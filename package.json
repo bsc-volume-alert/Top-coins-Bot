@@ -1,0 +1,15 @@
+{
+  "name": "solana-dex-alerts",
+  "version": "1.0.0",
+  "description": "Telegram alerts for Solana top gainers and new launches via DexScreener",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
