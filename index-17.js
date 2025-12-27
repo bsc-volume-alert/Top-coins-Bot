@@ -1,14 +1,14 @@
+
 const fetch = require('node-fetch');
 
 // ============================================
 // CONFIGURATION
 // ============================================
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8433789138:AAEQCkVtGN48IV6kcCg_XthsB8JuaDIJfvo';
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '5953868240';
 const ALERT_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 
 // Alert thresholds
-const MIN_1H_GAIN_PERCENT = 15; // Minimum 1hr gain for established coins
 const MAX_AGE_NEW_HOURS = 24;   // Max age for "new" coins
 const TOP_N = 5;                 // Number of coins per alert
 
@@ -215,16 +215,23 @@ async function fetchTopGainersAndNewTokens() {
 // ALERT BUILDERS
 // ============================================
 
-function buildGainersAlert(pairs) {
-  // Filter: >24hrs old, >=15% 1hr gain
+function buildTimeframeAlert(pairs, timeframe) {
+  // timeframe: 'h1', 'h6', 'h24'
+  const labels = {
+    h1: { title: '1 HOUR', emoji: '⚡' },
+    h6: { title: '6 HOUR', emoji: '📈' },
+    h24: { title: '24 HOUR', emoji: '🔥' }
+  };
+  
+  // Filter: >24hrs old, has price change data
   const eligiblePairs = pairs.filter(pair => {
     const ageHours = getAgeHours(pair.pairCreatedAt);
-    const priceChange1h = pair.priceChange?.h1 || 0;
-    return ageHours > MAX_AGE_NEW_HOURS && priceChange1h >= MIN_1H_GAIN_PERCENT;
+    const priceChange = pair.priceChange?.[timeframe];
+    return ageHours > MAX_AGE_NEW_HOURS && priceChange !== null && priceChange !== undefined;
   });
   
-  // Sort by 1hr gain descending
-  eligiblePairs.sort((a, b) => (b.priceChange?.h1 || 0) - (a.priceChange?.h1 || 0));
+  // Sort by this timeframe's gain descending
+  eligiblePairs.sort((a, b) => (b.priceChange?.[timeframe] || 0) - (a.priceChange?.[timeframe] || 0));
   
   // Take top N
   const topGainers = eligiblePairs.slice(0, TOP_N);
@@ -234,14 +241,15 @@ function buildGainersAlert(pairs) {
   }
   
   const timestamp = new Date().toISOString().slice(11, 16) + ' UTC';
-  let message = `🚀 *TOP ${topGainers.length} GAINERS (1hr ≥15%)* \\- ${timestamp}\n\n`;
+  const { title, emoji } = labels[timeframe];
+  let message = `${emoji} *TOP ${topGainers.length} GAINERS \\- ${title}* \\- ${timestamp}\n\n`;
   
   topGainers.forEach((pair, index) => {
     const symbol = escapeMarkdown(pair.baseToken?.symbol || 'UNKNOWN');
-    const name = escapeMarkdown(pair.baseToken?.name || 'Unknown');
     const price = formatPrice(parseFloat(pair.priceUsd) || 0);
     const change1h = formatPercent(pair.priceChange?.h1);
     const change6h = formatPercent(pair.priceChange?.h6);
+    const change24h = formatPercent(pair.priceChange?.h24);
     const mcap = formatNumber(pair.marketCap || pair.fdv);
     const vol1h = formatNumber(pair.volume?.h1);
     const vol6h = formatNumber(pair.volume?.h6);
@@ -253,7 +261,7 @@ function buildGainersAlert(pairs) {
     const twitterLink = `https://twitter.com/search?q=%24${pair.baseToken?.symbol || ''}`;
     
     message += `*${index + 1}\\. ${symbol}* \\| ${escapeMarkdown(price)}\n`;
-    message += `📈 1h: ${escapeMarkdown(change1h)} \\| 6h: ${escapeMarkdown(change6h)}\n`;
+    message += `📈 1h: ${escapeMarkdown(change1h)} \\| 6h: ${escapeMarkdown(change6h)} \\| 24h: ${escapeMarkdown(change24h)}\n`;
     message += `💰 MCap: ${escapeMarkdown(mcap)}\n`;
     message += `📊 Vol 1h: ${escapeMarkdown(vol1h)} \\| 6h: ${escapeMarkdown(vol6h)}\n`;
     message += `⏰ Age: ${escapeMarkdown(age)}\n`;
@@ -281,14 +289,14 @@ function buildNewLaunchesAlert(pairs) {
   }
   
   const timestamp = new Date().toISOString().slice(11, 16) + ' UTC';
-  let message = `🆕 *TOP ${topNew.length} NEW LAUNCHES (<24hrs)* \\- ${timestamp}\n\n`;
+  let message = `🆕 *TOP ${topNew.length} NEW LAUNCHES \\(<24hrs\\)* \\- ${timestamp}\n\n`;
   
   topNew.forEach((pair, index) => {
     const symbol = escapeMarkdown(pair.baseToken?.symbol || 'UNKNOWN');
-    const name = escapeMarkdown(pair.baseToken?.name || 'Unknown');
     const price = formatPrice(parseFloat(pair.priceUsd) || 0);
     const change1h = formatPercent(pair.priceChange?.h1);
     const change6h = formatPercent(pair.priceChange?.h6);
+    const change24h = formatPercent(pair.priceChange?.h24);
     const mcap = formatNumber(pair.marketCap || pair.fdv);
     const vol1h = formatNumber(pair.volume?.h1);
     const vol6h = formatNumber(pair.volume?.h6);
@@ -300,7 +308,7 @@ function buildNewLaunchesAlert(pairs) {
     const twitterLink = `https://twitter.com/search?q=%24${pair.baseToken?.symbol || ''}`;
     
     message += `*${index + 1}\\. ${symbol}* \\| ${escapeMarkdown(price)}\n`;
-    message += `📈 1h: ${escapeMarkdown(change1h)} \\| 6h: ${escapeMarkdown(change6h)}\n`;
+    message += `📈 1h: ${escapeMarkdown(change1h)} \\| 6h: ${escapeMarkdown(change6h)} \\| 24h: ${escapeMarkdown(change24h)}\n`;
     message += `💰 MCap: ${escapeMarkdown(mcap)}\n`;
     message += `📊 Vol 1h: ${escapeMarkdown(vol1h)} \\| 6h: ${escapeMarkdown(vol6h)}\n`;
     message += `⏰ Age: ${escapeMarkdown(age)}\n`;
@@ -383,17 +391,40 @@ async function runAlertCycle() {
       return;
     }
     
-    // Build and send gainers alert
-    const gainersAlert = buildGainersAlert(pairs);
-    if (gainersAlert) {
-      console.log('Sending gainers alert...');
-      await sendTelegramMessage(gainersAlert);
-      console.log('✅ Gainers alert sent');
+    // Build and send 1hr gainers alert
+    const alert1h = buildTimeframeAlert(pairs, 'h1');
+    if (alert1h) {
+      console.log('Sending 1hr gainers alert...');
+      await sendTelegramMessage(alert1h);
+      console.log('✅ 1hr gainers alert sent');
     } else {
-      console.log('No coins matching gainers criteria');
+      console.log('No coins for 1hr gainers');
     }
     
-    // Small delay between messages
+    await new Promise(r => setTimeout(r, 1000));
+    
+    // Build and send 6hr gainers alert
+    const alert6h = buildTimeframeAlert(pairs, 'h6');
+    if (alert6h) {
+      console.log('Sending 6hr gainers alert...');
+      await sendTelegramMessage(alert6h);
+      console.log('✅ 6hr gainers alert sent');
+    } else {
+      console.log('No coins for 6hr gainers');
+    }
+    
+    await new Promise(r => setTimeout(r, 1000));
+    
+    // Build and send 24hr gainers alert
+    const alert24h = buildTimeframeAlert(pairs, 'h24');
+    if (alert24h) {
+      console.log('Sending 24hr gainers alert...');
+      await sendTelegramMessage(alert24h);
+      console.log('✅ 24hr gainers alert sent');
+    } else {
+      console.log('No coins for 24hr gainers');
+    }
+    
     await new Promise(r => setTimeout(r, 1000));
     
     // Build and send new launches alert
@@ -419,9 +450,8 @@ async function runAlertCycle() {
 async function main() {
   console.log('🚀 Solana DEX Alerts Bot Starting...');
   console.log(`Alert interval: ${ALERT_INTERVAL_MS / 1000 / 60} minutes`);
-  console.log(`Gainers threshold: ${MIN_1H_GAIN_PERCENT}% (1hr)`);
+  console.log(`Alerts: Top 5 by 1hr, 6hr, 24hr change + New launches`);
   console.log(`New coins: <${MAX_AGE_NEW_HOURS} hours old`);
-  console.log(`Top N: ${TOP_N} per alert`);
   
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
     console.error('❌ Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID');
