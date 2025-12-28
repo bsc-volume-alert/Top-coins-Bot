@@ -10,6 +10,8 @@ const ALERT_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 // Alert thresholds
 const MAX_AGE_NEW_HOURS = 24;   // Max age for "new" coins
 const TOP_N = 5;                 // Number of coins per alert
+const MIN_LIQUIDITY_ESTABLISHED = 100000; // $100k min liquidity for coins >24hrs
+const MIN_LIQUIDITY_NEW = 50000;          // $50k min liquidity for coins <24hrs
 
 // ============================================
 // HELPER FUNCTIONS
@@ -222,11 +224,15 @@ function buildTimeframeAlert(pairs, timeframe) {
     h24: { title: '24 HOUR', emoji: '🔥' }
   };
   
-  // Filter: >24hrs old, has price change data
+  // Filter: >24hrs old, has price change data, min liquidity $100k
   const eligiblePairs = pairs.filter(pair => {
     const ageHours = getAgeHours(pair.pairCreatedAt);
     const priceChange = pair.priceChange?.[timeframe];
-    return ageHours > MAX_AGE_NEW_HOURS && priceChange !== null && priceChange !== undefined;
+    const liquidity = pair.liquidity?.usd || 0;
+    return ageHours > MAX_AGE_NEW_HOURS && 
+           priceChange !== null && 
+           priceChange !== undefined &&
+           liquidity >= MIN_LIQUIDITY_ESTABLISHED;
   });
   
   // Sort by this timeframe's gain descending
@@ -271,10 +277,13 @@ function buildTimeframeAlert(pairs, timeframe) {
 }
 
 function buildNewLaunchesAlert(pairs) {
-  // Filter: <24hrs old
+  // Filter: <24hrs old, min liquidity $50k
   const newPairs = pairs.filter(pair => {
     const ageHours = getAgeHours(pair.pairCreatedAt);
-    return ageHours <= MAX_AGE_NEW_HOURS && ageHours > 0;
+    const liquidity = pair.liquidity?.usd || 0;
+    return ageHours <= MAX_AGE_NEW_HOURS && 
+           ageHours > 0 &&
+           liquidity >= MIN_LIQUIDITY_NEW;
   });
   
   // Sort by 6hr volume descending (more meaningful for new coins)
@@ -451,6 +460,7 @@ async function main() {
   console.log(`Alert interval: ${ALERT_INTERVAL_MS / 1000 / 60} minutes`);
   console.log(`Alerts: Top 5 by 1hr, 6hr, 24hr change + New launches`);
   console.log(`New coins: <${MAX_AGE_NEW_HOURS} hours old`);
+  console.log(`Min liquidity: $${MIN_LIQUIDITY_ESTABLISHED/1000}k (established), $${MIN_LIQUIDITY_NEW/1000}k (new)`);
   
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
     console.error('❌ Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID');
