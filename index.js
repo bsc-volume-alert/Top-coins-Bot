@@ -10,8 +10,10 @@ const ALERT_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 // Alert thresholds
 const MAX_AGE_NEW_HOURS = 24;   // Max age for "new" coins
 const TOP_N = 5;                 // Number of coins per alert
-const MIN_LIQUIDITY_ESTABLISHED = 100000; // $100k min liquidity for coins >24hrs
-const MIN_LIQUIDITY_NEW = 50000;          // $50k min liquidity for coins <24hrs
+const MIN_LIQUIDITY_ESTABLISHED = 50000;  // $50k min liquidity for coins >24hrs
+const MIN_LIQUIDITY_NEW = 25000;          // $25k min liquidity for coins <24hrs
+const MIN_MARKET_CAP = 300000;            // $300k min market cap for all coins
+const MAX_MARKET_CAP_ESTABLISHED = 50000000; // $50M max market cap for coins >24hrs
 
 // ============================================
 // HELPER FUNCTIONS
@@ -224,15 +226,18 @@ function buildTimeframeAlert(pairs, timeframe) {
     h24: { title: '24 HOUR', emoji: '🔥' }
   };
   
-  // Filter: >24hrs old, has price change data, min liquidity $100k
+  // Filter: >24hrs old, has price change data, min liquidity $50k, mcap $300k-$50M
   const eligiblePairs = pairs.filter(pair => {
     const ageHours = getAgeHours(pair.pairCreatedAt);
     const priceChange = pair.priceChange?.[timeframe];
     const liquidity = pair.liquidity?.usd || 0;
+    const mcap = pair.marketCap || pair.fdv || 0;
     return ageHours > MAX_AGE_NEW_HOURS && 
            priceChange !== null && 
            priceChange !== undefined &&
-           liquidity >= MIN_LIQUIDITY_ESTABLISHED;
+           liquidity >= MIN_LIQUIDITY_ESTABLISHED &&
+           mcap >= MIN_MARKET_CAP &&
+           mcap <= MAX_MARKET_CAP_ESTABLISHED;
   });
   
   // Sort by this timeframe's gain descending
@@ -270,23 +275,25 @@ function buildTimeframeAlert(pairs, timeframe) {
     message += `💰 MCap: ${escapeMarkdown(mcap)}\n`;
     message += `📊 Vol 1h: ${escapeMarkdown(vol1h)} \\| 6h: ${escapeMarkdown(vol6h)}\n`;
     message += `⏰ Age: ${escapeMarkdown(age)}\n`;
-    message += `🔗 [DexScreener](${dexLink}) \\| [Axiom](${axiomLink}) \\| [Twitter](${twitterLink})\n\n`;
+    message += `🔗 [DexScreener](${dexLink}) \\| [Axiom](${axiomLink}) \\| [Twitter](${twitterLink})\n\n\n`;
   });
   
   return message;
 }
 
 function buildNewLaunchesAlert(pairs) {
-  // Filter: <24hrs old, min liquidity $50k
+  // Filter: <24hrs old, min liquidity $25k, min mcap $300k
   const newPairs = pairs.filter(pair => {
     const ageHours = getAgeHours(pair.pairCreatedAt);
     const liquidity = pair.liquidity?.usd || 0;
+    const mcap = pair.marketCap || pair.fdv || 0;
     return ageHours <= MAX_AGE_NEW_HOURS && 
            ageHours > 0 &&
-           liquidity >= MIN_LIQUIDITY_NEW;
+           liquidity >= MIN_LIQUIDITY_NEW &&
+           mcap >= MIN_MARKET_CAP;
   });
   
-  // Sort by 6hr volume descending (more meaningful for new coins)
+  // Sort by 6hr volume descending (most volume first)
   newPairs.sort((a, b) => (b.volume?.h6 || 0) - (a.volume?.h6 || 0));
   
   // Take top N
@@ -320,7 +327,7 @@ function buildNewLaunchesAlert(pairs) {
     message += `💰 MCap: ${escapeMarkdown(mcap)}\n`;
     message += `📊 Vol 1h: ${escapeMarkdown(vol1h)} \\| 6h: ${escapeMarkdown(vol6h)}\n`;
     message += `⏰ Age: ${escapeMarkdown(age)}\n`;
-    message += `🔗 [DexScreener](${dexLink}) \\| [Axiom](${axiomLink}) \\| [Twitter](${twitterLink})\n\n`;
+    message += `🔗 [DexScreener](${dexLink}) \\| [Axiom](${axiomLink}) \\| [Twitter](${twitterLink})\n\n\n`;
   });
   
   return message;
@@ -409,7 +416,7 @@ async function runAlertCycle() {
       console.log('No coins for 1hr gainers');
     }
     
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 2000));
     
     // Build and send 6hr gainers alert
     const alert6h = buildTimeframeAlert(pairs, 'h6');
@@ -421,7 +428,7 @@ async function runAlertCycle() {
       console.log('No coins for 6hr gainers');
     }
     
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 2000));
     
     // Build and send 24hr gainers alert
     const alert24h = buildTimeframeAlert(pairs, 'h24');
@@ -433,7 +440,7 @@ async function runAlertCycle() {
       console.log('No coins for 24hr gainers');
     }
     
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 2000));
     
     // Build and send new launches alert
     const newLaunchesAlert = buildNewLaunchesAlert(pairs);
@@ -461,6 +468,7 @@ async function main() {
   console.log(`Alerts: Top 5 by 1hr, 6hr, 24hr change + New launches`);
   console.log(`New coins: <${MAX_AGE_NEW_HOURS} hours old`);
   console.log(`Min liquidity: $${MIN_LIQUIDITY_ESTABLISHED/1000}k (established), $${MIN_LIQUIDITY_NEW/1000}k (new)`);
+  console.log(`Market cap: $${MIN_MARKET_CAP/1000}k - $${MAX_MARKET_CAP_ESTABLISHED/1000000}M (established), $${MIN_MARKET_CAP/1000}k+ (new)`);
   
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
     console.error('❌ Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID');
