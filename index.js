@@ -278,6 +278,7 @@ function buildTimeframeAlert(pairs, timeframe) {
     message += `🔗 [DexScreener](${dexLink}) \\| [Axiom](${axiomLink}) \\| [Twitter](${twitterLink})\n\n\n`;
   });
   
+  message += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n\n`;
   return message;
 }
 
@@ -330,6 +331,7 @@ function buildNewLaunchesAlert(pairs) {
     message += `🔗 [DexScreener](${dexLink}) \\| [Axiom](${axiomLink}) \\| [Twitter](${twitterLink})\n\n\n`;
   });
   
+  message += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n\n`;
   return message;
 }
 
