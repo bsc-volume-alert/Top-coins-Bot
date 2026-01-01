@@ -64,50 +64,11 @@ function escapeMarkdown(text) {
 }
 
 // ============================================
-// DEXSCREENER API
+// DEXSCREENER API - IMPROVED DATA FETCHING
 // ============================================
-
-async function fetchSolanaTokens() {
-  try {
-    // Fetch trending/top tokens from Solana
-    const response = await fetch(
-      'https://api.dexscreener.com/token-boosts/top/v1',
-      { headers: { 'Accept': 'application/json' } }
-    );
-    
-    if (!response.ok) {
-      throw new Error(`DexScreener API error: ${response.status}`);
-    }
-    
-    const boostedTokens = await response.json();
-    
-    // Filter for Solana tokens and get their addresses
-    const solanaTokens = boostedTokens
-      .filter(t => t.chainId === 'solana')
-      .slice(0, 100); // Get top 100 boosted
-    
-    // Also fetch from search/trending
-    const searchResponse = await fetch(
-      'https://api.dexscreener.com/latest/dex/search?q=SOL',
-      { headers: { 'Accept': 'application/json' } }
-    );
-    
-    let searchPairs = [];
-    if (searchResponse.ok) {
-      const searchData = await searchResponse.json();
-      searchPairs = (searchData.pairs || []).filter(p => p.chainId === 'solana');
-    }
-    
-    return { boostedTokens: solanaTokens, searchPairs };
-  } catch (error) {
-    console.error('Error fetching tokens:', error);
-    return { boostedTokens: [], searchPairs: [] };
-  }
-}
 
 async function fetchTokenDetails(tokenAddresses) {
   try {
-    // DexScreener allows up to 30 addresses per call
     const batches = [];
     for (let i = 0; i < tokenAddresses.length; i += 30) {
       batches.push(tokenAddresses.slice(i, i + 30));
@@ -129,8 +90,7 @@ async function fetchTokenDetails(tokenAddresses) {
         }
       }
       
-      // Small delay between batches to respect rate limits
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 250));
     }
     
     return allPairs;
@@ -142,38 +102,33 @@ async function fetchTokenDetails(tokenAddresses) {
 
 async function fetchTopGainersAndNewTokens() {
   try {
-    // Strategy: Use multiple DexScreener endpoints to get comprehensive data
-    
-    // 1. Fetch pairs from Solana's main DEXes
-    const endpoints = [
-      'https://api.dexscreener.com/latest/dex/search?q=raydium%20solana',
-      'https://api.dexscreener.com/latest/dex/search?q=jupiter%20solana',
-      'https://api.dexscreener.com/latest/dex/search?q=orca%20solana'
-    ];
-    
     let allPairs = [];
+    let tokenAddresses = new Set();
     
-    for (const url of endpoints) {
-      try {
-        const response = await fetch(url, { 
-          headers: { 'Accept': 'application/json' } 
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.pairs) {
-            const solanaPairs = data.pairs.filter(p => p.chainId === 'solana');
-            allPairs.push(...solanaPairs);
-          }
-        }
-      } catch (e) {
-        console.error(`Error fetching ${url}:`, e.message);
-      }
+    // 1. Fetch from token-profiles/latest (recently active tokens)
+    console.log('Fetching latest token profiles...');
+    try {
+      const profilesResponse = await fetch(
+        'https://api.dexscreener.com/token-profiles/latest/v1',
+        { headers: { 'Accept': 'application/json' } }
+      );
       
-      await new Promise(r => setTimeout(r, 250));
+      if (profilesResponse.ok) {
+        const profiles = await profilesResponse.json();
+        if (Array.isArray(profiles)) {
+          profiles
+            .filter(p => p.chainId === 'solana')
+            .forEach(p => tokenAddresses.add(p.tokenAddress));
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching profiles:', e.message);
     }
     
-    // 2. Also try token boosts endpoint
+    await new Promise(r => setTimeout(r, 300));
+    
+    // 2. Fetch from token-boosts/top (boosted tokens)
+    console.log('Fetching boosted tokens...');
     try {
       const boostResponse = await fetch(
         'https://api.dexscreener.com/token-boosts/top/v1',
@@ -181,22 +136,94 @@ async function fetchTopGainersAndNewTokens() {
       );
       
       if (boostResponse.ok) {
-        const boostedTokens = await boostResponse.json();
-        const solanaAddresses = boostedTokens
-          .filter(t => t.chainId === 'solana')
-          .map(t => t.tokenAddress)
-          .slice(0, 60);
-        
-        if (solanaAddresses.length > 0) {
-          const detailPairs = await fetchTokenDetails(solanaAddresses);
-          allPairs.push(...detailPairs);
+        const boosted = await boostResponse.json();
+        if (Array.isArray(boosted)) {
+          boosted
+            .filter(t => t.chainId === 'solana')
+            .forEach(t => tokenAddresses.add(t.tokenAddress));
         }
       }
     } catch (e) {
-      console.error('Error fetching boosted tokens:', e.message);
+      console.error('Error fetching boosted:', e.message);
     }
     
-    // 3. Deduplicate by pair address
+    await new Promise(r => setTimeout(r, 300));
+    
+    // 3. Fetch from token-boosts/latest
+    console.log('Fetching latest boosts...');
+    try {
+      const latestBoostResponse = await fetch(
+        'https://api.dexscreener.com/token-boosts/latest/v1',
+        { headers: { 'Accept': 'application/json' } }
+      );
+      
+      if (latestBoostResponse.ok) {
+        const latestBoosted = await latestBoostResponse.json();
+        if (Array.isArray(latestBoosted)) {
+          latestBoosted
+            .filter(t => t.chainId === 'solana')
+            .forEach(t => tokenAddresses.add(t.tokenAddress));
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching latest boosts:', e.message);
+    }
+    
+    await new Promise(r => setTimeout(r, 300));
+    
+    // 4. Multiple search queries to discover more tokens
+    const searchQueries = [
+      'SOL',
+      'USDC',
+      'pump',
+      'meme',
+      'ai',
+      'dog',
+      'cat',
+      'pepe',
+      'trump',
+      'doge',
+      'moon',
+      'raydium',
+      'jupiter',
+      'orca'
+    ];
+    
+    console.log('Searching for tokens...');
+    for (const query of searchQueries) {
+      try {
+        const response = await fetch(
+          `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(query)}`,
+          { headers: { 'Accept': 'application/json' } }
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.pairs) {
+            const solanaPairs = data.pairs.filter(p => p.chainId === 'solana');
+            allPairs.push(...solanaPairs);
+            solanaPairs.forEach(p => {
+              if (p.baseToken?.address) tokenAddresses.add(p.baseToken.address);
+            });
+          }
+        }
+      } catch (e) {
+        console.error(`Error searching ${query}:`, e.message);
+      }
+      
+      await new Promise(r => setTimeout(r, 200));
+    }
+    
+    // 5. Fetch full details for all discovered token addresses
+    console.log(`Discovered ${tokenAddresses.size} unique token addresses`);
+    
+    if (tokenAddresses.size > 0) {
+      const addresses = Array.from(tokenAddresses).slice(0, 150); // Limit to 150 tokens
+      const detailPairs = await fetchTokenDetails(addresses);
+      allPairs.push(...detailPairs);
+    }
+    
+    // 6. Deduplicate by pair address
     const uniquePairs = new Map();
     for (const pair of allPairs) {
       if (pair.pairAddress && !uniquePairs.has(pair.pairAddress)) {
@@ -205,7 +232,7 @@ async function fetchTopGainersAndNewTokens() {
     }
     
     const pairs = Array.from(uniquePairs.values());
-    console.log(`Fetched ${pairs.length} unique Solana pairs`);
+    console.log(`Total ${pairs.length} unique Solana pairs after deduplication`);
     
     return pairs;
   } catch (error) {
@@ -219,14 +246,12 @@ async function fetchTopGainersAndNewTokens() {
 // ============================================
 
 function buildTimeframeAlert(pairs, timeframe) {
-  // timeframe: 'h1', 'h6', 'h24'
   const labels = {
     h1: { title: '1 HOUR', emoji: '⚡' },
     h6: { title: '6 HOUR', emoji: '📈' },
     h24: { title: '24 HOUR', emoji: '🔥' }
   };
   
-  // Filter: >24hrs old, has price change data, min liquidity $50k, mcap $300k-$50M
   const eligiblePairs = pairs.filter(pair => {
     const ageHours = getAgeHours(pair.pairCreatedAt);
     const priceChange = pair.priceChange?.[timeframe];
@@ -240,10 +265,8 @@ function buildTimeframeAlert(pairs, timeframe) {
            mcap <= MAX_MARKET_CAP_ESTABLISHED;
   });
   
-  // Sort by this timeframe's gain descending
   eligiblePairs.sort((a, b) => (b.priceChange?.[timeframe] || 0) - (a.priceChange?.[timeframe] || 0));
   
-  // Take top N
   const topGainers = eligiblePairs.slice(0, TOP_N);
   
   if (topGainers.length === 0) {
@@ -283,7 +306,6 @@ function buildTimeframeAlert(pairs, timeframe) {
 }
 
 function buildNewLaunchesAlert(pairs) {
-  // Filter: <24hrs old, min liquidity $25k, min mcap $300k
   const newPairs = pairs.filter(pair => {
     const ageHours = getAgeHours(pair.pairCreatedAt);
     const liquidity = pair.liquidity?.usd || 0;
@@ -294,10 +316,8 @@ function buildNewLaunchesAlert(pairs) {
            mcap >= MIN_MARKET_CAP;
   });
   
-  // Sort by 6hr volume descending (most volume first)
   newPairs.sort((a, b) => (b.volume?.h6 || 0) - (a.volume?.h6 || 0));
   
-  // Take top N
   const topNew = newPairs.slice(0, TOP_N);
   
   if (topNew.length === 0) {
@@ -365,7 +385,6 @@ async function sendTelegramMessage(message) {
     if (!result.ok) {
       console.error('Telegram API error:', result.description);
       
-      // Try plain text if markdown fails
       const plainResponse = await fetch(
         `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
         {
@@ -400,7 +419,6 @@ async function runAlertCycle() {
   console.log('='.repeat(50));
   
   try {
-    // Fetch all pairs
     const pairs = await fetchTopGainersAndNewTokens();
     
     if (pairs.length === 0) {
@@ -408,7 +426,6 @@ async function runAlertCycle() {
       return;
     }
     
-    // Build and send 1hr gainers alert
     const alert1h = buildTimeframeAlert(pairs, 'h1');
     if (alert1h) {
       console.log('Sending 1hr gainers alert...');
@@ -420,7 +437,6 @@ async function runAlertCycle() {
     
     await new Promise(r => setTimeout(r, 2000));
     
-    // Build and send 6hr gainers alert
     const alert6h = buildTimeframeAlert(pairs, 'h6');
     if (alert6h) {
       console.log('Sending 6hr gainers alert...');
@@ -432,7 +448,6 @@ async function runAlertCycle() {
     
     await new Promise(r => setTimeout(r, 2000));
     
-    // Build and send 24hr gainers alert
     const alert24h = buildTimeframeAlert(pairs, 'h24');
     if (alert24h) {
       console.log('Sending 24hr gainers alert...');
@@ -444,7 +459,6 @@ async function runAlertCycle() {
     
     await new Promise(r => setTimeout(r, 2000));
     
-    // Build and send new launches alert
     const newLaunchesAlert = buildNewLaunchesAlert(pairs);
     if (newLaunchesAlert) {
       console.log('Sending new launches alert...');
@@ -479,10 +493,8 @@ async function main() {
   
   console.log('✅ Telegram configured');
   
-  // Run immediately on start
   await runAlertCycle();
   
-  // Then run every 10 minutes
   setInterval(runAlertCycle, ALERT_INTERVAL_MS);
   
   console.log('Bot running. Alerts every 10 minutes.');
