@@ -45,6 +45,7 @@ CREATE INDEX IF NOT EXISTS wb_mint ON wallet_buys(mint);
 CREATE INDEX IF NOT EXISTS wb_ts ON wallet_buys(ts);
 CREATE TABLE IF NOT EXISTS token_peaks (mint TEXT PRIMARY KEY, create_ts INTEGER, peak_30m REAL DEFAULT 0, peak_24h REAL DEFAULT 0, until INTEGER);
 CREATE TABLE IF NOT EXISTS watch_wallets (wallet TEXT PRIMARY KEY, label TEXT, added_ts INTEGER, source TEXT);
+CREATE TABLE IF NOT EXISTS watch_creators (creator TEXT PRIMARY KEY, label TEXT, added_ts INTEGER);
 `);
 // migrations (idempotent)
 for (const sql of [
@@ -161,6 +162,12 @@ export const q = {
   walletStats: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN peak_24h>=2*entry_mc THEN 1 ELSE 0 END) h2, SUM(CASE WHEN peak_24h>=3*entry_mc THEN 1 ELSE 0 END) h3, SUM(CASE WHEN peak_24h>=4*entry_mc THEN 1 ELSE 0 END) h4, AVG(peak_24h/entry_mc) avgpeak, AVG(entry_mc) avgmc, MAX(ts) last_ts, SUM(resolved=0) pending FROM wallet_buys WHERE wallet=? AND is_cluster=0 AND entry_mc>0`),
   walletRecent: db.prepare(`SELECT w.mint, t.name, w.ts, w.age_s, w.sol, w.entry_mc, w.peak_24h, w.resolved FROM wallet_buys w LEFT JOIN tokens t ON t.mint=w.mint WHERE w.wallet=? ORDER BY w.ts DESC LIMIT 8`),
   spamWallets: db.prepare(`SELECT wallet FROM wallet_buys WHERE ts>=? GROUP BY wallet HAVING COUNT(*)>?`),
+  creatorsTop: db.prepare(`SELECT creator, COUNT(*) n, MAX(peak_mc_usd) best, AVG(peak_mc_usd) avgpeak, SUM(CASE WHEN peak_mc_usd>=100000 THEN 1 ELSE 0 END) over100k, SUM(CASE WHEN graduated=1 THEN 1 ELSE 0 END) grads, MAX(create_ts) last_ts, SUM(factory) fac, AVG(bundle_pct) avgbundle FROM tokens WHERE create_ts>=? GROUP BY creator HAVING n>=? ORDER BY best DESC LIMIT ?`),
+  creatorTokens: db.prepare(`SELECT name, symbol, create_ts, bundle_pct, bundle_sol, peak_mc_usd, graduated, has_socials, mint FROM tokens WHERE creator=? ORDER BY create_ts DESC LIMIT 10`),
+  creatorAgg: db.prepare(`SELECT COUNT(*) n, MAX(peak_mc_usd) best, AVG(peak_mc_usd) avgpeak, SUM(CASE WHEN peak_mc_usd>=100000 THEN 1 ELSE 0 END) over100k, SUM(graduated) grads, MIN(create_ts) first_ts, MAX(create_ts) last_ts FROM tokens WHERE creator=?`),
+  addWatchCreator: db.prepare(`INSERT OR REPLACE INTO watch_creators (creator,label,added_ts) VALUES (?,?,?)`),
+  delWatchCreator: db.prepare(`DELETE FROM watch_creators WHERE creator=?`),
+  listWatchCreators: db.prepare(`SELECT creator,label FROM watch_creators ORDER BY added_ts`),
   addWatch: db.prepare(`INSERT OR REPLACE INTO watch_wallets (wallet,label,added_ts,source) VALUES (?,?,?,?)`),
   delWatch: db.prepare(`DELETE FROM watch_wallets WHERE wallet=?`),
   listWatch: db.prepare(`SELECT wallet,label,source FROM watch_wallets ORDER BY added_ts`),

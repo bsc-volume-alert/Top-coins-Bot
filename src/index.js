@@ -10,7 +10,7 @@ import { sigStats } from "./signals.js";
 import { startCommands, reportText } from "./commands.js";
 import { startPumpSwap, ps } from "./pumpswap.js";
 import { momStats, strategySummary } from "./momentum.js";
-import { wbStats, leaderboardText } from "./wallets.js";
+import { wbStats, leaderboardText, creatorsText } from "./wallets.js";
 import { cpStats } from "./copytrade.js";
 
 const v = JSON.parse(readFileSync(new URL("../package.json", import.meta.url))).version;
@@ -67,5 +67,6 @@ async function digest() {
   }
   await tg(txt);
   await tg(leaderboardText(7, 5));
+  await tg(creatorsText(7, 5));
 }
 setInterval(digest, 60_000);

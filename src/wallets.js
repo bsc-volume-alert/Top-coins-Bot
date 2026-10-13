@@ -10,11 +10,13 @@ export const wb = { recorded: 0, tokensScored: 0, copies: 0 };
 const early = new Map();   // mint -> { buyers: Map(wallet -> {ts, age, sol, mc}), cluster:Set, createTs, maxMc, committed }
 const peaks = new Map();   // mint -> { createTs, p30: mc, p24: mc, until }
 const watch = new Map();   // wallet -> {label, source}
+const watchC = new Map();  // creator -> {label}
 const copyCooldown = new Map(); // wallet|mint -> ts
 let spam = new Set();
 const listeners = []; export const onCopy = (fn) => listeners.push(fn);
+const cListeners = []; export const onCreatorLaunch = (fn) => cListeners.push(fn);
 
-export function reloadWatch() { watch.clear(); for (const r of q.listWatch.all()) watch.set(r.wallet, { label: r.label, source: r.source }); }
+export function reloadWatch() { watch.clear(); for (const r of q.listWatch.all()) watch.set(r.wallet, { label: r.label, source: r.source }); watchC.clear(); for (const r of q.listWatchCreators.all()) watchC.set(r.creator, { label: r.label }); }
 reloadWatch();
 export const isWatched = (w) => watch.has(w);
 export const watchList = () => [...watch.entries()];
@@ -38,6 +40,12 @@ on("trade", (t, tr) => {
     e.buyers.set(tr.wallet, { ts: now, age, sol: tr.sol, mc: t.lastMc });
   if (tr.isBuy && watch.has(tr.wallet) && tr.sol >= CFG.WB_COPY_MIN_SOL) copySignal(tr.wallet, t.mint, t.name, t.symbol, tr, t.lastMc, "curve");
   if (!e.committed && e.maxMc >= CFG.WB_TOKEN_MIN_MC && age > CFG.WB_EARLY_S) commit(t, e);
+});
+on("finalized", (t) => {
+  const w = watchC.get(t.creator); if (!w) return;
+  const a = q.creatorAgg.get(t.creator);
+  tg(`🧑‍💻 <b>WATCHED CREATOR LAUNCHED</b> — ${esc(w.label || short(t.creator))}\n${esc(t.name)} ($${esc(t.symbol)}) · bundle ${t.bundle?.pct.toFixed(0) ?? 0}% · ${t.bundle?.sol.toFixed(1) ?? 0} SOL · ${t.bundle?.wallets ?? 0} wallets · MC $${fmt(t.lastMc)}\nCreator record: ${a.n} launches · best $${fmt(a.best || 0)} · ${a.over100k} over $100K · ${a.grads} graduated\n${links(t.mint)}`);
+  for (const fn of cListeners) { try { fn({ creator: t.creator, label: w.label, mint: t.mint, name: t.name, symbol: t.symbol, price: t.trades.at(-1)?.price ?? 0, mc: t.lastMc, ts: Math.floor(Date.now() / 1000) }); } catch (e) { console.error("[creator]", e.message); } }
 });
 on("expire", (t) => { const e = early.get(t.mint); if (e && !e.committed && e.maxMc >= CFG.WB_TOKEN_MIN_MC) commit(t, e); early.delete(t.mint); });
 function commit(t, e) {
@@ -107,3 +115,24 @@ export function walletText(wallet) {
 export function addWatch(wallet, label, source = "manual") { q.addWatch.run(wallet, label || null, Math.floor(Date.now() / 1000), source); reloadWatch(); }
 export function removeWatch(wallet) { q.delWatch.run(wallet); reloadWatch(); }
 export const wbStats = () => ({ ...wb, early: early.size, peaks: peaks.size, watched: watch.size });
+
+export function creatorsText(days = 7, limit = 10) {
+  const from = Math.floor(Date.now() / 1000) - days * 86400;
+  const rows = q.creatorsTop.all(from, 2, limit);
+  if (!rows.length) return "🧑‍💻 <b>Creators</b> — no creators with 2+ launches yet";
+  let t = `🧑‍💻 <b>Top creators</b> — last ${days}d · 2+ launches · ranked by best peak\n`;
+  rows.forEach((r, i) => {
+    const ago = Math.floor((Date.now() / 1000 - r.last_ts) / 3600);
+    t += `${i + 1}. <code>${r.creator}</code>${watchC.has(r.creator) ? " 👁" : ""}\n   ${r.n} launches · best <b>$${fmt(r.best || 0)}</b> · ${r.over100k} over $100K · ${r.grads} graduated · avg bundle ${Math.round(r.avgbundle || 0)}%${r.fac ? " · ⚠️factory " + r.fac : ""} · ${ago}h ago\n`;
+  });
+  return t + "\n/watchcreator &lt;address&gt; to be alerted on their next launch";
+}
+export function creatorText(creator) {
+  const a = q.creatorAgg.get(creator); if (!a || !a.n) return `No launches seen from <code>${creator}</code>.`;
+  let t = `🧑‍💻 <code>${creator}</code>${watchC.has(creator) ? " 👁 watched" : ""}\n${a.n} launches · best $${fmt(a.best || 0)} · avg peak $${fmt(a.avgpeak || 0)} · ${a.over100k} over $100K · ${a.grads} graduated · first seen ${Math.floor((Date.now() / 1000 - a.first_ts) / 3600)}h ago\nRecent:\n`;
+  for (const r of q.creatorTokens.all(creator)) t += `• ${esc(r.name)} ($${esc(r.symbol)}) · bundle ${Math.round(r.bundle_pct || 0)}% ${(r.bundle_sol || 0).toFixed(0)} SOL → peak $${fmt(r.peak_mc_usd || 0)}${r.graduated ? " 🎓" : ""}\n`;
+  return t;
+}
+export function addWatchCreator(c, label) { q.addWatchCreator.run(c, label || null, Math.floor(Date.now() / 1000)); reloadWatch(); }
+export function removeWatchCreator(c) { q.delWatchCreator.run(c); reloadWatch(); }
+export const watchCreatorList = () => [...watchC.entries()];
