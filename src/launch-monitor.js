@@ -7,9 +7,9 @@ import { tg } from "./telegram.js";
 /** In-memory token state. mint -> {create, slot, trades:[], finalized, tier, bundle:{...}} */
 export const live = new Map();
 export const counters = { txs: 0, creates: 0, trades: 0, tier1: 0, decodeErr: 0 };
-const listeners = []; // (event, token) => void   event: 'create'|'finalized'|'trade'|'expire'
-export const on = (fn) => listeners.push(fn);
-const emit = (ev, t, extra) => { for (const fn of listeners) { try { fn(ev, t, extra); } catch (e) { console.error("[listener]", e.message); } } };
+const listeners = new Map(); // event -> [fn(token, extra)]   events: create|finalized|trade|graduated|expire
+export const on = (ev, fn) => { if (!listeners.has(ev)) listeners.set(ev, []); listeners.get(ev).push(fn); };
+const emit = (ev, t, extra) => { for (const fn of listeners.get(ev) || []) { try { fn(t, extra); } catch (e) { console.error(`[listener:${ev}]`, e.stack || e.message); } } };
 
 const mcUsd = (vsol, vtok) => priceSol(vsol, vtok) * CFG.TOTAL_SUPPLY * solUsdCached();
 
@@ -24,11 +24,11 @@ export function handleTx({ sig, slot, logs, err }) {
       counters.creates++;
       const t = { mint: e.mint, name: e.name, symbol: e.symbol, uri: e.uri, creator: e.creator, bc: e.bondingCurve,
         slot, ts: e.ts || ts, sig, trades: [], finalized: false, tier: 0, bundle: null, lastVsol: e.vsol, lastVtok: e.vtok,
-        peakMc: 0, lastMc: 0 };
+        peakMc: 0, lastMc: 0, hold: false, factory: false, graduated: false };
       live.set(e.mint, t);
       q.insToken.run(t.mint, t.name, t.symbol, t.uri, t.creator, t.bc, slot, t.ts, sig);
+      if (q.creatorRecent.get(t.creator, t.ts - CFG.FACTORY_WINDOW_MIN * 60, t.mint) >= 1) { t.factory = true; q.setFactory.run(t.mint); }
       setTimeout(() => finalize(t), CFG.FINALIZE_MS);
-      setTimeout(() => expire(t), CFG.TRACK_MIN * 60_000);
       emit("create", t);
     } else if (e.type === "trade") {
       counters.trades++;
@@ -36,8 +36,9 @@ export function handleTx({ sig, slot, logs, err }) {
       const tr = { sig, slot, ts: e.ts || ts, wallet: e.user, isBuy: e.isBuy, sol: lamports(e.sol), tokens: rawTok(e.tokens), price: priceSol(e.vsol, e.vtok) };
       t.lastVsol = e.vsol; t.lastVtok = e.vtok;
       const mc = mcUsd(e.vsol, e.vtok); t.lastMc = mc; if (mc > t.peakMc) t.peakMc = mc;
-      if (!t.finalized || t.tier >= 1) t.trades.push(tr);
-      if (t.tier >= 1) q.insTrade.run(t.mint, sig, slot, tr.ts, tr.wallet, tr.isBuy ? 1 : 0, tr.sol, tr.tokens, tr.price);
+      t.trades.push(tr);
+      if (t.finalized && t.tier >= 1) q.insTrade.run(t.mint, sig, slot, tr.ts, tr.wallet, tr.isBuy ? 1 : 0, tr.sol, tr.tokens, tr.price);
+      if (!t.graduated && e.vtok <= BigInt(CFG.GRAD_VTOK)) { t.graduated = true; q.setGrad.run(t.mint); emit("graduated", t, tr); }
       emit("trade", t, tr);
     }
   }
@@ -73,16 +74,19 @@ function finalize(t) {
       `🧱 <b>Prepared launch</b> — ${esc(t.name)} ($${esc(t.symbol)})\n` +
       `Bundle: <b>${pct.toFixed(1)}%</b> of supply · <b>${bundleSol.toFixed(1)} SOL</b> · ${wallets.size} wallets (dev ${devBuy.toFixed(1)} SOL)\n` +
       `MC now: $${fmt(mc)} · SOL $${solUsdCached().toFixed(0)}\n` +
-      `<a href="https://pump.fun/coin/${t.mint}">pump.fun</a> · <a href="https://solscan.io/token/${t.mint}">solscan</a> · <a href="https://isitbundled.com/token/${t.mint}">isitbundled</a>\n<code>${t.mint}</code>`
+      links(t.mint) + (t.factory ? "\n⚠️ factory: same creator launched another token in the last 10 min" : "")
     );
-  } else {
-    t.trades.length = 0; // free memory for the 95%
   }
+  setTimeout(() => expire(t), (t.tier >= 1 ? CFG.TRACK_MIN : CFG.TRACK_MIN_T0) * 60_000);
   emit("finalized", t);
 }
 
-function expire(t) { emit("expire", t); live.delete(t.mint); }
+function expire(t) {
+  if (t.hold) return setTimeout(() => expire(t), 60_000); // open paper position keeps it alive
+  emit("expire", t); live.delete(t.mint);
+}
 
+export const links = (m) => `<a href="https://pump.fun/coin/${m}">pump.fun</a> · <a href="https://axiom.trade/t/${m}">Axiom</a> · <a href="https://dexscreener.com/solana/${m}">DexScreener</a> · <a href="https://solscan.io/token/${m}">Solscan</a>\n<code>${m}</code>`;
 export const esc = (s) => String(s ?? "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
 export const fmt = (n) => (n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : n.toFixed(0));
 export function startPriceLoop() { getSolUsd(); setInterval(getSolUsd, 60_000); }

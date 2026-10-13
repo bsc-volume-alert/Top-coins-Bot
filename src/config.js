@@ -36,3 +36,14 @@ Object.assign(CFG, {
   MAX_HOLD_MIN: n("MAX_HOLD_MIN", 120),
   RPC_DAILY_BUDGET: n("RPC_DAILY_BUDGET", 20000), // max credits/day for wallet lookups
 });
+// --- v0.3: early-inflow entry, parallel paper exits ---
+Object.assign(CFG, {
+  ENTRY_WINDOW_MIN: n("ENTRY_WINDOW_MIN", 3),   // inflow trigger only within first N minutes after launch
+  INFLOW_SOL: n("INFLOW_SOL", 10),              // buys (SOL) in the last 60s, excluding create slot
+  INFLOW_WALLETS: n("INFLOW_WALLETS", 8),       // distinct buyers in that window
+  INFLOW_WINDOW_S: n("INFLOW_WINDOW_S", 60),
+  TRACK_MIN_T0: n("TRACK_MIN_T0", 5),           // unbundled tokens: keep in memory this long unless a position opens
+  FACTORY_WINDOW_MIN: n("FACTORY_WINDOW_MIN", 10), // same creator, >=2 launches within this = factory flag
+  TP_MULT: n("TP_MULT", 2),                     // take-profit variant
+  GRAD_VTOK: n("GRAD_VTOK", 285_000_000),       // virtual token reserves at/below this = curve complete (graduated)
+});

@@ -36,6 +36,30 @@ CREATE TABLE IF NOT EXISTS paper_trades (
 );
 CREATE TABLE IF NOT EXISTS stats (k TEXT PRIMARY KEY, v REAL);
 `);
+// migrations (idempotent)
+for (const sql of [
+  "ALTER TABLE tokens ADD COLUMN factory INTEGER DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN graduated INTEGER DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN cluster_sol_in REAL DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN cluster_sol_out REAL DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN outside_sol_in REAL DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN outside_sol_out REAL DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN outside_buyers INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN tier INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN factory INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN inflow_sol REAL",
+  "ALTER TABLE paper_trades ADD COLUMN inflow_wallets INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN outside_share REAL",
+  "ALTER TABLE paper_trades ADD COLUMN entry_age_s INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN peak_mult REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_cluster REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tsl40 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tsl60 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tp REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_time REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_grad REAL",
+  "ALTER TABLE paper_trades ADD COLUMN closed INTEGER DEFAULT 0",
+]) { try { db.exec(sql); } catch {} }
 export const q = {
   insToken: db.prepare(`INSERT OR IGNORE INTO tokens (mint,name,symbol,uri,creator,bonding_curve,create_slot,create_ts,create_sig) VALUES (?,?,?,?,?,?,?,?,?)`),
   finToken: db.prepare(`UPDATE tokens SET bundle_sol=?, bundle_tokens=?, bundle_pct=?, bundle_wallets=?, dev_buy_sol=?, tier=?, finalized=1, entry_mc_usd=?, peak_mc_usd=?, last_mc_usd=? WHERE mint=?`),
@@ -45,4 +69,14 @@ export const q = {
   stat: db.prepare(`SELECT v FROM stats WHERE k=?`).pluck(),
   countSince: db.prepare(`SELECT COUNT(*) FROM tokens WHERE create_ts>=?`).pluck(),
   countTierSince: db.prepare(`SELECT COUNT(*) FROM tokens WHERE tier>=? AND create_ts>=?`).pluck(),
+  creatorRecent: db.prepare(`SELECT COUNT(*) FROM tokens WHERE creator=? AND create_ts>=? AND mint<>?`).pluck(),
+  setFactory: db.prepare(`UPDATE tokens SET factory=1 WHERE mint=?`),
+  setGrad: db.prepare(`UPDATE tokens SET graduated=1 WHERE mint=?`),
+  updFlows: db.prepare(`UPDATE tokens SET cluster_sol_in=?, cluster_sol_out=?, outside_sol_in=?, outside_sol_out=?, outside_buyers=?, handoffs=?, cluster_net_sol=?, peak_mc_usd=?, last_mc_usd=? WHERE mint=?`),
+  insHandoff: db.prepare(`INSERT INTO handoffs (mint,slot,ts,seller,buyer,sol,tokens,same_tx) VALUES (?,?,?,?,?,?,?,?)`),
+  updWallet: db.prepare(`UPDATE cluster_wallets SET funder=?, wallet_age_s=? WHERE mint=? AND wallet=?`),
+  insPaper: db.prepare(`INSERT INTO paper_trades (mint,name,entry_ts,entry_mc,entry_price,bundle_pct,bundle_sol,handoffs,tier,factory,inflow_sol,inflow_wallets,outside_share,entry_age_s,peak_mc) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`),
+  updPaper: db.prepare(`UPDATE paper_trades SET peak_mc=?, peak_mult=?, x_cluster=?, x_tsl40=?, x_tsl60=?, x_tp=?, x_time=?, x_grad=?, exit_ts=?, exit_mc=?, exit_price=?, exit_reason=?, pnl_pct=?, closed=? WHERE id=?`),
+  openPapers: db.prepare(`SELECT COUNT(*) FROM paper_trades WHERE closed=0`).pluck(),
+  closedSince: db.prepare(`SELECT COUNT(*) c, AVG(pnl_pct) p FROM paper_trades WHERE closed=1 AND exit_ts>=?`),
 };
