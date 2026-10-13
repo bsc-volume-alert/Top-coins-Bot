@@ -21,5 +21,6 @@ export const CFG = {
   TRACK_MIN: n("TRACK_MIN", 30),               // keep tier-1 token trades for this many minutes
   TOTAL_SUPPLY: 1_000_000_000,
   TG_TIER1_ALERTS: n("TG_TIER1_ALERTS", 1),
+  TG_TIER1_SOL_MIN: n("TG_TIER1_SOL_MIN", 60),   // only ping Telegram for prepared launches with at least this much bundle SOL
   HEARTBEAT_MIN: n("HEARTBEAT_MIN", 30),
 };
