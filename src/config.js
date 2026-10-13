@@ -131,3 +131,12 @@ Object.assign(CFG, {
   BURST_MIN_AGE_S: n("BURST_MIN_AGE_S", 600),
   BURST_MIN_MC: n("BURST_MIN_MC", 60_000),
 });
+// --- v0.12: lifecycle sampler, holders, big buys ---
+Object.assign(CFG, {
+  LIFE_CHECKPOINTS: s("LIFE_CHECKPOINTS", "60,300,900,1800,3600,7200,14400,86400").split(",").map(Number),
+  LIFE_HOLDERS_FROM_S: n("LIFE_HOLDERS_FROM_S", 1800),  // snapshot top-10 holders at checkpoints >= this
+  LIFE_HOLDERS_MIN_MC: n("LIFE_HOLDERS_MIN_MC", 20_000),
+  LIFE_HOLDER_DAILY_BUDGET: n("LIFE_HOLDER_DAILY_BUDGET", 2000),
+  BIGBUY_SOL: n("BIGBUY_SOL", 5),
+  BIGBUY_BAL_DAILY_BUDGET: n("BIGBUY_BAL_DAILY_BUDGET", 2000),
+});

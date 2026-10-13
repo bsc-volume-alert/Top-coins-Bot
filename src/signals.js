@@ -26,6 +26,7 @@ function state(t) {
 
 on("finalized", (t) => {
   const s = state(t);
+  if (t.tier >= 1) walletInfo(t.creator).then((w) => { if (w.age_s != null || w.funder) q.setCreatorFunder.run(w.funder || null, w.age_s ?? null, w.funded_sol ?? null, t.mint); }).catch(() => {});
   for (const tr of t.trades) if (tr.isBuy && tr.slot <= t.slot + CFG.BUNDLE_SLOTS) s.cluster.add(tr.wallet);
   s.cTok = t.trades.filter((x) => s.cluster.has(x.wallet)).reduce((a, x) => a + (x.isBuy ? x.tokens : -x.tokens), 0);
 });

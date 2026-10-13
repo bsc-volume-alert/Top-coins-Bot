@@ -46,6 +46,13 @@ CREATE INDEX IF NOT EXISTS wb_ts ON wallet_buys(ts);
 CREATE TABLE IF NOT EXISTS token_peaks (mint TEXT PRIMARY KEY, create_ts INTEGER, peak_30m REAL DEFAULT 0, peak_24h REAL DEFAULT 0, until INTEGER);
 CREATE TABLE IF NOT EXISTS watch_wallets (wallet TEXT PRIMARY KEY, label TEXT, added_ts INTEGER, source TEXT);
 CREATE TABLE IF NOT EXISTS watch_creators (creator TEXT PRIMARY KEY, label TEXT, added_ts INTEGER);
+CREATE TABLE IF NOT EXISTS token_life (
+  mint TEXT, cp INTEGER, ts INTEGER, mc REAL, vol5m_usd REAL, buys5m INTEGER, sells5m INTEGER, buyers5m INTEGER, buyers_total INTEGER,
+  graduated INTEGER, top10_pct REAL, holders INTEGER, alive INTEGER, PRIMARY KEY (mint, cp)
+);
+CREATE INDEX IF NOT EXISTS life_cp ON token_life(cp, mc);
+CREATE TABLE IF NOT EXISTS big_buys (mint TEXT, wallet TEXT, ts INTEGER, age_s INTEGER, sol REAL, mc REAL, balance_sol REAL, venue TEXT);
+CREATE INDEX IF NOT EXISTS bb_mint ON big_buys(mint);
 `);
 // migrations (idempotent)
 for (const sql of [
@@ -108,6 +115,9 @@ for (const sql of [
   "ALTER TABLE paper_trades ADD COLUMN parent_id INTEGER",
   "ALTER TABLE paper_trades ADD COLUMN bs_ratio_entry REAL",
   "ALTER TABLE paper_trades ADD COLUMN buyers_entry INTEGER",
+  "ALTER TABLE tokens ADD COLUMN creator_funder TEXT",
+  "ALTER TABLE tokens ADD COLUMN creator_age_s INTEGER",
+  "ALTER TABLE tokens ADD COLUMN creator_funded_sol REAL",
   "ALTER TABLE tokens ADD COLUMN has_socials INTEGER",
   "ALTER TABLE tokens ADD COLUMN socials TEXT",
 ]) { try { db.exec(sql); } catch {} }
@@ -168,6 +178,10 @@ export const q = {
   addWatchCreator: db.prepare(`INSERT OR REPLACE INTO watch_creators (creator,label,added_ts) VALUES (?,?,?)`),
   delWatchCreator: db.prepare(`DELETE FROM watch_creators WHERE creator=?`),
   listWatchCreators: db.prepare(`SELECT creator,label FROM watch_creators ORDER BY added_ts`),
+  setCreatorFunder: db.prepare(`UPDATE tokens SET creator_funder=?, creator_age_s=?, creator_funded_sol=? WHERE mint=?`),
+  insLife: db.prepare(`INSERT OR REPLACE INTO token_life (mint,cp,ts,mc,vol5m_usd,buys5m,sells5m,buyers5m,buyers_total,graduated,top10_pct,holders,alive) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`),
+  setLifeHolders: db.prepare(`UPDATE token_life SET top10_pct=?, holders=? WHERE mint=? AND cp=?`),
+  insBigBuy: db.prepare(`INSERT INTO big_buys (mint,wallet,ts,age_s,sol,mc,balance_sol,venue) VALUES (?,?,?,?,?,?,?,?)`),
   addWatch: db.prepare(`INSERT OR REPLACE INTO watch_wallets (wallet,label,added_ts,source) VALUES (?,?,?,?)`),
   delWatch: db.prepare(`DELETE FROM watch_wallets WHERE wallet=?`),
   listWatch: db.prepare(`SELECT wallet,label,source FROM watch_wallets ORDER BY added_ts`),
