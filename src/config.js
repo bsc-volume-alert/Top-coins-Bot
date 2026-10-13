@@ -148,3 +148,5 @@ Object.assign(CFG, {
   CLIMB_MIN_MC: n("CLIMB_MIN_MC", 15_000),
   CLIMB_MAX_BURST_USD: n("CLIMB_MAX_BURST_USD", 30_000), // must never have had a 1m burst above this (else momentum's job)
 });
+// --- v0.14: runner autopsy ---
+Object.assign(CFG, { RUNNER_MIN_MC: n("RUNNER_MIN_MC", 1_000_000) });

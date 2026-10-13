@@ -13,6 +13,7 @@ import { momStats, strategySummary } from "./momentum.js";
 import { wbStats, leaderboardText, creatorsText } from "./wallets.js";
 import { cpStats } from "./copytrade.js";
 import { lcStats } from "./lifecycle.js";
+import { runnersText } from "./runners.js";
 
 const v = JSON.parse(readFileSync(new URL("../package.json", import.meta.url))).version;
 console.log(`bundler-tracker v${v} starting (node ${process.version}) helius=${CFG.HELIUS_KEY ? "yes" : "no"}`);
@@ -69,5 +70,6 @@ async function digest() {
   await tg(txt);
   await tg(leaderboardText(7, 5));
   await tg(creatorsText(7, 5));
+  await tg(runnersText(24, 8));
 }
 setInterval(digest, 60_000);
