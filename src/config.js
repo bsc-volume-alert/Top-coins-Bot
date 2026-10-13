@@ -79,3 +79,17 @@ Object.assign(CFG, {
   SUMMARY_HOURS: n("SUMMARY_HOURS", 4),
   PS_RESOLVE_SOL: n("PS_RESOLVE_SOL", 100),
 });
+// --- v0.6: second wave, levels ---
+Object.assign(CFG, {
+  LEVELS_USD: s("LEVELS_USD", "69000,100000,250000,500000,1000000,2000000").split(",").map(Number),
+  LEVEL_SELL_PCT: n("LEVEL_SELL_PCT", 0.97),     // sell slice at 97% of each level
+  LEVEL_SLICE: n("LEVEL_SLICE", 0.25),           // 25% of position per level crossed (rest trails 60%)
+  WALL_WARN_PCT: n("WALL_WARN_PCT", 15),         // warn if next level within this % above entry MC
+  SW_FADE_FRAC: n("SW_FADE_FRAC", 0.25),         // first wave faded: 60s inflow < this × wave peak
+  SW_QUIET_MIN: n("SW_QUIET_MIN", 5),            // ...for at least this long
+  SW_CLUSTER_FLAT_MIN: n("SW_CLUSTER_FLAT_MIN", 5), // cluster net outflow unchanged for this long
+  SW_INFLOW_SOL: n("SW_INFLOW_SOL", 8),          // second wave: 60s inflow back over this
+  SW_INFLOW_WALLETS: n("SW_INFLOW_WALLETS", 6),  // ...from this many distinct new wallets
+  SW_WINDOW_MIN: n("SW_WINDOW_MIN", 30),         // second wave must happen within tracking window
+  MOM_REENTRY_RECLAIM: n("MOM_REENTRY_RECLAIM", 1), // re-entry must reclaim the last rejected level
+});

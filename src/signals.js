@@ -6,6 +6,7 @@ import { walletInfo, rpcUsed } from "./rpc.js";
 import { solUsdCached } from "./price.js";
 import { tg } from "./telegram.js";
 import { getSocials, socialsLine } from "./socials.js";
+import { nextLevel, wallWarning, levelsStep, levelsFinal, newLevels } from "./levels.js";
 
 export const sig = { handoffs: 0, entries: 0, closes: 0, graduations: 0 };
 const S = new Map(); // mint -> state
@@ -14,7 +15,7 @@ function state(t) {
   let s = S.get(t.mint);
   if (!s) {
     s = { cluster: new Set([t.creator]), cIn: 0, cOut: 0, oIn: 0, oOut: 0, oBuyers: new Set(), recentSells: [],
-      handoffs: 0, handoffAlerted: false, leaveAlerted: false, win: [], pos: null, lastFlush: 0, buys: 0, sells: 0, buyersAt: {} };
+      handoffs: 0, handoffAlerted: false, leaveAlerted: false, win: [], pos: null, lastFlush: 0, buys: 0, sells: 0, buyersAt: {}, wavePeakIn: 0, fadeSince: 0, outflowAt: 0, outflowTs: 0, wave1PeakMc: 0, sw: null, swDone: false, seenBuyers: new Set() };
     S.set(t.mint, s);
   }
   return s;
@@ -67,13 +68,33 @@ function afterTrade(t, s, tr, isCluster) {
     s.win.push({ ts: now, sol: tr.sol, w: tr.wallet, c: isCluster });
     while (s.win.length && now - s.win[0].ts > CFG.INFLOW_WINDOW_S) s.win.shift();
   }
-  // entry trigger
+  const sol60 = s.win.reduce((a, x) => a + x.sol, 0);
+  if (sol60 > s.wavePeakIn) s.wavePeakIn = sol60;
+  if (t.lastMc > s.wave1PeakMc && now - t.ts <= CFG.ENTRY_WINDOW_MIN * 60) s.wave1PeakMc = t.lastMc;
+  // entry trigger (early)
   if (!s.pos && t.finalized && !t.graduated && now - t.ts <= CFG.ENTRY_WINDOW_MIN * 60) {
-    const sol = s.win.reduce((a, x) => a + x.sol, 0);
     const wallets = new Set(s.win.map((x) => x.w)).size;
-    if (sol >= CFG.INFLOW_SOL && wallets >= CFG.INFLOW_WALLETS) openPaper(t, s, tr, sol, wallets);
+    if (sol60 >= CFG.INFLOW_SOL && wallets >= CFG.INFLOW_WALLETS) openPaper(t, s, tr, sol60, wallets, "early");
   }
   if (s.pos) updatePaper(t, s, tr);
+  // second wave: first wave faded, cluster finished selling, buyers return
+  if (!s.swDone && t.finalized && !t.graduated && now - t.ts > CFG.ENTRY_WINDOW_MIN * 60 && now - t.ts <= CFG.SW_WINDOW_MIN * 60 && s.wavePeakIn >= CFG.INFLOW_SOL) {
+    const faded = sol60 < CFG.SW_FADE_FRAC * s.wavePeakIn;
+    if (faded) { if (!s.fadeSince) s.fadeSince = now; }
+    const outflow = s.cOut - s.cIn;
+    if (Math.abs(outflow - s.outflowAt) > 0.5) { s.outflowAt = outflow; s.outflowTs = now; }
+    const quietLong = s.fadeSince && now - s.fadeSince >= CFG.SW_QUIET_MIN * 60;
+    const clusterFlat = now - (s.outflowTs || t.ts) >= CFG.SW_CLUSTER_FLAT_MIN * 60;
+    if (s.fadeSince && quietLong && clusterFlat && !faded) {
+      const fresh = s.win.filter((x) => x.isBuy !== false && !s.seenBuyers.has(x.w)).map((x) => x.w);
+      const wallets = new Set(fresh).size;
+      if (sol60 >= CFG.SW_INFLOW_SOL && wallets >= CFG.SW_INFLOW_WALLETS && (!s.pos || s.pos.closed)) {
+        s.swDone = true; openPaper(t, s, tr, sol60, wallets, "secondwave");
+      }
+    }
+    if (!faded && s.fadeSince && !quietLong) s.fadeSince = 0; // bounce too soon, reset
+  }
+  if (tr.isBuy && now - t.ts <= CFG.ENTRY_WINDOW_MIN * 60) s.seenBuyers.add(tr.wallet);
   // cluster leaving alert (tier-1 only)
   if (t.tier >= 1 && t.bundle && !s.leaveAlerted && s.cOut - s.cIn > (CFG.EXIT_OUTFLOW_PCT / 100) * t.bundle.sol) {
     s.leaveAlerted = true; // logged via exit variants; no alert (operators selling into the pump is expected)
@@ -87,15 +108,16 @@ function flush(t, s) {
   q.updFlows.run(s.cIn, s.cOut, s.oIn, s.oOut, s.oBuyers.size, s.handoffs, net(s), t.peakMc, t.lastMc, t.mint);
 }
 
-function openPaper(t, s, tr, inflowSol, wallets) {
+function openPaper(t, s, tr, inflowSol, wallets, strategy = "early") {
   const outsideShare = inflowSol > 0 ? s.win.filter((x) => !x.c).reduce((a, x) => a + x.sol, 0) / inflowSol : 0;
   const entryAge = tr.ts - t.ts;
   s.buyersAt.entry = s.oBuyers.size + s.cluster.size;
-  const r = q.insPaper.run(t.mint, t.name, tr.ts, t.lastMc, tr.price, t.bundle?.pct ?? 0, t.bundle?.sol ?? 0, s.handoffs, t.tier, t.factory ? 1 : 0, inflowSol, wallets, outsideShare, entryAge, t.lastMc);
-  s.pos = { id: r.lastInsertRowid, entry: tr.price, entryMc: t.lastMc, entryTs: tr.ts, peak: tr.price, x: {}, closed: false, msgId: null, alerted: false, half: false, s3: false };
+  const r = q.insPaper.run(t.mint, t.name, tr.ts, t.lastMc, tr.price, t.bundle?.pct ?? 0, t.bundle?.sol ?? 0, s.handoffs, t.tier, t.factory ? 1 : 0, inflowSol, wallets, outsideShare, entryAge, t.lastMc, strategy, nextLevel(t.lastMc), s.wave1PeakMc || null);
+  s.pos = { id: r.lastInsertRowid, entry: tr.price, entryMc: t.lastMc, entryTs: tr.ts, peak: tr.price, x: {}, closed: false, msgId: null, alerted: false, half: false, s3: false, lv: newLevels(), strategy };
   t.hold = true; sig.entries++;
-  setTimeout(() => closePaper(t, s, "time"), CFG.MAX_HOLD_MIN * 60_000);
-  const strong = t.tier >= 1 || (inflowSol >= CFG.ALERT_INFLOW_SOL && wallets >= CFG.ALERT_INFLOW_WALLETS);
+  const pRef = s.pos;
+  setTimeout(() => closePaper(t, s, "time", pRef), CFG.MAX_HOLD_MIN * 60_000);
+  const strong = strategy === "secondwave" || t.tier >= 1 || (inflowSol >= CFG.ALERT_INFLOW_SOL && wallets >= CFG.ALERT_INFLOW_WALLETS);
   const p = s.pos;
   getSocials(t.mint, t.uri).then(async (soc) => {
     const socStr = JSON.stringify({ t: soc.twitter, w: soc.website, k: soc.tiktok, g: soc.telegram });
@@ -105,17 +127,20 @@ function openPaper(t, s, tr, inflowSol, wallets) {
     if (!alert) return;
     p.alerted = true;
     const nowMc = t.lastMc, chg = p.entryMc > 0 ? ((nowMc / p.entryMc - 1) * 100).toFixed(0) : "0";
-    p.msgId = await tg(`🟢 <b>PAPER ENTRY</b> — ${esc(t.name)} ($${esc(t.symbol)})${t.factory ? " ⚠️factory" : ""}\n` +
-      `MC <b>$${fmt(p.entryMc)}</b> · ${entryAge}s after launch · now $${fmt(nowMc)} (${chg >= 0 ? "+" : ""}${chg}%)\n` +
+    const wall = wallWarning(p.entryMc);
+    const head = strategy === "secondwave" ? "🌊 <b>SECOND WAVE</b>" : "🟢 <b>PAPER ENTRY</b>";
+    const waveStr = strategy === "secondwave" && s.wave1PeakMc ? ` · wave-1 peak $${fmt(s.wave1PeakMc)} (${((p.entryMc / s.wave1PeakMc - 1) * 100).toFixed(0)}% from it)` : "";
+    p.msgId = await tg(`${head} — ${esc(t.name)} ($${esc(t.symbol)})${t.factory ? " ⚠️factory" : ""}\n` +
+      `MC <b>$${fmt(p.entryMc)}</b> · ${entryAge}s after launch · now $${fmt(nowMc)} (${chg >= 0 ? "+" : ""}${chg}%)${waveStr}${wall ? "\n" + wall : ""}\n` +
       `${socialsLine(soc)}\n` +
       `Inflow: <b>${inflowSol.toFixed(1)} SOL</b> / ${wallets} wallets in ${CFG.INFLOW_WINDOW_S}s · buys ${s.buys} / sells ${s.sells}\n` +
       `Bundle ${t.bundle?.pct.toFixed(0) ?? 0}% · ${t.bundle?.sol.toFixed(1) ?? 0} SOL · hand-offs ${s.handoffs}\n${links(t.mint)}`);
-    for (const m of CFG.SCORECARD_MIN) setTimeout(() => scorecard(t, s, m), m * 60_000);
+    for (const m of CFG.SCORECARD_MIN) setTimeout(() => scorecard(t, s, m, p), m * 60_000);
   }).catch((e) => console.error("[socials]", e.message));
 }
 
-function scorecard(t, s, m) {
-  const p = s.pos; if (!p) return;
+function scorecard(t, s, m, p = s.pos) {
+  if (!p) return;
   const px = t.trades.at(-1)?.price ?? p.entry, mult = px / p.entry, peakMult = p.peak / p.entry;
   const buyers = s.oBuyers.size + s.cluster.size;
   const prevBuyers = s.buyersAt[m === CFG.SCORECARD_MIN[0] ? "entry" : CFG.SCORECARD_MIN[0]] ?? s.buyersAt.entry ?? 0;
@@ -150,26 +175,28 @@ function updatePaper(t, s, tr) {
   if (x.ladder == null && fromPeak <= -0.60) x.ladder = (p.half ? 0.5 : 0) + (p.s3 ? 0.75 : 0) + (1 - (p.half ? 0.25 : 0) - (p.s3 ? 0.25 : 0)) * mult;
   if (x.cluster == null && t.bundle && s.cOut - s.cIn > (CFG.EXIT_OUTFLOW_PCT / 100) * Math.max(t.bundle.sol, 1)) x.cluster = mult;
   if (t.graduated && x.grad == null) x.grad = mult;
+  x.levels = levelsStep(p.lv, p.entryMc, t.lastMc, mult, fromPeak);
   const peakMult = p.peak / p.entry;
-  q.updPaper.run(t.peakMc, peakMult, x.cluster ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tp ?? null, x.time ?? null, x.grad ?? null, null, null, null, null, null, 0, x.tsl80 ?? null, x.half60 ?? null, x.twophase ?? null, x.ladder ?? null, p.id);
-  if (t.graduated) closePaper(t, s, "graduated");
-  else if (x.tsl60 != null && x.cluster != null) closePaper(t, s, "all-exits-hit");
+  q.updPaper.run(t.peakMc, peakMult, x.cluster ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tp ?? null, x.time ?? null, x.grad ?? null, null, null, null, null, null, 0, x.tsl80 ?? null, x.half60 ?? null, x.twophase ?? null, x.ladder ?? null, x.levels ?? null, p.id);
+  if (t.graduated) closePaper(t, s, "graduated", p);
+  else if (x.tsl60 != null && x.cluster != null) closePaper(t, s, "all-exits-hit", p);
 }
 
-function closePaper(t, s, reason) {
-  const p = s.pos; if (!p || p.closed) return;
+function closePaper(t, s, reason, p = s.pos) {
+  if (!p || p.closed) return;
   p.closed = true; p.closeReason = reason; t.hold = false; sig.closes++;
   const px = t.trades.at(-1)?.price ?? p.entry; const mult = px / p.entry; const x = p.x;
   if (x.time == null) x.time = mult;
   if (x.half60 == null) x.half60 = p.half ? 1 + 0.5 * mult : mult;
   if (x.twophase == null) x.twophase = p.half ? 1 + 0.5 * mult : mult;
   if (x.ladder == null) x.ladder = (p.half ? 0.5 : 0) + (p.s3 ? 0.75 : 0) + (1 - (p.half ? 0.25 : 0) - (p.s3 ? 0.25 : 0)) * mult;
+  x.levels = levelsFinal(p.lv, mult);
   const peakMult = p.peak / p.entry;
   const pnl = (v) => (v == null ? "—" : `${((v - 1) * 100).toFixed(0)}%`);
-  q.updPaper.run(t.peakMc, peakMult, x.cluster ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tp ?? null, x.time, x.grad ?? null, Math.floor(Date.now() / 1000), t.lastMc, px, reason, (x.time - 1) * 100, 1, x.tsl80 ?? null, x.half60, x.twophase, x.ladder, p.id);
-  if (p.alerted) tg(`${mult >= 1 ? "✅" : "🔴"} <b>PAPER CLOSE</b> — ${esc(t.name)} (${reason})\n` +
+  q.updPaper.run(t.peakMc, peakMult, x.cluster ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tp ?? null, x.time, x.grad ?? null, Math.floor(Date.now() / 1000), t.lastMc, px, reason, (x.time - 1) * 100, 1, x.tsl80 ?? null, x.half60, x.twophase, x.ladder, x.levels, p.id);
+  if (p.alerted) tg(`${mult >= 1 ? "✅" : "🔴"} <b>${p.strategy === "secondwave" ? "SECOND WAVE CLOSE" : "PAPER CLOSE"}</b> — ${esc(t.name)} (${reason})\n` +
      `Entry $${fmt(p.entryMc)} → now $${fmt(t.lastMc)} · peak <b>${peakMult.toFixed(2)}x</b>\n` +
-     `½@2x+60% <b>${pnl(x.half60)}</b> · 2-phase ${pnl(x.twophase)} · ladder ${pnl(x.ladder)}\n2x-out ${pnl(x.tp)} · trail40 ${pnl(x.tsl40)} · trail60 ${pnl(x.tsl60)} · trail80 ${pnl(x.tsl80)} · cluster ${pnl(x.cluster)} · grad ${pnl(x.grad)} · hold ${pnl(x.time)}\n` +
+     `½@2x+60% <b>${pnl(x.half60)}</b> · 2-phase ${pnl(x.twophase)} · ladder ${pnl(x.ladder)} · levels ${pnl(x.levels)}\n2x-out ${pnl(x.tp)} · trail40 ${pnl(x.tsl40)} · trail60 ${pnl(x.tsl60)} · trail80 ${pnl(x.tsl80)} · cluster ${pnl(x.cluster)} · grad ${pnl(x.grad)} · hold ${pnl(x.time)}\n` +
      `Hand-offs ${s.handoffs} · outside in ${s.oIn.toFixed(1)} SOL / ${s.oBuyers.size} buyers · buys ${s.buys} / sells ${s.sells} · cluster net ${net(s).toFixed(1)} SOL`, { replyTo: p.msgId });
 }
 
