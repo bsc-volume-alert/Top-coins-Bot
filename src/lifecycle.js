@@ -11,11 +11,12 @@ export const lc = { samples: 0, holderSnaps: 0, bigBuys: 0, tracked: 0 };
 const L = new Map(); // mint -> { createTs, w5:[{ts,sol,b,w}], buyers:Set, lastMc, lastTs, graduated, next: idx }
 let holderBudget = 0, balBudget = 0, day = new Date().getUTCDate();
 const balCache = new Map();
+const START_TS = Math.floor(Date.now() / 1000);
 const resetDay = () => { const d = new Date().getUTCDate(); if (d !== day) { day = d; holderBudget = 0; balBudget = 0; } };
 
 function st(mint, createTs) {
   let s = L.get(mint);
-  if (!s && createTs) { s = { createTs, w5: [], buyers: new Set(), lastMc: 0, lastTs: 0, graduated: 0, next: 0, cp: {}, maxBurst: 0, lastPx: 0, climbed: false }; L.set(mint, s); }
+  if (!s && createTs && createTs >= START_TS) { s = { createTs, w5: [], buyers: new Set(), lastMc: 0, lastTs: 0, graduated: 0, next: 0, cp: {}, maxBurst: 0, lastPx: 0, climbed: false }; L.set(mint, s); }
   return s;
 }
 function trade(mint, createTs, tr, mc, graduated, venue) {
