@@ -1,12 +1,15 @@
 // v0.3: cluster tracking, hand-off detection, early-inflow paper entries, parallel paper exits.
 import { CFG } from "./config.js";
 import { db, q } from "./db.js";
-import { on, esc, fmt, links } from "./launch-monitor.js";
+import { on, esc, fmt, links, live } from "./launch-monitor.js";
+const liveToken = (m) => live.get(m);
 import { walletInfo, rpcUsed } from "./rpc.js";
 import { solUsdCached } from "./price.js";
 import { tg } from "./telegram.js";
 import { getSocials, socialsLine } from "./socials.js";
-import { nextLevel, wallWarning, levelsStep, levelsFinal, newLevels } from "./levels.js";
+import { nextLevel, wallWarning, levelsStep, levelsFinal, newLevels, volStopExit } from "./levels.js";
+import { watch as afterWatch, tick as afterTick } from "./aftercare.js";
+import { retrySocials } from "./socials.js";
 
 export const sig = { handoffs: 0, entries: 0, closes: 0, graduations: 0 };
 const S = new Map(); // mint -> state
@@ -15,7 +18,7 @@ function state(t) {
   let s = S.get(t.mint);
   if (!s) {
     s = { cluster: new Set([t.creator]), cIn: 0, cOut: 0, oIn: 0, oOut: 0, oBuyers: new Set(), recentSells: [],
-      handoffs: 0, handoffAlerted: false, leaveAlerted: false, win: [], pos: null, lastFlush: 0, buys: 0, sells: 0, buyersAt: {}, wavePeakIn: 0, fadeSince: 0, outflowAt: 0, outflowTs: 0, wave1PeakMc: 0, sw: null, swDone: false, seenBuyers: new Set() };
+      handoffs: 0, handoffAlerted: false, leaveAlerted: false, win: [], pos: null, lastFlush: 0, buys: 0, sells: 0, buyersAt: {}, wavePeakIn: 0, fadeSince: 0, outflowAt: 0, outflowTs: 0, wave1PeakMc: 0, sw: null, swDone: false, seenBuyers: new Set(), v5: [], psVol5: 0 };
     S.set(t.mint, s);
   }
   return s;
@@ -67,6 +70,8 @@ on("trade", (t, tr) => {
 
 function afterTrade(t, s, tr, isCluster) {
   const now = tr.ts;
+  s.v5.push({ ts: now, sol: tr.sol, b: tr.isBuy }); while (s.v5.length && now - s.v5[0].ts > 300) s.v5.shift();
+  afterTick(t.mint, tr.price, t.lastMc);
   // rolling inflow window (all buys after the create slot)
   if (tr.isBuy && tr.slot > t.slot + CFG.BUNDLE_SLOTS) {
     s.win.push({ ts: now, sol: tr.sol, w: tr.wallet, c: isCluster });
@@ -107,6 +112,8 @@ function afterTrade(t, s, tr, isCluster) {
 }
 
 const net = (s) => s.cIn - s.cOut;
+const vol5Usd = (s) => (s.psVol5 || s.v5.reduce((a, x) => a + x.sol, 0) * solUsdCached());
+const buySellUsd = (s) => s.psBS || [s.v5.filter((x) => x.b).reduce((a, x) => a + x.sol, 0) * solUsdCached(), s.v5.filter((x) => !x.b).reduce((a, x) => a + x.sol, 0) * solUsdCached()];
 const age = (t) => { const a = Math.floor(Date.now() / 1000) - t.ts; return a < 90 ? `${a}s` : `${Math.floor(a / 60)}m`; };
 function flush(t, s) {
   q.updFlows.run(s.cIn, s.cOut, s.oIn, s.oOut, s.oBuyers.size, s.handoffs, net(s), t.peakMc, t.lastMc, t.mint);
@@ -119,6 +126,8 @@ function openPaper(t, s, tr, inflowSol, wallets, strategy = "early") {
   const r = q.insPaper.run(t.mint, t.name, tr.ts, t.lastMc, tr.price, t.bundle?.pct ?? 0, t.bundle?.sol ?? 0, s.handoffs, t.tier, t.factory ? 1 : 0, inflowSol, wallets, outsideShare, entryAge, t.lastMc, strategy, nextLevel(t.lastMc), s.wave1PeakMc || null);
   s.pos = { id: r.lastInsertRowid, entry: tr.price, entryMc: t.lastMc, entryTs: tr.ts, peak: tr.price, x: {}, closed: false, msgId: null, alerted: false, half: false, s3: false, lv: newLevels(), strategy, m1: { hit: false } };
   q.setPaperExtra.run(heldPct(s), strategy, r.lastInsertRowid);
+  s.pos.volAtEntry = vol5Usd(s); q.setVolEntry.run(s.pos.volAtEntry, r.lastInsertRowid);
+  afterWatch(t.mint, r.lastInsertRowid, tr.price, t.lastMc);
   t.hold = true; sig.entries++;
   const pRef = s.pos;
   setTimeout(() => closePaper(t, s, "time", pRef), CFG.MAX_HOLD_MIN * 60_000);
@@ -129,6 +138,7 @@ function openPaper(t, s, tr, inflowSol, wallets, strategy = "early") {
     q.setTokenSocials.run(soc.fetched ? (soc.ok ? 1 : 0) : null, socStr, t.mint);
     const alert = strong && (!CFG.ALERT_REQUIRE_SOCIALS || soc.ok || !soc.fetched);
     q.setPaperMeta.run(alert ? 1 : 0, socStr, soc.fetched ? (soc.ok ? 1 : 0) : null, p.id);
+    if (!soc.fetched) retrySocials(t.mint, t.uri, (s2) => { const str = JSON.stringify({ t: s2.twitter, w: s2.website, k: s2.tiktok, g: s2.telegram }); q.setTokenSocials.run(s2.ok ? 1 : 0, str, t.mint); q.setPaperSocials.run(str, s2.ok ? 1 : 0, p.id); if (p.msgId) tg(`socials (late): ${socialsLine(s2)}`, { replyTo: p.msgId }); });
     if (!alert) return;
     p.alerted = true;
     const nowMc = t.lastMc, chg = p.entryMc > 0 ? ((nowMc / p.entryMc - 1) * 100).toFixed(0) : "0";
@@ -182,11 +192,14 @@ function updatePaper(t, s, tr) {
   if (t.graduated && x.grad == null) x.grad = mult;
   x.levels = levelsStep(p.lv, p.entryMc, t.lastMc, mult, fromPeak);
   if (x.m1 == null) { if (t.lastMc >= CFG.M1_EXIT_USD) x.m1 = mult; else if (fromPeak <= -0.60) x.m1 = mult; }
-  if (x.m1vol == null) { const v5 = s.win.reduce((a, z) => a + z.sol, 0) * 5 * solUsdCached(); if (t.lastMc >= CFG.M1_EXIT_USD && v5 < CFG.M1_HOLD_VOL5M) x.m1vol = mult; else if (fromPeak <= -0.60) x.m1vol = mult; }
+  const v5u = vol5Usd(s);
+  if (x.m1vol == null) { if (t.lastMc >= CFG.M1_EXIT_USD && v5u < CFG.M1_HOLD_VOL5M) x.m1vol = mult; else if (fromPeak <= -0.60) x.m1vol = mult; }
+  if (x.volstop == null && fromPeak <= -0.60) { const [bu, su] = buySellUsd(s); if (volStopExit(fromPeak, v5u, bu, su, p.volAtEntry)) x.volstop = mult; }
   const peakMult = p.peak / p.entry;
-  q.updPaper.run(t.peakMc, peakMult, x.cluster ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tp ?? null, x.time ?? null, x.grad ?? null, null, null, null, null, null, 0, x.tsl80 ?? null, x.half60 ?? null, x.twophase ?? null, x.ladder ?? null, x.levels ?? null, x.m1 ?? null, x.m1vol ?? null, p.id);
-  if (t.graduated) closePaper(t, s, "graduated", p);
-  else if (x.tsl60 != null && x.cluster != null) closePaper(t, s, "all-exits-hit", p);
+  q.updPaper.run(t.peakMc, peakMult, x.cluster ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tp ?? null, x.time ?? null, x.grad ?? null, null, null, null, null, null, 0, x.tsl80 ?? null, x.half60 ?? null, x.twophase ?? null, x.ladder ?? null, x.levels ?? null, x.m1 ?? null, x.m1vol ?? null, x.volstop ?? null, p.id);
+  if (t.graduated && !p.handover) { if (CFG.GRAD_HANDOVER) { p.handover = true; q.setHandover.run(p.id); } else closePaper(t, s, "graduated", p); }
+  else if (!t.graduated && x.tsl60 != null && x.cluster != null && x.volstop != null) closePaper(t, s, "all-exits-hit", p);
+  else if (t.graduated && x.tsl80 != null) closePaper(t, s, "tsl80", p);
 }
 
 function closePaper(t, s, reason, p = s.pos) {
@@ -198,22 +211,33 @@ function closePaper(t, s, reason, p = s.pos) {
   if (x.twophase == null) x.twophase = p.half ? 1 + 0.5 * mult : mult;
   if (x.ladder == null) x.ladder = (p.half ? 0.5 : 0) + (p.s3 ? 0.75 : 0) + (1 - (p.half ? 0.25 : 0) - (p.s3 ? 0.25 : 0)) * mult;
   x.levels = levelsFinal(p.lv, mult);
-  if (x.m1 == null) x.m1 = mult; if (x.m1vol == null) x.m1vol = mult;
+  if (x.m1 == null) x.m1 = mult; if (x.m1vol == null) x.m1vol = mult; if (x.volstop == null) x.volstop = mult;
   const peakMult = p.peak / p.entry;
   const pnl = (v) => (v == null ? "—" : `${((v - 1) * 100).toFixed(0)}%`);
-  q.updPaper.run(t.peakMc, peakMult, x.cluster ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tp ?? null, x.time, x.grad ?? null, Math.floor(Date.now() / 1000), t.lastMc, px, reason, (x.time - 1) * 100, 1, x.tsl80 ?? null, x.half60, x.twophase, x.ladder, x.levels, x.m1, x.m1vol, p.id);
+  q.updPaper.run(t.peakMc, peakMult, x.cluster ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tp ?? null, x.time, x.grad ?? null, Math.floor(Date.now() / 1000), t.lastMc, px, reason, (x.time - 1) * 100, 1, x.tsl80 ?? null, x.half60, x.twophase, x.ladder, x.levels, x.m1, x.m1vol, x.volstop, p.id);
   if (p.alerted) tg(`${mult >= 1 ? "✅" : "🔴"} <b>${p.strategy === "secondwave" ? "SECOND WAVE CLOSE" : "PAPER CLOSE"}</b> — ${esc(t.name)} (${reason})\n` +
      `Entry $${fmt(p.entryMc)} → now $${fmt(t.lastMc)} · peak <b>${peakMult.toFixed(2)}x</b>\n` +
-     `½@2x+60% <b>${pnl(x.half60)}</b> · 2-phase ${pnl(x.twophase)} · ladder ${pnl(x.ladder)} · levels ${pnl(x.levels)}\n2x-out ${pnl(x.tp)} · trail40 ${pnl(x.tsl40)} · trail60 ${pnl(x.tsl60)} · trail80 ${pnl(x.tsl80)} · cluster ${pnl(x.cluster)} · grad ${pnl(x.grad)} · hold ${pnl(x.time)}\n` +
+     `½@2x+60% <b>${pnl(x.half60)}</b> · 2-phase ${pnl(x.twophase)} · ladder ${pnl(x.ladder)} · levels ${pnl(x.levels)} · vol-stop ${pnl(x.volstop)}\n2x-out ${pnl(x.tp)} · trail40 ${pnl(x.tsl40)} · trail60 ${pnl(x.tsl60)} · trail80 ${pnl(x.tsl80)} · cluster ${pnl(x.cluster)} · grad ${pnl(x.grad)} · hold ${pnl(x.time)}\n` +
      `Hand-offs ${s.handoffs} · outside in ${s.oIn.toFixed(1)} SOL / ${s.oBuyers.size} buyers · buys ${s.buys} / sells ${s.sells} · cluster net ${net(s).toFixed(1)} SOL · cluster holds ${heldPct(s).toFixed(0)}%`, { replyTo: p.msgId });
 }
 
 on("graduated", (t, tr) => {
   sig.graduations++;
   const p = S.get(t.mint)?.pos;
-  if (p?.alerted) tg(`🎓 <b>Graduated</b> — ${esc(t.name)} at ${age(t)} · MC $${fmt(t.lastMc)} · moving to PumpSwap (curve tracking ends)`, { replyTo: p.msgId });
+  if (p?.alerted) tg(`🎓 <b>Graduated</b> — ${esc(t.name)} at ${age(t)} · MC $${fmt(t.lastMc)} · now on PumpSwap, position continues`, { replyTo: p.msgId });
 });
 
 on("expire", (t) => { const s = S.get(t.mint); if (s) { flush(t, s); S.delete(t.mint); } });
 
+/** Called by the PumpSwap feed: continue curve positions after graduation. */
+export function pumpSwapTick(mint, tr, vol5Usd, bs) {
+  const s = S.get(mint); if (!s) return;
+  afterTick(mint, tr.price, tr.mc);
+  const p = s.pos; if (!p || p.closed || !p.handover) return;
+  const t = liveToken(mint); if (!t) return;
+  t.lastMc = tr.mc; if (tr.mc > t.peakMc) t.peakMc = tr.mc; s.psVol5 = vol5Usd; s.psBS = bs;
+  t.trades.push({ sig: tr.sig, slot: tr.slot, ts: tr.ts, wallet: tr.wallet, isBuy: tr.isBuy, sol: tr.sol, tokens: tr.tokens, price: tr.price });
+  if (t.trades.length > 2000) t.trades.splice(0, 1000);
+  updatePaper(t, s, { price: tr.price, ts: tr.ts });
+}
 export const sigStats = () => ({ ...sig, tracked: S.size, open: [...S.values()].filter((s) => s.pos && !s.pos.closed).length, rpc: rpcUsed() });

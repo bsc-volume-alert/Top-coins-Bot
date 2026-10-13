@@ -33,7 +33,7 @@ Object.assign(CFG, {
   FRESH_MAX_AGE_S: n("FRESH_MAX_AGE_S", 86400),// wallet first tx younger than this = fresh
   EXIT_OUTFLOW_PCT: n("EXIT_OUTFLOW_PCT", 20), // cluster net SOL outflow > this % of bundle SOL = exit
   TSL_PCT: n("TSL_PCT", 40),                   // paper exit: drop from peak
-  MAX_HOLD_MIN: n("MAX_HOLD_MIN", 120),
+  MAX_HOLD_MIN: n("MAX_HOLD_MIN", 360),
   RPC_DAILY_BUDGET: n("RPC_DAILY_BUDGET", 20000), // max credits/day for wallet lookups
 });
 // --- v0.3: early-inflow entry, parallel paper exits ---
@@ -98,4 +98,14 @@ Object.assign(CFG, {
   BURST_TRIGGER: n("BURST_TRIGGER", 1),           // 1-min burst is an entry trigger in its own right
   M1_EXIT_USD: n("M1_EXIT_USD", 970_000),         // "$1M all-out" sells at this MC
   M1_HOLD_VOL5M: n("M1_HOLD_VOL5M", 200_000),     // volume-aware: hold through $1M if 5m vol >= this
+});
+// --- v0.8 ---
+Object.assign(CFG, {
+  VOLSTOP_FRAC: n("VOLSTOP_FRAC", 0.5),       // grey zone: stay in if 5m vol >= this × vol at entry
+  VOLSTOP_EXIT_USD: n("VOLSTOP_EXIT_USD", 20_000),  // 5m vol below this = out
+  VOLSTOP_STAY_USD: n("VOLSTOP_STAY_USD", 50_000),  // 5m vol above this (and ratio ok) = stay
+  VOLSTOP_SELL_RATIO: n("VOLSTOP_SELL_RATIO", 1.6), // sells/buys (USD) above this = out
+  VOLSTOP_HARD: n("VOLSTOP_HARD", 0.80),      // ...but always out at -80%
+  AFTER_CLOSE_H: n("AFTER_CLOSE_H", 24),
+  GRAD_HANDOVER: n("GRAD_HANDOVER", 1),
 });

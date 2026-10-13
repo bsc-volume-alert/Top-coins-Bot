@@ -20,3 +20,12 @@ export function levelsStep(lv, entryMc, mc, mult, fromPeak) {
 }
 export const levelsFinal = (lv, mult) => lv.done ?? lv.realized + (1 - lv.sold) * mult;
 export const newLevels = () => ({ sold: 0, realized: 0, crossed: new Set(), done: null });
+
+/** vol-stop decision at <= -60% from peak. Returns true = exit now. */
+export function volStopExit(fromPeak, v5Usd, buyUsd, sellUsd, volAtEntry) {
+  if (fromPeak <= -CFG.VOLSTOP_HARD) return true;
+  const ratio = buyUsd > 0 ? sellUsd / buyUsd : Infinity;
+  if (v5Usd < CFG.VOLSTOP_EXIT_USD || ratio > CFG.VOLSTOP_SELL_RATIO * 1.0625) return true;   // ~1.7
+  if (v5Usd >= CFG.VOLSTOP_STAY_USD && ratio <= CFG.VOLSTOP_SELL_RATIO) return false;
+  return v5Usd < CFG.VOLSTOP_FRAC * (volAtEntry || 0);
+}
