@@ -8,12 +8,14 @@ import { handleTx, counters, live, startPriceLoop, fmt } from "./launch-monitor.
 import { solUsdCached } from "./price.js";
 import { sigStats } from "./signals.js";
 import { startCommands, reportText } from "./commands.js";
+import { startPumpSwap, ps } from "./pumpswap.js";
 
 const v = JSON.parse(readFileSync(new URL("../package.json", import.meta.url))).version;
 console.log(`bundler-tracker v${v} starting (node ${process.version}) helius=${CFG.HELIUS_KEY ? "yes" : "no"}`);
 startPriceLoop();
 let wsStatus = "init";
 const sub = subscribeLogs(handleTx, (s) => { wsStatus = s; console.log("[ws]", s); });
+if (CFG.PUMPSWAP_ENABLED) startPumpSwap((s) => console.log("[pumpswap]", s));
 
 await tg(`🟢 <b>Tracker online</b> v${v}\nFirehose: ${CFG.HELIUS_KEY ? "Helius" : "public RPC"} · prepared gate ≥${CFG.BUNDLE_PCT_MIN}% &amp; ≥${CFG.BUNDLE_SOL_MIN} SOL\nPaper entry: ≥${CFG.INFLOW_SOL} SOL / ≥${CFG.INFLOW_WALLETS} wallets in ${CFG.INFLOW_WINDOW_S}s, first ${CFG.ENTRY_WINDOW_MIN} min`);
 
@@ -30,6 +32,7 @@ setInterval(() => {
   lastC = { ...counters };
   const g = sigStats();
   console.log(`[1m] txs=${d.txs} creates=${d.creates} trades=${d.trades} tier1=${d.tier1} live=${live.size} open=${g.open} handoffs=${g.handoffs} rpc=${g.rpc} sol=$${solUsdCached().toFixed(2)} ws=${wsStatus}`);
+  if (CFG.PUMPSWAP_ENABLED) console.log(`[ps 1m] txs=${ps.txs} data=${ps.data} buys=${ps.buys} sells=${ps.sells} pools=${ps.pools} resolved=${ps.resolved} unknown=${ps.unknownPool} fail=${ps.lookupFail} ws↻=${ps.reconnects}`);
 }, 60_000);
 
 const hb = async () => {

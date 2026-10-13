@@ -58,3 +58,4 @@ Object.assign(CFG, {
   NO_NEW_WALLETS_MAX_BUYERS: n("NO_NEW_WALLETS_MAX_BUYERS", 15),
   DIGEST_HOUR_LOCAL: n("DIGEST_HOUR_LOCAL", 9),    // Europe/London
 });
+Object.assign(CFG, { PUMPSWAP_ENABLED: n("PUMPSWAP_ENABLED", 1) });
