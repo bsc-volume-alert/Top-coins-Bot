@@ -1,7 +1,31 @@
 import "./env.js";
 import { readFileSync } from "node:fs";
+import { CFG } from "./config.js";
+import { q } from "./db.js";
 import { tg } from "./telegram.js";
+import { subscribeLogs } from "./ws.js";
+import { handleTx, counters, live, startPriceLoop, fmt } from "./launch-monitor.js";
+import { solUsdCached } from "./price.js";
+
 const v = JSON.parse(readFileSync(new URL("../package.json", import.meta.url))).version;
-console.log(`bundler-tracker v${v} starting (node ${process.version})`);
-await tg(`🟢 <b>Tracker online</b> v${v}\nAuto-deploy pipeline confirmed. Modules coming next.`);
-setInterval(() => console.log("alive", new Date().toISOString()), 60_000);
+console.log(`bundler-tracker v${v} starting (node ${process.version}) helius=${CFG.HELIUS_KEY ? "yes" : "no"}`);
+startPriceLoop();
+let wsStatus = "init";
+const sub = subscribeLogs(handleTx, (s) => { wsStatus = s; console.log("[ws]", s); });
+
+await tg(`🟢 <b>Tracker online</b> v${v}\nFirehose: ${CFG.HELIUS_KEY ? "Helius" : "public RPC"} · gate: bundle ≥${CFG.BUNDLE_PCT_MIN}% &amp; ≥${CFG.BUNDLE_SOL_MIN} SOL`);
+
+let lastC = { ...counters };
+setInterval(() => {
+  const d = Object.fromEntries(Object.keys(counters).map((k) => [k, counters[k] - lastC[k]]));
+  lastC = { ...counters };
+  console.log(`[1m] txs=${d.txs} creates=${d.creates} trades=${d.trades} tier1=${d.tier1} live=${live.size} sol=$${solUsdCached().toFixed(2)} ws=${wsStatus}`);
+}, 60_000);
+
+const hb = async () => {
+  const since = Math.floor(Date.now() / 1000) - CFG.HEARTBEAT_MIN * 60;
+  const n = q.countSince.get(since), n1 = q.countTierSince.get(1, since);
+  await tg(`💓 <b>${CFG.HEARTBEAT_MIN}m</b> · launches ${n} · prepared ${n1} · trades ${counters.trades} · reconnects ${sub.stats().reconnects} · SOL $${solUsdCached().toFixed(0)}`);
+};
+setInterval(hb, CFG.HEARTBEAT_MIN * 60_000);
+process.on("unhandledRejection", (e) => console.error("[unhandled]", e));
