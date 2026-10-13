@@ -86,7 +86,7 @@ function expire(t) {
   emit("expire", t); live.delete(t.mint);
 }
 
-export const links = (m) => `<a href="https://pump.fun/coin/${m}">pump.fun</a> · <a href="https://axiom.trade/t/${m}">Axiom</a> · <a href="https://dexscreener.com/solana/${m}">DexScreener</a> · <a href="https://solscan.io/token/${m}">Solscan</a>\n<code>${m}</code>`;
+export const links = (m) => `<a href="https://fomo.family/tokens/solana/${m}">FOMO</a> · <a href="https://axiom.trade/t/${m}">Axiom</a> · <a href="https://dexscreener.com/solana/${m}">DexScreener</a> · <a href="https://solscan.io/token/${m}">Solscan</a>\n<code>${m}</code>`;
 export const esc = (s) => String(s ?? "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
 export const fmt = (n) => (n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : n.toFixed(0));
 export function startPriceLoop() { getSolUsd(); setInterval(getSolUsd, 60_000); }
