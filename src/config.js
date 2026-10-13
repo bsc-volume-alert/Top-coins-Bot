@@ -140,3 +140,11 @@ Object.assign(CFG, {
   BIGBUY_SOL: n("BIGBUY_SOL", 5),
   BIGBUY_BAL_DAILY_BUDGET: n("BIGBUY_BAL_DAILY_BUDGET", 2000),
 });
+// --- v0.13: climber (slow riser) ---
+Object.assign(CFG, {
+  CLIMB_STEP: n("CLIMB_STEP", 1.3),          // each checkpoint MC >= this × previous
+  CLIMB_CPS: s("CLIMB_CPS", "300,900,1800").split(",").map(Number), // stairs that must rise; entry at the last one
+  CLIMB_CPS2: s("CLIMB_CPS2", "900,1800,3600").split(",").map(Number), // second chance at 1h
+  CLIMB_MIN_MC: n("CLIMB_MIN_MC", 15_000),
+  CLIMB_MAX_BURST_USD: n("CLIMB_MAX_BURST_USD", 30_000), // must never have had a 1m burst above this (else momentum's job)
+});

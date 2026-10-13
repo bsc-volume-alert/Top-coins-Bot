@@ -5,6 +5,7 @@ import { on, live } from "./launch-monitor.js";
 import { onSwap } from "./pumpswap.js";
 import { rpc } from "./rpc.js";
 import { solUsdCached } from "./price.js";
+const climbListeners = []; export const onClimb = (fn) => climbListeners.push(fn);
 
 export const lc = { samples: 0, holderSnaps: 0, bigBuys: 0, tracked: 0 };
 const L = new Map(); // mint -> { createTs, w5:[{ts,sol,b,w}], buyers:Set, lastMc, lastTs, graduated, next: idx }
@@ -14,7 +15,7 @@ const resetDay = () => { const d = new Date().getUTCDate(); if (d !== day) { day
 
 function st(mint, createTs) {
   let s = L.get(mint);
-  if (!s && createTs) { s = { createTs, w5: [], buyers: new Set(), lastMc: 0, lastTs: 0, graduated: 0, next: 0 }; L.set(mint, s); }
+  if (!s && createTs) { s = { createTs, w5: [], buyers: new Set(), lastMc: 0, lastTs: 0, graduated: 0, next: 0, cp: {}, maxBurst: 0, lastPx: 0, climbed: false }; L.set(mint, s); }
   return s;
 }
 function trade(mint, createTs, tr, mc, graduated, venue) {
@@ -22,7 +23,8 @@ function trade(mint, createTs, tr, mc, graduated, venue) {
   const now = tr.ts || Math.floor(Date.now() / 1000);
   s.w5.push({ ts: now, sol: tr.sol, b: tr.isBuy, w: tr.wallet }); while (s.w5.length && now - s.w5[0].ts > 300) s.w5.shift();
   if (tr.isBuy) s.buyers.add(tr.wallet);
-  s.lastMc = mc; s.lastTs = now; if (graduated) s.graduated = 1;
+  s.lastMc = mc; s.lastTs = now; s.lastPx = tr.price; if (graduated) s.graduated = 1;
+  const v1 = s.w5.filter((x) => now - x.ts <= 60).reduce((a, x) => a + x.sol, 0) * solUsdCached(); if (v1 > s.maxBurst) s.maxBurst = v1;
   if (tr.isBuy && tr.sol >= CFG.BIGBUY_SOL) bigBuy(mint, tr, now - s.createTs, mc, venue);
   sample(mint, s, now);
 }
@@ -34,6 +36,8 @@ function sample(mint, s, now) {
     const vol = w.reduce((a, x) => a + x.sol, 0) * solUsdCached(), b = w.filter((x) => x.b).length, sl = w.length - b, by = new Set(w.filter((x) => x.b).map((x) => x.w)).size;
     const alive = now - s.lastTs <= 300 && w.length > 0 ? 1 : 0;
     q.insLife.run(mint, cp, now, s.lastMc, vol, b, sl, by, s.buyers.size, s.graduated, null, null, alive); lc.samples++;
+    s.cp[cp] = { mc: s.lastMc, buyers: s.buyers.size, b, sl, alive };
+    climbCheck(mint, s, cp, now);
     if (cp >= CFG.LIFE_HOLDERS_FROM_S && s.lastMc >= CFG.LIFE_HOLDERS_MIN_MC && alive) holders(mint, cp);
   }
 }
@@ -73,3 +77,21 @@ setInterval(() => {
   lc.tracked = L.size;
 }, 30_000);
 export const lcStats = () => ({ ...lc, holderBudget, balBudget });
+
+function stairs(s, cps) {
+  for (let i = 1; i < cps.length; i++) {
+    const a = s.cp[cps[i - 1]], b = s.cp[cps[i]];
+    if (!a || !b || !(b.mc >= CFG.CLIMB_STEP * a.mc) || !(b.buyers > a.buyers)) return false;
+  }
+  return true;
+}
+function climbCheck(mint, s, cp, now) {
+  if (s.climbed) return;
+  const last = s.cp[cp]; if (!last?.alive || last.mc < CFG.CLIMB_MIN_MC || s.maxBurst >= CFG.CLIMB_MAX_BURST_USD || !(last.b > last.sl)) return;
+  const set = cp === CFG.CLIMB_CPS.at(-1) ? CFG.CLIMB_CPS : cp === CFG.CLIMB_CPS2.at(-1) ? CFG.CLIMB_CPS2 : null;
+  if (!set || !stairs(s, set)) return;
+  s.climbed = true;
+  const m = q.tokenMeta.get(mint);
+  const steps = set.map((c) => `$${Math.round(s.cp[c].mc / 1000)}K`).join(" → ");
+  for (const fn of climbListeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: last.mc, ts: now, steps, buyers: last.buyers, cp }); } catch (e) { console.error("[climb]", e.message); } }
+}

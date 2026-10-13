@@ -4,6 +4,8 @@ import { q } from "./db.js";
 import { on } from "./launch-monitor.js";
 import { onSwap } from "./pumpswap.js";
 import { onCopy, onCreatorLaunch } from "./wallets.js";
+import { onClimb } from "./lifecycle.js";
+import { links } from "./launch-monitor.js";
 import { newExits, stepExits, finalExits, pc } from "./exits.js";
 import { watch as afterWatch } from "./aftercare.js";
 import { tg } from "./telegram.js";
@@ -13,16 +15,18 @@ import { solUsdCached } from "./price.js";
 const P = new Map(); // mint -> [{id, label, e, w5:[], closed, msgId}]
 export const cp = { entries: 0, closes: 0 };
 
-function openCopy(kind, who, mint, name, symbol, price, mc, ts) {
+function openCopy(kind, who, mint, name, symbol, price, mc, ts, note) {
   const r = q.insMom.run(mint, name, symbol, ts, mc, price, null, null, null, null, null, null, null, 0, 0, 0, 0, null, 0, 1, mc);
   q.setPaperExtra.run(null, kind + ":" + who, r.lastInsertRowid);
   q.setStrategy.run(kind, r.lastInsertRowid);
-  const pos = { id: r.lastInsertRowid, label: who, e: newExits(price, mc, 0), w5: [], closed: false, lastMc: mc, lastPx: price, name };
+  const pos = { id: r.lastInsertRowid, label: who, e: newExits(price, mc, 0), w5: [], closed: false, lastMc: mc, lastPx: price, name, kind };
+  if (kind === "climber") tg(`🪜 <b>CLIMBER</b> — ${esc(name)} ($${esc(symbol)})\nStairs: ${note.steps} · ${note.buyers} buyers · no burst · entry at +${Math.round(note.cp / 60)}m\nMC <b>$${fmt(mc)}</b>\n${links(mint)}`).then((id) => { pos.msgId = id; });
   const arr = P.get(mint) || []; arr.push(pos); P.set(mint, arr); cp.entries++;
   afterWatch(mint, pos.id, price, mc);
   setTimeout(() => close(mint, pos, "time"), CFG.MOM_MAX_HOLD_MIN * 60_000);
 }
 onCopy(({ wallet, label, mint, name, symbol, price, mc, ts }) => openCopy("copy", label || wallet.slice(0, 6), mint, name, symbol, price, mc, ts));
+onClimb((c) => { if (c.price > 0) openCopy("climber", `${Math.round(c.cp / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, c); });
 onCreatorLaunch(({ creator, label, mint, name, symbol, price, mc, ts }) => { if (price > 0) openCopy("copycreator", label || creator.slice(0, 6), mint, name, symbol, price, mc, ts); });
 
 function tick(mint, price, mc, sol, isBuy, ts) {
@@ -45,7 +49,7 @@ function close(mint, p, reason) {
   if (p.closed) return; p.closed = true; cp.closes++;
   const mult = p.lastPx / p.e.entry, v = finalExits(p.e, mult), peakMult = p.e.peak / p.e.entry, now = Math.floor(Date.now() / 1000);
   q.updMom.run(p.lastMc, peakMult, v.tp, v.tsl40, v.tsl60, v.tsl80, v.half60, v.twophase, v.ladder, v.time, now, p.lastMc, p.lastPx, reason, (v.time - 1) * 100, 1, v.levels, v.m1, v.m1vol, v.volstop, p.id);
-  tg(`${v.half60 >= 1 ? "✅" : "🔴"} <b>COPY CLOSE</b> — ${esc(p.label)} / ${esc(p.name)} (${reason}) · peak <b>${peakMult.toFixed(2)}x</b> · now ${mult.toFixed(2)}x\n½@2x+60%: <b>${pc(v.half60)}</b> · 2-phase ${pc(v.twophase)} · vol-stop ${pc(v.volstop)} · 2x-out ${pc(v.tp)} · trail40 ${pc(v.tsl40)} · hold ${pc(v.time)}`);
+  tg(`${v.half60 >= 1 ? "✅" : "🔴"} <b>${p.kind === "climber" ? "CLIMBER CLOSE" : p.kind === "copycreator" ? "COPY CREATOR CLOSE" : "COPY CLOSE"}</b> — ${esc(p.label)} / ${esc(p.name)} (${reason}) · peak <b>${peakMult.toFixed(2)}x</b> · now ${mult.toFixed(2)}x\n½@2x+60%: <b>${pc(v.half60)}</b> · 2-phase ${pc(v.twophase)} · vol-stop ${pc(v.volstop)} · 2x-out ${pc(v.tp)} · trail40 ${pc(v.tsl40)} · hold ${pc(v.time)}`, { replyTo: p.msgId });
   const arr = P.get(mint); if (arr && arr.every((z) => z.closed)) P.delete(mint);
 }
 export const cpStats = () => ({ ...cp, open: [...P.values()].flat().filter((p) => !p.closed).length });
