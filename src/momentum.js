@@ -61,7 +61,7 @@ onSwap((tr) => {
   if (usd <= 0) return;
   const v1 = s.w1.reduce((a, x) => a + x.usd, 0);
   const b1 = s.w1.filter((x) => x.b).length, s1 = s.w1.length - b1;
-  const burst = CFG.BURST_TRIGGER && v1 >= CFG.VOL1M_BURST_USD && b1 > s1;
+  const burst = CFG.BURST_TRIGGER && v1 >= CFG.VOL1M_BURST_USD && b1 > s1 && tr.mc >= CFG.BURST_MIN_MC && (() => { const m = q.tokenMeta.get(tr.mint); return !m?.create_ts || now - m.create_ts >= CFG.BURST_MIN_AGE_S; })();
   if (v5 < CFG.VOL5M_USD && !burst) return;
   const kind = v5 >= CFG.VOL5M_USD ? "vol5m" : "burst";
   if (tr.mc > CFG.MOM_MC_CAP || tr.mc <= 0) return;
@@ -100,6 +100,7 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
   const held = meta ? clusterHeld(mint) : null;
   q.setPaperExtra.run(held, kind + (reentry ? "-re" : ""), pos.id);
   if (reentry) { s.peakMc = tr.mc; s.rejectedLevel = null; }
+  try { const h = new Date(now * 1000).getUTCHours(); q.setFeatures.run(null, null, null, null, h, null, buyUsd > 0 ? buyUsd / Math.max(sellUsd, 1) : null, buyers, pos.id); } catch {}
   s.pos = pos; s.posPeakMc = tr.mc; if (!s.firstEntryPx) s.firstEntryPx = tr.price;
   pos.volAtEntry = v5; q.setVolEntry.run(v5, pos.id); afterWatch(mint, pos.id, tr.price, tr.mc);
   if (!soc.fetched) retrySocials(mint, null, (s2) => { const str = JSON.stringify({ t: s2.twitter, w: s2.website, k: s2.tiktok, g: s2.telegram }); q.setPaperSocials.run(str, s2.ok ? 1 : 0, pos.id); if (pos.msgId) tg(`socials (late): ${socialsLine(s2)}`, { replyTo: pos.msgId }); });
@@ -194,7 +195,7 @@ export function strategySummary(hours) {
   if (!rows.length) return `📋 <b>${hours}h summary</b> — no paper trades`;
   let t = `📋 <b>${hours}h summary</b> · ${new Date().toISOString().slice(11, 16)} UTC\n`;
   for (const r of rows) {
-    t += `\n<b>${r.strategy === "early" ? "EARLY (curve)" : r.strategy === "secondwave" ? "SECOND WAVE (curve)" : r.strategy === "copy" ? "COPY (watched wallets)" : "MOMENTUM (volume)"}</b> — ${r.n} trades · ${r.hit2x} hit 2x (${r.n ? ((r.hit2x / r.n) * 100).toFixed(0) : 0}%) · avg peak ${(r.peak || 1).toFixed(2)}x\n`;
+    t += `\n<b>${r.strategy === "early" ? "EARLY (curve)" : r.strategy === "secondwave" ? "SECOND WAVE (curve)" : r.strategy === "copy" ? "COPY (watched wallets)" : r.strategy === "confirm" ? "CONFIRMED (+5m, curve)" : "MOMENTUM (volume)"}</b> — ${r.n} trades · ${r.hit2x} hit 2x (${r.n ? ((r.hit2x / r.n) * 100).toFixed(0) : 0}%) · avg peak ${(r.peak || 1).toFixed(2)}x\n`;
     t += `½@2x+60% ${pc(r.xh)} · 2-phase ${pc(r.x2p)} · ladder ${pc(r.xl)} · levels ${pc(r.xlv)} · $1M-out ${pc(r.xm1)} · $1M-vol ${pc(r.xm1v)} · vol-stop ${pc(r.xvs)}\n2x-out ${pc(r.xtp)} · trail40 ${pc(r.x40)} · trail60 ${pc(r.x60)} · trail80 ${pc(r.x80)} · hold ${pc(r.xt)}\nran after entry (24h): avg peak ${(r.ap || 1).toFixed(2)}x · ${r.ap3 || 0} went 3x+\n`;
   }
   return t;

@@ -120,3 +120,14 @@ Object.assign(CFG, {
   WB_RETAIN_D: n("WB_RETAIN_D", 30),
   WB_COPY_MIN_SOL: n("WB_COPY_MIN_SOL", 0.2),  // watched wallet must buy at least this to trigger a copy
 });
+// --- v0.10: confirmation strategy, burst filter, analysis features ---
+Object.assign(CFG, {
+  ALERT_REQUIRE_SOCIALS: n("ALERT_REQUIRE_SOCIALS", 0),  // log socials, don't gate alerts (data didn't support the gate)
+  CONF_MIN_S: n("CONF_MIN_S", 240),       // confirmation window after raw trigger: from
+  CONF_MAX_S: n("CONF_MAX_S", 600),       // ...to
+  CONF_MC_MULT: n("CONF_MC_MULT", 1.5),   // MC must be >= this × raw-entry MC
+  CONF_BS_RATIO: n("CONF_BS_RATIO", 1.3), // buys/sells over last 5m
+  CONF_BUYERS_GROW: n("CONF_BUYERS_GROW", 10), // new distinct buyers in last 5m
+  BURST_MIN_AGE_S: n("BURST_MIN_AGE_S", 600),
+  BURST_MIN_MC: n("BURST_MIN_MC", 60_000),
+});
