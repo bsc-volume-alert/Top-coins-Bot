@@ -19,6 +19,9 @@ function st(mint) {
 }
 setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [m, s] of T) if (!s.pos && now - s.lastTs > 900 && !s.trades.length) T.delete(m); mom.tracked = T.size; }, 60_000);
 
+const qHeld = db.prepare(`SELECT COALESCE(SUM(CASE WHEN tr.is_buy=1 THEN tr.tokens ELSE -tr.tokens END),0) tok FROM trades tr JOIN cluster_wallets c ON c.mint=tr.mint AND c.wallet=tr.wallet WHERE tr.mint=?`);
+function clusterHeld(mint) { try { return Math.max(0, qHeld.get(mint).tok / CFG.TOTAL_SUPPLY) * 100; } catch { return null; } }
+
 async function dexInfo(mint) {
   if (dexCache.has(mint)) return dexCache.get(mint);
   let info = { name: null, symbol: null, createdAt: null, socials: null };
@@ -51,7 +54,11 @@ onSwap((tr) => {
   if (s.pos) updatePos(tr.mint, s, tr.price, now);
   if (usd <= 0) return;
   const v5 = s.w5.reduce((a, x) => a + x.usd, 0);
-  if (v5 < CFG.VOL5M_USD) return;
+  const v1 = s.w1.reduce((a, x) => a + x.usd, 0);
+  const b1 = s.w1.filter((x) => x.b).length, s1 = s.w1.length - b1;
+  const burst = CFG.BURST_TRIGGER && v1 >= CFG.VOL1M_BURST_USD && b1 > s1;
+  if (v5 < CFG.VOL5M_USD && !burst) return;
+  const kind = v5 >= CFG.VOL5M_USD ? "vol5m" : "burst";
   if (tr.mc > CFG.MOM_MC_CAP || tr.mc <= 0) return;
   if (now - s.lastAlert < CFG.MOM_COOLDOWN_MIN * 60) return;
   if (s.pos && !s.pos.closed) return;
@@ -64,10 +71,10 @@ onSwap((tr) => {
     if (CFG.MOM_REENTRY_RECLAIM && s.rejectedLevel && tr.mc < s.rejectedLevel) return; // must reclaim the level that rejected it
   }
   s.lastAlert = now;
-  trigger(tr.mint, s, tr, v5, now).catch((e) => console.error("[momentum]", e.message));
+  trigger(tr.mint, s, tr, v5, now, kind).catch((e) => console.error("[momentum]", e.message));
 });
 
-async function trigger(mint, s, tr, v5, now) {
+async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
   const v1 = s.w1.reduce((a, x) => a + x.usd, 0);
   const buys = s.w5.filter((x) => x.b), sells = s.w5.filter((x) => !x.b);
   const buyUsd = buys.reduce((a, x) => a + x.usd, 0), sellUsd = sells.reduce((a, x) => a + x.usd, 0);
@@ -83,8 +90,10 @@ async function trigger(mint, s, tr, v5, now) {
   const alert = !CFG.ALERT_REQUIRE_SOCIALS || soc.ok || !soc.fetched;
   const r = q.insMom.run(mint, name || mint.slice(0, 8), symbol || "", now, tr.mc, tr.price, meta?.bundle_pct ?? null, meta?.bundle_sol ?? null, meta?.handoffs ?? null, meta?.tier ?? null, meta?.factory ?? null,
     soc.fetched ? (soc.ok ? 1 : 0) : null, JSON.stringify({ t: soc.twitter, w: soc.website, k: soc.tiktok, g: soc.telegram }), v5, v1, buys.length, sells.length, ageS, reentry, alert ? 1 : 0, tr.mc);
-  const pos = { id: r.lastInsertRowid, entry: tr.price, entryMc: tr.mc, entryTs: now, peak: tr.price, x: {}, lad: { s2: false, s3: false }, tp: { half: false, twoHalf: false }, closed: false, msgId: null, alerted: alert, name: name || mint.slice(0, 8), lv: newLevels() };
+  const pos = { id: r.lastInsertRowid, entry: tr.price, entryMc: tr.mc, entryTs: now, peak: tr.price, x: {}, lad: { s2: false, s3: false }, tp: { half: false, twoHalf: false }, closed: false, msgId: null, alerted: alert, name: name || mint.slice(0, 8), lv: newLevels(), kind };
   q.setNextLevel.run(nextLevel(tr.mc), pos.id);
+  const held = meta ? clusterHeld(mint) : null;
+  q.setPaperExtra.run(held, kind + (reentry ? "-re" : ""), pos.id);
   if (reentry) { s.peakMc = tr.mc; s.rejectedLevel = null; }
   s.pos = pos; s.posPeakMc = tr.mc; if (!s.firstEntryPx) s.firstEntryPx = tr.price;
   mom.entries++; if (reentry) mom.reentries++;
@@ -92,13 +101,14 @@ async function trigger(mint, s, tr, v5, now) {
   if (!alert) return;
   mom.alerts++;
   const hot = v5 >= CFG.VOL5M_HOT_USD, burst = v1 >= CFG.VOL1M_BURST_USD;
+  const heldStr = held != null ? ` · cluster holds <b>${held.toFixed(0)}%</b>` : "";
   const ageStr = ageS == null ? "age ?" : ageS < 3600 ? `${Math.floor(ageS / 60)}m old` : ageS < 86400 ? `${(ageS / 3600).toFixed(1)}h old` : `${(ageS / 86400).toFixed(1)}d old`;
   const wall = wallWarning(tr.mc);
   const reclaimStr = reentry && s.rejectedLevel ? ` · reclaimed $${fmt(s.rejectedLevel)}` : "";
   const bundleStr = meta?.bundle_pct != null ? `Bundle ${meta.bundle_pct.toFixed(0)}% · ${meta.bundle_sol.toFixed(1)} SOL · hand-offs ${meta.handoffs} · cluster net ${((meta.cluster_sol_in || 0) - (meta.cluster_sol_out || 0)).toFixed(1)} SOL` : "Bundle: launched before tracker (no data)";
-  pos.msgId = await tg(`${hot ? "🔥" : "📈"} <b>VOLUME${reentry ? " RE-ENTRY " + reentry : ""}</b> — ${esc(name || mint.slice(0, 8))} ($${esc(symbol || "?")})${burst ? " ⚡" : ""}${meta?.factory ? " ⚠️factory" : ""}\n` +
+  pos.msgId = await tg(`${kind === "burst" ? "⚡" : hot ? "🔥" : "📈"} <b>${kind === "burst" ? "BURST" : "VOLUME"}${reentry ? " RE-ENTRY " + reentry : ""}</b> — ${esc(name || mint.slice(0, 8))} ($${esc(symbol || "?")})${burst ? " ⚡" : ""}${meta?.factory ? " ⚠️factory" : ""}\n` +
     `5m vol <b>$${fmt(v5)}</b> (1m $${fmt(v1)}) · buys ${buys.length} / sells ${sells.length} · $${fmt(buyUsd)} in / $${fmt(sellUsd)} out · ${buyers} buyers\n` +
-    `MC <b>$${fmt(tr.mc)}</b> · ${ageStr}${reclaimStr}${wall ? "\n" + wall : ""}\n${socialsLine(soc)}\n${bundleStr}\n${links(mint)}`);
+    `MC <b>$${fmt(tr.mc)}</b> · ${ageStr}${reclaimStr}${wall ? "\n" + wall : ""}\n${socialsLine(soc)}\n${bundleStr}${heldStr}\n${links(mint)}`);
   for (const m of CFG.MOM_SCORECARD_MIN) setTimeout(() => scorecard(mint, s, m), m * 60_000);
 }
 
@@ -122,7 +132,9 @@ function updatePos(mint, s, px, now) {
   if (!p.lad.s3 && mult >= 3) p.lad.s3 = true;
   if (x.ladder == null && fromPeak <= -0.60) x.ladder = (p.lad.s2 ? 0.25 * 2 : 0) + (p.lad.s3 ? 0.25 * 3 : 0) + (1 - (p.lad.s2 ? 0.25 : 0) - (p.lad.s3 ? 0.25 : 0)) * mult;
   x.levels = levelsStep(p.lv, p.entryMc, s.lastMc, mult, fromPeak);
-  q.updMom.run(s.posPeakMc, p.peak / p.entry, x.tp ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tsl80 ?? null, x.half60 ?? null, x.twophase ?? null, x.ladder ?? null, null, null, null, null, null, null, 0, x.levels ?? null, p.id);
+  if (x.m1 == null) { if (s.lastMc >= CFG.M1_EXIT_USD) x.m1 = mult; else if (fromPeak <= -0.60) x.m1 = mult; }
+  if (x.m1vol == null) { const v5 = s.w5.reduce((a, z) => a + z.usd, 0); if (s.lastMc >= CFG.M1_EXIT_USD && v5 < CFG.M1_HOLD_VOL5M) x.m1vol = mult; else if (fromPeak <= -0.60) x.m1vol = mult; }
+  q.updMom.run(s.posPeakMc, p.peak / p.entry, x.tp ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tsl80 ?? null, x.half60 ?? null, x.twophase ?? null, x.ladder ?? null, null, null, null, null, null, null, 0, x.levels ?? null, x.m1 ?? null, x.m1vol ?? null, p.id);
   if (x.tsl80 != null) closePos(mint, s, "tsl80");
 }
 
@@ -135,6 +147,7 @@ function finalVariants(p, mult) {
     ladder: x.ladder ?? ((p.lad.s2 ? 0.5 : 0) + (p.lad.s3 ? 0.75 : 0) + (1 - (p.lad.s2 ? 0.25 : 0) - (p.lad.s3 ? 0.25 : 0)) * mult),
     time: mult,
     levels: levelsFinal(p.lv, mult),
+    m1: x.m1 ?? mult, m1vol: x.m1vol ?? mult,
   };
   return out;
 }
@@ -144,10 +157,10 @@ function closePos(mint, s, reason) {
   p.closed = true; mom.closes++;
   const now = Math.floor(Date.now() / 1000), px = s.lastPx || p.entry, mult = px / p.entry, v = finalVariants(p, mult), peakMult = p.peak / p.entry;
   s.trades.push({ id: p.id, closedTs: now });
-  q.updMom.run(s.posPeakMc, peakMult, v.tp, v.tsl40, v.tsl60, v.tsl80, v.half60, v.twophase, v.ladder, v.time, now, s.lastMc, px, reason, (v.time - 1) * 100, 1, v.levels, p.id);
+  q.updMom.run(s.posPeakMc, peakMult, v.tp, v.tsl40, v.tsl60, v.tsl80, v.half60, v.twophase, v.ladder, v.time, now, s.lastMc, px, reason, (v.time - 1) * 100, 1, v.levels, v.m1, v.m1vol, p.id);
   const pc = (m) => `${m >= 1 ? "+" : ""}${((m - 1) * 100).toFixed(0)}%`;
   if (p.alerted) tg(`${v.half60 >= 1 ? "✅" : "🔴"} <b>VOLUME CLOSE</b> — ${esc(p.name)} (${reason}) · peak <b>${peakMult.toFixed(2)}x</b> · now ${mult.toFixed(2)}x\n` +
-    `½@2x+60%: <b>${pc(v.half60)}</b> · 2-phase: ${pc(v.twophase)} · ladder: ${pc(v.ladder)} · levels: ${pc(v.levels)}\n` +
+    `½@2x+60%: <b>${pc(v.half60)}</b> · 2-phase: ${pc(v.twophase)} · ladder: ${pc(v.ladder)} · levels: ${pc(v.levels)}\n$1M-out: ${pc(v.m1)} · $1M-vol: ${pc(v.m1vol)}\n` +
     `2x out: ${pc(v.tp)} · trail40: ${pc(v.tsl40)} · trail60: ${pc(v.tsl60)} · trail80: ${pc(v.tsl80)} · hold: ${pc(v.time)}`, { replyTo: p.msgId });
 }
 
@@ -173,7 +186,7 @@ export function strategySummary(hours) {
   let t = `📋 <b>${hours}h summary</b> · ${new Date().toISOString().slice(11, 16)} UTC\n`;
   for (const r of rows) {
     t += `\n<b>${r.strategy === "early" ? "EARLY (curve)" : r.strategy === "secondwave" ? "SECOND WAVE (curve)" : "MOMENTUM (volume)"}</b> — ${r.n} trades · ${r.hit2x} hit 2x (${r.n ? ((r.hit2x / r.n) * 100).toFixed(0) : 0}%) · avg peak ${(r.peak || 1).toFixed(2)}x\n`;
-    t += `½@2x+60% ${pc(r.xh)} · 2-phase ${pc(r.x2p)} · ladder ${pc(r.xl)} · levels ${pc(r.xlv)}\n2x-out ${pc(r.xtp)} · trail40 ${pc(r.x40)} · trail60 ${pc(r.x60)} · trail80 ${pc(r.x80)} · hold ${pc(r.xt)}\n`;
+    t += `½@2x+60% ${pc(r.xh)} · 2-phase ${pc(r.x2p)} · ladder ${pc(r.xl)} · levels ${pc(r.xlv)} · $1M-out ${pc(r.xm1)} · $1M-vol ${pc(r.xm1v)}\n2x-out ${pc(r.xtp)} · trail40 ${pc(r.x40)} · trail60 ${pc(r.x60)} · trail80 ${pc(r.x80)} · hold ${pc(r.xt)}\n`;
   }
   return t;
 }

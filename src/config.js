@@ -93,3 +93,9 @@ Object.assign(CFG, {
   SW_WINDOW_MIN: n("SW_WINDOW_MIN", 30),         // second wave must happen within tracking window
   MOM_REENTRY_RECLAIM: n("MOM_REENTRY_RECLAIM", 1), // re-entry must reclaim the last rejected level
 });
+// --- v0.7: burst trigger, $1M exits, cluster holdings ---
+Object.assign(CFG, {
+  BURST_TRIGGER: n("BURST_TRIGGER", 1),           // 1-min burst is an entry trigger in its own right
+  M1_EXIT_USD: n("M1_EXIT_USD", 970_000),         // "$1M all-out" sells at this MC
+  M1_HOLD_VOL5M: n("M1_HOLD_VOL5M", 200_000),     // volume-aware: hold through $1M if 5m vol >= this
+});
