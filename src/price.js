@@ -1,4 +1,4 @@
-let solUsd = 0, last = 0;
+let solUsd = Number(process.env.SOL_USD_OVERRIDE || 0), last = solUsd ? Infinity : 0;
 async function fetchJup() {
   const r = await fetch("https://lite-api.jup.ag/price/v3?ids=So11111111111111111111111111111111111111112", { signal: AbortSignal.timeout(5000) });
   const j = await r.json(); return Number(j?.So11111111111111111111111111111111111111112?.usdPrice);

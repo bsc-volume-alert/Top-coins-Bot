@@ -92,7 +92,7 @@ function openPaper(t, s, tr, inflowSol, wallets) {
   const entryAge = tr.ts - t.ts;
   s.buyersAt.entry = s.oBuyers.size + s.cluster.size;
   const r = q.insPaper.run(t.mint, t.name, tr.ts, t.lastMc, tr.price, t.bundle?.pct ?? 0, t.bundle?.sol ?? 0, s.handoffs, t.tier, t.factory ? 1 : 0, inflowSol, wallets, outsideShare, entryAge, t.lastMc);
-  s.pos = { id: r.lastInsertRowid, entry: tr.price, entryMc: t.lastMc, entryTs: tr.ts, peak: tr.price, x: {}, closed: false, msgId: null, alerted: false };
+  s.pos = { id: r.lastInsertRowid, entry: tr.price, entryMc: t.lastMc, entryTs: tr.ts, peak: tr.price, x: {}, closed: false, msgId: null, alerted: false, half: false, s3: false };
   t.hold = true; sig.entries++;
   setTimeout(() => closePaper(t, s, "time"), CFG.MAX_HOLD_MIN * 60_000);
   const strong = t.tier >= 1 || (inflowSol >= CFG.ALERT_INFLOW_SOL && wallets >= CFG.ALERT_INFLOW_WALLETS);
@@ -141,11 +141,17 @@ function updatePaper(t, s, tr) {
   const x = p.x;
   if (x.tsl40 == null && fromPeak <= -0.40) x.tsl40 = mult;
   if (x.tsl60 == null && fromPeak <= -0.60) x.tsl60 = mult;
+  if (x.tsl80 == null && fromPeak <= -0.80) x.tsl80 = mult;
   if (x.tp == null && mult >= CFG.TP_MULT) x.tp = mult;
+  if (!p.half && mult >= 2) p.half = true;
+  if (!p.s3 && mult >= 3) p.s3 = true;
+  if (x.half60 == null && fromPeak <= -0.60) x.half60 = p.half ? 1 + 0.5 * mult : mult;
+  if (x.twophase == null) { if (!p.half && fromPeak <= -0.40) x.twophase = mult; else if (p.half && fromPeak <= -0.60) x.twophase = 1 + 0.5 * mult; }
+  if (x.ladder == null && fromPeak <= -0.60) x.ladder = (p.half ? 0.5 : 0) + (p.s3 ? 0.75 : 0) + (1 - (p.half ? 0.25 : 0) - (p.s3 ? 0.25 : 0)) * mult;
   if (x.cluster == null && t.bundle && s.cOut - s.cIn > (CFG.EXIT_OUTFLOW_PCT / 100) * Math.max(t.bundle.sol, 1)) x.cluster = mult;
   if (t.graduated && x.grad == null) x.grad = mult;
   const peakMult = p.peak / p.entry;
-  q.updPaper.run(t.peakMc, peakMult, x.cluster ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tp ?? null, x.time ?? null, x.grad ?? null, null, null, null, null, null, 0, p.id);
+  q.updPaper.run(t.peakMc, peakMult, x.cluster ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tp ?? null, x.time ?? null, x.grad ?? null, null, null, null, null, null, 0, x.tsl80 ?? null, x.half60 ?? null, x.twophase ?? null, x.ladder ?? null, p.id);
   if (t.graduated) closePaper(t, s, "graduated");
   else if (x.tsl60 != null && x.cluster != null) closePaper(t, s, "all-exits-hit");
 }
@@ -155,12 +161,15 @@ function closePaper(t, s, reason) {
   p.closed = true; p.closeReason = reason; t.hold = false; sig.closes++;
   const px = t.trades.at(-1)?.price ?? p.entry; const mult = px / p.entry; const x = p.x;
   if (x.time == null) x.time = mult;
+  if (x.half60 == null) x.half60 = p.half ? 1 + 0.5 * mult : mult;
+  if (x.twophase == null) x.twophase = p.half ? 1 + 0.5 * mult : mult;
+  if (x.ladder == null) x.ladder = (p.half ? 0.5 : 0) + (p.s3 ? 0.75 : 0) + (1 - (p.half ? 0.25 : 0) - (p.s3 ? 0.25 : 0)) * mult;
   const peakMult = p.peak / p.entry;
   const pnl = (v) => (v == null ? "—" : `${((v - 1) * 100).toFixed(0)}%`);
-  q.updPaper.run(t.peakMc, peakMult, x.cluster ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tp ?? null, x.time, x.grad ?? null, Math.floor(Date.now() / 1000), t.lastMc, px, reason, (x.time - 1) * 100, 1, p.id);
+  q.updPaper.run(t.peakMc, peakMult, x.cluster ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tp ?? null, x.time, x.grad ?? null, Math.floor(Date.now() / 1000), t.lastMc, px, reason, (x.time - 1) * 100, 1, x.tsl80 ?? null, x.half60, x.twophase, x.ladder, p.id);
   if (p.alerted) tg(`${mult >= 1 ? "✅" : "🔴"} <b>PAPER CLOSE</b> — ${esc(t.name)} (${reason})\n` +
      `Entry $${fmt(p.entryMc)} → now $${fmt(t.lastMc)} · peak <b>${peakMult.toFixed(2)}x</b>\n` +
-     `Exits: cluster-leave ${pnl(x.cluster)} · TSL40 ${pnl(x.tsl40)} · TSL60 ${pnl(x.tsl60)} · TP${CFG.TP_MULT}x ${pnl(x.tp)} · graduation ${pnl(x.grad)} · hold ${pnl(x.time)}\n` +
+     `½@2x+60% <b>${pnl(x.half60)}</b> · 2-phase ${pnl(x.twophase)} · ladder ${pnl(x.ladder)}\n2x-out ${pnl(x.tp)} · trail40 ${pnl(x.tsl40)} · trail60 ${pnl(x.tsl60)} · trail80 ${pnl(x.tsl80)} · cluster ${pnl(x.cluster)} · grad ${pnl(x.grad)} · hold ${pnl(x.time)}\n` +
      `Hand-offs ${s.handoffs} · outside in ${s.oIn.toFixed(1)} SOL / ${s.oBuyers.size} buyers · buys ${s.buys} / sells ${s.sells} · cluster net ${net(s).toFixed(1)} SOL`, { replyTo: p.msgId });
 }
 

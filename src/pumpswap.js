@@ -13,6 +13,7 @@ let poolBudgetUsed = 0, poolBudgetDay = new Date().getUTCDate(), inFlight = 0;
 const queue = [];
 const listeners = [];
 export const onSwap = (fn) => listeners.push(fn);
+export const emitSwap = (tr) => { for (const fn of listeners) { try { fn(tr); } catch (x) { console.error("[ps listener]", x.message); } } };
 let samples = 0;
 
 function wantResolve(pool, sol, ts) {

@@ -18,7 +18,8 @@ async function poll() {
         else if (cmd === "/report7") await tg(reportText(24 * 7));
         else if (cmd === "/csv") await sendCsv();
         else if (cmd === "/status") await tg(deps.status ? deps.status() : "n/a");
-        else if (cmd === "/help") await tg("Commands: /report (24h) · /report7 (7d) · /csv (all paper trades) · /status");
+        else if (cmd === "/summary") await tg(deps.summary ? deps.summary() : "n/a");
+        else if (cmd === "/help") await tg("Commands: /report (24h) · /report7 (7d) · /summary (24h by strategy & exit) · /csv (all paper trades) · /status");
       }
     } catch (e) { await new Promise((r) => setTimeout(r, 5000)); }
   }
@@ -40,7 +41,7 @@ export function reportText(hours) {
     byTier.map((r) => `tier${r.tier}: ${r.n} trades, ${r.h} hit 2x (${pc(r.h, r.n)}), TSL40 ${m(r.x40)}, hold ${m(r.xt)}`).join("\n");
 }
 async function sendCsv() {
-  const rows = db.prepare(`SELECT p.id, p.name, p.mint, datetime(p.entry_ts,'unixepoch') entry_utc, p.entry_age_s, p.entry_mc, p.peak_mult, p.x_tp, p.x_tsl40, p.x_tsl60, p.x_cluster, p.x_grad, p.x_time, p.exit_reason, p.closed, p.tier, p.factory, p.has_socials, p.bundle_pct, p.bundle_sol, p.handoffs, p.inflow_sol, p.inflow_wallets, p.outside_share, p.buys, p.sells, p.mc_5m, p.mc_15m, p.buyers_5m, p.alerted, t.outside_buyers, t.outside_sol_in, t.cluster_sol_in, t.cluster_sol_out, t.graduated, t.creator FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint ORDER BY p.id`).all();
+  const rows = db.prepare(`SELECT p.id, p.strategy, p.name, p.symbol, p.mint, datetime(p.entry_ts,'unixepoch') entry_utc, p.entry_age_s, p.entry_mc, p.peak_mult, p.x_tp, p.x_tsl40, p.x_tsl60, p.x_cluster, p.x_grad, p.x_time, p.x_tsl80, p.x_half60, p.x_twophase, p.x_ladder, p.vol5m_usd, p.vol1m_usd, p.age_s, p.reentry_n, p.exit_reason, p.closed, p.tier, p.factory, p.has_socials, p.bundle_pct, p.bundle_sol, p.handoffs, p.inflow_sol, p.inflow_wallets, p.outside_share, p.buys, p.sells, p.mc_5m, p.mc_15m, p.buyers_5m, p.alerted, t.outside_buyers, t.outside_sol_in, t.cluster_sol_in, t.cluster_sol_out, t.graduated, t.creator FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint ORDER BY p.id`).all();
   if (!rows.length) return tg("No paper trades yet.");
   const cols = Object.keys(rows[0]);
   const esc = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));

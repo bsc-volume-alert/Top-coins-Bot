@@ -9,6 +9,7 @@ import { solUsdCached } from "./price.js";
 import { sigStats } from "./signals.js";
 import { startCommands, reportText } from "./commands.js";
 import { startPumpSwap, ps } from "./pumpswap.js";
+import { momStats, strategySummary } from "./momentum.js";
 
 const v = JSON.parse(readFileSync(new URL("../package.json", import.meta.url))).version;
 console.log(`bundler-tracker v${v} starting (node ${process.version}) helius=${CFG.HELIUS_KEY ? "yes" : "no"}`);
@@ -19,13 +20,9 @@ if (CFG.PUMPSWAP_ENABLED) startPumpSwap((s) => console.log("[pumpswap]", s));
 
 await tg(`🟢 <b>Tracker online</b> v${v}\nFirehose: ${CFG.HELIUS_KEY ? "Helius" : "public RPC"} · prepared gate ≥${CFG.BUNDLE_PCT_MIN}% &amp; ≥${CFG.BUNDLE_SOL_MIN} SOL\nPaper entry: ≥${CFG.INFLOW_SOL} SOL / ≥${CFG.INFLOW_WALLETS} wallets in ${CFG.INFLOW_WINDOW_S}s, first ${CFG.ENTRY_WINDOW_MIN} min`);
 
-startCommands({ status: () => { const g = sigStats(); return `v${v} · ws ${wsStatus} · live ${live.size} · open ${g.open} · hand-offs ${g.handoffs} · rpc ${g.rpc} · SOL $${solUsdCached().toFixed(0)}`; } });
-// 6-hourly one-liner
-setInterval(async () => {
-  const from = Math.floor(Date.now() / 1000) - 6 * 3600, a = q.digestAgg.get(from, from + 6 * 3600 + 60);
-  const m = (v) => (v == null ? "—" : `${((v - 1) * 100).toFixed(0)}%`);
-  await tg(`🕕 <b>6h</b> · trades ${a.n} · hit 2x ${a.hit2x} · TSL40 ${m(a.x40)} · TSL60 ${m(a.x60)} · hold ${m(a.xt)}`);
-}, 6 * 3600_000);
+startCommands({ status: () => { const g = sigStats(), mo = momStats(); return `v${v} · ws ${wsStatus} · live ${live.size} · early open ${g.open} · volume alerts ${mo.alerts} open ${mo.open} · ps txs ${ps.txs} · hand-offs ${g.handoffs} · rpc ${g.rpc} · SOL $${solUsdCached().toFixed(0)}`; }, summary: () => strategySummary(24) });
+// strategy summary every SUMMARY_HOURS
+setInterval(() => tg(strategySummary(CFG.SUMMARY_HOURS)), CFG.SUMMARY_HOURS * 3600_000);
 let lastC = { ...counters };
 setInterval(() => {
   const d = Object.fromEntries(Object.keys(counters).map((k) => [k, counters[k] - lastC[k]]));
@@ -39,7 +36,8 @@ const hb = async () => {
   const since = Math.floor(Date.now() / 1000) - CFG.HEARTBEAT_MIN * 60;
   const n = q.countSince.get(since), n1 = q.countTierSince.get(1, since);
   const g = sigStats(), c = q.closedSince.get(since);
-  await tg(`💓 <b>${CFG.HEARTBEAT_MIN}m</b> · launches ${n} · prepared ${n1} · hand-offs ${g.handoffs} · paper open ${g.open} · closed ${c.c}${c.c ? ` (avg ${c.p.toFixed(0)}%)` : ""} · rpc ${g.rpc} · ws↻ ${sub.stats().reconnects} · SOL $${solUsdCached().toFixed(0)}`);
+  const mo = momStats();
+  await tg(`💓 <b>${CFG.HEARTBEAT_MIN}m</b> · launches ${n} · prepared ${n1} · hand-offs ${g.handoffs} · early open ${g.open} · volume alerts ${mo.alerts} / open ${mo.open} · ps tokens ${mo.tracked} · rpc ${g.rpc} · ws↻ ${sub.stats().reconnects} · SOL $${solUsdCached().toFixed(0)}`);
 };
 setInterval(hb, CFG.HEARTBEAT_MIN * 60_000);
 process.on("unhandledRejection", (e) => console.error("[unhandled]", e));
