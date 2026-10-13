@@ -109,3 +109,14 @@ Object.assign(CFG, {
   AFTER_CLOSE_H: n("AFTER_CLOSE_H", 24),
   GRAD_HANDOVER: n("GRAD_HANDOVER", 1),
 });
+// --- v0.9: wallet database ---
+Object.assign(CFG, {
+  WB_EARLY_S: n("WB_EARLY_S", 180),        // record buys within first N seconds of launch
+  WB_MIN_SOL: n("WB_MIN_SOL", 0.3),
+  WB_MAX_PER_TOKEN: n("WB_MAX_PER_TOKEN", 40),
+  WB_TOKEN_MIN_MC: n("WB_TOKEN_MIN_MC", 15_000), // only score tokens that reach this MC
+  WB_MIN_BUYS: n("WB_MIN_BUYS", 5),
+  WB_MAX_BUYS_PER_DAY: n("WB_MAX_BUYS_PER_DAY", 50),
+  WB_RETAIN_D: n("WB_RETAIN_D", 30),
+  WB_COPY_MIN_SOL: n("WB_COPY_MIN_SOL", 0.2),  // watched wallet must buy at least this to trigger a copy
+});

@@ -10,6 +10,8 @@ import { sigStats } from "./signals.js";
 import { startCommands, reportText } from "./commands.js";
 import { startPumpSwap, ps } from "./pumpswap.js";
 import { momStats, strategySummary } from "./momentum.js";
+import { wbStats, leaderboardText } from "./wallets.js";
+import { cpStats } from "./copytrade.js";
 
 const v = JSON.parse(readFileSync(new URL("../package.json", import.meta.url))).version;
 console.log(`bundler-tracker v${v} starting (node ${process.version}) helius=${CFG.HELIUS_KEY ? "yes" : "no"}`);
@@ -37,7 +39,7 @@ const hb = async () => {
   const n = q.countSince.get(since), n1 = q.countTierSince.get(1, since);
   const g = sigStats(), c = q.closedSince.get(since);
   const mo = momStats();
-  await tg(`💓 <b>${CFG.HEARTBEAT_MIN}m</b> · launches ${n} · prepared ${n1} · hand-offs ${g.handoffs} · early open ${g.open} · volume alerts ${mo.alerts} / open ${mo.open} · ps tokens ${mo.tracked} · rpc ${g.rpc} · ws↻ ${sub.stats().reconnects} · SOL $${solUsdCached().toFixed(0)}`);
+  await tg(`💓 <b>${CFG.HEARTBEAT_MIN}m</b> · launches ${n} · prepared ${n1} · hand-offs ${g.handoffs} · early open ${g.open} · volume alerts ${mo.alerts} / open ${mo.open} · copy open ${cpStats().open} · wallets scored ${wbStats().recorded} · rpc ${g.rpc} · ws↻ ${sub.stats().reconnects} · SOL $${solUsdCached().toFixed(0)}`);
 };
 setInterval(hb, CFG.HEARTBEAT_MIN * 60_000);
 process.on("unhandledRejection", (e) => console.error("[unhandled]", e));
@@ -64,5 +66,6 @@ async function digest() {
     txt += `${(r.peak_mult || 1).toFixed(1)}x <b>${_esc((r.name || "").slice(0, 16))}</b> $${_fmt(r.entry_mc || 0)} @${r.entry_age_s}s · ${soc} t${r.tier}${r.factory ? "F" : ""} · ${(r.inflow_sol || 0).toFixed(0)} SOL/${r.inflow_wallets}w · b/s ${r.buys ?? "?"}/${r.sells ?? "?"} · buyers ${r.outside_buyers ?? "?"} · ho ${r.handoffs}\n`;
   }
   await tg(txt);
+  await tg(leaderboardText(7, 5));
 }
 setInterval(digest, 60_000);

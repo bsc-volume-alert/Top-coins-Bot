@@ -36,6 +36,16 @@ CREATE TABLE IF NOT EXISTS paper_trades (
 );
 CREATE TABLE IF NOT EXISTS stats (k TEXT PRIMARY KEY, v REAL);
 `);
+db.exec(`
+CREATE TABLE IF NOT EXISTS wallet_buys (
+  wallet TEXT, mint TEXT, ts INTEGER, age_s INTEGER, sol REAL, entry_mc REAL, is_cluster INTEGER DEFAULT 0,
+  peak_30m REAL, peak_24h REAL, resolved INTEGER DEFAULT 0, PRIMARY KEY (wallet, mint)
+);
+CREATE INDEX IF NOT EXISTS wb_mint ON wallet_buys(mint);
+CREATE INDEX IF NOT EXISTS wb_ts ON wallet_buys(ts);
+CREATE TABLE IF NOT EXISTS token_peaks (mint TEXT PRIMARY KEY, create_ts INTEGER, peak_30m REAL DEFAULT 0, peak_24h REAL DEFAULT 0, until INTEGER);
+CREATE TABLE IF NOT EXISTS watch_wallets (wallet TEXT PRIMARY KEY, label TEXT, added_ts INTEGER, source TEXT);
+`);
 // migrations (idempotent)
 for (const sql of [
   "ALTER TABLE tokens ADD COLUMN factory INTEGER DEFAULT 0",
@@ -120,10 +130,30 @@ export const q = {
   digestTop: db.prepare(`SELECT p.name, p.entry_mc, p.peak_mult, p.x_time, p.tier, p.factory, p.has_socials, p.handoffs, p.inflow_sol, p.inflow_wallets, p.entry_age_s, p.buys, p.sells, t.outside_buyers, p.mint FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint WHERE p.entry_ts>=? AND p.entry_ts<? ORDER BY p.peak_mult DESC LIMIT 10`),
   digestAgg: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, SUM(CASE WHEN has_socials=0 THEN 1 ELSE 0 END) nosoc, SUM(CASE WHEN has_socials=0 AND peak_mult>=2 THEN 1 ELSE 0 END) nosoc2x, SUM(CASE WHEN factory=1 THEN 1 ELSE 0 END) fac, SUM(CASE WHEN factory=1 AND peak_mult>=2 THEN 1 ELSE 0 END) fac2x, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_time) xt FROM paper_trades WHERE entry_ts>=? AND entry_ts<?`),
   insMom: db.prepare(`INSERT INTO paper_trades (strategy,mint,name,symbol,entry_ts,entry_mc,entry_price,bundle_pct,bundle_sol,handoffs,tier,factory,has_socials,socials,vol5m_usd,vol1m_usd,buys,sells,age_s,reentry_n,alerted,peak_mc) VALUES ('momentum',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`),
+  setStrategy: db.prepare(`UPDATE paper_trades SET strategy=? WHERE id=?`),
   setNextLevel: db.prepare(`UPDATE paper_trades SET next_level=? WHERE id=?`),
   updMom: db.prepare(`UPDATE paper_trades SET peak_mc=?, peak_mult=?, x_tp=?, x_tsl40=?, x_tsl60=?, x_tsl80=?, x_half60=?, x_twophase=?, x_ladder=?, x_time=?, exit_ts=?, exit_mc=?, exit_price=?, exit_reason=?, pnl_pct=?, closed=?, x_levels=?, x_m1=?, x_m1vol=?, x_volstop=? WHERE id=?`),
   tokenMeta: db.prepare(`SELECT name, symbol, create_ts, bundle_pct, bundle_sol, handoffs, tier, factory, has_socials, socials, cluster_sol_in, cluster_sol_out FROM tokens WHERE mint=?`),
   stratSummary: db.prepare(`SELECT strategy, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, AVG(peak_mult) peak, AVG(x_tp) xtp, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_tsl80) x80, AVG(x_half60) xh, AVG(x_twophase) x2p, AVG(x_ladder) xl, AVG(x_levels) xlv, AVG(x_m1) xm1, AVG(x_m1vol) xm1v, AVG(x_volstop) xvs, AVG(x_time) xt, AVG(after_peak_mult) ap, SUM(CASE WHEN after_peak_mult>=3 THEN 1 ELSE 0 END) ap3 FROM paper_trades WHERE entry_ts>=? AND entry_ts<? GROUP BY strategy`),
+  insWB: db.prepare(`INSERT OR IGNORE INTO wallet_buys (wallet,mint,ts,age_s,sol,entry_mc,is_cluster) VALUES (?,?,?,?,?,?,?)`),
+  wbCount: db.prepare(`SELECT COUNT(*) FROM wallet_buys WHERE mint=?`).pluck(),
+  upPeak: db.prepare(`INSERT INTO token_peaks (mint,create_ts,peak_30m,peak_24h,until) VALUES (?,?,?,?,?) ON CONFLICT(mint) DO UPDATE SET peak_30m=MAX(peak_30m,excluded.peak_30m), peak_24h=MAX(peak_24h,excluded.peak_24h)`),
+  resolveWB: db.prepare(`UPDATE wallet_buys SET peak_30m=(SELECT peak_30m FROM token_peaks WHERE token_peaks.mint=wallet_buys.mint), peak_24h=(SELECT peak_24h FROM token_peaks WHERE token_peaks.mint=wallet_buys.mint), resolved=1 WHERE resolved=0 AND mint IN (SELECT mint FROM token_peaks WHERE until<=?)`),
+  pruneWB: db.prepare(`DELETE FROM wallet_buys WHERE ts<?`),
+  prunePeaks: db.prepare(`DELETE FROM token_peaks WHERE until<?`),
+  leaderboard: db.prepare(`SELECT wallet, COUNT(*) n,
+      SUM(CASE WHEN peak_24h>=2*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*) r2,
+      SUM(CASE WHEN peak_24h>=3*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*) r3,
+      SUM(CASE WHEN peak_24h>=4*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*) r4,
+      AVG(peak_24h/entry_mc) avgpeak, AVG(entry_mc) avgmc, AVG(sol) avgsol, MAX(ts) last_ts, AVG(age_s) avgage
+    FROM wallet_buys WHERE resolved=1 AND is_cluster=0 AND entry_mc>0 AND ts>=?
+    GROUP BY wallet HAVING n>=? ORDER BY r3 DESC, r2 DESC, n DESC LIMIT ?`),
+  walletStats: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN peak_24h>=2*entry_mc THEN 1 ELSE 0 END) h2, SUM(CASE WHEN peak_24h>=3*entry_mc THEN 1 ELSE 0 END) h3, SUM(CASE WHEN peak_24h>=4*entry_mc THEN 1 ELSE 0 END) h4, AVG(peak_24h/entry_mc) avgpeak, AVG(entry_mc) avgmc, MAX(ts) last_ts, SUM(resolved=0) pending FROM wallet_buys WHERE wallet=? AND is_cluster=0 AND entry_mc>0`),
+  walletRecent: db.prepare(`SELECT w.mint, t.name, w.ts, w.age_s, w.sol, w.entry_mc, w.peak_24h, w.resolved FROM wallet_buys w LEFT JOIN tokens t ON t.mint=w.mint WHERE w.wallet=? ORDER BY w.ts DESC LIMIT 8`),
+  spamWallets: db.prepare(`SELECT wallet FROM wallet_buys WHERE ts>=? GROUP BY wallet HAVING COUNT(*)>?`),
+  addWatch: db.prepare(`INSERT OR REPLACE INTO watch_wallets (wallet,label,added_ts,source) VALUES (?,?,?,?)`),
+  delWatch: db.prepare(`DELETE FROM watch_wallets WHERE wallet=?`),
+  listWatch: db.prepare(`SELECT wallet,label,source FROM watch_wallets ORDER BY added_ts`),
   openPapers: db.prepare(`SELECT COUNT(*) FROM paper_trades WHERE closed=0`).pluck(),
   closedSince: db.prepare(`SELECT COUNT(*) c, AVG(pnl_pct) p FROM paper_trades WHERE closed=1 AND exit_ts>=?`),
 };

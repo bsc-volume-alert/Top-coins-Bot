@@ -2,6 +2,7 @@
 import { CFG } from "./config.js";
 import { db, q } from "./db.js";
 import { tg } from "./telegram.js";
+import { leaderboardText, walletText, addWatch, removeWatch, watchList } from "./wallets.js";
 const TOKEN = () => process.env.TG_BOT_TOKEN, CHAT = () => String(process.env.TG_CHAT_ID);
 let offset = 0, deps = {};
 export function startCommands(d) { deps = d; poll(); }
@@ -19,7 +20,13 @@ async function poll() {
         else if (cmd === "/csv") await sendCsv();
         else if (cmd === "/status") await tg(deps.status ? deps.status() : "n/a");
         else if (cmd === "/summary") await tg(deps.summary ? deps.summary() : "n/a");
-        else if (cmd === "/help") await tg("Commands: /report (24h) · /report7 (7d) · /summary (24h by strategy & exit) · /csv (all paper trades) · /status");
+        else if (cmd === "/wallets") await tg(leaderboardText(7, 10));
+        else if (cmd === "/wallets30") await tg(leaderboardText(30, 10));
+        else if (cmd === "/wallet") { const a = m.text.trim().split(/\s+/)[1]; await tg(a ? walletText(a) : "Usage: /wallet <address>"); }
+        else if (cmd === "/watch") { const [, a, ...rest] = m.text.trim().split(/\s+/); if (!a || a.length < 32) await tg("Usage: /watch <address> [label]"); else { addWatch(a, rest.join(" ") || null); await tg(`👁 watching <code>${a}</code>${rest.length ? " as " + rest.join(" ") : ""} — copy alerts + paper trades on its buys`); } }
+        else if (cmd === "/unwatch") { const a = m.text.trim().split(/\s+/)[1]; if (a) { removeWatch(a); await tg(`removed <code>${a}</code>`); } }
+        else if (cmd === "/watching") { const l = watchList(); await tg(l.length ? "👁 Watching:\n" + l.map(([w, v]) => `• <code>${w}</code>${v.label ? " — " + v.label : ""}`).join("\n") : "Not watching any wallets. /watch <address> [label]"); }
+        else if (cmd === "/help") await tg("Commands: /report · /report7 · /summary · /csv · /status · /wallets (top 10, 7d) · /wallets30 · /wallet <addr> · /watch <addr> [label] · /unwatch <addr> · /watching");
       }
     } catch (e) { await new Promise((r) => setTimeout(r, 5000)); }
   }

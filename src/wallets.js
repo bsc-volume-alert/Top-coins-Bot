@@ -1,0 +1,109 @@
+// v0.9: wallet database — scores early buyers by what their entries went on to do (24h peak), leaderboard, watch list / copy alerts.
+import { CFG } from "./config.js";
+import { db, q } from "./db.js";
+import { on, esc, fmt, links, live } from "./launch-monitor.js";
+import { onSwap } from "./pumpswap.js";
+import { tg } from "./telegram.js";
+import { solUsdCached } from "./price.js";
+
+export const wb = { recorded: 0, tokensScored: 0, copies: 0 };
+const early = new Map();   // mint -> { buyers: Map(wallet -> {ts, age, sol, mc}), cluster:Set, createTs, maxMc, committed }
+const peaks = new Map();   // mint -> { createTs, p30: mc, p24: mc, until }
+const watch = new Map();   // wallet -> {label, source}
+const copyCooldown = new Map(); // wallet|mint -> ts
+let spam = new Set();
+const listeners = []; export const onCopy = (fn) => listeners.push(fn);
+
+export function reloadWatch() { watch.clear(); for (const r of q.listWatch.all()) watch.set(r.wallet, { label: r.label, source: r.source }); }
+reloadWatch();
+export const isWatched = (w) => watch.has(w);
+export const watchList = () => [...watch.entries()];
+
+function peakTick(mint, mc, now) {
+  let p = peaks.get(mint);
+  if (!p) { const t = live.get(mint); const ct = t?.ts ?? (q.tokenMeta.get(mint)?.create_ts) ?? null; if (ct == null) return; p = { createTs: ct, p30: 0, p24: 0, until: ct + 86400, dirty: false }; peaks.set(mint, p); }
+  if (now - p.createTs <= 1800 && mc > p.p30) { p.p30 = mc; p.dirty = true; }
+  if (now - p.createTs <= 86400 && mc > p.p24) { p.p24 = mc; p.dirty = true; }
+}
+
+// --- curve trades: record early buyers ---
+on("create", (t) => { early.set(t.mint, { buyers: new Map(), createTs: t.ts, maxMc: 0, committed: false }); });
+on("trade", (t, tr) => {
+  const now = tr.ts;
+  peakTick(t.mint, t.lastMc, now);
+  const e = early.get(t.mint); if (!e) return;
+  if (t.lastMc > e.maxMc) e.maxMc = t.lastMc;
+  const age = now - t.ts;
+  if (tr.isBuy && age <= CFG.WB_EARLY_S && tr.sol >= CFG.WB_MIN_SOL && !e.buyers.has(tr.wallet) && e.buyers.size < CFG.WB_MAX_PER_TOKEN)
+    e.buyers.set(tr.wallet, { ts: now, age, sol: tr.sol, mc: t.lastMc });
+  if (tr.isBuy && watch.has(tr.wallet) && tr.sol >= CFG.WB_COPY_MIN_SOL) copySignal(tr.wallet, t.mint, t.name, t.symbol, tr, t.lastMc, "curve");
+  if (!e.committed && e.maxMc >= CFG.WB_TOKEN_MIN_MC && age > CFG.WB_EARLY_S) commit(t, e);
+});
+on("expire", (t) => { const e = early.get(t.mint); if (e && !e.committed && e.maxMc >= CFG.WB_TOKEN_MIN_MC) commit(t, e); early.delete(t.mint); });
+function commit(t, e) {
+  e.committed = true;
+  const cluster = new Set(db.prepare(`SELECT wallet FROM cluster_wallets WHERE mint=?`).all(t.mint).map((r) => r.wallet)); cluster.add(t.creator);
+  const ins = db.transaction(() => { for (const [w, b] of e.buyers) { q.insWB.run(w, t.mint, b.ts, b.age, b.sol, b.mc, cluster.has(w) ? 1 : 0); wb.recorded++; } });
+  ins(); wb.tokensScored++;
+  const p = peaks.get(t.mint); if (p) q.upPeak.run(t.mint, p.createTs, p.p30, p.p24, p.until);
+}
+
+// --- PumpSwap: peaks continue; watched wallets on PumpSwap ---
+onSwap((tr) => {
+  peakTick(tr.mint, tr.mc, tr.ts);
+  if (tr.isBuy && watch.has(tr.wallet) && tr.sol >= CFG.WB_COPY_MIN_SOL) {
+    const m = q.tokenMeta.get(tr.mint); copySignal(tr.wallet, tr.mint, m?.name || tr.mint.slice(0, 8), m?.symbol || "", tr, tr.mc, "pumpswap");
+  }
+});
+
+function copySignal(wallet, mint, name, symbol, tr, mc, venue) {
+  const k = wallet + "|" + mint, now = tr.ts; if (now - (copyCooldown.get(k) || 0) < 1800) return; copyCooldown.set(k, now);
+  wb.copies++;
+  const w = watch.get(wallet);
+  tg(`👤 <b>COPY</b> — ${esc(w.label || wallet.slice(0, 6) + "…" + wallet.slice(-4))} bought <b>${tr.sol.toFixed(2)} SOL</b> of ${esc(name)} ($${esc(symbol)}) on ${venue}\nMC <b>$${fmt(mc)}</b> · <a href="https://solscan.io/account/${wallet}">wallet</a>\n${links(mint)}`);
+  for (const fn of listeners) { try { fn({ wallet, label: w.label, mint, name, symbol, price: tr.price, mc, ts: now, venue }); } catch (e) { console.error("[copy]", e.message); } }
+}
+
+// --- periodic: flush peaks, resolve, prune, refresh spam list ---
+setInterval(() => {
+  const now = Math.floor(Date.now() / 1000);
+  const tx = db.transaction(() => {
+    for (const [mint, p] of peaks) {
+      if (p.dirty) { q.upPeak.run(mint, p.createTs, p.p30, p.p24, p.until); p.dirty = false; }
+      if (now > p.until) peaks.delete(mint);
+    }
+    q.resolveWB.run(now);
+  });
+  tx();
+}, 60_000);
+setInterval(() => {
+  const now = Math.floor(Date.now() / 1000);
+  q.pruneWB.run(now - CFG.WB_RETAIN_D * 86400); q.prunePeaks.run(now - 2 * 86400);
+  spam = new Set(q.spamWallets.all(now - 86400, CFG.WB_MAX_BUYS_PER_DAY).map((r) => r.wallet));
+}, 3600_000);
+
+const short = (w) => w.slice(0, 4) + "…" + w.slice(-4);
+const pct = (x) => `${Math.round((x || 0) * 100)}%`;
+export function leaderboardText(days = 7, limit = 10) {
+  const from = Math.floor(Date.now() / 1000) - days * 86400;
+  const rows = q.leaderboard.all(from, CFG.WB_MIN_BUYS, limit * 3).filter((r) => !spam.has(r.wallet)).slice(0, limit);
+  if (!rows.length) return `🏆 <b>Wallet leaderboard</b> — not enough resolved data yet (needs ${CFG.WB_MIN_BUYS}+ scored buys per wallet; buys resolve 24h after launch)`;
+  let t = `🏆 <b>Wallet leaderboard</b> — last ${days}d · early buys ≤${CFG.WB_EARLY_S}s, ≥${CFG.WB_MIN_SOL} SOL · ranked by 3x hit rate\n`;
+  rows.forEach((r, i) => {
+    const ago = Math.floor((Date.now() / 1000 - r.last_ts) / 3600);
+    t += `${i + 1}. <code>${r.wallet}</code>${watch.has(r.wallet) ? " 👁" : ""}\n   ${r.n} buys · 2x <b>${pct(r.r2)}</b> · 3x <b>${pct(r.r3)}</b> · 4x <b>${pct(r.r4)}</b> · avg peak ${(r.avgpeak || 0).toFixed(1)}x · entry ~$${fmt(r.avgmc)} @${Math.round(r.avgage)}s · ${(r.avgsol).toFixed(1)} SOL · ${ago}h ago\n`;
+  });
+  t += `\n/watch &lt;wallet&gt; to copy-trade one`;
+  return t;
+}
+export function walletText(wallet) {
+  const s = q.walletStats.get(wallet);
+  if (!s || !s.n) return `No early buys recorded for <code>${wallet}</code> yet.`;
+  const rec = q.walletRecent.all(wallet);
+  let t = `👛 <code>${wallet}</code>${watch.has(wallet) ? " 👁 watched" : ""}\n${s.n} scored buys (${s.pending} pending) · 2x ${pct(s.h2 / s.n)} · 3x ${pct(s.h3 / s.n)} · 4x ${pct(s.h4 / s.n)} · avg peak ${(s.avgpeak || 0).toFixed(1)}x · entry ~$${fmt(s.avgmc || 0)}\nRecent:\n`;
+  for (const r of rec) t += `• ${esc(r.name || r.mint.slice(0, 8))} @${r.age_s}s $${fmt(r.entry_mc)} ${r.sol.toFixed(1)} SOL → ${r.resolved ? `peak $${fmt(r.peak_24h)} (${(r.peak_24h / r.entry_mc).toFixed(1)}x)` : "pending"}\n`;
+  return t;
+}
+export function addWatch(wallet, label, source = "manual") { q.addWatch.run(wallet, label || null, Math.floor(Date.now() / 1000), source); reloadWatch(); }
+export function removeWatch(wallet) { q.delWatch.run(wallet); reloadWatch(); }
+export const wbStats = () => ({ ...wb, early: early.size, peaks: peaks.size, watched: watch.size });
