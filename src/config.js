@@ -59,3 +59,8 @@ Object.assign(CFG, {
   DIGEST_HOUR_LOCAL: n("DIGEST_HOUR_LOCAL", 9),    // Europe/London
 });
 Object.assign(CFG, { PUMPSWAP_ENABLED: n("PUMPSWAP_ENABLED", 1) });
+Object.assign(CFG, {
+  PS_RESOLVE_SOL: n("PS_RESOLVE_SOL", 30),         // look up a pool's token only once it has traded >= this SOL in 5 min
+  PS_POOL_DAILY_BUDGET: n("PS_POOL_DAILY_BUDGET", 5000),
+  PS_RESOLVE_CONCURRENCY: n("PS_RESOLVE_CONCURRENCY", 2),
+});

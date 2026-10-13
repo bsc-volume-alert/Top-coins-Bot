@@ -5,22 +5,38 @@ import { pumpSwapEventsFromLogs, parsePoolAccount, PUMPSWAP_PROGRAM, WSOL } from
 import { rpc } from "./rpc.js";
 import { solUsdCached } from "./price.js";
 
-export const ps = { txs: 0, data: 0, buys: 0, sells: 0, pools: 0, unknownPool: 0, resolved: 0, lookupFail: 0, reconnects: 0 };
+export const ps = { txs: 0, data: 0, buys: 0, sells: 0, pools: 0, unknownPool: 0, resolved: 0, lookupFail: 0, reconnects: 0, get poolBudget() { return poolBudgetUsed; } };
 const poolMint = new Map();   // pool -> {mint, quote}
 const pending = new Set();
+const poolVol = new Map();    // pool -> [{ts, sol}] rolling 5m, used to decide when a lookup is worth a credit
+let poolBudgetUsed = 0, poolBudgetDay = new Date().getUTCDate(), inFlight = 0;
+const queue = [];
 const listeners = [];
 export const onSwap = (fn) => listeners.push(fn);
 let samples = 0;
 
-async function resolvePool(pool) {
+function wantResolve(pool, sol, ts) {
+  let w = poolVol.get(pool); if (!w) { w = []; poolVol.set(pool, w); }
+  w.push({ ts, sol }); while (w.length && ts - w[0].ts > 300) w.shift();
+  if (poolVol.size > 20000) poolVol.delete(poolVol.keys().next().value);
+  return w.reduce((a, x) => a + x.sol, 0) >= CFG.PS_RESOLVE_SOL;
+}
+function resolvePool(pool) {
   if (poolMint.has(pool) || pending.has(pool)) return;
-  pending.add(pool);
-  try {
-    const r = await rpc("getAccountInfo", [pool, { encoding: "base64" }]);
-    const p = parsePoolAccount(r?.value?.data?.[0] || "");
-    if (p) { poolMint.set(pool, { mint: p.baseMint, quote: p.quoteMint }); ps.resolved++; }
-    else ps.lookupFail++;
-  } catch { ps.lookupFail++; } finally { pending.delete(pool); }
+  if (new Date().getUTCDate() !== poolBudgetDay) { poolBudgetDay = new Date().getUTCDate(); poolBudgetUsed = 0; }
+  if (poolBudgetUsed >= CFG.PS_POOL_DAILY_BUDGET) return;
+  pending.add(pool); queue.push(pool); drain();
+}
+async function drain() {
+  while (inFlight < CFG.PS_RESOLVE_CONCURRENCY && queue.length) {
+    const pool = queue.shift(); inFlight++; poolBudgetUsed++;
+    try {
+      const r = await rpc("getAccountInfo", [pool, { encoding: "base64" }]);
+      const p = parsePoolAccount(r?.value?.data?.[0] || "");
+      if (p) { poolMint.set(pool, { mint: p.baseMint, quote: p.quoteMint }); ps.resolved++; }
+      else ps.lookupFail++;
+    } catch { ps.lookupFail++; } finally { pending.delete(pool); inFlight--; }
+  }
 }
 
 function handle({ sig, slot, logs, err }) {
@@ -32,14 +48,14 @@ function handle({ sig, slot, logs, err }) {
   for (const e of evs) {
     if (e.type === "pool") { ps.pools++; poolMint.set(e.pool, { mint: e.baseMint, quote: e.quoteMint }); continue; }
     if (e.isBuy) ps.buys++; else ps.sells++;
+    const sol = Number(e.quoteAmt) / 1e9, tokens = Number(e.baseAmt) / 1e6;
     const pm = poolMint.get(e.pool);
-    if (!pm) { ps.unknownPool++; resolvePool(e.pool); continue; }
+    if (!pm) { ps.unknownPool++; if (wantResolve(e.pool, sol, e.ts)) resolvePool(e.pool); continue; }
     if (pm.quote !== WSOL) continue; // only SOL-quoted pools
-    const sol = Number(e.userQuote) / 1e9, tokens = Number(e.baseAmt) / 1e6;
     const price = (Number(e.poolQuote) / 1e9) / (Number(e.poolBase) / 1e6);
     const mc = price * CFG.TOTAL_SUPPLY * solUsdCached();
     const tr = { mint: pm.mint, pool: e.pool, sig, slot, ts: e.ts, wallet: e.user, isBuy: e.isBuy, sol, tokens, price, mc };
-    if (samples < 5) { samples++; console.log("[ps sample]", JSON.stringify({ mint: tr.mint.slice(0, 8), buy: tr.isBuy, sol: +sol.toFixed(3), mc: Math.round(mc), wallet: tr.wallet.slice(0, 6) })); }
+    if (samples < 5) { samples++; console.log("[ps sample]", JSON.stringify({ mint: tr.mint.slice(0, 8), buy: tr.isBuy, sol: +sol.toFixed(4), mc: Math.round(mc), wallet: tr.wallet.slice(0, 6) })); }
     for (const fn of listeners) { try { fn(tr); } catch (x) { console.error("[ps listener]", x.message); } }
   }
 }

@@ -39,7 +39,7 @@ export function handleTx({ sig, slot, logs, err }) {
       const mc = mcUsd(e.vsol, e.vtok); t.lastMc = mc; if (mc > t.peakMc) t.peakMc = mc;
       t.trades.push(tr);
       if (t.finalized && t.tier >= 1) q.insTrade.run(t.mint, sig, slot, tr.ts, tr.wallet, tr.isBuy ? 1 : 0, tr.sol, tr.tokens, tr.price);
-      if (!t.graduated && e.vtok <= BigInt(CFG.GRAD_VTOK)) { t.graduated = true; q.setGrad.run(t.mint); emit("graduated", t, tr); }
+      if (!t.graduated && e.vtok <= BigInt(CFG.GRAD_VTOK) * 1_000_000n) { t.graduated = true; q.setGrad.run(t.mint); emit("graduated", t, tr); }
       emit("trade", t, tr);
     }
   }
