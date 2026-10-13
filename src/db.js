@@ -59,6 +59,16 @@ for (const sql of [
   "ALTER TABLE paper_trades ADD COLUMN x_time REAL",
   "ALTER TABLE paper_trades ADD COLUMN x_grad REAL",
   "ALTER TABLE paper_trades ADD COLUMN closed INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN alerted INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN socials TEXT",
+  "ALTER TABLE paper_trades ADD COLUMN has_socials INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN buys INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN sells INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN mc_5m REAL",
+  "ALTER TABLE paper_trades ADD COLUMN mc_15m REAL",
+  "ALTER TABLE paper_trades ADD COLUMN buyers_5m INTEGER",
+  "ALTER TABLE tokens ADD COLUMN has_socials INTEGER",
+  "ALTER TABLE tokens ADD COLUMN socials TEXT",
 ]) { try { db.exec(sql); } catch {} }
 export const q = {
   insToken: db.prepare(`INSERT OR IGNORE INTO tokens (mint,name,symbol,uri,creator,bonding_curve,create_slot,create_ts,create_sig) VALUES (?,?,?,?,?,?,?,?,?)`),
@@ -77,6 +87,11 @@ export const q = {
   updWallet: db.prepare(`UPDATE cluster_wallets SET funder=?, wallet_age_s=? WHERE mint=? AND wallet=?`),
   insPaper: db.prepare(`INSERT INTO paper_trades (mint,name,entry_ts,entry_mc,entry_price,bundle_pct,bundle_sol,handoffs,tier,factory,inflow_sol,inflow_wallets,outside_share,entry_age_s,peak_mc) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`),
   updPaper: db.prepare(`UPDATE paper_trades SET peak_mc=?, peak_mult=?, x_cluster=?, x_tsl40=?, x_tsl60=?, x_tp=?, x_time=?, x_grad=?, exit_ts=?, exit_mc=?, exit_price=?, exit_reason=?, pnl_pct=?, closed=? WHERE id=?`),
+  setPaperMeta: db.prepare(`UPDATE paper_trades SET alerted=?, socials=?, has_socials=? WHERE id=?`),
+  setPaperCard: db.prepare(`UPDATE paper_trades SET mc_5m=COALESCE(?,mc_5m), mc_15m=COALESCE(?,mc_15m), buyers_5m=COALESCE(?,buyers_5m), buys=?, sells=? WHERE id=?`),
+  setTokenSocials: db.prepare(`UPDATE tokens SET has_socials=?, socials=? WHERE mint=?`),
+  digestTop: db.prepare(`SELECT p.name, p.entry_mc, p.peak_mult, p.x_time, p.tier, p.factory, p.has_socials, p.handoffs, p.inflow_sol, p.inflow_wallets, p.entry_age_s, p.buys, p.sells, t.outside_buyers, p.mint FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint WHERE p.entry_ts>=? AND p.entry_ts<? ORDER BY p.peak_mult DESC LIMIT 10`),
+  digestAgg: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, SUM(CASE WHEN has_socials=0 THEN 1 ELSE 0 END) nosoc, SUM(CASE WHEN has_socials=0 AND peak_mult>=2 THEN 1 ELSE 0 END) nosoc2x, SUM(CASE WHEN factory=1 THEN 1 ELSE 0 END) fac, SUM(CASE WHEN factory=1 AND peak_mult>=2 THEN 1 ELSE 0 END) fac2x, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_time) xt FROM paper_trades WHERE entry_ts>=? AND entry_ts<?`),
   openPapers: db.prepare(`SELECT COUNT(*) FROM paper_trades WHERE closed=0`).pluck(),
   closedSince: db.prepare(`SELECT COUNT(*) c, AVG(pnl_pct) p FROM paper_trades WHERE closed=1 AND exit_ts>=?`),
 };

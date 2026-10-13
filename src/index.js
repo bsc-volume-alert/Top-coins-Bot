@@ -32,3 +32,28 @@ const hb = async () => {
 };
 setInterval(hb, CFG.HEARTBEAT_MIN * 60_000);
 process.on("unhandledRejection", (e) => console.error("[unhandled]", e));
+
+// --- daily digest at DIGEST_HOUR_LOCAL (Europe/London) ---
+import { fmt as _fmt, esc as _esc } from "./launch-monitor.js";
+let lastDigestDay = null;
+async function digest() {
+  const now = new Date();
+  const lon = new Date(now.toLocaleString("en-US", { timeZone: "Europe/London" }));
+  if (lon.getHours() !== CFG.DIGEST_HOUR_LOCAL || lastDigestDay === lon.toDateString()) return;
+  lastDigestDay = lon.toDateString();
+  const to = Math.floor(Date.now() / 1000), from = to - 86400;
+  const a = q.digestAgg.get(from, to), rows = q.digestTop.all(from, to);
+  if (!a.n) return tg("📊 <b>Daily digest</b> — no paper trades in the last 24h");
+  const pc = (x, n) => (n ? `${((x / n) * 100).toFixed(0)}%` : "—");
+  const m = (v) => (v == null ? "—" : `${((v - 1) * 100).toFixed(0)}%`);
+  let txt = `📊 <b>Daily digest</b> — last 24h\n` +
+    `Paper trades ${a.n} · reached 2x: ${a.hit2x} (${pc(a.hit2x, a.n)})\n` +
+    `No socials: ${a.nosoc} trades, ${a.nosoc2x} hit 2x (${pc(a.nosoc2x, a.nosoc)}) · factory: ${a.fac} trades, ${a.fac2x} hit 2x (${pc(a.fac2x, a.fac)})\n` +
+    `Avg by exit: TSL40 ${m(a.x40)} · TSL60 ${m(a.x60)} · hold ${m(a.xt)}\n\n<b>Top 10 by peak</b>\n`;
+  for (const r of rows) {
+    const soc = r.has_socials === 1 ? "🐦" : r.has_socials === 0 ? "❌" : "?";
+    txt += `${(r.peak_mult || 1).toFixed(1)}x <b>${_esc((r.name || "").slice(0, 16))}</b> $${_fmt(r.entry_mc || 0)} @${r.entry_age_s}s · ${soc} t${r.tier}${r.factory ? "F" : ""} · ${(r.inflow_sol || 0).toFixed(0)} SOL/${r.inflow_wallets}w · b/s ${r.buys ?? "?"}/${r.sells ?? "?"} · buyers ${r.outside_buyers ?? "?"} · ho ${r.handoffs}\n`;
+  }
+  await tg(txt);
+}
+setInterval(digest, 60_000);

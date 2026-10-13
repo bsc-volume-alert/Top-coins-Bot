@@ -3,6 +3,7 @@ import { db, q } from "./db.js";
 import { eventsFromLogs, lamports, rawTok, priceSol } from "./pump-decoder.js";
 import { getSolUsd, solUsdCached } from "./price.js";
 import { tg } from "./telegram.js";
+import { getSocials, socialsLine } from "./socials.js";
 
 /** In-memory token state. mint -> {create, slot, trades:[], finalized, tier, bundle:{...}} */
 export const live = new Map();
@@ -70,12 +71,14 @@ function finalize(t) {
       for (const tr of t.trades) q.insTrade.run(t.mint, tr.sig, tr.slot, tr.ts, tr.wallet, tr.isBuy ? 1 : 0, tr.sol, tr.tokens, tr.price);
     });
     ins();
-    if (CFG.TG_TIER1_ALERTS && bundleSol >= CFG.TG_TIER1_SOL_MIN) tg(
-      `🧱 <b>Prepared launch</b> — ${esc(t.name)} ($${esc(t.symbol)})\n` +
-      `Bundle: <b>${pct.toFixed(1)}%</b> of supply · <b>${bundleSol.toFixed(1)} SOL</b> · ${wallets.size} wallets (dev ${devBuy.toFixed(1)} SOL)\n` +
-      `MC now: $${fmt(mc)} · SOL $${solUsdCached().toFixed(0)}\n` +
-      links(t.mint) + (t.factory ? "\n⚠️ factory: same creator launched another token in the last 10 min" : "")
-    );
+    if (CFG.TG_TIER1_ALERTS && bundleSol >= CFG.TG_TIER1_SOL_MIN) getSocials(t.mint, t.uri).then((soc) => {
+      q.setTokenSocials.run(soc.fetched ? (soc.ok ? 1 : 0) : null, JSON.stringify({ t: soc.twitter, w: soc.website, k: soc.tiktok, g: soc.telegram }), t.mint);
+      if (CFG.ALERT_REQUIRE_SOCIALS && soc.fetched && !soc.ok) return; // no socials = rug candidate, logged only
+      tg(`🧱 <b>Prepared launch</b> — ${esc(t.name)} ($${esc(t.symbol)})\n` +
+        `Bundle: <b>${pct.toFixed(1)}%</b> of supply · <b>${bundleSol.toFixed(1)} SOL</b> · ${wallets.size} wallets (dev ${devBuy.toFixed(1)} SOL)\n` +
+        `${socialsLine(soc)}\nMC now: $${fmt(mc)} · SOL $${solUsdCached().toFixed(0)}\n` +
+        links(t.mint) + (t.factory ? "\n⚠️ factory: same creator launched another token in the last 10 min" : ""));
+    }).catch(() => {});
   }
   setTimeout(() => expire(t), (t.tier >= 1 ? CFG.TRACK_MIN : CFG.TRACK_MIN_T0) * 60_000);
   emit("finalized", t);

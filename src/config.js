@@ -47,3 +47,14 @@ Object.assign(CFG, {
   TP_MULT: n("TP_MULT", 2),                     // take-profit variant
   GRAD_VTOK: n("GRAD_VTOK", 285_000_000),       // virtual token reserves at/below this = curve complete (graduated)
 });
+// --- v0.3.2: alert gating, scorecards, digest ---
+Object.assign(CFG, {
+  ALERT_INFLOW_SOL: n("ALERT_INFLOW_SOL", 20),     // Telegram only if inflow >= this (or tier-1)
+  ALERT_INFLOW_WALLETS: n("ALERT_INFLOW_WALLETS", 15),
+  ALERT_REQUIRE_SOCIALS: n("ALERT_REQUIRE_SOCIALS", 1),
+  SCORECARD_MIN: s("SCORECARD_MIN", "5,15").split(",").map(Number),
+  FLAT_MC_PCT: n("FLAT_MC_PCT", 20),               // MC up less than this at +5m = flat/dead
+  NO_NEW_WALLETS_SOL_PER_BUYER: n("NO_NEW_WALLETS_SOL_PER_BUYER", 1.5), // inflow/buyers above this with few buyers = churn
+  NO_NEW_WALLETS_MAX_BUYERS: n("NO_NEW_WALLETS_MAX_BUYERS", 15),
+  DIGEST_HOUR_LOCAL: n("DIGEST_HOUR_LOCAL", 9),    // Europe/London
+});
