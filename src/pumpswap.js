@@ -4,6 +4,7 @@ import { CFG } from "./config.js";
 import { pumpSwapEventsFromLogs, parsePoolAccount, PUMPSWAP_PROGRAM, WSOL } from "./pumpswap-decoder.js";
 import { rpc } from "./rpc.js";
 import { solUsdCached } from "./price.js";
+import { routeOf } from "./routes.js";
 
 export const ps = { txs: 0, data: 0, buys: 0, sells: 0, pools: 0, unknownPool: 0, resolved: 0, lookupFail: 0, reconnects: 0, oversize: 0, get poolBudget() { return poolBudgetUsed; } };
 const poolMint = new Map();   // pool -> {mint, quote}
@@ -46,6 +47,7 @@ function handle({ sig, slot, logs, err }) {
   const evs = pumpSwapEventsFromLogs(logs);
   if (!evs.length) return;
   ps.data += evs.length;
+  const route = routeOf(logs);
   for (const e of evs) {
     if (e.type === "pool") { ps.pools++; poolMint.set(e.pool, { mint: e.baseMint, quote: e.quoteMint }); continue; }
     if (e.isBuy) ps.buys++; else ps.sells++;
@@ -56,7 +58,7 @@ function handle({ sig, slot, logs, err }) {
     if (!(sol > 0) || sol > CFG.PS_MAX_SWAP_SOL) { ps.oversize++; continue; } // v0.15: implausible single swap (instant-graduation curve buys decode with bogus amounts)
     const price = (Number(e.poolQuote) / 1e9) / (Number(e.poolBase) / 1e6);
     const mc = price * CFG.TOTAL_SUPPLY * solUsdCached();
-    const tr = { mint: pm.mint, pool: e.pool, sig, slot, ts: e.ts, wallet: e.user, isBuy: e.isBuy, sol, tokens, price, mc };
+    const tr = { mint: pm.mint, pool: e.pool, sig, slot, ts: e.ts, wallet: e.user, isBuy: e.isBuy, sol, tokens, price, mc, route };
     if (samples < 5) { samples++; console.log("[ps sample]", JSON.stringify({ mint: tr.mint.slice(0, 8), buy: tr.isBuy, sol: +sol.toFixed(4), mc: Math.round(mc), wallet: tr.wallet.slice(0, 6) })); }
     for (const fn of listeners) { try { fn(tr); } catch (x) { console.error("[ps listener]", x.message); } }
   }

@@ -2,6 +2,7 @@ import { CFG } from "./config.js";
 import { db, q } from "./db.js";
 import { eventsFromLogs, lamports, rawTok, priceSol } from "./pump-decoder.js";
 import { getSolUsd, solUsdCached } from "./price.js";
+import { routeOf } from "./routes.js";
 import { tg } from "./telegram.js";
 import { getSocials, socialsLine } from "./socials.js";
 
@@ -34,7 +35,7 @@ export function handleTx({ sig, slot, logs, err }) {
     } else if (e.type === "trade") {
       counters.trades++;
       const t = live.get(e.mint); if (!t) continue; // not a token we saw created (older launches) — ignore
-      const tr = { sig, slot, ts: e.ts || ts, wallet: e.user, isBuy: e.isBuy, sol: lamports(e.sol), tokens: rawTok(e.tokens), price: priceSol(e.vsol, e.vtok) };
+      const tr = { sig, slot, ts: e.ts || ts, wallet: e.user, isBuy: e.isBuy, sol: lamports(e.sol), tokens: rawTok(e.tokens), price: priceSol(e.vsol, e.vtok), route: routeOf(logs) };
       t.lastVsol = e.vsol; t.lastVtok = e.vtok;
       const mc = mcUsd(e.vsol, e.vtok); t.lastMc = mc; if (mc > t.peakMc) t.peakMc = mc;
       t.trades.push(tr);
