@@ -18,6 +18,13 @@ const cListeners = []; export const onCreatorLaunch = (fn) => cListeners.push(fn
 
 export function reloadWatch() { watch.clear(); for (const r of q.listWatch.all()) watch.set(r.wallet, { label: r.label, source: r.source }); watchC.clear(); for (const r of q.listWatchCreators.all()) watchC.set(r.creator, { label: r.label }); }
 reloadWatch();
+// v0.15.1: seed watch lists from config (first-night analysis picks); only adds if not present
+try {
+  const now0 = Math.floor(Date.now() / 1000);
+  for (const w of CFG.WATCH_SEED_WALLETS) if (w.length >= 32 && !watch.has(w)) q.addWatch.run(w, "seed", now0, "seed");
+  for (const c of CFG.WATCH_SEED_CREATORS) if (c.length >= 32 && !watchC.has(c)) q.addWatchCreator.run(c, "bundle-group", now0);
+  reloadWatch();
+} catch (e) { console.error("[watch seed]", e.message); }
 export const isWatched = (w) => watch.has(w);
 export const watchList = () => [...watch.entries()];
 
@@ -94,12 +101,12 @@ const short = (w) => w.slice(0, 4) + "…" + w.slice(-4);
 const pct = (x) => `${Math.round((x || 0) * 100)}%`;
 export function leaderboardText(days = 7, limit = 10) {
   const from = Math.floor(Date.now() / 1000) - days * 86400;
-  const rows = q.leaderboard.all(from, CFG.WB_MIN_BUYS, limit * 3).filter((r) => !spam.has(r.wallet)).slice(0, limit);
+  const rows = q.leaderboard.all(CFG.WB_MIN_AGE_S, from, CFG.WB_MIN_BUYS, limit * 3).filter((r) => !spam.has(r.wallet)).slice(0, limit);
   if (!rows.length) return `🏆 <b>Wallet leaderboard</b> — not enough resolved data yet (needs ${CFG.WB_MIN_BUYS}+ scored buys per wallet; buys resolve 24h after launch)`;
-  let t = `🏆 <b>Wallet leaderboard</b> — last ${days}d · early buys ≤${CFG.WB_EARLY_S}s, ≥${CFG.WB_MIN_SOL} SOL · ranked by 3x hit rate\n`;
+  let t = `🏆 <b>Wallet leaderboard</b> — last ${days}d · early buys ≤${CFG.WB_EARLY_S}s, ≥${CFG.WB_MIN_SOL} SOL · no bundle/0s buys · ranked by 5x hit rate (base ~25%)\n`;
   rows.forEach((r, i) => {
     const ago = Math.floor((Date.now() / 1000 - r.last_ts) / 3600);
-    t += `${i + 1}. <code>${r.wallet}</code>${watch.has(r.wallet) ? " 👁" : ""}\n   ${r.n} buys · 2x <b>${pct(r.r2)}</b> · 3x <b>${pct(r.r3)}</b> · 4x <b>${pct(r.r4)}</b> · avg peak ${(r.avgpeak || 0).toFixed(1)}x · entry ~$${fmt(r.avgmc)} @${Math.round(r.avgage)}s · ${(r.avgsol).toFixed(1)} SOL · ${ago}h ago\n`;
+    t += `${i + 1}. <code>${r.wallet}</code>${watch.has(r.wallet) ? " 👁" : ""}\n   ${r.n} buys · 5x <b>${pct(r.r5)}</b> · 10x <b>${pct(r.r10)}</b> · 2x ${pct(r.r2)} · avg peak ${(r.avgpeak || 0).toFixed(1)}x · entry ~$${fmt(r.avgmc)} @${Math.round(r.avgage)}s · ${(r.avgsol).toFixed(1)} SOL · ${ago}h ago\n`;
   });
   t += `\n/watch &lt;wallet&gt; to copy-trade one`;
   return t;
@@ -108,7 +115,7 @@ export function walletText(wallet) {
   const s = q.walletStats.get(wallet);
   if (!s || !s.n) return `No early buys recorded for <code>${wallet}</code> yet.`;
   const rec = q.walletRecent.all(wallet);
-  let t = `👛 <code>${wallet}</code>${watch.has(wallet) ? " 👁 watched" : ""}\n${s.n} scored buys (${s.pending} pending) · 2x ${pct(s.h2 / s.n)} · 3x ${pct(s.h3 / s.n)} · 4x ${pct(s.h4 / s.n)} · avg peak ${(s.avgpeak || 0).toFixed(1)}x · entry ~$${fmt(s.avgmc || 0)}\nRecent:\n`;
+  let t = `👛 <code>${wallet}</code>${watch.has(wallet) ? " 👁 watched" : ""}\n${s.n} scored buys (${s.pending} pending) · 5x ${pct(s.h4 / s.n)} · 10x ${pct(s.h10 / s.n)} · 2x ${pct(s.h2 / s.n)} · avg peak ${(s.avgpeak || 0).toFixed(1)}x · entry ~$${fmt(s.avgmc || 0)}\nRecent:\n`;
   for (const r of rec) t += `• ${esc(r.name || r.mint.slice(0, 8))} @${r.age_s}s $${fmt(r.entry_mc)} ${r.sol.toFixed(1)} SOL → ${r.resolved ? `peak $${fmt(r.peak_24h)} (${(r.peak_24h / r.entry_mc).toFixed(1)}x)` : "pending"}\n`;
   return t;
 }
@@ -120,7 +127,7 @@ export function creatorsText(days = 7, limit = 10) {
   const from = Math.floor(Date.now() / 1000) - days * 86400;
   const rows = q.creatorsTop.all(from, 2, limit);
   if (!rows.length) return "🧑‍💻 <b>Creators</b> — no creators with 2+ launches yet";
-  let t = `🧑‍💻 <b>Top creators</b> — last ${days}d · 2+ launches · ranked by best peak\n`;
+  let t = `🧑‍💻 <b>Top creators</b> — last ${days}d · 2+ launches · ranked by graduations (≥2 prior grads ≈ 4× base odds)\n`;
   rows.forEach((r, i) => {
     const ago = Math.floor((Date.now() / 1000 - r.last_ts) / 3600);
     t += `${i + 1}. <code>${r.creator}</code>${watchC.has(r.creator) ? " 👁" : ""}\n   ${r.n} launches · best <b>$${fmt(r.best || 0)}</b> · ${r.over100k} over $100K · ${r.grads} graduated · avg bundle ${Math.round(r.avgbundle || 0)}%${r.fac ? " · ⚠️factory " + r.fac : ""} · ${ago}h ago\n`;

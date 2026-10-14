@@ -146,7 +146,7 @@ function openPaper(t, s, tr, inflowSol, wallets, strategy = "early") {
   q.setPaperExtra.run(heldPct(s), strategy, r.lastInsertRowid);
   s.pos.volAtEntry = vol5Usd(s); q.setVolEntry.run(s.pos.volAtEntry, r.lastInsertRowid);
   try {
-    const ch = q.creatorHist.get(t.creator, t.mint, t.ts);
+    const ch = q.creatorHist.get(t.creator, t.mint, t.ts); s.creatorHist = ch;
     const snipers = t.trades.filter((x) => x.isBuy && x.slot <= t.slot + CFG.BUNDLE_SLOTS && x.wallet !== t.creator).length;
     const bsr = s.sells > 0 ? s.buys / s.sells : s.buys;
     q.setFeatures.run(ch?.n ?? 0, ch?.best ?? null, t.bundle?.devBuy ?? 0, snipers, new Date(tr.ts * 1000).getUTCHours(), s.rawPosId ?? null, bsr, s.oBuyers.size + s.cluster.size, r.lastInsertRowid);
@@ -174,7 +174,8 @@ function openPaper(t, s, tr, inflowSol, wallets, strategy = "early") {
       `MC <b>$${fmt(p.entryMc)}</b> · ${entryAge}s after launch · now $${fmt(nowMc)} (${chg >= 0 ? "+" : ""}${chg}%)${waveStr}${wall ? "\n" + wall : ""}\n` +
       `${socialsLine(soc)}\n` +
       `Inflow: <b>${inflowSol.toFixed(1)} SOL</b> / ${wallets} wallets in ${CFG.INFLOW_WINDOW_S}s · buys ${s.buys} / sells ${s.sells}\n` +
-      `Bundle ${t.bundle?.pct.toFixed(0) ?? 0}% · ${t.bundle?.sol.toFixed(1) ?? 0} SOL · hand-offs ${s.handoffs} · cluster holds <b>${heldPct(s).toFixed(0)}%</b>\n${links(t.mint)}`);
+      `Bundle ${t.bundle?.pct.toFixed(0) ?? 0}% · ${t.bundle?.sol.toFixed(1) ?? 0} SOL · hand-offs ${s.handoffs} · cluster holds <b>${heldPct(s).toFixed(0)}%</b>` +
+      (s.creatorHist?.n ? `\n🧑‍💻 creator: ${s.creatorHist.n} prior launches · ${s.creatorHist.grads || 0} graduated · ${s.creatorHist.over100k || 0} over $100K${(s.creatorHist.grads || 0) >= CFG.CREATOR_GRADS_FLAG ? " ⭐ proven" : ""}` : "") + `\n${links(t.mint)}`);
     for (const m of CFG.SCORECARD_MIN) setTimeout(() => scorecard(t, s, m, p), m * 60_000);
   }).catch((e) => console.error("[socials]", e.message));
 }
