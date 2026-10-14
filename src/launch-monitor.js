@@ -11,7 +11,7 @@ export const live = new Map();
 export const counters = { txs: 0, creates: 0, trades: 0, tier1: 0, decodeErr: 0 };
 const listeners = new Map(); // event -> [fn(token, extra)]   events: create|finalized|trade|graduated|expire
 export const on = (ev, fn) => { if (!listeners.has(ev)) listeners.set(ev, []); listeners.get(ev).push(fn); };
-const emit = (ev, t, extra) => { for (const fn of listeners.get(ev) || []) { try { fn(t, extra); } catch (e) { console.error(`[listener:${ev}]`, e.stack || e.message); } } };
+export const emit = (ev, t, extra) => { for (const fn of listeners.get(ev) || []) { try { fn(t, extra); } catch (e) { console.error(`[listener:${ev}]`, e.stack || e.message); } } };
 
 const mcUsd = (vsol, vtok) => priceSol(vsol, vtok) * CFG.TOTAL_SUPPLY * solUsdCached();
 

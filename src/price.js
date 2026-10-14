@@ -10,7 +10,7 @@ async function fetchCg() {
 export async function getSolUsd() {
   if (Date.now() - last < 60_000 && solUsd > 0) return solUsd;
   for (const f of [fetchJup, fetchCg]) {
-    try { const p = await f(); if (p > 0) { solUsd = p; last = Date.now(); return p; } } catch {}
+    try { const p = await f(); if (p > 0) { if (solUsd > 0 && (p > solUsd * 1.2 || p < solUsd * 0.8)) { console.error(`[price] rejected SOL/USD ${p} (last ${solUsd})`); continue; } solUsd = p; last = Date.now(); return p; } } catch {} // v0.17: reject >20% jumps
   }
   return solUsd;
 }

@@ -33,9 +33,9 @@ async function currentPrice(row) {
   try { return await dexPrice(row.mint); } catch { return null; }
 }
 function finals(r, mult) {
-  const hit2 = r.x_tp != null || (r.peak_mult || 1) >= 2, hit3 = (r.peak_mult || 1) >= 3;
+  const hit2 = r.x_tp != null || Math.max(r.peak_mult || 1, mult) >= 2, hit3 = Math.max(r.peak_mult || 1, mult) >= 3;
   return {
-    tp: r.x_tp ?? mult, tsl40: r.x_tsl40 ?? mult, tsl60: r.x_tsl60 ?? mult, tsl80: r.x_tsl80 ?? mult, cluster: r.x_cluster ?? mult, grad: r.x_grad ?? null,
+    tp: r.x_tp ?? (mult >= 2 ? 2 : mult), tsl40: r.x_tsl40 ?? mult, tsl60: r.x_tsl60 ?? mult, tsl80: r.x_tsl80 ?? mult, cluster: r.x_cluster ?? mult, grad: r.x_grad ?? null,
     half60: r.x_half60 ?? (hit2 ? 1 + 0.5 * mult : mult), twophase: r.x_twophase ?? (hit2 ? 1 + 0.5 * mult : mult),
     ladder: r.x_ladder ?? ((hit2 ? 0.5 : 0) + (hit3 ? 0.75 : 0) + (1 - (hit2 ? 0.25 : 0) - (hit3 ? 0.25 : 0)) * mult),
     levels: r.x_levels ?? mult, m1: r.x_m1 ?? mult, m1vol: r.x_m1vol ?? mult, volstop: r.x_volstop ?? mult, time: mult,

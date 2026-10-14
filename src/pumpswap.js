@@ -5,9 +5,12 @@ import { pumpSwapEventsFromLogs, parsePoolAccount, PUMPSWAP_PROGRAM, WSOL } from
 import { rpc } from "./rpc.js";
 import { solUsdCached } from "./price.js";
 import { routeOf } from "./routes.js";
+import { q } from "./db.js";
+import { live, emit } from "./launch-monitor.js";
 
-export const ps = { txs: 0, data: 0, buys: 0, sells: 0, pools: 0, unknownPool: 0, resolved: 0, lookupFail: 0, reconnects: 0, oversize: 0, get poolBudget() { return poolBudgetUsed; } };
+export const ps = { txs: 0, data: 0, buys: 0, sells: 0, pools: 0, unknownPool: 0, resolved: 0, lookupFail: 0, reconnects: 0, oversize: 0, thinPool: 0, gradEvidence: 0, get poolBudget() { return poolBudgetUsed; } };
 const poolMint = new Map();   // pool -> {mint, quote}
+const gradSeen = new Set();
 const pending = new Set();
 const poolVol = new Map();    // pool -> [{ts, sol}] rolling 5m, used to decide when a lookup is worth a credit
 let poolBudgetUsed = 0, poolBudgetDay = new Date().getUTCDate(), inFlight = 0;
@@ -55,7 +58,9 @@ function handle({ sig, slot, logs, err }) {
     const pm = poolMint.get(e.pool);
     if (!pm) { ps.unknownPool++; if (wantResolve(e.pool, sol, e.ts)) resolvePool(e.pool); continue; }
     if (pm.quote !== WSOL) continue; // only SOL-quoted pools
-    if (!(sol > 0) || sol > CFG.PS_MAX_SWAP_SOL) { ps.oversize++; continue; } // v0.15: implausible single swap (instant-graduation curve buys decode with bogus amounts)
+    if (!(sol > 0) || sol > CFG.PS_MAX_SWAP_SOL) { ps.oversize++; continue; }
+    if (Number(e.poolQuote) / 1e9 < CFG.PS_MIN_POOL_SOL) { ps.thinPool++; continue; } // v0.17: secondary/thin pools price the token wrongly
+    if (!gradSeen.has(pm.mint)) { gradSeen.add(pm.mint); if (gradSeen.size > 50000) gradSeen.delete(gradSeen.keys().next().value); try { q.setGrad.run(pm.mint); const t = live.get(pm.mint); if (t && !t.graduated) { t.graduated = true; emit("graduated", t, { price: (Number(e.poolQuote) / 1e9) / (Number(e.poolBase) / 1e6), ts: e.ts }); } ps.gradEvidence++; } catch {} } // v0.17: graduation flagged from PumpSwap evidence // v0.15: implausible single swap (instant-graduation curve buys decode with bogus amounts)
     const price = (Number(e.poolQuote) / 1e9) / (Number(e.poolBase) / 1e6);
     const mc = price * CFG.TOTAL_SUPPLY * solUsdCached();
     const tr = { mint: pm.mint, pool: e.pool, sig, slot, ts: e.ts, wallet: e.user, isBuy: e.isBuy, sol, tokens, price, mc, route };

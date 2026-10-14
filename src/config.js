@@ -134,6 +134,19 @@ Object.assign(CFG, {
   SWEEP_EVERY_MIN: n("SWEEP_EVERY_MIN", 5),     // v0.15.3: close over-hold paper trades at the real current price
   SWEEP_BATCH: n("SWEEP_BATCH", 60),             // per run (1 RPC read each for curve tokens; DexScreener for graduated)
   SWEEP_MAX_FAILS: n("SWEEP_MAX_FAILS", 3),
+  PS_MIN_POOL_SOL: n("PS_MIN_POOL_SOL", 10),        // v0.17: ignore PumpSwap swaps from pools holding less SOL than this
+  W2_CHECKS_S: s("W2_CHECKS_S", "120,180,240").split(",").map(Number), // v0.17 second-wave: ages checked
+  W2_MC_MIN: n("W2_MC_MIN", 10_000), W2_MC_MAX: n("W2_MC_MAX", 40_000),
+  W2_BUYERS_MIN: n("W2_BUYERS_MIN", 80),           // distinct buyers so far
+  W2_NEW60_MIN: n("W2_NEW60_MIN", 30),             // new distinct buyers in the last 60s
+  W2_BS_MIN: n("W2_BS_MIN", 1.0),                  // buy$/sell$ over last 60s
+  W2_BUNDLE_MAX: n("W2_BUNDLE_MAX", 60),
+  REV_AGE_MIN_S: n("REV_AGE_MIN_S", 300), REV_AGE_MAX_S: n("REV_AGE_MAX_S", 3600), // v0.17 revival
+  REV_DRAWDOWN: n("REV_DRAWDOWN", 0.4),            // price at least this far below peak
+  REV_NEW5M_MIN: n("REV_NEW5M_MIN", 20),           // new buyers in last 5m
+  REV_VOL_RATIO: n("REV_VOL_RATIO", 1.0),          // vol last 5m / previous 5m
+  REV_MC_MIN: n("REV_MC_MIN", 5_000),
+  COMBO_FLOOR_MC: n("COMBO_FLOOR_MC", 20_000),     // combined exit: out if MC falls back under this after being above
   CREATOR_GRADS_FLAG: n("CREATOR_GRADS_FLAG", 2), // v0.15.1: flag creators with this many prior graduations on alerts
   WB_MAX_BUYS_PER_DAY: n("WB_MAX_BUYS_PER_DAY", 50),
   WB_RETAIN_D: n("WB_RETAIN_D", 30),

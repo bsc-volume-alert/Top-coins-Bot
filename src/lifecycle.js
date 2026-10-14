@@ -6,6 +6,8 @@ import { onSwap } from "./pumpswap.js";
 import { rpc } from "./rpc.js";
 import { solUsdCached } from "./price.js";
 const climbListeners = []; export const onClimb = (fn) => climbListeners.push(fn);
+const w2Listeners = []; export const onWave2 = (fn) => w2Listeners.push(fn);
+const revListeners = []; export const onRevival = (fn) => revListeners.push(fn);
 
 export const lc = { samples: 0, holderSnaps: 0, bigBuys: 0, tracked: 0 };
 const L = new Map(); // mint -> { createTs, w5:[{ts,sol,b,w}], buyers:Set, lastMc, lastTs, graduated, next: idx }
@@ -16,15 +18,18 @@ const resetDay = () => { const d = new Date().getUTCDate(); if (d !== day) { day
 
 function st(mint, createTs) {
   let s = L.get(mint);
-  if (!s && createTs && createTs >= START_TS) { s = { createTs, w5: [], buyers: new Set(), lastMc: 0, lastTs: 0, graduated: 0, next: 0, cp: {}, maxBurst: 0, lastPx: 0, climbed: false }; L.set(mint, s); }
+  if (!s && createTs && createTs >= START_TS) { s = { createTs, w5: [], buyers: new Set(), lastMc: 0, lastTs: 0, graduated: 0, next: 0, cp: {}, maxBurst: 0, lastPx: 0, climbed: false, bts: [], ring: [], peakMc: 0, w2: new Set(), revDone: false, lastRev: 0 }; L.set(mint, s); }
   return s;
 }
 function trade(mint, createTs, tr, mc, graduated, venue) {
   const s = st(mint, createTs); if (!s) return;
   const now = tr.ts || Math.floor(Date.now() / 1000);
   s.w5.push({ ts: now, sol: tr.sol, b: tr.isBuy, w: tr.wallet }); while (s.w5.length && now - s.w5[0].ts > 300) s.w5.shift();
-  if (tr.isBuy) s.buyers.add(tr.wallet);
-  s.lastMc = mc; s.lastTs = now; s.lastPx = tr.price; if (graduated) s.graduated = 1;
+  if (tr.isBuy && !s.buyers.has(tr.wallet)) { s.buyers.add(tr.wallet); s.bts.push({ ts: now, w: tr.wallet }); }
+  while (s.bts.length && now - s.bts[0].ts > 600) s.bts.shift();
+  s.ring.push({ ts: now, px: tr.price, mc, usd: tr.sol * solUsdCached(), b: tr.isBuy }); while (s.ring.length && now - s.ring[0].ts > 660) s.ring.shift();
+  s.lastMc = mc; s.lastTs = now; s.lastPx = tr.price; if (graduated) s.graduated = 1; if (mc > s.peakMc) s.peakMc = mc;
+  wave2Check(mint, s, now, venue); revivalCheck(mint, s, now, venue);
   const v1 = s.w5.filter((x) => now - x.ts <= 60).reduce((a, x) => a + x.sol, 0) * solUsdCached(); if (v1 > s.maxBurst) s.maxBurst = v1;
   if (tr.isBuy && tr.sol >= CFG.BIGBUY_SOL) bigBuy(mint, tr, now - s.createTs, mc, venue);
   sample(mint, s, now);
@@ -81,6 +86,34 @@ export const lcStats = () => ({ ...lc, holderBudget, balBudget });
 /** v0.15: snapshot for the graduation strategy — 5m checkpoint (if reached), distinct buyers so far, biggest 1m burst */
 export function lifeSnap(mint) { const s = L.get(mint); if (!s) return null; return { cp5: s.cp[300] || null, buyers: s.buyers.size, maxBurst: s.maxBurst, createTs: s.createTs }; }
 
+// v0.17 second-wave-early: at 2/3/4 minutes, the first wave is still being bought by new people
+function wave2Check(mint, s, now, venue) {
+  const age = now - s.createTs;
+  if (s.w2.has("done")) return;
+  const cp = CFG.W2_CHECKS_S.find((c) => age >= c && age < c + 20 && !s.w2.has(c)); if (!cp) return;
+  s.w2.add(cp);
+  if (s.lastMc < CFG.W2_MC_MIN || s.lastMc > CFG.W2_MC_MAX || s.buyers.size < CFG.W2_BUYERS_MIN) return;
+  const new60 = s.bts.filter((x) => now - x.ts <= 60).length; if (new60 < CFG.W2_NEW60_MIN) return;
+  const r60 = s.ring.filter((x) => now - x.ts <= 60); const buyUsd = r60.filter((x) => x.b).reduce((a, x) => a + x.usd, 0), sellUsd = r60.filter((x) => !x.b).reduce((a, x) => a + x.usd, 0);
+  if (buyUsd / Math.max(sellUsd, 1) < CFG.W2_BS_MIN) return;
+  const ago = s.ring.find((x) => now - x.ts <= 75 && now - x.ts >= 45) || s.ring[0]; if (!ago || !(s.lastPx > ago.px)) return;
+  const m = q.tokenMeta.get(mint); if (m?.bundle_pct != null && m.bundle_pct > CFG.W2_BUNDLE_MAX) return;
+  s.w2.add("done");
+  for (const fn of w2Listeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: s.lastMc, ts: now, cp, buyers: s.buyers.size, new60, bs: buyUsd / Math.max(sellUsd, 1), pxChg: s.lastPx / ago.px - 1, bundle: m?.bundle_pct ?? null, venue }); } catch (e) { console.error("[wave2]", e.message); } }
+}
+// v0.17 revival (user's hypothesis): a coin that fell 40%+ from its peak, then new buyers and volume come back
+function revivalCheck(mint, s, now, venue) {
+  const age = now - s.createTs;
+  if (s.revDone || age < CFG.REV_AGE_MIN_S || age > CFG.REV_AGE_MAX_S || now - s.lastRev < 30) return;
+  s.lastRev = now;
+  if (s.lastMc < CFG.REV_MC_MIN || !(s.peakMc > 0) || s.lastMc > s.peakMc * (1 - CFG.REV_DRAWDOWN)) return;
+  const new5 = s.bts.filter((x) => now - x.ts <= 300).length; if (new5 < CFG.REV_NEW5M_MIN) return;
+  const vNow = s.ring.filter((x) => now - x.ts <= 300).reduce((a, x) => a + x.usd, 0), vPrev = s.ring.filter((x) => now - x.ts > 300 && now - x.ts <= 600).reduce((a, x) => a + x.usd, 0);
+  if (!(vPrev > 0) || vNow / vPrev < CFG.REV_VOL_RATIO) return;
+  s.revDone = true;
+  const m = q.tokenMeta.get(mint);
+  for (const fn of revListeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: s.lastMc, ts: now, age, peakMc: s.peakMc, new5, volRatio: vNow / vPrev, venue }); } catch (e) { console.error("[revival]", e.message); } }
+}
 function stairs(s, cps) {
   for (let i = 1; i < cps.length; i++) {
     const a = s.cp[cps[i - 1]], b = s.cp[cps[i]];
