@@ -20,16 +20,17 @@ function saveChat(id) {
     t = /^BSC_TG_CHAT_ID=.*$/m.test(t) ? t.replace(/^BSC_TG_CHAT_ID=.*$/m, `BSC_TG_CHAT_ID=${CHAT}`) : t + `\nBSC_TG_CHAT_ID=${CHAT}\n`;
     writeFileSync(ENV_FILE, t, { mode: 0o600 }); } catch (e) { console.error("[tg] save chat", e.message); }
 }
-const v = "bsc-0.2"; // BSC version (separate from the Solana tracker version in package.json)
+const v = "bsc-0.2.1"; // BSC version (separate from the Solana tracker version in package.json)
 const STAGE = "0.2";
 const T = (k, d) => (process.env[k] ? Number(process.env[k]) : d); // test overrides (seconds)
 const NR = process.env.NODEREAL_API_KEY;
 // caps: ws = live subscription allowed · logs = address-filtered eth_getLogs allowed · chain = whole-chain eth_getLogs allowed
 const NODES = [
   { name: "publicnode", http: "https://bsc-rpc.publicnode.com", ws: "wss://bsc-rpc.publicnode.com", caps: { ws: true, logs: true, chain: false } },
-  ...(NR ? [{ name: "nodereal", http: `https://bsc-mainnet.nodereal.io/v1/${NR}`, ws: `wss://bsc-mainnet.nodereal.io/ws/v1/${NR}`, caps: { ws: true, logs: true, chain: true } }] : []),
   { name: "drpc", http: "https://bsc.drpc.org", caps: { ws: false, logs: false, chain: false } },
   { name: "bnbchain", http: "https://bsc-dataseed.bnbchain.org", caps: { ws: false, logs: false, chain: false } },
+  // NodeReal last: backup only (free plan = 10M credits/month), used when the free public nodes fail
+  ...(NR ? [{ name: "nodereal", backup: true, http: `https://bsc-mainnet.nodereal.io/v1/${NR}`, ws: `wss://bsc-mainnet.nodereal.io/ws/v1/${NR}`, caps: { ws: true, logs: true, chain: true } }] : []),
 ].map((n) => ({ ...n, ok: 0, err: 0, r429: 0, lastErr: "", ms: 0, restUntil: 0, win: [] }));
 if (process.env.BSC_TEST_NODE) { NODES.length = 0; NODES.push({ name: "test", http: process.env.BSC_TEST_NODE, ws: process.env.BSC_TEST_NODE.replace("http", "ws").replace(/:\d+$/, (p) => ":" + (+p.slice(1) + 1)), caps: { ws: true, logs: true, chain: true }, ok: 0, err: 0, r429: 0, lastErr: "", ms: 0, restUntil: 0, win: [] }); }
 const LAUNCHPADS = { // address → venue (lower-case)
@@ -77,11 +78,11 @@ const usable = (n, cap) => (!cap || n.caps[cap]) && Date.now() > n.restUntil;
 function rest(n, why) { // too many refusals → leave it alone for 15 min (no alarm; shown in /status)
   if (Date.now() < n.restUntil) return; n.restUntil = Date.now() + 15 * 60_000; console.log(`[node] resting ${n.name}: ${why}`);
 }
-let rr = 0;
-async function rpc(method, params, cap = null) { // rotate across nodes that allow this kind of call
+const backupUse = { calls: {}, wsEvents: 0, since: Date.now() }; // NodeReal usage, shown in /status
+async function rpc(method, params, cap = null) { // priority order: free public nodes first, NodeReal only if they all fail
   const pool = NODES.filter((n) => usable(n, cap));
   for (let i = 0; i < pool.length; i++) {
-    const n = pool[(rr++) % pool.length];
+    const n = pool[i]; if (n.backup) backupUse.calls[method] = (backupUse.calls[method] || 0) + 1;
     try { return await call(n, method, params); }
     catch (e) { if (e.limit) { const s = winStats(n); if (s["429"] >= 5 && s["429"] > s.ok) rest(n, e.message); if (cap === "logs" && /specify an address/i.test(e.message)) n.caps.chain = false; } }
   }
@@ -123,14 +124,15 @@ function startLaunchpadFeed() {
         lp.connected = true; lp.since = Date.now(); backoff = 1000; console.log("[lp] subscribed", n.name);
         clear("ws-down", `live feed reconnected via ${n.name}`); return;
       }
-      if (m.params?.result?.topics) onLpLog(m.params.result, "ws");
+      if (m.params?.result?.topics) { if (n.backup) backupUse.wsEvents++; onLpLog(m.params.result, "ws"); }
     });
     let downDone = false;
     const down = (why) => {
       if (downDone) return; downDone = true; clearInterval(ping);
       if (lp.connected) { lp.reconnects++; lp.drops.push({ ts: Date.now(), node: n.name, why, up: Date.now() - lp.since }); }
       lp.connected = false; console.log(`[lp] down (${why}) after ${ago(Date.now() - openedAt)}`);
-      i++; setTimeout(connect, backoff); backoff = Math.min(backoff * 2, 30000);
+      const up = Date.now() - openedAt; if (up < 60_000) i++; else i = 0; // short session → try the next node; long one → back to publicnode
+      setTimeout(connect, backoff); backoff = Math.min(backoff * 2, 30000);
     };
     ws.on("close", (c, r) => down(`closed ${c}${r?.length ? " " + String(r).slice(0, 40) : ""}`));
     ws.on("error", (e) => { console.log("[lp] error", e.message); try { ws.terminate(); } catch {} down("error " + e.message.slice(0, 40)); });
@@ -228,7 +230,8 @@ function report() {
     `<b>Nodes</b> (last 10 min ok/err/refused):\n` + NODES.map((n) => { const s = winStats(n); const resting = Date.now() < n.restUntil;
       return `${resting ? "💤" : s.ok && !s["429"] && !s.err ? "✅" : s.ok ? "⚠️" : "❔"} ${n.name} ${s.ok}/${s.err}/${s["429"]} · ${n.ms}ms · ${[n.caps.ws && "live", n.caps.logs && "logs", n.caps.chain && "whole-chain"].filter(Boolean).join("+") || "lookups only"}${resting ? ` · resting ${ago(n.restUntil - Date.now())}` : ""}${n.lastErr && (s.err || s["429"]) ? ` · ${n.lastErr.slice(0, 50)}` : ""}`; }).join("\n") +
     `\n<b>Whole-chain PancakeSwap</b> (block ${blockTime.toFixed(2)}s): ` + (chain.last.some((r) => r.ok) ? chain.last.filter((r) => r.ok).map((r) => `✅ ${r.name} ~${r.perMin}/min`).join(" · ") : "❌ no free node allows it — needs the NodeReal key") +
-    `\nActive alarms: ${alarms.size ? [...alarms.keys()].join(", ") : "none"}${NR ? "" : "\nℹ️ No NodeReal key yet — publicnode is the only source of launchpad events."}`;
+    `\nActive alarms: ${alarms.size ? [...alarms.keys()].join(", ") : "none"}` +
+    (NR ? `\n<b>NodeReal backup</b> used since start (${ago(Date.now() - backupUse.since)}): ${Object.entries(backupUse.calls).map(([k, c]) => `${k} ${c}`).join(" · ") || "no calls"} · live events ${backupUse.wsEvents} — check credits on the NodeReal dashboard` : "\nℹ️ No NodeReal key yet — publicnode is the only source of launchpad events.");
 }
 
 // ---------- Telegram commands ----------
