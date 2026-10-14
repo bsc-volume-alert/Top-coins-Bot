@@ -38,3 +38,10 @@ All thresholds are env-overridable (see `src/config.js`).
 - **revival** (`🔁 REVIVAL`, the user's hypothesis): token 5–60 min old, ≥40% below its peak, then ≥20 new buyers in 5 min with volume ≥ the previous 5 min (`REV_*`). Day-one replay found almost no such cases; running to measure.
 - **combo exit** (`x_combo`): half at 2x, then out on a 60% trail, a volume stop after a 30% drop, or MC back under $20K after being above it. Reported on close messages and in /summary.
 - Graduation flagged from PumpSwap evidence (first swap seen for the mint), not only the curve threshold; swaps from pools holding <10 SOL ignored (`PS_MIN_POOL_SOL`) — secondary pools priced tokens at 1% of their value; SOL/USD readings that jump >20% are rejected; trades on the 79.3%/85 SOL operator's tokens marked invalid; sweeper take-profit fixed.
+
+## v0.17.1 — graduation runner + recovery, calmer alerts (14 Oct, evening)
+- **gradrun** (`🎓🚀 GRADUATION RUNNER`): within 15 min of graduation, 5m volume ≥ $80K, price ≥ graduation price, ≥30 new buyers in 2 min, buy$ ≥ sell$ (`GR_*`).
+- **gradrec** (`🔁🎓 GRADUATION RECOVERY`): graduated, ≥60% below post-graduation peak, then ≥20 new buyers in 5 min with volume ≥ previous 5 min (`GREC_*`). The plain `grad` entry stays as the control (no entries below $20K MC — bad prices).
+- Second wave: paper-trades all, alerts only ≥150 buyers and ≥50 new in 60s (`W2_ALERT_*`). Revival (curve): age ≥8 min, not graduated, the peak being recovered from ≥3 min old.
+- Combo exit: the $20K floor stop arms only once the position has been up 1.5x (`COMBO_FLOOR_ARM`).
+- Momentum paper cap back to $2M (all $100K/5m spikes paper-traded; MC recorded for analysis).

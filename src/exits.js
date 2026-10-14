@@ -2,7 +2,7 @@
 import { CFG } from "./config.js";
 import { levelsStep, levelsFinal, newLevels, volStopExit } from "./levels.js";
 export function newExits(entry, entryMc, volAtEntry) {
-  return { entry, entryMc, peak: entry, x: {}, half: false, s3: false, lv: newLevels(), volAtEntry: volAtEntry || 0, aboveFloor: entryMc >= CFG.COMBO_FLOOR_MC, lowVolSince: 0 };
+  return { entry, entryMc, peak: entry, x: {}, half: false, s3: false, lv: newLevels(), volAtEntry: volAtEntry || 0, aboveFloor: false, armed: false };
 }
 export function stepExits(e, price, mc, v5Usd, buyUsd, sellUsd) {
   if (price > e.peak) e.peak = price;
@@ -21,7 +21,7 @@ export function stepExits(e, price, mc, v5Usd, buyUsd, sellUsd) {
   if (x.m1vol == null) { if (mc >= CFG.M1_EXIT_USD && v5Usd < CFG.M1_HOLD_VOL5M) x.m1vol = mult; else if (fromPeak <= -0.60) x.m1vol = mult; }
   if (x.volstop == null && fromPeak <= -0.60 && volStopExit(fromPeak, v5Usd, buyUsd, sellUsd, e.volAtEntry)) x.volstop = mult;
   // v0.17 combined rule: half at 2x, then out on 60% trail, or volume stop, or MC back under the floor after being above it
-  if (mc >= CFG.COMBO_FLOOR_MC) e.aboveFloor = true;
+  if (mult >= CFG.COMBO_FLOOR_ARM) e.armed = true; if (e.armed && mc >= CFG.COMBO_FLOOR_MC) e.aboveFloor = true; // v0.17.1: floor only once in profit
   if (x.combo == null) {
     const half = e.half ? 1 + 0.5 * mult : mult;
     if (fromPeak <= -0.60) x.combo = half;

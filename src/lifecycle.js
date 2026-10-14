@@ -8,6 +8,8 @@ import { solUsdCached } from "./price.js";
 const climbListeners = []; export const onClimb = (fn) => climbListeners.push(fn);
 const w2Listeners = []; export const onWave2 = (fn) => w2Listeners.push(fn);
 const revListeners = []; export const onRevival = (fn) => revListeners.push(fn);
+const grListeners = []; export const onGradRunner = (fn) => grListeners.push(fn);
+const grecListeners = []; export const onGradRecovery = (fn) => grecListeners.push(fn);
 
 export const lc = { samples: 0, holderSnaps: 0, bigBuys: 0, tracked: 0 };
 const L = new Map(); // mint -> { createTs, w5:[{ts,sol,b,w}], buyers:Set, lastMc, lastTs, graduated, next: idx }
@@ -18,7 +20,7 @@ const resetDay = () => { const d = new Date().getUTCDate(); if (d !== day) { day
 
 function st(mint, createTs) {
   let s = L.get(mint);
-  if (!s && createTs && createTs >= START_TS) { s = { createTs, w5: [], buyers: new Set(), lastMc: 0, lastTs: 0, graduated: 0, next: 0, cp: {}, maxBurst: 0, lastPx: 0, climbed: false, bts: [], ring: [], peakMc: 0, w2: new Set(), revDone: false, lastRev: 0 }; L.set(mint, s); }
+  if (!s && createTs && createTs >= START_TS) { s = { createTs, w5: [], buyers: new Set(), lastMc: 0, lastTs: 0, graduated: 0, next: 0, cp: {}, maxBurst: 0, lastPx: 0, climbed: false, bts: [], ring: [], peakMc: 0, peakTs: 0, w2: new Set(), revDone: false, lastRev: 0, gradTs: 0, gradPx: 0, gradPeak: 0, grDone: false, grecDone: false, lastGr: 0 }; L.set(mint, s); }
   return s;
 }
 function trade(mint, createTs, tr, mc, graduated, venue) {
@@ -28,8 +30,10 @@ function trade(mint, createTs, tr, mc, graduated, venue) {
   if (tr.isBuy && !s.buyers.has(tr.wallet)) { s.buyers.add(tr.wallet); s.bts.push({ ts: now, w: tr.wallet }); }
   while (s.bts.length && now - s.bts[0].ts > 600) s.bts.shift();
   s.ring.push({ ts: now, px: tr.price, mc, usd: tr.sol * solUsdCached(), b: tr.isBuy }); while (s.ring.length && now - s.ring[0].ts > 660) s.ring.shift();
-  s.lastMc = mc; s.lastTs = now; s.lastPx = tr.price; if (graduated) s.graduated = 1; if (mc > s.peakMc) s.peakMc = mc;
-  wave2Check(mint, s, now, venue); revivalCheck(mint, s, now, venue);
+  s.lastMc = mc; s.lastTs = now; s.lastPx = tr.price; if (mc > s.peakMc) { s.peakMc = mc; s.peakTs = now; }
+  if (graduated && !s.graduated) { s.graduated = 1; s.gradTs = now; s.gradPx = tr.price; s.gradPeak = mc; }
+  if (s.graduated && mc > s.gradPeak) s.gradPeak = mc;
+  wave2Check(mint, s, now, venue); revivalCheck(mint, s, now, venue); gradRunnerCheck(mint, s, now); gradRecoveryCheck(mint, s, now);
   const v1 = s.w5.filter((x) => now - x.ts <= 60).reduce((a, x) => a + x.sol, 0) * solUsdCached(); if (v1 > s.maxBurst) s.maxBurst = v1;
   if (tr.isBuy && tr.sol >= CFG.BIGBUY_SOL) bigBuy(mint, tr, now - s.createTs, mc, venue);
   sample(mint, s, now);
@@ -99,20 +103,43 @@ function wave2Check(mint, s, now, venue) {
   const ago = s.ring.find((x) => now - x.ts <= 75 && now - x.ts >= 45) || s.ring[0]; if (!ago || !(s.lastPx > ago.px)) return;
   const m = q.tokenMeta.get(mint); if (m?.bundle_pct != null && m.bundle_pct > CFG.W2_BUNDLE_MAX) return;
   s.w2.add("done");
-  for (const fn of w2Listeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: s.lastMc, ts: now, cp, buyers: s.buyers.size, new60, bs: buyUsd / Math.max(sellUsd, 1), pxChg: s.lastPx / ago.px - 1, bundle: m?.bundle_pct ?? null, venue }); } catch (e) { console.error("[wave2]", e.message); } }
+  for (const fn of w2Listeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: s.lastMc, ts: now, cp, buyers: s.buyers.size, new60, bs: buyUsd / Math.max(sellUsd, 1), pxChg: s.lastPx / ago.px - 1, bundle: m?.bundle_pct ?? null, venue, alert: s.buyers.size >= CFG.W2_ALERT_BUYERS && new60 >= CFG.W2_ALERT_NEW60 }); } catch (e) { console.error("[wave2]", e.message); } }
 }
 // v0.17 revival (user's hypothesis): a coin that fell 40%+ from its peak, then new buyers and volume come back
 function revivalCheck(mint, s, now, venue) {
   const age = now - s.createTs;
-  if (s.revDone || age < CFG.REV_AGE_MIN_S || age > CFG.REV_AGE_MAX_S || now - s.lastRev < 30) return;
+  if (s.revDone || s.graduated || age < CFG.REV_AGE_MIN_S || age > CFG.REV_AGE_MAX_S || now - s.lastRev < 30) return;
   s.lastRev = now;
-  if (s.lastMc < CFG.REV_MC_MIN || !(s.peakMc > 0) || s.lastMc > s.peakMc * (1 - CFG.REV_DRAWDOWN)) return;
+  if (s.lastMc < CFG.REV_MC_MIN || !(s.peakMc > 0) || s.lastMc > s.peakMc * (1 - CFG.REV_DRAWDOWN) || now - s.peakTs < CFG.REV_PEAK_MIN_AGE_S) return;
   const new5 = s.bts.filter((x) => now - x.ts <= 300).length; if (new5 < CFG.REV_NEW5M_MIN) return;
   const vNow = s.ring.filter((x) => now - x.ts <= 300).reduce((a, x) => a + x.usd, 0), vPrev = s.ring.filter((x) => now - x.ts > 300 && now - x.ts <= 600).reduce((a, x) => a + x.usd, 0);
   if (!(vPrev > 0) || vNow / vPrev < CFG.REV_VOL_RATIO) return;
   s.revDone = true;
   const m = q.tokenMeta.get(mint);
   for (const fn of revListeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: s.lastMc, ts: now, age, peakMc: s.peakMc, new5, volRatio: vNow / vPrev, venue }); } catch (e) { console.error("[revival]", e.message); } }
+}
+// v0.17.1 graduation runner: just graduated and still being bought hard
+function gradRunnerCheck(mint, s, now) {
+  if (!s.graduated || s.grDone || !s.gradTs || now - s.gradTs > CFG.GR_WINDOW_S || now - s.lastGr < 10) return;
+  s.lastGr = now;
+  const r5 = s.ring.filter((x) => now - x.ts <= 300); const vol = r5.reduce((a, x) => a + x.usd, 0); if (vol < CFG.GR_VOL5M_USD) return;
+  if (!(s.lastPx >= s.gradPx)) return;
+  const new2 = s.bts.filter((x) => now - x.ts <= 120).length; if (new2 < CFG.GR_NEW2M_MIN) return;
+  const buyUsd = r5.filter((x) => x.b).reduce((a, x) => a + x.usd, 0), sellUsd = vol - buyUsd; if (buyUsd / Math.max(sellUsd, 1) < CFG.GR_BS_MIN) return;
+  s.grDone = true;
+  const m = q.tokenMeta.get(mint);
+  for (const fn of grListeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: s.lastMc, ts: now, sinceGrad: now - s.gradTs, vol5: vol, new2, bs: buyUsd / Math.max(sellUsd, 1), buyers: s.buyers.size, age: now - s.createTs }); } catch (e) { console.error("[gradrun]", e.message); } }
+}
+// v0.17.1 graduation recovery: graduated, dumped 60%+ from its post-graduation peak, then buyers and volume return
+function gradRecoveryCheck(mint, s, now) {
+  if (!s.graduated || s.grecDone || !s.gradTs || now - s.lastRev < 30) return;
+  if (!(s.gradPeak > 0) || s.lastMc > s.gradPeak * (1 - CFG.GREC_DRAWDOWN) || s.lastMc < CFG.REV_MC_MIN) return;
+  const new5 = s.bts.filter((x) => now - x.ts <= 300).length; if (new5 < CFG.GREC_NEW5M_MIN) return;
+  const vNow = s.ring.filter((x) => now - x.ts <= 300).reduce((a, x) => a + x.usd, 0), vPrev = s.ring.filter((x) => now - x.ts > 300 && now - x.ts <= 600).reduce((a, x) => a + x.usd, 0);
+  if (!(vPrev > 0) || vNow / vPrev < CFG.REV_VOL_RATIO) return;
+  s.grecDone = true;
+  const m = q.tokenMeta.get(mint);
+  for (const fn of grecListeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: s.lastMc, ts: now, peakMc: s.gradPeak, new5, volRatio: vNow / vPrev, age: now - s.createTs, buyers: s.buyers.size }); } catch (e) { console.error("[gradrec]", e.message); } }
 }
 function stairs(s, cps) {
   for (let i = 1; i < cps.length; i++) {

@@ -70,7 +70,7 @@ Object.assign(CFG, {
   VOL5M_HOT_USD: n("VOL5M_HOT_USD", 200_000),
   VOL1M_BURST_USD: n("VOL1M_BURST_USD", 30_000),
   MOM_MC_CAP: n("MOM_MC_CAP", 2_000_000),
-  MOM_PAPER_MC_CAP: n("MOM_PAPER_MC_CAP", 200_000), // v0.15: paper-trade only below this; above → alert only (0/24 hit 2x above $500K)
+  MOM_PAPER_MC_CAP: n("MOM_PAPER_MC_CAP", 2_000_000), // v0.15: paper-trade only below this; above → alert only (0/24 hit 2x above $500K)
   MOM_BS_MIN: n("MOM_BS_MIN", 1.0),           // v0.15: 5m buy$/sell$ must be >= this (3% hit 2x below 1.0 vs 28% above)
   MOM_MIN_TRADES5: n("MOM_MIN_TRADES5", 10),  // v0.15: sanity — at least this many swaps in the 5m window
   MOM_MIN_WALLETS5: n("MOM_MIN_WALLETS5", 5), // ...from this many distinct wallets
@@ -141,7 +141,14 @@ Object.assign(CFG, {
   W2_NEW60_MIN: n("W2_NEW60_MIN", 30),             // new distinct buyers in the last 60s
   W2_BS_MIN: n("W2_BS_MIN", 1.0),                  // buy$/sell$ over last 60s
   W2_BUNDLE_MAX: n("W2_BUNDLE_MAX", 60),
-  REV_AGE_MIN_S: n("REV_AGE_MIN_S", 300), REV_AGE_MAX_S: n("REV_AGE_MAX_S", 3600), // v0.17 revival
+  W2_ALERT_BUYERS: n("W2_ALERT_BUYERS", 150), W2_ALERT_NEW60: n("W2_ALERT_NEW60", 50), // v0.17.1: alert only the strong ones; paper-trade all
+  REV_PEAK_MIN_AGE_S: n("REV_PEAK_MIN_AGE_S", 180),  // v0.17.1: the peak being recovered from must be at least this old
+  GR_WINDOW_S: n("GR_WINDOW_S", 900),                 // v0.17.1 graduation runner: within this many seconds of graduation
+  GR_VOL5M_USD: n("GR_VOL5M_USD", 80_000), GR_NEW2M_MIN: n("GR_NEW2M_MIN", 30), GR_BS_MIN: n("GR_BS_MIN", 1.0),
+  GREC_DRAWDOWN: n("GREC_DRAWDOWN", 0.6),             // v0.17.1 graduation recovery: >= this far below post-graduation peak
+  GREC_NEW5M_MIN: n("GREC_NEW5M_MIN", 20),
+  COMBO_FLOOR_ARM: n("COMBO_FLOOR_ARM", 1.5),         // v0.17.1: floor stop only armed once the position has been up this much
+  REV_AGE_MIN_S: n("REV_AGE_MIN_S", 480), REV_AGE_MAX_S: n("REV_AGE_MAX_S", 3600), // v0.17 revival
   REV_DRAWDOWN: n("REV_DRAWDOWN", 0.4),            // price at least this far below peak
   REV_NEW5M_MIN: n("REV_NEW5M_MIN", 20),           // new buyers in last 5m
   REV_VOL_RATIO: n("REV_VOL_RATIO", 1.0),          // vol last 5m / previous 5m
