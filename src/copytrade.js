@@ -4,7 +4,7 @@ import { q } from "./db.js";
 import { on } from "./launch-monitor.js";
 import { onSwap } from "./pumpswap.js";
 import { onCopy, onCreatorLaunch } from "./wallets.js";
-import { onClimb, lifeSnap, onWave2, onRevival, onGradRunner, onGradRecovery } from "./lifecycle.js";
+import { onClimb, lifeSnap, onWave2, onRevival, onGradRunner, onGradRecovery, onSlowBuild } from "./lifecycle.js";
 import { links } from "./launch-monitor.js";
 import { newExits, stepExits, finalExits, pc } from "./exits.js";
 import { watch as afterWatch } from "./aftercare.js";
@@ -28,6 +28,7 @@ function openCopy(kind, who, mint, name, symbol, price, mc, ts, note) {
   if (kind === "revival") tg(`🔁 <b>REVIVAL</b> — ${esc(name)} ($${esc(symbol)}) · ${Math.round(note.age / 60)}m old\nFell ${((1 - mc / note.peakMc) * 100).toFixed(0)}% from peak $${fmt(note.peakMc)} · ${note.new5} new buyers in 5m · volume ${note.volRatio.toFixed(1)}x previous 5m\nMC <b>$${fmt(mc)}</b>\n${links(mint)}`).then((id) => { pos.msgId = id; });
   if (kind === "gradrun") tg(`🎓🚀 <b>GRADUATION RUNNER</b> — ${esc(name)} ($${esc(symbol)}) · ${Math.round(note.sinceGrad / 60)}m after graduation (${Math.round(note.age / 60)}m old)\n5m vol <b>$${fmt(note.vol5)}</b> · ${note.new2} new buyers in 2m · ${note.buyers} buyers · buy$/sell$ ${note.bs.toFixed(1)}\nMC <b>$${fmt(mc)}</b>\n${links(mint)}`).then((id) => { pos.msgId = id; });
   if (kind === "gradrec") tg(`🔁🎓 <b>GRADUATION RECOVERY</b> — ${esc(name)} ($${esc(symbol)}) · ${Math.round(note.age / 60)}m old\nFell ${((1 - mc / note.peakMc) * 100).toFixed(0)}% from post-graduation peak $${fmt(note.peakMc)} · ${note.new5} new buyers in 5m · volume ${note.volRatio.toFixed(1)}x previous 5m\nMC <b>$${fmt(mc)}</b>\n${links(mint)}`).then((id) => { pos.msgId = id; });
+  if (kind === "slow") tg(`📈🔁 <b>SLOW BUILD</b> — ${esc(name)} ($${esc(symbol)}) · ${Math.round(note.age / 60)}m old${note.graduated ? " · graduated" : ""}\nPeak $${fmt(note.peakMc)} → low $${fmt(note.lowMc)} (${Math.round(note.sinceLow / 60)}m ago) → now <b>$${fmt(mc)}</b>\n5m volume ${note.vols.map((v) => "$" + fmt(v)).join(" → ")} · new buyers ${note.nbs.join(" → ")} · ${note.buyers} buyers total\n${links(mint)}`).then((id) => { pos.msgId = id; });
   if (kind === "grad") { pos.alerted = (note.buyers || 0) >= CFG.GRAD_ALERT_BUYERS; if (pos.alerted) tg(`🎓 <b>GRADUATION ENTRY</b> — ${esc(name)} ($${esc(symbol)})\nGraduated at +${ageS != null ? Math.round(ageS / 60) + "m" : "?"} · ${note.buyers} buyers · 5m-mark MC ${note.mc5 ? "$" + fmt(note.mc5) : "n/a"} · 5m buyers ${note.buyers5 ?? "n/a"} · max 1m burst $${fmt(note.maxBurst || 0)}\nMC <b>$${fmt(mc)}</b> · now trading on PumpSwap\n${links(mint)}`).then((id) => { pos.msgId = id; }); }
   const arr = P.get(mint) || []; arr.push(pos); P.set(mint, arr); cp.entries++;
   afterWatch(mint, pos.id, price, mc);
@@ -38,6 +39,7 @@ onClimb((c) => { if (c.price > 0) openCopy("climber", `${Math.round(c.cp / 60)}m
 onWave2((c) => { if (c.price > 0) openCopy("wave2", `${Math.round(c.cp / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, buyers: c.buyers, bs: c.bs }); });
 onGradRunner((c) => { if (c.price > 0 && c.mc >= 20000) openCopy("gradrun", `${Math.round(c.sinceGrad / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, ageS: c.age }); });
 onGradRecovery((c) => { if (c.price > 0) openCopy("gradrec", `${Math.round(c.age / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, ageS: c.age, buyers: c.new5 }); });
+onSlowBuild((c) => { if (c.price > 0) openCopy("slow", `${Math.round(c.age / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, ageS: c.age, buyers: c.buyers }); });
 onRevival((c) => { if (c.price > 0) openCopy("revival", `${Math.round(c.age / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, buyers: c.new5 }); });
 onCreatorLaunch(({ creator, label, mint, name, symbol, price, mc, ts }) => { if (price > 0) openCopy("copycreator", label || creator.slice(0, 6), mint, name, symbol, price, mc, ts); });
 // v0.15: graduation strategy — paper-enter every graduation we watched from launch, with the +5m snapshot as features (alert only when buyers >= GRAD_ALERT_BUYERS)
@@ -72,7 +74,7 @@ function close(mint, p, reason) {
   const mult = p.lastPx / p.e.entry, v = finalExits(p.e, mult), peakMult = p.e.peak / p.e.entry, now = Math.floor(Date.now() / 1000);
   q.updMom.run(p.lastMc, peakMult, v.tp, v.tsl40, v.tsl60, v.tsl80, v.half60, v.twophase, v.ladder, v.time, now, p.lastMc, p.lastPx, reason, (v.time - 1) * 100, 1, v.levels, v.m1, v.m1vol, v.volstop, p.id);
   try { q.setCombo.run(v.combo, p.id); } catch {}
-  if (p.alerted !== false) tg(`${v.half60 >= 1 ? "✅" : "🔴"} <b>${p.kind === "climber" ? "CLIMBER CLOSE" : p.kind === "grad" ? "GRADUATION CLOSE" : p.kind === "wave2" ? "SECOND WAVE CLOSE" : p.kind === "revival" ? "REVIVAL CLOSE" : p.kind === "gradrun" ? "GRADUATION RUNNER CLOSE" : p.kind === "gradrec" ? "GRADUATION RECOVERY CLOSE" : p.kind === "copycreator" ? "COPY CREATOR CLOSE" : "COPY CLOSE"}</b> — ${esc(p.label)} / ${esc(p.name)} (${reason}) · peak <b>${peakMult.toFixed(2)}x</b> · now ${mult.toFixed(2)}x\ncombo <b>${pc(v.combo)}</b> · ½@2x+60%: ${pc(v.half60)} · 2-phase ${pc(v.twophase)} · vol-stop ${pc(v.volstop)} · 2x-out ${pc(v.tp)} · trail40 ${pc(v.tsl40)} · hold ${pc(v.time)}`, { replyTo: p.msgId });
+  if (p.alerted !== false) tg(`${v.half60 >= 1 ? "✅" : "🔴"} <b>${p.kind === "climber" ? "CLIMBER CLOSE" : p.kind === "grad" ? "GRADUATION CLOSE" : p.kind === "wave2" ? "SECOND WAVE CLOSE" : p.kind === "revival" ? "REVIVAL CLOSE" : p.kind === "gradrun" ? "GRADUATION RUNNER CLOSE" : p.kind === "gradrec" ? "GRADUATION RECOVERY CLOSE" : p.kind === "slow" ? "SLOW BUILD CLOSE" : p.kind === "copycreator" ? "COPY CREATOR CLOSE" : "COPY CLOSE"}</b> — ${esc(p.label)} / ${esc(p.name)} (${reason}) · peak <b>${peakMult.toFixed(2)}x</b> · now ${mult.toFixed(2)}x\ncombo <b>${pc(v.combo)}</b> · ½@2x+60%: ${pc(v.half60)} · 2-phase ${pc(v.twophase)} · vol-stop ${pc(v.volstop)} · 2x-out ${pc(v.tp)} · trail40 ${pc(v.tsl40)} · hold ${pc(v.time)}`, { replyTo: p.msgId });
   const arr = P.get(mint); if (arr && arr.every((z) => z.closed)) P.delete(mint);
 }
 export const cpStats = () => ({ ...cp, open: [...P.values()].flat().filter((p) => !p.closed).length });

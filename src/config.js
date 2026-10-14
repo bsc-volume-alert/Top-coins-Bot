@@ -147,6 +147,12 @@ Object.assign(CFG, {
   GR_VOL5M_USD: n("GR_VOL5M_USD", 80_000), GR_NEW2M_MIN: n("GR_NEW2M_MIN", 30), GR_BS_MIN: n("GR_BS_MIN", 1.0),
   GREC_DRAWDOWN: n("GREC_DRAWDOWN", 0.6),             // v0.17.1 graduation recovery: >= this far below post-graduation peak
   GREC_NEW5M_MIN: n("GREC_NEW5M_MIN", 20),
+  SLOW_MIN_AGE_S: n("SLOW_MIN_AGE_S", 600),            // v0.17.2 slow build (base breakout)
+  SLOW_DRAWDOWN: n("SLOW_DRAWDOWN", 0.5),               // fell at least this far from peak at some point
+  SLOW_SINCE_DUMP_S: n("SLOW_SINCE_DUMP_S", 600),       // the low was at least this long ago (went sideways)
+  SLOW_WINDOWS: n("SLOW_WINDOWS", 3),                   // consecutive 5-min windows with rising buyers and volume
+  SLOW_OFF_LOW: n("SLOW_OFF_LOW", 0.3),                 // price at least this far above the post-dump low
+  SLOW_NEW10M_MIN: n("SLOW_NEW10M_MIN", 30), SLOW_MC_MIN: n("SLOW_MC_MIN", 8_000),
   COMBO_FLOOR_ARM: n("COMBO_FLOOR_ARM", 1.5),         // v0.17.1: floor stop only armed once the position has been up this much
   REV_AGE_MIN_S: n("REV_AGE_MIN_S", 480), REV_AGE_MAX_S: n("REV_AGE_MAX_S", 3600), // v0.17 revival
   REV_DRAWDOWN: n("REV_DRAWDOWN", 0.4),            // price at least this far below peak

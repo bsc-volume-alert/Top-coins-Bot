@@ -10,6 +10,7 @@ const w2Listeners = []; export const onWave2 = (fn) => w2Listeners.push(fn);
 const revListeners = []; export const onRevival = (fn) => revListeners.push(fn);
 const grListeners = []; export const onGradRunner = (fn) => grListeners.push(fn);
 const grecListeners = []; export const onGradRecovery = (fn) => grecListeners.push(fn);
+const slowListeners = []; export const onSlowBuild = (fn) => slowListeners.push(fn);
 
 export const lc = { samples: 0, holderSnaps: 0, bigBuys: 0, tracked: 0 };
 const L = new Map(); // mint -> { createTs, w5:[{ts,sol,b,w}], buyers:Set, lastMc, lastTs, graduated, next: idx }
@@ -20,7 +21,7 @@ const resetDay = () => { const d = new Date().getUTCDate(); if (d !== day) { day
 
 function st(mint, createTs) {
   let s = L.get(mint);
-  if (!s && createTs && createTs >= START_TS) { s = { createTs, w5: [], buyers: new Set(), lastMc: 0, lastTs: 0, graduated: 0, next: 0, cp: {}, maxBurst: 0, lastPx: 0, climbed: false, bts: [], ring: [], peakMc: 0, peakTs: 0, w2: new Set(), revDone: false, lastRev: 0, gradTs: 0, gradPx: 0, gradPeak: 0, grDone: false, grecDone: false, lastGr: 0 }; L.set(mint, s); }
+  if (!s && createTs && createTs >= START_TS) { s = { createTs, w5: [], buyers: new Set(), lastMc: 0, lastTs: 0, graduated: 0, next: 0, cp: {}, maxBurst: 0, lastPx: 0, climbed: false, bts: [], ring: [], peakMc: 0, peakTs: 0, w2: new Set(), revDone: false, lastRev: 0, gradTs: 0, gradPx: 0, gradPeak: 0, grDone: false, grecDone: false, lastGr: 0, dumped: false, lowMc: Infinity, lowTs: 0, slowDone: false, lastSlow: 0 }; L.set(mint, s); }
   return s;
 }
 function trade(mint, createTs, tr, mc, graduated, venue) {
@@ -28,12 +29,14 @@ function trade(mint, createTs, tr, mc, graduated, venue) {
   const now = tr.ts || Math.floor(Date.now() / 1000);
   s.w5.push({ ts: now, sol: tr.sol, b: tr.isBuy, w: tr.wallet }); while (s.w5.length && now - s.w5[0].ts > 300) s.w5.shift();
   if (tr.isBuy && !s.buyers.has(tr.wallet)) { s.buyers.add(tr.wallet); s.bts.push({ ts: now, w: tr.wallet }); }
-  while (s.bts.length && now - s.bts[0].ts > 600) s.bts.shift();
-  s.ring.push({ ts: now, px: tr.price, mc, usd: tr.sol * solUsdCached(), b: tr.isBuy }); while (s.ring.length && now - s.ring[0].ts > 660) s.ring.shift();
+  while (s.bts.length && now - s.bts[0].ts > 1260) s.bts.shift();
+  s.ring.push({ ts: now, px: tr.price, mc, usd: tr.sol * solUsdCached(), b: tr.isBuy }); while (s.ring.length && now - s.ring[0].ts > 1260) s.ring.shift();
   s.lastMc = mc; s.lastTs = now; s.lastPx = tr.price; if (mc > s.peakMc) { s.peakMc = mc; s.peakTs = now; }
   if (graduated && !s.graduated) { s.graduated = 1; s.gradTs = now; s.gradPx = tr.price; s.gradPeak = mc; }
   if (s.graduated && mc > s.gradPeak) s.gradPeak = mc;
-  wave2Check(mint, s, now, venue); revivalCheck(mint, s, now, venue); gradRunnerCheck(mint, s, now); gradRecoveryCheck(mint, s, now);
+  if (!s.dumped && s.peakMc > 0 && mc <= s.peakMc * (1 - CFG.SLOW_DRAWDOWN)) { s.dumped = true; s.lowMc = mc; s.lowTs = now; }
+  if (s.dumped && mc < s.lowMc) { s.lowMc = mc; s.lowTs = now; }
+  wave2Check(mint, s, now, venue); revivalCheck(mint, s, now, venue); gradRunnerCheck(mint, s, now); gradRecoveryCheck(mint, s, now); slowBuildCheck(mint, s, now);
   const v1 = s.w5.filter((x) => now - x.ts <= 60).reduce((a, x) => a + x.sol, 0) * solUsdCached(); if (v1 > s.maxBurst) s.maxBurst = v1;
   if (tr.isBuy && tr.sol >= CFG.BIGBUY_SOL) bigBuy(mint, tr, now - s.createTs, mc, venue);
   sample(mint, s, now);
@@ -140,6 +143,21 @@ function gradRecoveryCheck(mint, s, now) {
   s.grecDone = true;
   const m = q.tokenMeta.get(mint);
   for (const fn of grecListeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: s.lastMc, ts: now, peakMc: s.gradPeak, new5, volRatio: vNow / vPrev, age: now - s.createTs, buyers: s.buyers.size }); } catch (e) { console.error("[gradrec]", e.message); } }
+}
+// v0.17.2 slow build / base breakout: pumped, dumped 50%+, went sideways, now buyers and volume rising window over window and price turning up
+function slowBuildCheck(mint, s, now) {
+  if (s.slowDone || !s.dumped || now - s.createTs < CFG.SLOW_MIN_AGE_S || now - s.lowTs < CFG.SLOW_SINCE_DUMP_S || now - s.lastSlow < 30) return;
+  s.lastSlow = now;
+  if (s.lastMc < CFG.SLOW_MC_MIN || !(s.lastMc >= s.lowMc * (1 + CFG.SLOW_OFF_LOW))) return;
+  const W = CFG.SLOW_WINDOWS, win = [];
+  for (let i = 0; i < W; i++) { const a = now - (i + 1) * 300, b = now - i * 300; const r = s.ring.filter((x) => x.ts > a && x.ts <= b); win.push({ vol: r.reduce((q, x) => q + x.usd, 0), nb: s.bts.filter((x) => x.ts > a && x.ts <= b).length }); }
+  for (let i = 0; i < W - 1; i++) if (!(win[i].vol > win[i + 1].vol && win[i].nb > win[i + 1].nb)) return; // newest window must beat the one before, W-1 times
+  if (!(win[W - 1].vol > 0)) return;
+  const new10 = s.bts.filter((x) => now - x.ts <= 600).length; if (new10 < CFG.SLOW_NEW10M_MIN) return;
+  const r10 = s.ring.filter((x) => now - x.ts <= 600); const avg10 = r10.reduce((q, x) => q + x.px, 0) / Math.max(r10.length, 1); if (!(s.lastPx > avg10)) return;
+  s.slowDone = true;
+  const m = q.tokenMeta.get(mint);
+  for (const fn of slowListeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: s.lastMc, ts: now, age: now - s.createTs, peakMc: s.peakMc, lowMc: s.lowMc, sinceLow: now - s.lowTs, new10, vols: win.map((w) => Math.round(w.vol)).reverse(), nbs: win.map((w) => w.nb).reverse(), buyers: s.buyers.size, graduated: s.graduated }); } catch (e) { console.error("[slow]", e.message); } }
 }
 function stairs(s, cps) {
   for (let i = 1; i < cps.length; i++) {
