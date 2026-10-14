@@ -9,7 +9,8 @@ try { // load .env (path from pm2 ecosystem)
     const m = l.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/); if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
   }
 } catch {}
-const TOKEN = process.env.BSC_TG_BOT_TOKEN; let CHAT = String(process.env.BSC_TG_CHAT_ID || "");
+const TOKEN = process.env.BSC_TG_BOT_TOKEN; let CHAT = String(process.env.BSC_TG_CHAT_ID || "").trim();
+if (!/^-?\d+$/.test(CHAT)) CHAT = ""; // anything that is not a numeric chat ID is ignored → bot waits for /start in a group
 /** save the chat ID into .env so it survives restarts */
 function saveChat(id) {
   CHAT = String(id);
