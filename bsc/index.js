@@ -1,14 +1,24 @@
 // BSC tracker — stage 0: pipeline check only (no trading yet).
 // Proves the auto-deploy, the .env, the Telegram bot and the free BSC nodes all work before the real tracker lands.
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import WebSocket from "ws";
 
+const ENV_FILE = process.env.ENV_FILE || "/root/tracker-bsc/.env";
 try { // load .env (path from pm2 ecosystem)
-  for (const l of readFileSync(process.env.ENV_FILE || "/root/tracker-bsc/.env", "utf8").split("\n")) {
+  for (const l of readFileSync(ENV_FILE, "utf8").split("\n")) {
     const m = l.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/); if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
   }
 } catch {}
-const TOKEN = process.env.BSC_TG_BOT_TOKEN, CHAT = String(process.env.BSC_TG_CHAT_ID || "");
+const TOKEN = process.env.BSC_TG_BOT_TOKEN; let CHAT = String(process.env.BSC_TG_CHAT_ID || "");
+/** save the chat ID into .env so it survives restarts */
+function saveChat(id) {
+  CHAT = String(id);
+  try {
+    let t = ""; try { t = readFileSync(ENV_FILE, "utf8"); } catch {}
+    t = /^BSC_TG_CHAT_ID=.*$/m.test(t) ? t.replace(/^BSC_TG_CHAT_ID=.*$/m, `BSC_TG_CHAT_ID=${CHAT}`) : t + `\nBSC_TG_CHAT_ID=${CHAT}\n`;
+    writeFileSync(ENV_FILE, t, { mode: 0o600 }); console.log("[tg] chat ID saved", CHAT);
+  } catch (e) { console.error("[tg] could not save chat ID", e.message); }
+}
 const v = JSON.parse(readFileSync(new URL("../package.json", import.meta.url))).version;
 const HTTP = ["https://bsc-rpc.publicnode.com", "https://bsc.drpc.org", "https://bsc-dataseed.bnbchain.org",
   ...(process.env.NODEREAL_API_KEY ? [`https://bsc-mainnet.nodereal.io/v1/${process.env.NODEREAL_API_KEY}`] : [])];
@@ -62,15 +72,24 @@ async function poll() {
     try {
       const j = await (await fetch(`https://api.telegram.org/bot${TOKEN}/getUpdates?timeout=25&offset=${offset}`, { signal: AbortSignal.timeout(35000) })).json();
       for (const u of j.result || []) {
-        offset = u.update_id + 1; const m = u.message; if (!m?.text || String(m.chat?.id) !== CHAT) continue;
+        offset = u.update_id + 1; const m = u.message || u.channel_post;
+        if (m?.migrate_to_chat_id && String(m.chat?.id) === CHAT) { saveChat(m.migrate_to_chat_id); continue; } // group upgraded to supergroup
+        // no chat set yet: adopt the first group that sends /start
+        if (!CHAT && m?.text && /^\/start/.test(m.text) && /group|channel/.test(m.chat?.type || "")) {
+          saveChat(m.chat.id);
+          await tg(`🟡 <b>BSC tracker linked to this group</b> (chat ${CHAT})\n` + (await report()) + "\nSend /status any time to re-test.");
+          continue;
+        }
+        if (!m?.text || String(m.chat?.id) !== CHAT) continue;
         if (/^\/status/.test(m.text)) await tg(`🟡 <b>BSC</b> v${v} stage 0 (pipeline check) · up ${Math.round(process.uptime() / 60)}m\n` + (await report()));
       }
     } catch { await new Promise((r) => setTimeout(r, 5000)); }
   }
 }
 
-console.log(`bsc-tracker v${v} stage 0 starting`);
+console.log(`bsc-tracker v${v} stage 0 starting · chat ${CHAT || "not set — send /start@<bot> in the group"}`);
+if (TOKEN) { try { await fetch(`https://api.telegram.org/bot${TOKEN}/deleteWebhook`, { signal: AbortSignal.timeout(8000) }); } catch {} } // old webhooks block getUpdates
 const r = await report(); console.log(r);
-await tg(`🟡 <b>BSC tracker online</b> v${v} — stage 0: pipeline check (no trading yet)\nAuto-deploy ✅ · .env ✅ · Telegram ✅\n${r}\nSend /status any time to re-test.`);
+if (CHAT) await tg(`🟡 <b>BSC tracker online</b> v${v} — stage 0: pipeline check (no trading yet)\nAuto-deploy ✅ · .env ✅ · Telegram ✅\n${r}\nSend /status any time to re-test.`);
 poll();
 setInterval(() => {}, 1 << 30);
