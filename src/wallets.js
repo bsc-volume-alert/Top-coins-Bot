@@ -39,7 +39,7 @@ function peakTick(mint, mc, now) {
 on("create", (t) => { early.set(t.mint, { buyers: new Map(), createTs: t.ts, maxMc: 0, committed: false, proven: new Set() }); });
 // v0.15.3: proven wallets (>= PROVEN_MIN_BUYS resolved non-bundle early buys, >= PROVEN_MIN_5X of them 5x) — refreshed hourly
 let proven = new Set();
-const refreshProven = () => { try { proven = new Set(q.provenWallets.all(CFG.PROVEN_MIN_BUYS, CFG.PROVEN_MIN_5X).map((r) => r.wallet)); } catch (e) { console.error("[proven]", e.message); } };
+const refreshProven = () => { try { proven = new Set(q.provenWallets.all(CFG.PROVEN_MIN_SOL, Math.floor(Date.now() / 1000) - 86400, CFG.WB_MAX_BUYS_PER_DAY, CFG.PROVEN_MIN_BUYS, CFG.PROVEN_MIN_5X).map((r) => r.wallet)); } catch (e) { console.error("[proven]", e.message); } };
 refreshProven(); setInterval(refreshProven, 3600_000);
 export const provenCount = (mint) => early.get(mint)?.proven.size ?? 0;
 export const provenSize = () => proven.size;
@@ -51,7 +51,7 @@ on("trade", (t, tr) => {
   const age = now - t.ts;
   if (tr.isBuy && age <= CFG.WB_EARLY_S && tr.sol >= CFG.WB_MIN_SOL && !e.buyers.has(tr.wallet) && e.buyers.size < CFG.WB_MAX_PER_TOKEN)
     e.buyers.set(tr.wallet, { ts: now, age, sol: tr.sol, mc: t.lastMc });
-  if (tr.isBuy && age <= CFG.PROVEN_WINDOW_S && proven.has(tr.wallet) && !e.proven.has(tr.wallet)) { e.proven.add(tr.wallet); if (e.proven.size === 1 || e.proven.size === 2) tg(`👛 <b>PROVEN WALLET IN</b> — ${esc(t.name)} ($${esc(t.symbol)}) · ${short(tr.wallet)} bought ${tr.sol.toFixed(2)} SOL at ${age}s · MC $${fmt(t.lastMc)} · ${e.proven.size} proven so far\n${links(t.mint)}`); }
+  if (tr.isBuy && age <= CFG.PROVEN_WINDOW_S && tr.sol >= CFG.PROVEN_ALERT_MIN_SOL && proven.has(tr.wallet) && !e.proven.has(tr.wallet)) { e.proven.add(tr.wallet); if (e.proven.size === 1 || e.proven.size === 2) tg(`👛 <b>PROVEN WALLET IN</b> — ${esc(t.name)} ($${esc(t.symbol)}) · ${short(tr.wallet)} bought ${tr.sol.toFixed(2)} SOL at ${age}s · MC $${fmt(t.lastMc)} · ${e.proven.size} proven so far\n${links(t.mint)}`); }
   if (tr.isBuy && watch.has(tr.wallet) && tr.sol >= CFG.WB_COPY_MIN_SOL) copySignal(tr.wallet, t.mint, t.name, t.symbol, tr, t.lastMc, "curve");
   if (!e.committed && e.maxMc >= CFG.WB_TOKEN_MIN_MC && age > CFG.WB_EARLY_S) commit(t, e);
 });

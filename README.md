@@ -48,3 +48,6 @@ All thresholds are env-overridable (see `src/config.js`).
 
 ## v0.17.2 — slow build / base breakout (14 Oct, late)
 - **slow** (`📈🔁 SLOW BUILD`): token ≥10 min old that fell ≥50% from its peak, with the low ≥10 min ago; three consecutive 5-min windows each with more new buyers and more volume than the one before; price ≥30% above the post-dump low and above its 10-min average; ≥30 new buyers in 10 min; MC ≥ $8K (`SLOW_*`). Per-token history extended to 21 minutes.
+
+## v0.17.3 — proven-wallet bar raised (14 Oct, night)
+- Proven = 8+ scored non-bundle buys of ≥0.3 SOL at ≥3s, ≥50% of them 5x, and not a high-frequency wallet (50+ buys/day). Alert only on buys ≥0.2 SOL. The volume snipers (460 buys/day at 0.01 SOL) qualified under the old bar and are not copyable.

@@ -173,7 +173,7 @@ export const q = {
   setQuality: db.prepare(`UPDATE paper_trades SET q_score=?, q_wallets=?, q_per10k=?, q_top3=?, q_roundtrip=?, q_retail=?, q_custom=?, q_size_cv=?, q_new_pct=?, q_px_per10k=? WHERE id=?`),
   setCombo: db.prepare(`UPDATE paper_trades SET x_combo=? WHERE id=?`),
   setEntryCounts: db.prepare(`UPDATE paper_trades SET buys_entry=?, sells_entry=?, proven_entry=? WHERE id=?`),
-  provenWallets: db.prepare(`SELECT wallet FROM wallet_buys WHERE resolved=1 AND is_cluster=0 AND age_s>=1 AND entry_mc>0 GROUP BY wallet HAVING COUNT(*)>=? AND SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*)>=?`),
+  provenWallets: db.prepare(`SELECT wallet FROM wallet_buys WHERE resolved=1 AND is_cluster=0 AND age_s>=3 AND sol>=? AND entry_mc>0 AND wallet NOT IN (SELECT wallet FROM wallet_buys WHERE ts>=? GROUP BY wallet HAVING COUNT(*)>?) GROUP BY wallet HAVING COUNT(*)>=? AND SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*)>=?`),
   setNextLevel: db.prepare(`UPDATE paper_trades SET next_level=? WHERE id=?`),
   updMom: db.prepare(`UPDATE paper_trades SET peak_mc=?, peak_mult=?, x_tp=?, x_tsl40=?, x_tsl60=?, x_tsl80=?, x_half60=?, x_twophase=?, x_ladder=?, x_time=?, exit_ts=?, exit_mc=?, exit_price=?, exit_reason=?, pnl_pct=?, closed=?, x_levels=?, x_m1=?, x_m1vol=?, x_volstop=? WHERE id=?`),
   tokenMeta: db.prepare(`SELECT name, symbol, create_ts, bundle_pct, bundle_sol, handoffs, tier, factory, has_socials, socials, cluster_sol_in, cluster_sol_out FROM tokens WHERE mint=?`),

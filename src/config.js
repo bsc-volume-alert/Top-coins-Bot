@@ -128,9 +128,11 @@ Object.assign(CFG, {
   WB_MIN_AGE_S: n("WB_MIN_AGE_S", 1),        // v0.15.1: leaderboard ignores create-block (0s) buys — bundlers/snipers always "win"
   WATCH_SEED_WALLETS: s("WATCH_SEED_WALLETS", "CZdG7s8FVWVM6Ats8XSJ2R2qRkTKsd7qAtuvHGb1YLXN,BfUE1UcptE2noHrnBYxyqcDbPrboXsA1NZTurr5jd35b,4nHZjd64nCskpL852vcpMkHbYU3ppQ42E4SyZTbBp427").split(",").map((x) => x.trim()).filter(Boolean),
   WATCH_SEED_CREATORS: s("WATCH_SEED_CREATORS", "D8pP1hegfQrND1tpMv1pQJZYyzwnHsiFa9AVLc2Lzoxy,DR8351MpWktoeJPJnZiwTFnRoXkX7qofvKMvWM8FGuWT,9rdgxk4nTtQY6B8GXtjNsuwGQmz5RtMByFFvVpub8gSY,ACowwSv1QQzPbAD2EhjHTYm9FNgpqeUAfex6Zi9NgJNn,H9h9BCMurt5jTxCB9JhsJerVhqtuaHUVgvAFBGUQbMCs").split(",").map((x) => x.trim()).filter(Boolean),
-  PROVEN_MIN_BUYS: n("PROVEN_MIN_BUYS", 4),       // v0.15.3: "proven" wallet = this many resolved non-bundle early buys...
+  PROVEN_MIN_BUYS: n("PROVEN_MIN_BUYS", 8),        // v0.17.3: raised from 4 — the volume snipers qualified at 4       // v0.15.3: "proven" wallet = this many resolved non-bundle early buys...
   PROVEN_MIN_5X: n("PROVEN_MIN_5X", 0.5),         // ...with this share reaching 5x within 24h
-  PROVEN_WINDOW_S: n("PROVEN_WINDOW_S", 60),      // count proven wallets buying within this many seconds of launch
+  PROVEN_WINDOW_S: n("PROVEN_WINDOW_S", 60),
+  PROVEN_MIN_SOL: n("PROVEN_MIN_SOL", 0.3),         // v0.17.3: a scored buy must be at least this; alert needs 0.2 SOL
+  PROVEN_ALERT_MIN_SOL: n("PROVEN_ALERT_MIN_SOL", 0.2),      // count proven wallets buying within this many seconds of launch
   SWEEP_EVERY_MIN: n("SWEEP_EVERY_MIN", 5),     // v0.15.3: close over-hold paper trades at the real current price
   SWEEP_BATCH: n("SWEEP_BATCH", 60),             // per run (1 RPC read each for curve tokens; DexScreener for graduated)
   SWEEP_MAX_FAILS: n("SWEEP_MAX_FAILS", 3),
