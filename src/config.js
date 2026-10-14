@@ -70,6 +70,15 @@ Object.assign(CFG, {
   VOL5M_HOT_USD: n("VOL5M_HOT_USD", 200_000),
   VOL1M_BURST_USD: n("VOL1M_BURST_USD", 30_000),
   MOM_MC_CAP: n("MOM_MC_CAP", 2_000_000),
+  MOM_PAPER_MC_CAP: n("MOM_PAPER_MC_CAP", 200_000), // v0.15: paper-trade only below this; above → alert only (0/24 hit 2x above $500K)
+  MOM_BS_MIN: n("MOM_BS_MIN", 1.0),           // v0.15: 5m buy$/sell$ must be >= this (3% hit 2x below 1.0 vs 28% above)
+  MOM_MIN_TRADES5: n("MOM_MIN_TRADES5", 10),  // v0.15: sanity — at least this many swaps in the 5m window
+  MOM_MIN_WALLETS5: n("MOM_MIN_WALLETS5", 5), // ...from this many distinct wallets
+  MOM_MIN_AGE_S: n("MOM_MIN_AGE_S", 60),      // ...and token at least this old (when age is known)
+  PS_MAX_SWAP_SOL: n("PS_MAX_SWAP_SOL", 1000), // v0.15: drop PumpSwap swaps above this (decode artefacts on instant graduations)
+  GRAD_ALERT_BUYERS: n("GRAD_ALERT_BUYERS", 250), // v0.15: graduation strategy alerts only when distinct buyers >= this (paper-enters all)
+  CONF_ALERT_BUYERS: n("CONF_ALERT_BUYERS", 250), // v0.15: confirm alerts only with this many buyers (paper trade always)
+  CLIMB_ALERT_BUYERS: n("CLIMB_ALERT_BUYERS", 250), // v0.15: climber alerts only with this many buyers
   MOM_MAX_AGE_D: n("MOM_MAX_AGE_D", 30),
   MOM_COOLDOWN_MIN: n("MOM_COOLDOWN_MIN", 30),
   MOM_MAX_HOLD_MIN: n("MOM_MAX_HOLD_MIN", 360),

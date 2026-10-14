@@ -43,8 +43,8 @@ const m = (v) => (v == null ? "—" : `${((v - 1) * 100).toFixed(0)}%`);
 export function reportText(hours) {
   const to = Math.floor(Date.now() / 1000), from = to - hours * 3600;
   const a = q.digestAgg.get(from, to);
-  const byTier = db.prepare(`SELECT tier, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) h, AVG(x_time) xt, AVG(x_tsl40) x40 FROM paper_trades WHERE entry_ts>=? GROUP BY tier`).all(from);
-  const tp = db.prepare(`SELECT AVG(x_tp) xtp, SUM(CASE WHEN x_tp IS NOT NULL THEN 1 ELSE 0 END) n FROM paper_trades WHERE entry_ts>=?`).get(from);
+  const byTier = db.prepare(`SELECT tier, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) h, AVG(x_time) xt, AVG(x_tsl40) x40 FROM paper_trades WHERE entry_ts>=? AND COALESCE(invalid,0)=0 GROUP BY tier`).all(from);
+  const tp = db.prepare(`SELECT AVG(x_tp) xtp, SUM(CASE WHEN x_tp IS NOT NULL THEN 1 ELSE 0 END) n FROM paper_trades WHERE entry_ts>=? AND COALESCE(invalid,0)=0`).get(from);
   const launches = q.countSince.get(from), prepared = q.countTierSince.get(1, from);
   if (!a.n) return `📊 <b>Report ${hours}h</b> · launches ${launches} · prepared ${prepared} · no paper trades yet`;
   const pc = (x, n) => (n ? `${((x / n) * 100).toFixed(0)}%` : "—");
@@ -55,8 +55,31 @@ export function reportText(hours) {
     `No socials: ${a.nosoc} trades → ${a.nosoc2x} hit 2x (${pc(a.nosoc2x, a.nosoc)}) · factory: ${a.fac} → ${a.fac2x} (${pc(a.fac2x, a.fac)})\n` +
     byTier.map((r) => `tier${r.tier}: ${r.n} trades, ${r.h} hit 2x (${pc(r.h, r.n)}), TSL40 ${m(r.x40)}, hold ${m(r.xt)}`).join("\n");
 }
+const CSV_EXTRA = {
+  token_life: `SELECT l.mint, t.name, t.symbol, t.creator, datetime(t.create_ts,'unixepoch') launch_utc, t.bundle_pct, t.bundle_sol, t.tier, t.factory, t.has_socials, l.cp, l.mc, l.vol5m_usd, l.buys5m, l.sells5m, l.buyers5m, l.buyers_total, l.graduated, l.top10_pct, l.holders, l.alive FROM token_life l LEFT JOIN tokens t ON t.mint=l.mint ORDER BY l.mint, l.cp`,
+  wallet_buys: `SELECT w.wallet, w.mint, t.name, datetime(w.ts,'unixepoch') buy_utc, w.age_s, w.sol, w.entry_mc, w.is_cluster, w.peak_30m, w.peak_24h, w.resolved FROM wallet_buys w LEFT JOIN tokens t ON t.mint=w.mint ORDER BY w.ts`,
+  big_buys: `SELECT b.mint, t.name, b.wallet, datetime(b.ts,'unixepoch') buy_utc, b.age_s, b.sol, b.mc, b.balance_sol, b.venue FROM big_buys b LEFT JOIN tokens t ON t.mint=b.mint ORDER BY b.ts`,
+  tokens: `SELECT mint, name, symbol, creator, datetime(create_ts,'unixepoch') launch_utc, bundle_pct, bundle_sol, bundle_wallets, handoffs, tier, factory, has_socials, outside_buyers, outside_sol_in, cluster_sol_in, cluster_sol_out, peak_mc_usd, graduated, dev_buy_sol, creator_age_s, creator_funded_sol FROM tokens WHERE finalized=1 ORDER BY create_ts`,
+};
+async function sendDoc(name, rows, caption) {
+  const cols = Object.keys(rows[0]);
+  const escv = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+  const csv = [cols.join(","), ...rows.map((r) => cols.map((c) => escv(r[c])).join(","))].join("\n");
+  const fd = new FormData();
+  fd.append("chat_id", CHAT());
+  fd.append("document", new Blob([csv], { type: "text/csv" }), `${name}_${new Date().toISOString().slice(0, 10)}.csv`);
+  fd.append("caption", caption);
+  try { const r = await fetch(`https://api.telegram.org/bot${TOKEN()}/sendDocument`, { method: "POST", body: fd }); if (!r.ok) console.error("[csv]", await r.text()); }
+  catch (e) { console.error("[csv]", e.message); }
+}
 async function sendCsv() {
-  const rows = db.prepare(`SELECT p.id, p.strategy, p.name, p.symbol, p.mint, datetime(p.entry_ts,'unixepoch') entry_utc, p.entry_age_s, p.entry_mc, p.peak_mult, p.x_tp, p.x_tsl40, p.x_tsl60, p.x_cluster, p.x_grad, p.x_time, p.x_tsl80, p.x_half60, p.x_twophase, p.x_ladder, p.x_levels, p.x_m1, p.x_m1vol, p.next_level, p.wave1_peak_mc, p.cluster_held_pct, p.trigger_kind, p.x_volstop, p.vol_at_entry, p.after_peak_mult, p.after_peak_mc, p.handover, p.creator_prior, p.creator_best_peak, p.dev_buy_sol, p.snipers, p.hour_utc, p.parent_id, p.bs_ratio_entry, p.buyers_entry, p.vol5m_usd, p.vol1m_usd, p.age_s, p.reentry_n, p.exit_reason, p.closed, p.tier, p.factory, p.has_socials, p.bundle_pct, p.bundle_sol, p.handoffs, p.inflow_sol, p.inflow_wallets, p.outside_share, p.buys, p.sells, p.mc_5m, p.mc_15m, p.buyers_5m, p.alerted, t.outside_buyers, t.outside_sol_in, t.cluster_sol_in, t.cluster_sol_out, t.graduated, t.creator FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint ORDER BY p.id`).all();
+  await sendPaperCsv();
+  for (const [name, sql] of Object.entries(CSV_EXTRA)) { // v0.15: lifecycle funnel, wallet buys, big buys, tokens
+    try { const rows = db.prepare(sql).all(); if (rows.length) await sendDoc(name, rows, `${rows.length} ${name.replace("_", " ")} rows`); } catch (e) { console.error("[csv]", name, e.message); }
+  }
+}
+async function sendPaperCsv() {
+  const rows = db.prepare(`SELECT p.id, p.strategy, p.name, p.symbol, p.mint, datetime(p.entry_ts,'unixepoch') entry_utc, p.entry_age_s, p.entry_mc, p.peak_mult, p.x_tp, p.x_tsl40, p.x_tsl60, p.x_cluster, p.x_grad, p.x_time, p.x_tsl80, p.x_half60, p.x_twophase, p.x_ladder, p.x_levels, p.x_m1, p.x_m1vol, p.next_level, p.wave1_peak_mc, p.cluster_held_pct, p.trigger_kind, p.x_volstop, p.vol_at_entry, p.after_peak_mult, p.after_peak_mc, p.handover, p.creator_prior, p.creator_best_peak, p.dev_buy_sol, p.snipers, p.hour_utc, p.parent_id, p.bs_ratio_entry, p.buyers_entry, p.vol5m_usd, p.vol1m_usd, p.age_s, p.reentry_n, p.exit_reason, p.closed, p.tier, p.factory, p.has_socials, p.bundle_pct, p.bundle_sol, p.handoffs, p.inflow_sol, p.inflow_wallets, p.outside_share, p.buys, p.sells, p.mc_5m, p.mc_15m, p.buyers_5m, p.alerted, p.invalid, t.outside_buyers, t.outside_sol_in, t.cluster_sol_in, t.cluster_sol_out, t.graduated, t.creator FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint ORDER BY p.id`).all();
   if (!rows.length) return tg("No paper trades yet.");
   const cols = Object.keys(rows[0]);
   const esc = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));

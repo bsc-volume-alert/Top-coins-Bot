@@ -156,7 +156,7 @@ function openPaper(t, s, tr, inflowSol, wallets, strategy = "early") {
   t.hold = true; sig.entries++;
   const pRef = s.pos;
   setTimeout(() => closePaper(t, s, "time", pRef), CFG.MAX_HOLD_MIN * 60_000);
-  const strong = strategy === "secondwave" || strategy === "confirm" || t.tier >= 1 || (inflowSol >= CFG.ALERT_INFLOW_SOL && wallets >= CFG.ALERT_INFLOW_WALLETS);
+  const strong = strategy === "secondwave" || (strategy === "confirm" && s.oBuyers.size + s.cluster.size >= CFG.CONF_ALERT_BUYERS) || (strategy !== "confirm" && (t.tier >= 1 || (inflowSol >= CFG.ALERT_INFLOW_SOL && wallets >= CFG.ALERT_INFLOW_WALLETS))); // v0.15: confirm alerts only with >=250 buyers
   const p = s.pos;
   getSocials(t.mint, t.uri).then(async (soc) => {
     const socStr = JSON.stringify({ t: soc.twitter, w: soc.website, k: soc.tiktok, g: soc.telegram });

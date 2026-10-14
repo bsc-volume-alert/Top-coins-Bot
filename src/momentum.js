@@ -65,6 +65,11 @@ onSwap((tr) => {
   if (v5 < CFG.VOL5M_USD && !burst) return;
   const kind = v5 >= CFG.VOL5M_USD ? "vol5m" : "burst";
   if (tr.mc > CFG.MOM_MC_CAP || tr.mc <= 0) return;
+  // v0.15 sanity: a real volume event is many swaps from many wallets on a token that has existed for a minute
+  if (s.w5.length < CFG.MOM_MIN_TRADES5 || new Set(s.w5.map((x) => x.w)).size < CFG.MOM_MIN_WALLETS5) return;
+  { const m = q.tokenMeta.get(tr.mint); if (m?.create_ts && now - m.create_ts < CFG.MOM_MIN_AGE_S) return; }
+  // v0.15 gate: buyers must outweigh sellers in USD over the 5m window
+  if (bsu[1] > 0 && bsu[0] / bsu[1] < CFG.MOM_BS_MIN) return;
   if (now - s.lastAlert < CFG.MOM_COOLDOWN_MIN * 60) return;
   if (s.pos && !s.pos.closed) return;
   // re-entry rules
@@ -93,6 +98,12 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
   if (ageS != null && ageS > CFG.MOM_MAX_AGE_D * 86400) return;
   const reentry = s.trades.length;
   const alert = !CFG.ALERT_REQUIRE_SOCIALS || soc.ok || !soc.fetched;
+  if (tr.mc > CFG.MOM_PAPER_MC_CAP) { // v0.15: above the paper cap → information alert only, no position
+    if (!alert) return; mom.alerts++; mom.infoOnly = (mom.infoOnly || 0) + 1;
+    const ageStr0 = ageS == null ? "age ?" : ageS < 3600 ? `${Math.floor(ageS / 60)}m old` : ageS < 86400 ? `${(ageS / 3600).toFixed(1)}h old` : `${(ageS / 86400).toFixed(1)}d old`;
+    await tg(`ℹ️ <b>${kind === "burst" ? "BURST" : "VOLUME"} (above paper cap, info only)</b> — ${esc(name || mint.slice(0, 8))} ($${esc(symbol || "?")})\n5m vol <b>$${fmt(v5)}</b> (1m $${fmt(v1)}) · buys ${buys.length} / sells ${sells.length} · $${fmt(buyUsd)} in / $${fmt(sellUsd)} out · ${buyers} buyers\nMC <b>$${fmt(tr.mc)}</b> · ${ageStr0}\n${socialsLine(soc)}\n${links(mint)}`);
+    return;
+  }
   const r = q.insMom.run(mint, name || mint.slice(0, 8), symbol || "", now, tr.mc, tr.price, meta?.bundle_pct ?? null, meta?.bundle_sol ?? null, meta?.handoffs ?? null, meta?.tier ?? null, meta?.factory ?? null,
     soc.fetched ? (soc.ok ? 1 : 0) : null, JSON.stringify({ t: soc.twitter, w: soc.website, k: soc.tiktok, g: soc.telegram }), v5, v1, buys.length, sells.length, ageS, reentry, alert ? 1 : 0, tr.mc);
   const pos = { id: r.lastInsertRowid, entry: tr.price, entryMc: tr.mc, entryTs: now, peak: tr.price, x: {}, lad: { s2: false, s3: false }, tp: { half: false, twoHalf: false }, closed: false, msgId: null, alerted: alert, name: name || mint.slice(0, 8), lv: newLevels(), kind };
@@ -195,7 +206,7 @@ export function strategySummary(hours) {
   if (!rows.length) return `📋 <b>${hours}h summary</b> — no paper trades`;
   let t = `📋 <b>${hours}h summary</b> · ${new Date().toISOString().slice(11, 16)} UTC\n`;
   for (const r of rows) {
-    t += `\n<b>${r.strategy === "early" ? "EARLY (curve)" : r.strategy === "secondwave" ? "SECOND WAVE (curve)" : r.strategy === "copy" ? "COPY (watched wallets)" : r.strategy === "confirm" ? "CONFIRMED (+5m, curve)" : r.strategy === "copycreator" ? "COPY CREATOR" : r.strategy === "climber" ? "CLIMBER (slow riser)" : "MOMENTUM (volume)"}</b> — ${r.n} trades · ${r.hit2x} hit 2x (${r.n ? ((r.hit2x / r.n) * 100).toFixed(0) : 0}%) · avg peak ${(r.peak || 1).toFixed(2)}x\n`;
+    t += `\n<b>${r.strategy === "early" ? "EARLY (curve)" : r.strategy === "secondwave" ? "SECOND WAVE (curve)" : r.strategy === "copy" ? "COPY (watched wallets)" : r.strategy === "confirm" ? "CONFIRMED (+5m, curve)" : r.strategy === "copycreator" ? "COPY CREATOR" : r.strategy === "climber" ? "CLIMBER (slow riser)" : r.strategy === "grad" ? "GRADUATION (pool open)" : "MOMENTUM (volume)"}</b> — ${r.n} trades · ${r.hit2x} hit 2x (${r.n ? ((r.hit2x / r.n) * 100).toFixed(0) : 0}%) · avg peak ${(r.peak || 1).toFixed(2)}x\n`;
     t += `½@2x+60% ${pc(r.xh)} · 2-phase ${pc(r.x2p)} · ladder ${pc(r.xl)} · levels ${pc(r.xlv)} · $1M-out ${pc(r.xm1)} · $1M-vol ${pc(r.xm1v)} · vol-stop ${pc(r.xvs)}\n2x-out ${pc(r.xtp)} · trail40 ${pc(r.x40)} · trail60 ${pc(r.x60)} · trail80 ${pc(r.x80)} · hold ${pc(r.xt)}\nran after entry (24h): avg peak ${(r.ap || 1).toFixed(2)}x · ${r.ap3 || 0} went 3x+\n`;
   }
   return t;

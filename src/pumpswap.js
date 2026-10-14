@@ -5,7 +5,7 @@ import { pumpSwapEventsFromLogs, parsePoolAccount, PUMPSWAP_PROGRAM, WSOL } from
 import { rpc } from "./rpc.js";
 import { solUsdCached } from "./price.js";
 
-export const ps = { txs: 0, data: 0, buys: 0, sells: 0, pools: 0, unknownPool: 0, resolved: 0, lookupFail: 0, reconnects: 0, get poolBudget() { return poolBudgetUsed; } };
+export const ps = { txs: 0, data: 0, buys: 0, sells: 0, pools: 0, unknownPool: 0, resolved: 0, lookupFail: 0, reconnects: 0, oversize: 0, get poolBudget() { return poolBudgetUsed; } };
 const poolMint = new Map();   // pool -> {mint, quote}
 const pending = new Set();
 const poolVol = new Map();    // pool -> [{ts, sol}] rolling 5m, used to decide when a lookup is worth a credit
@@ -53,6 +53,7 @@ function handle({ sig, slot, logs, err }) {
     const pm = poolMint.get(e.pool);
     if (!pm) { ps.unknownPool++; if (wantResolve(e.pool, sol, e.ts)) resolvePool(e.pool); continue; }
     if (pm.quote !== WSOL) continue; // only SOL-quoted pools
+    if (!(sol > 0) || sol > CFG.PS_MAX_SWAP_SOL) { ps.oversize++; continue; } // v0.15: implausible single swap (instant-graduation curve buys decode with bogus amounts)
     const price = (Number(e.poolQuote) / 1e9) / (Number(e.poolBase) / 1e6);
     const mc = price * CFG.TOTAL_SUPPLY * solUsdCached();
     const tr = { mint: pm.mint, pool: e.pool, sig, slot, ts: e.ts, wallet: e.user, isBuy: e.isBuy, sol, tokens, price, mc };

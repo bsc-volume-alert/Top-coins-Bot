@@ -78,6 +78,8 @@ setInterval(() => {
   lc.tracked = L.size;
 }, 30_000);
 export const lcStats = () => ({ ...lc, holderBudget, balBudget });
+/** v0.15: snapshot for the graduation strategy — 5m checkpoint (if reached), distinct buyers so far, biggest 1m burst */
+export function lifeSnap(mint) { const s = L.get(mint); if (!s) return null; return { cp5: s.cp[300] || null, buyers: s.buyers.size, maxBurst: s.maxBurst, createTs: s.createTs }; }
 
 function stairs(s, cps) {
   for (let i = 1; i < cps.length; i++) {
