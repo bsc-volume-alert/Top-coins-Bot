@@ -8,6 +8,7 @@ import { solUsdCached } from "./price.js";
 import { tg } from "./telegram.js";
 import { getSocials, socialsLine } from "./socials.js";
 import { nextLevel, wallWarning, levelsStep, levelsFinal, newLevels, volStopExit } from "./levels.js";
+import { provenCount } from "./wallets.js";
 import { watch as afterWatch, tick as afterTick } from "./aftercare.js";
 import { retrySocials } from "./socials.js";
 
@@ -145,6 +146,7 @@ function openPaper(t, s, tr, inflowSol, wallets, strategy = "early") {
   s.pos = { id: r.lastInsertRowid, entry: tr.price, entryMc: t.lastMc, entryTs: tr.ts, peak: tr.price, x: {}, closed: false, msgId: null, alerted: false, half: false, s3: false, lv: newLevels(), strategy, m1: { hit: false } };
   q.setPaperExtra.run(heldPct(s), strategy, r.lastInsertRowid);
   s.pos.volAtEntry = vol5Usd(s); q.setVolEntry.run(s.pos.volAtEntry, r.lastInsertRowid);
+  try { s.provenAtEntry = provenCount(t.mint); q.setEntryCounts.run(s.buys, s.sells, s.provenAtEntry, r.lastInsertRowid); } catch {}
   try {
     const ch = q.creatorHist.get(t.creator, t.mint, t.ts); s.creatorHist = ch;
     const snipers = t.trades.filter((x) => x.isBuy && x.slot <= t.slot + CFG.BUNDLE_SLOTS && x.wallet !== t.creator).length;
@@ -175,7 +177,7 @@ function openPaper(t, s, tr, inflowSol, wallets, strategy = "early") {
       `${socialsLine(soc)}\n` +
       `Inflow: <b>${inflowSol.toFixed(1)} SOL</b> / ${wallets} wallets in ${CFG.INFLOW_WINDOW_S}s · buys ${s.buys} / sells ${s.sells}\n` +
       `Bundle ${t.bundle?.pct.toFixed(0) ?? 0}% · ${t.bundle?.sol.toFixed(1) ?? 0} SOL · hand-offs ${s.handoffs} · cluster holds <b>${heldPct(s).toFixed(0)}%</b>` +
-      (s.creatorHist?.n ? `\n🧑‍💻 creator: ${s.creatorHist.n} prior launches · ${s.creatorHist.grads || 0} graduated · ${s.creatorHist.over100k || 0} over $100K${(s.creatorHist.grads || 0) >= CFG.CREATOR_GRADS_FLAG ? " ⭐ proven" : ""}` : "") + `\n${links(t.mint)}`);
+      (s.provenAtEntry ? `\n👛 <b>${s.provenAtEntry} proven wallet${s.provenAtEntry > 1 ? "s" : ""}</b> in the first ${CFG.PROVEN_WINDOW_S}s` : "") + (s.creatorHist?.n ? `\n🧑‍💻 creator: ${s.creatorHist.n} prior launches · ${s.creatorHist.grads || 0} graduated · ${s.creatorHist.over100k || 0} over $100K${(s.creatorHist.grads || 0) >= CFG.CREATOR_GRADS_FLAG ? " ⭐ proven" : ""}` : "") + `\n${links(t.mint)}`);
     for (const m of CFG.SCORECARD_MIN) setTimeout(() => scorecard(t, s, m, p), m * 60_000);
   }).catch((e) => console.error("[socials]", e.message));
 }
