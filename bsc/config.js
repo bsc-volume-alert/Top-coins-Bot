@@ -9,7 +9,7 @@ const s = (k, d) => (process.env[k] !== undefined && process.env[k] !== "" ? pro
 const list = (k, d) => s(k, d).split(",").map((x) => x.trim()).filter(Boolean);
 
 export const C = {
-  VERSION: "bsc-1.0",
+  VERSION: "bsc-1.0.1",
   DB_PATH: s("BSC_DB_PATH", "/root/tracker-bsc/data/bsc.db"),
   NODEREAL_KEY: s("NODEREAL_API_KEY", ""),
 

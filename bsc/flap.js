@@ -16,6 +16,7 @@ const T = {
   "0x71a10912a55f73d3cced0d1515c2b33c396c80342522bad0e295ccbede556f37": "TokenCurveSetV2",
   "0xfaffa0863d521c9f92f81b87ff6e52ce5d5e2a4b856f15cbca113a69f0c813ee": "TokenDexPreferenceSet",
   "0x37502bf23c59a12e1036e7580a8dc056803623dbcd0885abb882adfa069ac89e": "TokenVersionSet",
+  "0x115c78ad17c4763fb97bca94f3e59dc8cb2e59c9d3862f24a694ec401200f562": "CirculatingSupplyChanged", // emitted with every trade — not needed
 };
 export const flapStats = { byName: {}, unknown: {}, bad: 0 };
 

@@ -2,7 +2,7 @@
 // Same logic and starting parameters as the Solana tracker (src/lifecycle.js, src/momentum.js, src/copytrade.js).
 import { C } from "./config.js";
 import { db, q } from "./db.js";
-import { quoteUsd, quoteSym } from "./price.js";
+import { quoteUsd, quoteSym, quoteDecimals, notePriceMiss, noteLaunchMc, launchCheckOk } from "./price.js";
 import { addPool, touchPool } from "./pools.js";
 import { volumeQuality, qualityLine } from "./quality.js";
 import { txInfo } from "./rpc.js";
@@ -82,10 +82,15 @@ function trade(t, venue) {
   // coins launched before the bot started: no TokenQuoteSet seen. A BNB-priced Flap coin can't be worth >$50M on the curve,
   // so a price that implies that is really quoted in a USD stable (USD1/USDT) — mark it inferred.
   if (!s.createBlock && !s.quoteChecked) { s.quoteChecked = true; if (!s.quote && t.price * C.TOTAL_SUPPLY * (quoteUsd(null) || 600) > 5e7) { s.quote = "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d"; s.quoteSym = "USD?"; } }
-  const qu = quoteUsd(s.quote);
+  const qu = quoteUsd(s.quote), dq = quoteDecimals(s.quote);
   const now = t.ts || Math.floor(Date.now() / 1000), late = s.lastTs && now < s.lastTs - 5; if (late) ts.lateTrades++;
-  if (!qu) { ts.noUsd++; return; }
+  if (!qu || dq == null || s.badQuote) { ts.noUsd++; notePriceMiss(s.quote); return; }
+  if (dq !== 18) { t.quoteAmt *= 10 ** (18 - dq); t.price = t.quoteAmt / t.amount; } // quote token with other decimals: amounts were read as 18-dec
   const usd = t.quoteAmt * qu, mc = t.price * C.TOTAL_SUPPLY * qu;
+  if (s.createBlock && !s.launchChecked) { // first priced trade of a fresh launch: sanity-check the quote price
+    s.launchChecked = true; noteLaunchMc(s.quote, mc);
+    if (!launchCheckOk(s.quote, mc)) { s.badQuote = true; ts.noUsd++; notePriceMiss(s.quote); console.log(`[price] ${s.token} launch MC $${mc.toFixed(0)} implausible for quote ${s.quote} — not priced`); return; }
+  }
   if (!(mc > 0) || !isFinite(mc)) return;
   if (!late) { s.lastPx = t.price; s.lastMc = mc; s.lastTs = now; }
   s.dirty = true;

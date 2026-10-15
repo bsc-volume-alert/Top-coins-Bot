@@ -17,7 +17,7 @@ export async function clear(key, text) { const a = alarms.get(key); if (!a) retu
 
 let getAddrs = () => [C.FLAP_PORTAL], dispatch = () => {};
 const seen = new Map(); // "tx:logIndex" -> {b, path}
-export const lp = { connected: false, node: "", since: 0, lastWsAt: 0, wsBlock: 0, httpBlock: 0, sweepBlock: 0, startBlock: 0, drops: [], byPath: { ws: 0, poll: 0, backfill: 0, sweep: 0, audit: 0 }, hour: [], polling: false, addrKey: "" };
+export const lp = { connected: false, node: "", since: 0, lastWsAt: 0, wsBlock: 0, httpBlock: 0, sweepBlock: 0, startBlock: 0, drops: [], byPath: { ws: 0, poll: 0, backfill: 0, sweep: 0, audit: 0 }, hour: [], polling: false, addrKey: "", pollN: 0 };
 const key = (l) => `${l.transactionHash}:${parseInt(l.logIndex, 16)}`;
 const venueOf = (a) => (a === C.FLAP_PORTAL ? "flap" : C.OTHER_LAUNCHPADS[a] || "pancake");
 function onLog(l, path) {
@@ -38,7 +38,8 @@ function startLive() {
   const wsNodes = () => NODES.filter((n) => n.ws && usable(n, "ws")); let i = 0, backoff = 1000, ping, openedAt = 0;
   const connect = () => {
     const list = wsNodes(); if (!list.length) { setTimeout(connect, 30_000); return; }
-    const n = list[i % list.length], addrs = getAddrs(); lp.node = n.name; openedAt = Date.now(); lp.addrKey = addrs.join(",");
+    // live socket on the Flap Portal only: publicnode stops delivering when the address list is long (pools/other launchpads go via HTTP)
+    const n = list[i % list.length], addrs = [C.FLAP_PORTAL]; lp.node = n.name; openedAt = Date.now(); lp.addrKey = addrs.join(",");
     const sock = new WebSocket(n.ws, { handshakeTimeout: 10000 }); ws = sock; let downDone = false;
     sock.on("open", () => { sock.send(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_subscribe", params: ["logs", { address: addrs }] })); ping = setInterval(() => { try { sock.ping(); } catch {} }, 15000); });
     sock.on("message", (raw) => {
@@ -60,23 +61,23 @@ function startLive() {
     sock.on("unexpected-response", (_q, res) => down(`HTTP ${res.statusCode} on connect`));
   };
   connect();
-  setInterval(() => { // resubscribe when the followed pools change (max once a minute)
-    if (lp.connected && getAddrs().join(",") !== lp.addrKey) { try { ws.terminate(); } catch {} }
-  }, 60_000);
   setInterval(() => { if (!lp.connected && lp.since && Date.now() - lp.since > 10 * 60_000) alarm("ws-down", `live feed down for 10+ min (${lp.drops.at(-1)?.why || "?"}). HTTP polling every 2 s is still collecting everything.`); }, 60_000);
 }
 
 async function pollLoop() {
   for (;;) {
+    // the live socket only carries the Flap Portal; pools + other launchpads always come by HTTP, so poll fast regardless
     const wsQuiet = !lp.connected || Date.now() - lp.lastWsAt > 20_000; lp.polling = wsQuiet;
     try {
       const head = parseInt(await rpc("eth_blockNumber", []), 16); lp.httpBlock = head;
-      const to = wsQuiet ? head : head - 5;
-      let from = lp.sweepBlock ? lp.sweepBlock + 1 : to - 20; if (to - from > 2000) from = to - 2000;
-      if (from <= to) { if (!lp.startBlock) lp.startBlock = from; const logs = sortLogs(await getLogsChunked({ address: getAddrs() }, from, to)); for (const l of logs) onLog(l, wsQuiet ? (lp.wsBlock ? "backfill" : "poll") : "sweep"); lp.sweepBlock = to; }
+      // overlap: re-read the last blocks every time (publicnode can report a block before all its servers have its logs);
+      // already-seen events are skipped, so this costs no extra requests, only a little more data
+      const to = head - 1;
+      let from = lp.sweepBlock ? lp.sweepBlock + 1 - (++lp.pollN % 5 === 0 ? 60 : 15) : to - 20; if (to - from > 2000) from = to - 2000;
+      if (from <= to) { if (!lp.startBlock) lp.startBlock = from; const logs = sortLogs(await getLogsChunked({ address: getAddrs() }, from, to)); for (const l of logs) onLog(l, wsQuiet ? (lp.wsBlock ? "backfill" : "poll") : "sweep"); lp.sweepBlock = Math.max(lp.sweepBlock, to); }
       await clear("no-logs", "launchpad events can be fetched again");
     } catch (e) { if (/no node could answer eth_getLogs/.test(e.message)) await alarm("no-logs", "no node is currently allowing log requests — data is NOT being collected."); }
-    await sleep(wsQuiet ? C.POLL_FAST_MS : C.SWEEP_MS);
+    await sleep(C.POLL_FAST_MS);
   }
 }
 
