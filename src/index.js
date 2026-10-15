@@ -9,7 +9,7 @@ import { solUsdCached } from "./price.js";
 import { sigStats } from "./signals.js";
 import { startSweeper, sw } from "./sweeper.js";
 import { startCommands, reportText } from "./commands.js";
-import { startPumpSwap, ps } from "./pumpswap.js";
+import { startPumpSwap, ps, quoteStats } from "./pumpswap.js";
 import { startDex, dx } from "./dex.js";
 import { fe } from "./fees.js";
 import { ho } from "./holders.js";
@@ -42,7 +42,7 @@ setInterval(() => {
   const g = sigStats();
   console.log(`[1m] txs=${d.txs} creates=${d.creates} trades=${d.trades} tier1=${d.tier1} live=${live.size} open=${g.open} handoffs=${g.handoffs} rpc=${g.rpc} sol=$${solUsdCached().toFixed(2)} ws=${wsStatus}`);
   if (CFG.DEX_ENABLED) console.log(`[dex 1m] txs=${dx.txs} dupes=${dx.dupes} events=${dx.events} fed=${dx.emitted} pools=${dx.resolved} unknown=${dx.unknownPool} ignored=${dx.ignored} big=${dx.big} fail=${dx.lookupFail} credits=${dx.poolBudget} ws↻=${dx.reconnects} ${JSON.stringify(dx.byVenue)}`);
-  if (CFG.PUMPSWAP_ENABLED) console.log(`[ps 1m] txs=${ps.txs} data=${ps.data} buys=${ps.buys} sells=${ps.sells} pools=${ps.pools} resolved=${ps.resolved} unknown=${ps.unknownPool} fail=${ps.lookupFail} poolcredits=${ps.poolBudget} oversize=${ps.oversize} ws↻=${ps.reconnects}`);
+  if (CFG.PUMPSWAP_ENABLED) console.log(`[ps 1m] txs=${ps.txs} data=${ps.data} buys=${ps.buys} sells=${ps.sells} pools=${ps.pools} resolved=${ps.resolved} unknown=${ps.unknownPool} fail=${ps.lookupFail} poolcredits=${ps.poolBudget} oversize=${ps.oversize} quotes=${quoteStats.lookups}/${quoteStats.fails}f/${quoteStats.skipped}skip ws↻=${ps.reconnects}`);
 }, 60_000);
 
 const hb = async () => {

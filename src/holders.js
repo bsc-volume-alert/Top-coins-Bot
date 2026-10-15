@@ -21,7 +21,7 @@ function apply(mint, wallet, isBuy, tokens) {
 }
 on("create", (t) => { L.set(t.mint, new Map()); ho.ledgers = L.size; });
 on("trade", (t, tr) => apply(t.mint, tr.wallet, tr.isBuy, tr.tokens));
-onSwap((tr) => { if (tr.venue === "pumpswap" && tr.wallet && !tr.wallet.startsWith("tx:")) apply(tr.mint, tr.wallet, tr.isBuy, tr.tokens); });
+onSwap((tr) => { if (String(tr.venue).startsWith("pumpswap") && tr.wallet && !tr.wallet.startsWith("tx:")) apply(tr.mint, tr.wallet, tr.isBuy, tr.tokens); });
 on("expire", (t) => { L.delete(t.mint); ho.ledgers = L.size; });
 
 function fromLedger(mint, creator) {
