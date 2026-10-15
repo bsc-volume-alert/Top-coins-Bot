@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { bs58 } from "./bs58.js";
 const disc = (name) => createHash("sha256").update(`event:${name}`).digest().subarray(0, 8);
-const D_CREATE = disc("CreateEvent"), D_TRADE = disc("TradeEvent");
+const D_CREATE = disc("CreateEvent"), D_TRADE = disc("TradeEvent"), D_CLAIM = disc("CollectCreatorFeeEvent"); // v0.18.4
 
 class R {
   constructor(b) { this.b = b; this.o = 0; }
@@ -36,7 +36,14 @@ export function decodeEvent(b64) {
       const r = new R(b.subarray(8));
       const mint = r.pk(), sol = r.u64(), tokens = r.u64(), isBuy = r.u8() === 1, user = r.pk(), ts = r.i64();
       const vsol = r.u64(), vtok = r.u64();
-      return { type: "trade", mint, sol, tokens, isBuy, user, ts: Number(ts), vsol, vtok };
+      let creator = null, creatorFee = 0n; // v0.18.4: newer TradeEvent carries real reserves, fee recipient/bps/fee, creator, creator fee bps/fee
+      if (r.left() >= 112) { r.u64(); r.u64(); r.pk(); r.u64(); r.u64(); creator = r.pk(); r.u64(); const cf = r.u64(); if (cf <= sol) creatorFee = cf; }
+      return { type: "trade", mint, sol, tokens, isBuy, user, ts: Number(ts), vsol, vtok, creator, creatorFee };
+    }
+    if (d.equals(D_CLAIM)) { // CollectCreatorFeeEvent { timestamp, creator, creator_fee }
+      const r = new R(b.subarray(8)); const ts = Number(r.i64()), creator = r.pk(), sol = Number(r.u64()) / 1e9;
+      const now = Date.now() / 1000; if (Math.abs(ts - now) > 86400 || !(sol >= 0) || sol > 10000) return null;
+      return { type: "claim", ts, creator, sol };
     }
   } catch { return null; }
   return null;

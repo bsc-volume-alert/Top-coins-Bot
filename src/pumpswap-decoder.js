@@ -3,7 +3,7 @@ import { bs58 } from "./bs58.js";
 export const PUMPSWAP_PROGRAM = "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA";
 export const WSOL = "So11111111111111111111111111111111111111112";
 const disc = (name) => createHash("sha256").update(`event:${name}`).digest().subarray(0, 8);
-const D_BUY = disc("BuyEvent"), D_SELL = disc("SellEvent"), D_POOL = disc("CreatePoolEvent");
+const D_BUY = disc("BuyEvent"), D_SELL = disc("SellEvent"), D_POOL = disc("CreatePoolEvent"), D_CLAIM = disc("CollectCoinCreatorFeeEvent"); // v0.18.4
 class R {
   constructor(b) { this.b = b; this.o = 0; }
   u64() { const v = this.b.readBigUInt64LE(this.o); this.o += 8; return v; }
@@ -32,7 +32,14 @@ export function decodePumpSwap(b64) {
       r.u64();                           // quote_amount_in_with_lp_fee / quote_amount_out_without_lp_fee
       const userQuote = r.u64();         // user_quote_amount_in / user_quote_amount_out
       const pool = r.pk(), user = r.pk();
-      return { type: isBuy ? "buy" : "sell", isBuy, ts: Number(ts), pool, user, baseAmt, quoteAmt, userQuote, poolBase, poolQuote };
+      let creator = null, creatorFee = 0n; // v0.18.4: user base/quote ATAs, protocol fee recipient + ATA, coin_creator, bps, coin_creator_fee
+      if (r.left() >= 176) { r.pk(); r.pk(); r.pk(); r.pk(); creator = r.pk(); r.u64(); const cf = r.u64(); if (cf <= quoteAmt) creatorFee = cf; }
+      return { type: isBuy ? "buy" : "sell", isBuy, ts: Number(ts), pool, user, baseAmt, quoteAmt, userQuote, poolBase, poolQuote, creator, creatorFee };
+    }
+    if (d.equals(D_CLAIM)) { // CollectCoinCreatorFeeEvent { timestamp, coin_creator, coin_creator_fee }
+      const r = new R(b.subarray(8)); const ts = Number(r.i64()), creator = r.pk(), sol = Number(r.u64()) / 1e9;
+      const now = Date.now() / 1000; if (Math.abs(ts - now) > 86400 || !(sol >= 0) || sol > 10000) return null;
+      return { type: "claim", ts, creator, sol };
     }
     if (d.equals(D_POOL)) {
       const r = new R(b.subarray(8));

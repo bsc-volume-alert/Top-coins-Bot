@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS handoffs (
   mint TEXT, slot INTEGER, ts INTEGER, seller TEXT, buyer TEXT, sol REAL, tokens REAL, same_tx INTEGER
 );
 CREATE TABLE IF NOT EXISTS mc_samples (mint TEXT, ts INTEGER, mc_usd REAL, price_sol REAL);
+CREATE TABLE IF NOT EXISTS creator_claims (creator TEXT, ts INTEGER, sol REAL, venue TEXT, sig TEXT);
+CREATE INDEX IF NOT EXISTS cc_creator ON creator_claims(creator, ts);
 CREATE TABLE IF NOT EXISTS pump_buyers (trade_id INTEGER, mint TEXT, wallet TEXT, ts INTEGER, sol REAL, mc REAL, lead_s INTEGER, venue TEXT);
 CREATE INDEX IF NOT EXISTS pb_wallet ON pump_buyers(wallet);
 CREATE TABLE IF NOT EXISTS dex_pools (pool TEXT PRIMARY KEY, venue TEXT, mint TEXT, sol_side INTEGER, m0 TEXT, m1 TEXT, dec INTEGER, supply REAL, bin_step INTEGER, ignore INTEGER DEFAULT 0, ts INTEGER);
@@ -128,6 +130,8 @@ for (const sql of [
   "ALTER TABLE paper_trades ADD COLUMN churn_entry REAL",
   "ALTER TABLE paper_trades ADD COLUMN cluster_out_entry REAL",
   "ALTER TABLE paper_trades ADD COLUMN venue TEXT",
+  "ALTER TABLE paper_trades ADD COLUMN fee_accrued_entry REAL", "ALTER TABLE paper_trades ADD COLUMN fee_claims_entry INTEGER", "ALTER TABLE paper_trades ADD COLUMN fee_claimed_entry REAL", "ALTER TABLE paper_trades ADD COLUMN core INTEGER", "ALTER TABLE paper_trades ADD COLUMN t_hit15_s INTEGER",
+  "ALTER TABLE tokens ADD COLUMN creator_fee_sol REAL", "ALTER TABLE tokens ADD COLUMN fee_claims INTEGER", "ALTER TABLE tokens ADD COLUMN fee_claimed_sol REAL", "ALTER TABLE tokens ADD COLUMN first_claim_ts INTEGER",
   "ALTER TABLE paper_trades ADD COLUMN x_t15s25 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t15s60 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t2s25 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t2s60 REAL",
   "UPDATE paper_trades SET invalid=1 WHERE COALESCE(invalid,0)=0 AND mint IN (SELECT mint FROM tokens WHERE bundle_pct BETWEEN 79.2 AND 79.4 AND bundle_sol BETWEEN 84.5 AND 85.5)",
   "ALTER TABLE paper_trades ADD COLUMN q_wallets INTEGER",
@@ -182,6 +186,13 @@ export const q = {
   setStrategy: db.prepare(`UPDATE paper_trades SET strategy=? WHERE id=?`),
   setQuality: db.prepare(`UPDATE paper_trades SET q_score=?, q_wallets=?, q_per10k=?, q_top3=?, q_roundtrip=?, q_retail=?, q_custom=?, q_size_cv=?, q_new_pct=?, q_px_per10k=? WHERE id=?`),
   setCombo: db.prepare(`UPDATE paper_trades SET x_combo=?, x_tp15=?, x_tsl25=?, x_t15s25=?, x_t15s60=?, x_t2s25=?, x_t2s60=? WHERE id=?`),
+  setFees: db.prepare(`UPDATE paper_trades SET fee_accrued_entry=?, fee_claims_entry=?, fee_claimed_entry=? WHERE id=?`),
+  setCore: db.prepare(`UPDATE paper_trades SET core=? WHERE id=?`),
+  setHit15: db.prepare(`UPDATE paper_trades SET t_hit15_s=? WHERE id=? AND t_hit15_s IS NULL`),
+  insClaim: db.prepare(`INSERT INTO creator_claims (creator, ts, sol, venue, sig) VALUES (?,?,?,?,?)`),
+  claimsSince: db.prepare(`SELECT COUNT(*) n, COALESCE(SUM(sol),0) sol, MIN(ts) first, MAX(ts) last FROM creator_claims WHERE creator=? AND ts>=?`),
+  upTokenFees: db.prepare(`UPDATE tokens SET creator_fee_sol=?, fee_claims=?, fee_claimed_sol=?, first_claim_ts=? WHERE mint=?`),
+  mintsByCreator: db.prepare(`SELECT mint, create_ts FROM tokens WHERE creator=? AND create_ts>=?`),
   setStops: db.prepare(`UPDATE paper_trades SET x_tp15=?, x_tsl25=?, x_t15s25=?, x_t15s60=?, x_t2s25=?, x_t2s60=? WHERE id=?`),
   setTight: db.prepare(`UPDATE paper_trades SET tight=? WHERE id=?`),
   setVenue: db.prepare(`UPDATE paper_trades SET venue=? WHERE id=?`),
@@ -196,8 +207,9 @@ export const q = {
   provenWallets: db.prepare(`SELECT wallet FROM wallet_buys WHERE resolved=1 AND is_cluster=0 AND age_s>=3 AND sol>=? AND entry_mc>0 AND wallet NOT IN (SELECT wallet FROM wallet_buys WHERE ts>=? GROUP BY wallet HAVING COUNT(*)>?) GROUP BY wallet HAVING COUNT(*)>=? AND SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*)>=?`),
   setNextLevel: db.prepare(`UPDATE paper_trades SET next_level=? WHERE id=?`),
   updMom: db.prepare(`UPDATE paper_trades SET peak_mc=?, peak_mult=?, x_tp=?, x_tsl40=?, x_tsl60=?, x_tsl80=?, x_half60=?, x_twophase=?, x_ladder=?, x_time=?, exit_ts=?, exit_mc=?, exit_price=?, exit_reason=?, pnl_pct=?, closed=?, x_levels=?, x_m1=?, x_m1vol=?, x_volstop=? WHERE id=?`),
-  tokenMeta: db.prepare(`SELECT name, symbol, create_ts, bundle_pct, bundle_sol, dev_buy_sol, handoffs, tier, factory, has_socials, socials, cluster_sol_in, cluster_sol_out FROM tokens WHERE mint=?`),
+  tokenMeta: db.prepare(`SELECT name, symbol, creator, create_ts, bundle_pct, bundle_sol, dev_buy_sol, handoffs, tier, factory, has_socials, socials, cluster_sol_in, cluster_sol_out FROM tokens WHERE mint=?`),
   stratSummary: db.prepare(`SELECT strategy, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, AVG(peak_mult) peak, AVG(x_tp) xtp, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_tsl80) x80, AVG(x_half60) xh, AVG(x_twophase) x2p, AVG(x_ladder) xl, AVG(x_levels) xlv, AVG(x_m1) xm1, AVG(x_m1vol) xm1v, AVG(x_volstop) xvs, AVG(x_time) xt, AVG(x_combo) xc, AVG(x_tp15) xtp15, AVG(x_tsl25) x25, AVG(x_t15s25) s1525, AVG(x_t15s60) s1560, AVG(x_t2s25) s225, AVG(x_t2s60) s260, SUM(CASE WHEN peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(after_peak_mult) ap, SUM(CASE WHEN after_peak_mult>=3 THEN 1 ELSE 0 END) ap3 FROM paper_trades WHERE entry_ts>=? AND entry_ts<? AND COALESCE(invalid,0)=0 GROUP BY strategy`),
+  stratSummaryCore: db.prepare(`SELECT 'momentum-core' strategy, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, AVG(peak_mult) peak, AVG(x_tp) xtp, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_tsl80) x80, AVG(x_half60) xh, AVG(x_twophase) x2p, AVG(x_ladder) xl, AVG(x_levels) xlv, AVG(x_m1) xm1, AVG(x_m1vol) xm1v, AVG(x_volstop) xvs, AVG(x_time) xt, AVG(x_combo) xc, AVG(x_tp15) xtp15, AVG(x_tsl25) x25, AVG(x_t15s25) s1525, AVG(x_t15s60) s1560, AVG(x_t2s25) s225, AVG(x_t2s60) s260, SUM(CASE WHEN peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(after_peak_mult) ap, SUM(CASE WHEN after_peak_mult>=3 THEN 1 ELSE 0 END) ap3 FROM paper_trades WHERE strategy='momentum' AND core=1 AND entry_ts>=? AND entry_ts<? AND COALESCE(invalid,0)=0`),
   stratSummaryTight: db.prepare(`SELECT 'wave2-tight' strategy, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, AVG(peak_mult) peak, AVG(x_tp) xtp, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_tsl80) x80, AVG(x_half60) xh, AVG(x_twophase) x2p, AVG(x_ladder) xl, AVG(x_levels) xlv, AVG(x_m1) xm1, AVG(x_m1vol) xm1v, AVG(x_volstop) xvs, AVG(x_time) xt, AVG(x_combo) xc, AVG(x_tp15) xtp15, AVG(x_tsl25) x25, AVG(x_t15s25) s1525, AVG(x_t15s60) s1560, AVG(x_t2s25) s225, AVG(x_t2s60) s260, SUM(CASE WHEN peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(after_peak_mult) ap, SUM(CASE WHEN after_peak_mult>=3 THEN 1 ELSE 0 END) ap3 FROM paper_trades WHERE strategy='wave2' AND tight=1 AND entry_ts>=? AND entry_ts<? AND COALESCE(invalid,0)=0`),
   insWB: db.prepare(`INSERT OR IGNORE INTO wallet_buys (wallet,mint,ts,age_s,sol,entry_mc,is_cluster) VALUES (?,?,?,?,?,?,?)`),
   wbCount: db.prepare(`SELECT COUNT(*) FROM wallet_buys WHERE mint=?`).pluck(),

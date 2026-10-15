@@ -33,9 +33,10 @@ export function handleTx({ sig, slot, logs, err }) {
       setTimeout(() => finalize(t), CFG.FINALIZE_MS);
       emit("create", t);
     } else if (e.type === "trade") {
+      if (e.type === "claim") { emit("claim", null, { ...e, sig, venue: "pump" }); continue; }
       counters.trades++;
       const t = live.get(e.mint); if (!t) continue; // not a token we saw created (older launches) — ignore
-      const tr = { sig, slot, ts: e.ts || ts, wallet: e.user, isBuy: e.isBuy, sol: lamports(e.sol), tokens: rawTok(e.tokens), price: priceSol(e.vsol, e.vtok), route: routeOf(logs) };
+      const tr = { sig, slot, ts: e.ts || ts, wallet: e.user, isBuy: e.isBuy, sol: lamports(e.sol), tokens: rawTok(e.tokens), price: priceSol(e.vsol, e.vtok), route: routeOf(logs), creatorFee: lamports(e.creatorFee || 0n) };
       t.lastVsol = e.vsol; t.lastVtok = e.vtok;
       const mc = mcUsd(e.vsol, e.vtok); t.lastMc = mc; if (mc > t.peakMc) t.peakMc = mc;
       t.trades.push(tr);

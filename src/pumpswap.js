@@ -52,6 +52,7 @@ function handle({ sig, slot, logs, err }) {
   ps.data += evs.length;
   const route = routeOf(logs);
   for (const e of evs) {
+    if (e.type === "claim") { ps.claims = (ps.claims || 0) + 1; emit("claim", null, { ...e, sig, venue: "pumpswap" }); continue; }
     if (e.type === "pool") { ps.pools++; poolMint.set(e.pool, { mint: e.baseMint, quote: e.quoteMint }); continue; }
     if (e.isBuy) ps.buys++; else ps.sells++;
     const sol = Number(e.quoteAmt) / 1e9, tokens = Number(e.baseAmt) / 1e6;
@@ -63,7 +64,7 @@ function handle({ sig, slot, logs, err }) {
     if (!gradSeen.has(pm.mint)) { gradSeen.add(pm.mint); if (gradSeen.size > 50000) gradSeen.delete(gradSeen.keys().next().value); try { q.setGrad.run(pm.mint); const t = live.get(pm.mint); if (t && !t.graduated) { t.graduated = true; emit("graduated", t, { price: (Number(e.poolQuote) / 1e9) / (Number(e.poolBase) / 1e6), ts: e.ts }); } ps.gradEvidence++; } catch {} } // v0.17: graduation flagged from PumpSwap evidence // v0.15: implausible single swap (instant-graduation curve buys decode with bogus amounts)
     const price = (Number(e.poolQuote) / 1e9) / (Number(e.poolBase) / 1e6);
     const mc = price * CFG.TOTAL_SUPPLY * solUsdCached();
-    const tr = { mint: pm.mint, pool: e.pool, sig, slot, ts: e.ts, wallet: e.user, isBuy: e.isBuy, sol, tokens, price, mc, route, venue: "pumpswap" };
+    const tr = { mint: pm.mint, pool: e.pool, sig, slot, ts: e.ts, wallet: e.user, isBuy: e.isBuy, sol, tokens, price, mc, route, venue: "pumpswap", creatorFee: Number(e.creatorFee || 0n) / 1e9 };
     if (samples < 5) { samples++; console.log("[ps sample]", JSON.stringify({ mint: tr.mint.slice(0, 8), buy: tr.isBuy, sol: +sol.toFixed(4), mc: Math.round(mc), wallet: tr.wallet.slice(0, 6) })); }
     for (const fn of listeners) { try { fn(tr); } catch (x) { console.error("[ps listener]", x.message); } }
   }

@@ -56,6 +56,11 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.4 — creator fees & claims, momentum core tag, time to 1.5x (15 Oct)
+- `src/fees.js`: creator fee accrued per coin (read from the trade events' `creator_fee` field on pump.fun and PumpSwap — free), and creator fee **claims** decoded from `CollectCreatorFeeEvent` (pump.fun) / `CollectCoinCreatorFeeEvent` (PumpSwap) into `creator_claims`. Claims are per creator (pump.fun pools the vault per creator), attributed to that creator's tokens. Every paper entry records `fee_accrued_entry`, `fee_claims_entry`, `fee_claimed_entry`; tokens get `creator_fee_sol`, `fee_claims`, `fee_claimed_sol`, `first_claim_ts`. Momentum and second-wave alerts show a "dev fees" line. Hypothesis to test (recorded, not gated): devs who claim are still engaged; rug devs don't bother.
+- Momentum `core` flag: `vol5m` trigger, entry under `MOM_CORE_MC` ($100K), first entry on the coin — 36 trades at 78% hit-1.5x since the 14 Oct gates, consistent in both halves; bursts (50%), entries over $100K (29–36%) and re-entries (0/3) were the drag. Own line in /summary ("MOMENTUM — CORE"). Nothing stops being recorded.
+- `t_hit15_s`: seconds from entry to first touch of 1.5x, on every strategy.
+
 ## v0.18.3 — target + hard-stop exits, 1.5x exits on momentum, venue in export (15 Oct)
 - Four new paper exits on every strategy: `x_t15s25`, `x_t15s60`, `x_t2s25`, `x_t2s60` — sell all at 1.5x (or 2x), or cut at −25% (or −60%) from entry, whichever comes first. No previous exit had a hard stop. Break-even hit rate at 1.5x after 5% costs: ~41% with a −25% stop, ~59% with a −60% stop — the tight stop's unknown is how many eventual 1.5x hits it knocks out first.
 - Momentum now records `x_tp15` and `x_tsl25` too (it had the best 1.5x rate — 51% of 162 closed — and no 1.5x exit recorded). Sweeper fills these columns on over-hold closes so no exit is NULL.

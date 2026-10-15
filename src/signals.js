@@ -10,6 +10,7 @@ import { getSocials, socialsLine } from "./socials.js";
 import { nextLevel, wallWarning, levelsStep, levelsFinal, newLevels, volStopExit } from "./levels.js";
 import { provenCount } from "./wallets.js";
 import { stopStep, stopFinal } from "./exits.js";
+import { feeInfo } from "./fees.js";
 import { watch as afterWatch, tick as afterTick } from "./aftercare.js";
 import { retrySocials } from "./socials.js";
 
@@ -148,6 +149,7 @@ function openPaper(t, s, tr, inflowSol, wallets, strategy = "early") {
   q.setPaperExtra.run(heldPct(s), strategy, r.lastInsertRowid);
   s.pos.volAtEntry = vol5Usd(s); q.setVolEntry.run(s.pos.volAtEntry, r.lastInsertRowid);
   try { s.provenAtEntry = provenCount(t.mint); q.setEntryCounts.run(s.buys, s.sells, s.provenAtEntry, r.lastInsertRowid); } catch {}
+  try { const fi = feeInfo(t.mint, t.creator, t.ts); q.setFees.run(fi.accrued, fi.claims, fi.claimedSol, r.lastInsertRowid); } catch {} // v0.18.4
   try {
     const ch = q.creatorHist.get(t.creator, t.mint, t.ts); s.creatorHist = ch;
     const snipers = t.trades.filter((x) => x.isBuy && x.slot <= t.slot + CFG.BUNDLE_SLOTS && x.wallet !== t.creator).length;
@@ -213,6 +215,7 @@ function updatePaper(t, s, tr) {
   if (x.tsl80 == null && fromPeak <= -0.80) x.tsl80 = mult;
   if (x.tp == null && mult >= CFG.TP_MULT) x.tp = mult;
   if (x.tp15 == null && mult >= 1.5) x.tp15 = 1.5; if (x.tsl25 == null && fromPeak <= -0.25) x.tsl25 = mult; stopStep(x, mult); // v0.18.3
+  if (x.tp15 != null && !p.hit15Saved) { p.hit15Saved = true; try { q.setHit15.run(tr.ts - p.entryTs, p.id); } catch {} }
   { const key = `${x.tp15}|${x.tsl25}|${x.t15s25}|${x.t15s60}|${x.t2s25}|${x.t2s60}`; if (p.stopsSaved !== key) { p.stopsSaved = key; try { q.setStops.run(x.tp15 ?? null, x.tsl25 ?? null, x.t15s25 ?? null, x.t15s60 ?? null, x.t2s25 ?? null, x.t2s60 ?? null, p.id); } catch {} } }
   if (!p.half && mult >= 2) p.half = true;
   if (!p.s3 && mult >= 3) p.s3 = true;
