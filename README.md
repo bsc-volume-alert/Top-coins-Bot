@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.7 — core-tight tag (15 Oct)
+- `core_tight` on momentum: core AND entry under `MOM_CT_MC` ($60K) AND age under `MOM_CT_AGE_S` (6 min) AND trade-size spread (`q_size_cv`) under `MOM_CT_SIZE_CV` (1.6). From the 38-trade winners-vs-losers comparison: losers triggered later (median 7.7 min vs 4.6), higher (median $74K vs $51K) and on churnier, more erratic volume (size CV 1.91 vs 1.42; round-trippers 294 vs 154). Each cut alone was 86–91% vs 60–69%; 8 losers only, so a tag to watch, not a rule. Own line in /summary.
+
 ## v0.18.6 — $60K and $80K momentum variants (15 Oct)
 - `src/momtiers.js`: silent paper strategies `mom60` / `mom80` (`MOM_TIERS`) fire on $60K / $80K in 5 minutes with the same sanity gates and cooldown as momentum, only while the 5m volume is still below the $100K rule (which then owns the coin). Same exit set via the copy-strategy path; vol5m and venue recorded at entry. Own lines in /summary.
 
