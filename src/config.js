@@ -137,6 +137,7 @@ Object.assign(CFG, {
   SWEEP_BATCH: n("SWEEP_BATCH", 60),             // per run (1 RPC read each for curve tokens; DexScreener for graduated)
   SWEEP_MAX_FAILS: n("SWEEP_MAX_FAILS", 3),
   HOLDERS_RPC_DAILY_BUDGET: n("HOLDERS_RPC_DAILY_BUDGET", 1500), // v0.18.5: getTokenLargestAccounts at entry for coins without a ledger
+  MOM_FAST_USD: n("MOM_FAST_USD", 50_000), MOM_FAST_WIN_S: n("MOM_FAST_WIN_S", 120), // v0.18.12 "fast" tier: $50K in 2 min (same pace as $125K/5m), fires before the 5m rule on fast movers
   MOM_TIERS: s("MOM_TIERS", "60000,80000").split(",").map(Number), // v0.18.6: silent paper variants of the momentum rule at lower 5m volume
   FLOW_CAP: n("FLOW_CAP", 4), // v0.18.10: flow4 = flow exit with a voluntary sell at this multiple
   FLOW_MIN_VOL: n("FLOW_MIN_VOL", 100_000), FLOW_BS_MIN: n("FLOW_BS_MIN", 1.0), // v0.18.9 flow exit: hold after 1.5x while 5m vol >= this and buy$/sell$ >= this

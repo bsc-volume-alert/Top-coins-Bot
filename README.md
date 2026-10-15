@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.12 — fast tier (15 Oct)
+- `momfast` (silent): `MOM_FAST_USD` ($50K) inside `MOM_FAST_WIN_S` (2 min) — same pace as $125K/5m, so it fires earlier on fast movers and ignores slow accumulators. Same gates and cooldown as momentum. Background: the $60K tier fired 45–155s before the $100K trigger on the same coins, sometimes at a much lower price (HellCat $46K vs $64K), but also on 24 coins that never reached $100K (54%); the under-$50K winners differ from the $50–100K ones only in price at trigger, not in any coin feature.
+
 ## v0.18.11 — momentum age cap removed (15 Oct)
 - `MOM_MAX_AGE_D` 30 → 3650. Groklet (Grok Mascot, 486 days old, PumpSwap) did $100K/5m at ~$300K MC and ran 2.6x; the $60K/$80K tiers (no age cap) caught it, the main rule did not. Any age now; MC cap and sanity gates unchanged.
 
