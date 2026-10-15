@@ -136,6 +136,7 @@ Object.assign(CFG, {
   SWEEP_EVERY_MIN: n("SWEEP_EVERY_MIN", 5),     // v0.15.3: close over-hold paper trades at the real current price
   SWEEP_BATCH: n("SWEEP_BATCH", 60),             // per run (1 RPC read each for curve tokens; DexScreener for graduated)
   SWEEP_MAX_FAILS: n("SWEEP_MAX_FAILS", 3),
+  PREPUMP_WINDOW_S: n("PREPUMP_WINDOW_S", 1800),  // v0.18.2: record wallets that bought in this window before a volume trigger
   DEX_ENABLED: n("DEX_ENABLED", 1),                 // v0.18: Raydium CPMM/CLMM/LaunchLab + Meteora DLMM + Orca swap feed into momentum
   DEX_RESOLVE_SWAPS: n("DEX_RESOLVE_SWAPS", 30),    // look a pool up (1–2 credits) once it has this many swaps in 5 min
   DEX_POOL_DAILY_BUDGET: n("DEX_POOL_DAILY_BUDGET", 6000),

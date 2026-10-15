@@ -29,6 +29,7 @@ async function poll() {
         else if (cmd === "/watch") { const [, a, ...rest] = m.text.trim().split(/\s+/); if (!a || a.length < 32) await tg("Usage: /watch <address> [label]"); else { addWatch(a, rest.join(" ") || null); await tg(`👁 watching <code>${a}</code>${rest.length ? " as " + rest.join(" ") : ""} — copy alerts + paper trades on its buys`); } }
         else if (cmd === "/unwatch") { const a = m.text.trim().split(/\s+/)[1]; if (a) { removeWatch(a); await tg(`removed <code>${a}</code>`); } }
         else if (cmd === "/check") { const a = m.text.trim().split(/\s+/)[1]; await tg(a && a.length >= 32 ? await checkText(a) : "Usage: /check <mint>"); }
+        else if (cmd === "/prepump" || cmd === "/prepump30") { const d = cmd === "/prepump30" ? 30 : 7; const rows = q.prepumpTop.all(Math.floor(Date.now() / 1000) - d * 86400, 2, 15); await tg(rows.length ? `🕵️ <b>Pre-pump wallets — ${d}d</b> (bought in the 30 min before a volume trigger, 2+ coins)\n` + rows.map((r) => `• <code>${r.wallet}</code> ${r.n} coins · 2x on ${r.hit2} · 1.5x on ${r.hit15} · avg lead ${Math.round(r.lead / 60)}m · ${r.sol.toFixed(1)} SOL`).join("\n") + "\n/wallet &lt;addr&gt; for detail · /watch to copy" : "No pre-pump wallet data yet (needs volume triggers since v0.18.2)."); }
         else if (cmd === "/runners") await tg(runnersText(24, 10));
         else if (cmd === "/runners7") await tg(runnersText(24 * 7, 15));
         else if (cmd === "/creators") await tg(creatorsText(7, 10));
@@ -37,7 +38,7 @@ async function poll() {
         else if (cmd === "/watchcreator") { const [, a, ...rest] = m.text.trim().split(/\s+/); if (!a || a.length < 32) await tg("Usage: /watchcreator <address> [label]"); else { addWatchCreator(a, rest.join(" ") || null); await tg(`👁 watching creator <code>${a}</code>${rest.length ? " as " + rest.join(" ") : ""} — alert + paper entry on their next launch`); } }
         else if (cmd === "/unwatchcreator") { const a = m.text.trim().split(/\s+/)[1]; if (a) { removeWatchCreator(a); await tg(`removed creator <code>${a}</code>`); } }
         else if (cmd === "/watching") { const l = watchList(), lc = watchCreatorList(); await tg((l.length ? "👁 Wallets:\n" + l.map(([w, v]) => `• <code>${w}</code>${v.label ? " — " + v.label : ""}`).join("\n") : "👁 Wallets: none") + "\n" + (lc.length ? "🧑‍💻 Creators:\n" + lc.map(([w, v]) => `• <code>${w}</code>${v.label ? " — " + v.label : ""}`).join("\n") : "🧑‍💻 Creators: none") + "\n/watch · /watchcreator"); }
-        else if (cmd === "/help") await tg("Commands: /report · /report7 · /summary · /csv · /status · /check &lt;mint&gt; · /wallets (top 10, 7d) · /wallets30 · /wallet <addr> · /watch <addr> [label] · /unwatch · /runners · /runners7 · /creators · /creators30 · /creator <addr> · /watchcreator <addr> [label] · /unwatchcreator · /watching");
+        else if (cmd === "/help") await tg("Commands: /report · /report7 · /summary · /csv · /status · /check &lt;mint&gt; · /prepump (wallets buying before volume triggers, 7d) · /prepump30 · /wallets (top 10, 7d) · /wallets30 · /wallet <addr> · /watch <addr> [label] · /unwatch · /runners · /runners7 · /creators · /creators30 · /creator <addr> · /watchcreator <addr> [label] · /unwatchcreator · /watching");
       }
     } catch (e) { await new Promise((r) => setTimeout(r, 5000)); }
   }
@@ -62,6 +63,7 @@ const CSV_EXTRA = {
   token_life: `SELECT l.mint, t.name, t.symbol, t.creator, datetime(t.create_ts,'unixepoch') launch_utc, t.bundle_pct, t.bundle_sol, t.tier, t.factory, t.has_socials, l.cp, l.mc, l.vol5m_usd, l.buys5m, l.sells5m, l.buyers5m, l.buyers_total, l.graduated, l.top10_pct, l.holders, l.alive FROM token_life l LEFT JOIN tokens t ON t.mint=l.mint ORDER BY l.mint, l.cp`,
   wallet_buys: `SELECT w.wallet, w.mint, t.name, datetime(w.ts,'unixepoch') buy_utc, w.age_s, w.sol, w.entry_mc, w.is_cluster, w.peak_30m, w.peak_24h, w.resolved FROM wallet_buys w LEFT JOIN tokens t ON t.mint=w.mint ORDER BY w.ts`,
   big_buys: `SELECT b.mint, t.name, b.wallet, datetime(b.ts,'unixepoch') buy_utc, b.age_s, b.sol, b.mc, b.balance_sol, b.venue FROM big_buys b LEFT JOIN tokens t ON t.mint=b.mint ORDER BY b.ts`,
+  pump_buyers: `SELECT b.trade_id, b.mint, p.name, b.wallet, datetime(b.ts,'unixepoch') buy_utc, b.sol, b.mc, b.lead_s, b.venue, p.peak_mult, p.entry_mc FROM pump_buyers b LEFT JOIN paper_trades p ON p.id=b.trade_id ORDER BY b.trade_id, b.lead_s DESC`,
   tokens: `SELECT mint, name, symbol, creator, datetime(create_ts,'unixepoch') launch_utc, bundle_pct, bundle_sol, bundle_wallets, handoffs, tier, factory, has_socials, outside_buyers, outside_sol_in, cluster_sol_in, cluster_sol_out, peak_mc_usd, graduated, dev_buy_sol, creator_age_s, creator_funded_sol FROM tokens WHERE finalized=1 ORDER BY create_ts`,
 };
 const toCsv = (rows) => {

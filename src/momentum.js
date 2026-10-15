@@ -11,6 +11,9 @@ import { pumpSwapTick } from "./signals.js";
 import { watch as afterWatch, tick as afterTick } from "./aftercare.js";
 import { retrySocials } from "./socials.js";
 import { volumeQuality, qualityLine } from "./quality.js";
+import { readFileSync, writeFileSync, renameSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { provenCount } from "./wallets.js";
 
 export const mom = { alerts: 0, entries: 0, closes: 0, tracked: 0, reentries: 0 };
 const T = new Map(); // mint -> state
@@ -18,10 +21,35 @@ const dexCache = new Map();
 
 function st(mint) {
   let s = T.get(mint);
-  if (!s) { s = { w5: [], w1: [], lastTs: 0, lastAlert: 0, pos: null, trades: [], firstEntryPx: null, belowSince: 0, lastPx: 0, lastMc: 0, rejectedLevel: null, peakMc: 0, posPeakMc: 0, seen: new Set() }; T.set(mint, s); }
+  if (!s) { s = { w5: [], w1: [], buyers: [], lastTs: 0, lastAlert: 0, pos: null, trades: [], firstEntryPx: null, belowSince: 0, lastPx: 0, lastMc: 0, rejectedLevel: null, peakMc: 0, posPeakMc: 0, seen: new Set() }; T.set(mint, s); }
   return s;
 }
-setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [m, s] of T) if (!s.pos && now - s.lastTs > 900 && !s.trades.length) T.delete(m); mom.tracked = T.size; }, 60_000);
+setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [m, s] of T) { if (!s.pos && now - s.lastTs > 900 && !s.trades.length) { T.delete(m); continue; } while (s.buyers.length && now - s.buyers[0].ts > CFG.PREPUMP_WINDOW_S) s.buyers.shift(); } mom.tracked = T.size; }, 60_000);
+
+// v0.18.2: the rolling windows survive restarts. Every deploy restarted the process and wiped them — 9g4Pib…pump spiked at 03:42 UTC
+// on 15 Oct while two deploys landed (03:39, 03:42) and the tally never reached $100K. Saved every 20s and on SIGINT/SIGTERM.
+const STATE_FILE = join(dirname(CFG.DB_PATH), "momentum-state.json");
+function saveState() {
+  try {
+    const now = Math.floor(Date.now() / 1000), out = {};
+    for (const [m, s] of T) if (now - s.lastTs <= 300 || s.buyers.length) out[m] = { w5: s.w5, w1: s.w1, buyers: s.buyers, lastTs: s.lastTs, lastAlert: s.lastAlert, lastPx: s.lastPx, lastMc: s.lastMc, peakMc: s.peakMc };
+    writeFileSync(STATE_FILE + ".tmp", JSON.stringify({ ts: now, T: out })); renameSync(STATE_FILE + ".tmp", STATE_FILE);
+  } catch (e) { console.error("[momentum save]", e.message); }
+}
+function loadState() {
+  try {
+    const j = JSON.parse(readFileSync(STATE_FILE, "utf8")), now = Math.floor(Date.now() / 1000); let n = 0, tr = 0;
+    if (now - j.ts > 600) return console.log("[momentum] state file too old, ignored");
+    for (const [m, v] of Object.entries(j.T || {})) {
+      const s = st(m); s.w5 = (v.w5 || []).filter((x) => now - x.ts <= 300); s.w1 = (v.w1 || []).filter((x) => now - x.ts <= 60); s.buyers = (v.buyers || []).filter((x) => now - x.ts <= CFG.PREPUMP_WINDOW_S);
+      Object.assign(s, { lastTs: v.lastTs || 0, lastAlert: v.lastAlert || 0, lastPx: v.lastPx || 0, lastMc: v.lastMc || 0, peakMc: v.peakMc || 0 }); n++; tr += s.w5.length;
+    }
+    console.log(`[momentum] restored ${n} tokens / ${tr} swaps from state saved ${now - j.ts}s ago`);
+  } catch (e) { if (e.code !== "ENOENT") console.error("[momentum load]", e.message); }
+}
+loadState();
+setInterval(saveState, 20_000);
+for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => { saveState(); process.exit(0); });
 
 const qHeld = db.prepare(`SELECT COALESCE(SUM(CASE WHEN tr.is_buy=1 THEN tr.tokens ELSE -tr.tokens END),0) tok FROM trades tr JOIN cluster_wallets c ON c.mint=tr.mint AND c.wallet=tr.wallet WHERE tr.mint=?`);
 function clusterHeld(mint) { try { return Math.max(0, qHeld.get(mint).tok / CFG.TOTAL_SUPPLY) * 100; } catch { return null; } }
@@ -54,6 +82,7 @@ onSwap((tr) => {
   // level rejection: price fell >30% from a peak that was above a level → that level is "rejected"
   if (s.peakMc > 0 && tr.mc < s.peakMc * 0.7) { const L = lastLevel(s.peakMc); if (L && L > tr.mc) s.rejectedLevel = L; }
   s.w5.push({ ts: now, usd, b: tr.isBuy, w: tr.wallet, route: tr.route || "unknown", px: tr.price, v: tr.venue || "pumpswap" }); while (s.w5.length && now - s.w5[0].ts > 300) { const old = s.w5.shift(); if (s.seen.size < 20000) s.seen.add(old.w); }
+  if (tr.isBuy && tr.wallet && !tr.wallet.startsWith("tx:")) { s.buyers.push({ ts: now, w: tr.wallet, sol: tr.sol, mc: tr.mc, v: tr.venue || "pumpswap" }); if (s.buyers.length > 5000) s.buyers.splice(0, 1000); }
   s.w1.push({ ts: now, usd, b: tr.isBuy }); while (s.w1.length && now - s.w1[0].ts > 60) s.w1.shift();
   if (s.pos) updatePos(tr.mint, s, tr.price, now);
   const v5 = s.w5.reduce((a, x) => a + x.usd, 0);
@@ -114,6 +143,13 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
   if (qv) { try { q.setQuality.run(qv.score, qv.wallets, qv.per10k, qv.top3, qv.roundtrip, qv.retail, qv.custom, qv.sizeCv, qv.newPct, qv.pxPer10k, pos.id); } catch (e) { console.error("[quality]", e.message); } }
   const held = meta ? clusterHeld(mint) : null;
   q.setPaperExtra.run(held, kind + (reentry ? "-re" : ""), pos.id);
+  let preStr = "";
+  try { // v0.18.2: who bought in the 30 min up to this trigger — scored later by how the token did (insider finder)
+    const pre = s.buyers.filter((b) => now - b.ts <= CFG.PREPUMP_WINDOW_S), seenW = new Set();
+    const ins = db.transaction(() => { for (const b of pre) { q.insPumpBuyer.run(pos.id, mint, b.w, b.ts, b.sol, b.mc, now - b.ts, b.v); seenW.add(b.w); } }); ins();
+    const early = new Set(pre.filter((b) => now - b.ts > 300).map((b) => b.w));
+    preStr = `\nbuyers before the trigger: ${seenW.size} wallets in 30m (${early.size} more than 5m early) · proven ${provenCount(mint)}`;
+  } catch (e) { console.error("[prepump]", e.message); }
   try { q.setVenue.run(tr.venue || "pumpswap", pos.id); } catch {}
   if (reentry) { s.peakMc = tr.mc; s.rejectedLevel = null; }
   try { const h = new Date(now * 1000).getUTCHours(); q.setFeatures.run(null, null, null, null, h, null, buyUsd > 0 ? buyUsd / Math.max(sellUsd, 1) : null, buyers, pos.id); } catch {}
@@ -134,7 +170,7 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
   const bundleStr = meta?.bundle_pct != null ? `Bundle ${meta.bundle_pct.toFixed(0)}% · ${meta.bundle_sol.toFixed(1)} SOL · hand-offs ${meta.handoffs} · cluster net ${((meta.cluster_sol_in || 0) - (meta.cluster_sol_out || 0)).toFixed(1)} SOL` : "Bundle: launched before tracker (no data)";
   pos.msgId = await tg(`${kind === "burst" ? "⚡" : hot ? "🔥" : "📈"} <b>${kind === "burst" ? "BURST" : "VOLUME"}${reentry ? " RE-ENTRY " + reentry : ""}</b> — ${esc(name || mint.slice(0, 8))} ($${esc(symbol || "?")})${burst ? " ⚡" : ""}${meta?.factory ? " ⚠️factory" : ""}\n` +
     `5m vol <b>$${fmt(v5)}</b> (1m $${fmt(v1)}) · buys ${buys.length} / sells ${sells.length} · $${fmt(buyUsd)} in / $${fmt(sellUsd)} out · ${buyers} buyers\n` +
-    `MC <b>$${fmt(tr.mc)}</b> · ${ageStr}${reclaimStr}${wall ? "\n" + wall : ""}\nvenue: ${venueStr}${dexNote}\n${qLine}\n${socialsLine(soc)}\n${bundleStr}${heldStr}\n${links(mint)}`);
+    `MC <b>$${fmt(tr.mc)}</b> · ${ageStr}${reclaimStr}${wall ? "\n" + wall : ""}\nvenue: ${venueStr}${dexNote}${preStr}\n${qLine}\n${socialsLine(soc)}\n${bundleStr}${heldStr}\n${links(mint)}`);
   for (const m of CFG.MOM_SCORECARD_MIN) setTimeout(() => scorecard(mint, s, m), m * 60_000);
 }
 

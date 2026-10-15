@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS handoffs (
   mint TEXT, slot INTEGER, ts INTEGER, seller TEXT, buyer TEXT, sol REAL, tokens REAL, same_tx INTEGER
 );
 CREATE TABLE IF NOT EXISTS mc_samples (mint TEXT, ts INTEGER, mc_usd REAL, price_sol REAL);
+CREATE TABLE IF NOT EXISTS pump_buyers (trade_id INTEGER, mint TEXT, wallet TEXT, ts INTEGER, sol REAL, mc REAL, lead_s INTEGER, venue TEXT);
+CREATE INDEX IF NOT EXISTS pb_wallet ON pump_buyers(wallet);
 CREATE TABLE IF NOT EXISTS dex_pools (pool TEXT PRIMARY KEY, venue TEXT, mint TEXT, sol_side INTEGER, m0 TEXT, m1 TEXT, dec INTEGER, supply REAL, bin_step INTEGER, ignore INTEGER DEFAULT 0, ts INTEGER);
 CREATE INDEX IF NOT EXISTS mc_mint ON mc_samples(mint, ts);
 CREATE TABLE IF NOT EXISTS paper_trades (
@@ -181,6 +183,10 @@ export const q = {
   setCombo: db.prepare(`UPDATE paper_trades SET x_combo=?, x_tp15=?, x_tsl25=? WHERE id=?`),
   setTight: db.prepare(`UPDATE paper_trades SET tight=? WHERE id=?`),
   setVenue: db.prepare(`UPDATE paper_trades SET venue=? WHERE id=?`),
+  insPumpBuyer: db.prepare(`INSERT INTO pump_buyers (trade_id, mint, wallet, ts, sol, mc, lead_s, venue) VALUES (?,?,?,?,?,?,?,?)`),
+  prepumpTop: db.prepare(`SELECT b.wallet, COUNT(DISTINCT b.mint) n, SUM(CASE WHEN p.peak_mult>=2 THEN 1 ELSE 0 END) hit2, SUM(CASE WHEN p.peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(b.lead_s) lead, SUM(b.sol) sol
+    FROM (SELECT trade_id, mint, wallet, MIN(ts) ts, MAX(lead_s) lead_s, SUM(sol) sol FROM pump_buyers WHERE ts>=? GROUP BY trade_id, wallet) b JOIN paper_trades p ON p.id=b.trade_id AND COALESCE(p.invalid,0)=0
+    GROUP BY b.wallet HAVING n>=? ORDER BY hit2 DESC, n DESC LIMIT ?`),
   insDexPool: db.prepare(`INSERT OR REPLACE INTO dex_pools (pool, venue, mint, sol_side, m0, m1, dec, supply, bin_step, ignore, ts) VALUES (?,?,?,?,?,?,?,?,?,?,?)`),
   allDexPools: db.prepare(`SELECT * FROM dex_pools`),
   setChurn: db.prepare(`UPDATE paper_trades SET churn_entry=?, cluster_out_entry=?, cluster_held_pct=COALESCE(cluster_held_pct,?), handoffs=COALESCE(handoffs,?) WHERE id=?`),
