@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.14 — price path after entry (15 Oct)
+- `paper_trades.path`: JSON of the multiple at 30s/1m/2m/3m/5m/10m after entry on every strategy, so fast-fail rules ("out if not up X by minute Y") can be evaluated offline. Background: on the 27 runner-exit trades, the 14 winners reached 1.5x in a median ~2 min; 9 of the 13 losers never exceeded 1.4x and drifted into the −40% stop; 3 were instant rugs; 2 were stopped first then ran.
+
 ## v0.18.13 — non-SOL quoted PumpSwap pools (15 Oct)
 - PumpSwap pools quoted in USDC or tokenized stocks (Dacity Coin: $4.6M/24h on a TTWO-quoted pool, pumped 13:00–13:40 UTC, invisible to us) are now priced through the quote asset: its SOL price from DexScreener (best SOL pair, else USD ÷ SOL/USD), decimals from one getTokenSupply call, cached and refreshed every 5 min. Swaps and reserves convert to SOL before the existing gates. `venue` records `pumpswap/<QUOTE>` so these entries can be split out in analysis. The other DEX feed still takes SOL-quoted pools only.
 

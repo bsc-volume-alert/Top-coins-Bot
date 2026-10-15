@@ -9,7 +9,7 @@ import { tg } from "./telegram.js";
 import { getSocials, socialsLine } from "./socials.js";
 import { nextLevel, wallWarning, levelsStep, levelsFinal, newLevels, volStopExit } from "./levels.js";
 import { provenCount } from "./wallets.js";
-import { stopStep, stopFinal } from "./exits.js";
+import { stopStep, stopFinal, pathStep } from "./exits.js";
 import { feeInfo } from "./fees.js";
 import { recordHolders } from "./holders.js";
 import { watch as afterWatch, tick as afterTick } from "./aftercare.js";
@@ -217,6 +217,7 @@ function updatePaper(t, s, tr) {
   if (x.tsl80 == null && fromPeak <= -0.80) x.tsl80 = mult;
   if (x.tp == null && mult >= CFG.TP_MULT) x.tp = mult;
   if (x.tp15 == null && mult >= 1.5) x.tp15 = 1.5; if (x.tsl25 == null && fromPeak <= -0.25) x.tsl25 = mult; stopStep(x, mult); // v0.18.3
+  if (pathStep(p, p.entryTs, tr.ts, mult)) { try { q.setPath.run(JSON.stringify(p.path), p.id); } catch {} } // v0.18.14
   if (x.tp15 != null && !p.hit15Saved) { p.hit15Saved = true; try { q.setHit15.run(tr.ts - p.entryTs, p.id); } catch {} }
   { const key = `${x.tp15}|${x.tsl25}|${x.t15s25}|${x.t15s60}|${x.t2s25}|${x.t2s60}`; if (p.stopsSaved !== key) { p.stopsSaved = key; try { q.setStops.run(x.tp15 ?? null, x.tsl25 ?? null, x.t15s25 ?? null, x.t15s60 ?? null, x.t2s25 ?? null, x.t2s60 ?? null, p.id); } catch {} } }
   if (!p.half && mult >= 2) p.half = true;

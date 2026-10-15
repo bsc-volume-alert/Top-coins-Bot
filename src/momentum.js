@@ -11,7 +11,7 @@ import { pumpSwapTick } from "./signals.js";
 import { watch as afterWatch, tick as afterTick } from "./aftercare.js";
 import { retrySocials } from "./socials.js";
 import { volumeQuality, qualityLine } from "./quality.js";
-import { stopStep, stopFinal, flowStep } from "./exits.js";
+import { stopStep, stopFinal, flowStep, pathStep } from "./exits.js";
 import { openCopy } from "./copytrade.js";
 const coreListeners = []; export const onCoreEntry = (fn) => coreListeners.push(fn);
 import { feeInfo, feeLine } from "./fees.js";
@@ -222,6 +222,7 @@ function updatePos(mint, s, px, now) {
   if (x.m1vol == null) { if (s.lastMc >= CFG.M1_EXIT_USD && v5 < CFG.M1_HOLD_VOL5M) x.m1vol = mult; else if (fromPeak <= -0.60) x.m1vol = mult; }
   if (x.volstop == null && fromPeak <= -0.60) { const bu = s.w5.filter((z) => z.b).reduce((a, z) => a + z.usd, 0), su = s.w5.filter((z) => !z.b).reduce((a, z) => a + z.usd, 0); if (volStopExit(fromPeak, v5, bu, su, p.volAtEntry)) x.volstop = mult; }
   q.updMom.run(s.posPeakMc, p.peak / p.entry, x.tp ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tsl80 ?? null, x.half60 ?? null, x.twophase ?? null, x.ladder ?? null, null, null, null, null, null, null, 0, x.levels ?? null, x.m1 ?? null, x.m1vol ?? null, x.volstop ?? null, p.id);
+  if (pathStep(p, p.entryTs, now, mult)) { try { q.setPath.run(JSON.stringify(p.path), p.id); } catch {} } // v0.18.14
   if (x.tp15 != null && !p.hit15Saved) { p.hit15Saved = true; try { q.setHit15.run(now - p.entryTs, p.id); } catch {} }
   { const key = `${x.tp15}|${x.tsl25}|${x.t15s25}|${x.t15s60}|${x.t2s25}|${x.t2s60}`; if (p.stopsSaved !== key) { p.stopsSaved = key; try { q.setStops.run(x.tp15 ?? null, x.tsl25 ?? null, x.t15s25 ?? null, x.t15s60 ?? null, x.t2s25 ?? null, x.t2s60 ?? null, p.id); } catch {} } }
   if (x.tsl80 != null) closePos(mint, s, "tsl80");

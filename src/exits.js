@@ -56,4 +56,12 @@ export function finalExits(e, mult) {
     levels: levelsFinal(e.lv, mult), m1: x.m1 ?? mult, m1vol: x.m1vol ?? mult, volstop: x.volstop ?? mult, time: mult, combo: x.combo ?? (e.half ? 1 + 0.5 * mult : mult), tp15: x.tp15 ?? mult, tsl25: x.tsl25 ?? mult, flow: x.flow ?? mult, flow4: x.flow4 ?? (x.flow ?? mult), ...stopFinal(x, mult, e.peak / e.entry),
   };
 }
+// v0.18.14: price path after entry — multiple at fixed seconds since entry (first tick at or after each mark), so any
+// "if not up X by minute Y" rule can be evaluated offline on every trade. Returns true when a new mark was filled.
+export const PATH_MARKS = [30, 60, 120, 180, 300, 600];
+export function pathStep(holder, entryTs, now, mult) {
+  holder.path ||= {}; let changed = false;
+  for (const m of PATH_MARKS) if (now - entryTs >= m && holder.path[m] == null) { holder.path[m] = +mult.toFixed(4); changed = true; }
+  return changed;
+}
 export const pc = (m) => (m == null ? "—" : `${m >= 1 ? "+" : ""}${((m - 1) * 100).toFixed(0)}%`);
