@@ -56,6 +56,11 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.3 — target + hard-stop exits, 1.5x exits on momentum, venue in export (15 Oct)
+- Four new paper exits on every strategy: `x_t15s25`, `x_t15s60`, `x_t2s25`, `x_t2s60` — sell all at 1.5x (or 2x), or cut at −25% (or −60%) from entry, whichever comes first. No previous exit had a hard stop. Break-even hit rate at 1.5x after 5% costs: ~41% with a −25% stop, ~59% with a −60% stop — the tight stop's unknown is how many eventual 1.5x hits it knocks out first.
+- Momentum now records `x_tp15` and `x_tsl25` too (it had the best 1.5x rate — 51% of 162 closed — and no 1.5x exit recorded). Sweeper fills these columns on over-hold closes so no exit is NULL.
+- `/csv` paper_trades now includes `venue` (forgotten in v0.18.0) and the four stop exits; summaries show a "stops" line.
+
 ## v0.18.2 — restart-proof volume windows + pre-pump wallets (15 Oct)
 - Momentum's rolling 5m/1m windows are saved to `data/momentum-state.json` every 20s and on SIGINT/SIGTERM, and restored on start (ignored if older than 10 min). Why: 9g4Pib…pump IS on PumpSwap (the v0.18.0 note above was wrong — PumpSwap swaps are never stored in the DB, so an empty trades table proved nothing); its 03:42 UTC spike coincided with two deploy restarts (03:39, 03:42) that wiped the tally.
 - Pre-pump wallets: every buy with a real wallet (PumpSwap, Raydium CLMM, Meteora) is kept for `PREPUMP_WINDOW_S` (30 min) per token; when a volume trigger opens a paper trade, those buys go to `pump_buyers` (wallet, SOL, MC, lead seconds before the trigger, venue). `/prepump` (7d) and `/prepump30` rank wallets seen before 2+ triggers by how often the coin then hit 2x / 1.5x — the insider finder. Alert shows "buyers before the trigger: N wallets in 30m (M more than 5m early)". Exported in `/csv` as pump_buyers.

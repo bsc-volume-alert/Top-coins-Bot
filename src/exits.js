@@ -4,12 +4,17 @@ import { levelsStep, levelsFinal, newLevels, volStopExit } from "./levels.js";
 export function newExits(entry, entryMc, volAtEntry) {
   return { entry, entryMc, peak: entry, x: {}, half: false, s3: false, lv: newLevels(), volAtEntry: volAtEntry || 0, aboveFloor: false, armed: false };
 }
+// v0.18.3: target + hard stop pairs — sell everything at the target, or cut at the stop from ENTRY, whichever comes first
+export const STOPS = { t15s25: [1.5, 0.25], t15s60: [1.5, 0.60], t2s25: [2, 0.25], t2s60: [2, 0.60] };
+export function stopStep(x, mult) { for (const [k, [t, s]] of Object.entries(STOPS)) if (x[k] == null) { if (mult >= t) x[k] = t; else if (mult <= 1 - s) x[k] = mult; } }
+export function stopFinal(x, mult, peakMult) { const o = {}; for (const [k, [t]] of Object.entries(STOPS)) o[k] = x[k] ?? (peakMult >= t ? t : mult); return o; }
 export function stepExits(e, price, mc, v5Usd, buyUsd, sellUsd) {
   if (price > e.peak) e.peak = price;
   const mult = price / e.entry, fromPeak = price / e.peak - 1, x = e.x;
   if (x.tp == null && mult >= 2) x.tp = 2;
   if (x.tsl25 == null && fromPeak <= -0.25) x.tsl25 = mult; // v0.17.4
   if (x.tp15 == null && mult >= 1.5) x.tp15 = 1.5;
+  stopStep(x, mult);
   if (x.tsl40 == null && fromPeak <= -0.40) x.tsl40 = mult;
   if (x.tsl60 == null && fromPeak <= -0.60) x.tsl60 = mult;
   if (x.tsl80 == null && fromPeak <= -0.80) x.tsl80 = mult;
@@ -38,7 +43,7 @@ export function finalExits(e, mult) {
     tp: x.tp ?? mult, tsl40: x.tsl40 ?? mult, tsl60: x.tsl60 ?? mult, tsl80: x.tsl80 ?? mult,
     half60: x.half60 ?? (e.half ? 1 + 0.5 * mult : mult), twophase: x.twophase ?? (e.half ? 1 + 0.5 * mult : mult),
     ladder: x.ladder ?? ((e.half ? 0.5 : 0) + (e.s3 ? 0.75 : 0) + (1 - (e.half ? 0.25 : 0) - (e.s3 ? 0.25 : 0)) * mult),
-    levels: levelsFinal(e.lv, mult), m1: x.m1 ?? mult, m1vol: x.m1vol ?? mult, volstop: x.volstop ?? mult, time: mult, combo: x.combo ?? (e.half ? 1 + 0.5 * mult : mult), tp15: x.tp15 ?? mult, tsl25: x.tsl25 ?? mult,
+    levels: levelsFinal(e.lv, mult), m1: x.m1 ?? mult, m1vol: x.m1vol ?? mult, volstop: x.volstop ?? mult, time: mult, combo: x.combo ?? (e.half ? 1 + 0.5 * mult : mult), tp15: x.tp15 ?? mult, tsl25: x.tsl25 ?? mult, ...stopFinal(x, mult, e.peak / e.entry),
   };
 }
 export const pc = (m) => (m == null ? "—" : `${m >= 1 ? "+" : ""}${((m - 1) * 100).toFixed(0)}%`);

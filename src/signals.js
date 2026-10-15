@@ -9,6 +9,7 @@ import { tg } from "./telegram.js";
 import { getSocials, socialsLine } from "./socials.js";
 import { nextLevel, wallWarning, levelsStep, levelsFinal, newLevels, volStopExit } from "./levels.js";
 import { provenCount } from "./wallets.js";
+import { stopStep, stopFinal } from "./exits.js";
 import { watch as afterWatch, tick as afterTick } from "./aftercare.js";
 import { retrySocials } from "./socials.js";
 
@@ -211,6 +212,8 @@ function updatePaper(t, s, tr) {
   if (x.tsl60 == null && fromPeak <= -0.60) x.tsl60 = mult;
   if (x.tsl80 == null && fromPeak <= -0.80) x.tsl80 = mult;
   if (x.tp == null && mult >= CFG.TP_MULT) x.tp = mult;
+  if (x.tp15 == null && mult >= 1.5) x.tp15 = 1.5; if (x.tsl25 == null && fromPeak <= -0.25) x.tsl25 = mult; stopStep(x, mult); // v0.18.3
+  { const key = `${x.tp15}|${x.tsl25}|${x.t15s25}|${x.t15s60}|${x.t2s25}|${x.t2s60}`; if (p.stopsSaved !== key) { p.stopsSaved = key; try { q.setStops.run(x.tp15 ?? null, x.tsl25 ?? null, x.t15s25 ?? null, x.t15s60 ?? null, x.t2s25 ?? null, x.t2s60 ?? null, p.id); } catch {} } }
   if (!p.half && mult >= 2) p.half = true;
   if (!p.s3 && mult >= 3) p.s3 = true;
   if (x.half60 == null && fromPeak <= -0.60) x.half60 = p.half ? 1 + 0.5 * mult : mult;
@@ -241,6 +244,7 @@ function closePaper(t, s, reason, p = s.pos) {
   if (x.ladder == null) x.ladder = (p.half ? 0.5 : 0) + (p.s3 ? 0.75 : 0) + (1 - (p.half ? 0.25 : 0) - (p.s3 ? 0.25 : 0)) * mult;
   x.levels = levelsFinal(p.lv, mult);
   if (x.m1 == null) x.m1 = mult; if (x.m1vol == null) x.m1vol = mult; if (x.volstop == null) x.volstop = mult;
+  { const f = stopFinal(x, mult, p.peak / p.entry); try { q.setStops.run(x.tp15 ?? mult, x.tsl25 ?? mult, f.t15s25, f.t15s60, f.t2s25, f.t2s60, p.id); } catch {} }
   const peakMult = p.peak / p.entry;
   const pnl = (v) => (v == null ? "—" : `${((v - 1) * 100).toFixed(0)}%`);
   q.updPaper.run(t.peakMc, peakMult, x.cluster ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tp ?? null, x.time, x.grad ?? null, Math.floor(Date.now() / 1000), t.lastMc, px, reason, (x.time - 1) * 100, 1, x.tsl80 ?? null, x.half60, x.twophase, x.ladder, x.levels, x.m1, x.m1vol, x.volstop, p.id);
