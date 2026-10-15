@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.15 — path marks carry volume and sell share (15 Oct)
+- `path` marks on momentum and copy-path strategies are now `{m: multiple, v: 5m volume USD, s: sell share of 5m volume}` so sell-share exit thresholds (tolerate sells to ~60% while volume holds; exit regardless at 65–70%) can be tested offline. Early strategy keeps the plain multiple.
+
 ## v0.18.14 — price path after entry (15 Oct)
 - `paper_trades.path`: JSON of the multiple at 30s/1m/2m/3m/5m/10m after entry on every strategy, so fast-fail rules ("out if not up X by minute Y") can be evaluated offline. Background: on the 27 runner-exit trades, the 14 winners reached 1.5x in a median ~2 min; 9 of the 13 losers never exceeded 1.4x and drifted into the −40% stop; 3 were instant rugs; 2 were stopped first then ran.
 

@@ -59,9 +59,9 @@ export function finalExits(e, mult) {
 // v0.18.14: price path after entry — multiple at fixed seconds since entry (first tick at or after each mark), so any
 // "if not up X by minute Y" rule can be evaluated offline on every trade. Returns true when a new mark was filled.
 export const PATH_MARKS = [30, 60, 120, 180, 300, 600];
-export function pathStep(holder, entryTs, now, mult) {
+export function pathStep(holder, entryTs, now, mult, v5Usd = null, sellShare = null) {
   holder.path ||= {}; let changed = false;
-  for (const m of PATH_MARKS) if (now - entryTs >= m && holder.path[m] == null) { holder.path[m] = +mult.toFixed(4); changed = true; }
+  for (const m of PATH_MARKS) if (now - entryTs >= m && holder.path[m] == null) { holder.path[m] = v5Usd == null ? +mult.toFixed(4) : { m: +mult.toFixed(4), v: Math.round(v5Usd), s: sellShare == null ? null : +sellShare.toFixed(3) }; changed = true; } // v0.18.15: + 5m volume and sell share
   return changed;
 }
 export const pc = (m) => (m == null ? "—" : `${m >= 1 ? "+" : ""}${((m - 1) * 100).toFixed(0)}%`);

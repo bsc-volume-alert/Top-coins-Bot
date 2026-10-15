@@ -70,7 +70,7 @@ function tick(mint, price, mc, sol, isBuy, ts) {
     p.lastMc = mc; p.lastPx = price;
     const r = stepExits(p.e, price, mc, v5, bu, su); const x = p.e.x;
     q.updMom.run(Math.max(mc, p.e.peak * CFG.TOTAL_SUPPLY * solUsdCached()), r.peakMult, x.tp ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tsl80 ?? null, x.half60 ?? null, x.twophase ?? null, x.ladder ?? null, null, null, null, null, null, null, 0, x.levels ?? null, x.m1 ?? null, x.m1vol ?? null, x.volstop ?? null, p.id);
-    if (pathStep(p.e, p.entryTs, ts, r.mult)) { try { q.setPath.run(JSON.stringify(p.e.path), p.id); } catch {} } // v0.18.14
+    if (pathStep(p.e, p.entryTs, ts, r.mult, v5, v5 > 0 ? su / v5 : null)) { try { q.setPath.run(JSON.stringify(p.e.path), p.id); } catch {} } // v0.18.14
     if (x.tp15 != null && !p.hit15Saved) { p.hit15Saved = true; try { q.setHit15.run(ts - p.entryTs, p.id); } catch {} }
     { const k2 = `${x.flow}|${x.t15s40}|${x.t2s40}|${p.e.ddPre15}|${x.flow4}`; if (p.e.ex2Saved !== k2) { p.e.ex2Saved = k2; try { q.setExits2.run(x.flow ?? null, x.t15s40 ?? null, x.t2s40 ?? null, p.e.ddPre15 ?? null, x.flow4 ?? null, p.id); } catch {} } }
     { const key = `${x.combo}|${x.tp15}|${x.tsl25}|${x.t15s25}|${x.t15s60}|${x.t2s25}|${x.t2s60}`; if (p.e.comboSaved !== key) { p.e.comboSaved = key; try { q.setCombo.run(x.combo ?? null, x.tp15 ?? null, x.tsl25 ?? null, x.t15s25 ?? null, x.t15s60 ?? null, x.t2s25 ?? null, x.t2s60 ?? null, p.id); } catch {} } }
