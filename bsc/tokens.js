@@ -5,7 +5,7 @@ import { db, q } from "./db.js";
 import { quoteUsd, quoteSym, quoteDecimals, notePriceMiss, noteLaunchMc, launchCheckOk } from "./price.js";
 import { addPool, touchPool } from "./pools.js";
 import { volumeQuality, qualityLine } from "./quality.js";
-import { txInfo } from "./rpc.js";
+import { txInfo, ethCalls, str } from "./rpc.js";
 import { open, onTokenTrade, openForToken, isOpen, onClose } from "./paper.js";
 import { esc, fmt, ageStr } from "./telegram.js";
 import { feedSnapshot, backfillAddress } from "./feed.js";
@@ -29,10 +29,38 @@ function st(token, create = true) {
       bundle: { usd: 0, tokens: 0, wallets: new Set() }, devBuyUsd: 0, snipers: new Set(), early: [], cp: {}, nextCp: 0, maxBurst: 0,
       w2: new Set(), revDone: false, grDone: false, grecDone: false, slowDone: false, earlyDone: false, lastRev: 0, lastGr: 0, lastSlow: 0,
       mom: { lastAlert: 0, closed: [], firstEntryPx: null }, walletBuys: [], creatorHist: null, copyCreatorPending: false, first100k: null, dirty: true, strategies: new Set() };
-    S.set(token, s);
+    S.set(token, s); rehydrate(s);
   }
   return s;
 }
+// after a restart (every push restarts the bot): reload what the database already knows about the coin
+function rehydrate(s) {
+  const r = q.getToken.get(s.token);
+  if (!r) { nameQueue.add(s.token); return; }
+  Object.assign(s, { name: r.name, symbol: r.symbol, creator: r.creator, createTs: r.create_ts, createBlock: r.create_block, quote: r.quote, quoteSym: r.quote_sym || quoteSym(r.quote), taxBps: r.tax_bps,
+    graduated: !!r.graduated, gradTs: r.grad_ts || 0, gradPeak: r.grad_mc || 0, pool: r.pool, peakMc: r.peak_mc || 0, rehydrated: true, quoteChecked: true, launchChecked: true });
+  if (r.create_block) s.dbLaunch = { pct: r.bundle_pct, usd: r.bundle_usd, wallets: r.bundle_wallets, dev: r.dev_buy_usd, snipers: r.snipers };
+  s.creatorHist = { n: r.creator_prior || 0, grads: r.creator_prior_grads || 0, best: r.creator_best_mc || 0 };
+  if (s.createTs) { // don't re-run launch-window logic for coins whose window has passed
+    const age = Math.floor(Date.now() / 1000) - s.createTs;
+    while (s.nextCp < C.LIFE_CHECKPOINTS.length && C.LIFE_CHECKPOINTS[s.nextCp] <= age) s.nextCp++;
+    if (age > Math.max(...C.W2_CHECKS_S) + 20) s.w2.add("done");
+    if (age > C.EARLY_WINDOW_S) s.earlyDone = true;
+  }
+  if (s.graduated && s.gradTs && Date.now() / 1000 - s.gradTs > C.GR_WINDOW_S) s.grDone = true;
+  ts.rehydrated = (ts.rehydrated || 0) + 1;
+}
+// coins first seen after a restart that the database has never seen (launched before the bot existed): fetch name/symbol once
+const nameQueue = new Set();
+setInterval(async () => {
+  if (!nameQueue.size) return;
+  const batch = [...nameQueue].slice(0, 20); batch.forEach((t) => nameQueue.delete(t));
+  try {
+    const res = await ethCalls(batch.flatMap((t) => [{ to: t, data: "0x06fdde03" }, { to: t, data: "0x95d89b41" }]));
+    batch.forEach((t, i) => { const st0 = S.get(t); if (!st0) return; const nm = res[i * 2] ? str(res[i * 2], 0) : "", sy = res[i * 2 + 1] ? str(res[i * 2 + 1], 0) : ""; if (nm) st0.name ||= nm; if (sy) st0.symbol ||= sy; });
+  } catch {}
+}, 5000);
+const launch = (s) => s.dbLaunch ? s.dbLaunch : s.createBlock ? { pct: (s.bundle.tokens / C.TOTAL_SUPPLY) * 100, usd: s.bundle.usd, wallets: s.bundle.wallets.size, dev: s.devBuyUsd, snipers: s.snipers.size } : null;
 export const getState = (token, row) => { const s = st(token); if (row && !s.lastPx) { s.lastPx = row.last_price || row.entry_price; s.lastMc = row.last_mc || row.entry_mc; s.name ||= row.name; s.symbol ||= row.symbol; } return s; };
 export const peekState = (token) => S.get(token);
 
@@ -42,7 +70,7 @@ export async function onFlap(ev) {
   if (ev.kind === "create") return create(ev);
   if (ev.kind === "grad") return graduate(ev);
   const s = S.get(ev.token), m = pendingMeta.get(ev.token) || {};
-  if (ev.kind === "quote") { m.quote = ev.quote; if (s) setQuote(s, ev.quote); }
+  if (ev.kind === "quote") { m.quote = ev.quote; quoteUsd(ev.quote); if (s) setQuote(s, ev.quote); } // warm the quote price/decimals before the first trade
   if (ev.kind === "tax") { m.tax = ev.bps; if (s) { s.taxBps = ev.bps; q.tokenSet("tax_bps").run(ev.bps, s.token); } }
   if (ev.kind === "thresh") { m.thresh = ev.value; if (s) { s.dexThresh = ev.value; q.tokenSet("dex_thresh").run(ev.value, s.token); } }
   if (ev.kind === "migrator") { m.migrator = ev.type; if (s) { s.migrator = ev.type; q.tokenSet("migrator").run(ev.type, s.token); } }
@@ -82,7 +110,7 @@ function trade(t, venue) {
   const s = st(t.token); ts.trades++;
   // coins launched before the bot started: no TokenQuoteSet seen. A BNB-priced Flap coin can't be worth >$50M on the curve,
   // so a price that implies that is really quoted in a USD stable (USD1/USDT) — mark it inferred.
-  if (!s.createBlock && !s.quoteChecked) { s.quoteChecked = true; if (!s.quote && t.price * C.TOTAL_SUPPLY * (quoteUsd(null) || 600) > 5e7) { s.quote = "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d"; s.quoteSym = "USD?"; } }
+  if (!s.createBlock && !s.quoteChecked && !s.rehydrated) { s.quoteChecked = true; if (!s.quote && t.price * C.TOTAL_SUPPLY * (quoteUsd(null) || 600) > 5e7) { s.quote = "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d"; s.quoteSym = "USD?"; } }
   const qu = quoteUsd(s.quote), dq = quoteDecimals(s.quote);
   const now = t.ts || Math.floor(Date.now() / 1000), late = s.lastTs && now < s.lastTs - 5; if (late) ts.lateTrades++;
   if (!qu || dq == null || s.badQuote) { ts.noUsd++; notePriceMiss(s.quote); return; }
@@ -139,14 +167,14 @@ export function feats(s, kind, extra = {}) {
   const ch = s.creatorHist;
   return {
     vol5m_usd: w.v, vol1m_usd: s.v1, buys_entry: w.nb, sells_entry: w.ns, buyers_entry: s.buyers.size, bs_ratio_entry: w.b / Math.max(w.s, 1), new60_entry: new60, new5_entry: new5,
-    bundle_pct: s.createBlock ? (s.bundle.tokens / C.TOTAL_SUPPLY) * 100 : null, bundle_usd: s.createBlock ? s.bundle.usd : null, bundle_wallets: s.createBlock ? s.bundle.wallets.size : null,
-    snipers: s.createBlock ? s.snipers.size : null, dev_buy_usd: s.createBlock ? s.devBuyUsd : null, tax_bps: s.taxBps,
+    bundle_pct: launch(s)?.pct ?? null, bundle_usd: launch(s)?.usd ?? null, bundle_wallets: launch(s)?.wallets ?? null,
+    snipers: launch(s)?.snipers ?? null, dev_buy_usd: launch(s)?.dev ?? null, tax_bps: s.taxBps,
     creator_prior: ch?.n ?? null, creator_grads: ch?.grads ?? null, proven_entry: s.createTs ? provenCount(s.early.filter((x) => x.ts - s.createTs <= 60).map((x) => x.w)) : null,
     feed_final_pct: fh.finalPct, feed_live_pct: fh.livePct, feed_polling: fh.polling ? 1 : 0, ...extra,
   };
 }
 const title = (s) => `${esc(s.name || s.token.slice(0, 8))} ($${esc(s.symbol || "?")})${s.taxBps ? ` · tax ${(s.taxBps / 100).toFixed(1)}%` : ""}${s.quoteSym !== "BNB" ? ` · ${s.quoteSym} pair` : ""}`;
-const launchLine = (s) => s.createBlock ? `Launch: bundle ${((s.bundle.tokens / C.TOTAL_SUPPLY) * 100).toFixed(1)}% · ${s.bundle.wallets.size} wallets · dev buy $${fmt(s.devBuyUsd)} · snipers ${s.snipers.size}${s.creatorHist ? ` · creator ${s.creatorHist.n} prior / ${s.creatorHist.grads} grads${s.creatorHist.grads >= C.CREATOR_GRADS_FLAG ? " ⭐" : ""}` : ""}` : "Launch: before tracker start (no launch data)";
+const launchLine = (s, L = launch(s)) => L ? `Launch: bundle ${(L.pct ?? 0).toFixed(1)}% · ${L.wallets ?? 0} wallets · dev buy $${fmt(L.dev)} · snipers ${L.snipers ?? "?"}${s.creatorHist ? ` · creator ${s.creatorHist.n} prior / ${s.creatorHist.grads} grads${s.creatorHist.grads >= C.CREATOR_GRADS_FLAG ? " ⭐" : ""}` : ""}` : "Launch: before tracker start (no launch data)";
 function enter(kind, s, f, text) { s.strategies.add(kind); return open(kind, s, f, text); }
 
 // ---------- lifecycle checkpoints (honest-replay data) ----------
@@ -170,18 +198,17 @@ setInterval(() => { // quiet tokens still get their checkpoints; housekeeping
   }
   ts.tracked = S.size;
 }, 30_000);
-setInterval(() => { // persist token summaries + wallet peaks
-  const upd = db.prepare(`UPDATE tokens SET buyers_total=?, peak_mc=MAX(COALESCE(peak_mc,0),?), last_ts=?, bundle_pct=?, bundle_usd=?, bundle_wallets=?, dev_buy_usd=?, snipers=? WHERE token=?`);
-  const tx = db.transaction(() => {
-    for (const s of S.values()) {
-      if (s.dirty && s.createTs) { upd.run(s.buyers.size, s.peakMc, s.lastTs, s.createBlock ? (s.bundle.tokens / C.TOTAL_SUPPLY) * 100 : null, s.bundle.usd, s.bundle.wallets.size, s.devBuyUsd, s.snipers.size, s.token); s.dirty = false; }
-      for (const b of s.walletBuys) if (b.dirty) { q.updWalletBuy.run(b.p30, b.p24, b.id); b.dirty = false; }
-      s.walletBuys = s.walletBuys.filter((b) => Date.now() / 1000 - b.ts <= 86400);
-    }
-    q.resolveWalletBuys.run(Math.floor(Date.now() / 1000) - 86400);
-  });
-  try { tx(); } catch (e) { console.error("[persist]", e.message); }
-}, 60_000);
+const updTok = db.prepare(`UPDATE tokens SET buyers_total=COALESCE(MAX(COALESCE(buyers_total,0), ?), buyers_total), peak_mc=MAX(COALESCE(peak_mc,0),?), last_ts=?, bundle_pct=?, bundle_usd=?, bundle_wallets=?, dev_buy_usd=?, snipers=? WHERE token=?`);
+const persistTx = db.transaction(() => { // token summaries + wallet peaks
+  for (const s of S.values()) {
+    if (s.dirty && s.createTs) { const L = launch(s); updTok.run(s.rehydrated ? null : s.buyers.size, s.peakMc, s.lastTs, L?.pct ?? null, L?.usd ?? null, L?.wallets ?? null, L?.dev ?? null, L?.snipers ?? null, s.token); s.dirty = false; }
+    for (const b of s.walletBuys) if (b.dirty) { q.updWalletBuy.run(b.p30, b.p24, b.id); b.dirty = false; }
+    s.walletBuys = s.walletBuys.filter((b) => Date.now() / 1000 - b.ts <= 86400);
+  }
+  q.resolveWalletBuys.run(Math.floor(Date.now() / 1000) - 86400);
+});
+export function persistNow() { try { persistTx(); } catch (e) { console.error("[persist]", e.message); } }
+setInterval(persistNow, 60_000);
 
 // ---------- strategies ----------
 function checkEarly(s, now) { // silent sampler: strong inflow in the first 3 minutes (Solana "early")
@@ -201,7 +228,7 @@ function checkWave2(s, now) {
   const r60 = s.ring.filter((x) => now - x.ts <= 60), bu = r60.filter((x) => x.b).reduce((a, x) => a + x.usd, 0), su = r60.filter((x) => !x.b).reduce((a, x) => a + x.usd, 0);
   if (bu / Math.max(su, 1) < C.W2_BS_MIN) return;
   const ago = s.ring.find((x) => now - x.ts <= 75 && now - x.ts >= 45) || s.ring[0]; if (!ago || !(s.lastPx > ago.px)) return;
-  const bundlePct = s.createBlock ? (s.bundle.tokens / C.TOTAL_SUPPLY) * 100 : null; if (bundlePct != null && bundlePct > C.W2_BUNDLE_MAX) return;
+  const bundlePct = launch(s)?.pct ?? null; if (bundlePct != null && bundlePct > C.W2_BUNDLE_MAX) return;
   s.w2.add("done");
   const alert = s.buyers.size >= C.W2_ALERT_BUYERS && new60 >= C.W2_ALERT_NEW60;
   enter("wave2", s, feats(s, "wave2", { label: `${Math.round(cp / 60)}m` }), alert ? `🌊 <b>SECOND WAVE</b> — ${title(s)} · +${Math.round(cp / 60)}m\n${s.buyers.size} buyers (${new60} new in 60s) · buy$/sell$ ${(bu / Math.max(su, 1)).toFixed(1)} · price ${((s.lastPx / ago.px - 1) * 100).toFixed(0)}% vs 60s ago\nMC <b>$${fmt(s.lastMc)}</b>\n${launchLine(s)}` : null);

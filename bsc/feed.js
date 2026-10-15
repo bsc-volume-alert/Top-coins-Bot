@@ -3,7 +3,7 @@
 // Watches the Flap Portal, the other launchpads (counted only for now) and the PancakeSwap pools of graduated tokens.
 import WebSocket from "ws";
 import { C } from "./config.js";
-import { NODES, rpc, call, usable, winStats, getLogsChunked, hex, backupUse, cuEstimate } from "./rpc.js";
+import { NODES, rpc, call, usable, winStats, getLogsChunked, hex, backupUse, cuEstimate, day } from "./rpc.js";
 import { tg } from "./telegram.js";
 import { q } from "./db.js";
 
@@ -73,7 +73,7 @@ async function pollLoop() {
       // overlap: re-read the last blocks every time (publicnode can report a block before all its servers have its logs);
       // already-seen events are skipped, so this costs no extra requests, only a little more data
       const to = head - 1;
-      let from = lp.sweepBlock ? lp.sweepBlock + 1 - (++lp.pollN % 5 === 0 ? 60 : 15) : to - 20; if (to - from > 2000) from = to - 2000;
+      let from = lp.sweepBlock ? lp.sweepBlock + 1 - (++lp.pollN % 5 === 0 ? 60 : 15) : to - 20; if (to - from > C.CATCHUP_BLOCKS) from = to - C.CATCHUP_BLOCKS;
       if (from <= to) { if (!lp.startBlock) lp.startBlock = from; const logs = sortLogs(await getLogsChunked({ address: getAddrs() }, from, to)); for (const l of logs) onLog(l, wsQuiet ? (lp.wsBlock ? "backfill" : "poll") : "sweep"); lp.sweepBlock = Math.max(lp.sweepBlock, to); }
       await clear("no-logs", "launchpad events can be fetched again");
     } catch (e) { if (/no node could answer eth_getLogs/.test(e.message)) await alarm("no-logs", "no node is currently allowing log requests — data is NOT being collected."); }
@@ -118,13 +118,16 @@ const START = Date.now();
 const monthlyCu = () => (cuEstimate() / Math.max((Date.now() - START) / 86_400_000, 1 / 24)) * 30;
 async function creditCheck() {
   if (!NODES.some((n) => n.backup) || Date.now() - START < 3600_000) return;
+  if (day.capHit) await alarm("credit-cap", `NodeReal hit today's budget (${Math.round(day.cu / 1000)}K credits) while publicnode was failing — the bot is waiting for publicnode and will catch up (no data lost, but signals in the gap are late).`);
+  else await clear("credit-cap", "publicnode serving again");
+  day.capHit = 0;
   const m = monthlyCu();
   if (m > C.NODEREAL_WARN_CU) await alarm("credits", `NodeReal backup is on course for ≈${(m / 1e6).toFixed(1)}M credits this month (free plan 10M) — publicnode must be refusing a lot. Check the NodeReal dashboard.`);
   else if (m < C.NODEREAL_WARN_CU * 0.8) await clear("credits", "NodeReal credit use back to a safe rate");
 }
 /** a pool just added (graduation): fetch its logs from the graduation block, which the poller skipped before it knew the pool */
 export async function backfillAddress(address, fromBlock) {
-  try { const to = lp.sweepBlock; if (!to || fromBlock > to) return; const logs = sortLogs(await getLogsChunked({ address: [address] }, Math.max(fromBlock, to - 2000), to)); for (const l of logs) onLog(l, "backfill"); } catch (e) { console.error("[backfill]", e.message); }
+  try { const to = lp.sweepBlock; if (!to || fromBlock > to) return; const logs = sortLogs(await getLogsChunked({ address: [address] }, Math.max(fromBlock, to - C.CATCHUP_BLOCKS), to)); for (const l of logs) onLog(l, "backfill"); } catch (e) { console.error("[backfill]", e.message); }
 }
 export function feedSnapshot() { const a = audit.last; return { finalPct: a ? +a.finPct.toFixed(2) : null, livePct: a ? +a.livePct.toFixed(1) : null, polling: lp.polling }; }
 export function feedReport() {
@@ -135,7 +138,7 @@ export function feedReport() {
     `Arrived: live ${((lp.byPath.ws / tot) * 100).toFixed(0)}% · poller ${(((lp.byPath.poll + lp.byPath.backfill) / tot) * 100).toFixed(0)}% · sweep ${((lp.byPath.sweep / tot) * 100).toFixed(1)}% · only by 5-min check ${((lp.byPath.audit / tot) * 100).toFixed(2)}%\n` +
     `<b>Completeness</b>: ${a ? `${a.finPct >= 99.5 ? "✅" : "⚠️"} final ${a.finPct.toFixed(1)}% · live ${a.livePct.toFixed(0)}% (${a.n} events, ${ago(Date.now() - a.ts)} ago) · worst 24h ${worst.toFixed(1)}% over ${h.length} checks` : "first check ~5 min after start"}\n` +
     `<b>Nodes</b> (10 min ok/err/refused): ` + NODES.map((n) => { const s = winStats(n); return `${Date.now() < n.restUntil ? "💤" : s.ok && !s["429"] && !s.err ? "✅" : s.ok ? "⚠️" : "❔"}${n.name} ${s.ok}/${s.err}/${s["429"]}`; }).join(" · ") +
-    (NODES.some((n) => n.backup) ? `\nNodeReal backup (only after ${C.NODEREAL_AFTER_S}s of free-node failures): ${Object.entries(backupUse.calls).map(([k, c]) => `${k} ${c}`).join(" · ") || "no calls"} · ≈${Math.round(cuEstimate()).toLocaleString()} credits since start, on course for ≈${(monthlyCu() / 1e6).toFixed(2)}M/month (free 10M)` : "") +
+    (NODES.some((n) => n.backup) ? `\nNodeReal backup (only after ${C.NODEREAL_AFTER_S}s of free-node failures): ${Object.entries(backupUse.calls).map(([k, c]) => `${k} ${c}`).join(" · ") || "no calls"} · ≈${Math.round(cuEstimate()).toLocaleString()} credits since start (today ${Math.round(day.cu / 1000)}K of ${C.NODEREAL_DAY_CU / 1000}K cap), on course for ≈${(monthlyCu() / 1e6).toFixed(2)}M/month (free 10M)` : "") +
     `\nAlarms: ${alarms.size ? [...alarms.keys()].join(", ") : "none"}`;
 }
 export async function startFeed(addrsFn, dispatchFn) {

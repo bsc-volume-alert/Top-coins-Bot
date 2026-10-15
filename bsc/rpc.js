@@ -32,11 +32,16 @@ export async function call(node, method, params, timeout = 10000) {
 setInterval(() => { const cut = Date.now() - 600_000; for (const n of NODES) while (n.win.length && n.win[0].ts < cut) n.win.shift(); }, 30_000);
 export const winStats = (n) => n.win.reduce((a, x) => { a[x.kind]++; return a; }, { ok: 0, err: 0, "429": 0 });
 export const usable = (n, cap) => (!cap || n.caps[cap]) && Date.now() > n.restUntil;
-function rest(n, why) { if (Date.now() < n.restUntil) return; n.restUntil = Date.now() + 15 * 60_000; console.log(`[node] resting ${n.name}: ${why}`); }
+// publicnode is the only free node that serves logs, so it is only ever rested for 60 s (otherwise everything falls to NodeReal)
+function rest(n, why) { if (Date.now() < n.restUntil) return; n.restUntil = Date.now() + (n.caps.logs && !n.backup ? 60_000 : 15 * 60_000); console.log(`[node] resting ${n.name}: ${why}`); }
 
 // NodeReal credits (approximate cost per call; the dashboard is the source of truth)
 const CU = { eth_getLogs: 50, eth_call: 15, eth_blockNumber: 5, eth_getBlockByNumber: 15, eth_getTransactionByHash: 15 };
 export const cuEstimate = () => Object.entries(backupUse.calls).reduce((a, [m, n]) => a + n * (CU[m] ?? 20), 0);
+// daily NodeReal budget (UTC day): past it, wait for the free nodes and catch up afterwards
+export const day = { key: "", cu: 0, capHit: 0 };
+function spend(method, n = 1) { const k = new Date().toISOString().slice(0, 10); if (day.key !== k) { day.key = k; day.cu = 0; } day.cu += n * (CU[method] ?? 20); }
+const overBudget = () => { const k = new Date().toISOString().slice(0, 10); if (day.key !== k) { day.key = k; day.cu = 0; } if (day.cu >= C.NODEREAL_DAY_CU) { day.capHit++; return true; } return false; };
 const freeFailSince = {}; // per kind of call: when the free nodes started failing it (0 = fine)
 /** priority order: free public nodes first; NodeReal only once the free ones have been failing for NODEREAL_AFTER_S —
  *  a single refused poll is simply caught up by the next one 3 s later, so it is not worth a paid call */
@@ -44,7 +49,7 @@ export async function rpc(method, params, cap = null) {
   const pool = NODES.filter((n) => usable(n, cap));
   for (const n of pool) {
     const k = cap || method;
-    if (n.backup) { if (!freeFailSince[k] || Date.now() - freeFailSince[k] < C.NODEREAL_AFTER_S * 1000) continue; backupUse.calls[method] = (backupUse.calls[method] || 0) + 1; }
+    if (n.backup) { if (!freeFailSince[k] || Date.now() - freeFailSince[k] < C.NODEREAL_AFTER_S * 1000 || overBudget()) continue; backupUse.calls[method] = (backupUse.calls[method] || 0) + 1; spend(method); }
     try { const r = await call(n, method, params); if (!n.backup) freeFailSince[k] = 0; return r; }
     catch (e) { if (e.limit) { const s = winStats(n); if (s["429"] >= 5 && s["429"] > s.ok) rest(n, e.message); if (/specify an address/i.test(e.message)) n.caps.chain = false; } }
   }
@@ -60,7 +65,8 @@ export async function getLogsChunked(filter, from, to, step = 100) {
 export async function ethCalls(calls) {
   if (!calls.length) return [];
   const body = calls.map((c, i) => ({ jsonrpc: "2.0", id: i + 1, method: "eth_call", params: [{ to: c.to, data: c.data }, "latest"] }));
-  for (const n of NODES.filter((x) => usable(x) && (!x.backup || (freeFailSince.eth_call && Date.now() - freeFailSince.eth_call > C.NODEREAL_AFTER_S * 1000)))) {
+  for (const n of NODES.filter((x) => usable(x) && (!x.backup || (freeFailSince.eth_call && Date.now() - freeFailSince.eth_call > C.NODEREAL_AFTER_S * 1000 && !overBudget())))) {
+    if (n.backup) spend("eth_call", calls.length);
     try { const res = await call(n, body); const by = new Map(res.map((x) => [x.id, x.result ?? null])); if (!n.backup) freeFailSince.eth_call = 0; if (n.backup) backupUse.calls.eth_call = (backupUse.calls.eth_call || 0) + calls.length; return calls.map((_, i) => by.get(i + 1) ?? null); } catch {}
   }
   if (!freeFailSince.eth_call) freeFailSince.eth_call = Date.now();

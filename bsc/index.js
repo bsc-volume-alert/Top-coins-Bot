@@ -8,7 +8,7 @@ import { db } from "./db.js";
 import { startFeed, feedReport, ago } from "./feed.js";
 import { decodeFlap, flapStats } from "./flap.js";
 import { decodePoolLog, poolAddrs, poolStats, P } from "./pools.js";
-import { onFlap, onPoolTrade, ts, getState, peekState, setBlockTime } from "./tokens.js";
+import { onFlap, onPoolTrade, ts, getState, peekState, setBlockTime, persistNow } from "./tokens.js";
 import { restore, startSweeper, ps, openCount } from "./paper.js";
 import { startCommands, summaryText, reportText } from "./commands.js";
 import { leaderboardText, creatorsText, runnersText, provenSize } from "./wallets.js";
@@ -21,6 +21,9 @@ await startPrice();
 // 1.0.1 cleanup: entries recorded with a mispriced quote token (e.g. MC in the trillions) are invalid
 const fixed = db.prepare(`UPDATE paper_trades SET invalid=1, note=COALESCE(note,'')||' invalid:mispriced-quote' WHERE invalid=0 AND (entry_mc>1e8 OR entry_mc<=0)`).run().changes;
 if (fixed) console.log(`[cleanup] ${fixed} mispriced paper trades marked invalid`);
+// 1.0.3 cleanup: "USD?" was inferred for coins whose real quote token was in the database (lost on restart) → wrong prices
+const fixed2 = db.prepare(`UPDATE paper_trades SET invalid=1, note=COALESCE(note,'')||' invalid:quote-lost-on-restart' WHERE invalid=0 AND quote='USD?' AND token IN (SELECT token FROM tokens)`).run().changes;
+if (fixed2) console.log(`[cleanup] ${fixed2} restart-mispriced paper trades marked invalid`);
 const restored = restore(getState);
 const OTHER = Object.keys(C.OTHER_LAUNCHPADS), other = {};
 const addrs = () => [C.FLAP_PORTAL, ...OTHER, ...poolAddrs()];
@@ -36,7 +39,7 @@ startSweeper((tok) => peekState(tok));
 const status = () => {
   const unk = Object.entries(flapStats.unknown).sort((a, b) => b[1] - a[1]).slice(0, 3);
   return `🟡 <b>BSC ${v}</b> · Flap · up ${ago(process.uptime() * 1000)} · BNB $${bnbUsd().toFixed(0)}\n` +
-    `<b>Flap</b>: launches ${ts.launches} · trades ${ts.trades} · graduations ${ts.gradEvents} · tokens tracked ${ts.tracked}` + (ts.noUsd ? ` · no-price trades ${ts.noUsd}` : "") + (flapStats.bad ? ` · undecodable ${flapStats.bad}` : "") + `\n` +
+    `<b>Flap</b>: launches ${ts.launches} · trades ${ts.trades}` + (ts.rehydrated ? ` · reloaded from DB ${ts.rehydrated}` : "") + ` · graduations ${ts.gradEvents} · tokens tracked ${ts.tracked}` + (ts.noUsd ? ` · no-price trades ${ts.noUsd}` : "") + (flapStats.bad ? ` · undecodable ${flapStats.bad}` : "") + `\n` +
     `Events: ${Object.entries(flapStats.byName).filter(([k]) => k !== "CirculatingSupplyChanged").map(([k, n]) => `${k.replace(/^Token|^FlapToken/, "")} ${n}`).join(" · ") || "none yet"}` +
     (unk.length ? `\nSide events (one per trade, not needed): ${unk.map(([k, n]) => `${k.slice(0, 10)}… ${n}`).join(" · ")}` : "") +
     (noPrice.size ? `\nNo-price trades by quote token: ${[...noPrice.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, n]) => `${k.slice(0, 8)}${untrusted.has(k) ? "⚠️" : ""} ${n}`).join(" · ")}${untrusted.size ? ` · ⚠️ = mispriced, ignored` : ""}` : "") + `\n` +
@@ -57,3 +60,4 @@ setInterval(async () => { // daily digest at 9am London
 }, 60_000);
 setInterval(() => console.log(`[1m] trades=${ts.trades} launches=${ts.launches} grads=${ts.gradEvents} tracked=${ts.tracked} open=${openCount()} pools=${P.size} bnb=${bnbUsd().toFixed(1)}`), 60_000);
 process.on("unhandledRejection", (e) => console.error("[unhandled]", e));
+for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => { persistNow(); console.log(`[exit] ${sig}: state saved`); process.exit(0); }); // pm2 reload on every push
