@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.10 — flow exit with 4x cap (15 Oct)
+- `x_flow4`: the flow exit with a voluntary sell at `FLOW_CAP` (4x). Of 36 core winners so far: 21 reached 2x, 13 reached 3x, 8 reached 4x, 4 reached 10x (24h peaks).
+
 ## v0.18.9 — runner exits and entry variants (15 Oct)
 - Runner analysis on 49 core trades: 3x+ coins (13) still had ≥$100K/5m volume at +15m in 8 of 11 and buys > sells in 10 of 11; the 1.5–3x "modest winners" (23) had median 5m volume of $48K at +15m and a median MC of $1.6K at +30m — rugs that paused. Failures had $2.6K/5m at +15m. At entry the 3x+ group only differed in whale concentration (top-3 share 36% vs 16%/12%) and slightly earlier triggers.
 - `x_flow` exit (all strategies): −40% stop until 1.5x, then hold while 5m volume ≥ `FLOW_MIN_VOL` ($100K) and buy$/sell$ ≥ `FLOW_BS_MIN` (1.0); sell when either fails or on a 50% trail. `x_t15s40` / `x_t2s40` (−40% stops). `dd_pre15`: max drawdown before the first 1.5x touch.

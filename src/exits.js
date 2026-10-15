@@ -12,10 +12,11 @@ export function stopFinal(x, mult, peakMult) { const o = {}; for (const [k, [t]]
 // Before 1.5x: -40% hard stop. Backstop: 50% trail. Tracks the max drawdown before 1.5x (ddPre15) for the stop-width question.
 export function flowStep(e, x, mult, fromPeak, v5Usd, buyUsd, sellUsd) {
   if (x.tp15 == null && (e.ddPre15 == null || mult < e.ddPre15)) e.ddPre15 = mult;
+  if (x.flow4 == null && x.flow == null && mult >= CFG.FLOW_CAP) x.flow4 = CFG.FLOW_CAP; // v0.18.10: flow with a voluntary sell at FLOW_CAP
   if (x.flow != null) return;
-  if (!e.flowArmed) { if (mult >= 1.5) { e.flowArmed = true; e.flowSince = Date.now(); } else if (mult <= 0.6) x.flow = mult; return; }
+  if (!e.flowArmed) { if (mult >= 1.5) { e.flowArmed = true; e.flowSince = Date.now(); } else if (mult <= 0.6) { x.flow = mult; if (x.flow4 == null) x.flow4 = mult; } return; }
   if (Date.now() - e.flowSince < 20_000) return; // give the window a moment after arming
-  if (v5Usd < CFG.FLOW_MIN_VOL || (sellUsd > 0 && buyUsd / sellUsd < CFG.FLOW_BS_MIN) || fromPeak <= -0.50) x.flow = mult;
+  if (v5Usd < CFG.FLOW_MIN_VOL || (sellUsd > 0 && buyUsd / sellUsd < CFG.FLOW_BS_MIN) || fromPeak <= -0.50) { x.flow = mult; if (x.flow4 == null) x.flow4 = mult; }
 }
 export function stepExits(e, price, mc, v5Usd, buyUsd, sellUsd) {
   if (price > e.peak) e.peak = price;
@@ -52,7 +53,7 @@ export function finalExits(e, mult) {
     tp: x.tp ?? mult, tsl40: x.tsl40 ?? mult, tsl60: x.tsl60 ?? mult, tsl80: x.tsl80 ?? mult,
     half60: x.half60 ?? (e.half ? 1 + 0.5 * mult : mult), twophase: x.twophase ?? (e.half ? 1 + 0.5 * mult : mult),
     ladder: x.ladder ?? ((e.half ? 0.5 : 0) + (e.s3 ? 0.75 : 0) + (1 - (e.half ? 0.25 : 0) - (e.s3 ? 0.25 : 0)) * mult),
-    levels: levelsFinal(e.lv, mult), m1: x.m1 ?? mult, m1vol: x.m1vol ?? mult, volstop: x.volstop ?? mult, time: mult, combo: x.combo ?? (e.half ? 1 + 0.5 * mult : mult), tp15: x.tp15 ?? mult, tsl25: x.tsl25 ?? mult, flow: x.flow ?? mult, ...stopFinal(x, mult, e.peak / e.entry),
+    levels: levelsFinal(e.lv, mult), m1: x.m1 ?? mult, m1vol: x.m1vol ?? mult, volstop: x.volstop ?? mult, time: mult, combo: x.combo ?? (e.half ? 1 + 0.5 * mult : mult), tp15: x.tp15 ?? mult, tsl25: x.tsl25 ?? mult, flow: x.flow ?? mult, flow4: x.flow4 ?? (x.flow ?? mult), ...stopFinal(x, mult, e.peak / e.entry),
   };
 }
 export const pc = (m) => (m == null ? "—" : `${m >= 1 ? "+" : ""}${((m - 1) * 100).toFixed(0)}%`);
