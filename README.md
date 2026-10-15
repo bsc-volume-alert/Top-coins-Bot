@@ -55,3 +55,6 @@ All thresholds are env-overridable (see `src/config.js`).
 ## v0.17.4 — second-wave "tight" tag, 1.5x and trail-25 exits (15 Oct, early)
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
+
+## v0.17.5 — bundle churn at entry (15 Oct)
+- Every strategy entry records `churn_entry` (cluster SOL sold ÷ bundle SOL so far), `cluster_out_entry`, cluster holdings % and hand-offs at the moment of entry; second-wave alerts show "bundle churn N%". Day-one finding: bundled launches whose bundle sold out and bought back (churn >150%) reached graduation level 3.6% of the time vs 0.1–0.3% for bundles that held or just exited.

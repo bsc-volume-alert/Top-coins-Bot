@@ -270,4 +270,10 @@ export function pumpSwapTick(mint, tr, vol5Usd, bs) {
   if (p && !p.closed && p.handover) updatePaper(t, s, { price: tr.price, ts: tr.ts });
   if (s.confPos && !s.confPos.closed && s.confPos !== s.pos && s.confPos.handover) { const keep = s.pos; s.pos = s.confPos; updatePaper(t, s, { price: tr.price, ts: tr.ts }); s.pos = keep; }
 }
+/** v0.17.5: cluster flow snapshot for a tracked token — SOL the bundle/cluster wallets have put in and taken out so far, churn = out / bundle SOL */
+export function clusterSnap(mint) {
+  const s = S.get(mint); const t = liveToken(mint); if (!s) return null;
+  const bundleSol = t?.bundle?.sol ?? 0;
+  return { cIn: s.cIn, cOut: s.cOut, bundleSol, churn: bundleSol > 0 ? s.cOut / bundleSol : null, held: heldPct(s), handoffs: s.handoffs };
+}
 export const sigStats = () => ({ ...sig, tracked: S.size, open: [...S.values()].reduce((a, s) => a + (s.pos && !s.pos.closed ? 1 : 0) + (s.confPos && !s.confPos.closed && s.confPos !== s.pos ? 1 : 0), 0), rpc: rpcUsed() });
