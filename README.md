@@ -51,3 +51,7 @@ All thresholds are env-overridable (see `src/config.js`).
 
 ## v0.17.3 — proven-wallet bar raised (14 Oct, night)
 - Proven = 8+ scored non-bundle buys of ≥0.3 SOL at ≥3s, ≥50% of them 5x, and not a high-frequency wallet (50+ buys/day). Alert only on buys ≥0.2 SOL. The volume snipers (460 buys/day at 0.01 SOL) qualified under the old bar and are not copyable.
+
+## v0.17.4 — second-wave "tight" tag, 1.5x and trail-25 exits (15 Oct, early)
+- Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
+- New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.

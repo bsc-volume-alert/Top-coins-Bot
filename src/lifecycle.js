@@ -106,7 +106,8 @@ function wave2Check(mint, s, now, venue) {
   const ago = s.ring.find((x) => now - x.ts <= 75 && now - x.ts >= 45) || s.ring[0]; if (!ago || !(s.lastPx > ago.px)) return;
   const m = q.tokenMeta.get(mint); if (m?.bundle_pct != null && m.bundle_pct > CFG.W2_BUNDLE_MAX) return;
   s.w2.add("done");
-  for (const fn of w2Listeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: s.lastMc, ts: now, cp, buyers: s.buyers.size, new60, bs: buyUsd / Math.max(sellUsd, 1), pxChg: s.lastPx / ago.px - 1, bundle: m?.bundle_pct ?? null, venue, alert: s.buyers.size >= CFG.W2_ALERT_BUYERS && new60 >= CFG.W2_ALERT_NEW60 }); } catch (e) { console.error("[wave2]", e.message); } }
+  const bsv = buyUsd / Math.max(sellUsd, 1), tight = cp <= CFG.W2T_CP_MAX && s.lastMc >= CFG.W2T_MC_MIN && s.lastMc <= CFG.W2T_MC_MAX && bsv >= CFG.W2T_BS_MIN && (m?.dev_buy_sol ?? 0) >= CFG.W2T_DEV_MIN; // v0.17.4
+  for (const fn of w2Listeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: s.lastMc, ts: now, cp, buyers: s.buyers.size, new60, bs: buyUsd / Math.max(sellUsd, 1), pxChg: s.lastPx / ago.px - 1, bundle: m?.bundle_pct ?? null, venue, tight, alert: s.buyers.size >= CFG.W2_ALERT_BUYERS && new60 >= CFG.W2_ALERT_NEW60 }); } catch (e) { console.error("[wave2]", e.message); } }
 }
 // v0.17 revival (user's hypothesis): a coin that fell 40%+ from its peak, then new buyers and volume come back
 function revivalCheck(mint, s, now, venue) {

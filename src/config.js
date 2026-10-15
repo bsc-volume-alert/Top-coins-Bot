@@ -143,6 +143,7 @@ Object.assign(CFG, {
   W2_NEW60_MIN: n("W2_NEW60_MIN", 30),             // new distinct buyers in the last 60s
   W2_BS_MIN: n("W2_BS_MIN", 1.0),                  // buy$/sell$ over last 60s
   W2_BUNDLE_MAX: n("W2_BUNDLE_MAX", 60),
+  W2T_CP_MAX: n("W2T_CP_MAX", 180), W2T_MC_MIN: n("W2T_MC_MIN", 12_000), W2T_MC_MAX: n("W2T_MC_MAX", 25_000), W2T_BS_MIN: n("W2T_BS_MIN", 1.3), W2T_DEV_MIN: n("W2T_DEV_MIN", 0.001), // v0.17.4 "tight" tag on second-wave entries
   W2_ALERT_BUYERS: n("W2_ALERT_BUYERS", 150), W2_ALERT_NEW60: n("W2_ALERT_NEW60", 50), // v0.17.1: alert only the strong ones; paper-trade all
   REV_PEAK_MIN_AGE_S: n("REV_PEAK_MIN_AGE_S", 180),  // v0.17.1: the peak being recovered from must be at least this old
   GR_WINDOW_S: n("GR_WINDOW_S", 900),                 // v0.17.1 graduation runner: within this many seconds of graduation
