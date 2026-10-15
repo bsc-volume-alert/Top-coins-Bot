@@ -17,6 +17,7 @@ import { recordHolders, holdersLine } from "./holders.js";
 
 const P = new Map(); // mint -> [{id, label, e, w5:[], closed, msgId}]
 export const cp = { entries: 0, closes: 0 };
+export const positionsOf = (mint) => P.get(mint) || [];
 
 export function openCopy(kind, who, mint, name, symbol, price, mc, ts, note) {
   const ageS = note?.ageS ?? null;
@@ -70,6 +71,7 @@ function tick(mint, price, mc, sol, isBuy, ts) {
     const r = stepExits(p.e, price, mc, v5, bu, su); const x = p.e.x;
     q.updMom.run(Math.max(mc, p.e.peak * CFG.TOTAL_SUPPLY * solUsdCached()), r.peakMult, x.tp ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tsl80 ?? null, x.half60 ?? null, x.twophase ?? null, x.ladder ?? null, null, null, null, null, null, null, 0, x.levels ?? null, x.m1 ?? null, x.m1vol ?? null, x.volstop ?? null, p.id);
     if (x.tp15 != null && !p.hit15Saved) { p.hit15Saved = true; try { q.setHit15.run(ts - p.entryTs, p.id); } catch {} }
+    { const k2 = `${x.flow}|${x.t15s40}|${x.t2s40}|${p.e.ddPre15}`; if (p.e.ex2Saved !== k2) { p.e.ex2Saved = k2; try { q.setExits2.run(x.flow ?? null, x.t15s40 ?? null, x.t2s40 ?? null, p.e.ddPre15 ?? null, p.id); } catch {} } }
     { const key = `${x.combo}|${x.tp15}|${x.tsl25}|${x.t15s25}|${x.t15s60}|${x.t2s25}|${x.t2s60}`; if (p.e.comboSaved !== key) { p.e.comboSaved = key; try { q.setCombo.run(x.combo ?? null, x.tp15 ?? null, x.tsl25 ?? null, x.t15s25 ?? null, x.t15s60 ?? null, x.t2s25 ?? null, x.t2s60 ?? null, p.id); } catch {} } }
     if (x.tsl80 != null) close(mint, p, "tsl80");
   }
@@ -81,7 +83,7 @@ function close(mint, p, reason) {
   if (p.closed) return; p.closed = true; cp.closes++;
   const mult = p.lastPx / p.e.entry, v = finalExits(p.e, mult), peakMult = p.e.peak / p.e.entry, now = Math.floor(Date.now() / 1000);
   q.updMom.run(p.lastMc, peakMult, v.tp, v.tsl40, v.tsl60, v.tsl80, v.half60, v.twophase, v.ladder, v.time, now, p.lastMc, p.lastPx, reason, (v.time - 1) * 100, 1, v.levels, v.m1, v.m1vol, v.volstop, p.id);
-  try { q.setCombo.run(v.combo, v.tp15, v.tsl25, v.t15s25, v.t15s60, v.t2s25, v.t2s60, p.id); } catch {}
+  try { q.setCombo.run(v.combo, v.tp15, v.tsl25, v.t15s25, v.t15s60, v.t2s25, v.t2s60, p.id); q.setExits2.run(v.flow, v.t15s40, v.t2s40, p.e.ddPre15 ?? null, p.id); } catch {}
   if (p.alerted !== false) tg(`${v.half60 >= 1 ? "✅" : "🔴"} <b>${p.kind === "climber" ? "CLIMBER CLOSE" : p.kind === "grad" ? "GRADUATION CLOSE" : p.kind === "wave2" ? "SECOND WAVE CLOSE" : p.kind === "revival" ? "REVIVAL CLOSE" : p.kind === "gradrun" ? "GRADUATION RUNNER CLOSE" : p.kind === "gradrec" ? "GRADUATION RECOVERY CLOSE" : p.kind === "slow" ? "SLOW BUILD CLOSE" : p.kind === "copycreator" ? "COPY CREATOR CLOSE" : "COPY CLOSE"}</b> — ${esc(p.label)} / ${esc(p.name)} (${reason}) · peak <b>${peakMult.toFixed(2)}x</b> · now ${mult.toFixed(2)}x\ncombo <b>${pc(v.combo)}</b> · ½@2x+60%: ${pc(v.half60)} · 2-phase ${pc(v.twophase)} · vol-stop ${pc(v.volstop)} · 2x-out ${pc(v.tp)} · trail40 ${pc(v.tsl40)} · hold ${pc(v.time)}`, { replyTo: p.msgId });
   const arr = P.get(mint); if (arr && arr.every((z) => z.closed)) P.delete(mint);
 }

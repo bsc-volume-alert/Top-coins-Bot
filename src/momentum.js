@@ -11,7 +11,9 @@ import { pumpSwapTick } from "./signals.js";
 import { watch as afterWatch, tick as afterTick } from "./aftercare.js";
 import { retrySocials } from "./socials.js";
 import { volumeQuality, qualityLine } from "./quality.js";
-import { stopStep, stopFinal } from "./exits.js";
+import { stopStep, stopFinal, flowStep } from "./exits.js";
+import { openCopy } from "./copytrade.js";
+const coreListeners = []; export const onCoreEntry = (fn) => coreListeners.push(fn);
 import { feeInfo, feeLine } from "./fees.js";
 import { recordHoldersAsync, holdersLine } from "./holders.js";
 import { readFileSync, writeFileSync, renameSync } from "node:fs";
@@ -88,6 +90,7 @@ onSwap((tr) => {
   if (tr.isBuy && tr.wallet && !tr.wallet.startsWith("tx:")) { s.buyers.push({ ts: now, w: tr.wallet, sol: tr.sol, mc: tr.mc, v: tr.venue || "pumpswap" }); if (s.buyers.length > 5000) s.buyers.splice(0, 1000); }
   s.w1.push({ ts: now, usd, b: tr.isBuy }); while (s.w1.length && now - s.w1[0].ts > 60) s.w1.shift();
   if (s.pos) updatePos(tr.mint, s, tr.price, now);
+  dipCheck(tr.mint, s, tr, now);
   const v5 = s.w5.reduce((a, x) => a + x.usd, 0);
   const bsu = [s.w5.filter((x) => x.b).reduce((a, x) => a + x.usd, 0), s.w5.filter((x) => !x.b).reduce((a, x) => a + x.usd, 0)];
   pumpSwapTick(tr.mint, tr, v5, bsu); afterTick(tr.mint, tr.price, tr.mc);
@@ -157,6 +160,7 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
   const core = kind === "vol5m" && tr.mc < CFG.MOM_CORE_MC && !reentry; // v0.18.4
   const coreTight = core && tr.mc < CFG.MOM_CT_MC && ageS != null && ageS < CFG.MOM_CT_AGE_S && qv && qv.sizeCv < CFG.MOM_CT_SIZE_CV; // v0.18.7: under $60K, under 6 min, steady trade sizes
   try { q.setCore.run(core ? 1 : 0, coreTight ? 1 : 0, pos.id); } catch {}
+  if (core) { s.dip = { px: tr.price, ts: now, done: false, name: name || mint.slice(0, 8), symbol: symbol || "" }; for (const fn of coreListeners) { try { fn({ mint, name: name || mint.slice(0, 8), symbol: symbol || "", price: tr.price, mc: tr.mc, ts: now, pos }); } catch (e) { console.error("[core listener]", e.message); } } } // v0.18.9
   let hl = null; try { hl = holdersLine(await recordHoldersAsync(pos.id, mint, meta?.creator)); } catch {} // v0.18.5
   let fi = null; try { fi = feeInfo(mint, meta?.creator, createTs); q.setFees.run(fi.accrued, fi.claims, fi.claimedSol, pos.id); } catch (e) { console.error("[fees entry]", e.message); }
   if (reentry) { s.peakMc = tr.mc; s.rejectedLevel = null; }
@@ -182,6 +186,12 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
   for (const m of CFG.MOM_SCORECARD_MIN) setTimeout(() => scorecard(mint, s, m), m * 60_000);
 }
 
+// v0.18.9 dip-entry variant: after a core trigger, enter only if price falls MOM_DIP_PCT within MOM_DIP_WINDOW_S (and before 1.5x)
+function dipCheck(mint, s, tr, now) {
+  const d = s.dip; if (!d || d.done) return;
+  if (now - d.ts > CFG.MOM_DIP_WINDOW_S || tr.price >= d.px * 1.5) { d.done = true; return; }
+  if (tr.price <= d.px * (1 - CFG.MOM_DIP_PCT)) { d.done = true; try { openCopy("momdip", `-${Math.round(CFG.MOM_DIP_PCT * 100)}%`, mint, d.name, d.symbol, tr.price, tr.mc, now, { v5: s.w5.reduce((a, x) => a + x.usd, 0), venue: tr.venue, ageS: (() => { const m = q.tokenMeta.get(mint); return m?.create_ts ? now - m.create_ts : null; })() }); } catch (e) { console.error("[momdip]", e.message); } }
+}
 function updatePos(mint, s, px, now) {
   const p = s.pos; if (!p || p.closed) return;
   if (px > p.peak) p.peak = px;
@@ -191,6 +201,8 @@ function updatePos(mint, s, px, now) {
   if (x.tp15 == null && mult >= 1.5) x.tp15 = 1.5; // v0.18.3
   if (x.tsl25 == null && fromPeak <= -0.25) x.tsl25 = mult;
   stopStep(x, mult);
+  { const v5f = s.w5.reduce((a, z) => a + z.usd, 0), buf = s.w5.filter((z) => z.b).reduce((a, z) => a + z.usd, 0); flowStep(p, x, mult, fromPeak, v5f, buf, v5f - buf); }
+  { const k2 = `${x.flow}|${x.t15s40}|${x.t2s40}|${p.ddPre15}`; if (p.ex2Saved !== k2) { p.ex2Saved = k2; try { q.setExits2.run(x.flow ?? null, x.t15s40 ?? null, x.t2s40 ?? null, p.ddPre15 ?? null, p.id); } catch {} } }
   if (x.tsl40 == null && fromPeak <= -0.40) x.tsl40 = mult;
   if (x.tsl60 == null && fromPeak <= -0.60) x.tsl60 = mult;
   if (x.tsl80 == null && fromPeak <= -0.80) x.tsl80 = mult;
@@ -225,7 +237,7 @@ function finalVariants(p, mult) {
     time: mult,
     levels: levelsFinal(p.lv, mult),
     m1: x.m1 ?? mult, m1vol: x.m1vol ?? mult, volstop: x.volstop ?? mult,
-    tp15: x.tp15 ?? mult, tsl25: x.tsl25 ?? mult, ...stopFinal(x, mult, p.peak / p.entry),
+    tp15: x.tp15 ?? mult, tsl25: x.tsl25 ?? mult, flow: x.flow ?? mult, ...stopFinal(x, mult, p.peak / p.entry),
   };
   return out;
 }
@@ -236,11 +248,11 @@ function closePos(mint, s, reason) {
   const now = Math.floor(Date.now() / 1000), px = s.lastPx || p.entry, mult = px / p.entry, v = finalVariants(p, mult), peakMult = p.peak / p.entry;
   s.trades.push({ id: p.id, closedTs: now });
   q.updMom.run(s.posPeakMc, peakMult, v.tp, v.tsl40, v.tsl60, v.tsl80, v.half60, v.twophase, v.ladder, v.time, now, s.lastMc, px, reason, (v.time - 1) * 100, 1, v.levels, v.m1, v.m1vol, v.volstop, p.id);
-  try { q.setStops.run(v.tp15, v.tsl25, v.t15s25, v.t15s60, v.t2s25, v.t2s60, p.id); } catch {}
+  try { q.setStops.run(v.tp15, v.tsl25, v.t15s25, v.t15s60, v.t2s25, v.t2s60, p.id); q.setExits2.run(v.flow, v.t15s40, v.t2s40, p.ddPre15 ?? null, p.id); } catch {}
   const pc = (m) => `${m >= 1 ? "+" : ""}${((m - 1) * 100).toFixed(0)}%`;
   if (p.alerted) tg(`${v.half60 >= 1 ? "✅" : "🔴"} <b>VOLUME CLOSE</b> — ${esc(p.name)} (${reason}) · peak <b>${peakMult.toFixed(2)}x</b> · now ${mult.toFixed(2)}x\n` +
     `½@2x+60%: <b>${pc(v.half60)}</b> · 2-phase: ${pc(v.twophase)} · ladder: ${pc(v.ladder)} · levels: ${pc(v.levels)}\n$1M-out: ${pc(v.m1)} · $1M-vol: ${pc(v.m1vol)} · vol-stop: ${pc(v.volstop)}\n` +
-    `1.5x-out: ${pc(v.tp15)} · 1.5x/−25: ${pc(v.t15s25)} · 1.5x/−60: ${pc(v.t15s60)} · 2x/−25: ${pc(v.t2s25)} · 2x/−60: ${pc(v.t2s60)} · trail25: ${pc(v.tsl25)}\n2x out: ${pc(v.tp)} · trail40: ${pc(v.tsl40)} · trail60: ${pc(v.tsl60)} · trail80: ${pc(v.tsl80)} · hold: ${pc(v.time)}`, { replyTo: p.msgId });
+    `flow: ${pc(v.flow)} · 1.5x-out: ${pc(v.tp15)} · 1.5x/−25: ${pc(v.t15s25)} · 1.5x/−60: ${pc(v.t15s60)} · 2x/−25: ${pc(v.t2s25)} · 2x/−60: ${pc(v.t2s60)} · trail25: ${pc(v.tsl25)}\n2x out: ${pc(v.tp)} · trail40: ${pc(v.tsl40)} · trail60: ${pc(v.tsl60)} · trail80: ${pc(v.tsl80)} · hold: ${pc(v.time)}`, { replyTo: p.msgId });
 }
 
 function scorecard(mint, s, m) {
@@ -271,8 +283,8 @@ export function strategySummary(hours) {
   if (!rows.length) return `📋 <b>${hours}h summary</b> — no paper trades`;
   let t = `📋 <b>${hours}h summary</b> · ${new Date().toISOString().slice(11, 16)} UTC\n`;
   for (const r of rows) {
-    t += `\n<b>${r.strategy === "early" ? "EARLY (curve)" : r.strategy === "secondwave" ? "SECOND WAVE (curve)" : r.strategy === "copy" ? "COPY (watched wallets)" : r.strategy === "confirm" ? "CONFIRMED (+5m, curve)" : r.strategy === "copycreator" ? "COPY CREATOR" : r.strategy === "climber" ? "CLIMBER (slow riser)" : r.strategy === "grad" ? "GRADUATION (pool open)" : r.strategy === "wave2" ? "SECOND WAVE EARLY (2–4m)" : r.strategy === "mom60" ? "MOMENTUM $60K/5m (silent)" : r.strategy === "mom80" ? "MOMENTUM $80K/5m (silent)" : r.strategy === "momentum-core-tight" ? "MOMENTUM — CORE TIGHT (<$60K · <6m · steady sizes)" : r.strategy === "momentum-core" ? "MOMENTUM — CORE ($100K/5m · entry <$100K · first entry)" : r.strategy === "wave2-tight" ? "SECOND WAVE — TIGHT (2–3m · $12–25K · dev holds · buys ≥1.3× sells)" : r.strategy === "revival" ? "REVIVAL (curve dip + new buyers)" : r.strategy === "gradrun" ? "GRADUATION RUNNER (vol after grad)" : r.strategy === "gradrec" ? "GRADUATION RECOVERY (dump + buyers back)" : r.strategy === "slow" ? "SLOW BUILD (base breakout)" : "MOMENTUM (volume)"}</b> — ${r.n} trades · ${r.hit15 ?? 0} hit 1.5x (${r.n ? (((r.hit15 || 0) / r.n) * 100).toFixed(0) : 0}%) · ${r.hit2x} hit 2x (${r.n ? ((r.hit2x / r.n) * 100).toFixed(0) : 0}%) · avg peak ${(r.peak || 1).toFixed(2)}x\n`;
-    t += `½@2x+60% ${pc(r.xh)} · 2-phase ${pc(r.x2p)} · ladder ${pc(r.xl)} · levels ${pc(r.xlv)} · $1M-out ${pc(r.xm1)} · $1M-vol ${pc(r.xm1v)} · vol-stop ${pc(r.xvs)} · combo ${pc(r.xc)}\n1.5x-out ${pc(r.xtp15)} · trail25 ${pc(r.x25)} · 2x-out ${pc(r.xtp)} · trail40 ${pc(r.x40)} · trail60 ${pc(r.x60)} · trail80 ${pc(r.x80)} · hold ${pc(r.xt)}\nstops — 1.5x/−25 ${pc(r.s1525)} · 1.5x/−60 ${pc(r.s1560)} · 2x/−25 ${pc(r.s225)} · 2x/−60 ${pc(r.s260)}\nran after entry (24h): avg peak ${(r.ap || 1).toFixed(2)}x · ${r.ap3 || 0} went 3x+\n`;
+    t += `\n<b>${r.strategy === "early" ? "EARLY (curve)" : r.strategy === "secondwave" ? "SECOND WAVE (curve)" : r.strategy === "copy" ? "COPY (watched wallets)" : r.strategy === "confirm" ? "CONFIRMED (+5m, curve)" : r.strategy === "copycreator" ? "COPY CREATOR" : r.strategy === "climber" ? "CLIMBER (slow riser)" : r.strategy === "grad" ? "GRADUATION (pool open)" : r.strategy === "wave2" ? "SECOND WAVE EARLY (2–4m)" : r.strategy === "momdip" ? "MOMENTUM DIP ENTRY (−20% within 10m, silent)" : r.strategy === "momre" ? "MOMENTUM RE-ENTRY (after 1.5x-out or −25% stop, silent)" : r.strategy === "mom60" ? "MOMENTUM $60K/5m (silent)" : r.strategy === "mom80" ? "MOMENTUM $80K/5m (silent)" : r.strategy === "momentum-core-tight" ? "MOMENTUM — CORE TIGHT (<$60K · <6m · steady sizes)" : r.strategy === "momentum-core" ? "MOMENTUM — CORE ($100K/5m · entry <$100K · first entry)" : r.strategy === "wave2-tight" ? "SECOND WAVE — TIGHT (2–3m · $12–25K · dev holds · buys ≥1.3× sells)" : r.strategy === "revival" ? "REVIVAL (curve dip + new buyers)" : r.strategy === "gradrun" ? "GRADUATION RUNNER (vol after grad)" : r.strategy === "gradrec" ? "GRADUATION RECOVERY (dump + buyers back)" : r.strategy === "slow" ? "SLOW BUILD (base breakout)" : "MOMENTUM (volume)"}</b> — ${r.n} trades · ${r.hit15 ?? 0} hit 1.5x (${r.n ? (((r.hit15 || 0) / r.n) * 100).toFixed(0) : 0}%) · ${r.hit2x} hit 2x (${r.n ? ((r.hit2x / r.n) * 100).toFixed(0) : 0}%) · avg peak ${(r.peak || 1).toFixed(2)}x\n`;
+    t += `½@2x+60% ${pc(r.xh)} · 2-phase ${pc(r.x2p)} · ladder ${pc(r.xl)} · levels ${pc(r.xlv)} · $1M-out ${pc(r.xm1)} · $1M-vol ${pc(r.xm1v)} · vol-stop ${pc(r.xvs)} · combo ${pc(r.xc)}\n1.5x-out ${pc(r.xtp15)} · trail25 ${pc(r.x25)} · 2x-out ${pc(r.xtp)} · trail40 ${pc(r.x40)} · trail60 ${pc(r.x60)} · trail80 ${pc(r.x80)} · hold ${pc(r.xt)}\nstops — 1.5x/−25 ${pc(r.s1525)} · 1.5x/−40 ${pc(r.s1540)} · 1.5x/−60 ${pc(r.s1560)} · 2x/−25 ${pc(r.s225)} · 2x/−40 ${pc(r.s240)} · 2x/−60 ${pc(r.s260)} · flow ${pc(r.xflow)}\nran after entry (24h): avg peak ${(r.ap || 1).toFixed(2)}x · ${r.ap3 || 0} went 3x+\n`;
   }
   return t;
 }

@@ -56,6 +56,13 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.9 — runner exits and entry variants (15 Oct)
+- Runner analysis on 49 core trades: 3x+ coins (13) still had ≥$100K/5m volume at +15m in 8 of 11 and buys > sells in 10 of 11; the 1.5–3x "modest winners" (23) had median 5m volume of $48K at +15m and a median MC of $1.6K at +30m — rugs that paused. Failures had $2.6K/5m at +15m. At entry the 3x+ group only differed in whale concentration (top-3 share 36% vs 16%/12%) and slightly earlier triggers.
+- `x_flow` exit (all strategies): −40% stop until 1.5x, then hold while 5m volume ≥ `FLOW_MIN_VOL` ($100K) and buy$/sell$ ≥ `FLOW_BS_MIN` (1.0); sell when either fails or on a 50% trail. `x_t15s40` / `x_t2s40` (−40% stops). `dd_pre15`: max drawdown before the first 1.5x touch.
+- `momdip` (silent): after a core trigger, enter only if price falls `MOM_DIP_PCT` (20%) within `MOM_DIP_WINDOW_S` (10 min) and before 1.5x.
+- `momre` (silent, `src/momre.js`): after a core entry, whenever the "1.5x-out / −25% stop" rule would be flat and the coin still satisfies the core condition and price has reclaimed the exit price, re-enter (max `MOM_RE_MAX` 5, ≥ `MOM_RE_GAP_S` 60s apart). Background: ALTAIDOPE stopped at −26% then ran to 10x with 5m volume never below $108K; the 30-min cooldown kept us out.
+- `/bigrunners`: 3x+ momentum trades (7d) with 5m volume, buy:sell and MC at +5/15/30/60m.
+
 ## v0.18.8 — holder and claim attribution fixes (15 Oct)
 - Holders: every graduated coin showed top-10 ≈ 83% with a 42% "largest holder" — a pool/curve/migration account in the ledger. Any single balance ≥ 25% of supply is now excluded (logged once per coin so the address can be confirmed); curve-stage numbers were already sane (top-10 ~25%, largest ~5%).
 - Fee claims: the creator vault is shared across a creator's coins, and claims were being credited to every coin they launched in 7 days (54% of coins "claimed"). A claim is now credited to the creator's most recent coin at claim time, flagged `ambiguous` when they launched more than one in the prior 24h; token/entry claim counts use that attribution. Note the "accrued" figure is ~1% of volume (redundant with volume) — claims are the signal.

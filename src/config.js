@@ -138,6 +138,9 @@ Object.assign(CFG, {
   SWEEP_MAX_FAILS: n("SWEEP_MAX_FAILS", 3),
   HOLDERS_RPC_DAILY_BUDGET: n("HOLDERS_RPC_DAILY_BUDGET", 1500), // v0.18.5: getTokenLargestAccounts at entry for coins without a ledger
   MOM_TIERS: s("MOM_TIERS", "60000,80000").split(",").map(Number), // v0.18.6: silent paper variants of the momentum rule at lower 5m volume
+  FLOW_MIN_VOL: n("FLOW_MIN_VOL", 100_000), FLOW_BS_MIN: n("FLOW_BS_MIN", 1.0), // v0.18.9 flow exit: hold after 1.5x while 5m vol >= this and buy$/sell$ >= this
+  MOM_DIP_PCT: n("MOM_DIP_PCT", 0.20), MOM_DIP_WINDOW_S: n("MOM_DIP_WINDOW_S", 600), // dip-entry variant
+  MOM_RE_MAX: n("MOM_RE_MAX", 5), MOM_RE_GAP_S: n("MOM_RE_GAP_S", 60), // re-entry variant
   MOM_CT_MC: n("MOM_CT_MC", 60_000), MOM_CT_AGE_S: n("MOM_CT_AGE_S", 360), MOM_CT_SIZE_CV: n("MOM_CT_SIZE_CV", 1.6), // v0.18.7 core-tight tag
   MOM_CORE_MC: n("MOM_CORE_MC", 100_000),          // v0.18.4: "core" momentum = $100K/5m trigger, entry below this, first entry
   PREPUMP_WINDOW_S: n("PREPUMP_WINDOW_S", 1800),  // v0.18.2: record wallets that bought in this window before a volume trigger
