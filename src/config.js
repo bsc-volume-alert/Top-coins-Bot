@@ -79,7 +79,7 @@ Object.assign(CFG, {
   GRAD_ALERT_BUYERS: n("GRAD_ALERT_BUYERS", 250), // v0.15: graduation strategy alerts only when distinct buyers >= this (paper-enters all)
   CONF_ALERT_BUYERS: n("CONF_ALERT_BUYERS", 250), // v0.15: confirm alerts only with this many buyers (paper trade always)
   CLIMB_ALERT_BUYERS: n("CLIMB_ALERT_BUYERS", 250), // v0.15: climber alerts only with this many buyers
-  MOM_MAX_AGE_D: n("MOM_MAX_AGE_D", 30),
+  MOM_MAX_AGE_D: n("MOM_MAX_AGE_D", 3650), // v0.18.11: any age — Groklet (486d old) did $100K/5m at $304K and 2.58x; the 30-day cap kept momentum out
   MOM_COOLDOWN_MIN: n("MOM_COOLDOWN_MIN", 30),
   MOM_MAX_HOLD_MIN: n("MOM_MAX_HOLD_MIN", 360),
   MOM_REENTRY_MAX: n("MOM_REENTRY_MAX", 2),

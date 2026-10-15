@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.11 — momentum age cap removed (15 Oct)
+- `MOM_MAX_AGE_D` 30 → 3650. Groklet (Grok Mascot, 486 days old, PumpSwap) did $100K/5m at ~$300K MC and ran 2.6x; the $60K/$80K tiers (no age cap) caught it, the main rule did not. Any age now; MC cap and sanity gates unchanged.
+
 ## v0.18.10 — flow exit with 4x cap (15 Oct)
 - `x_flow4`: the flow exit with a voluntary sell at `FLOW_CAP` (4x). Of 36 core winners so far: 21 reached 2x, 13 reached 3x, 8 reached 4x, 4 reached 10x (24h peaks).
 
