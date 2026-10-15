@@ -21,10 +21,12 @@ onSwap((tr) => { if (tr.creatorFee > 0) acc(tr.mint, tr.creatorFee); });
 
 on("claim", (_, c) => {
   fe.claims++; if (c.venue === "pump") fe.claimsPump++; else fe.claimsSwap++;
-  try { q.insClaim.run(c.creator, c.ts, c.sol, c.venue, c.sig); } catch {}
-  if (samples < 5) { samples++; console.log("[fee claim]", JSON.stringify({ venue: c.venue, creator: c.creator.slice(0, 8), sol: +c.sol.toFixed(4), ts: c.ts })); }
-  // mark the creator's recent tokens dirty so their claim columns refresh
-  try { for (const r of q.mintsByCreator.all(c.creator, c.ts - 7 * 86400)) { fe.attributed++; let a = accrued.get(r.mint); if (!a) { a = { sol: 0, n: 0, dirty: true }; accrued.set(r.mint, a); } a.dirty = true; } } catch {}
+  // v0.18.8: the vault is per creator, so credit the claim to their most recent coin; flag it if they launched more than one in the last 24h
+  let mint = null, amb = 0;
+  try { const r = q.latestMintOf.get(c.ts - 86400, c.creator, c.ts); if (r) { mint = r.mint; amb = r.n > 1 ? 1 : 0; fe.attributed++; } } catch {}
+  try { q.insClaim.run(c.creator, c.ts, c.sol, c.venue, c.sig, mint, amb); } catch {}
+  if (samples < 5) { samples++; console.log("[fee claim]", JSON.stringify({ venue: c.venue, creator: c.creator.slice(0, 8), sol: +c.sol.toFixed(4), mint: mint?.slice(0, 8) || null, ambiguous: amb })); }
+  if (mint) { let a = accrued.get(mint); if (!a) { a = { sol: 0, n: 0, dirty: true }; accrued.set(mint, a); } a.dirty = true; }
 });
 
 /** Fee picture for a mint at this moment: accrued creator fees (SOL) and the creator's claims since the token launched. */
@@ -32,13 +34,13 @@ export function feeInfo(mint, creator = null, createTs = null) {
   const a = accrued.get(mint);
   const meta = creator && createTs ? null : q.tokenMeta.get(mint);
   creator ||= meta?.creator || live.get(mint)?.creator || null; createTs ||= meta?.create_ts || live.get(mint)?.ts || null;
-  let claims = { n: 0, sol: 0, first: null, last: null };
-  if (creator && createTs) { try { const r = q.claimsSince.get(creator, createTs); claims = { n: r.n || 0, sol: r.sol || 0, first: r.first ?? null, last: r.last ?? null }; } catch {} }
-  return { accrued: a?.sol || 0, trades: a?.n || 0, claims: claims.n, claimedSol: claims.sol, firstClaimTs: claims.first, lastClaimTs: claims.last };
+  let claims = { n: 0, sol: 0, first: null, last: null, amb: 0 };
+  try { const r = q.claimsFor.get(mint); claims = { n: r.n || 0, sol: r.sol || 0, first: r.first ?? null, last: r.last ?? null, amb: r.amb || 0 }; } catch {}
+  return { accrued: a?.sol || 0, trades: a?.n || 0, claims: claims.n, claimedSol: claims.sol, firstClaimTs: claims.first, lastClaimTs: claims.last, ambiguous: claims.amb };
 }
 export function feeLine(fi, now = Math.floor(Date.now() / 1000)) {
   const ago = (ts) => { const d = now - ts; return d < 60 ? `${d}s ago` : d < 3600 ? `${Math.floor(d / 60)}m ago` : `${(d / 3600).toFixed(1)}h ago`; };
-  return `dev fees: ${fi.accrued.toFixed(2)} SOL accrued · ${fi.claims ? `claimed ${fi.claims}× (${fi.claimedSol.toFixed(2)} SOL), last ${ago(fi.lastClaimTs)}` : "never claimed"}`;
+  return `dev fees: ${fi.accrued.toFixed(2)} SOL accrued · ${fi.claims ? `claimed ${fi.claims}× (${fi.claimedSol.toFixed(2)} SOL), last ${ago(fi.lastClaimTs)}${fi.ambiguous ? " ⚠️ multi-coin creator" : ""}` : "never claimed"}`;
 }
 // persist accrued/claim columns on the tokens table once a minute for anything that changed
 setInterval(() => {

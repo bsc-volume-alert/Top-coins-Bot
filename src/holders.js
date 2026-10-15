@@ -8,7 +8,9 @@ import { on, live } from "./launch-monitor.js";
 import { onSwap } from "./pumpswap.js";
 import { rpc } from "./rpc.js";
 
-export const ho = { ledgers: 0, rpc: 0, rpcFail: 0 };
+export const ho = { ledgers: 0, rpc: 0, rpcFail: 0, poolLike: 0 };
+const POOL_PCT = 25; // v0.18.8: a single ledger balance above this share of supply is the pool / curve / migration account, not a holder
+let poolLogs = 0;
 const L = new Map(); // mint -> Map(wallet -> tokens)
 let budget = 0, day = new Date().getUTCDate();
 const DUST = 1000; // tokens; below this a wallet is not counted as a holder
@@ -24,9 +26,11 @@ on("expire", (t) => { L.delete(t.mint); ho.ledgers = L.size; });
 
 function fromLedger(mint, creator) {
   const m = L.get(mint); if (!m || !m.size) return null;
-  const bal = [...m.entries()].filter(([, v]) => v > DUST).sort((a, b) => b[1] - a[1]);
+  const S = CFG.TOTAL_SUPPLY;
+  let bal = [...m.entries()].filter(([, v]) => v > DUST).sort((a, b) => b[1] - a[1]);
+  const pools = bal.filter(([, v]) => v / S * 100 >= POOL_PCT); if (pools.length) { ho.poolLike++; if (poolLogs < 5) { poolLogs++; console.log("[holders] pool-like", pools.map(([w, v]) => `${w} ${(v / S * 100).toFixed(1)}%`).join(", "), "on", mint.slice(0, 8)); } bal = bal.filter(([, v]) => v / S * 100 < POOL_PCT); }
   if (!bal.length) return null;
-  const S = CFG.TOTAL_SUPPLY, top10 = bal.slice(0, 10).reduce((a, [, v]) => a + v, 0) / S * 100;
+  const top10 = bal.slice(0, 10).reduce((a, [, v]) => a + v, 0) / S * 100;
   return { top10, largest: bal[0][1] / S * 100, holders: bal.length, dev: creator ? Math.max(0, (m.get(creator) || 0)) / S * 100 : null, src: "ledger" };
 }
 async function fromRpc(mint) {
