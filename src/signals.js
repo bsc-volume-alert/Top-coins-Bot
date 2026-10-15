@@ -11,6 +11,7 @@ import { nextLevel, wallWarning, levelsStep, levelsFinal, newLevels, volStopExit
 import { provenCount } from "./wallets.js";
 import { stopStep, stopFinal } from "./exits.js";
 import { feeInfo } from "./fees.js";
+import { recordHolders } from "./holders.js";
 import { watch as afterWatch, tick as afterTick } from "./aftercare.js";
 import { retrySocials } from "./socials.js";
 
@@ -150,6 +151,7 @@ function openPaper(t, s, tr, inflowSol, wallets, strategy = "early") {
   s.pos.volAtEntry = vol5Usd(s); q.setVolEntry.run(s.pos.volAtEntry, r.lastInsertRowid);
   try { s.provenAtEntry = provenCount(t.mint); q.setEntryCounts.run(s.buys, s.sells, s.provenAtEntry, r.lastInsertRowid); } catch {}
   try { const fi = feeInfo(t.mint, t.creator, t.ts); q.setFees.run(fi.accrued, fi.claims, fi.claimedSol, r.lastInsertRowid); } catch {} // v0.18.4
+  try { recordHolders(r.lastInsertRowid, t.mint, t.creator); } catch {} // v0.18.5
   try {
     const ch = q.creatorHist.get(t.creator, t.mint, t.ts); s.creatorHist = ch;
     const snipers = t.trades.filter((x) => x.isBuy && x.slot <= t.slot + CFG.BUNDLE_SLOTS && x.wallet !== t.creator).length;

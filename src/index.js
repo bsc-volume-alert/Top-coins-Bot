@@ -12,6 +12,7 @@ import { startCommands, reportText } from "./commands.js";
 import { startPumpSwap, ps } from "./pumpswap.js";
 import { startDex, dx } from "./dex.js";
 import { fe } from "./fees.js";
+import { ho } from "./holders.js";
 import { momStats, strategySummary } from "./momentum.js";
 import { wbStats, leaderboardText, creatorsText } from "./wallets.js";
 import { cpStats } from "./copytrade.js";
@@ -29,7 +30,7 @@ if (CFG.DEX_ENABLED) setTimeout(() => startDex((s) => console.log("[dex]", s)), 
 await tg(`🟢 <b>Tracker online</b> v${v}\nFirehose: ${CFG.HELIUS_KEY ? "Helius" : "public RPC"} · prepared gate ≥${CFG.BUNDLE_PCT_MIN}% &amp; ≥${CFG.BUNDLE_SOL_MIN} SOL\nPaper entry: ≥${CFG.INFLOW_SOL} SOL / ≥${CFG.INFLOW_WALLETS} wallets in ${CFG.INFLOW_WINDOW_S}s, first ${CFG.ENTRY_WINDOW_MIN} min`);
 
 startSweeper();
-startCommands({ status: () => { const g = sigStats(), mo = momStats(); return `v${v} · ws ${wsStatus} · live ${live.size} · early open ${g.open} · volume alerts ${mo.alerts} open ${mo.open} · ps txs ${ps.txs} · dex txs ${dx.txs}/${dx.emitted} fed · fee claims ${fe.claims} · hand-offs ${g.handoffs} · swept ${sw.closed}/${sw.noprice}np · rpc ${g.rpc} · SOL $${solUsdCached().toFixed(0)}`; }, summary: () => strategySummary(24) });
+startCommands({ status: () => { const g = sigStats(), mo = momStats(); return `v${v} · ws ${wsStatus} · live ${live.size} · early open ${g.open} · volume alerts ${mo.alerts} open ${mo.open} · ps txs ${ps.txs} · dex txs ${dx.txs}/${dx.emitted} fed · fee claims ${fe.claims} · holder ledgers ${ho.ledgers} rpc ${ho.rpc} · hand-offs ${g.handoffs} · swept ${sw.closed}/${sw.noprice}np · rpc ${g.rpc} · SOL $${solUsdCached().toFixed(0)}`; }, summary: () => strategySummary(24) });
 // strategy summary every SUMMARY_HOURS
 setInterval(() => tg(strategySummary(CFG.SUMMARY_HOURS)), CFG.SUMMARY_HOURS * 3600_000);
 let lastC = { ...counters };

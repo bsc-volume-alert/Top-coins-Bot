@@ -13,6 +13,7 @@ import { retrySocials } from "./socials.js";
 import { volumeQuality, qualityLine } from "./quality.js";
 import { stopStep, stopFinal } from "./exits.js";
 import { feeInfo, feeLine } from "./fees.js";
+import { recordHoldersAsync, holdersLine } from "./holders.js";
 import { readFileSync, writeFileSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { provenCount } from "./wallets.js";
@@ -154,6 +155,7 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
   } catch (e) { console.error("[prepump]", e.message); }
   try { q.setVenue.run(tr.venue || "pumpswap", pos.id); } catch {}
   const core = kind === "vol5m" && tr.mc < CFG.MOM_CORE_MC && !reentry; try { q.setCore.run(core ? 1 : 0, pos.id); } catch {} // v0.18.4
+  let hl = null; try { hl = holdersLine(await recordHoldersAsync(pos.id, mint, meta?.creator)); } catch {} // v0.18.5
   let fi = null; try { fi = feeInfo(mint, meta?.creator, createTs); q.setFees.run(fi.accrued, fi.claims, fi.claimedSol, pos.id); } catch (e) { console.error("[fees entry]", e.message); }
   if (reentry) { s.peakMc = tr.mc; s.rejectedLevel = null; }
   try { const h = new Date(now * 1000).getUTCHours(); q.setFeatures.run(null, null, null, null, h, null, buyUsd > 0 ? buyUsd / Math.max(sellUsd, 1) : null, buyers, pos.id); } catch {}
@@ -174,7 +176,7 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
   const bundleStr = meta?.bundle_pct != null ? `Bundle ${meta.bundle_pct.toFixed(0)}% · ${meta.bundle_sol.toFixed(1)} SOL · hand-offs ${meta.handoffs} · cluster net ${((meta.cluster_sol_in || 0) - (meta.cluster_sol_out || 0)).toFixed(1)} SOL` : "Bundle: launched before tracker (no data)";
   pos.msgId = await tg(`${kind === "burst" ? "⚡" : hot ? "🔥" : "📈"} <b>${kind === "burst" ? "BURST" : "VOLUME"}${reentry ? " RE-ENTRY " + reentry : ""}</b> — ${esc(name || mint.slice(0, 8))} ($${esc(symbol || "?")})${burst ? " ⚡" : ""}${meta?.factory ? " ⚠️factory" : ""}\n` +
     `5m vol <b>$${fmt(v5)}</b> (1m $${fmt(v1)}) · buys ${buys.length} / sells ${sells.length} · $${fmt(buyUsd)} in / $${fmt(sellUsd)} out · ${buyers} buyers\n` +
-    `MC <b>$${fmt(tr.mc)}</b> · ${ageStr}${reclaimStr}${wall ? "\n" + wall : ""}\nvenue: ${venueStr}${dexNote}${preStr}${fi ? "\n" + feeLine(fi, now) : ""}${core ? "\n⭐ core rule ($100K/5m · entry under $100K · first entry)" : ""}\n${qLine}\n${socialsLine(soc)}\n${bundleStr}${heldStr}\n${links(mint)}`);
+    `MC <b>$${fmt(tr.mc)}</b> · ${ageStr}${reclaimStr}${wall ? "\n" + wall : ""}\nvenue: ${venueStr}${dexNote}${preStr}${fi ? "\n" + feeLine(fi, now) : ""}${hl ? "\n" + hl : ""}${core ? "\n⭐ core rule ($100K/5m · entry under $100K · first entry)" : ""}\n${qLine}\n${socialsLine(soc)}\n${bundleStr}${heldStr}\n${links(mint)}`);
   for (const m of CFG.MOM_SCORECARD_MIN) setTimeout(() => scorecard(mint, s, m), m * 60_000);
 }
 
