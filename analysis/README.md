@@ -15,3 +15,6 @@ unzip tracker_export_<date>.zip -d analysis/data && cd analysis && for f in [0-9
 7. **Creator "prior 2x" is meaningless** — use prior graduations.
 8. **Any model: time-split (train early / test late), report AUC and the EV of the top decile on the test half only.** A within-sample rule that looks good is not a finding.
 9. **Report sample sizes with every rate.** n<30 is an anecdote.
+
+## v0.18 notes
+- `paper_trades.venue` (pumpswap / raydium-cpmm / raydium-clmm / raydium-launchlab / meteora-dlmm / orca) says which feed produced the triggering swap. Momentum rows with a non-PumpSwap venue have wallet counts ≈ transaction counts (CPMM, LaunchLab and Orca events carry no wallet; placeholder `tx:<sig>`), so `q_wallets`, `q_per10k`, `buyers_entry` and `q_new_pct` are not comparable with PumpSwap rows — split by venue before comparing.

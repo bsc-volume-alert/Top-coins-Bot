@@ -53,7 +53,7 @@ onSwap((tr) => {
   if (tr.mc > s.peakMc) s.peakMc = tr.mc;
   // level rejection: price fell >30% from a peak that was above a level → that level is "rejected"
   if (s.peakMc > 0 && tr.mc < s.peakMc * 0.7) { const L = lastLevel(s.peakMc); if (L && L > tr.mc) s.rejectedLevel = L; }
-  s.w5.push({ ts: now, usd, b: tr.isBuy, w: tr.wallet, route: tr.route || "unknown", px: tr.price }); while (s.w5.length && now - s.w5[0].ts > 300) { const old = s.w5.shift(); if (s.seen.size < 20000) s.seen.add(old.w); }
+  s.w5.push({ ts: now, usd, b: tr.isBuy, w: tr.wallet, route: tr.route || "unknown", px: tr.price, v: tr.venue || "pumpswap" }); while (s.w5.length && now - s.w5[0].ts > 300) { const old = s.w5.shift(); if (s.seen.size < 20000) s.seen.add(old.w); }
   s.w1.push({ ts: now, usd, b: tr.isBuy }); while (s.w1.length && now - s.w1[0].ts > 60) s.w1.shift();
   if (s.pos) updatePos(tr.mint, s, tr.price, now);
   const v5 = s.w5.reduce((a, x) => a + x.usd, 0);
@@ -114,6 +114,7 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
   if (qv) { try { q.setQuality.run(qv.score, qv.wallets, qv.per10k, qv.top3, qv.roundtrip, qv.retail, qv.custom, qv.sizeCv, qv.newPct, qv.pxPer10k, pos.id); } catch (e) { console.error("[quality]", e.message); } }
   const held = meta ? clusterHeld(mint) : null;
   q.setPaperExtra.run(held, kind + (reentry ? "-re" : ""), pos.id);
+  try { q.setVenue.run(tr.venue || "pumpswap", pos.id); } catch {}
   if (reentry) { s.peakMc = tr.mc; s.rejectedLevel = null; }
   try { const h = new Date(now * 1000).getUTCHours(); q.setFeatures.run(null, null, null, null, h, null, buyUsd > 0 ? buyUsd / Math.max(sellUsd, 1) : null, buyers, pos.id); } catch {}
   s.pos = pos; s.posPeakMc = tr.mc; if (!s.firstEntryPx) s.firstEntryPx = tr.price;
@@ -128,10 +129,12 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
   const ageStr = ageS == null ? "age ?" : ageS < 3600 ? `${Math.floor(ageS / 60)}m old` : ageS < 86400 ? `${(ageS / 3600).toFixed(1)}h old` : `${(ageS / 86400).toFixed(1)}d old`;
   const wall = wallWarning(tr.mc);
   const reclaimStr = reentry && s.rejectedLevel ? ` · reclaimed $${fmt(s.rejectedLevel)}` : "";
+  const venues = {}; for (const x of s.w5) venues[x.v] = (venues[x.v] || 0) + x.usd; const venueStr = Object.entries(venues).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} $${fmt(v)}`).join(" · ");
+  const dexNote = (tr.venue || "pumpswap") !== "pumpswap" ? " (DEX feed: buyers ≈ transactions)" : "";
   const bundleStr = meta?.bundle_pct != null ? `Bundle ${meta.bundle_pct.toFixed(0)}% · ${meta.bundle_sol.toFixed(1)} SOL · hand-offs ${meta.handoffs} · cluster net ${((meta.cluster_sol_in || 0) - (meta.cluster_sol_out || 0)).toFixed(1)} SOL` : "Bundle: launched before tracker (no data)";
   pos.msgId = await tg(`${kind === "burst" ? "⚡" : hot ? "🔥" : "📈"} <b>${kind === "burst" ? "BURST" : "VOLUME"}${reentry ? " RE-ENTRY " + reentry : ""}</b> — ${esc(name || mint.slice(0, 8))} ($${esc(symbol || "?")})${burst ? " ⚡" : ""}${meta?.factory ? " ⚠️factory" : ""}\n` +
     `5m vol <b>$${fmt(v5)}</b> (1m $${fmt(v1)}) · buys ${buys.length} / sells ${sells.length} · $${fmt(buyUsd)} in / $${fmt(sellUsd)} out · ${buyers} buyers\n` +
-    `MC <b>$${fmt(tr.mc)}</b> · ${ageStr}${reclaimStr}${wall ? "\n" + wall : ""}\n${qLine}\n${socialsLine(soc)}\n${bundleStr}${heldStr}\n${links(mint)}`);
+    `MC <b>$${fmt(tr.mc)}</b> · ${ageStr}${reclaimStr}${wall ? "\n" + wall : ""}\nvenue: ${venueStr}${dexNote}\n${qLine}\n${socialsLine(soc)}\n${bundleStr}${heldStr}\n${links(mint)}`);
   for (const m of CFG.MOM_SCORECARD_MIN) setTimeout(() => scorecard(mint, s, m), m * 60_000);
 }
 
@@ -200,6 +203,13 @@ function scorecard(mint, s, m) {
   tg(`⏱ <b>+${m}m</b> ${esc(p.name)} · MC <b>$${fmt(s.lastMc)}</b> (${mult >= 1 ? "+" : ""}${((mult - 1) * 100).toFixed(0)}%, peak ${peakMult.toFixed(2)}x) · 5m vol $${fmt(v5)} · buys ${b} / sells ${sl}` + (flags.length ? `\n${flags.join(" · ")}` : ""), { replyTo: p.msgId });
 }
 
+/** v0.18: what momentum currently holds for a mint (for /check) */
+export function momSnap(mint) {
+  const s = T.get(mint); if (!s) return null;
+  const now = Math.floor(Date.now() / 1000), w5 = s.w5.filter((x) => now - x.ts <= 300);
+  const venues = {}; for (const x of w5) venues[x.v] = (venues[x.v] || 0) + x.usd;
+  return { v5: w5.reduce((a, x) => a + x.usd, 0), buys: w5.filter((x) => x.b).length, sells: w5.filter((x) => !x.b).length, wallets: new Set(w5.map((x) => x.w)).size, lastMc: s.lastMc, lastTs: s.lastTs, peakMc: s.peakMc, venues, open: !!(s.pos && !s.pos.closed), trades: s.trades.length };
+}
 export const momStats = () => ({ ...mom, open: [...T.values()].filter((s) => s.pos && !s.pos.closed).length });
 
 /** 4-hourly strategy summary text */

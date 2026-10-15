@@ -4,6 +4,7 @@ import { db, q } from "./db.js";
 import { tg } from "./telegram.js";
 import { runnersText } from "./runners.js";
 import { zip } from "./zip.js";
+import { checkText } from "./check.js";
 import { leaderboardText, walletText, addWatch, removeWatch, watchList, creatorsText, creatorText, addWatchCreator, removeWatchCreator, watchCreatorList } from "./wallets.js";
 const TOKEN = () => process.env.TG_BOT_TOKEN, CHAT = () => String(process.env.TG_CHAT_ID);
 let offset = 0, deps = {};
@@ -27,6 +28,7 @@ async function poll() {
         else if (cmd === "/wallet") { const a = m.text.trim().split(/\s+/)[1]; await tg(a ? walletText(a) : "Usage: /wallet <address>"); }
         else if (cmd === "/watch") { const [, a, ...rest] = m.text.trim().split(/\s+/); if (!a || a.length < 32) await tg("Usage: /watch <address> [label]"); else { addWatch(a, rest.join(" ") || null); await tg(`👁 watching <code>${a}</code>${rest.length ? " as " + rest.join(" ") : ""} — copy alerts + paper trades on its buys`); } }
         else if (cmd === "/unwatch") { const a = m.text.trim().split(/\s+/)[1]; if (a) { removeWatch(a); await tg(`removed <code>${a}</code>`); } }
+        else if (cmd === "/check") { const a = m.text.trim().split(/\s+/)[1]; await tg(a && a.length >= 32 ? await checkText(a) : "Usage: /check <mint>"); }
         else if (cmd === "/runners") await tg(runnersText(24, 10));
         else if (cmd === "/runners7") await tg(runnersText(24 * 7, 15));
         else if (cmd === "/creators") await tg(creatorsText(7, 10));
@@ -35,7 +37,7 @@ async function poll() {
         else if (cmd === "/watchcreator") { const [, a, ...rest] = m.text.trim().split(/\s+/); if (!a || a.length < 32) await tg("Usage: /watchcreator <address> [label]"); else { addWatchCreator(a, rest.join(" ") || null); await tg(`👁 watching creator <code>${a}</code>${rest.length ? " as " + rest.join(" ") : ""} — alert + paper entry on their next launch`); } }
         else if (cmd === "/unwatchcreator") { const a = m.text.trim().split(/\s+/)[1]; if (a) { removeWatchCreator(a); await tg(`removed creator <code>${a}</code>`); } }
         else if (cmd === "/watching") { const l = watchList(), lc = watchCreatorList(); await tg((l.length ? "👁 Wallets:\n" + l.map(([w, v]) => `• <code>${w}</code>${v.label ? " — " + v.label : ""}`).join("\n") : "👁 Wallets: none") + "\n" + (lc.length ? "🧑‍💻 Creators:\n" + lc.map(([w, v]) => `• <code>${w}</code>${v.label ? " — " + v.label : ""}`).join("\n") : "🧑‍💻 Creators: none") + "\n/watch · /watchcreator"); }
-        else if (cmd === "/help") await tg("Commands: /report · /report7 · /summary · /csv · /status · /wallets (top 10, 7d) · /wallets30 · /wallet <addr> · /watch <addr> [label] · /unwatch · /runners · /runners7 · /creators · /creators30 · /creator <addr> · /watchcreator <addr> [label] · /unwatchcreator · /watching");
+        else if (cmd === "/help") await tg("Commands: /report · /report7 · /summary · /csv · /status · /check &lt;mint&gt; · /wallets (top 10, 7d) · /wallets30 · /wallet <addr> · /watch <addr> [label] · /unwatch · /runners · /runners7 · /creators · /creators30 · /creator <addr> · /watchcreator <addr> [label] · /unwatchcreator · /watching");
       }
     } catch (e) { await new Promise((r) => setTimeout(r, 5000)); }
   }
