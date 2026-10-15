@@ -13,6 +13,7 @@ import { startPumpSwap, ps } from "./pumpswap.js";
 import { startDex, dx } from "./dex.js";
 import { fe } from "./fees.js";
 import { ho } from "./holders.js";
+import "./momtiers.js";
 import { momStats, strategySummary } from "./momentum.js";
 import { wbStats, leaderboardText, creatorsText } from "./wallets.js";
 import { cpStats } from "./copytrade.js";

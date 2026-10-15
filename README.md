@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.6 — $60K and $80K momentum variants (15 Oct)
+- `src/momtiers.js`: silent paper strategies `mom60` / `mom80` (`MOM_TIERS`) fire on $60K / $80K in 5 minutes with the same sanity gates and cooldown as momentum, only while the 5m volume is still below the $100K rule (which then owns the coin). Same exit set via the copy-strategy path; vol5m and venue recorded at entry. Own lines in /summary.
+
 ## v0.18.5 — holder distribution at entry (15 Oct)
 - `src/holders.js`: per-coin ledger of net token balances per wallet built from the trades we already decode (coins seen from launch; swaps only, transfers invisible). Every paper entry records `top10_entry` (excluding curve/pool), `largest_entry`, `holders_entry`, `dev_hold_entry`. Coins without a ledger (momentum on older/graduated coins) use one `getTokenLargestAccounts` call, dropping the largest account (curve or pool), budget `HOLDERS_RPC_DAILY_BUDGET` 1500/day; holder count is unknown on that path. Alert line: "holders N · top-10 X% · largest Y% · dev Z%". Recorded, not gated.
 

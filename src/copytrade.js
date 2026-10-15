@@ -18,11 +18,12 @@ import { recordHolders, holdersLine } from "./holders.js";
 const P = new Map(); // mint -> [{id, label, e, w5:[], closed, msgId}]
 export const cp = { entries: 0, closes: 0 };
 
-function openCopy(kind, who, mint, name, symbol, price, mc, ts, note) {
+export function openCopy(kind, who, mint, name, symbol, price, mc, ts, note) {
   const ageS = note?.ageS ?? null;
   const r = q.insMom.run(mint, name, symbol, ts, mc, price, null, null, null, null, null, null, null, 0, 0, 0, 0, ageS, 0, 1, mc);
   q.setPaperExtra.run(null, kind + ":" + who, r.lastInsertRowid);
   q.setStrategy.run(kind, r.lastInsertRowid);
+  if (note?.v5 != null) { try { q.setVolEntry.run(note.v5, r.lastInsertRowid); q.setVenue.run(note.venue || "pumpswap", r.lastInsertRowid); } catch {} }
   if (note?.buyers != null) { try { q.setFeatures.run(null, null, null, null, new Date(ts * 1000).getUTCHours(), null, note.bs ?? null, note.buyers, r.lastInsertRowid); } catch {} }
   if (note?.mc5 != null || note?.buyers5 != null) { try { q.setPaperCard.run(note.mc5 ?? null, null, note.buyers5 ?? null, note.b5 ?? 0, note.s5 ?? 0, r.lastInsertRowid); } catch {} }
   let hl = null; try { hl = holdersLine(recordHolders(r.lastInsertRowid, mint)); } catch {} // v0.18.5
