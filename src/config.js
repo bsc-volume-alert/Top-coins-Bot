@@ -137,8 +137,8 @@ Object.assign(CFG, {
   SWEEP_BATCH: n("SWEEP_BATCH", 60),             // per run (1 RPC read each for curve tokens; DexScreener for graduated)
   SWEEP_MAX_FAILS: n("SWEEP_MAX_FAILS", 3),
   DEX_ENABLED: n("DEX_ENABLED", 1),                 // v0.18: Raydium CPMM/CLMM/LaunchLab + Meteora DLMM + Orca swap feed into momentum
-  DEX_RESOLVE_SWAPS: n("DEX_RESOLVE_SWAPS", 15),    // look a pool up (1–2 credits) once it has this many swaps in 5 min
-  DEX_POOL_DAILY_BUDGET: n("DEX_POOL_DAILY_BUDGET", 4000),
+  DEX_RESOLVE_SWAPS: n("DEX_RESOLVE_SWAPS", 30),    // look a pool up (1–2 credits) once it has this many swaps in 5 min
+  DEX_POOL_DAILY_BUDGET: n("DEX_POOL_DAILY_BUDGET", 6000),
   DEX_IGNORE_MC: n("DEX_IGNORE_MC", 20_000_000),     // don't feed swaps on tokens above this MC (majors/stables; momentum caps at $2M anyway)
   PS_MIN_POOL_SOL: n("PS_MIN_POOL_SOL", 10),        // v0.17: ignore PumpSwap swaps from pools holding less SOL than this
   W2_CHECKS_S: s("W2_CHECKS_S", "120,180,240").split(",").map(Number), // v0.17 second-wave: ages checked

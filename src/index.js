@@ -23,7 +23,7 @@ startPriceLoop();
 let wsStatus = "init";
 const sub = subscribeLogs(handleTx, (s) => { wsStatus = s; console.log("[ws]", s); });
 if (CFG.PUMPSWAP_ENABLED) startPumpSwap((s) => console.log("[pumpswap]", s));
-if (CFG.DEX_ENABLED) startDex((s) => console.log("[dex]", s));
+if (CFG.DEX_ENABLED) setTimeout(() => startDex((s) => console.log("[dex]", s)), 5000); // v0.18.1: stagger the third socket so Helius doesn't 429 it
 
 await tg(`🟢 <b>Tracker online</b> v${v}\nFirehose: ${CFG.HELIUS_KEY ? "Helius" : "public RPC"} · prepared gate ≥${CFG.BUNDLE_PCT_MIN}% &amp; ≥${CFG.BUNDLE_SOL_MIN} SOL\nPaper entry: ≥${CFG.INFLOW_SOL} SOL / ≥${CFG.INFLOW_WALLETS} wallets in ${CFG.INFLOW_WINDOW_S}s, first ${CFG.ENTRY_WINDOW_MIN} min`);
 

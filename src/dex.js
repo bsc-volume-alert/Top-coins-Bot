@@ -10,6 +10,7 @@ import { rpc } from "./rpc.js";
 import { solUsdCached } from "./price.js";
 import { routeOf } from "./routes.js";
 import { emitSwap } from "./pumpswap.js";
+import { q } from "./db.js";
 
 export const dx = { txs: 0, dupes: 0, events: 0, emitted: 0, unknownPool: 0, resolved: 0, ignored: 0, lookupFail: 0, big: 0, reconnects: 0, byVenue: {}, get poolBudget() { return budgetUsed; } };
 const pools = new Map();        // pool -> {mint, solSide, dec, supply, binStep} | {ignore:true}
@@ -20,6 +21,10 @@ const pending = new Set(), queue = [];
 const seenSig = new Set(); let seenOrder = [];
 let budgetUsed = 0, budgetDay = new Date().getUTCDate(), inFlight = 0, samples = 0;
 const STABLE = new Set(["EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB", "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT", "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So", "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"]);
+// v0.18.1: pool cache survives restarts (every deploy restarted the process and re-spent the lookups)
+const now0 = Math.floor(Date.now() / 1000);
+try { for (const r of q.allDexPools.all()) { if (r.ignore) pools.set(r.pool, { ignore: true }); else { pools.set(r.pool, { mint: r.mint, solSide: r.sol_side, m0: r.m0, m1: r.m1, dec: r.dec, supply: r.supply, binStep: r.bin_step }); let set = mintPools.get(r.mint); if (!set) { set = new Set(); mintPools.set(r.mint, set); } set.add(r.pool); } } } catch (e) { console.error("[dex cache]", e.message); }
+const save = (pool, venue, info) => { try { q.insDexPool.run(pool, venue, info.mint || null, info.solSide ?? null, info.m0 || null, info.m1 || null, info.dec ?? null, info.supply ?? null, info.binStep ?? null, info.ignore ? 1 : 0, now0); } catch {} };
 const SUPPLY_SHORTCUT = (mint) => (mint.endsWith("pump") ? { dec: 6, supply: 1e9 } : null);
 
 function remember(sig) { if (seenSig.has(sig)) return false; seenSig.add(sig); seenOrder.push(sig); if (seenOrder.length > 8000) { for (const s of seenOrder.splice(0, 4000)) seenSig.delete(s); } return true; }
@@ -51,15 +56,15 @@ async function drain() {
       let p = null;
       if (e.venue === "raydium-cpmm" && e.inMint && e.outMint) p = { mint0: e.inMint, mint1: e.outMint, swapOrder: true };
       else { budgetUsed++; const r = await rpc("getAccountInfo", [pool, { encoding: "base64" }]); p = parsePoolAccount(e.venue, r?.value?.data?.[0] || ""); }
-      if (!p) { dx.lookupFail++; pools.set(pool, { ignore: true }); continue; }
+      if (!p) { dx.lookupFail++; pools.set(pool, { ignore: true }); save(pool, e.venue, { ignore: true }); continue; }
       const solSide = p.mint0 === WSOL ? 0 : p.mint1 === WSOL ? 1 : -1;
       const mint = solSide === 0 ? p.mint1 : p.mint0;
-      if (solSide < 0 || STABLE.has(mint)) { dx.ignored++; pools.set(pool, { ignore: true }); continue; }
+      if (solSide < 0 || STABLE.has(mint)) { dx.ignored++; pools.set(pool, { ignore: true }); save(pool, e.venue, { ignore: true }); continue; }
       let dec, supply;
       if (e.venue === "raydium-launchlab") { dec = p.dec0; supply = p.supply / 10 ** dec; }
       else { const s = await supplyOf(mint); dec = s.dec; supply = s.supply; }
       const info = { mint, solSide: p.swapOrder ? null : solSide, m0: p.swapOrder ? null : p.mint0, m1: p.swapOrder ? null : p.mint1, dec, supply, binStep: p.binStep };
-      pools.set(pool, info); dx.resolved++;
+      pools.set(pool, info); dx.resolved++; save(pool, e.venue, info);
       let set = mintPools.get(mint); if (!set) { set = new Set(); mintPools.set(mint, set); } set.add(pool);
       if (pools.size > 50000) pools.delete(pools.keys().next().value);
     } catch (x) { dx.lookupFail++; }

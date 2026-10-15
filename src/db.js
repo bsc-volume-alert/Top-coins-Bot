@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS handoffs (
   mint TEXT, slot INTEGER, ts INTEGER, seller TEXT, buyer TEXT, sol REAL, tokens REAL, same_tx INTEGER
 );
 CREATE TABLE IF NOT EXISTS mc_samples (mint TEXT, ts INTEGER, mc_usd REAL, price_sol REAL);
+CREATE TABLE IF NOT EXISTS dex_pools (pool TEXT PRIMARY KEY, venue TEXT, mint TEXT, sol_side INTEGER, m0 TEXT, m1 TEXT, dec INTEGER, supply REAL, bin_step INTEGER, ignore INTEGER DEFAULT 0, ts INTEGER);
 CREATE INDEX IF NOT EXISTS mc_mint ON mc_samples(mint, ts);
 CREATE TABLE IF NOT EXISTS paper_trades (
   id INTEGER PRIMARY KEY, mint TEXT, name TEXT, entry_ts INTEGER, entry_mc REAL, entry_price REAL,
@@ -180,6 +181,8 @@ export const q = {
   setCombo: db.prepare(`UPDATE paper_trades SET x_combo=?, x_tp15=?, x_tsl25=? WHERE id=?`),
   setTight: db.prepare(`UPDATE paper_trades SET tight=? WHERE id=?`),
   setVenue: db.prepare(`UPDATE paper_trades SET venue=? WHERE id=?`),
+  insDexPool: db.prepare(`INSERT OR REPLACE INTO dex_pools (pool, venue, mint, sol_side, m0, m1, dec, supply, bin_step, ignore, ts) VALUES (?,?,?,?,?,?,?,?,?,?,?)`),
+  allDexPools: db.prepare(`SELECT * FROM dex_pools`),
   setChurn: db.prepare(`UPDATE paper_trades SET churn_entry=?, cluster_out_entry=?, cluster_held_pct=COALESCE(cluster_held_pct,?), handoffs=COALESCE(handoffs,?) WHERE id=?`),
   setEntryCounts: db.prepare(`UPDATE paper_trades SET buys_entry=?, sells_entry=?, proven_entry=? WHERE id=?`),
   provenWallets: db.prepare(`SELECT wallet FROM wallet_buys WHERE resolved=1 AND is_cluster=0 AND age_s>=3 AND sol>=? AND entry_mc>0 AND wallet NOT IN (SELECT wallet FROM wallet_buys WHERE ts>=? GROUP BY wallet HAVING COUNT(*)>?) GROUP BY wallet HAVING COUNT(*)>=? AND SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*)>=?`),
