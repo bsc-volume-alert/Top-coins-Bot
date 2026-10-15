@@ -3,7 +3,7 @@
 // Watches the Flap Portal, the other launchpads (counted only for now) and the PancakeSwap pools of graduated tokens.
 import WebSocket from "ws";
 import { C } from "./config.js";
-import { NODES, rpc, call, usable, winStats, getLogsChunked, hex, backupUse } from "./rpc.js";
+import { NODES, rpc, call, usable, winStats, getLogsChunked, hex, backupUse, cuEstimate } from "./rpc.js";
 import { tg } from "./telegram.js";
 import { q } from "./db.js";
 
@@ -94,13 +94,14 @@ async function runAudit() {
   try {
     if (!lp.startBlock) return;
     const head = parseInt(await rpc("eth_blockNumber", []), 16), to = head - Math.max(60, Math.ceil(15 / blockTime));
-    const from = Math.max(to - Math.round(240 / blockTime), lp.startBlock); if (to - from < T("AUDIT_MIN_BLOCKS", 100)) return;
-    const logs = sortLogs(await getLogsChunked({ address: getAddrs() }, from, to));
+    const to2 = Math.min(to, lp.sweepBlock - 5); // only blocks the poller has already had its chance at
+    const from = Math.max(to2 - Math.round(240 / blockTime), lp.startBlock); if (to2 - from < T("AUDIT_MIN_BLOCKS", 100)) return;
+    const logs = sortLogs(await getLogsChunked({ address: getAddrs() }, from, to2));
     let live = 0, fin = 0; const missV = {};
     for (const l of logs) { const s = seen.get(key(l)); if (s) { fin++; if (s.path === "ws") live++; } else { const vn = venueOf(l.address.toLowerCase()); missV[vn] = (missV[vn] || 0) + 1; onLog(l, "audit"); } }
     const n = logs.length, livePct = n ? (live / n) * 100 : 100, finPct = n ? (fin / n) * 100 : 100;
-    audit.last = { ts: Date.now(), from, to, n, livePct, finPct }; audit.history.push({ ts: Date.now(), livePct, finPct, n }); audit.history = audit.history.filter((x) => Date.now() - x.ts < 86_400_000);
-    try { q.insHealth.run(Math.floor(Date.now() / 1000), from, to, n, finPct, livePct); } catch {}
+    audit.last = { ts: Date.now(), from, to: to2, n, livePct, finPct }; audit.history.push({ ts: Date.now(), livePct, finPct, n }); audit.history = audit.history.filter((x) => Date.now() - x.ts < 86_400_000);
+    try { q.insHealth.run(Math.floor(Date.now() / 1000), from, to2, n, finPct, livePct); } catch {}
     if (n >= 20 && finPct < 99.5) await alarm("gap", `<b>${(100 - finPct).toFixed(1)}%</b> of events in the last ~4 min were missed by the live feed, poller and sweep (${n - fin} of ${n}: ${Object.entries(missV).map(([k, c]) => `${k} ${c}`).join(", ")}). Recovered now, but signals on them were late.`);
     else if (finPct >= 99.9) await clear("gap", `no missed events in the last check (${n} events)`);
     audit.lowLive = n >= 20 && livePct < 20 ? audit.lowLive + 1 : 0; // publicnode closes free sockets every ~60 s, so live % is normally low; alarm only if it collapses
@@ -113,22 +114,35 @@ async function nodeHealth() {
   const all = NODES.map((n) => winStats(n));
   if (all.every((s) => s.ok === 0 && s.err + s["429"] > 0)) await alarm("all-down", "every BSC node is failing — no data is being collected."); else await clear("all-down", "nodes answering again");
 }
+const START = Date.now();
+const monthlyCu = () => (cuEstimate() / Math.max((Date.now() - START) / 86_400_000, 1 / 24)) * 30;
+async function creditCheck() {
+  if (!NODES.some((n) => n.backup) || Date.now() - START < 3600_000) return;
+  const m = monthlyCu();
+  if (m > C.NODEREAL_WARN_CU) await alarm("credits", `NodeReal backup is on course for ≈${(m / 1e6).toFixed(1)}M credits this month (free plan 10M) — publicnode must be refusing a lot. Check the NodeReal dashboard.`);
+  else if (m < C.NODEREAL_WARN_CU * 0.8) await clear("credits", "NodeReal credit use back to a safe rate");
+}
+/** a pool just added (graduation): fetch its logs from the graduation block, which the poller skipped before it knew the pool */
+export async function backfillAddress(address, fromBlock) {
+  try { const to = lp.sweepBlock; if (!to || fromBlock > to) return; const logs = sortLogs(await getLogsChunked({ address: [address] }, Math.max(fromBlock, to - 2000), to)); for (const l of logs) onLog(l, "backfill"); } catch (e) { console.error("[backfill]", e.message); }
+}
 export function feedSnapshot() { const a = audit.last; return { finalPct: a ? +a.finPct.toFixed(2) : null, livePct: a ? +a.livePct.toFixed(1) : null, polling: lp.polling }; }
 export function feedReport() {
   const hourBy = {}; for (const x of lp.hour) hourBy[x.venue] = (hourBy[x.venue] || 0) + 1;
   const a = audit.last, h = audit.history, worst = h.length ? Math.min(...h.map((x) => x.finPct)) : null;
   const tot = Object.values(lp.byPath).reduce((s, x) => s + x, 0) || 1;
-  return `<b>Feed</b>: live ${lp.connected ? `✅ via ${lp.node}` : "❌"}${lp.polling ? " · poller covering" : ""} · ${lp.drops.length} drops/h · events/h ${Object.entries(hourBy).map(([k, n]) => `${k} ${n}`).join(" · ") || "none"}\n` +
+  return `<b>Feed</b>: ${C.LIVE_FEED ? `live ${lp.connected ? `✅ via ${lp.node}` : "❌"}${lp.polling ? " · poller covering" : ""}` : `HTTP poller every ${C.POLL_FAST_MS / 1000}s (live feed off)`} · ${lp.drops.length} drops/h · events/h ${Object.entries(hourBy).map(([k, n]) => `${k} ${n}`).join(" · ") || "none"}\n` +
     `Arrived: live ${((lp.byPath.ws / tot) * 100).toFixed(0)}% · poller ${(((lp.byPath.poll + lp.byPath.backfill) / tot) * 100).toFixed(0)}% · sweep ${((lp.byPath.sweep / tot) * 100).toFixed(1)}% · only by 5-min check ${((lp.byPath.audit / tot) * 100).toFixed(2)}%\n` +
     `<b>Completeness</b>: ${a ? `${a.finPct >= 99.5 ? "✅" : "⚠️"} final ${a.finPct.toFixed(1)}% · live ${a.livePct.toFixed(0)}% (${a.n} events, ${ago(Date.now() - a.ts)} ago) · worst 24h ${worst.toFixed(1)}% over ${h.length} checks` : "first check ~5 min after start"}\n` +
     `<b>Nodes</b> (10 min ok/err/refused): ` + NODES.map((n) => { const s = winStats(n); return `${Date.now() < n.restUntil ? "💤" : s.ok && !s["429"] && !s.err ? "✅" : s.ok ? "⚠️" : "❔"}${n.name} ${s.ok}/${s.err}/${s["429"]}`; }).join(" · ") +
-    (NODES.some((n) => n.backup) ? `\nNodeReal backup: ${Object.entries(backupUse.calls).map(([k, c]) => `${k} ${c}`).join(" · ") || "no calls"} · live ${backupUse.wsEvents}` : "") +
+    (NODES.some((n) => n.backup) ? `\nNodeReal backup (only after ${C.NODEREAL_AFTER_S}s of free-node failures): ${Object.entries(backupUse.calls).map(([k, c]) => `${k} ${c}`).join(" · ") || "no calls"} · ≈${Math.round(cuEstimate()).toLocaleString()} credits since start, on course for ≈${(monthlyCu() / 1e6).toFixed(2)}M/month (free 10M)` : "") +
     `\nAlarms: ${alarms.size ? [...alarms.keys()].join(", ") : "none"}`;
 }
 export async function startFeed(addrsFn, dispatchFn) {
   getAddrs = addrsFn; dispatch = dispatchFn;
   await measureBlockTime(); setInterval(measureBlockTime, 3600_000);
-  startLive(); pollLoop();
+  if (C.LIVE_FEED) startLive(); pollLoop();
+  setInterval(creditCheck, 600_000);
   setInterval(runAudit, T("AUDIT_EVERY_S", 300) * 1000); setTimeout(runAudit, T("AUDIT_FIRST_S", 300) * 1000);
   setInterval(nodeHealth, 300_000);
   return blockTime;

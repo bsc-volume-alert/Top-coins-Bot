@@ -8,7 +8,7 @@ import { volumeQuality, qualityLine } from "./quality.js";
 import { txInfo } from "./rpc.js";
 import { open, onTokenTrade, openForToken, isOpen, onClose } from "./paper.js";
 import { esc, fmt, ageStr } from "./telegram.js";
-import { feedSnapshot } from "./feed.js";
+import { feedSnapshot, backfillAddress } from "./feed.js";
 import { isWatchedWallet, isWatchedCreator, provenCount, walletLabel, creatorLabel } from "./wallets.js";
 
 export const ts = { launches: 0, trades: 0, gradEvents: 0, tracked: 0, noUsd: 0, lateTrades: 0 };
@@ -64,6 +64,7 @@ async function graduate(ev) {
   const s = st(ev.token); ts.gradEvents++;
   if (!s.graduated) { s.graduated = true; s.gradTs = s.lastTs || Math.floor(Date.now() / 1000); s.gradPx = s.lastPx; s.gradPeak = s.lastMc; } // chain time
   s.pool = ev.pool; const p = await addPool(ev.token, ev.pool, s.quote); s.poolKind = p.kind;
+  if (p.kind === "v2" || p.kind === "v3") backfillAddress(ev.pool, ev.block); // trades between graduation and the poller picking up the pool
   db.prepare(`UPDATE tokens SET graduated=1, grad_ts=?, grad_mc=?, pool=?, pool_kind=? WHERE token=?`).run(s.gradTs, s.lastMc, ev.pool, p.kind, s.token);
   // silent control: buy every graduation of a token tracked since launch (alert only with many buyers)
   if (s.createTs && s.buyers.size >= C.GRAD_MIN_BUYERS && s.lastMc >= C.GRAD_MIN_MC && s.lastPx > 0) {

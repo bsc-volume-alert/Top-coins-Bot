@@ -9,7 +9,7 @@ const s = (k, d) => (process.env[k] !== undefined && process.env[k] !== "" ? pro
 const list = (k, d) => s(k, d).split(",").map((x) => x.trim()).filter(Boolean);
 
 export const C = {
-  VERSION: "bsc-1.0.1",
+  VERSION: "bsc-1.0.2",
   DB_PATH: s("BSC_DB_PATH", "/root/tracker-bsc/data/bsc.db"),
   NODEREAL_KEY: s("NODEREAL_API_KEY", ""),
 
@@ -23,7 +23,8 @@ export const C = {
   TOTAL_SUPPLY: 1e9,                       // Flap tokens: 1,000,000,000 (18 decimals)
 
   // ---- feed ----
-  POLL_FAST_MS: n("BSC_POLL_FAST_MS", 2000), SWEEP_MS: n("BSC_SWEEP_MS", 10000),
+  POLL_FAST_MS: n("BSC_POLL_FAST_MS", 3000), LIVE_FEED: n("BSC_LIVE_FEED", 0), // live sockets off: publicnode delivers nothing, NodeReal charges per event
+  NODEREAL_AFTER_S: n("BSC_NODEREAL_AFTER_S", 30), NODEREAL_MONTH_CU: n("BSC_NODEREAL_MONTH_CU", 10_000_000), NODEREAL_WARN_CU: n("BSC_NODEREAL_WARN_CU", 8_000_000), SWEEP_MS: n("BSC_SWEEP_MS", 10000),
   MAX_POOLS: n("BSC_MAX_POOLS", 400),      // graduated pools followed at once (most recent / with open trades)
 
   // ---- paper trading ----
