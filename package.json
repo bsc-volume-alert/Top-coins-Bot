@@ -3,10 +3,16 @@
   "version": "0.17.2",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22" },
-  "scripts": { "start": "node src/index.js", "report": "node src/report.js" },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "report": "node src/report.js"
+  },
   "dependencies": {
     "better-sqlite3": "^11.7.0",
+    "js-sha3": "^0.9.3",
     "ws": "^8.18.0"
   }
 }
