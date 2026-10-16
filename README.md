@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.41 — Project 3 retired from the website (16 Oct)
+Project 3 failed out of sample (26 trades, −0.32 SOL vs −0.10 for P1's exit and −0.02 for P2's on the same coins): 7 coins crashed before its 2-minute decision (−1.01 SOL, incl. Tesla To The Moon at 1.51x after 30 s → 0.06x), the middle branch returned 1.00x, and it had no entry filter. Removed from the main page (card, chart, live tables, last-25 table, parameters); still recorded (`x_split`, `split_branch`, `x_p3d`) and on the analysis page. "Holding" now only counts P1, P2 and P4. Last-25 table: row colour = P1 result, P1/P2 faded when the coin is outside that project's filter, "closed by" column (golden rule in yellow).
+
 ## v0.18.40 — analysis page covers every project; daily database backup (16 Oct)
 Analysis page now includes Project 4 (`momconf`) and Project 5 (`mom2m`) trades next to the core ones, with new columns: project, in P1 filter, in P2 filter, P5 2-minute volume, P4 check at 60 s, P5 exit (½ at 2x + trail), peak within 24 h, its market cap, and last price seen. Range up to 365 days ("everything"); the CSV download carries every field. Brackets still use core trades only. New `src/backup.js`: online SQLite backup (safe while writing) once a day at 04:00 UTC and 10 min after start if today's is missing, to `data/backups/tracker-YYYY-MM-DD.db`, newest 3 kept (`BACKUP_KEEP`), skipped with a Telegram warning if free disk < 2× the database. `/backup` runs one now; `/status` shows the last backup.
 
