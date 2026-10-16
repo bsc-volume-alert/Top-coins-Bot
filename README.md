@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.22 — Project 3 exit recorded (`x_split`) (16 Oct)
+Recording only. A third exit scored on every momentum and copy-variant trade, decided at the 2-minute mark: below 0.90× entry → sell (fast-fail); at or above 1.20× → runner: hold with a 40% trail from the peak, cap 4x, no volume/buy-sell conditions; in between → half out at 1.5x, the rest rides the same trail. −40% hard stop before the mark. `split_branch` records which branch the trade took (stop / ff / run / mid; `sweep` when the sweeper had to fill it). Shown in close messages and the 6-hourly summary; in the CSV next to `x_flow4` and `x_t15s40`. Pre-registered in `analysis/README.md` with the numbers it was built on (33 path-marked trades: +23% vs +5% for flow4; +48% with the `core_v40` entry filter) and the test set starting at this deploy.
+
 ## v0.18.21 — memory, third pass: heap cap and the two windows that were not instrumented (16 Oct)
 `/mem` at 15:33: rss 612 MB, heap 292/439 after 2h20m — trimming helped (ring entries down a third with 60% more coins) but was not the whole story. (1) The tier watcher (`momtiers`) and re-entry watcher (`momre`) kept per-coin windows trimmed only on new trades and were not in the `/mem` breakdown; now time-trimmed and listed, with aftercare. (2) Node ran with no heap limit, so V8 collected garbage lazily and "heap used" drifted upward with dead objects; `--max-old-space-size=450` makes it collect properly (live data is well under 200 MB by the counts). `/mem` now shows the heap limit so it is visible whether the cap is in effect.
 

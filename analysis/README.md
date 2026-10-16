@@ -39,3 +39,10 @@ Baseline on the 52: win 48%, avg +19% (net +13% at 5% costs), 8 trades ≥2x, 3 
 - Holders (`top10_entry` etc.) missing on non-SOL-quoted pools and Raydium; a GMGN fallback is planned.
 
 **Added 16 Oct 11:30 UTC (v0.18.19), untested, no prior claim:** `dex_paid` / `dex_paid_lead_s`, `snipers_n` / `snipers_held_pct`, `fresh_share`, `proven_vol_share`. Treat the first read of each as exploratory; a split that appears on <30 trades is a hypothesis for the next day, not a result.
+
+## Project 3 — pre-registered 16 Oct 2026 16:00 UTC (v0.18.22)
+**Entry:** core trigger ($100K/5m, MC < $100K, first entry) + 1m volume ≥ $40K + age < 10 min (`core_v40`).
+**Exit (`x_split`):** at +120 s: < 0.90× → sell; ≥ 1.20× → hold with 40% trail from peak, cap 4x; else half at 1.5x, rest on the same trail. −40% hard stop before +120 s.
+Built on the 33 path-marked core trades of 15–16 Oct (trail approximated by `x_tsl40`): all 33 → +23% avg / 48% win (flow4 +5%, P1 +7%); with the entry filter, 13 trades → +48% / 54% win; the 20 dropped → +6%. Branches: fast-fail 9 trades −28%, runner-hold 13 trades +77% (69% win), middle 11 trades −1%. Thresholds 0.90 / 1.20 / 40% chosen on this data.
+**Test only on trades entered after this deploy.** Confirm: `x_split` avg ≥ `x_flow4` avg + 10pt on ≥40 trades, runner-hold branch avg ≥ +30%, fast-fail branch still ≤ 1 winner in 5. Kill: `x_split` ≤ `x_flow4` on ≥40 trades, or runner-hold branch avg < +10%.
+Record of today's correction: `HellCat`, `ALIENCY`, `bottle.capital` predate the flow rule and were sweeper-filled; excluded from all Project 2 figures from now on (P2 all-time on 62 proper trades: +12%, net +7%, 48% win).
