@@ -11,7 +11,9 @@ import { startSweeper, sw } from "./sweeper.js";
 import { startCommands, reportText, memMb } from "./commands.js";
 import { en } from "./enrich.js";
 import { startWeb } from "./web.js"; // v0.18.23
-import "./backup.js"; // v0.18.40 daily database backup
+import "./backup.js";
+import { pxg } from "./pumpswap.js"; // v0.18.43
+import "./pxcheck.js"; // v0.18.43 peak cross-check // v0.18.40 daily database backup
 import { startPumpSwap, ps, quoteStats } from "./pumpswap.js";
 import { startDex, dx } from "./dex.js";
 import { fe } from "./fees.js";
@@ -36,7 +38,7 @@ await tg(`🟢 <b>Tracker online</b> v${v}\nFirehose: ${CFG.HELIUS_KEY ? "Helius
 
 startSweeper();
 startWeb();
-startCommands({ status: () => { const g = sigStats(), mo = momStats(); return `v${v} · ws ${wsStatus} · live ${live.size} · early open ${g.open} · volume alerts ${mo.alerts} open ${mo.open} · ps txs ${ps.txs} · dex txs ${dx.txs}/${dx.emitted} fed · fee claims ${fe.claims} · holder ledgers ${ho.ledgers} rpc ${ho.rpc} · hand-offs ${g.handoffs} · swept ${sw.closed}/${sw.noprice}np · rpc ${g.rpc} · dexpaid ${en.dexPaid}/${en.dexCalls} fresh ${en.freshCalls} · mem ${memMb()} MB · SOL $${solUsdCached().toFixed(0)}`; }, summary: () => strategySummary(24) });
+startCommands({ status: () => { const g = sigStats(), mo = momStats(); return `bad prices held ${pxg.held} / confirmed ${pxg.confirmed} of ${pxg.checked}\n` + `v${v} · ws ${wsStatus} · live ${live.size} · early open ${g.open} · volume alerts ${mo.alerts} open ${mo.open} · ps txs ${ps.txs} · dex txs ${dx.txs}/${dx.emitted} fed · fee claims ${fe.claims} · holder ledgers ${ho.ledgers} rpc ${ho.rpc} · hand-offs ${g.handoffs} · swept ${sw.closed}/${sw.noprice}np · rpc ${g.rpc} · dexpaid ${en.dexPaid}/${en.dexCalls} fresh ${en.freshCalls} · mem ${memMb()} MB · SOL $${solUsdCached().toFixed(0)}`; }, summary: () => strategySummary(24) });
 // strategy summary every SUMMARY_HOURS
 setInterval(() => tg(strategySummary(CFG.SUMMARY_HOURS)), CFG.SUMMARY_HOURS * 3600_000);
 let lastC = { ...counters };

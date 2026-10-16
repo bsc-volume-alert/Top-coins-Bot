@@ -17,14 +17,32 @@ let poolBudgetUsed = 0, poolBudgetDay = new Date().getUTCDate(), inFlight = 0;
 const queue = [];
 const listeners = [];
 export const onSwap = (fn) => listeners.push(fn);
-export const emitSwap = (tr) => { for (const fn of listeners) { try { fn(tr); } catch (x) { console.error("[ps listener]", x.message); } } };
+// v0.18.43 bad-price guard. A single swap priced more than PX_JUMP× away from the coin's last accepted price (usually a thin or
+// mis-quoted second pool, or a decode glitch) is not trusted on its own: its volume still counts, but its price is replaced by the last
+// accepted one. The new level is accepted once a second swap within PX_CONFIRM_S lands within ±35% of it (a real pump or rug repeats).
+export const pxg = { checked: 0, held: 0, confirmed: 0, lastHeld: null };
+const PXL = new Map(); // mint -> { px, ts, pend: { px, ts } | null }
+const PX_JUMP = Number(process.env.PX_JUMP || 3), PX_CONFIRM_S = Number(process.env.PX_CONFIRM_S || 60);
+export function guardPx(tr) {
+  if (!(tr.price > 0)) return tr;
+  pxg.checked++;
+  const g = PXL.get(tr.mint), ts = tr.ts || Math.floor(Date.now() / 1000);
+  if (!g) { PXL.set(tr.mint, { px: tr.price, ts, pend: null }); if (PXL.size > 30000) PXL.delete(PXL.keys().next().value); return tr; }
+  const r = tr.price / g.px;
+  if (r <= PX_JUMP && r >= 1 / PX_JUMP) { g.px = tr.price; g.ts = ts; g.pend = null; return tr; }
+  if (g.pend && ts - g.pend.ts <= PX_CONFIRM_S && Math.abs(tr.price / g.pend.px - 1) <= 0.35) { pxg.confirmed++; g.px = tr.price; g.ts = ts; g.pend = null; return tr; }
+  if (ts - g.ts > 1800) { g.px = tr.price; g.ts = ts; g.pend = null; return tr; } // no trades for 30 min: start fresh
+  g.pend = { px: tr.price, ts }; pxg.held++; pxg.lastHeld = { mint: tr.mint, from: g.px, to: tr.price, venue: tr.venue, ts };
+  const k = g.px / tr.price; return { ...tr, price: g.px, mc: tr.mc * k, pxHeld: true };
+}
+export const emitSwap = (tr0) => { const tr = guardPx(tr0); for (const fn of listeners) { try { fn(tr); } catch (x) { console.error("[ps listener]", x.message); } } };
 let samples = 0;
 // v0.18.13: pools quoted in something other than SOL (USDC, tokenized stocks such as TTWO…). The quote token's SOL price comes from
 // DexScreener (its best SOL pair, else USD price ÷ SOL/USD), decimals from one getTokenSupply call; cached, refreshed every 5 min.
 const quotes = new Map(); // quoteMint -> {sol, dec, sym, ts}
 const quotePending = new Set();
 export const quoteStats = { lookups: 0, fails: 0, skipped: 0 };
-export const memStats = () => { let pv = 0; for (const a of poolVol.values()) pv += a.length; return { poolMint: poolMint.size, poolVol: poolVol.size, poolVolEntries: pv, gradSeen: gradSeen.size, quotes: quotes.size }; }; // v0.18.18
+export const memStats = () => { let pv = 0; for (const a of poolVol.values()) pv += a.length; return { pxGuard: PXL.size, poolMint: poolMint.size, poolVol: poolVol.size, poolVolEntries: pv, gradSeen: gradSeen.size, quotes: quotes.size }; }; // v0.18.18
 function quoteOf(mint, now) {
   if (mint === WSOL) return { sol: 1, dec: 9, sym: "SOL" };
   const c = quotes.get(mint);
@@ -94,7 +112,7 @@ function handle({ sig, slot, logs, err }) {
     const mc = price * CFG.TOTAL_SUPPLY * solUsdCached();
     const tr = { mint: pm.mint, pool: e.pool, sig, slot, ts: e.ts, wallet: e.user, isBuy: e.isBuy, sol: solQ, tokens, price, mc, route, venue: pm.quote === WSOL ? "pumpswap" : `pumpswap/${qi.sym}`, quote: qi.sym, creatorFee: (Number(e.creatorFee || 0n) / qDiv) * qi.sol };
     if (samples < 5) { samples++; console.log("[ps sample]", JSON.stringify({ mint: tr.mint.slice(0, 8), buy: tr.isBuy, sol: +sol.toFixed(4), mc: Math.round(mc), wallet: tr.wallet.slice(0, 6) })); }
-    for (const fn of listeners) { try { fn(tr); } catch (x) { console.error("[ps listener]", x.message); } }
+    emitSwap(tr); // v0.18.43: through the bad-price guard
   }
 }
 

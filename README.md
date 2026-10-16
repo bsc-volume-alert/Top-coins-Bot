@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.43 — bad-price guard and peak cross-check (17 Oct)
+Silly.exe recorded 1.35x → 11.18x → 0.06x within 5 minutes while real large buys topped at 1.5x — a bad price tick (likely a thin or mis-quoted second pool) that also produced Project 2's "4x". Guard (`guardPx` in pumpswap.js, applied to every PumpSwap and other-DEX swap): a swap priced more than 3× away from the coin's last accepted price keeps its volume but is given the last accepted price; the new level is accepted when a second swap within 60 s lands within ±35% of it (real pumps and rugs repeat). `/status` shows held / confirmed counts. Peak cross-check (`src/pxcheck.js`, every 10 min, last 3 days): for closed core/P4/P5 trades with a recorded peak ≥ 2.5x, the highest market cap on real ≥5 SOL buys in the 6 h after entry is compared; under peak / 2.5 → `px_suspect = 1`, `px_verified_mult` stored. Flagged peaks show "⚠ … real?" on the recent-trades table, sold history and analysis page.
+
 ## v0.18.42 — simpler main page (16 Oct)
 "Sold by every project" section removed (the sold-history page covers after-sale behaviour). "Last 25 core trades" renamed "Recent trades" with a status column: HOLDING (money still in P1/P2/P4) or done · what closed it (golden rule, coin fell 80% from peak, 6 h limit…). Times shown in UK time on the main and analysis pages.
 
