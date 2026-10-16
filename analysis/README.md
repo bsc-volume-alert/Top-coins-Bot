@@ -56,3 +56,8 @@ Record of today's correction: `HellCat`, `ALIENCY`, `bottle.capital` predate the
 **Caveat:** the same first-minute signal underlies the 2-minute fast-fail found on day one, so this is not wholly fresh evidence; the runner exit gets worse under a later entry (≈ +6%), so P4 is scored on P1's exit.
 **Confirm** on ≥40 `momconf` trades: win ≥ 55% and avg ≥ +10% on `x_t15s40` after costs, and the skipped triggers' P1 average below 0. **Kill:** P4 avg ≤ the core trades' P1 avg over the same period, or win < 50%.
 Also to test from this export onward (recorded, not gated): creator fees accrued ≥ 9 SOL at entry (worse); bundle still holding ≥ 70% at entry (deeper losses when it fails — 3 of the 5 trades that dumped through the stop).
+
+## Project 1 filtered — pre-registered 16 Oct 2026 21:10 UTC (v0.18.33)
+**Rule:** core trigger AND (stock-token-quoted PumpSwap pool OR entry MC < $47K) → sell at 1.5x, −40% stop.
+**Built on** 80 core trades with 45 entry-time features, each tested at three cut-points for the same gap (≥15pt) in both halves. On SOL pools, entry MC < $47K: 72% reached 1.5x first (18 trades) vs 38% (45); stock-quoted pools: 67% (15) vs 48% on SOL pools. "Creator fees accrued" also passed but is mostly an artefact (fees only counted from first sight; stock pools convert differently) — not used. Filtered P1 on the 80: 35 trades, 66% win, +18% avg, +1.02 SOL at 0.25; on the 29 trades after 08:29: 13 trades, 69%, +22%, +0.51.
+**Test:** the next 40 filtered trades (book starts at this deploy). **Confirm:** win ≥ 60% and net > 0 after 5% costs. **Kill:** win < 55% or net ≤ 0 — Project 1 is then removed.
