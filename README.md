@@ -56,6 +56,14 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.17 — Project 2 hypotheses on file, fast-fail exit, clean buy/sell flow (16 Oct)
+Recording only; no entry, alert or exit rule changed. The 16 Oct findings on 52 Project 2 trades are written as pre-registered hypotheses in `analysis/README.md`, to be tested on trades entered after this deploy.
+- `core_v40` tag: core trade with 1m volume ≥ $40K (`MOM_V40_USD`) and under 10 min old (`MOM_V40_AGE_S`) at entry.
+- `x_flow4ff` exit: flow4 plus a fast-fail — at the first tick ≥120 s after entry, if price < 0.90× entry, sell there. Recorded next to `x_flow4` on momentum and copy-variant trades; the sweeper fills it from flow4.
+- Clean flow: wallets that buy and sell the same coin within 2 s are bot pairs; `bs_clean_entry` and `bot_share_entry` at entry, and `cs` (clean sell share) / `bot` (bot share of $) / `cv` (clean $) in each path mark.
+- `churn_entry` / `cluster_out_entry` now filled on momentum trades (live cluster snapshot, else the tokens table).
+- CSV gains `x_flow4ff`, `core_v40`, `bs_clean_entry`, `bot_share_entry`.
+
 ## v0.18.16 — `/csv` can no longer take the bot down (16 Oct)
 On the morning of 16 Oct `/csv` crashed the tracker in a loop: the export built every table as one in-memory string and zipped it in memory, which passed pm2's 600 MB limit on the 2 GB droplet; pm2 killed it, restarted it, and Telegram re-delivered the same unconfirmed `/csv`. ~15 minutes of feed lost (06:17–06:31 UTC) while Helius rate-limited the reconnects; nothing before that was lost (every write is in SQLite the moment it happens).
 - Commands are confirmed to Telegram **before** they run, so a crash mid-command can never replay it.

@@ -18,3 +18,22 @@ unzip tracker_export_<date>.zip -d analysis/data && cd analysis && for f in [0-9
 
 ## v0.18 notes
 - `paper_trades.venue` (pumpswap / raydium-cpmm / raydium-clmm / raydium-launchlab / meteora-dlmm / orca) says which feed produced the triggering swap. Momentum rows with a non-PumpSwap venue have wallet counts ≈ transaction counts (CPMM, LaunchLab and Orca events carry no wallet; placeholder `tx:<sig>`), so `q_wallets`, `q_per10k`, `buyers_entry` and `q_new_pct` are not comparable with PumpSwap rows — split by venue before comparing.
+
+## Pre-registered hypotheses — Project 2, written 16 Oct 2026 09:30 UTC (v0.18.17)
+Made on the 52 core momentum trades with both `x_t15s40` and `x_flow4` recorded (entries 15 Oct 10:49 → 16 Oct 06:04 UTC, scratchpad run13). **Test only on trades entered after the v0.18.17 deploy** (`core=1`, `entry_utc` > deploy time). Each line states the claim, the number it was made on, and what would confirm or kill it on ≥50 new trades. Project 2 = flow4: core entry, −40% hard stop before 1.5x, then hold while 5m vol ≥ $100K and buy$ ≥ sell$, voluntary sell at 4x, 50% trail backstop.
+
+Baseline on the 52: win 48%, avg +19% (net +13% at 5% costs), 8 trades ≥2x, 3 at the 4x cap; drop the best trade and avg is +2%.
+
+**Claimed to separate winners from losers (confirm if the gap holds in the same direction; kill if it closes or flips):**
+1. **1m volume at entry ≥ $40K** (`vol1m_usd`): 19 trades, win 53%, avg +54%, 32% reached ≥2x — vs 33 trades below: win 45%, avg −1%, 6% ≥2x. Confirm: ≥+25pt gap in avg return on ≥15 trades each side. Kill: gap under 10pt or reversed.
+2. **Age at entry < 10 min** (`age_s` < 600): 38 trades, win 53%, +33%, all 8 big wins — vs 14 older: win 36%, −17%, no big wins. Confirm: older group still produces ≤10% ≥2x and negative avg.
+3. **Combination (tag `core_v40` = 1m vol ≥ $40K AND age < 10 min)**: 17 trades, win 59%, avg +69%, 35% ≥2x; the other 35 trades: −4%. This is the headline claim and the most likely to shrink — 6 big wins is the whole evidence. Confirm: core_v40 avg ≥ +30% and ≥ 2× the non-v40 avg on ≥20 tagged trades.
+4. **Top-10 holder share < 30%** (`top10_entry`): 30 trades, win 53%, +31% — vs ≥30%: 22 trades, 41%, +3%. Missing on 12/52 (non-SOL pools, Raydium). Weaker claim.
+5. **Fast-fail exit** (`x_flow4ff`: sell at the first tick ≥120 s after entry if price < 0.90× entry, else = flow4): on the 20 trades with path marks it triggered 6 times, all 6 were flow4 losers, avg +13% → +17%. Confirm: `x_flow4ff` avg ≥ `x_flow4` avg AND ≤1 in 5 of its triggers were flow4 winners. Kill: it fires on ≥30% of eventual winners.
+
+**Claimed NOT to separate (confirm = still no gap; a gap appearing on new data is itself a finding to re-check):** entry MC (all ≈$55K), 5m volume at entry (all ≈$100K by construction), raw buy/sell $ ratio (`bs_ratio_entry`, pinned 1.00–1.14 — see below), buyers/wallets in 5m, bundle % at launch (and the 3 unbundled coins all lost), bundle still held at entry, largest holder %, creator fees accrued (≈1% of volume), dev fee claims before entry (7 trades only), dev buy SOL. Heavily bundled "factory" coins (bundle ≥60% and still held ≥60% at entry, 13 trades) performed like the rest (+22%) but hold both wipeouts (<0.3x) — downside shape, not a filter.
+
+**Measurement notes that came out of this pass:**
+- Raw buy/sell $ ratio and sell share sit at ~1:1 / 47–53% on every coin at every mark, including coins that 4x'd in 5 minutes. Decoder is right (buy/sell are separate on-chain events); the volume is dominated by paired bot trades (sandwich/arb). v0.18.17 records `bs_clean_entry` / `bot_share_entry` and `cs`/`bot`/`cv` in the path marks with wallets that buy and sell within 2 s removed. Until the clean figures are in, treat the buy≥sell half of the flow exit as noise. The flow rule itself is unchanged for now so the test set is comparable.
+- `cluster_out_entry`/`churn_entry` were never filled on momentum rows (copy trades only). Filled from v0.18.17.
+- Holders (`top10_entry` etc.) missing on non-SOL-quoted pools and Raydium; a GMGN fallback is planned.

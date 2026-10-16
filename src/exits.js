@@ -18,13 +18,38 @@ export function flowStep(e, x, mult, fromPeak, v5Usd, buyUsd, sellUsd) {
   if (Date.now() - e.flowSince < 20_000) return; // give the window a moment after arming
   if (v5Usd < CFG.FLOW_MIN_VOL || (sellUsd > 0 && buyUsd / sellUsd < CFG.FLOW_BS_MIN) || fromPeak <= -0.50) { x.flow = mult; if (x.flow4 == null) x.flow4 = mult; }
 }
-export function stepExits(e, price, mc, v5Usd, buyUsd, sellUsd) {
+// v0.18.17 "fast-fail" on top of flow4: at the first tick FF_AT_S after entry, if price is below FF_BELOW x entry, sell there;
+// otherwise identical to flow4. Recorded as x_flow4ff next to x_flow4 — a hypothesis from 20 trades, to be tested on the next 100.
+export const FF_AT_S = 120, FF_BELOW = 0.90;
+export function ffStep(e, x, mult, sinceS) {
+  if (x.flow4ff != null) return;
+  if (!e.ffDone && sinceS != null && sinceS >= FF_AT_S) { e.ffDone = true; if (mult < FF_BELOW) { x.flow4ff = mult; return; } }
+  if (x.flow4 != null) x.flow4ff = x.flow4;
+}
+export const ffFinal = (x, flow4Final) => x.flow4ff ?? flow4Final;
+// v0.18.17 clean flow: a wallet that buys and sells the same coin within BOT_PAIR_S seconds is a sandwich/arb bot, and its $ is
+// paired volume that says nothing about direction. Returns buy/sell $ on the rest, plus the share of $ volume that was bot pairs.
+export const BOT_PAIR_S = 2;
+export function cleanFlow(win) {
+  const byW = new Map();
+  for (const z of win) { if (!z.w || z.w.startsWith("tx:")) continue; let a = byW.get(z.w); if (!a) { a = { b: [], s: [] }; byW.set(z.w, a); } (z.b ? a.b : a.s).push(z.ts); }
+  const near = (arr, t) => { for (const u of arr) if (Math.abs(u - t) <= BOT_PAIR_S) return true; return false; };
+  let buy = 0, sell = 0, bot = 0, total = 0;
+  for (const z of win) {
+    total += z.usd;
+    const a = z.w && !z.w.startsWith("tx:") ? byW.get(z.w) : null;
+    if (a && near(z.b ? a.s : a.b, z.ts)) { bot += z.usd; continue; }
+    if (z.b) buy += z.usd; else sell += z.usd;
+  }
+  return { buy, sell, bot, total, ratio: sell > 0 ? buy / sell : buy > 0 ? 99 : null, botShare: total > 0 ? bot / total : null, sellShare: buy + sell > 0 ? sell / (buy + sell) : null };
+}
+export function stepExits(e, price, mc, v5Usd, buyUsd, sellUsd, sinceS = null) {
   if (price > e.peak) e.peak = price;
   const mult = price / e.entry, fromPeak = price / e.peak - 1, x = e.x;
   if (x.tp == null && mult >= 2) x.tp = 2;
   if (x.tsl25 == null && fromPeak <= -0.25) x.tsl25 = mult; // v0.17.4
   if (x.tp15 == null && mult >= 1.5) x.tp15 = 1.5;
-  stopStep(x, mult); flowStep(e, x, mult, fromPeak, v5Usd, buyUsd, sellUsd);
+  stopStep(x, mult); flowStep(e, x, mult, fromPeak, v5Usd, buyUsd, sellUsd); ffStep(e, x, mult, sinceS);
   if (x.tsl40 == null && fromPeak <= -0.40) x.tsl40 = mult;
   if (x.tsl60 == null && fromPeak <= -0.60) x.tsl60 = mult;
   if (x.tsl80 == null && fromPeak <= -0.80) x.tsl80 = mult;
@@ -53,15 +78,20 @@ export function finalExits(e, mult) {
     tp: x.tp ?? mult, tsl40: x.tsl40 ?? mult, tsl60: x.tsl60 ?? mult, tsl80: x.tsl80 ?? mult,
     half60: x.half60 ?? (e.half ? 1 + 0.5 * mult : mult), twophase: x.twophase ?? (e.half ? 1 + 0.5 * mult : mult),
     ladder: x.ladder ?? ((e.half ? 0.5 : 0) + (e.s3 ? 0.75 : 0) + (1 - (e.half ? 0.25 : 0) - (e.s3 ? 0.25 : 0)) * mult),
-    levels: levelsFinal(e.lv, mult), m1: x.m1 ?? mult, m1vol: x.m1vol ?? mult, volstop: x.volstop ?? mult, time: mult, combo: x.combo ?? (e.half ? 1 + 0.5 * mult : mult), tp15: x.tp15 ?? mult, tsl25: x.tsl25 ?? mult, flow: x.flow ?? mult, flow4: x.flow4 ?? (x.flow ?? mult), ...stopFinal(x, mult, e.peak / e.entry),
+    levels: levelsFinal(e.lv, mult), m1: x.m1 ?? mult, m1vol: x.m1vol ?? mult, volstop: x.volstop ?? mult, time: mult, combo: x.combo ?? (e.half ? 1 + 0.5 * mult : mult), tp15: x.tp15 ?? mult, tsl25: x.tsl25 ?? mult, flow: x.flow ?? mult, flow4: x.flow4 ?? (x.flow ?? mult), flow4ff: ffFinal(x, x.flow4 ?? (x.flow ?? mult)), ...stopFinal(x, mult, e.peak / e.entry),
   };
 }
 // v0.18.14: price path after entry — multiple at fixed seconds since entry (first tick at or after each mark), so any
 // "if not up X by minute Y" rule can be evaluated offline on every trade. Returns true when a new mark was filled.
 export const PATH_MARKS = [30, 60, 120, 180, 300, 600];
-export function pathStep(holder, entryTs, now, mult, v5Usd = null, sellShare = null) {
+export function pathStep(holder, entryTs, now, mult, v5Usd = null, sellShare = null, win = null) {
   holder.path ||= {}; let changed = false;
-  for (const m of PATH_MARKS) if (now - entryTs >= m && holder.path[m] == null) { holder.path[m] = v5Usd == null ? +mult.toFixed(4) : { m: +mult.toFixed(4), v: Math.round(v5Usd), s: sellShare == null ? null : +sellShare.toFixed(3) }; changed = true; } // v0.18.15: + 5m volume and sell share
+  for (const m of PATH_MARKS) if (now - entryTs >= m && holder.path[m] == null) {
+    if (v5Usd == null) { holder.path[m] = +mult.toFixed(4); changed = true; continue; }
+    const o = { m: +mult.toFixed(4), v: Math.round(v5Usd), s: sellShare == null ? null : +sellShare.toFixed(3) }; // v0.18.15: + 5m volume and sell share
+    if (win) { const c = cleanFlow(win); o.cs = c.sellShare == null ? null : +c.sellShare.toFixed(3); o.bot = c.botShare == null ? null : +c.botShare.toFixed(3); o.cv = Math.round(c.buy + c.sell); } // v0.18.17: clean sell share, bot share, clean volume
+    holder.path[m] = o; changed = true;
+  }
   return changed;
 }
 export const pc = (m) => (m == null ? "—" : `${m >= 1 ? "+" : ""}${((m - 1) * 100).toFixed(0)}%`);
