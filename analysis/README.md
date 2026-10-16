@@ -37,3 +37,5 @@ Baseline on the 52: win 48%, avg +19% (net +13% at 5% costs), 8 trades ≥2x, 3 
 - Raw buy/sell $ ratio and sell share sit at ~1:1 / 47–53% on every coin at every mark, including coins that 4x'd in 5 minutes. Decoder is right (buy/sell are separate on-chain events); the volume is dominated by paired bot trades (sandwich/arb). v0.18.17 records `bs_clean_entry` / `bot_share_entry` and `cs`/`bot`/`cv` in the path marks with wallets that buy and sell within 2 s removed. Until the clean figures are in, treat the buy≥sell half of the flow exit as noise. The flow rule itself is unchanged for now so the test set is comparable.
 - `cluster_out_entry`/`churn_entry` were never filled on momentum rows (copy trades only). Filled from v0.18.17.
 - Holders (`top10_entry` etc.) missing on non-SOL-quoted pools and Raydium; a GMGN fallback is planned.
+
+**Added 16 Oct 11:30 UTC (v0.18.19), untested, no prior claim:** `dex_paid` / `dex_paid_lead_s`, `snipers_n` / `snipers_held_pct`, `fresh_share`, `proven_vol_share`. Treat the first read of each as exploratory; a split that appears on <30 trades is a hypothesis for the next day, not a result.

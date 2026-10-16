@@ -19,6 +19,7 @@ import { recordHoldersAsync, holdersLine } from "./holders.js";
 import { readFileSync, writeFileSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { provenCount } from "./wallets.js";
+import { enrichEntry, sniperInfo, provenShare, enrichLine } from "./enrich.js"; // v0.18.19
 
 export const mom = { alerts: 0, entries: 0, closes: 0, tracked: 0, reentries: 0 };
 const T = new Map(); // mint -> state
@@ -170,6 +171,7 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
   try { q.setCore.run(core ? 1 : 0, coreTight ? 1 : 0, pos.id); } catch {}
   const coreV40 = core && v1 >= CFG.MOM_V40_USD && ageS != null && ageS < CFG.MOM_V40_AGE_S; // v0.18.17: the 16 Oct hypothesis — last-minute volume >= $40K and under 10 min old
   try { q.setCoreV40.run(coreV40 ? 1 : 0, pos.id); } catch {}
+  let enStr = null; try { enrichEntry(pos.id, mint, s.w5, now); enStr = enrichLine(sniperInfo(mint), provenShare(s.w5)); } catch (e) { console.error("[enrich entry]", e.message); } // v0.18.19
   let cf = null; try { cf = cleanFlow(s.w5); q.setCleanFlow.run(cf.ratio, cf.botShare, pos.id); } catch (e) { console.error("[cleanflow]", e.message); } // v0.18.17: buy/sell with bot pairs removed
   try { // v0.18.17: bundle churn at entry (was only recorded for copy trades)
     const cs = clusterSnap(mint);
@@ -198,7 +200,7 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
   const bundleStr = meta?.bundle_pct != null ? `Bundle ${meta.bundle_pct.toFixed(0)}% · ${meta.bundle_sol.toFixed(1)} SOL · hand-offs ${meta.handoffs} · cluster net ${((meta.cluster_sol_in || 0) - (meta.cluster_sol_out || 0)).toFixed(1)} SOL` : "Bundle: launched before tracker (no data)";
   pos.msgId = await tg(`${kind === "burst" ? "⚡" : hot ? "🔥" : "📈"} <b>${kind === "burst" ? "BURST" : "VOLUME"}${reentry ? " RE-ENTRY " + reentry : ""}</b> — ${esc(name || mint.slice(0, 8))} ($${esc(symbol || "?")})${burst ? " ⚡" : ""}${meta?.factory ? " ⚠️factory" : ""}\n` +
     `5m vol <b>$${fmt(v5)}</b> (1m $${fmt(v1)}) · buys ${buys.length} / sells ${sells.length} · $${fmt(buyUsd)} in / $${fmt(sellUsd)} out · ${buyers} buyers\n` +
-    `MC <b>$${fmt(tr.mc)}</b> · ${ageStr}${reclaimStr}${wall ? "\n" + wall : ""}\nvenue: ${venueStr}${dexNote}${preStr}${fi ? "\n" + feeLine(fi, now) : ""}${hl ? "\n" + hl : ""}${coreTight ? "\n⭐⭐ core-tight (under $60K · under 6m · steady sizes)" : core ? "\n⭐ core rule ($100K/5m · entry under $100K · first entry)" : ""}\n${qLine}\n${socialsLine(soc)}\n${bundleStr}${heldStr}\n${links(mint)}`);
+    `MC <b>$${fmt(tr.mc)}</b> · ${ageStr}${reclaimStr}${wall ? "\n" + wall : ""}\nvenue: ${venueStr}${dexNote}${preStr}${fi ? "\n" + feeLine(fi, now) : ""}${hl ? "\n" + hl : ""}${enStr ? "\n" + enStr : ""}${coreTight ? "\n⭐⭐ core-tight (under $60K · under 6m · steady sizes)" : core ? "\n⭐ core rule ($100K/5m · entry under $100K · first entry)" : ""}\n${qLine}\n${socialsLine(soc)}\n${bundleStr}${heldStr}\n${links(mint)}`);
   for (const m of CFG.MOM_SCORECARD_MIN) setTimeout(() => scorecard(mint, s, m), m * 60_000);
 }
 

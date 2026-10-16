@@ -61,5 +61,6 @@ export async function recordHoldersAsync(id, mint, creator = null) {
   if (h) { try { q.setHolders.run(h.top10, h.largest, h.holders, h.dev, id); } catch {} }
   return h;
 }
+export const balanceOf = (mint, wallet) => L.get(mint)?.get(wallet) ?? null; // v0.18.19
 export const memStats = () => { let entries = 0; for (const m of L.values()) entries += m.size; return { ledgers: L.size, entries }; }; // v0.18.18
 export const holdersLine = (h) => h ? `holders ${h.holders ?? "20+"} · top-10 ${h.top10.toFixed(0)}% · largest ${h.largest.toFixed(1)}%${h.dev != null ? ` · dev ${h.dev.toFixed(1)}%` : ""}` : null;

@@ -44,6 +44,7 @@ const refreshProven = () => { try { proven = new Set(q.provenWallets.all(CFG.PRO
 refreshProven(); setInterval(refreshProven, 3600_000);
 export const provenCount = (mint) => early.get(mint)?.proven.size ?? 0;
 export const provenSize = () => proven.size;
+export const isProven = (w) => proven.has(w); // v0.18.19
 on("trade", (t, tr) => {
   const now = tr.ts;
   peakTick(t.mint, t.lastMc, now);

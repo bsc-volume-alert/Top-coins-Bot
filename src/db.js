@@ -135,7 +135,7 @@ for (const sql of [
   "ALTER TABLE creator_claims ADD COLUMN mint TEXT", "ALTER TABLE creator_claims ADD COLUMN ambiguous INTEGER", "CREATE INDEX IF NOT EXISTS cc_mint ON creator_claims(mint)",
   "UPDATE tokens SET fee_claims=NULL, fee_claimed_sol=NULL, first_claim_ts=NULL WHERE fee_claims IS NOT NULL AND NOT EXISTS (SELECT 1 FROM creator_claims c WHERE c.mint=tokens.mint)",
   "ALTER TABLE paper_trades ADD COLUMN core_tight INTEGER",
-  "ALTER TABLE paper_trades ADD COLUMN core_v40 INTEGER", "ALTER TABLE paper_trades ADD COLUMN x_flow4ff REAL", "ALTER TABLE paper_trades ADD COLUMN bs_clean_entry REAL", "ALTER TABLE paper_trades ADD COLUMN bot_share_entry REAL", // v0.18.17
+  "ALTER TABLE paper_trades ADD COLUMN core_v40 INTEGER", "ALTER TABLE paper_trades ADD COLUMN dex_paid INTEGER", "ALTER TABLE paper_trades ADD COLUMN dex_paid_types TEXT", "ALTER TABLE paper_trades ADD COLUMN dex_paid_lead_s INTEGER", "ALTER TABLE paper_trades ADD COLUMN snipers_n INTEGER", "ALTER TABLE paper_trades ADD COLUMN snipers_held_pct REAL", "ALTER TABLE paper_trades ADD COLUMN fresh_share REAL", "ALTER TABLE paper_trades ADD COLUMN fresh_n INTEGER", "ALTER TABLE paper_trades ADD COLUMN proven_vol_share REAL", "ALTER TABLE paper_trades ADD COLUMN proven_wallets_5m INTEGER", "ALTER TABLE paper_trades ADD COLUMN x_flow4ff REAL", "ALTER TABLE paper_trades ADD COLUMN bs_clean_entry REAL", "ALTER TABLE paper_trades ADD COLUMN bot_share_entry REAL", // v0.18.17
   "ALTER TABLE paper_trades ADD COLUMN top10_entry REAL", "ALTER TABLE paper_trades ADD COLUMN largest_entry REAL", "ALTER TABLE paper_trades ADD COLUMN holders_entry INTEGER", "ALTER TABLE paper_trades ADD COLUMN dev_hold_entry REAL",
   "ALTER TABLE paper_trades ADD COLUMN fee_accrued_entry REAL", "ALTER TABLE paper_trades ADD COLUMN fee_claims_entry INTEGER", "ALTER TABLE paper_trades ADD COLUMN fee_claimed_entry REAL", "ALTER TABLE paper_trades ADD COLUMN core INTEGER", "ALTER TABLE paper_trades ADD COLUMN t_hit15_s INTEGER",
   "ALTER TABLE tokens ADD COLUMN creator_fee_sol REAL", "ALTER TABLE tokens ADD COLUMN fee_claims INTEGER", "ALTER TABLE tokens ADD COLUMN fee_claimed_sol REAL", "ALTER TABLE tokens ADD COLUMN first_claim_ts INTEGER",
@@ -196,6 +196,9 @@ export const q = {
   setHolders: db.prepare(`UPDATE paper_trades SET top10_entry=?, largest_entry=?, holders_entry=?, dev_hold_entry=? WHERE id=?`),
   setFees: db.prepare(`UPDATE paper_trades SET fee_accrued_entry=?, fee_claims_entry=?, fee_claimed_entry=? WHERE id=?`),
   setCore: db.prepare(`UPDATE paper_trades SET core=?, core_tight=? WHERE id=?`),
+  setEnrich1: db.prepare(`UPDATE paper_trades SET snipers_n=?, snipers_held_pct=?, proven_vol_share=?, proven_wallets_5m=? WHERE id=?`), // v0.18.19
+  setDexPaid: db.prepare(`UPDATE paper_trades SET dex_paid=?, dex_paid_types=?, dex_paid_lead_s=? WHERE id=?`),
+  setFresh: db.prepare(`UPDATE paper_trades SET fresh_share=?, fresh_n=? WHERE id=?`),
   setCoreV40: db.prepare(`UPDATE paper_trades SET core_v40=? WHERE id=?`), // v0.18.17
   setFlow4ff: db.prepare(`UPDATE paper_trades SET x_flow4ff=? WHERE id=?`),
   setCleanFlow: db.prepare(`UPDATE paper_trades SET bs_clean_entry=?, bot_share_entry=? WHERE id=?`),

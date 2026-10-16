@@ -56,6 +56,15 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.19 — more entry-time features for the winners-vs-losers table (16 Oct)
+Recording only. Every momentum entry now also records:
+- **Dex Paid** (`dex_paid`, `dex_paid_types`, `dex_paid_lead_s`): approved DexScreener orders for the coin (tokenProfile / communityTakeover / ads) from the public orders endpoint, and how many seconds before our entry the first was paid. One call per entry.
+- **Snipers** (`snipers_n`, `snipers_held_pct`): wallets (other than the creator) that bought in the launch slot(s), and the share of supply they still hold at entry from the holder ledger. Coins not seen from launch: null.
+- **Fresh wallets** (`fresh_share`, `fresh_n`): of up to 25 sampled buyers in the 5m window, the share whose wallet is younger than `FRESH_WALLET_D` (3) days — wallet age via the existing lookup, `FRESH_DAILY_BUDGET` 2000 calls/day.
+- **Proven wallets** (`proven_vol_share`, `proven_wallets_5m`): share of the 5m buy $ from wallets on the proven list, and how many of them.
+- Fields that are constant on pump.fun tokens (mint/freeze authority, LP burn, tax, blacklist) are not recorded: identical on every coin, they cannot separate anything.
+The alert line shows snipers and proven-wallet share; `/status` shows Dex-Paid hits and fresh-wallet calls.
+
 ## v0.18.18 — memory: `/mem` breakdown and caps on the stores that grew all day (16 Oct)
 After the v0.18.17 restart the process went from 120 MB to 482 MB in 80 minutes; pm2 restarts it at 600 MB, so the bot had been silently restarting several times a day (each one empties the 5m volume windows for a moment). Found by the new memory warning, not by luck.
 - `/mem`: process memory plus the size of every in-memory store (momentum mints/windows/wallet sets, lifecycle buyer sets, holder ledgers, signals, live tokens, PumpSwap and DEX pool maps, fees, copy positions, wallet buys) — so growth is measured, not guessed.
