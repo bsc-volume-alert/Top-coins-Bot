@@ -99,13 +99,13 @@ async function refreshIdle() {
   try {
     const now = Math.floor(Date.now() / 1000); let n = 0;
     for (const [mint, s] of T) {
-      if (!s.pos || s.pos.closed || now - s.lastTs < 120 || n >= 25) continue;
+      if (!s.pos || s.pos.closed || now - (s.pxTs || s.lastTs) < 60 || n >= 25) continue;
       const px = await dexPrice(mint).catch(() => null); n++;
       if (px > 0) { s.lastPx = px; s.lastMc = px * CFG.TOTAL_SUPPLY * solUsdCached(); s.pxSrc = "dex"; s.pxTs = now; updatePos(mint, s, px, now); }
     }
   } finally { refreshing = false; }
 }
-setTimeout(refreshIdle, 8_000); setInterval(refreshIdle, 60_000);
+setTimeout(refreshIdle, 8_000); setInterval(refreshIdle, 20_000);
 setInterval(saveState, 20_000);
 for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => { saveState(); process.exit(0); });
 
