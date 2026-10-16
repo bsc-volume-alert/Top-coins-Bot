@@ -56,6 +56,11 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.30 — dead-coin exit, FOMO links, paper sell buttons (16 Oct)
+- **Dead-coin exit** (`x_dead`): after 10 minutes, if the 5-minute volume stays under $25K for 5 minutes, sell at market. On the 19 trades with a +10m mark, the four whose volume had died by then averaged −42% (P2) / −83% held; nothing with volume at +10m failed. **`x_p3d`** = Project 3 with the dead-coin branch added (whichever of split/dead fires first; a mid-branch half already banked is kept). Both recorded everywhere the other exits are; "P3+dead" on the dashboard and in the summary.
+- Every coin name on the dashboard and analysis page links to its FOMO page.
+- **Sell (paper)** buttons on live positions — 25% / 50% / 100% at the current price, with a confirm. 100% closes the paper position ("manual"); a partial banks that share and the rest follows the position to its close. Recorded as `x_manual` / `manual_pct`, so human exits can be scored against the rules. Paper only: nothing is sent to the chain until the executor exists, and then these buttons will drive it.
+
 ## v0.18.29 — live prices for idle positions, stale labels, page auto-reload (16 Oct)
 Prices on open positions came only from the trade feed, so a coin nobody was trading — and every position rebuilt after a restart — sat at its last known (or entry) price, showing 1.00x / $0 on the dashboard. Now any open position with no trade in the last 2 minutes is re-priced from DexScreener once a minute (max 25 per cycle, same lookup the sweeper uses), the exit rules step on that price too, and the dashboard labels a price that is not from a trade in the last 2 minutes ("dex 3m ago" / "last trade 11m ago" / "no price yet"). The API carries the version and the page reloads itself when a new one deploys.
 

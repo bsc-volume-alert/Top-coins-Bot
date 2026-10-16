@@ -33,22 +33,37 @@ export const ffFinal = (x, flow4Final) => x.flow4ff ?? flow4Final;
 //   in between                  -> half out at 1.5x, the rest rides the same trail (stop = trail from peak before 1.5x)
 // Before the mark: -40% hard stop. Branch recorded in e.splitBranch ("ff" | "run" | "mid" | "stop").
 export const SPLIT_AT_S = 120, SPLIT_FAIL = 0.90, SPLIT_RUN = 1.20, SPLIT_TRAIL = 0.40, SPLIT_CAP = 4;
-export function splitStep(e, x, mult, fromPeak, sinceS) {
+export function splitStep(e, x, mult, fromPeak, sinceS) { const before = x.split; _splitStep(e, x, mult, fromPeak, sinceS); if (x.split != null && before == null && e.splitAt == null) e.splitAt = Math.floor(Date.now() / 1000); }
+function _splitStep(e, x, mult, fromPeak, sinceS) {
   if (x.split != null) return;
   if (!e.splitBranch) {
-    if (mult <= 0.6) { x.split = mult; e.splitBranch = "stop"; return; }
+    if (mult <= 0.6) { x.split = mult; e.splitBranch = "stop"; e.splitAt = Math.floor(Date.now() / 1000); return; }
     if (sinceS == null || sinceS < SPLIT_AT_S) return;
-    if (mult < SPLIT_FAIL) { x.split = mult; e.splitBranch = "ff"; return; }
+    if (mult < SPLIT_FAIL) { x.split = mult; e.splitBranch = "ff"; e.splitAt = Math.floor(Date.now() / 1000); return; }
     e.splitBranch = mult >= SPLIT_RUN ? "run" : "mid"; e.splitHalf = false;
   }
-  if (e.splitBranch === "run") { if (mult >= SPLIT_CAP) x.split = SPLIT_CAP; else if (fromPeak <= -SPLIT_TRAIL) x.split = mult; return; }
+  if (e.splitBranch === "run") { if (mult >= SPLIT_CAP) x.split = SPLIT_CAP; else if (fromPeak <= -SPLIT_TRAIL) x.split = mult; if (x.split != null) e.splitAt = Math.floor(Date.now() / 1000); return; }
   if (e.splitBranch === "mid") {
     if (!e.splitHalf && mult >= 1.5) e.splitHalf = true;
     if (!e.splitHalf) { if (fromPeak <= -SPLIT_TRAIL) x.split = mult; return; }
     if (mult >= SPLIT_CAP) x.split = 0.75 + 0.5 * SPLIT_CAP; else if (fromPeak <= -SPLIT_TRAIL) x.split = 0.75 + 0.5 * mult;
+    if (x.split != null) e.splitAt = Math.floor(Date.now() / 1000);
   }
 }
 export const splitFinal = (e, x, mult) => x.split ?? (e.splitBranch === "mid" && e.splitHalf ? 0.75 + 0.5 * mult : mult);
+// v0.18.30 dead-coin exit: after DEAD_AFTER_S, if the 5-minute volume stays below DEAD_VOL for DEAD_FOR_S, sell at market whatever the price.
+// x_dead = that exit alone (else the hold value). x_p3d = Project 3 with the dead-coin branch added: whichever of split / dead fires first.
+export const DEAD_AFTER_S = 600, DEAD_VOL = 25_000, DEAD_FOR_S = 300;
+export function deadStep(e, x, mult, sinceS, v5Usd, now) {
+  if (x.dead != null || sinceS == null || sinceS < DEAD_AFTER_S) return;
+  if (v5Usd < DEAD_VOL) { if (!e.deadSince) e.deadSince = now; if (now - e.deadSince >= DEAD_FOR_S) { x.dead = mult; e.deadAt = now; } }
+  else e.deadSince = null;
+}
+export function p3dFinal(e, x, mult) {
+  if (x.split != null && (e.deadAt == null || (e.splitAt ?? 0) <= e.deadAt)) return x.split;            // split fired first (or only)
+  if (x.dead != null) return e.splitBranch === "mid" && e.splitHalf ? 0.75 + 0.5 * x.dead : x.dead; // dead fired first; mid branch keeps its banked half
+  return splitFinal(e, x, mult);
+}
 // v0.18.17 clean flow: a wallet that buys and sells the same coin within BOT_PAIR_S seconds is a sandwich/arb bot, and its $ is
 // paired volume that says nothing about direction. Returns buy/sell $ on the rest, plus the share of $ volume that was bot pairs.
 export const BOT_PAIR_S = 2;
@@ -71,7 +86,7 @@ export function stepExits(e, price, mc, v5Usd, buyUsd, sellUsd, sinceS = null) {
   if (x.tp == null && mult >= 2) x.tp = 2;
   if (x.tsl25 == null && fromPeak <= -0.25) x.tsl25 = mult; // v0.17.4
   if (x.tp15 == null && mult >= 1.5) x.tp15 = 1.5;
-  stopStep(x, mult); flowStep(e, x, mult, fromPeak, v5Usd, buyUsd, sellUsd); ffStep(e, x, mult, sinceS); splitStep(e, x, mult, fromPeak, sinceS);
+  stopStep(x, mult); flowStep(e, x, mult, fromPeak, v5Usd, buyUsd, sellUsd); ffStep(e, x, mult, sinceS); splitStep(e, x, mult, fromPeak, sinceS); deadStep(e, x, mult, sinceS, v5Usd, Math.floor(Date.now() / 1000));
   if (x.tsl40 == null && fromPeak <= -0.40) x.tsl40 = mult;
   if (x.tsl60 == null && fromPeak <= -0.60) x.tsl60 = mult;
   if (x.tsl80 == null && fromPeak <= -0.80) x.tsl80 = mult;
@@ -100,7 +115,7 @@ export function finalExits(e, mult) {
     tp: x.tp ?? mult, tsl40: x.tsl40 ?? mult, tsl60: x.tsl60 ?? mult, tsl80: x.tsl80 ?? mult,
     half60: x.half60 ?? (e.half ? 1 + 0.5 * mult : mult), twophase: x.twophase ?? (e.half ? 1 + 0.5 * mult : mult),
     ladder: x.ladder ?? ((e.half ? 0.5 : 0) + (e.s3 ? 0.75 : 0) + (1 - (e.half ? 0.25 : 0) - (e.s3 ? 0.25 : 0)) * mult),
-    levels: levelsFinal(e.lv, mult), m1: x.m1 ?? mult, m1vol: x.m1vol ?? mult, volstop: x.volstop ?? mult, time: mult, combo: x.combo ?? (e.half ? 1 + 0.5 * mult : mult), tp15: x.tp15 ?? mult, tsl25: x.tsl25 ?? mult, flow: x.flow ?? mult, flow4: x.flow4 ?? (x.flow ?? mult), flow4ff: ffFinal(x, x.flow4 ?? (x.flow ?? mult)), split: splitFinal(e, x, mult), ...stopFinal(x, mult, e.peak / e.entry),
+    levels: levelsFinal(e.lv, mult), m1: x.m1 ?? mult, m1vol: x.m1vol ?? mult, volstop: x.volstop ?? mult, time: mult, combo: x.combo ?? (e.half ? 1 + 0.5 * mult : mult), tp15: x.tp15 ?? mult, tsl25: x.tsl25 ?? mult, flow: x.flow ?? mult, flow4: x.flow4 ?? (x.flow ?? mult), flow4ff: ffFinal(x, x.flow4 ?? (x.flow ?? mult)), split: splitFinal(e, x, mult), dead: x.dead ?? mult, p3d: p3dFinal(e, x, mult), ...stopFinal(x, mult, e.peak / e.entry),
   };
 }
 // v0.18.14: price path after entry — multiple at fixed seconds since entry (first tick at or after each mark), so any

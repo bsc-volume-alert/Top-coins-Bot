@@ -11,7 +11,7 @@ import { pumpSwapTick, clusterSnap } from "./signals.js";
 import { watch as afterWatch, tick as afterTick } from "./aftercare.js";
 import { retrySocials } from "./socials.js";
 import { volumeQuality, qualityLine } from "./quality.js";
-import { stopStep, stopFinal, flowStep, pathStep, ffStep, ffFinal, cleanFlow, splitStep, splitFinal } from "./exits.js";
+import { stopStep, stopFinal, flowStep, pathStep, ffStep, ffFinal, cleanFlow, splitStep, splitFinal, deadStep, p3dFinal } from "./exits.js";
 import { openCopy } from "./copytrade.js";
 const coreListeners = []; export const onCoreEntry = (fn) => coreListeners.push(fn);
 import { feeInfo, feeLine } from "./fees.js";
@@ -50,7 +50,7 @@ function saveState() {
     const now = Math.floor(Date.now() / 1000), out = {};
     for (const [m, s] of T) if (now - s.lastTs <= 300 || s.buyers.length || (s.pos && !s.pos.closed)) {
       const o = { w5: s.w5, w1: s.w1, buyers: s.buyers, lastTs: s.lastTs, lastAlert: s.lastAlert, lastPx: s.lastPx, lastMc: s.lastMc, peakMc: s.peakMc, trades: s.trades, firstEntryPx: s.firstEntryPx, posPeakMc: s.posPeakMc, rejectedLevel: s.rejectedLevel, dip: s.dip };
-      if (s.pos && !s.pos.closed) { const p = s.pos; o.pos = { id: p.id, entry: p.entry, entryMc: p.entryMc, entryTs: p.entryTs, peak: p.peak, x: p.x, lad: p.lad, tp: p.tp, msgId: p.msgId, alerted: p.alerted, name: p.name, lv: p.lv, kind: p.kind, volAtEntry: p.volAtEntry, flowArmed: p.flowArmed, flowSince: p.flowSince, ffDone: p.ffDone, splitBranch: p.splitBranch, splitHalf: p.splitHalf, ddPre15: p.ddPre15, path: p.path, hit15Saved: p.hit15Saved }; } // v0.18.28: open positions survive restarts
+      if (s.pos && !s.pos.closed) { const p = s.pos; o.pos = { id: p.id, entry: p.entry, entryMc: p.entryMc, entryTs: p.entryTs, peak: p.peak, x: p.x, lad: p.lad, tp: p.tp, msgId: p.msgId, alerted: p.alerted, name: p.name, lv: p.lv, kind: p.kind, volAtEntry: p.volAtEntry, flowArmed: p.flowArmed, flowSince: p.flowSince, ffDone: p.ffDone, splitBranch: p.splitBranch, splitHalf: p.splitHalf, splitAt: p.splitAt, deadSince: p.deadSince, deadAt: p.deadAt, manual: p.manual, ddPre15: p.ddPre15, path: p.path, hit15Saved: p.hit15Saved }; } // v0.18.28: open positions survive restarts
       out[m] = o;
     }
     writeFileSync(STATE_FILE + ".tmp", JSON.stringify({ ts: now, T: out })); renameSync(STATE_FILE + ".tmp", STATE_FILE);
@@ -266,6 +266,8 @@ function updatePos(mint, s, px, now) {
   { const v5f = s.w5.reduce((a, z) => a + z.usd, 0), buf = s.w5.filter((z) => z.b).reduce((a, z) => a + z.usd, 0); flowStep(p, x, mult, fromPeak, v5f, buf, v5f - buf); }
   ffStep(p, x, mult, now - p.entryTs); // v0.18.17
   splitStep(p, x, mult, fromPeak, now - p.entryTs); // v0.18.22
+  deadStep(p, x, mult, now - p.entryTs, s.w5.filter((z) => now - z.ts <= 300).reduce((a, z) => a + z.usd, 0), now); // v0.18.30
+  if ((x.dead != null || x.split != null) && p.deadSaved !== `${x.dead}|${x.split}`) { p.deadSaved = `${x.dead}|${x.split}`; try { q.setDead.run(x.dead ?? null, (x.dead != null || x.split != null) ? p3dFinal(p, x, mult) : null, p.id); } catch {} }
   { const ks = `${x.split}|${p.splitBranch}`; if (p.splitSaved !== ks) { p.splitSaved = ks; try { q.setSplit.run(x.split ?? null, p.splitBranch ?? null, p.id); } catch {} } }
   { const k2 = `${x.flow}|${x.t15s40}|${x.t2s40}|${p.ddPre15}|${x.flow4}`; if (p.ex2Saved !== k2) { p.ex2Saved = k2; try { q.setExits2.run(x.flow ?? null, x.t15s40 ?? null, x.t2s40 ?? null, p.ddPre15 ?? null, x.flow4 ?? null, p.id); } catch {} } }
   if (x.flow4ff != null && p.ffSaved !== x.flow4ff) { p.ffSaved = x.flow4ff; try { q.setFlow4ff.run(x.flow4ff, p.id); } catch {} }
@@ -308,6 +310,7 @@ function finalVariants(p, mult) {
   };
   out.flow4ff = ffFinal(x, out.flow4); // v0.18.17
   out.split = splitFinal(p, x, mult); // v0.18.22
+  out.dead = x.dead ?? mult; out.p3d = p3dFinal(p, x, mult); // v0.18.30
   return out;
 }
 
@@ -317,11 +320,11 @@ function closePos(mint, s, reason) {
   const now = Math.floor(Date.now() / 1000), px = s.lastPx || p.entry, mult = px / p.entry, v = finalVariants(p, mult), peakMult = p.peak / p.entry;
   s.trades.push({ id: p.id, closedTs: now });
   q.updMom.run(s.posPeakMc, peakMult, v.tp, v.tsl40, v.tsl60, v.tsl80, v.half60, v.twophase, v.ladder, v.time, now, s.lastMc, px, reason, (v.time - 1) * 100, 1, v.levels, v.m1, v.m1vol, v.volstop, p.id);
-  try { q.setStops.run(v.tp15, v.tsl25, v.t15s25, v.t15s60, v.t2s25, v.t2s60, p.id); q.setExits2.run(v.flow, v.t15s40, v.t2s40, p.ddPre15 ?? null, v.flow4, p.id); q.setFlow4ff.run(v.flow4ff, p.id); q.setSplit.run(v.split, p.splitBranch ?? null, p.id); } catch {}
+  try { q.setStops.run(v.tp15, v.tsl25, v.t15s25, v.t15s60, v.t2s25, v.t2s60, p.id); q.setExits2.run(v.flow, v.t15s40, v.t2s40, p.ddPre15 ?? null, v.flow4, p.id); q.setFlow4ff.run(v.flow4ff, p.id); q.setSplit.run(v.split, p.splitBranch ?? null, p.id); q.setDead.run(v.dead, v.p3d, p.id); if (p.manual) q.setManual.run(p.manual.banked + (1 - p.manual.sold) * mult, p.manual.sold, p.manual.ts, p.id); } catch {}
   const pc = (m) => `${m >= 1 ? "+" : ""}${((m - 1) * 100).toFixed(0)}%`;
   if (p.alerted) tg(`${v.half60 >= 1 ? "✅" : "🔴"} <b>VOLUME CLOSE</b> — ${esc(p.name)} (${reason}) · peak <b>${peakMult.toFixed(2)}x</b> · now ${mult.toFixed(2)}x\n` +
     `½@2x+60%: <b>${pc(v.half60)}</b> · 2-phase: ${pc(v.twophase)} · ladder: ${pc(v.ladder)} · levels: ${pc(v.levels)}\n$1M-out: ${pc(v.m1)} · $1M-vol: ${pc(v.m1vol)} · vol-stop: ${pc(v.volstop)}\n` +
-    `P3 split: <b>${pc(v.split)}</b> (${p.splitBranch || "—"}) · flow: ${pc(v.flow)} · 1.5x-out: ${pc(v.tp15)} · 1.5x/−25: ${pc(v.t15s25)} · 1.5x/−60: ${pc(v.t15s60)} · 2x/−25: ${pc(v.t2s25)} · 2x/−60: ${pc(v.t2s60)} · trail25: ${pc(v.tsl25)}\n2x out: ${pc(v.tp)} · trail40: ${pc(v.tsl40)} · trail60: ${pc(v.tsl60)} · trail80: ${pc(v.tsl80)} · hold: ${pc(v.time)}`, { replyTo: p.msgId });
+    `P3 split: <b>${pc(v.split)}</b> (${p.splitBranch || "—"}) · P3+dead: ${pc(v.p3d)} · dead-only: ${pc(v.dead)} · flow: ${pc(v.flow)} · 1.5x-out: ${pc(v.tp15)} · 1.5x/−25: ${pc(v.t15s25)} · 1.5x/−60: ${pc(v.t15s60)} · 2x/−25: ${pc(v.t2s25)} · 2x/−60: ${pc(v.t2s60)} · trail25: ${pc(v.tsl25)}\n2x out: ${pc(v.tp)} · trail40: ${pc(v.tsl40)} · trail60: ${pc(v.tsl60)} · trail80: ${pc(v.tsl80)} · hold: ${pc(v.time)}`, { replyTo: p.msgId });
 }
 
 function scorecard(mint, s, m) {
@@ -354,9 +357,25 @@ export function strategySummary(hours) {
   let t = `📋 <b>${hours}h summary</b> · ${new Date().toISOString().slice(11, 16)} UTC\n`;
   for (const r of rows) {
     t += `\n<b>${r.strategy === "early" ? "EARLY (curve)" : r.strategy === "secondwave" ? "SECOND WAVE (curve)" : r.strategy === "copy" ? "COPY (watched wallets)" : r.strategy === "confirm" ? "CONFIRMED (+5m, curve)" : r.strategy === "copycreator" ? "COPY CREATOR" : r.strategy === "climber" ? "CLIMBER (slow riser)" : r.strategy === "grad" ? "GRADUATION (pool open)" : r.strategy === "wave2" ? "SECOND WAVE EARLY (2–4m)" : r.strategy === "momfast" ? "MOMENTUM FAST ($50K in 2m, silent)" : r.strategy === "momdip" ? "MOMENTUM DIP ENTRY (−20% within 10m, silent)" : r.strategy === "momre" ? "MOMENTUM RE-ENTRY (after 1.5x-out or −25% stop, silent)" : r.strategy === "mom60" ? "MOMENTUM $60K/5m (silent)" : r.strategy === "mom80" ? "MOMENTUM $80K/5m (silent)" : r.strategy === "momentum-core-tight" ? "MOMENTUM — CORE TIGHT (<$60K · <6m · steady sizes)" : r.strategy === "momentum-core" ? "MOMENTUM — CORE ($100K/5m · entry <$100K · first entry)" : r.strategy === "wave2-tight" ? "SECOND WAVE — TIGHT (2–3m · $12–25K · dev holds · buys ≥1.3× sells)" : r.strategy === "revival" ? "REVIVAL (curve dip + new buyers)" : r.strategy === "gradrun" ? "GRADUATION RUNNER (vol after grad)" : r.strategy === "gradrec" ? "GRADUATION RECOVERY (dump + buyers back)" : r.strategy === "slow" ? "SLOW BUILD (base breakout)" : "MOMENTUM (volume)"}</b> — ${r.n} trades · ${r.hit15 ?? 0} hit 1.5x (${r.n ? (((r.hit15 || 0) / r.n) * 100).toFixed(0) : 0}%) · ${r.hit2x} hit 2x (${r.n ? ((r.hit2x / r.n) * 100).toFixed(0) : 0}%) · avg peak ${(r.peak || 1).toFixed(2)}x\n`;
-    t += `½@2x+60% ${pc(r.xh)} · 2-phase ${pc(r.x2p)} · ladder ${pc(r.xl)} · levels ${pc(r.xlv)} · $1M-out ${pc(r.xm1)} · $1M-vol ${pc(r.xm1v)} · vol-stop ${pc(r.xvs)} · combo ${pc(r.xc)}\n1.5x-out ${pc(r.xtp15)} · trail25 ${pc(r.x25)} · 2x-out ${pc(r.xtp)} · trail40 ${pc(r.x40)} · trail60 ${pc(r.x60)} · trail80 ${pc(r.x80)} · hold ${pc(r.xt)}\nstops — 1.5x/−25 ${pc(r.s1525)} · 1.5x/−40 ${pc(r.s1540)} · 1.5x/−60 ${pc(r.s1560)} · 2x/−25 ${pc(r.s225)} · 2x/−40 ${pc(r.s240)} · 2x/−60 ${pc(r.s260)} · flow ${pc(r.xflow)} · flow→4x ${pc(r.xflow4)} · flow→4x+fastfail ${pc(r.xflow4ff)} · <b>P3 split ${pc(r.xsplit)}</b>${r.nv40 ? ` · v40 tag: ${r.nv40} trades, flow→4x ${pc(r.xv40)}` : ""}\nran after entry (24h): avg peak ${(r.ap || 1).toFixed(2)}x · ${r.ap3 || 0} went 3x+\n`;
+    t += `½@2x+60% ${pc(r.xh)} · 2-phase ${pc(r.x2p)} · ladder ${pc(r.xl)} · levels ${pc(r.xlv)} · $1M-out ${pc(r.xm1)} · $1M-vol ${pc(r.xm1v)} · vol-stop ${pc(r.xvs)} · combo ${pc(r.xc)}\n1.5x-out ${pc(r.xtp15)} · trail25 ${pc(r.x25)} · 2x-out ${pc(r.xtp)} · trail40 ${pc(r.x40)} · trail60 ${pc(r.x60)} · trail80 ${pc(r.x80)} · hold ${pc(r.xt)}\nstops — 1.5x/−25 ${pc(r.s1525)} · 1.5x/−40 ${pc(r.s1540)} · 1.5x/−60 ${pc(r.s1560)} · 2x/−25 ${pc(r.s225)} · 2x/−40 ${pc(r.s240)} · 2x/−60 ${pc(r.s260)} · flow ${pc(r.xflow)} · flow→4x ${pc(r.xflow4)} · flow→4x+fastfail ${pc(r.xflow4ff)} · <b>P3 split ${pc(r.xsplit)}</b> · P3+dead ${pc(r.xp3d)}${r.nv40 ? ` · v40 tag: ${r.nv40} trades, flow→4x ${pc(r.xv40)}` : ""}\nran after entry (24h): avg peak ${(r.ap || 1).toFixed(2)}x · ${r.ap3 || 0} went 3x+\n`;
   }
   return t;
+}
+/** v0.18.30: dashboard "sell" (paper). pct 1 closes the position now ("manual"); a partial banks pct at the current price and the
+ *  remainder is scored at whatever the position finally closes at. Recorded as x_manual so human exits can be compared with the rules. */
+export function manualSell(id, pct) {
+  for (const [mint, s] of T) {
+    const p = s.pos; if (!p || p.closed || p.id !== id) continue;
+    const now = Math.floor(Date.now() / 1000), px = s.lastPx || p.entry, mult = px / p.entry;
+    const prev = p.manual || { banked: 0, sold: 0 }; const take = Math.min(pct, 1 - prev.sold);
+    if (take <= 0) return { ok: false, error: "already fully sold" };
+    p.manual = { banked: prev.banked + take * mult, sold: prev.sold + take, ts: now };
+    const partialValue = p.manual.banked + (1 - p.manual.sold) * mult;
+    try { q.setManual.run(partialValue, p.manual.sold, now, p.id); } catch {}
+    if (p.manual.sold >= 0.999) closePos(mint, s, "manual");
+    return { ok: true, mult, sold: p.manual.sold, value: partialValue };
+  }
+  return { ok: false, error: "position not open (already closed, or not a momentum position)" };
 }
 /** v0.18.23: open momentum positions for the dashboard */
 export function openPositions() {
@@ -364,7 +383,7 @@ export function openPositions() {
   for (const [mint, s] of T) {
     const p = s.pos; if (!p || p.closed) continue;
     out.push({ id: p.id, mint, name: p.name, entry: p.entry, entryMc: p.entryMc, entryTs: p.entryTs, ageS: now - p.entryTs, lastPx: s.lastPx || p.entry, lastMc: s.lastMc, lastTs: s.lastTs, pxSrc: s.pxSrc || (s.lastTs ? "trade" : null), pxAge: s.pxTs ? now - s.pxTs : (s.lastTs ? now - s.lastTs : null), peak: p.peak, mult: (s.lastPx || p.entry) / p.entry, peakMult: p.peak / p.entry,
-      x: { tp15: p.x.tp15 ?? null, t15s40: p.x.t15s40 ?? null, flow4: p.x.flow4 ?? null, flow: p.x.flow ?? null, split: p.x.split ?? null }, splitBranch: p.splitBranch || null, splitHalf: !!p.splitHalf, flowArmed: !!p.flowArmed, kind: p.kind, restored: p.restored || null, v5: s.w5.filter((x) => now - x.ts <= 300).reduce((a, x) => a + x.usd, 0) });
+      x: { tp15: p.x.tp15 ?? null, t15s40: p.x.t15s40 ?? null, flow4: p.x.flow4 ?? null, flow: p.x.flow ?? null, split: p.x.split ?? null }, splitBranch: p.splitBranch || null, splitHalf: !!p.splitHalf, flowArmed: !!p.flowArmed, kind: p.kind, restored: p.restored || null, manualSold: p.manual?.sold || 0, v5: s.w5.filter((x) => now - x.ts <= 300).reduce((a, x) => a + x.usd, 0) });
   }
   return out.sort((a, b) => b.entryTs - a.entryTs);
 }

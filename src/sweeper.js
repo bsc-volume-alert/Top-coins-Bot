@@ -11,7 +11,7 @@ const CURVE_HOLD = () => CFG.MAX_HOLD_MIN * 60, MOM_HOLD = () => CFG.MOM_MAX_HOL
 const qOpen = db.prepare(`SELECT p.id, p.strategy, p.mint, p.entry_ts, p.entry_price, p.peak_mult, p.x_tp, p.x_tsl40, p.x_tsl60, p.x_tsl80, p.x_cluster, p.x_grad, p.x_half60, p.x_twophase, p.x_ladder, p.x_levels, p.x_m1, p.x_m1vol, p.x_volstop, p.peak_mc, t.bonding_curve, t.graduated
   FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint WHERE p.closed=0 AND COALESCE(p.invalid,0)=0 AND p.entry_ts < ? ORDER BY p.entry_ts LIMIT ?`);
 const qClose = db.prepare(`UPDATE paper_trades SET x_tp=?, x_tsl40=?, x_tsl60=?, x_tsl80=?, x_cluster=?, x_grad=?, x_half60=?, x_twophase=?, x_ladder=?, x_levels=?, x_m1=?, x_m1vol=?, x_volstop=?, x_time=?, exit_ts=?, exit_mc=?, exit_price=?, exit_reason=?, pnl_pct=?, closed=1, peak_mult=MAX(COALESCE(peak_mult,1),?) WHERE id=? AND closed=0`);
-const qStops = db.prepare(`UPDATE paper_trades SET x_tp15=COALESCE(x_tp15,?), x_tsl25=COALESCE(x_tsl25,?), x_t15s25=COALESCE(x_t15s25,?), x_t15s60=COALESCE(x_t15s60,?), x_t2s25=COALESCE(x_t2s25,?), x_t2s60=COALESCE(x_t2s60,?), x_combo=COALESCE(x_combo,?), x_flow=COALESCE(x_flow,?), x_t15s40=COALESCE(x_t15s40,?), x_t2s40=COALESCE(x_t2s40,?), x_flow4=COALESCE(x_flow4,?), x_flow4ff=COALESCE(x_flow4ff,COALESCE(x_flow4,?)), x_split=COALESCE(x_split,?), split_branch=COALESCE(split_branch,'sweep') WHERE id=?`); // v0.18.17: flow4ff falls back to flow4 on swept trades
+const qStops = db.prepare(`UPDATE paper_trades SET x_tp15=COALESCE(x_tp15,?), x_tsl25=COALESCE(x_tsl25,?), x_t15s25=COALESCE(x_t15s25,?), x_t15s60=COALESCE(x_t15s60,?), x_t2s25=COALESCE(x_t2s25,?), x_t2s60=COALESCE(x_t2s60,?), x_combo=COALESCE(x_combo,?), x_flow=COALESCE(x_flow,?), x_t15s40=COALESCE(x_t15s40,?), x_t2s40=COALESCE(x_t2s40,?), x_flow4=COALESCE(x_flow4,?), x_flow4ff=COALESCE(x_flow4ff,COALESCE(x_flow4,?)), x_split=COALESCE(x_split,?), split_branch=COALESCE(split_branch,'sweep'), x_p3d=COALESCE(x_p3d,COALESCE(x_split,?)), x_dead=COALESCE(x_dead,?) WHERE id=?`); // v0.18.17: flow4ff falls back to flow4 on swept trades
 const qNoPrice = db.prepare(`UPDATE paper_trades SET closed=1, exit_ts=?, exit_reason='sweep-noprice' WHERE id=? AND closed=0`);
 
 function parseCurve(b64) { // pump.fun BondingCurve: disc(8) vtok u64, vsol u64, rtok u64, rsol u64, supply u64, complete u8
@@ -56,7 +56,7 @@ export async function sweep(batch = CFG.SWEEP_BATCH) {
     }
     const mult = px / r.entry_price, v = finals(r, mult), mc = px * CFG.TOTAL_SUPPLY * solUsdCached();
     qClose.run(v.tp, v.tsl40, v.tsl60, v.tsl80, v.cluster, v.grad, v.half60, v.twophase, v.ladder, v.levels, v.m1, v.m1vol, v.volstop, v.time, now, mc, px, "sweep", (mult - 1) * 100, mult, r.id);
-    { const pk = Math.max(r.peak_mult || 1, mult), h2 = pk >= 2; try { qStops.run(pk >= 1.5 ? 1.5 : mult, mult, pk >= 1.5 ? 1.5 : mult, pk >= 1.5 ? 1.5 : mult, h2 ? 2 : mult, h2 ? 2 : mult, h2 ? 1 + 0.5 * mult : mult, mult, pk >= 1.5 ? 1.5 : mult, h2 ? 2 : mult, pk >= 4 ? 4 : mult, pk >= 4 ? 4 : mult, pk >= 4 ? 4 : mult, r.id); } catch {} } // v0.18.3: no NULL exits on swept trades
+    { const pk = Math.max(r.peak_mult || 1, mult), h2 = pk >= 2; try { qStops.run(pk >= 1.5 ? 1.5 : mult, mult, pk >= 1.5 ? 1.5 : mult, pk >= 1.5 ? 1.5 : mult, h2 ? 2 : mult, h2 ? 2 : mult, h2 ? 1 + 0.5 * mult : mult, mult, pk >= 1.5 ? 1.5 : mult, h2 ? 2 : mult, pk >= 4 ? 4 : mult, pk >= 4 ? 4 : mult, pk >= 4 ? 4 : mult, pk >= 4 ? 4 : mult, mult, r.id); } catch {} } // v0.18.3: no NULL exits on swept trades
     fails.delete(r.id); sw.closed++;
   }
   return rows.length;
