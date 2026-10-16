@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.24 — dashboard polish (16 Oct)
+Per-project chart with SOL and time axes and green/red fill; win/loss bar with counts; best/worst trade; segmented per-trade size (0.1/0.25/0.5/1 SOL) and cost buttons that recolour everything; trade rows carry SOL P&L per project at the selected size with a green/red edge (keyed to Project 3, or Project 2 before it existed).
+
 ## v0.18.23 — live dashboard (16 Oct)
 A read-only web page served by the tracker itself (`src/web.js`, no extra process): the three projects' live books (net SOL after costs at a chosen trade size, win rate, average, last 24h, ≥2x/4x counts, equity curve), the open positions with each project's current state on them (P1 took 1.5x / stopped, P2 armed / exited, P3 branch and countdown to its 2-minute decision), the last 25 core trades with all three exits side by side, and the parameters. Refreshes every 10 s. Each project's book starts when its exit began recording live (P1/P2 15 Oct 12:52 UTC, P3 16 Oct 16:00 UTC) so sweeper-filled rows never count.
 Enabled by `WEB_KEY` in `.env` (`WEB_PORT` default 8787); without a key the server does not start. URL: `http://<droplet>:8787/?key=<WEB_KEY>`. Plain HTTP with a secret in the link — fine for read-only paper data; not where a wallet key will ever live.
