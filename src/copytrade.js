@@ -89,5 +89,6 @@ function close(mint, p, reason) {
   if (p.alerted !== false) tg(`${v.half60 >= 1 ? "✅" : "🔴"} <b>${p.kind === "climber" ? "CLIMBER CLOSE" : p.kind === "grad" ? "GRADUATION CLOSE" : p.kind === "wave2" ? "SECOND WAVE CLOSE" : p.kind === "revival" ? "REVIVAL CLOSE" : p.kind === "gradrun" ? "GRADUATION RUNNER CLOSE" : p.kind === "gradrec" ? "GRADUATION RECOVERY CLOSE" : p.kind === "slow" ? "SLOW BUILD CLOSE" : p.kind === "copycreator" ? "COPY CREATOR CLOSE" : "COPY CLOSE"}</b> — ${esc(p.label)} / ${esc(p.name)} (${reason}) · peak <b>${peakMult.toFixed(2)}x</b> · now ${mult.toFixed(2)}x\ncombo <b>${pc(v.combo)}</b> · ½@2x+60%: ${pc(v.half60)} · 2-phase ${pc(v.twophase)} · vol-stop ${pc(v.volstop)} · 2x-out ${pc(v.tp)} · trail40 ${pc(v.tsl40)} · hold ${pc(v.time)}`, { replyTo: p.msgId });
   const arr = P.get(mint); if (arr && arr.every((z) => z.closed)) P.delete(mint);
 }
+setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const arr of P.values()) for (const p of arr) while (p.w5.length && now - p.w5[0].ts > 300) p.w5.shift(); }, 60_000); // v0.18.20
 export const memStats = () => { let n = 0, w5 = 0; for (const arr of P.values()) for (const p of arr) { n++; w5 += p.w5.length; } return { mints: P.size, positions: n, w5 }; }; // v0.18.18
 export const cpStats = () => ({ ...cp, open: [...P.values()].flat().filter((p) => !p.closed).length });

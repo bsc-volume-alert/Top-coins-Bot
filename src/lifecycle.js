@@ -83,6 +83,7 @@ onSwap((tr) => { const s = L.get(tr.mint); const ct = s?.createTs ?? q.tokenMeta
 setInterval(() => {
   const now = Math.floor(Date.now() / 1000);
   for (const [mint, s] of L) {
+    while (s.w5.length && now - s.w5[0].ts > 300) s.w5.shift(); while (s.ring.length && now - s.ring[0].ts > 1260) s.ring.shift(); while (s.bts.length && now - s.bts[0].ts > 1260) s.bts.shift(); // v0.18.20: windows only trimmed on new trades before — dead coins kept their last 20 min forever
     sample(mint, s, now);
     if (s.next >= CFG.LIFE_CHECKPOINTS.length || (now - s.createTs > 7200 && now - s.lastTs > 7200)) L.delete(mint); // v0.18.18: any token quiet for 2h is released (was held up to 25h waiting for late checkpoints)
     else if (now - s.createTs > 90000) L.delete(mint);

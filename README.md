@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.20 — memory, second pass: dead coins kept their last 20 minutes of trades (16 Oct)
+`/mem` after 85 minutes: heap 65 → 230 MB, almost all in lifecycle (2,300 coins, 339K ring entries, 182K window entries). The rolling windows were only trimmed when a new trade arrived, so a coin that died kept its final 20 minutes of history until it was released hours later. Now trimmed by time every 30 s (lifecycle), 60 s (momentum, copy positions). pm2 ceiling raised 600 → 900 MB (2 GB swap added on the droplet). Recording unchanged.
+
 ## v0.18.19 — more entry-time features for the winners-vs-losers table (16 Oct)
 Recording only. Every momentum entry now also records:
 - **Dex Paid** (`dex_paid`, `dex_paid_types`, `dex_paid_lead_s`): approved DexScreener orders for the coin (tokenProfile / communityTakeover / ads) from the public orders endpoint, and how many seconds before our entry the first was paid. One call per entry.

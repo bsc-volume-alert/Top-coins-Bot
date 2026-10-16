@@ -35,6 +35,7 @@ setInterval(() => { // v0.18.18: traded mints are released 3h after their last c
   for (const [m, s] of T) {
     if (!s.pos && now - s.lastTs > 900 && (!s.trades.length || now - s.trades.at(-1).closedTs > 3 * 3600)) { T.delete(m); continue; }
     if (s.seen.size > 5000 && !s.pos && now - s.lastTs > 300) s.seen.clear();
+    while (s.w5.length && now - s.w5[0].ts > 300) s.w5.shift(); while (s.w1.length && now - s.w1[0].ts > 60) s.w1.shift(); // v0.18.20
     while (s.buyers.length && now - s.buyers[0].ts > CFG.PREPUMP_WINDOW_S) s.buyers.shift();
   }
   mom.tracked = T.size;
