@@ -17,7 +17,10 @@ const P2_FROM = Date.UTC(2026, 9, 15, 12, 52) / 1000, P3_FROM = Date.UTC(2026, 9
 // v0.18.33 Project 1 filtered: live book starts fresh at this deploy; the 15–16 Oct back-test is shown separately as fitted.
 const P1F_FROM = Date.UTC(2026, 9, 16, 21, 10) / 1000, P1F_MC = 47_000;
 const p1Pass = (r) => String(r.venue || "").startsWith("pumpswap/") || (r.entry_mc > 0 && r.entry_mc < P1F_MC);
-const qCore = db.prepare(`SELECT id, name, mint, entry_ts, entry_mc, entry_price, peak_mult, after_peak_mult, closed, exit_reason, core_v40, x_t15s40, x_flow4, x_split, split_branch, x_flow4ff, vol1m_usd, age_s, venue
+// v0.18.34 Project 2 filtered: small crowd (≤600 distinct wallets in the 5-min window) OR Project 1's filter. Fresh book from this deploy.
+const P2F_FROM = Date.UTC(2026, 9, 16, 21, 25) / 1000, P2F_WALLETS = 600;
+const p2Pass = (r) => p1Pass(r) || (r.q_wallets != null && r.q_wallets <= P2F_WALLETS);
+const qCore = db.prepare(`SELECT id, name, mint, entry_ts, entry_mc, entry_price, peak_mult, after_peak_mult, closed, exit_reason, core_v40, x_t15s40, x_flow4, x_split, split_branch, x_flow4ff, vol1m_usd, age_s, venue, q_wallets
   FROM paper_trades WHERE strategy='momentum' AND core=1 AND COALESCE(invalid,0)=0 AND entry_ts>=? ORDER BY entry_ts`);
 const qRecent = db.prepare(`SELECT p.id, p.name, p.mint, p.entry_ts, p.entry_mc, p.peak_mult, p.after_peak_mult, p.closed, p.exit_reason, p.core_v40, p.x_t15s40, p.x_flow4, p.x_split, p.split_branch, p.x_p3d, p.conf_ok, p.conf_ratio,
   (SELECT c.x_t15s40 FROM paper_trades c WHERE c.strategy='momconf' AND c.mint=p.mint AND c.entry_ts BETWEEN p.entry_ts AND p.entry_ts+200 LIMIT 1) AS p4x
@@ -80,13 +83,21 @@ export function snapshot(size = 0.25, cost = 0.05) {
     p1: { name: "Project 1 — filtered", rule: "fresh book from 16 Oct 22:10 · only trades that pass the filters below",
       filters: ["Volume trigger: $100K traded in the last 5 minutes", "Entry market cap under $100K, first entry on the coin, coin at least 60 s old", "<b>AND</b> one of: <b>pool quoted in a stock token</b> (NVDAx, TRUMP, TTWO, GOOGLx…) <b>or</b> <b>market cap under $47K</b> at the trigger", "Sell everything at <b>1.5x</b> · stop at <b>−40%</b> from entry · out after 6 h"],
       ...book(rows.filter(p1Pass), "x_t15s40", P1F_FROM, size, cost) },
-    p2: { name: "Project 2", rule: "runner: hold while 5m vol ≥ $100K · cap 4x · −40% stop before 1.5x", ...book(rows, "x_flow4", P2_FROM, size, cost) },
+    p2: { name: "Project 2 — filtered", rule: "fresh book from 16 Oct 22:25 · only trades that pass the filters below",
+      filters: ["Volume trigger: $100K traded in the last 5 minutes", "Entry market cap under $100K, first entry on the coin, coin at least 60 s old", "<b>AND</b> one of: <b>small crowd</b> — no more than <b>600 different wallets</b> traded in that 5-minute window <b>or</b> <b>pool quoted in a stock token</b> <b>or</b> <b>market cap under $47K</b>", "Runner exit: hold while 5m volume stays ≥ <b>$100K</b> and buys ≥ sells · cap <b>4x</b> · stop <b>−40%</b> before 1.5x · 50% trail backstop"],
+      ...book(rows.filter(p2Pass), "x_flow4", P2F_FROM, size, cost) },
     p3: { name: "Project 3", rule: "at 2 min: <0.90× sell · ≥1.20× hold (40% trail, cap 4x) · else half at 1.5x, rest rides", ...book(rows, "x_split", P3_FROM, size, cost) },
   };
   { const bt = rows.filter((r) => r.entry_ts >= P2_FROM && r.entry_ts < P1F_FROM && r.x_t15s40 != null && p1Pass(r)), all = rows.filter((r) => r.entry_ts >= P2_FROM && r.x_t15s40 != null);
     const sum = (a) => +a.reduce((x, r) => x + size * (r.x_t15s40 * (1 - cost) - 1), 0).toFixed(3);
     projects.p1.backtest = { n: bt.length, win: bt.length ? bt.filter((r) => r.x_t15s40 > 1).length / bt.length : null, net: sum(bt) };
     projects.p1.unfiltered = { n: all.length, net: sum(all) }; }
+  { const f = rows.filter((r) => r.entry_ts >= P2_FROM && r.x_flow4 != null && p2Pass(r)), bt = f.filter((r) => r.entry_ts < P2F_FROM), all = rows.filter((r) => r.entry_ts >= P2_FROM && r.entry_ts < P2F_FROM && r.x_flow4 != null);
+    const sum = (a, col) => +a.reduce((x, r) => x + size * ((r[col] ?? 1) * (1 - cost) - 1), 0).toFixed(3);
+    projects.p2.backtest = { n: bt.length, win: bt.length ? bt.filter((r) => r.x_flow4 > 1).length / bt.length : null, net: sum(bt, "x_flow4") };
+    projects.p2.unfiltered = { n: all.length, net: sum(all, "x_flow4") };
+    const live = f.filter((r) => r.entry_ts >= P2F_FROM && r.x_t15s40 != null);
+    projects.p2.vsP1 = { n: live.length, p2: sum(live, "x_flow4"), p1: sum(live, "x_t15s40") }; }
   const crows = qConf.all(), dec = qConfDecisions.get() || {};
   projects.p4 = { name: "Project 4", rule: `confirm: buy ${CFG.MOM_CONF_S}s after the trigger only if price is still above the trigger price · sell at 1.5x · −40% stop`, ...book(crows, "x_t15s40", 0, size, cost), taken: dec.taken || 0, skipped: dec.skipped || 0 };
   const v40 = rows.filter((r) => r.entry_ts >= P3_FROM && r.core_v40 === 1);
@@ -96,8 +107,8 @@ export function snapshot(size = 0.25, cost = 0.05) {
     const r = rows.find((z) => z.id === p.id);
     const cp = confOpen.get(p.mint), c = p.conf;
     const p4 = !c ? "—" : !c.done ? `deciding in ${c.left}s` : !c.ok ? `skipped (${c.ratio != null ? c.ratio.toFixed(2) + "x" : "no price"})` : cp ? (cp.e.x.t15s40 != null ? (cp.e.x.t15s40 >= 1.5 ? "took 1.5x" : `stopped ${cp.e.x.t15s40.toFixed(2)}x`) : `in at ${c.ratio.toFixed(2)}x · now ${(cp.lastPx / cp.e.entry).toFixed(2)}x`) : `bought at ${c.ratio.toFixed(2)}x`;
-    return { ...p, core: !!r, coreV40: r?.core_v40 === 1, p1: p.x.t15s40 != null ? (p.x.t15s40 >= 1.5 ? "took 1.5x" : `stopped ${p.x.t15s40.toFixed(2)}x`) : p.mult <= 0.6 ? "stopping" : "running",
-      p2: p.x.flow4 != null ? `exited ${p.x.flow4.toFixed(2)}x` : p.flowArmed ? "armed (holding)" : "running", p3: p.x.split != null ? `exited ${p.x.split.toFixed(2)}x (${p.splitBranch})` : p.splitBranch ? `${p.splitBranch}${p.splitHalf ? " · half taken" : ""}` : p.ageS < 120 ? `deciding in ${120 - p.ageS}s` : "running", p4 };
+    return { ...p, core: !!r, coreV40: r?.core_v40 === 1, p1: r && !p1Pass(r) ? "not in filter" : p.x.t15s40 != null ? (p.x.t15s40 >= 1.5 ? "took 1.5x" : `stopped ${p.x.t15s40.toFixed(2)}x`) : p.mult <= 0.6 ? "stopping" : "running",
+      p2: r && !p2Pass(r) ? "not in filter" : p.x.flow4 != null ? `exited ${p.x.flow4.toFixed(2)}x` : p.flowArmed ? "armed (holding)" : "running", p3: p.x.split != null ? `exited ${p.x.split.toFixed(2)}x (${p.splitBranch})` : p.splitBranch ? `${p.splitBranch}${p.splitHalf ? " · half taken" : ""}` : p.ageS < 120 ? `deciding in ${120 - p.ageS}s` : "running", p4 };
   });
   const recent = qRecent.all().map((r) => ({ ...r, peak: Math.max(r.peak_mult || 1, r.after_peak_mult || 1) }));
   return { now: Math.floor(Date.now() / 1000), version: VERSION, sol: solUsdCached(), size, cost, mem: memMb(), projects, open, recent,
@@ -131,7 +142,7 @@ footer{padding:16px;color:var(--mut);font-size:12px;text-align:center}
 <header><div><h1>Ismael — live paper trading <a id="alink" href="#" style="font-size:12px;color:var(--acc);margin-left:10px;font-weight:500">analysis →</a></h1><div class="mut" id="sub">loading…</div></div>
 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="mut">per trade</span><span class="seg" id="size"><button data-v="0.1">0.1</button><button data-v="0.25" class="on">0.25</button><button data-v="0.5">0.5</button><button data-v="1">1 SOL</button></span><span class="mut">costs</span><span class="seg" id="cost"><button data-v="0">0%</button><button data-v="0.05" class="on">5%</button><button data-v="0.1">10%</button></span></div></header>
 <main>
-<div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px"><h2 style="margin:0;font-size:15px">All three projects — cumulative net SOL</h2><div id="legend" style="font-size:12px"></div></div><div id="combo"></div></div>
+<div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px"><h2 style="margin:0;font-size:15px">All four projects — cumulative net SOL</h2><div id="legend" style="font-size:12px"></div></div><div id="combo"></div></div>
 <div class="grid" id="projects"></div>
 <h3>Live positions</h3><div class="tbl"><table id="open"><thead><tr><th>coin</th><th>entered</th><th>age</th><th>entry MC</th><th>now</th><th>peak</th><th>5m vol</th><th>P1</th><th>P2</th><th>P3</th><th>P4</th><th>sell (paper)</th></tr></thead><tbody></tbody></table></div>
 <h3>Last 25 core trades <span class="mut" style="text-transform:none;letter-spacing:0">— P&L per project at the selected size; row colour = Project 3 (or Project 2 before it existed)</span></h3><div class="tbl"><table id="recent"><thead><tr><th>coin</th><th>entered (UTC)</th><th>entry MC</th><th>peak</th><th>P1</th><th>P2</th><th>P3</th><th>P3+dead</th><th>P4</th><th>P3 branch</th><th>P3 filter</th><th>state</th></tr></thead><tbody></tbody></table></div>
@@ -172,7 +183,7 @@ $('#projects').innerHTML=['p1','p2','p3','p4'].map(k=>{const p=d.projects[k];con
 const dur=p.durationH<48?Math.round(p.durationH)+' hours':(p.durationH/24).toFixed(1)+' days';
 const daysT=p.days&&p.days.length?'<table style="margin-top:10px;font-size:12px"><tr><th>day (UTC)</th><th>trades</th><th>won</th><th>net</th></tr>'+p.days.map(d=>'<tr><td>'+d.day.slice(5)+'</td><td>'+d.n+'</td><td>'+d.wins+'</td><td class="'+cls(d.net)+'">'+sol(d.net)+'</td></tr>').join('')+'</table>':'';
 const flt=p.filters?'<div class="flt"><h4>Filters — all must pass</h4><ol>'+p.filters.map(x=>'<li>'+x+'</li>').join('')+'</ol></div>':'';
-const btl=p.backtest?'<div class="bt">back-test 15–16 Oct (filter found on this data — fitted): '+p.backtest.n+' trades · '+(p.backtest.win==null?'—':(p.backtest.win*100).toFixed(0)+'% won')+' · <span class="'+cls(p.backtest.net)+'">'+sol(p.backtest.net)+'</span><br>same period without the filter: '+p.unfiltered.n+' trades · <span class="'+cls(p.unfiltered.net)+'">'+sol(p.unfiltered.net)+'</span></div>':'';
+const btl=p.backtest?'<div class="bt">back-test 15–16 Oct (filter found on this data — fitted): '+p.backtest.n+' trades · '+(p.backtest.win==null?'—':(p.backtest.win*100).toFixed(0)+'% won')+' · <span class="'+cls(p.backtest.net)+'">'+sol(p.backtest.net)+'</span><br>same period without the filter: '+p.unfiltered.n+' trades · <span class="'+cls(p.unfiltered.net)+'">'+sol(p.unfiltered.net)+'</span>'+(p.vsP1&&p.vsP1.n?'<br>pass test: live filtered trades with this exit <span class="'+cls(p.vsP1.p2)+'">'+sol(p.vsP1.p2)+'</span> vs selling the same '+p.vsP1.n+' at 1.5x <span class="'+cls(p.vsP1.p1)+'">'+sol(p.vsP1.p1)+'</span>':'')+'</div>':'';
 return '<div class="card"'+(p.filters?' style="border-color:rgba(57,255,156,.55)"':'')+'><h2>'+p.name+'</h2><div class="rule">'+p.rule+'</div>'+flt+btl+'<div class="mut" style="margin-top:6px">last 24 hours</div><div class="big '+cls(p.net24)+'">'+(p.n24?sol(p.net24):'—')+'</div><div class="mut">'+p.n24+' trades'+(p.open?' · '+p.open+' open now':'')+'</div>'+
 '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line)"><span class="mut">total</span> <b class="'+cls(p.net)+'" style="font-size:20px">'+(p.n?sol(p.net):'—')+'</b> <span class="mut">· '+p.n+' trades · '+(p.n?dur:'—')+'</span></div>'+chart(p.curve)+wl(p)+
 '<div class="kv"><span class="mut">win rate</span><b>'+(p.win==null?'—':(p.win*100).toFixed(0)+'%')+'</b><span class="mut">avg per trade</span><b>'+pc(p.avg==null?null:p.avg+1)+'</b><span class="mut">win rate 24h</span><b>'+(p.win24==null?'—':(p.win24*100).toFixed(0)+'%')+'</b><span class="mut">reached 2x / 4x</span><b>'+p.big+' / '+p.cap+'</b><span class="mut">best / worst trade</span><b><span class="up">'+(p.best>=0?'+':'')+p.best.toFixed(2)+'</span> / <span class="dn">'+p.worst.toFixed(2)+'</span></b></div>'+f+(k==='p4'?'<div class="kv" style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"><span class="mut">triggers taken / skipped</span><b>'+p.taken+' / '+p.skipped+'</b></div>':'')+daysT+'</div>'}).join('');

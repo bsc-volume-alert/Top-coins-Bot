@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.34 — Project 2 filtered, fresh book (16 Oct)
+Project 2's card is now "Project 2 — filtered": only core trades with ≤ 600 distinct wallets in the 5-minute trigger window, or that pass Project 1's filter (stock-token pool or MC under $47K); runner exit unchanged. Live book starts fresh at 16 Oct 21:25 UTC; the 15–16 Oct back-test (fitted) and the unfiltered figure are shown in grey, plus a pass-test line comparing the live filtered trades with selling the same trades at 1.5x. Live positions that fail a project's filter show "not in filter" in that column. Pre-registered in `analysis/README.md`.
+
 ## v0.18.33 — Project 1 filtered, fresh book (16 Oct)
 Project 1's card is now "Project 1 — filtered": only core trades on a stock-token-quoted PumpSwap pool or with entry MC under $47K, exit unchanged (1.5x / −40%). The live book starts fresh at 16 Oct 21:10 UTC; the 15–16 Oct back-test (35 of 80 trades, 66% won, +1.02 SOL at 0.25 — fitted, the filter was found on it) and the unfiltered figure for the same period are shown beneath it in grey. The filters are listed in a highlighted box on the card. Pre-registered in `analysis/README.md`.
 
