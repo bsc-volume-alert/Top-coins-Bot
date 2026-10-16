@@ -18,3 +18,5 @@ setInterval(() => {
   }
 }, 30_000);
 export const afterStats = () => ({ watching: W.size });
+
+export const memStats = () => { let n = 0; for (const a of W.values()) n += a.length; return { mints: W.size, watches: n }; }; // v0.18.21

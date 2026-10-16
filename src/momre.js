@@ -15,7 +15,8 @@ const W = new Map(); // mint -> {name, symbol, main:{entry,x}, w5:[], n, last:{p
 const exitOf = (entry, x) => (x.tp15 != null ? { px: entry * 1.5, kind: "tp" } : x.t15s25 != null ? { px: entry * x.t15s25, kind: "stop" } : null);
 
 onCoreEntry(({ mint, name, symbol, pos }) => { W.set(mint, { name, symbol, main: pos, w5: [], n: 0, flat: null, lastRe: null, ts: pos.entryTs }); mr.tracked = W.size; });
-setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [m, w] of W) if (now - w.ts > CFG.MOM_MAX_HOLD_MIN * 60) W.delete(m); mr.tracked = W.size; }, 60_000);
+setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [m, w] of W) { if (now - w.ts > CFG.MOM_MAX_HOLD_MIN * 60) { W.delete(m); continue; } while (w.w5.length && now - w.w5[0].ts > 300) w.w5.shift(); } mr.tracked = W.size; }, 60_000); // v0.18.21: time-trim
+export const memStats = () => { let w5 = 0; for (const w of W.values()) w5 += w.w5.length; return { mints: W.size, w5 }; };
 
 onSwap((tr) => {
   const w = W.get(tr.mint); if (!w) return;

@@ -8,7 +8,8 @@ import { solUsdCached } from "./price.js";
 import { openCopy } from "./copytrade.js";
 const S = new Map(); // mint -> {w5:[], w2:[], last:{tier: ts}}
 export const mt = { entries: 0 };
-setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [m, s] of S) if (now - (s.ts || 0) > 900) S.delete(m); }, 60_000);
+setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [m, s] of S) { if (now - (s.ts || 0) > 900) { S.delete(m); continue; } while (s.w5.length && now - s.w5[0].ts > 300) s.w5.shift(); if (s.w2) while (s.w2.length && now - s.w2[0].ts > 120) s.w2.shift(); } }, 60_000); // v0.18.21: time-trim
+export const memStats = () => { let w5 = 0, w2 = 0; for (const s of S.values()) { w5 += s.w5.length; w2 += s.w2?.length || 0; } return { mints: S.size, w5, w2 }; };
 onSwap((tr) => {
   const usd = tr.sol * solUsdCached(); if (!(usd > 0)) return;
   const now = tr.ts || Math.floor(Date.now() / 1000);

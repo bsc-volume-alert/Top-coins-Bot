@@ -18,6 +18,9 @@ import { memStats as memDex } from "./dex.js";
 import { memStats as memFees } from "./fees.js";
 import { memStats as memCopy } from "./copytrade.js";
 import { memStats as memWal } from "./wallets.js";
+import { memStats as memTiers } from "./momtiers.js";
+import { memStats as memRe } from "./momre.js";
+import { memStats as memAfter } from "./aftercare.js";
 import { leaderboardText, walletText, addWatch, removeWatch, watchList, creatorsText, creatorText, addWatchCreator, removeWatchCreator, watchCreatorList } from "./wallets.js";
 const TOKEN = () => process.env.TG_BOT_TOKEN, CHAT = () => String(process.env.TG_CHAT_ID);
 let offset = 0, deps = {};
@@ -41,9 +44,9 @@ async function poll() {
         else if (cmd === "/csvfull") await sendCsv(true);
         else if (cmd === "/status") await tg(deps.status ? deps.status() : "n/a");
         else if (cmd === "/mem") { // v0.18.18: what is in memory, so growth can be seen instead of guessed
-          const mu = process.memoryUsage(), f = (o) => Object.entries(o).map(([k, v]) => `${k} ${typeof v === "number" ? v.toLocaleString("en-GB") : v}`).join(" · ");
-          const parts = { momentum: memMom, lifecycle: memLife, holders: memHold, signals: memSig, live: memLive, pumpswap: memPs, dex: memDex, fees: memFees, copy: memCopy, wallets: memWal };
-          let t = `🧠 <b>Memory</b> rss ${Math.round(mu.rss / 1048576)} MB · heap ${Math.round(mu.heapUsed / 1048576)}/${Math.round(mu.heapTotal / 1048576)} MB · external ${Math.round(mu.external / 1048576)} MB · arrays ${Math.round(mu.arrayBuffers / 1048576)} MB\n`;
+          const mu = process.memoryUsage(), hs = (await import('node:v8')).getHeapStatistics(), f = (o) => Object.entries(o).map(([k, v]) => `${k} ${typeof v === "number" ? v.toLocaleString("en-GB") : v}`).join(" · ");
+          const parts = { momentum: memMom, lifecycle: memLife, holders: memHold, signals: memSig, live: memLive, pumpswap: memPs, dex: memDex, fees: memFees, copy: memCopy, wallets: memWal, tiers: memTiers, reentry: memRe, aftercare: memAfter };
+          let t = `🧠 <b>Memory</b> rss ${Math.round(mu.rss / 1048576)} MB · heap ${Math.round(mu.heapUsed / 1048576)}/${Math.round(mu.heapTotal / 1048576)} MB · external ${Math.round(mu.external / 1048576)} MB · arrays ${Math.round(mu.arrayBuffers / 1048576)} MB · heap limit ${Math.round(hs.heap_size_limit / 1048576)} MB\n`;
           for (const [k, fn] of Object.entries(parts)) { try { t += `<b>${k}</b>: ${f(fn())}\n`; } catch (e) { t += `<b>${k}</b>: error ${esc(e.message)}\n`; } }
           await tg(t);
         }
