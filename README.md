@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.26 — dashboard theme (16 Oct)
+Terminal/synthwave look as requested: monospace type, purple-to-navy vertical gradient background, glassy cards, magenta headings and table headers, cyan section titles, amber figures, neon green/red for profit and loss; chart lines P1 amber, P2 cyan, P3 magenta. Both pages.
+
 ## v0.18.25 — analysis page and combined chart (16 Oct)
 - Main page: one chart with all three projects' cumulative net SOL on the same axes (P1 orange, P2 white, P3 blue) above the cards.
 - `/analysis?key=…` (link in the header): every momentum trade of the last 2/7/30 days with every recorded factor — pool, entry MC, age, 5m/1m volume at entry, 5m volume at +2m and +5m, buyers, wallets, bot share, clean buy/sell, bundle % / SOL / held / sold, snipers and share held, fresh wallets, proven-wallet share, Dex Paid, holders, top-10, largest, dev hold, fees accrued and claims, launch buyers, dev buy, socials, price at +30s/+2m/+5m, seconds to 1.5x, peak, P1/P2/P3, P3 branch and filter, state, DexScreener link. Sortable, filterable, core-only toggle, CSV download. Above it, the core trades split by each factor (entry MC, 1m volume, age, price at +2m, bundle, top-10, snipers, fresh wallets, Dex Paid, fee claims, hour, quote asset) with reach-1.5x/2x/3x and the three exits' averages.
