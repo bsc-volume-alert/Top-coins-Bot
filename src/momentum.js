@@ -49,7 +49,7 @@ function saveState() {
   try {
     const now = Math.floor(Date.now() / 1000), out = {};
     for (const [m, s] of T) if (now - s.lastTs <= 300 || s.buyers.length || (s.pos && !s.pos.closed)) {
-      const o = { w5: s.w5, w1: s.w1, buyers: s.buyers, lastTs: s.lastTs, lastAlert: s.lastAlert, lastPx: s.lastPx, lastMc: s.lastMc, peakMc: s.peakMc, trades: s.trades, firstEntryPx: s.firstEntryPx, posPeakMc: s.posPeakMc, rejectedLevel: s.rejectedLevel, dip: s.dip };
+      const o = { w5: s.w5, w1: s.w1, buyers: s.buyers, lastTs: s.lastTs, lastAlert: s.lastAlert, lastPx: s.lastPx, lastMc: s.lastMc, peakMc: s.peakMc, trades: s.trades, firstEntryPx: s.firstEntryPx, posPeakMc: s.posPeakMc, rejectedLevel: s.rejectedLevel, dip: s.dip, conf: s.conf };
       if (s.pos && !s.pos.closed) { const p = s.pos; o.pos = { id: p.id, entry: p.entry, entryMc: p.entryMc, entryTs: p.entryTs, peak: p.peak, x: p.x, lad: p.lad, tp: p.tp, msgId: p.msgId, alerted: p.alerted, name: p.name, lv: p.lv, kind: p.kind, volAtEntry: p.volAtEntry, flowArmed: p.flowArmed, flowSince: p.flowSince, ffDone: p.ffDone, splitBranch: p.splitBranch, splitHalf: p.splitHalf, splitAt: p.splitAt, deadSince: p.deadSince, deadAt: p.deadAt, manual: p.manual, ddPre15: p.ddPre15, path: p.path, hit15Saved: p.hit15Saved }; } // v0.18.28: open positions survive restarts
       out[m] = o;
     }
@@ -62,7 +62,7 @@ function loadState() {
     if (now - j.ts > 600) return console.log("[momentum] state file too old, ignored");
     for (const [m, v] of Object.entries(j.T || {})) {
       const s = st(m); s.w5 = (v.w5 || []).filter((x) => now - x.ts <= 300); s.w1 = (v.w1 || []).filter((x) => now - x.ts <= 60); s.buyers = (v.buyers || []).filter((x) => now - x.ts <= CFG.PREPUMP_WINDOW_S);
-      Object.assign(s, { lastTs: v.lastTs || 0, lastAlert: v.lastAlert || 0, lastPx: v.lastPx || 0, lastMc: v.lastMc || 0, peakMc: v.peakMc || 0, trades: v.trades || [], firstEntryPx: v.firstEntryPx ?? null, posPeakMc: v.posPeakMc || 0, rejectedLevel: v.rejectedLevel ?? null, dip: v.dip ?? null }); n++; tr += s.w5.length;
+      Object.assign(s, { lastTs: v.lastTs || 0, lastAlert: v.lastAlert || 0, lastPx: v.lastPx || 0, lastMc: v.lastMc || 0, peakMc: v.peakMc || 0, trades: v.trades || [], firstEntryPx: v.firstEntryPx ?? null, posPeakMc: v.posPeakMc || 0, rejectedLevel: v.rejectedLevel ?? null, dip: v.dip ?? null, conf: v.conf ?? null }); n++; tr += s.w5.length;
       if (v.pos && v.pos.id) { s.pos = { ...v.pos, closed: false, lv: v.pos.lv || newLevels(), lad: v.pos.lad || { s2: false, s3: false }, tp: v.pos.tp || { half: false, twoHalf: false }, x: v.pos.x || {} }; armClose(m, s); pr++; }
     }
     console.log(`[momentum] restored ${n} tokens / ${tr} swaps / ${pr} open positions from state saved ${now - j.ts}s ago`);
@@ -143,7 +143,7 @@ onSwap((tr) => {
   if (tr.isBuy && tr.wallet && !tr.wallet.startsWith("tx:")) { s.buyers.push({ ts: now, w: tr.wallet, sol: tr.sol, mc: tr.mc, v: tr.venue || "pumpswap" }); if (s.buyers.length > 5000) s.buyers.splice(0, 1000); }
   s.w1.push({ ts: now, usd, b: tr.isBuy }); while (s.w1.length && now - s.w1[0].ts > 60) s.w1.shift();
   if (s.pos) updatePos(tr.mint, s, tr.price, now);
-  dipCheck(tr.mint, s, tr, now);
+  dipCheck(tr.mint, s, tr, now); confCheck(tr.mint, s, tr.price, tr.mc, now, tr.venue);
   const v5 = s.w5.reduce((a, x) => a + x.usd, 0);
   const bsu = [s.w5.filter((x) => x.b).reduce((a, x) => a + x.usd, 0), s.w5.filter((x) => !x.b).reduce((a, x) => a + x.usd, 0)];
   pumpSwapTick(tr.mint, tr, v5, bsu); afterTick(tr.mint, tr.price, tr.mc);
@@ -222,6 +222,7 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
     if (cs) q.setChurn.run(cs.churn, cs.cOut, cs.held, cs.handoffs, pos.id);
     else if (meta?.bundle_sol > 0) q.setChurn.run((meta.cluster_sol_out || 0) / meta.bundle_sol, meta.cluster_sol_out ?? null, held, meta.handoffs ?? null, pos.id);
   } catch (e) { console.error("[churn entry]", e.message); }
+  if (core) { s.conf = { px: tr.price, ts: now, done: false, ok: null, ratio: null, parentId: pos.id, name: name || mint.slice(0, 8), symbol: symbol || "" }; } // v0.18.32 Project 4
   if (core) { s.dip = { px: tr.price, ts: now, done: false, name: name || mint.slice(0, 8), symbol: symbol || "" }; for (const fn of coreListeners) { try { fn({ mint, name: name || mint.slice(0, 8), symbol: symbol || "", price: tr.price, mc: tr.mc, ts: now, pos }); } catch (e) { console.error("[core listener]", e.message); } } } // v0.18.9
   let hl = null; try { hl = holdersLine(await recordHoldersAsync(pos.id, mint, meta?.creator)); } catch {} // v0.18.5
   let fi = null; try { fi = feeInfo(mint, meta?.creator, createTs); q.setFees.run(fi.accrued, fi.claims, fi.claimedSol, pos.id); } catch (e) { console.error("[fees entry]", e.message); }
@@ -249,6 +250,21 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
 }
 
 // v0.18.9 dip-entry variant: after a core trigger, enter only if price falls MOM_DIP_PCT within MOM_DIP_WINDOW_S (and before 1.5x)
+// v0.18.32 Project 4 — confirmation entry. 60 s after a core trigger, buy only if the price is still above the trigger price.
+// Uses the first trade at or after +60 s (up to +120 s); a timer covers coins that go quiet. Skips are recorded on the core row.
+export const conf = { armed: 0, bought: 0, skipped: 0, late: 0 };
+function confCheck(mint, s, px, mc, now, venue) {
+  const c = s.conf; if (!c || c.done) return;
+  const age = now - c.ts; if (age < CFG.MOM_CONF_S) return;
+  c.done = true; c.ratio = px / c.px;
+  if (age > CFG.MOM_CONF_LATE_S) { c.ok = false; c.why = "no price by +" + CFG.MOM_CONF_LATE_S + "s"; conf.late++; }
+  else if (c.ratio > CFG.MOM_CONF_MIN) {
+    c.ok = true; conf.bought++;
+    try { openCopy("momconf", `${c.ratio.toFixed(2)}x@${age}s`, mint, c.name, c.symbol, px, mc, now, { v5: s.w5.reduce((a, x) => a + x.usd, 0), venue, ageS: (() => { const m = q.tokenMeta.get(mint); return m?.create_ts ? now - m.create_ts : null; })() }); } catch (e) { console.error("[momconf]", e.message); }
+  } else { c.ok = false; c.why = `${c.ratio.toFixed(2)}x at +${age}s`; conf.skipped++; }
+  try { q.setConf.run(c.ok ? 1 : 0, +c.ratio.toFixed(4), c.parentId); } catch {}
+}
+setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [m, s] of T) { const c = s.conf; if (c && !c.done && now - c.ts >= CFG.MOM_CONF_S + 5 && s.lastPx > 0) confCheck(m, s, s.lastPx, s.lastMc, now, null); } }, 5_000);
 function dipCheck(mint, s, tr, now) {
   const d = s.dip; if (!d || d.done) return;
   if (now - d.ts > CFG.MOM_DIP_WINDOW_S || tr.price >= d.px * 1.5) { d.done = true; return; }
@@ -383,7 +399,7 @@ export function openPositions() {
   for (const [mint, s] of T) {
     const p = s.pos; if (!p || p.closed) continue;
     out.push({ id: p.id, mint, name: p.name, entry: p.entry, entryMc: p.entryMc, entryTs: p.entryTs, ageS: now - p.entryTs, lastPx: s.lastPx || p.entry, lastMc: s.lastMc, lastTs: s.lastTs, pxSrc: s.pxSrc || (s.lastTs ? "trade" : null), pxAge: s.pxTs ? now - s.pxTs : (s.lastTs ? now - s.lastTs : null), peak: p.peak, mult: (s.lastPx || p.entry) / p.entry, peakMult: p.peak / p.entry,
-      x: { tp15: p.x.tp15 ?? null, t15s40: p.x.t15s40 ?? null, flow4: p.x.flow4 ?? null, flow: p.x.flow ?? null, split: p.x.split ?? null }, splitBranch: p.splitBranch || null, splitHalf: !!p.splitHalf, flowArmed: !!p.flowArmed, kind: p.kind, restored: p.restored || null, manualSold: p.manual?.sold || 0, v5: s.w5.filter((x) => now - x.ts <= 300).reduce((a, x) => a + x.usd, 0) });
+      x: { tp15: p.x.tp15 ?? null, t15s40: p.x.t15s40 ?? null, flow4: p.x.flow4 ?? null, flow: p.x.flow ?? null, split: p.x.split ?? null }, splitBranch: p.splitBranch || null, splitHalf: !!p.splitHalf, flowArmed: !!p.flowArmed, kind: p.kind, restored: p.restored || null, manualSold: p.manual?.sold || 0, conf: s.conf ? { done: s.conf.done, ok: s.conf.ok, ratio: s.conf.ratio, left: Math.max(0, CFG.MOM_CONF_S - (now - s.conf.ts)) } : null, v5: s.w5.filter((x) => now - x.ts <= 300).reduce((a, x) => a + x.usd, 0) });
   }
   return out.sort((a, b) => b.entryTs - a.entryTs);
 }

@@ -145,6 +145,7 @@ Object.assign(CFG, {
   MOM_RE_MAX: n("MOM_RE_MAX", 5), MOM_RE_GAP_S: n("MOM_RE_GAP_S", 60), // re-entry variant
   MOM_CT_MC: n("MOM_CT_MC", 60_000), MOM_CT_AGE_S: n("MOM_CT_AGE_S", 360), MOM_CT_SIZE_CV: n("MOM_CT_SIZE_CV", 1.6), // v0.18.7 core-tight tag
   FRESH_WALLET_D: n("FRESH_WALLET_D", 3), FRESH_SAMPLE: n("FRESH_SAMPLE", 25), FRESH_DAILY_BUDGET: n("FRESH_DAILY_BUDGET", 2000), // v0.18.19 fresh-wallet share at entry
+  MOM_CONF_S: n("MOM_CONF_S", 60), MOM_CONF_MIN: n("MOM_CONF_MIN", 1.0), MOM_CONF_LATE_S: n("MOM_CONF_LATE_S", 120), // v0.18.32 Project 4: buy MOM_CONF_S after a core trigger only if price > MOM_CONF_MIN x trigger (first tick up to MOM_CONF_LATE_S)
   MOM_V40_USD: n("MOM_V40_USD", 40_000), MOM_V40_AGE_S: n("MOM_V40_AGE_S", 600), // v0.18.17 core_v40 tag: 1m volume >= $40K and under 10 min old at entry
   MOM_CORE_MC: n("MOM_CORE_MC", 100_000),          // v0.18.4: "core" momentum = $100K/5m trigger, entry below this, first entry
   PREPUMP_WINDOW_S: n("PREPUMP_WINDOW_S", 1800),  // v0.18.2: record wallets that bought in this window before a volume trigger

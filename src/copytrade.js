@@ -18,6 +18,7 @@ import { recordHolders, holdersLine } from "./holders.js";
 const P = new Map(); // mint -> [{id, label, e, w5:[], closed, msgId}]
 export const cp = { entries: 0, closes: 0 };
 export const positionsOf = (mint) => P.get(mint) || [];
+export const openOfKind = (kind) => [...P.entries()].flatMap(([mint, arr]) => arr.filter((p) => !p.closed && p.kind === kind).map((p) => ({ mint, p }))); // v0.18.32
 
 export function openCopy(kind, who, mint, name, symbol, price, mc, ts, note) {
   const ageS = note?.ageS ?? null;

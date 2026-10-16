@@ -56,6 +56,10 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.32 — Project 4: confirmation entry (16 Oct)
+After every core trigger the bot waits 60 s (`MOM_CONF_S`) and opens a paper position (strategy `momconf`) at the real price then — only if that price is above the trigger price (`MOM_CONF_MIN` 1.0×). It uses the first trade at or after +60 s, up to +120 s (`MOM_CONF_LATE_S`); a 5-second timer covers coins that went quiet (they are skipped). The decision is recorded on the core row (`conf_ok`, `conf_ratio`); the `momconf` row carries every exit like any other position and survives restarts. Dashboard: a Project 4 card (scored on Project 1's exit, 1.5x / −40%), its own line on the combined chart, a P4 column on live positions (deciding / skipped / in at … / took 1.5x / stopped) and on the last-25 table, triggers taken vs skipped. Project 3 stays recorded; it failed its test (19 fresh trades, −20%) and is kept only for comparison.
+Why: on 80 core trades no entry-time factor separated 1.5x winners from losers in both halves of the data except "creator had already earned ~9+ SOL in fees" (heavily traded before the trigger). The first minute after the trigger did: above the trigger price at +60 s → 79% won; below → 12%. Pre-registered in `analysis/README.md`.
+
 ## v0.18.31 — faster refresh (16 Oct)
 Dashboard polls every 3 s (was 10); idle open positions re-priced from DexScreener every 20 s after 60 s without a trade (was 60 s / 120 s). Price age shown when older than 45 s.
 
