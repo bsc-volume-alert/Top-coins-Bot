@@ -315,3 +315,13 @@ export function strategySummary(hours) {
   }
   return t;
 }
+/** v0.18.23: open momentum positions for the dashboard */
+export function openPositions() {
+  const now = Math.floor(Date.now() / 1000), out = [];
+  for (const [mint, s] of T) {
+    const p = s.pos; if (!p || p.closed) continue;
+    out.push({ id: p.id, mint, name: p.name, entry: p.entry, entryMc: p.entryMc, entryTs: p.entryTs, ageS: now - p.entryTs, lastPx: s.lastPx || p.entry, lastMc: s.lastMc, lastTs: s.lastTs, peak: p.peak, mult: (s.lastPx || p.entry) / p.entry, peakMult: p.peak / p.entry,
+      x: { tp15: p.x.tp15 ?? null, t15s40: p.x.t15s40 ?? null, flow4: p.x.flow4 ?? null, flow: p.x.flow ?? null, split: p.x.split ?? null }, splitBranch: p.splitBranch || null, splitHalf: !!p.splitHalf, flowArmed: !!p.flowArmed, kind: p.kind, v5: s.w5.filter((x) => now - x.ts <= 300).reduce((a, x) => a + x.usd, 0) });
+  }
+  return out.sort((a, b) => b.entryTs - a.entryTs);
+}

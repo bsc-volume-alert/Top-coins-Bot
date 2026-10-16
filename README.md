@@ -56,6 +56,10 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.23 — live dashboard (16 Oct)
+A read-only web page served by the tracker itself (`src/web.js`, no extra process): the three projects' live books (net SOL after costs at a chosen trade size, win rate, average, last 24h, ≥2x/4x counts, equity curve), the open positions with each project's current state on them (P1 took 1.5x / stopped, P2 armed / exited, P3 branch and countdown to its 2-minute decision), the last 25 core trades with all three exits side by side, and the parameters. Refreshes every 10 s. Each project's book starts when its exit began recording live (P1/P2 15 Oct 12:52 UTC, P3 16 Oct 16:00 UTC) so sweeper-filled rows never count.
+Enabled by `WEB_KEY` in `.env` (`WEB_PORT` default 8787); without a key the server does not start. URL: `http://<droplet>:8787/?key=<WEB_KEY>`. Plain HTTP with a secret in the link — fine for read-only paper data; not where a wallet key will ever live.
+
 ## v0.18.22 — Project 3 exit recorded (`x_split`) (16 Oct)
 Recording only. A third exit scored on every momentum and copy-variant trade, decided at the 2-minute mark: below 0.90× entry → sell (fast-fail); at or above 1.20× → runner: hold with a 40% trail from the peak, cap 4x, no volume/buy-sell conditions; in between → half out at 1.5x, the rest rides the same trail. −40% hard stop before the mark. `split_branch` records which branch the trade took (stop / ff / run / mid; `sweep` when the sweeper had to fill it). Shown in close messages and the 6-hourly summary; in the CSV next to `x_flow4` and `x_t15s40`. Pre-registered in `analysis/README.md` with the numbers it was built on (33 path-marked trades: +23% vs +5% for flow4; +48% with the `core_v40` entry filter) and the test set starting at this deploy.
 
