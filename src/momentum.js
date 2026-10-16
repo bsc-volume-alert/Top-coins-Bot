@@ -47,22 +47,49 @@ const STATE_FILE = join(dirname(CFG.DB_PATH), "momentum-state.json");
 function saveState() {
   try {
     const now = Math.floor(Date.now() / 1000), out = {};
-    for (const [m, s] of T) if (now - s.lastTs <= 300 || s.buyers.length) out[m] = { w5: s.w5, w1: s.w1, buyers: s.buyers, lastTs: s.lastTs, lastAlert: s.lastAlert, lastPx: s.lastPx, lastMc: s.lastMc, peakMc: s.peakMc };
+    for (const [m, s] of T) if (now - s.lastTs <= 300 || s.buyers.length || (s.pos && !s.pos.closed)) {
+      const o = { w5: s.w5, w1: s.w1, buyers: s.buyers, lastTs: s.lastTs, lastAlert: s.lastAlert, lastPx: s.lastPx, lastMc: s.lastMc, peakMc: s.peakMc, trades: s.trades, firstEntryPx: s.firstEntryPx, posPeakMc: s.posPeakMc, rejectedLevel: s.rejectedLevel, dip: s.dip };
+      if (s.pos && !s.pos.closed) { const p = s.pos; o.pos = { id: p.id, entry: p.entry, entryMc: p.entryMc, entryTs: p.entryTs, peak: p.peak, x: p.x, lad: p.lad, tp: p.tp, msgId: p.msgId, alerted: p.alerted, name: p.name, lv: p.lv, kind: p.kind, volAtEntry: p.volAtEntry, flowArmed: p.flowArmed, flowSince: p.flowSince, ffDone: p.ffDone, splitBranch: p.splitBranch, splitHalf: p.splitHalf, ddPre15: p.ddPre15, path: p.path, hit15Saved: p.hit15Saved }; } // v0.18.28: open positions survive restarts
+      out[m] = o;
+    }
     writeFileSync(STATE_FILE + ".tmp", JSON.stringify({ ts: now, T: out })); renameSync(STATE_FILE + ".tmp", STATE_FILE);
   } catch (e) { console.error("[momentum save]", e.message); }
 }
 function loadState() {
   try {
-    const j = JSON.parse(readFileSync(STATE_FILE, "utf8")), now = Math.floor(Date.now() / 1000); let n = 0, tr = 0;
+    const j = JSON.parse(readFileSync(STATE_FILE, "utf8")), now = Math.floor(Date.now() / 1000); let n = 0, tr = 0, pr = 0;
     if (now - j.ts > 600) return console.log("[momentum] state file too old, ignored");
     for (const [m, v] of Object.entries(j.T || {})) {
       const s = st(m); s.w5 = (v.w5 || []).filter((x) => now - x.ts <= 300); s.w1 = (v.w1 || []).filter((x) => now - x.ts <= 60); s.buyers = (v.buyers || []).filter((x) => now - x.ts <= CFG.PREPUMP_WINDOW_S);
-      Object.assign(s, { lastTs: v.lastTs || 0, lastAlert: v.lastAlert || 0, lastPx: v.lastPx || 0, lastMc: v.lastMc || 0, peakMc: v.peakMc || 0 }); n++; tr += s.w5.length;
+      Object.assign(s, { lastTs: v.lastTs || 0, lastAlert: v.lastAlert || 0, lastPx: v.lastPx || 0, lastMc: v.lastMc || 0, peakMc: v.peakMc || 0, trades: v.trades || [], firstEntryPx: v.firstEntryPx ?? null, posPeakMc: v.posPeakMc || 0, rejectedLevel: v.rejectedLevel ?? null, dip: v.dip ?? null }); n++; tr += s.w5.length;
+      if (v.pos && v.pos.id) { s.pos = { ...v.pos, closed: false, lv: v.pos.lv || newLevels(), lad: v.pos.lad || { s2: false, s3: false }, tp: v.pos.tp || { half: false, twoHalf: false }, x: v.pos.x || {} }; armClose(m, s); pr++; }
     }
-    console.log(`[momentum] restored ${n} tokens / ${tr} swaps from state saved ${now - j.ts}s ago`);
+    console.log(`[momentum] restored ${n} tokens / ${tr} swaps / ${pr} open positions from state saved ${now - j.ts}s ago`);
   } catch (e) { if (e.code !== "ENOENT") console.error("[momentum load]", e.message); }
 }
-loadState();
+function armClose(mint, s) { const left = CFG.MOM_MAX_HOLD_MIN * 60_000 - (Date.now() - s.pos.entryTs * 1000); setTimeout(() => closePos(mint, s, "time"), Math.max(5_000, left)); }
+// v0.18.28: anything still open in the database but not in the state file (older restarts, state file too old) is rebuilt from its row,
+// so no paper position is ever orphaned by a restart again. Exits already recorded are kept; tracking resumes from the current price.
+const qOpenMom = db.prepare(`SELECT id, mint, name, entry_ts, entry_mc, entry_price, peak_mult, vol_at_entry, alerted, trigger_kind, x_tp, x_tp15, x_tsl25, x_tsl40, x_tsl60, x_tsl80, x_half60, x_twophase, x_ladder, x_levels, x_m1, x_m1vol, x_volstop, x_t15s25, x_t15s40, x_t15s60, x_t2s25, x_t2s40, x_t2s60, x_flow, x_flow4, x_flow4ff, x_split, split_branch, dd_pre15, path, t_hit15_s
+  FROM paper_trades WHERE strategy='momentum' AND closed=0 AND COALESCE(invalid,0)=0 AND entry_ts > ? ORDER BY entry_ts`);
+function restoreFromDb() {
+  const now = Math.floor(Date.now() / 1000); let n = 0;
+  try {
+    for (const r of qOpenMom.all(now - CFG.MOM_MAX_HOLD_MIN * 60)) {
+      if (!(r.entry_price > 0)) continue; const s = st(r.mint); if (s.pos && !s.pos.closed) continue;
+      const x = {}; for (const k of ["tp", "tp15", "tsl25", "tsl40", "tsl60", "tsl80", "half60", "twophase", "ladder", "levels", "m1", "m1vol", "volstop", "t15s25", "t15s40", "t15s60", "t2s25", "t2s40", "t2s60", "flow", "flow4", "flow4ff", "split"]) if (r["x_" + k] != null) x[k] = r["x_" + k];
+      let path = {}; try { path = r.path ? JSON.parse(r.path) : {}; } catch {}
+      const peak = r.entry_price * Math.max(r.peak_mult || 1, 1);
+      s.pos = { id: r.id, entry: r.entry_price, entryMc: r.entry_mc, entryTs: r.entry_ts, peak, x, lad: { s2: peak / r.entry_price >= 2, s3: peak / r.entry_price >= 3 }, tp: { half: peak / r.entry_price >= 2, twoHalf: peak / r.entry_price >= 2 }, closed: false, msgId: null, alerted: !!r.alerted, name: r.name, lv: newLevels(), kind: (r.trigger_kind || "vol5m").split("-")[0], volAtEntry: r.vol_at_entry || 0,
+        flowArmed: x.tp15 != null, flowSince: 0, ffDone: (now - r.entry_ts) >= 120, splitBranch: r.split_branch && r.split_branch !== "sweep" ? r.split_branch : null, splitHalf: r.split_branch === "mid" && peak / r.entry_price >= 1.5, ddPre15: r.dd_pre15 ?? null, path, hit15Saved: r.t_hit15_s != null, restored: "db" };
+      if (!s.firstEntryPx) s.firstEntryPx = r.entry_price; s.posPeakMc = Math.max(s.posPeakMc || 0, r.entry_mc * (r.peak_mult || 1));
+      armClose(r.mint, s); n++;
+    }
+  } catch (e) { console.error("[momentum restore]", e.message); }
+  if (n) console.log(`[momentum] rebuilt ${n} open positions from the database`);
+  mom.restored = n;
+}
+loadState(); restoreFromDb();
 setInterval(saveState, 20_000);
 for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => { saveState(); process.exit(0); });
 
@@ -321,7 +348,7 @@ export function openPositions() {
   for (const [mint, s] of T) {
     const p = s.pos; if (!p || p.closed) continue;
     out.push({ id: p.id, mint, name: p.name, entry: p.entry, entryMc: p.entryMc, entryTs: p.entryTs, ageS: now - p.entryTs, lastPx: s.lastPx || p.entry, lastMc: s.lastMc, lastTs: s.lastTs, peak: p.peak, mult: (s.lastPx || p.entry) / p.entry, peakMult: p.peak / p.entry,
-      x: { tp15: p.x.tp15 ?? null, t15s40: p.x.t15s40 ?? null, flow4: p.x.flow4 ?? null, flow: p.x.flow ?? null, split: p.x.split ?? null }, splitBranch: p.splitBranch || null, splitHalf: !!p.splitHalf, flowArmed: !!p.flowArmed, kind: p.kind, v5: s.w5.filter((x) => now - x.ts <= 300).reduce((a, x) => a + x.usd, 0) });
+      x: { tp15: p.x.tp15 ?? null, t15s40: p.x.t15s40 ?? null, flow4: p.x.flow4 ?? null, flow: p.x.flow ?? null, split: p.x.split ?? null }, splitBranch: p.splitBranch || null, splitHalf: !!p.splitHalf, flowArmed: !!p.flowArmed, kind: p.kind, restored: p.restored || null, v5: s.w5.filter((x) => now - x.ts <= 300).reduce((a, x) => a + x.usd, 0) });
   }
   return out.sort((a, b) => b.entryTs - a.entryTs);
 }

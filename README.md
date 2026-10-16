@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.28 — open positions survive restarts (16 Oct)
+Until now a restart orphaned every open paper position: the row stayed open in the database but nothing tracked it, so its path-dependent exits (P2 runner, P3 split, trails) were lost and the sweeper later closed it at whatever the price was. The dashboard made this visible ("8 open now" against an empty live table). Now: (1) the 20-second state file carries every open momentum position in full (entry, peak, exits so far, flow/split state, path marks) and it is restored on start; (2) anything still open in the database but missing from the state file — momentum or any variant strategy — is rebuilt from its row, exits already recorded kept, tracking resumed from the next swap, hold timer re-armed for the remaining time. Restored positions carry a "restored" tag on the dashboard. The database is the memory; a restart changes nothing.
+
 ## v0.18.27 — dashboard: 24h headline, running total with duration, per-day table (16 Oct)
 Each project card now leads with the last-24-hours net, then the running total with trade count and how long the book has run (hours, then days), then a day-by-day table (UTC day, trades, won, net) that gains a row each day.
 

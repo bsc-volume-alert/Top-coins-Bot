@@ -1,6 +1,6 @@
 // Copy strategy: paper-enter when a watched wallet buys; track on both feeds; same parallel exits.
 import { CFG } from "./config.js";
-import { q } from "./db.js";
+import { db, q } from "./db.js";
 import { on } from "./launch-monitor.js";
 import { onSwap } from "./pumpswap.js";
 import { onCopy, onCreatorLaunch } from "./wallets.js";
@@ -91,5 +91,28 @@ function close(mint, p, reason) {
   const arr = P.get(mint); if (arr && arr.every((z) => z.closed)) P.delete(mint);
 }
 setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const arr of P.values()) for (const p of arr) while (p.w5.length && now - p.w5[0].ts > 300) p.w5.shift(); }, 60_000); // v0.18.20
+
+// v0.18.28: variant positions (tiers, dip, re-entry, copy, wave2, grad…) still open in the database are rebuilt on startup, so a restart
+// never orphans them. Exits already recorded are kept; tracking resumes from the next swap.
+const qOpenCopy = db.prepare(`SELECT id, strategy, mint, name, entry_ts, entry_mc, entry_price, peak_mult, vol_at_entry, trigger_kind, x_tp, x_tp15, x_tsl25, x_tsl40, x_tsl60, x_tsl80, x_half60, x_twophase, x_ladder, x_levels, x_m1, x_m1vol, x_volstop, x_combo, x_t15s25, x_t15s40, x_t15s60, x_t2s25, x_t2s40, x_t2s60, x_flow, x_flow4, x_flow4ff, x_split, split_branch, dd_pre15, path, t_hit15_s
+  FROM paper_trades WHERE strategy NOT IN ('momentum','early','confirm','secondwave') AND closed=0 AND COALESCE(invalid,0)=0 AND entry_ts > ? ORDER BY entry_ts`);
+export function restoreCopyFromDb() {
+  const now = Math.floor(Date.now() / 1000); let n = 0;
+  try {
+    for (const r of qOpenCopy.all(now - CFG.MOM_MAX_HOLD_MIN * 60)) {
+      if (!(r.entry_price > 0) || (P.get(r.mint) || []).some((p) => p.id === r.id)) continue;
+      const e = newExits(r.entry_price, r.entry_mc, r.vol_at_entry || 0); const pk = Math.max(r.peak_mult || 1, 1); e.peak = r.entry_price * pk; e.half = pk >= 2; e.s3 = pk >= 3;
+      for (const k of ["tp", "tp15", "tsl25", "tsl40", "tsl60", "tsl80", "half60", "twophase", "ladder", "levels", "m1", "m1vol", "volstop", "combo", "t15s25", "t15s40", "t15s60", "t2s25", "t2s40", "t2s60", "flow", "flow4", "flow4ff", "split"]) if (r["x_" + k] != null) e.x[k] = r["x_" + k];
+      e.flowArmed = e.x.tp15 != null; e.ffDone = now - r.entry_ts >= 120; e.splitBranch = r.split_branch && r.split_branch !== "sweep" ? r.split_branch : null; e.splitHalf = r.split_branch === "mid" && pk >= 1.5; e.ddPre15 = r.dd_pre15 ?? null;
+      try { e.path = r.path ? JSON.parse(r.path) : {}; } catch { e.path = {}; }
+      const pos = { id: r.id, label: (r.trigger_kind || "").split(":").slice(1).join(":") || r.strategy, e, w5: [], closed: false, entryTs: r.entry_ts, lastMc: r.entry_mc, lastPx: r.entry_price, name: r.name, kind: r.strategy, alerted: false, hit15Saved: r.t_hit15_s != null, restored: "db" };
+      const arr = P.get(r.mint) || []; arr.push(pos); P.set(r.mint, arr);
+      setTimeout(() => close(r.mint, pos, "time"), Math.max(5_000, CFG.MOM_MAX_HOLD_MIN * 60_000 - (Date.now() - r.entry_ts * 1000))); n++;
+    }
+  } catch (e) { console.error("[copy restore]", e.message); }
+  if (n) console.log(`[copy] rebuilt ${n} open variant positions from the database`);
+  return n;
+}
+setTimeout(restoreCopyFromDb, 1500);
 export const memStats = () => { let n = 0, w5 = 0; for (const arr of P.values()) for (const p of arr) { n++; w5 += p.w5.length; } return { mints: P.size, positions: n, w5 }; }; // v0.18.18
 export const cpStats = () => ({ ...cp, open: [...P.values()].flat().filter((p) => !p.closed).length });
