@@ -27,6 +27,15 @@ const qRecent = db.prepare(`SELECT p.id, p.name, p.mint, p.entry_ts, p.entry_mc,
   FROM paper_trades p WHERE p.strategy='momentum' AND p.core=1 AND COALESCE(p.invalid,0)=0 ORDER BY p.entry_ts DESC LIMIT 25`);
 // v0.18.32 Project 4: the confirmation-entry positions (strategy momconf) and the decisions recorded on the core rows
 const qP5 = db.prepare(`SELECT id, name, mint, entry_ts, entry_mc, closed, exit_reason, x_t15s40, x_h2t40, v2m_usd, peak_mult FROM paper_trades WHERE strategy='mom2m' AND COALESCE(invalid,0)=0 ORDER BY entry_ts`); // v0.18.35
+// v0.18.39 sold-coin history: every closed core / P4 / P5 trade with each project's exit and what the coin did after (24 h watch)
+const qHist = db.prepare(`SELECT id, strategy, name, mint, entry_ts, exit_ts, entry_mc, venue, q_wallets, exit_reason, peak_mult, after_peak_mult, after_peak_mc, after_last_mult, after_last_mc, after_last_ts,
+  x_t15s40, x_flow4, x_split, split_branch, x_h2t40 FROM paper_trades WHERE closed=1 AND COALESCE(invalid,0)=0 AND entry_ts > ? AND ((strategy='momentum' AND core=1) OR strategy IN ('momconf','mom2m')) ORDER BY entry_ts DESC`);
+export function history(days = 3) {
+  const now = Math.floor(Date.now() / 1000);
+  const rows = qHist.all(now - days * 86400).map((r) => ({ ...r, proj: r.strategy === "momconf" ? "P4" : r.strategy === "mom2m" ? "P5" : "core", p1in: p1Pass(r) && r.entry_ts >= P1F_FROM, p2in: p2Pass(r) && r.entry_ts >= P2F_FROM,
+    after: Math.max(r.after_peak_mult || 0, r.peak_mult || 0) || null }));
+  return { now, days, rows };
+}
 const qConf = db.prepare(`SELECT id, name, mint, entry_ts, entry_mc, closed, exit_reason, x_t15s40, x_flow4, x_split, x_p3d, peak_mult, after_peak_mult FROM paper_trades WHERE strategy='momconf' AND COALESCE(invalid,0)=0 ORDER BY entry_ts`);
 const qConfDecisions = db.prepare(`SELECT SUM(conf_ok=1) taken, SUM(conf_ok=0) skipped FROM paper_trades WHERE strategy='momentum' AND core=1 AND conf_ok IS NOT NULL`);
 
@@ -163,7 +172,7 @@ tr.win td:first-child{box-shadow:inset 3px 0 0 var(--up)}tr.loss td:first-child{
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.seg button{background:transparent;color:var(--mut);border:0;padding:6px 10px;font-size:13px;cursor:pointer}.seg button.on{background:rgba(255,62,165,.18);color:#fff}a.coin{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--acc)}a.coin:hover{color:var(--acc)}.seg.sell button{padding:3px 7px;font-size:11px;color:var(--amb)}.seg.sell button:hover{background:rgba(255,184,77,.18)}
 footer{padding:16px;color:var(--mut);font-size:12px;text-align:center}
 </style></head><body>
-<header><div><h1>Ismael — live paper trading <a id="alink" href="#" style="font-size:12px;color:var(--acc);margin-left:10px;font-weight:500">analysis →</a></h1><div class="mut" id="sub">loading…</div></div>
+<header><div><h1>Ismael — live paper trading <a id="alink" href="#" style="font-size:12px;color:var(--acc);margin-left:10px;font-weight:500">analysis →</a><a id="hlink" href="#" style="font-size:12px;color:#ff79f0;margin-left:10px;font-weight:500">sold history →</a></h1><div class="mut" id="sub">loading…</div></div>
 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="mut">per trade</span><span class="seg" id="size"><button data-v="0.1">0.1</button><button data-v="0.25" class="on">0.25</button><button data-v="0.5">0.5</button><button data-v="1">1 SOL</button></span><span class="mut">costs</span><span class="seg" id="cost"><button data-v="0">0%</button><button data-v="0.05" class="on">5%</button><button data-v="0.1">10%</button></span></div></header>
 <main>
 <div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px"><h2 style="margin:0;font-size:15px">All projects — cumulative net SOL</h2><div id="legend" style="font-size:12px"></div></div><div id="combo"></div></div>
@@ -222,11 +231,49 @@ $('#recent tbody').innerHTML=d.recent.map(r=>{const ref=r.x_split??r.x_flow4;con
 $('#params').innerHTML=Object.values(d.params).map(v=>'<div>'+v+'</div>').join('');
 $('#foot').textContent='Books start when each exit began recording live: P1/P2 from 15 Oct 12:52 UTC, P3 from 16 Oct 16:00 UTC. Paper trades, no real money. Chart: cumulative net SOL over time at the selected size. Page refreshes every 3 s; trades price instantly, idle coins every 20 s from DexScreener.';}
 for(const id of ['size','cost'])$('#'+id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;[...$('#'+id).children].forEach(x=>x.classList.remove('on'));b.classList.add('on');if(id==='size')SIZE=Number(b.dataset.v);else COST=Number(b.dataset.v);load()});
-$('#alink').href='/analysis?key='+encodeURIComponent(key);
+$('#alink').href='/analysis?key='+encodeURIComponent(key);$('#hlink').href='/history?key='+encodeURIComponent(key);
 $('#open').addEventListener('click',async e=>{const b=e.target.closest('.sell button');if(!b)return;const id=b.closest('.sell').dataset.id,pct=Number(b.dataset.pct);const name=b.closest('tr').querySelector('a.coin').textContent;if(!confirm('Paper-sell '+(pct*100)+'% of '+name+' at the current price?'))return;const r=await fetch('/api/sell?key='+encodeURIComponent(key),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,pct})});const j=await r.json();if(!j.ok)alert(j.error||'failed');load()});
 load();setInterval(load,3000);
 </script></body></html>`;
 
+const HISTORY = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ismael — sold history</title>
+<style>
+:root{--line:#2b2b6b;--tx:#e9e6ff;--mut:#8f8fc8;--up:#5fff87;--dn:#ff5f6f;--acc:#5fd7ff;--mag:#ff79f0;--yel:#ffd75f}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(180deg,#1b0b3a 0%,#2a0f5a 30%,#0e1f5a 70%,#071a3f 100%) fixed;color:var(--tx);font:13px/1.45 ui-monospace,'SF Mono',Menlo,Consolas,monospace}
+header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;position:sticky;top:0;background:rgba(18,10,42,.88);backdrop-filter:blur(8px);z-index:3}h1{font-size:16px;margin:0;color:var(--mag)}
+main{padding:12px 16px}.mut{color:var(--mut)}a{color:var(--acc)}select{background:#10104a;color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font:inherit}
+.hbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:16px 0 0;padding:6px 10px;background:#c6c6c6;color:#0b0b2b;border-radius:10px 10px 0 0;font-size:13px}.hbar b{letter-spacing:.08em}.hbar .fk{background:#0b0b2b;color:var(--mag);padding:1px 7px;border-radius:3px;font-weight:700}.hbar .lgd{margin-left:auto;font-size:11px;color:#2a2a4a;white-space:normal}
+.tbl{overflow:auto;background:#07072a;border:1px solid var(--line);border-radius:0 0 12px 12px;max-height:78vh}
+table{border-collapse:collapse;font-size:12px;width:100%}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #1d1d55;white-space:nowrap}th{color:var(--acc);background:#10104a;position:sticky;top:0;cursor:pointer}tr:hover td{background:rgba(224,124,240,.12)}
+a.coin{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--acc)}a.coin:hover{color:var(--acc)}
+.pill{display:inline-block;padding:2px 7px;border-radius:4px;font-weight:700;font-style:normal;font-size:12px}.pill.win{background:var(--up);color:#04140a}.pill.loss{background:var(--dn);color:#1a0008}.pill.na{color:#6c6ca0}
+.tag{font-size:10px;padding:1px 5px;border-radius:3px;margin-left:5px;background:#10104a;color:var(--acc)}.tag.p4{color:#b48cff}.tag.p5{color:var(--up)}
+.big{color:var(--yel);font-weight:700}.up{color:var(--up)}.dn{color:var(--dn)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:12px}.kpi{background:#07072a;border:1px solid var(--line);border-radius:10px;padding:10px 12px}.kpi b{display:block;font-size:22px;color:var(--yel)}.kpi span{color:var(--mut);font-size:12px}
+</style></head><body>
+<header><div><h1>Ismael — sold history <a id="back" href="#" style="font-size:12px;color:var(--acc);margin-left:10px;font-weight:500">← live</a></h1><div class="mut" id="sub">loading…</div></div><div>show last <select id="days"><option>1</option><option selected>3</option><option>7</option><option>14</option><option>30</option></select> days</div></header>
+<main>
+<div class="kpis" id="kpis"></div>
+<div class="hbar"><span class="fk">HIST</span><b>EVERY SOLD COIN — AND WHAT IT DID AFTER</b><span class="lgd"><i class="pill win">1.50x</i> project sold at a profit &nbsp;<i class="pill loss">0.58x</i> at a loss &nbsp;faded = outside that project's current filter &nbsp;<i class="pill na">—</i> not taken &nbsp;· "after" = highest price within 24 h of entry · "now" = last price seen</span></div>
+<div class="tbl"><table id="t"><thead><tr><th data-k="name">coin</th><th data-k="entry_ts">entered</th><th data-k="entry_mc">entry MC</th><th data-k="exit_reason">closed by</th><th data-k="x_t15s40">P1</th><th data-k="x_flow4">P2</th><th data-k="x_split">P3</th><th data-k="p45">P4 / P5</th><th data-k="peak_mult">peak while held</th><th data-k="after">peak within 24 h</th><th data-k="after_peak_mc">peak MC</th><th data-k="after_last_mult">now</th><th data-k="miss">left on the table</th></tr></thead><tbody></tbody></table></div>
+</main>
+<script>
+const key=new URLSearchParams(location.search).get('key')||'';const $=s=>document.querySelector(s);$('#back').href='/?key='+encodeURIComponent(key);
+const fmt=n=>n==null?'—':n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(0)+'K':Math.round(n)+'';
+const ts=t=>{const d=new Date(t*1000);return d.toLocaleDateString(undefined,{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})};
+const pill=(v,on)=>v==null?'<i class="pill na">—</i>':'<i class="pill '+(v>=1?'win':'loss')+'"'+(on?'':' style="opacity:.4" title="outside this project\'s current filter"')+'>'+v.toFixed(2)+'x</i>';
+let D=null,SK='entry_ts',SD=-1;
+function best(r){const v=[r.proj==='core'?r.x_t15s40:null,r.proj==='core'?r.x_flow4:null,r.proj==='core'?r.x_split:null,r.proj==='P4'?r.x_t15s40:null,r.proj==='P5'?r.x_h2t40:null].filter(x=>x!=null);return v.length?Math.max(...v):null}
+function render(){const R=D.rows.map(r=>({...r,p45:r.proj==='P4'?r.x_t15s40:r.proj==='P5'?r.x_h2t40:null,miss:(()=>{const b=best(r);return b&&r.after?r.after/b:null})()}));
+R.sort((a,b)=>{const x=a[SK],y=b[SK];return (x==null)-(y==null)||(x>y?1:x<y?-1:0)*SD});
+const n=R.length,ran2=R.filter(r=>r.after>=2).length,ran4=R.filter(r=>r.after>=4).length,lv=R.filter(r=>r.exit_reason==='lowvol').length,lvRan=R.filter(r=>r.exit_reason==='lowvol'&&r.after_peak_mult!=null&&r.after_peak_mult>=1.5*(best(r)||1)).length;
+$('#kpis').innerHTML='<div class="kpi"><b>'+n+'</b><span>sold coins in '+D.days+' day(s)</span></div><div class="kpi"><b>'+ran2+'</b><span>went to 2x+ of our entry within 24 h</span></div><div class="kpi"><b>'+ran4+'</b><span>went to 4x+ within 24 h</span></div><div class="kpi"><b>'+lv+'</b><span>closed by the golden rule (volume < $25K)</span></div><div class="kpi"><b>'+lvRan+'</b><span>of those later ran 1.5× above our best exit</span></div>';
+$('#t tbody').innerHTML=R.length?R.map(r=>'<tr><td><a class="coin" href="https://fomo.family/tokens/solana/'+r.mint+'" target="_blank" rel="noopener">'+r.name+'</a>'+(r.proj!=='core'?'<span class="tag '+r.proj.toLowerCase()+'">'+r.proj+'</span>':'')+'</td><td>'+ts(r.entry_ts)+'</td><td>$'+fmt(r.entry_mc)+'</td><td style="color:'+(r.exit_reason==='lowvol'?'#ffd75f':'#8f8fc8')+'">'+(r.exit_reason||'—')+'</td><td>'+(r.proj==='core'?pill(r.x_t15s40,r.p1in):'<i class="pill na">—</i>')+'</td><td>'+(r.proj==='core'?pill(r.x_flow4,r.p2in):'<i class="pill na">—</i>')+'</td><td>'+(r.proj==='core'?pill(r.x_split,true):'<i class="pill na">—</i>')+'</td><td>'+(r.proj==='core'?'<i class="pill na">—</i>':pill(r.p45,true))+'</td><td>'+(r.peak_mult?r.peak_mult.toFixed(2)+'x':'—')+'</td><td class="'+(r.after>=2?'big':'')+'">'+(r.after?r.after.toFixed(2)+'x':'—')+'</td><td>$'+fmt(r.after_peak_mc)+'</td><td class="'+(r.after_last_mult==null?'':r.after_last_mult>=1?'up':'dn')+'">'+(r.after_last_mult!=null?r.after_last_mult.toFixed(2)+'x':'—')+'</td><td class="'+(r.miss>=1.5?'big':'mut')+'">'+(r.miss?r.miss.toFixed(2)+'× our best exit':'—')+'</td></tr>').join(''):'<tr><td colspan="13" class="mut">no sold coins in this period</td></tr>';
+$('#sub').textContent=n+' sold coins · updated '+new Date().toLocaleTimeString()}
+document.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{const k=th.dataset.k;SD=SK===k?-SD:-1;SK=k;render()});
+async function load(){const r=await fetch('/api/history?key='+encodeURIComponent(key)+'&days='+$('#days').value);if(!r.ok){$('#sub').textContent='access denied';return}D=await r.json();render()}
+$('#days').onchange=load;load();setInterval(load,30000);
+</script></body></html>`;
 const ANALYSIS = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ismael — analysis</title>
 <style>
 :root{--bg:#120a2a;--card:rgba(14,10,40,.72);--line:#3a2a6a;--tx:#e9e6ff;--mut:#9a8fd0;--up:#39ff9c;--dn:#ff4d7a;--acc:#4ad8ff;--mag:#ff3ea5;--amb:#ffb84d}
@@ -278,6 +325,8 @@ export function startWeb() {
       if (u.searchParams.get("key") !== KEY()) { res.writeHead(403, { "content-type": "text/plain" }); return res.end("forbidden"); }
       if (u.pathname === "/api/sell" && req.method === "POST") { let body = ""; req.on("data", (c) => { body += c; if (body.length > 1e4) req.destroy(); }); req.on("end", () => { try { const { id, pct } = JSON.parse(body || "{}"); const r = manualSell(Number(id), Math.min(1, Math.max(0.01, Number(pct) || 1))); res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify(r)); } catch (e) { res.writeHead(400, { "content-type": "application/json" }); res.end(JSON.stringify({ ok: false, error: e.message })); } }); return; }
       if (u.pathname === "/api/trades") { const days = Math.min(60, Math.max(1, Number(u.searchParams.get("days")) || 7)); res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(tradesDump(days))); }
+      if (u.pathname === "/api/history") { const days = Math.min(30, Math.max(1, Number(u.searchParams.get("days")) || 3)); res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(history(days))); }
+      if (u.pathname === "/history") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(HISTORY); }
       if (u.pathname === "/analysis") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(ANALYSIS); }
       if (u.pathname === "/api/snapshot") { const size = Math.min(5, Math.max(0.01, Number(u.searchParams.get("size")) || 0.25)), cost = Math.min(0.5, Math.max(0, Number(u.searchParams.get("cost") ?? 0.05))); res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(snapshot(size, cost))); }
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); res.end(PAGE);

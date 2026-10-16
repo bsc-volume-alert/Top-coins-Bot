@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.39 — sold-coin history page; after-sale watch survives restarts (16 Oct)
+New page `/history` ("sold history →" in the header): every closed core / P4 / P5 trade for the last 1–30 days with each project's exit (green/red, faded when outside that project's current filter), what closed it (golden rule highlighted), peak while held, peak within 24 h of entry with its market cap, last price seen, and how far the after-peak ran past our best exit. Summary boxes: coins that later reached 2x / 4x, golden-rule closes and how many of those ran on. The 24 h after-entry watch (aftercare) is now rebuilt from the database on startup, so restarts no longer lose it, and it also records the latest price seen (`after_last_mult`, `after_last_mc`, `after_last_ts`).
+
 ## v0.18.38 — holding vs sold, profit/loss colours; low-volume exit hardened (16 Oct)
 Live positions split into "Holding now" (money still in at least one project) and "Sold by every project" (kept only to watch what the coin did after we sold). Each project cell is a coloured tag: green SOLD (profit, with SOL at the selected size), red SOLD (loss), cyan HOLDING (with "if sold now"), yellow WAIT (deciding), grey — (not taken). htop-style colours. Low-volume exit: both check loops now catch and log errors per coin instead of failing the whole loop; a position still open after a failed check is force-closed; a quick restart (state saved ≤30 s before) keeps the 5-minute windows, so no new 5-minute wait.
 
