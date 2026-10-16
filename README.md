@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.35 — Project 5: fast 2-minute trigger, half out at 2x (16 Oct)
+New paper strategy `mom2m`: the first time a coin trades ≥ $100K inside any 2-minute window (`P5_VOL2M_USD`), coin ≥ 60 s old (`P5_MIN_AGE_S`), buys ≥ sells in the window, ≥ 5 wallets, no market-cap cap, one trade per coin (checked against the database, so restarts never double-buy). New exit `x_h2t40`: −40% stop until 2x, then half sold at 2x and the rest on a 40% trailing stop with no cap; recorded on P5 and core trades. `v2m_usd` = 2-minute volume at the trigger. Dashboard: Project 5 card with its filter box, the 1.5x/−40% result on the same trades, trigger counters, and its open positions; its own line on the chart. No Telegram close messages for P5. Pre-registered in `analysis/README.md`.
+
 ## v0.18.34 — Project 2 filtered, fresh book (16 Oct)
 Project 2's card is now "Project 2 — filtered": only core trades with ≤ 600 distinct wallets in the 5-minute trigger window, or that pass Project 1's filter (stock-token pool or MC under $47K); runner exit unchanged. Live book starts fresh at 16 Oct 21:25 UTC; the 15–16 Oct back-test (fitted) and the unfiltered figure are shown in grey, plus a pass-test line comparing the live filtered trades with selling the same trades at 1.5x. Live positions that fail a project's filter show "not in filter" in that column. Pre-registered in `analysis/README.md`.
 

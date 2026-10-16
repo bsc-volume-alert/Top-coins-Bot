@@ -11,7 +11,7 @@ import { pumpSwapTick, clusterSnap } from "./signals.js";
 import { watch as afterWatch, tick as afterTick } from "./aftercare.js";
 import { retrySocials } from "./socials.js";
 import { volumeQuality, qualityLine } from "./quality.js";
-import { stopStep, stopFinal, flowStep, pathStep, ffStep, ffFinal, cleanFlow, splitStep, splitFinal, deadStep, p3dFinal } from "./exits.js";
+import { stopStep, stopFinal, flowStep, pathStep, ffStep, ffFinal, cleanFlow, splitStep, splitFinal, deadStep, p3dFinal, h2Step, h2Final } from "./exits.js";
 import { openCopy } from "./copytrade.js";
 const coreListeners = []; export const onCoreEntry = (fn) => coreListeners.push(fn);
 import { feeInfo, feeLine } from "./fees.js";
@@ -71,18 +71,18 @@ function loadState() {
 function armClose(mint, s) { const left = CFG.MOM_MAX_HOLD_MIN * 60_000 - (Date.now() - s.pos.entryTs * 1000); setTimeout(() => closePos(mint, s, "time"), Math.max(5_000, left)); }
 // v0.18.28: anything still open in the database but not in the state file (older restarts, state file too old) is rebuilt from its row,
 // so no paper position is ever orphaned by a restart again. Exits already recorded are kept; tracking resumes from the current price.
-const qOpenMom = db.prepare(`SELECT id, mint, name, entry_ts, entry_mc, entry_price, peak_mult, vol_at_entry, alerted, trigger_kind, x_tp, x_tp15, x_tsl25, x_tsl40, x_tsl60, x_tsl80, x_half60, x_twophase, x_ladder, x_levels, x_m1, x_m1vol, x_volstop, x_t15s25, x_t15s40, x_t15s60, x_t2s25, x_t2s40, x_t2s60, x_flow, x_flow4, x_flow4ff, x_split, split_branch, dd_pre15, path, t_hit15_s
+const qOpenMom = db.prepare(`SELECT id, mint, name, entry_ts, entry_mc, entry_price, peak_mult, vol_at_entry, alerted, trigger_kind, x_tp, x_tp15, x_tsl25, x_tsl40, x_tsl60, x_tsl80, x_half60, x_twophase, x_ladder, x_levels, x_m1, x_m1vol, x_volstop, x_t15s25, x_t15s40, x_t15s60, x_t2s25, x_t2s40, x_t2s60, x_h2t40, x_flow, x_flow4, x_flow4ff, x_split, split_branch, dd_pre15, path, t_hit15_s
   FROM paper_trades WHERE strategy='momentum' AND closed=0 AND COALESCE(invalid,0)=0 AND entry_ts > ? ORDER BY entry_ts`);
 function restoreFromDb() {
   const now = Math.floor(Date.now() / 1000); let n = 0;
   try {
     for (const r of qOpenMom.all(now - CFG.MOM_MAX_HOLD_MIN * 60)) {
       if (!(r.entry_price > 0)) continue; const s = st(r.mint); if (s.pos && !s.pos.closed) continue;
-      const x = {}; for (const k of ["tp", "tp15", "tsl25", "tsl40", "tsl60", "tsl80", "half60", "twophase", "ladder", "levels", "m1", "m1vol", "volstop", "t15s25", "t15s40", "t15s60", "t2s25", "t2s40", "t2s60", "flow", "flow4", "flow4ff", "split"]) if (r["x_" + k] != null) x[k] = r["x_" + k];
+      const x = {}; for (const k of ["tp", "tp15", "tsl25", "tsl40", "tsl60", "tsl80", "half60", "twophase", "ladder", "levels", "m1", "m1vol", "volstop", "t15s25", "t15s40", "t15s60", "t2s25", "t2s40", "t2s60", "flow", "flow4", "flow4ff", "split", "h2t40"]) if (r["x_" + k] != null) x[k] = r["x_" + k];
       let path = {}; try { path = r.path ? JSON.parse(r.path) : {}; } catch {}
       const peak = r.entry_price * Math.max(r.peak_mult || 1, 1);
       s.pos = { id: r.id, entry: r.entry_price, entryMc: r.entry_mc, entryTs: r.entry_ts, peak, x, lad: { s2: peak / r.entry_price >= 2, s3: peak / r.entry_price >= 3 }, tp: { half: peak / r.entry_price >= 2, twoHalf: peak / r.entry_price >= 2 }, closed: false, msgId: null, alerted: !!r.alerted, name: r.name, lv: newLevels(), kind: (r.trigger_kind || "vol5m").split("-")[0], volAtEntry: r.vol_at_entry || 0,
-        flowArmed: x.tp15 != null, flowSince: 0, ffDone: (now - r.entry_ts) >= 120, splitBranch: r.split_branch && r.split_branch !== "sweep" ? r.split_branch : null, splitHalf: r.split_branch === "mid" && peak / r.entry_price >= 1.5, ddPre15: r.dd_pre15 ?? null, path, hit15Saved: r.t_hit15_s != null, restored: "db" };
+        flowArmed: x.tp15 != null, flowSince: 0, h2Half: peak / r.entry_price >= 2, ffDone: (now - r.entry_ts) >= 120, splitBranch: r.split_branch && r.split_branch !== "sweep" ? r.split_branch : null, splitHalf: r.split_branch === "mid" && peak / r.entry_price >= 1.5, ddPre15: r.dd_pre15 ?? null, path, hit15Saved: r.t_hit15_s != null, restored: "db" };
       if (!s.firstEntryPx) s.firstEntryPx = r.entry_price; s.posPeakMc = Math.max(s.posPeakMc || 0, r.entry_mc * (r.peak_mult || 1));
       armClose(r.mint, s); n++;
     }
@@ -144,6 +144,7 @@ onSwap((tr) => {
   s.w1.push({ ts: now, usd, b: tr.isBuy }); while (s.w1.length && now - s.w1[0].ts > 60) s.w1.shift();
   if (s.pos) updatePos(tr.mint, s, tr.price, now);
   dipCheck(tr.mint, s, tr, now); confCheck(tr.mint, s, tr.price, tr.mc, now, tr.venue);
+  if (!s.p5done && usd > 0) p5Check(tr.mint, s, tr, now);
   const v5 = s.w5.reduce((a, x) => a + x.usd, 0);
   const bsu = [s.w5.filter((x) => x.b).reduce((a, x) => a + x.usd, 0), s.w5.filter((x) => !x.b).reduce((a, x) => a + x.usd, 0)];
   pumpSwapTick(tr.mint, tr, v5, bsu); afterTick(tr.mint, tr.price, tr.mc);
@@ -265,6 +266,29 @@ function confCheck(mint, s, px, mc, now, venue) {
   try { q.setConf.run(c.ok ? 1 : 0, +c.ratio.toFixed(4), c.parentId); } catch {}
 }
 setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [m, s] of T) { const c = s.conf; if (c && !c.done && now - c.ts >= CFG.MOM_CONF_S + 5 && s.lastPx > 0) confCheck(m, s, s.lastPx, s.lastMc, now, null); } }, 5_000);
+// v0.18.35 Project 5 — fast trigger: $100K traded inside any 2-minute window, coin at least 60 s old, buys ≥ sells in that window,
+// no market-cap cap. One paper position per coin (strategy 'mom2m'), independent of the core trigger. Exits: 1.5x/−40% and h2t40.
+export const p5 = { fired: 0, young: 0, sellHeavy: 0 };
+export function p5Check(mint, s, tr, now) {
+  let v2 = 0, b2 = 0; const w = new Set();
+  for (let i = s.w5.length - 1; i >= 0; i--) { const z = s.w5[i]; if (now - z.ts > 120) break; v2 += z.usd; if (z.b) b2 += z.usd; w.add(z.w); }
+  if (v2 < CFG.P5_VOL2M_USD || !(tr.mc > 0) || !(tr.price > 0) || w.size < CFG.MOM_MIN_WALLETS5) return;
+  if (b2 < v2 - b2) { if (!s.p5sell || now - s.p5sell > 60) { s.p5sell = now; p5.sellHeavy++; } return; }
+  const meta = q.tokenMeta.get(mint);
+  if (meta?.create_ts && now - meta.create_ts < CFG.P5_MIN_AGE_S) { p5.young++; return; }
+  s.p5done = true;
+  try { if (q.hasP5.get(mint)) return; } catch {}
+  const px = tr.price, mc = tr.mc, venue = tr.venue, v5 = s.w5.reduce((a, x) => a + x.usd, 0);
+  (async () => {
+    let name = meta?.name, symbol = meta?.symbol, createTs = meta?.create_ts;
+    if (!name || !createTs) { try { const d = await dexInfo(mint); name ||= d.name; symbol ||= d.symbol; createTs ||= d.createdAt; } catch {} }
+    const ageS = createTs ? now - createTs : null;
+    if (ageS != null && (ageS < CFG.P5_MIN_AGE_S || ageS > CFG.MOM_MAX_AGE_D * 86400)) return;
+    const pos = openCopy("mom2m", `$${fmt(v2)}/2m`, mint, name || mint.slice(0, 8), symbol || "", px, mc, now, { v5, venue, ageS });
+    p5.fired++;
+    if (pos?.id) { pos.alerted = false; try { q.setV2m.run(Math.round(v2), pos.id); } catch {} } // no Telegram close messages for P5
+  })().catch((e) => console.error("[p5]", e.message));
+}
 function dipCheck(mint, s, tr, now) {
   const d = s.dip; if (!d || d.done) return;
   if (now - d.ts > CFG.MOM_DIP_WINDOW_S || tr.price >= d.px * 1.5) { d.done = true; return; }
@@ -281,6 +305,7 @@ function updatePos(mint, s, px, now) {
   stopStep(x, mult);
   { const v5f = s.w5.reduce((a, z) => a + z.usd, 0), buf = s.w5.filter((z) => z.b).reduce((a, z) => a + z.usd, 0); flowStep(p, x, mult, fromPeak, v5f, buf, v5f - buf); }
   ffStep(p, x, mult, now - p.entryTs); // v0.18.17
+  h2Step(p, x, mult, fromPeak); if (x.h2t40 != null && p.h2Saved !== x.h2t40) { p.h2Saved = x.h2t40; try { q.setH2.run(x.h2t40, p.id); } catch {} } // v0.18.35
   splitStep(p, x, mult, fromPeak, now - p.entryTs); // v0.18.22
   deadStep(p, x, mult, now - p.entryTs, s.w5.filter((z) => now - z.ts <= 300).reduce((a, z) => a + z.usd, 0), now); // v0.18.30
   if ((x.dead != null || x.split != null) && p.deadSaved !== `${x.dead}|${x.split}`) { p.deadSaved = `${x.dead}|${x.split}`; try { q.setDead.run(x.dead ?? null, (x.dead != null || x.split != null) ? p3dFinal(p, x, mult) : null, p.id); } catch {} }
@@ -327,6 +352,7 @@ function finalVariants(p, mult) {
   out.flow4ff = ffFinal(x, out.flow4); // v0.18.17
   out.split = splitFinal(p, x, mult); // v0.18.22
   out.dead = x.dead ?? mult; out.p3d = p3dFinal(p, x, mult); // v0.18.30
+  out.h2t40 = h2Final(p, x, mult); // v0.18.35
   return out;
 }
 
@@ -336,7 +362,7 @@ function closePos(mint, s, reason) {
   const now = Math.floor(Date.now() / 1000), px = s.lastPx || p.entry, mult = px / p.entry, v = finalVariants(p, mult), peakMult = p.peak / p.entry;
   s.trades.push({ id: p.id, closedTs: now });
   q.updMom.run(s.posPeakMc, peakMult, v.tp, v.tsl40, v.tsl60, v.tsl80, v.half60, v.twophase, v.ladder, v.time, now, s.lastMc, px, reason, (v.time - 1) * 100, 1, v.levels, v.m1, v.m1vol, v.volstop, p.id);
-  try { q.setStops.run(v.tp15, v.tsl25, v.t15s25, v.t15s60, v.t2s25, v.t2s60, p.id); q.setExits2.run(v.flow, v.t15s40, v.t2s40, p.ddPre15 ?? null, v.flow4, p.id); q.setFlow4ff.run(v.flow4ff, p.id); q.setSplit.run(v.split, p.splitBranch ?? null, p.id); q.setDead.run(v.dead, v.p3d, p.id); if (p.manual) q.setManual.run(p.manual.banked + (1 - p.manual.sold) * mult, p.manual.sold, p.manual.ts, p.id); } catch {}
+  try { q.setStops.run(v.tp15, v.tsl25, v.t15s25, v.t15s60, v.t2s25, v.t2s60, p.id); q.setExits2.run(v.flow, v.t15s40, v.t2s40, p.ddPre15 ?? null, v.flow4, p.id); q.setFlow4ff.run(v.flow4ff, p.id); q.setH2.run(v.h2t40, p.id); q.setSplit.run(v.split, p.splitBranch ?? null, p.id); q.setDead.run(v.dead, v.p3d, p.id); if (p.manual) q.setManual.run(p.manual.banked + (1 - p.manual.sold) * mult, p.manual.sold, p.manual.ts, p.id); } catch {}
   const pc = (m) => `${m >= 1 ? "+" : ""}${((m - 1) * 100).toFixed(0)}%`;
   if (p.alerted) tg(`${v.half60 >= 1 ? "✅" : "🔴"} <b>VOLUME CLOSE</b> — ${esc(p.name)} (${reason}) · peak <b>${peakMult.toFixed(2)}x</b> · now ${mult.toFixed(2)}x\n` +
     `½@2x+60%: <b>${pc(v.half60)}</b> · 2-phase: ${pc(v.twophase)} · ladder: ${pc(v.ladder)} · levels: ${pc(v.levels)}\n$1M-out: ${pc(v.m1)} · $1M-vol: ${pc(v.m1vol)} · vol-stop: ${pc(v.volstop)}\n` +

@@ -42,6 +42,7 @@ export function openCopy(kind, who, mint, name, symbol, price, mc, ts, note) {
   const arr = P.get(mint) || []; arr.push(pos); P.set(mint, arr); cp.entries++;
   afterWatch(mint, pos.id, price, mc);
   setTimeout(() => close(mint, pos, "time"), CFG.MOM_MAX_HOLD_MIN * 60_000);
+  return pos;
 }
 onCopy(({ wallet, label, mint, name, symbol, price, mc, ts }) => openCopy("copy", label || wallet.slice(0, 6), mint, name, symbol, price, mc, ts));
 onClimb((c) => { if (c.price > 0) openCopy("climber", `${Math.round(c.cp / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, c); });
@@ -70,6 +71,7 @@ function tick(mint, price, mc, sol, isBuy, ts) {
     const v5 = p.w5.reduce((a, x) => a + x.usd, 0), bu = p.w5.filter((x) => x.b).reduce((a, x) => a + x.usd, 0), su = v5 - bu;
     p.lastMc = mc; p.lastPx = price;
     const r = stepExits(p.e, price, mc, v5, bu, su, ts - p.entryTs); const x = p.e.x; // v0.18.17: seconds since entry for the fast-fail exit
+    if (x.h2t40 != null && p.e.h2Saved !== x.h2t40) { p.e.h2Saved = x.h2t40; try { q.setH2.run(x.h2t40, p.id); } catch {} } // v0.18.35
     if (x.flow4ff != null && p.e.ffSaved !== x.flow4ff) { p.e.ffSaved = x.flow4ff; try { q.setFlow4ff.run(x.flow4ff, p.id); } catch {} }
     if ((x.dead != null || x.split != null) && p.e.deadSaved !== `${x.dead}|${x.split}`) { p.e.deadSaved = `${x.dead}|${x.split}`; try { q.setDead.run(x.dead ?? null, p3dFinal(p.e, x, r.mult), p.id); } catch {} } // v0.18.30
     { const ks = `${x.split}|${p.e.splitBranch}`; if (p.e.splitSaved !== ks) { p.e.splitSaved = ks; try { q.setSplit.run(x.split ?? null, p.e.splitBranch ?? null, p.id); } catch {} } } // v0.18.22
@@ -88,7 +90,7 @@ function close(mint, p, reason) {
   if (p.closed) return; p.closed = true; cp.closes++;
   const mult = p.lastPx / p.e.entry, v = finalExits(p.e, mult), peakMult = p.e.peak / p.e.entry, now = Math.floor(Date.now() / 1000);
   q.updMom.run(p.lastMc, peakMult, v.tp, v.tsl40, v.tsl60, v.tsl80, v.half60, v.twophase, v.ladder, v.time, now, p.lastMc, p.lastPx, reason, (v.time - 1) * 100, 1, v.levels, v.m1, v.m1vol, v.volstop, p.id);
-  try { q.setCombo.run(v.combo, v.tp15, v.tsl25, v.t15s25, v.t15s60, v.t2s25, v.t2s60, p.id); q.setExits2.run(v.flow, v.t15s40, v.t2s40, p.e.ddPre15 ?? null, v.flow4, p.id); q.setFlow4ff.run(v.flow4ff, p.id); q.setSplit.run(v.split, p.e.splitBranch ?? null, p.id); q.setDead.run(v.dead, v.p3d, p.id); } catch {}
+  try { q.setCombo.run(v.combo, v.tp15, v.tsl25, v.t15s25, v.t15s60, v.t2s25, v.t2s60, p.id); q.setExits2.run(v.flow, v.t15s40, v.t2s40, p.e.ddPre15 ?? null, v.flow4, p.id); q.setFlow4ff.run(v.flow4ff, p.id); q.setH2.run(v.h2t40, p.id); q.setSplit.run(v.split, p.e.splitBranch ?? null, p.id); q.setDead.run(v.dead, v.p3d, p.id); } catch {}
   if (p.alerted !== false) tg(`${v.half60 >= 1 ? "✅" : "🔴"} <b>${p.kind === "climber" ? "CLIMBER CLOSE" : p.kind === "grad" ? "GRADUATION CLOSE" : p.kind === "wave2" ? "SECOND WAVE CLOSE" : p.kind === "revival" ? "REVIVAL CLOSE" : p.kind === "gradrun" ? "GRADUATION RUNNER CLOSE" : p.kind === "gradrec" ? "GRADUATION RECOVERY CLOSE" : p.kind === "slow" ? "SLOW BUILD CLOSE" : p.kind === "copycreator" ? "COPY CREATOR CLOSE" : "COPY CLOSE"}</b> — ${esc(p.label)} / ${esc(p.name)} (${reason}) · peak <b>${peakMult.toFixed(2)}x</b> · now ${mult.toFixed(2)}x\ncombo <b>${pc(v.combo)}</b> · ½@2x+60%: ${pc(v.half60)} · 2-phase ${pc(v.twophase)} · vol-stop ${pc(v.volstop)} · 2x-out ${pc(v.tp)} · trail40 ${pc(v.tsl40)} · hold ${pc(v.time)}`, { replyTo: p.msgId });
   const arr = P.get(mint); if (arr && arr.every((z) => z.closed)) P.delete(mint);
 }
@@ -96,7 +98,7 @@ setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const arr of
 
 // v0.18.28: variant positions (tiers, dip, re-entry, copy, wave2, grad…) still open in the database are rebuilt on startup, so a restart
 // never orphans them. Exits already recorded are kept; tracking resumes from the next swap.
-const qOpenCopy = db.prepare(`SELECT id, strategy, mint, name, entry_ts, entry_mc, entry_price, peak_mult, vol_at_entry, trigger_kind, x_tp, x_tp15, x_tsl25, x_tsl40, x_tsl60, x_tsl80, x_half60, x_twophase, x_ladder, x_levels, x_m1, x_m1vol, x_volstop, x_combo, x_t15s25, x_t15s40, x_t15s60, x_t2s25, x_t2s40, x_t2s60, x_flow, x_flow4, x_flow4ff, x_split, split_branch, dd_pre15, path, t_hit15_s
+const qOpenCopy = db.prepare(`SELECT id, strategy, mint, name, entry_ts, entry_mc, entry_price, peak_mult, vol_at_entry, trigger_kind, x_tp, x_tp15, x_tsl25, x_tsl40, x_tsl60, x_tsl80, x_half60, x_twophase, x_ladder, x_levels, x_m1, x_m1vol, x_volstop, x_combo, x_h2t40, x_t15s25, x_t15s40, x_t15s60, x_t2s25, x_t2s40, x_t2s60, x_flow, x_flow4, x_flow4ff, x_split, split_branch, dd_pre15, path, t_hit15_s
   FROM paper_trades WHERE strategy NOT IN ('momentum','early','confirm','secondwave') AND closed=0 AND COALESCE(invalid,0)=0 AND entry_ts > ? ORDER BY entry_ts`);
 export function restoreCopyFromDb() {
   const now = Math.floor(Date.now() / 1000); let n = 0;
@@ -104,7 +106,7 @@ export function restoreCopyFromDb() {
     for (const r of qOpenCopy.all(now - CFG.MOM_MAX_HOLD_MIN * 60)) {
       if (!(r.entry_price > 0) || (P.get(r.mint) || []).some((p) => p.id === r.id)) continue;
       const e = newExits(r.entry_price, r.entry_mc, r.vol_at_entry || 0); const pk = Math.max(r.peak_mult || 1, 1); e.peak = r.entry_price * pk; e.half = pk >= 2; e.s3 = pk >= 3;
-      for (const k of ["tp", "tp15", "tsl25", "tsl40", "tsl60", "tsl80", "half60", "twophase", "ladder", "levels", "m1", "m1vol", "volstop", "combo", "t15s25", "t15s40", "t15s60", "t2s25", "t2s40", "t2s60", "flow", "flow4", "flow4ff", "split"]) if (r["x_" + k] != null) e.x[k] = r["x_" + k];
+      for (const k of ["tp", "tp15", "tsl25", "tsl40", "tsl60", "tsl80", "half60", "twophase", "ladder", "levels", "m1", "m1vol", "volstop", "combo", "t15s25", "t15s40", "t15s60", "t2s25", "t2s40", "t2s60", "flow", "flow4", "flow4ff", "split", "h2t40"]) if (r["x_" + k] != null) e.x[k] = r["x_" + k]; e.h2Half = pk >= 2;
       e.flowArmed = e.x.tp15 != null; e.ffDone = now - r.entry_ts >= 120; e.splitBranch = r.split_branch && r.split_branch !== "sweep" ? r.split_branch : null; e.splitHalf = r.split_branch === "mid" && pk >= 1.5; e.ddPre15 = r.dd_pre15 ?? null;
       try { e.path = r.path ? JSON.parse(r.path) : {}; } catch { e.path = {}; }
       const pos = { id: r.id, label: (r.trigger_kind || "").split(":").slice(1).join(":") || r.strategy, e, w5: [], closed: false, entryTs: r.entry_ts, lastMc: r.entry_mc, lastPx: r.entry_price, name: r.name, kind: r.strategy, alerted: false, hit15Saved: r.t_hit15_s != null, restored: "db" };
