@@ -56,6 +56,14 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.16 — `/csv` can no longer take the bot down (16 Oct)
+On the morning of 16 Oct `/csv` crashed the tracker in a loop: the export built every table as one in-memory string and zipped it in memory, which passed pm2's 600 MB limit on the 2 GB droplet; pm2 killed it, restarted it, and Telegram re-delivered the same unconfirmed `/csv`. ~15 minutes of feed lost (06:17–06:31 UTC) while Helius rate-limited the reconnects; nothing before that was lost (every write is in SQLite the moment it happens).
+- Commands are confirmed to Telegram **before** they run, so a crash mid-command can never replay it.
+- The export is streamed row-by-row to temp files and zipped from disk (`zipFiles`, data-descriptor entries); memory stays flat whatever the size. One export at a time; failures are reported in the chat instead of silently.
+- `/csv` leaves out `token_life` and `wallet_buys` (the two big tables, unused in analysis so far); `/csvfull` includes them.
+- Memory guard: `/status` shows RSS; a warning goes to the chat if it passes 450 MB (pm2 restarts at 600).
+- Nothing in entries, exits, tiers or recording changed.
+
 ## v0.18.15 — path marks carry volume and sell share (15 Oct)
 - `path` marks on momentum and copy-path strategies are now `{m: multiple, v: 5m volume USD, s: sell share of 5m volume}` so sell-share exit thresholds (tolerate sells to ~60% while volume holds; exit regardless at 65–70%) can be tested offline. Early strategy keeps the plain multiple.
 

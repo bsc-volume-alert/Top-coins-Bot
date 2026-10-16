@@ -3,7 +3,10 @@ import { CFG } from "./config.js";
 import { db, q } from "./db.js";
 import { tg } from "./telegram.js";
 import { runnersText } from "./runners.js";
-import { zip } from "./zip.js";
+import { zipFiles } from "./zip.js";
+import { mkdtempSync, openSync, writeSync, closeSync, rmSync, readFileSync, openAsBlob } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { checkText } from "./check.js";
 import { leaderboardText, walletText, addWatch, removeWatch, watchList, creatorsText, creatorText, addWatchCreator, removeWatchCreator, watchCreatorList } from "./wallets.js";
 const TOKEN = () => process.env.TG_BOT_TOKEN, CHAT = () => String(process.env.TG_CHAT_ID);
@@ -14,13 +17,18 @@ async function poll() {
     try {
       const r = await fetch(`https://api.telegram.org/bot${TOKEN()}/getUpdates?timeout=25&offset=${offset}&allowed_updates=["message"]`, { signal: AbortSignal.timeout(35000) });
       const j = await r.json();
-      for (const u of j.result || []) {
-        offset = u.update_id + 1;
+      const batch = j.result || [];
+      if (batch.length) { // v0.18.16: confirm receipt BEFORE running anything, so a crash mid-command can never replay the same command in a loop
+        offset = batch[batch.length - 1].update_id + 1;
+        try { await fetch(`https://api.telegram.org/bot${TOKEN()}/getUpdates?timeout=0&limit=1&offset=${offset}`, { signal: AbortSignal.timeout(10000) }); } catch {}
+      }
+      for (const u of batch) {
         const m = u.message; if (!m?.text || String(m.chat?.id) !== CHAT()) continue;
         const cmd = m.text.trim().split(/\s+/)[0].toLowerCase().replace(/@.*$/, "");
         if (cmd === "/report") await tg(reportText(24));
         else if (cmd === "/report7") await tg(reportText(24 * 7));
-        else if (cmd === "/csv") await sendCsv();
+        else if (cmd === "/csv") await sendCsv(false);
+        else if (cmd === "/csvfull") await sendCsv(true);
         else if (cmd === "/status") await tg(deps.status ? deps.status() : "n/a");
         else if (cmd === "/summary") await tg(deps.summary ? deps.summary() : "n/a");
         else if (cmd === "/wallets") await tg(leaderboardText(7, 10));
@@ -44,7 +52,7 @@ async function poll() {
         else if (cmd === "/watchcreator") { const [, a, ...rest] = m.text.trim().split(/\s+/); if (!a || a.length < 32) await tg("Usage: /watchcreator <address> [label]"); else { addWatchCreator(a, rest.join(" ") || null); await tg(`👁 watching creator <code>${a}</code>${rest.length ? " as " + rest.join(" ") : ""} — alert + paper entry on their next launch`); } }
         else if (cmd === "/unwatchcreator") { const a = m.text.trim().split(/\s+/)[1]; if (a) { removeWatchCreator(a); await tg(`removed creator <code>${a}</code>`); } }
         else if (cmd === "/watching") { const l = watchList(), lc = watchCreatorList(); await tg((l.length ? "👁 Wallets:\n" + l.map(([w, v]) => `• <code>${w}</code>${v.label ? " — " + v.label : ""}`).join("\n") : "👁 Wallets: none") + "\n" + (lc.length ? "🧑‍💻 Creators:\n" + lc.map(([w, v]) => `• <code>${w}</code>${v.label ? " — " + v.label : ""}`).join("\n") : "🧑‍💻 Creators: none") + "\n/watch · /watchcreator"); }
-        else if (cmd === "/help") await tg("Commands: /report · /report7 · /summary · /csv · /status · /check &lt;mint&gt; · /prepump · /prepump30 · /bigrunners (3x+ momentum, with volume after entry) · /wallets (top 10, 7d) · /wallets30 · /wallet <addr> · /watch <addr> [label] · /unwatch · /runners · /runners7 · /creators · /creators30 · /creator <addr> · /watchcreator <addr> [label] · /unwatchcreator · /watching");
+        else if (cmd === "/help") await tg("Commands: /report · /report7 · /summary · /csv · /csvfull (adds token_life + wallet_buys) · /status · /check &lt;mint&gt; · /prepump · /prepump30 · /bigrunners (3x+ momentum, with volume after entry) · /wallets (top 10, 7d) · /wallets30 · /wallet <addr> · /watch <addr> [label] · /unwatch · /runners · /runners7 · /creators · /creators30 · /creator <addr> · /watchcreator <addr> [label] · /unwatchcreator · /watching");
       }
     } catch (e) { await new Promise((r) => setTimeout(r, 5000)); }
   }
@@ -73,26 +81,50 @@ const CSV_EXTRA = {
   pump_buyers: `SELECT b.trade_id, b.mint, p.name, b.wallet, datetime(b.ts,'unixepoch') buy_utc, b.sol, b.mc, b.lead_s, b.venue, p.peak_mult, p.entry_mc FROM pump_buyers b LEFT JOIN paper_trades p ON p.id=b.trade_id ORDER BY b.trade_id, b.lead_s DESC`,
   tokens: `SELECT mint, name, symbol, creator, datetime(create_ts,'unixepoch') launch_utc, bundle_pct, bundle_sol, bundle_wallets, handoffs, tier, factory, has_socials, outside_buyers, outside_sol_in, cluster_sol_in, cluster_sol_out, peak_mc_usd, graduated, dev_buy_sol, creator_age_s, creator_funded_sol, creator_fee_sol, fee_claims, fee_claimed_sol, first_claim_ts FROM tokens WHERE finalized=1 ORDER BY create_ts`,
 };
-const toCsv = (rows) => {
-  const cols = Object.keys(rows[0]);
-  const escv = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
-  return [cols.join(","), ...rows.map((r) => cols.map((c) => escv(r[c])).join(","))].join("\n");
-};
-async function sendCsv() { // v0.15.2: one zip with all five CSVs (large CSVs crash Telegram's preview on iPad)
-  const day = new Date().toISOString().slice(0, 10), files = [], counts = [];
-  const paper = paperRows(); if (paper.length) { files.push({ name: `paper_trades_${day}.csv`, data: toCsv(paper) }); counts.push(`${paper.length} paper trades`); }
-  for (const [name, sql] of Object.entries(CSV_EXTRA)) {
-    try { const rows = db.prepare(sql).all(); if (rows.length) { files.push({ name: `${name}_${day}.csv`, data: toCsv(rows) }); counts.push(`${rows.length} ${name.replace("_", " ")}`); } } catch (e) { console.error("[csv]", name, e.message); }
-  }
-  if (!files.length) return tg("No data yet.");
-  const buf = zip(files);
-  const fd = new FormData();
-  fd.append("chat_id", CHAT());
-  fd.append("document", new Blob([buf], { type: "application/zip" }), `tracker_export_${day}.zip`);
-  fd.append("caption", `${counts.join(" · ")} · ${(buf.length / 1048576).toFixed(1)} MB zipped`);
-  try { const r = await fetch(`https://api.telegram.org/bot${TOKEN()}/sendDocument`, { method: "POST", body: fd }); if (!r.ok) console.error("[csv]", await r.text()); }
-  catch (e) { console.error("[csv]", e.message); }
+const CSV_FULL_ONLY = new Set(["token_life", "wallet_buys"]); // v0.18.16: the two big tables; only in /csvfull
+const escv = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+/** v0.18.16: stream a query to a CSV file row by row (never holds the table in memory). Returns row count. */
+function queryToCsvFile(sql, path) {
+  const fd = openSync(path, "w"); let n = 0, cols = null, buf = [];
+  const flush = () => { if (buf.length) { writeSync(fd, buf.join("\n") + "\n"); buf = []; } };
+  try {
+    for (const r of db.prepare(sql).iterate()) {
+      if (!cols) { cols = Object.keys(r); buf.push(cols.join(",")); }
+      buf.push(cols.map((c) => escv(r[c])).join(",")); n++;
+      if (buf.length >= 2000) flush();
+    }
+    flush();
+  } finally { closeSync(fd); }
+  return n;
 }
-function paperRows() {
-  return db.prepare(`SELECT p.id, p.strategy, p.name, p.symbol, p.mint, datetime(p.entry_ts,'unixepoch') entry_utc, p.entry_age_s, p.entry_mc, p.peak_mult, p.x_tp, p.x_tsl40, p.x_tsl60, p.x_cluster, p.x_grad, p.x_time, p.x_tsl80, p.x_half60, p.x_twophase, p.x_ladder, p.x_levels, p.x_m1, p.x_m1vol, p.next_level, p.wave1_peak_mc, p.cluster_held_pct, p.trigger_kind, p.x_volstop, p.vol_at_entry, p.after_peak_mult, p.after_peak_mc, p.handover, p.creator_prior, p.creator_best_peak, p.dev_buy_sol, p.snipers, p.hour_utc, p.parent_id, p.bs_ratio_entry, p.buyers_entry, p.vol5m_usd, p.vol1m_usd, p.age_s, p.reentry_n, p.exit_reason, p.closed, p.tier, p.factory, p.has_socials, p.bundle_pct, p.bundle_sol, p.handoffs, p.inflow_sol, p.inflow_wallets, p.outside_share, p.buys, p.sells, p.mc_5m, p.mc_15m, p.buyers_5m, p.alerted, p.invalid, p.buys_entry, p.sells_entry, p.proven_entry, p.q_score, p.q_wallets, p.q_per10k, p.q_top3, p.q_roundtrip, p.q_retail, p.q_custom, p.q_size_cv, p.q_new_pct, p.q_px_per10k, p.x_combo, p.x_tp15, p.x_tsl25, p.x_t15s25, p.x_t15s60, p.x_t2s25, p.x_t2s60, p.x_t15s40, p.x_t2s40, p.x_flow, p.x_flow4, p.dd_pre15, p.path, p.venue, p.fee_accrued_entry, p.fee_claims_entry, p.fee_claimed_entry, p.core, p.core_tight, p.t_hit15_s, p.top10_entry, p.largest_entry, p.holders_entry, p.dev_hold_entry, p.tight, p.churn_entry, p.cluster_out_entry, t.outside_buyers, t.outside_sol_in, t.cluster_sol_in, t.cluster_sol_out, t.graduated, t.creator FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint ORDER BY p.id`).all();
+let csvBusy = false;
+async function sendCsv(full) { // v0.15.2: one zip (large CSVs crash Telegram's preview on iPad). v0.18.16: built on disk, streamed, not in memory
+  if (csvBusy) return tg("Export already running — one moment.");
+  csvBusy = true;
+  const day = new Date().toISOString().slice(0, 10), dir = mkdtempSync(join(tmpdir(), "tracker-csv-")), files = [], counts = [];
+  try {
+    const tables = { paper_trades: PAPER_SQL, ...CSV_EXTRA };
+    for (const [name, sql] of Object.entries(tables)) {
+      if (!full && CSV_FULL_ONLY.has(name)) continue;
+      const path = join(dir, `${name}_${day}.csv`);
+      try { const n = queryToCsvFile(sql, path); if (n) { files.push({ name: `${name}_${day}.csv`, path }); counts.push(`${n} ${name.replace("_", " ")}`); } } catch (e) { console.error("[csv]", name, e.message); }
+      await new Promise((r) => setImmediate(r)); // let the feed breathe between tables
+    }
+    if (!files.length) return tg("No data yet.");
+    const zipPath = join(dir, `tracker_export_${day}.zip`), size = await zipFiles(files, zipPath);
+    const blob = typeof openAsBlob === "function" ? await openAsBlob(zipPath, { type: "application/zip" }) : new Blob([readFileSync(zipPath)], { type: "application/zip" });
+    const fd = new FormData();
+    fd.append("chat_id", CHAT());
+    fd.append("document", blob, `tracker_export_${day}.zip`);
+    fd.append("caption", `${counts.join(" · ")} · ${(size / 1048576).toFixed(1)} MB zipped${full ? "" : " · /csvfull for token_life + wallet_buys"}`);
+    const r = await fetch(`https://api.telegram.org/bot${TOKEN()}/sendDocument`, { method: "POST", body: fd, signal: AbortSignal.timeout(120000) });
+    if (!r.ok) { const t = await r.text(); console.error("[csv]", t); await tg(`Export failed to send: ${esc(t.slice(0, 200))}`); }
+  } catch (e) { console.error("[csv]", e.message); try { await tg(`Export failed: ${esc(e.message)}`); } catch {} }
+  finally { csvBusy = false; try { rmSync(dir, { recursive: true, force: true }); } catch {} }
 }
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// v0.18.16: memory guard — pm2 restarts the bot at 600 MB; warn well before that so growth is seen before it bites
+export const memMb = () => Math.round(process.memoryUsage().rss / 1048576);
+let memWarnAt = 0;
+setInterval(() => { const mb = memMb(); if (mb > 450 && Date.now() - memWarnAt > 600_000) { memWarnAt = Date.now(); console.error(`[mem] rss ${mb} MB — pm2 restarts at 600`); tg(`⚠️ memory ${mb} MB (restart at 600)`).catch(() => {}); } }, 20_000);
+const PAPER_SQL = `SELECT p.id, p.strategy, p.name, p.symbol, p.mint, datetime(p.entry_ts,'unixepoch') entry_utc, p.entry_age_s, p.entry_mc, p.peak_mult, p.x_tp, p.x_tsl40, p.x_tsl60, p.x_cluster, p.x_grad, p.x_time, p.x_tsl80, p.x_half60, p.x_twophase, p.x_ladder, p.x_levels, p.x_m1, p.x_m1vol, p.next_level, p.wave1_peak_mc, p.cluster_held_pct, p.trigger_kind, p.x_volstop, p.vol_at_entry, p.after_peak_mult, p.after_peak_mc, p.handover, p.creator_prior, p.creator_best_peak, p.dev_buy_sol, p.snipers, p.hour_utc, p.parent_id, p.bs_ratio_entry, p.buyers_entry, p.vol5m_usd, p.vol1m_usd, p.age_s, p.reentry_n, p.exit_reason, p.closed, p.tier, p.factory, p.has_socials, p.bundle_pct, p.bundle_sol, p.handoffs, p.inflow_sol, p.inflow_wallets, p.outside_share, p.buys, p.sells, p.mc_5m, p.mc_15m, p.buyers_5m, p.alerted, p.invalid, p.buys_entry, p.sells_entry, p.proven_entry, p.q_score, p.q_wallets, p.q_per10k, p.q_top3, p.q_roundtrip, p.q_retail, p.q_custom, p.q_size_cv, p.q_new_pct, p.q_px_per10k, p.x_combo, p.x_tp15, p.x_tsl25, p.x_t15s25, p.x_t15s60, p.x_t2s25, p.x_t2s60, p.x_t15s40, p.x_t2s40, p.x_flow, p.x_flow4, p.dd_pre15, p.path, p.venue, p.fee_accrued_entry, p.fee_claims_entry, p.fee_claimed_entry, p.core, p.core_tight, p.t_hit15_s, p.top10_entry, p.largest_entry, p.holders_entry, p.dev_hold_entry, p.tight, p.churn_entry, p.cluster_out_entry, t.outside_buyers, t.outside_sol_in, t.cluster_sol_in, t.cluster_sol_out, t.graduated, t.creator FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint ORDER BY p.id`;
