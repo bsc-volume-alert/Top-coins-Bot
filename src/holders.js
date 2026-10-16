@@ -18,6 +18,7 @@ const DUST = 1000; // tokens; below this a wallet is not counted as a holder
 function apply(mint, wallet, isBuy, tokens) {
   const m = L.get(mint); if (!m || !wallet || !(tokens > 0)) return;
   m.set(wallet, (m.get(wallet) || 0) + (isBuy ? tokens : -tokens));
+  if (m.size > 4000 && (m.size & 1023) === 0) for (const [w, v] of m) if (v <= DUST) m.delete(w); // v0.18.18: sold-out wallets are dropped from big ledgers
 }
 on("create", (t) => { L.set(t.mint, new Map()); ho.ledgers = L.size; });
 on("trade", (t, tr) => apply(t.mint, tr.wallet, tr.isBuy, tr.tokens));
@@ -60,4 +61,5 @@ export async function recordHoldersAsync(id, mint, creator = null) {
   if (h) { try { q.setHolders.run(h.top10, h.largest, h.holders, h.dev, id); } catch {} }
   return h;
 }
+export const memStats = () => { let entries = 0; for (const m of L.values()) entries += m.size; return { ledgers: L.size, entries }; }; // v0.18.18
 export const holdersLine = (h) => h ? `holders ${h.holders ?? "20+"} · top-10 ${h.top10.toFixed(0)}% · largest ${h.largest.toFixed(1)}%${h.dev != null ? ` · dev ${h.dev.toFixed(1)}%` : ""}` : null;

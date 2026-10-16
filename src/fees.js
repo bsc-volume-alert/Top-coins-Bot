@@ -30,6 +30,7 @@ on("claim", (_, c) => {
 });
 
 /** Fee picture for a mint at this moment: accrued creator fees (SOL) and the creator's claims since the token launched. */
+export const memStats = () => ({ accrued: accrued.size, creatorOf: creatorOf.size }); // v0.18.18
 export function feeInfo(mint, creator = null, createTs = null) {
   const a = accrued.get(mint);
   const meta = creator && createTs ? null : q.tokenMeta.get(mint);

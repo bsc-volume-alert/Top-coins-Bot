@@ -8,6 +8,7 @@ import { getSocials, socialsLine } from "./socials.js";
 
 /** In-memory token state. mint -> {create, slot, trades:[], finalized, tier, bundle:{...}} */
 export const live = new Map();
+export const memStats = () => { let trades = 0; for (const t of live.values()) trades += t.trades?.length || 0; return { live: live.size, trades }; }; // v0.18.18
 export const counters = { txs: 0, creates: 0, trades: 0, tier1: 0, decodeErr: 0 };
 const listeners = new Map(); // event -> [fn(token, extra)]   events: create|finalized|trade|graduated|expire
 export const on = (ev, fn) => { if (!listeners.has(ev)) listeners.set(ev, []); listeners.get(ev).push(fn); };

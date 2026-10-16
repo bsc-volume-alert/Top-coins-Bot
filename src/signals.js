@@ -286,4 +286,5 @@ export function clusterSnap(mint) {
   const bundleSol = t?.bundle?.sol ?? 0;
   return { cIn: s.cIn, cOut: s.cOut, bundleSol, churn: bundleSol > 0 ? s.cOut / bundleSol : null, held: heldPct(s), handoffs: s.handoffs };
 }
+export const memStats = () => { let ob = 0, sb = 0, win = 0, v5 = 0, cl = 0; for (const s of S.values()) { ob += s.oBuyers.size; sb += s.seenBuyers.size; win += s.win.length; v5 += s.v5.length; cl += s.cluster.size; } return { mints: S.size, oBuyers: ob, seenBuyers: sb, win, v5, cluster: cl }; }; // v0.18.18
 export const sigStats = () => ({ ...sig, tracked: S.size, open: [...S.values()].reduce((a, s) => a + (s.pos && !s.pos.closed ? 1 : 0) + (s.confPos && !s.confPos.closed && s.confPos !== s.pos ? 1 : 0), 0), rpc: rpcUsed() });

@@ -29,7 +29,15 @@ function st(mint) {
   if (!s) { s = { w5: [], w1: [], buyers: [], lastTs: 0, lastAlert: 0, pos: null, trades: [], firstEntryPx: null, belowSince: 0, lastPx: 0, lastMc: 0, rejectedLevel: null, peakMc: 0, posPeakMc: 0, seen: new Set() }; T.set(mint, s); }
   return s;
 }
-setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [m, s] of T) { if (!s.pos && now - s.lastTs > 900 && !s.trades.length) { T.delete(m); continue; } while (s.buyers.length && now - s.buyers[0].ts > CFG.PREPUMP_WINDOW_S) s.buyers.shift(); } mom.tracked = T.size; }, 60_000);
+setInterval(() => { // v0.18.18: traded mints are released 3h after their last close (were kept forever); idle wallet sets are cleared
+  const now = Math.floor(Date.now() / 1000);
+  for (const [m, s] of T) {
+    if (!s.pos && now - s.lastTs > 900 && (!s.trades.length || now - s.trades.at(-1).closedTs > 3 * 3600)) { T.delete(m); continue; }
+    if (s.seen.size > 5000 && !s.pos && now - s.lastTs > 300) s.seen.clear();
+    while (s.buyers.length && now - s.buyers[0].ts > CFG.PREPUMP_WINDOW_S) s.buyers.shift();
+  }
+  mom.tracked = T.size;
+}, 60_000);
 
 // v0.18.2: the rolling windows survive restarts. Every deploy restarted the process and wiped them — 9g4Pib…pump spiked at 03:42 UTC
 // on 15 Oct while two deploys landed (03:39, 03:42) and the tally never reached $100K. Saved every 20s and on SIGINT/SIGTERM.
@@ -86,7 +94,7 @@ onSwap((tr) => {
   if (tr.mc > s.peakMc) s.peakMc = tr.mc;
   // level rejection: price fell >30% from a peak that was above a level → that level is "rejected"
   if (s.peakMc > 0 && tr.mc < s.peakMc * 0.7) { const L = lastLevel(s.peakMc); if (L && L > tr.mc) s.rejectedLevel = L; }
-  s.w5.push({ ts: now, usd, b: tr.isBuy, w: tr.wallet, route: tr.route || "unknown", px: tr.price, v: tr.venue || "pumpswap" }); while (s.w5.length && now - s.w5[0].ts > 300) { const old = s.w5.shift(); if (s.seen.size < 20000) s.seen.add(old.w); }
+  s.w5.push({ ts: now, usd, b: tr.isBuy, w: tr.wallet, route: tr.route || "unknown", px: tr.price, v: tr.venue || "pumpswap" }); while (s.w5.length && now - s.w5[0].ts > 300) { const old = s.w5.shift(); if (s.seen.size < 5000) s.seen.add(old.w); }
   if (tr.isBuy && tr.wallet && !tr.wallet.startsWith("tx:")) { s.buyers.push({ ts: now, w: tr.wallet, sol: tr.sol, mc: tr.mc, v: tr.venue || "pumpswap" }); if (s.buyers.length > 5000) s.buyers.splice(0, 1000); }
   s.w1.push({ ts: now, usd, b: tr.isBuy }); while (s.w1.length && now - s.w1[0].ts > 60) s.w1.shift();
   if (s.pos) updatePos(tr.mint, s, tr.price, now);
@@ -286,6 +294,7 @@ export function momSnap(mint) {
   return { v5: w5.reduce((a, x) => a + x.usd, 0), buys: w5.filter((x) => x.b).length, sells: w5.filter((x) => !x.b).length, wallets: new Set(w5.map((x) => x.w)).size, lastMc: s.lastMc, lastTs: s.lastTs, peakMc: s.peakMc, venues, open: !!(s.pos && !s.pos.closed), trades: s.trades.length };
 }
 export const momStats = () => ({ ...mom, open: [...T.values()].filter((s) => s.pos && !s.pos.closed).length });
+export const memStats = () => { let w5 = 0, seen = 0, buyers = 0, w1 = 0; for (const s of T.values()) { w5 += s.w5.length; w1 += s.w1.length; seen += s.seen.size; buyers += s.buyers.length; } return { mints: T.size, w5, w1, seen, buyers }; }; // v0.18.18
 
 /** 4-hourly strategy summary text */
 export function strategySummary(hours) {

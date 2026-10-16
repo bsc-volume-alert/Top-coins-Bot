@@ -25,6 +25,7 @@ try {
   for (const c of CFG.WATCH_SEED_CREATORS) if (c.length >= 32 && !watchC.has(c)) q.addWatchCreator.run(c, "bundle-group", now0);
   reloadWatch();
 } catch (e) { console.error("[watch seed]", e.message); }
+export const memStats = () => { let b = 0; for (const e of early.values()) b += e.buyers?.size || 0; return { early: early.size, earlyBuyers: b, peaks: peaks.size }; }; // v0.18.18
 export const isWatched = (w) => watch.has(w);
 export const watchList = () => [...watch.entries()];
 

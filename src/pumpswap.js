@@ -24,6 +24,7 @@ let samples = 0;
 const quotes = new Map(); // quoteMint -> {sol, dec, sym, ts}
 const quotePending = new Set();
 export const quoteStats = { lookups: 0, fails: 0, skipped: 0 };
+export const memStats = () => { let pv = 0; for (const a of poolVol.values()) pv += a.length; return { poolMint: poolMint.size, poolVol: poolVol.size, poolVolEntries: pv, gradSeen: gradSeen.size, quotes: quotes.size }; }; // v0.18.18
 function quoteOf(mint, now) {
   if (mint === WSOL) return { sol: 1, dec: 9, sym: "SOL" };
   const c = quotes.get(mint);

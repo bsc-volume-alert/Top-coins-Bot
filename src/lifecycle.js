@@ -28,7 +28,7 @@ function trade(mint, createTs, tr, mc, graduated, venue) {
   const s = st(mint, createTs); if (!s) return;
   const now = tr.ts || Math.floor(Date.now() / 1000);
   s.w5.push({ ts: now, sol: tr.sol, b: tr.isBuy, w: tr.wallet }); while (s.w5.length && now - s.w5[0].ts > 300) s.w5.shift();
-  if (tr.isBuy && !s.buyers.has(tr.wallet)) { s.buyers.add(tr.wallet); s.bts.push({ ts: now, w: tr.wallet }); }
+  if (tr.isBuy && s.buyers.size < 20000 && !s.buyers.has(tr.wallet)) { s.buyers.add(tr.wallet); s.bts.push({ ts: now, w: tr.wallet }); } // v0.18.18: buyer set capped at 20K wallets (count saturates)
   while (s.bts.length && now - s.bts[0].ts > 1260) s.bts.shift();
   s.ring.push({ ts: now, px: tr.price, mc, usd: tr.sol * solUsdCached(), b: tr.isBuy }); while (s.ring.length && now - s.ring[0].ts > 1260) s.ring.shift();
   s.lastMc = mc; s.lastTs = now; s.lastPx = tr.price; if (mc > s.peakMc) { s.peakMc = mc; s.peakTs = now; }
@@ -84,12 +84,13 @@ setInterval(() => {
   const now = Math.floor(Date.now() / 1000);
   for (const [mint, s] of L) {
     sample(mint, s, now);
-    if (s.next >= CFG.LIFE_CHECKPOINTS.length || (now - s.createTs > 7200 && now - s.lastTs > 7200 && s.next >= 6)) L.delete(mint);
+    if (s.next >= CFG.LIFE_CHECKPOINTS.length || (now - s.createTs > 7200 && now - s.lastTs > 7200)) L.delete(mint); // v0.18.18: any token quiet for 2h is released (was held up to 25h waiting for late checkpoints)
     else if (now - s.createTs > 90000) L.delete(mint);
   }
   lc.tracked = L.size;
 }, 30_000);
 export const lcStats = () => ({ ...lc, holderBudget, balBudget });
+export const memStats = () => { let buyers = 0, bts = 0, ring = 0, w5 = 0; for (const s of L.values()) { buyers += s.buyers.size; bts += s.bts.length; ring += s.ring.length; w5 += s.w5.length; } return { mints: L.size, buyers, bts, ring, w5, balCache: balCache.size }; }; // v0.18.18
 /** v0.15: snapshot for the graduation strategy — 5m checkpoint (if reached), distinct buyers so far, biggest 1m burst */
 export function lifeSnap(mint) { const s = L.get(mint); if (!s) return null; return { cp5: s.cp[300] || null, buyers: s.buyers.size, maxBurst: s.maxBurst, createTs: s.createTs }; }
 

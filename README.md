@@ -56,6 +56,14 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.18 — memory: `/mem` breakdown and caps on the stores that grew all day (16 Oct)
+After the v0.18.17 restart the process went from 120 MB to 482 MB in 80 minutes; pm2 restarts it at 600 MB, so the bot had been silently restarting several times a day (each one empties the 5m volume windows for a moment). Found by the new memory warning, not by luck.
+- `/mem`: process memory plus the size of every in-memory store (momentum mints/windows/wallet sets, lifecycle buyer sets, holder ledgers, signals, live tokens, PumpSwap and DEX pool maps, fees, copy positions, wallet buys) — so growth is measured, not guessed.
+- Momentum: mints that ever traded were kept forever (with up to 20K "seen" wallets each); now released 3h after the last close, wallet sets capped at 5K and cleared when idle.
+- Lifecycle: every token was held up to 25h waiting for late checkpoints; now released after 2h quiet. Buyer sets capped at 20K wallets.
+- Holder ledgers: sold-out wallets are dropped from big ledgers.
+- No change to entries, exits or recording.
+
 ## v0.18.17 — Project 2 hypotheses on file, fast-fail exit, clean buy/sell flow (16 Oct)
 Recording only; no entry, alert or exit rule changed. The 16 Oct findings on 52 Project 2 trades are written as pre-registered hypotheses in `analysis/README.md`, to be tested on trades entered after this deploy.
 - `core_v40` tag: core trade with 1m volume ≥ $40K (`MOM_V40_USD`) and under 10 min old (`MOM_V40_AGE_S`) at entry.

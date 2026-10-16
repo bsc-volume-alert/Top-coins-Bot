@@ -8,6 +8,16 @@ import { mkdtempSync, openSync, writeSync, closeSync, rmSync, readFileSync, open
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkText } from "./check.js";
+import { memStats as memMom } from "./momentum.js";
+import { memStats as memLife } from "./lifecycle.js";
+import { memStats as memHold } from "./holders.js";
+import { memStats as memSig } from "./signals.js";
+import { memStats as memLive } from "./launch-monitor.js";
+import { memStats as memPs } from "./pumpswap.js";
+import { memStats as memDex } from "./dex.js";
+import { memStats as memFees } from "./fees.js";
+import { memStats as memCopy } from "./copytrade.js";
+import { memStats as memWal } from "./wallets.js";
 import { leaderboardText, walletText, addWatch, removeWatch, watchList, creatorsText, creatorText, addWatchCreator, removeWatchCreator, watchCreatorList } from "./wallets.js";
 const TOKEN = () => process.env.TG_BOT_TOKEN, CHAT = () => String(process.env.TG_CHAT_ID);
 let offset = 0, deps = {};
@@ -30,6 +40,13 @@ async function poll() {
         else if (cmd === "/csv") await sendCsv(false);
         else if (cmd === "/csvfull") await sendCsv(true);
         else if (cmd === "/status") await tg(deps.status ? deps.status() : "n/a");
+        else if (cmd === "/mem") { // v0.18.18: what is in memory, so growth can be seen instead of guessed
+          const mu = process.memoryUsage(), f = (o) => Object.entries(o).map(([k, v]) => `${k} ${typeof v === "number" ? v.toLocaleString("en-GB") : v}`).join(" · ");
+          const parts = { momentum: memMom, lifecycle: memLife, holders: memHold, signals: memSig, live: memLive, pumpswap: memPs, dex: memDex, fees: memFees, copy: memCopy, wallets: memWal };
+          let t = `🧠 <b>Memory</b> rss ${Math.round(mu.rss / 1048576)} MB · heap ${Math.round(mu.heapUsed / 1048576)}/${Math.round(mu.heapTotal / 1048576)} MB · external ${Math.round(mu.external / 1048576)} MB · arrays ${Math.round(mu.arrayBuffers / 1048576)} MB\n`;
+          for (const [k, fn] of Object.entries(parts)) { try { t += `<b>${k}</b>: ${f(fn())}\n`; } catch (e) { t += `<b>${k}</b>: error ${esc(e.message)}\n`; } }
+          await tg(t);
+        }
         else if (cmd === "/summary") await tg(deps.summary ? deps.summary() : "n/a");
         else if (cmd === "/wallets") await tg(leaderboardText(7, 10));
         else if (cmd === "/wallets30") await tg(leaderboardText(30, 10));
@@ -52,7 +69,7 @@ async function poll() {
         else if (cmd === "/watchcreator") { const [, a, ...rest] = m.text.trim().split(/\s+/); if (!a || a.length < 32) await tg("Usage: /watchcreator <address> [label]"); else { addWatchCreator(a, rest.join(" ") || null); await tg(`👁 watching creator <code>${a}</code>${rest.length ? " as " + rest.join(" ") : ""} — alert + paper entry on their next launch`); } }
         else if (cmd === "/unwatchcreator") { const a = m.text.trim().split(/\s+/)[1]; if (a) { removeWatchCreator(a); await tg(`removed creator <code>${a}</code>`); } }
         else if (cmd === "/watching") { const l = watchList(), lc = watchCreatorList(); await tg((l.length ? "👁 Wallets:\n" + l.map(([w, v]) => `• <code>${w}</code>${v.label ? " — " + v.label : ""}`).join("\n") : "👁 Wallets: none") + "\n" + (lc.length ? "🧑‍💻 Creators:\n" + lc.map(([w, v]) => `• <code>${w}</code>${v.label ? " — " + v.label : ""}`).join("\n") : "🧑‍💻 Creators: none") + "\n/watch · /watchcreator"); }
-        else if (cmd === "/help") await tg("Commands: /report · /report7 · /summary · /csv · /csvfull (adds token_life + wallet_buys) · /status · /check &lt;mint&gt; · /prepump · /prepump30 · /bigrunners (3x+ momentum, with volume after entry) · /wallets (top 10, 7d) · /wallets30 · /wallet <addr> · /watch <addr> [label] · /unwatch · /runners · /runners7 · /creators · /creators30 · /creator <addr> · /watchcreator <addr> [label] · /unwatchcreator · /watching");
+        else if (cmd === "/help") await tg("Commands: /report · /report7 · /summary · /csv · /csvfull (adds token_life + wallet_buys) · /status · /mem · /check &lt;mint&gt; · /prepump · /prepump30 · /bigrunners (3x+ momentum, with volume after entry) · /wallets (top 10, 7d) · /wallets30 · /wallet <addr> · /watch <addr> [label] · /unwatch · /runners · /runners7 · /creators · /creators30 · /creator <addr> · /watchcreator <addr> [label] · /unwatchcreator · /watching");
       }
     } catch (e) { await new Promise((r) => setTimeout(r, 5000)); }
   }

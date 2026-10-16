@@ -124,6 +124,7 @@ function handle({ sig, slot, logs, err }) {
 }
 
 /** Pools we have mapped for a mint (for /check). */
+export const memStats = () => { let ph = 0; for (const a of poolHits.values()) ph += a.length; return { pools: pools.size, mintPools: mintPools.size, supplyCache: supplyCache.size, poolHits: poolHits.size, poolHitEntries: ph, seenSig: seenSig.size }; }; // v0.18.18
 export const dexSnap = (mint) => [...(mintPools.get(mint) || [])].map((pool) => ({ pool, ...pools.get(pool) }));
 
 export function startDex(onStatus = () => {}) {
