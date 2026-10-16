@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.27 — dashboard: 24h headline, running total with duration, per-day table (16 Oct)
+Each project card now leads with the last-24-hours net, then the running total with trade count and how long the book has run (hours, then days), then a day-by-day table (UTC day, trades, won, net) that gains a row each day.
+
 ## v0.18.26 — dashboard theme (16 Oct)
 Terminal/synthwave look as requested: monospace type, purple-to-navy vertical gradient background, glassy cards, magenta headings and table headers, cyan section titles, amber figures, neon green/red for profit and loss; chart lines P1 amber, P2 cyan, P3 magenta. Both pages.
 
