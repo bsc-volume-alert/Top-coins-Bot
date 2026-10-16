@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.37 — rules box on every project (16 Oct)
+Projects 3, 4 and 5 now show their full rules in the highlighted box like 1 and 2; every box ends with the golden rule (sold when 5m volume < $25K). Project 5's box shows the $2M cap. Display only.
+
 ## v0.18.36 — low-volume exit on everything; Project 5 capped at $2M (16 Oct)
 Every open paper position (core, Project 4, Project 5 and all variants) is closed when the coin's 5-minute volume drops below $25K (`LOWVOL_EXIT_USD`), exit reason `lowvol` — every project's exit is settled at that price. Core positions carry the pre-entry trades, so the rule applies at any time; variant positions only count trades since entry, so it applies from 5 minutes after entry. After a restart nothing is closed for 5 minutes (`LOWVOL_WARMUP_S`) while the windows refill. Quiet coins with no trades are re-priced from DexScreener before closing. Back-test on 80 core trades (path marks): P1 −0.54 → −0.61 SOL — a clean-up rule, not a profit rule. Note for analysis: exits on trades from this version are not directly comparable with earlier ones (runners are cut when volume dies). Project 5 now only buys under $2M market cap (`P5_MAX_MC`).
 
