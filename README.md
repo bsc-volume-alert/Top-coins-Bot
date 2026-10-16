@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.38 — holding vs sold, profit/loss colours; low-volume exit hardened (16 Oct)
+Live positions split into "Holding now" (money still in at least one project) and "Sold by every project" (kept only to watch what the coin did after we sold). Each project cell is a coloured tag: green SOLD (profit, with SOL at the selected size), red SOLD (loss), cyan HOLDING (with "if sold now"), yellow WAIT (deciding), grey — (not taken). htop-style colours. Low-volume exit: both check loops now catch and log errors per coin instead of failing the whole loop; a position still open after a failed check is force-closed; a quick restart (state saved ≤30 s before) keeps the 5-minute windows, so no new 5-minute wait.
+
 ## v0.18.37 — rules box on every project (16 Oct)
 Projects 3, 4 and 5 now show their full rules in the highlighted box like 1 and 2; every box ends with the golden rule (sold when 5m volume < $25K). Project 5's box shows the $2M cap. Display only.
 

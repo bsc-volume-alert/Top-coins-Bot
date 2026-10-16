@@ -22,6 +22,8 @@ import { provenCount } from "./wallets.js";
 import { enrichEntry, sniperInfo, provenShare, enrichLine } from "./enrich.js"; // v0.18.19
 import { dexPrice } from "./sweeper.js"; // v0.18.29
 export const BOOT = Math.floor(Date.now() / 1000); // v0.18.36 process start (low-volume exit warm-up)
+// v0.18.38: windows count as complete from this time. A quick restart (state saved ≤30 s ago) keeps the saved 5m windows, so no new wait.
+let WARM_FROM = BOOT; const lvReady = (now) => now - WARM_FROM >= CFG.LOWVOL_WARMUP_S;
 
 export const mom = { alerts: 0, entries: 0, closes: 0, tracked: 0, reentries: 0 };
 const T = new Map(); // mint -> state
@@ -61,6 +63,7 @@ function loadState() {
   try {
     const j = JSON.parse(readFileSync(STATE_FILE, "utf8")), now = Math.floor(Date.now() / 1000); let n = 0, tr = 0, pr = 0;
     if (now - j.ts > 600) return console.log("[momentum] state file too old, ignored");
+    if (now - j.ts <= 30) WARM_FROM = now - CFG.LOWVOL_WARMUP_S;
     for (const [m, v] of Object.entries(j.T || {})) {
       const s = st(m); s.w5 = (v.w5 || []).filter((x) => now - x.ts <= 300); s.w1 = (v.w1 || []).filter((x) => now - x.ts <= 60); s.buyers = (v.buyers || []).filter((x) => now - x.ts <= CFG.PREPUMP_WINDOW_S);
       Object.assign(s, { lastTs: v.lastTs || 0, lastAlert: v.lastAlert || 0, lastPx: v.lastPx || 0, lastMc: v.lastMc || 0, peakMc: v.peakMc || 0, trades: v.trades || [], firstEntryPx: v.firstEntryPx ?? null, posPeakMc: v.posPeakMc || 0, rejectedLevel: v.rejectedLevel ?? null, dip: v.dip ?? null, conf: v.conf ?? null }); n++; tr += s.w5.length;
@@ -101,13 +104,15 @@ async function refreshIdle() {
     const now = Math.floor(Date.now() / 1000); let n = 0;
     for (const [mint, s] of T) {
       if (!s.pos || s.pos.closed || now - (s.pxTs || s.lastTs) < 60 || n >= 25) continue;
-      if (now - BOOT >= CFG.LOWVOL_WARMUP_S && lowVol(s.w5, now)) { const px = await dexPrice(mint).catch(() => null); n++; if (px > 0) { s.lastPx = px; s.lastMc = px * CFG.TOTAL_SUPPLY * solUsdCached(); s.pxSrc = "dex"; s.pxTs = now; } updatePos(mint, s, s.lastPx || s.pos.entry, now); continue; }
-      const px = await dexPrice(mint).catch(() => null); n++;
-      if (px > 0) { s.lastPx = px; s.lastMc = px * CFG.TOTAL_SUPPLY * solUsdCached(); s.pxSrc = "dex"; s.pxTs = now; updatePos(mint, s, px, now); }
+      try {
+        if (lvReady(now) && lowVol(s.w5, now)) { const px = await dexPrice(mint).catch(() => null); n++; if (px > 0) { s.lastPx = px; s.lastMc = px * CFG.TOTAL_SUPPLY * solUsdCached(); s.pxSrc = "dex"; s.pxTs = now; } updatePos(mint, s, s.lastPx || s.pos.entry, now); if (s.pos && !s.pos.closed) { console.error("[lowvol] still open after check", mint); closePos(mint, s, "lowvol"); } continue; }
+        const px = await dexPrice(mint).catch(() => null); n++;
+        if (px > 0) { s.lastPx = px; s.lastMc = px * CFG.TOTAL_SUPPLY * solUsdCached(); s.pxSrc = "dex"; s.pxTs = now; updatePos(mint, s, px, now); }
+      } catch (e) { console.error("[refreshIdle]", mint, e.message); try { if (lvReady(now) && lowVol(s.w5, now)) closePos(mint, s, "lowvol"); } catch (e2) { console.error("[lowvol close]", mint, e2.message); } }
     }
   } finally { refreshing = false; }
 }
-setTimeout(refreshIdle, 8_000); setInterval(refreshIdle, 20_000);
+setTimeout(() => refreshIdle().catch((e) => console.error("[refreshIdle]", e.message)), 8_000); setInterval(() => refreshIdle().catch((e) => console.error("[refreshIdle]", e.message)), 20_000);
 setInterval(saveState, 20_000);
 for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => { saveState(); process.exit(0); });
 
@@ -337,10 +342,11 @@ function updatePos(mint, s, px, now) {
   if (x.tp15 != null && !p.hit15Saved) { p.hit15Saved = true; try { q.setHit15.run(now - p.entryTs, p.id); } catch {} }
   { const key = `${x.tp15}|${x.tsl25}|${x.t15s25}|${x.t15s60}|${x.t2s25}|${x.t2s60}`; if (p.stopsSaved !== key) { p.stopsSaved = key; try { q.setStops.run(x.tp15 ?? null, x.tsl25 ?? null, x.t15s25 ?? null, x.t15s60 ?? null, x.t2s25 ?? null, x.t2s60 ?? null, p.id); } catch {} } }
   if (x.tsl80 != null) closePos(mint, s, "tsl80");
-  else if (lowVol(s.w5, now) && now - BOOT >= CFG.LOWVOL_WARMUP_S) closePos(mint, s, "lowvol"); // v0.18.36
+  else if (lvReady(now) && lowVol(s.w5, now)) closePos(mint, s, "lowvol"); // v0.18.36
 }
 // v0.18.36: sell on every project's rule at once when the coin's 5-minute volume drops below LOWVOL_EXIT_USD. The core window already
 // holds the pre-entry trades, so it applies at any time — but only once this process has seen 5 full minutes (no false "quiet" after a restart).
+export const lowVolReady = (now) => lvReady(now);
 export const lowVol = (w, now) => w.reduce((a, z) => a + (now - z.ts <= 300 ? z.usd : 0), 0) < CFG.LOWVOL_EXIT_USD;
 
 function finalVariants(p, mult) {

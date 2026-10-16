@@ -82,7 +82,7 @@ function tick(mint, price, mc, sol, isBuy, ts) {
     { const k2 = `${x.flow}|${x.t15s40}|${x.t2s40}|${p.e.ddPre15}|${x.flow4}`; if (p.e.ex2Saved !== k2) { p.e.ex2Saved = k2; try { q.setExits2.run(x.flow ?? null, x.t15s40 ?? null, x.t2s40 ?? null, p.e.ddPre15 ?? null, x.flow4 ?? null, p.id); } catch {} } }
     { const key = `${x.combo}|${x.tp15}|${x.tsl25}|${x.t15s25}|${x.t15s60}|${x.t2s25}|${x.t2s60}`; if (p.e.comboSaved !== key) { p.e.comboSaved = key; try { q.setCombo.run(x.combo ?? null, x.tp15 ?? null, x.tsl25 ?? null, x.t15s25 ?? null, x.t15s60 ?? null, x.t2s25 ?? null, x.t2s60 ?? null, p.id); } catch {} } }
     if (x.tsl80 != null) close(mint, p, "tsl80");
-    else if (lowVolCopy(p, ts)) close(mint, p, "lowvol"); // v0.18.36
+    else if (lowVolCopy(p, ts)) { try { close(mint, p, "lowvol"); } catch (e) { console.error("[lowvol copy]", e.message); } } // v0.18.36
   }
 }
 on("trade", (t, tr) => tick(t.mint, tr.price, t.lastMc, tr.sol, tr.isBuy, tr.ts));
@@ -113,9 +113,9 @@ setInterval(async () => {
       if (p.closed || !lowVolCopy(p, now)) continue;
       if (now - (p.lastTs || 0) > 60 && n < 25) { n++; const px = await dexPrice(mint).catch(() => null); if (px > 0) { p.lastPx = px; p.lastMc = px * CFG.TOTAL_SUPPLY * solUsdCached(); } }
       try { stepExits(p.e, p.lastPx, p.lastMc, 0, 0, 0, now - p.entryTs); } catch {}
-      close(mint, p, "lowvol");
+      try { close(mint, p, "lowvol"); } catch (e) { console.error("[lowvol copy]", mint, e.message); p.closed = true; }
     }
-  } finally { lvBusy = false; }
+  } catch (e) { console.error("[lowvol loop]", e.message); } finally { lvBusy = false; }
 }, 20_000);
 
 // v0.18.28: variant positions (tiers, dip, re-entry, copy, wave2, grad…) still open in the database are rebuilt on startup, so a restart
