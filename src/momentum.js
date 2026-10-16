@@ -21,6 +21,7 @@ import { dirname, join } from "node:path";
 import { provenCount } from "./wallets.js";
 import { enrichEntry, sniperInfo, provenShare, enrichLine } from "./enrich.js"; // v0.18.19
 import { dexPrice } from "./sweeper.js"; // v0.18.29
+export const BOOT = Math.floor(Date.now() / 1000); // v0.18.36 process start (low-volume exit warm-up)
 
 export const mom = { alerts: 0, entries: 0, closes: 0, tracked: 0, reentries: 0 };
 const T = new Map(); // mint -> state
@@ -100,6 +101,7 @@ async function refreshIdle() {
     const now = Math.floor(Date.now() / 1000); let n = 0;
     for (const [mint, s] of T) {
       if (!s.pos || s.pos.closed || now - (s.pxTs || s.lastTs) < 60 || n >= 25) continue;
+      if (now - BOOT >= CFG.LOWVOL_WARMUP_S && lowVol(s.w5, now)) { const px = await dexPrice(mint).catch(() => null); n++; if (px > 0) { s.lastPx = px; s.lastMc = px * CFG.TOTAL_SUPPLY * solUsdCached(); s.pxSrc = "dex"; s.pxTs = now; } updatePos(mint, s, s.lastPx || s.pos.entry, now); continue; }
       const px = await dexPrice(mint).catch(() => null); n++;
       if (px > 0) { s.lastPx = px; s.lastMc = px * CFG.TOTAL_SUPPLY * solUsdCached(); s.pxSrc = "dex"; s.pxTs = now; updatePos(mint, s, px, now); }
     }
@@ -272,7 +274,7 @@ export const p5 = { fired: 0, young: 0, sellHeavy: 0 };
 export function p5Check(mint, s, tr, now) {
   let v2 = 0, b2 = 0; const w = new Set();
   for (let i = s.w5.length - 1; i >= 0; i--) { const z = s.w5[i]; if (now - z.ts > 120) break; v2 += z.usd; if (z.b) b2 += z.usd; w.add(z.w); }
-  if (v2 < CFG.P5_VOL2M_USD || !(tr.mc > 0) || !(tr.price > 0) || w.size < CFG.MOM_MIN_WALLETS5) return;
+  if (v2 < CFG.P5_VOL2M_USD || !(tr.mc > 0) || tr.mc >= CFG.P5_MAX_MC || !(tr.price > 0) || w.size < CFG.MOM_MIN_WALLETS5) return;
   if (b2 < v2 - b2) { if (!s.p5sell || now - s.p5sell > 60) { s.p5sell = now; p5.sellHeavy++; } return; }
   const meta = q.tokenMeta.get(mint);
   if (meta?.create_ts && now - meta.create_ts < CFG.P5_MIN_AGE_S) { p5.young++; return; }
@@ -335,7 +337,11 @@ function updatePos(mint, s, px, now) {
   if (x.tp15 != null && !p.hit15Saved) { p.hit15Saved = true; try { q.setHit15.run(now - p.entryTs, p.id); } catch {} }
   { const key = `${x.tp15}|${x.tsl25}|${x.t15s25}|${x.t15s60}|${x.t2s25}|${x.t2s60}`; if (p.stopsSaved !== key) { p.stopsSaved = key; try { q.setStops.run(x.tp15 ?? null, x.tsl25 ?? null, x.t15s25 ?? null, x.t15s60 ?? null, x.t2s25 ?? null, x.t2s60 ?? null, p.id); } catch {} } }
   if (x.tsl80 != null) closePos(mint, s, "tsl80");
+  else if (lowVol(s.w5, now) && now - BOOT >= CFG.LOWVOL_WARMUP_S) closePos(mint, s, "lowvol"); // v0.18.36
 }
+// v0.18.36: sell on every project's rule at once when the coin's 5-minute volume drops below LOWVOL_EXIT_USD. The core window already
+// holds the pre-entry trades, so it applies at any time — but only once this process has seen 5 full minutes (no false "quiet" after a restart).
+export const lowVol = (w, now) => w.reduce((a, z) => a + (now - z.ts <= 300 ? z.usd : 0), 0) < CFG.LOWVOL_EXIT_USD;
 
 function finalVariants(p, mult) {
   const x = p.x;

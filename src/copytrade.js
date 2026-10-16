@@ -12,6 +12,7 @@ import { tg } from "./telegram.js";
 import { esc, fmt } from "./launch-monitor.js";
 import { solUsdCached } from "./price.js";
 import { clusterSnap } from "./signals.js";
+import { dexPrice } from "./sweeper.js"; // v0.18.36
 import { feeInfo, feeLine } from "./fees.js";
 import { recordHolders, holdersLine } from "./holders.js";
 
@@ -69,7 +70,7 @@ function tick(mint, price, mc, sol, isBuy, ts) {
     p.w5.push({ ts, usd: sol * solUsdCached(), b: isBuy }); while (p.w5.length && ts - p.w5[0].ts > 300) p.w5.shift();
     if (!p.e.volAtEntry) p.e.volAtEntry = p.w5.reduce((a, x) => a + x.usd, 0);
     const v5 = p.w5.reduce((a, x) => a + x.usd, 0), bu = p.w5.filter((x) => x.b).reduce((a, x) => a + x.usd, 0), su = v5 - bu;
-    p.lastMc = mc; p.lastPx = price;
+    p.lastMc = mc; p.lastPx = price; p.lastTs = ts;
     const r = stepExits(p.e, price, mc, v5, bu, su, ts - p.entryTs); const x = p.e.x; // v0.18.17: seconds since entry for the fast-fail exit
     if (x.h2t40 != null && p.e.h2Saved !== x.h2t40) { p.e.h2Saved = x.h2t40; try { q.setH2.run(x.h2t40, p.id); } catch {} } // v0.18.35
     if (x.flow4ff != null && p.e.ffSaved !== x.flow4ff) { p.e.ffSaved = x.flow4ff; try { q.setFlow4ff.run(x.flow4ff, p.id); } catch {} }
@@ -81,6 +82,7 @@ function tick(mint, price, mc, sol, isBuy, ts) {
     { const k2 = `${x.flow}|${x.t15s40}|${x.t2s40}|${p.e.ddPre15}|${x.flow4}`; if (p.e.ex2Saved !== k2) { p.e.ex2Saved = k2; try { q.setExits2.run(x.flow ?? null, x.t15s40 ?? null, x.t2s40 ?? null, p.e.ddPre15 ?? null, x.flow4 ?? null, p.id); } catch {} } }
     { const key = `${x.combo}|${x.tp15}|${x.tsl25}|${x.t15s25}|${x.t15s60}|${x.t2s25}|${x.t2s60}`; if (p.e.comboSaved !== key) { p.e.comboSaved = key; try { q.setCombo.run(x.combo ?? null, x.tp15 ?? null, x.tsl25 ?? null, x.t15s25 ?? null, x.t15s60 ?? null, x.t2s25 ?? null, x.t2s60 ?? null, p.id); } catch {} } }
     if (x.tsl80 != null) close(mint, p, "tsl80");
+    else if (lowVolCopy(p, ts)) close(mint, p, "lowvol"); // v0.18.36
   }
 }
 on("trade", (t, tr) => tick(t.mint, tr.price, t.lastMc, tr.sol, tr.isBuy, tr.ts));
@@ -95,6 +97,26 @@ function close(mint, p, reason) {
   const arr = P.get(mint); if (arr && arr.every((z) => z.closed)) P.delete(mint);
 }
 setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const arr of P.values()) for (const p of arr) while (p.w5.length && now - p.w5[0].ts > 300) p.w5.shift(); }, 60_000); // v0.18.20
+// v0.18.36 low-volume exit: a variant position's window only holds trades since entry (or since a restart), so it applies once that
+// window covers a full 5 minutes. Quiet coins (no trades) are re-priced from DexScreener before closing.
+const BOOT = Math.floor(Date.now() / 1000);
+function lowVolCopy(p, now) {
+  if (now - Math.max(p.entryTs, BOOT) < CFG.LOWVOL_WARMUP_S) return false;
+  return p.w5.reduce((a, z) => a + (now - z.ts <= 300 ? z.usd : 0), 0) < CFG.LOWVOL_EXIT_USD;
+}
+let lvBusy = false;
+setInterval(async () => {
+  if (lvBusy) return; lvBusy = true;
+  try {
+    const now = Math.floor(Date.now() / 1000); let n = 0;
+    for (const [mint, arr] of [...P.entries()]) for (const p of arr) {
+      if (p.closed || !lowVolCopy(p, now)) continue;
+      if (now - (p.lastTs || 0) > 60 && n < 25) { n++; const px = await dexPrice(mint).catch(() => null); if (px > 0) { p.lastPx = px; p.lastMc = px * CFG.TOTAL_SUPPLY * solUsdCached(); } }
+      try { stepExits(p.e, p.lastPx, p.lastMc, 0, 0, 0, now - p.entryTs); } catch {}
+      close(mint, p, "lowvol");
+    }
+  } finally { lvBusy = false; }
+}, 20_000);
 
 // v0.18.28: variant positions (tiers, dip, re-entry, copy, wave2, grad…) still open in the database are rebuilt on startup, so a restart
 // never orphans them. Exits already recorded are kept; tracking resumes from the next swap.

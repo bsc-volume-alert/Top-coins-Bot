@@ -145,6 +145,8 @@ Object.assign(CFG, {
   MOM_RE_MAX: n("MOM_RE_MAX", 5), MOM_RE_GAP_S: n("MOM_RE_GAP_S", 60), // re-entry variant
   MOM_CT_MC: n("MOM_CT_MC", 60_000), MOM_CT_AGE_S: n("MOM_CT_AGE_S", 360), MOM_CT_SIZE_CV: n("MOM_CT_SIZE_CV", 1.6), // v0.18.7 core-tight tag
   FRESH_WALLET_D: n("FRESH_WALLET_D", 3), FRESH_SAMPLE: n("FRESH_SAMPLE", 25), FRESH_DAILY_BUDGET: n("FRESH_DAILY_BUDGET", 2000), // v0.18.19 fresh-wallet share at entry
+  LOWVOL_EXIT_USD: n("LOWVOL_EXIT_USD", 25000), LOWVOL_WARMUP_S: n("LOWVOL_WARMUP_S", 300), // v0.18.36: every open paper position is sold when its 5m volume < $25K (needs 5 min of complete trade data)
+  P5_MAX_MC: n("P5_MAX_MC", 2000000), // v0.18.36 Project 5 market-cap cap
   P5_VOL2M_USD: n("P5_VOL2M_USD", 100000), P5_MIN_AGE_S: n("P5_MIN_AGE_S", 60), // v0.18.35 Project 5: $100K traded inside 2 minutes, coin ≥60 s old, buys ≥ sells, no MC cap
   MOM_CONF_S: n("MOM_CONF_S", 60), MOM_CONF_MIN: n("MOM_CONF_MIN", 1.0), MOM_CONF_LATE_S: n("MOM_CONF_LATE_S", 120), // v0.18.32 Project 4: buy MOM_CONF_S after a core trigger only if price > MOM_CONF_MIN x trigger (first tick up to MOM_CONF_LATE_S)
   MOM_V40_USD: n("MOM_V40_USD", 40_000), MOM_V40_AGE_S: n("MOM_V40_AGE_S", 600), // v0.18.17 core_v40 tag: 1m volume >= $40K and under 10 min old at entry
