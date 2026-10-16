@@ -20,7 +20,7 @@ function parseCurve(b64) { // pump.fun BondingCurve: disc(8) vtok u64, vsol u64,
   if (!(vtok > 0)) return { complete, price: null };
   return { complete, price: (vsol / 1e9) / (vtok / 1e6) };
 }
-async function dexPrice(mint) {
+export async function dexPrice(mint) {
   const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`, { signal: AbortSignal.timeout(6000) });
   const j = await r.json(); const pairs = (j.pairs || []).filter((p) => p.chainId === "solana" && p.quoteToken?.symbol === "SOL");
   if (!pairs.length) return null;

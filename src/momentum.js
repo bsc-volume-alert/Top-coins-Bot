@@ -20,6 +20,7 @@ import { readFileSync, writeFileSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { provenCount } from "./wallets.js";
 import { enrichEntry, sniperInfo, provenShare, enrichLine } from "./enrich.js"; // v0.18.19
+import { dexPrice } from "./sweeper.js"; // v0.18.29
 
 export const mom = { alerts: 0, entries: 0, closes: 0, tracked: 0, reentries: 0 };
 const T = new Map(); // mint -> state
@@ -90,6 +91,21 @@ function restoreFromDb() {
   mom.restored = n;
 }
 loadState(); restoreFromDb();
+// v0.18.29: open positions with no trade in the last 2 minutes (dead coins, positions rebuilt after a restart) are re-priced from
+// DexScreener once a minute, so the dashboard and the hold-limit close use a real price rather than the last trade we happened to see.
+let refreshing = false;
+async function refreshIdle() {
+  if (refreshing) return; refreshing = true;
+  try {
+    const now = Math.floor(Date.now() / 1000); let n = 0;
+    for (const [mint, s] of T) {
+      if (!s.pos || s.pos.closed || now - s.lastTs < 120 || n >= 25) continue;
+      const px = await dexPrice(mint).catch(() => null); n++;
+      if (px > 0) { s.lastPx = px; s.lastMc = px * CFG.TOTAL_SUPPLY * solUsdCached(); s.pxSrc = "dex"; s.pxTs = now; updatePos(mint, s, px, now); }
+    }
+  } finally { refreshing = false; }
+}
+setTimeout(refreshIdle, 8_000); setInterval(refreshIdle, 60_000);
 setInterval(saveState, 20_000);
 for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => { saveState(); process.exit(0); });
 
@@ -119,7 +135,7 @@ async function dexInfo(mint) {
 
 onSwap((tr) => {
   const s = st(tr.mint), usd = tr.sol * solUsdCached(), now = tr.ts || Math.floor(Date.now() / 1000);
-  s.lastTs = now; s.lastPx = tr.price; s.lastMc = tr.mc;
+  s.lastTs = now; s.lastPx = tr.price; s.lastMc = tr.mc; s.pxSrc = "trade"; s.pxTs = now;
   if (tr.mc > s.peakMc) s.peakMc = tr.mc;
   // level rejection: price fell >30% from a peak that was above a level → that level is "rejected"
   if (s.peakMc > 0 && tr.mc < s.peakMc * 0.7) { const L = lastLevel(s.peakMc); if (L && L > tr.mc) s.rejectedLevel = L; }
@@ -347,7 +363,7 @@ export function openPositions() {
   const now = Math.floor(Date.now() / 1000), out = [];
   for (const [mint, s] of T) {
     const p = s.pos; if (!p || p.closed) continue;
-    out.push({ id: p.id, mint, name: p.name, entry: p.entry, entryMc: p.entryMc, entryTs: p.entryTs, ageS: now - p.entryTs, lastPx: s.lastPx || p.entry, lastMc: s.lastMc, lastTs: s.lastTs, peak: p.peak, mult: (s.lastPx || p.entry) / p.entry, peakMult: p.peak / p.entry,
+    out.push({ id: p.id, mint, name: p.name, entry: p.entry, entryMc: p.entryMc, entryTs: p.entryTs, ageS: now - p.entryTs, lastPx: s.lastPx || p.entry, lastMc: s.lastMc, lastTs: s.lastTs, pxSrc: s.pxSrc || (s.lastTs ? "trade" : null), pxAge: s.pxTs ? now - s.pxTs : (s.lastTs ? now - s.lastTs : null), peak: p.peak, mult: (s.lastPx || p.entry) / p.entry, peakMult: p.peak / p.entry,
       x: { tp15: p.x.tp15 ?? null, t15s40: p.x.t15s40 ?? null, flow4: p.x.flow4 ?? null, flow: p.x.flow ?? null, split: p.x.split ?? null }, splitBranch: p.splitBranch || null, splitHalf: !!p.splitHalf, flowArmed: !!p.flowArmed, kind: p.kind, restored: p.restored || null, v5: s.w5.filter((x) => now - x.ts <= 300).reduce((a, x) => a + x.usd, 0) });
   }
   return out.sort((a, b) => b.entryTs - a.entryTs);

@@ -6,6 +6,8 @@ import { db } from "./db.js";
 import { openPositions } from "./momentum.js";
 import { solUsdCached } from "./price.js";
 import { memMb } from "./commands.js";
+import { readFileSync } from "node:fs";
+const VERSION = (() => { try { return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version; } catch { return "?"; } })();
 
 const KEY = () => process.env.WEB_KEY || "", PORT = () => Number(process.env.WEB_PORT || 8787);
 // Project 2's exit (flow4) exists from v0.18.10 (15 Oct 12:52 UTC); Project 3's (split) from v0.18.22 (16 Oct 16:00 UTC). Earlier rows
@@ -78,7 +80,7 @@ export function snapshot(size = 0.25, cost = 0.05) {
       p2: p.x.flow4 != null ? `exited ${p.x.flow4.toFixed(2)}x` : p.flowArmed ? "armed (holding)" : "running", p3: p.x.split != null ? `exited ${p.x.split.toFixed(2)}x (${p.splitBranch})` : p.splitBranch ? `${p.splitBranch}${p.splitHalf ? " · half taken" : ""}` : p.ageS < 120 ? `deciding in ${120 - p.ageS}s` : "running" };
   });
   const recent = qRecent.all().map((r) => ({ ...r, peak: Math.max(r.peak_mult || 1, r.after_peak_mult || 1) }));
-  return { now: Math.floor(Date.now() / 1000), sol: solUsdCached(), size, cost, mem: memMb(), projects, open, recent,
+  return { now: Math.floor(Date.now() / 1000), version: VERSION, sol: solUsdCached(), size, cost, mem: memMb(), projects, open, recent,
     params: { trigger: `$${(CFG.VOL5M_USD / 1e3).toFixed(0)}K traded in 5 min`, entryCap: `MC under $${(CFG.MOM_CORE_MC / 1e3).toFixed(0)}K at entry`, first: "first entry on the coin only", minAge: `coin ≥ ${CFG.MOM_MIN_AGE_S}s old`, v40: `P3 filter: 1m vol ≥ $${(CFG.MOM_V40_USD / 1e3).toFixed(0)}K and age < ${CFG.MOM_V40_AGE_S / 60} min`, hold: `max hold ${CFG.MOM_MAX_HOLD_MIN / 60}h`, flow: `P2 hold: 5m vol ≥ $${(CFG.FLOW_MIN_VOL / 1e3).toFixed(0)}K · cap ${CFG.FLOW_CAP}x · 50% trail backstop`, split: "P3: decide at 120s · fail <0.90× · run ≥1.20× · trail 40% · cap 4x · half at 1.5x", costs: `${(cost * 100).toFixed(0)}% round trip assumed · ${size} SOL per trade` } };
 }
 
@@ -115,7 +117,7 @@ footer{padding:16px;color:var(--mut);font-size:12px;text-align:center}
 <h3>Parameters</h3><div class="card params" id="params"></div>
 </main><footer id="foot"></footer>
 <script>
-const key=new URLSearchParams(location.search).get('key')||'';let SIZE=0.25,COST=0.05;
+const key=new URLSearchParams(location.search).get('key')||'';let SIZE=0.25,COST=0.05,VER=null;
 const $=s=>document.querySelector(s);const fmt=n=>n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(0)+'K':String(Math.round(n));
 const pc=v=>v==null?'—':((v-1)*100).toFixed(0)+'%';const sol=v=>(v>=0?'+':'')+v.toFixed(2)+' SOL';const cls=v=>v>0?'up':v<0?'dn':'';
 const pl=v=>v==null?'—':'<span class="'+cls(v*(1-COST)-1)+'">'+((v*(1-COST)-1)*SIZE>=0?'+':'')+((v*(1-COST)-1)*SIZE).toFixed(2)+'</span> <span class="mut">'+pc(v)+'</span>';
@@ -142,8 +144,8 @@ g+=xt.map((t,i)=>'<text x="'+X(t).toFixed(1)+'" y="'+(H-6)+'" fill="#9a8fd0" fon
 for(const s of series){const pts=[[s.c[0][0],0]].concat(s.c);const d=pts.map((p,i)=>(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)).join(' ');const last=s.c[s.c.length-1];g+='<path d="'+d+'" fill="none" stroke="'+PCOL[s.k]+'" stroke-width="2" vector-effect="non-scaling-stroke"/><circle cx="'+X(last[0]).toFixed(1)+'" cy="'+Y(last[1]).toFixed(1)+'" r="3.5" fill="'+PCOL[s.k]+'"/>';}
 return g+'</svg>'}
 function wl(p){const n=p.wins+p.losses;if(!n)return '';return '<div class="wl"><i class="w" style="width:'+(p.wins/n*100)+'%"></i><i class="l" style="width:'+(p.losses/n*100)+'%"></i></div><div class="wlt"><span class="up">'+p.wins+' profitable</span><span class="dn">'+p.losses+' losses</span></div>'}
-async function load(){const r=await fetch('/api/snapshot?key='+encodeURIComponent(key)+'&size='+SIZE+'&cost='+COST);if(!r.ok){$('#sub').textContent='access denied — check the key in the link';return}const d=await r.json();
-$('#sub').textContent='updated '+new Date(d.now*1000).toLocaleTimeString()+' · SOL $'+d.sol.toFixed(0)+' · mem '+d.mem+' MB';
+async function load(){const r=await fetch('/api/snapshot?key='+encodeURIComponent(key)+'&size='+SIZE+'&cost='+COST);if(!r.ok){$('#sub').textContent='access denied — check the key in the link';return}const d=await r.json();if(VER&&d.version&&VER!==d.version){location.reload();return}VER=d.version;
+$('#sub').textContent='v'+d.version+' · updated '+new Date(d.now*1000).toLocaleTimeString()+' · SOL $'+d.sol.toFixed(0)+' · mem '+d.mem+' MB';
 $('#combo').innerHTML=combo(d.projects);$('#legend').innerHTML=['p1','p2','p3'].map(k=>'<span class="lg"><i style="background:'+PCOL[k]+'"></i>'+d.projects[k].name+' <b class="'+cls(d.projects[k].net)+'">'+(d.projects[k].n?sol(d.projects[k].net):'—')+'</b></span>').join('');
 $('#projects').innerHTML=['p1','p2','p3'].map(k=>{const p=d.projects[k];const f=p.filtered?'<div class="kv" style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"><span class="mut">with entry filter</span><b class="'+cls(p.filtered.net)+'">'+(p.filtered.n?sol(p.filtered.net)+' <span class="mut">('+p.filtered.n+')</span>':'—')+'</b></div>':'';
 const dur=p.durationH<48?Math.round(p.durationH)+' hours':(p.durationH/24).toFixed(1)+' days';
@@ -151,7 +153,7 @@ const daysT=p.days&&p.days.length?'<table style="margin-top:10px;font-size:12px"
 return '<div class="card"><h2>'+p.name+'</h2><div class="rule">'+p.rule+'</div><div class="mut" style="margin-top:6px">last 24 hours</div><div class="big '+cls(p.net24)+'">'+(p.n24?sol(p.net24):'—')+'</div><div class="mut">'+p.n24+' trades'+(p.open?' · '+p.open+' open now':'')+'</div>'+
 '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--line)"><span class="mut">total</span> <b class="'+cls(p.net)+'" style="font-size:20px">'+(p.n?sol(p.net):'—')+'</b> <span class="mut">· '+p.n+' trades · '+(p.n?dur:'—')+'</span></div>'+chart(p.curve)+wl(p)+
 '<div class="kv"><span class="mut">win rate</span><b>'+(p.win==null?'—':(p.win*100).toFixed(0)+'%')+'</b><span class="mut">avg per trade</span><b>'+pc(p.avg==null?null:p.avg+1)+'</b><span class="mut">win rate 24h</span><b>'+(p.win24==null?'—':(p.win24*100).toFixed(0)+'%')+'</b><span class="mut">reached 2x / 4x</span><b>'+p.big+' / '+p.cap+'</b><span class="mut">best / worst trade</span><b><span class="up">'+(p.best>=0?'+':'')+p.best.toFixed(2)+'</span> / <span class="dn">'+p.worst.toFixed(2)+'</span></b></div>'+f+daysT+'</div>'}).join('');
-$('#open tbody').innerHTML=d.open.length?d.open.map(p=>'<tr class="'+(p.mult>1?'win':p.mult<1?'loss':'')+'"><td>'+p.name+(p.core?'':'<span class="tag">non-core</span>')+(p.coreV40?'<span class="tag">P3 filter</span>':'')+(p.restored?'<span class="tag" title="rebuilt from the database after a restart">restored</span>':'')+'</td><td>'+hhmm(p.entryTs)+'</td><td>'+ago(p.ageS)+'</td><td>$'+fmt(p.entryMc)+'</td><td class="'+cls(p.mult-1)+'"><b>'+p.mult.toFixed(2)+'x</b> <span class="mut">$'+fmt(p.lastMc)+'</span></td><td>'+p.peakMult.toFixed(2)+'x</td><td>$'+fmt(p.v5)+'</td><td>'+p.p1+'</td><td>'+p.p2+'</td><td>'+p.p3+'</td></tr>').join(''):'<tr><td colspan="10" class="mut">no open positions</td></tr>';
+$('#open tbody').innerHTML=d.open.length?d.open.map(p=>'<tr class="'+(p.mult>1?'win':p.mult<1?'loss':'')+'"><td>'+p.name+(p.core?'':'<span class="tag">non-core</span>')+(p.coreV40?'<span class="tag">P3 filter</span>':'')+(p.restored?'<span class="tag" title="rebuilt from the database after a restart">restored</span>':'')+'</td><td>'+hhmm(p.entryTs)+'</td><td>'+ago(p.ageS)+'</td><td>$'+fmt(p.entryMc)+'</td><td class="'+cls(p.mult-1)+'"><b>'+p.mult.toFixed(2)+'x</b> <span class="mut">$'+fmt(p.lastMc)+(p.pxAge==null?' · no price yet':p.pxAge>120?' · '+(p.pxSrc==='dex'?'dex ':'last trade ')+ago(p.pxAge)+' ago':'')+'</span></td><td>'+p.peakMult.toFixed(2)+'x</td><td>$'+fmt(p.v5)+'</td><td>'+p.p1+'</td><td>'+p.p2+'</td><td>'+p.p3+'</td></tr>').join(''):'<tr><td colspan="10" class="mut">no open positions</td></tr>';
 $('#recent tbody').innerHTML=d.recent.map(r=>{const ref=r.x_split??r.x_flow4;const rc=ref==null?'':ref>1?'win':'loss';return '<tr class="'+rc+'"><td>'+r.name+'</td><td>'+new Date(r.entry_ts*1000).toISOString().slice(5,16).replace('T',' ')+'</td><td>$'+fmt(r.entry_mc||0)+'</td><td>'+r.peak.toFixed(2)+'x</td><td>'+pl(r.x_t15s40)+'</td><td>'+pl(r.x_flow4)+'</td><td>'+pl(r.x_split)+'</td><td>'+(r.split_branch||'—')+'</td><td>'+(r.core_v40?'yes':'no')+'</td><td class="mut">'+(r.closed?(r.exit_reason||'closed'):'open')+'</td></tr>'}).join('');
 $('#params').innerHTML=Object.values(d.params).map(v=>'<div>'+v+'</div>').join('');
 $('#foot').textContent='Books start when each exit began recording live: P1/P2 from 15 Oct 12:52 UTC, P3 from 16 Oct 16:00 UTC. Paper trades, no real money. Chart: cumulative net SOL over time at the selected size. Refreshes every 10 s.';}
