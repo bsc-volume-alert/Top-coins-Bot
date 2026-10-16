@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.31 — faster refresh (16 Oct)
+Dashboard polls every 3 s (was 10); idle open positions re-priced from DexScreener every 20 s after 60 s without a trade (was 60 s / 120 s). Price age shown when older than 45 s.
+
 ## v0.18.30 — dead-coin exit, FOMO links, paper sell buttons (16 Oct)
 - **Dead-coin exit** (`x_dead`): after 10 minutes, if the 5-minute volume stays under $25K for 5 minutes, sell at market. On the 19 trades with a +10m mark, the four whose volume had died by then averaged −42% (P2) / −83% held; nothing with volume at +10m failed. **`x_p3d`** = Project 3 with the dead-coin branch added (whichever of split/dead fires first; a mid-branch half already banked is kept). Both recorded everywhere the other exits are; "P3+dead" on the dashboard and in the summary.
 - Every coin name on the dashboard and analysis page links to its FOMO page.
