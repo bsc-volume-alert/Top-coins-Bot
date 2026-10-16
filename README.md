@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.42 — simpler main page (16 Oct)
+"Sold by every project" section removed (the sold-history page covers after-sale behaviour). "Last 25 core trades" renamed "Recent trades" with a status column: HOLDING (money still in P1/P2/P4) or done · what closed it (golden rule, coin fell 80% from peak, 6 h limit…). Times shown in UK time on the main and analysis pages.
+
 ## v0.18.41 — Project 3 retired from the website (16 Oct)
 Project 3 failed out of sample (26 trades, −0.32 SOL vs −0.10 for P1's exit and −0.02 for P2's on the same coins): 7 coins crashed before its 2-minute decision (−1.01 SOL, incl. Tesla To The Moon at 1.51x after 30 s → 0.06x), the middle branch returned 1.00x, and it had no entry filter. Removed from the main page (card, chart, live tables, last-25 table, parameters); still recorded (`x_split`, `split_branch`, `x_p3d`) and on the analysis page. "Holding" now only counts P1, P2 and P4. Last-25 table: row colour = P1 result, P1/P2 faded when the coin is outside that project's filter, "closed by" column (golden rule in yellow).
 
