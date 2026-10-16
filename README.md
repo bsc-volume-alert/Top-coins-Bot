@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.40 — analysis page covers every project; daily database backup (16 Oct)
+Analysis page now includes Project 4 (`momconf`) and Project 5 (`mom2m`) trades next to the core ones, with new columns: project, in P1 filter, in P2 filter, P5 2-minute volume, P4 check at 60 s, P5 exit (½ at 2x + trail), peak within 24 h, its market cap, and last price seen. Range up to 365 days ("everything"); the CSV download carries every field. Brackets still use core trades only. New `src/backup.js`: online SQLite backup (safe while writing) once a day at 04:00 UTC and 10 min after start if today's is missing, to `data/backups/tracker-YYYY-MM-DD.db`, newest 3 kept (`BACKUP_KEEP`), skipped with a Telegram warning if free disk < 2× the database. `/backup` runs one now; `/status` shows the last backup.
+
 ## v0.18.39 — sold-coin history page; after-sale watch survives restarts (16 Oct)
 New page `/history` ("sold history →" in the header): every closed core / P4 / P5 trade for the last 1–30 days with each project's exit (green/red, faded when outside that project's current filter), what closed it (golden rule highlighted), peak while held, peak within 24 h of entry with its market cap, last price seen, and how far the after-peak ran past our best exit. Summary boxes: coins that later reached 2x / 4x, golden-rule closes and how many of those ran on. The 24 h after-entry watch (aftercare) is now rebuilt from the database on startup, so restarts no longer lose it, and it also records the latest price seen (`after_last_mult`, `after_last_mc`, `after_last_ts`).
 

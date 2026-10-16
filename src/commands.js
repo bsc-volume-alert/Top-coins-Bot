@@ -21,6 +21,7 @@ import { memStats as memWal } from "./wallets.js";
 import { memStats as memTiers } from "./momtiers.js";
 import { memStats as memRe } from "./momre.js";
 import { memStats as memAfter } from "./aftercare.js";
+import { runBackup, backupInfo } from "./backup.js"; // v0.18.40
 import { leaderboardText, walletText, addWatch, removeWatch, watchList, creatorsText, creatorText, addWatchCreator, removeWatchCreator, watchCreatorList } from "./wallets.js";
 const TOKEN = () => process.env.TG_BOT_TOKEN, CHAT = () => String(process.env.TG_CHAT_ID);
 let offset = 0, deps = {};
@@ -42,7 +43,8 @@ async function poll() {
         else if (cmd === "/report7") await tg(reportText(24 * 7));
         else if (cmd === "/csv") await sendCsv(false);
         else if (cmd === "/csvfull") await sendCsv(true);
-        else if (cmd === "/status") await tg(deps.status ? deps.status() : "n/a");
+        else if (cmd === "/status") { const b = backupInfo(); await tg((deps.status ? deps.status() : "n/a") + `\nBackup: ${b.last ? "last " + new Date(b.last * 1000).toISOString().slice(0, 16).replace("T", " ") + " UTC" : "none yet"} · ${b.files.length} kept${b.lastErr ? " · ⚠️ " + b.lastErr : ""}`); }
+        else if (cmd === "/backup") { await tg("Backing up the database…"); await runBackup("manual"); const b = backupInfo(); await tg(b.lastErr ? `⚠️ Backup failed — ${b.lastErr}` : `✅ Backup done · ${b.files.length} kept`); }
         else if (cmd === "/mem") { // v0.18.18: what is in memory, so growth can be seen instead of guessed
           const mu = process.memoryUsage(), hs = (await import('node:v8')).getHeapStatistics(), f = (o) => Object.entries(o).map(([k, v]) => `${k} ${typeof v === "number" ? v.toLocaleString("en-GB") : v}`).join(" · ");
           const parts = { momentum: memMom, lifecycle: memLife, holders: memHold, signals: memSig, live: memLive, pumpswap: memPs, dex: memDex, fees: memFees, copy: memCopy, wallets: memWal, tiers: memTiers, reentry: memRe, aftercare: memAfter };
@@ -72,7 +74,7 @@ async function poll() {
         else if (cmd === "/watchcreator") { const [, a, ...rest] = m.text.trim().split(/\s+/); if (!a || a.length < 32) await tg("Usage: /watchcreator <address> [label]"); else { addWatchCreator(a, rest.join(" ") || null); await tg(`👁 watching creator <code>${a}</code>${rest.length ? " as " + rest.join(" ") : ""} — alert + paper entry on their next launch`); } }
         else if (cmd === "/unwatchcreator") { const a = m.text.trim().split(/\s+/)[1]; if (a) { removeWatchCreator(a); await tg(`removed creator <code>${a}</code>`); } }
         else if (cmd === "/watching") { const l = watchList(), lc = watchCreatorList(); await tg((l.length ? "👁 Wallets:\n" + l.map(([w, v]) => `• <code>${w}</code>${v.label ? " — " + v.label : ""}`).join("\n") : "👁 Wallets: none") + "\n" + (lc.length ? "🧑‍💻 Creators:\n" + lc.map(([w, v]) => `• <code>${w}</code>${v.label ? " — " + v.label : ""}`).join("\n") : "🧑‍💻 Creators: none") + "\n/watch · /watchcreator"); }
-        else if (cmd === "/help") await tg("Commands: /report · /report7 · /summary · /csv · /csvfull (adds token_life + wallet_buys) · /status · /mem · /check &lt;mint&gt; · /prepump · /prepump30 · /bigrunners (3x+ momentum, with volume after entry) · /wallets (top 10, 7d) · /wallets30 · /wallet <addr> · /watch <addr> [label] · /unwatch · /runners · /runners7 · /creators · /creators30 · /creator <addr> · /watchcreator <addr> [label] · /unwatchcreator · /watching");
+        else if (cmd === "/help") await tg("Commands: /report · /report7 · /summary · /csv · /csvfull (adds token_life + wallet_buys) · /status · /mem · /backup · /check &lt;mint&gt; · /prepump · /prepump30 · /bigrunners (3x+ momentum, with volume after entry) · /wallets (top 10, 7d) · /wallets30 · /wallet <addr> · /watch <addr> [label] · /unwatch · /runners · /runners7 · /creators · /creators30 · /creator <addr> · /watchcreator <addr> [label] · /unwatchcreator · /watching");
       }
     } catch (e) { await new Promise((r) => setTimeout(r, 5000)); }
   }

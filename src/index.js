@@ -11,6 +11,7 @@ import { startSweeper, sw } from "./sweeper.js";
 import { startCommands, reportText, memMb } from "./commands.js";
 import { en } from "./enrich.js";
 import { startWeb } from "./web.js"; // v0.18.23
+import "./backup.js"; // v0.18.40 daily database backup
 import { startPumpSwap, ps, quoteStats } from "./pumpswap.js";
 import { startDex, dx } from "./dex.js";
 import { fe } from "./fees.js";
