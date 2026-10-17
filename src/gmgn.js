@@ -10,6 +10,7 @@ import { randomUUID } from "node:crypto";
 import { db } from "./db.js";
 import { momSnap } from "./momentum.js";
 import { p6Candidate } from "./p6.js"; // v0.18.60
+import { p7Observe } from "./p7.js"; // v0.18.69
 import { volGmgn, VOL_LOG_USD } from "./vollog.js"; // v0.18.62
 
 const KEY = () => process.env.GMGN_API_KEY || "";
@@ -172,6 +173,12 @@ export async function gmgnSellers(dir, onProgress = () => {}) {
   return { path, n: coins.length, ok, fail };
 }
 export { get as _get, slim as _slim };
+// v0.18.69 Project 7: token info + security right now (through the queue), for the holder check before a buy
+export async function gmgnInfoNow(mint) {
+  if (!KEY()) return null;
+  const [info, sec] = await Promise.all([get("/v1/token/info", { chain: "sol", address: mint }).catch(() => null), get("/v1/token/security", { chain: "sol", address: mint }).catch(() => null)]);
+  return info || sec ? { info: info ? slim(info) : null, sec: sec ? slim(sec, 4000) : null } : null;
+}
 
 export const gmgnFor = (mint) => { const x = latest.get(mint); return x && Date.now() / 1000 - x.ts < 600 ? x.row : null; };
 // v0.18.62 GMGN's latest 5-minute volume for a coin, only if a 5m list showed it in the last `maxAge` seconds (else null)
@@ -192,6 +199,7 @@ function ingest(rows, interval, chain) {
     if (interval !== "5m") continue;
     const v5 = num(r.volume), mc = num(r.market_cap);
     if (chain === "sol") p6Candidate({ mint: addr, mc, v5, source: "gmgn", name: r.name, symbol: r.symbol, created: num(r.creation_timestamp), usd: num(r.price), buys: num(r.buys), sells: num(r.sells), exchange: r.exchange }); // v0.18.60 P6
+    if (chain === "sol") p7Observe({ mint: addr, mc, v5, source: "gmgn", name: r.name, symbol: r.symbol, created: num(r.creation_timestamp), usd: num(r.price), exchange: r.exchange }); // v0.18.69 P7
     if (chain === "sol" && v5 > gm.maxVol5) gm.maxVol5 = v5;
     if (!(v5 >= FLAG_VOL5M) || !(mc > 0) || mc > MAX_MC) continue;
     const f = flagged.get(mint); if (f && now - f < 6 * 3600) continue;

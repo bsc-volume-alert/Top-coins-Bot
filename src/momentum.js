@@ -23,7 +23,8 @@ import { enrichEntry, sniperInfo, provenShare, enrichLine } from "./enrich.js"; 
 import { dexPrice } from "./sweeper.js"; // v0.18.29
 import { gmgnFor, gmgnSummary, gmgnEntry, gmgnV5 } from "./gmgn.js";
 import { volFeed, VOL_LOG_USD } from "./vollog.js"; // v0.18.62 volume log
-import { p6Candidate, P6_VOL } from "./p6.js"; // v0.18.60 // v0.18.52 · v0.18.56 gmgnEntry
+import { p6Candidate, P6_VOL } from "./p6.js";
+import { p7Observe, P7_VOL } from "./p7.js"; // v0.18.69 // v0.18.60 // v0.18.52 · v0.18.56 gmgnEntry
 export const BOOT = Math.floor(Date.now() / 1000); // v0.18.36 process start (low-volume exit warm-up)
 // v0.18.38: windows count as complete from this time. A quick restart (state saved ≤30 s ago) keeps the saved 5m windows, so no new wait.
 let WARM_FROM = BOOT; const lvReady = (now) => now - WARM_FROM >= CFG.LOWVOL_WARMUP_S;
@@ -167,6 +168,7 @@ onSwap((tr) => {
   const v1 = s.w1.reduce((a, x) => a + x.usd, 0);
   const b1 = s.w1.filter((x) => x.b).length, s1 = s.w1.length - b1;
   const burst = CFG.BURST_TRIGGER && v1 >= CFG.VOL1M_BURST_USD && b1 > s1 && tr.mc >= CFG.BURST_MIN_MC && (() => { const m = q.tokenMeta.get(tr.mint); return !m?.create_ts || now - m.create_ts >= CFG.BURST_MIN_AGE_S; })();
+  if (v5 >= P7_VOL) p7Observe({ mint: tr.mint, mc: tr.mc, v5, source: "feed", venue: tr.venue || "pumpswap", price: tr.price }); // v0.18.69 Project 7 — own checks inside
   if (v5 >= P6_VOL) p6Candidate({ mint: tr.mint, mc: tr.mc, v5, source: "feed", bu: bsu[0], su: bsu[1], venue: tr.venue || "pumpswap", price: tr.price }); // v0.18.60 Project 6 (sleepers) — own MC / age gates inside · v0.18.65 from $60K
   if (v5 < CFG.VOL5M_USD && !burst) return;
   const kind = v5 >= CFG.VOL5M_USD ? "vol5m" : "burst";

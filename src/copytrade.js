@@ -125,7 +125,7 @@ setInterval(async () => {
 // v0.18.28: variant positions (tiers, dip, re-entry, copy, wave2, grad…) still open in the database are rebuilt on startup, so a restart
 // never orphans them. Exits already recorded are kept; tracking resumes from the next swap.
 const qOpenCopy = db.prepare(`SELECT id, strategy, mint, name, entry_ts, entry_mc, entry_price, peak_mult, vol_at_entry, trigger_kind, x_tp, x_tp15, x_tsl25, x_tsl40, x_tsl60, x_tsl80, x_half60, x_twophase, x_ladder, x_levels, x_m1, x_m1vol, x_volstop, x_combo, x_h2t40, x_s15be, x_t15s25, x_t15s40, x_t15s60, x_t2s25, x_t2s40, x_t2s60, x_flow, x_flow4, x_flow4ff, x_split, split_branch, dd_pre15, path, t_hit15_s
-  FROM paper_trades WHERE strategy NOT IN ('momentum','early','confirm','secondwave','p6') AND closed=0 AND COALESCE(invalid,0)=0 AND entry_ts > ? ORDER BY entry_ts`);
+  FROM paper_trades WHERE strategy NOT IN ('momentum','early','confirm','secondwave','p6','p7') AND closed=0 AND COALESCE(invalid,0)=0 AND entry_ts > ? ORDER BY entry_ts`);
 export function restoreCopyFromDb() {
   const now = Math.floor(Date.now() / 1000); let n = 0;
   try {
