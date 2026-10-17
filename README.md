@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.48 — SOL and stablecoins never treated as coins (17 Oct)
+Project 5 bought "Wrapped SOL" (So111…112, $105M cap, recorded peak 954,628x) on 16 Oct 22:36, before its $2M cap existed. Wrapped SOL, USDC, USDT and USD1 swaps are now ignored by every momentum project.
+
 ## v0.18.47 — live table: no P1/P2 results on non-core coins (17 Oct)
 Non-core momentum positions (entry above $100K, re-entries) showed Project 1/2 "SOLD 1.50x" in the holding table although those projects never trade them (the cards correctly excluded them). They now show "not a core trade", and such coins no longer count as "holding".
 

@@ -140,7 +140,10 @@ async function dexInfo(mint) {
   return info;
 }
 
+// v0.18.48: never treat SOL itself or stablecoins as a coin (P5 bought "Wrapped SOL" at a $105M cap on 16 Oct)
+const NOT_COINS = new Set(["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB"]);
 onSwap((tr) => {
+  if (NOT_COINS.has(tr.mint)) return;
   const s = st(tr.mint), usd = tr.sol * solUsdCached(), now = tr.ts || Math.floor(Date.now() / 1000);
   s.lastTs = now; s.lastPx = tr.price; s.lastMc = tr.mc; s.pxSrc = "trade"; s.pxTs = now;
   if (tr.mc > s.peakMc) s.peakMc = tr.mc;
