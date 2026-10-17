@@ -77,3 +77,9 @@ Also to test from this export onward (recorded, not gated): creator fees accrued
 
 ## Split exit beside Project 1 — pre-registered 17 Oct 2026 01:30 UTC (v0.18.49)
 **Rule:** P1's entry and filter; exit = −40% stop until 1.5x, half sold at 1.5x, other half at 2x or at entry if it falls back. **Evidence:** 95 core trades 15–16 Oct: +0.86 SOL vs −0.27 for P1's exit, positive in both halves (assumes the entry-price stop fills at entry; if the second half instead rides to −40% the same rule is −0.94). P1-filtered trades 16 Oct 22:10–17 Oct 02:15: +0.68 vs +0.39. **Test:** first 40 P1-filtered trades with `x_s15be` recorded. **Adopt as P1's exit** if its net beats `x_t15s40` on the same trades; **drop** otherwise. The recorded second-half fill shows whether the entry-price stop really fills near 1.0x.
+
+## Project 5 retired (fast trigger) and Project 5 early — pre-registered 17 Oct 2026 01:45 UTC (v0.18.50)
+**Old P5 result:** 10 closed trades, −0.60 SOL (h2t40); on every coin both triggers fired on, it bought at the same time or later than the core trigger — killed.
+**Evidence for early:** on 105 core pumps (15–17 Oct) the first minute with ≥50 SOL bought came a median ~146 s before the $100K/5m trigger, at MC ~$35K (73% between $25–45K, i.e. right after graduation); the trigger price was a median ~1.5x higher. Simulated on those coins: +6.35 SOL vs +0.27 for P1 — **heavily biased**: only coins that later pumped are in the data. Pre-trigger features (buyers, buy sizes, largest-buy share, repeat buyers, bundle, top-10, dev hold) did not separate runners (2x+) from duds consistently in both halves.
+**Test:** first 60 `p5e50` trades. **Confirm:** net > 0 after 5% costs on 1.5x/−40% and win ≥ 50%. **Kill:** net ≤ 0. The 30/80 levels and the split exit are compared descriptively; entry features in `early_json` are screened for a rug filter only after 60 trades, with a both-halves check.
+

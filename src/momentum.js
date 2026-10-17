@@ -155,7 +155,7 @@ onSwap((tr) => {
   s.w1.push({ ts: now, usd, b: tr.isBuy }); while (s.w1.length && now - s.w1[0].ts > 60) s.w1.shift();
   if (s.pos) updatePos(tr.mint, s, tr.price, now);
   dipCheck(tr.mint, s, tr, now); confCheck(tr.mint, s, tr.price, tr.mc, now, tr.venue);
-  if (!s.p5done && usd > 0) p5Check(tr.mint, s, tr, now);
+  if (usd > 0) p5Check(tr.mint, s, tr, now);
   const v5 = s.w5.reduce((a, x) => a + x.usd, 0);
   const bsu = [s.w5.filter((x) => x.b).reduce((a, x) => a + x.usd, 0), s.w5.filter((x) => !x.b).reduce((a, x) => a + x.usd, 0)];
   pumpSwapTick(tr.mint, tr, v5, bsu); afterTick(tr.mint, tr.price, tr.mc);
@@ -279,26 +279,38 @@ function confCheck(mint, s, px, mc, now, venue) {
 setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [m, s] of T) { const c = s.conf; if (c && !c.done && now - c.ts >= CFG.MOM_CONF_S + 5 && s.lastPx > 0) confCheck(m, s, s.lastPx, s.lastMc, now, null); } }, 5_000);
 // v0.18.35 Project 5 — fast trigger: $100K traded inside any 2-minute window, coin at least 60 s old, buys ≥ sells in that window,
 // no market-cap cap. One paper position per coin (strategy 'mom2m'), independent of the core trigger. Exits: 1.5x/−40% and h2t40.
-export const p5 = { fired: 0, young: 0, sellHeavy: 0 };
+export const p5 = { fired: 0, young: 0, sellHeavy: 0, byLevel: {} };
+// v0.18.50 Project 5 — early. On 105 past core pumps the move was visible ~2.5 min before the $100K/5m trigger, when ~50 SOL had been
+// bought within 60 s (usually right after graduation, MC ~$25–45K). That evidence only covers coins that went on to pump, so this
+// records the signal on EVERY coin to count the false starts. Levels P5E_LEVELS (SOL bought in 60 s) each get their own strategy
+// (p5e30 / p5e50 / p5e80); first time per coin per level. Guards: MC < P5E_MAX_MC, coin ≥ P5_MIN_AGE_S old, buy $ ≥ sell $ and
+// ≥ P5E_MIN_WALLETS buyers in those 60 s. Exits: every recorded variant (1.5x/−40%, split, ½ at 2x…). Entry features stored.
+const P5E_LEVELS = String(process.env.P5E_LEVELS || "30,50,80").split(",").map(Number).filter((x) => x > 0);
 export function p5Check(mint, s, tr, now) {
-  let v2 = 0, b2 = 0; const w = new Set();
-  for (let i = s.w5.length - 1; i >= 0; i--) { const z = s.w5[i]; if (now - z.ts > 120) break; v2 += z.usd; if (z.b) b2 += z.usd; w.add(z.w); }
-  if (v2 < CFG.P5_VOL2M_USD || !(tr.mc > 0) || tr.mc >= CFG.P5_MAX_MC || !(tr.price > 0) || w.size < CFG.MOM_MIN_WALLETS5) return;
-  if (b2 < v2 - b2) { if (!s.p5sell || now - s.p5sell > 60) { s.p5sell = now; p5.sellHeavy++; } return; }
-  const meta = q.tokenMeta.get(mint);
-  if (meta?.create_ts && now - meta.create_ts < CFG.P5_MIN_AGE_S) { p5.young++; return; }
-  s.p5done = true;
-  try { if (q.hasP5.get(mint)) return; } catch {}
-  const px = tr.price, mc = tr.mc, venue = tr.venue, v5 = s.w5.reduce((a, x) => a + x.usd, 0);
-  (async () => {
-    let name = meta?.name, symbol = meta?.symbol, createTs = meta?.create_ts;
-    if (!name || !createTs) { try { const d = await dexInfo(mint); name ||= d.name; symbol ||= d.symbol; createTs ||= d.createdAt; } catch {} }
-    const ageS = createTs ? now - createTs : null;
-    if (ageS != null && (ageS < CFG.P5_MIN_AGE_S || ageS > CFG.MOM_MAX_AGE_D * 86400)) return;
-    const pos = openCopy("mom2m", `$${fmt(v2)}/2m`, mint, name || mint.slice(0, 8), symbol || "", px, mc, now, { v5, venue, ageS });
-    p5.fired++;
-    if (pos?.id) { pos.alerted = false; try { q.setV2m.run(Math.round(v2), pos.id); } catch {} } // no Telegram close messages for P5
-  })().catch((e) => console.error("[p5]", e.message));
+  if (!(tr.mc > 0) || !(tr.price > 0) || tr.mc >= CFG.P5E_MAX_MC) return;
+  const sol = solUsdCached(); if (!(sol > 0)) return;
+  let bU = 0, sU = 0, n = 0, maxB = 0; const wal = new Set();
+  for (let i = s.w5.length - 1; i >= 0; i--) { const z = s.w5[i]; if (now - z.ts > 60) break; if (z.b) { bU += z.usd; n++; if (z.usd > maxB) maxB = z.usd; if (z.w) wal.add(z.w); } else sU += z.usd; }
+  const bSol = bU / sol; s.p5e ||= {};
+  for (const lv of P5E_LEVELS) {
+    if (s.p5e[lv] || bSol < lv) continue;
+    if (sU > bU || wal.size < CFG.P5E_MIN_WALLETS) { p5.sellHeavy++; continue; }
+    const meta = q.tokenMeta.get(mint);
+    if (meta?.create_ts && now - meta.create_ts < CFG.P5_MIN_AGE_S) { p5.young++; continue; }
+    s.p5e[lv] = true; const strat = `p5e${lv}`;
+    try { if (q.hasStrat.get(strat, mint)) continue; } catch {}
+    const px = tr.price, mc = tr.mc, venue = tr.venue, v5 = s.w5.reduce((a, x) => a + x.usd, 0);
+    const feat = { sol60: +bSol.toFixed(2), wal60: wal.size, n60: n, maxShare: bU > 0 ? +(maxB / bU).toFixed(3) : null, avgBuySol: n ? +(bSol / n).toFixed(3) : null, sell60: +(sU / sol).toFixed(2) };
+    (async () => {
+      let name = meta?.name, symbol = meta?.symbol, createTs = meta?.create_ts;
+      if (!name || !createTs) { try { const d = await dexInfo(mint); name ||= d.name; symbol ||= d.symbol; createTs ||= d.createdAt; } catch {} }
+      const ageS = createTs ? now - createTs : null;
+      if (ageS != null && (ageS < CFG.P5_MIN_AGE_S || ageS > CFG.MOM_MAX_AGE_D * 86400)) return;
+      const pos = openCopy(strat, `${lv}SOL/60s`, mint, name || mint.slice(0, 8), symbol || "", px, mc, now, { v5, venue, ageS });
+      p5.fired++; p5.byLevel[lv] = (p5.byLevel[lv] || 0) + 1;
+      if (pos?.id) { pos.alerted = false; try { q.setV2m.run(Math.round(bU), pos.id); q.setEarly.run(JSON.stringify(feat), pos.id); } catch {} }
+    })().catch((e) => console.error("[p5 early]", e.message));
+  }
 }
 function dipCheck(mint, s, tr, now) {
   const d = s.dip; if (!d || d.done) return;
