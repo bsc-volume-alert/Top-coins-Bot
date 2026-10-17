@@ -53,7 +53,7 @@ function saveState() {
     const now = Math.floor(Date.now() / 1000), out = {};
     for (const [m, s] of T) if (now - s.lastTs <= 300 || s.buyers.length || (s.pos && !s.pos.closed)) {
       const o = { w5: s.w5, w1: s.w1, buyers: s.buyers, lastTs: s.lastTs, lastAlert: s.lastAlert, lastPx: s.lastPx, lastMc: s.lastMc, peakMc: s.peakMc, trades: s.trades, firstEntryPx: s.firstEntryPx, posPeakMc: s.posPeakMc, rejectedLevel: s.rejectedLevel, dip: s.dip, conf: s.conf };
-      if (s.pos && !s.pos.closed) { const p = s.pos; o.pos = { id: p.id, entry: p.entry, entryMc: p.entryMc, entryTs: p.entryTs, peak: p.peak, x: p.x, lad: p.lad, tp: p.tp, msgId: p.msgId, alerted: p.alerted, name: p.name, lv: p.lv, kind: p.kind, volAtEntry: p.volAtEntry, flowArmed: p.flowArmed, flowSince: p.flowSince, ffDone: p.ffDone, splitBranch: p.splitBranch, splitHalf: p.splitHalf, splitAt: p.splitAt, deadSince: p.deadSince, deadAt: p.deadAt, manual: p.manual, ddPre15: p.ddPre15, path: p.path, hit15Saved: p.hit15Saved }; } // v0.18.28: open positions survive restarts
+      if (s.pos && !s.pos.closed) { const p = s.pos; o.pos = { id: p.id, entry: p.entry, entryMc: p.entryMc, entryTs: p.entryTs, peak: p.peak, x: p.x, lad: p.lad, tp: p.tp, msgId: p.msgId, alerted: p.alerted, name: p.name, lv: p.lv ? { ...p.lv, crossed: [...(p.lv.crossed instanceof Set ? p.lv.crossed : [])] } : null, kind: p.kind, volAtEntry: p.volAtEntry, flowArmed: p.flowArmed, flowSince: p.flowSince, ffDone: p.ffDone, splitBranch: p.splitBranch, splitHalf: p.splitHalf, splitAt: p.splitAt, deadSince: p.deadSince, deadAt: p.deadAt, manual: p.manual, ddPre15: p.ddPre15, path: p.path, hit15Saved: p.hit15Saved }; } // v0.18.28: open positions survive restarts
       out[m] = o;
     }
     writeFileSync(STATE_FILE + ".tmp", JSON.stringify({ ts: now, T: out })); renameSync(STATE_FILE + ".tmp", STATE_FILE);
@@ -67,7 +67,7 @@ function loadState() {
     for (const [m, v] of Object.entries(j.T || {})) {
       const s = st(m); s.w5 = (v.w5 || []).filter((x) => now - x.ts <= 300); s.w1 = (v.w1 || []).filter((x) => now - x.ts <= 60); s.buyers = (v.buyers || []).filter((x) => now - x.ts <= CFG.PREPUMP_WINDOW_S);
       Object.assign(s, { lastTs: v.lastTs || 0, lastAlert: v.lastAlert || 0, lastPx: v.lastPx || 0, lastMc: v.lastMc || 0, peakMc: v.peakMc || 0, trades: v.trades || [], firstEntryPx: v.firstEntryPx ?? null, posPeakMc: v.posPeakMc || 0, rejectedLevel: v.rejectedLevel ?? null, dip: v.dip ?? null, conf: v.conf ?? null }); n++; tr += s.w5.length;
-      if (v.pos && v.pos.id) { s.pos = { ...v.pos, closed: false, lv: v.pos.lv || newLevels(), lad: v.pos.lad || { s2: false, s3: false }, tp: v.pos.tp || { half: false, twoHalf: false }, x: v.pos.x || {} }; armClose(m, s); pr++; }
+      if (v.pos && v.pos.id) { s.pos = { ...v.pos, closed: false, lv: v.pos.lv ? { ...newLevels(), ...v.pos.lv, crossed: new Set(Array.isArray(v.pos.lv.crossed) ? v.pos.lv.crossed : []) } : newLevels(), lad: v.pos.lad || { s2: false, s3: false }, tp: v.pos.tp || { half: false, twoHalf: false }, x: v.pos.x || {} }; armClose(m, s); pr++; }
     }
     console.log(`[momentum] restored ${n} tokens / ${tr} swaps / ${pr} open positions from state saved ${now - j.ts}s ago`);
   } catch (e) { if (e.code !== "ENOENT") console.error("[momentum load]", e.message); }

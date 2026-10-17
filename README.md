@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.45 — restart bug fixed; error-proof pages (17 Oct)
+Bug: the momentum state file saved each open position's levels tracker with a `Set`, which JSON turns into `{}`; after every quick restart `lv.crossed.has is not a function` was thrown on each swap of a restored coin — its exits stopped updating, the golden rule could not close it, and the rest of the swap handler (trigger detection for that coin) was skipped. Now saved as an array and rebuilt as a `Set` (old files with `{}` also restore). Sold-history page script was broken since v0.18.39 by an escaped apostrophe — fixed. Snapshot errors now return a readable 500 instead of a broken response; the page shows "server error: …" or "page error: …" instead of hanging on "loading…".
+
 ## v0.18.44 — bolder top of the page (17 Oct)
 Large gradient ISMAEL title with a pulsing live dot, pill navigation (Live · Analysis · Sold history), gradient header band, and a row of result tiles under it: P1, P2, P4, P5 (total, trades, win %, last 24 h, open) and Holding now; tapping a tile jumps to that card. Two tiles per row on phones.
 
