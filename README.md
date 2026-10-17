@@ -57,7 +57,7 @@ All thresholds are env-overridable (see `src/config.js`).
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
 ## v0.18.69 — Project 7 "slow sleepers" (17 Oct)
-Coins ≥ 6 h old, $300K–$1.5M, with $50K+ in each of three back-to-back 5-minute periods and clean holders on GMGN right before the buy (top 10 < 20%,
+Coins ≥ 6 h old, $300K–$1.5M, with $50K+ in each of three back-to-back minutes (1-minute volume: our feed, or GMGN's 1m list — back on, 5m/1m alternate every 3 s) and clean holders on GMGN right before the buy (top 10 < 20%,
 dev < 5%, bundle wallets < 15%). Exits recorded: all at 2x / 3x / 4x, −40% stop, and everything left sold when 5-min volume drops below $15K — no time
 limit. Then 24 h of watching to record how high the coin went after we sold. New card next to Project 5. Sweeper and copy-trade rebuild skip P7.
 

@@ -15,7 +15,7 @@ import { volGmgn, VOL_LOG_USD } from "./vollog.js"; // v0.18.62
 
 const KEY = () => process.env.GMGN_API_KEY || "";
 const HOST = "https://openapi.gmgn.ai";
-const POLL_MS = Number(process.env.GMGN_POLL_MS || 4000); // v0.18.62: 5m list every 4 s (was 5m/1m alternating every 2 s — same 5m rate, half the calls)
+const POLL_MS = Number(process.env.GMGN_POLL_MS || 3000); // v0.18.69: 5m and 1m lists alternate every 3 s (each every 6 s) — P7 needs 1-minute volume // v0.18.62: 5m list every 4 s (was 5m/1m alternating every 2 s — same 5m rate, half the calls)
 const FLAG_VOL5M = Number(process.env.GMGN_FLAG_VOL5M || 100000);
 const MAX_MC = Number(process.env.GMGN_MAX_MC || 5000000);
 const CHAINS = String(process.env.GMGN_CHAINS || "sol") /* v0.18.62: record-only BSC/Base/Robinhood polls off to save GMGN calls */.split(",").map((x) => x.trim()).filter(Boolean); // sol, bsc, base, eth, robinhood — non-sol chains are record-only
@@ -182,6 +182,7 @@ export async function gmgnInfoNow(mint) {
 
 export const gmgnFor = (mint) => { const x = latest.get(mint); return x && Date.now() / 1000 - x.ts < 600 ? x.row : null; };
 // v0.18.62 GMGN's latest 5-minute volume for a coin, only if a 5m list showed it in the last `maxAge` seconds (else null)
+export const gmgnV1 = (mint, maxAge = 20) => { const x = latest.get(mint); return x?.row?._t1 && Date.now() / 1000 - x.row._t1 <= maxAge ? num(x.row.volume_1m) : null; }; // v0.18.69
 export const gmgnV5 = (mint, maxAge = 120) => { const x = latest.get(mint); return x?.row?._t5 && Date.now() / 1000 - x.row._t5 <= maxAge ? num(x.row.volume_5m) : null; };
 export const gmgnSummary = (r) => r ? { mc: num(r.market_cap), liq: num(r.liquidity), vol: num(r.volume), holders: num(r.holder_count), rug: num(r.rug_ratio), bundler: num(r.bundler_rate), top10: num(r.top_10_holder_rate), smart: num(r.smart_degen_count), renowned: num(r.renowned_count), wash: r.is_wash_trading ?? null, dev: r.creator_token_status ?? null, exchange: r.exchange ?? null, launchpad: r.launchpad_platform ?? null } : null;
 
@@ -190,16 +191,16 @@ function ingest(rows, interval, chain) {
   for (const r of rows) {
     const addr = r.address; if (!addr) continue; const mint = chain === "sol" ? addr : `${chain}:${addr}`;
     const prev = latest.get(mint)?.row || {};
-    const row = { ...prev, ...r, [`volume_${interval}`]: num(r.volume) }; if (interval === "5m") row._t5 = now;
+    const row = { ...prev, ...r, [`volume_${interval}`]: num(r.volume) }; if (interval === "5m") row._t5 = now; else if (interval === "1m") row._t1 = now;
     latest.set(mint, { row, ts: now }); if (latest.size > 5000) latest.delete(latest.keys().next().value);
     // v0.18.62 volume log: every Solana row prices open wake-ups; a 5m row at $100K+ opens / extends a wake-up line
     if (chain === "sol") { const v = interval === "5m" ? num(r.volume) : null, big = v >= VOL_LOG_USD;
       volGmgn({ mint: addr, ts: now, v5: v, mc: num(r.market_cap), usd: num(r.price), name: r.name, symbol: r.symbol, exchange: r.exchange, launchpad: r.launchpad_platform,
         created: num(r.creation_timestamp), buys: num(r.buys), sells: num(r.sells), liq: num(r.liquidity), holders: num(r.holder_count), otherV5: big ? momSnap(addr)?.v5 ?? null : undefined }); }
+    if (chain === "sol" && interval === "1m") p7Observe({ mint: addr, mc: num(r.market_cap), v1: num(r.volume), source: "gmgn", name: r.name, symbol: r.symbol, created: num(r.creation_timestamp), usd: num(r.price), exchange: r.exchange }); // v0.18.69 P7 (1-min volume)
     if (interval !== "5m") continue;
     const v5 = num(r.volume), mc = num(r.market_cap);
     if (chain === "sol") p6Candidate({ mint: addr, mc, v5, source: "gmgn", name: r.name, symbol: r.symbol, created: num(r.creation_timestamp), usd: num(r.price), buys: num(r.buys), sells: num(r.sells), exchange: r.exchange }); // v0.18.60 P6
-    if (chain === "sol") p7Observe({ mint: addr, mc, v5, source: "gmgn", name: r.name, symbol: r.symbol, created: num(r.creation_timestamp), usd: num(r.price), exchange: r.exchange }); // v0.18.69 P7
     if (chain === "sol" && v5 > gm.maxVol5) gm.maxVol5 = v5;
     if (!(v5 >= FLAG_VOL5M) || !(mc > 0) || mc > MAX_MC) continue;
     const f = flagged.get(mint); if (f && now - f < 6 * 3600) continue;
@@ -243,7 +244,7 @@ async function poll() {
   if (busy || !KEY() || Date.now() < pausedUntil) return; busy = true;
   // Solana alternates 5m / 1m every poll; each other chain gets one 5m poll every ~10 polls (record-only)
   const k = turn++, other = CHAINS.filter((c) => c !== "sol"), useOther = other.length && k % 10 === 9;
-  const chain = useOther ? other[Math.floor(k / 10) % other.length] : "sol", interval = useOther || process.env.GMGN_1M !== "1" || k % 2 === 0 ? "5m" : "1m"; // v0.18.62: 1m list off unless GMGN_1M=1
+  const chain = useOther ? other[Math.floor(k / 10) % other.length] : "sol", interval = useOther || process.env.GMGN_1M === "0" || k % 2 === 0 ? "5m" : "1m"; // v0.18.62: 1m list off unless GMGN_1M=1
   if (chain === "sol" && !CHAINS.includes("sol")) { busy = false; return; }
   try { const rows = await rank(chain, interval); gm.ok++; gm.rows = rows.length; gm.lastOk = Math.floor(Date.now() / 1000); ingest(rows, interval, chain); }
   catch (e) { gm.fail++; gm.lastErr = e.message; if (gm.fail % 30 === 1) console.error("[gmgn]", e.message); }

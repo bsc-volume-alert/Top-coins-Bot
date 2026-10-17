@@ -1,5 +1,5 @@
-// v0.18.69 Project 7 — "slow sleepers" (owner, 17 Oct 19:25–19:27). A coin at least 6 h old, $300K–$1.5M, that trades ≥ $50K in each of
-// three back-to-back 5-minute periods (15 minutes of steady buying, checked at the first sighting, +5 min and +10 min), and whose holders look
+// v0.18.69 Project 7 — "slow sleepers" (owner, 17 Oct 19:25–19:33). A coin at least 6 h old, $300K–$1.5M, that trades ≥ $50K in each of
+// three back-to-back minutes (1-minute volume checked at the first sighting, +1 min and +2 min), and whose holders look
 // clean on GMGN just before buying: top 10 hold < 20%, dev (creator / dev team) holds < 5%, bundle wallets hold < 15%. Any Solana DEX (our feed
 // or GMGN, incl. Meteora). Paper buy, three exits recorded side by side: all at 2x · all at 3x · all at 4x — each with a −40% stop, and all three
 // sell what is left when the volume dies down (5-min volume < $15K). No time limit. After the exit the coin is watched for 24 h more and the highest
@@ -9,14 +9,14 @@ import { on, links, esc, fmt } from "./launch-monitor.js";
 import { onSwap } from "./pumpswap.js";
 import { tg } from "./telegram.js";
 import { solUsdCached } from "./price.js";
-import { gmgnInfoNow, gmgnFor, gmgnV5 } from "./gmgn.js";
+import { gmgnInfoNow, gmgnFor, gmgnV5, gmgnV1 } from "./gmgn.js";
 import { momSnap } from "./momentum.js";
 
 const E = (k, d) => Number(process.env[k] || d);
-const MIN_MC = E("P7_MIN_MC", 300_000), MAX_MC = E("P7_MAX_MC", 1_500_000), VOL = E("P7_VOL5M_USD", 50_000), MIN_AGE_H = E("P7_MIN_AGE_H", 6);
+const MIN_MC = E("P7_MIN_MC", 300_000), MAX_MC = E("P7_MAX_MC", 1_500_000), VOL1 = E("P7_VOL1M_USD", 50_000), MIN_AGE_H = E("P7_MIN_AGE_H", 6);
 const TOP10 = E("P7_TOP10", 0.20), DEV = E("P7_DEV", 0.05), BUNDLE = E("P7_BUNDLE", 0.15), GOLDEN = E("P7_GOLDEN_USD", 15_000), STOP = 0.6;
 const ENABLED = process.env.P7_ENABLED !== "0", AFTER_S = 86400, NO_DATA_S = 6 * 3600, REPEAT_S = 86400;
-export const P7_VOL = VOL;
+export const P7_VOL1 = VOL1;
 const NOT_COINS = new Set(["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB"]);
 
 for (const c of ["x_p7_2 REAL", "x_p7_3 REAL", "x_p7_4 REAL", "p7_json TEXT", "p7_state TEXT", "p7_after_peak REAL", "p7_after_ts INTEGER"]) { try { db.exec(`ALTER TABLE paper_trades ADD COLUMN ${c}`); } catch {} }
@@ -47,25 +47,30 @@ async function vol5(mint, feedOnly = false) {
   const d = await dsInfo(mint).catch(() => null); return d?.m5 != null ? Number(d.m5) : null;
 }
 
-/** every ≥ $50K/5m sighting (momentum.js swaps, gmgn.js 5m rows): starts a 15-minute watch — checks at +5 and +10 min */
+// 1-minute volume: our feed's last 60 s (if it trades the coin) and GMGN's 1m list (≤ 20 s old) — the larger; null if neither sees it
+function vol1(mint) {
+  const s = momSnap(mint), f = s && nowS() - (s.lastTs || 0) < 60 ? s.v1 : null, g = gmgnV1(mint, 20);
+  return f != null || g != null ? Math.max(f || 0, g || 0) : null;
+}
+/** every ≥ $50K/1m sighting (momentum.js swaps, gmgn.js 1m rows): starts a 3-minute watch — checks again at +1 and +2 min */
 export function p7Observe(c) {
-  if (!ENABLED || !c?.mint || NOT_COINS.has(c.mint) || !(c.v5 >= VOL)) return;
+  if (!ENABLED || !c?.mint || NOT_COINS.has(c.mint) || !(c.v1 >= VOL1)) return;
   if (watch.has(c.mint) || open.has(c.mint)) return;
   if (!(c.mc >= MIN_MC && c.mc <= MAX_MC)) return;
   if (qRecent.get(c.mint, nowS() - REPEAT_S)) return;
   p7.seen++; const w = { t0: nowS(), c }; watch.set(c.mint, w); p7.watching = watch.size;
   const check = async (n) => {
     try {
-      const v = await vol5(c.mint);
-      if (!(v >= VOL)) { watch.delete(c.mint); p7.watching = watch.size; p7.streakFail++; return; }
-      if (n === 1) return void setTimeout(() => check(2), 300_000);
-      watch.delete(c.mint); p7.watching = watch.size; await buy(c, v);
+      const v = vol1(c.mint);
+      if (!(v >= VOL1)) { watch.delete(c.mint); p7.watching = watch.size; p7.streakFail++; return; }
+      if (n === 1) return void setTimeout(() => check(2), 60_000);
+      watch.delete(c.mint); p7.watching = watch.size; const v5 = await vol5(c.mint); await buy(c, v5 ?? v, v);
     } catch (e) { watch.delete(c.mint); p7.watching = watch.size; console.error("[p7]", e.message); }
   };
-  setTimeout(() => check(1), 300_000);
+  setTimeout(() => check(1), 60_000);
 }
 
-async function buy(c, v5) {
+async function buy(c, v5, v1 = null) {
   const ds = await dsInfo(c.mint).catch(() => null);
   const meta = (() => { try { return q.tokenMeta.get(c.mint); } catch { return null; } })();
   const created = meta?.create_ts || c.created || ds?.created || null, ts = nowS();
@@ -87,12 +92,12 @@ async function buy(c, v5) {
   const name = meta?.name || c.name || ds?.name || c.mint.slice(0, 8), symbol = meta?.symbol || c.symbol || ds?.symbol || "";
   const r = q.insMom.run(c.mint, name, symbol, ts, mc, usd, meta?.bundle_pct ?? null, meta?.bundle_sol ?? null, meta?.handoffs ?? null, meta?.tier ?? null, meta?.factory ?? null, meta?.has_socials ?? null, meta?.socials ?? null, v5, null, null, null, ageS, 0, 1, mc);
   const id = r.lastInsertRowid;
-  const info = { source: c.source, ageH: +(ageS / 3600).toFixed(1), v5: Math.round(v5), firstV5: Math.round(c.v5), top10: +Number(top10).toFixed(4), dev: +dev.toFixed(4), bundle: +bundle.toFixed(4), bundleSrc,
+  const info = { source: c.source, ageH: +(ageS / 3600).toFixed(1), v5: Math.round(v5), v1: v1 != null ? Math.round(v1) : null, firstV1: Math.round(c.v1), top10: +Number(top10).toFixed(4), dev: +dev.toFixed(4), bundle: +bundle.toFixed(4), bundleSrc,
     holders: g?.info?.holder_count ?? null, snipers: g?.info?.wallet_tags_stat?.sniper_wallets ?? null, fresh: st.fresh_wallet_rate ?? null, insider: g?.sec?.suspected_insider_hold_rate ?? null, rug: row.rug_ratio ?? null, dex: ds?.dex ?? c.exchange ?? null, liq: ds?.liq ?? null };
   try { q.setStrategy.run("p7", id); q.setVenue.run(c.venue || (c.source === "gmgn" ? `gmgn:${c.exchange || "?"}` : "feed"), id); q.setVolEntry.run(v5, id); db.prepare(`UPDATE paper_trades SET p7_json=?, gmgn_entry=? WHERE id=?`).run(JSON.stringify(info), JSON.stringify({ ts, info: g?.info ?? null, sec: g?.sec ?? null }).slice(0, 20000), id); } catch (e) { console.error("[p7 save]", e.message); }
   const pos = { id: Number(id), mint: c.mint, name, entryTs: ts, entryMc: mc, entryUsd: usd, peak: 1, low: 1, peakTs: ts, lowTs: ts, last: 1, lastTs: ts, feed: c.source === "feed", x: {}, saved: 0 };
   open.set(c.mint, pos); p7.bought++;
-  tg(`🐢 <b>P7 SLOW SLEEPER</b> — ${esc(name)} ($${esc(symbol)})\n${(ageS / 86400 >= 1 ? (ageS / 86400).toFixed(1) + " days" : (ageS / 3600).toFixed(1) + " h")} old · MC <b>$${fmt(mc)}</b> · $50K+ in 3 × 5 min (now $${fmt(v5)})\ntop 10 ${pct(Number(top10))} · dev ${pct(dev)} · bundle ${pct(bundle)}\nPaper: sell at 2x / 3x / 4x · −40% stop · out when 5-min volume &lt; $${fmt(GOLDEN)}\n${links(c.mint)}\n<code>${c.mint}</code>`);
+  tg(`🐢 <b>P7 SLOW SLEEPER</b> — ${esc(name)} ($${esc(symbol)})\n${(ageS / 86400 >= 1 ? (ageS / 86400).toFixed(1) + " days" : (ageS / 3600).toFixed(1) + " h")} old · MC <b>$${fmt(mc)}</b> · $50K+ in each of 3 minutes in a row (5-min vol $${fmt(v5)})\ntop 10 ${pct(Number(top10))} · dev ${pct(dev)} · bundle ${pct(bundle)}\nPaper: sell at 2x / 3x / 4x · −40% stop · out when 5-min volume &lt; $${fmt(GOLDEN)}\n${links(c.mint)}\n<code>${c.mint}</code>`);
 }
 
 function step(pos, usd, ts) {
@@ -159,5 +164,5 @@ try {
   }
   if (open.size || after.size) console.log(`[p7] restored ${open.size} open / ${after.size} after-watch`);
 } catch (e) { console.error("[p7 restore]", e.message); }
-console.log(`[p7] ${ENABLED ? "on" : "off"} — ≥ ${MIN_AGE_H} h old · MC $${MIN_MC / 1e3}K–$${MAX_MC / 1e6}M · $${VOL / 1e3}K+ in 3 back-to-back 5-min periods · top 10 < ${TOP10 * 100}% · dev < ${DEV * 100}% · bundle < ${BUNDLE * 100}% · exits 2x / 3x / 4x, −40% stop, out when 5m vol < $${GOLDEN / 1e3}K · no time limit · 24 h after-watch`);
+console.log(`[p7] ${ENABLED ? "on" : "off"} — ≥ ${MIN_AGE_H} h old · MC $${MIN_MC / 1e3}K–$${MAX_MC / 1e6}M · $${VOL1 / 1e3}K+ in each of 3 back-to-back minutes · top 10 < ${TOP10 * 100}% · dev < ${DEV * 100}% · bundle < ${BUNDLE * 100}% · exits 2x / 3x / 4x, −40% stop, out when 5m vol < $${GOLDEN / 1e3}K · no time limit · 24 h after-watch`);
 export { step as _step, close as _close, open as _open, watch as _watch, buy as _buy };

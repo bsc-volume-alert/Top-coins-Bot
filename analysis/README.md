@@ -120,8 +120,8 @@ Recorded per trade for the 50–60-trade review: age, entry MC, 5-min $ in / $ o
 history, bundler / insider / sniper shares, fresh wallets, rug score, socials), our launch bundle % and dev buy where we saw the launch, source and DEX.
 
 ## P7 "slow sleepers" — set by the owner 17 Oct 19:25–19:27 UK
-Entry: coin ≥ 6 h old, MC $300K–$1.5M, ≥ $50K traded in each of three back-to-back 5-min periods (checked at first sighting, +5 min, +10 min;
-our feed or GMGN / DexScreener for coins our feed cannot read), GMGN check just before buying: top 10 < 20%, dev (creator / dev team) < 5%,
+Entry: coin ≥ 6 h old, MC $300K–$1.5M, ≥ $50K traded in each of three back-to-back minutes (checked at first sighting, +1 min, +2 min;
+our feed or GMGN's 1m list for coins our feed cannot read), GMGN check just before buying: top 10 < 20%, dev (creator / dev team) < 5%,
 bundle wallets < 15% (GMGN list bundler hold %, else GMGN info bundler share). One trade per coin per 24 h.
 Exits recorded side by side: all at 2x (headline) · all at 3x · all at 4x, each with −40% stop; no time limit — everything left is sold when 5-min
 volume < $15K. After the exit the coin is watched 24 h and the highest price is recorded (p7_after_peak).
