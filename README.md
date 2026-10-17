@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.77 — bottom table: badges, skip verdicts (17 Oct)
+- Bought by a project: solid WON / LOST badge (dark green / red) with the exit; open: HOLDING. Skipped: faded with the reason, plus "good skip" (would have lost) or "missed win" (would have made money). · = not that project's kind of coin. Peak shows the highest after the sale where recorded (core after-watch, P7 24 h watch). Verdict column per row. Entry MC moved under the coin name; columns tightened so P1A–P7 fit.
+
 ## v0.18.76 — background colour picker (17 Oct)
 - Six gradient backgrounds (midnight → orchid, deep ocean → foam, neon dusk → peach, teal glow → mint, berry sunset → apricot, indigo → sky) plus the original, picked from the dots on the right edge; remembered in the browser. On the new backgrounds the two lines that sit straight on the background (the "Recent trades" heading and the footer) get a dark backing so they stay readable. Nothing else changes.
 
