@@ -142,6 +142,7 @@ async function dexInfo(mint) {
 
 // v0.18.48: never treat SOL itself or stablecoins as a coin (P5 bought "Wrapped SOL" at a $105M cap on 16 Oct)
 const NOT_COINS = new Set(["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB"]);
+try { const n = db.prepare(`UPDATE paper_trades SET invalid=1 WHERE COALESCE(invalid,0)=0 AND mint IN (${[...NOT_COINS].map(() => "?").join(",")})`).run(...NOT_COINS).changes; if (n) console.log(`[momentum] marked ${n} SOL/stablecoin paper trades invalid`); } catch (e) { console.error("[not-coins]", e.message); }
 onSwap((tr) => {
   if (NOT_COINS.has(tr.mint)) return;
   const s = st(tr.mint), usd = tr.sol * solUsdCached(), now = tr.ts || Math.floor(Date.now() / 1000);
