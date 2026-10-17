@@ -56,6 +56,10 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.58 — Project 5 v2 and clear profit lines on every card (17 Oct)
+**P5 v2:** book = 30 SOL level (`p5e30`) with three skips — launches ≥ 70% bundled, launches we never saw (no `tokens` row: mostly non-pump.fun launchpads) and bursts with ≥ 150 different wallets buying in the 60 s (`early_json.wal60`). Same 1.5x / −40% exit; fresh book from 17 Oct 11:20 UTC. The card also shows the same rule at 50 SOL, the 30 SOL trades the skips left out, and old P5 (50 SOL, no skips) — all since the fresh start. 80 SOL keeps recording, off the card.
+**Profit block on every card:** (1) since the rule's data begins (15 Oct 13:52 UK for P1/P2, 17 Oct 02:34 UK for P5) — includes the back-test; (2) last 24 hours — every trade the rule takes; (3) the live book since its fresh start.
+
 ## v0.18.57 — Project 4 off the website (17 Oct)
 P4 (buy 60 s after the trigger if price is still above it) retired from the dashboard: on the 32 core coins since it started, the 60-s check separated well (taken 12/16 core wins +0.65 vs skipped 5/16 −0.81), but P4 buys at a median 1.34x the trigger, so 1.5x needs ~2.0x from the trigger — 9/16 won, +0.06 vs +0.65 for the core entry on the same coins. Using the check as an early exit (sell at 60 s if below trigger) was not robust (helped 15–16 Oct, hurt since; hurt P1-filtered coins). The confirmation decision and `momconf` trades keep recording (analysis page).
 
