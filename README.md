@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.76 — background colour picker (17 Oct)
+- Six gradient backgrounds (midnight → orchid, deep ocean → foam, neon dusk → peach, teal glow → mint, berry sunset → apricot, indigo → sky) plus the original, picked from the dots on the right edge; remembered in the browser. On the new backgrounds the two lines that sit straight on the background (the "Recent trades" heading and the footer) get a dark backing so they stay readable. Nothing else changes.
+
 ## v0.18.75 — instant size / cost buttons (17 Oct)
 - Size buttons 0.1 · 0.25 · 0.5 · 1 · 1.25 · 1.5 · 2 SOL. Every SOL figure on the page is size × (x·(1−cost) − 1), a straight line in both, so `/api/snapshot?lin=1` sends each as [per SOL at 0% cost, change per unit of cost] and the page redraws at any size / cost without a server trip. The 3-second refresh can no longer put older figures back after a click. The choice is remembered in the browser.
 
