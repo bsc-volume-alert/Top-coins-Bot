@@ -20,6 +20,11 @@ import { recordHolders, holdersLine } from "./holders.js";
 const P = new Map(); // mint -> [{id, label, e, w5:[], closed, msgId}]
 export const cp = { entries: 0, closes: 0 };
 export const positionsOf = (mint) => P.get(mint) || [];
+// v0.18.70 website "sell 100%" for copy-type positions (P5): closes the paper position at the current price (every exit not yet hit takes it)
+export function copyManualSell(id) {
+  for (const [mint, arr] of P) for (const p of arr) if (p.id === id && !p.closed) { const mult = p.lastPx / p.e.entry; close(mint, p, "manual"); return { ok: true, mult, sold: 1 }; }
+  return null;
+}
 export const openOfKind = (kind) => [...P.entries()].flatMap(([mint, arr]) => arr.filter((p) => !p.closed && p.kind === kind).map((p) => ({ mint, p }))); // v0.18.32
 
 export function openCopy(kind, who, mint, name, symbol, price, mc, ts, note) {

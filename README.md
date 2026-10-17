@@ -56,6 +56,10 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.70 — open trades + "sell 100%" under every card (17 Oct)
+Every project card lists its open trades with a "sell 100%" paper button (P1A / P1B / P2A / P2B share one core position, so selling it in one card
+closes it for all four; P5 and P7 get their own sell; P6 keeps 25 / 50 / 100%). Closed-trade lists removed from the P6 and P7 cards.
+
 ## v0.18.69 — Project 7 "slow sleepers" (17 Oct)
 Coins ≥ 6 h old, $300K–$1.5M, with $50K+ in each of three back-to-back minutes (1-minute volume: our feed, or GMGN's 1m list — back on, 5m/1m alternate every 3 s) and clean holders on GMGN right before the buy (top 10 < 20%,
 dev < 5%, bundle wallets < 15%). Exits recorded: all at 2x / 3x / 4x, −40% stop, and everything left sold when 5-min volume drops below $15K — no time

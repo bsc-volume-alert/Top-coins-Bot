@@ -150,6 +150,11 @@ setInterval(async () => {
   } catch (e) { console.error("[p7 poll]", e.message); } finally { busy = false; }
 }, 20_000);
 
+// v0.18.70 website "sell 100%": every exit not yet hit is sold at the current price, then the 24 h after-watch starts
+export function p7ManualSell(id) {
+  for (const p of open.values()) if (p.id === id) { const m = p.last; for (const k of ["x2", "x3", "x4"]) if (p.x[k] == null) p.x[k] = m; close(p, "manual"); return { ok: true, mult: m, sold: 1 }; }
+  return null;
+}
 export const p7Open = () => [...open.values()].map((p) => ({ id: p.id, mint: p.mint, name: p.name, entryTs: p.entryTs, entryMc: p.entryMc, mult: p.last, peak: p.peak, low: p.low, x: p.x }));
 
 // restart: open positions keep running; closed ones inside their 24 h after-watch keep being watched
