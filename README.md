@@ -56,6 +56,11 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.56 — Project 2A / 2B, GMGN snapshot on every entry, /gmgnsellers (17 Oct)
+**P2A / P2B** = P1A / P1B's coins with P2's runner exit (`x_flow4`), books from the same moment (17 Oct 11:00 UTC) so each P1/P2 pair is scored on identical trades. Old P2 (≤ 600 wallets OR P1 filter) still recorded (`p2f`) but off the dashboard; 20 of its 27 extra trades were ≥ 70%-bundled launches with 5 of P2's 8 rugs.
+**GMGN at entry:** every momentum / P4 / P5 entry queues a GMGN `/v1/token/info` + `/v1/token/security` lookup (one per coin per 2 min, ~2/s max) stored as JSON in `paper_trades.gmgn_entry` (images / long text dropped, size-capped) and exported in /csv. /status shows lookups ok / failed.
+**/gmgnsellers:** one-off background pull for every coin a project traded since 15 Oct 12:52 UTC — GMGN top 100 traders by sell volume (tags, first buy, full exit time, buy / sell $, realized profit, funding wallet), top 30 holders, token info, security, the dev's created tokens, 1-minute candles −10 → +60 min around our first entry. Written to disk one coin at a time (~2 s per coin), zipped and sent to Telegram.
+
 ## v0.18.55 — Project 1 split into 1A and 1B (17 Oct)
 After the 17 Oct per-coin review of all P1 trades: **P1A** = old P1 (stock/other-token pool OR entry MC < $47K) minus launches where ≥ 70% of supply was bought in the creation block; **P1B** = SOL-paired pool only + entry MC < $47K + not ≥ 70% bundled. Both 1.5x / −40%, fresh books from 17 Oct 11:00 UTC (12:00 UK); back-test over 15 Oct 12:52 → 17 Oct 11:00 shown as fitted. Bundle % comes from the trade row, else the tokens table; unknown bundle is not treated as bundled. Old P1 rule still recorded (analysis page `p1f`, plus new `p1a` / `p1b` flags) but off the dashboard. Open/sold/recent tables show P1A and P1B columns.
 /coverage: GMGN flags raised in the first 5 min after a restart are stored as "unknown" (our feed is still warming up) and left out of the seen/missed share.

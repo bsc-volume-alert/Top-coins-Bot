@@ -13,7 +13,7 @@ import { esc, fmt } from "./launch-monitor.js";
 import { solUsdCached } from "./price.js";
 import { clusterSnap } from "./signals.js";
 import { dexPrice } from "./sweeper.js"; // v0.18.36
-import { gmgnFor, gmgnSummary } from "./gmgn.js"; // v0.18.52
+import { gmgnFor, gmgnSummary, gmgnEntry } from "./gmgn.js"; // v0.18.52 · v0.18.56 gmgnEntry
 import { feeInfo, feeLine } from "./fees.js";
 import { recordHolders, holdersLine } from "./holders.js";
 
@@ -31,6 +31,7 @@ export function openCopy(kind, who, mint, name, symbol, price, mc, ts, note) {
   if (note?.buyers != null) { try { q.setFeatures.run(null, null, null, null, new Date(ts * 1000).getUTCHours(), null, note.bs ?? null, note.buyers, r.lastInsertRowid); } catch {} }
   if (note?.mc5 != null || note?.buyers5 != null) { try { q.setPaperCard.run(note.mc5 ?? null, null, note.buyers5 ?? null, note.b5 ?? 0, note.s5 ?? 0, r.lastInsertRowid); } catch {} }
   try { const g = gmgnFor(mint); if (g) q.setGmgn.run(JSON.stringify(gmgnSummary(g)), r.lastInsertRowid); } catch {} // v0.18.52
+  if (kind === "momconf" || kind === "mom2m" || String(kind).startsWith("p5e")) gmgnEntry(mint, r.lastInsertRowid); // v0.18.56: P4 / P5 entries only (other copy kinds are too many)
   let hl = null; try { hl = holdersLine(recordHolders(r.lastInsertRowid, mint)); } catch {} // v0.18.5
   let fi = null; try { fi = feeInfo(mint); q.setFees.run(fi.accrued, fi.claims, fi.claimedSol, r.lastInsertRowid); } catch {} // v0.18.4
   let cs = null; try { cs = clusterSnap(mint); if (cs) q.setChurn.run(cs.churn, cs.cOut, cs.held, cs.handoffs, r.lastInsertRowid); } catch {} // v0.17.5: bundle churn at entry

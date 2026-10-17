@@ -21,7 +21,7 @@ import { memStats as memWal } from "./wallets.js";
 import { memStats as memTiers } from "./momtiers.js";
 import { memStats as memRe } from "./momre.js";
 import { memStats as memAfter } from "./aftercare.js";
-import { memStats as memGmgn } from "./gmgn.js"; // v0.18.52
+import { memStats as memGmgn, gmgnSellers } from "./gmgn.js"; // v0.18.52 · v0.18.56 /gmgnsellers
 import { runBackup, backupInfo } from "./backup.js"; // v0.18.40
 import { leaderboardText, walletText, addWatch, removeWatch, watchList, creatorsText, creatorText, addWatchCreator, removeWatchCreator, watchCreatorList } from "./wallets.js";
 const TOKEN = () => process.env.TG_BOT_TOKEN, CHAT = () => String(process.env.TG_CHAT_ID);
@@ -59,6 +59,7 @@ async function poll() {
         else if (cmd === "/wallet") { const a = m.text.trim().split(/\s+/)[1]; await tg(a ? walletText(a) : "Usage: /wallet <address>"); }
         else if (cmd === "/watch") { const [, a, ...rest] = m.text.trim().split(/\s+/); if (!a || a.length < 32) await tg("Usage: /watch <address> [label]"); else { addWatch(a, rest.join(" ") || null); await tg(`👁 watching <code>${a}</code>${rest.length ? " as " + rest.join(" ") : ""} — copy alerts + paper trades on its buys`); } }
         else if (cmd === "/unwatch") { const a = m.text.trim().split(/\s+/)[1]; if (a) { removeWatch(a); await tg(`removed <code>${a}</code>`); } }
+        else if (cmd === "/gmgnsellers") sendGmgnSellers(); // v0.18.56 runs in the background (~2 s per coin), sends a zip when done
         else if (cmd === "/coverage") { const h = Number(m.text.trim().split(/\s+/)[1]) || 24; await tg(coverageText(Math.min(168, Math.max(1, h)))); }
         else if (cmd === "/check") { const a = m.text.trim().split(/\s+/)[1]; await tg(a && a.length >= 32 ? await checkText(a) : "Usage: /check <mint>"); }
         else if (cmd === "/prepump" || cmd === "/prepump30") { const d = cmd === "/prepump30" ? 30 : 7; const rows = q.prepumpTop.all(Math.floor(Date.now() / 1000) - d * 86400, 2, 15); await tg(rows.length ? `🕵️ <b>Pre-pump wallets — ${d}d</b> (bought in the 30 min before a volume trigger, 2+ coins)\n` + rows.map((r) => `• <code>${r.wallet}</code> ${r.n} coins · 2x on ${r.hit2} · 1.5x on ${r.hit15} · avg lead ${Math.round(r.lead / 60)}m · ${r.sol.toFixed(1)} SOL`).join("\n") + "\n/wallet &lt;addr&gt; for detail · /watch to copy" : "No pre-pump wallet data yet (needs volume triggers since v0.18.2)."); }
@@ -76,7 +77,7 @@ async function poll() {
         else if (cmd === "/watchcreator") { const [, a, ...rest] = m.text.trim().split(/\s+/); if (!a || a.length < 32) await tg("Usage: /watchcreator <address> [label]"); else { addWatchCreator(a, rest.join(" ") || null); await tg(`👁 watching creator <code>${a}</code>${rest.length ? " as " + rest.join(" ") : ""} — alert + paper entry on their next launch`); } }
         else if (cmd === "/unwatchcreator") { const a = m.text.trim().split(/\s+/)[1]; if (a) { removeWatchCreator(a); await tg(`removed creator <code>${a}</code>`); } }
         else if (cmd === "/watching") { const l = watchList(), lc = watchCreatorList(); await tg((l.length ? "👁 Wallets:\n" + l.map(([w, v]) => `• <code>${w}</code>${v.label ? " — " + v.label : ""}`).join("\n") : "👁 Wallets: none") + "\n" + (lc.length ? "🧑‍💻 Creators:\n" + lc.map(([w, v]) => `• <code>${w}</code>${v.label ? " — " + v.label : ""}`).join("\n") : "🧑‍💻 Creators: none") + "\n/watch · /watchcreator"); }
-        else if (cmd === "/help") await tg("Commands: /report · /report7 · /summary · /csv · /csvfull (adds token_life + wallet_buys) · /status · /mem · /backup · /coverage [hours] · /check &lt;mint&gt; · /prepump · /prepump30 · /bigrunners (3x+ momentum, with volume after entry) · /wallets (top 10, 7d) · /wallets30 · /wallet <addr> · /watch <addr> [label] · /unwatch · /runners · /runners7 · /creators · /creators30 · /creator <addr> · /watchcreator <addr> [label] · /unwatchcreator · /watching");
+        else if (cmd === "/help") await tg("Commands: /report · /report7 · /summary · /csv · /csvfull (adds token_life + wallet_buys) · /status · /mem · /backup · /coverage [hours] · /gmgnsellers · /check &lt;mint&gt; · /prepump · /prepump30 · /bigrunners (3x+ momentum, with volume after entry) · /wallets (top 10, 7d) · /wallets30 · /wallet <addr> · /watch <addr> [label] · /unwatch · /runners · /runners7 · /creators · /creators30 · /creator <addr> · /watchcreator <addr> [label] · /unwatchcreator · /watching");
       }
     } catch (e) { await new Promise((r) => setTimeout(r, 5000)); }
   }
@@ -147,12 +148,28 @@ async function sendCsv(full) { // v0.15.2: one zip (large CSVs crash Telegram's 
   } catch (e) { console.error("[csv]", e.message); try { await tg(`Export failed: ${esc(e.message)}`); } catch {} }
   finally { csvBusy = false; try { rmSync(dir, { recursive: true, force: true }); } catch {} }
 }
+// v0.18.56 /gmgnsellers: one-off GMGN pull (who sold, tags, funding wallets, dev launches, 1-min candles) for every coin a project traded
+async function sendGmgnSellers() {
+  const dir = mkdtempSync(join(tmpdir(), "gmgn-sellers-"));
+  try {
+    await tg("GMGN seller pull started — about 2 s per coin. I'll send the file when it's done.");
+    const res = await gmgnSellers(dir, (i, n, ok, fail) => { if (i % 100 === 0) tg(`GMGN seller pull: ${i} / ${n} coins (${ok} ok, ${fail} failed)`); });
+    const day = new Date().toISOString().slice(0, 10), zipPath = join(dir, `gmgn_sellers_${day}.zip`);
+    const size = await zipFiles([{ name: `gmgn_sellers_${day}.jsonl`, path: res.path }], zipPath);
+    const blob = typeof openAsBlob === "function" ? await openAsBlob(zipPath, { type: "application/zip" }) : new Blob([readFileSync(zipPath)], { type: "application/zip" });
+    const fd = new FormData(); fd.append("chat_id", CHAT()); fd.append("document", blob, `gmgn_sellers_${day}.zip`);
+    fd.append("caption", `GMGN sellers: ${res.n} coins · ${res.ok} with trader data · ${res.fail} without · ${(size / 1048576).toFixed(1)} MB`);
+    const r = await fetch(`https://api.telegram.org/bot${TOKEN()}/sendDocument`, { method: "POST", body: fd, signal: AbortSignal.timeout(120000) });
+    if (!r.ok) { const t = await r.text(); console.error("[gmgnsellers]", t); await tg(`GMGN file failed to send: ${esc(t.slice(0, 200))}`); }
+  } catch (e) { console.error("[gmgnsellers]", e.message); try { await tg(`GMGN seller pull failed: ${esc(e.message)}`); } catch {} }
+  finally { try { rmSync(dir, { recursive: true, force: true }); } catch {} }
+}
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 // v0.18.16: memory guard — pm2 restarts the bot at 600 MB; warn well before that so growth is seen before it bites
 export const memMb = () => Math.round(process.memoryUsage().rss / 1048576);
 let memWarnAt = 0;
 setInterval(() => { const mb = memMb(); if (mb > 450 && Date.now() - memWarnAt > 600_000) { memWarnAt = Date.now(); console.error(`[mem] rss ${mb} MB — pm2 restarts at 600`); tg(`⚠️ memory ${mb} MB (restart at 600)`).catch(() => {}); } }, 20_000);
-const PAPER_SQL = `SELECT p.id, p.strategy, p.name, p.symbol, p.mint, datetime(p.entry_ts,'unixepoch') entry_utc, p.entry_age_s, p.entry_mc, p.peak_mult, p.x_tp, p.x_tsl40, p.x_tsl60, p.x_cluster, p.x_grad, p.x_time, p.x_tsl80, p.x_half60, p.x_twophase, p.x_ladder, p.x_levels, p.x_m1, p.x_m1vol, p.next_level, p.wave1_peak_mc, p.cluster_held_pct, p.trigger_kind, p.x_volstop, p.vol_at_entry, p.after_peak_mult, p.after_peak_mc, p.handover, p.creator_prior, p.creator_best_peak, p.dev_buy_sol, p.snipers, p.hour_utc, p.parent_id, p.bs_ratio_entry, p.buyers_entry, p.vol5m_usd, p.vol1m_usd, p.age_s, p.reentry_n, p.exit_reason, p.closed, p.tier, p.factory, p.has_socials, p.bundle_pct, p.bundle_sol, p.handoffs, p.inflow_sol, p.inflow_wallets, p.outside_share, p.buys, p.sells, p.mc_5m, p.mc_15m, p.buyers_5m, p.alerted, p.invalid, p.buys_entry, p.sells_entry, p.proven_entry, p.q_score, p.q_wallets, p.q_per10k, p.q_top3, p.q_roundtrip, p.q_retail, p.q_custom, p.q_size_cv, p.q_new_pct, p.q_px_per10k, p.x_combo, p.x_tp15, p.x_tsl25, p.x_t15s25, p.x_t15s60, p.x_t2s25, p.x_t2s60, p.x_t15s40, p.x_t2s40, p.x_flow, p.x_flow4, p.x_flow4ff, p.x_split, p.split_branch, p.x_dead, p.x_p3d, p.x_manual, p.manual_pct, p.conf_ok, p.conf_ratio, p.x_h2t40, p.x_s15be, p.v2m_usd, p.early_json, p.gmgn_json, p.dd_pre15, p.path, p.venue, p.fee_accrued_entry, p.fee_claims_entry, p.fee_claimed_entry, p.core, p.core_tight, p.core_v40, p.bs_clean_entry, p.bot_share_entry, p.dex_paid, p.dex_paid_types, p.dex_paid_lead_s, p.snipers_n, p.snipers_held_pct, p.fresh_share, p.fresh_n, p.proven_vol_share, p.proven_wallets_5m, p.t_hit15_s, p.top10_entry, p.largest_entry, p.holders_entry, p.dev_hold_entry, p.tight, p.churn_entry, p.cluster_out_entry, t.outside_buyers, t.outside_sol_in, t.cluster_sol_in, t.cluster_sol_out, t.graduated, t.creator FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint ORDER BY p.id`;
+const PAPER_SQL = `SELECT p.id, p.strategy, p.name, p.symbol, p.mint, datetime(p.entry_ts,'unixepoch') entry_utc, p.entry_age_s, p.entry_mc, p.peak_mult, p.x_tp, p.x_tsl40, p.x_tsl60, p.x_cluster, p.x_grad, p.x_time, p.x_tsl80, p.x_half60, p.x_twophase, p.x_ladder, p.x_levels, p.x_m1, p.x_m1vol, p.next_level, p.wave1_peak_mc, p.cluster_held_pct, p.trigger_kind, p.x_volstop, p.vol_at_entry, p.after_peak_mult, p.after_peak_mc, p.handover, p.creator_prior, p.creator_best_peak, p.dev_buy_sol, p.snipers, p.hour_utc, p.parent_id, p.bs_ratio_entry, p.buyers_entry, p.vol5m_usd, p.vol1m_usd, p.age_s, p.reentry_n, p.exit_reason, p.closed, p.tier, p.factory, p.has_socials, p.bundle_pct, p.bundle_sol, p.handoffs, p.inflow_sol, p.inflow_wallets, p.outside_share, p.buys, p.sells, p.mc_5m, p.mc_15m, p.buyers_5m, p.alerted, p.invalid, p.buys_entry, p.sells_entry, p.proven_entry, p.q_score, p.q_wallets, p.q_per10k, p.q_top3, p.q_roundtrip, p.q_retail, p.q_custom, p.q_size_cv, p.q_new_pct, p.q_px_per10k, p.x_combo, p.x_tp15, p.x_tsl25, p.x_t15s25, p.x_t15s60, p.x_t2s25, p.x_t2s60, p.x_t15s40, p.x_t2s40, p.x_flow, p.x_flow4, p.x_flow4ff, p.x_split, p.split_branch, p.x_dead, p.x_p3d, p.x_manual, p.manual_pct, p.conf_ok, p.conf_ratio, p.x_h2t40, p.x_s15be, p.v2m_usd, p.early_json, p.gmgn_json, p.gmgn_entry, p.dd_pre15, p.path, p.venue, p.fee_accrued_entry, p.fee_claims_entry, p.fee_claimed_entry, p.core, p.core_tight, p.core_v40, p.bs_clean_entry, p.bot_share_entry, p.dex_paid, p.dex_paid_types, p.dex_paid_lead_s, p.snipers_n, p.snipers_held_pct, p.fresh_share, p.fresh_n, p.proven_vol_share, p.proven_wallets_5m, p.t_hit15_s, p.top10_entry, p.largest_entry, p.holders_entry, p.dev_hold_entry, p.tight, p.churn_entry, p.cluster_out_entry, t.outside_buyers, t.outside_sol_in, t.cluster_sol_in, t.cluster_sol_out, t.graduated, t.creator FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint ORDER BY p.id`;
 
 // v0.18.54 /coverage: how much of the Solana market our own feed sees, measured against GMGN (which covers every DEX). For each token GMGN
 // flagged at >= $100K traded in 5 min, our_v5 is our own feed's 5-minute volume for the same token at that moment.

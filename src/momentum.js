@@ -21,7 +21,7 @@ import { dirname, join } from "node:path";
 import { provenCount } from "./wallets.js";
 import { enrichEntry, sniperInfo, provenShare, enrichLine } from "./enrich.js"; // v0.18.19
 import { dexPrice } from "./sweeper.js"; // v0.18.29
-import { gmgnFor, gmgnSummary } from "./gmgn.js"; // v0.18.52
+import { gmgnFor, gmgnSummary, gmgnEntry } from "./gmgn.js"; // v0.18.52 · v0.18.56 gmgnEntry
 export const BOOT = Math.floor(Date.now() / 1000); // v0.18.36 process start (low-volume exit warm-up)
 // v0.18.38: windows count as complete from this time. A quick restart (state saved ≤30 s ago) keeps the saved 5m windows, so no new wait.
 let WARM_FROM = BOOT; const lvReady = (now) => now - WARM_FROM >= CFG.LOWVOL_WARMUP_S;
@@ -224,6 +224,7 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
   } catch (e) { console.error("[prepump]", e.message); }
   try { q.setVenue.run(tr.venue || "pumpswap", pos.id); } catch {}
   try { const g = gmgnFor(mint); if (g) q.setGmgn.run(JSON.stringify(gmgnSummary(g)), pos.id); } catch {} // v0.18.52 GMGN rug / smart-money data at entry
+  gmgnEntry(mint, pos.id); // v0.18.56 full GMGN token info + security snapshot at entry
   const core = kind === "vol5m" && tr.mc < CFG.MOM_CORE_MC && !reentry; // v0.18.4
   const coreTight = core && tr.mc < CFG.MOM_CT_MC && ageS != null && ageS < CFG.MOM_CT_AGE_S && qv && qv.sizeCv < CFG.MOM_CT_SIZE_CV; // v0.18.7: under $60K, under 6 min, steady trade sizes
   try { q.setCore.run(core ? 1 : 0, coreTight ? 1 : 0, pos.id); } catch {}

@@ -52,6 +52,92 @@ async function rank(chain, interval) {
   return rows;
 }
 
+// v0.18.56 generic GET for the other read-only endpoints (token info / security / top traders / created tokens / kline). Same auth, same
+// rate-limit handling; unwraps the inner {code,data} envelope when present.
+async function get(path, params) {
+  const q = new URLSearchParams({ ...params, timestamp: String(Math.floor(Date.now() / 1000)), client_id: randomUUID() });
+  const r = await fetch(`${HOST}${path}?${q}`, { headers: { "X-APIKEY": KEY(), "Content-Type": "application/json" }, signal: AbortSignal.timeout(10000) });
+  const text = await r.text(); let j; try { j = JSON.parse(text); } catch { throw new Error(`HTTP ${r.status} non-JSON`); }
+  if (r.status === 429 || j.error === "RATE_LIMIT_EXCEEDED" || j.error === "RATE_LIMIT_BANNED") {
+    gm.rateLimited++; const reset = Number(r.headers.get("x-ratelimit-reset") || j.reset_at || 0);
+    pausedUntil = Math.max(Date.now() + 5000, reset * 1000 || 0); throw new Error("rate limited");
+  }
+  if (j.code !== 0) throw new Error(`${j.error || j.code}: ${j.message || ""}`.slice(0, 160));
+  return j.data && j.data.data && typeof j.data.data === "object" && !Array.isArray(j.data.data) && j.data.code !== undefined ? j.data.data : j.data;
+}
+// keep a GMGN object small: drop images / long text / big arrays, then cap the size by removing the largest remaining keys
+function slim(o, cap = 9000) {
+  if (!o || typeof o !== "object") return o;
+  const c = JSON.parse(JSON.stringify(o));
+  const drop = (x) => { if (!x || typeof x !== "object") return; for (const k of Object.keys(x)) { if (/logo|avatar|banner|description|pfp|image/i.test(k)) delete x[k]; else if (Array.isArray(x[k]) && x[k].length > 20) x[k] = x[k].slice(0, 20); else drop(x[k]); } };
+  drop(c);
+  let str = JSON.stringify(c);
+  while (str.length > cap) { const big = Object.keys(c).filter((k) => !["dev", "stat", "wallet_tags_stat", "price"].includes(k)).sort((a, b) => JSON.stringify(c[b]).length - JSON.stringify(c[a]).length)[0]; if (!big) break; delete c[big]; str = JSON.stringify(c); }
+  return c;
+}
+
+// v0.18.56 GMGN snapshot at entry: token info (holders, top-10, dev history, bundler / insider / sniper shares, fresh wallets, socials) and
+// token security (rug ratio, wash trading, insider hold, sniper count) are fetched for every momentum / P5 entry and stored in
+// paper_trades.gmgn_entry. Fills the holder data our own ledger lacks for coins older than ~5 min. One lookup per coin per 2 min.
+try { db.exec("ALTER TABLE paper_trades ADD COLUMN gmgn_entry TEXT"); } catch {}
+const qSetEntry = db.prepare(`UPDATE paper_trades SET gmgn_entry=? WHERE id=?`);
+gm.entryOk = 0; gm.entryFail = 0;
+const eq = [], eCache = new Map(); let eBusy = false;
+export function gmgnEntry(mint, id) { if (!KEY() || !mint || !id) return; eq.push({ mint, id }); if (eq.length > 300) eq.shift(); }
+setInterval(async () => {
+  if (eBusy || !eq.length || Date.now() < pausedUntil) return; eBusy = true;
+  const { mint, id } = eq.shift();
+  try {
+    let c = eCache.get(mint);
+    if (!c || Date.now() - c.t > 120000) {
+      const [info, sec] = await Promise.all([get("/v1/token/info", { chain: "sol", address: mint }).catch((e) => ({ _err: e.message })), get("/v1/token/security", { chain: "sol", address: mint }).catch((e) => ({ _err: e.message }))]);
+      if (info?._err && sec?._err) throw new Error(info._err);
+      c = { t: Date.now(), json: JSON.stringify({ ts: Math.floor(Date.now() / 1000), info: slim(info), sec: slim(sec, 4000) }) };
+      eCache.set(mint, c); if (eCache.size > 500) eCache.delete(eCache.keys().next().value);
+    }
+    qSetEntry.run(c.json, id); gm.entryOk++;
+  } catch (e) { gm.entryFail++; gm.lastErr = `entry: ${e.message}`; if (gm.entryFail % 20 === 1) console.error("[gmgn entry]", e.message); }
+  finally { eBusy = false; }
+}, 500);
+
+// v0.18.56 one-off "who sold" pull (/gmgnsellers): for every coin a project traded since 15 Oct, GMGN's top 100 traders by sell volume
+// (tags dev / bundler / sniper / insider, first buy, full exit time, buy and sell $, realized profit, funding wallet), token info + security,
+// the dev's other launches and 1-minute candles from 10 min before to 60 min after our first entry. Written to a JSONL file on disk one
+// coin at a time (memory stays flat), then zipped and sent to Telegram. ~2 s per coin.
+const T = (x) => (x == null ? null : x);
+const trader = (w) => ({ a: w.address, tags: w.tags, mt: w.maker_token_tags, start: T(w.start_holding_at), end: T(w.end_holding_at), last: T(w.last_active_timestamp),
+  buyUsd: T(w.buy_volume_cur), sellUsd: T(w.sell_volume_cur), buys: T(w.buy_tx_count_cur), sells: T(w.sell_tx_count_cur), soldPct: T(w.sell_amount_percentage),
+  pct: T(w.amount_percentage), profit: T(w.profit), rProfit: T(w.realized_profit), avgCost: T(w.avg_cost), avgSold: T(w.avg_sold), isNew: T(w.is_new), sus: T(w.is_suspicious),
+  tIn: T(w.history_transfer_in_amount), tOut: T(w.history_transfer_out_amount), fund: w.native_transfer ? { a: w.native_transfer.address, ts: w.native_transfer.timestamp, name: w.native_transfer.name } : null, created: T(w.created_at), type: T(w.addr_type) });
+let sellersBusy = false;
+export async function gmgnSellers(dir, onProgress = () => {}) {
+  if (!KEY()) throw new Error("GMGN_API_KEY not set"); if (sellersBusy) throw new Error("already running"); sellersBusy = true;
+  const { openSync, writeSync, closeSync } = await import("node:fs"); const { join } = await import("node:path");
+  const coins = db.prepare(`SELECT p.mint, MIN(p.entry_ts) first_ts, GROUP_CONCAT(p.id) ids, GROUP_CONCAT(DISTINCT p.strategy) strats, MAX(t.creator) creator, MAX(p.name) name
+    FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint WHERE COALESCE(p.invalid,0)=0 AND p.entry_ts >= ? AND ((p.strategy='momentum' AND p.core=1) OR p.strategy IN ('momconf','mom2m','p5e30','p5e50','p5e80'))
+    GROUP BY p.mint ORDER BY first_ts`).all(Math.floor(Date.UTC(2026, 9, 15, 12, 52) / 1000));
+  const path = join(dir, "gmgn_sellers.jsonl"), fd = openSync(path, "w"); let ok = 0, fail = 0;
+  try {
+    for (let i = 0; i < coins.length; i++) {
+      const c = coins[i], o = { mint: c.mint, name: c.name, first_ts: c.first_ts, ids: c.ids, strats: c.strats, creator: c.creator };
+      while (Date.now() < pausedUntil) await new Promise((r) => setTimeout(r, 1000));
+      const step = async (k, f) => { try { o[k] = await f(); } catch (e) { o[k + "_err"] = e.message; } await new Promise((r) => setTimeout(r, 350)); };
+      await step("traders", async () => (await get("/v1/market/token_top_traders", { chain: "sol", address: c.mint, limit: "100", order_by: "sell_volume_cur", direction: "desc" }))?.list?.map(trader));
+      await step("holders", async () => (await get("/v1/market/token_top_holders", { chain: "sol", address: c.mint, limit: "30" }))?.list?.map(trader));
+      await step("info", async () => slim(await get("/v1/token/info", { chain: "sol", address: c.mint })));
+      await step("sec", async () => slim(await get("/v1/token/security", { chain: "sol", address: c.mint }), 4000));
+      const creator = c.creator || o.info?.dev?.creator_address;
+      if (creator) await step("dev_tokens", async () => slim(await get("/v1/user/created_tokens", { chain: "sol", wallet_address: creator }), 12000));
+      await step("kline", async () => (await get("/v1/market/token_kline", { chain: "sol", address: c.mint, resolution: "1m", from: String(c.first_ts - 600), to: String(c.first_ts + 3600) }))?.list ?? null);
+      if (o.traders) ok++; else fail++;
+      writeSync(fd, JSON.stringify(o) + "\n");
+      if ((i + 1) % 25 === 0) onProgress(i + 1, coins.length, ok, fail);
+    }
+  } finally { closeSync(fd); sellersBusy = false; }
+  return { path, n: coins.length, ok, fail };
+}
+export { get as _get, slim as _slim };
+
 export const gmgnFor = (mint) => { const x = latest.get(mint); return x && Date.now() / 1000 - x.ts < 600 ? x.row : null; };
 export const gmgnSummary = (r) => r ? { mc: num(r.market_cap), liq: num(r.liquidity), vol: num(r.volume), holders: num(r.holder_count), rug: num(r.rug_ratio), bundler: num(r.bundler_rate), top10: num(r.top_10_holder_rate), smart: num(r.smart_degen_count), renowned: num(r.renowned_count), wash: r.is_wash_trading ?? null, dev: r.creator_token_status ?? null, exchange: r.exchange ?? null, launchpad: r.launchpad_platform ?? null } : null;
 
@@ -115,6 +201,6 @@ async function poll() {
 }
 if (KEY()) { console.log(`[gmgn] scanner on (${CHAINS.join(", ")}) — every ${POLL_MS} ms, flag ≥ $${FLAG_VOL5M} in 5 min, MC ≤ $${MAX_MC}`); setInterval(poll, POLL_MS); setTimeout(poll, 3000); }
 else console.log("[gmgn] GMGN_API_KEY not set — scanner off");
-export const gmgnStatus = () => KEY() ? `GMGN: ${gm.ok} ok / ${gm.fail} failed${gm.rateLimited ? ` (${gm.rateLimited} rate-limited)` : ""} · last list ${gm.rows} coins${gm.empty ? ` · ${gm.empty} empty` : ""} · top 5m vol seen $${Math.round(gm.maxVol5 / 1000)}K · flagged ${gm.flags} ($${Math.round(FLAG_VOL5M / 1000)}K/5m${Object.keys(gm.byChain).length > 1 ? ": " + Object.entries(gm.byChain).map(([c, n]) => `${c} ${n}`).join(", ") : ""}) · ${gm.missedByFeed} not seen by our feed${gm.lastErr && gm.fail ? ` · last error: ${gm.lastErr}` : ""}` : "GMGN: off (no API key)";
+export const gmgnStatus = () => KEY() ? `GMGN: ${gm.ok} ok / ${gm.fail} failed${gm.rateLimited ? ` (${gm.rateLimited} rate-limited)` : ""} · last list ${gm.rows} coins${gm.empty ? ` · ${gm.empty} empty` : ""} · top 5m vol seen $${Math.round(gm.maxVol5 / 1000)}K · flagged ${gm.flags} ($${Math.round(FLAG_VOL5M / 1000)}K/5m${Object.keys(gm.byChain).length > 1 ? ": " + Object.entries(gm.byChain).map(([c, n]) => `${c} ${n}`).join(", ") : ""}) · ${gm.missedByFeed} not seen by our feed · entry lookups ${gm.entryOk} ok / ${gm.entryFail} failed${gm.lastErr && gm.fail ? ` · last error: ${gm.lastErr}` : ""}` : "GMGN: off (no API key)";
 export const memStats = () => ({ latest: latest.size, flagged: flagged.size, follow: follow.length });
 export { ingest as _ingest, rank as _rank };
