@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.54 — /coverage: how much of Solana our feed sees (17 Oct)
+`/coverage [hours]` (default 24) compares our own feed with GMGN for every Solana token GMGN flagged at ≥ $100K traded in 5 min: share our feed saw, median share of the token's 5-min volume we captured, how many we paper-traded, the same for coins older than 7 days, a breakdown by exchange, the biggest tokens our feed missed (with age and later peak), and other-chain counts.
+
 ## v0.18.53 — GMGN scanner reads the trending list correctly (17 Oct)
 GMGN's trending response keeps an inner `{code, data}` envelope (rows at `data.data.rank`); v0.18.52 read `data.rank` and saw 0 coins on every one of its 305 successful polls. Both shapes are now accepted; empty responses are counted and logged, and `/status` shows the size of the last list and the largest Solana 5-minute volume seen.
 
