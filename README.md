@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.49 — split exit recorded beside Project 1 (17 Oct)
+New exit `x_s15be` on every core, P4 and P5 position: −40% stop until 1.5x; at 1.5x half is sold; the other half sells at 2x, or at the buy price if it falls back (stop moved to entry) — whole position 1.75x, ~1.25x or the stop. Project 1's card shows "split test" against Project 1 on the same filtered trades; analysis page and CSV carry the column.
+
 ## v0.18.48 — SOL and stablecoins never treated as coins (17 Oct)
 Project 5 bought "Wrapped SOL" (So111…112, $105M cap, recorded peak 954,628x) on 16 Oct 22:36, before its $2M cap existed. Wrapped SOL, USDC, USDT and USD1 swaps are now ignored by every momentum project, and existing paper trades on them are marked invalid at startup.
 

@@ -88,13 +88,21 @@ export function h2Step(e, x, mult, fromPeak) {
   if (e.h2Half && fromPeak <= -0.40) x.h2t40 = 1 + 0.5 * mult;
 }
 export const h2Final = (e, x, mult) => x.h2t40 ?? (e.h2Half ? 1 + 0.5 * mult : mult);
+// v0.18.49 "split" exit recorded beside Project 1 (x_s15be): −40% stop until 1.5x; at 1.5x sell half; the rest sells at 2x, or at the
+// buy price if it falls back (stop moved to entry). Whole-position multiple: 0.75 + 0.5 × second-half exit.
+export function s15Step(e, x, mult) {
+  if (x.s15be != null) return;
+  if (!e.s15Half) { if (mult >= 1.5) e.s15Half = true; else if (mult <= 0.6) { x.s15be = mult; return; } }
+  if (e.s15Half) { if (mult >= 2) x.s15be = 1.75; else if (mult <= 1.0) x.s15be = 0.75 + 0.5 * mult; }
+}
+export const s15Final = (e, x, mult) => x.s15be ?? (e.s15Half ? 0.75 + 0.5 * Math.min(mult, 2) : mult);
 export function stepExits(e, price, mc, v5Usd, buyUsd, sellUsd, sinceS = null) {
   if (price > e.peak) e.peak = price;
   const mult = price / e.entry, fromPeak = price / e.peak - 1, x = e.x;
   if (x.tp == null && mult >= 2) x.tp = 2;
   if (x.tsl25 == null && fromPeak <= -0.25) x.tsl25 = mult; // v0.17.4
   if (x.tp15 == null && mult >= 1.5) x.tp15 = 1.5;
-  stopStep(x, mult); flowStep(e, x, mult, fromPeak, v5Usd, buyUsd, sellUsd); ffStep(e, x, mult, sinceS); splitStep(e, x, mult, fromPeak, sinceS); deadStep(e, x, mult, sinceS, v5Usd, Math.floor(Date.now() / 1000)); h2Step(e, x, mult, fromPeak);
+  stopStep(x, mult); flowStep(e, x, mult, fromPeak, v5Usd, buyUsd, sellUsd); ffStep(e, x, mult, sinceS); splitStep(e, x, mult, fromPeak, sinceS); deadStep(e, x, mult, sinceS, v5Usd, Math.floor(Date.now() / 1000)); h2Step(e, x, mult, fromPeak); s15Step(e, x, mult);
   if (x.tsl40 == null && fromPeak <= -0.40) x.tsl40 = mult;
   if (x.tsl60 == null && fromPeak <= -0.60) x.tsl60 = mult;
   if (x.tsl80 == null && fromPeak <= -0.80) x.tsl80 = mult;
@@ -123,7 +131,7 @@ export function finalExits(e, mult) {
     tp: x.tp ?? mult, tsl40: x.tsl40 ?? mult, tsl60: x.tsl60 ?? mult, tsl80: x.tsl80 ?? mult,
     half60: x.half60 ?? (e.half ? 1 + 0.5 * mult : mult), twophase: x.twophase ?? (e.half ? 1 + 0.5 * mult : mult),
     ladder: x.ladder ?? ((e.half ? 0.5 : 0) + (e.s3 ? 0.75 : 0) + (1 - (e.half ? 0.25 : 0) - (e.s3 ? 0.25 : 0)) * mult),
-    h2t40: h2Final(e, x, mult), levels: levelsFinal(e.lv, mult), m1: x.m1 ?? mult, m1vol: x.m1vol ?? mult, volstop: x.volstop ?? mult, time: mult, combo: x.combo ?? (e.half ? 1 + 0.5 * mult : mult), tp15: x.tp15 ?? mult, tsl25: x.tsl25 ?? mult, flow: x.flow ?? mult, flow4: x.flow4 ?? (x.flow ?? mult), flow4ff: ffFinal(x, x.flow4 ?? (x.flow ?? mult)), split: splitFinal(e, x, mult), dead: x.dead ?? mult, p3d: p3dFinal(e, x, mult), ...stopFinal(x, mult, e.peak / e.entry),
+    h2t40: h2Final(e, x, mult), s15be: s15Final(e, x, mult), levels: levelsFinal(e.lv, mult), m1: x.m1 ?? mult, m1vol: x.m1vol ?? mult, volstop: x.volstop ?? mult, time: mult, combo: x.combo ?? (e.half ? 1 + 0.5 * mult : mult), tp15: x.tp15 ?? mult, tsl25: x.tsl25 ?? mult, flow: x.flow ?? mult, flow4: x.flow4 ?? (x.flow ?? mult), flow4ff: ffFinal(x, x.flow4 ?? (x.flow ?? mult)), split: splitFinal(e, x, mult), dead: x.dead ?? mult, p3d: p3dFinal(e, x, mult), ...stopFinal(x, mult, e.peak / e.entry),
   };
 }
 // v0.18.14: price path after entry — multiple at fixed seconds since entry (first tick at or after each mark), so any
