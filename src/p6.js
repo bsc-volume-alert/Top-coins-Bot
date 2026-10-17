@@ -49,7 +49,8 @@ async function dsInfo(mint) {
   const j = await r.json(); const ps = (j.pairs || []).filter((p) => p.chainId === "solana"); if (!ps.length) return null;
   const b = ps.reduce((a, c) => ((c.liquidity?.usd || 0) > (a.liquidity?.usd || 0) ? c : a));
   return { usd: Number(b.priceUsd) || null, mc: Number(b.marketCap || b.fdv) || null, created: b.pairCreatedAt ? Math.floor(b.pairCreatedAt / 1000) : null, dex: b.dexId, liq: b.liquidity?.usd ?? null,
-    vol: b.volume || null, chg: b.priceChange || null, txm5: b.txns?.m5 || null, name: b.baseToken?.name, symbol: b.baseToken?.symbol, pairs: ps.length };
+    vol: b.volume || null, chg: b.priceChange || null, txm5: b.txns?.m5 || null, name: b.baseToken?.name, symbol: b.baseToken?.symbol, pairs: ps.length,
+    m5all: ps.reduce((a, p) => a + (Number(p.volume?.m5) || 0), 0) }; // v0.18.72: 5-min volume across every pool
 }
 
 // called by momentum.js on every swap once our feed sees ≥ $100K in 5 min, and by gmgn.js for every coin on GMGN's 5-minute list
@@ -141,6 +142,10 @@ on("trade", (t, tr) => { if (!(tr?.price > 0) || !open.size) return; for (const 
 onSwap((tr) => { if (!(tr.price > 0) || !open.size) return; for (const p of posOf(tr.mint)) { p.feed = true; step(p, tr.price * solUsdCached(), tr.ts || nowS()); } });
 // v0.18.65 golden rule: 5-min volume from our feed (coins it trades; no trades = $0), else GMGN's list (≤ 2 min old), else DexScreener's m5
 function vol5(p) {
+  // v0.18.72: DexScreener's total over every pool is the referee (17 Oct: frameXTV showed $7K on DexScreener while our feed's count of the pools it
+  // reads stayed above $15K, so the golden rule never fired); our feed / GMGN only when DexScreener has not answered in the last 90 s
+  if (p.dsAll != null && nowS() - p.dsAllTs < 90) { p.vSrc = "dexscreener"; return p.dsAll; }
+  p.vSrc = "feed/gmgn";
   const s = momSnap(p.mint); if (p.feed) return s ? s.v5 : 0;
   const g = gmgnV5(p.mint, 120); if (g != null) return g;
   return p.dsV5 != null && nowS() - p.dsV5Ts < 90 ? p.dsV5 : null;
@@ -148,7 +153,7 @@ function vol5(p) {
 function golden(p) {
   if (p.closed || nowS() - p.entryTs < 60) return; const x = p.x; if (x.a != null && x.b != null && x.c != null) return;
   const v = vol5(p); if (v == null || v >= GOLDEN_USD) return;
-  const m = p.last; x.gr = m; x.grV = Math.round(v);
+  const m = p.last; x.gr = m; x.grV = Math.round(v); x.grSrc = p.vSrc;
   if (x.a == null) x.a = m; if (x.c == null) x.c = m; if (x.b == null) x.b = p.b2 ? 1 + 0.5 * m : m;
   save(p); close(p, "golden rule");
 }
@@ -170,7 +175,12 @@ function retro(x, pk, pkTs, lo, loTs, flags) {
 let busy = false;
 setInterval(async () => {
   if (busy || !open.size) return; busy = true;
-  try { for (const p of [...open.values()]) { if (!p.closed && nowS() - p.lastTs >= 45) { const d = await dsCached(p.mint); if (d?.usd > 0) step(p, d.usd, nowS()); if (d?.vol?.m5 != null) { p.dsV5 = Number(d.vol.m5); p.dsV5Ts = nowS(); } } golden(p); } }
+  try { for (const p of [...open.values()]) {
+    if (!p.closed && (nowS() - p.lastTs >= 45 || nowS() - (p.dsAllTs || 0) >= 40)) { const d = await dsCached(p.mint);
+      if (d?.usd > 0 && nowS() - p.lastTs >= 45) step(p, d.usd, nowS());
+      if (d?.vol?.m5 != null) { p.dsV5 = Number(d.vol.m5); p.dsV5Ts = nowS(); }
+      if (d?.m5all != null) { p.dsAll = d.m5all; p.dsAllTs = nowS(); } }
+    golden(p); } }
   catch (e) { console.error("[p6 poll]", e.message); } finally { busy = false; }
 }, 20_000);
 

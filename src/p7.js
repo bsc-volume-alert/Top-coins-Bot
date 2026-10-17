@@ -19,7 +19,7 @@ const ENABLED = process.env.P7_ENABLED !== "0", AFTER_S = 86400, NO_DATA_S = 6 *
 export const P7_VOL1 = VOL1;
 const NOT_COINS = new Set(["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB"]);
 
-for (const c of ["x_p7_2 REAL", "x_p7_3 REAL", "x_p7_4 REAL", "p7_json TEXT", "p7_state TEXT", "p7_after_peak REAL", "p7_after_ts INTEGER"]) { try { db.exec(`ALTER TABLE paper_trades ADD COLUMN ${c}`); } catch {} }
+for (const c of ["p6_low REAL", "p6_low_ts INTEGER", "p6_peak_ts INTEGER", "p6_last REAL", "x_p7_2 REAL", "x_p7_3 REAL", "x_p7_4 REAL", "p7_json TEXT", "p7_state TEXT", "p7_after_peak REAL", "p7_after_ts INTEGER"]) { try { db.exec(`ALTER TABLE paper_trades ADD COLUMN ${c}`); } catch {} }
 const qRecent = db.prepare(`SELECT 1 FROM paper_trades WHERE strategy='p7' AND mint=? AND (closed=0 OR exit_ts > ?) LIMIT 1`);
 const qSave = db.prepare(`UPDATE paper_trades SET peak_mult=?, p6_low=?, p6_low_ts=?, p6_peak_ts=?, p6_last=?, p7_state=?, peak_mc=? WHERE id=?`);
 const qClose = db.prepare(`UPDATE paper_trades SET closed=1, exit_ts=?, exit_reason=?, x_p7_2=?, x_p7_3=?, x_p7_4=?, peak_mult=?, p6_low=?, p6_low_ts=?, p6_peak_ts=?, p6_last=?, p7_state=? WHERE id=?`);
@@ -37,7 +37,7 @@ async function dsInfo(mint) {
   const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`, { signal: AbortSignal.timeout(6000) });
   const j = await r.json(); const ps = (j.pairs || []).filter((p) => p.chainId === "solana"); if (!ps.length) return null;
   const b = ps.reduce((a, c) => ((c.liquidity?.usd || 0) > (a.liquidity?.usd || 0) ? c : a));
-  return { usd: Number(b.priceUsd) || null, mc: Number(b.marketCap || b.fdv) || null, created: b.pairCreatedAt ? Math.floor(b.pairCreatedAt / 1000) : null, dex: b.dexId, liq: b.liquidity?.usd ?? null, m5: b.volume?.m5 ?? null, name: b.baseToken?.name, symbol: b.baseToken?.symbol };
+  return { usd: Number(b.priceUsd) || null, mc: Number(b.marketCap || b.fdv) || null, created: b.pairCreatedAt ? Math.floor(b.pairCreatedAt / 1000) : null, dex: b.dexId, liq: b.liquidity?.usd ?? null, m5: ps.reduce((a, p) => a + (Number(p.volume?.m5) || 0), 0), name: b.baseToken?.name, symbol: b.baseToken?.symbol }; // v0.18.72: m5 = every pool
 }
 // 5-minute volume from every source we have: our feed (if it trades the coin), GMGN's 5m list (≤ 2 min old), else DexScreener's m5
 async function vol5(mint, feedOnly = false) {
@@ -133,11 +133,11 @@ setInterval(async () => {
   try {
     const n = nowS();
     for (const p of [...open.values()]) {
-      let dsV = null;
-      if (n - p.lastTs >= 45) { const d = await dsInfo(p.mint).catch(() => null); if (d?.usd > 0) step(p, d.usd, n); dsV = d?.m5 ?? null; }
+      // v0.18.72: DexScreener's total over every pool (checked every ~40 s) decides the volume rule; our feed / GMGN only if it does not answer
+      if (n - p.lastTs >= 45 || n - (p.dsTs || 0) >= 40) { const d = await dsInfo(p.mint).catch(() => null); if (d?.usd > 0 && n - p.lastTs >= 45) step(p, d.usd, n); if (d?.m5 != null) { p.dsM5 = d.m5; p.dsTs = n; } }
       if (p.closed) continue;
       if (n - p.entryTs >= 60) {
-        let v = await vol5(p.mint, true); if (v == null && p.feed) v = 0; if (v == null) v = dsV;
+        let v = p.dsM5 != null && n - p.dsTs < 90 ? p.dsM5 : null; if (v == null) { v = await vol5(p.mint, true); if (v == null && p.feed) v = 0; }
         if (v != null && v < GOLDEN) { const m = p.last, x = p.x; x.gr = m; x.grV = Math.round(v); for (const k of ["x2", "x3", "x4"]) if (x[k] == null) x[k] = m; close(p, "golden"); continue; }
       }
       if (n - p.lastTs > NO_DATA_S) close(p, "no price data 6 h");
