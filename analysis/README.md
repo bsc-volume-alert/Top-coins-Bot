@@ -113,3 +113,8 @@ Exits recorded side by side, each with −40% stop and golden rule (sell the res
 A all at 2x · B half at 2x, rest 40% trailing stop (website headline) · C all at 3x · plus the v1 exit (half at 4x, rides 24 h, no stop).
 Test: 40 trades; the best exit must be net > 0 in both halves. P6 v1 ($100K, 6 h+) had 3 trades (peaks 2.97x / 2.54x / 1.76x, none reached 4x).
 No back-test exists for $60K on older coins (never recorded) — this is data collection first.
+
+### P6 v2 amended 17 Oct 19:11 UK (owner): three volume levels, age from 6 h
+$60K / $80K / $100K in 5 min are separate paper trades (p6_tier); minimum age 6 h (age_s recorded; compare 6–12 h vs 12 h+). Exits A / B / C as above.
+Recorded per trade for the 50–60-trade review: age, entry MC, 5-min $ in / $ out, GMGN token info + security snapshot (holders, top 10, dev hold and
+history, bundler / insider / sniper shares, fresh wallets, rug score, socials), our launch bundle % and dev buy where we saw the launch, source and DEX.

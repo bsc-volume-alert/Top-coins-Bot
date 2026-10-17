@@ -56,6 +56,11 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.66 — P6: $60K / $80K / $100K levels, age from 6 h (17 Oct)
+Each volume level is its own P6 paper trade (`p6_tier`), so one coin crossing all three gets three trades — compares which level picks better coins.
+Minimum age back to 6 h; `age_s` recorded for the 6–12 h vs 12 h+ split. P6 card: table of level × exit A / B / C / old ½-at-4x, plus exit B split
+by age. GMGN snapshot (`gmgn_entry`) stored on every entry. CSV adds p6_tier, x_p6a / x_p6b / x_p6c.
+
 ## v0.18.65 — P6 v2: $60K, 12 h+, exits A / B / C (17 Oct)
 P6 now buys coins at least 12 h old, $300K–$1.5M MC, with $60K+ traded in 5 minutes and more buys than sells — our feed or GMGN (any Solana DEX).
 Exits recorded per trade (x_p6a / x_p6b / x_p6c): A all at 2x · B half at 2x, rest on a 40% trailing stop · C all at 3x — each with a −40% stop

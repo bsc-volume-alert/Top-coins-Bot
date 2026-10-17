@@ -8,6 +8,9 @@
 // v0.18.65 P6 v2 (owner, 17 Oct 19:04): coin ≥ 12 h old, $300K–$1.5M, ≥ $60K traded in 5 min, buys ≥ sells — any Solana DEX (our feed or GMGN).
 // Three exits, each with a −40% stop and the golden rule (sell what is left when 5-min volume < $15K): A all at 2x · B half at 2x, rest on a
 // 40% trailing stop · C all at 3x. The v1 exit (half at 4x, rest rides 24 h, no stop) is still recorded as x_p6 for comparison.
+// v0.18.66 (owner, 17 Oct 19:11): three volume levels as separate paper trades — $60K, $80K and $100K in 5 min (p6_tier) — so the levels can be
+// compared; minimum age back to 6 h (age is recorded, 6–12 h vs 12 h+ compared later). GMGN's token info + security snapshot is stored at every
+// entry (gmgn_entry: holders, top 10, dev hold / history, bundler / insider / sniper shares, fresh wallets, rug score) for the 50–60-trade review.
 import { CFG } from "./config.js";
 import { db, q } from "./db.js";
 import { on, links, esc, fmt } from "./launch-monitor.js";
@@ -19,21 +22,25 @@ import { momSnap } from "./momentum.js"; // v0.18.65 golden rule needs our feed'
 import { volP6 } from "./vollog.js"; // v0.18.62 every decision goes on the coin's volume-log line
 
 const MIN_MC = Number(process.env.P6_MIN_MC || 300_000), MAX_MC = Number(process.env.P6_MAX_MC || 1_500_000);
-const VOL5M = Number(process.env.P6_VOL5M_USD || 60_000), MIN_AGE_H = Number(process.env.P6_MIN_AGE_H || 12), HOLD_H = Number(process.env.P6_HOLD_H || 24);
+const TIERS = String(process.env.P6_TIERS || "60000,80000,100000").split(",").map(Number).filter((x) => x > 0).sort((a, b) => a - b);
+const VOL5M = TIERS[0], MIN_AGE_H = Number(process.env.P6_MIN_AGE_H || 6), HOLD_H = Number(process.env.P6_HOLD_H || 24);
 const ENABLED = process.env.P6_ENABLED !== "0";
 export const P6_VOL = VOL5M;
 const GOLDEN_USD = Number(process.env.P6_GOLDEN_USD || 15_000), STOP = 0.6;
 const NOT_COINS = new Set(["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB"]);
 
-for (const c of ["x_p6a REAL", "x_p6b REAL", "x_p6c REAL", "x_p6 REAL", "p6_low REAL", "p6_low_ts INTEGER", "p6_peak_ts INTEGER", "p6_last REAL", "p6_state TEXT"]) { try { db.exec(`ALTER TABLE paper_trades ADD COLUMN ${c}`); } catch {} }
-const qRecent = db.prepare(`SELECT 1 FROM paper_trades WHERE strategy='p6' AND mint=? AND entry_ts > ? LIMIT 1`);
+for (const c of ["p6_tier INTEGER", "x_p6a REAL", "x_p6b REAL", "x_p6c REAL", "x_p6 REAL", "p6_low REAL", "p6_low_ts INTEGER", "p6_peak_ts INTEGER", "p6_last REAL", "p6_state TEXT"]) { try { db.exec(`ALTER TABLE paper_trades ADD COLUMN ${c}`); } catch {} }
+const qRecent = db.prepare(`SELECT 1 FROM paper_trades WHERE strategy='p6' AND mint=? AND entry_ts > ? AND COALESCE(p6_tier,100000)=? LIMIT 1`);
+const qTier = db.prepare(`UPDATE paper_trades SET p6_tier=? WHERE id=?`);
 const qSave = db.prepare(`UPDATE paper_trades SET peak_mult=?, p6_low=?, p6_low_ts=?, p6_peak_ts=?, p6_last=?, p6_state=?, peak_mc=? WHERE id=?`);
 const qClose = db.prepare(`UPDATE paper_trades SET closed=1, exit_ts=?, exit_reason=?, x_p6a=?, x_p6b=?, x_p6c=?, x_p6=?, x_t15s40=?, x_tsl60=?, x_h2t40=?, peak_mult=?, p6_low=?, p6_low_ts=?, p6_peak_ts=?, p6_last=?, p6_state=? WHERE id=?`);
-const qOpen = db.prepare(`SELECT id, mint, name, entry_ts, entry_mc, entry_price, peak_mult, p6_low, p6_low_ts, p6_peak_ts, p6_last, p6_state FROM paper_trades WHERE strategy='p6' AND closed=0 AND COALESCE(invalid,0)=0`);
+const qOpen = db.prepare(`SELECT id, mint, name, p6_tier, entry_ts, entry_mc, entry_price, peak_mult, p6_low, p6_low_ts, p6_peak_ts, p6_last, p6_state FROM paper_trades WHERE strategy='p6' AND closed=0 AND COALESCE(invalid,0)=0`);
 
-export const p6 = { candidates: 0, entries: 0, closes: 0, young: 0, noAge: 0, sellHeavy: 0, outOfRange: 0, repeat: 0, bySource: { feed: 0, gmgn: 0 } };
-const open = new Map(); // mint -> pos
-const checked = new Map(); // mint -> ms of last candidate check (one look per coin per 10 min)
+export const p6 = { byTier: {}, candidates: 0, entries: 0, closes: 0, young: 0, noAge: 0, sellHeavy: 0, outOfRange: 0, repeat: 0, bySource: { feed: 0, gmgn: 0 } };
+const open = new Map(); // `${mint}|${tier}` -> pos (v0.18.66: one position per coin per volume level)
+const checked = new Map(); // `${mint}|${tier}` -> ms of last check (one look per coin per level per 10 min)
+const K = (mint, tier) => `${mint}|${tier}`;
+const posOf = (mint) => TIERS.map((t) => open.get(K(mint, t))).filter(Boolean);
 const nowS = () => Math.floor(Date.now() / 1000);
 
 // DexScreener: best pair by liquidity — USD price, market cap, pool age, recent volume / price change (how quiet it was before)
@@ -52,19 +59,25 @@ export function p6Candidate(c) {
   if (!c?.mint || NOT_COINS.has(c.mint)) return;
   if (!(c.v5 >= VOL5M)) return;
   if (!ENABLED) return volP6(c.mint, "P6 off");
-  if (open.has(c.mint)) return volP6(c.mint, "already holding");
   if (!(c.mc >= MIN_MC && c.mc <= MAX_MC)) return c.mc > 0 ? volP6(c.mint, c.mc > MAX_MC ? MC_HI : MC_LO, `MC ${usdK(c.mc)}`) : volP6(c.mint, "MC unknown");
-  const t = Date.now(), last = checked.get(c.mint); if (last && t - last < 600_000) return;
-  checked.set(c.mint, t); if (checked.size > 20000) checked.delete(checked.keys().next().value);
-  p6.candidates++;
-  if (qRecent.get(c.mint, nowS() - 86400)) { p6.repeat++; return volP6(c.mint, "bought in last 24 h"); }
-  if (c.bu != null && c.su != null && c.su > 0 && c.bu < c.su) { p6.sellHeavy++; return volP6(c.mint, "more sells", `${usdK(c.bu)} in / ${usdK(c.su)} out`); } // our feed: buy $ ≥ sell $ in the 5-min window
-  if (c.buys != null && c.sells != null && c.buys < c.sells) { p6.sellHeavy++; return volP6(c.mint, "more sells", `${c.buys} buys / ${c.sells} sells`); }  // GMGN: more buys than sells (counts)
-  enter(c).catch((e) => { console.error("[p6]", e.message); volP6(c.mint, "error", String(e.message).slice(0, 80)); });
+  for (const tier of TIERS) { // v0.18.66: each level the coin has reached is its own trade
+    if (!(c.v5 >= tier)) break;
+    const key = K(c.mint, tier); if (open.has(key)) { volP6(c.mint, "already holding"); continue; }
+    const t = Date.now(), last = checked.get(key); if (last && t - last < 600_000) continue;
+    checked.set(key, t); if (checked.size > 30000) checked.delete(checked.keys().next().value);
+    p6.candidates++;
+    if (qRecent.get(c.mint, nowS() - 86400, tier)) { p6.repeat++; volP6(c.mint, "bought in last 24 h"); continue; }
+    if (c.bu != null && c.su != null && c.su > 0 && c.bu < c.su) { p6.sellHeavy++; volP6(c.mint, "more sells", `${usdK(c.bu)} in / ${usdK(c.su)} out`); continue; } // our feed: buy $ ≥ sell $ in the 5-min window
+    if (c.buys != null && c.sells != null && c.buys < c.sells) { p6.sellHeavy++; volP6(c.mint, "more sells", `${c.buys} buys / ${c.sells} sells`); continue; }  // GMGN: more buys than sells (counts)
+    enter(c, tier).catch((e) => { console.error("[p6]", e.message); volP6(c.mint, "error", String(e.message).slice(0, 80)); });
+  }
 }
 
-async function enter(c) {
-  const ds = await dsInfo(c.mint).catch(() => null);
+const dsCache = new Map(); // mint -> { t, d } (one DexScreener look per coin per 20 s across levels)
+async function dsCached(mint) { const x = dsCache.get(mint); if (x && Date.now() - x.t < 20_000) return x.d; const d = await dsInfo(mint).catch(() => null); dsCache.set(mint, { t: Date.now(), d }); if (dsCache.size > 2000) dsCache.delete(dsCache.keys().next().value); return d; }
+async function enter(c, tier) {
+  const key = K(c.mint, tier);
+  const ds = await dsCached(c.mint);
   const meta = (() => { try { return q.tokenMeta.get(c.mint); } catch { return null; } })();
   const created = meta?.create_ts || c.created || ds?.created || null, ts = nowS();
   if (!created) { p6.noAge++; return volP6(c.mint, "age unknown"); }
@@ -72,21 +85,22 @@ async function enter(c) {
   const usd = c.usd || ds?.usd || (c.price > 0 ? c.price * solUsdCached() : null);
   const mc = c.mc || ds?.mc; if (!(usd > 0) || !(mc > 0)) return volP6(c.mint, "no price", null, { created });
   if (!(mc >= MIN_MC && mc <= MAX_MC)) { p6.outOfRange++; return volP6(c.mint, mc > MAX_MC ? MC_HI : MC_LO, `MC ${usdK(mc)}`, { created }); }
-  if (open.has(c.mint) || qRecent.get(c.mint, ts - 86400)) return;
+  if (open.has(key) || qRecent.get(c.mint, ts - 86400, tier)) return;
   const name = meta?.name || c.name || ds?.name || c.mint.slice(0, 8), symbol = meta?.symbol || c.symbol || ds?.symbol || "";
   const r = q.insMom.run(c.mint, name, symbol, ts, mc, usd, meta?.bundle_pct ?? null, meta?.bundle_sol ?? null, meta?.handoffs ?? null, meta?.tier ?? null, meta?.factory ?? null, meta?.has_socials ?? null, meta?.socials ?? null, c.v5, null, null, null, ageS, 0, 1, mc);
   const id = r.lastInsertRowid;
-  try { q.setStrategy.run("p6", id); q.setVenue.run(c.venue || (c.source === "gmgn" ? `gmgn:${c.exchange || "?"}` : "feed"), id); q.setVolEntry.run(c.v5, id); } catch {}
-  const info = { source: c.source, ageH: +(ageS / 3600).toFixed(1), v5: Math.round(c.v5), bu: c.bu ?? null, su: c.su ?? null, buys: c.buys ?? null, sells: c.sells ?? null, exchange: c.exchange ?? null,
+  try { q.setStrategy.run("p6", id); qTier.run(tier, id); q.setVenue.run(c.venue || (c.source === "gmgn" ? `gmgn:${c.exchange || "?"}` : "feed"), id); q.setVolEntry.run(c.v5, id); } catch {}
+  const info = { tier, source: c.source, ageH: +(ageS / 3600).toFixed(1), v5: Math.round(c.v5), bu: c.bu ?? null, su: c.su ?? null, buys: c.buys ?? null, sells: c.sells ?? null, exchange: c.exchange ?? null,
     ds: ds ? { dex: ds.dex, liq: ds.liq, vol: ds.vol, chg: ds.chg, txm5: ds.txm5, pairs: ds.pairs } : null };
   try { q.setEarly.run(JSON.stringify(info), id); } catch {}
   gmgnEntry(c.mint, id);
-  const pos = { id, mint: c.mint, name, entryTs: ts, entryMc: mc, entryUsd: usd, peak: 1, low: 1, peakTs: ts, lowTs: ts, last: 1, lastTs: ts, half4: false, h2: false, b2: false, feed: c.source === "feed", x: {}, manual: null, saved: 0 };
-  open.set(c.mint, pos); p6.entries++; p6.bySource[c.source] = (p6.bySource[c.source] || 0) + 1;
-  volP6(c.mint, "bought", `${(ageS / 3600).toFixed(1)} h old · MC ${usdK(mc)}`, { created, id: Number(id) });
+  const pos = { id, key, tier, mint: c.mint, name, entryTs: ts, entryMc: mc, entryUsd: usd, peak: 1, low: 1, peakTs: ts, lowTs: ts, last: 1, lastTs: ts, half4: false, h2: false, b2: false, feed: c.source === "feed", x: {}, manual: null, saved: 0 };
+  open.set(key, pos); p6.entries++; p6.byTier[tier] = (p6.byTier[tier] || 0) + 1; p6.bySource[c.source] = (p6.bySource[c.source] || 0) + 1;
+  volP6(c.mint, "bought", `@$${tier / 1000}K · ${(ageS / 3600).toFixed(1)} h old · MC ${usdK(mc)}`, { created, id: Number(id) });
   setTimeout(() => close(pos, "time"), HOLD_H * 3600_000);
   const quiet = ds?.vol ? ` · 24h vol $${fmt(ds.vol.h24 || 0)} · 6h $${fmt(ds.vol.h6 || 0)} · 1h $${fmt(ds.vol.h1 || 0)}` : "";
-  tg(`🌅 <b>P6 SLEEPER WAKES</b> — ${esc(name)} ($${esc(symbol)})\n${(ageS / 86400 >= 1 ? (ageS / 86400).toFixed(1) + " days" : (ageS / 3600).toFixed(1) + " h")} old · MC <b>$${fmt(mc)}</b> · 5m vol $${fmt(c.v5)} · seen by ${c.source === "gmgn" ? "GMGN" : "our feed"}${ds?.dex ? " · " + esc(ds.dex) : ""}${quiet}\nPaper: A all at 2x · B ½ at 2x + 40% trail · C all at 3x (−40% stop · out if 5m vol &lt; $${fmt(GOLDEN_USD)})\n${links(c.mint)}\n<code>${c.mint}</code>`);
+  if (tier !== TIERS[0]) return tg(`🌅 P6 @$${tier / 1000}K — ${esc(name)} hit $${fmt(c.v5)} in 5 min · MC $${fmt(mc)} · paper trade at this level too`);
+  tg(`🌅 <b>P6 SLEEPER WAKES @$${tier / 1000}K</b> — ${esc(name)} ($${esc(symbol)})\n${(ageS / 86400 >= 1 ? (ageS / 86400).toFixed(1) + " days" : (ageS / 3600).toFixed(1) + " h")} old · MC <b>$${fmt(mc)}</b> · 5m vol $${fmt(c.v5)} · seen by ${c.source === "gmgn" ? "GMGN" : "our feed"}${ds?.dex ? " · " + esc(ds.dex) : ""}${quiet}\nPaper: A all at 2x · B ½ at 2x + 40% trail · C all at 3x (−40% stop · out if 5m vol &lt; $${fmt(GOLDEN_USD)})\n${links(c.mint)}\n<code>${c.mint}</code>`);
 }
 
 function step(pos, usd, ts) {
@@ -111,19 +125,19 @@ const state = (pos) => JSON.stringify({ entryUsd: pos.entryUsd, half4: pos.half4
 function save(pos) { try { qSave.run(pos.peak, pos.low, pos.lowTs, pos.peakTs, pos.last, state(pos), pos.entryMc * pos.peak, pos.id); } catch {} }
 const mainValue = (pos, m) => (pos.half4 ? 2 + 0.5 * m : m);
 function close(pos, reason, exitTs = null, quiet = false) { // v0.18.62 exitTs/quiet: restart closes of rows past 24 h get entry + 24 h, no Telegram
-  if (pos.closed) return; pos.closed = true; open.delete(pos.mint); p6.closes++;
+  if (pos.closed) return; pos.closed = true; open.delete(pos.key); p6.closes++;
   const m = pos.last, x = pos.x;
   let main = mainValue(pos, m); if (pos.manual) main = pos.manual.banked + (1 - pos.manual.sold) * main;
   const t15 = x.t15s40 ?? m, t60 = x.tsl60 ?? m, h2 = x.h2t40 ?? (pos.h2 ? 1 + 0.5 * m : m);
   const A = x.a ?? m, B = x.b ?? (pos.b2 ? 1 + 0.5 * m : m), Cx = x.c ?? m;
   try { qClose.run(exitTs || nowS(), reason, A, B, Cx, main, t15, t60, h2, pos.peak, pos.low, pos.lowTs, pos.peakTs, m, state(pos), pos.id); } catch (e) { console.error("[p6 close]", e.message); }
   if (quiet) return;
-  tg(`${main >= 1 ? "✅" : "🔴"} <b>P6 CLOSE</b> — ${esc(pos.name)} (${reason === "time" ? `${HOLD_H} h` : reason === "dead" ? "fell 90% from peak" : reason})\nA all at 2x: <b>${A.toFixed(2)}x</b> · B ½ at 2x + trail: <b>${B.toFixed(2)}x</b> · C all at 3x: <b>${Cx.toFixed(2)}x</b>${x.gr ? ` (golden rule at ${x.gr.toFixed(2)}x)` : ""}\npeak ${pos.peak.toFixed(2)}x · low ${pos.low.toFixed(2)}x · now ${m.toFixed(2)}x · old ½-at-4x: ${main.toFixed(2)}x`);
+  tg(`${main >= 1 ? "✅" : "🔴"} <b>P6 CLOSE @$${(pos.tier || 100000) / 1000}K</b> — ${esc(pos.name)} (${reason === "time" ? `${HOLD_H} h` : reason === "dead" ? "fell 90% from peak" : reason})\nA all at 2x: <b>${A.toFixed(2)}x</b> · B ½ at 2x + trail: <b>${B.toFixed(2)}x</b> · C all at 3x: <b>${Cx.toFixed(2)}x</b>${x.gr ? ` (golden rule at ${x.gr.toFixed(2)}x)` : ""}\npeak ${pos.peak.toFixed(2)}x · low ${pos.low.toFixed(2)}x · now ${m.toFixed(2)}x · old ½-at-4x: ${main.toFixed(2)}x`);
 }
 
 // prices: every trade our feed sees on an open P6 coin…
-on("trade", (t, tr) => { const p = open.get(t.mint); if (p && tr?.price > 0) { p.feed = true; step(p, tr.price * solUsdCached(), tr.ts || nowS()); } });
-onSwap((tr) => { const p = open.get(tr.mint); if (p && tr.price > 0) { p.feed = true; step(p, tr.price * solUsdCached(), tr.ts || nowS()); } });
+on("trade", (t, tr) => { if (!(tr?.price > 0) || !open.size) return; for (const p of posOf(t.mint)) { p.feed = true; step(p, tr.price * solUsdCached(), tr.ts || nowS()); } });
+onSwap((tr) => { if (!(tr.price > 0) || !open.size) return; for (const p of posOf(tr.mint)) { p.feed = true; step(p, tr.price * solUsdCached(), tr.ts || nowS()); } });
 // v0.18.65 golden rule: 5-min volume from our feed (coins it trades; no trades = $0), else GMGN's list (≤ 2 min old), else DexScreener's m5
 function vol5(p) {
   const s = momSnap(p.mint); if (p.feed) return s ? s.v5 : 0;
@@ -141,7 +155,7 @@ function golden(p) {
 let busy = false;
 setInterval(async () => {
   if (busy || !open.size) return; busy = true;
-  try { for (const p of [...open.values()]) { if (!p.closed && nowS() - p.lastTs >= 45) { const d = await dsInfo(p.mint).catch(() => null); if (d?.usd > 0) step(p, d.usd, nowS()); if (d?.vol?.m5 != null) { p.dsV5 = Number(d.vol.m5); p.dsV5Ts = nowS(); } } golden(p); } }
+  try { for (const p of [...open.values()]) { if (!p.closed && nowS() - p.lastTs >= 45) { const d = await dsCached(p.mint); if (d?.usd > 0) step(p, d.usd, nowS()); if (d?.vol?.m5 != null) { p.dsV5 = Number(d.vol.m5); p.dsV5Ts = nowS(); } } golden(p); } }
   catch (e) { console.error("[p6 poll]", e.message); } finally { busy = false; }
 }, 20_000);
 
@@ -157,7 +171,7 @@ export function p6ManualSell(id, pct) {
   }
   return null;
 }
-export const p6Open = () => [...open.values()].map((p) => ({ id: p.id, mint: p.mint, name: p.name, entryTs: p.entryTs, entryMc: p.entryMc, mult: p.last, peak: p.peak, low: p.low, half4: p.half4, manualSold: p.manual?.sold || 0, lastTs: p.lastTs }));
+export const p6Open = () => [...open.values()].map((p) => ({ id: p.id, tier: p.tier, mint: p.mint, name: p.name, entryTs: p.entryTs, entryMc: p.entryMc, mult: p.last, peak: p.peak, low: p.low, half4: p.half4, manualSold: p.manual?.sold || 0, lastTs: p.lastTs }));
 
 // v0.18.62 repair: before v0.18.62 the 6-hour sweeper and the copy-trade restart rebuild also picked up open P6 rows and closed them with their
 // own exits, in SOL prices against P6's USD entry price (nonsense multiples). P6's own close always writes x_p6, so a P6 row that is closed
@@ -177,14 +191,14 @@ try {
   for (const r of qOpen.all()) {
     let s = {}; try { s = JSON.parse(r.p6_state || "{}"); } catch {}
     const pk = Math.max(s.peak || 0, r.peak_mult || 0, s.half4 ? 4 : 0, s.h2 ? 2 : 0, r.p6_last || 0, 1); // peak_mult may have been overwritten by the old foreign close
-    const pos = { id: r.id, mint: r.mint, name: r.name, entryTs: r.entry_ts, entryMc: r.entry_mc, entryUsd: s.entryUsd || r.entry_price, peak: pk, low: Math.min(s.low || 1, r.p6_low || 1), peakTs: r.p6_peak_ts || r.entry_ts, lowTs: r.p6_low_ts || r.entry_ts,
+    const tier = r.p6_tier || 100000, pos = { id: r.id, key: K(r.mint, tier), tier, mint: r.mint, name: r.name, entryTs: r.entry_ts, entryMc: r.entry_mc, entryUsd: s.entryUsd || r.entry_price, peak: pk, low: Math.min(s.low || 1, r.p6_low || 1), peakTs: r.p6_peak_ts || r.entry_ts, lowTs: r.p6_low_ts || r.entry_ts,
       last: r.p6_last || 1, lastTs: 0, half4: !!s.half4, h2: !!s.h2, b2: !!s.b2, feed: !!s.feed, x: s.x || {}, manual: s.manual || null, saved: 0 };
     if (!(pos.entryUsd > 0)) { pos.closed = false; close(pos, "restart-no-price", null, true); continue; }
-    open.set(r.mint, pos);
+    open.set(pos.key, pos);
     const left = r.entry_ts + HOLD_H * 3600 - nowS();
     if (left <= 0) close(pos, "time", r.entry_ts + HOLD_H * 3600, true); else setTimeout(() => close(pos, "time"), left * 1000);
   }
   if (open.size) console.log(`[p6] restored ${open.size} open position(s)`);
 } catch (e) { console.error("[p6 restore]", e.message); }
-console.log(`[p6] ${ENABLED ? "on" : "off"} — MC $${MIN_MC / 1e3}K–$${MAX_MC / 1e6}M · ≥ $${VOL5M / 1e3}K in 5 min · coin ≥ ${MIN_AGE_H} h old · exits A all at 2x / B ½ at 2x + 40% trail / C all at 3x, −40% stop, out if 5m vol < $${GOLDEN_USD / 1e3}K · old ½-at-4x line kept · max ${HOLD_H} h`);
+console.log(`[p6] ${ENABLED ? "on" : "off"} — MC $${MIN_MC / 1e3}K–$${MAX_MC / 1e6}M · ≥ ${TIERS.map((t) => `$${t / 1e3}K`).join(" / ")} in 5 min (separate trades) · coin ≥ ${MIN_AGE_H} h old · exits A all at 2x / B ½ at 2x + 40% trail / C all at 3x, −40% stop, out if 5m vol < $${GOLDEN_USD / 1e3}K · old ½-at-4x line kept · max ${HOLD_H} h`);
 export { step as _step, close as _close, open as _open }; // tests
