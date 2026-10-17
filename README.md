@@ -75,6 +75,9 @@ GMGN applies the filter).
 on 17 Oct) and the copy-trade rebuild after every restart (closed P6 trades with momentum exits). Both used SOL prices against P6's USD entry
 price, so the multiples were nonsense. Both now skip P6; on start P6 reopens any P6 row closed by someone else (closed with x_p6 empty) and
 finishes it itself. P6's peak / low are now also kept in p6_state.
+**GMGN calls cut / pause fix:** on 17 Oct GMGN managed 202 lists in 4.4 h (expected ~7,900) — every GMGN caller waits out a rate-limit pause
+and the scanner barely ran after ~13:45. A pause is now capped at 6 min and /status shows "PAUSED until …" and GMGN's reset value. Calls cut:
+Solana only (record-only BSC/Base/Robinhood polls off), the 1-minute list off, 5-minute list every 4 s, venue lists every 6 s each.
 
 ## v0.18.61 — card charts since the rule's data begins (17 Oct)
 Recent-trades table: a project that did not buy a trigger now shows **"skip · <reason>"** (MC over $47K / bundled 70%+ / not SOL-paired) with "if taken" underneath, instead of faint numbers. P1A/P1B/P2A/P2B cards add a live **what-if** block: the core triggers each rule skipped since its fresh start, by reason, and what they would have made — to check whether the $47K cap and the bundle rule are right. /gmgnsellers while a pull is running now says so (no misleading "started").

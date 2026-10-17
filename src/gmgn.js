@@ -14,10 +14,10 @@ import { volGmgn, VOL_LOG_USD } from "./vollog.js"; // v0.18.62
 
 const KEY = () => process.env.GMGN_API_KEY || "";
 const HOST = "https://openapi.gmgn.ai";
-const POLL_MS = Number(process.env.GMGN_POLL_MS || 2000);
+const POLL_MS = Number(process.env.GMGN_POLL_MS || 4000); // v0.18.62: 5m list every 4 s (was 5m/1m alternating every 2 s — same 5m rate, half the calls)
 const FLAG_VOL5M = Number(process.env.GMGN_FLAG_VOL5M || 100000);
 const MAX_MC = Number(process.env.GMGN_MAX_MC || 5000000);
-const CHAINS = String(process.env.GMGN_CHAINS || "sol,bsc,base,robinhood").split(",").map((x) => x.trim()).filter(Boolean); // sol, bsc, base, eth, robinhood — non-sol chains are record-only
+const CHAINS = String(process.env.GMGN_CHAINS || "sol") /* v0.18.62: record-only BSC/Base/Robinhood polls off to save GMGN calls */.split(",").map((x) => x.trim()).filter(Boolean); // sol, bsc, base, eth, robinhood — non-sol chains are record-only
 const DS_CHAIN = { sol: "solana", bsc: "bsc", base: "base", eth: "ethereum", robinhood: "robinhood" };
 
 db.exec(`CREATE TABLE IF NOT EXISTS gmgn_flags (id INTEGER PRIMARY KEY AUTOINCREMENT, chain TEXT DEFAULT 'sol', mint TEXT, ts INTEGER, name TEXT, symbol TEXT,
@@ -217,7 +217,7 @@ async function poll() {
   if (busy || !KEY() || Date.now() < pausedUntil) return; busy = true;
   // Solana alternates 5m / 1m every poll; each other chain gets one 5m poll every ~10 polls (record-only)
   const k = turn++, other = CHAINS.filter((c) => c !== "sol"), useOther = other.length && k % 10 === 9;
-  const chain = useOther ? other[Math.floor(k / 10) % other.length] : "sol", interval = useOther || k % 2 === 0 ? "5m" : "1m";
+  const chain = useOther ? other[Math.floor(k / 10) % other.length] : "sol", interval = useOther || process.env.GMGN_1M !== "1" || k % 2 === 0 ? "5m" : "1m"; // v0.18.62: 1m list off unless GMGN_1M=1
   if (chain === "sol" && !CHAINS.includes("sol")) { busy = false; return; }
   try { const rows = await rank(chain, interval); gm.ok++; gm.rows = rows.length; gm.lastOk = Math.floor(Date.now() / 1000); ingest(rows, interval, chain); }
   catch (e) { gm.fail++; gm.lastErr = e.message; if (gm.fail % 30 === 1) console.error("[gmgn]", e.message); }
