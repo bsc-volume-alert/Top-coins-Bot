@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.57 — Project 4 off the website (17 Oct)
+P4 (buy 60 s after the trigger if price is still above it) retired from the dashboard: on the 32 core coins since it started, the 60-s check separated well (taken 12/16 core wins +0.65 vs skipped 5/16 −0.81), but P4 buys at a median 1.34x the trigger, so 1.5x needs ~2.0x from the trigger — 9/16 won, +0.06 vs +0.65 for the core entry on the same coins. Using the check as an early exit (sell at 60 s if below trigger) was not robust (helped 15–16 Oct, hurt since; hurt P1-filtered coins). The confirmation decision and `momconf` trades keep recording (analysis page).
+
 ## v0.18.56 — Project 2A / 2B, GMGN snapshot on every entry, /gmgnsellers (17 Oct)
 **P2A / P2B** = P1A / P1B's coins with P2's runner exit (`x_flow4`), books from the same moment (17 Oct 11:00 UTC) so each P1/P2 pair is scored on identical trades. Old P2 (≤ 600 wallets OR P1 filter) still recorded (`p2f`) but off the dashboard; 20 of its 27 extra trades were ≥ 70%-bundled launches with 5 of P2's 8 rugs.
 **GMGN at entry:** every momentum / P4 / P5 entry queues a GMGN `/v1/token/info` + `/v1/token/security` lookup (one per coin per 2 min, ~2/s max) stored as JSON in `paper_trades.gmgn_entry` (images / long text dropped, size-capped) and exported in /csv. /status shows lookups ok / failed.
