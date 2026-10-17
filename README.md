@@ -56,6 +56,12 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.65 — P6 v2: $60K, 12 h+, exits A / B / C (17 Oct)
+P6 now buys coins at least 12 h old, $300K–$1.5M MC, with $60K+ traded in 5 minutes and more buys than sells — our feed or GMGN (any Solana DEX).
+Exits recorded per trade (x_p6a / x_p6b / x_p6c): A all at 2x · B half at 2x, rest on a 40% trailing stop · C all at 3x — each with a −40% stop
+and the golden rule (sell what is left once 5-min volume < $15K: our feed's volume, else GMGN's list, else DexScreener m5). The old exit
+(half at 4x, rides 24 h) stays as x_p6. Fresh book from 19:15 UK, headline = B. The volume log now starts at $60K to match.
+
 ## v0.18.64 — P5 v3: runner exit (17 Oct)
 P5 v2 failed its 40-trade test (54 live trades, 48% won, −0.25 SOL). P5 v3 keeps the same coins and skips but sells with the P2 runner exit
 (hold while 5-min volume ≥ $100K and buys ≥ sells, cap 4x, −40% stop) — positive in both halves and live on the v2 data. Fresh book from 19:05 UK;

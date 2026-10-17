@@ -11,7 +11,7 @@
 import { db, q } from "./db.js";
 import { solUsdCached } from "./price.js";
 
-export const VOL_LOG_USD = Number(process.env.VOL_LOG_USD || 100_000);
+export const VOL_LOG_USD = Number(process.env.VOL_LOG_USD || 60_000); // v0.18.65: follows P6's $60K trigger
 const GAP_S = 1800, TRACK_S = 86400, QUIET_S = 90, QUIET_POLL_H = 6;
 const NOT_COINS = new Set(["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB"]);
 

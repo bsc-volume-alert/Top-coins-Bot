@@ -106,3 +106,10 @@ P5 v2 (30 SOL in 60 s, skip unseen / bundled 70%+ / 150+ wallets, 1.5x / −40%)
 (x_flow4) made +1.56 SOL, positive in both halves (+0.84 / +0.72) and in the live window (+0.60), vs 1.5x/−40% +1.41 / −0.13. No 4x coin.
 P5 v3 = same coins and skips, runner exit, fresh book from 17 Oct 18:05 UTC. Test: 40 trades, net > 0 AND win ≥ 55% (0.25 SOL, 5% costs).
 Not adopted (mixed by half): skip bundled 50–70% (live +0.58, morning −0.12) — recorded only.
+
+## P6 v2 — set by the owner 17 Oct 19:04 UK, fresh book from 18:15 UTC
+Entry: coin ≥ 12 h old, MC $300K–$1.5M, ≥ $60K traded in 5 min (our feed or GMGN, any Solana DEX incl. Meteora), buys ≥ sells, one per coin per 24 h.
+Exits recorded side by side, each with −40% stop and golden rule (sell the rest when 5-min volume < $15K), max 24 h:
+A all at 2x · B half at 2x, rest 40% trailing stop (website headline) · C all at 3x · plus the v1 exit (half at 4x, rides 24 h, no stop).
+Test: 40 trades; the best exit must be net > 0 in both halves. P6 v1 ($100K, 6 h+) had 3 trades (peaks 2.97x / 2.54x / 1.76x, none reached 4x).
+No back-test exists for $60K on older coins (never recorded) — this is data collection first.
