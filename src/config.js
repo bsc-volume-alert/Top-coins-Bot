@@ -10,6 +10,7 @@ export const CFG = {
   ],
   RPC_URLS: [
     ...(s("HELIUS_API_KEY", "") ? [`https://mainnet.helius-rpc.com/?api-key=${s("HELIUS_API_KEY")}`] : []),
+    ...s("RPC_EXTRA", "").split(",").map((x) => x.trim()).filter(Boolean), // v0.18.59: extra RPC providers (comma-separated URLs) tried after Helius
     "https://api.mainnet-beta.solana.com",
   ],
   DB_PATH: s("DB_PATH", "/root/tracker/data/tracker.db"),

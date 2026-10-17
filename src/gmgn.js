@@ -121,7 +121,15 @@ export async function gmgnSellers(dir, onProgress = () => {}) {
     for (let i = 0; i < coins.length; i++) {
       const c = coins[i], o = { mint: c.mint, name: c.name, first_ts: c.first_ts, ids: c.ids, strats: c.strats, creator: c.creator };
       while (Date.now() < pausedUntil) await new Promise((r) => setTimeout(r, 1000));
-      const step = async (k, f) => { try { o[k] = await f(); } catch (e) { o[k + "_err"] = e.message; } await new Promise((r) => setTimeout(r, 350)); };
+      // v0.18.59: wait out any GMGN rate-limit pause before EVERY call (calling during a ban extends it) and pace calls ~1.2 s apart so
+      // the pull shares GMGN's limit with the trending scanner and the entry lookups instead of starving them (17 Oct: 39 rate-limits).
+      const step = async (k, f) => {
+        for (let tries = 0; tries < 3; tries++) {
+          while (Date.now() < pausedUntil) await new Promise((r) => setTimeout(r, 1000));
+          try { o[k] = await f(); delete o[k + "_err"]; break; } catch (e) { o[k + "_err"] = e.message; if (!/rate limited/.test(e.message)) break; }
+        }
+        await new Promise((r) => setTimeout(r, 1200));
+      };
       await step("traders", async () => (await get("/v1/market/token_top_traders", { chain: "sol", address: c.mint, limit: "100", order_by: "sell_volume_cur", direction: "desc" }))?.list?.map(trader));
       await step("holders", async () => (await get("/v1/market/token_top_holders", { chain: "sol", address: c.mint, limit: "30" }))?.list?.map(trader));
       await step("info", async () => slim(await get("/v1/token/info", { chain: "sol", address: c.mint })));

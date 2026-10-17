@@ -5,11 +5,33 @@ import { pumpSwapEventsFromLogs, parsePoolAccount, PUMPSWAP_PROGRAM, WSOL } from
 import { rpc } from "./rpc.js";
 import { solUsdCached } from "./price.js";
 import { routeOf } from "./routes.js";
-import { q } from "./db.js";
+import { q, db } from "./db.js";
 import { live, emit } from "./launch-monitor.js";
 
-export const ps = { txs: 0, data: 0, buys: 0, sells: 0, pools: 0, unknownPool: 0, resolved: 0, lookupFail: 0, reconnects: 0, oversize: 0, thinPool: 0, gradEvidence: 0, get poolBudget() { return poolBudgetUsed; } };
+export const ps = { txs: 0, data: 0, buys: 0, sells: 0, pools: 0, unknownPool: 0, resolved: 0, lookupFail: 0, fromDb: 0, rpcErr: 0, dsResolved: 0, lastErr: "", reconnects: 0, oversize: 0, thinPool: 0, gradEvidence: 0, get poolBudget() { return poolBudgetUsed; } };
 const poolMint = new Map();   // pool -> {mint, quote}
+// v0.18.59 the pool → token map is now kept in the database. It used to live only in memory, so every restart had to look every active
+// pool up again by RPC; on 17 Oct (5 restarts) those lookups failed ~99% of the time, burned the 5,000/day lookup budget in ~3 minutes and
+// left most PumpSwap swaps on older pools unseen until midnight. Now: database first, RPC only for genuinely new pools; failed lookups do
+// not use the budget, the pool waits 60 s before a retry, and a rate-limit answer pauses all lookups for 15 s.
+db.exec(`CREATE TABLE IF NOT EXISTS ps_pools (pool TEXT PRIMARY KEY, mint TEXT, quote TEXT, ts INTEGER)`);
+const qPsGet = db.prepare(`SELECT mint, quote FROM ps_pools WHERE pool=?`), qPsPut = db.prepare(`INSERT OR IGNORE INTO ps_pools (pool, mint, quote, ts) VALUES (?,?,?,?)`);
+const savePool = (pool, mint, quote) => { try { qPsPut.run(pool, mint, quote, Math.floor(Date.now() / 1000)); } catch {} };
+const retryAt = new Map(); let coolUntil = 0, rpcDownUntil = 0, dsLast = 0;
+// DexScreener pair lookup: pool address → {baseMint, quoteMint}. Only PumpSwap pairs accepted; WSOL is always the quote side.
+// Paced ≥ 250 ms apart (DexScreener allows 300/min on this endpoint).
+async function dsPool(pool) {
+  const wait = dsLast + 250 - Date.now(); if (wait > 0) await new Promise((r) => setTimeout(r, wait)); dsLast = Date.now();
+  try {
+    const r = await fetch(`https://api.dexscreener.com/latest/dex/pairs/solana/${pool}`, { signal: AbortSignal.timeout(6000) });
+    if (r.status === 429) { ps.dsLimited = (ps.dsLimited || 0) + 1; coolUntil = Date.now() + 15_000; return null; }
+    const j = await r.json(); const pr = (j.pairs && j.pairs[0]) || j.pair;
+    if (!pr || pr.pairAddress !== pool || !/pump/i.test(pr.dexId || "")) return null;
+    let base = pr.baseToken?.address, quote = pr.quoteToken?.address; if (!base || !quote) return null;
+    if (base === WSOL && quote !== WSOL) [base, quote] = [quote, base];
+    return { baseMint: base, quoteMint: quote };
+  } catch { return null; }
+}
 const gradSeen = new Set();
 const pending = new Set();
 const poolVol = new Map();    // pool -> [{ts, sol}] rolling 5m, used to decide when a lookup is worth a credit
@@ -91,19 +113,28 @@ function wantResolve(pool, sol, ts) {
 }
 function resolvePool(pool) {
   if (poolMint.has(pool) || pending.has(pool)) return;
+  try { const r = qPsGet.get(pool); if (r) { poolMint.set(pool, { mint: r.mint, quote: r.quote }); ps.fromDb++; return; } } catch {}
+  const now = Date.now(); if (now < coolUntil || (retryAt.get(pool) || 0) > now) return;
   if (new Date().getUTCDate() !== poolBudgetDay) { poolBudgetDay = new Date().getUTCDate(); poolBudgetUsed = 0; }
   if (poolBudgetUsed >= CFG.PS_POOL_DAILY_BUDGET) return;
   pending.add(pool); queue.push(pool); drain();
 }
 async function drain() {
   while (inFlight < CFG.PS_RESOLVE_CONCURRENCY && queue.length) {
-    const pool = queue.shift(); inFlight++; poolBudgetUsed++;
+    if (Date.now() < coolUntil) { setTimeout(drain, coolUntil - Date.now() + 50); return; }
+    const pool = queue.shift(); inFlight++;
     try {
-      const r = await rpc("getAccountInfo", [pool, { encoding: "base64" }]);
-      const p = parsePoolAccount(r?.value?.data?.[0] || "");
-      if (p) { poolMint.set(pool, { mint: p.baseMint, quote: p.quoteMint }); ps.resolved++; }
-      else ps.lookupFail++;
-    } catch { ps.lookupFail++; } finally { pending.delete(pool); inFlight--; }
+      let p = null;
+      if (Date.now() > rpcDownUntil) {
+        try { const r = await rpc("getAccountInfo", [pool, { encoding: "base64" }]); poolBudgetUsed++; p = parsePoolAccount(r?.value?.data?.[0] || ""); }
+        catch (e) { ps.rpcErr++; ps.lastErr = String(e?.message || e).slice(0, 80); if (/max usage|rate|too many|429|credits|paused/i.test(ps.lastErr)) rpcDownUntil = Date.now() + 300_000; }
+      }
+      // v0.18.59 fallback: when RPC is down / out of credits, DexScreener's pair endpoint gives the pool's base and quote token (free)
+      if (!p) { p = await dsPool(pool); if (p) ps.dsResolved++; }
+      if (p) { poolMint.set(pool, { mint: p.baseMint, quote: p.quoteMint }); savePool(pool, p.baseMint, p.quoteMint); ps.resolved++; }
+      else { ps.lookupFail++; retryAt.set(pool, Date.now() + 120_000); }
+    } catch (e) { ps.lookupFail++; ps.lastErr = String(e?.message || e).slice(0, 80); retryAt.set(pool, Date.now() + 120_000); }
+    finally { pending.delete(pool); inFlight--; if (retryAt.size > 20000) retryAt.delete(retryAt.keys().next().value); }
   }
 }
 
@@ -116,7 +147,7 @@ function handle({ sig, slot, logs, err }) {
   const route = routeOf(logs);
   for (const e of evs) {
     if (e.type === "claim") { ps.claims = (ps.claims || 0) + 1; emit("claim", null, { ...e, sig, venue: "pumpswap" }); continue; }
-    if (e.type === "pool") { ps.pools++; poolMint.set(e.pool, { mint: e.baseMint, quote: e.quoteMint }); continue; }
+    if (e.type === "pool") { ps.pools++; poolMint.set(e.pool, { mint: e.baseMint, quote: e.quoteMint }); savePool(e.pool, e.baseMint, e.quoteMint); continue; }
     if (e.isBuy) ps.buys++; else ps.sells++;
     const sol = Number(e.quoteAmt) / 1e9, tokens = Number(e.baseAmt) / 1e6; // sol: raw quote units/1e9, only used for the resolve gate
     const pm = poolMint.get(e.pool);
@@ -159,3 +190,4 @@ export function startPumpSwap(onStatus = () => {}) {
   };
   connect();
 }
+export { resolvePool as _resolvePool, poolMint as _poolMint }; // tests

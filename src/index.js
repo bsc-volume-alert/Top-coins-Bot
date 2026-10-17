@@ -1,4 +1,5 @@
 import "./env.js";
+import { rpcStat } from "./rpc.js"; // v0.18.59 (after env.js so .env is loaded first)
 import { readFileSync } from "node:fs";
 import { CFG } from "./config.js";
 import { q } from "./db.js";
@@ -39,7 +40,7 @@ await tg(`🟢 <b>Tracker online</b> v${v}\nFirehose: ${CFG.HELIUS_KEY ? "Helius
 
 startSweeper();
 startWeb();
-startCommands({ status: () => { const g = sigStats(), mo = momStats(); return `${gmgnStatus()}\nprices: ${ppx.swapped} from other pools re-priced to the main pool · bad held ${pxg.held} / confirmed ${pxg.confirmed} of ${pxg.checked}\n` + `v${v} · ws ${wsStatus} · live ${live.size} · early open ${g.open} · volume alerts ${mo.alerts} open ${mo.open} · ps txs ${ps.txs} · dex txs ${dx.txs}/${dx.emitted} fed · fee claims ${fe.claims} · holder ledgers ${ho.ledgers} rpc ${ho.rpc} · hand-offs ${g.handoffs} · swept ${sw.closed}/${sw.noprice}np · rpc ${g.rpc} · dexpaid ${en.dexPaid}/${en.dexCalls} fresh ${en.freshCalls} · mem ${memMb()} MB · SOL $${solUsdCached().toFixed(0)}`; }, summary: () => strategySummary(24) });
+startCommands({ status: () => { const g = sigStats(), mo = momStats(); return `${gmgnStatus()}\nprices: ${ppx.swapped} from other pools re-priced to the main pool · PumpSwap pools from db ${ps.fromDb} / via DexScreener ${ps.dsResolved} · RPC errors ${rpcStat.errors}${rpcStat.lastErr ? ` (last: ${rpcStat.lastErr})` : ""} · bad held ${pxg.held} / confirmed ${pxg.confirmed} of ${pxg.checked}\n` + `v${v} · ws ${wsStatus} · live ${live.size} · early open ${g.open} · volume alerts ${mo.alerts} open ${mo.open} · ps txs ${ps.txs} · dex txs ${dx.txs}/${dx.emitted} fed · fee claims ${fe.claims} · holder ledgers ${ho.ledgers} rpc ${ho.rpc} · hand-offs ${g.handoffs} · swept ${sw.closed}/${sw.noprice}np · rpc ${g.rpc} · dexpaid ${en.dexPaid}/${en.dexCalls} fresh ${en.freshCalls} · mem ${memMb()} MB · SOL $${solUsdCached().toFixed(0)}`; }, summary: () => strategySummary(24) });
 // strategy summary every SUMMARY_HOURS
 setInterval(() => tg(strategySummary(CFG.SUMMARY_HOURS)), CFG.SUMMARY_HOURS * 3600_000);
 let lastC = { ...counters };
@@ -49,7 +50,7 @@ setInterval(() => {
   const g = sigStats();
   console.log(`[1m] txs=${d.txs} creates=${d.creates} trades=${d.trades} tier1=${d.tier1} live=${live.size} open=${g.open} handoffs=${g.handoffs} rpc=${g.rpc} sol=$${solUsdCached().toFixed(2)} ws=${wsStatus}`);
   if (CFG.DEX_ENABLED) console.log(`[dex 1m] txs=${dx.txs} dupes=${dx.dupes} events=${dx.events} fed=${dx.emitted} pools=${dx.resolved} unknown=${dx.unknownPool} ignored=${dx.ignored} big=${dx.big} fail=${dx.lookupFail} credits=${dx.poolBudget} ws↻=${dx.reconnects} ${JSON.stringify(dx.byVenue)}`);
-  if (CFG.PUMPSWAP_ENABLED) console.log(`[ps 1m] txs=${ps.txs} data=${ps.data} buys=${ps.buys} sells=${ps.sells} pools=${ps.pools} resolved=${ps.resolved} unknown=${ps.unknownPool} fail=${ps.lookupFail} poolcredits=${ps.poolBudget} oversize=${ps.oversize} quotes=${quoteStats.lookups}/${quoteStats.fails}f/${quoteStats.skipped}skip ws↻=${ps.reconnects}`);
+  if (CFG.PUMPSWAP_ENABLED) console.log(`[ps 1m] txs=${ps.txs} data=${ps.data} buys=${ps.buys} sells=${ps.sells} pools=${ps.pools} resolved=${ps.resolved} unknown=${ps.unknownPool} fail=${ps.lookupFail} fromDb=${ps.fromDb} viaDexScreener=${ps.dsResolved} rpcErr=${ps.rpcErr}${ps.lastErr ? ` (${ps.lastErr})` : ""} poolcredits=${ps.poolBudget} oversize=${ps.oversize} quotes=${quoteStats.lookups}/${quoteStats.fails}f/${quoteStats.skipped}skip ws↻=${ps.reconnects}`);
 }, 60_000);
 
 const hb = async () => {

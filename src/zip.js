@@ -40,7 +40,7 @@ export function zip(files) {
 }
 /** files: [{ name, path }] → writes a zip at outPath, streaming each source file through deflate (data-descriptor entries). Returns zip size. */
 export async function zipFiles(files, outPath) {
-  const now = new Date(), out = createWriteStream(outPath), central = []; let offset = 0;
+  const now = new Date(), out = createWriteStream(outPath), central = []; let offset = 0; out.setMaxListeners(0); // v0.18.59: one pipeline per file adds a listener each — silences the MaxListeners warning on 11+ files
   const write = (buf) => new Promise((res, rej) => out.write(buf, (e) => (e ? rej(e) : res())));
   for (const f of files) {
     const name = Buffer.from(f.name), flags = 0x0008; // bit 3: sizes + crc follow the data

@@ -152,7 +152,7 @@ async function sendCsv(full) { // v0.15.2: one zip (large CSVs crash Telegram's 
 async function sendGmgnSellers() {
   const dir = mkdtempSync(join(tmpdir(), "gmgn-sellers-"));
   try {
-    await tg("GMGN seller pull started — about 2 s per coin. I'll send the file when it's done.");
+    await tg("GMGN seller pull started — about 8 s per coin (paced to stay under GMGN's rate limit). I'll send the file when it's done.");
     const res = await gmgnSellers(dir, (i, n, ok, fail) => { if (i % 100 === 0) tg(`GMGN seller pull: ${i} / ${n} coins (${ok} ok, ${fail} failed)`); });
     const day = new Date().toISOString().slice(0, 10), zipPath = join(dir, `gmgn_sellers_${day}.zip`);
     const size = await zipFiles([{ name: `gmgn_sellers_${day}.jsonl`, path: res.path }], zipPath);

@@ -7,16 +7,24 @@ export async function rpc(method, params) {
   used++;
   let lastErr;
   for (const url of CFG.RPC_URLS) {
+    if ((skipUntil.get(url) || 0) > Date.now()) continue;
     try {
       const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(8000) });
-      const j = await r.json();
-      if (j.error) throw new Error(j.error.message);
+      const text = await r.text(); let j;
+      try { j = JSON.parse(text); } catch { throw new Error(`HTTP ${r.status}: ${text.slice(0, 60)}`); }
+      if (j.error) throw new Error(j.error.message || JSON.stringify(j.error).slice(0, 60));
       return j.result;
-    } catch (e) { lastErr = e; }
+    } catch (e) {
+      lastErr = e; rpcStat.errors++; rpcStat.lastErr = `${url.replace(/api-key=[^&]+/, "api-key=…").slice(8, 40)}: ${String(e.message).slice(0, 60)}`;
+      // v0.18.59: a provider that says it is out of credits / rate-limited is skipped for 10 min instead of being asked (and failing) on every call
+      if (/max usage|rate limit|too many|429|credits/i.test(e.message)) { skipUntil.set(url, Date.now() + 600_000); rpcStat.skips++; }
+    }
   }
-  throw lastErr;
+  throw lastErr || new Error("all RPC providers paused (out of credits / rate-limited)");
 }
+const skipUntil = new Map();
+export const rpcStat = { errors: 0, skips: 0, lastErr: "" };
 const ageCache = new Map(); // wallet -> {age_s, funder, firstTs}
 /** Wallet age + funder. ~2 credits for fresh wallets, 1 for old ones. */
 export async function walletInfo(wallet) {
