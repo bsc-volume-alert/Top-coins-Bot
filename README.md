@@ -56,6 +56,10 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.55 — Project 1 split into 1A and 1B (17 Oct)
+After the 17 Oct per-coin review of all P1 trades: **P1A** = old P1 (stock/other-token pool OR entry MC < $47K) minus launches where ≥ 70% of supply was bought in the creation block; **P1B** = SOL-paired pool only + entry MC < $47K + not ≥ 70% bundled. Both 1.5x / −40%, fresh books from 17 Oct 11:00 UTC (12:00 UK); back-test over 15 Oct 12:52 → 17 Oct 11:00 shown as fitted. Bundle % comes from the trade row, else the tokens table; unknown bundle is not treated as bundled. Old P1 rule still recorded (analysis page `p1f`, plus new `p1a` / `p1b` flags) but off the dashboard. Open/sold/recent tables show P1A and P1B columns.
+/coverage: GMGN flags raised in the first 5 min after a restart are stored as "unknown" (our feed is still warming up) and left out of the seen/missed share.
+
 ## v0.18.54 — /coverage: how much of Solana our feed sees (17 Oct)
 `/coverage [hours]` (default 24) compares our own feed with GMGN for every Solana token GMGN flagged at ≥ $100K traded in 5 min: share our feed saw, median share of the token's 5-min volume we captured, how many we paper-traded, the same for coins older than 7 days, a breakdown by exchange, the biggest tokens our feed missed (with age and later peak), and other-chain counts.
 

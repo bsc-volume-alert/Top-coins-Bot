@@ -160,7 +160,8 @@ const fmtK = (n) => (n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3
 export function coverageText(hours = 24) {
   let rows; try { rows = db.prepare(`SELECT chain, name, mint, exchange, launchpad, created_ts, ts, mc, vol5m, our_v5, our_seen, our_trade, peak_mc FROM gmgn_flags WHERE ts > ?`).all(Math.floor(Date.now() / 1000) - hours * 3600); }
   catch { return "No GMGN data yet (scanner not running?)"; }
-  const sol = rows.filter((r) => r.chain === "sol"), other = rows.filter((r) => r.chain !== "sol");
+  const warm = rows.filter((r) => r.chain === "sol" && r.our_seen == null).length; // v0.18.55: flagged during the 5 min after a restart — not counted
+  const sol = rows.filter((r) => r.chain === "sol" && r.our_seen != null), other = rows.filter((r) => r.chain !== "sol");
   if (!sol.length) return `GMGN coverage, last ${hours} h: no Solana tokens flagged yet ($100K / 5 min). Other chains: ${other.length}.`;
   const ratio = (r) => (r.vol5m > 0 ? Math.min(1.5, (r.our_v5 || 0) / r.vol5m) : 0), pct = (a, b) => (b ? Math.round((100 * a) / b) + "%" : "—");
   const med = (a) => { if (!a.length) return 0; const z = [...a].sort((x, y) => x - y); return z[Math.floor(z.length / 2)]; };
@@ -172,7 +173,7 @@ export function coverageText(hours = 24) {
   const o = sol.filter(old);
   return `🛰 <b>Coverage vs GMGN — last ${hours} h</b>
 Solana tokens GMGN saw trading ≥ $100K in 5 min: <b>${sol.length}</b>
-Our own feed saw <b>${pct(sol.filter((r) => r.our_seen).length, sol.length)}</b> of them · median share of their 5-min volume we captured: <b>${Math.round(100 * med(sol.map(ratio)))}%</b>
+Our own feed saw <b>${pct(sol.filter((r) => r.our_seen).length, sol.length)}</b> of them · median share of their 5-min volume we captured: <b>${Math.round(100 * med(sol.map(ratio)))}%</b>${warm ? `\n(${warm} flagged in the first 5 min after a restart — not counted)` : ""}
 We paper-traded ${sol.filter((r) => r.our_trade).length} of them
 Older coins (over 7 days old): ${o.length} · we saw ${pct(o.filter((r) => r.our_seen).length, o.length)}
 <b>By exchange</b>

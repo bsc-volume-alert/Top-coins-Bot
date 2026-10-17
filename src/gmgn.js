@@ -68,14 +68,14 @@ function ingest(rows, interval, chain) {
     if (!(v5 >= FLAG_VOL5M) || !(mc > 0) || mc > MAX_MC) continue;
     const f = flagged.get(mint); if (f && now - f < 6 * 3600) continue;
     flagged.set(mint, now); if (flagged.size > 20000) flagged.delete(flagged.keys().next().value);
-    const ours = chain === "sol" ? momSnap(mint) : null, ourV5 = ours ? ours.v5 : 0, ourSeen = ours && now - (ours.lastTs || 0) < 300 ? 1 : 0;
+    const ours = chain === "sol" ? momSnap(mint) : null, ourV5 = ours ? ours.v5 : 0, ourSeen = process.uptime() < 300 ? null : ours && now - (ours.lastTs || 0) < 300 ? 1 : 0; // v0.18.55: first 5 min after a restart our feed is still warming up — unknown, not "missed"
     let ourTrade = 0; if (chain === "sol") try { ourTrade = qOurTrade.get(mint, now - 1800, now + 60) ? 1 : 0; } catch {}
     try {
       const res = qIns.run(chain, addr, now, r.name ?? null, r.symbol ?? null, r.exchange ?? null, r.launchpad_platform ?? null, num(r.creation_timestamp), mc, num(r.price), num(r.liquidity),
         v5, num(row.volume_1m), num(r.buys), num(r.sells), num(r.swaps), num(r.holder_count), num(r.rug_ratio), num(r.bundler_rate), num(r.top_10_holder_rate),
         num(r.smart_degen_count), num(r.renowned_count), r.is_wash_trading == null ? null : (r.is_wash_trading ? 1 : 0), r.creator_token_status == null ? null : String(r.creator_token_status),
         num(r.history_highest_market_cap), ourV5, ourSeen, ourTrade, JSON.stringify(r).slice(0, 4000));
-      gm.flags++; gm.byChain[chain] = (gm.byChain[chain] || 0) + 1; if (chain === "sol" && !ourSeen) gm.missedByFeed++;
+      gm.flags++; gm.byChain[chain] = (gm.byChain[chain] || 0) + 1; if (chain === "sol" && ourSeen === 0) gm.missedByFeed++;
       for (const [slot, min] of [["mc5", 5], ["mc15", 15], ["mc60", 60]]) follow.push({ id: res.lastInsertRowid, mint: addr, chain, at: now + min * 60, slot });
     } catch (e) { console.error("[gmgn flag]", e.message); }
   }
