@@ -116,7 +116,7 @@ export function tradesDump(days = 7) {
 // [per-SOL at 0% cost, change per unit of cost] and works out any size / cost itself — instant buttons, no server trip.
 const MONEY = new Set(["net", "gross", "net24", "best", "worst", "p1", "p2"]), CURVES = new Set(["curve", "histCurve"]);
 const per1 = (v) => Math.round(v * 1000) / 1e6; // computed at 1000 SOL so the 3-decimal rounding inside snapshot() is 0.000001 per SOL
-let LIN = { at: 0, body: null }; // shared by every open tab for 2 s
+let LIN = { at: 0, body: null }; // v0.18.78: shared by every open tab for 20 s (one build takes ~5 s on the live 684 MB database and blocks the bot meanwhile)
 export function linSnapshot() {
   const a = snapshot(1000, 0), b = snapshot(1000, 1);
   const walk = (x, y, k) => {
@@ -355,12 +355,12 @@ if(hold)vt.unshift('<i class="b h" style="font-size:11px">HOLDING</i>');
 const why=r.closed&&r.exit_reason?'<span class="sub">'+(r.exit_reason==='time'?(K==='p6'?'24 h limit':'6 h limit'):XR[r.exit_reason]||r.exit_reason)+'</span>':'';
 return '<tr class="'+rc+'"><td class="cn"><a class="coin" href="https://dexscreener.com/solana/'+r.mint+'" target="_blank" rel="noopener">'+r.name+'</a><span class="sub">$'+fmt(r.entry_mc||0)+(K!=='core'?' · '+K.toUpperCase():'')+'</span></td><td>'+when+'</td><td>'+r.peak.toFixed(2)+'x'+(aft&&aft>r.peak+0.005?'<span class="sub">after sale '+aft.toFixed(2)+'x</span>':'')+(r.px_suspect===1?'<span title="bad price reading suspected — real large buys only reached '+(r.px_verified_mult||0).toFixed(2)+'x" style="color:#ffd75f;display:block"> ⚠ '+(r.px_verified_mult||0).toFixed(2)+'x real?</span>':'')+'</td>'+cells+'<td class="vd">'+(vt.join('')||'<span class="mut">—</span>')+why+'</td></tr>'}).join('');
 $('#params').innerHTML=Object.values(d.params).map(v=>'<div>'+v+'</div>').join('');
-$('#foot').textContent='Books start when each exit began recording live: P1/P2 from 15 Oct 12:52 UTC, P3 from 16 Oct 16:00 UTC. Paper trades, no real money. Chart: cumulative net SOL over time at the selected size. Page refreshes every 3 s; trades price instantly, idle coins every 20 s from DexScreener.';}
+$('#foot').textContent='Books start when each exit began recording live: P1/P2 from 15 Oct 12:52 UTC, P3 from 16 Oct 16:00 UTC. Paper trades, no real money. Chart: cumulative net SOL over time at the selected size. Page refreshes every 10 s (figures rebuilt at most every 20 s); trades price instantly, idle coins every 20 s from DexScreener.';}
 for(const id of ['size','cost'])$('#'+id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;[...$('#'+id).children].forEach(x=>x.classList.remove('on'));b.classList.add('on');if(id==='size')SIZE=Number(b.dataset.v);else COST=Number(b.dataset.v);try{localStorage.setItem('pc',JSON.stringify({s:SIZE,c:COST}))}catch(e){}draw()});
 for(const id of ['size','cost'])[...$('#'+id).children].forEach(x=>x.classList.toggle('on',Number(x.dataset.v)===(id==='size'?SIZE:COST)));
 $('#alink').href='/analysis?key='+encodeURIComponent(key);$('#hlink').href='/history?key='+encodeURIComponent(key);
 const sellClick=async e=>{const b=e.target.closest('.sell button');if(!b)return;const id=b.closest('.sell').dataset.id,pct=Number(b.dataset.pct);const name=b.closest('tr').querySelector('a.coin').textContent;if(!confirm('Paper-sell '+(pct*100)+'% of '+name+' at the current price?'))return;const r=await fetch('/api/sell?key='+encodeURIComponent(key),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,pct})});const j=await r.json();if(!j.ok)alert(j.error||'failed');load()};$('#open').addEventListener('click',sellClick);$('#projects').addEventListener('click',sellClick);
-load();setInterval(load,3000);
+load();setInterval(load,10000);
 </script></body></html>`;
 
 const HISTORY = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ismael — sold history</title>
@@ -455,7 +455,7 @@ export function startWeb() {
       if (u.pathname === "/api/history") { const days = Math.min(30, Math.max(1, Number(u.searchParams.get("days")) || 3)); res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(history(days))); }
       if (u.pathname === "/history") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(HISTORY); }
       if (u.pathname === "/analysis") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(ANALYSIS); }
-      if (u.pathname === "/api/snapshot" && u.searchParams.get("lin") === "1") { let body; try { const t = Date.now(); if (!LIN.body || t - LIN.at > 2000) LIN = { at: t, body: JSON.stringify(linSnapshot()) }; body = LIN.body; } catch (e) { console.error("[web snapshot]", e.stack || e.message); res.writeHead(500, { "content-type": "text/plain" }); return res.end("snapshot error: " + e.message); } res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(body); }
+      if (u.pathname === "/api/snapshot" && u.searchParams.get("lin") === "1") { let body; try { const t = Date.now(); if (!LIN.body || t - LIN.at > 20000) LIN = { at: t, body: JSON.stringify(linSnapshot()) }; body = LIN.body; } catch (e) { console.error("[web snapshot]", e.stack || e.message); res.writeHead(500, { "content-type": "text/plain" }); return res.end("snapshot error: " + e.message); } res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(body); }
       if (u.pathname === "/api/snapshot") { const size = Math.min(5, Math.max(0.01, Number(u.searchParams.get("size")) || 0.25)), cost = Math.min(0.5, Math.max(0, Number(u.searchParams.get("cost") ?? 0.05))); let body; try { body = JSON.stringify(snapshot(size, cost)); } catch (e) { console.error("[web snapshot]", e.stack || e.message); res.writeHead(500, { "content-type": "text/plain" }); return res.end("snapshot error: " + e.message); } res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(body); }
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); res.end(PAGE);
     } catch (e) { console.error("[web]", e.stack || e.message); try { if (!res.headersSent) res.writeHead(500, { "content-type": "text/plain" }); res.end("error: " + e.message); } catch {} }
