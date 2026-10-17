@@ -61,7 +61,7 @@ Every project card lists its open trades with a "sell 100%" paper button (P1A / 
 closes it for all four; P5 and P7 get their own sell; P6 keeps 25 / 50 / 100%). Closed-trade lists removed from the P6 and P7 cards.
 
 ## v0.18.69 — Project 7 "slow sleepers" (17 Oct)
-Coins ≥ 6 h old, $300K–$1.5M, with $50K+ in each of three back-to-back minutes (1-minute volume: our feed, or GMGN's 1m list — back on, 5m/1m alternate every 3 s) and clean holders on GMGN right before the buy (top 10 < 20%,
+Coins ≥ 6 h old, $300K–$1.5M, with $20K+ (was $50K until 17 Oct 21:02) in each of three back-to-back minutes (1-minute volume: our feed, or GMGN's 1m list — back on, 5m/1m alternate every 3 s) and clean holders on GMGN right before the buy (top 10 < 20%,
 dev < 5%, bundle wallets < 15%). Exits recorded: all at 2x / 3x / 4x, −40% stop, and everything left sold when 5-min volume drops below $15K — no time
 limit. Then 24 h of watching to record how high the coin went after we sold. New card next to Project 5. Sweeper and copy-trade rebuild skip P7.
 

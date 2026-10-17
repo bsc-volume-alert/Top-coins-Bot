@@ -13,7 +13,7 @@ import { gmgnInfoNow, gmgnFor, gmgnV5, gmgnV1 } from "./gmgn.js";
 import { momSnap } from "./momentum.js";
 
 const E = (k, d) => Number(process.env[k] || d);
-const MIN_MC = E("P7_MIN_MC", 300_000), MAX_MC = E("P7_MAX_MC", 1_500_000), VOL1 = E("P7_VOL1M_USD", 50_000), MIN_AGE_H = E("P7_MIN_AGE_H", 6);
+const MIN_MC = E("P7_MIN_MC", 300_000), MAX_MC = E("P7_MAX_MC", 1_500_000), VOL1 = E("P7_VOL1M_USD", 20_000) /* v0.18.73 owner 17 Oct 21:02: $20K a minute, 3 minutes in a row (was $50K) */, MIN_AGE_H = E("P7_MIN_AGE_H", 6);
 const TOP10 = E("P7_TOP10", 0.20), DEV = E("P7_DEV", 0.05), BUNDLE = E("P7_BUNDLE", 0.15), GOLDEN = E("P7_GOLDEN_USD", 15_000), STOP = 0.6;
 const ENABLED = process.env.P7_ENABLED !== "0", AFTER_S = 86400, NO_DATA_S = 6 * 3600, REPEAT_S = 86400;
 export const P7_VOL1 = VOL1;
@@ -52,7 +52,7 @@ function vol1(mint) {
   const s = momSnap(mint), f = s && nowS() - (s.lastTs || 0) < 60 ? s.v1 : null, g = gmgnV1(mint, 20);
   return f != null || g != null ? Math.max(f || 0, g || 0) : null;
 }
-/** every ≥ $50K/1m sighting (momentum.js swaps, gmgn.js 1m rows): starts a 3-minute watch — checks again at +1 and +2 min */
+/** every ≥ $20K/1m sighting (momentum.js swaps, gmgn.js 1m rows): starts a 3-minute watch — checks again at +1 and +2 min */
 export function p7Observe(c) {
   if (!ENABLED || !c?.mint || NOT_COINS.has(c.mint) || !(c.v1 >= VOL1)) return;
   if (watch.has(c.mint) || open.has(c.mint)) return;
@@ -97,7 +97,7 @@ async function buy(c, v5, v1 = null) {
   try { q.setStrategy.run("p7", id); q.setVenue.run(c.venue || (c.source === "gmgn" ? `gmgn:${c.exchange || "?"}` : "feed"), id); q.setVolEntry.run(v5, id); db.prepare(`UPDATE paper_trades SET p7_json=?, gmgn_entry=? WHERE id=?`).run(JSON.stringify(info), JSON.stringify({ ts, info: g?.info ?? null, sec: g?.sec ?? null }).slice(0, 20000), id); } catch (e) { console.error("[p7 save]", e.message); }
   const pos = { id: Number(id), mint: c.mint, name, entryTs: ts, entryMc: mc, entryUsd: usd, peak: 1, low: 1, peakTs: ts, lowTs: ts, last: 1, lastTs: ts, feed: c.source === "feed", x: {}, saved: 0 };
   open.set(c.mint, pos); p7.bought++;
-  tg(`🐢 <b>P7 SLOW SLEEPER</b> — ${esc(name)} ($${esc(symbol)})\n${(ageS / 86400 >= 1 ? (ageS / 86400).toFixed(1) + " days" : (ageS / 3600).toFixed(1) + " h")} old · MC <b>$${fmt(mc)}</b> · $50K+ in each of 3 minutes in a row (5-min vol $${fmt(v5)})\ntop 10 ${pct(Number(top10))} · dev ${pct(dev)} · bundle ${pct(bundle)}\nPaper: sell at 2x / 3x / 4x · −40% stop · out when 5-min volume &lt; $${fmt(GOLDEN)}\n${links(c.mint)}\n<code>${c.mint}</code>`);
+  tg(`🐢 <b>P7 SLOW SLEEPER</b> — ${esc(name)} ($${esc(symbol)})\n${(ageS / 86400 >= 1 ? (ageS / 86400).toFixed(1) + " days" : (ageS / 3600).toFixed(1) + " h")} old · MC <b>$${fmt(mc)}</b> · $${fmt(VOL1)}+ in each of 3 minutes in a row (5-min vol $${fmt(v5)})\ntop 10 ${pct(Number(top10))} · dev ${pct(dev)} · bundle ${pct(bundle)}\nPaper: sell at 2x / 3x / 4x · −40% stop · out when 5-min volume &lt; $${fmt(GOLDEN)}\n${links(c.mint)}\n<code>${c.mint}</code>`);
 }
 
 function step(pos, usd, ts) {
