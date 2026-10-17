@@ -149,7 +149,10 @@ async function sendCsv(full) { // v0.15.2: one zip (large CSVs crash Telegram's 
   finally { csvBusy = false; try { rmSync(dir, { recursive: true, force: true }); } catch {} }
 }
 // v0.18.56 /gmgnsellers: one-off GMGN pull (who sold, tags, funding wallets, dev launches, 1-min candles) for every coin a project traded
+let gsBusy = false;
 async function sendGmgnSellers() {
+  if (gsBusy) return tg("GMGN seller pull is already running — the file will arrive when it's done."); // v0.18.61: no misleading "started" first
+  gsBusy = true;
   const dir = mkdtempSync(join(tmpdir(), "gmgn-sellers-"));
   try {
     await tg("GMGN seller pull started — about 8 s per coin (paced to stay under GMGN's rate limit). I'll send the file when it's done.");
@@ -162,7 +165,7 @@ async function sendGmgnSellers() {
     const r = await fetch(`https://api.telegram.org/bot${TOKEN()}/sendDocument`, { method: "POST", body: fd, signal: AbortSignal.timeout(120000) });
     if (!r.ok) { const t = await r.text(); console.error("[gmgnsellers]", t); await tg(`GMGN file failed to send: ${esc(t.slice(0, 200))}`); }
   } catch (e) { console.error("[gmgnsellers]", e.message); try { await tg(`GMGN seller pull failed: ${esc(e.message)}`); } catch {} }
-  finally { try { rmSync(dir, { recursive: true, force: true }); } catch {} }
+  finally { gsBusy = false; try { rmSync(dir, { recursive: true, force: true }); } catch {} }
 }
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 // v0.18.16: memory guard — pm2 restarts the bot at 600 MB; warn well before that so growth is seen before it bites

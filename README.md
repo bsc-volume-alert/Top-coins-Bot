@@ -57,6 +57,7 @@ All thresholds are env-overridable (see `src/config.js`).
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
 ## v0.18.61 — card charts since the rule's data begins (17 Oct)
+Recent-trades table: a project that did not buy a trigger now shows **"skip · <reason>"** (MC over $47K / bundled 70%+ / not SOL-paired) with "if taken" underneath, instead of faint numbers. P1A/P1B/P2A/P2B cards add a live **what-if** block: the core triggers each rule skipped since its fresh start, by reason, and what they would have made — to check whether the $47K cap and the bundle rule are right. /gmgnsellers while a pull is running now says so (no misleading "started").
 Each project card's chart now plots cumulative profit for every trade the rule would have taken since its data begins (15 Oct 13:52 UK for P1A/P1B/P2A/P2B, 17 Oct 02:34 UK for P5 v2, P6 from its start), with a yellow dashed line where the live book starts — the live-only chart was empty after the 17 Oct fresh starts.
 
 ## v0.18.60 — Project 6 "sleepers" (17 Oct)
