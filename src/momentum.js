@@ -21,7 +21,8 @@ import { dirname, join } from "node:path";
 import { provenCount } from "./wallets.js";
 import { enrichEntry, sniperInfo, provenShare, enrichLine } from "./enrich.js"; // v0.18.19
 import { dexPrice } from "./sweeper.js"; // v0.18.29
-import { gmgnFor, gmgnSummary, gmgnEntry } from "./gmgn.js";
+import { gmgnFor, gmgnSummary, gmgnEntry, gmgnV5 } from "./gmgn.js";
+import { volFeed, VOL_LOG_USD } from "./vollog.js"; // v0.18.62 volume log
 import { p6Candidate } from "./p6.js"; // v0.18.60 // v0.18.52 · v0.18.56 gmgnEntry
 export const BOOT = Math.floor(Date.now() / 1000); // v0.18.36 process start (low-volume exit warm-up)
 // v0.18.38: windows count as complete from this time. A quick restart (state saved ≤30 s ago) keeps the saved 5m windows, so no new wait.
@@ -161,6 +162,7 @@ onSwap((tr) => {
   const v5 = s.w5.reduce((a, x) => a + x.usd, 0);
   const bsu = [s.w5.filter((x) => x.b).reduce((a, x) => a + x.usd, 0), s.w5.filter((x) => !x.b).reduce((a, x) => a + x.usd, 0)];
   pumpSwapTick(tr.mint, tr, v5, bsu); afterTick(tr.mint, tr.price, tr.mc);
+  volFeed(tr, v5, bsu, now, v5 >= VOL_LOG_USD ? gmgnV5(tr.mint) : null); // v0.18.62: prices open wake-ups; a line once v5 ≥ $100K (before P6 decides)
   if (usd <= 0) return;
   const v1 = s.w1.reduce((a, x) => a + x.usd, 0);
   const b1 = s.w1.filter((x) => x.b).length, s1 = s.w1.length - b1;

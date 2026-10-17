@@ -22,6 +22,7 @@ import { memStats as memTiers } from "./momtiers.js";
 import { memStats as memRe } from "./momre.js";
 import { memStats as memAfter } from "./aftercare.js";
 import { memStats as memGmgn, gmgnSellers } from "./gmgn.js"; // v0.18.52 · v0.18.56 /gmgnsellers
+import { volMem } from "./vollog.js"; // v0.18.62
 import { runBackup, backupInfo } from "./backup.js"; // v0.18.40
 import { leaderboardText, walletText, addWatch, removeWatch, watchList, creatorsText, creatorText, addWatchCreator, removeWatchCreator, watchCreatorList } from "./wallets.js";
 const TOKEN = () => process.env.TG_BOT_TOKEN, CHAT = () => String(process.env.TG_CHAT_ID);
@@ -48,7 +49,7 @@ async function poll() {
         else if (cmd === "/backup") { await tg("Backing up the database…"); await runBackup("manual"); const b = backupInfo(); await tg(b.lastErr ? `⚠️ Backup failed — ${b.lastErr}` : `✅ Backup done · ${b.files.length} kept`); }
         else if (cmd === "/mem") { // v0.18.18: what is in memory, so growth can be seen instead of guessed
           const mu = process.memoryUsage(), hs = (await import('node:v8')).getHeapStatistics(), f = (o) => Object.entries(o).map(([k, v]) => `${k} ${typeof v === "number" ? v.toLocaleString("en-GB") : v}`).join(" · ");
-          const parts = { momentum: memMom, lifecycle: memLife, holders: memHold, signals: memSig, live: memLive, pumpswap: memPs, dex: memDex, fees: memFees, copy: memCopy, wallets: memWal, tiers: memTiers, reentry: memRe, aftercare: memAfter, gmgn: memGmgn };
+          const parts = { momentum: memMom, lifecycle: memLife, holders: memHold, signals: memSig, live: memLive, pumpswap: memPs, dex: memDex, fees: memFees, copy: memCopy, wallets: memWal, tiers: memTiers, reentry: memRe, aftercare: memAfter, gmgn: memGmgn, vollog: volMem };
           let t = `🧠 <b>Memory</b> rss ${Math.round(mu.rss / 1048576)} MB · heap ${Math.round(mu.heapUsed / 1048576)}/${Math.round(mu.heapTotal / 1048576)} MB · external ${Math.round(mu.external / 1048576)} MB · arrays ${Math.round(mu.arrayBuffers / 1048576)} MB · heap limit ${Math.round(hs.heap_size_limit / 1048576)} MB\n`;
           for (const [k, fn] of Object.entries(parts)) { try { t += `<b>${k}</b>: ${f(fn())}\n`; } catch (e) { t += `<b>${k}</b>: error ${esc(e.message)}\n`; } }
           await tg(t);
@@ -104,6 +105,7 @@ const CSV_EXTRA = {
   big_buys: `SELECT b.mint, t.name, b.wallet, datetime(b.ts,'unixepoch') buy_utc, b.age_s, b.sol, b.mc, b.balance_sol, b.venue FROM big_buys b LEFT JOIN tokens t ON t.mint=b.mint ORDER BY b.ts`,
   creator_claims: `SELECT c.creator, c.mint, t.name, c.ambiguous, datetime(c.ts,'unixepoch') claim_utc, c.sol, c.venue, c.sig FROM creator_claims c LEFT JOIN tokens t ON t.mint=c.mint ORDER BY c.ts`,
   pump_buyers: `SELECT b.trade_id, b.mint, p.name, b.wallet, datetime(b.ts,'unixepoch') buy_utc, b.sol, b.mc, b.lead_s, b.venue, p.peak_mult, p.entry_mc FROM pump_buyers b LEFT JOIN paper_trades p ON p.id=b.trade_id ORDER BY b.trade_id, b.lead_s DESC`,
+  vol_log: `SELECT id, mint, name, symbol, datetime(ts,'unixepoch') woke_utc, datetime(last_ts,'unixepoch') last_100k_utc, first_src, datetime(feed_ts,'unixepoch') feed_100k_utc, datetime(gmgn_ts,'unixepoch') gmgn_100k_utc, venue, exchange, launchpad, datetime(created_ts,'unixepoch') created_utc, ROUND(age_s/3600.0,1) age_h, mc, px0 price_usd, v5_feed, v5_gmgn, v5_feed_max, v5_gmgn_max, buy_usd, sell_usd, buys, sells, liq, holders, p6, p6_note, p6_hist, p6_id, peak_x, peak_mc, datetime(peak_ts,'unixepoch') peak_utc, low_x, low_mc, datetime(low_ts,'unixepoch') low_utc, mc_15m, mc_1h, mc_6h, mc_24h, done FROM vol_log ORDER BY ts`, // v0.18.62
   gmgn_flags: `SELECT id, chain, mint, datetime(ts,'unixepoch') flagged_utc, name, symbol, exchange, launchpad, datetime(created_ts,'unixepoch') created_utc, mc, price, liquidity, vol5m, vol1m, buys, sells, swaps, holders, rug_ratio, bundler_rate, top10, smart, renowned, wash, dev_status, ath_mc, our_v5, our_seen, our_trade, mc5, mc15, mc60, peak_mc FROM gmgn_flags ORDER BY ts`, // v0.18.52
   tokens: `SELECT mint, name, symbol, creator, datetime(create_ts,'unixepoch') launch_utc, bundle_pct, bundle_sol, bundle_wallets, handoffs, tier, factory, has_socials, outside_buyers, outside_sol_in, cluster_sol_in, cluster_sol_out, peak_mc_usd, graduated, dev_buy_sol, creator_age_s, creator_funded_sol, creator_fee_sol, fee_claims, fee_claimed_sol, first_claim_ts FROM tokens WHERE finalized=1 ORDER BY create_ts`,
 };

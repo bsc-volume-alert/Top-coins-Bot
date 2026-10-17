@@ -12,6 +12,7 @@ import { onSwap } from "./pumpswap.js";
 import { tg } from "./telegram.js";
 import { solUsdCached } from "./price.js";
 import { gmgnEntry } from "./gmgn.js";
+import { volP6 } from "./vollog.js"; // v0.18.62 every decision goes on the coin's volume-log line
 
 const MIN_MC = Number(process.env.P6_MIN_MC || 300_000), MAX_MC = Number(process.env.P6_MAX_MC || 1_500_000);
 const VOL5M = Number(process.env.P6_VOL5M_USD || 100_000), MIN_AGE_H = Number(process.env.P6_MIN_AGE_H || 6), HOLD_H = Number(process.env.P6_HOLD_H || 24);
@@ -39,28 +40,32 @@ async function dsInfo(mint) {
 }
 
 // called by momentum.js on every swap once our feed sees ≥ $100K in 5 min, and by gmgn.js for every coin on GMGN's 5-minute list
+const usdK = (v) => (v >= 1e6 ? `$${(v / 1e6).toFixed(2)}M` : `$${Math.round((v || 0) / 1e3)}K`);
+const MC_LO = `MC under ${usdK(MIN_MC)}`, MC_HI = `MC over ${usdK(MAX_MC)}`;
 export function p6Candidate(c) {
-  if (!ENABLED || !c?.mint || NOT_COINS.has(c.mint) || open.has(c.mint)) return;
+  if (!c?.mint || NOT_COINS.has(c.mint)) return;
   if (!(c.v5 >= VOL5M)) return;
-  if (!(c.mc >= MIN_MC && c.mc <= MAX_MC)) return;
+  if (!ENABLED) return volP6(c.mint, "P6 off");
+  if (open.has(c.mint)) return volP6(c.mint, "already holding");
+  if (!(c.mc >= MIN_MC && c.mc <= MAX_MC)) return c.mc > 0 ? volP6(c.mint, c.mc > MAX_MC ? MC_HI : MC_LO, `MC ${usdK(c.mc)}`) : volP6(c.mint, "MC unknown");
   const t = Date.now(), last = checked.get(c.mint); if (last && t - last < 600_000) return;
   checked.set(c.mint, t); if (checked.size > 20000) checked.delete(checked.keys().next().value);
   p6.candidates++;
-  if (qRecent.get(c.mint, nowS() - 86400)) { p6.repeat++; return; }
-  if (c.bu != null && c.su != null && c.su > 0 && c.bu < c.su) { p6.sellHeavy++; return; } // our feed: buy $ ≥ sell $ in the 5-min window
-  if (c.buys != null && c.sells != null && c.buys < c.sells) { p6.sellHeavy++; return; }  // GMGN: more buys than sells (counts)
-  enter(c).catch((e) => console.error("[p6]", e.message));
+  if (qRecent.get(c.mint, nowS() - 86400)) { p6.repeat++; return volP6(c.mint, "bought in last 24 h"); }
+  if (c.bu != null && c.su != null && c.su > 0 && c.bu < c.su) { p6.sellHeavy++; return volP6(c.mint, "more sells", `${usdK(c.bu)} in / ${usdK(c.su)} out`); } // our feed: buy $ ≥ sell $ in the 5-min window
+  if (c.buys != null && c.sells != null && c.buys < c.sells) { p6.sellHeavy++; return volP6(c.mint, "more sells", `${c.buys} buys / ${c.sells} sells`); }  // GMGN: more buys than sells (counts)
+  enter(c).catch((e) => { console.error("[p6]", e.message); volP6(c.mint, "error", String(e.message).slice(0, 80)); });
 }
 
 async function enter(c) {
   const ds = await dsInfo(c.mint).catch(() => null);
   const meta = (() => { try { return q.tokenMeta.get(c.mint); } catch { return null; } })();
   const created = meta?.create_ts || c.created || ds?.created || null, ts = nowS();
-  if (!created) { p6.noAge++; return; }
-  const ageS = ts - created; if (ageS < MIN_AGE_H * 3600) { p6.young++; return; }
+  if (!created) { p6.noAge++; return volP6(c.mint, "age unknown"); }
+  const ageS = ts - created; if (ageS < MIN_AGE_H * 3600) { p6.young++; return volP6(c.mint, "too young", `${(ageS / 3600).toFixed(1)} h old`, { created }); }
   const usd = c.usd || ds?.usd || (c.price > 0 ? c.price * solUsdCached() : null);
-  const mc = c.mc || ds?.mc; if (!(usd > 0) || !(mc > 0)) return;
-  if (!(mc >= MIN_MC && mc <= MAX_MC)) { p6.outOfRange++; return; }
+  const mc = c.mc || ds?.mc; if (!(usd > 0) || !(mc > 0)) return volP6(c.mint, "no price", null, { created });
+  if (!(mc >= MIN_MC && mc <= MAX_MC)) { p6.outOfRange++; return volP6(c.mint, mc > MAX_MC ? MC_HI : MC_LO, `MC ${usdK(mc)}`, { created }); }
   if (open.has(c.mint) || qRecent.get(c.mint, ts - 86400)) return;
   const name = meta?.name || c.name || ds?.name || c.mint.slice(0, 8), symbol = meta?.symbol || c.symbol || ds?.symbol || "";
   const r = q.insMom.run(c.mint, name, symbol, ts, mc, usd, meta?.bundle_pct ?? null, meta?.bundle_sol ?? null, meta?.handoffs ?? null, meta?.tier ?? null, meta?.factory ?? null, meta?.has_socials ?? null, meta?.socials ?? null, c.v5, null, null, null, ageS, 0, 1, mc);
@@ -72,6 +77,7 @@ async function enter(c) {
   gmgnEntry(c.mint, id);
   const pos = { id, mint: c.mint, name, entryTs: ts, entryMc: mc, entryUsd: usd, peak: 1, low: 1, peakTs: ts, lowTs: ts, last: 1, lastTs: ts, half4: false, h2: false, x: {}, manual: null, saved: 0 };
   open.set(c.mint, pos); p6.entries++; p6.bySource[c.source] = (p6.bySource[c.source] || 0) + 1;
+  volP6(c.mint, "bought", `${(ageS / 3600).toFixed(1)} h old · MC ${usdK(mc)}`, { created, id: Number(id) });
   setTimeout(() => close(pos, "time"), HOLD_H * 3600_000);
   const quiet = ds?.vol ? ` · 24h vol $${fmt(ds.vol.h24 || 0)} · 6h $${fmt(ds.vol.h6 || 0)} · 1h $${fmt(ds.vol.h1 || 0)}` : "";
   tg(`🌅 <b>P6 SLEEPER WAKES</b> — ${esc(name)} ($${esc(symbol)})\n${(ageS / 86400 >= 1 ? (ageS / 86400).toFixed(1) + " days" : (ageS / 3600).toFixed(1) + " h")} old · MC <b>$${fmt(mc)}</b> · 5m vol $${fmt(c.v5)} · seen by ${c.source === "gmgn" ? "GMGN" : "our feed"}${ds?.dex ? " · " + esc(ds.dex) : ""}${quiet}\nPaper: half at 4x, rest rides 24 h\n${links(c.mint)}\n<code>${c.mint}</code>`);

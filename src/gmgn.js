@@ -10,6 +10,7 @@ import { randomUUID } from "node:crypto";
 import { db } from "./db.js";
 import { momSnap } from "./momentum.js";
 import { p6Candidate } from "./p6.js"; // v0.18.60
+import { volGmgn, VOL_LOG_USD } from "./vollog.js"; // v0.18.62
 
 const KEY = () => process.env.GMGN_API_KEY || "";
 const HOST = "https://openapi.gmgn.ai";
@@ -37,8 +38,9 @@ const follow = []; // { id, mint, at, slot }
 let pausedUntil = 0;
 
 const num = (v) => (v == null || v === "" ? null : Number(v));
-async function rank(chain, interval) {
+async function rank(chain, interval, platforms = []) {
   const q = new URLSearchParams({ chain, interval, order_by: "volume", limit: "100", timestamp: String(Math.floor(Date.now() / 1000)), client_id: randomUUID() });
+  for (const p of platforms) q.append("platforms", p); // v0.18.62 venue lists (repeatable, as in gmgn-cli)
   const r = await fetch(`${HOST}/v1/market/rank?${q}`, { headers: { "X-APIKEY": KEY(), "Content-Type": "application/json" }, signal: AbortSignal.timeout(8000) });
   const text = await r.text(); let j; try { j = JSON.parse(text); } catch { throw new Error(`HTTP ${r.status} non-JSON`); }
   if (r.status === 429 || j.error === "RATE_LIMIT_EXCEEDED" || j.error === "RATE_LIMIT_BANNED") {
@@ -148,6 +150,8 @@ export async function gmgnSellers(dir, onProgress = () => {}) {
 export { get as _get, slim as _slim };
 
 export const gmgnFor = (mint) => { const x = latest.get(mint); return x && Date.now() / 1000 - x.ts < 600 ? x.row : null; };
+// v0.18.62 GMGN's latest 5-minute volume for a coin, only if a 5m list showed it in the last `maxAge` seconds (else null)
+export const gmgnV5 = (mint, maxAge = 120) => { const x = latest.get(mint); return x?.row?._t5 && Date.now() / 1000 - x.row._t5 <= maxAge ? num(x.row.volume_5m) : null; };
 export const gmgnSummary = (r) => r ? { mc: num(r.market_cap), liq: num(r.liquidity), vol: num(r.volume), holders: num(r.holder_count), rug: num(r.rug_ratio), bundler: num(r.bundler_rate), top10: num(r.top_10_holder_rate), smart: num(r.smart_degen_count), renowned: num(r.renowned_count), wash: r.is_wash_trading ?? null, dev: r.creator_token_status ?? null, exchange: r.exchange ?? null, launchpad: r.launchpad_platform ?? null } : null;
 
 function ingest(rows, interval, chain) {
@@ -155,8 +159,12 @@ function ingest(rows, interval, chain) {
   for (const r of rows) {
     const addr = r.address; if (!addr) continue; const mint = chain === "sol" ? addr : `${chain}:${addr}`;
     const prev = latest.get(mint)?.row || {};
-    const row = { ...prev, ...r, [`volume_${interval}`]: num(r.volume) };
+    const row = { ...prev, ...r, [`volume_${interval}`]: num(r.volume) }; if (interval === "5m") row._t5 = now;
     latest.set(mint, { row, ts: now }); if (latest.size > 5000) latest.delete(latest.keys().next().value);
+    // v0.18.62 volume log: every Solana row prices open wake-ups; a 5m row at $100K+ opens / extends a wake-up line
+    if (chain === "sol") { const v = interval === "5m" ? num(r.volume) : null, big = v >= VOL_LOG_USD;
+      volGmgn({ mint: addr, ts: now, v5: v, mc: num(r.market_cap), usd: num(r.price), name: r.name, symbol: r.symbol, exchange: r.exchange, launchpad: r.launchpad_platform,
+        created: num(r.creation_timestamp), buys: num(r.buys), sells: num(r.sells), liq: num(r.liquidity), holders: num(r.holder_count), otherV5: big ? momSnap(addr)?.v5 ?? null : undefined }); }
     if (interval !== "5m") continue;
     const v5 = num(r.volume), mc = num(r.market_cap);
     if (chain === "sol") p6Candidate({ mint: addr, mc, v5, source: "gmgn", name: r.name, symbol: r.symbol, created: num(r.creation_timestamp), usd: num(r.price), buys: num(r.buys), sells: num(r.sells), exchange: r.exchange }); // v0.18.60 P6
@@ -209,8 +217,27 @@ async function poll() {
   catch (e) { gm.fail++; gm.lastErr = e.message; if (gm.fail % 30 === 1) console.error("[gmgn]", e.message); }
   finally { busy = false; }
 }
-if (KEY()) { console.log(`[gmgn] scanner on (${CHAINS.join(", ")}) — every ${POLL_MS} ms, flag ≥ $${FLAG_VOL5M} in 5 min, MC ≤ $${MAX_MC}`); setInterval(poll, POLL_MS); setTimeout(poll, 3000); }
+// v0.18.62 venue lists: GMGN's 5-minute list filtered to the exchanges our own feed cannot read (Meteora pools + Meteora launch curves used by
+// Bags / Believe / Jupiter Studio / Moonshot; all Raydium pools incl. the older standard pools). Same ingest → volume log, P6, flags.
+// GMGN's default Solana safety filter (mint + freeze authority renounced) still applies — it cannot be switched off.
+const PLAT = [{ k: "meteora", p: ["pool_meteora", "meteora_virtual_curve"], re: /meteora/i }, { k: "raydium", p: ["pool_ray"], re: /ray/i }];
+const PLAT_MS = Number(process.env.GMGN_PLAT_MS || 3000);
+gm.plat = Object.fromEntries(PLAT.map((x) => [x.k, { ok: 0, fail: 0, rows: 0, other: 0, top: 0, lastErr: null }]));
+let pTurn = 0, pBusy = false;
+async function pollPlat() {
+  if (pBusy || !KEY() || Date.now() < pausedUntil || !CHAINS.includes("sol")) return; pBusy = true;
+  const x = PLAT[pTurn++ % PLAT.length], s = gm.plat[x.k];
+  try {
+    const rows = await rank("sol", "5m", x.p); s.ok++; s.rows = rows.length;
+    s.other = rows.filter((r) => r.exchange && !x.re.test(r.exchange) && !x.re.test(r.launchpad_platform || "")).length; // > 0 on every poll = GMGN ignored the filter
+    s.top = rows.reduce((a, r) => Math.max(a, num(r.volume) || 0), 0);
+    ingest(rows, "5m", "sol");
+  } catch (e) { s.fail++; s.lastErr = e.message; if (s.fail % 30 === 1) console.error(`[gmgn ${x.k}]`, e.message); }
+  finally { pBusy = false; }
+}
+if (KEY()) { console.log(`[gmgn] scanner on (${CHAINS.join(", ")}) — every ${POLL_MS} ms, flag ≥ $${FLAG_VOL5M} in 5 min, MC ≤ $${MAX_MC} · Meteora / Raydium lists every ${PLAT_MS * PLAT.length / 1000} s`); setInterval(poll, POLL_MS); setTimeout(poll, 3000); setInterval(pollPlat, PLAT_MS); }
 else console.log("[gmgn] GMGN_API_KEY not set — scanner off");
-export const gmgnStatus = () => KEY() ? `GMGN: ${gm.ok} ok / ${gm.fail} failed${gm.rateLimited ? ` (${gm.rateLimited} rate-limited)` : ""} · last list ${gm.rows} coins${gm.empty ? ` · ${gm.empty} empty` : ""} · top 5m vol seen $${Math.round(gm.maxVol5 / 1000)}K · flagged ${gm.flags} ($${Math.round(FLAG_VOL5M / 1000)}K/5m${Object.keys(gm.byChain).length > 1 ? ": " + Object.entries(gm.byChain).map(([c, n]) => `${c} ${n}`).join(", ") : ""}) · ${gm.missedByFeed} not seen by our feed · entry lookups ${gm.entryOk} ok / ${gm.entryFail} failed${gm.lastErr && gm.fail ? ` · last error: ${gm.lastErr}` : ""}` : "GMGN: off (no API key)";
+export const gmgnStatus = () => KEY() ? `GMGN: ${gm.ok} ok / ${gm.fail} failed${gm.rateLimited ? ` (${gm.rateLimited} rate-limited)` : ""} · last list ${gm.rows} coins${gm.empty ? ` · ${gm.empty} empty` : ""} · top 5m vol seen $${Math.round(gm.maxVol5 / 1000)}K · flagged ${gm.flags} ($${Math.round(FLAG_VOL5M / 1000)}K/5m${Object.keys(gm.byChain).length > 1 ? ": " + Object.entries(gm.byChain).map(([c, n]) => `${c} ${n}`).join(", ") : ""}) · ${gm.missedByFeed} not seen by our feed · entry lookups ${gm.entryOk} ok / ${gm.entryFail} failed${gm.lastErr && gm.fail ? ` · last error: ${gm.lastErr}` : ""}\n` +
+  `GMGN venue lists: ${PLAT.map((x) => { const s = gm.plat[x.k]; return `${x.k} ${s.ok} ok${s.fail ? ` / ${s.fail} failed (${s.lastErr})` : ""} · ${s.rows} coins, top 5m $${Math.round(s.top / 1000)}K${s.other ? ` · ${s.other} off-venue` : ""}`; }).join(" | ")}` : "GMGN: off (no API key)";
 export const memStats = () => ({ latest: latest.size, flagged: flagged.size, follow: follow.length });
-export { ingest as _ingest, rank as _rank };
+export { ingest as _ingest, rank as _rank, pollPlat as _pollPlat };

@@ -56,6 +56,22 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.62 — volume log: every Solana coin at $100K/5m, bought or not (17 Oct)
+New table **`vol_log`** (in /csv as `vol_log.csv`): one line per coin per wake-up for every Solana coin that trades ≥ $100K in 5 minutes,
+seen by our own feed (pump.fun / PumpSwap / Raydium CPMM-CLMM-LaunchLab / Orca) **or** GMGN (every DEX incl. Meteora and Raydium's older pools).
+Each line: when it crossed and at what MC and price, age, which source saw it first (`feed_100k_utc` vs `gmgn_100k_utc`), both sources'
+5-minute figures side by side (`v5_feed` / `v5_gmgn` at the start, `_max` over the wake-up — tests whether GMGN's number matches ours), $ in / $ out
+(our feed) and buys / sells, liquidity, holders (GMGN), **Project 6's decision with the reason** (`p6`: bought / too young / more sells /
+MC under $300K / MC over $1.5M / age unknown / bought in last 24 h / already holding; `p6_hist` keeps every change as "+Nm reason (detail)"),
+and what the coin did next: highest and lowest price over 24 h (`peak_x` / `low_x` vs the wake-up price, and as MC) and its MC 15 min, 1 h,
+6 h and 24 h later (DexScreener). A wake-up ends after 30 minutes with no $100K/5m sighting from either source. Prices are USD per token from
+whichever source has the coin (our feed per trade, GMGN's lists every few seconds, DexScreener every ~60 s for the first 6 h when nothing else
+prices it). /status gets a "Volume log (24 h)" line: wake-ups, our feed only / GMGN only / both, and P6's decisions by reason. No RPC credits.
+**GMGN venue lists:** GMGN's 5-minute list is also polled filtered to Meteora (`pool_meteora` + `meteora_virtual_curve`) and Raydium (`pool_ray`)
+— the exchanges our own feed cannot read — every 6 s each, into the same checks (volume log, P6, flags). GMGN's default Solana safety filter
+(mint + freeze authority renounced) still applies. /status shows each list's coins, top 5-minute volume and any off-venue rows (a check that
+GMGN applies the filter).
+
 ## v0.18.61 — card charts since the rule's data begins (17 Oct)
 Recent-trades table: a project that did not buy a trigger now shows **"skip · <reason>"** (MC over $47K / bundled 70%+ / not SOL-paired) with "if taken" underneath, instead of faint numbers. P1A/P1B/P2A/P2B cards add a live **what-if** block: the core triggers each rule skipped since its fresh start, by reason, and what they would have made — to check whether the $47K cap and the bundle rule are right. /gmgnsellers while a pull is running now says so (no misleading "started").
 Each project card's chart now plots cumulative profit for every trade the rule would have taken since its data begins (15 Oct 13:52 UK for P1A/P1B/P2A/P2B, 17 Oct 02:34 UK for P5 v2, P6 from its start), with a yellow dashed line where the live book starts — the live-only chart was empty after the 17 Oct fresh starts.
