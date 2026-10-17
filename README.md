@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.47 — live table: no P1/P2 results on non-core coins (17 Oct)
+Non-core momentum positions (entry above $100K, re-entries) showed Project 1/2 "SOLD 1.50x" in the holding table although those projects never trade them (the cards correctly excluded them). They now show "not a core trade", and such coins no longer count as "holding".
+
 ## v0.18.46 — header reverted (17 Oct)
 The v0.18.44 header (gradient title, pill nav, result tiles) is removed at the owner's request; the page top is back to the v0.18.43 design. All v0.18.45 fixes kept.
 

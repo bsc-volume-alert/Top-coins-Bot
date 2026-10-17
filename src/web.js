@@ -130,8 +130,8 @@ export function snapshot(size = 0.25, cost = 0.05) {
     const S = (st, m, t) => ({ st, m: m ?? null, t });
     const c4 = crows.find((z) => z.mint === p.mint && z.entry_ts >= p.entryTs && z.entry_ts <= p.entryTs + 200);
     const st = {
-      p1: r && !p1Pass(r) ? S("na", null, "not in filter") : p.x.t15s40 != null ? S("sold", p.x.t15s40, p.x.t15s40 >= 1.5 ? "took 1.5x" : "stopped") : S("hold", p.mult, "holding"),
-      p2: r && !p2Pass(r) ? S("na", null, "not in filter") : p.x.flow4 != null ? S("sold", p.x.flow4, "sold") : S("hold", p.mult, p.flowArmed ? "riding (past 1.5x)" : "holding"),
+      p1: !r ? S("na", null, "not a core trade") : !p1Pass(r) ? S("na", null, "not in filter") : p.x.t15s40 != null ? S("sold", p.x.t15s40, p.x.t15s40 >= 1.5 ? "took 1.5x" : "stopped") : S("hold", p.mult, "holding"),
+      p2: !r ? S("na", null, "not a core trade") : !p2Pass(r) ? S("na", null, "not in filter") : p.x.flow4 != null ? S("sold", p.x.flow4, "sold") : S("hold", p.mult, p.flowArmed ? "riding (past 1.5x)" : "holding"),
       p3: p.x.split != null ? S("sold", p.x.split, `sold (${p.splitBranch || "—"})`) : S(p.ageS < 120 ? "wait" : "hold", p.mult, p.ageS < 120 ? `deciding in ${120 - p.ageS}s` : p.splitHalf ? "half sold · rest riding" : p.splitBranch === "run" ? "riding (trail)" : "holding"),
       p4: !c ? S("na", null, "—") : !c.done ? S("wait", null, `deciding in ${c.left}s`) : !c.ok ? S("na", null, `skipped (${c.ratio != null ? c.ratio.toFixed(2) + "x" : "no price"})`)
         : cp ? (cp.e.x.t15s40 != null ? S("sold", cp.e.x.t15s40, cp.e.x.t15s40 >= 1.5 ? "took 1.5x" : "stopped") : S("hold", cp.lastPx / cp.e.entry, `holding (in at ${c.ratio.toFixed(2)}x)`))
