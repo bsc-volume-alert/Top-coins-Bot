@@ -29,7 +29,7 @@ const qIns = db.prepare(`INSERT INTO gmgn_flags (chain,mint,ts,name,symbol,excha
 const qOurTrade = db.prepare(`SELECT 1 FROM paper_trades WHERE mint=? AND entry_ts BETWEEN ? AND ? LIMIT 1`);
 const qFollow = db.prepare(`UPDATE gmgn_flags SET mc5=COALESCE(?,mc5), mc15=COALESCE(?,mc15), mc60=COALESCE(?,mc60), peak_mc=MAX(COALESCE(peak_mc,0),?) WHERE id=?`);
 
-export const gm = { byChain: {}, ok: 0, fail: 0, rateLimited: 0, flags: 0, missedByFeed: 0, lastErr: null, lastOk: 0, rows: 0 };
+export const gm = { byChain: {}, empty: 0, maxVol5: 0, ok: 0, fail: 0, rateLimited: 0, flags: 0, missedByFeed: 0, lastErr: null, lastOk: 0, rows: 0 };
 const latest = new Map(); // mint -> { row, ts }
 const flagged = new Map(); // mint -> ts flagged (one flag per mint per 6 h)
 const follow = []; // { id, mint, at, slot }
@@ -45,7 +45,11 @@ async function rank(chain, interval) {
     pausedUntil = Math.max(Date.now() + 5000, reset * 1000 || 0); throw new Error("rate limited");
   }
   if (j.code !== 0) throw new Error(`${j.error || j.code}: ${j.message || ""}`.slice(0, 160));
-  return Array.isArray(j.data?.rank) ? j.data.rank : Array.isArray(j.data) ? j.data : [];
+  // trending keeps an inner {code, data} envelope: rows are at data.data.rank (seen in GMGN's own skills docs); accept both shapes
+  const d = j.data && j.data.data && typeof j.data.data === "object" ? j.data.data : j.data;
+  const rows = Array.isArray(d?.rank) ? d.rank : Array.isArray(d) ? d : [];
+  if (!rows.length) { gm.empty++; if (gm.empty % 50 === 1) console.error("[gmgn] empty rank response, keys:", Object.keys(j.data || {}).join(","), JSON.stringify(j).slice(0, 300)); }
+  return rows;
 }
 
 export const gmgnFor = (mint) => { const x = latest.get(mint); return x && Date.now() / 1000 - x.ts < 600 ? x.row : null; };
@@ -60,6 +64,7 @@ function ingest(rows, interval, chain) {
     latest.set(mint, { row, ts: now }); if (latest.size > 5000) latest.delete(latest.keys().next().value);
     if (interval !== "5m") continue;
     const v5 = num(r.volume), mc = num(r.market_cap);
+    if (chain === "sol" && v5 > gm.maxVol5) gm.maxVol5 = v5;
     if (!(v5 >= FLAG_VOL5M) || !(mc > 0) || mc > MAX_MC) continue;
     const f = flagged.get(mint); if (f && now - f < 6 * 3600) continue;
     flagged.set(mint, now); if (flagged.size > 20000) flagged.delete(flagged.keys().next().value);
@@ -110,6 +115,6 @@ async function poll() {
 }
 if (KEY()) { console.log(`[gmgn] scanner on (${CHAINS.join(", ")}) — every ${POLL_MS} ms, flag ≥ $${FLAG_VOL5M} in 5 min, MC ≤ $${MAX_MC}`); setInterval(poll, POLL_MS); setTimeout(poll, 3000); }
 else console.log("[gmgn] GMGN_API_KEY not set — scanner off");
-export const gmgnStatus = () => KEY() ? `GMGN: ${gm.ok} ok / ${gm.fail} failed${gm.rateLimited ? ` (${gm.rateLimited} rate-limited)` : ""} · flagged ${gm.flags} ($${Math.round(FLAG_VOL5M / 1000)}K/5m${Object.keys(gm.byChain).length > 1 ? ": " + Object.entries(gm.byChain).map(([c, n]) => `${c} ${n}`).join(", ") : ""}) · ${gm.missedByFeed} not seen by our feed${gm.lastErr && gm.fail ? ` · last error: ${gm.lastErr}` : ""}` : "GMGN: off (no API key)";
+export const gmgnStatus = () => KEY() ? `GMGN: ${gm.ok} ok / ${gm.fail} failed${gm.rateLimited ? ` (${gm.rateLimited} rate-limited)` : ""} · last list ${gm.rows} coins${gm.empty ? ` · ${gm.empty} empty` : ""} · top 5m vol seen $${Math.round(gm.maxVol5 / 1000)}K · flagged ${gm.flags} ($${Math.round(FLAG_VOL5M / 1000)}K/5m${Object.keys(gm.byChain).length > 1 ? ": " + Object.entries(gm.byChain).map(([c, n]) => `${c} ${n}`).join(", ") : ""}) · ${gm.missedByFeed} not seen by our feed${gm.lastErr && gm.fail ? ` · last error: ${gm.lastErr}` : ""}` : "GMGN: off (no API key)";
 export const memStats = () => ({ latest: latest.size, flagged: flagged.size, follow: follow.length });
 export { ingest as _ingest, rank as _rank };
