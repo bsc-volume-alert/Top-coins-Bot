@@ -56,6 +56,11 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.64 — P5 v3: runner exit (17 Oct)
+P5 v2 failed its 40-trade test (54 live trades, 48% won, −0.25 SOL). P5 v3 keeps the same coins and skips but sells with the P2 runner exit
+(hold while 5-min volume ≥ $100K and buys ≥ sells, cap 4x, −40% stop) — positive in both halves and live on the v2 data. Fresh book from 19:05 UK;
+the card also shows the v2 exit on the same coins since 12:20. Pre-registration in analysis/README.md.
+
 ## v0.18.63 — one GMGN queue (17 Oct)
 Every GMGN call (lists, entry lookups, seller pull) now goes through one queue, one call at a time, spaced by GMGN's weight for that call
 (trending 3, token info / security 1, kline / created-tokens 2, top traders / holders 5) so the total stays at or under 3 weight a second

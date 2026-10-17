@@ -99,3 +99,10 @@ Also to test from this export onward (recorded, not gated): creator fees accrued
 
 ## Project 6 "sleepers" — started 17 Oct 2026 11:55 UTC (v0.18.60), data collection
 **No back-test:** our own feed caught only 4 coins ≥ 6 h old at $300K–$1.5M doing $100K/5m in 45 h (none ran) — but that is our blind spot (old pools unresolved, Meteora unseen), so the GMGN scanner is the main source. Earlier evidence on runner exits (all core $80K–$400K triggers, 38 coins): ½ at 2x + 40% trail +1.08, 60% trail −0.61, 40% trail −1.61, 1.5x −0.28; 10x coins often dipped 40–60% before running. **Plan:** collect ≥ 40 trades, then choose the exit. **Judge:** the chosen exit must be net > 0 after 5% costs and ahead in both halves.
+
+## P5 v3 — pre-registered 17 Oct 19:05 UK
+P5 v2 (30 SOL in 60 s, skip unseen / bundled 70%+ / 150+ wallets, 1.5x / −40%) FAILED its test: 54 live trades since 12:20 UK, 48% won, −0.25 SOL
+(needed ≥55% and > 0). The skips still helped (no-skip −0.77 on the same window). On the same 107 kept coins since 02:34 UK the P2 runner exit
+(x_flow4) made +1.56 SOL, positive in both halves (+0.84 / +0.72) and in the live window (+0.60), vs 1.5x/−40% +1.41 / −0.13. No 4x coin.
+P5 v3 = same coins and skips, runner exit, fresh book from 17 Oct 18:05 UTC. Test: 40 trades, net > 0 AND win ≥ 55% (0.25 SOL, 5% costs).
+Not adopted (mixed by half): skip bundled 50–70% (live +0.58, morning −0.12) — recorded only.
