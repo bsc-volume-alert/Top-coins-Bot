@@ -23,8 +23,26 @@ export const onSwap = (fn) => listeners.push(fn);
 export const pxg = { checked: 0, held: 0, confirmed: 0, lastHeld: null };
 const PXL = new Map(); // mint -> { px, ts, pend: { px, ts } | null }
 const PX_JUMP = Number(process.env.PX_JUMP || 3), PX_CONFIRM_S = Number(process.env.PX_CONFIRM_S || 60);
-export function guardPx(tr) {
-  if (!(tr.price > 0)) return tr;
+// v0.18.51 primary-pool pricing. Many coins trade on several pools (PumpSwap + Raydium/Orca/Meteora, or stock-quoted pools) whose
+// prices can differ a lot; mixing them made fake pumps and dumps (6% of swaps tripped the 3x guard). Volume from every pool still
+// counts, but the PRICE only comes from the coin's main pool — the one with the most SOL traded over the last ~5 min (decayed sum).
+// A swap on another pool carries the main pool's latest price (if seen in the last 5 min). Then the 3x guard applies as before.
+const PP = new Map(); // mint -> { pools: Map(pool -> { v, t, px, mcPerPx }), primary }
+export const ppx = { swapped: 0 };
+function primaryPx(tr, ts) {
+  if (!tr.pool) return tr;
+  let m = PP.get(tr.mint); if (!m) { m = { pools: new Map(), primary: null }; PP.set(tr.mint, m); if (PP.size > 30000) PP.delete(PP.keys().next().value); }
+  let q = m.pools.get(tr.pool); if (!q) { q = { v: 0, t: ts, px: 0, k: 0 }; m.pools.set(tr.pool, q); }
+  q.v = q.v * Math.exp(-Math.max(0, ts - q.t) / 300) + (tr.sol || 0); q.t = ts; q.px = tr.price; q.k = tr.price > 0 ? tr.mc / tr.price : 0;
+  let best = null, bv = -1; for (const [id, z] of m.pools) { const v = z.v * Math.exp(-Math.max(0, ts - z.t) / 300); if (v > bv) { bv = v; best = id; } }
+  m.primary = best;
+  if (best === tr.pool) return tr;
+  const p = m.pools.get(best); if (!p || !(p.px > 0) || ts - p.t > 300) return tr;
+  ppx.swapped++; return { ...tr, price: p.px, mc: p.px * (p.k || (tr.price > 0 ? tr.mc / tr.price : 0)), pxFromPool: best };
+}
+export function guardPx(tr0) {
+  if (!(tr0.price > 0)) return tr0;
+  const tr = primaryPx(tr0, tr0.ts || Math.floor(Date.now() / 1000));
   pxg.checked++;
   const g = PXL.get(tr.mint), ts = tr.ts || Math.floor(Date.now() / 1000);
   if (!g) { PXL.set(tr.mint, { px: tr.price, ts, pend: null }); if (PXL.size > 30000) PXL.delete(PXL.keys().next().value); return tr; }
@@ -42,7 +60,7 @@ let samples = 0;
 const quotes = new Map(); // quoteMint -> {sol, dec, sym, ts}
 const quotePending = new Set();
 export const quoteStats = { lookups: 0, fails: 0, skipped: 0 };
-export const memStats = () => { let pv = 0; for (const a of poolVol.values()) pv += a.length; return { pxGuard: PXL.size, poolMint: poolMint.size, poolVol: poolVol.size, poolVolEntries: pv, gradSeen: gradSeen.size, quotes: quotes.size }; }; // v0.18.18
+export const memStats = () => { let pv = 0; for (const a of poolVol.values()) pv += a.length; return { pxGuard: PXL.size, pxPools: PP.size, poolMint: poolMint.size, poolVol: poolVol.size, poolVolEntries: pv, gradSeen: gradSeen.size, quotes: quotes.size }; }; // v0.18.18
 function quoteOf(mint, now) {
   if (mint === WSOL) return { sol: 1, dec: 9, sym: "SOL" };
   const c = quotes.get(mint);

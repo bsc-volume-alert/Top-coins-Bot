@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.51 — price from each coin's main pool only (17 Oct)
+`/status` showed the 3x guard holding ~6% of all swaps (11,253 of 196,255): coins trading on several pools (PumpSwap + Raydium/Orca/Meteora, stock-quoted pools) report very different prices, and mixing them made fake pumps and dumps that could fire 1.5x sells and −40% stops. Now every swap's volume still counts, but its price is replaced by the coin's main pool price (the pool with the most SOL traded over ~5 min, decayed) when the swap came from another pool and the main pool traded in the last 5 min. The 3x guard still applies afterwards. `/status` shows how many swaps were re-priced. Backup time in `/status` now survives restarts.
+
 ## v0.18.50 — Project 5 becomes "early" (17 Oct)
 Old P5 ($100K in 2 min) retired: 10 closed trades, −0.60 SOL; it fired at the same time or later than the 5-minute trigger on every shared coin. New P5: paper-buy the first time a coin sees 30 / 50 / 80 SOL bought within 60 s (strategies `p5e30`, `p5e50`, `p5e80`), MC < $100K (`P5E_MAX_MC`), coin ≥ 60 s old, buy $ ≥ sell $ and ≥ 10 buyers (`P5E_MIN_WALLETS`) in those 60 s, one trade per coin per level. All exits recorded; entry features in `early_json` (SOL bought, buyers, buys, largest-buy share, average buy, SOL sold in the 60 s). Card shows p5e50 on 1.5x/−40% with the split exit, the 30 and 80 levels and the retired version. Recorded on every coin, so false starts count.
 

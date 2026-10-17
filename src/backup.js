@@ -26,4 +26,4 @@ export async function runBackup(reason = "daily") {
 // first backup 10 min after start if none exists for today; then every day at AT_UTC_H:00 UTC
 setTimeout(() => { if (!existing().includes(`tracker-${day()}.db`)) runBackup("startup"); }, 10 * 60_000);
 setInterval(() => { const d = new Date(); if (d.getUTCHours() === AT_UTC_H && !existing().includes(`tracker-${day()}.db`)) runBackup("daily"); }, 10 * 60_000);
-export const backupInfo = () => ({ ...bk, files: existing() });
+export const backupInfo = () => { const files = existing(); let last = bk.last; if (!last && files.length) { try { last = Math.floor(statSync(join(DIR, files.at(-1))).mtimeMs / 1000); } catch {} } return { ...bk, last, files }; }; // v0.18.51: last backup survives restarts
