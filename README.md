@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.75 — instant size / cost buttons (17 Oct)
+- Size buttons 0.1 · 0.25 · 0.5 · 1 · 1.25 · 1.5 · 2 SOL. Every SOL figure on the page is size × (x·(1−cost) − 1), a straight line in both, so `/api/snapshot?lin=1` sends each as [per SOL at 0% cost, change per unit of cost] and the page redraws at any size / cost without a server trip. The 3-second refresh can no longer put older figures back after a click. The choice is remembered in the browser.
+
 ## v0.18.70 — open trades + "sell 100%" under every card (17 Oct)
 Every project card lists its open trades with a "sell 100%" paper button (P1A / P1B / P2A / P2B share one core position, so selling it in one card
 closes it for all four; P5 and P7 get their own sell; P6 keeps 25 / 50 / 100%). Closed-trade lists removed from the P6 and P7 cards.
