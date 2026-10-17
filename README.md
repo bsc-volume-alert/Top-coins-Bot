@@ -56,6 +56,12 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.68 — P6: older trades re-scored with exits A / B / C; finished trades close (17 Oct)
+P6 trades opened before exits A / B / C existed are re-scored from their recorded high / low and when each happened (high first: A = 2x / C = 3x if
+reached, B banks half at 2x and the rest stops at 60% of the high if the later low went that far; a −40% low is the stop), filed at $100K (the v1
+trigger). Undecided exits stay open under the live rules incl. the golden rule. A P6 position now closes as soon as A, B and C are all finished
+(or the golden rule fires) instead of waiting 24 h; the old ½-at-4x line is valued at that moment. The P6 book counts from P6's start (12:53 UK).
+
 ## v0.18.66 — P6: $60K / $80K / $100K levels, age from 6 h (17 Oct)
 Each volume level is its own P6 paper trade (`p6_tier`), so one coin crossing all three gets three trades — compares which level picks better coins.
 Minimum age back to 6 h; `age_s` recorded for the 6–12 h vs 12 h+ split. P6 card: table of level × exit A / B / C / old ½-at-4x, plus exit B split

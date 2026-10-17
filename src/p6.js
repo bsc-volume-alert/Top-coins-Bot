@@ -94,7 +94,7 @@ async function enter(c, tier) {
     ds: ds ? { dex: ds.dex, liq: ds.liq, vol: ds.vol, chg: ds.chg, txm5: ds.txm5, pairs: ds.pairs } : null };
   try { q.setEarly.run(JSON.stringify(info), id); } catch {}
   gmgnEntry(c.mint, id);
-  const pos = { id, key, tier, mint: c.mint, name, entryTs: ts, entryMc: mc, entryUsd: usd, peak: 1, low: 1, peakTs: ts, lowTs: ts, last: 1, lastTs: ts, half4: false, h2: false, b2: false, feed: c.source === "feed", x: {}, manual: null, saved: 0 };
+  const pos = { id, key, tier, mint: c.mint, name, entryTs: ts, entryMc: mc, entryUsd: usd, peak: 1, low: 1, peakTs: ts, lowTs: ts, last: 1, lastTs: ts, half4: false, h2: false, b2: false, feed: c.source === "feed", v2: true, x: {}, manual: null, saved: 0 };
   open.set(key, pos); p6.entries++; p6.byTier[tier] = (p6.byTier[tier] || 0) + 1; p6.bySource[c.source] = (p6.bySource[c.source] || 0) + 1;
   volP6(c.mint, "bought", `@$${tier / 1000}K · ${(ageS / 3600).toFixed(1)} h old · MC ${usdK(mc)}`, { created, id: Number(id) });
   setTimeout(() => close(pos, "time"), HOLD_H * 3600_000);
@@ -119,9 +119,10 @@ function step(pos, usd, ts) {
   if (x.c == null) { if (m >= 3) x.c = 3; else if (m <= STOP) x.c = m; }
   if (x.b == null) { if (!pos.b2) { if (m >= 2) pos.b2 = true; else if (m <= STOP) x.b = m; } if (pos.b2 && m <= 0.6 * pos.peak) x.b = 1 + 0.5 * m; }
   if (m <= 0.1 * pos.peak) return close(pos, "dead");
+  if (x.a != null && x.b != null && x.c != null) return close(pos, "done"); // v0.18.68: all three exits finished — nothing left to hold
   if (ts - pos.saved >= 15) { pos.saved = ts; save(pos); }
 }
-const state = (pos) => JSON.stringify({ entryUsd: pos.entryUsd, half4: pos.half4, h2: pos.h2, b2: pos.b2, feed: pos.feed, x: pos.x, manual: pos.manual, peak: pos.peak, low: pos.low }); // v0.18.62 peak/low kept here too
+const state = (pos) => JSON.stringify({ v2: pos.v2, entryUsd: pos.entryUsd, half4: pos.half4, h2: pos.h2, b2: pos.b2, feed: pos.feed, x: pos.x, manual: pos.manual, peak: pos.peak, low: pos.low }); // v0.18.62 peak/low kept here too
 function save(pos) { try { qSave.run(pos.peak, pos.low, pos.lowTs, pos.peakTs, pos.last, state(pos), pos.entryMc * pos.peak, pos.id); } catch {} }
 const mainValue = (pos, m) => (pos.half4 ? 2 + 0.5 * m : m);
 function close(pos, reason, exitTs = null, quiet = false) { // v0.18.62 exitTs/quiet: restart closes of rows past 24 h get entry + 24 h, no Telegram
@@ -149,7 +150,21 @@ function golden(p) {
   const v = vol5(p); if (v == null || v >= GOLDEN_USD) return;
   const m = p.last; x.gr = m; x.grV = Math.round(v);
   if (x.a == null) x.a = m; if (x.c == null) x.c = m; if (x.b == null) x.b = p.b2 ? 1 + 0.5 * m : m;
-  save(p);
+  save(p); close(p, "golden rule");
+}
+// v0.18.68 (owner, 17 Oct 19:20): trades opened before exits A / B / C existed are re-scored with them from their recorded high / low and when each
+// happened. If the high came first: A = 2x if it reached 2x, C = 3x if it reached 3x, B banks half at 2x and the rest stops at 60% of the high
+// if the later low went that far; a low of −40% or worse (before the high, or with no 2x / 3x) is the −40% stop. Exits not decided stay open
+// for the live rules (incl. the golden rule). No volume history exists for those hours, so the golden rule can only apply from now on.
+function retro(x, pk, pkTs, lo, loTs, flags) {
+  const highFirst = (pkTs || 0) <= (loTs || 0), stop = lo <= STOP;
+  if (x.a == null) { if (pk >= 2 && (highFirst || !stop)) x.a = 2; else if (stop) x.a = STOP; }
+  if (x.c == null) { if (pk >= 3 && (highFirst || !stop)) x.c = 3; else if (stop) x.c = STOP; }
+  if (x.b == null) {
+    if (pk >= 2 && (highFirst || !stop)) { flags.b2 = true; if (highFirst && lo <= 0.6 * pk) x.b = 1 + 0.5 * 0.6 * pk; }
+    else if (stop) x.b = STOP;
+  }
+  x.retro = 1; return x;
 }
 // …and DexScreener every 20 s for coins our feed hasn't priced in the last 45 s (Meteora, quiet coins)
 let busy = false;
@@ -192,13 +207,25 @@ try {
     let s = {}; try { s = JSON.parse(r.p6_state || "{}"); } catch {}
     const pk = Math.max(s.peak || 0, r.peak_mult || 0, s.half4 ? 4 : 0, s.h2 ? 2 : 0, r.p6_last || 0, 1); // peak_mult may have been overwritten by the old foreign close
     const tier = r.p6_tier || 100000, pos = { id: r.id, key: K(r.mint, tier), tier, mint: r.mint, name: r.name, entryTs: r.entry_ts, entryMc: r.entry_mc, entryUsd: s.entryUsd || r.entry_price, peak: pk, low: Math.min(s.low || 1, r.p6_low || 1), peakTs: r.p6_peak_ts || r.entry_ts, lowTs: r.p6_low_ts || r.entry_ts,
-      last: r.p6_last || 1, lastTs: 0, half4: !!s.half4, h2: !!s.h2, b2: !!s.b2, feed: !!s.feed, x: s.x || {}, manual: s.manual || null, saved: 0 };
+      last: r.p6_last || 1, lastTs: 0, half4: !!s.half4, h2: !!s.h2, b2: !!s.b2, feed: !!s.feed, v2: !!s.v2, x: s.x || {}, manual: s.manual || null, saved: 0 };
     if (!(pos.entryUsd > 0)) { pos.closed = false; close(pos, "restart-no-price", null, true); continue; }
+    if (!s.v2 && !pos.x.retro) { const f = {}; retro(pos.x, pos.peak, pos.peakTs, pos.low, pos.lowTs, f); if (f.b2) pos.b2 = true; console.log(`[p6] re-scored ${r.name} with exits A/B/C:`, JSON.stringify(pos.x)); }
     open.set(pos.key, pos);
+    if (pos.x.a != null && pos.x.b != null && pos.x.c != null) { close(pos, "done", Math.max(pos.peakTs || 0, pos.lowTs || 0) || null, true); continue; }
     const left = r.entry_ts + HOLD_H * 3600 - nowS();
     if (left <= 0) close(pos, "time", r.entry_ts + HOLD_H * 3600, true); else setTimeout(() => close(pos, "time"), left * 1000);
   }
   if (open.size) console.log(`[p6] restored ${open.size} open position(s)`);
 } catch (e) { console.error("[p6 restore]", e.message); }
+// v0.18.68 closed trades from before exits A / B / C: re-score from their recorded high / low (same rules as above); level = $100K (v1 trigger)
+try {
+  let n = 0; const up = db.prepare(`UPDATE paper_trades SET x_p6a=?, x_p6b=?, x_p6c=?, p6_tier=COALESCE(p6_tier,100000) WHERE id=?`);
+  for (const r of db.prepare(`SELECT id, entry_ts, peak_mult, p6_peak_ts, p6_low, p6_low_ts, p6_last FROM paper_trades WHERE strategy='p6' AND closed=1 AND x_p6a IS NULL AND COALESCE(invalid,0)=0`).all()) {
+    const f = {}, x = retro({}, Math.max(r.peak_mult || 1, 1), r.p6_peak_ts || r.entry_ts, Math.min(r.p6_low || 1, 1), r.p6_low_ts || r.entry_ts, f), m = r.p6_last || 1;
+    up.run(x.a ?? m, x.b ?? (f.b2 ? 1 + 0.5 * m : m), x.c ?? m, r.id); n++;
+  }
+  db.prepare(`UPDATE paper_trades SET p6_tier=100000 WHERE strategy='p6' AND p6_tier IS NULL`).run();
+  if (n) console.log(`[p6] re-scored ${n} closed P6 trade(s) with exits A/B/C`);
+} catch (e) { console.error("[p6 rescore]", e.message); }
 console.log(`[p6] ${ENABLED ? "on" : "off"} — MC $${MIN_MC / 1e3}K–$${MAX_MC / 1e6}M · ≥ ${TIERS.map((t) => `$${t / 1e3}K`).join(" / ")} in 5 min (separate trades) · coin ≥ ${MIN_AGE_H} h old · exits A all at 2x / B ½ at 2x + 40% trail / C all at 3x, −40% stop, out if 5m vol < $${GOLDEN_USD / 1e3}K · old ½-at-4x line kept · max ${HOLD_H} h`);
 export { step as _step, close as _close, open as _open }; // tests
