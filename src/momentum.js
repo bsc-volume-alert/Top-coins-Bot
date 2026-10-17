@@ -21,7 +21,8 @@ import { dirname, join } from "node:path";
 import { provenCount } from "./wallets.js";
 import { enrichEntry, sniperInfo, provenShare, enrichLine } from "./enrich.js"; // v0.18.19
 import { dexPrice } from "./sweeper.js"; // v0.18.29
-import { gmgnFor, gmgnSummary, gmgnEntry } from "./gmgn.js"; // v0.18.52 · v0.18.56 gmgnEntry
+import { gmgnFor, gmgnSummary, gmgnEntry } from "./gmgn.js";
+import { p6Candidate } from "./p6.js"; // v0.18.60 // v0.18.52 · v0.18.56 gmgnEntry
 export const BOOT = Math.floor(Date.now() / 1000); // v0.18.36 process start (low-volume exit warm-up)
 // v0.18.38: windows count as complete from this time. A quick restart (state saved ≤30 s ago) keeps the saved 5m windows, so no new wait.
 let WARM_FROM = BOOT; const lvReady = (now) => now - WARM_FROM >= CFG.LOWVOL_WARMUP_S;
@@ -165,6 +166,7 @@ onSwap((tr) => {
   const b1 = s.w1.filter((x) => x.b).length, s1 = s.w1.length - b1;
   const burst = CFG.BURST_TRIGGER && v1 >= CFG.VOL1M_BURST_USD && b1 > s1 && tr.mc >= CFG.BURST_MIN_MC && (() => { const m = q.tokenMeta.get(tr.mint); return !m?.create_ts || now - m.create_ts >= CFG.BURST_MIN_AGE_S; })();
   if (v5 < CFG.VOL5M_USD && !burst) return;
+  if (v5 >= CFG.VOL5M_USD) p6Candidate({ mint: tr.mint, mc: tr.mc, v5, source: "feed", bu: bsu[0], su: bsu[1], venue: tr.venue || "pumpswap", price: tr.price }); // v0.18.60 Project 6 (sleepers) — own MC / age gates inside
   const kind = v5 >= CFG.VOL5M_USD ? "vol5m" : "burst";
   if (tr.mc > CFG.MOM_MC_CAP || tr.mc <= 0) return;
   // v0.15 sanity: a real volume event is many swaps from many wallets on a token that has existed for a minute

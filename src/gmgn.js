@@ -9,6 +9,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "./db.js";
 import { momSnap } from "./momentum.js";
+import { p6Candidate } from "./p6.js"; // v0.18.60
 
 const KEY = () => process.env.GMGN_API_KEY || "";
 const HOST = "https://openapi.gmgn.ai";
@@ -158,6 +159,7 @@ function ingest(rows, interval, chain) {
     latest.set(mint, { row, ts: now }); if (latest.size > 5000) latest.delete(latest.keys().next().value);
     if (interval !== "5m") continue;
     const v5 = num(r.volume), mc = num(r.market_cap);
+    if (chain === "sol") p6Candidate({ mint: addr, mc, v5, source: "gmgn", name: r.name, symbol: r.symbol, created: num(r.creation_timestamp), usd: num(r.price), buys: num(r.buys), sells: num(r.sells), exchange: r.exchange }); // v0.18.60 P6
     if (chain === "sol" && v5 > gm.maxVol5) gm.maxVol5 = v5;
     if (!(v5 >= FLAG_VOL5M) || !(mc > 0) || mc > MAX_MC) continue;
     const f = flagged.get(mint); if (f && now - f < 6 * 3600) continue;
