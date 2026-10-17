@@ -128,18 +128,20 @@ function queryToCsvFile(sql, path) {
 let csvBusy = false;
 export const exportBusy = () => csvBusy;
 /** v0.18.79: build the export zip on disk (shared by /csv and the website download). Caller must call done() to delete the temp folder. */
-export async function buildExport(full) {
+export async function buildExport(full, onStep) {
   const day = new Date().toISOString().slice(0, 10), dir = mkdtempSync(join(tmpdir(), "tracker-csv-")), files = [], counts = [];
   const done = () => { try { rmSync(dir, { recursive: true, force: true }); } catch {} };
   try {
     const tables = { paper_trades: PAPER_SQL, ...CSV_EXTRA };
-    for (const [name, sql] of Object.entries(tables)) {
-      if (!full && CSV_FULL_ONLY.has(name)) continue;
+    const list = Object.entries(tables).filter(([name]) => full || !CSV_FULL_ONLY.has(name)); let i = 0;
+    for (const [name, sql] of list) {
+      if (onStep) onStep(i++, list.length + 1, name);
       const path = join(dir, `${name}_${day}.csv`);
       try { const n = queryToCsvFile(sql, path); if (n) { files.push({ name: `${name}_${day}.csv`, path }); counts.push(`${n} ${name.replace("_", " ")}`); } } catch (e) { console.error("[csv]", name, e.message); }
       await new Promise((r) => setImmediate(r)); // let the feed breathe between tables
     }
     if (!files.length) { done(); return null; }
+    if (onStep) onStep(list.length, list.length + 1, "zip");
     const name = `tracker_export_${day}${full ? "_full" : ""}.zip`, zipPath = join(dir, name), size = await zipFiles(files, zipPath);
     return { zipPath, name, size, counts, done };
   } catch (e) { done(); throw e; }
@@ -162,8 +164,22 @@ async function sendCsv(full) { // v0.15.2: one zip. v0.18.16: built on disk. v0.
   } catch (e) { console.error("[csv]", e.message); try { await tg(`Export failed: ${esc(e.message)}`); } catch {} }
   finally { csvBusy = false; if (ex) ex.done(); }
 }
-/** v0.18.79: website download — same lock as /csv. Returns null when an export is already running. */
-export async function exportForWeb(full) { if (csvBusy) return null; csvBusy = true; try { return await buildExport(full); } finally { csvBusy = false; } }
+/** v0.18.80: website download — built in the background with progress, kept for 30 min so repeat downloads are instant. Shares the /csv lock. */
+const WEB_KEEP_S = 1800;
+export const EXP = { state: "idle", step: 0, steps: 0, table: "", startedAt: 0, file: null, err: null };
+export function exportStatus() { const f = EXP.file; return { state: EXP.state, step: EXP.step, steps: EXP.steps, table: EXP.table, startedAt: EXP.startedAt, err: EXP.err,
+  file: f ? { name: f.name, size: f.size, builtAt: f.builtAt, ageS: Math.floor(Date.now() / 1000) - f.builtAt } : null, now: Math.floor(Date.now() / 1000) }; }
+export function startWebExport(force) {
+  const now = Math.floor(Date.now() / 1000);
+  if (EXP.state === "building") return;
+  if (!force && EXP.file && now - EXP.file.builtAt < WEB_KEEP_S) return; // fresh copy already there
+  if (csvBusy) { EXP.err = "A Telegram export is running — this one starts when it finishes. Try again in a minute."; return; }
+  csvBusy = true; Object.assign(EXP, { state: "building", step: 0, steps: 0, table: "", startedAt: now, err: null });
+  buildExport(true, (i, n, t) => { EXP.step = i; EXP.steps = n; EXP.table = t; })
+    .then((ex) => { if (!ex) { EXP.state = "error"; EXP.err = "No data yet."; return; } const old = EXP.file; EXP.file = { ...ex, builtAt: Math.floor(Date.now() / 1000) }; EXP.state = "ready"; if (old) setTimeout(() => old.done(), 10 * 60e3); })
+    .catch((e) => { console.error("[web export]", e.message); EXP.state = "error"; EXP.err = e.message; })
+    .finally(() => { csvBusy = false; });
+}
 // v0.18.56 /gmgnsellers: one-off GMGN pull (who sold, tags, funding wallets, dev launches, 1-min candles) for every coin a project traded
 let gsBusy = false;
 async function sendGmgnSellers() {

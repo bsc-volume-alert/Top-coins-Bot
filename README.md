@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.80 — download page (18 Oct)
+- "download data ↓" opens a download page: the zip builds in the background with a progress bar, the download starts by itself when ready, and the file is kept 30 min so repeat downloads are instant ("build a fresh copy" to rebuild). Fixes the plain-text "already running" page (the browser asked twice).
+
 ## v0.18.79 — full data download on the website; /csv over 50 MB points there (18 Oct)
 - The /csv zip passed Telegram's 50 MB bot limit (413 "Request Entity Too Large"); while the oversized uploads ran, other Telegram calls timed out, so commands looked dead. Website header now has "download data ↓" (`/api/export?full=1`): the full export (every table, incl. token_life and wallet_buys), any size. /csv checks the size first and, over 48 MB, replies with a pointer to the website instead of uploading. One export at a time across both.
 
