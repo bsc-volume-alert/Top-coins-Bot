@@ -46,7 +46,24 @@ function pause(r, j) {
   const until = Math.min(Date.now() + 360_000, Math.max(Date.now() + 5000, reset * 1000 || 0));
   pausedUntil = Math.max(pausedUntil, until); gm.lastPause = { at: Date.now(), until, raw: r.headers.get("x-ratelimit-reset") ?? j.reset_at ?? null, err: j.error || r.status };
 }
+// v0.18.63 one GMGN queue: every call (lists, entry lookups, seller pull) goes through slot(), one at a time, each spaced by its weight so
+// the total stays under GMGN_WEIGHT_PER_S (default 3 of the Free plan's 5). On 17 Oct the average was ~2 weight/s but separate timers fired
+// together (two lists = 6 weight in one instant > 5) and GMGN blocked ~80% of calls. Weights from GMGN's plan page.
+const GW = Math.max(1, Number(process.env.GMGN_WEIGHT_PER_S) || 3);
+const WEIGHT = { "/v1/market/rank": 3, "/v1/token/info": 1, "/v1/token/security": 1, "/v1/market/token_kline": 2, "/v1/user/created_tokens": 2, "/v1/market/token_top_traders": 5, "/v1/market/token_top_holders": 5 };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let gNext = 0, gChain = Promise.resolve(); gm.queued = 0;
+function slot(path) {
+  const w = WEIGHT[path] ?? 3; gm.queued++;
+  const p = gChain.then(async () => {
+    while (Date.now() < pausedUntil) await sleep(500);
+    const wait = gNext - Date.now(); if (wait > 0) await sleep(wait);
+    gNext = Math.max(Date.now(), gNext) + (w / GW) * 1000;
+  }).finally(() => { gm.queued--; });
+  gChain = p.catch(() => {}); return p;
+}
 async function rank(chain, interval, platforms = []) {
+  await slot("/v1/market/rank");
   const q = new URLSearchParams({ chain, interval, order_by: "volume", limit: "100", timestamp: String(Math.floor(Date.now() / 1000)), client_id: randomUUID() });
   for (const p of platforms) q.append("platforms", p); // v0.18.62 venue lists (repeatable, as in gmgn-cli)
   const r = await fetch(`${HOST}/v1/market/rank?${q}`, { headers: { "X-APIKEY": KEY(), "Content-Type": "application/json" }, signal: AbortSignal.timeout(8000) });
@@ -65,6 +82,7 @@ async function rank(chain, interval, platforms = []) {
 // v0.18.56 generic GET for the other read-only endpoints (token info / security / top traders / created tokens / kline). Same auth, same
 // rate-limit handling; unwraps the inner {code,data} envelope when present.
 async function get(path, params) {
+  await slot(path);
   const q = new URLSearchParams({ ...params, timestamp: String(Math.floor(Date.now() / 1000)), client_id: randomUUID() });
   const r = await fetch(`${HOST}${path}?${q}`, { headers: { "X-APIKEY": KEY(), "Content-Type": "application/json" }, signal: AbortSignal.timeout(10000) });
   const text = await r.text(); let j; try { j = JSON.parse(text); } catch { throw new Error(`HTTP ${r.status} non-JSON`); }
@@ -226,8 +244,9 @@ async function poll() {
 // v0.18.62 venue lists: GMGN's 5-minute list filtered to the exchanges our own feed cannot read (Meteora pools + Meteora launch curves used by
 // Bags / Believe / Jupiter Studio / Moonshot; all Raydium pools incl. the older standard pools). Same ingest → volume log, P6, flags.
 // GMGN's default Solana safety filter (mint + freeze authority renounced) still applies — it cannot be switched off.
-const PLAT = [{ k: "meteora", p: ["pool_meteora", "meteora_virtual_curve"], re: /meteora/i }, { k: "raydium", p: ["pool_ray"], re: /ray/i }];
-const PLAT_MS = Math.max(1000, Number(process.env.GMGN_PLAT_MS) || 3000), PLAT_ON = process.env.GMGN_PLAT !== "0";
+// v0.18.63: Raydium list off (0 coins and time-outs on 17 Oct; our own feed reads Raydium CPMM / CLMM / LaunchLab). Meteora every 6 s.
+const PLAT = [{ k: "meteora", p: ["pool_meteora", "meteora_virtual_curve"], re: /meteora/i }];
+const PLAT_MS = Math.max(1000, Number(process.env.GMGN_PLAT_MS) || 6000), PLAT_ON = process.env.GMGN_PLAT !== "0";
 gm.plat = Object.fromEntries(PLAT.map((x) => [x.k, { ok: 0, fail: 0, rows: 0, other: 0, top: 0, lastErr: null }]));
 let pTurn = 0, pBusy = false;
 async function pollPlat() {
@@ -241,10 +260,10 @@ async function pollPlat() {
   } catch (e) { s.fail++; s.lastErr = e.message; if (s.fail % 30 === 1) console.error(`[gmgn ${x.k}]`, e.message); }
   finally { pBusy = false; }
 }
-if (KEY()) { console.log(`[gmgn] scanner on (${CHAINS.join(", ")}) — every ${POLL_MS} ms, flag ≥ $${FLAG_VOL5M} in 5 min, MC ≤ $${MAX_MC} · Meteora / Raydium lists every ${PLAT_MS * PLAT.length / 1000} s`); setInterval(poll, POLL_MS); setTimeout(poll, 3000); if (PLAT_ON) setInterval(pollPlat, PLAT_MS); }
+if (KEY()) { console.log(`[gmgn] scanner on (${CHAINS.join(", ")}) — every ${POLL_MS} ms, flag ≥ $${FLAG_VOL5M} in 5 min, MC ≤ $${MAX_MC} · Meteora list every ${PLAT_MS * PLAT.length / 1000} s · max ${GW} weight/s`); setInterval(poll, POLL_MS); setTimeout(poll, 3000); if (PLAT_ON) setInterval(pollPlat, PLAT_MS); }
 else console.log("[gmgn] GMGN_API_KEY not set — scanner off");
 const ukT = (ms) => new Date(ms).toLocaleTimeString("en-GB", { timeZone: "Europe/London" });
 export const gmgnStatus = () => KEY() ? `GMGN: ${gm.ok} ok / ${gm.fail} failed${gm.rateLimited ? ` (${gm.rateLimited} rate-limited)` : ""}${Date.now() < pausedUntil ? ` · ⏸ PAUSED until ${ukT(pausedUntil)} UK` : ""}${gm.lastPause ? ` · last pause ${ukT(gm.lastPause.at)} (reset ${String(gm.lastPause.raw).replace(/[<>&]/g, "")})` : ""} · last list ${gm.rows} coins${gm.empty ? ` · ${gm.empty} empty` : ""} · top 5m vol seen $${Math.round(gm.maxVol5 / 1000)}K · flagged ${gm.flags} ($${Math.round(FLAG_VOL5M / 1000)}K/5m${Object.keys(gm.byChain).length > 1 ? ": " + Object.entries(gm.byChain).map(([c, n]) => `${c} ${n}`).join(", ") : ""}) · ${gm.missedByFeed} not seen by our feed · entry lookups ${gm.entryOk} ok / ${gm.entryFail} failed${gm.lastErr && gm.fail ? ` · last error: ${gm.lastErr}` : ""}\n` +
-  `GMGN venue lists: ${PLAT.map((x) => { const s = gm.plat[x.k]; return `${x.k} ${s.ok} ok${s.fail ? ` / ${s.fail} failed (${String(s.lastErr).replace(/[<>&]/g, "")})` : ""} · ${s.rows} coins, top 5m $${Math.round(s.top / 1000)}K${s.other ? ` · ${s.other} off-venue` : ""}`; }).join(" | ")}` : "GMGN: off (no API key)";
+  `GMGN venue lists (queue ${gm.queued}): ${PLAT.map((x) => { const s = gm.plat[x.k]; return `${x.k} ${s.ok} ok${s.fail ? ` / ${s.fail} failed (${String(s.lastErr).replace(/[<>&]/g, "")})` : ""} · ${s.rows} coins, top 5m $${Math.round(s.top / 1000)}K${s.other ? ` · ${s.other} off-venue` : ""}`; }).join(" | ")}` : "GMGN: off (no API key)";
 export const memStats = () => ({ latest: latest.size, flagged: flagged.size, follow: follow.length });
 export { ingest as _ingest, rank as _rank, pollPlat as _pollPlat };

@@ -56,6 +56,13 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.63 — one GMGN queue (17 Oct)
+Every GMGN call (lists, entry lookups, seller pull) now goes through one queue, one call at a time, spaced by GMGN's weight for that call
+(trending 3, token info / security 1, kline / created-tokens 2, top traders / holders 5) so the total stays at or under 3 weight a second
+(Free plan allows 5; `GMGN_WEIGHT_PER_S`). On 17 Oct the average was ~2/s but separate timers fired together and GMGN blocked ~80% of calls.
+Raydium venue list off (0 coins, time-outs); Meteora list every 6 s. /status shows the queue length. Memory warning now at 700 MB and says
+pm2 restarts at 900 MB (ecosystem.config.cjs), not 600.
+
 ## v0.18.62 — volume log: every Solana coin at $100K/5m, bought or not (17 Oct)
 New table **`vol_log`** (in /csv as `vol_log.csv`): one line per coin per wake-up for every Solana coin that trades ≥ $100K in 5 minutes,
 seen by our own feed (pump.fun / PumpSwap / Raydium CPMM-CLMM-LaunchLab / Orca) **or** GMGN (every DEX incl. Meteora and Raydium's older pools).
