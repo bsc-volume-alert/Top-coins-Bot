@@ -7,6 +7,10 @@ export const wallWarning = (mc) => { const l = nextLevel(mc); return l && (l / m
 /** Levels exit tracker: sells LEVEL_SLICE at 97% of each level crossed; remainder trails 60%. state = {sold:[{mult}], } */
 export function levelsStep(lv, entryMc, mc, mult, fromPeak) {
   // lv: { sold: number (fraction sold), realized: number (sum fraction×mult), crossed: Set }
+  if (!(lv.crossed instanceof Set)) { // v0.18.67: a restored position can carry crossed as an array / plain object (JSON) — repair instead of throwing on every swap
+    lv.crossed = new Set(Array.isArray(lv.crossed) ? lv.crossed : Object.keys(lv.crossed || {}).map(Number).filter(Number.isFinite));
+    if (!levelsStep.warned) { levelsStep.warned = true; console.error("[levels] repaired a non-Set crossed list (once)", new Error().stack.split("\n").slice(2, 5).join(" | ")); }
+  }
   for (const L of CFG.LEVELS_USD) {
     if (L <= entryMc) continue;
     const trigger = L * CFG.LEVEL_SELL_PCT;
