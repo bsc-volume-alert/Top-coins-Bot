@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.46 — header reverted (17 Oct)
+The v0.18.44 header (gradient title, pill nav, result tiles) is removed at the owner's request; the page top is back to the v0.18.43 design. All v0.18.45 fixes kept.
+
 ## v0.18.45 — restart bug fixed; error-proof pages (17 Oct)
 Bug: the momentum state file saved each open position's levels tracker with a `Set`, which JSON turns into `{}`; after every quick restart `lv.crossed.has is not a function` was thrown on each swap of a restored coin — its exits stopped updating, the golden rule could not close it, and the rest of the swap handler (trigger detection for that coin) was skipped. Now saved as an array and rebuilt as a `Set` (old files with `{}` also restore). Sold-history page script was broken since v0.18.39 by an escaped apostrophe — fixed. Snapshot errors now return a readable 500 instead of a broken response; the page shows "server error: …" or "page error: …" instead of hanging on "loading…".
 
