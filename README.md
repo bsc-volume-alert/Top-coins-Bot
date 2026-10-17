@@ -56,6 +56,9 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.61 — card charts since the rule's data begins (17 Oct)
+Each project card's chart now plots cumulative profit for every trade the rule would have taken since its data begins (15 Oct 13:52 UK for P1A/P1B/P2A/P2B, 17 Oct 02:34 UK for P5 v2, P6 from its start), with a yellow dashed line where the live book starts — the live-only chart was empty after the 17 Oct fresh starts.
+
 ## v0.18.60 — Project 6 "sleepers" (17 Oct)
 Owner's idea: older coins sitting at $300K–$1.5M that suddenly wake up (e.g. "simulator", 6 months old, $200K → $3M on 17 Oct — our feed only saw it at $1.88M, an hour late). New module `src/p6.js`, strategy `p6`, paper only.
 **Buy:** ≥ $100K traded in 5 min seen by our feed (hook in momentum.js before its own MC caps) **or** on GMGN's 5-minute trending list (every DEX incl. Meteora); MC $300K–$1.5M; coin ≥ 6 h old (tokens table → GMGN creation time → DexScreener pair age); buy $ ≥ sell $ (feed) or buys ≥ sells (GMGN counts); one entry per coin per 24 h. Env: `P6_MIN_MC`, `P6_MAX_MC`, `P6_VOL5M_USD`, `P6_MIN_AGE_H`, `P6_HOLD_H`, `P6_ENABLED`.
