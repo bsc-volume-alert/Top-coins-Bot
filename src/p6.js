@@ -23,7 +23,7 @@ for (const c of ["x_p6 REAL", "p6_low REAL", "p6_low_ts INTEGER", "p6_peak_ts IN
 const qRecent = db.prepare(`SELECT 1 FROM paper_trades WHERE strategy='p6' AND mint=? AND entry_ts > ? LIMIT 1`);
 const qSave = db.prepare(`UPDATE paper_trades SET peak_mult=?, p6_low=?, p6_low_ts=?, p6_peak_ts=?, p6_last=?, p6_state=?, peak_mc=? WHERE id=?`);
 const qClose = db.prepare(`UPDATE paper_trades SET closed=1, exit_ts=?, exit_reason=?, x_p6=?, x_t15s40=?, x_tsl60=?, x_h2t40=?, peak_mult=?, p6_low=?, p6_low_ts=?, p6_peak_ts=?, p6_last=?, p6_state=? WHERE id=?`);
-const qOpen = db.prepare(`SELECT id, mint, name, entry_ts, entry_mc, peak_mult, p6_low, p6_low_ts, p6_peak_ts, p6_last, p6_state FROM paper_trades WHERE strategy='p6' AND closed=0 AND COALESCE(invalid,0)=0`);
+const qOpen = db.prepare(`SELECT id, mint, name, entry_ts, entry_mc, entry_price, peak_mult, p6_low, p6_low_ts, p6_peak_ts, p6_last, p6_state FROM paper_trades WHERE strategy='p6' AND closed=0 AND COALESCE(invalid,0)=0`);
 
 export const p6 = { candidates: 0, entries: 0, closes: 0, young: 0, noAge: 0, sellHeavy: 0, outOfRange: 0, repeat: 0, bySource: { feed: 0, gmgn: 0 } };
 const open = new Map(); // mint -> pos
@@ -100,12 +100,13 @@ function step(pos, usd, ts) {
 const state = (pos) => JSON.stringify({ entryUsd: pos.entryUsd, half4: pos.half4, h2: pos.h2, x: pos.x, manual: pos.manual, peak: pos.peak, low: pos.low }); // v0.18.62 peak/low kept here too
 function save(pos) { try { qSave.run(pos.peak, pos.low, pos.lowTs, pos.peakTs, pos.last, state(pos), pos.entryMc * pos.peak, pos.id); } catch {} }
 const mainValue = (pos, m) => (pos.half4 ? 2 + 0.5 * m : m);
-function close(pos, reason) {
+function close(pos, reason, exitTs = null, quiet = false) { // v0.18.62 exitTs/quiet: restart closes of rows past 24 h get entry + 24 h, no Telegram
   if (pos.closed) return; pos.closed = true; open.delete(pos.mint); p6.closes++;
   const m = pos.last, x = pos.x;
   let main = mainValue(pos, m); if (pos.manual) main = pos.manual.banked + (1 - pos.manual.sold) * main;
   const t15 = x.t15s40 ?? m, t60 = x.tsl60 ?? m, h2 = x.h2t40 ?? (pos.h2 ? 1 + 0.5 * m : m);
-  try { qClose.run(nowS(), reason, main, t15, t60, h2, pos.peak, pos.low, pos.lowTs, pos.peakTs, m, state(pos), pos.id); } catch (e) { console.error("[p6 close]", e.message); }
+  try { qClose.run(exitTs || nowS(), reason, main, t15, t60, h2, pos.peak, pos.low, pos.lowTs, pos.peakTs, m, state(pos), pos.id); } catch (e) { console.error("[p6 close]", e.message); }
+  if (quiet) return;
   tg(`${main >= 1 ? "✅" : "🔴"} <b>P6 CLOSE</b> — ${esc(pos.name)} (${reason === "time" ? `${HOLD_H} h` : reason === "dead" ? "fell 90% from peak" : reason})\nResult <b>${main.toFixed(2)}x</b> · peak ${pos.peak.toFixed(2)}x · low ${pos.low.toFixed(2)}x · now ${m.toFixed(2)}x\n1.5x/−40%: ${t15.toFixed(2)}x · ½ at 2x + 40% trail: ${h2.toFixed(2)}x · 60% trail: ${t60.toFixed(2)}x`);
 }
 
@@ -137,21 +138,27 @@ export const p6Open = () => [...open.values()].map((p) => ({ id: p.id, mint: p.m
 // v0.18.62 repair: before v0.18.62 the 6-hour sweeper and the copy-trade restart rebuild also picked up open P6 rows and closed them with their
 // own exits, in SOL prices against P6's USD entry price (nonsense multiples). P6's own close always writes x_p6, so a P6 row that is closed
 // with x_p6 empty was closed by someone else: reopen it and let P6 finish it (its high / low / last are in p6_* columns and p6_state).
+// The same foreign writes left their own exit fields on P6 rows (pnl_pct, exit_mc/price, x_time, x_tp…, a peak_mc ~200x too high); P6 never
+// uses those columns, so they are cleared on every P6 row and peak_mc is recomputed from P6's own peak.
 try {
   const fix = db.prepare(`UPDATE paper_trades SET closed=0, exit_reason=NULL, exit_ts=NULL WHERE strategy='p6' AND closed=1 AND x_p6 IS NULL AND COALESCE(invalid,0)=0`).run().changes;
   if (fix) console.log(`[p6] reopened ${fix} P6 position(s) closed by the sweeper / copy-trade restore`);
+  const cols = ["pnl_pct", "exit_mc", "exit_price", "x_time", "x_tp", "x_tsl40", "x_tsl80", "x_half60", "x_twophase", "x_ladder", "x_levels", "x_m1", "x_m1vol", "x_volstop", "x_combo", "x_tp15", "x_tsl25", "x_t15s25", "x_t15s60", "x_t2s25", "x_t2s40", "x_t2s60", "x_flow", "x_flow4", "x_flow4ff", "x_split", "x_cluster", "x_grad", "path"];
+  const have = new Set(db.prepare(`PRAGMA table_info(paper_trades)`).all().map((c) => c.name)), set = cols.filter((c) => have.has(c));
+  const n = db.prepare(`UPDATE paper_trades SET ${set.map((c) => `${c}=NULL`).join(", ")}, peak_mc=entry_mc*MAX(COALESCE(peak_mult,1),1) WHERE strategy='p6' AND (${set.map((c) => `${c} IS NOT NULL`).join(" OR ")} OR ABS(COALESCE(peak_mc,0) - entry_mc*MAX(COALESCE(peak_mult,1),1)) > 1)`).run().changes;
+  if (n) console.log(`[p6] cleared other modules' exit fields on ${n} P6 row(s)`);
 } catch (e) { console.error("[p6 repair]", e.message); }
 // restart: rebuild open P6 positions; anything past its 24 h is closed at the last recorded multiple
 try {
   for (const r of qOpen.all()) {
     let s = {}; try { s = JSON.parse(r.p6_state || "{}"); } catch {}
     const pk = Math.max(s.peak || 0, r.peak_mult || 0, s.half4 ? 4 : 0, s.h2 ? 2 : 0, r.p6_last || 0, 1); // peak_mult may have been overwritten by the old foreign close
-    const pos = { id: r.id, mint: r.mint, name: r.name, entryTs: r.entry_ts, entryMc: r.entry_mc, entryUsd: s.entryUsd, peak: pk, low: Math.min(s.low || 1, r.p6_low || 1), peakTs: r.p6_peak_ts || r.entry_ts, lowTs: r.p6_low_ts || r.entry_ts,
+    const pos = { id: r.id, mint: r.mint, name: r.name, entryTs: r.entry_ts, entryMc: r.entry_mc, entryUsd: s.entryUsd || r.entry_price, peak: pk, low: Math.min(s.low || 1, r.p6_low || 1), peakTs: r.p6_peak_ts || r.entry_ts, lowTs: r.p6_low_ts || r.entry_ts,
       last: r.p6_last || 1, lastTs: 0, half4: !!s.half4, h2: !!s.h2, x: s.x || {}, manual: s.manual || null, saved: 0 };
-    if (!(pos.entryUsd > 0)) { pos.closed = false; close(pos, "restart-no-price"); continue; }
+    if (!(pos.entryUsd > 0)) { pos.closed = false; close(pos, "restart-no-price", null, true); continue; }
     open.set(r.mint, pos);
     const left = r.entry_ts + HOLD_H * 3600 - nowS();
-    if (left <= 0) close(pos, "time"); else setTimeout(() => close(pos, "time"), left * 1000);
+    if (left <= 0) close(pos, "time", r.entry_ts + HOLD_H * 3600, true); else setTimeout(() => close(pos, "time"), left * 1000);
   }
   if (open.size) console.log(`[p6] restored ${open.size} open position(s)`);
 } catch (e) { console.error("[p6 restore]", e.message); }

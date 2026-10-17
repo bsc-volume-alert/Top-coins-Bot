@@ -35,7 +35,8 @@ const qDue = db.prepare(`SELECT id, mint, ts, mc_15m, mc_1h, mc_6h, mc_24h FROM 
 const SLOTS = [["mc_15m", 900, 1800], ["mc_1h", 3600, 3600], ["mc_6h", 21600, 7200], ["mc_24h", 86400, 7200]]; // [column, due after s, give up after s more]
 const qSlot = Object.fromEntries(SLOTS.map(([c]) => [c, db.prepare(`UPDATE vol_log SET ${c}=? WHERE id=?`)]));
 
-export const vl = { rows: 0, feedFirst: 0, gmgnFirst: 0, dsCalls: 0, dsFail: 0, follow: 0 };
+export const vl = { rows: 0, feedFirst: 0, gmgnFirst: 0, dsCalls: 0, dsFail: 0, dsAsked: 0, dsGot: 0, follow: 0 };
+const dsTried = new Map(); // mint -> { at: ms of last ask, miss: consecutive asks DexScreener returned nothing for }
 const trk = new Map();     // id -> tracker
 const cur = new Map();     // mint -> id of the latest wake-up
 const mintIds = new Map(); // mint -> Set(ids tracked in the last 24 h)
@@ -98,7 +99,8 @@ export function volFeed(tr, v5, bsu, ts, gmgnV5) {
 }
 
 /** GMGN, every Solana row of every list (gmgn.js): price for open wake-ups, GMGN's 5-minute figure (5m lists only, v5 = null on 1m lists),
- *  and a wake-up line once GMGN shows v5 ≥ $100K. o.otherV5 = our feed's 5-minute figure (null = our feed has no trades for this coin). */
+ *  and a wake-up line once GMGN shows v5 ≥ $100K. o.otherV5 = our feed's 5-minute figure (null = our feed holds no trades for this coin in
+ *  memory; 0 = it knows the coin but saw no trades in the last 5 minutes). */
 export function volGmgn(o) {
   if (!o?.mint || NOT_COINS.has(o.mint)) return;
   const ts = o.ts || nowS();
@@ -110,7 +112,7 @@ export function volGmgn(o) {
 /** Project 6's decision for a coin in an open wake-up (p6.js). "bought" sticks; otherwise the latest reason is kept and every change is
  *  appended to p6_hist as "+Nm reason (detail)". x.created fills the coin's age when P6 found it; x.id links the paper trade. */
 export function volP6(mint, code, note = null, x = {}) {
-  const t = trk.get(cur.get(mint)); if (!t) return;
+  const t = current(mint, nowS()); if (!t) return; // only an open wake-up
   if (x.created && !t.created) { t.created = x.created; try { qAge.run(x.created, t.start - x.created, t.id); } catch {} }
   if (t.p6 === "bought" || t.p6 === code) return;
   t.p6 = code; t.p6Note = note;
@@ -126,9 +128,11 @@ function save(t) {
 setInterval(() => {
   const n = nowS();
   for (const t of [...trk.values()]) { if (t.dirty) save(t); if (n > t.start + TRACK_S) untrack(t); }
+  for (const [m, x] of dsTried) if (Date.now() - x.at > 27 * 3600_000) dsTried.delete(m);
 }, 30_000);
 
-// DexScreener: best Solana pair (by liquidity) per coin, up to 30 coins per call
+// DexScreener: best Solana pair (by liquidity) per coin. Batches of 10: the multi-token reply may be capped at ~30 pairs in total and most
+// coins have 2–3 pairs, so 30-coin batches could silently drop coins (independent check, 17 Oct). Asked vs returned is counted in /status.
 async function dsBatch(mints) {
   vl.dsCalls++;
   const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mints.join(",")}`, { signal: AbortSignal.timeout(8000) });
@@ -156,13 +160,18 @@ setInterval(async () => {
       }
       if (!open) qDone.run(r.id);
     }
-    const quiet = new Set(); for (const t of trk.values()) if (n - t.start < QUIET_POLL_H * 3600 && n - t.pxTs >= QUIET_S) quiet.add(t.mint);
-    const mints = [...new Set([...want.keys(), ...quiet])].slice(0, 120);
-    for (let i = 0; i < mints.length; i += 30) {
-      const part = mints.slice(i, i + 30); let got;
+    // quiet coins DexScreener has returned nothing for 5 times in a row are left to the 15m/1h/6h/24h samples
+    const quiet = new Set(); for (const t of trk.values()) if (n - t.start < QUIET_POLL_H * 3600 && n - t.pxTs >= QUIET_S && !((dsTried.get(t.mint)?.miss || 0) >= 5)) quiet.add(t.mint);
+    // least recently asked first, so no coin can be starved by others that never return data
+    const last = (m) => dsTried.get(m)?.at || 0;
+    const mints = [...new Set([...want.keys(), ...quiet])].sort((a, b) => last(a) - last(b)).slice(0, 60);
+    for (let i = 0; i < mints.length; i += 10) {
+      const part = mints.slice(i, i + 10); let got;
+      for (const m of part) dsTried.set(m, { at: Date.now(), miss: dsTried.get(m)?.miss || 0 });
       try { got = await dsBatch(part); } catch { vl.dsFail++; continue; }
+      vl.dsAsked += part.length; vl.dsGot += got.size;
       for (const m of part) {
-        const d = got.get(m); if (!d) continue;
+        const d = got.get(m), tr = dsTried.get(m); if (!d) { tr.miss++; continue; } tr.miss = 0;
         if (d.usd > 0) price(m, d.usd, n, "ds");
         if (d.name) try { qName.run(d.name, d.symbol, m); } catch {}
         if (d.mc > 0) for (const w of want.get(m) || []) { try { qSlot[w.col].run(d.mc, w.id); vl.follow++; } catch {} }
@@ -188,7 +197,7 @@ export function volLogStatus() {
   try {
     const since = nowS() - 86400, s = qStat.get(since); if (!s.n) return `Volume log (24 h): no coin at $${VOL_LOG_USD / 1000}K/5m yet`;
     const why = qWhy.all(since).map((r) => `${r.p6} ${r.n}`).join(", ");
-    return `Volume log (24 h): ${s.n} wake-ups at $${VOL_LOG_USD / 1000}K+/5m (${s.coins} coins) — our feed only ${s.fo || 0} · GMGN only ${s.go || 0} · both ${s.bo || 0}${s.gfirst ? ` (GMGN first on ${s.gfirst})` : ""} · P6: ${why} · tracking ${trk.size} · DexScreener ${vl.dsCalls} calls${vl.dsFail ? ` (${vl.dsFail} failed)` : ""}`;
+    return `Volume log (24 h): ${s.n} wake-ups at $${VOL_LOG_USD / 1000}K+/5m (${s.coins} coins) — our feed only ${s.fo || 0} · GMGN only ${s.go || 0} · both ${s.bo || 0}${s.gfirst ? ` (GMGN first on ${s.gfirst})` : ""} · P6: ${why} · tracking ${trk.size} · DexScreener ${vl.dsCalls} calls, ${vl.dsGot}/${vl.dsAsked} coins returned${vl.dsFail ? `, ${vl.dsFail} failed` : ""}`;
   } catch (e) { return `Volume log: error ${e.message}`; }
 }
 export const volMem = () => ({ tracked: trk.size, mints: mintIds.size });
