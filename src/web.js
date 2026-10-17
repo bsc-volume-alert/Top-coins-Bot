@@ -8,7 +8,8 @@ import { p6Open, p6ManualSell, p6 as p6stats } from "./p6.js"; // v0.18.60
 import { p7Open, p7ManualSell, p7 as p7stats } from "./p7.js"; // v0.18.69
 import { openOfKind, copyManualSell } from "./copytrade.js";
 import { solUsdCached } from "./price.js";
-import { memMb } from "./commands.js";
+import { memMb, exportForWeb } from "./commands.js";
+import { createReadStream } from "node:fs";
 import { readFileSync } from "node:fs";
 const VERSION = (() => { try { return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version; } catch { return "?"; } })();
 
@@ -276,7 +277,7 @@ footer{padding:16px;color:var(--mut);font-size:12px;text-align:center}
 #recent{font-size:12px}#recent th,#recent td{padding:6px 6px;vertical-align:top}#recent td.pc{white-space:normal;min-width:74px}#recent td.cn{white-space:normal;min-width:110px;max-width:170px;overflow-wrap:break-word}.b{display:inline-block;padding:2px 6px;border-radius:5px;font-weight:700;font-style:normal;font-size:11px;white-space:nowrap;letter-spacing:.02em}.b.w{background:#0d5a34;color:#dcffe9;border:1px solid #23955a}.b.l{background:#5e1027;color:#ffdbe4;border:1px solid #9a2547}.b.h{border:1px solid #5fd7ff;color:#5fd7ff}.sk{opacity:.5;color:#ffd75f;font-size:12px}.mw{display:block;color:#ffb84d;font-weight:700;font-size:11px}.gs{display:block;color:#7fd8a6;font-size:11px;opacity:.8}#recent td.na{color:rgba(154,143,208,.35);text-align:center}.vd b{display:inline-block;margin:0 4px 2px 0;font-size:11px;padding:1px 6px;border-radius:4px}.vd .t-w{background:#0d5a34;color:#dcffe9}.vd .t-l{background:#5e1027;color:#ffdbe4}.vd .t-g{border:1px solid #2f7a55;color:#7fd8a6}.vd .t-m{border:1px solid #ffb84d;color:#ffb84d}
 .bgp{position:fixed;right:8px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:9px;z-index:5;padding:9px 6px;border-radius:20px;background:rgba(10,8,30,.5);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.12)}.bgp button{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.3);cursor:pointer;padding:0;transition:transform .12s}.bgp button:hover{transform:scale(1.15)}.bgp button.on{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.45)}body.lt main>h3,body.lt footer{background:rgba(10,8,30,.62);border-radius:8px;padding:5px 10px}body.lt footer{margin:0 16px 16px}
 </style></head><body>
-<header><div><h1>Ismael — live paper trading <a id="alink" href="#" style="font-size:12px;color:var(--acc);margin-left:10px;font-weight:500">analysis →</a><a id="hlink" href="#" style="font-size:12px;color:#ff79f0;margin-left:10px;font-weight:500">sold history →</a></h1><div class="mut" id="sub">loading…</div></div>
+<header><div><h1>Ismael — live paper trading <a id="alink" href="#" style="font-size:12px;color:var(--acc);margin-left:10px;font-weight:500">analysis →</a><a id="hlink" href="#" style="font-size:12px;color:#ff79f0;margin-left:10px;font-weight:500">sold history →</a><a id="dlink" href="#" title="full CSV export of every table, as a zip — takes up to a minute to build" style="font-size:12px;color:#39ff9c;margin-left:10px;font-weight:500">download data ↓</a></h1><div class="mut" id="sub">loading…</div></div>
 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="mut">per trade</span><span class="seg" id="size"><button data-v="0.1">0.1</button><button data-v="0.25" class="on">0.25</button><button data-v="0.5">0.5</button><button data-v="1">1</button><button data-v="1.25">1.25</button><button data-v="1.5">1.5</button><button data-v="2">2 SOL</button></span><span class="mut">costs</span><span class="seg" id="cost"><button data-v="0">0%</button><button data-v="0.05" class="on">5%</button><button data-v="0.1">10%</button></span></div></header>
 <main>
 <div class="card" style="margin-bottom:12px"><h2 style="margin:0;font-size:17px">Last 24 hours — profit by project</h2><div class="p24" id="p24"></div><div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-top:14px"><h2 style="margin:0;font-size:15px">All projects — cumulative net SOL</h2><div id="legend" style="font-size:12px"></div></div><div id="combo"></div></div>
@@ -358,7 +359,7 @@ $('#params').innerHTML=Object.values(d.params).map(v=>'<div>'+v+'</div>').join('
 $('#foot').textContent='Books start when each exit began recording live: P1/P2 from 15 Oct 12:52 UTC, P3 from 16 Oct 16:00 UTC. Paper trades, no real money. Chart: cumulative net SOL over time at the selected size. Page refreshes every 10 s (figures rebuilt at most every 20 s); trades price instantly, idle coins every 20 s from DexScreener.';}
 for(const id of ['size','cost'])$('#'+id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;[...$('#'+id).children].forEach(x=>x.classList.remove('on'));b.classList.add('on');if(id==='size')SIZE=Number(b.dataset.v);else COST=Number(b.dataset.v);try{localStorage.setItem('pc',JSON.stringify({s:SIZE,c:COST}))}catch(e){}draw()});
 for(const id of ['size','cost'])[...$('#'+id).children].forEach(x=>x.classList.toggle('on',Number(x.dataset.v)===(id==='size'?SIZE:COST)));
-$('#alink').href='/analysis?key='+encodeURIComponent(key);$('#hlink').href='/history?key='+encodeURIComponent(key);
+$('#alink').href='/analysis?key='+encodeURIComponent(key);$('#hlink').href='/history?key='+encodeURIComponent(key);$('#dlink').href='/api/export?key='+encodeURIComponent(key)+'&full=1';
 const sellClick=async e=>{const b=e.target.closest('.sell button');if(!b)return;const id=b.closest('.sell').dataset.id,pct=Number(b.dataset.pct);const name=b.closest('tr').querySelector('a.coin').textContent;if(!confirm('Paper-sell '+(pct*100)+'% of '+name+' at the current price?'))return;const r=await fetch('/api/sell?key='+encodeURIComponent(key),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,pct})});const j=await r.json();if(!j.ok)alert(j.error||'failed');load()};$('#open').addEventListener('click',sellClick);$('#projects').addEventListener('click',sellClick);
 load();setInterval(load,10000);
 </script></body></html>`;
@@ -446,10 +447,18 @@ load();setInterval(load,60000);
 
 export function startWeb() {
   if (!KEY()) { console.log("[web] WEB_KEY not set — dashboard disabled"); return; }
-  const srv = createServer((req, res) => {
+  const srv = createServer(async (req, res) => {
     try {
       const u = new URL(req.url, "http://x");
       if (u.searchParams.get("key") !== KEY()) { res.writeHead(403, { "content-type": "text/plain" }); return res.end("forbidden"); }
+      if (u.pathname === "/api/export") { // v0.18.79: full CSV export as a download (no Telegram 50 MB limit)
+        const full = u.searchParams.get("full") !== "0"; let ex;
+        try { ex = await exportForWeb(full); } catch (e) { console.error("[web export]", e.message); res.writeHead(500, { "content-type": "text/plain" }); return res.end("export failed: " + e.message); }
+        if (ex === null) { res.writeHead(429, { "content-type": "text/plain; charset=utf-8" }); return res.end("An export is already running (from Telegram or another tab) — try again in a minute."); }
+        if (!ex) { res.writeHead(404, { "content-type": "text/plain" }); return res.end("no data yet"); }
+        res.writeHead(200, { "content-type": "application/zip", "content-length": ex.size, "content-disposition": `attachment; filename="${ex.name}"`, "cache-control": "no-store" });
+        const st = createReadStream(ex.zipPath); st.pipe(res); const fin = () => ex.done(); st.on("close", fin); res.on("close", () => { st.destroy(); }); return;
+      }
       if (u.pathname === "/api/sell" && req.method === "POST") { LIN.at = 0; let body = ""; req.on("data", (c) => { body += c; if (body.length > 1e4) req.destroy(); }); req.on("end", () => { try { const { id, pct } = JSON.parse(body || "{}"); let r = manualSell(Number(id), Math.min(1, Math.max(0.01, Number(pct) || 1))); if (!r?.ok) { const r6 = p6ManualSell(Number(id), Math.min(1, Math.max(0.01, Number(pct) || 1))); if (r6) r = r6; } if (!r?.ok) { const r7 = p7ManualSell(Number(id)) || copyManualSell(Number(id)); if (r7) r = r7; } /* v0.18.70 P7 / P5 sell */ res.writeHead(200, { "content-type": "application/json" }); res.end(JSON.stringify(r)); } catch (e) { res.writeHead(400, { "content-type": "application/json" }); res.end(JSON.stringify({ ok: false, error: e.message })); } }); return; }
       if (u.pathname === "/api/trades") { const days = Math.min(365, Math.max(1, Number(u.searchParams.get("days")) || 7)); res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(tradesDump(days))); }
       if (u.pathname === "/api/history") { const days = Math.min(30, Math.max(1, Number(u.searchParams.get("days")) || 3)); res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(history(days))); }

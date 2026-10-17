@@ -126,10 +126,11 @@ function queryToCsvFile(sql, path) {
   return n;
 }
 let csvBusy = false;
-async function sendCsv(full) { // v0.15.2: one zip (large CSVs crash Telegram's preview on iPad). v0.18.16: built on disk, streamed, not in memory
-  if (csvBusy) return tg("Export already running — one moment.");
-  csvBusy = true;
+export const exportBusy = () => csvBusy;
+/** v0.18.79: build the export zip on disk (shared by /csv and the website download). Caller must call done() to delete the temp folder. */
+export async function buildExport(full) {
   const day = new Date().toISOString().slice(0, 10), dir = mkdtempSync(join(tmpdir(), "tracker-csv-")), files = [], counts = [];
+  const done = () => { try { rmSync(dir, { recursive: true, force: true }); } catch {} };
   try {
     const tables = { paper_trades: PAPER_SQL, ...CSV_EXTRA };
     for (const [name, sql] of Object.entries(tables)) {
@@ -138,18 +139,31 @@ async function sendCsv(full) { // v0.15.2: one zip (large CSVs crash Telegram's 
       try { const n = queryToCsvFile(sql, path); if (n) { files.push({ name: `${name}_${day}.csv`, path }); counts.push(`${n} ${name.replace("_", " ")}`); } } catch (e) { console.error("[csv]", name, e.message); }
       await new Promise((r) => setImmediate(r)); // let the feed breathe between tables
     }
-    if (!files.length) return tg("No data yet.");
-    const zipPath = join(dir, `tracker_export_${day}.zip`), size = await zipFiles(files, zipPath);
-    const blob = typeof openAsBlob === "function" ? await openAsBlob(zipPath, { type: "application/zip" }) : new Blob([readFileSync(zipPath)], { type: "application/zip" });
+    if (!files.length) { done(); return null; }
+    const name = `tracker_export_${day}${full ? "_full" : ""}.zip`, zipPath = join(dir, name), size = await zipFiles(files, zipPath);
+    return { zipPath, name, size, counts, done };
+  } catch (e) { done(); throw e; }
+}
+const TG_MAX = 48 * 1048576; // Telegram bots can send at most 50 MB
+async function sendCsv(full) { // v0.15.2: one zip. v0.18.16: built on disk. v0.18.79: over 48 MB → point to the website download instead of uploading
+  if (csvBusy) return tg("Export already running — one moment.");
+  csvBusy = true; let ex = null;
+  try {
+    ex = await buildExport(full);
+    if (!ex) return tg("No data yet.");
+    if (ex.size > TG_MAX) return tg(`Export is ${(ex.size / 1048576).toFixed(0)} MB — over Telegram's 50 MB limit. Download it from your website instead: the <b>download data</b> link at the top of the page (always the full export, any size).`);
+    const blob = typeof openAsBlob === "function" ? await openAsBlob(ex.zipPath, { type: "application/zip" }) : new Blob([readFileSync(ex.zipPath)], { type: "application/zip" });
     const fd = new FormData();
     fd.append("chat_id", CHAT());
-    fd.append("document", blob, `tracker_export_${day}.zip`);
-    fd.append("caption", `${counts.join(" · ")} · ${(size / 1048576).toFixed(1)} MB zipped${full ? "" : " · /csvfull for token_life + wallet_buys"}`);
+    fd.append("document", blob, ex.name);
+    fd.append("caption", `${ex.counts.join(" · ")} · ${(ex.size / 1048576).toFixed(1)} MB zipped${full ? "" : " · /csvfull for token_life + wallet_buys"}`);
     const r = await fetch(`https://api.telegram.org/bot${TOKEN()}/sendDocument`, { method: "POST", body: fd, signal: AbortSignal.timeout(120000) });
     if (!r.ok) { const t = await r.text(); console.error("[csv]", t); await tg(`Export failed to send: ${esc(t.slice(0, 200))}`); }
   } catch (e) { console.error("[csv]", e.message); try { await tg(`Export failed: ${esc(e.message)}`); } catch {} }
-  finally { csvBusy = false; try { rmSync(dir, { recursive: true, force: true }); } catch {} }
+  finally { csvBusy = false; if (ex) ex.done(); }
 }
+/** v0.18.79: website download — same lock as /csv. Returns null when an export is already running. */
+export async function exportForWeb(full) { if (csvBusy) return null; csvBusy = true; try { return await buildExport(full); } finally { csvBusy = false; } }
 // v0.18.56 /gmgnsellers: one-off GMGN pull (who sold, tags, funding wallets, dev launches, 1-min candles) for every coin a project traded
 let gsBusy = false;
 async function sendGmgnSellers() {
