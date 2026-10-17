@@ -97,7 +97,7 @@ function step(pos, usd, ts) {
   if (m <= 0.1 * pos.peak) return close(pos, "dead");
   if (ts - pos.saved >= 15) { pos.saved = ts; save(pos); }
 }
-const state = (pos) => JSON.stringify({ entryUsd: pos.entryUsd, half4: pos.half4, h2: pos.h2, x: pos.x, manual: pos.manual });
+const state = (pos) => JSON.stringify({ entryUsd: pos.entryUsd, half4: pos.half4, h2: pos.h2, x: pos.x, manual: pos.manual, peak: pos.peak, low: pos.low }); // v0.18.62 peak/low kept here too
 function save(pos) { try { qSave.run(pos.peak, pos.low, pos.lowTs, pos.peakTs, pos.last, state(pos), pos.entryMc * pos.peak, pos.id); } catch {} }
 const mainValue = (pos, m) => (pos.half4 ? 2 + 0.5 * m : m);
 function close(pos, reason) {
@@ -134,11 +134,19 @@ export function p6ManualSell(id, pct) {
 }
 export const p6Open = () => [...open.values()].map((p) => ({ id: p.id, mint: p.mint, name: p.name, entryTs: p.entryTs, entryMc: p.entryMc, mult: p.last, peak: p.peak, low: p.low, half4: p.half4, manualSold: p.manual?.sold || 0, lastTs: p.lastTs }));
 
+// v0.18.62 repair: before v0.18.62 the 6-hour sweeper and the copy-trade restart rebuild also picked up open P6 rows and closed them with their
+// own exits, in SOL prices against P6's USD entry price (nonsense multiples). P6's own close always writes x_p6, so a P6 row that is closed
+// with x_p6 empty was closed by someone else: reopen it and let P6 finish it (its high / low / last are in p6_* columns and p6_state).
+try {
+  const fix = db.prepare(`UPDATE paper_trades SET closed=0, exit_reason=NULL, exit_ts=NULL WHERE strategy='p6' AND closed=1 AND x_p6 IS NULL AND COALESCE(invalid,0)=0`).run().changes;
+  if (fix) console.log(`[p6] reopened ${fix} P6 position(s) closed by the sweeper / copy-trade restore`);
+} catch (e) { console.error("[p6 repair]", e.message); }
 // restart: rebuild open P6 positions; anything past its 24 h is closed at the last recorded multiple
 try {
   for (const r of qOpen.all()) {
     let s = {}; try { s = JSON.parse(r.p6_state || "{}"); } catch {}
-    const pos = { id: r.id, mint: r.mint, name: r.name, entryTs: r.entry_ts, entryMc: r.entry_mc, entryUsd: s.entryUsd, peak: r.peak_mult || 1, low: r.p6_low || 1, peakTs: r.p6_peak_ts || r.entry_ts, lowTs: r.p6_low_ts || r.entry_ts,
+    const pk = Math.max(s.peak || 0, r.peak_mult || 0, s.half4 ? 4 : 0, s.h2 ? 2 : 0, r.p6_last || 0, 1); // peak_mult may have been overwritten by the old foreign close
+    const pos = { id: r.id, mint: r.mint, name: r.name, entryTs: r.entry_ts, entryMc: r.entry_mc, entryUsd: s.entryUsd, peak: pk, low: Math.min(s.low || 1, r.p6_low || 1), peakTs: r.p6_peak_ts || r.entry_ts, lowTs: r.p6_low_ts || r.entry_ts,
       last: r.p6_last || 1, lastTs: 0, half4: !!s.half4, h2: !!s.h2, x: s.x || {}, manual: s.manual || null, saved: 0 };
     if (!(pos.entryUsd > 0)) { pos.closed = false; close(pos, "restart-no-price"); continue; }
     open.set(r.mint, pos);

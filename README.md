@@ -71,6 +71,10 @@ prices it). /status gets a "Volume log (24 h)" line: wake-ups, our feed only / G
 — the exchanges our own feed cannot read — every 6 s each, into the same checks (volume log, P6, flags). GMGN's default Solana safety filter
 (mint + freeze authority renounced) still applies. /status shows each list's coins, top 5-minute volume and any off-venue rows (a check that
 GMGN applies the filter).
+**P6 fix:** two older modules treated open P6 positions as their own — the 6-hour sweeper (would close every P6 trade at 6 h, from ~19:00 UK
+on 17 Oct) and the copy-trade rebuild after every restart (closed P6 trades with momentum exits). Both used SOL prices against P6's USD entry
+price, so the multiples were nonsense. Both now skip P6; on start P6 reopens any P6 row closed by someone else (closed with x_p6 empty) and
+finishes it itself. P6's peak / low are now also kept in p6_state.
 
 ## v0.18.61 — card charts since the rule's data begins (17 Oct)
 Recent-trades table: a project that did not buy a trigger now shows **"skip · <reason>"** (MC over $47K / bundled 70%+ / not SOL-paired) with "if taken" underneath, instead of faint numbers. P1A/P1B/P2A/P2B cards add a live **what-if** block: the core triggers each rule skipped since its fresh start, by reason, and what they would have made — to check whether the $47K cap and the bundle rule are right. /gmgnsellers while a pull is running now says so (no misleading "started").
