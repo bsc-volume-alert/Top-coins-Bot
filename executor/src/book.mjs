@@ -48,9 +48,9 @@ export const pendingBuys = () => db.prepare(`SELECT * FROM orders WHERE side='bu
 export const lastSellSig = (paperId) => db.prepare(`SELECT id, sig FROM orders WHERE side='sell' AND paper_id=? AND sig IS NOT NULL ORDER BY id DESC LIMIT 1`).get(paperId);
 /** last closed positions with their buy / sell orders, for the website's wallet box */
 export function recentClosed(n = 10) {
-  return db.prepare(`SELECT p.*, b.fill_tokens b_tokens, b.from_trigger_ms b_ms, b.sig b_sig, b.detail b_detail, s.sig s_sig, s.rule s_rule FROM positions p
+  return db.prepare(`SELECT p.*, b.fill_tokens b_tokens, b.stake_lamports b_stake, b.from_trigger_ms b_ms, b.sig b_sig, b.detail b_detail, s.sig s_sig, s.rule s_rule FROM positions p
     LEFT JOIN orders b ON b.id=p.buy_order LEFT JOIN orders s ON s.id=p.sell_order WHERE p.status='closed' ORDER BY p.closed_ts DESC LIMIT ?`).all(n)
-    .map((r) => { let d = {}; try { d = JSON.parse(r.b_detail || "{}"); } catch {} const livePx = r.cost_lamports > 0 && r.b_tokens > 0 ? (r.cost_lamports / 1e9) / (r.b_tokens / 1e6) : null;
+    .map((r) => { let d = {}; try { d = JSON.parse(r.b_detail || "{}"); } catch {} const livePx = (r.b_stake || r.cost_lamports) > 0 && r.b_tokens > 0 ? ((r.b_stake || r.cost_lamports) / 1e9) / (r.b_tokens / 1e6) : null; // entry price from the SOL that went into the pool, not the tip
       return { id: r.paper_id, name: r.name, mint: r.mint, mode: r.mode, opened_ts: r.opened_ts, closed_ts: r.closed_ts, cost: r.cost_lamports / 1e9, proceeds: (r.proceeds_lamports || 0) / 1e9, pnl: (r.pnl_lamports || 0) / 1e9,
         liveX: r.cost_lamports > 0 ? (r.proceeds_lamports || 0) / r.cost_lamports : null, paperX: r.paper_exit_mult, rule: r.exit_rule, ms: r.b_ms, buySig: r.b_sig, sellSig: r.s_sig, gap: livePx && r.paper_entry_price ? livePx / r.paper_entry_price - 1 : null }; });
 }

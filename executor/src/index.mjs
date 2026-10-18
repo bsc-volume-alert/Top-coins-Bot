@@ -149,8 +149,9 @@ async function handleTrigger(m) {
     if (S.mode !== "live") { // shadow: the chain's simulated fill is the fill (falls back to our quote if the post-state was not returned)
       const simTok = parseTokenAccount(sim.post?.[0])?.amount ?? null; const got = simTok != null && simTok > 0n ? simTok : b.expected; const off = simTok != null && simTok > 0n ? Number(simTok) / Number(b.expected) - 1 : null;
       if (off != null && Math.abs(off) > 0.05) log("quote-off", `${m.name} ${b.ixKind}: our quote ${b.expected} vs chain ${simTok} (${(off * 100).toFixed(1)}%)`);
-      openPosition.run({ paper_id: m.id, mint: m.mint, name: m.name, strategy: m.strategy, mode: "shadow", opened_ts: nowS(), tokens: Number(got), cost_lamports: stake, buy_order: id, venue: v.kind, ix_kind: b.ixKind, paper_entry_price: m.price });
-      updOrder(id, { status: "shadow-filled", fill_tokens: Number(got), fill_sol: -stake, from_trigger_ms: fromTrig(), detail: { paperPrice: m.price, paperMc: m.mc, lagMs: m.lagMs ?? null, bundle: m.bundle ?? null, wal60: m.wal60 ?? null, feeBps: b.feeBps, tVenueMs: tVenue, quoteTokens: Number(b.expected), simTokens: simTok == null ? null : Number(simTok), quoteOff: off } }); afterOpen(m.id); return;
+      const costAll = stake + lamports(CFG.TIP_SOL) + 5000; // v0.1.3: the buy's tip and network fee count against the trade, as the sell's already do
+      openPosition.run({ paper_id: m.id, mint: m.mint, name: m.name, strategy: m.strategy, mode: "shadow", opened_ts: nowS(), tokens: Number(got), cost_lamports: costAll, buy_order: id, venue: v.kind, ix_kind: b.ixKind, paper_entry_price: m.price });
+      updOrder(id, { status: "shadow-filled", fill_tokens: Number(got), fill_sol: -costAll, from_trigger_ms: fromTrig(), detail: { paperPrice: m.price, paperMc: m.mc, lagMs: m.lagMs ?? null, bundle: m.bundle ?? null, wal60: m.wal60 ?? null, feeBps: b.feeBps, tVenueMs: tVenue, quoteTokens: Number(b.expected), simTokens: simTok == null ? null : Number(simTok), quoteOff: off } }); afterOpen(m.id); return;
     }
     // live: sign; the signature is on record BEFORE the first send, so a buy that lands late (or after a crash) is found by the reconciler and never left unmanaged.
     tx.sign([S.kp]); const sig = bs58.encode(tx.signatures[0]);
