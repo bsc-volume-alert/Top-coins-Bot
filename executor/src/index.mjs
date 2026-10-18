@@ -132,14 +132,14 @@ async function handleTrigger(m) {
     const v = await venueOf(m.mint); const tVenue = Date.now() - t0;
     if (v.kind === "none") return skip(v.reason);
     if (v.kind === "curve" && !v.solQuoted) return skip("curve not SOL-quoted");
-    let b = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, v.kind === "amm" ? "amm" : "classic"); const pre = await userVolPrefix(v.kind);
+    let b = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, v.kind === "amm" ? "amm" : "v3"); const pre = await userVolPrefix(v.kind); // curve: v3 first (simulated clean on a mayhem coin, 18 Oct); pool: classic first
     if (!(b.minOut > 0n)) return skip("quote gave a zero minimum — pool state unreadable");
     const id = newOrder({ side: "buy", paper_id: m.id, mint: m.mint, name: m.name, strategy: m.strategy, venue: v.kind, ix_kind: b.ixKind, stake_lamports: stake, slippage: CFG.SLIP_BUY, quote_out: b.expected, min_out: b.minOut, tip_lamports: lamports(CFG.TIP_SOL), cu_price: CFG.CU_PRICE,
       from_trigger_ms: fromTrig(), detail: { paperPrice: m.price, paperMc: m.mc, lagMs: m.lagMs ?? null, bundle: m.bundle ?? null, wal60: m.wal60 ?? null, feeBps: b.feeBps, tVenueMs: tVenue, curveMcSol: v.curve ? +pump.curveMcSol(v.curve).toFixed(1) : null } });
     let tx = await buildTx(S.pub, wrap(S.pub, [...pre, ...b.ixs], lamports(CFG.TIP_SOL), CFG.CU_PRICE));
     // shadow always simulates; live simulates unless EXEC_SIM_BEFORE_SEND=0. A program refusal on the classic instruction → try the other form once (v3 on the curve, IDL-v2 on the pool)
     let sim = S.mode === "live" && !CFG.SIM_BEFORE_SEND ? { ok: true, err: null, logs: [], units: null, ms: 0, skipped: true } : await simulate(tx);
-    if (progErr(sim)) { const altKind = v.kind === "curve" ? "v3" : "amm2"; const b3 = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, altKind); const tx3 = await buildTx(S.pub, wrap(S.pub, [...pre, ...b3.ixs], lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim3 = await simulate(tx3);
+    if (progErr(sim)) { const altKind = v.kind === "curve" ? "classic" : "amm2"; const b3 = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, altKind); const tx3 = await buildTx(S.pub, wrap(S.pub, [...pre, ...b3.ixs], lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim3 = await simulate(tx3);
       updOrder(id, { detail: { firstKind: b.ixKind, firstErr: sim.err, firstLogs: sim.logs.slice(-4) } }); if (sim3.ok || !progErr(sim3)) { b = b3; tx = tx3; sim = sim3; } }
     if (!(b.minOut > 0n)) return skip("quote gave a zero minimum — pool state unreadable");
     updOrder(id, { ix_kind: b.ixKind, quote_out: b.expected, min_out: b.minOut, sim_ok: sim.ok ? 1 : 0, sim_err: sim.err, sim_units: sim.units, sim_ms: sim.ms, status: sim.ok ? "simulated" : "sim-failed" });
@@ -321,14 +321,15 @@ if (cmd === "selftest") {
   console.log(`wallet: ${S.pub ? S.pub.toBase58() : "none (simulating with a placeholder payer — expect an insufficient-funds error, the account list is still checked)"}`);
   const v = await venueOf(mintStr); console.log("venue:", v.kind, v.kind === "curve" ? `MC ${pump.curveMcSol(v.curve).toFixed(1)} SOL · complete ${v.curve.complete} · creator ${v.curve.creator.toBase58()} · creatorFeeBps ${v.curve.creatorFeeBps} · acct len ${v.curve.len} · solQuoted ${v.solQuoted}` : v.kind === "amm" ? `pool ${v.poolPk.toBase58()} base ${v.baseRes} quote ${v.quoteRes}` : v.reason);
   const pre = S.pub ? await userVolPrefix(v.kind === "curve" ? "curve" : "amm") : []; console.log(`user volume accumulator (${v.kind === "curve" ? "pump" : "amm"}): ${pre.length ? "missing — create instruction goes in front of the first buy" : "exists"}`);
-  if (v.kind !== "none") for (const kind of v.kind === "curve" ? ["classic", "v3"] : ["amm", "amm2"]) {
+  if (v.kind !== "none") for (const kind of v.kind === "curve" ? ["v3", "classic"] : ["amm", "amm2"]) {
     const b = buyIxs(v, user, lamports(stakeSol), CFG.SLIP_BUY, kind); const tx = await buildTx(user, wrap(user, [...pre, ...b.ixs], lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim = await simulate(tx);
     console.log(`buy ${kind}: expected ${b.expected} tokens (min ${b.minOut}) feeBps ${b.feeBps} · sim ${sim.ok ? "OK" : "FAILED " + sim.err} · units ${sim.units} · ${sim.ms} ms`); if (!sim.ok) console.log("   logs:", sim.logs.slice(-6).join("\n         "));
-    if (b.expected > 0n) { const sIx = sellIxs(v, user, b.expected, CFG.SLIP_SELL, kind); console.log(`sell ${kind}: ${b.expected} tokens → ${sol(sIx.expected).toFixed(5)} SOL expected (min ${sol(sIx.minOut).toFixed(5)}) — round trip ${((Number(sIx.expected) / lamports(stakeSol) - 1) * 100).toFixed(2)}% at an unmoved price`);
-      // we hold no tokens, so the sell is simulated right behind the buy in one transaction: buy, then sell the minimum the buy guarantees
-      // (no tip / priority-fee instructions here — with both swaps the transaction is otherwise over the 1232-byte limit)
-      const rt = sellIxs(v, user, b.minOut, CFG.SLIP_SELL, kind); const stx = await buildTx(user, [ixBudget(400000, 0)[0], ...pre, ...b.ixs, ...rt.ixs]).catch((e) => ({ err: e.message })); const ssim = stx.err ? { ok: false, err: stx.err, logs: [] } : await simulate(stx);
-      console.log(`   buy+sell in one tx: ${ssim.ok ? "OK · units " + ssim.units : "FAILED " + ssim.err + " | " + ssim.logs.slice(-4).join(" | ")}`); }
+    if (b.expected > 0n) { // the sell is quoted against the state our buy would leave behind, so the round trip is what we would really pay in fees
+      const net = BigInt(lamports(stakeSol)) - (BigInt(lamports(stakeSol)) * BigInt(b.feeBps)) / 10000n;
+      const after = v.kind === "curve" ? { ...v, curve: { ...v.curve, vSol: v.curve.vSol + net, vTok: v.curve.vTok - b.expected } } : { ...v, baseRes: BigInt(v.baseRes) - b.expected, quoteRes: BigInt(v.quoteRes) + net };
+      const sIx = sellIxs(after, user, b.expected, CFG.SLIP_SELL, kind); console.log(`sell ${kind}: ${b.expected} tokens → ${sol(sIx.expected).toFixed(5)} SOL expected (min ${sol(sIx.minOut).toFixed(5)}) — round trip ${((Number(sIx.expected) / lamports(stakeSol) - 1) * 100).toFixed(2)}% if the price did not move`);
+      // (a buy and a sell together do not fit in one 1232-byte transaction, so the sell layout is checked by the first real position, not here)
+    }
   }
   console.log("rpc:", rpcStats); process.exit(0);
 } else if (cmd === "orders") {
