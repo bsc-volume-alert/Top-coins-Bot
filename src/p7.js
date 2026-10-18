@@ -15,7 +15,7 @@ import { momSnap } from "./momentum.js";
 const E = (k, d) => Number(process.env[k] || d);
 const MIN_MC = E("P7_MIN_MC", 300_000), MAX_MC = E("P7_MAX_MC", 1_500_000), VOL1 = E("P7_VOL1M_USD", 20_000) /* v0.18.73 owner 17 Oct 21:02: $20K a minute, 3 minutes in a row (was $50K) */, MIN_AGE_H = E("P7_MIN_AGE_H", 6);
 const TOP10 = E("P7_TOP10", 0.20), DEV = E("P7_DEV", 0.05), BUNDLE = E("P7_BUNDLE", 0.15), GOLDEN = E("P7_GOLDEN_USD", 15_000), STOP = 0.6;
-const ENABLED = process.env.P7_ENABLED !== "0", AFTER_S = 86400, NO_DATA_S = 6 * 3600, REPEAT_S = 86400;
+const ENABLED = process.env.P7_ENABLED === "1", AFTER_S = 86400, NO_DATA_S = 6 * 3600, REPEAT_S = 86400; // v0.18.88: no new P7 entries — folded into Project 6 v3 as flags (P7_ENABLED=1 turns it back on); open positions and the 24 h after-watch still run
 export const P7_VOL1 = VOL1;
 const NOT_COINS = new Set(["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB"]);
 

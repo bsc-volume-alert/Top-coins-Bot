@@ -3,6 +3,7 @@
 // whatever closed the paper position, so longer holds can be scored later.
 import { CFG } from "./config.js";
 import { db, q } from "./db.js";
+import { solUsdCached } from "./price.js"; // v0.18.88: P6 rows store a USD entry price; the feed ticks here are SOL prices
 export const AFTER_MARKS = [420, 600, 900, 1200, 1800];
 const W = new Map(); // mint -> [{id, entry, until, peak, peakMc, entryTs, ap}]
 export function watch(mint, id, entryPrice, entryMc, until = null, peak = null, peakMc = null, entryTs = null, ap = null) {
@@ -32,11 +33,13 @@ export function tick(mint, price, mc) {
   }
 }
 // v0.18.39: the 24 h after-entry watch survives restarts — rebuilt from the database for every momentum / P5 entry still inside its window.
-const qRe = db.prepare(`SELECT id, mint, entry_ts, entry_price, entry_mc, peak_mult, after_peak_mult, after_peak_mc, after_path FROM paper_trades WHERE strategy IN ('momentum','momconf','mom2m','p5e30','p5e50','p5e80','p5w30') AND entry_price > 0 AND COALESCE(invalid,0)=0 AND entry_ts > ?`);
+// v0.18.88: P6 added (its entry_price is USD per token → converted to SOL with the current SOL price; the 24-h after-figures for P6 are therefore in SOL terms, ± SOL's own move)
+const qRe = db.prepare(`SELECT id, mint, strategy, entry_ts, entry_price, entry_mc, peak_mult, after_peak_mult, after_peak_mc, after_path FROM paper_trades WHERE strategy IN ('momentum','momconf','mom2m','p5e30','p5e50','p5e80','p5w30','p6') AND entry_price > 0 AND COALESCE(invalid,0)=0 AND entry_ts > ?`);
 try { const now = Math.floor(Date.now() / 1000); let n = 0;
   for (const r of qRe.all(now - CFG.AFTER_CLOSE_H * 3600)) {
     const pk = Math.max(r.after_peak_mult || 1, r.peak_mult || 1, 1); let ap = null; try { ap = r.after_path ? JSON.parse(r.after_path) : null; } catch {}
-    watch(r.mint, r.id, r.entry_price, r.entry_mc, r.entry_ts + CFG.AFTER_CLOSE_H * 3600, r.entry_price * pk, r.after_peak_mc ?? r.entry_mc * pk, r.entry_ts, ap); n++;
+    const ep = r.strategy === "p6" ? r.entry_price / Math.max(solUsdCached(), 1) : r.entry_price; if (!(ep > 0)) continue;
+    watch(r.mint, r.id, ep, r.entry_mc, r.entry_ts + CFG.AFTER_CLOSE_H * 3600, ep * pk, r.after_peak_mc ?? r.entry_mc * pk, r.entry_ts, ap); n++;
   }
   if (n) console.log(`[aftercare] re-armed ${n} after-entry watches`);
 } catch (e) { console.error("[aftercare restore]", e.message); }
