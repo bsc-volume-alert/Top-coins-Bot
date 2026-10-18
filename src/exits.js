@@ -98,9 +98,17 @@ export function s15Step(e, x, mult) {
 export const s15Final = (e, x, mult) => x.s15be ?? (e.s15Half ? 0.75 + 0.5 * Math.min(mult, 2) : mult);
 // v0.18.81 "hold-5" exits (P5 analysis, 17 Oct): −40% stop until 1.5x; once 1.5x is seen never let it fall below the floor F; whatever is
 // left is sold at T seconds after entry. Variants: h5 (5 min, floor 1.3), h5f12 (floor 1.2), h5f14 (floor 1.4), h3 (3 min, floor 1.3).
-export const H5 = { h5: [300, 1.3], h5f12: [300, 1.2], h5f14: [300, 1.4], h3: [180, 1.3] };
+export const H5 = { h5: [300, 1.3], h5f12: [300, 1.2], h5f14: [300, 1.4], h3: [180, 1.3], h15: [900, 1.3] }; // v0.18.87: + hold-15
+// v0.18.87 "fast starters run": the state 60 s after entry decides — up 30%+ → hold until the position itself closes (golden rule / −80% / 6 h), no stop;
+// otherwise exactly hold-5 (floor 1.3). Recorded as x_h5fast. Before 60 s only the −40% stop applies.
+export const H5_KEYS = [...Object.keys(H5), "h5fast"];
 export function h5Step(e, x, mult, sinceS) {
   if (!e.h5Armed && mult >= 1.5) e.h5Armed = true;
+  if (e.h5Fast == null && sinceS != null && sinceS >= 60) e.h5Fast = mult >= 1.3; // first tick at/after 60 s fixes the state (a restored position decides on its first tick)
+  if (x.h5fast == null) {
+    if (!e.h5Armed && mult <= 0.6 && e.h5Fast !== true) x.h5fast = mult;
+    else if (e.h5Fast === false) { if (e.h5Armed && mult <= 1.3) x.h5fast = mult; else if (sinceS != null && sinceS >= 300) x.h5fast = mult; }
+  }
   for (const [k, [T, F]] of Object.entries(H5)) {
     if (x[k] != null) continue;
     if (!e.h5Armed && mult <= 0.6) { x[k] = mult; continue; }
@@ -108,8 +116,8 @@ export function h5Step(e, x, mult, sinceS) {
     if (sinceS != null && sinceS >= T) x[k] = mult;
   }
 }
-export function h5Final(e, x, mult) { const o = {}; for (const k of Object.keys(H5)) o[k] = x[k] ?? mult; return o; }
-export const h5Key = (x) => `${x.h5}|${x.h5f12}|${x.h5f14}|${x.h3}`;
+export function h5Final(e, x, mult) { const o = {}; for (const k of H5_KEYS) o[k] = x[k] ?? mult; return o; }
+export const h5Key = (x) => H5_KEYS.map((k) => x[k]).join("|");
 export function stepExits(e, price, mc, v5Usd, buyUsd, sellUsd, sinceS = null) {
   if (price > e.peak) e.peak = price;
   const mult = price / e.entry, fromPeak = price / e.peak - 1, x = e.x;
