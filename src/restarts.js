@@ -11,7 +11,8 @@ export const RESTARTS_FILE = join(dirname(CFG.DB_PATH), "restarts.txt");
 const LOOP_GAP_S = 150, LOOP_MIN = 4, PAD_BEFORE = 60, PAD_AFTER = 120;
 let TS = [];
 function load() { try { TS = [...new Set(readFileSync(RESTARTS_FILE, "utf8").split(/\s+/).map(Number).filter((n) => n > 1.7e9))].sort((a, b) => a - b); } catch { TS = []; } }
-export function recordBoot() { const now = Math.floor(Date.now() / 1000); try { mkdirSync(dirname(RESTARTS_FILE), { recursive: true }); appendFileSync(RESTARTS_FILE, now + "\n"); } catch (e) { console.error("[restarts]", e.message); } load(); }
+export function recordBoot() { const now = Math.floor(Date.now() / 1000); if (process.env.SMOKE) { load(); return; } // v0.18.99: the deploy's 45 s test boot is not a restart of the live bot (it tripped the loop alarm on back-to-back pushes)
+  try { mkdirSync(dirname(RESTARTS_FILE), { recursive: true }); appendFileSync(RESTARTS_FILE, now + "\n"); } catch (e) { console.error("[restarts]", e.message); } load(); }
 export function loopWindows() {
   const W = []; if (!TS.length) return W; let run = [TS[0]];
   for (let i = 1; i <= TS.length; i++) {
