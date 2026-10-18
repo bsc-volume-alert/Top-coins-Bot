@@ -134,3 +134,6 @@ Test: 40 trades; an exit must be net > 0 in both halves. Expect few trades (stri
 - **P5 Hold-5:** first 40 live trades from 18 Oct 00:20 UTC. **Adopt as Project 5's exit** if `x_h5` net > 0, beats `x_flow4` on the same trades, and is ahead in both halves; otherwise keep the runner. Floor variants and hold-3 are descriptive only.
 - **P5 Wide:** first 40 trades on the extra coins ($100K–$250K). **Keep** if net > 0 and win ≥ 55%; **kill** otherwise. No prior evidence.
 - **P5 Strict (50 SOL):** next 40 trades. **Confirm** if net > 0, win ≥ 55% and net per trade ≥ Project 5's on the same window; otherwise it stays a comparison line.
+
+## P6 v2 — review 18 Oct 2026 00:50 UTC (v0.18.82)
+14 trades on 7 coins (one evening): A +1.12 (11 won), B +0.97, C +0.55, old +0.48; first level per coin A +0.81. 4 of 7 reached 2x while held, 0 reached 3x. Golden rule closed 9 of 14; El Gato (5x two hours after a 1.2x golden-rule sale on a one-pool volume reading) cost more than the whole result. Candidates: 5 in-band wake-ups in 7 h of the volume log. Decision: headline exit A; DexScreener all-pool volume referee; **judge at 20 coins (first level per coin)** — ≥ +0.10 per coin and positive in both halves → live trial at 0.25; otherwise cut. Not changed: age, MC band, levels, rebuy.

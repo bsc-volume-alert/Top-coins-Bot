@@ -56,6 +56,10 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.82 — P6: exit A is the headline; golden rule referee = DexScreener over every pool (18 Oct)
+- P6 analysis (14 trades / 7 coins): A (all at 2x) +1.12, B +0.97, C +0.55; no coin reached 3x while held. El Gato was sold by the golden rule at 1.05–1.23x because its second pool looked dead; it reached 4.97x two hours later. The feed sees a median 67% of GMGN's 5-min volume on these coins.
+- Headline exit A (card figures, chart, tile, bottom table); B and C still recorded and shown. The parked v0.18.72 referee is live for P6: DexScreener's 5-min volume summed over every pool decides the golden rule when fresh (< 90 s, refreshed every ~40 s); feed / GMGN only when DexScreener has not answered. P7 unchanged.
+
 ## v0.18.81 — P5 deviations: Hold-5, Wide, Strict (18 Oct)
 From the 17 Oct P5 analysis (150 live-book trades, one day): entry features do not separate winners from losers; the exit does. The runner (built for P2's $100K/5m coins) sells P5 winners straight after 1.5x (mean 1.53x) while the same coins average 1.64x at 5 minutes.
 - **Hold-5 exit** (`x_h5`): −40% stop until 1.5x; once 1.5x is seen, sell if it falls back to 1.3x; whatever is left is sold at 5 minutes. Variants `x_h5f12` (floor 1.2), `x_h5f14` (1.4), `x_h3` (3 min). Recorded on every position (core and variant). Back-test on the same 150 trades: +4.90 vs +3.08 (both halves, all three windows), fitted. Earlier P5 trades are scored from their path marks at startup (`h5_retro=1`, approximate).

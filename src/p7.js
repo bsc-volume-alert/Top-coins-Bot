@@ -19,7 +19,7 @@ const ENABLED = process.env.P7_ENABLED !== "0", AFTER_S = 86400, NO_DATA_S = 6 *
 export const P7_VOL1 = VOL1;
 const NOT_COINS = new Set(["So11111111111111111111111111111111111111112", "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB"]);
 
-for (const c of ["x_p7_2 REAL", "x_p7_3 REAL", "x_p7_4 REAL", "p7_json TEXT", "p7_state TEXT", "p7_after_peak REAL", "p7_after_ts INTEGER"]) { try { db.exec(`ALTER TABLE paper_trades ADD COLUMN ${c}`); } catch {} }
+for (const c of ["p6_low REAL", "p6_low_ts INTEGER", "p6_peak_ts INTEGER", "p6_last REAL", "x_p7_2 REAL", "x_p7_3 REAL", "x_p7_4 REAL", "p7_json TEXT", "p7_state TEXT", "p7_after_peak REAL", "p7_after_ts INTEGER"] /* v0.18.82: own columns on a fresh database */) { try { db.exec(`ALTER TABLE paper_trades ADD COLUMN ${c}`); } catch {} }
 const qRecent = db.prepare(`SELECT 1 FROM paper_trades WHERE strategy='p7' AND mint=? AND (closed=0 OR exit_ts > ?) LIMIT 1`);
 const qSave = db.prepare(`UPDATE paper_trades SET peak_mult=?, p6_low=?, p6_low_ts=?, p6_peak_ts=?, p6_last=?, p7_state=?, peak_mc=? WHERE id=?`);
 const qClose = db.prepare(`UPDATE paper_trades SET closed=1, exit_ts=?, exit_reason=?, x_p7_2=?, x_p7_3=?, x_p7_4=?, peak_mult=?, p6_low=?, p6_low_ts=?, p6_peak_ts=?, p6_last=?, p7_state=? WHERE id=?`);
