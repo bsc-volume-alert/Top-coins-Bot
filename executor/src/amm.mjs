@@ -19,7 +19,7 @@ export function decodePool(data) {
   if (!data || data.length < 243 || !data.subarray(0, 8).equals(POOL_DISC)) return null;
   const p = { index: data.readUInt16LE(9), creator: readPk(data, 11), baseMint: readPk(data, 43), quoteMint: readPk(data, 75), lpMint: readPk(data, 107), baseAcc: readPk(data, 139), quoteAcc: readPk(data, 171),
     coinCreator: readPk(data, 211), virtualQuote: 0n, creatorFeeBps: null };
-  if (data.length >= 261) { try { p.virtualQuote = data.readBigInt128LE ? data.readBigInt128LE(245) : BigInt(data.readBigUInt64LE(245)); } catch { p.virtualQuote = 0n; } }
+  if (data.length >= 261) { try { p.virtualQuote = (data.readBigInt64LE(253) << 64n) | data.readBigUInt64LE(245); } catch { p.virtualQuote = 0n; } } // i128 LE: low u64 then signed high
   if (data.length >= 269) p.creatorFeeBps = Number(readU64(data, 261));
   return p;
 }

@@ -27,6 +27,14 @@ in `src/` is changed for it except the measurements below and, later, one line t
 - Tracker side (`src/execlink.js` + three hook lines in `copytrade.js`, one in `commands.js`): P5-family entries → `trigger`; hold-5 / runner firing → `exit`;
   paper close → `close`; `/live …` → `cmd`. Nothing in the tracker waits on the executor.
 
+## Independent review, 18 Oct evening (12 findings, all fixed before any live trade)
+Signature recorded before the first send and late-landing buys reconciled from the chain (never an unmanaged position) · exits that arrive during a
+buy are acted on the moment it books · failed sells retried every 20 s until gone · every sell attempt's signature checked so an earlier landing is
+booked at its real proceeds (no false "lost" + false daily stop) · position cap and same-coin guard reserved before any await (no burst over-buy) ·
+PumpSwap virtual-quote i128 read fixed (+ a zero-minimum guard on every buy) · one sell at a time per position · v3 buyback recipient zero-key
+check · u64 encoding BigInt-safe · tracker pings carry the feed's last trade time, a silent feed counts as tracker-down, restored P5 positions keep
+forwarding exits · `/live on` really re-arms the daily stop · fill read-back retried.
+
 ## Shadow mode needs a funded wallet
 A buy can only be simulated against the chain with a payer that holds the stake, so shadow mode simulates with the real bot wallet: ~0.2 SOL in it
 is enough at a 0.1 stake. Nothing is signed in shadow mode. Shadow sells are quoted from the curve at the moment the exit fires (a sell cannot be

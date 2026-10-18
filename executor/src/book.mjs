@@ -44,6 +44,8 @@ export function dayNet(mode = CFG.MODE) { // today's realised result in lamports
   const start = Math.floor(Date.now() / 86400000) * 86400;
   return db.prepare(`SELECT COALESCE(SUM(pnl_lamports),0) n, COUNT(*) c FROM positions WHERE status='closed' AND mode=? AND closed_ts>=?`).get(mode, start);
 }
+export const pendingBuys = () => db.prepare(`SELECT * FROM orders WHERE side='buy' AND mode='live' AND status IN ('sent','pending') ORDER BY id`).all();
+export const lastSellSig = (paperId) => db.prepare(`SELECT id, sig FROM orders WHERE side='sell' AND paper_id=? AND sig IS NOT NULL ORDER BY id DESC LIMIT 1`).get(paperId);
 export function recentOrders(n = 20) { return db.prepare(`SELECT * FROM orders ORDER BY id DESC LIMIT ?`).all(n); }
 export function stats() {
   const o = db.prepare(`SELECT side, status, COUNT(*) n FROM orders WHERE ts > ? GROUP BY side, status`).all(now() - 86400);

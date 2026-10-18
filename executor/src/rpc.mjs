@@ -17,9 +17,9 @@ export async function getAccounts(pubkeys, commitment = "processed") {
 }
 export async function getBalance(pubkey) { rpcStats.calls++; return conn.getBalance(pubkey, "confirmed"); }
 export async function buildTx(payer, ixs, signer = null) {
-  const { blockhash: b } = await blockhash();
+  const { blockhash: b, lastValidBlockHeight } = await blockhash();
   const msg = new TransactionMessage({ payerKey: payer, recentBlockhash: b, instructions: ixs }).compileToV0Message();
-  const tx = new VersionedTransaction(msg); if (signer) tx.sign([signer]); return tx;
+  const tx = new VersionedTransaction(msg); tx.lastValidBlockHeight = lastValidBlockHeight; if (signer) tx.sign([signer]); return tx;
 }
 /** Simulate (no signature needed). Returns { ok, err, logs, units, ms }. */
 export async function simulate(tx) {
@@ -64,10 +64,12 @@ export async function waitConfirm(sig, ms = 20000) {
   }
   return { status: "timeout", slot: null, err: null };
 }
-/** What actually happened: SOL change for the payer (lamports, fee included) and token change for the mint. */
-export async function readFill(sig, payer, mint) {
-  rpcStats.calls++;
-  const tx = await conn.getTransaction(sig, { maxSupportedTransactionVersion: 0, commitment: "confirmed" }); if (!tx?.meta) return null;
+export async function blockHeight() { rpcStats.calls++; return conn.getBlockHeight("confirmed"); }
+export async function signatureStatus(sig) { rpcStats.calls++; const r = await conn.getSignatureStatuses([sig]); const s = r.value[0]; return s ? { status: s.err ? "failed" : (s.confirmationStatus === "confirmed" || s.confirmationStatus === "finalized") ? "confirmed" : "processed", slot: s.slot, err: s.err ? JSON.stringify(s.err) : null } : { status: "unknown" }; }
+/** What actually happened: SOL change for the payer (lamports, fee included) and token change for the mint. Retries a few times — the node can lag the confirmation by a moment. */
+export async function readFill(sig, payer, mint, tries = 4) {
+  let tx = null; for (let i = 0; i < tries && !tx?.meta; i++) { if (i) await new Promise((r) => setTimeout(r, 600)); rpcStats.calls++; tx = await conn.getTransaction(sig, { maxSupportedTransactionVersion: 0, commitment: "confirmed" }).catch(() => null); }
+  if (!tx?.meta) return null;
   const keys = tx.transaction.message.staticAccountKeys.map((k) => k.toBase58()), i = keys.indexOf(payer.toBase58());
   const solDelta = i >= 0 ? tx.meta.postBalances[i] - tx.meta.preBalances[i] : null;
   const tok = (arr) => (arr || []).filter((b) => b.mint === mint.toBase58() && b.owner === payer.toBase58()).reduce((a, b) => a + Number(b.uiTokenAmount.amount), 0);

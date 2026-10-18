@@ -58,6 +58,7 @@ export const curveMcSol = (curve) => Number(curve.vSol) / Number(curve.vTok) * N
 
 const key = (pubkey, w = false, s = false) => ({ pubkey, isSigner: s, isWritable: w });
 const optBool = (b) => Buffer.from([b ? 1 : 0]);
+const buybackOf = (global) => (global.buybackFeeRecipients || []).find((k) => !k.equals(ZERO)) || global.feeRecipient; // an unset slot is the zero key, which is truthy
 
 /** Classic buy: spend exactly `spendLamports`, receive ≥ minTokens. Returns [createATA, buy]. */
 export function ixBuyClassic({ user, mint, curve, global, tokenProgram = TOKEN, spendLamports, minTokens, partialFill = true }) {
@@ -79,7 +80,7 @@ export function ixSellClassic({ user, mint, curve, global, tokenProgram = TOKEN,
 }
 /** v3 buy (quote held as WSOL): wrap SOL into the user's WSOL account, buy, unwrap what is left. */
 export function ixBuyV3({ user, mint, curve, global, tokenProgram = TOKEN, spendLamports, minTokens, partialFill = true }) {
-  const bc = curveOf(mint), quote = WSOL, wsolAta = ata(user, quote, TOKEN), buyback = global.buybackFeeRecipients[0] || global.feeRecipient;
+  const bc = curveOf(mint), quote = WSOL, wsolAta = ata(user, quote, TOKEN), buyback = buybackOf(global);
   const keys = [key(GLOBAL), key(mint), key(quote), key(tokenProgram), key(TOKEN), key(bc, true), key(ata(bc, mint, tokenProgram), true), key(ata(bc, quote, TOKEN), true), key(user, true, true),
     key(ata(user, mint, tokenProgram), true), key(wsolAta, true), key(userVolOf(user), true), key(FEE_CONFIG), key(buyback, true), key(SYSTEM), key(EVENT_AUTHORITY), key(PUMP)];
   const data = Buffer.concat([Buffer.from(DISC.buyExactQuoteInV3), u64(spendLamports), u64(minTokens), optBool(partialFill)]);
@@ -87,7 +88,7 @@ export function ixBuyV3({ user, mint, curve, global, tokenProgram = TOKEN, spend
     new TransactionInstruction({ programId: PUMP, keys, data }), ixCloseAccount(wsolAta, user, user, TOKEN)];
 }
 export function ixSellV3({ user, mint, curve, global, tokenProgram = TOKEN, amount, minSol, close = true }) {
-  const bc = curveOf(mint), quote = WSOL, wsolAta = ata(user, quote, TOKEN), userAta = ata(user, mint, tokenProgram), buyback = global.buybackFeeRecipients[0] || global.feeRecipient;
+  const bc = curveOf(mint), quote = WSOL, wsolAta = ata(user, quote, TOKEN), userAta = ata(user, mint, tokenProgram), buyback = buybackOf(global);
   const keys = [key(GLOBAL), key(mint), key(quote), key(tokenProgram), key(TOKEN), key(bc, true), key(ata(bc, mint, tokenProgram), true), key(ata(bc, quote, TOKEN), true), key(user, true, true),
     key(userAta, true), key(wsolAta, true), key(userVolOf(user), true), key(FEE_CONFIG), key(buyback, true), key(SYSTEM), key(EVENT_AUTHORITY), key(PUMP)];
   const data = Buffer.concat([Buffer.from(DISC.sellV3), u64(amount), u64(minSol)]);

@@ -21,7 +21,7 @@ export const randomTip = () => TIP_ACCOUNTS[Math.floor(Math.random() * TIP_ACCOU
 export const pda = (seeds, program) => PublicKey.findProgramAddressSync(seeds.map((s) => (typeof s === "string" ? Buffer.from(s) : s instanceof PublicKey ? s.toBuffer() : Buffer.from(s))), program)[0];
 export const ata = (owner, mint, tokenProgram = TOKEN) => pda([owner, tokenProgram, mint], ATA_PROGRAM);
 
-export const u64 = (n) => { const b = Buffer.alloc(8); b.writeBigUInt64LE(BigInt(Math.max(0, Math.floor(Number(n))))); return b; };
+export const u64 = (n) => { const b = Buffer.alloc(8); const v = typeof n === "bigint" ? n : BigInt(Math.max(0, Math.floor(Number(n)))); b.writeBigUInt64LE(v < 0n ? 0n : v); return b; };
 export const u16 = (n) => { const b = Buffer.alloc(2); b.writeUInt16LE(n); return b; };
 export const readU64 = (buf, off) => buf.readBigUInt64LE(off);
 export const readPk = (buf, off) => new PublicKey(buf.subarray(off, off + 32));

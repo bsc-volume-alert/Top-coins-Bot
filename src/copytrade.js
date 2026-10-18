@@ -16,7 +16,7 @@ import { dexPrice } from "./sweeper.js"; // v0.18.36
 import { gmgnFor, gmgnSummary, gmgnEntry } from "./gmgn.js"; // v0.18.52 · v0.18.56 gmgnEntry
 import { feeInfo, feeLine } from "./fees.js";
 import { recordHolders, holdersLine } from "./holders.js";
-import { execSend } from "./execlink.js"; // v0.18.90 → executor (live buy/sell bot)
+import { execSend, noteFeed } from "./execlink.js"; // v0.18.90 → executor (live buy/sell bot)
 
 const P = new Map(); // mint -> [{id, label, e, w5:[], closed, msgId}]
 export const cp = { entries: 0, closes: 0 };
@@ -101,8 +101,8 @@ function tick(mint, price, mc, sol, isBuy, ts) {
     else if (lowVolCopy(p, ts)) { try { close(mint, p, "lowvol"); } catch (e) { console.error("[lowvol copy]", e.message); } } // v0.18.36
   }
 }
-on("trade", (t, tr) => tick(t.mint, tr.price, t.lastMc, tr.sol, tr.isBuy, tr.ts));
-onSwap((tr) => tick(tr.mint, tr.price, tr.mc, tr.sol, tr.isBuy, tr.ts));
+on("trade", (t, tr) => { noteFeed(); tick(t.mint, tr.price, t.lastMc, tr.sol, tr.isBuy, tr.ts); });
+onSwap((tr) => { noteFeed(); tick(tr.mint, tr.price, tr.mc, tr.sol, tr.isBuy, tr.ts); });
 
 function close(mint, p, reason) {
   if (p.wall0) { try { const cm = (p.lastPx || p.e.entry) / p.e.entry, v = finalExits(p.e, cm); execSend({ type: "close", id: Number(p.id), mint, reason, mult: cm, h5: v.h5 ?? null, flow4: v.flow4 ?? null }); } catch {} } // v0.18.90 → executor (backstop: sell if still held)
@@ -149,6 +149,7 @@ export function restoreCopyFromDb() {
       e.flowArmed = e.x.tp15 != null; e.ffDone = now - r.entry_ts >= 120; e.splitBranch = r.split_branch && r.split_branch !== "sweep" ? r.split_branch : null; e.splitHalf = r.split_branch === "mid" && pk >= 1.5; e.ddPre15 = r.dd_pre15 ?? null;
       try { e.path = r.path ? JSON.parse(r.path) : {}; } catch { e.path = {}; }
       const pos = { id: r.id, label: (r.trigger_kind || "").split(":").slice(1).join(":") || r.strategy, e, w5: [], closed: false, entryTs: r.entry_ts, lastMc: r.entry_mc, lastPx: r.entry_price, name: r.name, kind: r.strategy, alerted: false, hit15Saved: r.t_hit15_s != null, restored: "db" };
+      if (/^p5[ew]\d+$/.test(r.strategy)) { pos.wall0 = r.entry_ts * 1000; if (e.x.h5 != null) e.h5Sent = true; if (e.x.flow4 != null) e.flow4Sent = true; } // v0.18.90: a restored P5 position still tells the executor when its exit fires (rules already fired are not re-sent)
       const arr = P.get(r.mint) || []; arr.push(pos); P.set(r.mint, arr);
       setTimeout(() => close(r.mint, pos, "time"), Math.max(5_000, CFG.MOM_MAX_HOLD_MIN * 60_000 - (Date.now() - r.entry_ts * 1000))); n++;
     }

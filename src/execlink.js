@@ -4,7 +4,8 @@
 import { connect } from "node:net";
 import { existsSync } from "node:fs";
 const SOCK = process.env.EXEC_SOCK || "/root/executor/exec.sock";
-export const execStats = { connected: false, sent: 0, dropped: 0, reconnects: 0, lastErr: "" };
+export const execStats = { connected: false, sent: 0, dropped: 0, reconnects: 0, lastErr: "", lastFeed: 0 };
+export const noteFeed = () => { execStats.lastFeed = Date.now(); }; // last trade our feed delivered — sent with every ping so the executor can tell a dead feed from a quiet one
 let sock = null, timer = null;
 function open() {
   if (process.env.SMOKE || !existsSync(SOCK)) { schedule(); return; }
@@ -22,4 +23,4 @@ export function execSend(obj) {
   try { sock.write(JSON.stringify(obj) + "\n"); execStats.sent++; return true; } catch (e) { execStats.lastErr = e.message; execStats.dropped++; return false; }
 }
 open();
-setInterval(() => { if (execStats.connected) execSend({ type: "ping", t: Date.now() }); }, 30_000);
+setInterval(() => { if (execStats.connected) execSend({ type: "ping", t: Date.now(), feed: execStats.lastFeed }); }, 15_000);
