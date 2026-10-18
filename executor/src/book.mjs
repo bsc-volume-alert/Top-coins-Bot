@@ -46,6 +46,19 @@ export function dayNet(mode = CFG.MODE) { // today's realised result in lamports
 }
 export const pendingBuys = () => db.prepare(`SELECT * FROM orders WHERE side='buy' AND mode='live' AND status IN ('sent','pending') ORDER BY id`).all();
 export const lastSellSig = (paperId) => db.prepare(`SELECT id, sig FROM orders WHERE side='sell' AND paper_id=? AND sig IS NOT NULL ORDER BY id DESC LIMIT 1`).get(paperId);
+/** last closed positions with their buy / sell orders, for the website's wallet box */
+export function recentClosed(n = 10) {
+  return db.prepare(`SELECT p.*, b.fill_tokens b_tokens, b.from_trigger_ms b_ms, b.sig b_sig, b.detail b_detail, s.sig s_sig, s.rule s_rule FROM positions p
+    LEFT JOIN orders b ON b.id=p.buy_order LEFT JOIN orders s ON s.id=p.sell_order WHERE p.status='closed' ORDER BY p.closed_ts DESC LIMIT ?`).all(n)
+    .map((r) => { let d = {}; try { d = JSON.parse(r.b_detail || "{}"); } catch {} const livePx = r.cost_lamports > 0 && r.b_tokens > 0 ? (r.cost_lamports / 1e9) / (r.b_tokens / 1e6) : null;
+      return { id: r.paper_id, name: r.name, mint: r.mint, mode: r.mode, opened_ts: r.opened_ts, closed_ts: r.closed_ts, cost: r.cost_lamports / 1e9, proceeds: (r.proceeds_lamports || 0) / 1e9, pnl: (r.pnl_lamports || 0) / 1e9,
+        liveX: r.cost_lamports > 0 ? (r.proceeds_lamports || 0) / r.cost_lamports : null, paperX: r.paper_exit_mult, rule: r.exit_rule, ms: r.b_ms, buySig: r.b_sig, sellSig: r.s_sig, gap: livePx && r.paper_entry_price ? livePx / r.paper_entry_price - 1 : null }; });
+}
+export function skipSummary(sinceTs) {
+  const rows = db.prepare(`SELECT skip_reason r, COUNT(*) n FROM orders WHERE side='buy' AND status IN ('skipped','error','sim-failed') AND ts >= ? GROUP BY skip_reason ORDER BY n DESC`).all(sinceTs);
+  const out = {}; for (const x of rows) { const k = String(x.r || "other").replace(/^paper skip: /, "").replace(/\d+ wallets/, "crowded").replace(/bundled \d+%/, "bundled").replace(/balance .*/, "balance").replace(/\d+ positions open.*/, "cap").replace(/trigger \d+ ms old/, "late"); out[k] = (out[k] || 0) + x.n; } return out;
+}
+export const totals = (mode) => db.prepare(`SELECT COUNT(*) n, COALESCE(SUM(pnl_lamports),0) pnl, SUM(CASE WHEN pnl_lamports>0 THEN 1 ELSE 0 END) w FROM positions WHERE status='closed' AND mode=?`).get(mode);
 export function recentOrders(n = 20) { return db.prepare(`SELECT * FROM orders ORDER BY id DESC LIMIT ?`).all(n); }
 export function stats() {
   const o = db.prepare(`SELECT side, status, COUNT(*) n FROM orders WHERE ts > ? GROUP BY side, status`).all(now() - 86400);

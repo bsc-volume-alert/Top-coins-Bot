@@ -14,7 +14,7 @@ import { getAccounts, getBalance, buildTx, simulate, send, sendUntilConfirmed, w
 import { ata, parseTokenAccount, ixBudget, ixTip, ixTransfer, PK } from "./solana.mjs";
 import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
-import { newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, hasPosition, dayNet, recentOrders, stats, log, pendingBuys, lastSellSig } from "./book.mjs";
+import { newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, hasPosition, dayNet, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
 const VERSION = "0.1.0";
 const nowS = () => Math.floor(Date.now() / 1000);
@@ -242,7 +242,14 @@ async function handleCmd(text) {
   if (sub === "strategy") { if (!/^p5[ew]\d+$/.test(arg || "")) return tg("usage: /live strategy p5e30 | p5e50"); S.strategy = arg; saveOvr(); return tg(`following <b>${arg}</b>`); }
   if (sub === "sell") { const ops = openPositions(); const list = arg === "all" ? ops : ops.filter((p) => String(p.paper_id) === arg); if (!list.length) return tg("nothing open by that id"); for (const p of list) await sellPosition(p, "manual", null, "telegram"); return; }
   if (sub === "orders") return tg(recentOrders(8).map((o) => `#${o.id} ${o.side} ${esc(o.name)} ${o.status}${o.skip_reason ? " (" + esc(o.skip_reason) + ")" : ""}${o.sim_err ? " " + esc(String(o.sim_err).slice(0, 60)) : ""}`).join("\n") || "no orders yet");
-  return tg("commands: /live · /live on · /live off · /live shadow · /live stake 0.25 · /live exit h5|flow4 · /live strategy p5e30|p5e50 · /live sell &lt;id|all&gt; · /live orders");
+  if (sub === "withdraw") { // only ever to the configured address — a stolen Telegram session can only send your money to you
+    if (!CFG.SWEEP_TO) return tg("no withdrawal address set yet (EXEC_SWEEP_TO in /root/executor/.env)"); if (!S.kp) return tg("no wallet on the box");
+    const amt = Number(arg); if (!(amt > 0)) return tg("usage: /live withdraw 0.5");
+    if (openPositions().some((p) => p.mode === "live")) return tg("positions are open — withdraw after they close");
+    if (bal == null || bal < lamports(amt) + lamports(0.01)) return tg(`balance ${bal != null ? sol(bal).toFixed(4) : "?"} SOL — not enough for ${amt} plus fees`);
+    try { const tx = await buildTx(S.pub, [...ixBudget(20_000, CFG.CU_PRICE), ixTransfer(S.pub, PK(CFG.SWEEP_TO), lamports(amt))], S.kp); const c = await sendUntilConfirmed(tx, 30000); log("withdraw", `${amt} SOL → ${CFG.SWEEP_TO} ${c.status} ${c.sig}`);
+      return tg(c.status === "confirmed" ? `🏦 sent <b>${amt} SOL</b> to <code>${CFG.SWEEP_TO}</code>\n<code>${c.sig}</code>` : `⚠️ withdrawal ${c.status} — <code>${c.sig}</code> (check Solscan before retrying)`); } catch (e) { return tg(`⚠️ withdrawal failed: ${esc(e.message)}`); } }
+  return tg("commands: /live · /live on · /live off · /live shadow · /live stake 0.25 · /live exit h5|flow4 · /live strategy p5e30|p5e50 · /live sell &lt;id|all&gt; · /live orders · /live withdraw 0.5");
 }
 
 // ---- socket from the tracker ----
@@ -280,8 +287,11 @@ async function housekeeping() {
       if (sweptDay !== day && bal != null && bal > lamports(CFG.SWEEP_CEILING_SOL) + lamports(0.05) && !ops.length) { sweptDay = day; const amt = bal - lamports(CFG.SWEEP_CEILING_SOL);
         try { const tx = await buildTx(S.pub, [...ixBudget(20_000, CFG.CU_PRICE), ixTransfer(S.pub, PK(CFG.SWEEP_TO), amt)], S.kp); const s = await send(tx); const c = await waitConfirm(s.sig, 30000); log("sweep", `${sol(amt)} SOL → ${CFG.SWEEP_TO} ${c.status}`); tg(`🏦 swept ${sol(amt).toFixed(3)} SOL to <code>${CFG.SWEEP_TO}</code> (${c.status})`); } catch (e) { log("sweep-error", e.message); } } }
     const bal = S.pub ? await balance() : null;
-    writeFileSync(join(EXEC_HOME, "status.json"), JSON.stringify({ version: VERSION, mode: S.mode, strategy: S.strategy, exit: S.exit, stake: S.stake, wallet: S.pub?.toBase58() || null, balance: bal != null ? sol(bal) : null, open: ops.map((p) => ({ id: p.paper_id, name: p.name, mint: p.mint, mode: p.mode, opened_ts: p.opened_ts, cost: sol(p.cost_lamports) })),
-      dayLive: dayNet("live"), dayShadow: dayNet("shadow"), stats: stats(), rpc: rpcStats, trackerSeenS: S.lastTracker ? Math.round((Date.now() - S.lastTracker) / 1000) : null, now: nowS() }));
+    const dayStart = Math.floor(Date.now() / 86400000) * 86400, tl = totals("live"), ts = totals("shadow");
+    writeFileSync(join(EXEC_HOME, "status.json"), JSON.stringify({ version: VERSION, mode: S.mode, strategy: S.strategy, exit: S.exit, stake: S.stake, wallet: S.pub?.toBase58() || null, balance: bal != null ? sol(bal) : null, sweepTo: CFG.SWEEP_TO || null,
+      open: ops.map((p) => ({ id: p.paper_id, name: p.name, mint: p.mint, mode: p.mode, opened_ts: p.opened_ts, cost: sol(p.cost_lamports), tokens: p.tokens })),
+      dayLive: dayNet("live"), dayShadow: dayNet("shadow"), totalLive: { n: tl.n, pnl: sol(tl.pnl), win: tl.n ? tl.w / tl.n : null }, totalShadow: { n: ts.n, pnl: sol(ts.pnl), win: ts.n ? ts.w / ts.n : null },
+      recent: recentClosed(10), skipsToday: skipSummary(dayStart), stats: stats(), rpc: rpcStats, trackerSeenS: S.lastTracker ? Math.round((Date.now() - S.lastTracker) / 1000) : null, now: nowS() }));
   } catch (e) { console.error("[housekeeping]", e.message); }
   finally { housekeepingBusy = false; }
 }
@@ -299,6 +309,9 @@ if (cmd === "selftest") {
     if (v.kind === "curve" && b.expected > 0n) { const sIx = sellIxs(v, user, b.expected, CFG.SLIP_SELL, kind); console.log(`sell ${kind}: ${b.expected} tokens → ${sol(sIx.expected).toFixed(5)} SOL expected (min ${sol(sIx.minOut).toFixed(5)}) — round trip ${((Number(sIx.expected) / lamports(stakeSol) - 1) * 100).toFixed(2)}% at an unmoved price`); }
   }
   console.log("rpc:", rpcStats); process.exit(0);
+} else if (cmd === "orders") {
+  for (const o of recentOrders(Number(process.argv[3] || 30)).reverse()) console.log(o.id, new Date(o.ts * 1000).toISOString().slice(11, 19), o.side, o.name, "|", o.status, o.skip_reason || "", o.venue || "", o.ix_kind || "", o.sim_ok == null ? "" : "sim " + o.sim_ok, o.sim_err ? String(o.sim_err).slice(0, 100) : "", o.from_trigger_ms != null ? o.from_trigger_ms + "ms" : "", o.quote_out ? "exp " + o.quote_out : "", o.fill_sol != null ? "sol " + (o.fill_sol / 1e9).toFixed(4) : "");
+  process.exit(0);
 } else if (cmd === "status") {
   loadWallet(); const bal = await balance(true); console.log(JSON.stringify({ mode: S.mode, strategy: S.strategy, exit: S.exit, stake: S.stake, wallet: S.pub?.toBase58() || null, balance: bal != null ? sol(bal) : null, open: openPositions(), lastOrders: recentOrders(10) }, null, 1)); process.exit(0);
 } else {

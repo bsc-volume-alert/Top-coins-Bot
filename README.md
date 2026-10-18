@@ -56,6 +56,14 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.92 — "Wallet — live trading" box + /live withdraw (18 Oct, evening)
+- One white, bold box at the top of the main page (owner's spec): mode badge (OFF / SHADOW / LIVE), wallet address (tap to copy), balance (SOL, ≈ £),
+  profit today and total since start with trade counts and win rate, what it follows, the average live-vs-paper price gap; open positions with a
+  **SELL NOW** button (whole position at market, via the executor, confirmed on Telegram); the last 10 trades (in → out, result, live x vs paper x,
+  exit rule, seconds to fill, Solscan links); skipped triggers today by reason. Shadow rows are greyed and labelled. Data: the executor's status file
+  (every 10 s); `/api/livesell` forwards to the executor over the socket. Mode and stake changes stay Telegram-only on purpose.
+- Executor: `/live withdraw <amount>` — only ever to the configured address (`EXEC_SWEEP_TO`), refused while positions are open; `node src/index.mjs orders` prints the order list.
+
 ## v0.18.91 — Telegram quiet mode + watchdog (18 Oct, evening)
 - Owner: "just basic, really important messages". `tg()` now sends only alarms and replies to commands (`opts.alarm`, `tgAlarm`); every paper entry / close,
   2x note, climber / wave / revival alert, the heartbeat, the strategy summary and the boot message are logged, not sent (`TG_QUIET=0` restores them).
