@@ -29,12 +29,14 @@ export const CFG = {
   SLIP_STOP: n("EXEC_SLIP_STOP", 0.30),           // stop sells into a dump: not selling is worse than a bad price
   TIP_SOL: n("EXEC_TIP_SOL", 0.001),              // Helius Sender full route needs ≥ 0.001
   TIP_RETRY_SOL: n("EXEC_TIP_RETRY_SOL", 0.002),
-  CU_LIMIT: n("EXEC_CU_LIMIT", 250_000),
+  CU_LIMIT: n("EXEC_CU_LIMIT", 300_000),
   CU_PRICE: n("EXEC_CU_PRICE", 2_000_000),        // micro-lamports per CU: 250k CU × 2 lamports = 0.0005 SOL priority fee
   CU_PRICE_RETRY: n("EXEC_CU_PRICE_RETRY", 6_000_000),
   FEED_LAG_MAX_MS: n("EXEC_FEED_LAG_MAX_MS", 2000), // no buys when the tracker's feed is this far behind the chain
   TRIGGER_MAX_AGE_MS: n("EXEC_TRIGGER_MAX_AGE_MS", 4000), // a trigger older than this (queued while we were busy) is not bought
-  FALLBACK_SELL_MIN: n("EXEC_FALLBACK_SELL_MIN", 7), // sell anyway if the tracker has not told us to exit by then (hold-5 is 5 min)
+  FALLBACK_SELL_MIN_H5: n("EXEC_FALLBACK_SELL_MIN_H5", 7),      // following hold-5: the exit must come by 5 min — sell anyway at 7
+  FALLBACK_SELL_MIN_FLOW4: n("EXEC_FALLBACK_SELL_MIN_FLOW4", 390), // following the runner: the paper close is the backstop, 6½ h the ceiling
+  SIM_BEFORE_SEND: process.env.EXEC_SIM_BEFORE_SEND !== "0",    // live: simulate before signing (≈100 ms); off later if the fills say speed matters more
   SWEEP_TO: s("EXEC_SWEEP_TO", ""),               // cold / Phantom address for the daily sweep (public address)
   SWEEP_CEILING_SOL: n("EXEC_SWEEP_CEILING_SOL", 0), // 0 = no sweeping
   HELIUS_KEY: s("HELIUS_API_KEY", ""),

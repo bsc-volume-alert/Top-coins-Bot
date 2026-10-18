@@ -42,6 +42,16 @@ export async function send(tx) {
     const sig = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: true, maxRetries: 0 }); return { sig, via: "rpc", ms: Date.now() - t0, senderErr: e.message };
   }
 }
+/** Send, then keep re-sending the SAME signed transaction every 2.5 s until it is confirmed / failed or `ms` passes. Re-sending the identical
+ *  transaction can never execute twice, so this is the only retry a BUY gets (a second, different buy could land as well → bought twice). */
+export async function sendUntilConfirmed(tx, ms = 18000) {
+  const first = await send(tx); const sig = first.sig, t0 = Date.now(); let resends = 0;
+  while (Date.now() - t0 < ms) {
+    const c = await waitConfirm(sig, 2500); if (c.status !== "timeout") return { ...c, sig, via: first.via, resends, ms: Date.now() - t0 };
+    try { await send(tx); resends++; } catch {}
+  }
+  return { status: "timeout", slot: null, err: null, sig, via: first.via, resends, ms: Date.now() - t0 };
+}
 /** Poll until the signature is confirmed or failed, or `ms` passes. Returns { status: 'confirmed'|'failed'|'timeout', slot, err }. */
 export async function waitConfirm(sig, ms = 20000) {
   const t0 = Date.now();

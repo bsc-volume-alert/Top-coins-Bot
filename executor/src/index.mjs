@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { Keypair } from "@solana/web3.js";
 import { CFG, EXEC_HOME, lamports, sol } from "./config.mjs";
 import { loadKeypair } from "./wallet.mjs";
-import { getAccounts, getBalance, buildTx, simulate, send, waitConfirm, readFill, rpcStats } from "./rpc.mjs";
+import { getAccounts, getBalance, buildTx, simulate, send, sendUntilConfirmed, waitConfirm, readFill, rpcStats } from "./rpc.mjs";
 import { ata, parseTokenAccount, ixBudget, ixTip, ixTransfer, PK } from "./solana.mjs";
 import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
@@ -23,7 +23,9 @@ const short = (m) => (m ? `${m.slice(0, 4)}…${m.slice(-4)}` : "?");
 // ---- settings that can be changed from Telegram and survive restarts (mode, stake) ----
 const OVR = join(EXEC_HOME, "overrides.json");
 const ovr = (() => { try { return JSON.parse(readFileSync(OVR, "utf8")); } catch { return {}; } })();
-const S = { mode: ovr.mode || CFG.MODE, stake: ovr.stake || CFG.STAKE_SOL, exit: ovr.exit || CFG.EXIT, strategy: ovr.strategy || CFG.STRATEGY, stoppedDay: null, lastTracker: 0, kp: null, pub: null, balance: null, balanceT: 0, buying: 0 };
+const S = { mode: ovr.mode || CFG.MODE, stake: ovr.stake || CFG.STAKE_SOL, exit: ovr.exit || CFG.EXIT, strategy: ovr.strategy || CFG.STRATEGY, stoppedDay: null, lastTracker: Date.now(), kp: null, pub: null, balance: null, balanceT: 0, buying: 0, lags: [] };
+const fallbackMin = () => (S.exit === "flow4" ? CFG.FALLBACK_SELL_MIN_FLOW4 : CFG.FALLBACK_SELL_MIN_H5);
+const feedLagAvg = () => (S.lags.length ? S.lags.reduce((a, b) => a + b, 0) / S.lags.length : 0);
 const saveOvr = () => { try { writeFileSync(OVR, JSON.stringify({ mode: S.mode, stake: S.stake, exit: S.exit, strategy: S.strategy })); } catch {} };
 
 // ---- Telegram (send only; commands arrive through the tracker, which owns the bot's polling) ----
@@ -87,13 +89,15 @@ async function handleTrigger(m) {
   if (m.strategy !== S.strategy) return;
   const t0 = Date.now(), fromTrig = () => Date.now() - (m.wall0 || t0);
   const skip = (why) => { newOrder({ side: "buy", paper_id: m.id, mint: m.mint, name: m.name, strategy: m.strategy, status: "skipped", skip_reason: why, stake_lamports: lamports(S.stake), from_trigger_ms: fromTrig() }); log("skip", `${m.name} ${why}`); };
+  if (m.lagMs != null) { S.lags.push(m.lagMs); if (S.lags.length > 10) S.lags.shift(); }
   if (S.mode === "off") return skip("mode off");
-  if (m.lagMs != null && m.lagMs > CFG.FEED_LAG_MAX_MS) return skip(`feed lag ${m.lagMs} ms`);
+  if (m.pass === false) return skip(`paper skip: ${m.skipWhy || "filter"}`); // the website's P5 filters (launch seen · bundle < 70% · < 150 wallets) — not a trade the book takes
+  if (m.lagMs != null && S.lags.length >= 5 && feedLagAvg() > CFG.FEED_LAG_MAX_MS && m.lagMs > CFG.FEED_LAG_MAX_MS) return skip(`feed ${Math.round(feedLagAvg())} ms behind the chain (last 10 triggers)`); // block time is whole seconds: judged on the average, never one reading
   if (fromTrig() > CFG.TRIGGER_MAX_AGE_MS) return skip(`trigger ${fromTrig()} ms old`);
   if (m.venue && !/pump|pumpswap/i.test(m.venue)) return skip(`venue ${m.venue} not handled yet`);
   if (hasPosition(m.mint)) return skip("already holding");
   const open = openPositions().length + S.buying; if (open >= CFG.MAX_OPEN) return skip(`${open} positions open (cap ${CFG.MAX_OPEN})`);
-  const day = dayNet(); if (day.n <= -lamports(S.stake) * CFG.DAILY_STOP_STAKES) { if (S.stoppedDay !== new Date().toISOString().slice(0, 10)) { S.stoppedDay = new Date().toISOString().slice(0, 10); tg(`⛔ <b>Daily stop</b> — ${sol(day.n).toFixed(3)} SOL today over ${day.c} trades. No more buys until tomorrow (UTC). <code>/live on</code> re-arms it.`); } return skip("daily stop"); }
+  const day = dayNet(S.mode === "live" ? "live" : "shadow"); if (day.n <= -lamports(S.stake) * CFG.DAILY_STOP_STAKES) { if (S.stoppedDay !== new Date().toISOString().slice(0, 10)) { S.stoppedDay = new Date().toISOString().slice(0, 10); tg(`⛔ <b>Daily stop</b> — ${sol(day.n).toFixed(3)} SOL today over ${day.c} trades. No more buys until tomorrow (UTC). <code>/live on</code> re-arms it.`); } return skip("daily stop"); }
   if (!S.pub) return skip("no wallet yet");
   const stake = lamports(S.stake), bal = await balance(); if (bal != null && bal < stake + lamports(0.02)) return skip(`balance ${sol(bal).toFixed(3)} SOL below stake + fees`);
   S.buying++;
@@ -103,10 +107,10 @@ async function handleTrigger(m) {
     if (v.kind === "curve" && !v.solQuoted) return skip("curve not SOL-quoted");
     let b = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, "classic");
     const id = newOrder({ side: "buy", paper_id: m.id, mint: m.mint, name: m.name, strategy: m.strategy, venue: v.kind, ix_kind: b.ixKind, stake_lamports: stake, slippage: CFG.SLIP_BUY, quote_out: b.expected, min_out: b.minOut, tip_lamports: lamports(CFG.TIP_SOL), cu_price: CFG.CU_PRICE,
-      from_trigger_ms: fromTrig(), detail: { paperPrice: m.price, paperMc: m.mc, lagMs: m.lagMs ?? null, feeBps: b.feeBps, tVenueMs: tVenue, curveMcSol: v.curve ? +pump.curveMcSol(v.curve).toFixed(1) : null } });
+      from_trigger_ms: fromTrig(), detail: { paperPrice: m.price, paperMc: m.mc, lagMs: m.lagMs ?? null, bundle: m.bundle ?? null, wal60: m.wal60 ?? null, feeBps: b.feeBps, tVenueMs: tVenue, curveMcSol: v.curve ? +pump.curveMcSol(v.curve).toFixed(1) : null } });
     let tx = await buildTx(S.pub, wrap(S.pub, b.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE));
-    // shadow and live both simulate first; a program refusal on the classic curve instruction → try the v3 form once
-    let sim = await simulate(tx);
+    // shadow always simulates; live simulates unless EXEC_SIM_BEFORE_SEND=0. A program refusal on the classic curve instruction → try the v3 form once
+    let sim = S.mode === "live" && !CFG.SIM_BEFORE_SEND ? { ok: true, err: null, logs: [], units: null, ms: 0, skipped: true } : await simulate(tx);
     if (v.kind === "curve" && progErr(sim)) { const b3 = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, "v3"); const tx3 = await buildTx(S.pub, wrap(S.pub, b3.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim3 = await simulate(tx3);
       updOrder(id, { detail: { classicErr: sim.err, classicLogs: sim.logs.slice(-4) } }); if (sim3.ok || !progErr(sim3)) { b = b3; tx = tx3; sim = sim3; } }
     updOrder(id, { ix_kind: b.ixKind, quote_out: b.expected, min_out: b.minOut, sim_ok: sim.ok ? 1 : 0, sim_err: sim.err, sim_units: sim.units, sim_ms: sim.ms, status: sim.ok ? "simulated" : "sim-failed" });
@@ -115,14 +119,9 @@ async function handleTrigger(m) {
       openPosition.run({ paper_id: m.id, mint: m.mint, name: m.name, strategy: m.strategy, mode: "shadow", opened_ts: nowS(), tokens: Number(b.expected), cost_lamports: stake, buy_order: id, venue: v.kind, ix_kind: b.ixKind, paper_entry_price: m.price });
       updOrder(id, { status: "shadow-filled", fill_tokens: Number(b.expected), fill_sol: -stake, from_trigger_ms: fromTrig() }); return;
     }
-    // live: sign, send, confirm; one retry at a higher tip
-    tx.sign([S.kp]); let s = await send(tx); updOrder(id, { sig: s.sig, via: s.via, send_ms: s.ms, status: "sent" });
-    let c = await waitConfirm(s.sig, 12000);
-    if (c.status === "timeout") {
-      const tx2 = await buildTx(S.pub, wrap(S.pub, b.ixs, lamports(CFG.TIP_RETRY_SOL), CFG.CU_PRICE_RETRY), S.kp); const s2 = await send(tx2); updOrder(id, { detail: { retrySig: s2.sig, retryVia: s2.via } });
-      const c1 = await waitConfirm(s.sig, 4000); c = c1.status === "confirmed" ? c1 : await waitConfirm(s2.sig, 15000); if (c.status === "confirmed" && c1.status !== "confirmed") { s = s2; updOrder(id, { sig: s2.sig, via: s2.via, tip_lamports: lamports(CFG.TIP_RETRY_SOL), cu_price: CFG.CU_PRICE_RETRY }); }
-    }
-    if (c.status !== "confirmed") { updOrder(id, { status: c.status === "failed" ? "failed" : "timeout", sim_err: c.err }); log("buy-fail", `${m.name} ${c.status} ${c.err || ""}`); tg(`⚠️ buy ${c.status} — ${esc(m.name)} ${c.err ? `<code>${esc(c.err).slice(0, 120)}</code>` : "(not landed in 30 s)"}`); return; }
+    // live: sign and send; the only retry is re-sending the SAME transaction (a second, different buy could land too → bought twice). Not landed in 18 s → the trigger is gone, give up.
+    tx.sign([S.kp]); const c = await sendUntilConfirmed(tx, 18000); const s = { sig: c.sig, via: c.via }; updOrder(id, { sig: c.sig, via: c.via, send_ms: c.ms, detail: { resends: c.resends } });
+    if (c.status !== "confirmed") { updOrder(id, { status: c.status === "failed" ? "failed" : "timeout", sim_err: c.err }); log("buy-fail", `${m.name} ${c.status} ${c.err || ""}`); tg(`⚠️ buy ${c.status} — ${esc(m.name)} ${c.err ? `<code>${esc(c.err).slice(0, 120)}</code>` : "(not landed in 18 s — no second attempt, by design)"}`); return; }
     const fill = await readFill(s.sig, S.pub, PK(m.mint)).catch(() => null);
     const tokens = fill?.tokenDelta ?? Number(b.expected), spent = fill ? -fill.solDelta : stake;
     openPosition.run({ paper_id: m.id, mint: m.mint, name: m.name, strategy: m.strategy, mode: "live", opened_ts: nowS(), tokens, cost_lamports: spent, buy_order: id, venue: v.kind, ix_kind: b.ixKind, paper_entry_price: m.price });
@@ -157,9 +156,8 @@ async function sellPosition(p, rule, paperMult = null, why = null) {
     updOrder(id, { ix_kind: sIx.ixKind, sim_ok: sim.ok ? 1 : 0, sim_err: sim.err, sim_units: sim.units, sim_ms: sim.ms });
     // a failed simulation on a sell is not a reason to hold a dumping coin: send anyway with the stop slippage
     if (!sim.ok) { log("sell-simfail", `${p.name}: ${sim.err} | ${sim.logs.slice(-3).join(" | ")}`); if (slip < CFG.SLIP_STOP) { sIx = sellIxs(v, S.pub, amount, CFG.SLIP_STOP, sIx.ixKind); tx = await buildTx(S.pub, wrap(S.pub, sIx.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); } }
-    tx.sign([S.kp]); let s = await send(tx); updOrder(id, { sig: s.sig, via: s.via, send_ms: s.ms, status: "sent" });
-    let c = await waitConfirm(s.sig, 12000);
-    for (let attempt = 0; attempt < 3 && c.status !== "confirmed"; attempt++) { // sells keep trying: fresh quote, wider slippage, bigger tip
+    tx.sign([S.kp]); let c = await sendUntilConfirmed(tx, 12000); let s = { sig: c.sig, via: c.via }; updOrder(id, { sig: c.sig, via: c.via, send_ms: c.ms, status: "sent" });
+    for (let attempt = 0; attempt < 3 && c.status !== "confirmed"; attempt++) { // sells keep trying: fresh quote, wider slippage, bigger tip (a duplicate sell cannot execute twice — the tokens are gone)
       const v2 = await venueOf(p.mint); if (v2.kind === "none") break;
       const r = sellIxs(v2, S.pub, amount, Math.min(0.5, CFG.SLIP_STOP + 0.1 * attempt), sIx.ixKind); const txr = await buildTx(S.pub, wrap(S.pub, r.ixs, lamports(CFG.TIP_RETRY_SOL), CFG.CU_PRICE_RETRY), S.kp);
       const sr = await send(txr); c = await waitConfirm(sr.sig, 15000); if (c.status === "confirmed") { s = sr; updOrder(id, { sig: sr.sig, via: sr.via, tip_lamports: lamports(CFG.TIP_RETRY_SOL), cu_price: CFG.CU_PRICE_RETRY, slippage: Math.min(0.5, CFG.SLIP_STOP + 0.1 * attempt) }); }
@@ -215,7 +213,7 @@ async function housekeeping() {
   try {
     const ops = openPositions(), n = nowS();
     for (const p of ops) {
-      if (n - p.opened_ts > CFG.FALLBACK_SELL_MIN * 60) await sellPosition(p, "fallback-time", null, `no exit signal in ${CFG.FALLBACK_SELL_MIN} min`);
+      if (n - p.opened_ts > fallbackMin() * 60) await sellPosition(p, "fallback-time", null, `no exit signal in ${fallbackMin()} min (${S.exit})`);
       else if (p.mode === "live" && S.lastTracker && Date.now() - S.lastTracker > 120_000) await sellPosition(p, "tracker-down", null, "no tracker contact for 2 min");
     }
     if (S.mode === "live" && CFG.SWEEP_TO && CFG.SWEEP_CEILING_SOL > 0) { const day = new Date().toISOString().slice(0, 10); const bal = await balance(true);

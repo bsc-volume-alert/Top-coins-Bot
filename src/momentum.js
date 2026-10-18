@@ -313,12 +313,14 @@ export function p5Check(mint, s, tr, now) {
     try { if (q.hasStrat.get(strat, mint)) continue; } catch {}
     const px = tr.price, mc = tr.mc, venue = tr.venue, v5 = s.w5.reduce((a, x) => a + x.usd, 0);
     const feat = { sol60: +bSol.toFixed(2), wal60: wal.size, n60: n, maxShare: bU > 0 ? +(maxB / bU).toFixed(3) : null, avgBuySol: n ? +(bSol / n).toFixed(3) : null, sell60: +(sU / sol).toFixed(2) };
+    // v0.18.90: the website's Project 5 filters (launch seen · bundle < 70% · under 150 wallets in the 60 s), decided here so the executor buys exactly the website's book
+    const skipWhy = !meta || meta.bundle_pct == null ? "launch not seen" : meta.bundle_pct >= 70 ? `bundled ${Math.round(meta.bundle_pct)}%` : wal.size >= 150 ? `${wal.size} wallets` : null;
     (async () => {
       let name = meta?.name, symbol = meta?.symbol, createTs = meta?.create_ts;
       if (!name || !createTs) { try { const d = await dexInfo(mint); name ||= d.name; symbol ||= d.symbol; createTs ||= d.createdAt; } catch {} }
       const ageS = createTs ? now - createTs : null;
       if (ageS != null && (ageS < CFG.P5_MIN_AGE_S || ageS > CFG.MOM_MAX_AGE_D * 86400)) return;
-      const pos = openCopy(strat, `${lv}SOL/60s`, mint, name || mint.slice(0, 8), symbol || "", px, mc, now, { v5, venue, ageS, wall0, blockTs: tr.ts });
+      const pos = openCopy(strat, `${lv}SOL/60s`, mint, name || mint.slice(0, 8), symbol || "", px, mc, now, { v5, venue, ageS, wall0, blockTs: tr.ts, pass: !skipWhy, skipWhy, bundle: meta?.bundle_pct ?? null, wal60: wal.size });
       p5.fired++; if (wide) p5.wide++; else p5.byLevel[lv] = (p5.byLevel[lv] || 0) + 1;
       if (pos?.id) { pos.alerted = false; try { q.setV2m.run(Math.round(bU), pos.id); q.setEarly.run(JSON.stringify(feat), pos.id); } catch {} }
     })().catch((e) => console.error("[p5 early]", e.message));
