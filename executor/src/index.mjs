@@ -16,7 +16,7 @@ import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 import { newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, hasPosition, dayNet, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.1.2";
+const VERSION = "0.1.3";
 const nowS = () => Math.floor(Date.now() / 1000);
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const short = (m) => (m ? `${m.slice(0, 4)}…${m.slice(-4)}` : "?");
@@ -114,6 +114,7 @@ async function handleTrigger(m) {
   const skip = (why) => { newOrder({ side: "buy", paper_id: m.id, mint: m.mint, name: m.name, strategy: m.strategy, status: "skipped", skip_reason: why, stake_lamports: lamports(S.stake), from_trigger_ms: fromTrig() }); log("skip", `${m.name} ${why}`); };
   if (m.lagMs != null) { S.lags.push(m.lagMs); if (S.lags.length > 10) S.lags.shift(); }
   if (S.mode === "off") return skip("mode off");
+  if (m.lagMs != null && m.lagMs > CFG.FEED_BACKLOG_MS) return skip(`feed ${(m.lagMs / 1000).toFixed(0)} s behind (tracker catching up)`); // v0.1.3: a 33 s lag after a tracker restart put a paper buy on a stale price (peeled potato, 18 Oct)
   if (m.pass === false) return skip(`paper skip: ${m.skipWhy || "filter"}`); // the website's P5 filters (launch seen · bundle < 70% · < 150 wallets) — not a trade the book takes
   // feed lag is recorded, not acted on: block timestamps run 2–5 s behind the wall clock on Solana, so the number is a trend, not a delay (shadow 18 Oct: it tripped on a healthy feed). The trigger-age check below is the real guard.
   if (fromTrig() > CFG.TRIGGER_MAX_AGE_MS) return skip(`trigger ${fromTrig()} ms old`);
@@ -138,15 +139,18 @@ async function handleTrigger(m) {
       from_trigger_ms: fromTrig(), detail: { paperPrice: m.price, paperMc: m.mc, lagMs: m.lagMs ?? null, bundle: m.bundle ?? null, wal60: m.wal60 ?? null, feeBps: b.feeBps, tVenueMs: tVenue, curveMcSol: v.curve ? +pump.curveMcSol(v.curve).toFixed(1) : null } });
     let tx = await buildTx(S.pub, wrap(S.pub, [...pre, ...b.ixs], lamports(CFG.TIP_SOL), CFG.CU_PRICE));
     // shadow always simulates; live simulates unless EXEC_SIM_BEFORE_SEND=0. A program refusal on the classic instruction → try the other form once (v3 on the curve, IDL-v2 on the pool)
-    let sim = S.mode === "live" && !CFG.SIM_BEFORE_SEND ? { ok: true, err: null, logs: [], units: null, ms: 0, skipped: true } : await simulate(tx);
-    if (progErr(sim)) { const altKind = v.kind === "curve" ? "classic" : "amm2"; const b3 = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, altKind); const tx3 = await buildTx(S.pub, wrap(S.pub, [...pre, ...b3.ixs], lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim3 = await simulate(tx3);
+    const myAta = ata(S.pub, v.mint, v.tokenProgram); // watched through the simulation: its post-state balance is the fill the chain would really give (our quote can be off — reserves and fees change under us)
+    let sim = S.mode === "live" && !CFG.SIM_BEFORE_SEND ? { ok: true, err: null, logs: [], units: null, ms: 0, skipped: true, post: [] } : await simulate(tx, [myAta]);
+    if (progErr(sim)) { const altKind = v.kind === "curve" ? "classic" : "amm2"; const b3 = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, altKind); const tx3 = await buildTx(S.pub, wrap(S.pub, [...pre, ...b3.ixs], lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim3 = await simulate(tx3, [myAta]);
       updOrder(id, { detail: { firstKind: b.ixKind, firstErr: sim.err, firstLogs: sim.logs.slice(-4) } }); if (sim3.ok || !progErr(sim3)) { b = b3; tx = tx3; sim = sim3; } }
     if (!(b.minOut > 0n)) return skip("quote gave a zero minimum — pool state unreadable");
     updOrder(id, { ix_kind: b.ixKind, quote_out: b.expected, min_out: b.minOut, sim_ok: sim.ok ? 1 : 0, sim_err: sim.err, sim_units: sim.units, sim_ms: sim.ms, status: sim.ok ? "simulated" : "sim-failed" });
     if (!sim.ok) { log("sim-fail", `${m.name} ${b.ixKind}: ${sim.err} | ${sim.logs.slice(-3).join(" | ")}`); return; }
-    if (S.mode !== "live") { // shadow: the simulated buy is the fill
-      openPosition.run({ paper_id: m.id, mint: m.mint, name: m.name, strategy: m.strategy, mode: "shadow", opened_ts: nowS(), tokens: Number(b.expected), cost_lamports: stake, buy_order: id, venue: v.kind, ix_kind: b.ixKind, paper_entry_price: m.price });
-      updOrder(id, { status: "shadow-filled", fill_tokens: Number(b.expected), fill_sol: -stake, from_trigger_ms: fromTrig() }); afterOpen(m.id); return;
+    if (S.mode !== "live") { // shadow: the chain's simulated fill is the fill (falls back to our quote if the post-state was not returned)
+      const simTok = parseTokenAccount(sim.post?.[0])?.amount ?? null; const got = simTok != null && simTok > 0n ? simTok : b.expected; const off = simTok != null && simTok > 0n ? Number(simTok) / Number(b.expected) - 1 : null;
+      if (off != null && Math.abs(off) > 0.05) log("quote-off", `${m.name} ${b.ixKind}: our quote ${b.expected} vs chain ${simTok} (${(off * 100).toFixed(1)}%)`);
+      openPosition.run({ paper_id: m.id, mint: m.mint, name: m.name, strategy: m.strategy, mode: "shadow", opened_ts: nowS(), tokens: Number(got), cost_lamports: stake, buy_order: id, venue: v.kind, ix_kind: b.ixKind, paper_entry_price: m.price });
+      updOrder(id, { status: "shadow-filled", fill_tokens: Number(got), fill_sol: -stake, from_trigger_ms: fromTrig(), detail: { paperPrice: m.price, paperMc: m.mc, lagMs: m.lagMs ?? null, bundle: m.bundle ?? null, wal60: m.wal60 ?? null, feeBps: b.feeBps, tVenueMs: tVenue, quoteTokens: Number(b.expected), simTokens: simTok == null ? null : Number(simTok), quoteOff: off } }); afterOpen(m.id); return;
     }
     // live: sign; the signature is on record BEFORE the first send, so a buy that lands late (or after a crash) is found by the reconciler and never left unmanaged.
     tx.sign([S.kp]); const sig = bs58.encode(tx.signatures[0]);
@@ -322,8 +326,10 @@ if (cmd === "selftest") {
   const v = await venueOf(mintStr); console.log("venue:", v.kind, v.kind === "curve" ? `MC ${pump.curveMcSol(v.curve).toFixed(1)} SOL · complete ${v.curve.complete} · creator ${v.curve.creator.toBase58()} · creatorFeeBps ${v.curve.creatorFeeBps} · acct len ${v.curve.len} · solQuoted ${v.solQuoted}` : v.kind === "amm" ? `pool ${v.poolPk.toBase58()} base ${v.baseRes} quote ${v.quoteRes}` : v.reason);
   const pre = S.pub ? await userVolPrefix(v.kind === "curve" ? "curve" : "amm") : []; console.log(`user volume accumulator (${v.kind === "curve" ? "pump" : "amm"}): ${pre.length ? "missing — create instruction goes in front of the first buy" : "exists"}`);
   if (v.kind !== "none") for (const kind of v.kind === "curve" ? ["v3", "classic"] : ["amm", "amm2"]) {
-    const b = buyIxs(v, user, lamports(stakeSol), CFG.SLIP_BUY, kind); const tx = await buildTx(user, wrap(user, [...pre, ...b.ixs], lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim = await simulate(tx);
+    const b = buyIxs(v, user, lamports(stakeSol), CFG.SLIP_BUY, kind); const tx = await buildTx(user, wrap(user, [...pre, ...b.ixs], lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim = await simulate(tx, [ata(user, v.mint, v.tokenProgram)]);
     console.log(`buy ${kind}: expected ${b.expected} tokens (min ${b.minOut}) feeBps ${b.feeBps} · sim ${sim.ok ? "OK" : "FAILED " + sim.err} · units ${sim.units} · ${sim.ms} ms`); if (!sim.ok) console.log("   logs:", sim.logs.slice(-6).join("\n         "));
+    const simTok = parseTokenAccount(sim.post?.[0])?.amount; const spot = v.kind === "curve" ? Number(v.curve.vSol) / Number(v.curve.vTok) : Number(v.quoteRes) / Number(v.baseRes); // lamports per raw token
+    if (sim.ok) console.log(`   chain fill: ${simTok ?? "?"} tokens (${simTok ? ((Number(simTok) / Number(b.expected) - 1) * 100).toFixed(1) + "% vs our quote" : "post-state not returned"}) · spot ${(spot * 1e3).toFixed(4)} · our quote ${(lamports(stakeSol) / Number(b.expected) * 1e3).toFixed(4)} · chain ${simTok ? (lamports(stakeSol) / Number(simTok) * 1e3).toFixed(4) : "?"} (SOL per 1M tokens)${v.kind === "amm" ? ` · pool virtualQuote ${v.pool.virtualQuote} creatorFeeBps ${v.pool.creatorFeeBps}` : ""}`);
     if (b.expected > 0n) { // the sell is quoted against the state our buy would leave behind, so the round trip is what we would really pay in fees
       const net = BigInt(lamports(stakeSol)) - (BigInt(lamports(stakeSol)) * BigInt(b.feeBps)) / 10000n;
       const after = v.kind === "curve" ? { ...v, curve: { ...v.curve, vSol: v.curve.vSol + net, vTok: v.curve.vTok - b.expected } } : { ...v, baseRes: BigInt(v.baseRes) - b.expected, quoteRes: BigInt(v.quoteRes) + net };

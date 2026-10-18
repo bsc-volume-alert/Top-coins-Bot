@@ -32,7 +32,8 @@ export const CFG = {
   CU_LIMIT: n("EXEC_CU_LIMIT", 300_000),
   CU_PRICE: n("EXEC_CU_PRICE", 2_000_000),        // micro-lamports per CU: 250k CU × 2 lamports = 0.0005 SOL priority fee
   CU_PRICE_RETRY: n("EXEC_CU_PRICE_RETRY", 6_000_000),
-  FEED_LAG_MAX_MS: n("EXEC_FEED_LAG_MAX_MS", 2000), // no buys when the tracker's feed is this far behind the chain
+  FEED_LAG_MAX_MS: n("EXEC_FEED_LAG_MAX_MS", 2000), // recorded only (block timestamps run 2–5 s behind the wall clock)
+  FEED_BACKLOG_MS: n("EXEC_FEED_BACKLOG_MS", 10000), // no buys when the trigger's own trade is this old: the tracker is replaying a backlog (restart), the paper price is stale
   TRIGGER_MAX_AGE_MS: n("EXEC_TRIGGER_MAX_AGE_MS", 4000), // a trigger older than this (queued while we were busy) is not bought
   FALLBACK_SELL_MIN_H5: n("EXEC_FALLBACK_SELL_MIN_H5", 7),      // following hold-5: the exit must come by 5 min — sell anyway at 7
   FALLBACK_SELL_MIN_FLOW4: n("EXEC_FALLBACK_SELL_MIN_FLOW4", 390), // following the runner: the paper close is the backstop, 6½ h the ceiling

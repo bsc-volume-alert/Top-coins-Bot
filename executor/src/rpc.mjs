@@ -22,12 +22,15 @@ export async function buildTx(payer, ixs, signer = null) {
   const tx = new VersionedTransaction(msg); tx.lastValidBlockHeight = lastValidBlockHeight; if (signer) tx.sign([signer]); return tx;
 }
 /** Simulate (no signature needed). Returns { ok, err, logs, units, ms }. */
-export async function simulate(tx) {
+/** Simulate; `watch` = accounts whose post-simulation state we want back (e.g. our token account, to read the real fill the chain would give). */
+export async function simulate(tx, watch = []) {
   const t0 = Date.now(); rpcStats.calls++;
   try {
-    const r = await conn.simulateTransaction(tx, { sigVerify: false, replaceRecentBlockhash: true, commitment: "processed" });
-    return { ok: !r.value.err, err: r.value.err ? JSON.stringify(r.value.err) : null, logs: r.value.logs || [], units: r.value.unitsConsumed ?? null, ms: Date.now() - t0 };
-  } catch (e) { rpcStats.errors++; rpcStats.lastErr = e.message; return { ok: false, err: "rpc: " + e.message, logs: [], units: null, ms: Date.now() - t0 }; }
+    const cfg = { sigVerify: false, replaceRecentBlockhash: true, commitment: "processed" }; if (watch.length) cfg.accounts = { encoding: "base64", addresses: watch.map((k) => k.toBase58()) };
+    const r = await conn.simulateTransaction(tx, cfg);
+    const post = (r.value.accounts || []).map((a) => (a && a.data ? Buffer.from(a.data[0], "base64") : null));
+    return { ok: !r.value.err, err: r.value.err ? JSON.stringify(r.value.err) : null, logs: r.value.logs || [], units: r.value.unitsConsumed ?? null, ms: Date.now() - t0, post };
+  } catch (e) { rpcStats.errors++; rpcStats.lastErr = e.message; return { ok: false, err: "rpc: " + e.message, logs: [], units: null, ms: Date.now() - t0, post: [] }; }
 }
 /** Send a signed transaction through Helius Sender (every landing route at once); falls back to the normal RPC. Returns { sig, via, ms }. */
 export async function send(tx) {
