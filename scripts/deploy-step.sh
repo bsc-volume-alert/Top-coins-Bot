@@ -27,3 +27,17 @@ if [ -n "$FAIL" ]; then
 fi
 pm2 startOrReload ecosystem.config.cjs --only tracker --update-env >/dev/null 2>&1
 echo "[deploy] done: $(git log -1 --pretty=%s)"
+# v0.18.90: the executor (live buy/sell bot) deploys only when its own folder changed, with its own libraries and its own smoke boot
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^executor/'; then
+  echo "[deploy] executor changed — installing and checking"
+  (cd executor && npm install --omit=dev --no-audit --no-fund 2>&1 | tail -1)
+  EFAIL=""
+  for f in executor/src/*.mjs; do node --check "$f" 2>/tmp/deploy-exec.err || { EFAIL="syntax: $f $(head -c 300 /tmp/deploy-exec.err)"; break; }; done
+  if [ -z "$EFAIL" ]; then
+    mkdir -p /root/executor
+    (cd executor && EXEC_SMOKE=1 EXEC_SMOKE_MS=15000 timeout 60 node src/index.mjs >/tmp/deploy-exec-smoke.log 2>&1); ERC=$?
+    [ "$ERC" != "0" ] && EFAIL="executor smoke boot exited with code $ERC: $(grep -E 'Error|error|at ' /tmp/deploy-exec-smoke.log | head -5 | tr '\n' ' ' | head -c 400)"
+  fi
+  if [ -n "$EFAIL" ]; then echo "[deploy] EXECUTOR REJECTED: $EFAIL"; notify "⛔ <b>Executor deploy rejected</b> — the running executor stays as it was. Reason: <code>$(echo "$EFAIL" | head -c 500)</code>"
+  else pm2 startOrReload executor/ecosystem.cjs --only executor --update-env >/dev/null 2>&1 && pm2 save >/dev/null 2>&1; echo "[deploy] executor reloaded"; fi
+fi

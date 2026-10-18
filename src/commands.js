@@ -1,5 +1,6 @@
 // Telegram command polling: /report, /csv, /status. Long-polls getUpdates; only answers the configured chat.
 import { CFG } from "./config.js";
+import { execSend } from "./execlink.js"; // v0.18.90
 import { db, q } from "./db.js";
 import { tg } from "./telegram.js";
 import { runnersText } from "./runners.js";
@@ -41,7 +42,8 @@ async function poll() {
       for (const u of batch) {
         const m = u.message; if (!m?.text || String(m.chat?.id) !== CHAT()) continue;
         const cmd = m.text.trim().split(/\s+/)[0].toLowerCase().replace(/@.*$/, "");
-        if (cmd === "/report") await tg(reportText(24));
+        if (cmd === "/live") { const ok = execSend({ type: "cmd", text: m.text.trim() }); if (!ok) await tg("executor not running (no socket) — nothing to pass the command to"); } // v0.18.90: forwarded to the executor, which answers itself
+        else if (cmd === "/report") await tg(reportText(24));
         else if (cmd === "/report7") await tg(reportText(24 * 7));
         else if (cmd === "/csv") await sendCsv(false);
         else if (cmd === "/csvfull") await sendCsv(true);

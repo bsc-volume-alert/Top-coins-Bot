@@ -56,6 +56,15 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.90 — the executor: live buy/sell bot, shadow mode (18 Oct, evening)
+- New folder `executor/` — a separate program (pm2 app `executor`, own libraries, own SQLite book, own wallet file outside the repo) that receives
+  Project 5 triggers from the tracker over a local socket and builds the real pump.fun / PumpSwap transactions itself. Modes: `off`, `shadow`
+  (simulate, sign nothing), `live` (sign, send through Helius Sender, confirm, read the real fill). Details and decisions: `executor/README.md`.
+- Tracker changes are four hook lines: `src/execlink.js` (socket client), triggers / exit-rule firings / closes sent from `copytrade.js`, `/live …`
+  forwarded from `commands.js`. The tracker never waits on the executor; if it is not running, messages are dropped.
+- Deploy: `scripts/deploy-step.sh` installs, syntax-checks, smoke-boots and reloads the executor only when `executor/` changed. First start on the box is manual (one paste).
+- v0.18.89 (same afternoon): `first_secs` on every P5-family entry — feed lag at the trigger, open delay, price 1 / 2 / 5 / 10 s after the trigger.
+
 ## v0.18.88 — Project 6 v3 + Project 7 folded in (18 Oct, 14:30 UK)
 - **Entry** (owner's direction after the 18-hour wake-up review, 304 wake-ups ≥ $100K/5m): coin **6–72 h old**, market cap **$300K–$600K**, 5-minute volume **≥ $60K and ≥ 10% of market cap**, buys ≥ sells, **one trade per coin per 24 h** (the $60K / $80K / $100K tiers are gone — `P6_TIERS` default "60000"). New rejections on the volume log: "too old", "volume under 10% of MC". Env: `P6_MAX_MC` 600000 (was 1.5M), `P6_MAX_AGE_H` 72, `P6_MIN_VR` 0.10, `P6_HOLD_H` 6 (was 24), `P6_V3=0` turns the new exit off.
 - **Exit v3** (`x_p6v3`): **−40% stop until the coin doubles · at 2x sell half** (the stake is back) **· the rest on a 50% trailing stop from the peak · closed at 6 h · no golden rule** — the $15K rule was 3.6% of these coins' market cap and closed 8 of 11 inside two hours (El Gato: sold 1.23x, went 5x). Where the old golden rule *would* have sold is still noted in `p6_state.x.grWould`. A / B / C and the old ½-at-4x line keep being recorded on the same coins (`x_p6a/b/c`, `x_p6`). Positions open at the deploy keep the v2 rules (24 h, golden rule, "done" close); new entries are v3 (`p6_state.v3`). The −90% "dead" close stays. Telegram: "P6 HIT 2x — half sold" and the close shows the v3 value first.

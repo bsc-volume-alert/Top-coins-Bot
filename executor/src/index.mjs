@@ -1,0 +1,255 @@
+// Executor — the live buy/sell bot. Listens on a local socket for the tracker's Project 5 triggers and exit signals, builds the real pump.fun /
+// PumpSwap transactions itself and (shadow) simulates them or (live) signs and sends them through Helius Sender. Own wallet, own book, own pm2 app.
+//   node src/index.mjs                      run (mode from EXEC_MODE / the saved override: off | shadow | live)
+//   node src/index.mjs selftest <mint>      build + simulate a buy for one coin and print everything
+//   node src/index.mjs status               print mode, wallet, balance, open positions, last orders
+import { createServer } from "node:net";
+import { existsSync, unlinkSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { Keypair } from "@solana/web3.js";
+import { CFG, EXEC_HOME, lamports, sol } from "./config.mjs";
+import { loadKeypair } from "./wallet.mjs";
+import { getAccounts, getBalance, buildTx, simulate, send, waitConfirm, readFill, rpcStats } from "./rpc.mjs";
+import { ata, parseTokenAccount, ixBudget, ixTip, ixTransfer, PK } from "./solana.mjs";
+import * as pump from "./pump.mjs";
+import * as amm from "./amm.mjs";
+import { newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, hasPosition, dayNet, recentOrders, stats, log } from "./book.mjs";
+
+const VERSION = "0.1.0";
+const nowS = () => Math.floor(Date.now() / 1000);
+const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const short = (m) => (m ? `${m.slice(0, 4)}…${m.slice(-4)}` : "?");
+
+// ---- settings that can be changed from Telegram and survive restarts (mode, stake) ----
+const OVR = join(EXEC_HOME, "overrides.json");
+const ovr = (() => { try { return JSON.parse(readFileSync(OVR, "utf8")); } catch { return {}; } })();
+const S = { mode: ovr.mode || CFG.MODE, stake: ovr.stake || CFG.STAKE_SOL, exit: ovr.exit || CFG.EXIT, strategy: ovr.strategy || CFG.STRATEGY, stoppedDay: null, lastTracker: 0, kp: null, pub: null, balance: null, balanceT: 0, buying: 0 };
+const saveOvr = () => { try { writeFileSync(OVR, JSON.stringify({ mode: S.mode, stake: S.stake, exit: S.exit, strategy: S.strategy })); } catch {} };
+
+// ---- Telegram (send only; commands arrive through the tracker, which owns the bot's polling) ----
+export async function tg(text) {
+  if (!CFG.TG_TOKEN || !CFG.TG_CHAT || CFG.SMOKE) { console.log("[tg]", text.replace(/<[^>]+>/g, "")); return; }
+  try { await fetch(`https://api.telegram.org/bot${CFG.TG_TOKEN}/sendMessage`, { method: "POST", headers: { "content-type": "application/json" }, signal: AbortSignal.timeout(8000),
+    body: JSON.stringify({ chat_id: CFG.TG_CHAT, text: `🤖 ${text}`, parse_mode: "HTML", disable_web_page_preview: true }) }); } catch (e) { console.error("[tg]", e.message); }
+}
+
+// ---- wallet / balance ----
+function loadWallet() { try { S.kp = loadKeypair(); S.pub = S.kp?.publicKey || null; } catch (e) { console.error("[wallet]", e.message); S.kp = null; S.pub = null; } return S.kp; }
+async function balance(force = false) {
+  if (!S.pub) return null; if (!force && Date.now() - S.balanceT < 5000) return S.balance;
+  try { S.balance = await getBalance(S.pub); S.balanceT = Date.now(); } catch (e) { console.error("[balance]", e.message); } return S.balance;
+}
+
+// ---- venue lookup: where does this coin trade right now? ----
+let globalCache = null, cfgCache = null;
+async function venueOf(mintStr) {
+  const mint = PK(mintStr), curvePk = pump.curveOf(mint);
+  const [curveAcc, mintAcc, globalAcc] = await getAccounts([curvePk, mint, pump.GLOBAL]);
+  if (globalAcc) globalCache = pump.decodeGlobal(globalAcc.data) || globalCache;
+  const tokenProgram = pump.tokenProgramOf(mintAcc?.owner);
+  const curve = curveAcc ? pump.decodeCurve(curveAcc.data) : null;
+  if (curve && !curve.complete) return { kind: "curve", mint, curve, tokenProgram, global: globalCache, curvePk, solQuoted: curve.solQuoted };
+  const poolPk = amm.migratedPoolOf(mint);
+  const [poolAcc, cfgAcc] = await getAccounts([poolPk, amm.GLOBAL_CONFIG]);
+  if (cfgAcc) cfgCache = amm.decodeGlobalConfig(cfgAcc.data) || cfgCache;
+  const pool = poolAcc ? amm.decodePool(poolAcc.data) : null;
+  if (!pool) return { kind: "none", mint, curve, tokenProgram, reason: curve ? "curve complete, PumpSwap pool not found at the migration address" : "no bonding curve for this mint" };
+  const [baseAcc, quoteAcc] = await getAccounts([pool.baseAcc, pool.quoteAcc]);
+  const baseRes = parseTokenAccount(baseAcc?.data)?.amount ?? 0n, quoteRes = parseTokenAccount(quoteAcc?.data)?.amount ?? 0n;
+  return { kind: "amm", mint, pool, poolPk, cfg: cfgCache, tokenProgram, baseRes, quoteRes, curve };
+}
+
+// ---- building ----
+function buyIxs(v, user, spendLamports, slip, kind = "classic") {
+  if (v.kind === "curve") {
+    const q = pump.quoteBuy(v.curve, v.global, spendLamports), minTokens = (q.tokens * BigInt(Math.round((1 - slip) * 10000))) / 10000n;
+    const f = kind === "v3" ? pump.ixBuyV3 : pump.ixBuyClassic;
+    return { ixs: f({ user, mint: v.mint, curve: v.curve, global: v.global, tokenProgram: v.tokenProgram, spendLamports, minTokens }), expected: q.tokens, minOut: minTokens, feeBps: q.feeBps, ixKind: kind };
+  }
+  const q = amm.quoteBuy(v.pool, v.cfg, v.baseRes, v.quoteRes, spendLamports), minBase = (q.base * BigInt(Math.round((1 - slip) * 10000))) / 10000n;
+  return { ixs: amm.ixBuy({ user, poolPk: v.poolPk, pool: v.pool, cfg: v.cfg, baseTokenProgram: v.tokenProgram, spendLamports, minBase }), expected: q.base, minOut: minBase, feeBps: q.feeBps, ixKind: "amm" };
+}
+function sellIxs(v, user, amount, slip, kind = "classic") {
+  if (v.kind === "curve") {
+    const q = pump.quoteSell(v.curve, v.global, amount), minSol = (q.sol * BigInt(Math.round((1 - slip) * 10000))) / 10000n;
+    const f = kind === "v3" ? pump.ixSellV3 : pump.ixSellClassic;
+    return { ixs: f({ user, mint: v.mint, curve: v.curve, global: v.global, tokenProgram: v.tokenProgram, amount, minSol }), expected: q.sol, minOut: minSol, ixKind: kind };
+  }
+  const q = amm.quoteSell(v.pool, v.cfg, v.baseRes, v.quoteRes, amount), minSol = (q.sol * BigInt(Math.round((1 - slip) * 10000))) / 10000n;
+  return { ixs: amm.ixSell({ user, poolPk: v.poolPk, pool: v.pool, cfg: v.cfg, baseTokenProgram: v.tokenProgram, amount, minSol }), expected: q.sol, minOut: minSol, ixKind: "amm" };
+}
+const wrap = (user, ixs, tipLamports, cuPrice) => [...ixBudget(CFG.CU_LIMIT, cuPrice), ixTip(user, tipLamports), ...ixs];
+const progErr = (sim) => !sim.ok && !/rpc:/.test(sim.err || "") && !/insufficient (lamports|funds)/i.test(sim.logs.join(" ") + (sim.err || ""));
+
+// ---- the buy ----
+async function handleTrigger(m) {
+  S.lastTracker = Date.now();
+  if (m.strategy !== S.strategy) return;
+  const t0 = Date.now(), fromTrig = () => Date.now() - (m.wall0 || t0);
+  const skip = (why) => { newOrder({ side: "buy", paper_id: m.id, mint: m.mint, name: m.name, strategy: m.strategy, status: "skipped", skip_reason: why, stake_lamports: lamports(S.stake), from_trigger_ms: fromTrig() }); log("skip", `${m.name} ${why}`); };
+  if (S.mode === "off") return skip("mode off");
+  if (m.lagMs != null && m.lagMs > CFG.FEED_LAG_MAX_MS) return skip(`feed lag ${m.lagMs} ms`);
+  if (fromTrig() > CFG.TRIGGER_MAX_AGE_MS) return skip(`trigger ${fromTrig()} ms old`);
+  if (m.venue && !/pump|pumpswap/i.test(m.venue)) return skip(`venue ${m.venue} not handled yet`);
+  if (hasPosition(m.mint)) return skip("already holding");
+  const open = openPositions().length + S.buying; if (open >= CFG.MAX_OPEN) return skip(`${open} positions open (cap ${CFG.MAX_OPEN})`);
+  const day = dayNet(); if (day.n <= -lamports(S.stake) * CFG.DAILY_STOP_STAKES) { if (S.stoppedDay !== new Date().toISOString().slice(0, 10)) { S.stoppedDay = new Date().toISOString().slice(0, 10); tg(`⛔ <b>Daily stop</b> — ${sol(day.n).toFixed(3)} SOL today over ${day.c} trades. No more buys until tomorrow (UTC). <code>/live on</code> re-arms it.`); } return skip("daily stop"); }
+  if (!S.pub) return skip("no wallet yet");
+  const stake = lamports(S.stake), bal = await balance(); if (bal != null && bal < stake + lamports(0.02)) return skip(`balance ${sol(bal).toFixed(3)} SOL below stake + fees`);
+  S.buying++;
+  try {
+    const v = await venueOf(m.mint); const tVenue = Date.now() - t0;
+    if (v.kind === "none") return skip(v.reason);
+    if (v.kind === "curve" && !v.solQuoted) return skip("curve not SOL-quoted");
+    let b = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, "classic");
+    const id = newOrder({ side: "buy", paper_id: m.id, mint: m.mint, name: m.name, strategy: m.strategy, venue: v.kind, ix_kind: b.ixKind, stake_lamports: stake, slippage: CFG.SLIP_BUY, quote_out: b.expected, min_out: b.minOut, tip_lamports: lamports(CFG.TIP_SOL), cu_price: CFG.CU_PRICE,
+      from_trigger_ms: fromTrig(), detail: { paperPrice: m.price, paperMc: m.mc, lagMs: m.lagMs ?? null, feeBps: b.feeBps, tVenueMs: tVenue, curveMcSol: v.curve ? +pump.curveMcSol(v.curve).toFixed(1) : null } });
+    let tx = await buildTx(S.pub, wrap(S.pub, b.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE));
+    // shadow and live both simulate first; a program refusal on the classic curve instruction → try the v3 form once
+    let sim = await simulate(tx);
+    if (v.kind === "curve" && progErr(sim)) { const b3 = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, "v3"); const tx3 = await buildTx(S.pub, wrap(S.pub, b3.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim3 = await simulate(tx3);
+      updOrder(id, { detail: { classicErr: sim.err, classicLogs: sim.logs.slice(-4) } }); if (sim3.ok || !progErr(sim3)) { b = b3; tx = tx3; sim = sim3; } }
+    updOrder(id, { ix_kind: b.ixKind, quote_out: b.expected, min_out: b.minOut, sim_ok: sim.ok ? 1 : 0, sim_err: sim.err, sim_units: sim.units, sim_ms: sim.ms, status: sim.ok ? "simulated" : "sim-failed" });
+    if (!sim.ok) { log("sim-fail", `${m.name} ${b.ixKind}: ${sim.err} | ${sim.logs.slice(-3).join(" | ")}`); return; }
+    if (S.mode !== "live") { // shadow: the simulated buy is the fill
+      openPosition.run({ paper_id: m.id, mint: m.mint, name: m.name, strategy: m.strategy, mode: "shadow", opened_ts: nowS(), tokens: Number(b.expected), cost_lamports: stake, buy_order: id, venue: v.kind, ix_kind: b.ixKind, paper_entry_price: m.price });
+      updOrder(id, { status: "shadow-filled", fill_tokens: Number(b.expected), fill_sol: -stake, from_trigger_ms: fromTrig() }); return;
+    }
+    // live: sign, send, confirm; one retry at a higher tip
+    tx.sign([S.kp]); let s = await send(tx); updOrder(id, { sig: s.sig, via: s.via, send_ms: s.ms, status: "sent" });
+    let c = await waitConfirm(s.sig, 12000);
+    if (c.status === "timeout") {
+      const tx2 = await buildTx(S.pub, wrap(S.pub, b.ixs, lamports(CFG.TIP_RETRY_SOL), CFG.CU_PRICE_RETRY), S.kp); const s2 = await send(tx2); updOrder(id, { detail: { retrySig: s2.sig, retryVia: s2.via } });
+      const c1 = await waitConfirm(s.sig, 4000); c = c1.status === "confirmed" ? c1 : await waitConfirm(s2.sig, 15000); if (c.status === "confirmed" && c1.status !== "confirmed") { s = s2; updOrder(id, { sig: s2.sig, via: s2.via, tip_lamports: lamports(CFG.TIP_RETRY_SOL), cu_price: CFG.CU_PRICE_RETRY }); }
+    }
+    if (c.status !== "confirmed") { updOrder(id, { status: c.status === "failed" ? "failed" : "timeout", sim_err: c.err }); log("buy-fail", `${m.name} ${c.status} ${c.err || ""}`); tg(`⚠️ buy ${c.status} — ${esc(m.name)} ${c.err ? `<code>${esc(c.err).slice(0, 120)}</code>` : "(not landed in 30 s)"}`); return; }
+    const fill = await readFill(s.sig, S.pub, PK(m.mint)).catch(() => null);
+    const tokens = fill?.tokenDelta ?? Number(b.expected), spent = fill ? -fill.solDelta : stake;
+    openPosition.run({ paper_id: m.id, mint: m.mint, name: m.name, strategy: m.strategy, mode: "live", opened_ts: nowS(), tokens, cost_lamports: spent, buy_order: id, venue: v.kind, ix_kind: b.ixKind, paper_entry_price: m.price });
+    updOrder(id, { status: "confirmed", confirm_slot: c.slot, fill_tokens: tokens, fill_sol: -spent, fee: fill?.fee ?? null, from_trigger_ms: fromTrig() });
+    const livePx = tokens > 0 ? (spent / 1e9) / (tokens / 1e6) : null; // SOL per whole token (6 decimals), same unit as the paper price
+    const gap = livePx && m.price ? ((livePx / m.price) - 1) * 100 : null;
+    tg(`🟢 <b>BOUGHT</b> ${esc(m.name)} — ${sol(spent).toFixed(4)} SOL incl. fees · ${(fromTrig() / 1000).toFixed(1)} s after the trigger${gap != null ? ` · ${gap >= 0 ? "+" : ""}${gap.toFixed(1)}% vs paper price` : ""} · ${v.kind}/${b.ixKind}\n<code>${s.sig}</code>`);
+  } catch (e) { console.error("[buy]", e); log("buy-error", `${m.name}: ${e.message}`); newOrder({ side: "buy", paper_id: m.id, mint: m.mint, name: m.name, strategy: m.strategy, status: "error", skip_reason: String(e.message).slice(0, 200), stake_lamports: stake, from_trigger_ms: fromTrig() }); }
+  finally { S.buying = Math.max(0, S.buying - 1); }
+}
+
+// ---- the sell ----
+const sellTry = new Map(); // paper_id -> last attempt ms (a sell that will not land is retried every 20 s, not every tick)
+async function sellPosition(p, rule, paperMult = null, why = null) {
+  if (!S.pub) return; const t0 = Date.now(), mint = PK(p.mint);
+  if (Date.now() - (sellTry.get(p.paper_id) || 0) < 20_000) return; sellTry.set(p.paper_id, Date.now());
+  try {
+    const v = await venueOf(p.mint); if (v.kind === "none") { log("sell-novenue", `${p.name}: ${v.reason}`); return; }
+    const isStop = paperMult != null && paperMult < 1, slip = isStop ? CFG.SLIP_STOP : CFG.SLIP_SELL;
+    let amount = BigInt(p.tokens || 0);
+    if (p.mode === "live") { const [acc] = await getAccounts([ata(S.pub, mint, v.tokenProgram)]); amount = parseTokenAccount(acc?.data)?.amount ?? 0n;
+      if (amount === 0n) { closePosition.run({ paper_id: p.paper_id, sell_order: null, closed_ts: nowS(), proceeds_lamports: 0, pnl_lamports: -p.cost_lamports, exit_rule: rule, paper_exit_mult: paperMult, status: "closed" }); log("sell-empty", `${p.name}: no tokens in wallet`); return; } }
+    let sIx = sellIxs(v, S.pub, amount, slip, p.ix_kind === "v3" ? "v3" : "classic");
+    const id = newOrder({ side: "sell", paper_id: p.paper_id, mint: p.mint, name: p.name, strategy: p.strategy, rule, venue: v.kind, ix_kind: sIx.ixKind, amount_tokens: Number(amount), slippage: slip, quote_out: sIx.expected, min_out: sIx.minOut, tip_lamports: lamports(CFG.TIP_SOL), cu_price: CFG.CU_PRICE, detail: { why, paperMult } });
+    if (p.mode !== "live") { // shadow: the quote at this moment is the fill (a sell cannot be simulated without holding the tokens)
+      const proceeds = Number(sIx.expected) - lamports(CFG.TIP_SOL) - 10000;
+      closePosition.run({ paper_id: p.paper_id, sell_order: id, closed_ts: nowS(), proceeds_lamports: proceeds, pnl_lamports: proceeds - p.cost_lamports, exit_rule: rule, paper_exit_mult: paperMult, status: "closed" });
+      updOrder(id, { status: "shadow-filled", fill_sol: proceeds, fill_tokens: -Number(amount) }); return;
+    }
+    let tx = await buildTx(S.pub, wrap(S.pub, sIx.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); let sim = await simulate(tx);
+    if (v.kind === "curve" && progErr(sim)) { const alt = sellIxs(v, S.pub, amount, slip, sIx.ixKind === "v3" ? "classic" : "v3"); const tx2 = await buildTx(S.pub, wrap(S.pub, alt.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim2 = await simulate(tx2); if (sim2.ok) { sIx = alt; tx = tx2; sim = sim2; } }
+    updOrder(id, { ix_kind: sIx.ixKind, sim_ok: sim.ok ? 1 : 0, sim_err: sim.err, sim_units: sim.units, sim_ms: sim.ms });
+    // a failed simulation on a sell is not a reason to hold a dumping coin: send anyway with the stop slippage
+    if (!sim.ok) { log("sell-simfail", `${p.name}: ${sim.err} | ${sim.logs.slice(-3).join(" | ")}`); if (slip < CFG.SLIP_STOP) { sIx = sellIxs(v, S.pub, amount, CFG.SLIP_STOP, sIx.ixKind); tx = await buildTx(S.pub, wrap(S.pub, sIx.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); } }
+    tx.sign([S.kp]); let s = await send(tx); updOrder(id, { sig: s.sig, via: s.via, send_ms: s.ms, status: "sent" });
+    let c = await waitConfirm(s.sig, 12000);
+    for (let attempt = 0; attempt < 3 && c.status !== "confirmed"; attempt++) { // sells keep trying: fresh quote, wider slippage, bigger tip
+      const v2 = await venueOf(p.mint); if (v2.kind === "none") break;
+      const r = sellIxs(v2, S.pub, amount, Math.min(0.5, CFG.SLIP_STOP + 0.1 * attempt), sIx.ixKind); const txr = await buildTx(S.pub, wrap(S.pub, r.ixs, lamports(CFG.TIP_RETRY_SOL), CFG.CU_PRICE_RETRY), S.kp);
+      const sr = await send(txr); c = await waitConfirm(sr.sig, 15000); if (c.status === "confirmed") { s = sr; updOrder(id, { sig: sr.sig, via: sr.via, tip_lamports: lamports(CFG.TIP_RETRY_SOL), cu_price: CFG.CU_PRICE_RETRY, slippage: Math.min(0.5, CFG.SLIP_STOP + 0.1 * attempt) }); }
+    }
+    if (c.status !== "confirmed") { updOrder(id, { status: c.status === "failed" ? "failed" : "timeout", sim_err: c.err }); tg(`🚨 <b>SELL NOT LANDED</b> — ${esc(p.name)} (${rule}) ${c.err ? `<code>${esc(c.err).slice(0, 120)}</code>` : ""}\nStill holding ${Number(amount)} tokens. I will keep trying every 20 s; <code>/live sell ${p.paper_id}</code> forces it.`); return; }
+    const fill = await readFill(s.sig, S.pub, mint).catch(() => null); const proceeds = fill ? fill.solDelta : Number(sIx.expected);
+    closePosition.run({ paper_id: p.paper_id, sell_order: id, closed_ts: nowS(), proceeds_lamports: proceeds, pnl_lamports: proceeds - p.cost_lamports, exit_rule: rule, paper_exit_mult: paperMult, status: "closed" });
+    updOrder(id, { status: "confirmed", confirm_slot: c.slot, fill_sol: proceeds, fill_tokens: fill?.tokenDelta ?? -Number(amount), fee: fill?.fee ?? null, send_ms: Date.now() - t0 });
+    const pnl = proceeds - p.cost_lamports, mult = p.cost_lamports > 0 ? proceeds / p.cost_lamports : null, day = dayNet("live");
+    tg(`${pnl >= 0 ? "✅" : "🔴"} <b>SOLD</b> ${esc(p.name)} (${rule}${paperMult != null ? `, paper ${paperMult.toFixed(2)}x` : ""}) — live <b>${mult ? mult.toFixed(2) + "x" : "?"}</b> · ${pnl >= 0 ? "+" : ""}${sol(pnl).toFixed(4)} SOL · today ${sol(day.n) >= 0 ? "+" : ""}${sol(day.n).toFixed(3)} over ${day.c}\n<code>${s.sig}</code>`);
+  } catch (e) { console.error("[sell]", e); log("sell-error", `${p.name}: ${e.message}`); }
+}
+async function handleExit(m) { S.lastTracker = Date.now(); const p = positionOf(m.id); if (!p || p.status !== "open") return; if (m.type === "exit" && m.rule !== S.exit) return; await sellPosition(p, m.type === "close" ? `paper-close:${m.reason}` : m.rule, m.mult ?? null); }
+
+// ---- commands from Telegram (forwarded by the tracker) ----
+async function handleCmd(text) {
+  const [, sub, arg] = text.trim().split(/\s+/); const bal = await balance(true);
+  const status = () => { const ops = openPositions(); const d = dayNet("live"), sd = dayNet("shadow");
+    return `executor v${VERSION} · mode <b>${S.mode}</b> · follows ${S.strategy} / exit ${S.exit} · stake ${S.stake} SOL · cap ${CFG.MAX_OPEN}\nwallet ${S.pub ? `<code>${S.pub.toBase58()}</code>` : "none"} · balance ${bal != null ? sol(bal).toFixed(4) : "?"} SOL\nopen ${ops.length}: ${ops.map((p) => `${esc(p.name)} (${p.mode})`).join(", ") || "—"}\ntoday live ${sol(d.n).toFixed(3)} / ${d.c} · shadow ${sol(sd.n).toFixed(3)} / ${sd.c} · rpc errs ${rpcStats.errors} · sender errs ${rpcStats.senderErrors}`; };
+  if (!sub) return tg(status());
+  if (sub === "off") { S.mode = "off"; saveOvr(); return tg(`mode <b>off</b> — no buys. Open positions are still sold on their exits.`); }
+  if (sub === "shadow") { S.mode = "shadow"; saveOvr(); return tg(`mode <b>shadow</b> — building and simulating, signing nothing.`); }
+  if (sub === "on" || sub === "live") { if (!S.kp) return tg("no wallet on the box yet"); if (bal == null || bal < lamports(S.stake) + lamports(0.02)) return tg(`balance ${bal != null ? sol(bal).toFixed(4) : "?"} SOL is below one stake + fees — fund the wallet first`); S.mode = "live"; S.stoppedDay = null; saveOvr(); return tg(`mode <b>LIVE</b> — ${S.stake} SOL per trade on ${S.strategy}, exit ${S.exit}.`); }
+  if (sub === "stake") { const v = Number(arg); if (!(v > 0 && v <= 2)) return tg("usage: /live stake 0.25"); S.stake = v; saveOvr(); return tg(`stake set to <b>${v} SOL</b>`); }
+  if (sub === "exit") { if (!["h5", "flow4"].includes(arg)) return tg("usage: /live exit h5 | flow4"); S.exit = arg; saveOvr(); return tg(`exit rule set to <b>${arg}</b>`); }
+  if (sub === "strategy") { if (!/^p5[ew]\d+$/.test(arg || "")) return tg("usage: /live strategy p5e30 | p5e50"); S.strategy = arg; saveOvr(); return tg(`following <b>${arg}</b>`); }
+  if (sub === "sell") { const ops = openPositions(); const list = arg === "all" ? ops : ops.filter((p) => String(p.paper_id) === arg); if (!list.length) return tg("nothing open by that id"); for (const p of list) await sellPosition(p, "manual", null, "telegram"); return; }
+  if (sub === "orders") return tg(recentOrders(8).map((o) => `#${o.id} ${o.side} ${esc(o.name)} ${o.status}${o.skip_reason ? " (" + esc(o.skip_reason) + ")" : ""}${o.sim_err ? " " + esc(String(o.sim_err).slice(0, 60)) : ""}`).join("\n") || "no orders yet");
+  return tg("commands: /live · /live on · /live off · /live shadow · /live stake 0.25 · /live exit h5|flow4 · /live strategy p5e30|p5e50 · /live sell &lt;id|all&gt; · /live orders");
+}
+
+// ---- socket from the tracker ----
+function startSocket(path) {
+  try { if (existsSync(path)) unlinkSync(path); } catch {}
+  const server = createServer((sock) => {
+    let buf = ""; S.lastTracker = Date.now();
+    sock.on("data", (d) => { buf += d.toString(); let i; while ((i = buf.indexOf("\n")) >= 0) { const line = buf.slice(0, i); buf = buf.slice(i + 1); if (!line.trim()) continue; let m; try { m = JSON.parse(line); } catch { continue; }
+      S.lastTracker = Date.now();
+      if (m.type === "trigger") handleTrigger(m).catch((e) => console.error("[trigger]", e.message));
+      else if (m.type === "exit" || m.type === "close") handleExit(m).catch((e) => console.error("[exit]", e.message));
+      else if (m.type === "cmd") handleCmd(m.text || "").catch((e) => console.error("[cmd]", e.message));
+      else if (m.type === "ping") { try { sock.write(JSON.stringify({ type: "pong", mode: S.mode, open: openPositions().length }) + "\n"); } catch {} } } });
+    sock.on("error", () => {});
+  });
+  server.on("error", (e) => console.error("[socket]", e.message));
+  server.listen(path, () => { console.log(`[executor] listening on ${path}`); });
+  return server;
+}
+
+// ---- periodic: orphan sells, tracker-down safety, status file, sweep ----
+let sweptDay = null;
+async function housekeeping() {
+  try {
+    const ops = openPositions(), n = nowS();
+    for (const p of ops) {
+      if (n - p.opened_ts > CFG.FALLBACK_SELL_MIN * 60) await sellPosition(p, "fallback-time", null, `no exit signal in ${CFG.FALLBACK_SELL_MIN} min`);
+      else if (p.mode === "live" && S.lastTracker && Date.now() - S.lastTracker > 120_000) await sellPosition(p, "tracker-down", null, "no tracker contact for 2 min");
+    }
+    if (S.mode === "live" && CFG.SWEEP_TO && CFG.SWEEP_CEILING_SOL > 0) { const day = new Date().toISOString().slice(0, 10); const bal = await balance(true);
+      if (sweptDay !== day && bal != null && bal > lamports(CFG.SWEEP_CEILING_SOL) + lamports(0.05) && !ops.length) { sweptDay = day; const amt = bal - lamports(CFG.SWEEP_CEILING_SOL);
+        try { const tx = await buildTx(S.pub, [...ixBudget(20_000, CFG.CU_PRICE), ixTransfer(S.pub, PK(CFG.SWEEP_TO), amt)], S.kp); const s = await send(tx); const c = await waitConfirm(s.sig, 30000); log("sweep", `${sol(amt)} SOL → ${CFG.SWEEP_TO} ${c.status}`); tg(`🏦 swept ${sol(amt).toFixed(3)} SOL to <code>${CFG.SWEEP_TO}</code> (${c.status})`); } catch (e) { log("sweep-error", e.message); } } }
+    const bal = S.pub ? await balance() : null;
+    writeFileSync(join(EXEC_HOME, "status.json"), JSON.stringify({ version: VERSION, mode: S.mode, strategy: S.strategy, exit: S.exit, stake: S.stake, wallet: S.pub?.toBase58() || null, balance: bal != null ? sol(bal) : null, open: ops.map((p) => ({ id: p.paper_id, name: p.name, mint: p.mint, mode: p.mode, opened_ts: p.opened_ts, cost: sol(p.cost_lamports) })),
+      dayLive: dayNet("live"), dayShadow: dayNet("shadow"), stats: stats(), rpc: rpcStats, trackerSeenS: S.lastTracker ? Math.round((Date.now() - S.lastTracker) / 1000) : null, now: nowS() }));
+  } catch (e) { console.error("[housekeeping]", e.message); }
+}
+
+// ---- CLI ----
+const cmd = process.argv[2];
+if (cmd === "selftest") {
+  const mintStr = process.argv[3]; if (!mintStr) { console.log("usage: node src/index.mjs selftest <mint> [stakeSol]"); process.exit(1); }
+  loadWallet(); const stakeSol = Number(process.argv[4] || S.stake); const user = S.pub || Keypair.generate().publicKey;
+  console.log(`wallet: ${S.pub ? S.pub.toBase58() : "none (simulating with a placeholder payer — expect an insufficient-funds error, the account list is still checked)"}`);
+  const v = await venueOf(mintStr); console.log("venue:", v.kind, v.kind === "curve" ? `MC ${pump.curveMcSol(v.curve).toFixed(1)} SOL · complete ${v.curve.complete} · creator ${v.curve.creator.toBase58()} · creatorFeeBps ${v.curve.creatorFeeBps} · acct len ${v.curve.len} · solQuoted ${v.solQuoted}` : v.kind === "amm" ? `pool ${v.poolPk.toBase58()} base ${v.baseRes} quote ${v.quoteRes}` : v.reason);
+  if (v.kind !== "none") for (const kind of v.kind === "curve" ? ["classic", "v3"] : ["amm"]) {
+    const b = buyIxs(v, user, lamports(stakeSol), CFG.SLIP_BUY, kind); const tx = await buildTx(user, wrap(user, b.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim = await simulate(tx);
+    console.log(`buy ${kind}: expected ${b.expected} tokens (min ${b.minOut}) feeBps ${b.feeBps} · sim ${sim.ok ? "OK" : "FAILED " + sim.err} · units ${sim.units} · ${sim.ms} ms`); if (!sim.ok) console.log("   logs:", sim.logs.slice(-6).join("\n         "));
+    if (v.kind === "curve" && b.expected > 0n) { const sIx = sellIxs(v, user, b.expected, CFG.SLIP_SELL, kind); console.log(`sell ${kind}: ${b.expected} tokens → ${sol(sIx.expected).toFixed(5)} SOL expected (min ${sol(sIx.minOut).toFixed(5)}) — round trip ${((Number(sIx.expected) / lamports(stakeSol) - 1) * 100).toFixed(2)}% at an unmoved price`); }
+  }
+  console.log("rpc:", rpcStats); process.exit(0);
+} else if (cmd === "status") {
+  loadWallet(); const bal = await balance(true); console.log(JSON.stringify({ mode: S.mode, strategy: S.strategy, exit: S.exit, stake: S.stake, wallet: S.pub?.toBase58() || null, balance: bal != null ? sol(bal) : null, open: openPositions(), lastOrders: recentOrders(10) }, null, 1)); process.exit(0);
+} else {
+  loadWallet();
+  const sockPath = CFG.SMOKE ? join(EXEC_HOME, `smoke-${process.pid}.sock`) : CFG.SOCK;
+  startSocket(sockPath);
+  setInterval(housekeeping, 10_000); housekeeping();
+  console.log(`[executor] v${VERSION} mode ${S.mode} · follows ${S.strategy} / exit ${S.exit} · stake ${S.stake} SOL · wallet ${S.pub ? S.pub.toBase58() : "none"} · rpc ${CFG.RPC_URL.replace(/api-key=.*/, "api-key=…")}`);
+  if (CFG.SMOKE) setTimeout(() => { console.log("[smoke] executor alive — ok"); try { unlinkSync(sockPath); } catch {} process.exit(0); }, Number(process.env.EXEC_SMOKE_MS || 15000));
+  else tg(`executor v${VERSION} up — mode <b>${S.mode}</b>, following ${S.strategy} with exit ${S.exit}, ${S.stake} SOL per trade${S.pub ? `\nwallet <code>${S.pub.toBase58()}</code>` : "\nno wallet yet — run: node src/wallet.mjs init"}`);
+  process.on("uncaughtException", (e) => { console.error("[uncaught]", e); log("uncaught", e.stack || e.message); });
+  process.on("unhandledRejection", (e) => { console.error("[unhandled]", e); log("unhandled", e?.stack || String(e)); });
+}

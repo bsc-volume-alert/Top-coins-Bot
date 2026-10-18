@@ -13,6 +13,25 @@ in `src/` is changed for it except the measurements below and, later, one line t
 - Safety: 4 open positions max, daily stop at −6 stakes, no buys when feed lag > 2 s or the restart alarm is on, Telegram `/live off|on`,
   never part-buys (skips and tells), sweeps above a ceiling to a cold address daily, closes token accounts after selling (rent back).
 
+## What is in the folder (v0.1.0, 18 Oct)
+- `src/wallet.mjs` — `init` makes the key file (0600, in /root/executor, outside the repo) and prints the public address only; `address`, `balance`.
+- `src/pump.mjs` / `src/amm.mjs` — pump.fun bonding curve and PumpSwap: account decoding, the IDL's own quote formula, buy / sell instructions built locally
+  (classic `buy_exact_sol_in` / `sell`; the v3 WSOL-quoted pair as the automatic fallback; `buy_exact_quote_in` / `sell` on PumpSwap). PDAs verified
+  against the known global / event-authority / AMM-config addresses.
+- `src/rpc.mjs` — Helius RPC, blockhash cache, simulate, send through Helius Sender (Newark) with plain-RPC fallback, confirmation, fill read-back.
+- `src/book.mjs` — its own SQLite (`/root/executor/executor.db`): every order (built → simulated → sent → confirmed / failed / skipped, with the reason) and every position.
+- `src/index.mjs` — the bot: local socket from the tracker; buy flow (checks → venue → quote → build → simulate → [live: sign, Sender, confirm, retry once at a
+  higher tip, read the real fill]); sell flow on the followed exit rule (`h5` or `flow4`) or the paper close, with retries at wider slippage; safety
+  (4 open, daily stop, feed lag, trigger age, balance, 7-min fallback sell, tracker-down sell, `/live` commands); `status.json` every 10 s; `selftest <mint>`.
+- `ecosystem.cjs` — pm2 app `executor`; `scripts/deploy-step.sh` installs / checks / smoke-boots / reloads it only when this folder changes.
+- Tracker side (`src/execlink.js` + three hook lines in `copytrade.js`, one in `commands.js`): P5-family entries → `trigger`; hold-5 / runner firing → `exit`;
+  paper close → `close`; `/live …` → `cmd`. Nothing in the tracker waits on the executor.
+
+## Shadow mode needs a funded wallet
+A buy can only be simulated against the chain with a payer that holds the stake, so shadow mode simulates with the real bot wallet: ~0.2 SOL in it
+is enough at a 0.1 stake. Nothing is signed in shadow mode. Shadow sells are quoted from the curve at the moment the exit fires (a sell cannot be
+simulated without holding the tokens) — the real sell path is proven live at 0.1 SOL.
+
 ## Build order
 1. **Measurements (v0.18.89, in the tracker):** `paper_trades.first_secs` on every P5-family entry — `lag` = our feed's delay behind the chain at the
    trigger (block time is whole seconds, so ±0.5 s per trade; average over many), `open` = ms from seeing the trigger to the paper entry

@@ -1,0 +1,13 @@
+{
+  "name": "executor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Live buy/sell bot for the tracker's Project 5 signals — own wallet, pump.fun / PumpSwap direct, Helius Sender. Separate pm2 app.",
+  "scripts": { "start": "node src/index.mjs" },
+  "dependencies": {
+    "@solana/web3.js": "^1.98.0",
+    "better-sqlite3": "^11.7.0",
+    "bs58": "^6.0.0"
+  }
+}
