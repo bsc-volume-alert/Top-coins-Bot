@@ -11,7 +11,11 @@ git reset -q --hard origin/tracker
 npm install --omit=dev --no-audit --no-fund 2>&1 | tail -1
 TOKEN=$(grep -E '^TG_BOT_TOKEN=' .env | cut -d= -f2-); CHAT=$(grep -E '^TG_CHAT_ID=' .env | cut -d= -f2-)
 notify() { [ -n "$TOKEN" ] && curl -s -m 10 -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" -d chat_id="$CHAT" -d parse_mode=HTML --data-urlencode text="$1" >/dev/null 2>&1; }
+# v0.18.93: a push that touches only executor/ (and docs) leaves the tracker alone — no smoke boot, no reload, no lost P5 restore
+TRACKER_CHANGED=1
+if ! git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -vqE '^(executor/|.*\.md$)'; then TRACKER_CHANGED=0; echo "[deploy] tracker untouched — executor-only push"; fi
 FAIL=""
+if [ "$TRACKER_CHANGED" = "1" ]; then
 for f in src/*.js; do node --check "$f" 2>/tmp/deploy-check.err || { FAIL="syntax: $f $(head -c 300 /tmp/deploy-check.err)"; break; }; done
 if [ -z "$FAIL" ]; then
   rm -f /root/tracker/data/smoke.db /root/tracker/data/smoke.db-wal /root/tracker/data/smoke.db-shm
@@ -27,6 +31,7 @@ if [ -n "$FAIL" ]; then
 fi
 pm2 startOrReload ecosystem.config.cjs --only tracker --update-env >/dev/null 2>&1
 echo "[deploy] done: $(git log -1 --pretty=%s)"
+fi
 # v0.18.90: the executor (live buy/sell bot) deploys only when its own folder changed, with its own libraries and its own smoke boot
 if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^executor/'; then
   echo "[deploy] executor changed — installing and checking"

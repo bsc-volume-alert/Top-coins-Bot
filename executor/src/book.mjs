@@ -55,7 +55,7 @@ export function recentClosed(n = 10) {
         liveX: r.cost_lamports > 0 ? (r.proceeds_lamports || 0) / r.cost_lamports : null, paperX: r.paper_exit_mult, rule: r.exit_rule, ms: r.b_ms, buySig: r.b_sig, sellSig: r.s_sig, gap: livePx && r.paper_entry_price ? livePx / r.paper_entry_price - 1 : null }; });
 }
 export function skipSummary(sinceTs) {
-  const rows = db.prepare(`SELECT skip_reason r, COUNT(*) n FROM orders WHERE side='buy' AND status IN ('skipped','error','sim-failed') AND ts >= ? GROUP BY skip_reason ORDER BY n DESC`).all(sinceTs);
+  const rows = db.prepare(`SELECT CASE WHEN status='sim-failed' THEN 'sim failed' WHEN status='error' THEN 'error' ELSE skip_reason END r, COUNT(*) n FROM orders WHERE side='buy' AND status IN ('skipped','error','sim-failed') AND ts >= ? GROUP BY 1 ORDER BY n DESC`).all(sinceTs);
   const out = {}; for (const x of rows) { const k = String(x.r || "other").replace(/^paper skip: /, "").replace(/\d+ wallets/, "crowded").replace(/bundled \d+%/, "bundled").replace(/balance .*/, "balance").replace(/\d+ positions open.*/, "cap").replace(/trigger \d+ ms old/, "late").replace(/feed \d+ ms.*/, "feed lag").replace(/curve complete, pool not there.*/, "migration pending").replace(/curve complete, PumpSwap pool not found.*/, "migration pending"); out[k] = (out[k] || 0) + x.n; } return out;
 }
 export const totals = (mode) => db.prepare(`SELECT COUNT(*) n, COALESCE(SUM(pnl_lamports),0) pnl, SUM(CASE WHEN pnl_lamports>0 THEN 1 ELSE 0 END) w FROM positions WHERE status='closed' AND mode=?`).get(mode);
