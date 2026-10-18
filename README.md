@@ -56,6 +56,13 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.91 — Telegram quiet mode + watchdog (18 Oct, evening)
+- Owner: "just basic, really important messages". `tg()` now sends only alarms and replies to commands (`opts.alarm`, `tgAlarm`); every paper entry / close,
+  2x note, climber / wave / revival alert, the heartbeat, the strategy summary and the boot message are logged, not sent (`TG_QUIET=0` restores them).
+- Watchdog every 2 min, alarms at most once per 30 min each: website not answering (two failed local checks), price feed silent 3 min, executor unreachable 5 min.
+- The executor's messages were already only real events (bought / sold / failed / pending / daily stop / sweep / command replies); its boot line is console-only now.
+  A BUY is reported only once it is confirmed on-chain, with the real fill read back from the transaction; a buy not landed in 18 s is reported as pending and again when it lands or expires.
+
 ## v0.18.90 — the executor: live buy/sell bot, shadow mode (18 Oct, evening)
 - New folder `executor/` — a separate program (pm2 app `executor`, own libraries, own SQLite book, own wallet file outside the repo) that receives
   Project 5 triggers from the tracker over a local socket and builds the real pump.fun / PumpSwap transactions itself. Modes: `off`, `shadow`

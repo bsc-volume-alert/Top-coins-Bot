@@ -3,7 +3,8 @@ import { rpcStat } from "./rpc.js"; // v0.18.59 (after env.js so .env is loaded 
 import { readFileSync } from "node:fs";
 import { CFG } from "./config.js";
 import { q } from "./db.js";
-import { tg } from "./telegram.js";
+import { tg, tgAlarm } from "./telegram.js";
+import { execStats } from "./execlink.js"; // v0.18.91 watchdog: feed / executor status
 import { subscribeLogs } from "./ws.js";
 import { handleTx, counters, live, startPriceLoop, fmt } from "./launch-monitor.js";
 import { solUsdCached } from "./price.js";
@@ -69,11 +70,21 @@ const hb = async () => {
   await tg(`💓 <b>${CFG.HEARTBEAT_MIN}m</b> · up ${upTxt} · ${restarts24()} restarts/24h · launches ${n} · prepared ${n1} · hand-offs ${g.handoffs} · early open ${g.open} · volume alerts ${mo.alerts} / open ${mo.open} · copy open ${cpStats().open} · wallets scored ${wbStats().recorded} · life samples ${lcStats().samples} · rpc ${g.rpc} · ws↻ ${sub.stats().reconnects} · SOL $${solUsdCached().toFixed(0)}`);
 };
 setInterval(hb, CFG.HEARTBEAT_MIN * 60_000);
+// v0.18.91 watchdog (quiet mode means nobody reads the heartbeat): alarms — at most once per 30 min each — when the website stops answering,
+// when the price feed has delivered nothing for 3 minutes, or when the executor has been unreachable for 5 minutes while the tracker runs.
+{ const last = {}, fails = { web: 0 }; const once = (k, text) => { const n = Date.now(); if (n - (last[k] || 0) < 1800_000) return; last[k] = n; tgAlarm(text).catch(() => {}); };
+  setInterval(async () => {
+    if (process.env.SMOKE) return;
+    try { const key = process.env.WEB_KEY; if (key) { const r = await fetch(`http://127.0.0.1:${process.env.WEB_PORT || 8787}/api/snapshot?key=${encodeURIComponent(key)}`, { signal: AbortSignal.timeout(15000) }); fails.web = r.ok ? 0 : fails.web + 1; } } catch { fails.web++; }
+    if (fails.web >= 2) once("web", `🚨 <b>Website not answering</b> — ${fails.web} checks in a row failed on port ${process.env.WEB_PORT || 8787}. The bot itself is running; <code>pm2 restart tracker</code> usually fixes it.`);
+    const feedAge = execStats.lastFeed ? Date.now() - execStats.lastFeed : null; if (feedAge != null && feedAge > 180_000 && process.uptime() > 300) once("feed", `🚨 <b>Price feed silent</b> for ${Math.round(feedAge / 60000)} min — no trades arriving from Helius. Live positions (if any) are being closed by the executor; check <code>pm2 logs tracker</code>.`);
+    if (!execStats.connected && process.uptime() > 300) { fails.exec = (fails.exec || 0) + 1; if (fails.exec >= 3) once("exec", `⚠️ <b>Executor unreachable</b> for 5+ min — the tracker is running but the buy/sell bot is not connected. <code>pm2 ls</code> / <code>pm2 logs executor</code>.`); } else fails.exec = 0;
+  }, 120_000); }
 setTimeout(() => { try { const n = flagTrades(0); if (n) console.log(`[restarts] flagged ${n} trades`); } catch (e) { console.error("[restarts]", e.message); } }, 8000); // v0.18.84
 setInterval(() => { try { flagTrades(Math.floor(Date.now() / 1000) - 7200); } catch {} }, 5 * 60_000);
 process.on("unhandledRejection", (e) => console.error("[unhandled]", e));
 // v0.18.83: a throw inside a timer must not take the whole bot down (v0.18.81 crash-looped every 30 s on one). Logged loudly; state lives in SQLite anyway.
-process.on("uncaughtException", (e) => { console.error("[uncaught]", e); try { tg(`⚠️ uncaught error (bot kept running): <code>${String(e?.message || e).slice(0, 200)}</code>`); } catch {} });
+process.on("uncaughtException", (e) => { console.error("[uncaught]", e); try { tgAlarm(`⚠️ uncaught error (bot kept running): <code>${String(e?.message || e).slice(0, 200)}</code>`); } catch {} });
 
 // --- daily digest at DIGEST_HOUR_LOCAL (Europe/London) ---
 import { fmt as _fmt, esc as _esc } from "./launch-monitor.js";

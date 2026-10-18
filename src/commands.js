@@ -2,7 +2,7 @@
 import { CFG } from "./config.js";
 import { execSend } from "./execlink.js"; // v0.18.90
 import { db, q } from "./db.js";
-import { tg } from "./telegram.js";
+import { tgAlarm as tg } from "./telegram.js"; // v0.18.91: replies to commands always go through (quiet mode mutes the rest)
 import { runnersText } from "./runners.js";
 import { zipFiles } from "./zip.js";
 import { mkdtempSync, openSync, writeSync, closeSync, rmSync, readFileSync, openAsBlob, mkdirSync, writeFileSync } from "node:fs";

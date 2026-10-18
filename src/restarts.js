@@ -6,7 +6,7 @@ import { readFileSync, appendFileSync, mkdirSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path";
 import { CFG } from "./config.js";
 import { db } from "./db.js";
-import { tg } from "./telegram.js";
+import { tgAlarm as tg } from "./telegram.js"; // v0.18.91: the restart-loop alarm is an alarm
 export const RESTARTS_FILE = join(dirname(CFG.DB_PATH), "restarts.txt");
 const LOOP_GAP_S = 150, LOOP_MIN = 4, PAD_BEFORE = 60, PAD_AFTER = 120;
 let TS = [];

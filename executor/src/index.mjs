@@ -308,7 +308,7 @@ if (cmd === "selftest") {
   setInterval(housekeeping, 10_000); housekeeping();
   console.log(`[executor] v${VERSION} mode ${S.mode} · follows ${S.strategy} / exit ${S.exit} · stake ${S.stake} SOL · wallet ${S.pub ? S.pub.toBase58() : "none"} · rpc ${CFG.RPC_URL.replace(/api-key=.*/, "api-key=…")}`);
   if (CFG.SMOKE) setTimeout(() => { console.log("[smoke] executor alive — ok"); try { unlinkSync(sockPath); } catch {} process.exit(0); }, Number(process.env.EXEC_SMOKE_MS || 15000));
-  else tg(`executor v${VERSION} up — mode <b>${S.mode}</b>, following ${S.strategy} with exit ${S.exit}, ${S.stake} SOL per trade${S.pub ? `\nwallet <code>${S.pub.toBase58()}</code>` : "\nno wallet yet — run: node src/wallet.mjs init"}`);
+  // (no Telegram on boot — quiet by design; `/live` answers with the status whenever you want it)
   process.on("uncaughtException", (e) => { console.error("[uncaught]", e); log("uncaught", e.stack || e.message); });
   process.on("unhandledRejection", (e) => { console.error("[unhandled]", e); log("unhandled", e?.stack || String(e)); });
 }
