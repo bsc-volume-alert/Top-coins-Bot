@@ -18,7 +18,7 @@ const poolPk = amm.migratedPoolOf(mint), curvePk = pump.curveOf(mint);
 const known = new Map([[PUMP.toBase58(), "PUMP"], [PUMP_AMM.toBase58(), "PUMP_AMM"], [FEE_PROGRAM.toBase58(), "FEE_PROGRAM"], [TOKEN.toBase58(), "TOKEN"], [TOKEN_2022.toBase58(), "TOKEN_2022"], [ATA_PROGRAM.toBase58(), "ATA_PROGRAM"],
   [SYSTEM.toBase58(), "SYSTEM"], [WSOL.toBase58(), "WSOL"], [mint.toBase58(), "MINT"], [poolPk.toBase58(), "POOL(derived)"], [curvePk.toBase58(), "CURVE"], [amm.GLOBAL_CONFIG.toBase58(), "AMM_GLOBAL_CONFIG"], [amm.poolV2Of(mint).toBase58(), "POOL_V2(mint)"],
   [amm.AMM_EVENT_AUTHORITY.toBase58(), "AMM_EVENT_AUTH"], [amm.AMM_GLOBAL_VOL.toBase58(), "AMM_GLOBAL_VOL"], [amm.AMM_FEE_CONFIG.toBase58(), "AMM_FEE_CONFIG"], [pump.GLOBAL.toBase58(), "PUMP_GLOBAL"], [pump.EVENT_AUTHORITY.toBase58(), "PUMP_EVENT_AUTH"],
-  [pump.GLOBAL_VOL.toBase58(), "PUMP_GLOBAL_VOL"], [pump.FEE_CONFIG.toBase58(), "PUMP_FEE_CONFIG"], [ata(poolPk, mint).toBase58(), "POOL_BASE_ATA"], [ata(poolPk, WSOL).toBase58(), "POOL_QUOTE_ATA"], [ata(curvePk, mint).toBase58(), "CURVE_ATA"], [ata(curvePk, WSOL).toBase58(), "CURVE_WSOL_ATA"],
+  [pump.GLOBAL_VOL.toBase58(), "PUMP_GLOBAL_VOL"], [pump.MAYHEM_FEE_RECIPIENT.toBase58(), "MAYHEM_FEE_RCPT"], [pump.curveV2Of(mint).toBase58(), "CURVE_V2(mayhem)"], [pump.FEE_CONFIG.toBase58(), "PUMP_FEE_CONFIG"], [ata(poolPk, mint).toBase58(), "POOL_BASE_ATA"], [ata(poolPk, WSOL).toBase58(), "POOL_QUOTE_ATA"], [ata(curvePk, mint).toBase58(), "CURVE_ATA"], [ata(curvePk, WSOL).toBase58(), "CURVE_WSOL_ATA"],
   ["SysvarRent111111111111111111111111111111111", "RENT"]]);
 const cfgAcc = await conn.getAccountInfo(amm.GLOBAL_CONFIG); const cfg = cfgAcc ? amm.decodeGlobalConfig(cfgAcc.data) : null;
 if (cfg) { cfg.protocolFeeRecipients.forEach((k, i) => known.set(k.toBase58(), `PROTO_FEE_RCPT[${i}]`)); cfg.buybackFeeRecipients.forEach((k, i) => known.set(k.toBase58(), `BUYBACK_RCPT[${i}]`)); }
@@ -52,7 +52,7 @@ for (const s of sigs) {
     // unknown accounts: who owns them, how big, and can we derive them from anything else in the instruction?
     const unknown = [...new Set(idx.map((ai) => keys[ai]?.toBase58()).filter((b) => b && !known.has(b)))].map((b) => new PublicKey(b));
     if (unknown.length) { const infos = await conn.getMultipleAccountsInfo(unknown).catch(() => []);
-      const all = idx.map((ai) => keys[ai]).filter(Boolean); const progs = [["PUMP", PUMP], ["AMM", PUMP_AMM], ["FEE", FEE_PROGRAM]];
+      const all = idx.map((ai) => keys[ai]).filter(Boolean); const progs = [["PUMP", PUMP], ["AMM", PUMP_AMM], ["FEE", FEE_PROGRAM], ["MAYHEM", pump.MAYHEM]];
       unknown.forEach((u, i) => { const info = infos[i]; const owner = info?.owner; if (owner && !progs.some(([, p]) => p.equals(owner))) progs.push(["owner", owner]);
         const hits = []; for (const seed of SEEDS) for (const [pn, pg] of progs) { try { if (pda([seed], pg).equals(u)) hits.push(`PDA("${seed}") under ${pn}`); } catch {}
           for (const a of all) { try { if (pda([seed, a], pg).equals(u)) hits.push(`PDA("${seed}", ${known.get(a.toBase58()) || a.toBase58().slice(0, 6) + "…"}) under ${pn}`); } catch {} } }

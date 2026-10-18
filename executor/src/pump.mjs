@@ -2,7 +2,7 @@
 // Layouts and account orders come from the published IDL (pump-fun/pump-public-docs, Oct 2026). Classic instructions
 // (buy_exact_sol_in / sell) are used for SOL-quoted coins; the v3 pair (quote token in a WSOL account) is the fallback that shadow
 // mode tries when the classic one is refused — which one each coin needs is recorded, so we learn the mix before going live.
-import { TransactionInstruction } from "@solana/web3.js";
+import { TransactionInstruction, PublicKey } from "@solana/web3.js";
 import { PK, PUMP, FEE_PROGRAM, SYSTEM, TOKEN, TOKEN_2022, WSOL, pda, ata, u64, readU64, readPk, ixCreateAtaIdempotent, ixCloseAccount, ixSyncNative, ixTransfer } from "./solana.mjs";
 
 const DISC = { buyExactSolIn: [56, 252, 116, 8, 158, 223, 205, 95], sell: [51, 230, 133, 164, 1, 127, 131, 173], buyExactQuoteInV3: [225, 247, 80, 30, 213, 179, 132, 136], sellV3: [28, 146, 222, 119, 38, 196, 105, 213] };
@@ -58,21 +58,30 @@ export const curveMcSol = (curve) => Number(curve.vSol) / Number(curve.vTok) * N
 
 const key = (pubkey, w = false, s = false) => ({ pubkey, isSigner: s, isWritable: w });
 const optBool = (b) => Buffer.from([b ? 1 : 0]);
-const buybackOf = (global) => (global.buybackFeeRecipients || []).find((k) => !k.equals(ZERO)) || global.feeRecipient; // an unset slot is the zero key, which is truthy
+/** a random live buyback recipient (an unset slot is the zero key) — spread across the eight like the other bots do, so they are not all queuing on one write lock */
+const buybackOf = (global) => { const xs = (global.buybackFeeRecipients || []).filter((k) => !k.equals(ZERO)); return xs.length ? xs[Math.floor(Math.random() * xs.length)] : global.feeRecipient; };
+// Mayhem (Oct 2026): pump.fun's "mayhem mode" lives in a second program. The classic buy/sell now carry two extra accounts after fee_program —
+// PDA("bonding-curve-v2", mint) under the Mayhem program (read-only, usually not even created) and a buyback recipient (writable) — and a mayhem
+// coin's fee recipient is the Mayhem fee account instead of Global.fee_recipient. All read off other bots' transactions with probe.mjs (18 Oct 2026).
+export const MAYHEM = new PublicKey("MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e");
+export const MAYHEM_FEE_RECIPIENT = new PublicKey("GesfTA3X2arioaHp8bbKdjG9vJtskViWACZoYvxp4twS"); // seen on every mayhem-coin swap in the probe; owned by the Mayhem program
+export const curveV2Of = (mint) => pda(["bonding-curve-v2", mint], MAYHEM);
+const feeRecipientFor = (curve, global) => (curve.mayhem ? MAYHEM_FEE_RECIPIENT : global.feeRecipient);
+const classicTail = (mint, global) => [key(curveV2Of(mint)), key(buybackOf(global), true)];
 
 /** Classic buy: spend exactly `spendLamports`, receive ≥ minTokens. Returns [createATA, buy]. */
 export function ixBuyClassic({ user, mint, curve, global, tokenProgram = TOKEN, spendLamports, minTokens, partialFill = true }) {
   const bc = curveOf(mint);
-  const keys = [key(GLOBAL), key(global.feeRecipient, true), key(mint), key(bc, true), key(ata(bc, mint, tokenProgram), true), key(ata(user, mint, tokenProgram), true), key(user, true, true),
-    key(SYSTEM), key(tokenProgram), key(creatorVaultOf(curve.creator), true), key(EVENT_AUTHORITY), key(PUMP), key(GLOBAL_VOL), key(userVolOf(user), true), key(FEE_CONFIG), key(FEE_PROGRAM)];
+  const keys = [key(GLOBAL), key(feeRecipientFor(curve, global), true), key(mint), key(bc, true), key(ata(bc, mint, tokenProgram), true), key(ata(user, mint, tokenProgram), true), key(user, true, true),
+    key(SYSTEM), key(tokenProgram), key(creatorVaultOf(curve.creator), true), key(EVENT_AUTHORITY), key(PUMP), key(GLOBAL_VOL), key(userVolOf(user), true), key(FEE_CONFIG), key(FEE_PROGRAM), ...classicTail(mint, global)]; // 18 accounts, as on chain
   const data = Buffer.concat([Buffer.from(DISC.buyExactSolIn), u64(spendLamports), u64(minTokens), optBool(false), optBool(partialFill)]);
   return [ixCreateAtaIdempotent(user, user, mint, tokenProgram), new TransactionInstruction({ programId: PUMP, keys, data })];
 }
 /** Classic sell of `amount` raw tokens for ≥ minSol lamports, then close the token account (rent back). */
 export function ixSellClassic({ user, mint, curve, global, tokenProgram = TOKEN, amount, minSol, close = true }) {
   const bc = curveOf(mint), userAta = ata(user, mint, tokenProgram);
-  const keys = [key(GLOBAL), key(global.feeRecipient, true), key(mint), key(bc, true), key(ata(bc, mint, tokenProgram), true), key(userAta, true), key(user, true, true),
-    key(SYSTEM), key(creatorVaultOf(curve.creator), true), key(tokenProgram), key(EVENT_AUTHORITY), key(PUMP), key(FEE_CONFIG), key(FEE_PROGRAM)];
+  const keys = [key(GLOBAL), key(feeRecipientFor(curve, global), true), key(mint), key(bc, true), key(ata(bc, mint, tokenProgram), true), key(userAta, true), key(user, true, true),
+    key(SYSTEM), key(creatorVaultOf(curve.creator), true), key(tokenProgram), key(EVENT_AUTHORITY), key(PUMP), key(FEE_CONFIG), key(FEE_PROGRAM), ...classicTail(mint, global)]; // 16 accounts, as on chain
   const data = Buffer.concat([Buffer.from(DISC.sell), u64(amount), u64(minSol)]);
   const out = [new TransactionInstruction({ programId: PUMP, keys, data })];
   if (close) out.push(ixCloseAccount(userAta, user, user, tokenProgram));
