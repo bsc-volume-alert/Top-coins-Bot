@@ -325,9 +325,9 @@ if (cmd === "selftest") {
     const b = buyIxs(v, user, lamports(stakeSol), CFG.SLIP_BUY, kind); const tx = await buildTx(user, wrap(user, [...pre, ...b.ixs], lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim = await simulate(tx);
     console.log(`buy ${kind}: expected ${b.expected} tokens (min ${b.minOut}) feeBps ${b.feeBps} · sim ${sim.ok ? "OK" : "FAILED " + sim.err} · units ${sim.units} · ${sim.ms} ms`); if (!sim.ok) console.log("   logs:", sim.logs.slice(-6).join("\n         "));
     if (b.expected > 0n) { const sIx = sellIxs(v, user, b.expected, CFG.SLIP_SELL, kind); console.log(`sell ${kind}: ${b.expected} tokens → ${sol(sIx.expected).toFixed(5)} SOL expected (min ${sol(sIx.minOut).toFixed(5)}) — round trip ${((Number(sIx.expected) / lamports(stakeSol) - 1) * 100).toFixed(2)}% at an unmoved price`);
-      // we hold no tokens, so a sell simulation can only get as far as the token transfer: "insufficient funds" there means every account was accepted
-      const stx = await buildTx(user, wrap(user, sIx.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const ssim = await simulate(stx); const txt = ssim.logs.join(" ");
-      console.log(`   sell layout: ${ssim.ok ? "OK" : /insufficient funds/i.test(txt) ? "accepted (stopped at the token transfer — we hold none)" : "FAILED " + ssim.err + " | " + ssim.logs.slice(-4).join(" | ")}`); }
+      // we hold no tokens, so the sell is simulated right behind the buy in one transaction: buy, then sell the minimum the buy guarantees
+      const rt = sellIxs(v, user, b.minOut, CFG.SLIP_SELL, kind); const stx = await buildTx(user, wrap(user, [...pre, ...b.ixs, ...rt.ixs], lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const ssim = await simulate(stx);
+      console.log(`   buy+sell in one tx: ${ssim.ok ? "OK · units " + ssim.units : "FAILED " + ssim.err + " | " + ssim.logs.slice(-4).join(" | ")}`); }
   }
   console.log("rpc:", rpcStats); process.exit(0);
 } else if (cmd === "orders") {

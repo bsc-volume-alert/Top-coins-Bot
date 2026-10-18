@@ -25,12 +25,15 @@ const poolAcc = await conn.getAccountInfo(poolPk); const pool = poolAcc ? amm.de
 if (pool) { known.set(pool.baseAcc.toBase58(), "POOL_BASE_ACC"); known.set(pool.quoteAcc.toBase58(), "POOL_QUOTE_ACC"); known.set(pool.coinCreator.toBase58(), "COIN_CREATOR"); const auth = amm.creatorVaultAuthorityOf(pool.coinCreator); known.set(auth.toBase58(), "CREATOR_VAULT_AUTH"); known.set(ata(auth, WSOL).toBase58(), "CREATOR_VAULT_ATA"); known.set(pool.lpMint.toBase58(), "LP_MINT"); }
 console.log(`mint ${mint.toBase58()} · pool ${poolPk.toBase58()} ${pool ? "(exists)" : "(not found)"} · curve ${curvePk.toBase58()}`);
 const target = CURVE_MODE ? PUMP : pool ? poolPk : curvePk;
-const sigs = await conn.getSignaturesForAddress(target, { limit: N });
+const sigs = await conn.getSignaturesForAddress(target, { limit: CURVE_MODE ? Math.max(N, 200) : N });
 console.log(`${sigs.length} recent transactions on ${CURVE_MODE ? "the pump.fun program" : pool ? "the pool" : "the curve"}`);
 const seen = new Map(); // disc hex -> count
+const count = { failed: 0, unreadable: 0, read: 0 }; let printed = 0;
 for (const s of sigs) {
-  if (s.err) continue;
-  const tx = await conn.getTransaction(s.signature, { maxSupportedTransactionVersion: 0, commitment: "confirmed" }).catch(() => null); if (!tx) continue;
+  if (s.err) { count.failed++; continue; }
+  if (CURVE_MODE && printed >= N) break;
+  const tx = await conn.getTransaction(s.signature, { maxSupportedTransactionVersion: 0, commitment: "confirmed" }).catch((e) => (count.lastErr = e.message, null)); if (!tx) { count.unreadable++; continue; }
+  count.read++;
   const msg = tx.transaction.message, h = msg.header, L = msg.staticAccountKeys.length, lw = tx.meta?.loadedAddresses?.writable || [], lr = tx.meta?.loadedAddresses?.readonly || [];
   const keys = msg.staticAccountKeys.concat(lw, lr);
   const flag = (i) => { const sg = i < h.numRequiredSignatures; const w = i < L ? (i < h.numRequiredSignatures - h.numReadonlySignedAccounts) || (i >= h.numRequiredSignatures && i < L - h.numReadonlyUnsignedAccounts) : i < L + lw.length; return (w ? "W" : "-") + (sg ? "S" : "-"); };
@@ -40,9 +43,9 @@ for (const s of sigs) {
     const data = Buffer.from(ix.data); const disc = data.subarray(0, 8).toString("hex"); if (data.length < 8) continue;
     const k = `${prog.equals(PUMP) ? "PUMP" : "AMM"}:${disc}`; seen.set(k, (seen.get(k) || 0) + 1); if (seen.get(k) > 2) continue; // print the first two of each kind
     const idx = ix.accountKeyIndexes || ix.accounts;
-    console.log(`\n${k} data ${data.length} bytes${inner ? " (inner)" : ""} · ${s.signature.slice(0, 20)}…`);
+    printed++; console.log(`\n${k} data ${data.length} bytes${inner ? " (inner)" : ""} · ${s.signature.slice(0, 20)}…`);
     idx.forEach((ai, i) => { const pk = keys[ai]; const b = pk?.toBase58() || "?"; console.log(`  [${String(i).padStart(2)}] ${flag(ai)} ${b} ${known.get(b) || ""}`); });
   }
 }
-console.log("\ninstruction kinds seen:", Object.fromEntries(seen));
+console.log("\ninstruction kinds seen:", Object.fromEntries(seen), count);
 process.exit(0);
