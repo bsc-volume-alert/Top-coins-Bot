@@ -4,12 +4,15 @@
 //   node src/probe.mjs curve [n]         the newest transactions on the pump.fun program itself — bonding-curve buys and sells from live bots
 // Each account shows W (writable) / S (signer) as the sender set it.
 import { PublicKey } from "@solana/web3.js";
+import bs58 from "bs58";
 import { conn } from "./rpc.mjs";
 import { PUMP, PUMP_AMM, FEE_PROGRAM, TOKEN, TOKEN_2022, ATA_PROGRAM, SYSTEM, WSOL, ata, PK } from "./solana.mjs";
 import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 
 const CURVE_MODE = process.argv[2] === "curve";
+const SEEDS = ["pool-v2", "pool_v2", "bonding-curve", "bonding-curve-v2", "bonding_curve_v2", "curve-v2", "mayhem", "mayhem-state", "mayhem_state", "mayhem-config", "mayhem_config", "global", "global-v2", "global_v2", "config", "creator-vault", "creator_vault", "cashback", "cashback-v2",
+  "whitelist", "fee-vault", "token-incentives", "token_incentives", "extension", "bonding-curve-extension", "user_volume_accumulator", "global_volume_accumulator", "fee_config", "pool-authority", "pool_authority", "buyback", "buyback-v2", "reserved", "metadata", "mint-authority", "mint_authority", "v2", "v3"];
 const mint = CURVE_MODE ? WSOL : PK(process.argv[2]); const N = Number(process.argv[3] || 25);
 const poolPk = amm.migratedPoolOf(mint), curvePk = pump.curveOf(mint);
 const known = new Map([[PUMP.toBase58(), "PUMP"], [PUMP_AMM.toBase58(), "PUMP_AMM"], [FEE_PROGRAM.toBase58(), "FEE_PROGRAM"], [TOKEN.toBase58(), "TOKEN"], [TOKEN_2022.toBase58(), "TOKEN_2022"], [ATA_PROGRAM.toBase58(), "ATA_PROGRAM"],
@@ -40,11 +43,21 @@ for (const s of sigs) {
   const all = [...tx.transaction.message.compiledInstructions.map((ix) => ({ ix, inner: false })), ...(tx.meta?.innerInstructions || []).flatMap((g) => g.instructions.map((ix) => ({ ix, inner: true })))];
   for (const { ix, inner } of all) {
     const prog = keys[ix.programIdIndex]; if (!prog || !(prog.equals(PUMP_AMM) || prog.equals(PUMP))) continue;
-    const data = Buffer.from(ix.data); const disc = data.subarray(0, 8).toString("hex"); if (data.length < 8) continue;
+    const data = typeof ix.data === "string" ? Buffer.from(bs58.decode(ix.data)) : Buffer.from(ix.data); const disc = data.subarray(0, 8).toString("hex"); if (data.length < 8) continue; // inner instructions carry base58 text
     const k = `${prog.equals(PUMP) ? "PUMP" : "AMM"}:${disc}`; seen.set(k, (seen.get(k) || 0) + 1); if (seen.get(k) > 2) continue; // print the first two of each kind
     const idx = ix.accountKeyIndexes || ix.accounts;
     printed++; console.log(`\n${k} data ${data.length} bytes${inner ? " (inner)" : ""} · ${s.signature.slice(0, 20)}…`);
     idx.forEach((ai, i) => { const pk = keys[ai]; const b = pk?.toBase58() || "?"; console.log(`  [${String(i).padStart(2)}] ${flag(ai)} ${b} ${known.get(b) || ""}`); });
+    console.log(`  args: ${data.subarray(8).toString("hex")}`);
+    // unknown accounts: who owns them, how big, and can we derive them from anything else in the instruction?
+    const unknown = [...new Set(idx.map((ai) => keys[ai]?.toBase58()).filter((b) => b && !known.has(b)))].map((b) => new PublicKey(b));
+    if (unknown.length) { const infos = await conn.getMultipleAccountsInfo(unknown).catch(() => []);
+      const all = idx.map((ai) => keys[ai]).filter(Boolean); const progs = [["PUMP", PUMP], ["AMM", PUMP_AMM], ["FEE", FEE_PROGRAM]];
+      unknown.forEach((u, i) => { const info = infos[i]; const owner = info?.owner; if (owner && !progs.some(([, p]) => p.equals(owner))) progs.push(["owner", owner]);
+        const hits = []; for (const seed of SEEDS) for (const [pn, pg] of progs) { try { if (pda([seed], pg).equals(u)) hits.push(`PDA("${seed}") under ${pn}`); } catch {}
+          for (const a of all) { try { if (pda([seed, a], pg).equals(u)) hits.push(`PDA("${seed}", ${known.get(a.toBase58()) || a.toBase58().slice(0, 6) + "…"}) under ${pn}`); } catch {} } }
+        for (const a of all) for (const m of [mint, WSOL]) { try { if (ata(a, m).equals(u)) hits.push(`ata(${known.get(a.toBase58()) || a.toBase58().slice(0, 6) + "…"}, ${m.equals(WSOL) ? "WSOL" : "mint"})`); } catch {} }
+        console.log(`  ? ${u.toBase58()}: ${info ? `owner ${known.get(owner.toBase58()) || owner.toBase58()} · ${info.data.length} bytes · disc ${info.data.subarray(0, 8).toString("hex")}` : "no account"}${hits.length ? " · = " + hits.join(" | ") : ""}`); }); }
   }
 }
 console.log("\ninstruction kinds seen:", Object.fromEntries(seen), count);
