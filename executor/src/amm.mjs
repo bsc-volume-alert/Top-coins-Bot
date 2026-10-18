@@ -44,23 +44,33 @@ export function quoteSell(pool, cfg, baseRes, quoteRes, baseIn) {
   const gross = (qr * b) / (BigInt(baseRes) + b); return { sol: gross - ceilDiv(gross * fee, 10000n), gross };
 }
 const key = (pubkey, w = false, s = false) => ({ pubkey, isSigner: s, isWritable: w });
+/** a random live entry from a recipient list — every bot does this so the eight fee accounts share the write locks instead of all queuing on [0] */
+const pick = (list, fallback) => { const xs = (list || []).filter((k) => k && !k.equals(ZERO)); return xs.length ? xs[Math.floor(Math.random() * xs.length)] : fallback; };
+/** Per-mint "pool-v2" account (Oct 2026): the classic swap instructions want it as the first remaining account, then a buyback recipient and its WSOL account.
+ *  Learned from other bots' transactions with probe.mjs (18 Oct 2026): [23] = PDA("pool-v2", mint) under the AMM program, [24] = buyback recipient, [25] = ata(recipient, WSOL). */
+export const poolV2Of = (mint) => pda(["pool-v2", mint], PUMP_AMM);
+const tail = (pool, cfg) => { const bb = pick(cfg?.buybackFeeRecipients, cfg.protocolFeeRecipients[0]); return [key(poolV2Of(pool.baseMint), true), key(bb, true), key(ata(bb, WSOL, TOKEN), true)]; };
 function common(user, poolPk, pool, cfg, baseTokenProgram) {
-  const feeRecipient = cfg.protocolFeeRecipients[0], authority = creatorVaultAuthorityOf(pool.coinCreator);
+  const feeRecipient = pick(cfg.protocolFeeRecipients, cfg.protocolFeeRecipients[0]), authority = creatorVaultAuthorityOf(pool.coinCreator);
   return [key(poolPk, true), key(user, true, true), key(GLOBAL_CONFIG), key(pool.baseMint), key(pool.quoteMint), key(ata(user, pool.baseMint, baseTokenProgram), true), key(ata(user, pool.quoteMint, TOKEN), true),
     key(pool.baseAcc, true), key(pool.quoteAcc, true), key(feeRecipient), key(ata(feeRecipient, pool.quoteMint, TOKEN), true), key(baseTokenProgram), key(TOKEN), key(SYSTEM), key(ATA_PROGRAM),
     key(AMM_EVENT_AUTHORITY), key(PUMP_AMM), key(ata(authority, pool.quoteMint, TOKEN), true), key(authority)];
 }
-/** Buy with exactly `spendLamports` of SOL (wrapped for the call), receive ≥ minBase. */
+/** Buy with exactly `spendLamports` of SOL (wrapped for the call), receive ≥ minBase. 26 accounts — the layout every live bot sends today (probe, 18 Oct 2026). */
 export function ixBuy({ user, poolPk, pool, cfg, baseTokenProgram = TOKEN, spendLamports, minBase }) {
   const wsolAta = ata(user, WSOL, TOKEN);
-  const keys = [...common(user, poolPk, pool, cfg, baseTokenProgram), key(AMM_GLOBAL_VOL), key(ammUserVolOf(user), true), key(AMM_FEE_CONFIG), key(FEE_PROGRAM)];
+  const keys = [...common(user, poolPk, pool, cfg, baseTokenProgram), key(AMM_GLOBAL_VOL), key(ammUserVolOf(user), true), key(AMM_FEE_CONFIG), key(FEE_PROGRAM), ...tail(pool, cfg)];
   const data = Buffer.concat([Buffer.from(DISC.buyExactQuoteIn), u64(spendLamports), u64(minBase), Buffer.from([0])]);
   return [ixCreateAtaIdempotent(user, user, pool.baseMint, baseTokenProgram), ixCreateAtaIdempotent(user, user, WSOL, TOKEN), ixTransfer(user, wsolAta, spendLamports), ixSyncNative(wsolAta),
     new TransactionInstruction({ programId: PUMP_AMM, keys, data }), ixCloseAccount(wsolAta, user, user, TOKEN)];
 }
-// v2 instructions (Oct 2026): the classic ones now want a pool_v2 remaining account the IDL does not describe (error 6062 InvalidPoolV2 in shadow);
-// the v2 pair has a shorter list — no protocol-fee or creator-vault accounts, a buyback recipient instead — and is what we try first.
-const buybackOf = (cfg) => (cfg?.buybackFeeRecipients || []).find((k) => !k.equals(ZERO)) || cfg.protocolFeeRecipients[0];
+// v2 instructions from the published IDL — kept as the fallback only. None of the 30 live swaps the probe read on 18 Oct used them, and our
+// build of them fails 6027 (an account out of place), so the classic form with the three remaining accounts above is what we send first.
+const buybackOf = (cfg) => pick(cfg?.buybackFeeRecipients, cfg.protocolFeeRecipients[0]);
+/** One-off per wallet: create the user_volume_accumulator the swaps reference (same instruction name, so the same discriminator, in both pump programs). */
+export function ixInitUserVolume(programId, user, uvaPk, eventAuthority) {
+  return new TransactionInstruction({ programId, keys: [key(user, true, true), key(user), key(uvaPk, true), key(SYSTEM), key(eventAuthority), key(programId)], data: Buffer.from([94, 6, 202, 115, 255, 96, 232, 183]) });
+}
 function commonV2(user, poolPk, pool, cfg, baseTokenProgram) {
   return [key(poolPk, true), key(user, true, true), key(GLOBAL_CONFIG), key(pool.baseMint), key(pool.quoteMint), key(ata(user, pool.baseMint, baseTokenProgram), true), key(ata(user, pool.quoteMint, TOKEN), true),
     key(pool.baseAcc, true), key(pool.quoteAcc, true), key(baseTokenProgram), key(TOKEN), key(SYSTEM), key(ammUserVolOf(user), true), key(AMM_FEE_CONFIG), key(buybackOf(cfg), true), key(AMM_EVENT_AUTHORITY), key(PUMP_AMM)];
@@ -81,7 +91,7 @@ export function ixSellV2({ user, poolPk, pool, cfg, baseTokenProgram = TOKEN, am
 /** Sell `amount` base for ≥ minSol lamports; unwrap and close both token accounts. */
 export function ixSell({ user, poolPk, pool, cfg, baseTokenProgram = TOKEN, amount, minSol, close = true }) {
   const wsolAta = ata(user, WSOL, TOKEN), baseAta = ata(user, pool.baseMint, baseTokenProgram);
-  const keys = [...common(user, poolPk, pool, cfg, baseTokenProgram), key(AMM_FEE_CONFIG), key(FEE_PROGRAM)];
+  const keys = [...common(user, poolPk, pool, cfg, baseTokenProgram), key(AMM_FEE_CONFIG), key(FEE_PROGRAM), ...tail(pool, cfg)]; // 24 accounts, as on chain
   const data = Buffer.concat([Buffer.from(DISC.sell), u64(amount), u64(minSol)]);
   const out = [ixCreateAtaIdempotent(user, user, WSOL, TOKEN), new TransactionInstruction({ programId: PUMP_AMM, keys, data }), ixCloseAccount(wsolAta, user, user, TOKEN)];
   if (close) out.push(ixCloseAccount(baseAta, user, user, baseTokenProgram));

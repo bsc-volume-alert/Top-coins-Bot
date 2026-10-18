@@ -39,8 +39,15 @@ forwarding exits · `/live on` really re-arms the daily stop · fill read-back r
 - At $103 a SOL the bonding curve fills at ≈ $40K market cap — exactly where Project 5 buys — so the trigger often lands in the seconds between the
   curve completing and pump.fun creating the PumpSwap pool ("curve complete, pool not found" × 4, incl. Zcash ATM). The executor now waits up to
   6 s for the pool, then asks DexScreener for the pair address, then gives up with "migration pending".
-- PumpSwap's classic `buy_exact_quote_in` is refused with error 6062 *InvalidPoolV2* (a `pool_v2` remaining account the IDL does not document).
-  The v2 pair (`buy_exact_quote_in_v2` / `sell_v2`: 17 accounts, buyback recipient from GlobalConfig) is now tried first, classic second.
+- PumpSwap's classic `buy_exact_quote_in` is refused with error 6062 *InvalidPoolV2* (a `pool_v2` remaining account the IDL does not document),
+  and our build of the IDL's v2 pair fails 6027 (an account out of place). Settled by reading other bots' transactions off the chain
+  (`node src/probe.mjs <mint> 30`, 18 Oct 19:00 UTC): every live bot still sends the classic instruction, with three accounts appended —
+  PDA("pool-v2", mint) under the AMM program, one of the eight buyback recipients (chosen at random), and that recipient's WSOL account.
+  v0.1.2 sends exactly that (26 accounts on a buy, 24 on a sell), picks the protocol-fee recipient at random too (spreads the write locks the
+  way the other bots do), and keeps the IDL v2 form as the one-shot fallback. The same probe confirmed new pump coins are Token-2022 mints,
+  which the venue lookup already detects from the mint's owner.
+- Both pump programs keep a per-wallet "user volume accumulator"; a fresh wallet has none (3012 *AccountNotInitialized*). The first buy on each
+  program now carries the one-off create instruction in front of it; after that it is remembered.
 - The feed-lag guard tripped on a healthy feed ("feed 2–5 s behind the chain"): block timestamps run seconds behind the wall clock, so the
   reading is a trend, not a delay. It is now recorded only; the executor-side trigger-age check (4 s) is the real guard.
 - Triggers reach the executor 40–110 ms after the tracker sees them; the website's P5 filters skipped bundled / crowded / unseen coins exactly as the paper book does.

@@ -11,12 +11,12 @@ import { CFG, EXEC_HOME, lamports, sol } from "./config.mjs";
 import { loadKeypair } from "./wallet.mjs";
 import bs58 from "bs58";
 import { getAccounts, getBalance, buildTx, simulate, send, sendUntilConfirmed, waitConfirm, readFill, blockHeight, signatureStatus, rpcStats } from "./rpc.mjs";
-import { ata, parseTokenAccount, ixBudget, ixTip, ixTransfer, PK } from "./solana.mjs";
+import { ata, parseTokenAccount, ixBudget, ixTip, ixTransfer, PK, PUMP, PUMP_AMM } from "./solana.mjs";
 import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 import { newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, hasPosition, dayNet, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.1.1";
+const VERSION = "0.1.2";
 const nowS = () => Math.floor(Date.now() / 1000);
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const short = (m) => (m ? `${m.slice(0, 4)}…${m.slice(-4)}` : "?");
@@ -95,6 +95,15 @@ function sellIxs(v, user, amount, slip, kind = "classic") {
   return { ixs: f({ user, poolPk: v.poolPk, pool: v.pool, cfg: v.cfg, baseTokenProgram: v.tokenProgram, amount, minSol }), expected: q.sol, minOut: minSol, ixKind: kind === "amm" ? "amm" : "amm2" };
 }
 const wrap = (user, ixs, tipLamports, cuPrice) => [...ixBudget(CFG.CU_LIMIT, cuPrice), ixTip(user, tipLamports), ...ixs];
+// Both pump programs keep a per-wallet "user volume accumulator" that every swap references. A fresh wallet has none, so the first buy on each
+// program carries the one-off create instruction in front of it (3012 AccountNotInitialized in shadow otherwise). Remembered once seen on chain.
+const uvaSeen = { curve: false, amm: false };
+async function userVolPrefix(kind) {
+  if (uvaSeen[kind] || !S.pub) return [];
+  const [prog, pk, ea] = kind === "curve" ? [PUMP, pump.userVolOf(S.pub), pump.EVENT_AUTHORITY] : [PUMP_AMM, amm.ammUserVolOf(S.pub), amm.AMM_EVENT_AUTHORITY];
+  const [acc] = await getAccounts([pk]); if (acc) { uvaSeen[kind] = true; return []; }
+  return [amm.ixInitUserVolume(prog, S.pub, pk, ea)];
+}
 const progErr = (sim) => !sim.ok && !/rpc:/.test(sim.err || "") && !/insufficient (lamports|funds)/i.test(sim.logs.join(" ") + (sim.err || ""));
 
 // ---- the buy ----
@@ -123,14 +132,14 @@ async function handleTrigger(m) {
     const v = await venueOf(m.mint); const tVenue = Date.now() - t0;
     if (v.kind === "none") return skip(v.reason);
     if (v.kind === "curve" && !v.solQuoted) return skip("curve not SOL-quoted");
-    let b = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, v.kind === "amm" ? "amm2" : "classic");
+    let b = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, v.kind === "amm" ? "amm" : "classic"); const pre = await userVolPrefix(v.kind);
     if (!(b.minOut > 0n)) return skip("quote gave a zero minimum — pool state unreadable");
     const id = newOrder({ side: "buy", paper_id: m.id, mint: m.mint, name: m.name, strategy: m.strategy, venue: v.kind, ix_kind: b.ixKind, stake_lamports: stake, slippage: CFG.SLIP_BUY, quote_out: b.expected, min_out: b.minOut, tip_lamports: lamports(CFG.TIP_SOL), cu_price: CFG.CU_PRICE,
       from_trigger_ms: fromTrig(), detail: { paperPrice: m.price, paperMc: m.mc, lagMs: m.lagMs ?? null, bundle: m.bundle ?? null, wal60: m.wal60 ?? null, feeBps: b.feeBps, tVenueMs: tVenue, curveMcSol: v.curve ? +pump.curveMcSol(v.curve).toFixed(1) : null } });
-    let tx = await buildTx(S.pub, wrap(S.pub, b.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE));
-    // shadow always simulates; live simulates unless EXEC_SIM_BEFORE_SEND=0. A program refusal on the classic curve instruction → try the v3 form once
+    let tx = await buildTx(S.pub, wrap(S.pub, [...pre, ...b.ixs], lamports(CFG.TIP_SOL), CFG.CU_PRICE));
+    // shadow always simulates; live simulates unless EXEC_SIM_BEFORE_SEND=0. A program refusal on the classic instruction → try the other form once (v3 on the curve, IDL-v2 on the pool)
     let sim = S.mode === "live" && !CFG.SIM_BEFORE_SEND ? { ok: true, err: null, logs: [], units: null, ms: 0, skipped: true } : await simulate(tx);
-    if (progErr(sim)) { const altKind = v.kind === "curve" ? "v3" : "amm"; const b3 = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, altKind); const tx3 = await buildTx(S.pub, wrap(S.pub, b3.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim3 = await simulate(tx3);
+    if (progErr(sim)) { const altKind = v.kind === "curve" ? "v3" : "amm2"; const b3 = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, altKind); const tx3 = await buildTx(S.pub, wrap(S.pub, [...pre, ...b3.ixs], lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim3 = await simulate(tx3);
       updOrder(id, { detail: { firstKind: b.ixKind, firstErr: sim.err, firstLogs: sim.logs.slice(-4) } }); if (sim3.ok || !progErr(sim3)) { b = b3; tx = tx3; sim = sim3; } }
     if (!(b.minOut > 0n)) return skip("quote gave a zero minimum — pool state unreadable");
     updOrder(id, { ix_kind: b.ixKind, quote_out: b.expected, min_out: b.minOut, sim_ok: sim.ok ? 1 : 0, sim_err: sim.err, sim_units: sim.units, sim_ms: sim.ms, status: sim.ok ? "simulated" : "sim-failed" });
@@ -311,10 +320,14 @@ if (cmd === "selftest") {
   loadWallet(); const stakeSol = Number(process.argv[4] || S.stake); const user = S.pub || Keypair.generate().publicKey;
   console.log(`wallet: ${S.pub ? S.pub.toBase58() : "none (simulating with a placeholder payer — expect an insufficient-funds error, the account list is still checked)"}`);
   const v = await venueOf(mintStr); console.log("venue:", v.kind, v.kind === "curve" ? `MC ${pump.curveMcSol(v.curve).toFixed(1)} SOL · complete ${v.curve.complete} · creator ${v.curve.creator.toBase58()} · creatorFeeBps ${v.curve.creatorFeeBps} · acct len ${v.curve.len} · solQuoted ${v.solQuoted}` : v.kind === "amm" ? `pool ${v.poolPk.toBase58()} base ${v.baseRes} quote ${v.quoteRes}` : v.reason);
-  if (v.kind !== "none") for (const kind of v.kind === "curve" ? ["classic", "v3"] : ["amm2", "amm"]) {
-    const b = buyIxs(v, user, lamports(stakeSol), CFG.SLIP_BUY, kind); const tx = await buildTx(user, wrap(user, b.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim = await simulate(tx);
+  const pre = S.pub ? await userVolPrefix(v.kind === "curve" ? "curve" : "amm") : []; console.log(`user volume accumulator (${v.kind === "curve" ? "pump" : "amm"}): ${pre.length ? "missing — create instruction goes in front of the first buy" : "exists"}`);
+  if (v.kind !== "none") for (const kind of v.kind === "curve" ? ["classic", "v3"] : ["amm", "amm2"]) {
+    const b = buyIxs(v, user, lamports(stakeSol), CFG.SLIP_BUY, kind); const tx = await buildTx(user, wrap(user, [...pre, ...b.ixs], lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim = await simulate(tx);
     console.log(`buy ${kind}: expected ${b.expected} tokens (min ${b.minOut}) feeBps ${b.feeBps} · sim ${sim.ok ? "OK" : "FAILED " + sim.err} · units ${sim.units} · ${sim.ms} ms`); if (!sim.ok) console.log("   logs:", sim.logs.slice(-6).join("\n         "));
-    if (v.kind === "curve" && b.expected > 0n) { const sIx = sellIxs(v, user, b.expected, CFG.SLIP_SELL, kind); console.log(`sell ${kind}: ${b.expected} tokens → ${sol(sIx.expected).toFixed(5)} SOL expected (min ${sol(sIx.minOut).toFixed(5)}) — round trip ${((Number(sIx.expected) / lamports(stakeSol) - 1) * 100).toFixed(2)}% at an unmoved price`); }
+    if (b.expected > 0n) { const sIx = sellIxs(v, user, b.expected, CFG.SLIP_SELL, kind); console.log(`sell ${kind}: ${b.expected} tokens → ${sol(sIx.expected).toFixed(5)} SOL expected (min ${sol(sIx.minOut).toFixed(5)}) — round trip ${((Number(sIx.expected) / lamports(stakeSol) - 1) * 100).toFixed(2)}% at an unmoved price`);
+      // we hold no tokens, so a sell simulation can only get as far as the token transfer: "insufficient funds" there means every account was accepted
+      const stx = await buildTx(user, wrap(user, sIx.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const ssim = await simulate(stx); const txt = ssim.logs.join(" ");
+      console.log(`   sell layout: ${ssim.ok ? "OK" : /insufficient funds/i.test(txt) ? "accepted (stopped at the token transfer — we hold none)" : "FAILED " + ssim.err + " | " + ssim.logs.slice(-4).join(" | ")}`); }
   }
   console.log("rpc:", rpcStats); process.exit(0);
 } else if (cmd === "orders") {
