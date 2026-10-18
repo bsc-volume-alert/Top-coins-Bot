@@ -297,6 +297,7 @@ export const p5 = { fired: 0, young: 0, sellHeavy: 0, byLevel: {}, wide: 0 }; //
 const P5E_LEVELS = String(process.env.P5E_LEVELS || "30,50,80").split(",").map(Number).filter((x) => x > 0);
 export function p5Check(mint, s, tr, now) {
   if (!(tr.mc > 0) || !(tr.price > 0) || tr.mc >= CFG.P5W_MAX_MC) return;
+  const wall0 = Date.now(); // v0.18.89: when WE saw the triggering trade (wall clock) — feed lag = wall0 − its block time; the first-seconds price path counts from here
   const wide = tr.mc >= CFG.P5E_MAX_MC; // v0.18.81 P5 Wide: the same 30 SOL trigger on coins at $100K–$250K MC, strategy p5w30 (30 level only)
   const sol = solUsdCached(); if (!(sol > 0)) return;
   let bU = 0, sU = 0, n = 0, maxB = 0; const wal = new Set();
@@ -317,7 +318,7 @@ export function p5Check(mint, s, tr, now) {
       if (!name || !createTs) { try { const d = await dexInfo(mint); name ||= d.name; symbol ||= d.symbol; createTs ||= d.createdAt; } catch {} }
       const ageS = createTs ? now - createTs : null;
       if (ageS != null && (ageS < CFG.P5_MIN_AGE_S || ageS > CFG.MOM_MAX_AGE_D * 86400)) return;
-      const pos = openCopy(strat, `${lv}SOL/60s`, mint, name || mint.slice(0, 8), symbol || "", px, mc, now, { v5, venue, ageS });
+      const pos = openCopy(strat, `${lv}SOL/60s`, mint, name || mint.slice(0, 8), symbol || "", px, mc, now, { v5, venue, ageS, wall0, blockTs: tr.ts });
       p5.fired++; if (wide) p5.wide++; else p5.byLevel[lv] = (p5.byLevel[lv] || 0) + 1;
       if (pos?.id) { pos.alerted = false; try { q.setV2m.run(Math.round(bU), pos.id); q.setEarly.run(JSON.stringify(feat), pos.id); } catch {} }
     })().catch((e) => console.error("[p5 early]", e.message));
