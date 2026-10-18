@@ -23,7 +23,7 @@ in `src/` is changed for it except the measurements below and, later, one line t
 - `src/index.mjs` — the bot: local socket from the tracker; buy flow (checks → venue → quote → build → simulate → [live: sign, Sender, confirm, retry once at a
   higher tip, read the real fill]); sell flow on the followed exit rule (`h5` or `flow4`) or the paper close, with retries at wider slippage; safety
   (4 open, daily stop, feed lag, trigger age, balance, 7-min fallback sell, tracker-down sell, `/live` commands); `status.json` every 10 s; `selftest <mint>`.
-- `ecosystem.cjs` — pm2 app `executor`; `scripts/deploy-step.sh` installs / checks / smoke-boots / reloads it only when this folder changes.
+- `ecosystem.config.cjs` — pm2 app `executor`; `scripts/deploy-step.sh` installs / checks / smoke-boots / reloads it only when this folder changes.
 - Tracker side (`src/execlink.js` + three hook lines in `copytrade.js`, one in `commands.js`): P5-family entries → `trigger`; hold-5 / runner firing → `exit`;
   paper close → `close`; `/live …` → `cmd`. Nothing in the tracker waits on the executor.
 
