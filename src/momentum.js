@@ -314,7 +314,8 @@ export function p5Check(mint, s, tr, now) {
     const px = tr.price, mc = tr.mc, venue = tr.venue, v5 = s.w5.reduce((a, x) => a + x.usd, 0);
     const feat = { sol60: +bSol.toFixed(2), wal60: wal.size, n60: n, maxShare: bU > 0 ? +(maxB / bU).toFixed(3) : null, avgBuySol: n ? +(bSol / n).toFixed(3) : null, sell60: +(sU / sol).toFixed(2) };
     // v0.18.90: the website's Project 5 filters (launch seen · bundle < 70% · under 150 wallets in the 60 s), decided here so the executor buys exactly the website's book
-    const skipWhy = !meta || meta.bundle_pct == null ? "launch not seen" : meta.bundle_pct >= 70 ? `bundled ${Math.round(meta.bundle_pct)}%` : wal.size >= 150 ? `${wal.size} wallets` : null;
+    const solPaired = !venue || venue === "pumpswap" || venue === "pump"; // v0.18.94: pools quoted in ZEC / XMR / PUMP / stocks and Raydium venues are not tradable by the live wallet
+    const skipWhy = !meta || meta.bundle_pct == null ? "launch not seen" : meta.bundle_pct >= 70 ? `bundled ${Math.round(meta.bundle_pct)}%` : wal.size >= 150 ? `${wal.size} wallets` : !solPaired ? `not SOL-paired (${venue})` : null;
     (async () => {
       let name = meta?.name, symbol = meta?.symbol, createTs = meta?.create_ts;
       if (!name || !createTs) { try { const d = await dexInfo(mint); name ||= d.name; symbol ||= d.symbol; createTs ||= d.createdAt; } catch {} }
