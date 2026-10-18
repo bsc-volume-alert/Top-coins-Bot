@@ -46,6 +46,12 @@ forwarding exits · `/live on` really re-arms the daily stop · fill read-back r
   v0.1.2 sends exactly that (26 accounts on a buy, 24 on a sell), picks the protocol-fee recipient at random too (spreads the write locks the
   way the other bots do), and keeps the IDL v2 form as the one-shot fallback. The same probe confirmed new pump coins are Token-2022 mints,
   which the venue lookup already detects from the mint's owner.
+- **The first shadow fills (20:07 UTC) caught a tracker pricing error.** The executor's quote (verified within 1% of the chain's own simulated fill)
+  put the price 28–29% above the paper book's on three coins in a row. Cause: pump.fun's pools now carry a *virtual quote reserve* (pool account,
+  17.5 SOL on a pool holding 22.9 SOL real) and the tracker priced pools from token balances, which miss it — pool-stage prices ran 25–80% low and
+  every coin showed a fake drop at migration. Tracker v0.18.95 prices each swap from its own amounts; paper multiples before 18 Oct 20:30 UK are
+  distorted for pool-stage trades and the sell-rule test is re-run from there. The executor itself was right throughout.
+- A 33 s feed lag after a tracker restart put a paper buy on a stale price (peeled potato): the executor now skips triggers whose trade is > 10 s old.
 - Both pump programs keep a per-wallet "user volume accumulator"; a fresh wallet has none (3012 *AccountNotInitialized*). The first buy on each
   program now carries the one-off create instruction in front of it; after that it is remembered.
 - The feed-lag guard tripped on a healthy feed ("feed 2–5 s behind the chain"): block timestamps run seconds behind the wall clock, so the

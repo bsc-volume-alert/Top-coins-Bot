@@ -157,7 +157,10 @@ function handle({ sig, slot, logs, err }) {
     if (!(solQ > 0) || solQ > CFG.PS_MAX_SWAP_SOL) { ps.oversize++; continue; }
     if (poolQuoteSol < CFG.PS_MIN_POOL_SOL) { ps.thinPool++; continue; } // v0.17: secondary/thin pools price the token wrongly
     if (!gradSeen.has(pm.mint)) { gradSeen.add(pm.mint); if (gradSeen.size > 50000) gradSeen.delete(gradSeen.keys().next().value); try { q.setGrad.run(pm.mint); const t = live.get(pm.mint); if (t && !t.graduated) { t.graduated = true; emit("graduated", t, { price: poolQuoteSol / (Number(e.poolBase) / 1e6), ts: e.ts }); } ps.gradEvidence++; } catch {} } // v0.17: graduation flagged from PumpSwap evidence // v0.15: implausible single swap (instant-graduation curve buys decode with bogus amounts)
-    const price = poolQuoteSol / (Number(e.poolBase) / 1e6);
+    // v0.18.95: price from the swap itself (quote in ÷ tokens out, before fees), not from the pool's token balances. pump.fun's pools now carry a
+    // virtual quote reserve (seen in the pool account, 17.5 SOL on a 22.9 SOL pool on 18 Oct) that the balances do not show, so balance ÷ balance
+    // under-priced pool-stage coins by 25–80% and put a fake drop into every coin at migration. Verified against the chain's own fills (executor selftest).
+    const price = e.baseAmt > 0n && e.quoteAmt > 0n ? ((Number(e.quoteAmt) / qDiv) * qi.sol) / (Number(e.baseAmt) / 1e6) : poolQuoteSol / (Number(e.poolBase) / 1e6);
     const mc = price * CFG.TOTAL_SUPPLY * solUsdCached();
     const tr = { mint: pm.mint, pool: e.pool, sig, slot, ts: e.ts, wallet: e.user, isBuy: e.isBuy, sol: solQ, tokens, price, mc, route, venue: pm.quote === WSOL ? "pumpswap" : `pumpswap/${qi.sym}`, quote: qi.sym, creatorFee: (Number(e.creatorFee || 0n) / qDiv) * qi.sol };
     if (samples < 5) { samples++; console.log("[ps sample]", JSON.stringify({ mint: tr.mint.slice(0, 8), buy: tr.isBuy, sol: +sol.toFixed(4), mc: Math.round(mc), wallet: tr.wallet.slice(0, 6) })); }
