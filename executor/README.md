@@ -35,6 +35,16 @@ PumpSwap virtual-quote i128 read fixed (+ a zero-minimum guard on every buy) · 
 check · u64 encoding BigInt-safe · tracker pings carry the feed's last trade time, a silent feed counts as tracker-down, restored P5 positions keep
 forwarding exits · `/live on` really re-arms the daily stop · fill read-back retried.
 
+## First shadow hour (18 Oct 17:30–18:40 UTC) — what the chain taught us, fixed in v0.1.1
+- At $103 a SOL the bonding curve fills at ≈ $40K market cap — exactly where Project 5 buys — so the trigger often lands in the seconds between the
+  curve completing and pump.fun creating the PumpSwap pool ("curve complete, pool not found" × 4, incl. Zcash ATM). The executor now waits up to
+  6 s for the pool, then asks DexScreener for the pair address, then gives up with "migration pending".
+- PumpSwap's classic `buy_exact_quote_in` is refused with error 6062 *InvalidPoolV2* (a `pool_v2` remaining account the IDL does not document).
+  The v2 pair (`buy_exact_quote_in_v2` / `sell_v2`: 17 accounts, buyback recipient from GlobalConfig) is now tried first, classic second.
+- The feed-lag guard tripped on a healthy feed ("feed 2–5 s behind the chain"): block timestamps run seconds behind the wall clock, so the
+  reading is a trend, not a delay. It is now recorded only; the executor-side trigger-age check (4 s) is the real guard.
+- Triggers reach the executor 40–110 ms after the tracker sees them; the website's P5 filters skipped bundled / crowded / unseen coins exactly as the paper book does.
+
 ## Shadow mode needs a funded wallet
 A buy can only be simulated against the chain with a payer that holds the stake, so shadow mode simulates with the real bot wallet: ~0.2 SOL in it
 is enough at a 0.1 stake. Nothing is signed in shadow mode. Shadow sells are quoted from the curve at the moment the exit fires (a sell cannot be

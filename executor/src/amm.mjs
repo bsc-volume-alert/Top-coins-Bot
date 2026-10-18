@@ -1,10 +1,11 @@
 // PumpSwap (pump.fun's AMM, where coins go after the bonding curve): pool lookup / decoding, quotes, buy_exact_quote_in and sell.
 // Account orders from the published IDL (pump_amm.json, Oct 2026). Quote side is WSOL: SOL is wrapped for the instruction and unwrapped after.
-import { TransactionInstruction } from "@solana/web3.js";
+import { TransactionInstruction, PublicKey } from "@solana/web3.js";
 import { PUMP_AMM, FEE_PROGRAM, SYSTEM, TOKEN, ATA_PROGRAM, WSOL, pda, ata, u64, u16, readU64, readPk, ixCreateAtaIdempotent, ixCloseAccount, ixSyncNative, ixTransfer } from "./solana.mjs";
 import { poolAuthorityOf } from "./pump.mjs";
 
-const DISC = { buyExactQuoteIn: [198, 46, 21, 82, 180, 217, 232, 112], sell: [51, 230, 133, 164, 1, 127, 131, 173] };
+const DISC = { buyExactQuoteIn: [198, 46, 21, 82, 180, 217, 232, 112], sell: [51, 230, 133, 164, 1, 127, 131, 173], buyExactQuoteInV2: [194, 171, 28, 70, 104, 77, 91, 47], sellV2: [93, 246, 130, 60, 231, 233, 64, 178] };
+const ZERO = new PublicKey("11111111111111111111111111111111");
 export const POOL_DISC = Buffer.from([241, 154, 109, 4, 17, 177, 109, 188]);
 export const GLOBAL_CONFIG = pda(["global_config"], PUMP_AMM);
 export const AMM_EVENT_AUTHORITY = pda(["__event_authority"], PUMP_AMM);
@@ -25,8 +26,9 @@ export function decodePool(data) {
 }
 export function decodeGlobalConfig(data) {
   if (!data || data.length < 321) return null;
-  const g = { lpFeeBps: Number(readU64(data, 40)), protocolFeeBps: Number(readU64(data, 48)), protocolFeeRecipients: [], coinCreatorFeeBps: Number(readU64(data, 313)) };
+  const g = { lpFeeBps: Number(readU64(data, 40)), protocolFeeBps: Number(readU64(data, 48)), protocolFeeRecipients: [], coinCreatorFeeBps: Number(readU64(data, 313)), buybackFeeRecipients: [] };
   for (let i = 0; i < 8; i++) g.protocolFeeRecipients.push(readPk(data, 57 + 32 * i));
+  for (let i = 0; i < 8 && data.length >= 643 + 32 * (i + 1); i++) g.buybackFeeRecipients.push(readPk(data, 643 + 32 * i)); // after admin_set_coin_creator_authority, whitelist_pda, reserved_fee_recipient, mayhem flag, 7 reserved recipients, cashback flag
   return g;
 }
 const ceilDiv = (a, b) => (a + b - 1n) / b;
@@ -55,6 +57,26 @@ export function ixBuy({ user, poolPk, pool, cfg, baseTokenProgram = TOKEN, spend
   const data = Buffer.concat([Buffer.from(DISC.buyExactQuoteIn), u64(spendLamports), u64(minBase), Buffer.from([0])]);
   return [ixCreateAtaIdempotent(user, user, pool.baseMint, baseTokenProgram), ixCreateAtaIdempotent(user, user, WSOL, TOKEN), ixTransfer(user, wsolAta, spendLamports), ixSyncNative(wsolAta),
     new TransactionInstruction({ programId: PUMP_AMM, keys, data }), ixCloseAccount(wsolAta, user, user, TOKEN)];
+}
+// v2 instructions (Oct 2026): the classic ones now want a pool_v2 remaining account the IDL does not describe (error 6062 InvalidPoolV2 in shadow);
+// the v2 pair has a shorter list — no protocol-fee or creator-vault accounts, a buyback recipient instead — and is what we try first.
+const buybackOf = (cfg) => (cfg?.buybackFeeRecipients || []).find((k) => !k.equals(ZERO)) || cfg.protocolFeeRecipients[0];
+function commonV2(user, poolPk, pool, cfg, baseTokenProgram) {
+  return [key(poolPk, true), key(user, true, true), key(GLOBAL_CONFIG), key(pool.baseMint), key(pool.quoteMint), key(ata(user, pool.baseMint, baseTokenProgram), true), key(ata(user, pool.quoteMint, TOKEN), true),
+    key(pool.baseAcc, true), key(pool.quoteAcc, true), key(baseTokenProgram), key(TOKEN), key(SYSTEM), key(ammUserVolOf(user), true), key(AMM_FEE_CONFIG), key(buybackOf(cfg), true), key(AMM_EVENT_AUTHORITY), key(PUMP_AMM)];
+}
+export function ixBuyV2({ user, poolPk, pool, cfg, baseTokenProgram = TOKEN, spendLamports, minBase }) {
+  const wsolAta = ata(user, WSOL, TOKEN);
+  const data = Buffer.concat([Buffer.from(DISC.buyExactQuoteInV2), u64(spendLamports), u64(minBase)]);
+  return [ixCreateAtaIdempotent(user, user, pool.baseMint, baseTokenProgram), ixCreateAtaIdempotent(user, user, WSOL, TOKEN), ixTransfer(user, wsolAta, spendLamports), ixSyncNative(wsolAta),
+    new TransactionInstruction({ programId: PUMP_AMM, keys: commonV2(user, poolPk, pool, cfg, baseTokenProgram), data }), ixCloseAccount(wsolAta, user, user, TOKEN)];
+}
+export function ixSellV2({ user, poolPk, pool, cfg, baseTokenProgram = TOKEN, amount, minSol, close = true }) {
+  const wsolAta = ata(user, WSOL, TOKEN), baseAta = ata(user, pool.baseMint, baseTokenProgram);
+  const data = Buffer.concat([Buffer.from(DISC.sellV2), u64(amount), u64(minSol)]);
+  const out = [ixCreateAtaIdempotent(user, user, WSOL, TOKEN), new TransactionInstruction({ programId: PUMP_AMM, keys: commonV2(user, poolPk, pool, cfg, baseTokenProgram), data }), ixCloseAccount(wsolAta, user, user, TOKEN)];
+  if (close) out.push(ixCloseAccount(baseAta, user, user, baseTokenProgram));
+  return out;
 }
 /** Sell `amount` base for ≥ minSol lamports; unwrap and close both token accounts. */
 export function ixSell({ user, poolPk, pool, cfg, baseTokenProgram = TOKEN, amount, minSol, close = true }) {

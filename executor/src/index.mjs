@@ -16,7 +16,7 @@ import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 import { newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, hasPosition, dayNet, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 const nowS = () => Math.floor(Date.now() / 1000);
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const short = (m) => (m ? `${m.slice(0, 4)}…${m.slice(-4)}` : "?");
@@ -50,18 +50,24 @@ async function balance(force = false) {
 
 // ---- venue lookup: where does this coin trade right now? ----
 let globalCache = null, cfgCache = null;
-async function venueOf(mintStr) {
+async function venueOf(mintStr, waitMs = 6000) {
   const mint = PK(mintStr), curvePk = pump.curveOf(mint);
   const [curveAcc, mintAcc, globalAcc] = await getAccounts([curvePk, mint, pump.GLOBAL]);
   if (globalAcc) globalCache = pump.decodeGlobal(globalAcc.data) || globalCache;
   const tokenProgram = pump.tokenProgramOf(mintAcc?.owner);
   const curve = curveAcc ? pump.decodeCurve(curveAcc.data) : null;
   if (curve && !curve.complete) return { kind: "curve", mint, curve, tokenProgram, global: globalCache, curvePk, solQuoted: curve.solQuoted };
-  const poolPk = amm.migratedPoolOf(mint);
-  const [poolAcc, cfgAcc] = await getAccounts([poolPk, amm.GLOBAL_CONFIG]);
+  let poolPk = amm.migratedPoolOf(mint);
+  let [poolAcc, cfgAcc] = await getAccounts([poolPk, amm.GLOBAL_CONFIG]);
   if (cfgAcc) cfgCache = amm.decodeGlobalConfig(cfgAcc.data) || cfgCache;
+  // at today's SOL price the curve completes at ≈ $40K — right where Project 5 buys — so the trigger often lands in the seconds between
+  // the curve filling and pump.fun creating the pool. Wait for it (up to `waitMs`), then try DexScreener's pair address as a last resort.
+  const t0 = Date.now(); let waited = 0;
+  while (!poolAcc && curve && Date.now() - t0 < waitMs) { await new Promise((r) => setTimeout(r, 400)); waited++; [poolAcc] = await getAccounts([poolPk]); }
+  if (!poolAcc && curve) { try { const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mintStr}`, { signal: AbortSignal.timeout(2500) }); const j = await r.json();
+    const pair = (j.pairs || []).find((p) => p.chainId === "solana" && /pumpswap/i.test(p.dexId || "")); if (pair?.pairAddress) { poolPk = PK(pair.pairAddress); [poolAcc] = await getAccounts([poolPk]); } } catch {} }
   const pool = poolAcc ? amm.decodePool(poolAcc.data) : null;
-  if (!pool) return { kind: "none", mint, curve, tokenProgram, reason: curve ? "curve complete, PumpSwap pool not found at the migration address" : "no bonding curve for this mint" };
+  if (!pool) return { kind: "none", mint, curve, tokenProgram, reason: curve ? `curve complete, pool not there after ${((Date.now() - t0) / 1000).toFixed(1)} s (migration pending)` : "no bonding curve for this mint" };
   const [baseAcc, quoteAcc] = await getAccounts([pool.baseAcc, pool.quoteAcc]);
   const baseRes = parseTokenAccount(baseAcc?.data)?.amount ?? 0n, quoteRes = parseTokenAccount(quoteAcc?.data)?.amount ?? 0n;
   return { kind: "amm", mint, pool, poolPk, cfg: cfgCache, tokenProgram, baseRes, quoteRes, curve };
@@ -75,7 +81,8 @@ function buyIxs(v, user, spendLamports, slip, kind = "classic") {
     return { ixs: f({ user, mint: v.mint, curve: v.curve, global: v.global, tokenProgram: v.tokenProgram, spendLamports, minTokens }), expected: q.tokens, minOut: minTokens, feeBps: q.feeBps, ixKind: kind };
   }
   const q = amm.quoteBuy(v.pool, v.cfg, v.baseRes, v.quoteRes, spendLamports), minBase = (q.base * BigInt(Math.round((1 - slip) * 10000))) / 10000n;
-  return { ixs: amm.ixBuy({ user, poolPk: v.poolPk, pool: v.pool, cfg: v.cfg, baseTokenProgram: v.tokenProgram, spendLamports, minBase }), expected: q.base, minOut: minBase, feeBps: q.feeBps, ixKind: "amm" };
+  const f = kind === "amm" ? amm.ixBuy : amm.ixBuyV2;
+  return { ixs: f({ user, poolPk: v.poolPk, pool: v.pool, cfg: v.cfg, baseTokenProgram: v.tokenProgram, spendLamports, minBase }), expected: q.base, minOut: minBase, feeBps: q.feeBps, ixKind: kind === "amm" ? "amm" : "amm2" };
 }
 function sellIxs(v, user, amount, slip, kind = "classic") {
   if (v.kind === "curve") {
@@ -84,7 +91,8 @@ function sellIxs(v, user, amount, slip, kind = "classic") {
     return { ixs: f({ user, mint: v.mint, curve: v.curve, global: v.global, tokenProgram: v.tokenProgram, amount, minSol }), expected: q.sol, minOut: minSol, ixKind: kind };
   }
   const q = amm.quoteSell(v.pool, v.cfg, v.baseRes, v.quoteRes, amount), minSol = (q.sol * BigInt(Math.round((1 - slip) * 10000))) / 10000n;
-  return { ixs: amm.ixSell({ user, poolPk: v.poolPk, pool: v.pool, cfg: v.cfg, baseTokenProgram: v.tokenProgram, amount, minSol }), expected: q.sol, minOut: minSol, ixKind: "amm" };
+  const f = kind === "amm" ? amm.ixSell : amm.ixSellV2;
+  return { ixs: f({ user, poolPk: v.poolPk, pool: v.pool, cfg: v.cfg, baseTokenProgram: v.tokenProgram, amount, minSol }), expected: q.sol, minOut: minSol, ixKind: kind === "amm" ? "amm" : "amm2" };
 }
 const wrap = (user, ixs, tipLamports, cuPrice) => [...ixBudget(CFG.CU_LIMIT, cuPrice), ixTip(user, tipLamports), ...ixs];
 const progErr = (sim) => !sim.ok && !/rpc:/.test(sim.err || "") && !/insufficient (lamports|funds)/i.test(sim.logs.join(" ") + (sim.err || ""));
@@ -98,7 +106,7 @@ async function handleTrigger(m) {
   if (m.lagMs != null) { S.lags.push(m.lagMs); if (S.lags.length > 10) S.lags.shift(); }
   if (S.mode === "off") return skip("mode off");
   if (m.pass === false) return skip(`paper skip: ${m.skipWhy || "filter"}`); // the website's P5 filters (launch seen · bundle < 70% · < 150 wallets) — not a trade the book takes
-  if (m.lagMs != null && S.lags.length >= 5 && feedLagAvg() > CFG.FEED_LAG_MAX_MS && m.lagMs > CFG.FEED_LAG_MAX_MS) return skip(`feed ${Math.round(feedLagAvg())} ms behind the chain (last 10 triggers)`); // block time is whole seconds: judged on the average, never one reading
+  // feed lag is recorded, not acted on: block timestamps run 2–5 s behind the wall clock on Solana, so the number is a trend, not a delay (shadow 18 Oct: it tripped on a healthy feed). The trigger-age check below is the real guard.
   if (fromTrig() > CFG.TRIGGER_MAX_AGE_MS) return skip(`trigger ${fromTrig()} ms old`);
   if (m.venue && !/pump|pumpswap/i.test(m.venue)) return skip(`venue ${m.venue} not handled yet`);
   if (hasPosition(m.mint)) return skip("already holding");
@@ -115,15 +123,15 @@ async function handleTrigger(m) {
     const v = await venueOf(m.mint); const tVenue = Date.now() - t0;
     if (v.kind === "none") return skip(v.reason);
     if (v.kind === "curve" && !v.solQuoted) return skip("curve not SOL-quoted");
-    let b = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, "classic");
+    let b = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, v.kind === "amm" ? "amm2" : "classic");
     if (!(b.minOut > 0n)) return skip("quote gave a zero minimum — pool state unreadable");
     const id = newOrder({ side: "buy", paper_id: m.id, mint: m.mint, name: m.name, strategy: m.strategy, venue: v.kind, ix_kind: b.ixKind, stake_lamports: stake, slippage: CFG.SLIP_BUY, quote_out: b.expected, min_out: b.minOut, tip_lamports: lamports(CFG.TIP_SOL), cu_price: CFG.CU_PRICE,
       from_trigger_ms: fromTrig(), detail: { paperPrice: m.price, paperMc: m.mc, lagMs: m.lagMs ?? null, bundle: m.bundle ?? null, wal60: m.wal60 ?? null, feeBps: b.feeBps, tVenueMs: tVenue, curveMcSol: v.curve ? +pump.curveMcSol(v.curve).toFixed(1) : null } });
     let tx = await buildTx(S.pub, wrap(S.pub, b.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE));
     // shadow always simulates; live simulates unless EXEC_SIM_BEFORE_SEND=0. A program refusal on the classic curve instruction → try the v3 form once
     let sim = S.mode === "live" && !CFG.SIM_BEFORE_SEND ? { ok: true, err: null, logs: [], units: null, ms: 0, skipped: true } : await simulate(tx);
-    if (v.kind === "curve" && progErr(sim)) { const b3 = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, "v3"); const tx3 = await buildTx(S.pub, wrap(S.pub, b3.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim3 = await simulate(tx3);
-      updOrder(id, { detail: { classicErr: sim.err, classicLogs: sim.logs.slice(-4) } }); if (sim3.ok || !progErr(sim3)) { b = b3; tx = tx3; sim = sim3; } }
+    if (progErr(sim)) { const altKind = v.kind === "curve" ? "v3" : "amm"; const b3 = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, altKind); const tx3 = await buildTx(S.pub, wrap(S.pub, b3.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim3 = await simulate(tx3);
+      updOrder(id, { detail: { firstKind: b.ixKind, firstErr: sim.err, firstLogs: sim.logs.slice(-4) } }); if (sim3.ok || !progErr(sim3)) { b = b3; tx = tx3; sim = sim3; } }
     if (!(b.minOut > 0n)) return skip("quote gave a zero minimum — pool state unreadable");
     updOrder(id, { ix_kind: b.ixKind, quote_out: b.expected, min_out: b.minOut, sim_ok: sim.ok ? 1 : 0, sim_err: sim.err, sim_units: sim.units, sim_ms: sim.ms, status: sim.ok ? "simulated" : "sim-failed" });
     if (!sim.ok) { log("sim-fail", `${m.name} ${b.ixKind}: ${sim.err} | ${sim.logs.slice(-3).join(" | ")}`); return; }
@@ -189,14 +197,14 @@ async function sellPosition(p, rule, paperMult = null, why = null) {
         if (f && f.tokenDelta < 0) { done(prev.id, f.solDelta); updOrder(prev.id, { status: "confirmed", fill_sol: f.solDelta, fill_tokens: f.tokenDelta, fee: f.fee }); log("sell-late", `${p.name}: earlier sell had landed, booked ${sol(f.solDelta).toFixed(4)} SOL`); }
         else { done(null, 0); log("sell-empty", `${p.name}: no tokens in wallet and no sell found — booked as lost`); tg(`⚠️ ${esc(p.name)}: wallet holds none of this coin and no sell of ours landed — booked as a full loss. Check the wallet on Solscan.`); }
         return; } }
-    let sIx = sellIxs(v, S.pub, amount, slip, p.ix_kind === "v3" ? "v3" : "classic");
+    let sIx = sellIxs(v, S.pub, amount, slip, v.kind === "amm" ? (p.ix_kind === "amm" ? "amm" : "amm2") : (p.ix_kind === "v3" ? "v3" : "classic"));
     const id = newOrder({ side: "sell", paper_id: p.paper_id, mint: p.mint, name: p.name, strategy: p.strategy, rule, venue: v.kind, ix_kind: sIx.ixKind, amount_tokens: Number(amount), slippage: slip, quote_out: sIx.expected, min_out: sIx.minOut, tip_lamports: lamports(CFG.TIP_SOL), cu_price: CFG.CU_PRICE, detail: { why, paperMult } });
     if (p.mode !== "live") { // shadow: the quote at this moment is the fill (a sell cannot be simulated without holding the tokens)
       const proceeds = Number(sIx.expected) - lamports(CFG.TIP_SOL) - 10000;
       done(id, proceeds); updOrder(id, { status: "shadow-filled", fill_sol: proceeds, fill_tokens: -Number(amount) }); return;
     }
     let tx = await buildTx(S.pub, wrap(S.pub, sIx.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); let sim = await simulate(tx);
-    if (v.kind === "curve" && progErr(sim)) { const alt = sellIxs(v, S.pub, amount, slip, sIx.ixKind === "v3" ? "classic" : "v3"); const tx2 = await buildTx(S.pub, wrap(S.pub, alt.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim2 = await simulate(tx2); if (sim2.ok) { sIx = alt; tx = tx2; sim = sim2; } }
+    if (progErr(sim)) { const altKind = v.kind === "amm" ? (sIx.ixKind === "amm" ? "amm2" : "amm") : (sIx.ixKind === "v3" ? "classic" : "v3"); const alt = sellIxs(v, S.pub, amount, slip, altKind); const tx2 = await buildTx(S.pub, wrap(S.pub, alt.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim2 = await simulate(tx2); if (sim2.ok) { sIx = alt; tx = tx2; sim = sim2; } }
     updOrder(id, { ix_kind: sIx.ixKind, sim_ok: sim.ok ? 1 : 0, sim_err: sim.err, sim_units: sim.units, sim_ms: sim.ms });
     // a failed simulation on a sell is not a reason to hold a dumping coin: send anyway with the stop slippage
     if (!sim.ok) { log("sell-simfail", `${p.name}: ${sim.err} | ${sim.logs.slice(-3).join(" | ")}`); if (slip < CFG.SLIP_STOP) { sIx = sellIxs(v, S.pub, amount, CFG.SLIP_STOP, sIx.ixKind); tx = await buildTx(S.pub, wrap(S.pub, sIx.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); } }
@@ -303,7 +311,7 @@ if (cmd === "selftest") {
   loadWallet(); const stakeSol = Number(process.argv[4] || S.stake); const user = S.pub || Keypair.generate().publicKey;
   console.log(`wallet: ${S.pub ? S.pub.toBase58() : "none (simulating with a placeholder payer — expect an insufficient-funds error, the account list is still checked)"}`);
   const v = await venueOf(mintStr); console.log("venue:", v.kind, v.kind === "curve" ? `MC ${pump.curveMcSol(v.curve).toFixed(1)} SOL · complete ${v.curve.complete} · creator ${v.curve.creator.toBase58()} · creatorFeeBps ${v.curve.creatorFeeBps} · acct len ${v.curve.len} · solQuoted ${v.solQuoted}` : v.kind === "amm" ? `pool ${v.poolPk.toBase58()} base ${v.baseRes} quote ${v.quoteRes}` : v.reason);
-  if (v.kind !== "none") for (const kind of v.kind === "curve" ? ["classic", "v3"] : ["amm"]) {
+  if (v.kind !== "none") for (const kind of v.kind === "curve" ? ["classic", "v3"] : ["amm2", "amm"]) {
     const b = buyIxs(v, user, lamports(stakeSol), CFG.SLIP_BUY, kind); const tx = await buildTx(user, wrap(user, b.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim = await simulate(tx);
     console.log(`buy ${kind}: expected ${b.expected} tokens (min ${b.minOut}) feeBps ${b.feeBps} · sim ${sim.ok ? "OK" : "FAILED " + sim.err} · units ${sim.units} · ${sim.ms} ms`); if (!sim.ok) console.log("   logs:", sim.logs.slice(-6).join("\n         "));
     if (v.kind === "curve" && b.expected > 0n) { const sIx = sellIxs(v, user, b.expected, CFG.SLIP_SELL, kind); console.log(`sell ${kind}: ${b.expected} tokens → ${sol(sIx.expected).toFixed(5)} SOL expected (min ${sol(sIx.minOut).toFixed(5)}) — round trip ${((Number(sIx.expected) / lamports(stakeSol) - 1) * 100).toFixed(2)}% at an unmoved price`); }
