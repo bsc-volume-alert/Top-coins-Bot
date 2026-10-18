@@ -62,6 +62,7 @@ CREATE INDEX IF NOT EXISTS bb_mint ON big_buys(mint);
 // migrations (idempotent)
 for (const sql of [
   "ALTER TABLE paper_trades ADD COLUMN x_h5 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h5f12 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h5f14 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h3 REAL", "ALTER TABLE paper_trades ADD COLUMN h5_retro INTEGER", "ALTER TABLE paper_trades ADD COLUMN after_path TEXT", // v0.18.81
+  "ALTER TABLE paper_trades ADD COLUMN restart_span INTEGER", "ALTER TABLE paper_trades ADD COLUMN crashloop INTEGER", // v0.18.84 restart quarantine
   "ALTER TABLE tokens ADD COLUMN factory INTEGER DEFAULT 0",
   "ALTER TABLE tokens ADD COLUMN graduated INTEGER DEFAULT 0",
   "ALTER TABLE tokens ADD COLUMN cluster_sol_in REAL DEFAULT 0",

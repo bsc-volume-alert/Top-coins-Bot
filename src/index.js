@@ -13,6 +13,8 @@ import { startCommands, reportText, memMb } from "./commands.js";
 import { en } from "./enrich.js";
 import { startWeb } from "./web.js"; // v0.18.23
 import { retroScoreP5 } from "./p5retro.js"; // v0.18.81
+import { recordBoot, flagTrades } from "./restarts.js"; // v0.18.84 restart quarantine
+recordBoot();
 import "./backup.js";
 import { pxg, ppx } from "./pumpswap.js"; // v0.18.43
 import "./pxcheck.js"; // v0.18.43 peak cross-check
@@ -64,6 +66,8 @@ const hb = async () => {
   await tg(`💓 <b>${CFG.HEARTBEAT_MIN}m</b> · launches ${n} · prepared ${n1} · hand-offs ${g.handoffs} · early open ${g.open} · volume alerts ${mo.alerts} / open ${mo.open} · copy open ${cpStats().open} · wallets scored ${wbStats().recorded} · life samples ${lcStats().samples} · rpc ${g.rpc} · ws↻ ${sub.stats().reconnects} · SOL $${solUsdCached().toFixed(0)}`);
 };
 setInterval(hb, CFG.HEARTBEAT_MIN * 60_000);
+setTimeout(() => { try { const n = flagTrades(0); if (n) console.log(`[restarts] flagged ${n} trades`); } catch (e) { console.error("[restarts]", e.message); } }, 8000); // v0.18.84
+setInterval(() => { try { flagTrades(Math.floor(Date.now() / 1000) - 7200); } catch {} }, 5 * 60_000);
 process.on("unhandledRejection", (e) => console.error("[unhandled]", e));
 // v0.18.83: a throw inside a timer must not take the whole bot down (v0.18.81 crash-looped every 30 s on one). Logged loudly; state lives in SQLite anyway.
 process.on("uncaughtException", (e) => { console.error("[uncaught]", e); try { tg(`⚠️ uncaught error (bot kept running): <code>${String(e?.message || e).slice(0, 200)}</code>`); } catch {} });

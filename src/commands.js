@@ -4,7 +4,7 @@ import { db, q } from "./db.js";
 import { tg } from "./telegram.js";
 import { runnersText } from "./runners.js";
 import { zipFiles } from "./zip.js";
-import { mkdtempSync, openSync, writeSync, closeSync, rmSync, readFileSync, openAsBlob } from "node:fs";
+import { mkdtempSync, openSync, writeSync, closeSync, rmSync, readFileSync, openAsBlob, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { checkText } from "./check.js";
@@ -99,86 +99,57 @@ export function reportText(hours) {
     `No socials: ${a.nosoc} trades → ${a.nosoc2x} hit 2x (${pc(a.nosoc2x, a.nosoc)}) · factory: ${a.fac} → ${a.fac2x} (${pc(a.fac2x, a.fac)})\n` +
     byTier.map((r) => `tier${r.tier}: ${r.n} trades, ${r.h} hit 2x (${pc(r.h, r.n)}), TSL40 ${m(r.x40)}, hold ${m(r.xt)}`).join("\n");
 }
-const CSV_EXTRA = {
-  token_life: `SELECT l.mint, t.name, t.symbol, t.creator, datetime(t.create_ts,'unixepoch') launch_utc, t.bundle_pct, t.bundle_sol, t.tier, t.factory, t.has_socials, l.cp, l.mc, l.vol5m_usd, l.buys5m, l.sells5m, l.buyers5m, l.buyers_total, l.graduated, l.top10_pct, l.holders, l.alive FROM token_life l LEFT JOIN tokens t ON t.mint=l.mint ORDER BY l.mint, l.cp`,
-  wallet_buys: `SELECT w.wallet, w.mint, t.name, datetime(w.ts,'unixepoch') buy_utc, w.age_s, w.sol, w.entry_mc, w.is_cluster, w.peak_30m, w.peak_24h, w.resolved FROM wallet_buys w LEFT JOIN tokens t ON t.mint=w.mint ORDER BY w.ts`,
-  big_buys: `SELECT b.mint, t.name, b.wallet, datetime(b.ts,'unixepoch') buy_utc, b.age_s, b.sol, b.mc, b.balance_sol, b.venue FROM big_buys b LEFT JOIN tokens t ON t.mint=b.mint ORDER BY b.ts`,
-  creator_claims: `SELECT c.creator, c.mint, t.name, c.ambiguous, datetime(c.ts,'unixepoch') claim_utc, c.sol, c.venue, c.sig FROM creator_claims c LEFT JOIN tokens t ON t.mint=c.mint ORDER BY c.ts`,
-  pump_buyers: `SELECT b.trade_id, b.mint, p.name, b.wallet, datetime(b.ts,'unixepoch') buy_utc, b.sol, b.mc, b.lead_s, b.venue, p.peak_mult, p.entry_mc FROM pump_buyers b LEFT JOIN paper_trades p ON p.id=b.trade_id ORDER BY b.trade_id, b.lead_s DESC`,
-  vol_log: `SELECT id, mint, name, symbol, datetime(ts,'unixepoch') woke_utc, datetime(last_ts,'unixepoch') last_100k_utc, first_src, datetime(feed_ts,'unixepoch') feed_100k_utc, datetime(gmgn_ts,'unixepoch') gmgn_100k_utc, venue, exchange, launchpad, datetime(created_ts,'unixepoch') created_utc, ROUND(age_s/3600.0,1) age_h, mc, px0 price_usd, v5_feed, v5_gmgn, v5_feed_max, v5_gmgn_max, buy_usd, sell_usd, buys, sells, liq, holders, p6, p6_note, p6_hist, p6_id, peak_x, peak_mc, datetime(peak_ts,'unixepoch') peak_utc, low_x, low_mc, datetime(low_ts,'unixepoch') low_utc, mc_15m, mc_1h, mc_6h, mc_24h, done FROM vol_log ORDER BY ts`, // v0.18.62
-  gmgn_flags: `SELECT id, chain, mint, datetime(ts,'unixepoch') flagged_utc, name, symbol, exchange, launchpad, datetime(created_ts,'unixepoch') created_utc, mc, price, liquidity, vol5m, vol1m, buys, sells, swaps, holders, rug_ratio, bundler_rate, top10, smart, renowned, wash, dev_status, ath_mc, our_v5, our_seen, our_trade, mc5, mc15, mc60, peak_mc FROM gmgn_flags ORDER BY ts`, // v0.18.52
-  tokens: `SELECT mint, name, symbol, creator, datetime(create_ts,'unixepoch') launch_utc, bundle_pct, bundle_sol, bundle_wallets, handoffs, tier, factory, has_socials, outside_buyers, outside_sol_in, cluster_sol_in, cluster_sol_out, peak_mc_usd, graduated, dev_buy_sol, creator_age_s, creator_funded_sol, creator_fee_sol, fee_claims, fee_claimed_sol, first_claim_ts FROM tokens WHERE finalized=1 ORDER BY create_ts`,
-};
-const CSV_FULL_ONLY = new Set(["token_life", "wallet_buys"]); // v0.18.16: the two big tables; only in /csvfull
-const escv = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
-/** v0.18.16: stream a query to a CSV file row by row (never holds the table in memory). Returns row count. */
-function queryToCsvFile(sql, path) {
-  const fd = openSync(path, "w"); let n = 0, cols = null, buf = [];
-  const flush = () => { if (buf.length) { writeSync(fd, buf.join("\n") + "\n"); buf = []; } };
-  try {
-    for (const r of db.prepare(sql).iterate()) {
-      if (!cols) { cols = Object.keys(r); buf.push(cols.join(",")); }
-      buf.push(cols.map((c) => escv(r[c])).join(",")); n++;
-      if (buf.length >= 2000) flush();
-    }
-    flush();
-  } finally { closeSync(fd); }
-  return n;
+// v0.18.84: exports run in a detached low-priority process (src/export-worker.js) with its own read-only database connection.
+// The bot never blocks, a bot restart cannot kill a build, progress + result live in data/export/status.json.
+import { spawn } from "node:child_process";
+import { existsSync, statSync } from "node:fs";
+import { dirname } from "node:path";
+export const EXPORT_DIR = join(dirname(CFG.DB_PATH), "export");
+const WORKER = new URL("./export-worker.js", import.meta.url).pathname;
+const WEB_KEEP_S = 1800;
+const alive = (pid) => { if (!pid) return false; try { process.kill(pid, 0); return true; } catch { return false; } };
+function readStatus() {
+  let st = null; try { st = JSON.parse(readFileSync(join(EXPORT_DIR, "status.json"), "utf8")); } catch { return { state: "idle" }; }
+  if (st.state === "building" && !alive(st.pid)) return { ...st, state: "error", err: "The export process stopped before finishing — press 'build a fresh copy' to try again." };
+  if (st.file && !existsSync(st.file.path)) return { ...st, file: null, state: st.state === "ready" ? "idle" : st.state };
+  return st;
 }
-let csvBusy = false;
-export const exportBusy = () => csvBusy;
-/** v0.18.79: build the export zip on disk (shared by /csv and the website download). Caller must call done() to delete the temp folder. */
-export async function buildExport(full, onStep) {
-  const day = new Date().toISOString().slice(0, 10), dir = mkdtempSync(join(tmpdir(), "tracker-csv-")), files = [], counts = [];
-  const done = () => { try { rmSync(dir, { recursive: true, force: true }); } catch {} };
-  try {
-    const tables = { paper_trades: PAPER_SQL, ...CSV_EXTRA };
-    const list = Object.entries(tables).filter(([name]) => full || !CSV_FULL_ONLY.has(name)); let i = 0;
-    for (const [name, sql] of list) {
-      if (onStep) onStep(i++, list.length + 1, name);
-      const path = join(dir, `${name}_${day}.csv`);
-      try { const n = queryToCsvFile(sql, path); if (n) { files.push({ name: `${name}_${day}.csv`, path }); counts.push(`${n} ${name.replace("_", " ")}`); } } catch (e) { console.error("[csv]", name, e.message); }
-      await new Promise((r) => setImmediate(r)); // let the feed breathe between tables
-    }
-    if (!files.length) { done(); return null; }
-    if (onStep) onStep(list.length, list.length + 1, "zip");
-    const name = `tracker_export_${day}${full ? "_full" : ""}.zip`, zipPath = join(dir, name), size = await zipFiles(files, zipPath);
-    return { zipPath, name, size, counts, done };
-  } catch (e) { done(); throw e; }
+export const exportBusy = () => readStatus().state === "building";
+export const exportFile = () => { const st = readStatus(); return st.file && existsSync(st.file.path) ? st.file : null; };
+export function exportStatus() {
+  const st = readStatus(), now = Math.floor(Date.now() / 1000), f = st.file;
+  return { state: st.state, step: st.step || 0, steps: st.steps || 0, table: st.table || "", startedAt: st.startedAt || 0, err: st.err || null,
+    file: f ? { name: f.name, size: f.size, builtAt: f.builtAt, ageS: now - f.builtAt } : null, now };
 }
+/** Start a build unless one is running (or a fresh file exists and force is off). Returns the child (or null). */
+export function launchExport(full = true, force = false) {
+  const st = readStatus(), now = Math.floor(Date.now() / 1000);
+  if (st.state === "building") return null;
+  if (!force && st.file && st.file.full !== false && now - st.file.builtAt < WEB_KEEP_S && existsSync(st.file.path)) return null;
+  try { mkdirSync(EXPORT_DIR, { recursive: true }); writeFileSync(join(EXPORT_DIR, "status.json"), JSON.stringify({ state: "building", step: 0, steps: 0, table: "starting", startedAt: now, pid: 0 })); } catch {}
+  const child = spawn(process.execPath, [WORKER, CFG.DB_PATH, EXPORT_DIR, full ? "1" : "0"], { detached: true, stdio: "ignore" });
+  try { writeFileSync(join(EXPORT_DIR, "status.json"), JSON.stringify({ state: "building", step: 0, steps: 0, table: "starting", startedAt: now, pid: child.pid })); } catch {}
+  child.unref(); return child;
+}
+export const startWebExport = (force) => { launchExport(true, force); };
 const TG_MAX = 48 * 1048576; // Telegram bots can send at most 50 MB
-async function sendCsv(full) { // v0.15.2: one zip. v0.18.16: built on disk. v0.18.79: over 48 MB → point to the website download instead of uploading
-  if (csvBusy) return tg("Export already running — one moment.");
-  csvBusy = true; let ex = null;
+async function sendCsv(full) { // v0.15.2: one zip. v0.18.16: built on disk. v0.18.79: over 48 MB → website. v0.18.84: built by the export process
+  if (exportBusy()) return tg("Export already running — one moment.");
   try {
-    ex = await buildExport(full);
-    if (!ex) return tg("No data yet.");
+    launchExport(full, true);
+    for (let i = 0; i < 600 && exportBusy(); i++) await new Promise((r) => setTimeout(r, 1000)); // up to 10 min
+    const st = readStatus();
+    if (st.state !== "ready" || !st.file) return tg(`Export failed: ${esc(st.err || "unknown")}`);
+    const ex = st.file;
     if (ex.size > TG_MAX) return tg(`Export is ${(ex.size / 1048576).toFixed(0)} MB — over Telegram's 50 MB limit. Download it from your website instead: the <b>download data</b> link at the top of the page (always the full export, any size).`);
-    const blob = typeof openAsBlob === "function" ? await openAsBlob(ex.zipPath, { type: "application/zip" }) : new Blob([readFileSync(ex.zipPath)], { type: "application/zip" });
+    const blob = typeof openAsBlob === "function" ? await openAsBlob(ex.path, { type: "application/zip" }) : new Blob([readFileSync(ex.path)], { type: "application/zip" });
     const fd = new FormData();
     fd.append("chat_id", CHAT());
     fd.append("document", blob, ex.name);
-    fd.append("caption", `${ex.counts.join(" · ")} · ${(ex.size / 1048576).toFixed(1)} MB zipped${full ? "" : " · /csvfull for token_life + wallet_buys"}`);
+    fd.append("caption", `${(ex.counts || []).join(" · ")} · ${(ex.size / 1048576).toFixed(1)} MB zipped${full ? "" : " · /csvfull for token_life + wallet_buys"}`);
     const r = await fetch(`https://api.telegram.org/bot${TOKEN()}/sendDocument`, { method: "POST", body: fd, signal: AbortSignal.timeout(120000) });
     if (!r.ok) { const t = await r.text(); console.error("[csv]", t); await tg(`Export failed to send: ${esc(t.slice(0, 200))}`); }
   } catch (e) { console.error("[csv]", e.message); try { await tg(`Export failed: ${esc(e.message)}`); } catch {} }
-  finally { csvBusy = false; if (ex) ex.done(); }
-}
-/** v0.18.80: website download — built in the background with progress, kept for 30 min so repeat downloads are instant. Shares the /csv lock. */
-const WEB_KEEP_S = 1800;
-export const EXP = { state: "idle", step: 0, steps: 0, table: "", startedAt: 0, file: null, err: null };
-export function exportStatus() { const f = EXP.file; return { state: EXP.state, step: EXP.step, steps: EXP.steps, table: EXP.table, startedAt: EXP.startedAt, err: EXP.err,
-  file: f ? { name: f.name, size: f.size, builtAt: f.builtAt, ageS: Math.floor(Date.now() / 1000) - f.builtAt } : null, now: Math.floor(Date.now() / 1000) }; }
-export function startWebExport(force) {
-  const now = Math.floor(Date.now() / 1000);
-  if (EXP.state === "building") return;
-  if (!force && EXP.file && now - EXP.file.builtAt < WEB_KEEP_S) return; // fresh copy already there
-  if (csvBusy) { EXP.err = "A Telegram export is running — this one starts when it finishes. Try again in a minute."; return; }
-  csvBusy = true; Object.assign(EXP, { state: "building", step: 0, steps: 0, table: "", startedAt: now, err: null });
-  buildExport(true, (i, n, t) => { EXP.step = i; EXP.steps = n; EXP.table = t; })
-    .then((ex) => { if (!ex) { EXP.state = "error"; EXP.err = "No data yet."; return; } const old = EXP.file; EXP.file = { ...ex, builtAt: Math.floor(Date.now() / 1000) }; EXP.state = "ready"; if (old) setTimeout(() => old.done(), 10 * 60e3); })
-    .catch((e) => { console.error("[web export]", e.message); EXP.state = "error"; EXP.err = e.message; })
-    .finally(() => { csvBusy = false; });
 }
 // v0.18.56 /gmgnsellers: one-off GMGN pull (who sold, tags, funding wallets, dev launches, 1-min candles) for every coin a project traded
 let gsBusy = false;
@@ -204,7 +175,7 @@ const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 export const memMb = () => Math.round(process.memoryUsage().rss / 1048576);
 let memWarnAt = 0;
 setInterval(() => { const mb = memMb(); if (mb > 700 && Date.now() - memWarnAt > 600_000) { memWarnAt = Date.now(); console.error(`[mem] rss ${mb} MB — pm2 restarts at 900`); tg(`⚠️ memory ${mb} MB (pm2 restarts at 900)`).catch(() => {}); } }, 20_000);
-const PAPER_SQL = `SELECT p.id, p.strategy, p.name, p.symbol, p.mint, datetime(p.entry_ts,'unixepoch') entry_utc, p.entry_age_s, p.entry_mc, p.peak_mult, p.x_tp, p.x_tsl40, p.x_tsl60, p.x_cluster, p.x_grad, p.x_time, p.x_tsl80, p.x_half60, p.x_twophase, p.x_ladder, p.x_levels, p.x_m1, p.x_m1vol, p.next_level, p.wave1_peak_mc, p.cluster_held_pct, p.trigger_kind, p.x_volstop, p.vol_at_entry, p.after_peak_mult, p.after_peak_mc, p.handover, p.creator_prior, p.creator_best_peak, p.dev_buy_sol, p.snipers, p.hour_utc, p.parent_id, p.bs_ratio_entry, p.buyers_entry, p.vol5m_usd, p.vol1m_usd, p.age_s, p.reentry_n, p.exit_reason, p.closed, p.tier, p.factory, p.has_socials, p.bundle_pct, p.bundle_sol, p.handoffs, p.inflow_sol, p.inflow_wallets, p.outside_share, p.buys, p.sells, p.mc_5m, p.mc_15m, p.buyers_5m, p.alerted, p.invalid, p.buys_entry, p.sells_entry, p.proven_entry, p.q_score, p.q_wallets, p.q_per10k, p.q_top3, p.q_roundtrip, p.q_retail, p.q_custom, p.q_size_cv, p.q_new_pct, p.q_px_per10k, p.x_combo, p.x_tp15, p.x_tsl25, p.x_t15s25, p.x_t15s60, p.x_t2s25, p.x_t2s60, p.x_t15s40, p.x_t2s40, p.x_flow, p.x_flow4, p.x_flow4ff, p.x_split, p.split_branch, p.x_dead, p.x_p3d, p.x_manual, p.manual_pct, p.conf_ok, p.conf_ratio, p.x_h2t40, p.x_s15be, p.v2m_usd, p.early_json, p.gmgn_json, p.gmgn_entry, p.p6_tier, p.x_p6a, p.x_p6b, p.x_p6c, p.x_p6, p.x_p7_2, p.x_p7_3, p.x_p7_4, p.p7_json, p.p7_after_peak, p.x_h5, p.x_h5f12, p.x_h5f14, p.x_h3, p.h5_retro, p.after_path, p.p6_low, p.p6_low_ts, p.p6_peak_ts, p.p6_last, datetime(p.exit_ts,'unixepoch') exit_utc, p.dd_pre15, p.path, p.venue, p.fee_accrued_entry, p.fee_claims_entry, p.fee_claimed_entry, p.core, p.core_tight, p.core_v40, p.bs_clean_entry, p.bot_share_entry, p.dex_paid, p.dex_paid_types, p.dex_paid_lead_s, p.snipers_n, p.snipers_held_pct, p.fresh_share, p.fresh_n, p.proven_vol_share, p.proven_wallets_5m, p.t_hit15_s, p.top10_entry, p.largest_entry, p.holders_entry, p.dev_hold_entry, p.tight, p.churn_entry, p.cluster_out_entry, t.outside_buyers, t.outside_sol_in, t.cluster_sol_in, t.cluster_sol_out, t.graduated, t.creator FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint ORDER BY p.id`;
+
 
 // v0.18.54 /coverage: how much of the Solana market our own feed sees, measured against GMGN (which covers every DEX). For each token GMGN
 // flagged at >= $100K traded in 5 min, our_v5 is our own feed's 5-minute volume for the same token at that moment.
