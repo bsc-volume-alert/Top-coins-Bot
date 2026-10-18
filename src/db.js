@@ -163,6 +163,9 @@ for (const sql of [
   "ALTER TABLE tokens ADD COLUMN creator_funded_sol REAL",
   "ALTER TABLE tokens ADD COLUMN has_socials INTEGER",
   "ALTER TABLE tokens ADD COLUMN socials TEXT",
+  // v0.18.98: the website's queries filter paper_trades by strategy (and mint) — without these every page build scanned the whole table, 18 s a time, freezing the feed
+  "CREATE INDEX IF NOT EXISTS pt_strat ON paper_trades(strategy, entry_ts)",
+  "CREATE INDEX IF NOT EXISTS pt_mint ON paper_trades(mint)",
 ]) { try { db.exec(sql); } catch {} }
 export const q = {
   insToken: db.prepare(`INSERT OR IGNORE INTO tokens (mint,name,symbol,uri,creator,bonding_curve,create_slot,create_ts,create_sig) VALUES (?,?,?,?,?,?,?,?,?)`),
