@@ -58,7 +58,8 @@ export function skipSummary(sinceTs) {
   const rows = db.prepare(`SELECT CASE WHEN status='sim-failed' THEN 'sim failed' WHEN status='error' THEN 'error' ELSE skip_reason END r, COUNT(*) n FROM orders WHERE side='buy' AND status IN ('skipped','error','sim-failed') AND ts >= ? GROUP BY 1 ORDER BY n DESC`).all(sinceTs);
   const out = {}; for (const x of rows) { const k = String(x.r || "other").replace(/^paper skip: /, "").replace(/\d+ wallets/, "crowded").replace(/bundled \d+%/, "bundled").replace(/balance .*/, "balance").replace(/\d+ positions open.*/, "cap").replace(/trigger \d+ ms old/, "late").replace(/feed \d+ ms.*/, "feed lag").replace(/curve complete, pool not there.*/, "migration pending").replace(/curve complete, PumpSwap pool not found.*/, "migration pending").replace(/not SOL-paired.*/, "not SOL-paired"); out[k] = (out[k] || 0) + x.n; } return out;
 }
-export const totals = (mode) => db.prepare(`SELECT COUNT(*) n, COALESCE(SUM(pnl_lamports),0) pnl, SUM(CASE WHEN pnl_lamports>0 THEN 1 ELSE 0 END) w FROM positions WHERE status='closed' AND mode=?`).get(mode);
+const BOOK_FROM = Number(process.env.EXEC_BOOK_FROM || 1792351500); // 18 Oct 19:25 UTC — the website's fresh start (PumpSwap prices corrected); earlier shadow trades stay in the database
+export const totals = (mode) => db.prepare(`SELECT COUNT(*) n, COALESCE(SUM(pnl_lamports),0) pnl, SUM(CASE WHEN pnl_lamports>0 THEN 1 ELSE 0 END) w FROM positions WHERE status='closed' AND mode=? AND opened_ts>=?`).get(mode, BOOK_FROM);
 export function recentOrders(n = 20) { return db.prepare(`SELECT * FROM orders ORDER BY id DESC LIMIT ?`).all(n); }
 export function stats() {
   const o = db.prepare(`SELECT side, status, COUNT(*) n FROM orders WHERE ts > ? GROUP BY side, status`).all(now() - 86400);
