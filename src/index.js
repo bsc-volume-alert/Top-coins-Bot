@@ -82,6 +82,11 @@ setInterval(hb, CFG.HEARTBEAT_MIN * 60_000);
   }, 120_000); }
 setTimeout(() => { try { const n = flagTrades(0); if (n) console.log(`[restarts] flagged ${n} trades`); } catch (e) { console.error("[restarts]", e.message); } }, 8000); // v0.18.84
 setInterval(() => { try { flagTrades(Math.floor(Date.now() / 1000) - 7200); } catch {} }, 5 * 60_000);
+// v0.18.97 stall monitor: the executor saw triggers whose trade was 18–80 s old an hour after boot (18 Oct). Log every event-loop stall over 2 s with
+// the heap size, and the heap every 10 min, so tomorrow's log says whether it is GC on a growing heap, a slow synchronous job, or the feed itself.
+{ let last = Date.now(); const mb = () => Math.round(process.memoryUsage().heapUsed / 1048576);
+  setInterval(() => { const now = Date.now(), late = now - last - 1000; last = now; if (late > 2000) console.error(`[stall] event loop blocked ${(late / 1000).toFixed(1)} s · heap ${mb()} MB · rss ${Math.round(process.memoryUsage().rss / 1048576)} MB`); }, 1000).unref();
+  setInterval(() => console.log(`[heap] ${mb()} MB used · rss ${Math.round(process.memoryUsage().rss / 1048576)} MB · up ${Math.round(process.uptime() / 60)} min`), 600_000).unref(); }
 process.on("unhandledRejection", (e) => console.error("[unhandled]", e));
 // v0.18.83: a throw inside a timer must not take the whole bot down (v0.18.81 crash-looped every 30 s on one). Logged loudly; state lives in SQLite anyway.
 process.on("uncaughtException", (e) => { console.error("[uncaught]", e); try { tgAlarm(`⚠️ uncaught error (bot kept running): <code>${String(e?.message || e).slice(0, 200)}</code>`); } catch {} });
