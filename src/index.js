@@ -12,6 +12,7 @@ import { startSweeper, sw } from "./sweeper.js";
 import { startCommands, reportText, memMb } from "./commands.js";
 import { en } from "./enrich.js";
 import { startWeb } from "./web.js"; // v0.18.23
+import { retroScoreP5 } from "./p5retro.js"; // v0.18.81
 import "./backup.js";
 import { pxg, ppx } from "./pumpswap.js"; // v0.18.43
 import "./pxcheck.js"; // v0.18.43 peak cross-check
@@ -41,6 +42,7 @@ await tg(`🟢 <b>Tracker online</b> v${v}\nFirehose: ${CFG.HELIUS_KEY ? "Helius
 
 startSweeper();
 startWeb();
+setTimeout(() => { try { retroScoreP5(); } catch (e) { console.error("[p5 retro]", e.message); } }, 3000); // v0.18.81: one-off scoring of earlier P5 trades
 startCommands({ status: () => { const g = sigStats(), mo = momStats(); return `${gmgnStatus()}\n${volLogStatus()}\nprices: ${ppx.swapped} from other pools re-priced to the main pool · PumpSwap pools from db ${ps.fromDb} / via DexScreener ${ps.dsResolved} · RPC errors ${rpcStat.errors}${rpcStat.lastErr ? ` (last: ${rpcStat.lastErr})` : ""} · bad held ${pxg.held} / confirmed ${pxg.confirmed} of ${pxg.checked}\n` + `v${v} · ws ${wsStatus} · live ${live.size} · early open ${g.open} · volume alerts ${mo.alerts} open ${mo.open} · ps txs ${ps.txs} · dex txs ${dx.txs}/${dx.emitted} fed · fee claims ${fe.claims} · holder ledgers ${ho.ledgers} rpc ${ho.rpc} · hand-offs ${g.handoffs} · swept ${sw.closed}/${sw.noprice}np · rpc ${g.rpc} · dexpaid ${en.dexPaid}/${en.dexCalls} fresh ${en.freshCalls} · mem ${memMb()} MB · SOL $${solUsdCached().toFixed(0)}`; }, summary: () => strategySummary(24) });
 // strategy summary every SUMMARY_HOURS
 setInterval(() => tg(strategySummary(CFG.SUMMARY_HOURS)), CFG.SUMMARY_HOURS * 3600_000);

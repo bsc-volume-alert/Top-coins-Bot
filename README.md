@@ -56,6 +56,14 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.81 — P5 deviations: Hold-5, Wide, Strict (18 Oct)
+From the 17 Oct P5 analysis (150 live-book trades, one day): entry features do not separate winners from losers; the exit does. The runner (built for P2's $100K/5m coins) sells P5 winners straight after 1.5x (mean 1.53x) while the same coins average 1.64x at 5 minutes.
+- **Hold-5 exit** (`x_h5`): −40% stop until 1.5x; once 1.5x is seen, sell if it falls back to 1.3x; whatever is left is sold at 5 minutes. Variants `x_h5f12` (floor 1.2), `x_h5f14` (1.4), `x_h3` (3 min). Recorded on every position (core and variant). Back-test on the same 150 trades: +4.90 vs +3.08 (both halves, all three windows), fitted. Earlier P5 trades are scored from their path marks at startup (`h5_retro=1`, approximate).
+- **P5 Wide** (`p5w30`): the 30 SOL trigger on coins at $100K–$250K MC (`P5W_MAX_MC`), same skips and runner exit, own card. No back-test.
+- **P5 Strict**: the 50 SOL level (`p5e50`, already recorded) with the same skips and exit, own card. 17 Oct: +3.36 on 120 trades vs +3.08 on 150 at 30 SOL.
+- Path marks now to 20 min (900, 1200 s); aftercare records `after_path` — the multiple at 7/10/15/20/30 min after entry, the lowest since the first 1.5x and the seconds to 1.5x — whatever closed the paper position, so longer holds can be scored later. P5 family after-watches survive restarts.
+- Website: three cards after Project 5 (fresh books from 18 Oct 01:20 UK, history where it exists), 24 h tiles, Wide's extra coins in the bottom table, hold-5 value under each P5 result. CSV: the new columns.
+
 ## v0.18.80 — download page (18 Oct)
 - "download data ↓" opens a download page: the zip builds in the background with a progress bar, the download starts by itself when ready, and the file is kept 30 min so repeat downloads are instant ("build a fresh copy" to rebuild). Fixes the plain-text "already running" page (the browser asked twice).
 

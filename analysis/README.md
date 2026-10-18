@@ -126,3 +126,11 @@ bundle wallets < 15% (GMGN list bundler hold %, else GMGN info bundler share). O
 Exits recorded side by side: all at 2x (headline) · all at 3x · all at 4x, each with −40% stop; no time limit — everything left is sold when 5-min
 volume < $15K. After the exit the coin is watched 24 h and the highest price is recorded (p7_after_peak).
 Test: 40 trades; an exit must be net > 0 in both halves. Expect few trades (strict holder filters).
+
+## P5 deviations — pre-registered 18 Oct 2026 00:20 UTC (v0.18.81)
+**Evidence (17 Oct, 150 live-book P5 trades, one day, fitted):** runner +3.08 (58% won); 48 stops (32%) are the whole loss; no entry feature separates stops from wins in both halves (MC, burst size, wallets, bundle, age, largest-buy share all matched). Exits on the same trades: 1.5x/−40% +2.50; runner +3.08; runner + 1.3 floor +3.51; 2x/−40% +3.41 (44% won); −25% stop +2.19; −60% +2.14; hold-5 (−40% stop, 1.3 floor after 1.5x, sell at 5 min) **+4.90** (halves +2.60/+2.30; windows +1.42/+0.50/+2.99); on the 50 SOL level +5.83 vs +3.36; on 80 SOL +2.29 vs +2.26. Hold-3 +2.75 (worse than the runner); hold-10 +5.89 but only 47 positions were still tracked at 10 min. Bootstrap: runner ≥ hold-5 in 2.5% of resamples. Floor checked at marks only — the live tick-level floor will fire more often.
+**Skips re-checked:** unseen launches 34 trades −1.94, crowd ≥150 wallets 35 trades −0.83 (both negative in both halves), bundled ≥70% 95 trades −1.39 (mixed by half, 48% rugs). Coins that reached 30 SOL but never 50 SOL: 31 trades −1.74.
+**Tests (0.25 SOL, 5% costs):**
+- **P5 Hold-5:** first 40 live trades from 18 Oct 00:20 UTC. **Adopt as Project 5's exit** if `x_h5` net > 0, beats `x_flow4` on the same trades, and is ahead in both halves; otherwise keep the runner. Floor variants and hold-3 are descriptive only.
+- **P5 Wide:** first 40 trades on the extra coins ($100K–$250K). **Keep** if net > 0 and win ≥ 55%; **kill** otherwise. No prior evidence.
+- **P5 Strict (50 SOL):** next 40 trades. **Confirm** if net > 0, win ≥ 55% and net per trade ≥ Project 5's on the same window; otherwise it stays a comparison line.

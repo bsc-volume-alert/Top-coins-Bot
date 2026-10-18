@@ -15,7 +15,7 @@ export function tick(mint, price, mc) {
 // v0.18.39: the 24 h after-entry watch survives restarts — rebuilt from the database for every momentum / P4 / P5 entry still inside its window.
 const qRe = db.prepare(`SELECT id, mint, entry_ts, entry_price, entry_mc, peak_mult, after_peak_mult, after_peak_mc FROM paper_trades WHERE strategy IN ('momentum','momconf','mom2m') AND entry_price > 0 AND COALESCE(invalid,0)=0 AND entry_ts > ?`);
 try { const now = Math.floor(Date.now() / 1000); let n = 0;
-  for (const r of qRe.all(now - CFG.AFTER_CLOSE_H * 3600)) { const pk = Math.max(r.after_peak_mult || 1, r.peak_mult || 1, 1); watch(r.mint, r.id, r.entry_price, r.entry_mc, r.entry_ts + CFG.AFTER_CLOSE_H * 3600, r.entry_price * pk, r.after_peak_mc ?? r.entry_mc * pk); n++; }
+  for (const r of qRe.all(now - CFG.AFTER_CLOSE_H * 3600)) { const pk = Math.max(r.after_peak_mult || 1, r.peak_mult || 1, 1); let ap = null; try { ap = r.after_path ? JSON.parse(r.after_path) : null; } catch {} watch(r.mint, r.id, r.entry_price, r.entry_mc, r.entry_ts + CFG.AFTER_CLOSE_H * 3600, r.entry_price * pk, r.after_peak_mc ?? r.entry_mc * pk, r.entry_ts, ap); n++; }
   if (n) console.log(`[aftercare] re-armed ${n} after-entry watches`);
 } catch (e) { console.error("[aftercare restore]", e.message); }
 setInterval(() => {
@@ -24,6 +24,8 @@ setInterval(() => {
     for (const w of arr) {
       if (w.dirty) { w.dirty = false; try { q.setAfter.run(w.peak / w.entry, w.peakMc, w.id); } catch {} }
       if (w.last && w.lastTs !== w.lastSaved) { w.lastSaved = w.lastTs; try { q.setAfterLast.run(w.last / w.entry, w.lastMc ?? null, w.lastTs, w.id); } catch {} } // v0.18.39 latest price seen
+      if (w.last && !w.ap.done) { try { apTick(w, w.last / w.entry, now); } catch {} } // v0.18.81: quiet coin — fill due marks with the last price seen
+      if (w.apDirty) { w.apDirty = false; try { q.setAfterPath.run(JSON.stringify(w.ap), w.id); } catch {} }
     }
     const keep = arr.filter((w) => w.until > now); if (keep.length) W.set(mint, keep); else W.delete(mint);
   }
