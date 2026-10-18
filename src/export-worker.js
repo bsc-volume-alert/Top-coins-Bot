@@ -1,5 +1,5 @@
 // v0.18.84: the export runs here, in its own low-priority process, so the bot never blocks and a bot restart cannot kill a build.
-// usage: node export-worker.js <dbPath> <outDir> <full 0|1>
+// usage: node export-worker.js <dbPath> <outDir> <mode: full | recent>  (recent = paper_trades of the last 48 h only, seconds to build)
 // Writes <outDir>/status.json while working ({state, step, steps, table, startedAt, pid}) and the zip to <outDir>/<name> when done ({state:"ready", file:{...}}).
 import Database from "better-sqlite3";
 import { mkdirSync, writeFileSync, renameSync, rmSync, statSync, readdirSync } from "node:fs";
@@ -7,15 +7,16 @@ import { join } from "node:path";
 import { setPriority } from "node:os";
 import { PAPER_SQL, CSV_EXTRA, CSV_FULL_ONLY, queryToCsvFile } from "./export-sql.js";
 import { zipFiles } from "./zip.js";
-const [dbPath, outDir, fullArg] = process.argv.slice(2); const full = fullArg !== "0";
+const [dbPath, outDir, modeArg] = process.argv.slice(2); const mode = modeArg === "recent" ? "recent" : "full", full = mode === "full";
 try { setPriority(19); } catch {}
 mkdirSync(outDir, { recursive: true });
-const status = (o) => { try { writeFileSync(join(outDir, "status.json.tmp"), JSON.stringify({ ...o, pid: process.pid, full, now: Math.floor(Date.now() / 1000) })); renameSync(join(outDir, "status.json.tmp"), join(outDir, "status.json")); } catch {} };
-const startedAt = Math.floor(Date.now() / 1000), day = new Date().toISOString().slice(0, 10), name = `tracker_export_${day}${full ? "_full" : ""}.zip`;
+const status = (o) => { try { writeFileSync(join(outDir, "status.json.tmp"), JSON.stringify({ ...o, pid: process.pid, full, mode, now: Math.floor(Date.now() / 1000) })); renameSync(join(outDir, "status.json.tmp"), join(outDir, "status.json")); } catch {} };
+const startedAt = Math.floor(Date.now() / 1000), day = new Date().toISOString().slice(0, 10), name = full ? `tracker_export_${day}_full.zip` : `tracker_recent_${day}_${new Date().toISOString().slice(11, 16).replace(":", "")}.zip`;
 const work = join(outDir, "work"); try { rmSync(work, { recursive: true, force: true }); } catch {} mkdirSync(work, { recursive: true });
 try {
   const dbc = new Database(dbPath, { readonly: true, fileMustExist: true }); dbc.pragma("query_only = 1");
-  const tables = { paper_trades: PAPER_SQL, ...CSV_EXTRA };
+  const since = Math.floor(Date.now() / 1000) - 48 * 3600;
+  const tables = full ? { paper_trades: PAPER_SQL, ...CSV_EXTRA } : { paper_trades: PAPER_SQL.replace(" FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint ORDER BY p.id", ` FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint WHERE p.entry_ts >= ${since} ORDER BY p.id`) };
   const list = Object.entries(tables).filter(([n]) => full || !CSV_FULL_ONLY.has(n)); const files = [], counts = []; let i = 0;
   for (const [t, sql] of list) {
     status({ state: "building", step: i++, steps: list.length + 1, table: t, startedAt });
@@ -28,7 +29,7 @@ try {
   const tmp = join(outDir, name + ".tmp"); const size = await zipFiles(files, tmp); renameSync(tmp, join(outDir, name));
   for (const f of readdirSync(outDir)) if (f.endsWith(".zip") && f !== name) { try { rmSync(join(outDir, f)); } catch {} } // keep one zip
   try { rmSync(work, { recursive: true, force: true }); } catch {}
-  status({ state: "ready", startedAt, file: { name, path: join(outDir, name), size: statSync(join(outDir, name)).size, builtAt: Math.floor(Date.now() / 1000), counts, full } });
+  status({ state: "ready", startedAt, file: { name, path: join(outDir, name), size: statSync(join(outDir, name)).size, builtAt: Math.floor(Date.now() / 1000), counts, full, mode } });
 } catch (e) {
   console.error("[export]", e.message); try { rmSync(work, { recursive: true, force: true }); } catch {}
   status({ state: "error", err: e.message, startedAt });

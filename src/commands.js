@@ -27,7 +27,7 @@ import { runBackup, backupInfo } from "./backup.js"; // v0.18.40
 import { leaderboardText, walletText, addWatch, removeWatch, watchList, creatorsText, creatorText, addWatchCreator, removeWatchCreator, watchCreatorList } from "./wallets.js";
 const TOKEN = () => process.env.TG_BOT_TOKEN, CHAT = () => String(process.env.TG_CHAT_ID);
 let offset = 0, deps = {};
-export function startCommands(d) { deps = d; poll(); }
+export function startCommands(d) { deps = d; if (process.env.SMOKE) return; poll(); } // v0.18.85: the pre-deploy check must not steal Telegram updates from the live bot
 async function poll() {
   for (;;) {
     try {
@@ -105,40 +105,42 @@ import { spawn } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import { dirname } from "node:path";
 export const EXPORT_DIR = join(dirname(CFG.DB_PATH), "export");
+const dirFor = (mode) => join(EXPORT_DIR, mode === "recent" ? "recent" : "full"); // v0.18.85: full history and the 2-day quick export live side by side
 const WORKER = new URL("./export-worker.js", import.meta.url).pathname;
-const WEB_KEEP_S = 1800;
+const KEEP_S = { full: 1800, recent: 120 };
 const alive = (pid) => { if (!pid) return false; try { process.kill(pid, 0); return true; } catch { return false; } };
-function readStatus() {
-  let st = null; try { st = JSON.parse(readFileSync(join(EXPORT_DIR, "status.json"), "utf8")); } catch { return { state: "idle" }; }
+function readStatus(mode = "full") {
+  let st = null; try { st = JSON.parse(readFileSync(join(dirFor(mode), "status.json"), "utf8")); } catch { return { state: "idle" }; }
   if (st.state === "building" && !alive(st.pid)) return { ...st, state: "error", err: "The export process stopped before finishing — press 'build a fresh copy' to try again." };
   if (st.file && !existsSync(st.file.path)) return { ...st, file: null, state: st.state === "ready" ? "idle" : st.state };
   return st;
 }
-export const exportBusy = () => readStatus().state === "building";
-export const exportFile = () => { const st = readStatus(); return st.file && existsSync(st.file.path) ? st.file : null; };
-export function exportStatus() {
-  const st = readStatus(), now = Math.floor(Date.now() / 1000), f = st.file;
-  return { state: st.state, step: st.step || 0, steps: st.steps || 0, table: st.table || "", startedAt: st.startedAt || 0, err: st.err || null,
+export const exportBusy = (mode = "full") => readStatus(mode).state === "building";
+export const exportFile = (mode = "full") => { const st = readStatus(mode); return st.file && existsSync(st.file.path) ? st.file : null; };
+export function exportStatus(mode = "full") {
+  const st = readStatus(mode), now = Math.floor(Date.now() / 1000), f = st.file;
+  return { mode, state: st.state, step: st.step || 0, steps: st.steps || 0, table: st.table || "", startedAt: st.startedAt || 0, err: st.err || null,
     file: f ? { name: f.name, size: f.size, builtAt: f.builtAt, ageS: now - f.builtAt } : null, now };
 }
 /** Start a build unless one is running (or a fresh file exists and force is off). Returns the child (or null). */
-export function launchExport(full = true, force = false) {
-  const st = readStatus(), now = Math.floor(Date.now() / 1000);
+export function launchExport(mode = "full", force = false) {
+  mode = mode === "recent" ? "recent" : "full";
+  const st = readStatus(mode), now = Math.floor(Date.now() / 1000), dir = dirFor(mode);
   if (st.state === "building") return null;
-  if (!force && st.file && st.file.full !== false && now - st.file.builtAt < WEB_KEEP_S && existsSync(st.file.path)) return null;
-  try { mkdirSync(EXPORT_DIR, { recursive: true }); writeFileSync(join(EXPORT_DIR, "status.json"), JSON.stringify({ state: "building", step: 0, steps: 0, table: "starting", startedAt: now, pid: 0 })); } catch {}
-  const child = spawn(process.execPath, [WORKER, CFG.DB_PATH, EXPORT_DIR, full ? "1" : "0"], { detached: true, stdio: "ignore" });
-  try { writeFileSync(join(EXPORT_DIR, "status.json"), JSON.stringify({ state: "building", step: 0, steps: 0, table: "starting", startedAt: now, pid: child.pid })); } catch {}
+  if (!force && st.file && now - st.file.builtAt < KEEP_S[mode] && existsSync(st.file.path)) return null;
+  try { mkdirSync(dir, { recursive: true }); writeFileSync(join(dir, "status.json"), JSON.stringify({ state: "building", step: 0, steps: 0, table: "starting", startedAt: now, pid: 0, mode })); } catch {}
+  const child = spawn(process.execPath, [WORKER, CFG.DB_PATH, dir, mode], { detached: true, stdio: "ignore" });
+  try { writeFileSync(join(dir, "status.json"), JSON.stringify({ state: "building", step: 0, steps: 0, table: "starting", startedAt: now, pid: child.pid, mode })); } catch {}
   child.unref(); return child;
 }
-export const startWebExport = (force) => { launchExport(true, force); };
+export const startWebExport = (force, mode = "full") => { launchExport(mode, force); };
 const TG_MAX = 48 * 1048576; // Telegram bots can send at most 50 MB
 async function sendCsv(full) { // v0.15.2: one zip. v0.18.16: built on disk. v0.18.79: over 48 MB → website. v0.18.84: built by the export process
-  if (exportBusy()) return tg("Export already running — one moment.");
+  if (exportBusy("full")) return tg("Export already running — one moment.");
   try {
-    launchExport(full, true);
-    for (let i = 0; i < 600 && exportBusy(); i++) await new Promise((r) => setTimeout(r, 1000)); // up to 10 min
-    const st = readStatus();
+    launchExport("full", true);
+    for (let i = 0; i < 600 && exportBusy("full"); i++) await new Promise((r) => setTimeout(r, 1000)); // up to 10 min
+    const st = readStatus("full");
     if (st.state !== "ready" || !st.file) return tg(`Export failed: ${esc(st.err || "unknown")}`);
     const ex = st.file;
     if (ex.size > TG_MAX) return tg(`Export is ${(ex.size / 1048576).toFixed(0)} MB — over Telegram's 50 MB limit. Download it from your website instead: the <b>download data</b> link at the top of the page (always the full export, any size).`);

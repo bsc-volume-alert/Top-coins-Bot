@@ -9,6 +9,7 @@ import { p7Open, p7ManualSell, p7 as p7stats } from "./p7.js"; // v0.18.69
 import { openOfKind, copyManualSell } from "./copytrade.js";
 import { solUsdCached } from "./price.js";
 import { memMb, exportStatus, startWebExport, exportFile } from "./commands.js";
+import { restarts24 } from "./restarts.js"; // v0.18.85
 import { createReadStream } from "node:fs";
 import { readFileSync } from "node:fs";
 const VERSION = (() => { try { return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version; } catch { return "?"; } })();
@@ -34,7 +35,7 @@ const whyA = (r) => (p1aPass(r) ? null : bundled(r) ? "bundled 70%+" : "MC over 
 const whyB = (r) => (p1bPass(r) ? null : bundled(r) ? "bundled 70%+" : r.venue !== "pumpswap" ? "not SOL-paired" : "MC over $47K");
 // v0.18.58 Project 5 v2 (17 Oct analysis): 30 SOL level; skip ≥70%-bundled launches, launches we never saw (no tokens row → mostly non-pump.fun
 // launchpads) and bursts with ≥150 different wallets buying in the 60 s. Same 1.5x / −40% exit. Old 50 / 80 SOL books keep recording.
-const P5V3_FROM = Date.UTC(2026, 9, 17, 18, 5) / 1000;
+const P5V3_FROM = Date.UTC(2026, 9, 18, 6, 14) / 1000; // v0.18.85: clean line — Project 5's live book counts from 18 Oct 07:14 UK (crash loop before it quarantined; 17 Oct 19:05 UK v3 start kept in history) // was Date.UTC(2026, 9, 17, 18, 5)
 const P5X_FROM = Date.UTC(2026, 9, 18, 6, 14) / 1000; // v0.18.84: fresh books for P5 Hold-5 / Wide / Strict restart at 18 Oct 07:14 UK (crash loop 01:20–07:14 UK quarantined) // v0.18.81: was 01:20 UK // v0.18.64 P5 v3: same coins as v2, runner exit (17 Oct analysis: v2 failed its 40-trade test, runner exit positive in both halves and live)
 const P5V2_FROM = Date.UTC(2026, 9, 17, 11, 20) / 1000, P5_CROWD = 150, CORE_HIST_LABEL = "Since 15 Oct 13:52 UK (incl. back-test)";
 const wal60 = (r) => { try { return r.early_json ? JSON.parse(r.early_json).wal60 ?? null : null; } catch { return null; } };
@@ -177,7 +178,7 @@ export function snapshot(size = 0.25, cost = 0.05) {
   { const all5 = qP5.all(), by = (st) => all5.filter((r) => r.strategy === st), now5 = Math.floor(Date.now() / 1000);
     const r30 = by("p5e30"), keep30 = r30.filter(p5Pass), keep50 = by("p5e50").filter(p5Pass), live = (a) => a.filter((r) => r.entry_ts >= P5V2_FROM);
     const passIds = new Set(keep30.map((r) => r.id));
-    projects.p5 = { name: "Project 5 — early (v3)", rule: "fresh book from 17 Oct 19:05 UK · buy at 30 SOL in 60 s, skipping bundled / unseen / crowded coins · runner exit: hold while 5-min volume stays strong, cap 4x (v2 sold at 1.5x / −40%)",
+    projects.p5 = { name: "Project 5 — early (v3)", rule: "clean book from 18 Oct 07:14 UK (v3 rules since 17 Oct 19:05 UK; earlier trades in history only) · buy at 30 SOL in 60 s, skipping bundled / unseen / crowded coins · runner exit: hold while 5-min volume stays strong, cap 4x (v2 sold at 1.5x / −40%)",
       filters: ["Early trigger: <b>30 SOL bought within 60 seconds</b>", "Market cap <b>under $100K</b> · coin at least <b>60 s</b> old · buys ≥ sells and at least <b>10 buyers</b> in those 60 s · one trade per coin", "<b>Skip</b> coins where <b>70% or more</b> of the supply was bought in the launch block (bundled)", "<b>Skip</b> coins whose <b>launch we never saw</b> (mostly non-pump.fun launchpads)", "<b>Skip</b> if <b>150 or more different wallets</b> bought in those 60 s (bot swarm)", "<b>Runner exit</b> (same as P2): hold while 5-min volume stays ≥ $100K and buys ≥ sells · cap <b>4x</b> · −40% stop"],
       ...book(keep30, "x_flow4", P5V3_FROM, size, cost),
       hist: { label: "Since 17 Oct 02:34 UK (incl. back-test)", ...summ(keep30, "x_flow4", size, cost) }, histCurve: curveOf(keep30, "x_flow4", size, cost), liveFrom: P5V3_FROM, h24: summ(keep30.filter((r) => r.entry_ts >= now5 - 86400), "x_flow4", size, cost),
@@ -266,7 +267,7 @@ export function snapshot(size = 0.25, cost = 0.05) {
   for (const r of qP7.all()) if (r.closed) done.push({ kind: "p7", id: r.id, name: r.name, mint: r.mint, entry_ts: r.entry_ts, entry_mc: r.entry_mc, peak: r.peak_mult || 1, closed: 1, exit_reason: r.exit_reason, x7: r.x_p7_2, x73: r.x_p7_3, x74: r.x_p7_4, after: r.p7_after_peak });
   for (const r of qFlagged.all(Math.floor(Date.now() / 1000) - 3 * 86400)) done.push({ kind: r.strategy === 'p6' ? 'p6' : r.strategy === 'p7' ? 'p7' : r.strategy === 'p5w30' ? 'p5w' : 'p5', flag: 1, id: r.id, name: r.name, mint: r.mint, entry_ts: r.entry_ts, entry_mc: r.entry_mc, peak: r.peak_mult || 1, closed: r.closed, exit_reason: r.exit_reason, restarts: r.restart_span }); // v0.18.84 crash-loop trades: shown, never counted
   const recentAll = [...recent.map((r) => ({ ...r, kind: "core", flag: r.crashloop ? 1 : 0 })), ...done].sort((a, b) => b.entry_ts - a.entry_ts).slice(0, 100);
-  return { now: Math.floor(Date.now() / 1000), version: VERSION, sol: solUsdCached(), size, cost, mem: memMb(), projects, open, recent: recentAll,
+  return { now: Math.floor(Date.now() / 1000), version: VERSION, up: Math.floor(process.uptime()), restarts24: restarts24(), sol: solUsdCached(), size, cost, mem: memMb(), projects, open, recent: recentAll,
     params: { trigger: `$${(CFG.VOL5M_USD / 1e3).toFixed(0)}K traded in 5 min`, entryCap: `MC under $${(CFG.MOM_CORE_MC / 1e3).toFixed(0)}K at entry`, first: "first entry on the coin only", minAge: `coin ≥ ${CFG.MOM_MIN_AGE_S}s old`, hold: `max hold ${CFG.MOM_MAX_HOLD_MIN / 60}h`, flow: `P2 hold: 5m vol ≥ $${(CFG.FLOW_MIN_VOL / 1e3).toFixed(0)}K · cap ${CFG.FLOW_CAP}x · 50% trail backstop`, golden: `Golden rule (all projects): sell when 5m volume < $${Math.round(CFG.LOWVOL_EXIT_USD / 1000)}K`, p5: `P5: $${Math.round(CFG.P5_VOL2M_USD / 1000)}K in 2 min · MC < $${CFG.P5_MAX_MC / 1e6}M · ½ at 2x, rest 40% trail · −40% stop`, p2f: "P2A / P2B: P1A / P1B coins with the runner exit (hold while 5m vol ≥ $100K and buys ≥ sells, cap 4x)", p1f: "P1A: stock/other-token pool OR entry MC < $47K, skip 70%+ bundled · P1B: SOL pool, MC < $47K, skip 70%+ bundled · both 1.5x / −40%", conf: `P4: wait ${CFG.MOM_CONF_S}s after the trigger; buy only if price > ${CFG.MOM_CONF_MIN.toFixed(2)}× trigger (first trade up to ${CFG.MOM_CONF_LATE_S}s); then 1.5x / −40%`, costs: `${(cost * 100).toFixed(0)}% round trip assumed · ${size} SOL per trade` } };
 }
 
@@ -283,25 +284,29 @@ h1{margin:0 0 4px;font-size:22px;color:var(--mag)}.sub{color:var(--mut);font-siz
 .btn{display:block;width:100%;margin-top:20px;padding:15px;border-radius:12px;border:0;background:#0d5a34;color:#dcffe9;font:700 17px ui-monospace,Menlo,monospace;text-align:center;text-decoration:none;box-shadow:0 0 0 1px #23955a}
 .btn[aria-disabled=true]{background:rgba(255,255,255,.06);color:var(--mut);box-shadow:0 0 0 1px var(--line);pointer-events:none}
 .row{display:flex;justify-content:space-between;margin-top:14px;font-size:12px}a{color:var(--acc)}
+.tabs{display:flex;gap:8px;margin:14px 0 10px}.tabs a{flex:1;text-align:center;padding:9px 6px;border-radius:10px;border:1px solid var(--line);color:var(--mut);text-decoration:none;font-size:13px}.tabs a.on{color:var(--tx);border-color:var(--mag);background:rgba(255,62,165,.12)}
 </style></head><body><div class="box">
-<h1>Download data</h1><div class="sub">Every table, full history, as one zip of CSV files. Built by a separate process, so the bot keeps trading and a bot restart does not lose the build.</div>
+<h1>Download data</h1><div class="tabs"><a id="tR" href="#">Last 2 days — trades only</a><a id="tF" href="#">Full history — every table</a></div><div class="sub" id="sub"></div>
 <div class="st" id="st">Checking…</div><div class="bar" id="bar"><i id="fill"></i></div><div class="det" id="det"></div>
 <a class="btn" id="btn" aria-disabled="true" href="#">Preparing…</a>
 <div class="row"><a id="back" href="#">← back to the dashboard</a><a id="rb" href="#">build a fresh copy</a></div>
 </div><script>
-const key=new URLSearchParams(location.search).get('key')||'',K='key='+encodeURIComponent(key),$=s=>document.getElementById(s);
-$('back').href='/?'+K;let auto=true,pending=false;
+const Q=new URLSearchParams(location.search),key=Q.get('key')||'',$=s=>document.getElementById(s);let MODE=Q.get('mode')==='full'?'full':'recent';const K=()=>'key='+encodeURIComponent(key)+'&mode='+MODE;
+const SUBS={recent:'Paper trades of the last 48 hours, one CSV, a few MB — built in seconds. The right file for the day-to-day P5 analysis.',full:'Every table, full history, as one zip of CSV files (≈ 400 MB of data). Built by a separate low-priority process: the bot keeps trading, a bot restart does not lose the build; allow a few minutes.'};
+function setMode(m){MODE=m;$('tR').className=m==='recent'?'on':'';$('tF').className=m==='full'?'on':'';$('sub').textContent=SUBS[m];auto=true;history.replaceState(null,'','/export?key='+encodeURIComponent(key)+'&mode='+m);tick(true,false)}
+$('tR').onclick=e=>{e.preventDefault();setMode('recent')};$('tF').onclick=e=>{e.preventDefault();setMode('full')};
+$('back').href='/?key='+encodeURIComponent(key);let auto=true,pending=false;
 const mb=b=>(b/1048576).toFixed(b<1048576*10?1:0)+' MB',ago=s=>s<60?'just now':Math.round(s/60)+' min ago';
-async function tick(start,force){if(pending)return;pending=true;let d;try{const r=await fetch('/api/export/status?'+K+(start?'&start=1':'')+(force?'&force=1':''),{cache:'no-store'});d=await r.json()}catch(e){$('st').textContent='Connection problem — retrying…';pending=false;return}pending=false;
+async function tick(start,force){if(pending)return;pending=true;let d;try{const m0=MODE;const r=await fetch('/api/export/status?'+K()+(start?'&start=1':'')+(force?'&force=1':''),{cache:'no-store'});d=await r.json();if(m0!==MODE){pending=false;return}}catch(e){$('st').textContent='Connection problem — retrying…';pending=false;return}pending=false;
 const st=$('st'),btn=$('btn'),bar=$('bar');st.className='st';
-if(d.state==='building'){const pct=d.steps?Math.round(d.step/d.steps*100):3;bar.className='bar go';$('fill').style.width=Math.max(4,pct)+'%';st.textContent='Building your file… '+pct+'%';$('det').textContent=(d.table==='zip'?'packing the zip':'reading '+d.table.replace('_',' '))+' · '+(d.now-d.startedAt)+'s so far · the full history takes a few minutes';btn.setAttribute('aria-disabled','true');btn.textContent='Preparing…';return}
+if(d.state==='building'){const pct=d.steps?Math.round(d.step/d.steps*100):3;bar.className='bar go';$('fill').style.width=Math.max(4,pct)+'%';st.textContent='Building your file… '+pct+'%';$('det').textContent=(d.table==='zip'?'packing the zip':'reading '+d.table.replace('_',' '))+' · '+(d.now-d.startedAt)+'s so far'+(MODE==='full'?' · the full history takes a few minutes':'');btn.setAttribute('aria-disabled','true');btn.textContent='Preparing…';return}
 bar.className='bar';
-if(d.file){$('fill').style.width='100%';st.className='st ok';st.textContent='Ready — '+mb(d.file.size);$('det').textContent=d.file.name+' · built '+ago(d.file.ageS)+(d.err?' · '+d.err:'');btn.removeAttribute('aria-disabled');btn.textContent='⬇ Download ('+mb(d.file.size)+')';btn.href='/api/export/file?'+K;
+if(d.file){$('fill').style.width='100%';st.className='st ok';st.textContent='Ready — '+mb(d.file.size);$('det').textContent=d.file.name+' · built '+ago(d.file.ageS)+(d.err?' · '+d.err:'');btn.removeAttribute('aria-disabled');btn.textContent='⬇ Download ('+mb(d.file.size)+')';btn.href='/api/export/file?'+K();
  if(auto){auto=false;location.href=btn.href}return}
 if(d.err){st.className='st err';st.textContent=d.err;$('det').textContent='';return}
 st.textContent='Starting…';if(!d.file&&!start)setTimeout(()=>tick(true,false),1500);}
 $('rb').onclick=e=>{e.preventDefault();auto=true;tick(true,true)};
-tick(true,false);setInterval(()=>tick(false,false),1500);
+setMode(MODE);setInterval(()=>tick(false,false),1500);
 </script></body></html>`;
 const PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ismael — live</title>
 <style>
@@ -380,7 +385,7 @@ return '<div class="prof"><h4>Profit (paper, at the selected size)</h4>'+(p.hist
 function wl(p){const n=p.wins+p.losses;if(!n)return '';return '<div class="wl"><i class="w" style="width:'+(p.wins/n*100)+'%"></i><i class="l" style="width:'+(p.losses/n*100)+'%"></i></div><div class="wlt"><span class="up">'+p.wins+' profitable</span><span class="dn">'+p.losses+' losses</span></div>'}
 const load=()=>load0().catch(e=>{$('#sub').textContent='page error: '+e.message;console.error(e)});async function load0(){const my=++SEQ;const r=await fetch('/api/snapshot?key='+encodeURIComponent(key)+'&lin=1');if(!r.ok){$('#sub').textContent=r.status===403?'access denied — check the key in the link':'server error: '+(await r.text()).slice(0,200);return}const j=await r.json();if(my<SHOWN)return;SHOWN=my;if(VER&&j.version&&VER!==j.version){location.reload();return}VER=j.version;RAW=j;draw()}
 function draw(){if(!RAW)return;const d=mat(RAW,'');d.size=SIZE;d.cost=COST;
-$('#sub').textContent='v'+d.version+' · updated '+new Date(d.now*1000).toLocaleTimeString('en-GB');
+const upS=d.up||0,upT=upS>=3600?Math.floor(upS/3600)+'h '+Math.floor(upS%3600/60)+'m':Math.floor(upS/60)+'m';$('#sub').textContent='v'+d.version+' · updated '+new Date(d.now*1000).toLocaleTimeString('en-GB')+' · bot up '+upT+' · '+(d.restarts24||0)+' restart'+(d.restarts24===1?'':'s')+' in 24 h';
 $('#p24').innerHTML=['p1','p1b','p2','p2b','p5','p5h','p5w','p5s','p7','p6'].filter(k=>d.projects[k]).map(k=>{const p=d.projects[k],h=p.h24||{n:0,net:0};return '<div class="t" style="--c:'+PCOL[k]+'"><div class="n" title="'+p.name+'">'+({p1:'Project 1A',p1b:'Project 1B',p2:'Project 2A',p2b:'Project 2B',p5:'Project 5',p5h:'P5 Hold-5',p5w:'P5 Wide',p5s:'P5 Strict',p6:'Project 6',p7:'Project 7'}[k])+'</div><div class="v '+(h.n?cls(h.net):'mut')+'">'+(h.n?sol(h.net):'—')+'</div><div class="s">'+(h.n?h.n+' trades · '+Math.round((h.win||0)*100)+'% won':'no trades in 24 h')+'</div></div>'}).join('');
 $('#combo').innerHTML=combo(d.projects);$('#legend').innerHTML=['p1','p1b','p2','p2b','p5','p5h','p5w','p5s','p7','p6'].map(k=>'<span class="lg"><i style="background:'+PCOL[k]+'"></i>'+d.projects[k].name+' <b class="'+cls(d.projects[k].net)+'">'+(d.projects[k].n?sol(d.projects[k].net):'—')+'</b></span>').join('');
 $('#projects').innerHTML=['p1','p1b','p2','p2b','p5','p5h','p5w','p5s','p7','p6'].map(k=>{const p=d.projects[k];const f=p.filtered?'<div class="kv" style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"><span class="mut">with entry filter</span><b class="'+cls(p.filtered.net)+'">'+(p.filtered.n?sol(p.filtered.net)+' <span class="mut">('+p.filtered.n+')</span>':'—')+'</b></div>':'';
@@ -511,9 +516,9 @@ export function startWeb() {
       if (u.searchParams.get("key") !== KEY()) { res.writeHead(403, { "content-type": "text/plain" }); return res.end("forbidden"); }
       // v0.18.80: download page — the zip is built in the background (progress shown), then kept 30 min so repeat downloads are instant
       if (u.pathname === "/export" || u.pathname === "/api/export") { if (u.pathname === "/api/export") { res.writeHead(302, { location: "/export?key=" + encodeURIComponent(KEY()) }); return res.end(); } res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(EXPORT_PAGE); }
-      if (u.pathname === "/api/export/status") { if (u.searchParams.get("start") === "1") startWebExport(u.searchParams.get("force") === "1"); res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(exportStatus())); }
+      if (u.pathname === "/api/export/status") { const mode = u.searchParams.get("mode") === "recent" ? "recent" : "full"; if (u.searchParams.get("start") === "1") startWebExport(u.searchParams.get("force") === "1", mode); res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(exportStatus(mode))); }
       if (u.pathname === "/api/export/file") {
-        const f = exportFile(); if (!f) { res.writeHead(409, { "content-type": "text/plain" }); return res.end("not ready yet"); }
+        const f = exportFile(u.searchParams.get("mode") === "recent" ? "recent" : "full"); if (!f) { res.writeHead(409, { "content-type": "text/plain" }); return res.end("not ready yet"); }
         res.writeHead(200, { "content-type": "application/zip", "content-length": f.size, "content-disposition": `attachment; filename="${f.name}"`, "cache-control": "no-store" });
         const st = createReadStream(f.path); st.pipe(res); res.on("close", () => st.destroy()); return;
       }

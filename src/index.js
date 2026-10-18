@@ -13,8 +13,10 @@ import { startCommands, reportText, memMb } from "./commands.js";
 import { en } from "./enrich.js";
 import { startWeb } from "./web.js"; // v0.18.23
 import { retroScoreP5 } from "./p5retro.js"; // v0.18.81
-import { recordBoot, flagTrades } from "./restarts.js"; // v0.18.84 restart quarantine
+import { recordBoot, flagTrades, loopAlarm, restarts24 } from "./restarts.js"; // v0.18.84 restart quarantine · v0.18.85 loop alarm
 recordBoot();
+if (process.env.SMOKE) { setTimeout(() => { console.log("[smoke] alive after", process.env.SMOKE_MS || 45000, "ms — ok"); process.exit(0); }, Number(process.env.SMOKE_MS || 45000)); } // v0.18.85 pre-deploy check: boot, run the timers, exit 0 if still alive
+else setTimeout(() => { try { loopAlarm(); } catch {} }, 15000);
 import "./backup.js";
 import { pxg, ppx } from "./pumpswap.js"; // v0.18.43
 import "./pxcheck.js"; // v0.18.43 peak cross-check
@@ -63,7 +65,8 @@ const hb = async () => {
   const n = q.countSince.get(since), n1 = q.countTierSince.get(1, since);
   const g = sigStats(), c = q.closedSince.get(since);
   const mo = momStats();
-  await tg(`💓 <b>${CFG.HEARTBEAT_MIN}m</b> · launches ${n} · prepared ${n1} · hand-offs ${g.handoffs} · early open ${g.open} · volume alerts ${mo.alerts} / open ${mo.open} · copy open ${cpStats().open} · wallets scored ${wbStats().recorded} · life samples ${lcStats().samples} · rpc ${g.rpc} · ws↻ ${sub.stats().reconnects} · SOL $${solUsdCached().toFixed(0)}`);
+  const upS = Math.floor(process.uptime()), upTxt = upS >= 3600 ? `${Math.floor(upS / 3600)}h${Math.floor((upS % 3600) / 60)}m` : `${Math.floor(upS / 60)}m`;
+  await tg(`💓 <b>${CFG.HEARTBEAT_MIN}m</b> · up ${upTxt} · ${restarts24()} restarts/24h · launches ${n} · prepared ${n1} · hand-offs ${g.handoffs} · early open ${g.open} · volume alerts ${mo.alerts} / open ${mo.open} · copy open ${cpStats().open} · wallets scored ${wbStats().recorded} · life samples ${lcStats().samples} · rpc ${g.rpc} · ws↻ ${sub.stats().reconnects} · SOL $${solUsdCached().toFixed(0)}`);
 };
 setInterval(hb, CFG.HEARTBEAT_MIN * 60_000);
 setTimeout(() => { try { const n = flagTrades(0); if (n) console.log(`[restarts] flagged ${n} trades`); } catch (e) { console.error("[restarts]", e.message); } }, 8000); // v0.18.84

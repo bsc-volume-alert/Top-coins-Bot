@@ -2,10 +2,11 @@
 // data/restarts.txt holds one epoch second per bot start (seeded from the pm2 log; the bot appends its own boots from now on).
 //   restart_span = how many restarts happened while the trade was open (deploy restarts blind the bot ~5 s and reset the runner's volume window)
 //   crashloop    = 1 when the trade was open during a crash loop (≥ 4 restarts no more than 150 s apart) — excluded from every website figure and test
-import { readFileSync, appendFileSync, mkdirSync } from "node:fs";
+import { readFileSync, appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { CFG } from "./config.js";
 import { db } from "./db.js";
+import { tg } from "./telegram.js";
 export const RESTARTS_FILE = join(dirname(CFG.DB_PATH), "restarts.txt");
 const LOOP_GAP_S = 150, LOOP_MIN = 4, PAD_BEFORE = 60, PAD_AFTER = 120;
 let TS = [];
@@ -41,3 +42,15 @@ export function flagTrades(sinceTs = 0) {
   try { tx(qRows.all(sinceTs)); } catch (e) { console.error("[restarts flag]", e.message); }
   return n;
 }
+
+/** v0.18.85 loop alarm: ≥ 3 starts in the last 10 minutes → Telegram, at most once per 30 min (data/restart-alarm.txt remembers the last one). */
+export function loopAlarm() {
+  const now = Math.floor(Date.now() / 1000), recent = restartsBetween(now - 600, now);
+  if (recent < 3) return false;
+  const f = join(dirname(RESTARTS_FILE), "restart-alarm.txt"); let last = 0; try { last = Number(readFileSync(f, "utf8")) || 0; } catch {}
+  if (now - last < 1800) return true;
+  try { writeFileSync(f, String(now)); } catch {}
+  tg(`🚨 <b>Bot restart loop</b> — ${recent} starts in the last 10 minutes (${restartsBetween(now - 86400, now)} in 24 h). Trades open now are being flagged <code>crashloop</code>. Check <code>pm2 logs tracker --err</code>.`).catch(() => {});
+  return true;
+}
+export const restarts24 = () => { const now = Math.floor(Date.now() / 1000); return restartsBetween(now - 86400, now); };
