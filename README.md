@@ -56,6 +56,11 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.86 — Projects 1A / 1B / 2A / 2B retired from the website (18 Oct)
+- Deep dive on 158 clean $100K-trigger trades (15–18 Oct): 48% hit 1.5x, 45% stop out (34% rug), every recorded exit negative (best: hold-5 −1.9, 1.5x/−40 −2.8, runner −3.2 per 139 trades; hold-to-golden-rule −20). Since P5 exists, **100% of the trigger's coins had already been P5 bursts**, bought a median 2.7 min later at 1.29× the market cap; on the same 54 coins P5's 1.5x exit made +3.02, the trigger's −1.25. The $47K cut sat at the peak of its fitted curve (90% → 33% live); stock-pair and bundle-70 filters had no support. Best honest filter (crowd < 450 wallets & MC < $60K, hold-5) ≈ 0.25 SOL/day at 0.25 SOL.
+- Cards, 24 h tiles and chart lines removed. The trigger keeps recording (bottom table with skip reasons, P6 volume referee, first-minute research); nothing deleted. Trade-by-trade workbook: P1_P2_deep_dive_trades.xlsx (sent 18 Oct).
+- Hold-5 note from the same review: the marks-based hold-5 estimates run optimistic — the live `x_h5` column sees dips through the 1.3 floor between marks (e.g. a coin sold at 1.28x that the marks estimate scored 1.81x). Decision on Hold-5 stays with the live 40-trade test.
+
 ## v0.18.85 — clean line for P5, loop alarm, pre-deploy check, 2-day quick export (18 Oct)
 - **Clean line.** Project 5's live book (and Hold-5 / Wide / Strict) count from **18 Oct 06:14 UTC (07:14 UK)**. Everything before stays in the database and in the P5 history line, carrying the restart flags, and never in a live figure. Reason: 01:20–07:14 UK was a crash loop; the day before carried deploy restarts. Clean days decide; if they disagree with 17 Oct, the clean days win.
 - **Loop alarm.** 15 s after every boot the bot counts its own starts: ≥ 3 in 10 minutes → Telegram alarm (at most one per 30 min). Header shows "bot up 3h 12m · 2 restarts in 24 h"; the heartbeat carries the same.
