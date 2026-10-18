@@ -56,6 +56,10 @@ All thresholds are env-overridable (see `src/config.js`).
 - Second-wave entries are tagged `tight=1` when: check at 2–3 min, MC $12–25K, dev holds a position, buy$ ≥ 1.3× sell$ (`W2T_*`). Entry unchanged; /summary shows a separate SECOND WAVE — TIGHT line.
 - New exit columns on every strategy: `x_tp15` (sell all at 1.5x) and `x_tsl25` (25% trail); summaries show 1.5x hit rate.
 
+## v0.18.83 — hotfix: bot crash-looped every 30 s since v0.18.81 (18 Oct)
+- The v0.18.81 commit carried only part of the after-entry marks module: its 30-second timer referenced `w.ap` / `apTick` that were never committed, threw outside its try/catch, and pm2 restarted the bot every ~31 s from 00:20 UTC (624 restarts by 06:10 UTC). Effects: the website export could never finish (needs 2–3 min), after-entry marks were never written, every restart cost ~5 s of blind time for entries and exits — treat P5 results between 18 Oct 01:20 and 07:15 UK with that in mind.
+- Fix: the full module as documented (marks at 7/10/15/20/30 min, lowest since first 1.5x, seconds to 1.5x; P5 family watches restored on restart), the timer wrapped so it can never throw, and a process-level `uncaughtException` guard that logs + Telegrams instead of exiting.
+
 ## v0.18.82 — P6: exit A is the headline; golden rule referee = DexScreener over every pool (18 Oct)
 - P6 analysis (14 trades / 7 coins): A (all at 2x) +1.12, B +0.97, C +0.55; no coin reached 3x while held. El Gato was sold by the golden rule at 1.05–1.23x because its second pool looked dead; it reached 4.97x two hours later. The feed sees a median 67% of GMGN's 5-min volume on these coins.
 - Headline exit A (card figures, chart, tile, bottom table); B and C still recorded and shown. The parked v0.18.72 referee is live for P6: DexScreener's 5-min volume summed over every pool decides the golden rule when fresh (< 90 s, refreshed every ~40 s); feed / GMGN only when DexScreener has not answered. P7 unchanged.

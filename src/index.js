@@ -65,6 +65,8 @@ const hb = async () => {
 };
 setInterval(hb, CFG.HEARTBEAT_MIN * 60_000);
 process.on("unhandledRejection", (e) => console.error("[unhandled]", e));
+// v0.18.83: a throw inside a timer must not take the whole bot down (v0.18.81 crash-looped every 30 s on one). Logged loudly; state lives in SQLite anyway.
+process.on("uncaughtException", (e) => { console.error("[uncaught]", e); try { tg(`⚠️ uncaught error (bot kept running): <code>${String(e?.message || e).slice(0, 200)}</code>`); } catch {} });
 
 // --- daily digest at DIGEST_HOUR_LOCAL (Europe/London) ---
 import { fmt as _fmt, esc as _esc } from "./launch-monitor.js";
