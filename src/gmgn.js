@@ -15,7 +15,7 @@ import { volGmgn, VOL_LOG_USD } from "./vollog.js"; // v0.18.62
 
 const KEY = () => process.env.GMGN_API_KEY || "";
 const HOST = "https://openapi.gmgn.ai";
-const POLL_MS = Number(process.env.GMGN_POLL_MS || 3000); // v0.18.69: 5m and 1m lists alternate every 3 s (each every 6 s) — P7 needs 1-minute volume // v0.18.62: 5m list every 4 s (was 5m/1m alternating every 2 s — same 5m rate, half the calls)
+const POLL_MS = Number(process.env.GMGN_POLL_MS || 6000); // v0.18.120: every 6 s (was 3) — on 19 Oct the lists took the whole budget, every entry lookup was "rate limited" and 131 entries in a row got no GMGN snapshot // v0.18.69: 5m and 1m lists alternate every 3 s (each every 6 s) — P7 needs 1-minute volume // v0.18.62: 5m list every 4 s (was 5m/1m alternating every 2 s — same 5m rate, half the calls)
 const FLAG_VOL5M = Number(process.env.GMGN_FLAG_VOL5M || 100000);
 const MAX_MC = Number(process.env.GMGN_MAX_MC || 5000000);
 const CHAINS = String(process.env.GMGN_CHAINS || "sol") /* v0.18.62: record-only BSC/Base/Robinhood polls off to save GMGN calls */.split(",").map((x) => x.trim()).filter(Boolean); // sol, bsc, base, eth, robinhood — non-sol chains are record-only
@@ -241,7 +241,7 @@ setInterval(async () => {
 
 let turn = 0, busy = false;
 async function poll() {
-  if (busy || !KEY() || Date.now() < pausedUntil) return; busy = true;
+  if (busy || !KEY() || Date.now() < pausedUntil || eq.length) return; busy = true; // v0.18.120: entry lookups (the data set) go first; a list poll waits while any are queued
   // Solana alternates 5m / 1m every poll; each other chain gets one 5m poll every ~10 polls (record-only)
   const k = turn++, other = CHAINS.filter((c) => c !== "sol"), useOther = other.length && k % 10 === 9;
   const chain = useOther ? other[Math.floor(k / 10) % other.length] : "sol", interval = useOther || process.env.GMGN_1M === "0" || k % 2 === 0 ? "5m" : "1m"; // v0.18.62: 1m list off unless GMGN_1M=1
@@ -255,11 +255,11 @@ async function poll() {
 // GMGN's default Solana safety filter (mint + freeze authority renounced) still applies — it cannot be switched off.
 // v0.18.63: Raydium list off (0 coins and time-outs on 17 Oct; our own feed reads Raydium CPMM / CLMM / LaunchLab). Meteora every 6 s.
 const PLAT = [{ k: "meteora", p: ["pool_meteora", "meteora_virtual_curve"], re: /meteora/i }];
-const PLAT_MS = Math.max(1000, Number(process.env.GMGN_PLAT_MS) || 6000), PLAT_ON = process.env.GMGN_PLAT !== "0";
+const PLAT_MS = Math.max(1000, Number(process.env.GMGN_PLAT_MS) || 12000), PLAT_ON = process.env.GMGN_PLAT !== "0";
 gm.plat = Object.fromEntries(PLAT.map((x) => [x.k, { ok: 0, fail: 0, rows: 0, other: 0, top: 0, lastErr: null }]));
 let pTurn = 0, pBusy = false;
 async function pollPlat() {
-  if (pBusy || !KEY() || Date.now() < pausedUntil || !CHAINS.includes("sol")) return; pBusy = true;
+  if (pBusy || !KEY() || Date.now() < pausedUntil || !CHAINS.includes("sol") || eq.length) return; pBusy = true;
   const x = PLAT[pTurn++ % PLAT.length], s = gm.plat[x.k];
   try {
     const rows = await rank("sol", "5m", x.p); s.ok++; s.rows = rows.length;

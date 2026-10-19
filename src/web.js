@@ -13,7 +13,8 @@ import { restarts24 } from "./restarts.js"; // v0.18.85
 import { createReadStream } from "node:fs";
 import { readFileSync, statSync, readdirSync } from "node:fs";
 import { p5dataCsv } from "./p5data.js";
-import { SN_BOOKS, SN_KINDS, snStats, SN } from "./snipe.js"; // v0.18.119 Project S // v0.18.113 the A–D data set as CSV
+import { SN_BOOKS, SN_KINDS, snStats, SN } from "./snipe.js"; // v0.18.119 Project S
+import { timed } from "./slow.js"; // v0.18.120 // v0.18.113 the A–D data set as CSV
 import { join } from "node:path"; // v0.18.92
 import { execSend } from "./execlink.js"; // v0.18.92 wallet box sell → executor
 const VERSION = (() => { try { return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version; } catch { return "?"; } })();
@@ -331,6 +332,9 @@ function mdToHtml(md) {
     const para = []; while (i < lines.length && lines[i].trim() && !/^(#{1,4} |\||[-*] |\d+\. )/.test(lines[i])) { para.push(lines[i]); i++; } out.push(`<p>${inline(para.join(" "))}</p>`); }
   return out.join("\n");
 }
+// v0.18.120: one snapshot build serves every open page for SNAP_MS — each build is 0.4–1.1 s of synchronous work on a 1-vCPU box (19 Oct: three
+// devices polling every 10 s cost 10–30% of the CPU and stalled the feed by up to a second each time; the executor then skipped triggers as "feed behind")
+const SNAP = new Map(), SNAP_MS = Number(process.env.WEB_SNAPSHOT_CACHE_MS || 8000);
 const REPORT_CSS = `<style>:root{--tx:#e9e6ff;--mut:#9a8fd0;--up:#39ff9c;--dn:#ff4d7a;--acc:#4ad8ff;--mag:#ff3ea5;--line:#3a2a6a}*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#1b0b3a 0%,#2a0f5a 30%,#0e1f5a 70%,#071a3f 100%) fixed;color:var(--tx);font:14px/1.55 ui-monospace,'SF Mono',Menlo,Consolas,monospace;padding:16px}
 main{max-width:1100px;margin:0 auto;background:rgba(14,10,40,.78);border:1px solid var(--line);border-radius:16px;padding:22px 24px}h1{color:var(--mag);font-size:22px;margin:0 0 4px}h2{color:var(--acc);font-size:17px;margin:22px 0 8px;border-bottom:1px solid var(--line);padding-bottom:4px}h3{font-size:15px;margin:16px 0 6px}h4{font-size:14px;margin:12px 0 4px}
 .sub{color:var(--mut);font-size:12px;margin-bottom:14px}.tbl{overflow:auto;margin:6px 0 10px}table{border-collapse:collapse;font-size:12.5px;min-width:100%}th,td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;white-space:nowrap}th{color:var(--mut);font-weight:600}td.up{color:var(--up)}td.dn{color:var(--dn)}td:first-child{white-space:normal;min-width:120px}
@@ -674,14 +678,14 @@ export function startWeb() {
         res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(reportPage(md, when, reg, hist, file, KEY())); }
       if (u.pathname === "/columns") { let md = "No column guide in this build."; try { md = readFileSync(join(process.cwd(), "reports", "columns.md"), "utf8"); } catch {} res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(docPage("The data set — what every column means", md, KEY())); } // v0.18.118
       if (u.pathname === "/api/p5data") { // v0.18.113: the A–D data set, one row per P5 trigger since the price fix
-        try { const body = p5dataCsv(SITE_FROM); res.writeHead(200, { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="abcd-data-${new Date().toISOString().slice(0, 10)}.csv"`, "cache-control": "no-store" }); return res.end(body); }
+        try { const body = timed("p5dataCsv", () => p5dataCsv(SITE_FROM)); res.writeHead(200, { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="abcd-data-${new Date().toISOString().slice(0, 10)}.csv"`, "cache-control": "no-store" }); return res.end(body); }
         catch (e) { res.writeHead(500, { "content-type": "text/plain" }); return res.end("data set error: " + e.message); } }
       if (u.pathname === "/api/trades") { const days = Math.min(365, Math.max(1, Number(u.searchParams.get("days")) || 7)); res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(tradesDump(days))); }
       if (u.pathname === "/api/history") { const days = Math.min(30, Math.max(1, Number(u.searchParams.get("days")) || 3)); res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(history(days))); }
       if (u.pathname === "/history") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(HISTORY); }
       if (u.pathname === "/analysis") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(ANALYSIS); }
       if (u.pathname === "/api/snapshot" && u.searchParams.get("lin") === "1") { let body; try { const t = Date.now(); if (!LIN.body || t - LIN.at > 60000) { LIN = { at: t, body: JSON.stringify(linSnapshot()) }; const dt = Date.now() - t; if (dt > 300) console.error(`[web snapshot] build took ${dt} ms`); } body = LIN.body; } catch (e) { console.error("[web snapshot]", e.stack || e.message); res.writeHead(500, { "content-type": "text/plain" }); return res.end("snapshot error: " + e.message); } res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(body); }
-      if (u.pathname === "/api/snapshot") { const size = Math.min(5, Math.max(0.01, Number(u.searchParams.get("size")) || 0.25)), cost = Math.min(0.5, Math.max(0, Number(u.searchParams.get("cost") ?? 0.05))); let body; try { const t0 = Date.now(); body = JSON.stringify(snapshot(size, cost)); const dt = Date.now() - t0; if (dt > 300) console.error(`[web snapshot plain] build took ${dt} ms`); } catch (e) { console.error("[web snapshot]", e.stack || e.message); res.writeHead(500, { "content-type": "text/plain" }); return res.end("snapshot error: " + e.message); } res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(body); }
+      if (u.pathname === "/api/snapshot") { const size = Math.min(5, Math.max(0.01, Number(u.searchParams.get("size")) || 0.25)), cost = Math.min(0.5, Math.max(0, Number(u.searchParams.get("cost") ?? 0.05))); let body; try { const ck = `${size}|${cost}`, hit = SNAP.get(ck); if (hit && Date.now() - hit.at < SNAP_MS) body = hit.body; else { const t0 = Date.now(); body = JSON.stringify(snapshot(size, cost)); const dt = Date.now() - t0; SNAP.set(ck, { at: Date.now(), body }); if (SNAP.size > 12) SNAP.delete(SNAP.keys().next().value); if (dt > 300) console.error(`[web snapshot plain] build took ${dt} ms`); } } catch (e) { console.error("[web snapshot]", e.stack || e.message); res.writeHead(500, { "content-type": "text/plain" }); return res.end("snapshot error: " + e.message); } res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(body); }
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); res.end(PAGE);
     } catch (e) { console.error("[web]", e.stack || e.message); try { if (!res.headersSent) res.writeHead(500, { "content-type": "text/plain" }); res.end("error: " + e.message); } catch {} }
   });

@@ -3,7 +3,7 @@
 // alpha shows — at the price of the trade that showed it, which is roughly what a bot sending a buy that second pays (the chain confirms a
 // slot or two later; the fs*_x columns and the 5-s path measure the rest). Paper only: nothing goes to the executor, nothing to Telegram.
 // Costs on the bonding curve are about 10% a round trip (1% fee each way, slippage, a second of latency on a moving curve) — the study prices it so.
-//   S1 creator record — the creator's earlier launches: ≥ SN_CREATOR_GRADS graduations, or one that peaked over $100K · enter on the first trade after the create slot
+//   S1 creator record — the creator's earlier launches (≤ SN_CREATOR_MAX_N of them: a dev, not a factory): ≥ SN_CREATOR_GRADS graduations or one over $100K, and ≥ SN_CREATOR_RATE of them did · enter on the first trade after the create slot
 //   S2 proven wallet  — a wallet with a scored record (≥ 8 early buys, ≥ 50% of them 5x within 24 h) buys ≥ 0.2 SOL within 60 s · enter on that trade
 //   S3 copycat        — the same name as a coin that peaked ≥ $SN_COPY_PEAK in the last 24 h · enter on the first trade after the create slot
 //   S4 clean launch   — bundle < 5% of supply, the dev bought 0.2–3 SOL, ≥ 10 outside buyers and ≥ 5 SOL in within 15 s · enter on the trade that completes it
@@ -19,11 +19,11 @@ import { gmgnEntry } from "./gmgn.js";
 import { solUsdCached } from "./price.js";
 
 const N = (k, d) => { const v = Number(process.env[k]); return Number.isFinite(v) && process.env[k] !== undefined && process.env[k] !== "" ? v : d; };
-export const SN = { MAX_MC: N("SN_MAX_MC", 60_000), MAX_PER_HOUR: N("SN_MAX_PER_HOUR", 20), WATCH_S: N("SN_WATCH_S", 120), CREATOR_GRADS: N("SN_CREATOR_GRADS", 2), COPY_PEAK: N("SN_COPY_PEAK", 300_000),
+export const SN = { MAX_MC: N("SN_MAX_MC", 60_000), MAX_PER_HOUR: N("SN_MAX_PER_HOUR", 20), WATCH_S: N("SN_WATCH_S", 120), CREATOR_GRADS: N("SN_CREATOR_GRADS", 2), CREATOR_MAX_N: N("SN_CREATOR_MAX_N", 30), CREATOR_RATE: N("SN_CREATOR_RATE", 0.1), COPY_PEAK: N("SN_COPY_PEAK", 300_000),
   CLEAN_BUNDLE: N("SN_CLEAN_BUNDLE", 5), CLEAN_DEV_MIN: N("SN_CLEAN_DEV_MIN", 0.2), CLEAN_DEV_MAX: N("SN_CLEAN_DEV_MAX", 3), CLEAN_BUYERS: N("SN_CLEAN_BUYERS", 10), CLEAN_SOL: N("SN_CLEAN_SOL", 5), CLEAN_BY_S: N("SN_CLEAN_BY_S", 15),
   FLOW_SOL: N("SN_FLOW_SOL", 15), FLOW_WALLETS: N("SN_FLOW_WALLETS", 12), FLOW_BY_S: N("SN_FLOW_BY_S", 20), WALLET_MIN_SOL: N("SN_WALLET_MIN_SOL", 0.2), WALLET_BY_S: N("SN_WALLET_BY_S", 60), FIRST_BY_S: N("SN_FIRST_BY_S", 60) };
 export const SN_BOOKS = {
-  sn1: { id: "S1", name: "creator record", what: `the creator's earlier launches: ${SN.CREATOR_GRADS}+ graduated, or one peaked over $100K — bought on the first trade after the create block` },
+  sn1: { id: "S1", name: "creator record", what: `the creator's earlier launches (at most ${SN.CREATOR_MAX_N}, so a dev, not a factory): ${SN.CREATOR_GRADS}+ graduated or one peaked over $100K, and at least ${Math.round(SN.CREATOR_RATE * 100)}% of them did — bought on the first trade after the create block` },
   sn2: { id: "S2", name: "proven wallet", what: `a wallet with a scored record (8+ early buys, half of them 5x) buys ≥ ${SN.WALLET_MIN_SOL} SOL within ${SN.WALLET_BY_S} s — bought on that trade` },
   sn3: { id: "S3", name: "copycat", what: `the same name as a coin that peaked ≥ $${fmt(SN.COPY_PEAK)} in the last 24 h — bought on the first trade after the create block` },
   sn4: { id: "S4", name: "clean launch", what: `bundle < ${SN.CLEAN_BUNDLE}%, the dev bought ${SN.CLEAN_DEV_MIN}–${SN.CLEAN_DEV_MAX} SOL, ${SN.CLEAN_BUYERS}+ outside buyers and ${SN.CLEAN_SOL}+ SOL in within ${SN.CLEAN_BY_S} s` },
@@ -38,7 +38,7 @@ const short = (w) => (w ? `${w.slice(0, 4)}…${w.slice(-4)}` : "");
 on("create", (t) => {
   if (!t?.mint) return;
   const L = { mint: t.mint, createTs: t.ts, slot: t.slot, buyers: new Map(), outSol: 0, solIn: 0, solOut: 0, sells: 0, n: 0, fired: {}, cr: null, crOk: false, cc: null, ccOk: false, mcFirst: null };
-  try { const ch = q.creatorHist.get(t.creator, t.mint, t.ts) || {}; L.cr = { n: ch.n || 0, grads: ch.grads || 0, over100k: ch.over100k || 0, best: ch.best ?? null }; L.crOk = L.cr.grads >= SN.CREATOR_GRADS || L.cr.over100k >= 1; } catch {}
+  try { const ch = q.creatorHist.get(t.creator, t.mint, t.ts) || {}; L.cr = { n: ch.n || 0, grads: ch.grads || 0, over100k: ch.over100k || 0, best: ch.best ?? null }; L.crOk = L.cr.n <= SN.CREATOR_MAX_N && (L.cr.grads >= SN.CREATOR_GRADS || L.cr.over100k >= 1) && (L.cr.grads + L.cr.over100k) / Math.max(1, L.cr.n) >= SN.CREATOR_RATE; } catch {} // v0.18.120: a record, not a factory — the first hour's S1 entries were creators with 400–2,400 launches and a dozen graduations by sheer volume
   try { if (t.name) { const cc = q.copycats.get(t.name, t.mint, t.ts - 86400) || {}; L.cc = { n: cc.n || 0, best: cc.best ?? null, min: cc.last ? Math.round((t.ts - cc.last) / 60) : null }; L.ccOk = (cc.best || 0) >= SN.COPY_PEAK; } } catch {}
   W.set(t.mint, L); sn.watched++;
   setTimeout(() => W.delete(t.mint), SN.WATCH_S * 1000);
