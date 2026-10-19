@@ -16,11 +16,11 @@ import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 import { newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, positionsOf, hasPosition, dayNet, net24, londonDayStart, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.3.1"; // four books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
-const EXIT_NAMES = { h5: "P5 Hold-5", flow4: "P5 Runner" };
+const VERSION = "0.3.2"; // four books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
+const EXIT_NAMES = { h5: "B", flow4: "A" };
 // wide = P5 Wide's EXTRA coins only (the $100K–$250K triggers, strategy p5w30): the rest of the paper Wide book is the Runner's coins, already traded by the runner book.
 // strict = the 50 SOL trigger (p5e50): its own paper trade on a coin the runner may already hold, bought later and higher — a separate leg, a separate test.
-const BOOKS = { runner: { name: "P5 Runner", strategy: "p5e30", exit: "flow4" }, hold5: { name: "P5 Hold-5", strategy: "p5e30", exit: "h5" }, wide: { name: "P5 Wide", strategy: "p5w30", exit: "flow4" }, strict: { name: "P5 Strict", strategy: "p5e50", exit: "flow4" } }; // one name per book, the same as the website's cards
+const BOOKS = { runner: { name: "A", strategy: "p5e30", exit: "flow4" }, hold5: { name: "B", strategy: "p5e30", exit: "h5" }, wide: { name: "C", strategy: "p5w30", exit: "flow4" }, strict: { name: "D", strategy: "p5e50", exit: "flow4" } }; // one letter per book, the same as the website: A runner · B hold-5 · C wide (runner exit) · D strict (runner exit)
 const BOOK_IDS = Object.keys(BOOKS);
 const nowS = () => Math.floor(Date.now() / 1000);
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -38,7 +38,7 @@ S.books = (() => { const b = ovr.books || {}; if (b.runner && b.hold5) return { 
 const booksOn = () => BOOK_IDS.filter((k) => S.books[k].on);
 const exitsActive = () => [...new Set(booksOn().map((k) => BOOKS[k].exit))]; // the exit rules any switched-on book uses
 const stakeOf = (book) => Number(S.books[book]?.stake || S.stake);
-const bookKey = (word) => ({ runner: "runner", flow4: "runner", "hold-5": "hold5", hold5: "hold5", h5: "hold5", wide: "wide", strict: "strict" }[String(word || "").toLowerCase()] || null);
+const bookKey = (word) => ({ a: "runner", runner: "runner", flow4: "runner", b: "hold5", "hold-5": "hold5", hold5: "hold5", h5: "hold5", c: "wide", wide: "wide", d: "strict", strict: "strict" }[String(word || "").toLowerCase()] || null);
 const STAKE_CHOICES = [0.01, 0.02, 0.05, 0.1, 0.25, 0.5, 1];
 const syncExitWord = () => { const r = S.books.runner.on, h = S.books.hold5.on; S.exit = r && h ? "both" : r ? "flow4" : h ? "h5" : "off"; };
 const legKey = (paperId, exit) => `${paperId}:${exit}`;
@@ -301,12 +301,12 @@ async function handleCmd(text) {
   if (sub === "shadow") { S.mode = "shadow"; saveOvr(); return tg(`mode <b>shadow</b> — building and simulating, signing nothing.`); }
   if (sub === "on" || sub === "live") { if (!S.kp) return tg("no wallet on the box yet"); const need = booksOn().reduce((a, x) => a + lamports(stakeOf(x)), 0); if (bal == null || bal < need + lamports(0.02)) return tg(`balance ${bal != null ? sol(bal).toFixed(4) : "?"} SOL is below one stake per switched-on book + fees — fund the wallet first`); S.mode = "live"; S.stopOverrideDay = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" }); saveOvr(); return tg(`mode <b>LIVE</b> — ${BOOK_IDS.map((k) => `${BOOKS[k].name} ${S.books[k].on ? "ON @ " + stakeOf(k) + " SOL" : "off"}`).join(", ")}.`); }
   if (sub === "stake") { // /live stake 0.25 (both books) · /live stake runner 0.25
-    const k = bookKey(arg), v = Number(k ? arg2 : arg); if (!(v > 0 && v <= 2)) return tg("usage: /live stake 0.25 · /live stake runner 0.25 · /live stake wide 0.01");
+    const k = bookKey(arg), v = Number(k ? arg2 : arg); if (!(v > 0 && v <= 2)) return tg("usage: /live stake 0.25 · /live stake a 0.25 · /live stake c 0.01");
     if (k) { S.books[k].stake = v; } else { S.stake = v; for (const b of BOOK_IDS) S.books[b].stake = v; } saveOvr(); return tg(`stake: ${BOOK_IDS.map((b) => `${BOOKS[b].name} <b>${stakeOf(b)} SOL</b>`).join(" · ")}`); }
   if (sub === "book") { // /live book runner|hold-5|wide|strict on|off
-    const k = bookKey(arg); if (!k || !["on", "off"].includes(arg2)) return tg("usage: /live book runner|hold-5|wide|strict on|off"); S.books[k].on = arg2 === "on"; syncExitWord(); saveOvr();
+    const k = bookKey(arg); if (!k || !["on", "off"].includes(arg2)) return tg("usage: /live book a|b|c|d on|off"); S.books[k].on = arg2 === "on"; syncExitWord(); saveOvr();
     return tg(`${BOOKS[k].name} book <b>${arg2.toUpperCase()}</b>${arg2 === "off" ? " — no new buys for it; anything it holds still sells on its rule" : ` at ${stakeOf(k)} SOL`}. Books now: ${BOOK_IDS.map((b) => `${BOOKS[b].name} ${S.books[b].on ? "ON" : "off"}`).join(", ")}.`); }
-  if (sub === "exit") { if (!["h5", "flow4", "both"].includes(arg)) return tg("usage: /live exit h5 | flow4 | both"); S.books.runner.on = arg !== "h5"; S.books.hold5.on = arg !== "flow4"; syncExitWord(); saveOvr(); return tg(`P5 Runner ${S.books.runner.on ? "ON" : "off"}, P5 Hold-5 ${S.books.hold5.on ? "ON" : "off"} (P5 Wide ${S.books.wide.on ? "ON" : "off"}, P5 Strict ${S.books.strict.on ? "ON" : "off"} unchanged)`); }
+  if (sub === "exit") { if (!["h5", "flow4", "both"].includes(arg)) return tg("usage: /live exit h5 | flow4 | both"); S.books.runner.on = arg !== "h5"; S.books.hold5.on = arg !== "flow4"; syncExitWord(); saveOvr(); return tg(`A ${S.books.runner.on ? "ON" : "off"}, B ${S.books.hold5.on ? "ON" : "off"} (C ${S.books.wide.on ? "ON" : "off"}, D ${S.books.strict.on ? "ON" : "off"} unchanged)`); }
   if (sub === "strategy") return tg(`each book follows its own paper strategy now: ${BOOK_IDS.map((k) => `${BOOKS[k].name} = ${BOOKS[k].strategy}/${BOOKS[k].exit}`).join(" · ")}`);
   if (sub === "sell") { const ops = openPositions(), bk = bookKey(arg2); const list = arg === "all" ? ops : ops.filter((p) => String(p.paper_id) === arg && (!arg2 || p.exit === arg2 || (bk && p.book === bk))); if (!list.length) return tg("nothing open by that id"); for (const p of list) await sellPosition(p, "manual", null, "owner"); return; }
   if (sub === "orders") return tg(recentOrders(8).map((o) => `#${o.id} ${o.side} ${esc(o.name)} ${o.status}${o.skip_reason ? " (" + esc(o.skip_reason) + ")" : ""}${o.sim_err ? " " + esc(String(o.sim_err).slice(0, 60)) : ""}`).join("\n") || "no orders yet");
@@ -317,7 +317,7 @@ async function handleCmd(text) {
     if (bal == null || bal < lamports(amt) + lamports(0.01)) return tg(`balance ${bal != null ? sol(bal).toFixed(4) : "?"} SOL — not enough for ${amt} plus fees`);
     try { const tx = await buildTx(S.pub, [...ixBudget(20_000, CFG.CU_PRICE), ixTransfer(S.pub, PK(CFG.SWEEP_TO), lamports(amt))], S.kp); const c = await sendUntilConfirmed(tx, 30000); log("withdraw", `${amt} SOL → ${CFG.SWEEP_TO} ${c.status} ${c.sig}`);
       return tg(c.status === "confirmed" ? `🏦 sent <b>${amt} SOL</b> to <code>${CFG.SWEEP_TO}</code>\n<code>${c.sig}</code>` : `⚠️ withdrawal ${c.status} — <code>${c.sig}</code> (check Solscan before retrying)`); } catch (e) { return tg(`⚠️ withdrawal failed: ${esc(e.message)}`); } }
-  return tg("commands: /live · /live on · /live off · /live shadow · /live book runner|hold-5|wide|strict on|off · /live stake 0.25 · /live stake wide 0.01 · /live sell &lt;id|all&gt; [h5|flow4] · /live orders · /live withdraw 0.5");
+  return tg("commands: /live · /live on · /live off · /live shadow · /live book a|b|c|d on|off · /live stake 0.25 · /live stake c 0.01 · /live sell &lt;id|all&gt; [a|b|c|d] · /live orders · /live withdraw 0.5");
 }
 
 // ---- socket from the tracker ----
