@@ -89,8 +89,9 @@ function finalize(t) {
   emit("finalized", t);
 }
 
+export const holds = new Set(); // v0.18.119: mints other modules (Project S) want kept in memory past the usual 5 / 30 min
 function expire(t) {
-  if (t.hold) return setTimeout(() => expire(t), 60_000); // open paper position keeps it alive
+  if (t.hold || holds.has(t.mint)) return setTimeout(() => expire(t), 60_000); // open paper position keeps it alive
   emit("expire", t); live.delete(t.mint);
 }
 

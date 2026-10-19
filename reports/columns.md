@@ -1,4 +1,4 @@
-One row per trigger since the price fix (18 Oct 20:25 UK), for books A, C, D (the P5 levels), 80 (the old 80-SOL level) and E (the $100K/5-min core trigger). Rows are kept whether the website's filters took the coin or skipped it (`pass` = 1 / 0). All money is USD unless the name says SOL; all multiples are price ÷ entry price (1.2 = up 20%, 0.6 = down 40%). Times are seconds after the trigger unless the name says otherwise. Empty = not known / not applicable.
+One row per trigger since the price fix (18 Oct 20:25 UK), for books A, C, D (the P5 levels), 80 (the old 80-SOL level), E (the $100K/5-min core trigger) and, from 19 Oct 14:00 UK, S1–S5 (Project S, the paper snipers — bought in a coin's first seconds on one alpha each; `pass` is always 1 for them, and the pre_* / sol60 columns are blank because there is no 60-s window before a launch). Rows are kept whether the website's filters took the coin or skipped it (`pass` = 1 / 0). All money is USD unless the name says SOL; all multiples are price ÷ entry price (1.2 = up 20%, 0.6 = down 40%). Times are seconds after the trigger unless the name says otherwise. Empty = not known / not applicable.
 
 ## Identity
 
@@ -73,6 +73,26 @@ One row per trigger since the price fix (18 Oct 20:25 UK), for books A, C, D (th
 | cc_best_mc24h, cc_grads24h | the best peak among them; how many graduated |
 | cc_last_min | minutes since the latest same-name launch |
 | cc_sym_n24h | coins with the same ticker in the last 24 h |
+
+## Project S — what the sniper book saw at its entry (S1–S5 rows only)
+
+| column | meaning |
+|---|---|
+| sn_delay_s, sn_slot_gap | seconds, and blocks, between the coin's creation and the trade we bought on |
+| sn_buyers, sn_out_sol | distinct buyers outside the create block (not the creator) by then, and the SOL they put in |
+| sn_sol_in, sn_sol_out, sn_sells, sn_trades | all buying / selling (SOL), sells and trades seen by then, create block included |
+| sn_mc_first | market cap at the first trade after the create block |
+| sn_dev_buy_sol, sn_bundle_pct, sn_bundle_sol, sn_bundle_wallets | the create block: the creator's own buy, the bundle's % of supply, SOL and wallets (known from +4 s; blank if the book bought before that) |
+| sn_signal, sn_signal_n | the alpha in words, and its number (S1 graduations, S2 the wallet's 5x rate, S3 the copied coin's peak, S4 buyers, S5 SOL in) |
+| sn_wallet, sn_wallet_n, sn_wallet_x5, sn_wallet_x10, sn_wallet_rate | S2 only: the proven wallet, its scored early buys, how many reached 5x / 10x, the 5x rate |
+
+Costs on the bonding curve are about 10% a round trip (1% fee each way, slippage, a second of latency on a moving curve) — price S rows at 10%, not at A's 5–6%.
+
+## Two more files on the `data` branch (Project S research, every 4 hours)
+
+**launches.csv** — every pump.fun launch we saw in the last 24 h (at least an hour old), winners and losers alike: what was known at launch and what happened. Columns: mint, name, symbol, creator, create_utc/ts, hour_uk, tier (1 = bundled launch), bundle_pct/sol/wallets, dev_buy_sol, outside_buyers, cluster_sol_in/out and churn (bundle SOL sold ÷ bundle SOL), handoffs, factory, has_socials, creator_age_s, creator_funded_sol, fee_claims, creator_fee_sol; cr_prior_* = the creator's launches BEFORE this one (count, graduations, over $100K, best peak, minutes since the last); cc_prior_* = same-name launches in the 24 h before (count, best peak, minutes since); wb_n / wb_sol = scored early buyers (≥ 0.3 SOL within 180 s) and their SOL, wb_60s_* the same within 60 s, proven_60s / proven_180s = how many of them were proven wallets; entry_mc = market cap at +4 s; mc_60, mc_300, mc_900, mc_1800, mc_3600 = market cap at 1, 5, 15, 30, 60 min (buyers_60, buyers_300, holders_300, top10_300, vol5m_60 alongside); peak_30m, peak_24h, peak_mc, last_mc, graduated, grad_3600; x60 … x3600, xpeak = those marks ÷ entry_mc (an honest replay of a buy at +4 s). Base rates, not trades: use it to find which launch tells lift the odds of 5x / graduation, and by how much.
+
+**wallets.csv** — our wallet leaderboard: every wallet with 5+ resolved non-bundle early buys (≥ 0.3 SOL, ≥ 3 s after launch): buys, x2 / x5 / x10 (how many reached that multiple within 24 h of the buy), rate5x, rate10x, avg_age_s (how early it buys), avg_sol, sol_total, avg_entry_mc, buys_24h, first/last seen. "2x" is meaningless for early buys (most launches 2x from the floor); judge wallets on 5x and 10x with at least 8 buys, and treat a wallet with 50+ buys a day as a volume bot.
 
 ## After the trigger — the trace (marks at 10, 20, 30, 40, 50, 60 s and 2, 3, 5, 10, 15, 20, 30 min; `t60_x` = at 60 s)
 

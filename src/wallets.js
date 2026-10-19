@@ -45,6 +45,8 @@ refreshProven(); setInterval(refreshProven, 3600_000);
 export const provenCount = (mint) => early.get(mint)?.proven.size ?? 0;
 export const provenSize = () => proven.size;
 export const isProven = (w) => proven.has(w); // v0.18.19
+// v0.18.119 Project S: a wallet's scored record — resolved non-bundle early buys (≥ PROVEN_MIN_SOL, ≥ 3 s after launch), how many reached 5x / 10x within 24 h
+export function walletRecord(w) { try { const r = q.walletRecord.get(w, CFG.PROVEN_MIN_SOL); return r ? { n: r.n || 0, x5: r.x5 || 0, x10: r.x10 || 0, rate: r.n ? +((r.x5 || 0) / r.n).toFixed(3) : null } : null; } catch { return null; } }
 on("trade", (t, tr) => {
   const now = tr.ts;
   peakTick(t.mint, t.lastMc, now);

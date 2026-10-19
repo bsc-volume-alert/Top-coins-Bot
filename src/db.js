@@ -169,6 +169,7 @@ for (const sql of [
   // v0.18.118: copycat lookups (same name / symbol launched in the last 24 h) at every trigger
   "CREATE INDEX IF NOT EXISTS tokens_name ON tokens(name, create_ts)",
   "CREATE INDEX IF NOT EXISTS tokens_symbol ON tokens(symbol, create_ts)",
+  "CREATE INDEX IF NOT EXISTS wb_wallet ON wallet_buys(wallet)", // v0.18.119: a wallet's record at the moment it buys (Project S)
 ]) { try { db.exec(sql); } catch {} }
 export const q = {
   insToken: db.prepare(`INSERT OR IGNORE INTO tokens (mint,name,symbol,uri,creator,bonding_curve,create_slot,create_ts,create_sig) VALUES (?,?,?,?,?,?,?,?,?)`),
@@ -181,6 +182,7 @@ export const q = {
   countTierSince: db.prepare(`SELECT COUNT(*) FROM tokens WHERE tier>=? AND create_ts>=?`).pluck(),
   creatorRecent: db.prepare(`SELECT COUNT(*) FROM tokens WHERE creator=? AND create_ts>=? AND mint<>?`).pluck(),
   // v0.18.118 trigger context: the creator's earlier launches, copycats, market heat
+  walletRecord: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END) x5, SUM(CASE WHEN peak_24h>=10*entry_mc THEN 1 ELSE 0 END) x10 FROM wallet_buys WHERE wallet=? AND resolved=1 AND is_cluster=0 AND age_s>=3 AND sol>=? AND entry_mc>0`),
   creatorLast: db.prepare(`SELECT MAX(create_ts) FROM tokens WHERE creator=? AND mint<>? AND create_ts<?`).pluck(),
   copycats: db.prepare(`SELECT COUNT(*) n, MAX(peak_mc_usd) best, MAX(create_ts) last, SUM(graduated) grads FROM tokens WHERE name=? AND mint<>? AND create_ts>=?`),
   copySym: db.prepare(`SELECT COUNT(*) n FROM tokens WHERE symbol=? AND mint<>? AND create_ts>=?`).pluck(),

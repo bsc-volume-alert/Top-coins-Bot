@@ -32,6 +32,7 @@ import "./momre.js";
 import { momStats, strategySummary } from "./momentum.js";
 import { wbStats, leaderboardText, creatorsText } from "./wallets.js";
 import { cpStats } from "./copytrade.js";
+import { snStats } from "./snipe.js"; // v0.18.119 Project S paper snipers
 import { lcStats } from "./lifecycle.js";
 import { runnersText } from "./runners.js";
 
@@ -67,7 +68,7 @@ const hb = async () => {
   const g = sigStats(), c = q.closedSince.get(since);
   const mo = momStats();
   const upS = Math.floor(process.uptime()), upTxt = upS >= 3600 ? `${Math.floor(upS / 3600)}h${Math.floor((upS % 3600) / 60)}m` : `${Math.floor(upS / 60)}m`;
-  await tg(`💓 <b>${CFG.HEARTBEAT_MIN}m</b> · up ${upTxt} · ${restarts24()} restarts/24h · launches ${n} · prepared ${n1} · hand-offs ${g.handoffs} · early open ${g.open} · volume alerts ${mo.alerts} / open ${mo.open} · copy open ${cpStats().open} · wallets scored ${wbStats().recorded} · life samples ${lcStats().samples} · rpc ${g.rpc} · ws↻ ${sub.stats().reconnects} · SOL $${solUsdCached().toFixed(0)}`);
+  await tg(`💓 <b>${CFG.HEARTBEAT_MIN}m</b> · up ${upTxt} · ${restarts24()} restarts/24h · launches ${n} · prepared ${n1} · hand-offs ${g.handoffs} · early open ${g.open} · volume alerts ${mo.alerts} / open ${mo.open} · copy open ${cpStats().open} · snipers ${(() => { const z = snStats(); return `${Object.values(z.taken).reduce((a, b) => a + b, 0)} taken / ${z.open} open`; })()} · wallets scored ${wbStats().recorded} · life samples ${lcStats().samples} · rpc ${g.rpc} · ws↻ ${sub.stats().reconnects} · SOL $${solUsdCached().toFixed(0)}`);
 };
 setInterval(hb, CFG.HEARTBEAT_MIN * 60_000);
 // v0.18.91 watchdog (quiet mode means nobody reads the heartbeat): alarms — at most once per 30 min each — when the website stops answering,
