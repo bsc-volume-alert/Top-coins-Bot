@@ -40,9 +40,16 @@ export const closePosition = db.prepare(`UPDATE positions SET sell_order=@sell_o
 export const openPositions = () => db.prepare(`SELECT * FROM positions WHERE status='open' ORDER BY opened_ts`).all();
 export const positionOf = (paperId) => db.prepare(`SELECT * FROM positions WHERE paper_id=?`).get(paperId);
 export const hasPosition = (mint) => !!db.prepare(`SELECT 1 FROM positions WHERE mint=? AND status='open' LIMIT 1`).get(mint);
-export function dayNet(mode = CFG.MODE) { // today's realised result in lamports (UTC day), closed positions only
-  const start = Math.floor(Date.now() / 86400000) * 86400;
-  return db.prepare(`SELECT COALESCE(SUM(pnl_lamports),0) n, COUNT(*) c FROM positions WHERE status='closed' AND mode=? AND closed_ts>=?`).get(mode, start);
+/** start of today in the owner's time zone (Europe/London), as epoch seconds — v0.1.3: the day used to roll over at midnight UTC, 01:00 UK in summer */
+export function londonDayStart() {
+  const now = new Date(); const parts = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(now).map((x) => [x.type, x.value]));
+  return Math.floor(now / 1000) - ((Number(parts.hour) % 24) * 3600 + Number(parts.minute) * 60 + Number(parts.second));
+}
+export function dayNet(mode = CFG.MODE) { // today's realised result in lamports (UK day), closed positions only
+  return db.prepare(`SELECT COALESCE(SUM(pnl_lamports),0) n, COUNT(*) c FROM positions WHERE status='closed' AND mode=? AND closed_ts>=?`).get(mode, londonDayStart());
+}
+export function net24(mode = CFG.MODE) { // last 24 hours, closed positions only
+  return db.prepare(`SELECT COALESCE(SUM(pnl_lamports),0) n, COUNT(*) c FROM positions WHERE status='closed' AND mode=? AND closed_ts>=?`).get(mode, Math.floor(Date.now() / 1000) - 86400);
 }
 export const pendingBuys = () => db.prepare(`SELECT * FROM orders WHERE side='buy' AND mode='live' AND status IN ('sent','pending') ORDER BY id`).all();
 export const lastSellSig = (paperId) => db.prepare(`SELECT id, sig FROM orders WHERE side='sell' AND paper_id=? AND sig IS NOT NULL ORDER BY id DESC LIMIT 1`).get(paperId);

@@ -14,7 +14,7 @@ import { getAccounts, getBalance, buildTx, simulate, send, sendUntilConfirmed, w
 import { ata, parseTokenAccount, ixBudget, ixTip, ixTransfer, PK, PUMP, PUMP_AMM } from "./solana.mjs";
 import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
-import { newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, hasPosition, dayNet, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
+import { newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, hasPosition, dayNet, net24, londonDayStart, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
 const VERSION = "0.1.3";
 const nowS = () => Math.floor(Date.now() / 1000);
@@ -120,7 +120,7 @@ async function handleTrigger(m) {
   if (fromTrig() > CFG.TRIGGER_MAX_AGE_MS) return skip(`trigger ${fromTrig()} ms old`);
   if (m.venue && !/pump|pumpswap/i.test(m.venue)) return skip(`venue ${m.venue} not handled yet`);
   if (hasPosition(m.mint)) return skip("already holding");
-  const today = new Date().toISOString().slice(0, 10), day = dayNet(S.mode === "live" ? "live" : "shadow");
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" }), day = dayNet(S.mode === "live" ? "live" : "shadow"); // UK day, like the box
   if (S.stopOverrideDay !== today && day.n <= -lamports(S.stake) * CFG.DAILY_STOP_STAKES) { if (S.stoppedDay !== today) { S.stoppedDay = today; tg(`⛔ <b>Daily stop</b> — ${sol(day.n).toFixed(3)} SOL today over ${day.c} trades. No more buys until tomorrow (UTC). <code>/live on</code> re-arms it for today.`); } return skip("daily stop"); }
   if (!S.pub) return skip("no wallet yet");
   if (inflight.has(m.mint)) return skip("buy already in flight for this coin");
@@ -309,10 +309,10 @@ async function housekeeping() {
       if (sweptDay !== day && bal != null && bal > lamports(CFG.SWEEP_CEILING_SOL) + lamports(0.05) && !ops.length) { sweptDay = day; const amt = bal - lamports(CFG.SWEEP_CEILING_SOL);
         try { const tx = await buildTx(S.pub, [...ixBudget(20_000, CFG.CU_PRICE), ixTransfer(S.pub, PK(CFG.SWEEP_TO), amt)], S.kp); const s = await send(tx); const c = await waitConfirm(s.sig, 30000); log("sweep", `${sol(amt)} SOL → ${CFG.SWEEP_TO} ${c.status}`); tg(`🏦 swept ${sol(amt).toFixed(3)} SOL to <code>${CFG.SWEEP_TO}</code> (${c.status})`); } catch (e) { log("sweep-error", e.message); } } }
     const bal = S.pub ? await balance() : null;
-    const dayStart = Math.floor(Date.now() / 86400000) * 86400, tl = totals("live"), ts = totals("shadow");
+    const dayStart = londonDayStart(), tl = totals("live"), ts = totals("shadow");
     writeFileSync(join(EXEC_HOME, "status.json"), JSON.stringify({ version: VERSION, mode: S.mode, strategy: S.strategy, exit: S.exit, stake: S.stake, wallet: S.pub?.toBase58() || null, balance: bal != null ? sol(bal) : null, sweepTo: CFG.SWEEP_TO || null,
       open: ops.map((p) => ({ id: p.paper_id, name: p.name, mint: p.mint, mode: p.mode, opened_ts: p.opened_ts, cost: sol(p.cost_lamports), tokens: p.tokens })),
-      dayLive: dayNet("live"), dayShadow: dayNet("shadow"), totalLive: { n: tl.n, pnl: sol(tl.pnl), win: tl.n ? tl.w / tl.n : null }, totalShadow: { n: ts.n, pnl: sol(ts.pnl), win: ts.n ? ts.w / ts.n : null },
+      dayLive: dayNet("live"), dayShadow: dayNet("shadow"), h24Live: net24("live"), h24Shadow: net24("shadow"), totalLive: { n: tl.n, pnl: sol(tl.pnl), win: tl.n ? tl.w / tl.n : null }, totalShadow: { n: ts.n, pnl: sol(ts.pnl), win: ts.n ? ts.w / ts.n : null },
       recent: recentClosed(10), skipsToday: skipSummary(dayStart), stats: stats(), rpc: rpcStats, trackerSeenS: S.lastTracker ? Math.round((Date.now() - S.lastTracker) / 1000) : null, now: nowS() }));
   } catch (e) { console.error("[housekeeping]", e.message); }
   finally { housekeepingBusy = false; }
