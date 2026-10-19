@@ -1,0 +1,8 @@
+{
+  "_about": "The study's register. Each rule is scored only on trades entered AFTER after_ts (out of sample); the study adds rules here and never edits an existing one's filter or after_ts. filter ops: < <= > >= == != on columns of data/abcd.csv; exit is the paper column to score (x_flow4 runner, x_h5 5-min, x_h3 3-min, x_h15, x_h5f14, x_t15s40).",
+  "strategies": [
+    { "id": "S1", "created": "2026-10-19T09:30Z", "after_ts": 1792401000, "book": "A", "exit": "x_h3", "filter": [], "note": "sell at 3 minutes instead of 5 (from 84 post-fix trades: +10.1% vs +5.0%)" },
+    { "id": "S2", "created": "2026-10-19T09:30Z", "after_ts": 1792401000, "book": "A", "exit": "x_flow4", "filter": [{ "f": "wal60", "op": "<=", "v": 65 }], "note": "fewer than 65 wallets in the trigger minute (from 49 live coins: 72% win vs 38%)" },
+    { "id": "S3", "created": "2026-10-19T09:30Z", "after_ts": 1792401000, "book": "A", "exit": "x_flow4", "filter": [{ "f": "max_share", "op": ">", "v": 0.1 }], "note": "one buyer took more than 10% of the trigger minute's buying (from 49 live coins: 75% win vs 36%)" }
+  ]
+}
