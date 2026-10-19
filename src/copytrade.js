@@ -43,7 +43,7 @@ export function openCopy(kind, who, mint, name, symbol, price, mc, ts, note) {
   let hl = null; try { hl = holdersLine(recordHolders(r.lastInsertRowid, mint)); } catch {} // v0.18.5
   let fi = null; try { fi = feeInfo(mint); q.setFees.run(fi.accrued, fi.claims, fi.claimedSol, r.lastInsertRowid); } catch {} // v0.18.4
   let cs = null; try { cs = clusterSnap(mint); if (cs) q.setChurn.run(cs.churn, cs.cOut, cs.held, cs.handoffs, r.lastInsertRowid); } catch {} // v0.17.5: bundle churn at entry
-  const pos = { id: r.lastInsertRowid, label: who, e: newExits(price, mc, 0), w5: [], closed: false, entryTs: ts, lastMc: mc, lastPx: price, name, kind, alerted: !String(kind).startsWith("sn"), noExec: !!note?.noExec }; // v0.18.119: Project S books are quiet and never reach the executor
+  const pos = { id: r.lastInsertRowid, label: who, e: newExits(price, mc, 0), w5: [], closed: false, entryTs: ts, lastMc: mc, lastPx: price, lastTs: ts, name, kind, alerted: !String(kind).startsWith("sn"), noExec: !!note?.noExec }; // v0.18.119: Project S books are quiet and never reach the executor
   if (kind === "climber") { pos.alerted = (note.buyers || 0) >= CFG.CLIMB_ALERT_BUYERS; if (pos.alerted) tg(`🪜 <b>CLIMBER</b> — ${esc(name)} ($${esc(symbol)})\nStairs: ${note.steps} · ${note.buyers} buyers · no burst · entry at +${Math.round(note.cp / 60)}m\nMC <b>$${fmt(mc)}</b>\n${links(mint)}`).then((id) => { pos.msgId = id; }); }
   if (kind === "wave2") { pos.alerted = !!note.alert; try { q.setTight.run(note.tight ? 1 : 0, r.lastInsertRowid); } catch {} if (pos.alerted) tg(`🌊 <b>SECOND WAVE</b> — ${esc(name)} ($${esc(symbol)}) · +${Math.round(note.cp / 60)}m\n${note.buyers} buyers (${note.new60} new in 60s) · buy$/sell$ ${note.bs.toFixed(1)} · price ${note.pxChg >= 0 ? "+" : ""}${(note.pxChg * 100).toFixed(0)}% vs 60s ago${note.bundle != null ? ` · bundle ${note.bundle.toFixed(0)}%` : ""}${cs && cs.churn != null ? ` · bundle churn ${(cs.churn * 100).toFixed(0)}%` : ""}\nMC <b>$${fmt(mc)}</b>${fi ? "\n" + feeLine(fi, ts) : ""}${hl ? "\n" + hl : ""}\n${links(mint)}`).then((id) => { pos.msgId = id; }); }
   if (kind === "revival") tg(`🔁 <b>REVIVAL</b> — ${esc(name)} ($${esc(symbol)}) · ${Math.round(note.age / 60)}m old\nFell ${((1 - mc / note.peakMc) * 100).toFixed(0)}% from peak $${fmt(note.peakMc)} · ${note.new5} new buyers in 5m · volume ${note.volRatio.toFixed(1)}x previous 5m\nMC <b>$${fmt(mc)}</b>\n${links(mint)}`).then((id) => { pos.msgId = id; });
@@ -78,7 +78,11 @@ on("graduated", (t, tr) => {
     { ageS, buyers: L.buyers, mc5: cp5?.mc ?? null, buyers5: cp5?.buyers ?? null, b5: cp5?.b ?? null, s5: cp5?.sl ?? null, maxBurst: L.maxBurst, bs: cp5 && cp5.sl > 0 ? cp5.b / cp5.sl : null });
 });
 
+// v0.18.146: how far behind the chain the tracker is — newest block time seen on any trade vs the wall clock (normally 1–5 s: block times are whole seconds and lag
+// the wall clock; 20 s+ after a restart while the backlog replays). A5 / F6 read a price 5–10 s after a trigger and must not act on a stale one.
+let newestBlockTs = 0; export const feedBehindS = () => (newestBlockTs ? Math.floor(Date.now() / 1000) - newestBlockTs : 999);
 function tick(mint, price, mc, sol, isBuy, ts, wallet = null, quiet = false) {
+  if (!quiet && ts > newestBlockTs) newestBlockTs = ts;
   if (!quiet) try { traceTick(mint, price, sol, sol * solUsdCached(), isBuy, wallet, ts); } catch (e) { console.error("[p5trace]", e.message); } // v0.18.113 (traces outlive the paper position: 10 min after entry)
   const arr = P.get(mint); if (!arr) return;
   for (const p of arr) {
@@ -113,7 +117,7 @@ setInterval(() => { try { sweepTraces(); } catch {} }, 5000); // v0.18.113: mark
 // v0.18.140: the 5-min (h5) sale fired only on a trade, so a bonding-curve coin that went quiet after minute 5 kept its paper sale open and never told the
 // executor (19 Oct: 10 of 24 S9 shadow legs sold by the executor's 7-min backstop instead). Every 5 s, a position past 5 min with no h5 yet and no trade for 5 s
 // is stepped at its last price on the clock — the sale is booked at the price a seller would have met, and the exit message goes out on time.
-setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [mint, arr] of P) { const p = arr.find((x) => !x.closed && x.e?.x?.h5 == null && now - x.entryTs >= 300 && now - (x.lastTs || 0) >= 5 && x.lastPx > 0); if (p) { try { tick(mint, p.lastPx, p.lastMc, 0, true, now, null, true); } catch (e) { console.error("[quiet tick]", e.message); } } } }, 5000);
+setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [mint, arr] of P) { const p = arr.find((x) => !x.closed && x.e?.x?.h5 == null && now - x.entryTs >= 300 && x.lastTs > 0 && now - x.lastTs >= 5 && x.lastPx > 0); if (p) { try { tick(mint, p.lastPx, p.lastMc, 0, true, now, null, true); } catch (e) { console.error("[quiet tick]", e.message); } } } }, 5000); // v0.18.146: x.lastTs > 0 — a position restored after a restart has seen no trade yet, so its last price is only the entry price
 
 function close(mint, p, reason) {
   if (p.wall0 && !p.noExec) { try { const cm = (p.lastPx || p.e.entry) / p.e.entry, v = finalExits(p.e, cm); execSend({ type: "close", id: Number(p.id), mint, reason, mult: cm, h5: v.h5 ?? null, flow4: v.flow4 ?? null }); } catch {} } // v0.18.90 → executor (backstop: sell if still held)
@@ -161,7 +165,7 @@ export function restoreCopyFromDb() {
       e.flowArmed = e.x.tp15 != null; e.ffDone = now - r.entry_ts >= 120; e.splitBranch = r.split_branch && r.split_branch !== "sweep" ? r.split_branch : null; e.splitHalf = r.split_branch === "mid" && pk >= 1.5; e.ddPre15 = r.dd_pre15 ?? null;
       try { e.path = r.path ? JSON.parse(r.path) : {}; } catch { e.path = {}; }
       const pos = { id: r.id, label: (r.trigger_kind || "").split(":").slice(1).join(":") || r.strategy, e, w5: [], closed: false, entryTs: r.entry_ts, lastMc: r.entry_mc, lastPx: r.entry_price, name: r.name, kind: r.strategy, alerted: false, hit15Saved: r.t_hit15_s != null, restored: "db" };
-      if (/^p5[ew]\d+$/.test(r.strategy)) { pos.wall0 = r.entry_ts * 1000; if (e.x.h5 != null) e.h5Sent = true; if (e.x.flow4 != null) e.flow4Sent = true; } // v0.18.90: a restored P5 position still tells the executor when its exit fires (rules already fired are not re-sent)
+      if (/^p5[ewc]\d+$/.test(r.strategy) || /^sn(1|3|4|6|6b|9|10)$/.test(r.strategy)) { pos.wall0 = r.entry_ts * 1000; if (e.x.h5 != null) e.h5Sent = true; if (e.x.flow4 != null) e.flow4Sent = true; } // v0.18.90: a restored P5 position still tells the executor when its exit fires (rules already fired are not re-sent) // v0.18.146: + A5/F6 (p5c*) and the executor's sniper books — before, a restart cut their sell messages and the executor fell back to its 7-min / 6½-h backstop
       const arr = P.get(r.mint) || []; arr.push(pos); P.set(r.mint, arr);
       setTimeout(() => close(r.mint, pos, "time"), Math.max(5_000, CFG.MOM_MAX_HOLD_MIN * 60_000 - (Date.now() - r.entry_ts * 1000))); n++;
     }

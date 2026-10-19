@@ -12,7 +12,7 @@ import { watch as afterWatch, tick as afterTick } from "./aftercare.js";
 import { retrySocials } from "./socials.js";
 import { volumeQuality, qualityLine } from "./quality.js";
 import { markExitTimes, stopStep, stopFinal, flowStep, pathStep, ffStep, ffFinal, cleanFlow, splitStep, splitFinal, deadStep, p3dFinal, h2Step, h2Final, s15Step, s15Final, h5Step, h5Final, h5Key } from "./exits.js";
-import { openCopy, positionsOf } from "./copytrade.js";
+import { openCopy, positionsOf, feedBehindS } from "./copytrade.js";
 import { startTrace, noteExits } from "./p5trace.js"; // v0.18.115: the core trigger's after-entry marks
 const coreListeners = []; export const onCoreEntry = (fn) => coreListeners.push(fn);
 import { feeInfo, feeLine } from "./fees.js";
@@ -359,16 +359,21 @@ export function p5Check(mint, s, tr, now) {
         if (maxW && !String(maxW).startsWith("tx:")) { feat.maxWallet = maxW; try { walletStatsFor(pos.id, "big", maxW); } catch {} } } // v0.18.122: the biggest buyer's 7-day GMGN record (gw_big_*)
       // v0.18.142 A5 (owner, 19 Oct 19:56 UK; the 19:48 analysis: 51 of A's coins whose price was ≥ 1.02x the trigger 5 s later made +4.4% a trade at real costs vs A's −1.7%, stops 25% vs 40%):
       // 5 s after A's own trigger, if A took the coin and the price is still ≥ A5_MIN x the trigger price, open book A5 (strategy p5c5) at that price — its own paper trade, its own executor leg
-      if (pos?.id && strat === "p5e30" && !skipWhy) setTimeout(() => { try {
-        p5.a5c = (p5.a5c || 0) + 1; const ap = positionsOf(mint).find((x) => x.id === pos.id), lp = ap?.lastPx, lmc = ap?.lastMc; if (!(lp > 0)) return;
-        const r = lp / px; if (r < A5_MIN) { p5.a5s = (p5.a5s || 0) + 1; return; } try { if (q.hasStrat.get("p5c5", mint)) return; } catch {}
-        const t5 = Math.floor(Date.now() / 1000), p2 = openCopy("p5c5", "A5 +5s", mint, name || mint.slice(0, 8), symbol || "", lp, lmc || mc, t5, { v5, venue, ageS: ageS != null ? ageS + 5 : null, wall0: Date.now(), blockTs: t5, pass: true, skipWhy: null, bundle: meta?.bundle_pct ?? null, bundleWallets: meta?.bundle_wallets ?? null, wal60: wal.size, preBuyers, creator: meta?.creator || null });
-        if (p2?.id) { p2.alerted = false; p5.a5t = (p5.a5t || 0) + 1; try { q.setEarly.run(JSON.stringify({ ...feat, a5: { trigPx: px, px5: lp, r: +r.toFixed(4), aId: pos.id } }), p2.id); } catch {} }
-      } catch (e) { console.error("[A5]", e.message); } }, 5000);
+      // v0.18.146: the confirm books only read a price the tracker is current on: skipped when A's own trigger was > CONFIRM_MAX_LAG_S behind the chain or the feed is now
+      // (19 Oct 20:39 UK: after a restart the tracker was 21 s behind; A5 saw "1.16x" while the pool was at 0.70x of paper and the shadow buy filled 31% below it)
+      const confirmBook = (book, waitMs, minR, label) => { if (pos?.id && strat === "p5e30" && !skipWhy) setTimeout(() => { try {
+        p5[book + "c"] = (p5[book + "c"] || 0) + 1; const lagA = (pos.fs?.lag ?? 0) / 1000, lagNow = feedBehindS(); if (lagA > CONFIRM_MAX_LAG_S || lagNow > CONFIRM_MAX_LAG_S) { p5[book + "lag"] = (p5[book + "lag"] || 0) + 1; return; }
+        const ap = positionsOf(mint).find((x) => x.id === pos.id), lp = ap?.lastPx, lmc = ap?.lastMc; if (!(lp > 0)) return;
+        const r = lp / px; if (r < minR) { p5[book + "s"] = (p5[book + "s"] || 0) + 1; return; } try { if (q.hasStrat.get(book, mint)) return; } catch {}
+        const t5 = Math.floor(Date.now() / 1000), p2 = openCopy(book, label, mint, name || mint.slice(0, 8), symbol || "", lp, lmc || mc, t5, { v5, venue, ageS: ageS != null ? ageS + 5 : null, wall0: Date.now(), blockTs: t5, pass: true, skipWhy: null, bundle: meta?.bundle_pct ?? null, bundleWallets: meta?.bundle_wallets ?? null, wal60: wal.size, preBuyers, creator: meta?.creator || null });
+        if (p2?.id) { p2.alerted = false; p5[book + "t"] = (p5[book + "t"] || 0) + 1; try { q.setEarly.run(JSON.stringify({ ...feat, a5: { trigPx: px, px5: lp, r: +r.toFixed(4), aId: pos.id, waitS: waitMs / 1000, lagA, lagNow } }), p2.id); } catch {} }
+      } catch (e) { console.error("[" + book + "]", e.message); } }, waitMs); };
+      confirmBook("p5c5", 5000, A5_MIN, "A5 +5s"); // A5: 5 s, ≥ 1.02x
+      confirmBook("p5c10", 10000, 1.05, "F6 +10s"); // v0.18.146 F6 (the 21:40 study): 10 s, ≥ 1.05x — +8.3% on 56, stop 12%; paper
     })().catch((e) => console.error("[p5 early]", e.message));
   }
 }
-const A5_MIN = Number(process.env.A5_MIN || 1.02);
+const A5_MIN = Number(process.env.A5_MIN || 1.02), CONFIRM_MAX_LAG_S = Number(process.env.CONFIRM_MAX_LAG_S || 8); // normal feed: 1–5 s behind block time
 function dipCheck(mint, s, tr, now) {
   const d = s.dip; if (!d || d.done) return;
   if (now - d.ts > CFG.MOM_DIP_WINDOW_S || tr.price >= d.px * 1.5) { d.done = true; return; }
