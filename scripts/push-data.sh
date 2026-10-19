@@ -19,6 +19,7 @@ curl -s -m 120 "http://127.0.0.1:${PORT}/api/p5data?key=${KEY}" -o data/abcd.csv
 cp -f "$E/status.json" data/status.json 2>/dev/null || true
 (cd "$T" && HOURS=24 nice -n 19 ionice -c 3 node scripts/dump-launches.cjs launches) > data/launches.csv 2>/tmp/dump-launches.err || { echo "[push-data] launches dump failed: $(head -c 300 /tmp/dump-launches.err)"; }
 (cd "$T" && nice -n 19 ionice -c 3 node scripts/dump-launches.cjs wallets) > data/wallets.csv 2>/tmp/dump-wallets.err || { echo "[push-data] wallets dump failed: $(head -c 300 /tmp/dump-wallets.err)"; }
+(cd "$T" && nice -n 19 node scripts/dump-launches.cjs smart) > data/smart_wallets.csv 2>/dev/null || true
 date -u +%FT%TZ > data/pushed_at.txt
 git add -A data
 git -c user.name=droplet -c user.email=droplet@tracker commit -q -m "data $(date -u +%FT%TZ): $(($(wc -l < data/abcd.csv) - 1)) triggers, $(($(wc -l < data/launches.csv 2>/dev/null || echo 1) - 1)) launches" || { echo "[push-data] nothing new"; exit 0; }

@@ -170,6 +170,7 @@ for (const sql of [
   "CREATE INDEX IF NOT EXISTS tokens_name ON tokens(name, create_ts)",
   "CREATE INDEX IF NOT EXISTS tokens_symbol ON tokens(symbol, create_ts)",
   "CREATE INDEX IF NOT EXISTS wb_wallet ON wallet_buys(wallet)", // v0.18.119: a wallet's record at the moment it buys (Project S)
+  "CREATE INDEX IF NOT EXISTS tokens_cts ON tokens(create_ts)", // v0.18.121: launches by time (smart-wallet harvest, heat)
 ]) { try { db.exec(sql); } catch {} }
 export const q = {
   insToken: db.prepare(`INSERT OR IGNORE INTO tokens (mint,name,symbol,uri,creator,bonding_curve,create_slot,create_ts,create_sig) VALUES (?,?,?,?,?,?,?,?,?)`),

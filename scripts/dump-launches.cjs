@@ -14,6 +14,12 @@ const utc = (ts) => (ts ? new Date(ts * 1000).toISOString().slice(0, 19).replace
 const hourUK = (ts) => Number(new Date(ts * 1000).toLocaleString("en-GB", { timeZone: "Europe/London", hour12: false }).slice(12, 14));
 const r2 = (x, d = 2) => (x == null ? null : +Number(x).toFixed(d));
 const mode = process.argv[2] || "launches";
+if (mode === "smart") { // the GMGN-harvested smart wallets (src/smartwallets.js) and the coins they were early on
+  let rows = []; try { rows = db.prepare(`SELECT w.wallet, w.wins, w.coins, w.tags, w.profit, w.first_ts, w.last_ts, w.med_early_s, w.gmgn_smart FROM smart_wallets w ORDER BY w.wins DESC, w.profit DESC`).all(); } catch {}
+  const out = ["wallet,early_wins,coins_seen,gmgn_tags,profit_usd,first_utc,last_utc,median_early_s,gmgn_smart"];
+  for (const w of rows) out.push([w.wallet, w.wins, w.coins, w.tags, r2(w.profit, 0), utc(w.first_ts), utc(w.last_ts), w.med_early_s, w.gmgn_smart].map(csv).join(","));
+  process.stdout.write(out.join("\n") + "\n"); process.exit(0);
+}
 if (mode === "wallets") {
   const rows = db.prepare(`SELECT wallet, COUNT(*) n, SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END) x5, SUM(CASE WHEN peak_24h>=10*entry_mc THEN 1 ELSE 0 END) x10, SUM(CASE WHEN peak_24h>=2*entry_mc THEN 1 ELSE 0 END) x2,
       AVG(age_s) avg_age_s, AVG(sol) avg_sol, SUM(sol) sol_total, MIN(ts) first_ts, MAX(ts) last_ts, AVG(entry_mc) avg_entry_mc, SUM(CASE WHEN ts>=? THEN 1 ELSE 0 END) buys_24h

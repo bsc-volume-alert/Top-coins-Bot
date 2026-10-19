@@ -8,11 +8,13 @@
 //   S3 copycat        — the same name as a coin that peaked ≥ $SN_COPY_PEAK in the last 24 h · enter on the first trade after the create slot
 //   S4 clean launch   — bundle < 5% of supply, the dev bought 0.2–3 SOL, ≥ 10 outside buyers and ≥ 5 SOL in within 15 s · enter on the trade that completes it
 //   S5 20-s inflow    — ≥ 15 SOL from ≥ 12 wallets within 20 s, create-slot buys excluded · enter on the trade that crosses it
+//   S6 GMGN smart     — a wallet from smartwallets.js (GMGN-tagged smart / renowned, or early and in profit on ≥ 2 coins that peaked ≥ $300K) buys ≥ 0.2 SOL within 60 s · enter on that trade
 // One entry per coin per book, market cap at entry under SN_MAX_MC, at most SN_MAX_PER_HOUR entries per book per hour (the rest are counted, not taken).
 // Everything a book sees at its entry is stored in early_json.sn (→ the data set's sn_* columns); the trace, holders and GMGN (at +90 s) follow as for A.
 import { q } from "./db.js";
 import { on, holds, fmt } from "./launch-monitor.js";
 import { isProven, walletRecord } from "./wallets.js";
+import { isSmart, smartInfo } from "./smartwallets.js"; // v0.18.121 S6
 import { openCopy, onCopyClose, positionsOf } from "./copytrade.js";
 import { triggerContext } from "./momentum.js";
 import { gmgnEntry } from "./gmgn.js";
@@ -28,6 +30,7 @@ export const SN_BOOKS = {
   sn3: { id: "S3", name: "copycat", what: `the same name as a coin that peaked ≥ $${fmt(SN.COPY_PEAK)} in the last 24 h — bought on the first trade after the create block` },
   sn4: { id: "S4", name: "clean launch", what: `bundle < ${SN.CLEAN_BUNDLE}%, the dev bought ${SN.CLEAN_DEV_MIN}–${SN.CLEAN_DEV_MAX} SOL, ${SN.CLEAN_BUYERS}+ outside buyers and ${SN.CLEAN_SOL}+ SOL in within ${SN.CLEAN_BY_S} s` },
   sn5: { id: "S5", name: "20-s inflow", what: `${SN.FLOW_SOL}+ SOL from ${SN.FLOW_WALLETS}+ wallets within ${SN.FLOW_BY_S} s (create-block buys excluded)` },
+  sn6: { id: "S6", name: "GMGN smart wallet", what: `a wallet GMGN tags smart / renowned, or that was early and in profit on 2+ coins that peaked ≥ $300K (harvested from GMGN's top traders), buys ≥ ${SN.WALLET_MIN_SOL} SOL within ${SN.WALLET_BY_S} s — bought on that trade` },
 };
 export const SN_KINDS = Object.keys(SN_BOOKS);
 export const sn = { watched: 0, fired: {}, taken: {}, overMc: {}, capped: {}, open: 0 };
@@ -53,6 +56,7 @@ on("trade", (t, tr) => {
   if (L.crOk && !L.fired.sn1 && age <= SN.FIRST_BY_S) fire("sn1", L, t, tr, age, `creator: ${L.cr.n} earlier launches, ${L.cr.grads} graduated, best $${fmt(L.cr.best || 0)}`, L.cr.grads);
   if (L.ccOk && !L.fired.sn3 && age <= SN.FIRST_BY_S) fire("sn3", L, t, tr, age, `copy of a $${fmt(L.cc.best)} coin launched ${L.cc.min} min ago (${L.cc.n} same-name in 24 h)`, L.cc.best);
   if (tr.isBuy && !L.fired.sn2 && age <= SN.WALLET_BY_S && tr.sol >= SN.WALLET_MIN_SOL && tr.wallet && isProven(tr.wallet)) { const rec = walletRecord(tr.wallet) || {}; fire("sn2", L, t, tr, age, `proven wallet ${short(tr.wallet)} (${rec.x5 ?? "?"}/${rec.n ?? "?"} reached 5x) bought ${tr.sol.toFixed(2)} SOL`, rec.rate ?? null, { wallet: tr.wallet, wallet_n: rec.n ?? null, wallet_x5: rec.x5 ?? null, wallet_x10: rec.x10 ?? null, wallet_rate: rec.rate ?? null }); }
+  if (tr.isBuy && !L.fired.sn6 && age <= SN.WALLET_BY_S && tr.sol >= SN.WALLET_MIN_SOL && tr.wallet && isSmart(tr.wallet)) { const si = smartInfo(tr.wallet) || {}; fire("sn6", L, t, tr, age, `smart wallet ${short(tr.wallet)} (${si.wins ?? 0} early wins on ${si.coins ?? 0} big coins${si.gmgn ? ", GMGN-tagged" : ""}) bought ${tr.sol.toFixed(2)} SOL`, si.wins ?? null, { wallet: tr.wallet, wallet_n: si.coins ?? null, wallet_x5: si.wins ?? null, wallet_x10: null, wallet_rate: si.coins ? +((si.wins || 0) / si.coins).toFixed(3) : null }); }
   if (!L.fired.sn4 && age <= SN.CLEAN_BY_S && t.bundle && t.bundle.pct < SN.CLEAN_BUNDLE && t.bundle.devBuy >= SN.CLEAN_DEV_MIN && t.bundle.devBuy <= SN.CLEAN_DEV_MAX && L.buyers.size >= SN.CLEAN_BUYERS && L.outSol >= SN.CLEAN_SOL) fire("sn4", L, t, tr, age, `clean: bundle ${t.bundle.pct.toFixed(1)}%, dev ${t.bundle.devBuy.toFixed(2)} SOL, ${L.buyers.size} buyers / ${L.outSol.toFixed(1)} SOL by ${age} s`, L.buyers.size);
   if (!L.fired.sn5 && age <= SN.FLOW_BY_S && L.buyers.size >= SN.FLOW_WALLETS && L.outSol >= SN.FLOW_SOL) fire("sn5", L, t, tr, age, `${L.outSol.toFixed(1)} SOL from ${L.buyers.size} wallets by ${age} s`, L.outSol);
 });
