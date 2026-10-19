@@ -94,6 +94,16 @@ entry) and exit gap (our sale vs the paper exit price). The 24-hour figures are 
 closing the account only on the last leg, two strategies in one burst → three legs, exit arriving during the buy, sell all) and the page rendered
 from a synthetic status file against a seeded tracker DB (four boxes, strip, commands sent by the switches and stake buttons, phone width).
 
+### v0.3.3 — a mode per book (off · shadow · live)
+Owner's ask (19 Oct 09:58): shadow and live per book, not one switch for the wallet. Each book now has its own mode; a trigger can produce a real
+leg for A and a simulated leg for B on the same coin. The wallet-wide word (status badge, `/live on|shadow|off`) is derived from the books and the
+three old commands became presets: every switched-on book → live / shadow, or everything off. `/live book a|b|c|d off|shadow|live` is the real
+control (the page's three buttons per book send exactly that; "on" means live if any book is live, otherwise shadow). The daily stop counts live
+books only and stops live legs only; the balance check covers live legs only (a shadow leg just needs the wallet to hold the stake for the
+simulation); a shadow leg next to a live leg of the same coin no longer stops the live sale from closing the token account. Tested offline on the
+fake chain: migration from the v0.3 {on} shape, A live + B shadow on one trigger, C/D switched by command, shadow sale at the quote vs live sale on
+chain, presets, all-off skip, 'on' default, sell all. Books A–D are the website's letters (glossary at the top of the page).
+
 ## Shadow mode needs a funded wallet
 A buy can only be simulated against the chain with a payer that holds the stake, so shadow mode simulates with the real bot wallet: ~0.2 SOL in it
 is enough at a 0.1 stake. Nothing is signed in shadow mode. Shadow sells are quoted from the curve at the moment the exit fires (a sell cannot be
