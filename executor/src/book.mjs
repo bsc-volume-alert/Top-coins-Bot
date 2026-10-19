@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTE
 CREATE INDEX IF NOT EXISTS orders_ts ON orders(ts); CREATE INDEX IF NOT EXISTS positions_status ON positions(status);`);
 // v0.2.0: two books side by side (runner + hold-5) — a position is (paper trade, exit). Existing rows were all hold-5.
 try { db.exec(`ALTER TABLE orders ADD COLUMN exit TEXT`); } catch {}
+// v0.3.0: four books — each is (strategy, exit): runner = p5e30/flow4, hold5 = p5e30/h5, wide = p5w30/flow4, strict = p5e50/flow4. `book` names it on every row.
+try { db.exec(`ALTER TABLE orders ADD COLUMN book TEXT`); } catch {}
 if (!db.prepare(`PRAGMA table_info(positions)`).all().some((c) => c.name === "exit")) {
   db.exec(`BEGIN; ALTER TABLE positions RENAME TO positions_v1;
     CREATE TABLE positions (paper_id INTEGER, exit TEXT NOT NULL DEFAULT 'h5', mint TEXT, name TEXT, strategy TEXT, mode TEXT, opened_ts INTEGER, tokens INTEGER, cost_lamports INTEGER, buy_order INTEGER,
@@ -28,12 +30,14 @@ if (!db.prepare(`PRAGMA table_info(positions)`).all().some((c) => c.name === "ex
     UPDATE orders SET exit='h5' WHERE exit IS NULL AND paper_id IS NOT NULL;
     CREATE INDEX IF NOT EXISTS positions_status ON positions(status); COMMIT;`);
 }
+try { db.exec(`ALTER TABLE positions ADD COLUMN book TEXT`); } catch {}
+db.exec(`UPDATE positions SET book = CASE WHEN exit='flow4' THEN 'runner' ELSE 'hold5' END WHERE book IS NULL; UPDATE orders SET book = CASE WHEN exit='flow4' THEN 'runner' WHEN exit='h5' THEN 'hold5' END WHERE book IS NULL AND exit IS NOT NULL;`);
 
 const now = () => Math.floor(Date.now() / 1000);
-const insOrder = db.prepare(`INSERT INTO orders (ts, mode, side, paper_id, exit, mint, name, strategy, rule, venue, ix_kind, stake_lamports, amount_tokens, slippage, quote_out, min_out, tip_lamports, cu_price, status, from_trigger_ms, skip_reason, detail)
-  VALUES (@ts, @mode, @side, @paper_id, @exit, @mint, @name, @strategy, @rule, @venue, @ix_kind, @stake_lamports, @amount_tokens, @slippage, @quote_out, @min_out, @tip_lamports, @cu_price, @status, @from_trigger_ms, @skip_reason, @detail)`);
+const insOrder = db.prepare(`INSERT INTO orders (ts, mode, side, paper_id, exit, book, mint, name, strategy, rule, venue, ix_kind, stake_lamports, amount_tokens, slippage, quote_out, min_out, tip_lamports, cu_price, status, from_trigger_ms, skip_reason, detail)
+  VALUES (@ts, @mode, @side, @paper_id, @exit, @book, @mint, @name, @strategy, @rule, @venue, @ix_kind, @stake_lamports, @amount_tokens, @slippage, @quote_out, @min_out, @tip_lamports, @cu_price, @status, @from_trigger_ms, @skip_reason, @detail)`);
 export function newOrder(o) {
-  const row = { ts: now(), mode: CFG.MODE, side: null, paper_id: null, exit: null, mint: null, name: null, strategy: null, rule: null, venue: null, ix_kind: null, stake_lamports: null, amount_tokens: null, slippage: null, quote_out: null, min_out: null,
+  const row = { ts: now(), mode: CFG.MODE, side: null, paper_id: null, exit: null, book: null, mint: null, name: null, strategy: null, rule: null, venue: null, ix_kind: null, stake_lamports: null, amount_tokens: null, slippage: null, quote_out: null, min_out: null,
     tip_lamports: null, cu_price: null, status: "built", from_trigger_ms: null, skip_reason: null, detail: null, ...o };
   for (const k of ["stake_lamports", "amount_tokens", "quote_out", "min_out", "tip_lamports"]) if (row[k] != null) row[k] = Number(row[k]);
   if (row.detail && typeof row.detail !== "string") row.detail = JSON.stringify(row.detail);
@@ -45,14 +49,15 @@ export function updOrder(id, patch) {
   const keys = Object.keys(p); if (!keys.length) return;
   db.prepare(`UPDATE orders SET ${keys.map((k) => `${k}=@${k}`).join(", ")} WHERE id=@id`).run({ ...p, id });
 }
-export const openPosition = db.prepare(`INSERT OR REPLACE INTO positions (paper_id, exit, mint, name, strategy, mode, opened_ts, tokens, cost_lamports, buy_order, status, venue, ix_kind, paper_entry_price)
-  VALUES (@paper_id, @exit, @mint, @name, @strategy, @mode, @opened_ts, @tokens, @cost_lamports, @buy_order, 'open', @venue, @ix_kind, @paper_entry_price)`);
+export const openPosition = db.prepare(`INSERT OR REPLACE INTO positions (paper_id, exit, book, mint, name, strategy, mode, opened_ts, tokens, cost_lamports, buy_order, status, venue, ix_kind, paper_entry_price)
+  VALUES (@paper_id, @exit, @book, @mint, @name, @strategy, @mode, @opened_ts, @tokens, @cost_lamports, @buy_order, 'open', @venue, @ix_kind, @paper_entry_price)`);
 export const closePosition = db.prepare(`UPDATE positions SET sell_order=@sell_order, closed_ts=@closed_ts, proceeds_lamports=@proceeds_lamports, pnl_lamports=@pnl_lamports, exit_rule=@exit_rule, paper_exit_mult=@paper_exit_mult, status=@status WHERE paper_id=@paper_id AND exit=@exit`);
-export const openPositions = (exit = null) => (exit ? db.prepare(`SELECT * FROM positions WHERE status='open' AND exit=? ORDER BY opened_ts`).all(exit) : db.prepare(`SELECT * FROM positions WHERE status='open' ORDER BY opened_ts`).all());
+export const openPositions = (book = null) => (book ? db.prepare(`SELECT * FROM positions WHERE status='open' AND book=? ORDER BY opened_ts`).all(book) : db.prepare(`SELECT * FROM positions WHERE status='open' ORDER BY opened_ts`).all());
 export const positionOf = (paperId, exit) => db.prepare(`SELECT * FROM positions WHERE paper_id=? AND exit=?`).get(paperId, exit);
 export const positionsOf = (paperId) => db.prepare(`SELECT * FROM positions WHERE paper_id=?`).all(paperId);
-export const hasPosition = (mint, exit) => !!db.prepare(`SELECT 1 FROM positions WHERE mint=? AND exit=? AND status='open' LIMIT 1`).get(mint, exit);
-const exitSql = (exit) => (exit ? ` AND exit='${exit === "flow4" ? "flow4" : "h5"}'` : "");
+export const hasPosition = (mint, book) => !!db.prepare(`SELECT 1 FROM positions WHERE mint=? AND book=? AND status='open' LIMIT 1`).get(mint, book);
+const BOOK_SQL = { runner: "runner", hold5: "hold5", wide: "wide", strict: "strict" };
+const exitSql = (book) => (book && BOOK_SQL[book] ? ` AND book='${BOOK_SQL[book]}'` : "");
 /** start of today in the owner's time zone (Europe/London), as epoch seconds — v0.1.3: the day used to roll over at midnight UTC, 01:00 UK in summer */
 export function londonDayStart() {
   const now = new Date(); const parts = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(now).map((x) => [x.type, x.value]));
@@ -68,11 +73,14 @@ export const pendingBuys = () => db.prepare(`SELECT * FROM orders WHERE side='bu
 export const lastSellSig = (paperId, exit) => db.prepare(`SELECT id, sig FROM orders WHERE side='sell' AND paper_id=? AND (exit=? OR exit IS NULL) AND sig IS NOT NULL ORDER BY id DESC LIMIT 1`).get(paperId, exit);
 /** last closed positions with their buy / sell orders, for the website's wallet box */
 export function recentClosed(n = 10, exit = null) {
-  return db.prepare(`SELECT p.*, b.fill_tokens b_tokens, b.stake_lamports b_stake, b.from_trigger_ms b_ms, b.sig b_sig, b.detail b_detail, s.sig s_sig, s.rule s_rule FROM positions p
-    LEFT JOIN orders b ON b.id=p.buy_order LEFT JOIN orders s ON s.id=p.sell_order WHERE p.status='closed'${exitSql(exit).replace(" AND exit=", " AND p.exit=")} ORDER BY p.closed_ts DESC LIMIT ?`).all(n)
+  return db.prepare(`SELECT p.*, b.fill_tokens b_tokens, b.stake_lamports b_stake, b.from_trigger_ms b_ms, b.sig b_sig, b.detail b_detail, s.sig s_sig, s.rule s_rule, s.detail s_detail, s.tip_lamports s_tip FROM positions p
+    LEFT JOIN orders b ON b.id=p.buy_order LEFT JOIN orders s ON s.id=p.sell_order WHERE p.status='closed'${exitSql(exit).replace(" AND book=", " AND p.book=")} ORDER BY p.closed_ts DESC LIMIT ?`).all(n)
     .map((r) => { let d = {}; try { d = JSON.parse(r.b_detail || "{}"); } catch {} const livePx = (r.b_stake || r.cost_lamports) > 0 && r.b_tokens > 0 ? ((r.b_stake || r.cost_lamports) / 1e9) / (r.b_tokens / 1e6) : null; // entry price from the SOL that went into the pool, not the tip
-      return { id: r.paper_id, exit: r.exit, name: r.name, mint: r.mint, mode: r.mode, opened_ts: r.opened_ts, closed_ts: r.closed_ts, cost: r.cost_lamports / 1e9, proceeds: (r.proceeds_lamports || 0) / 1e9, pnl: (r.pnl_lamports || 0) / 1e9,
-        liveX: r.cost_lamports > 0 ? (r.proceeds_lamports || 0) / r.cost_lamports : null, paperX: r.paper_exit_mult, rule: r.exit_rule, ms: r.b_ms, buySig: r.b_sig, sellSig: r.s_sig, gap: livePx && r.paper_entry_price ? livePx / r.paper_entry_price - 1 : null }; });
+      let sd = {}; try { sd = JSON.parse(r.s_detail || "{}"); } catch {}
+      return { id: r.paper_id, exit: r.exit, book: r.book, why: sd.why || null, name: r.name, mint: r.mint, mode: r.mode, opened_ts: r.opened_ts, closed_ts: r.closed_ts, cost: r.cost_lamports / 1e9, stake: (r.b_stake || r.cost_lamports) / 1e9, proceeds: (r.proceeds_lamports || 0) / 1e9, pnl: (r.pnl_lamports || 0) / 1e9,
+        liveX: r.cost_lamports > 0 ? (r.proceeds_lamports || 0) / r.cost_lamports : null, paperX: r.paper_exit_mult, rule: r.exit_rule, ms: r.b_ms, buySig: r.b_sig, sellSig: r.s_sig, gap: livePx && r.paper_entry_price ? livePx / r.paper_entry_price - 1 : null,
+        // exit gap: the price our sell achieved (proceeds before the tip ÷ tokens) against the price the paper book marked the exit at — the per-exit-type cost study
+        exitGap: r.b_tokens > 0 && r.paper_entry_price > 0 && r.paper_exit_mult > 0 && r.proceeds_lamports > 0 ? ((((r.proceeds_lamports + (r.s_tip || 0) + 5000)) / 1e9) / (r.b_tokens / 1e6)) / (r.paper_entry_price * r.paper_exit_mult) - 1 : null }; });
 }
 export function skipSummary(sinceTs) {
   const rows = db.prepare(`SELECT CASE WHEN status='sim-failed' THEN 'sim failed' WHEN status='error' THEN 'error' ELSE skip_reason END r, COUNT(*) n FROM orders WHERE side='buy' AND status IN ('skipped','error','sim-failed') AND ts >= ? GROUP BY 1 ORDER BY n DESC`).all(sinceTs);

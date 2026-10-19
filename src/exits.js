@@ -12,11 +12,11 @@ export function stopFinal(x, mult, peakMult) { const o = {}; for (const [k, [t]]
 // Before 1.5x: -40% hard stop. Backstop: 50% trail. Tracks the max drawdown before 1.5x (ddPre15) for the stop-width question.
 export function flowStep(e, x, mult, fromPeak, v5Usd, buyUsd, sellUsd) {
   if (x.tp15 == null && (e.ddPre15 == null || mult < e.ddPre15)) e.ddPre15 = mult;
-  if (x.flow4 == null && x.flow == null && mult >= CFG.FLOW_CAP) x.flow4 = CFG.FLOW_CAP; // v0.18.10: flow with a voluntary sell at FLOW_CAP
+  if (x.flow4 == null && x.flow == null && mult >= CFG.FLOW_CAP) { x.flow4 = CFG.FLOW_CAP; x.flow4why = "cap"; } // v0.18.10: flow with a voluntary sell at FLOW_CAP · v0.18.108: `why` = which part of the rule fired (the executor's exit-type cost study)
   if (x.flow != null) return;
-  if (!e.flowArmed) { if (mult >= 1.5) { e.flowArmed = true; e.flowSince = Date.now(); } else if (mult <= 0.6) { x.flow = mult; if (x.flow4 == null) x.flow4 = mult; } return; }
+  if (!e.flowArmed) { if (mult >= 1.5) { e.flowArmed = true; e.flowSince = Date.now(); } else if (mult <= 0.6) { x.flow = mult; if (x.flow4 == null) { x.flow4 = mult; x.flow4why = "stop"; } } return; }
   if (Date.now() - e.flowSince < 20_000) return; // give the window a moment after arming
-  if (v5Usd < CFG.FLOW_MIN_VOL || (sellUsd > 0 && buyUsd / sellUsd < CFG.FLOW_BS_MIN) || fromPeak <= -0.50) { x.flow = mult; if (x.flow4 == null) x.flow4 = mult; }
+  if (v5Usd < CFG.FLOW_MIN_VOL || (sellUsd > 0 && buyUsd / sellUsd < CFG.FLOW_BS_MIN) || fromPeak <= -0.50) { x.flow = mult; if (x.flow4 == null) { x.flow4 = mult; x.flow4why = fromPeak <= -0.50 ? "trail" : v5Usd < CFG.FLOW_MIN_VOL ? "fade-volume" : "fade-sellers"; } }
 }
 // v0.18.17 "fast-fail" on top of flow4: at the first tick FF_AT_S after entry, if price is below FF_BELOW x entry, sell there;
 // otherwise identical to flow4. Recorded as x_flow4ff next to x_flow4 — a hypothesis from 20 trades, to be tested on the next 100.
@@ -111,9 +111,9 @@ export function h5Step(e, x, mult, sinceS) {
   }
   for (const [k, [T, F]] of Object.entries(H5)) {
     if (x[k] != null) continue;
-    if (!e.h5Armed && mult <= 0.6) { x[k] = mult; continue; }
-    if (e.h5Armed && mult <= F) { x[k] = mult; continue; }
-    if (sinceS != null && sinceS >= T) x[k] = mult;
+    if (!e.h5Armed && mult <= 0.6) { x[k] = mult; if (k === "h5") x.h5why = "stop"; continue; }
+    if (e.h5Armed && mult <= F) { x[k] = mult; if (k === "h5") x.h5why = "floor"; continue; }
+    if (sinceS != null && sinceS >= T) { x[k] = mult; if (k === "h5") x.h5why = "time"; }
   }
 }
 export function h5Final(e, x, mult) { const o = {}; for (const k of H5_KEYS) o[k] = x[k] ?? mult; return o; }

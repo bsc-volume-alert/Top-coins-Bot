@@ -75,6 +75,25 @@ the switches say (the test caught a paper close skipping an off book's leg — f
 whitelist); mode, sells-all and withdrawals never come from the page. No PIN yet — the owner's call while the stakes are small; the endpoint is
 ready for one. The daily stop is 6 × the largest stake in play.
 
+## v0.3.0 (19 Oct 03:30 UK) — four books, and live measured against the paper trades it copied
+Owner's call: run every Project 5 variant live side by side, and compare live only against the paper trades it actually copied. A book is now
+(paper strategy, exit): **Runner** p5e30/flow4 · **Hold-5** p5e30/h5 · **Wide** p5w30/flow4 · **Strict** p5e50/flow4. A trigger is bought once per
+switched-on book that follows its strategy; `book` is recorded on every order and position (old rows backfilled: flow4 → runner, else hold5).
+Wide is Wide's *extra* coins only (the $100K–$250K triggers) — the rest of the paper Wide book is the Runner's coins, already traded by the runner
+book. Strict is the 50 SOL trigger: its own paper trade on a coin the runner may already hold, a later and higher entry, its own leg. Each book
+has a one-lamport-different tip so two books' buys of one coin from different triggers are never the same transaction; the in-flight guard is per
+(coin, book), so a coin triggered for two strategies in one burst is bought by both. Wide and Strict start **off at 0.01 SOL** (0.01 measures
+execution, not profit). Every sell records *which part of the rule fired* (`why`: stop / floor / time · trail / cap / fade-volume / fade-sellers ·
+close:<reason> for a paper close) — the tracker sends it with the exit.
+
+The website's "Last 24 hours — profit by project" strip is replaced by **Live vs paper — the same trades**: per live book, the live result over
+its N trades, the same N paper trades at the page's cost setting (the paper multiple is the tracker's own x_h5 / x_flow4 for that paper id, or the
+multiple the executor recorded when the exit fired), the difference, and a table by exit sub-reason with the mean entry gap (our fill vs the paper
+entry) and exit gap (our sale vs the paper exit price). The 24-hour figures are still on each project card. Tested offline on the fake chain
+(migration from the v0.2 overrides, legs per book, Wide/Strict switching, Strict on a coin the runner holds, exits with sub-reasons, paper close
+closing the account only on the last leg, two strategies in one burst → three legs, exit arriving during the buy, sell all) and the page rendered
+from a synthetic status file against a seeded tracker DB (four boxes, strip, commands sent by the switches and stake buttons, phone width).
+
 ## Shadow mode needs a funded wallet
 A buy can only be simulated against the chain with a payer that holds the stake, so shadow mode simulates with the real bot wallet: ~0.2 SOL in it
 is enough at a 0.1 stake. Nothing is signed in shadow mode. Shadow sells are quoted from the curve at the moment the exit fires (a sell cannot be
