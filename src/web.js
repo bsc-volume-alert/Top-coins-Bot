@@ -533,7 +533,7 @@ else if(src[0]==='s'){const bk=P.snipe&&(P.snipe.books||[]).find(z=>z.kind===src
 else{const q=P[src[0]];if(q)o={n:q.n,win:q.win,net:v(q.net),n24:q.h24?q.h24.n:0,net24:v(q.h24&&q.h24.net),win24:q.h24?q.h24.win:null,cost:COST,open:q.open,since:q.since||P.p5&&P.p5.liveFrom}}return o};
 const PCHOICES=[0.05,0.1,0.25,0.5,1,1.5,2];
 const UKT=ts=>ts?new Date(ts*1000).toLocaleString('en-GB',{timeZone:'Europe/London',weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).replace(/,/g,''):'—';
-const SHADOW_FROM={runner:1792344600,hold5:1792344600,wide:1792344600,strict:1792344600,small:1792414560,crowd:1792414560,swarm:1792425120,dev:1792425600,smart:1792425600};
+const SHADOW_FROM={runner:1792344600,hold5:1792344600,wide:1792344600,strict:1792344600,small:1792414560,crowd:1792414560,swarm:1792421520,dev:1792422000,smart:1792422000};
 const PSRC2={sn2:['s','sn2','h5'],sn3:['s','sn3','h5'],sn4:['s','sn4','h5'],sn5:['s','sn5','h5'],sn7:['s','sn7','h5'],sn8:['s','sn8','h5']};
 const STRIP=[['runner','A'],['hold5','B'],['wide','C'],['strict','D'],['epaper','E2'],['small','F'],['crowd','G'],['dev','S1'],['sn2','S2'],['sn3','S3'],['sn4','S4'],['sn5','S5'],['smart','S6'],['sn7','S7'],['sn8','S8'],['swarm','S9']];
 function renderPnl24(){const el=$('#pnl24');if(!el||!RAW||!RAW.projects)return;const W=(RAW.live&&RAW.live.books)||{};Object.assign(PSRC,PSRC2);
