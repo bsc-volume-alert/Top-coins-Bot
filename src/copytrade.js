@@ -17,6 +17,7 @@ import { gmgnFor, gmgnSummary, gmgnEntry } from "./gmgn.js"; // v0.18.52 · v0.1
 import { feeInfo, feeLine } from "./fees.js";
 import { recordHolders, holdersLine } from "./holders.js";
 import { execSend, noteFeed } from "./execlink.js"; // v0.18.90 → executor (live buy/sell bot)
+import { startTrace, traceTick, noteClose, sweepTraces } from "./p5trace.js"; // v0.18.113 P5 data set
 
 const P = new Map(); // mint -> [{id, label, e, w5:[], closed, msgId}]
 export const cp = { entries: 0, closes: 0 };
@@ -51,7 +52,8 @@ export function openCopy(kind, who, mint, name, symbol, price, mc, ts, note) {
   if (kind === "grad") { pos.alerted = (note.buyers || 0) >= CFG.GRAD_ALERT_BUYERS; if (pos.alerted) tg(`🎓 <b>GRADUATION ENTRY</b> — ${esc(name)} ($${esc(symbol)})\nGraduated at +${ageS != null ? Math.round(ageS / 60) + "m" : "?"} · ${note.buyers} buyers · 5m-mark MC ${note.mc5 ? "$" + fmt(note.mc5) : "n/a"} · 5m buyers ${note.buyers5 ?? "n/a"} · max 1m burst $${fmt(note.maxBurst || 0)}\nMC <b>$${fmt(mc)}</b> · now trading on PumpSwap\n${links(mint)}`).then((id) => { pos.msgId = id; }); }
   if (note?.wall0) { // v0.18.89 P5 live-readiness measurement: lag = how far behind the chain our feed was at the trigger (block time is whole seconds, so ±0.5 s per trade; the average is what counts) · open = ms from seeing the trigger to this paper entry (name / age lookups)
     pos.wall0 = note.wall0; pos.fs = { lag: note.blockTs ? Math.round(note.wall0 - note.blockTs * 1000) : null, open: Date.now() - note.wall0 }; try { q.setFirstSecs.run(JSON.stringify(pos.fs), pos.id); } catch {}
-    execSend({ type: "trigger", id: Number(pos.id), strategy: kind, mint, name, price, mc, ts, wall0: note.wall0, lagMs: pos.fs.lag, venue: note.venue || null, pass: note.pass !== false, skipWhy: note.skipWhy || null, bundle: note.bundle ?? null, wal60: note.wal60 ?? null }); } // v0.18.90 → executor (pass = the website's P5 filters)
+    execSend({ type: "trigger", id: Number(pos.id), strategy: kind, mint, name, price, mc, ts, wall0: note.wall0, lagMs: pos.fs.lag, venue: note.venue || null, pass: note.pass !== false, skipWhy: note.skipWhy || null, bundle: note.bundle ?? null, wal60: note.wal60 ?? null }); // v0.18.90 → executor (pass = the website's P5 filters)
+    try { startTrace(pos.id, mint, ts, price, note.preBuyers || null, note.creator || null); } catch (e) { console.error("[p5trace]", e.message); } } // v0.18.113: the data set's after-entry marks, taken or skipped alike
   const arr = P.get(mint) || []; arr.push(pos); P.set(mint, arr); cp.entries++;
   afterWatch(mint, pos.id, price, mc, null, null, null, ts);
   setTimeout(() => close(mint, pos, "time"), CFG.MOM_MAX_HOLD_MIN * 60_000);
@@ -75,7 +77,8 @@ on("graduated", (t, tr) => {
     { ageS, buyers: L.buyers, mc5: cp5?.mc ?? null, buyers5: cp5?.buyers ?? null, b5: cp5?.b ?? null, s5: cp5?.sl ?? null, maxBurst: L.maxBurst, bs: cp5 && cp5.sl > 0 ? cp5.b / cp5.sl : null });
 });
 
-function tick(mint, price, mc, sol, isBuy, ts) {
+function tick(mint, price, mc, sol, isBuy, ts, wallet = null) {
+  try { traceTick(mint, price, sol, sol * solUsdCached(), isBuy, wallet, ts); } catch (e) { console.error("[p5trace]", e.message); } // v0.18.113 (traces outlive the paper position: 10 min after entry)
   const arr = P.get(mint); if (!arr) return;
   for (const p of arr) {
     if (p.closed) continue;
@@ -101,12 +104,13 @@ function tick(mint, price, mc, sol, isBuy, ts) {
     else if (lowVolCopy(p, ts)) { try { close(mint, p, "lowvol"); } catch (e) { console.error("[lowvol copy]", e.message); } } // v0.18.36
   }
 }
-on("trade", (t, tr) => { noteFeed(); tick(t.mint, tr.price, t.lastMc, tr.sol, tr.isBuy, tr.ts); });
-onSwap((tr) => { noteFeed(); tick(tr.mint, tr.price, tr.mc, tr.sol, tr.isBuy, tr.ts); });
+on("trade", (t, tr) => { noteFeed(); tick(t.mint, tr.price, t.lastMc, tr.sol, tr.isBuy, tr.ts, tr.wallet || null); });
+onSwap((tr) => { noteFeed(); tick(tr.mint, tr.price, tr.mc, tr.sol, tr.isBuy, tr.ts, tr.wallet || null); });
+setInterval(() => { try { sweepTraces(); } catch {} }, 5000); // v0.18.113: marks for coins that went quiet
 
 function close(mint, p, reason) {
   if (p.wall0) { try { const cm = (p.lastPx || p.e.entry) / p.e.entry, v = finalExits(p.e, cm); execSend({ type: "close", id: Number(p.id), mint, reason, mult: cm, h5: v.h5 ?? null, flow4: v.flow4 ?? null }); } catch {} } // v0.18.90 → executor (backstop: sell if still held)
-  if (p.closed) return; p.closed = true; cp.closes++;
+  if (p.closed) return; p.closed = true; cp.closes++; try { noteClose(p.id); } catch {}
   const mult = p.lastPx / p.e.entry, v = finalExits(p.e, mult), peakMult = p.e.peak / p.e.entry, now = Math.floor(Date.now() / 1000);
   q.updMom.run(p.lastMc, peakMult, v.tp, v.tsl40, v.tsl60, v.tsl80, v.half60, v.twophase, v.ladder, v.time, now, p.lastMc, p.lastPx, reason, (v.time - 1) * 100, 1, v.levels, v.m1, v.m1vol, v.volstop, p.id);
   try { q.setCombo.run(v.combo, v.tp15, v.tsl25, v.t15s25, v.t15s60, v.t2s25, v.t2s60, p.id); q.setExits2.run(v.flow, v.t15s40, v.t2s40, p.e.ddPre15 ?? null, v.flow4, p.id); q.setFlow4ff.run(v.flow4ff, p.id); q.setH2.run(v.h2t40, p.id); q.setS15.run(v.s15be, p.id); q.setSplit.run(v.split, p.e.splitBranch ?? null, p.id); q.setDead.run(v.dead, v.p3d, p.id); q.setH5.run(v.h5, v.h5f12, v.h5f14, v.h3, v.h15, v.h5fast, p.id); } catch {}

@@ -31,8 +31,8 @@ function fromLedger(mint, creator) {
   let bal = [...m.entries()].filter(([, v]) => v > DUST).sort((a, b) => b[1] - a[1]);
   const pools = bal.filter(([, v]) => v / S * 100 >= POOL_PCT); if (pools.length) { ho.poolLike++; if (poolLogs < 5) { poolLogs++; console.log("[holders] pool-like", pools.map(([w, v]) => `${w} ${(v / S * 100).toFixed(1)}%`).join(", "), "on", mint.slice(0, 8)); } bal = bal.filter(([, v]) => v / S * 100 < POOL_PCT); }
   if (!bal.length) return null;
-  const top10 = bal.slice(0, 10).reduce((a, [, v]) => a + v, 0) / S * 100;
-  return { top10, largest: bal[0][1] / S * 100, holders: bal.length, dev: creator ? Math.max(0, (m.get(creator) || 0)) / S * 100 : null, src: "ledger" };
+  const top10 = bal.slice(0, 10).reduce((a, [, v]) => a + v, 0) / S * 100, top20 = bal.slice(0, 20).reduce((a, [, v]) => a + v, 0) / S * 100; // v0.18.113: + top-20
+  return { top10, top20, largest: bal[0][1] / S * 100, holders: bal.length, dev: creator ? Math.max(0, (m.get(creator) || 0)) / S * 100 : null, src: "ledger" };
 }
 async function fromRpc(mint) {
   if (new Date().getUTCDate() !== day) { day = new Date().getUTCDate(); budget = 0; }
@@ -62,5 +62,19 @@ export async function recordHoldersAsync(id, mint, creator = null) {
   return h;
 }
 export const balanceOf = (mint, wallet) => L.get(mint)?.get(wallet) ?? null; // v0.18.19
+/** v0.18.113: the ledger's view right now (no RPC, nothing written) — for the P5 data set's holder marks. Null when we did not see the launch. */
+export const holdersNow = (mint, creator = null) => fromLedger(mint, creator || live.get(mint)?.creator || q.tokenMeta.get(mint)?.creator || null);
+/** v0.18.113: holder count for a coin without a ledger — Helius DAS getTokenAccounts, paged (1000 a page, 5 pages max → "5000+"). Budgeted per day. */
+let hcBudget = 0, hcDay = new Date().getUTCDate(); export const hcStats = { calls: 0, fail: 0 };
+export async function countHolders(mint) {
+  if (new Date().getUTCDate() !== hcDay) { hcDay = new Date().getUTCDate(); hcBudget = 0; }
+  const url = CFG.RPC_URLS.find((u) => /helius/.test(u)); if (!url || hcBudget >= CFG.HOLDER_COUNT_DAILY_BUDGET) return null;
+  let n = 0; try {
+    for (let page = 1; page <= 5; page++) { hcBudget++; hcStats.calls++;
+      const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getTokenAccounts", params: { mint, limit: 1000, page, options: { showZeroBalance: false } } }), signal: AbortSignal.timeout(8000) });
+      const j = await r.json(); const accs = j?.result?.token_accounts || []; n += accs.filter((a) => Number(a.amount || 0) > 0).length; if (accs.length < 1000) return n; }
+    return n; // 5 full pages: 5000+
+  } catch { hcStats.fail++; return n || null; }
+}
 export const memStats = () => { let entries = 0; for (const m of L.values()) entries += m.size; return { ledgers: L.size, entries }; }; // v0.18.18
 export const holdersLine = (h) => h ? `holders ${h.holders ?? "20+"} · top-10 ${h.top10.toFixed(0)}% · largest ${h.largest.toFixed(1)}%${h.dev != null ? ` · dev ${h.dev.toFixed(1)}%` : ""}` : null;
