@@ -20,7 +20,7 @@ export function flowStep(e, x, mult, fromPeak, v5Usd, buyUsd, sellUsd) {
 }
 // v0.18.17 "fast-fail" on top of flow4: at the first tick FF_AT_S after entry, if price is below FF_BELOW x entry, sell there;
 // otherwise identical to flow4. Recorded as x_flow4ff next to x_flow4 — a hypothesis from 20 trades, to be tested on the next 100.
-export const FF_AT_S = 120, FF_BELOW = 0.90;
+export const FF_AT_S = 60, FF_BELOW = 0.95; // v0.18.142 (owner, 19 Oct 19:56 UK): book A2 — the 17:41 study: below 0.95 at 60 s won 1 of 12 (−39%), so sell there; otherwise the runner. Was 120 s / 0.90 (a stale 20-trade hypothesis); x_flow4ff before 19 Oct 19:00 UTC used those numbers
 export function ffStep(e, x, mult, sinceS) {
   if (x.flow4ff != null) return;
   if (!e.ffDone && sinceS != null && sinceS >= FF_AT_S) { e.ffDone = true; if (mult < FF_BELOW) { x.flow4ff = mult; return; } }

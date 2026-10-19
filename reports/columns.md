@@ -159,3 +159,6 @@ Costs on the bonding curve are about 10% a round trip (1% fee each way, slippage
 ## Reading the exit columns together
 
 For any rule R on any row: `ex_R_t` says when it fired, `ex_R_x` the multiple at that tick, `ex_R_px10` the path 10 s later. A realistic sale ≈ `ex_R_px10` × (1 − 0.03) for the price impact and fees at 0.1 SOL (measured on the 81 real sells: timed sells −1.6%, floors −3%, stops −3.8%; a rug −100%). The entry ≈ `fs5_x` × 1.02 (measured median +1.8%).
+
+**v0.18.142 (19 Oct 20:10 UK) — new books and exits.** book `A5` = strategy p5c5: opened 5 s after A's own trigger only when the price is still ≥ 1.02x the trigger price (early_json.a5 = {trigPx, px5, r, aId} — aId is A's paper row on the same coin); its executor leg is book A5 (key `confirm`) in live_*. `S10` = sn10, the 10-wallet operator fingerprint (10 bundle wallets, 37–41%, 22–28 SOL, dev < 0.2), executor book S10 (key `op`). `S4b` = sn4b, S4 with a bundle under 3%, paper only. **x_flow4ff is now A2's exit** (sell at 60 s if below 0.95x, else the runner) for rows entered from 19 Oct 19:00 UTC; before that it was 120 s / 0.90. Book G's executor leg sells at 5 min (h5) from 20:10 UK (runner before). The website prices paper with the measured costs (`real`): PumpSwap books x/1.02 × 0.967 − 0.016, stops (x ≤ 0.62) another −0.05; curve snipers x × 0.97 − 0.01, stops −0.06; x ≤ 0.05 → 0.
+

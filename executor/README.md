@@ -143,3 +143,9 @@ higher tip; fill confirmed by seeing our own swap in the feed. Slippage: 20% on 
 ## v0.3.9 — S3 and S4 in shadow; S1, S6, S9 back to paper (19 Oct 17:11 UK)
 - Shadow answered for S1, S6, S9 (15:52–17:10 UK): S1 and S9 real prices matched paper (entry +1.4%, exit −1.1% median) and paper loses; S6's real entry was 47% above paper. A one-time migration sets them to paper (off) and S3 (key `copy`) / S4 (key `clean`) to shadow at 0.05, both sold at 5 min (`h5`).
 - A sniper trigger for a book on paper returns silently (no skipped-order row), so the tracker can keep sending them.
+
+## v0.4.0 — A5, S10, G sold at 5 min (19 Oct 19:56 UK)
+- **A5** (key `confirm`, strategy `p5c5`): the tracker opens it 5 s after A's trigger only if the price is still ≥ 1.02x the trigger price; runner exit; shadow 0.05.
+- **S10** (key `op`, strategy `sn10`): the 10-wallet operator's launch fingerprint (the study's F3); sold at 5 min; shadow 0.05 — answers whether the launch price can be bought.
+- **G** now sells at 5 min (`h5`) instead of the runner.
+- Guard: positions are keyed (paper id, exit), so two switched-on books with the same exit on the same trade (A and F) would collide; the second now skips with a reason instead of overwriting.
