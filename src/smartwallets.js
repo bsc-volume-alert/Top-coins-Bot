@@ -22,7 +22,7 @@ const Q = {
   agg: db.prepare(`SELECT wallet, COUNT(*) coins, SUM(CASE WHEN early_s>2 AND early_s<=? AND COALESCE(profit,0)>0 THEN 1 ELSE 0 END) wins, SUM(COALESCE(profit,0)) profit, MIN(start_ts) first_ts, MAX(start_ts) last_ts, GROUP_CONCAT(DISTINCT tags) tags FROM smart_trades GROUP BY wallet`),
   medEarly: db.prepare(`SELECT early_s FROM smart_trades WHERE wallet=? AND early_s>2 ORDER BY early_s`).pluck(),
   upWallet: db.prepare(`INSERT OR REPLACE INTO smart_wallets (wallet, wins, coins, tags, profit, first_ts, last_ts, med_early_s, gmgn_smart, updated) VALUES (?,?,?,?,?,?,?,?,?,?)`),
-  clearWallets: db.prepare(`DELETE FROM smart_wallets`),
+  clearWallets: db.prepare(`DELETE FROM smart_wallets WHERE NOT (gmgn_smart=1 AND coins=0)`), // feed wallets (coins = 0) stay
   list: db.prepare(`SELECT wallet, wins, coins, tags, gmgn_smart FROM smart_wallets`),
 };
 export const sw = { runs: 0, coins: 0, traders: 0, fail: 0, lastErr: null, smart: 0 };
@@ -30,6 +30,9 @@ let smart = new Map(); // wallet -> { wins, coins, tags, gmgn }
 export const isSmart = (w) => smart.has(w);
 export const smartInfo = (w) => smart.get(w) || null;
 export const smartSize = () => smart.size;
+// v0.18.122: wallets seen in GMGN's smart-money / KOL feeds join the set at once (gmgn_smart = 1); the harvest's own rebuild keeps them (the feed rows are in sm_trades)
+const qFeedW = db.prepare(`INSERT INTO smart_wallets (wallet, wins, coins, tags, profit, first_ts, last_ts, med_early_s, gmgn_smart, updated) VALUES (?, 0, 0, ?, 0, ?, ?, NULL, 1, ?) ON CONFLICT(wallet) DO UPDATE SET gmgn_smart=1, last_ts=excluded.last_ts, tags=CASE WHEN tags='' OR tags IS NULL THEN excluded.tags ELSE tags END`);
+export function addSmart(wallet, tags = "") { if (!wallet || smart.has(wallet)) return; const now = Math.floor(Date.now() / 1000); try { qFeedW.run(wallet, String(tags || "").slice(0, 120), now, now, now); } catch {} smart.set(wallet, { wins: 0, coins: 0, tags: String(tags || ""), gmgn: 1 }); sw.smart = smart.size; }
 const T = (x) => (x == null ? null : x);
 const num = (v) => (v == null || v === "" ? null : Number(v));
 const tagStr = (a) => (Array.isArray(a) ? a.join("|") : a ? String(a) : "");

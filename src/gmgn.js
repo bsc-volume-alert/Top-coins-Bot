@@ -50,7 +50,7 @@ function pause(r, j) {
 // v0.18.63 one GMGN queue: every call (lists, entry lookups, seller pull) goes through slot(), one at a time, each spaced by its weight so
 // the total stays under GMGN_WEIGHT_PER_S (default 3 of the Free plan's 5). On 17 Oct the average was ~2 weight/s but separate timers fired
 // together (two lists = 6 weight in one instant > 5) and GMGN blocked ~80% of calls. Weights from GMGN's plan page.
-const GW = Math.max(1, Number(process.env.GMGN_WEIGHT_PER_S) || 3);
+const GW = Math.max(1, Number(process.env.GMGN_WEIGHT_PER_S) || 14); // v0.18.122: Plus plan (20/s) from 19 Oct 13:36 UK — 14 leaves room for bursts; was 3 on Free
 const WEIGHT = { "/v1/market/rank": 3, "/v1/token/info": 1, "/v1/token/security": 1, "/v1/market/token_kline": 2, "/v1/user/created_tokens": 2, "/v1/market/token_top_traders": 5, "/v1/market/token_top_holders": 5 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let gNext = 0, gChain = Promise.resolve(); gm.queued = 0;
@@ -111,22 +111,49 @@ try { db.exec("ALTER TABLE paper_trades ADD COLUMN gmgn_entry TEXT"); } catch {}
 const qSetEntry = db.prepare(`UPDATE paper_trades SET gmgn_entry=? WHERE id=?`);
 gm.entryOk = 0; gm.entryFail = 0;
 const eq = [], eCache = new Map(); let eBusy = false;
-export function gmgnEntry(mint, id) { if (!KEY() || !mint || !id) return; eq.push({ mint, id }); if (eq.length > 300) eq.shift(); }
+export function gmgnEntry(mint, id, opts = {}) { if (!KEY() || !mint || !id) return; eq.push({ mint, id, holders: !!opts.holders }); if (eq.length > 300) eq.shift(); }
+// v0.18.122: + the top-20 holders at entry (weight 5) summarised by GMGN's wallet tags — dev / bundler / sniper / smart / fresh / insider share of supply
+const pct = (list, f) => +list.filter(f).reduce((a, w) => a + (Number(w.amount_percentage) || 0), 0).toFixed(4);
+const hasTag = (w, t) => [...(Array.isArray(w.tags) ? w.tags : []), ...(Array.isArray(w.maker_token_tags) ? w.maker_token_tags : [])].includes(t);
+export function holdersSummary(d) { const list = (d?.list || (Array.isArray(d) ? d : [])).filter((w) => w && w.address); const wallets = list.filter((w) => Number(w.addr_type) !== 2); const top10 = wallets.slice(0, 10);
+  return { n: list.length, holder_count: list.find((w) => w.holder_count != null)?.holder_count ?? null, top10: pct(top10, () => true), top20: pct(wallets.slice(0, 20), () => true), largest: wallets[0] ? +(Number(wallets[0].amount_percentage) || 0).toFixed(4) : null, pool: pct(list, (w) => Number(w.addr_type) === 2),
+    dev: pct(wallets, (w) => hasTag(w, "dev") || hasTag(w, "dev_team") || hasTag(w, "creator")), bundler: pct(wallets, (w) => hasTag(w, "bundler")), sniper: pct(wallets, (w) => hasTag(w, "sniper")), smart: pct(wallets, (w) => hasTag(w, "smart_degen")), kol: pct(wallets, (w) => hasTag(w, "renowned")), fresh: pct(wallets, (w) => hasTag(w, "fresh_wallet") || w.is_new), insider: pct(wallets, (w) => hasTag(w, "rat_trader")), transfer_in: pct(wallets, (w) => !!w.transfer_in), suspicious: pct(wallets, (w) => !!w.is_suspicious),
+    n_smart: wallets.filter((w) => hasTag(w, "smart_degen")).length, n_kol: wallets.filter((w) => hasTag(w, "renowned")).length, n_bundler: wallets.filter((w) => hasTag(w, "bundler")).length, n_sniper: wallets.filter((w) => hasTag(w, "sniper")).length, n_fresh: wallets.filter((w) => hasTag(w, "fresh_wallet") || w.is_new).length,
+    sold_out: wallets.filter((w) => Number(w.sell_amount_percentage) >= 0.99).length, on_curve: wallets.some((w) => w.is_on_curve === true) ? 1 : 0 }; }
 setInterval(async () => {
   if (eBusy || !eq.length || Date.now() < pausedUntil) return; eBusy = true;
-  const { mint, id } = eq.shift();
+  const { mint, id, holders } = eq.shift();
   try {
     let c = eCache.get(mint);
-    if (!c || Date.now() - c.t > 120000) {
-      const [info, sec] = await Promise.all([get("/v1/token/info", { chain: "sol", address: mint }).catch((e) => ({ _err: e.message })), get("/v1/token/security", { chain: "sol", address: mint }).catch((e) => ({ _err: e.message }))]);
+    if (!c || Date.now() - c.t > 120000 || (holders && !c.hold)) {
+      const [info, sec, hold] = await Promise.all([get("/v1/token/info", { chain: "sol", address: mint }).catch((e) => ({ _err: e.message })), get("/v1/token/security", { chain: "sol", address: mint }).catch((e) => ({ _err: e.message })),
+        holders ? get("/v1/market/token_top_holders", { chain: "sol", address: mint, limit: "20" }).then(holdersSummary).catch((e) => ({ _err: e.message })) : Promise.resolve(null)]);
       if (info?._err && sec?._err) throw new Error(info._err);
-      c = { t: Date.now(), json: JSON.stringify({ ts: Math.floor(Date.now() / 1000), info: slim(info), sec: slim(sec, 4000) }) };
+      c = { t: Date.now(), hold: !!holders, json: JSON.stringify({ ts: Math.floor(Date.now() / 1000), info: slim(info), sec: slim(sec, 4000), hold: hold && !hold._err ? hold : null }) };
       eCache.set(mint, c); if (eCache.size > 500) eCache.delete(eCache.keys().next().value);
     }
     qSetEntry.run(c.json, id); gm.entryOk++;
   } catch (e) { gm.entryFail++; gm.lastErr = `entry: ${e.message}`; if (gm.entryFail % 20 === 1) console.error("[gmgn entry]", e.message); }
   finally { eBusy = false; }
 }, 500);
+// v0.18.122 wallet stats (7 d, weight 3) for a trade's key wallets, written to paper_trades.gmgn_wallet_json under a role: "big" = the biggest buyer of the
+// trigger minute (A / C / D / E), "sig" = the wallet that fired a sniper book (S2 / S6 / S7). One lookup per wallet per 10 min; the queue is drained one a second.
+try { db.exec("ALTER TABLE paper_trades ADD COLUMN gmgn_wallet_json TEXT"); } catch {}
+const qGetW = db.prepare(`SELECT gmgn_wallet_json FROM paper_trades WHERE id=?`).pluck(), qSetW = db.prepare(`UPDATE paper_trades SET gmgn_wallet_json=? WHERE id=?`);
+const wq = [], wCache = new Map(); let wBusy = false; gm.walletOk = 0; gm.walletFail = 0;
+export function walletStatsFor(id, role, wallet) { if (!KEY() || !id || !wallet || String(wallet).startsWith("tx:")) return; wq.push({ id, role, wallet }); if (wq.length > 400) wq.shift(); }
+export function slimWallet(d) { const w = Array.isArray(d) ? d[0] : d; if (!w || typeof w !== "object") return null; const c = w.common || {}; const n = (v) => (v == null || v === "" ? null : Number(v));
+  return { winrate: n(w.winrate), pnl: n(w.pnl), realized: n(w.realized_profit), unrealized: n(w.unrealized_profit), cost: n(w.total_cost), buys: n(w.buy_count), sells: n(w.sell_count), tags: Array.isArray(c.tags) ? c.tags.join("|") : (c.tag || ""), followers: n(c.follow_count), age_d: c.created_at ? +((Date.now() / 1000 - Number(c.created_at)) / 86400).toFixed(1) : null, created: n(c.created_token_count), fund: c.fund_from || null }; }
+setInterval(async () => {
+  if (wBusy || !wq.length || Date.now() < pausedUntil) return; wBusy = true;
+  const { id, role, wallet } = wq.shift();
+  try {
+    let c = wCache.get(wallet);
+    if (!c || Date.now() - c.t > 600000) { const d = await get("/v1/user/wallet_stats", { chain: "sol", wallet_address: wallet, period: "7d" }); c = { t: Date.now(), w: slimWallet(d) }; wCache.set(wallet, c); if (wCache.size > 2000) wCache.delete(wCache.keys().next().value); }
+    let cur = {}; try { cur = JSON.parse(qGetW.get(id) || "{}") || {}; } catch {} cur[role] = { wallet, ...(c.w || {}) }; qSetW.run(JSON.stringify(cur), id); gm.walletOk++;
+  } catch (e) { gm.walletFail++; gm.lastErr = `wallet: ${e.message}`; if (gm.walletFail % 20 === 1) console.error("[gmgn wallet]", e.message); }
+  finally { wBusy = false; }
+}, 1000);
 
 // v0.18.56 one-off "who sold" pull (/gmgnsellers): for every coin a project traded since 15 Oct, GMGN's top 100 traders by sell volume
 // (tags dev / bundler / sniper / insider, first buy, full exit time, buy and sell $, realized profit, funding wallet), token info + security,

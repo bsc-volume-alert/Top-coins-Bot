@@ -17,19 +17,22 @@ import { isProven, walletRecord } from "./wallets.js";
 import { isSmart, smartInfo } from "./smartwallets.js"; // v0.18.121 S6
 import { openCopy, onCopyClose, positionsOf } from "./copytrade.js";
 import { triggerContext } from "./momentum.js";
-import { gmgnEntry } from "./gmgn.js";
+import { gmgnEntry, walletStatsFor } from "./gmgn.js";
+import { onSmartBuy } from "./smartmoney.js"; // v0.18.122 S7
+import { live } from "./launch-monitor.js";
 import { solUsdCached } from "./price.js";
 
 const N = (k, d) => { const v = Number(process.env[k]); return Number.isFinite(v) && process.env[k] !== undefined && process.env[k] !== "" ? v : d; };
 export const SN = { MAX_MC: N("SN_MAX_MC", 60_000), MAX_PER_HOUR: N("SN_MAX_PER_HOUR", 20), WATCH_S: N("SN_WATCH_S", 120), CREATOR_GRADS: N("SN_CREATOR_GRADS", 2), CREATOR_MAX_N: N("SN_CREATOR_MAX_N", 30), CREATOR_RATE: N("SN_CREATOR_RATE", 0.1), COPY_PEAK: N("SN_COPY_PEAK", 300_000),
   CLEAN_BUNDLE: N("SN_CLEAN_BUNDLE", 5), CLEAN_DEV_MIN: N("SN_CLEAN_DEV_MIN", 0.2), CLEAN_DEV_MAX: N("SN_CLEAN_DEV_MAX", 3), CLEAN_BUYERS: N("SN_CLEAN_BUYERS", 10), CLEAN_SOL: N("SN_CLEAN_SOL", 5), CLEAN_BY_S: N("SN_CLEAN_BY_S", 15),
-  FLOW_SOL: N("SN_FLOW_SOL", 15), FLOW_WALLETS: N("SN_FLOW_WALLETS", 12), FLOW_BY_S: N("SN_FLOW_BY_S", 20), WALLET_MIN_SOL: N("SN_WALLET_MIN_SOL", 0.2), WALLET_BY_S: N("SN_WALLET_BY_S", 60), FIRST_BY_S: N("SN_FIRST_BY_S", 60) };
+  SM_AGE_S: N("SN_SM_AGE_S", 600), FLOW_SOL: N("SN_FLOW_SOL", 15), FLOW_WALLETS: N("SN_FLOW_WALLETS", 12), FLOW_BY_S: N("SN_FLOW_BY_S", 20), WALLET_MIN_SOL: N("SN_WALLET_MIN_SOL", 0.2), WALLET_BY_S: N("SN_WALLET_BY_S", 60), FIRST_BY_S: N("SN_FIRST_BY_S", 60) };
 export const SN_BOOKS = {
   sn1: { id: "S1", name: "creator record", what: `the creator's earlier launches (at most ${SN.CREATOR_MAX_N}, so a dev, not a factory): ${SN.CREATOR_GRADS}+ graduated or one peaked over $100K, and at least ${Math.round(SN.CREATOR_RATE * 100)}% of them did — bought on the first trade after the create block` },
   sn2: { id: "S2", name: "proven wallet", what: `a wallet with a scored record (8+ early buys, half of them 5x) buys ≥ ${SN.WALLET_MIN_SOL} SOL within ${SN.WALLET_BY_S} s — bought on that trade` },
   sn3: { id: "S3", name: "copycat", what: `the same name as a coin that peaked ≥ $${fmt(SN.COPY_PEAK)} in the last 24 h — bought on the first trade after the create block` },
   sn4: { id: "S4", name: "clean launch", what: `bundle < ${SN.CLEAN_BUNDLE}%, the dev bought ${SN.CLEAN_DEV_MIN}–${SN.CLEAN_DEV_MAX} SOL, ${SN.CLEAN_BUYERS}+ outside buyers and ${SN.CLEAN_SOL}+ SOL in within ${SN.CLEAN_BY_S} s` },
   sn5: { id: "S5", name: "20-s inflow", what: `${SN.FLOW_SOL}+ SOL from ${SN.FLOW_WALLETS}+ wallets within ${SN.FLOW_BY_S} s (create-block buys excluded)` },
+  sn7: { id: "S7", name: "GMGN smart-money feed", what: `GMGN's smart-money / KOL feed shows a buy on a coin under ${Math.round(SN.SM_AGE_S / 60)} min old — bought at our feed's current price (the GMGN feed lags the chain by some seconds, recorded in sn_delay_s vs the buy's own time)` },
   sn6: { id: "S6", name: "GMGN smart wallet", what: `a wallet GMGN tags smart / renowned, or that was early and in profit on 2+ coins that peaked ≥ $300K (harvested from GMGN's top traders), buys ≥ ${SN.WALLET_MIN_SOL} SOL within ${SN.WALLET_BY_S} s — bought on that trade` },
 };
 export const SN_KINDS = Object.keys(SN_BOOKS);
@@ -74,7 +77,17 @@ function fire(book, L, t, tr, age, signal, signalN, extra = {}) {
   if (!pos?.id) return;
   sn.taken[book] = (sn.taken[book] || 0) + 1; sn.open++; holds.add(t.mint);
   try { q.setEarly.run(JSON.stringify({ sn: feats, ctx: triggerContext(t.mint, { creator: t.creator || null, name: t.name || null, symbol: t.symbol || null }, now, null) }), pos.id); } catch (e) { console.error("[snipe early]", e.message); }
-  setTimeout(() => { try { gmgnEntry(t.mint, pos.id); } catch {} }, 90_000); // GMGN knows nothing at T+5 s; by +90 s its security / smart-money flags exist
+  setTimeout(() => { try { gmgnEntry(t.mint, pos.id, { holders: true }); } catch {} }, 90_000);
+  if (extra.wallet) { try { walletStatsFor(pos.id, "sig", extra.wallet); } catch {} } // v0.18.122: the signal wallet's 7-day GMGN record (gw_sig_*) // GMGN knows nothing at T+5 s; by +90 s its security / smart-money flags exist
 }
+// S7: a smart-money / KOL buy from GMGN's feed on a young coin we are tracking from launch → paper-buy at the last price our own feed saw
+const fired7 = new Map(); // mint -> ts
+onSmartBuy(({ mint, wallet, usd, ts, kind, tags, seenTs }) => {
+  const t = live.get(mint); if (!t || fired7.has(mint)) return; const age = seenTs - (t.ts || seenTs); if (age > SN.SM_AGE_S || !(t.lastMc > 0)) return;
+  const last = t.trades?.[t.trades.length - 1]; if (!last?.price) return; fired7.set(mint, seenTs); if (fired7.size > 2000) fired7.delete(fired7.keys().next().value);
+  const L = W.get(mint) || { mint, createTs: t.ts, slot: t.slot, buyers: new Map(), outSol: 0, solIn: 0, solOut: 0, sells: 0, n: t.trades?.length || 0, fired: {}, cr: null, cc: null, mcFirst: null };
+  const tr = { ...last, ts: seenTs, slot: (last.slot || t.slot) + 1, wallet, sol: 0, isBuy: true };
+  fire("sn7", L, t, tr, age, `${kind === "kol" ? "KOL" : "smart money"} ${short(wallet)} bought $${Math.round(usd)} ${seenTs - ts} s ago (${tags || kind})`, usd, { wallet, wallet_n: null, wallet_x5: null, wallet_x10: null, wallet_rate: null, feed_lag_s: seenTs - ts });
+});
 onCopyClose((mint, p) => { if (!SN_KINDS.includes(p.kind)) return; sn.open = Math.max(0, sn.open - 1); if (!positionsOf(mint).some((x) => !x.closed && SN_KINDS.includes(x.kind))) holds.delete(mint); });
 export const snStats = () => ({ ...sn, watching: W.size });

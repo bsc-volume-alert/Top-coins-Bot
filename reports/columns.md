@@ -31,7 +31,11 @@ One row per trigger since the price fix (18 Oct 20:25 UK), for books A, C, D (th
 | dex_paid | 1 = DexScreener profile paid for |
 | q_wallets | unique wallets in the 5-min window |
 | pool_sol | the PumpSwap pool's SOL side after the triggering trade (depth: how much a 0.25 SOL buy moves the price) |
-| gi_*, gs_* | GMGN's token-info and security snapshot at entry, one column per numeric field (gi_ = info, gs_ = security) |
+| gi_*, gs_* | GMGN's token-info and security snapshot at entry, one column per numeric field (gi_ = info, gs_ = security). Note: before 19 Oct 14:50 UK these were read from the wrong column and are blank |
+| gh_* | GMGN's top-20 holders at entry (A/C/D/E; snipers at +90 s), summarised by wallet tag as a share of supply (0–1): gh_top10, gh_top20, gh_largest, gh_pool (pools / exchanges), gh_dev, gh_bundler, gh_sniper, gh_smart, gh_kol, gh_fresh, gh_insider (rat traders), gh_transfer_in, gh_suspicious; counts gh_n_smart / n_kol / n_bundler / n_sniper / n_fresh; gh_sold_out = top wallets that have fully exited; gh_on_curve |
+| gm_* | GMGN's trending-list row for the coin, if it was on the list in the 10 min before entry (gm_mc, gm_holders, gm_rug, gm_bundler, gm_top10, gm_smart, gm_renowned…) |
+| gw_big_*, gw_sig_* | GMGN's 7-day record of the trigger minute's biggest buyer (big; its address in max_wallet) and of the wallet that fired a sniper book (sig): winrate (0–1), pnl (realized ÷ cost), realized, unrealized, cost, buys, sells, tags, followers (GMGN followers), age_d (wallet age in days), created (tokens it created) |
+| sm_buys_5m, sm_sells_5m, sm_buy_usd_5m, sm_sell_usd_5m, sm_wallets_5m, sm_kol_buys_5m, sm_smart_buys_5m, sm_last_buy_s | GMGN's smart-money / KOL feed on this coin in the 5 min before the trigger: buys and sells, USD, distinct buying wallets, how many were KOL vs smart-money, seconds since the last smart buy (blank = none seen; the feed lags the chain by some seconds) |
 
 ## The buying that made the trigger
 
@@ -86,7 +90,7 @@ One row per trigger since the price fix (18 Oct 20:25 UK), for books A, C, D (th
 | sn_signal, sn_signal_n | the alpha in words, and its number (S1 graduations, S2 the wallet's 5x rate, S3 the copied coin's peak, S4 buyers, S5 SOL in, S6 the wallet's early wins) |
 | sn_wallet, sn_wallet_n, sn_wallet_x5, sn_wallet_x10, sn_wallet_rate | S2: the proven wallet, its scored early buys, how many reached 5x / 10x, the 5x rate. S6: the smart wallet, the big coins it was seen on, its early wins, their ratio |
 
-The six books: S1 creator record (a dev with at most 30 launches, 2+ graduated or one over $100K, and at least 10% of them did) · S2 proven wallet (our own scoring: 8+ early buys, half of them 5x) · S3 copycat (same name as a coin that peaked ≥ $300K in 24 h) · S4 clean launch (bundle < 5%, dev 0.2–3 SOL, 10+ outside buyers and 5+ SOL within 15 s) · S5 20-s inflow (15+ SOL from 12+ wallets within 20 s) · S6 GMGN smart wallet (a wallet GMGN tags smart_degen / renowned / pump_smart, or that was early — after the create block, within 10 min — and in profit on 2+ coins that peaked ≥ $300K, harvested every 30 min from GMGN's top traders; dev / bundler / sniper / rat-trader tags excluded).
+The six books: S1 creator record (a dev with at most 30 launches, 2+ graduated or one over $100K, and at least 10% of them did) · S2 proven wallet (our own scoring: 8+ early buys, half of them 5x) · S3 copycat (same name as a coin that peaked ≥ $300K in 24 h) · S4 clean launch (bundle < 5%, dev 0.2–3 SOL, 10+ outside buyers and 5+ SOL within 15 s) · S5 20-s inflow (15+ SOL from 12+ wallets within 20 s) · S6 GMGN smart wallet (a wallet GMGN tags smart_degen / renowned / pump_smart, or that was early — after the create block, within 10 min — and in profit on 2+ coins that peaked ≥ $300K, harvested every 30 min from GMGN's top traders, or any wallet seen in GMGN's smart-money / KOL feed; dev / bundler / sniper / rat-trader tags excluded) · S7 GMGN smart-money feed (GMGN's feed shows a smart-money or KOL buy on a coin under 10 min old that we track from launch — bought at our own feed's last price; sn_feed_lag_s = how long after the buy the feed showed it).
 
 Costs on the bonding curve are about 10% a round trip (1% fee each way, slippage, a second of latency on a moving curve) — price S rows at 10%, not at A's 5–6%.
 

@@ -22,7 +22,8 @@ import { dirname, join } from "node:path";
 import { provenCount } from "./wallets.js";
 import { enrichEntry, sniperInfo, provenShare, enrichLine } from "./enrich.js"; // v0.18.19
 import { dexPrice } from "./sweeper.js"; // v0.18.29
-import { gmgnFor, gmgnSummary, gmgnEntry, gmgnV5 } from "./gmgn.js";
+import { gmgnFor, gmgnSummary, gmgnEntry, gmgnV5, walletStatsFor } from "./gmgn.js";
+import { smartFlow } from "./smartmoney.js"; // v0.18.122
 import { volFeed, VOL_LOG_USD } from "./vollog.js"; // v0.18.62 volume log
 import { p6Candidate, P6_VOL } from "./p6.js";
 import { p7Observe, P7_VOL1 } from "./p7.js"; // v0.18.69 // v0.18.60 // v0.18.52 · v0.18.56 gmgnEntry
@@ -231,7 +232,8 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
   } catch (e) { console.error("[prepump]", e.message); }
   try { q.setVenue.run(tr.venue || "pumpswap", pos.id); } catch {}
   try { const g = gmgnFor(mint); if (g) q.setGmgn.run(JSON.stringify(gmgnSummary(g)), pos.id); } catch {} // v0.18.52 GMGN rug / smart-money data at entry
-  gmgnEntry(mint, pos.id); // v0.18.56 full GMGN token info + security snapshot at entry
+  gmgnEntry(mint, pos.id, { holders: true }); // v0.18.56 full GMGN token info + security snapshot at entry · v0.18.122 + top holders
+  try { const big = s.w5.filter((z) => z.b && z.w && !String(z.w).startsWith("tx:") && now - z.ts <= 60).sort((a, b) => b.usd - a.usd)[0]; if (big) walletStatsFor(pos.id, "big", big.w); } catch {}
   const core = kind === "vol5m" && tr.mc < CFG.MOM_CORE_MC && !reentry; // v0.18.4
   pos.core = core; // v0.18.118: book E's positions report their exit timings to the trace
   if (core) { try { const solPx = solUsdCached(); if (solPx > 0) { const pf = preFeatures(s, now, solPx, meta); const bU = s.w5.filter((z) => z.b && now - z.ts <= 60).reduce((a, z) => a + z.usd, 0), wal = new Set(s.w5.filter((z) => z.b && z.w && now - z.ts <= 60).map((z) => z.w));
@@ -318,6 +320,7 @@ export function triggerContext(mint, meta, now, s) {
     o.heat = { trig1h: q.heatTrig.get(now - 3600), trig24h: q.heatTrig.get(now - 86400), win2h_n: w.n || 0, win2h_hit: w.hit || 0, win2h_dead: w.dead || 0, launch1h: lh.launch1h, launch10m: lh.launch10m, grad1h: ps.grad1h, pools1h: ps.pools1h, sol1h: solChange(3600), sol24h: solChange(86400), up: now - BOOT }; } catch (e) { console.error("[ctx heat]", e.message); }
   if (meta?.creator) try { const ch = q.creatorHist.get(meta.creator, mint, now) || {}, last = q.creatorLast.get(meta.creator, mint, now);
     o.cr = { n: ch.n || 0, best: ch.best ?? null, grads: ch.grads || 0, over100k: ch.over100k || 0, last_min: last ? Math.round((now - last) / 60) : null, n24h: q.creatorRecent.get(meta.creator, now - 86400, mint) }; } catch (e) { console.error("[ctx creator]", e.message); }
+  try { o.sm = smartFlow(mint, now, 300); } catch {} // v0.18.122 GMGN smart-money / KOL buys on this coin in the last 5 min
   if (meta?.name) try { const cc = q.copycats.get(meta.name, mint, now - 86400) || {};
     o.cc = { n24h: cc.n || 0, best24h: cc.best ?? null, grads24h: cc.grads || 0, last_min: cc.last ? Math.round((now - cc.last) / 60) : null, sym_n24h: meta.symbol ? q.copySym.get(meta.symbol, mint, now - 86400) : null }; } catch (e) { console.error("[ctx copycats]", e.message); }
   return o;
@@ -327,8 +330,8 @@ export function p5Check(mint, s, tr, now) {
   const wall0 = Date.now(); // v0.18.89: when WE saw the triggering trade (wall clock) — feed lag = wall0 − its block time; the first-seconds price path counts from here
   const wide = tr.mc >= CFG.P5E_MAX_MC; // v0.18.81 P5 Wide: the same 30 SOL trigger on coins at $100K–$250K MC, strategy p5w30 (30 level only)
   const sol = solUsdCached(); if (!(sol > 0)) return;
-  let bU = 0, sU = 0, n = 0, maxB = 0; const wal = new Set();
-  for (let i = s.w5.length - 1; i >= 0; i--) { const z = s.w5[i]; if (now - z.ts > 60) break; if (z.b) { bU += z.usd; n++; if (z.usd > maxB) maxB = z.usd; if (z.w) wal.add(z.w); } else sU += z.usd; }
+  let bU = 0, sU = 0, n = 0, maxB = 0, maxW = null; const wal = new Set();
+  for (let i = s.w5.length - 1; i >= 0; i--) { const z = s.w5[i]; if (now - z.ts > 60) break; if (z.b) { bU += z.usd; n++; if (z.usd > maxB) { maxB = z.usd; maxW = z.w || null; } if (z.w) wal.add(z.w); } else sU += z.usd; }
   const bSol = bU / sol; s.p5e ||= {};
   for (const lv of P5E_LEVELS) {
     if (wide && lv !== 30) continue;
@@ -352,7 +355,8 @@ export function p5Check(mint, s, tr, now) {
       const pos = openCopy(strat, `${lv}SOL/60s`, mint, name || mint.slice(0, 8), symbol || "", px, mc, now, { v5, venue, ageS, wall0, blockTs: tr.ts, pass: !skipWhy, skipWhy, bundle: meta?.bundle_pct ?? null, wal60: wal.size, preBuyers, creator: meta?.creator || null });
       p5.fired++; if (wide) p5.wide++; else p5.byLevel[lv] = (p5.byLevel[lv] || 0) + 1;
       if (pos?.id) { pos.alerted = false; try { feat.ctx = triggerContext(mint, { ...(meta || {}), name: name || meta?.name, symbol: symbol || meta?.symbol }, now, s); } catch {} try { q.setV2m.run(Math.round(bU), pos.id); q.setEarly.run(JSON.stringify(feat), pos.id); } catch {}
-        try { enrichEntry(pos.id, mint, s.w5, now); } catch (e) { console.error("[p5 enrich]", e.message); } } // v0.18.113: snipers, proven wallets, dex-paid, fresh wallets — the same enrichment the core trigger gets
+        try { enrichEntry(pos.id, mint, s.w5, now); } catch (e) { console.error("[p5 enrich]", e.message); } // v0.18.113: snipers, proven wallets, dex-paid, fresh wallets — the same enrichment the core trigger gets
+        if (maxW && !String(maxW).startsWith("tx:")) { feat.maxWallet = maxW; try { walletStatsFor(pos.id, "big", maxW); } catch {} } } // v0.18.122: the biggest buyer's 7-day GMGN record (gw_big_*)
     })().catch((e) => console.error("[p5 early]", e.message));
   }
 }
