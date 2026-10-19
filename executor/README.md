@@ -139,3 +139,7 @@ higher tip; fill confirmed by seeing our own swap in the feed. Slippage: 20% on 
 ## v0.3.7 — books S1 and S6 (19 Oct 15:57 UK)
 - Nine books. **S1** (key `dev`, strategy `sn1`, sold at 5 min on `h5`) and **S6** (key `smart`, strategy `sn6`, runner exit) join S9 as Project S shadow books at 0.05 SOL. S2–S5, S7 and S8 stay paper: shadow re-prices a book, it cannot rescue one that loses on paper, and the curve slippage measured on S1/S6/S9 applies to all of them.
 - Commands: `/live book s1|s6 off|shadow|live`, `/live stake s1 0.05`.
+
+## v0.3.9 — S3 and S4 in shadow; S1, S6, S9 back to paper (19 Oct 17:11 UK)
+- Shadow answered for S1, S6, S9 (15:52–17:10 UK): S1 and S9 real prices matched paper (entry +1.4%, exit −1.1% median) and paper loses; S6's real entry was 47% above paper. A one-time migration sets them to paper (off) and S3 (key `copy`) / S4 (key `clean`) to shadow at 0.05, both sold at 5 min (`h5`).
+- A sniper trigger for a book on paper returns silently (no skipped-order row), so the tracker can keep sending them.

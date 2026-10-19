@@ -78,12 +78,13 @@ on("graduated", (t, tr) => {
     { ageS, buyers: L.buyers, mc5: cp5?.mc ?? null, buyers5: cp5?.buyers ?? null, b5: cp5?.b ?? null, s5: cp5?.sl ?? null, maxBurst: L.maxBurst, bs: cp5 && cp5.sl > 0 ? cp5.b / cp5.sl : null });
 });
 
-function tick(mint, price, mc, sol, isBuy, ts, wallet = null) {
-  try { traceTick(mint, price, sol, sol * solUsdCached(), isBuy, wallet, ts); } catch (e) { console.error("[p5trace]", e.message); } // v0.18.113 (traces outlive the paper position: 10 min after entry)
+function tick(mint, price, mc, sol, isBuy, ts, wallet = null, quiet = false) {
+  if (!quiet) try { traceTick(mint, price, sol, sol * solUsdCached(), isBuy, wallet, ts); } catch (e) { console.error("[p5trace]", e.message); } // v0.18.113 (traces outlive the paper position: 10 min after entry)
   const arr = P.get(mint); if (!arr) return;
   for (const p of arr) {
     if (p.closed) continue;
-    p.w5.push({ ts, usd: sol * solUsdCached(), b: isBuy }); while (p.w5.length && ts - p.w5[0].ts > 300) p.w5.shift();
+    if (quiet && !(p.e.x.h5 == null && ts - p.entryTs >= 300 && ts - (p.lastTs || 0) >= 5)) continue; // v0.18.140: a clock tick only settles a 5-min sale that no trade arrived to settle
+    if (!quiet) p.w5.push({ ts, usd: sol * solUsdCached(), b: isBuy }); while (p.w5.length && ts - p.w5[0].ts > 300) p.w5.shift();
     if (!p.e.volAtEntry) p.e.volAtEntry = p.w5.reduce((a, x) => a + x.usd, 0);
     const v5 = p.w5.reduce((a, x) => a + x.usd, 0), bu = p.w5.filter((x) => x.b).reduce((a, x) => a + x.usd, 0), su = v5 - bu;
     p.lastMc = mc; p.lastPx = price; p.lastTs = ts;
@@ -109,6 +110,10 @@ function tick(mint, price, mc, sol, isBuy, ts, wallet = null) {
 on("trade", (t, tr) => { noteFeed(); tick(t.mint, tr.price, t.lastMc, tr.sol, tr.isBuy, tr.ts, tr.wallet || null); });
 onSwap((tr) => { noteFeed(); tick(tr.mint, tr.price, tr.mc, tr.sol, tr.isBuy, tr.ts, tr.wallet || null); });
 setInterval(() => { try { sweepTraces(); } catch {} }, 5000); // v0.18.113: marks for coins that went quiet
+// v0.18.140: the 5-min (h5) sale fired only on a trade, so a bonding-curve coin that went quiet after minute 5 kept its paper sale open and never told the
+// executor (19 Oct: 10 of 24 S9 shadow legs sold by the executor's 7-min backstop instead). Every 5 s, a position past 5 min with no h5 yet and no trade for 5 s
+// is stepped at its last price on the clock — the sale is booked at the price a seller would have met, and the exit message goes out on time.
+setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [mint, arr] of P) { const p = arr.find((x) => !x.closed && x.e?.x?.h5 == null && now - x.entryTs >= 300 && now - (x.lastTs || 0) >= 5 && x.lastPx > 0); if (p) { try { tick(mint, p.lastPx, p.lastMc, 0, true, now, null, true); } catch (e) { console.error("[quiet tick]", e.message); } } } }, 5000);
 
 function close(mint, p, reason) {
   if (p.wall0 && !p.noExec) { try { const cm = (p.lastPx || p.e.entry) / p.e.entry, v = finalExits(p.e, cm); execSend({ type: "close", id: Number(p.id), mint, reason, mult: cm, h5: v.h5 ?? null, flow4: v.flow4 ?? null }); } catch {} } // v0.18.90 → executor (backstop: sell if still held)

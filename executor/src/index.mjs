@@ -16,7 +16,7 @@ import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 import { newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, positionsOf, hasPosition, dayNet, net24, londonDayStart, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.3.8"; // four books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
+const VERSION = "0.3.9"; // four books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
 const EXIT_NAMES = { h5: "B", flow4: "A" };
 // wide = P5 Wide's EXTRA coins only (the $100K–$250K triggers, strategy p5w30): the rest of the paper Wide book is the Runner's coins, already traded by the runner book.
 // strict = the 50 SOL trigger (p5e50): its own paper trade on a coin the runner may already hold, bought later and higher — a separate leg, a separate test.
@@ -30,7 +30,9 @@ const BOOKS = { runner: { name: "A", strategy: "p5e30", exit: "flow4", take: pas
   crowd: { name: "G", strategy: "p5e30", exit: "flow4", take: (m) => /wallets/.test(String(m.skipWhy || "")) && m.wal60 != null && m.wal60 <= 500, rule: "A's trigger on the coins the page skips for 150–500 wallets in the trigger minute (the 13:28 study: 26 trades, +13% to +36%) · runner exit" },
   swarm: { name: "S9", strategy: "sn9", exit: "h5", take: () => true, rule: "Project S book S9: 20+ outside wallets each ≥ 0.3 SOL in a launch's first 60 s, bundle under 20% — bought at +60 s on the bonding curve, sold at 5 min (B's rule). The 15:40 launch study: 102 in 24 h, +46% mean / +11% median at 5 min, 54% winners" },
   dev: { name: "S1", strategy: "sn1", exit: "h5", take: () => true, rule: "Project S book S1: a creator with a record (≤ 30 launches, 2+ graduated or one over $100K, ≥ 10% of them) — bought on the first trade after the create block, sold at 5 min (B's rule)" },
-  smart: { name: "S6", strategy: "sn6", exit: "flow4", take: () => true, rule: "Project S book S6: a GMGN smart wallet buys ≥ 0.2 SOL within 60 s — bought on that trade · runner exit (the one positive paper line at 15:19 UK: +14.7% avg on 42)" } }; // v0.3.7 (owner, 19 Oct 15:57 UK): S1 and S6 in shadow too // v0.3.6 (owner, 19 Oct 15:48 UK: "every new analysis, straight onto shadow") // one letter per book, the same as the website: A runner · B hold-5 · C wide (runner exit) · D strict (runner exit)
+  smart: { name: "S6", strategy: "sn6", exit: "flow4", take: () => true, rule: "Project S book S6: a GMGN smart wallet buys ≥ 0.2 SOL within 60 s — bought on that trade · runner exit (the one positive paper line at 15:19 UK: +14.7% avg on 42)" },
+  copy: { name: "S3", strategy: "sn3", exit: "h5", take: () => true, rule: "Project S book S3: the same name as a coin that peaked ≥ $300K in the last 24 h — bought on the first trade after the create block, sold at 5 min (B's rule)" },
+  clean: { name: "S4", strategy: "sn4", exit: "h5", take: () => true, rule: "Project S book S4: clean launch (bundle < 5%, dev 0.2–3 SOL, 10+ outside buyers and 5+ SOL within 15 s) — bought on that trade, sold at 5 min (B's rule). The one sniper book positive under every exit on the 17:05 data (+9.5% on 13 replayed)" } }; // v0.3.9 (owner, 19 Oct 17:11 UK): S3 and S4 into shadow; S1, S6, S9 back to paper // v0.3.7 (owner, 19 Oct 15:57 UK): S1 and S6 in shadow too // v0.3.6 (owner, 19 Oct 15:48 UK: "every new analysis, straight onto shadow") // one letter per book, the same as the website: A runner · B hold-5 · C wide (runner exit) · D strict (runner exit)
 const BOOK_IDS = Object.keys(BOOKS);
 const nowS = () => Math.floor(Date.now() / 1000);
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -39,15 +41,16 @@ const short = (m) => (m ? `${m.slice(0, 4)}…${m.slice(-4)}` : "?");
 // ---- settings that can be changed from Telegram and survive restarts (mode, stake) ----
 const OVR = join(EXEC_HOME, "overrides.json");
 const ovr = (() => { try { return JSON.parse(readFileSync(OVR, "utf8")); } catch { return {}; } })();
-const S = { mode: ovr.mode || CFG.MODE, stake: ovr.stake || CFG.STAKE_SOL, exit: ovr.exit || CFG.EXIT, strategy: ovr.strategy || CFG.STRATEGY, stoppedDay: null, stopOverrideDay: null, lastTracker: Date.now(), lastFeed: 0, kp: null, pub: null, balance: null, balanceT: 0, buying: { runner: 0, hold5: 0, wide: 0, strict: 0, small: 0, crowd: 0, swarm: 0, dev: 0, smart: 0 }, lags: [] };
+const S = { mode: ovr.mode || CFG.MODE, stake: ovr.stake || CFG.STAKE_SOL, exit: ovr.exit || CFG.EXIT, strategy: ovr.strategy || CFG.STRATEGY, stoppedDay: null, stopOverrideDay: null, lastTracker: Date.now(), lastFeed: 0, kp: null, pub: null, balance: null, balanceT: 0, buying: { runner: 0, hold5: 0, wide: 0, strict: 0, small: 0, crowd: 0, swarm: 0, dev: 0, smart: 0, copy: 0, clean: 0 }, lags: [] };
 // v0.2.1: each book has its own switch and stake (owner's controls on the wallet box) · v0.3.0: books are named and tied to a strategy
 // v0.3.3: each book has its own MODE — off | shadow | live — so A can trade for real while C and D are simulated. The wallet-wide mode is derived from the books.
 const MODES = ["off", "shadow", "live"];
 S.books = (() => { const b = ovr.books || {}; const legacyMode = (on) => (!on ? "off" : S.mode === "live" ? "live" : S.mode === "shadow" ? "shadow" : "off");
-  if (b.runner && b.hold5) { const out = {}; for (const k of BOOK_IDS) { const x = b[k] || (k === "small" || k === "crowd" || k === "swarm" || k === "dev" || k === "smart" ? { mode: "shadow", stake: 0.05 } : { on: false, stake: 0.01 }); out[k] = { mode: MODES.includes(x.mode) ? x.mode : legacyMode(!!x.on), stake: x.stake || 0.01 }; } return out; } // v0.3.4: F and G start in shadow at 0.05
+  if (b.runner && b.hold5) { const out = {}; for (const k of BOOK_IDS) { const x = b[k] || (k === "small" || k === "crowd" || k === "swarm" || k === "dev" || k === "smart" || k === "copy" || k === "clean" ? { mode: "shadow", stake: 0.05 } : { on: false, stake: 0.01 }); out[k] = { mode: MODES.includes(x.mode) ? x.mode : legacyMode(!!x.on), stake: x.stake || 0.01 }; } return out; } // v0.3.4: F and G start in shadow at 0.05
   // migrate the v0.2 shape ({flow4, h5}) or the single-exit setting; Wide and Strict start off at 0.01
   const f = b.flow4 || { on: S.exit === "both" || S.exit === "flow4", stake: S.stake }, h = b.h5 || { on: S.exit === "both" || S.exit === "h5", stake: S.stake };
-  return { runner: { mode: legacyMode(!!f.on), stake: f.stake }, hold5: { mode: legacyMode(!!h.on), stake: h.stake }, wide: { mode: "off", stake: 0.01 }, strict: { mode: "off", stake: 0.01 }, small: { mode: "shadow", stake: 0.05 }, crowd: { mode: "shadow", stake: 0.05 }, swarm: { mode: "shadow", stake: 0.05 }, dev: { mode: "shadow", stake: 0.05 }, smart: { mode: "shadow", stake: 0.05 } }; })();
+  return { runner: { mode: legacyMode(!!f.on), stake: f.stake }, hold5: { mode: legacyMode(!!h.on), stake: h.stake }, wide: { mode: "off", stake: 0.01 }, strict: { mode: "off", stake: 0.01 }, small: { mode: "shadow", stake: 0.05 }, crowd: { mode: "shadow", stake: 0.05 }, swarm: { mode: "shadow", stake: 0.05 }, dev: { mode: "shadow", stake: 0.05 }, smart: { mode: "shadow", stake: 0.05 }, copy: { mode: "shadow", stake: 0.05 }, clean: { mode: "shadow", stake: 0.05 } }; })();
+if (!ovr.m039) { for (const k of ["dev", "smart", "swarm"]) if (S.books[k]) S.books[k].mode = "off"; for (const k of ["copy", "clean"]) if (S.books[k]) S.books[k].mode = "shadow"; ovr.m039 = true; S.mig039 = true; } // v0.3.9 one-time: S1/S6/S9 back to paper, S3/S4 shadow (owner, 19 Oct 17:11 UK)
 const modeOf = (book) => S.books[book]?.mode || "off";
 const booksOn = () => BOOK_IDS.filter((k) => modeOf(k) !== "off");
 const booksLive = () => BOOK_IDS.filter((k) => modeOf(k) === "live");
@@ -55,7 +58,7 @@ const syncMode = () => { S.mode = booksLive().length ? "live" : booksOn().length
 syncMode();
 const exitsActive = () => [...new Set(booksOn().map((k) => BOOKS[k].exit))]; // the exit rules any switched-on book uses
 const stakeOf = (book) => Number(S.books[book]?.stake || S.stake);
-const bookKey = (word) => ({ a: "runner", runner: "runner", flow4: "runner", b: "hold5", "hold-5": "hold5", hold5: "hold5", h5: "hold5", c: "wide", wide: "wide", d: "strict", strict: "strict", f: "small", small: "small", g: "crowd", crowd: "crowd", s9: "swarm", swarm: "swarm", s1: "dev", dev: "dev", s6: "smart", smart: "smart" }[String(word || "").toLowerCase()] || null);
+const bookKey = (word) => ({ a: "runner", runner: "runner", flow4: "runner", b: "hold5", "hold-5": "hold5", hold5: "hold5", h5: "hold5", c: "wide", wide: "wide", d: "strict", strict: "strict", f: "small", small: "small", g: "crowd", crowd: "crowd", s9: "swarm", swarm: "swarm", s1: "dev", dev: "dev", s6: "smart", smart: "smart", s3: "copy", copy: "copy", s4: "clean", clean: "clean" }[String(word || "").toLowerCase()] || null);
 const STAKE_CHOICES = [0.01, 0.02, 0.05, 0.1, 0.25, 0.5, 1];
 const syncExitWord = () => { const r = modeOf("runner") !== "off", h = modeOf("hold5") !== "off"; S.exit = r && h ? "both" : r ? "flow4" : h ? "h5" : "off"; syncMode(); };
 const legKey = (paperId, exit) => `${paperId}:${exit}`;
@@ -67,7 +70,8 @@ const selling = new Set();       // legKeys with a sell in progress
 let housekeepingBusy = false;
 const fallbackMin = (exit) => (exit === "flow4" ? CFG.FALLBACK_SELL_MIN_FLOW4 : CFG.FALLBACK_SELL_MIN_H5);
 const feedLagAvg = () => (S.lags.length ? S.lags.reduce((a, b) => a + b, 0) / S.lags.length : 0);
-const saveOvr = () => { try { writeFileSync(OVR, JSON.stringify({ mode: S.mode, stake: S.stake, exit: S.exit, strategy: S.strategy, books: S.books })); } catch {} };
+const saveOvr = () => { try { writeFileSync(OVR, JSON.stringify({ mode: S.mode, stake: S.stake, exit: S.exit, strategy: S.strategy, books: S.books, m039: true })); } catch {} };
+if (S.mig039) { syncMode(); saveOvr(); }
 
 // ---- Telegram (send only; commands arrive through the tracker, which owns the bot's polling) ----
 export async function tg(text) {
@@ -145,6 +149,7 @@ const progErr = (sim) => !sim.ok && !/rpc:/.test(sim.err || "") && !/insufficien
 async function handleTrigger(m) {
   S.lastTracker = Date.now();
   if (!BOOK_IDS.some((k) => BOOKS[k].strategy === m.strategy)) return; // not a strategy any book follows
+  if (/^sn\d$/.test(m.strategy) && !BOOK_IDS.some((k) => BOOKS[k].strategy === m.strategy && modeOf(k) !== "off")) return; // v0.3.9: a sniper book on paper — the tracker still sends its triggers; nothing to record here
   const t0 = Date.now(), fromTrig = () => Date.now() - (m.wall0 || t0);
   const skip = (why, book = null) => { newOrder({ side: "buy", paper_id: m.id, exit: book ? BOOKS[book].exit : null, book, mint: m.mint, name: m.name, strategy: m.strategy, status: "skipped", skip_reason: why, stake_lamports: lamports(book ? stakeOf(book) : S.stake), from_trigger_ms: fromTrig() }); log("skip", `${m.name}${book ? " [" + BOOKS[book].name + "]" : ""} ${why}`); };
   if (m.lagMs != null) { S.lags.push(m.lagMs); if (S.lags.length > 10) S.lags.shift(); }
