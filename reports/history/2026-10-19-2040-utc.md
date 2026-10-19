@@ -1,4 +1,4 @@
-# 4-hour study — 19 Oct 2026 22:05 UK
+# 4-hour study — 19 Oct 2026 21:40 UK
 
 **Data push:** 21:09 UK (fresh). 2,990 rows since the price fix (18 Oct 20:25 UK) to 19 Oct 21:05 UK. A: 359 fired, 152 passed and closed. C 47 · D 120 · 80-SOL 67 · E 50 passed. Executor legs: 88 live (none since 11:59 UK), 265 shadow. launches.csv: 48,022 launches to 20:05 UK. Every figure below is at the REAL costs (PumpSwap x/1.02 × 0.967 − 0.016, stops −0.05 more; curve x × 0.97 − 0.01, stops −0.06 more; prints above 15x capped), unless it says "paper".
 
