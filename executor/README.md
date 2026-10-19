@@ -131,3 +131,7 @@ higher tip; fill confirmed by seeing our own swap in the feed. Slippage: 20% on 
 - Each book now has a `take(m)` predicate; the website's pass flag is one input (A–D need it, F adds the bundle test, G takes the "N wallets" skips). The tracker's trigger message carries `bundleWallets`.
 - Commands: `/live book f|g off|shadow|live`, `/live stake f 0.05`.
 
+
+## v0.3.6 — book S9 (19 Oct 15:50 UK)
+- Seventh book, **S9** (key `swarm`, strategy `sn9`): the first Project S sniper that reaches the executor. The tracker fires it on the first trade at/after +60 s when 20+ outside wallets each bought ≥ 0.3 SOL in the first minute and the launch bundle was under 20%; the executor quotes the bonding curve (venue `curve`) and sells on B's 5-minute rule (`h5`). Starts in **shadow** at 0.05 SOL. From the 15:40 launch study (43,835 launches, 24 h): 102 such launches, +46% mean / +11% median at 5 min after 10% cost, 54% winners, positive in both 12-hour halves.
+- Commands: `/live book s9 off|shadow|live`, `/live stake s9 0.05`.
