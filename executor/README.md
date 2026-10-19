@@ -58,6 +58,16 @@ forwarding exits · `/live on` really re-arms the daily stop · fill read-back r
   reading is a trend, not a delay. It is now recorded only; the executor-side trigger-age check (4 s) is the real guard.
 - Triggers reach the executor 40–110 ms after the tracker sees them; the website's P5 filters skipped bundled / crowded / unseen coins exactly as the paper book does.
 
+## v0.2.0 (19 Oct 02:30 UK) — two books side by side
+Owner's call after the first live hour: run the runner and hold-5 **both live** on the same coins rather than pick one from paper. Every passing
+trigger is bought once per active book (`/live exit both`; `h5` or `flow4` alone still work), in two separate transactions sent together (they differ
+by one lamport of tip so the signatures differ). A position is now (paper trade, exit); each leg is sold on its own signal — the tracker already
+sends both `h5` and `flow4` exits — and a paper close takes both legs. When one leg sells while the other still holds the coin, the sell takes only
+that leg's tokens and leaves the token account open (closing a non-empty account would fail the whole transaction); the last leg closes it.
+Cap and `/live sell <id> [h5|flow4]` are per book; the daily stop counts both together. Tested offline against a fake chain (buy both → sell one →
+sell the other → duplicate trigger → paper close → single-book mode → manual sell by leg) before deploy. The wallet box shows the two books as
+two columns, each with its own today / 24 h / total, entry-price gap, open positions and last trades.
+
 ## Shadow mode needs a funded wallet
 A buy can only be simulated against the chain with a payer that holds the stake, so shadow mode simulates with the real bot wallet: ~0.2 SOL in it
 is enough at a 0.1 stake. Nothing is signed in shadow mode. Shadow sells are quoted from the curve at the moment the exit fires (a sell cannot be
