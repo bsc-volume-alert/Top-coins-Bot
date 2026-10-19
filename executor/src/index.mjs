@@ -311,7 +311,7 @@ async function housekeeping() {
     const bal = S.pub ? await balance() : null;
     const dayStart = londonDayStart(), tl = totals("live"), ts = totals("shadow");
     writeFileSync(join(EXEC_HOME, "status.json"), JSON.stringify({ version: VERSION, mode: S.mode, strategy: S.strategy, exit: S.exit, stake: S.stake, wallet: S.pub?.toBase58() || null, balance: bal != null ? sol(bal) : null, sweepTo: CFG.SWEEP_TO || null,
-      open: ops.map((p) => ({ id: p.paper_id, name: p.name, mint: p.mint, mode: p.mode, opened_ts: p.opened_ts, cost: sol(p.cost_lamports), tokens: p.tokens })),
+      open: ops.map((p) => ({ id: p.paper_id, name: p.name, mint: p.mint, mode: p.mode, opened_ts: p.opened_ts, cost: sol(p.cost_lamports), tokens: p.tokens, paperPx: p.paper_entry_price, livePx: p.tokens > 0 ? (p.cost_lamports / 1e9) / (p.tokens / 1e6) : null })),
       dayLive: dayNet("live"), dayShadow: dayNet("shadow"), h24Live: net24("live"), h24Shadow: net24("shadow"), totalLive: { n: tl.n, pnl: sol(tl.pnl), win: tl.n ? tl.w / tl.n : null }, totalShadow: { n: ts.n, pnl: sol(ts.pnl), win: ts.n ? ts.w / ts.n : null },
       recent: recentClosed(100), skipsToday: skipSummary(dayStart), stats: stats(), rpc: rpcStats, trackerSeenS: S.lastTracker ? Math.round((Date.now() - S.lastTracker) / 1000) : null, now: nowS() }));
   } catch (e) { console.error("[housekeeping]", e.message); }
