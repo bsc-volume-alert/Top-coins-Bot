@@ -68,6 +68,13 @@ Cap and `/live sell <id> [h5|flow4]` are per book; the daily stop counts both to
 sell the other → duplicate trigger → paper close → single-book mode → manual sell by leg) before deploy. The wallet box shows the two books as
 two columns, each with its own today / 24 h / total, entry-price gap, open positions and last trades.
 
+### v0.2.1 — a switch and a stake per book, on the wallet box
+Each book has its own on/off switch and stake (0.05 · 0.1 · 0.25 · 0.5 · 1 SOL) on the page, and the same via Telegram (`/live book runner on|off`,
+`/live stake hold-5 0.25`; `/live stake 0.25` sets both). Off = no new buys for that book; every leg that exists is still sold on its rule, whatever
+the switches say (the test caught a paper close skipping an off book's leg — fixed). The page can only send those exact commands (`/api/livecmd`
+whitelist); mode, sells-all and withdrawals never come from the page. No PIN yet — the owner's call while the stakes are small; the endpoint is
+ready for one. The daily stop is 6 × the largest stake in play.
+
 ## Shadow mode needs a funded wallet
 A buy can only be simulated against the chain with a payer that holds the stake, so shadow mode simulates with the real bot wallet: ~0.2 SOL in it
 is enough at a 0.1 stake. Nothing is signed in shadow mode. Shadow sells are quoted from the curve at the moment the exit fires (a sell cannot be

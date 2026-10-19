@@ -16,7 +16,7 @@ import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 import { newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, positionsOf, hasPosition, dayNet, net24, londonDayStart, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.2.0"; // two books side by side: each trigger is bought once per active exit (runner / hold-5), each leg sold on its own rule
+const VERSION = "0.2.1"; // two books side by side: each trigger is bought once per active exit (runner / hold-5), each leg sold on its own rule
 const EXIT_NAMES = { h5: "hold-5", flow4: "runner" };
 const nowS = () => Math.floor(Date.now() / 1000);
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -26,8 +26,14 @@ const short = (m) => (m ? `${m.slice(0, 4)}…${m.slice(-4)}` : "?");
 const OVR = join(EXEC_HOME, "overrides.json");
 const ovr = (() => { try { return JSON.parse(readFileSync(OVR, "utf8")); } catch { return {}; } })();
 const S = { mode: ovr.mode || CFG.MODE, stake: ovr.stake || CFG.STAKE_SOL, exit: ovr.exit || CFG.EXIT, strategy: ovr.strategy || CFG.STRATEGY, stoppedDay: null, stopOverrideDay: null, lastTracker: Date.now(), lastFeed: 0, kp: null, pub: null, balance: null, balanceT: 0, buying: { h5: 0, flow4: 0 }, lags: [] };
-/** the exits in play: "h5" | "flow4" | "both" (runner first — it is the headline) */
-const exitsActive = () => (S.exit === "both" ? ["flow4", "h5"] : [S.exit]);
+// v0.2.1: each book has its own switch and stake (owner's controls on the wallet box). `exit` is kept for the old commands: h5 / flow4 / both just set the switches.
+const BOOK_KEYS = ["flow4", "h5"]; // runner first — it is the headline
+S.books = ovr.books && ovr.books.flow4 && ovr.books.h5 ? ovr.books : { flow4: { on: S.exit === "both" || S.exit === "flow4", stake: S.stake }, h5: { on: S.exit === "both" || S.exit === "h5", stake: S.stake } };
+const exitsActive = () => BOOK_KEYS.filter((k) => S.books[k].on);
+const stakeOf = (exit) => Number(S.books[exit]?.stake || S.stake);
+const bookKey = (word) => ({ runner: "flow4", flow4: "flow4", "hold-5": "h5", hold5: "h5", h5: "h5" }[String(word || "").toLowerCase()] || null);
+const STAKE_CHOICES = [0.05, 0.1, 0.25, 0.5, 1];
+const syncExitWord = () => { const on = exitsActive(); S.exit = on.length === 2 ? "both" : on[0] || "off"; };
 const legKey = (paperId, exit) => `${paperId}:${exit}`;
 const inflight = new Set();      // mints with a buy in progress (blocks a second trigger on the same coin while the first is being bought)
 const pendingExit = new Map();   // legKey -> { rule, mult } : an exit that arrived while the buy was still in flight
@@ -36,7 +42,7 @@ const selling = new Set();       // legKeys with a sell in progress
 let housekeepingBusy = false;
 const fallbackMin = (exit) => (exit === "flow4" ? CFG.FALLBACK_SELL_MIN_FLOW4 : CFG.FALLBACK_SELL_MIN_H5);
 const feedLagAvg = () => (S.lags.length ? S.lags.reduce((a, b) => a + b, 0) / S.lags.length : 0);
-const saveOvr = () => { try { writeFileSync(OVR, JSON.stringify({ mode: S.mode, stake: S.stake, exit: S.exit, strategy: S.strategy })); } catch {} };
+const saveOvr = () => { try { writeFileSync(OVR, JSON.stringify({ mode: S.mode, stake: S.stake, exit: S.exit, strategy: S.strategy, books: S.books })); } catch {} };
 
 // ---- Telegram (send only; commands arrive through the tracker, which owns the bot's polling) ----
 export async function tg(text) {
@@ -115,7 +121,7 @@ async function handleTrigger(m) {
   S.lastTracker = Date.now();
   if (m.strategy !== S.strategy) return;
   const t0 = Date.now(), fromTrig = () => Date.now() - (m.wall0 || t0);
-  const skip = (why, exit = null) => { newOrder({ side: "buy", paper_id: m.id, exit, mint: m.mint, name: m.name, strategy: m.strategy, status: "skipped", skip_reason: why, stake_lamports: lamports(S.stake), from_trigger_ms: fromTrig() }); log("skip", `${m.name}${exit ? " [" + EXIT_NAMES[exit] + "]" : ""} ${why}`); };
+  const skip = (why, exit = null) => { newOrder({ side: "buy", paper_id: m.id, exit, mint: m.mint, name: m.name, strategy: m.strategy, status: "skipped", skip_reason: why, stake_lamports: lamports(exit ? stakeOf(exit) : S.stake), from_trigger_ms: fromTrig() }); log("skip", `${m.name}${exit ? " [" + EXIT_NAMES[exit] + "]" : ""} ${why}`); };
   if (m.lagMs != null) { S.lags.push(m.lagMs); if (S.lags.length > 10) S.lags.shift(); }
   if (S.mode === "off") return skip("mode off");
   if (m.lagMs != null && m.lagMs > CFG.FEED_BACKLOG_MS) return skip(`feed ${(m.lagMs / 1000).toFixed(0)} s behind (tracker catching up)`); // v0.1.3: a 33 s lag after a tracker restart put a paper buy on a stale price (peeled potato, 18 Oct)
@@ -124,10 +130,11 @@ async function handleTrigger(m) {
   if (fromTrig() > CFG.TRIGGER_MAX_AGE_MS) return skip(`trigger ${fromTrig()} ms old`);
   if (m.venue && !/pump|pumpswap/i.test(m.venue)) return skip(`venue ${m.venue} not handled yet`);
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" }), day = dayNet(S.mode === "live" ? "live" : "shadow"); // UK day, like the box; the stop counts both books together
-  if (S.stopOverrideDay !== today && day.n <= -lamports(S.stake) * CFG.DAILY_STOP_STAKES) { if (S.stoppedDay !== today) { S.stoppedDay = today; tg(`⛔ <b>Daily stop</b> — ${sol(day.n).toFixed(3)} SOL today over ${day.c} trades. No more buys until tomorrow. <code>/live on</code> re-arms it for today.`); } return skip("daily stop"); }
+  const stopStake = Math.max(...BOOK_KEYS.map(stakeOf)); // the brake scales with the biggest stake in play
+  if (S.stopOverrideDay !== today && day.n <= -lamports(stopStake) * CFG.DAILY_STOP_STAKES) { if (S.stoppedDay !== today) { S.stoppedDay = today; tg(`⛔ <b>Daily stop</b> — ${sol(day.n).toFixed(3)} SOL today over ${day.c} trades. No more buys until tomorrow. <code>/live on</code> re-arms it for today.`); } return skip("daily stop"); }
   if (!S.pub) return skip("no wallet yet");
   if (inflight.has(m.mint)) return skip("buy already in flight for this coin");
-  const stake = lamports(S.stake);
+  if (!exitsActive().length) return skip("both books switched off");
   // which books take this coin? reserve their slots BEFORE anything awaits, so two triggers in one burst cannot both pass the cap
   const legs = [];
   for (const exit of exitsActive()) {
@@ -138,13 +145,14 @@ async function handleTrigger(m) {
   if (!legs.length) return;
   inflight.add(m.mint);
   try {
-    const bal = await balance(); if (bal != null && bal < stake * legs.length + lamports(0.02)) { for (const exit of legs) skip(`balance ${sol(bal).toFixed(3)} SOL below ${legs.length} stake${legs.length > 1 ? "s" : ""} + fees`, exit); return; }
+    const need = legs.reduce((a, x) => a + lamports(stakeOf(x)), 0);
+    const bal = await balance(); if (bal != null && bal < need + lamports(0.02)) { for (const exit of legs) skip(`balance ${sol(bal).toFixed(3)} SOL below ${sol(need).toFixed(2)} (the ${legs.length > 1 ? "two books' stakes" : "stake"}) + fees`, exit); return; }
     const v = await venueOf(m.mint); const tVenue = Date.now() - t0;
     if (v.kind === "none") { for (const exit of legs) skip(v.reason, exit); return; }
     if (v.kind === "curve" && !v.solQuoted) { for (const exit of legs) skip("curve not SOL-quoted", exit); return; }
     const pre = await userVolPrefix(v.kind);
     // one transaction per leg, built and sent together. The legs differ by one lamport of tip so their signatures differ (an identical message would be the same transaction).
-    await Promise.all(legs.map((exit, i) => buyLeg(m, exit, i, v, stake, pre, tVenue, fromTrig).catch((e) => { console.error("[buy]", e); log("buy-error", `${m.name} [${EXIT_NAMES[exit]}]: ${e.message}`); newOrder({ side: "buy", paper_id: m.id, exit, mint: m.mint, name: m.name, strategy: m.strategy, status: "error", skip_reason: String(e.message).slice(0, 200), stake_lamports: stake, from_trigger_ms: fromTrig() }); })));
+    await Promise.all(legs.map((exit, i) => buyLeg(m, exit, i, v, lamports(stakeOf(exit)), pre, tVenue, fromTrig).catch((e) => { console.error("[buy]", e); log("buy-error", `${m.name} [${EXIT_NAMES[exit]}]: ${e.message}`); newOrder({ side: "buy", paper_id: m.id, exit, mint: m.mint, name: m.name, strategy: m.strategy, status: "error", skip_reason: String(e.message).slice(0, 200), stake_lamports: lamports(stakeOf(exit)), from_trigger_ms: fromTrig() }); })));
   } finally { for (const exit of legs) S.buying[exit] = Math.max(0, S.buying[exit] - 1); inflight.delete(m.mint); }
 }
 async function buyLeg(m, exit, legIndex, v, stake, pre, tVenue, fromTrig) {
@@ -260,10 +268,10 @@ async function sellPosition(p, rule, paperMult = null, why = null) {
 }
 async function handleExit(m) {
   S.lastTracker = Date.now();
-  const active = exitsActive();
-  if (m.type === "exit" && !active.includes(m.rule)) return;
+  if (m.type === "exit" && !BOOK_KEYS.includes(m.rule)) return;
   const rule = m.type === "close" ? `paper-close:${m.reason}` : m.rule, mult = m.mult ?? null;
-  const legs = m.type === "close" ? active : [m.rule]; // the paper book closing the coin closes every leg; an exit signal closes its own book's leg
+  // every leg that exists is managed, whether or not its book is switched on right now (the switch only governs new buys): a paper close takes all legs, an exit signal its own book's leg
+  const legs = m.type === "close" ? BOOK_KEYS : [m.rule];
   for (const exit of legs) {
     const p = positionOf(m.id, exit);
     if (!p) { if (inflight.has(m.mint) || pendingBuys().some((o) => o.paper_id === m.id && (o.exit || "h5") === exit)) pendingExit.set(legKey(m.id, exit), { rule, mult }); continue; } // buy still in flight → sell the moment it books
@@ -277,13 +285,18 @@ async function handleCmd(text) {
   const [, sub, arg, arg2] = text.trim().split(/\s+/); const bal = await balance(true);
   const status = () => { const ops = openPositions(); const d = dayNet("live"), sd = dayNet("shadow");
     const books = exitsActive().map((x) => { const dd = dayNet("live", x); return `${EXIT_NAMES[x]} ${sol(dd.n) >= 0 ? "+" : ""}${sol(dd.n).toFixed(3)} / ${dd.c}`; }).join(" · ");
-    return `executor v${VERSION} · mode <b>${S.mode}</b> · follows ${S.strategy} / exit ${S.exit === "both" ? "both (runner + hold-5)" : EXIT_NAMES[S.exit]} · stake ${S.stake} SOL per book · cap ${CFG.MAX_OPEN} per book\nwallet ${S.pub ? `<code>${S.pub.toBase58()}</code>` : "none"} · balance ${bal != null ? sol(bal).toFixed(4) : "?"} SOL\nopen ${ops.length}: ${ops.map((p) => `${esc(p.name)} [${EXIT_NAMES[p.exit] || p.exit}${p.mode !== "live" ? ", " + p.mode : ""}]`).join(", ") || "—"}\ntoday live ${sol(d.n).toFixed(3)} / ${d.c} (${books}) · shadow ${sol(sd.n).toFixed(3)} / ${sd.c} · rpc errs ${rpcStats.errors} · sender errs ${rpcStats.senderErrors}`; };
+    return `executor v${VERSION} · mode <b>${S.mode}</b> · follows ${S.strategy} · books: ${BOOK_KEYS.map((k) => `${EXIT_NAMES[k]} ${S.books[k].on ? "ON" : "off"} @ ${stakeOf(k)} SOL`).join(" · ")} · cap ${CFG.MAX_OPEN} per book\nwallet ${S.pub ? `<code>${S.pub.toBase58()}</code>` : "none"} · balance ${bal != null ? sol(bal).toFixed(4) : "?"} SOL\nopen ${ops.length}: ${ops.map((p) => `${esc(p.name)} [${EXIT_NAMES[p.exit] || p.exit}${p.mode !== "live" ? ", " + p.mode : ""}]`).join(", ") || "—"}\ntoday live ${sol(d.n).toFixed(3)} / ${d.c} (${books}) · shadow ${sol(sd.n).toFixed(3)} / ${sd.c} · rpc errs ${rpcStats.errors} · sender errs ${rpcStats.senderErrors}`; };
   if (!sub) return tg(status());
   if (sub === "off") { S.mode = "off"; saveOvr(); return tg(`mode <b>off</b> — no buys. Open positions are still sold on their exits.`); }
   if (sub === "shadow") { S.mode = "shadow"; saveOvr(); return tg(`mode <b>shadow</b> — building and simulating, signing nothing.`); }
-  if (sub === "on" || sub === "live") { if (!S.kp) return tg("no wallet on the box yet"); if (bal == null || bal < lamports(S.stake) * exitsActive().length + lamports(0.02)) return tg(`balance ${bal != null ? sol(bal).toFixed(4) : "?"} SOL is below one stake per book + fees — fund the wallet first`); S.mode = "live"; S.stopOverrideDay = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" }); saveOvr(); return tg(`mode <b>LIVE</b> — ${S.stake} SOL per trade on ${S.strategy}, exit ${S.exit === "both" ? "both books (runner + hold-5)" : EXIT_NAMES[S.exit]}.`); }
-  if (sub === "stake") { const v = Number(arg); if (!(v > 0 && v <= 2)) return tg("usage: /live stake 0.25"); S.stake = v; saveOvr(); return tg(`stake set to <b>${v} SOL</b>`); }
-  if (sub === "exit") { if (!["h5", "flow4", "both"].includes(arg)) return tg("usage: /live exit h5 | flow4 | both"); S.exit = arg; saveOvr(); return tg(arg === "both" ? `running <b>both books</b> — every coin is bought once for the runner and once for hold-5 (${S.stake} SOL each), each sold on its own rule` : `exit rule set to <b>${EXIT_NAMES[arg]}</b> (${arg})`); }
+  if (sub === "on" || sub === "live") { if (!S.kp) return tg("no wallet on the box yet"); const need = exitsActive().reduce((a, x) => a + lamports(stakeOf(x)), 0); if (bal == null || bal < need + lamports(0.02)) return tg(`balance ${bal != null ? sol(bal).toFixed(4) : "?"} SOL is below one stake per switched-on book + fees — fund the wallet first`); S.mode = "live"; S.stopOverrideDay = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" }); saveOvr(); return tg(`mode <b>LIVE</b> on ${S.strategy} — ${BOOK_KEYS.map((k) => `${EXIT_NAMES[k]} ${S.books[k].on ? "ON @ " + stakeOf(k) + " SOL" : "off"}`).join(", ")}.`); }
+  if (sub === "stake") { // /live stake 0.25 (both books) · /live stake runner 0.25
+    const k = bookKey(arg), v = Number(k ? arg2 : arg); if (!(v > 0 && v <= 2)) return tg("usage: /live stake 0.25 · /live stake runner 0.25 · /live stake hold-5 0.1");
+    if (k) { S.books[k].stake = v; } else { S.stake = v; for (const b of BOOK_KEYS) S.books[b].stake = v; } saveOvr(); return tg(`stake: ${BOOK_KEYS.map((b) => `${EXIT_NAMES[b]} <b>${stakeOf(b)} SOL</b>`).join(" · ")}`); }
+  if (sub === "book") { // /live book runner on|off
+    const k = bookKey(arg); if (!k || !["on", "off"].includes(arg2)) return tg("usage: /live book runner on|off · /live book hold-5 on|off"); S.books[k].on = arg2 === "on"; syncExitWord(); saveOvr();
+    return tg(`${EXIT_NAMES[k]} book <b>${arg2.toUpperCase()}</b>${arg2 === "off" ? " — no new buys for it; anything it holds still sells on its rule" : ` at ${stakeOf(k)} SOL`}. Books now: ${BOOK_KEYS.map((b) => `${EXIT_NAMES[b]} ${S.books[b].on ? "ON" : "off"}`).join(", ")}.`); }
+  if (sub === "exit") { if (!["h5", "flow4", "both"].includes(arg)) return tg("usage: /live exit h5 | flow4 | both"); S.books.flow4.on = arg !== "h5"; S.books.h5.on = arg !== "flow4"; syncExitWord(); saveOvr(); return tg(arg === "both" ? `running <b>both books</b> — every coin is bought once for the runner (${stakeOf("flow4")} SOL) and once for hold-5 (${stakeOf("h5")} SOL), each sold on its own rule` : `only the <b>${EXIT_NAMES[arg]}</b> book is on`); }
   if (sub === "strategy") { if (!/^p5[ew]\d+$/.test(arg || "")) return tg("usage: /live strategy p5e30 | p5e50"); S.strategy = arg; saveOvr(); return tg(`following <b>${arg}</b>`); }
   if (sub === "sell") { const ops = openPositions(); const list = arg === "all" ? ops : ops.filter((p) => String(p.paper_id) === arg && (!arg2 || p.exit === arg2)); if (!list.length) return tg("nothing open by that id"); for (const p of list) await sellPosition(p, "manual", null, "telegram"); return; }
   if (sub === "orders") return tg(recentOrders(8).map((o) => `#${o.id} ${o.side} ${esc(o.name)} ${o.status}${o.skip_reason ? " (" + esc(o.skip_reason) + ")" : ""}${o.sim_err ? " " + esc(String(o.sim_err).slice(0, 60)) : ""}`).join("\n") || "no orders yet");
@@ -294,7 +307,7 @@ async function handleCmd(text) {
     if (bal == null || bal < lamports(amt) + lamports(0.01)) return tg(`balance ${bal != null ? sol(bal).toFixed(4) : "?"} SOL — not enough for ${amt} plus fees`);
     try { const tx = await buildTx(S.pub, [...ixBudget(20_000, CFG.CU_PRICE), ixTransfer(S.pub, PK(CFG.SWEEP_TO), lamports(amt))], S.kp); const c = await sendUntilConfirmed(tx, 30000); log("withdraw", `${amt} SOL → ${CFG.SWEEP_TO} ${c.status} ${c.sig}`);
       return tg(c.status === "confirmed" ? `🏦 sent <b>${amt} SOL</b> to <code>${CFG.SWEEP_TO}</code>\n<code>${c.sig}</code>` : `⚠️ withdrawal ${c.status} — <code>${c.sig}</code> (check Solscan before retrying)`); } catch (e) { return tg(`⚠️ withdrawal failed: ${esc(e.message)}`); } }
-  return tg("commands: /live · /live on · /live off · /live shadow · /live stake 0.25 · /live exit h5|flow4|both · /live strategy p5e30|p5e50 · /live sell &lt;id|all&gt; [h5|flow4] · /live orders · /live withdraw 0.5");
+  return tg("commands: /live · /live on · /live off · /live shadow · /live book runner|hold-5 on|off · /live stake 0.25 · /live stake runner 0.25 · /live exit h5|flow4|both · /live strategy p5e30|p5e50 · /live sell &lt;id|all&gt; [h5|flow4] · /live orders · /live withdraw 0.5");
 }
 
 // ---- socket from the tracker ----
@@ -306,7 +319,7 @@ function startSocket(path) {
       S.lastTracker = Date.now();
       if (m.type === "trigger") handleTrigger(m).catch((e) => console.error("[trigger]", e.message));
       else if (m.type === "exit" || m.type === "close") handleExit(m).catch((e) => console.error("[exit]", e.message));
-      else if (m.type === "cmd") handleCmd(m.text || "").catch((e) => console.error("[cmd]", e.message));
+      else if (m.type === "cmd") handleCmd(m.text || "").then(() => housekeeping()).catch((e) => console.error("[cmd]", e.message)); // status.json refreshed right after a command, so the page shows the change
       else if (m.type === "ping") { if (m.feed) S.lastFeed = m.feed; try { sock.write(JSON.stringify({ type: "pong", mode: S.mode, open: openPositions().length }) + "\n"); } catch {} } } });
     sock.on("error", () => {});
   });
@@ -335,8 +348,8 @@ async function housekeeping() {
     const dayStart = londonDayStart(), tl = totals("live"), ts = totals("shadow");
     const openRow = (p) => ({ id: p.paper_id, exit: p.exit, name: p.name, mint: p.mint, mode: p.mode, opened_ts: p.opened_ts, cost: sol(p.cost_lamports), tokens: p.tokens, paperPx: p.paper_entry_price, livePx: p.tokens > 0 ? (p.cost_lamports / 1e9) / (p.tokens / 1e6) : null });
     const tot = (mode, x) => { const t = totals(mode, x); return { n: t.n, pnl: sol(t.pnl), win: t.n ? t.w / t.n : null }; };
-    const books = Object.fromEntries(exitsActive().map((x) => [x, { name: EXIT_NAMES[x], open: ops.filter((p) => p.exit === x).map(openRow), dayLive: dayNet("live", x), dayShadow: dayNet("shadow", x), h24Live: net24("live", x), h24Shadow: net24("shadow", x), totalLive: tot("live", x), totalShadow: tot("shadow", x), recent: recentClosed(100, x) }]));
-    writeFileSync(join(EXEC_HOME, "status.json"), JSON.stringify({ version: VERSION, mode: S.mode, strategy: S.strategy, exit: S.exit, exits: exitsActive(), exitNames: EXIT_NAMES, stake: S.stake, wallet: S.pub?.toBase58() || null, balance: bal != null ? sol(bal) : null, sweepTo: CFG.SWEEP_TO || null,
+    const books = Object.fromEntries(BOOK_KEYS.map((x) => [x, { name: EXIT_NAMES[x], on: !!S.books[x].on, stake: stakeOf(x), open: ops.filter((p) => p.exit === x).map(openRow), dayLive: dayNet("live", x), dayShadow: dayNet("shadow", x), h24Live: net24("live", x), h24Shadow: net24("shadow", x), totalLive: tot("live", x), totalShadow: tot("shadow", x), recent: recentClosed(100, x) }]));
+    writeFileSync(join(EXEC_HOME, "status.json"), JSON.stringify({ version: VERSION, mode: S.mode, strategy: S.strategy, exit: S.exit, exits: exitsActive(), exitNames: EXIT_NAMES, stake: S.stake, stakeChoices: STAKE_CHOICES, wallet: S.pub?.toBase58() || null, balance: bal != null ? sol(bal) : null, sweepTo: CFG.SWEEP_TO || null,
       open: ops.map(openRow), books,
       dayLive: dayNet("live"), dayShadow: dayNet("shadow"), h24Live: net24("live"), h24Shadow: net24("shadow"), totalLive: tot("live"), totalShadow: tot("shadow"),
       recent: recentClosed(100), skipsToday: skipSummary(dayStart), stats: stats(), rpc: rpcStats, trackerSeenS: S.lastTracker ? Math.round((Date.now() - S.lastTracker) / 1000) : null, now: nowS() }));
