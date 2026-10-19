@@ -14,7 +14,7 @@ function parseCsv(text) { const rows = []; let i = 0, field = "", row = [], q = 
 const rows = parseCsv(readFileSync(csvPath, "utf8")).filter((r) => r.entry_ts >= SINCE);
 const reg = regPath && existsSync(regPath) ? JSON.parse(readFileSync(regPath, "utf8")) : { strategies: [] };
 const A = rows.filter((r) => r.book === "A"), Apass = A.filter((r) => r.pass === 1 && r.closed === 1);
-const Cpass = rows.filter((r) => r.book === "C" && r.pass === 1 && r.closed === 1), Dpass = rows.filter((r) => r.book === "D" && r.pass === 1 && r.closed === 1);
+const Cpass = rows.filter((r) => r.book === "C" && r.pass === 1 && r.closed === 1), Dpass = rows.filter((r) => r.book === "D" && r.pass === 1 && r.closed === 1), Epass = rows.filter((r) => r.book === "E" && r.pass === 1 && r.closed === 1);
 const STAKE = 0.1, FEES = 0.0033 / STAKE;
 const costOf = (x, exitKind = "auto") => FEES + 0.02 + (exitKind === "stop" || (exitKind === "auto" && x <= 0.62) ? 0.045 : exitKind === "floor" || (exitKind === "auto" && x >= 1.2 && x < 1.5) ? 0.03 : exitKind === "time" ? 0.016 : exitKind === "auto" ? 0.016 : 0.03);
 const net = (x) => x * (1 - costOf(x)) - 1;
@@ -24,10 +24,11 @@ const summ = (rs, col) => { const xs = rs.map((r) => r[col]).filter((x) => x != 
 const out = { generated: new Date().toISOString(), since: SINCE, counts: {}, exits: {}, bands: {}, live: {}, timing: {}, features: [], strategies: [] };
 // 1. counts
 const skipCounts = {}; for (const r of rows) if (r.pass !== 1) skipCounts[String(r.skip_why || "?").replace(/\d+ wallets/, "150+ wallets").replace(/bundled \d+%/, "bundled 70%+").replace(/\(.*\)/, "")] = (skipCounts[String(r.skip_why || "?").replace(/\d+ wallets/, "150+ wallets").replace(/bundled \d+%/, "bundled 70%+").replace(/\(.*\)/, "")] || 0) + 1;
-out.counts = { triggers: rows.length, A: A.length, A_passed: A.filter((r) => r.pass === 1).length, A_closed_passed: Apass.length, C_passed: Cpass.length, D_passed: Dpass.length, skips: skipCounts, live_legs: rows.filter((r) => r.live_mode === "live").length, shadow_legs: rows.filter((r) => r.live_mode === "shadow").length, first: rows.length ? rows[0].entry_utc : null, last: rows.length ? rows[rows.length - 1].entry_utc : null };
+out.counts = { triggers: rows.length, A: A.length, A_passed: A.filter((r) => r.pass === 1).length, A_closed_passed: Apass.length, C_passed: Cpass.length, D_passed: Dpass.length, E_passed: Epass.length, skips: skipCounts, live_legs: rows.filter((r) => r.live_mode === "live").length, shadow_legs: rows.filter((r) => r.live_mode === "shadow").length, first: rows.length ? rows[0].entry_utc : null, last: rows.length ? rows[rows.length - 1].entry_utc : null };
 // 2. exits on A's coins (and C, D with the runner exit)
 for (const [k, col] of [["A runner (live rule)", "x_flow4"], ["sell at 5 min (B)", "x_h5"], ["sell at 3 min", "x_h3"], ["sell at 15 min", "x_h15"], ["5 min, floor 1.4", "x_h5f14"], ["1.5x / −40%", "x_t15s40"]]) out.exits[k] = summ(Apass, col);
 out.exits["C coins, runner"] = summ(Cpass, "x_flow4"); out.exits["D coins, runner"] = summ(Dpass, "x_flow4");
+for (const [k, col] of [["E ($100K in 5 min) runner", "x_flow4"], ["E 1.5x / −40%", "x_t15s40"], ["E sell at 5 min", "x_h5"], ["E sell at 3 min", "x_h3"], ["E 2x / −40%", "x_t2s40"], ["E ½ at 2x + 40% trail", "x_h2t40"]]) out.exits[k] = summ(Epass, col);
 // 3. time bands (UK)
 const band = (a, b) => Apass.filter((r) => a <= b ? r.hour_uk >= a && r.hour_uk < b : r.hour_uk >= a || r.hour_uk < b);
 for (const [a, b] of [[0, 6], [6, 12], [12, 18], [18, 24]]) out.bands[`${String(a).padStart(2, "0")}–${String(b).padStart(2, "0")}h`] = { runner: summ(band(a, b), "x_flow4"), h5: summ(band(a, b), "x_h5"), h3: summ(band(a, b), "x_h3") };
@@ -53,15 +54,15 @@ out.features.sort((a, b) => Math.abs(b.halfSplit.spread) - Math.abs(a.halfSplit.
 // 7. the strategy register: each rule scored on the trades it was proposed from (in-sample) and on every trade after it (out of sample)
 const OPS = { "<": (a, b) => a < b, "<=": (a, b) => a <= b, ">": (a, b) => a > b, ">=": (a, b) => a >= b, "==": (a, b) => a == b, "!=": (a, b) => a != b };
 const passes = (r, conds) => (conds || []).every((c) => r[c.f] != null && OPS[c.op] && OPS[c.op](r[c.f], c.v));
-for (const st of reg.strategies || []) { const base = (st.book === "C" ? Cpass : st.book === "D" ? Dpass : Apass); const col = st.exit || "x_flow4";
+for (const st of reg.strategies || []) { const base = (st.book === "C" ? Cpass : st.book === "D" ? Dpass : st.book === "E" ? Epass : Apass); const col = st.exit || "x_flow4";
   const ins = base.filter((r) => r.entry_ts <= st.after_ts && passes(r, st.filter)), oos = base.filter((r) => r.entry_ts > st.after_ts && passes(r, st.filter)), oosAll = base.filter((r) => r.entry_ts > st.after_ts);
   out.strategies.push({ id: st.id, note: st.note, book: st.book || "A", exit: col, filter: st.filter, proposed: st.created, in_sample: summ(ins, col), out_of_sample: summ(oos, col), out_of_sample_baseline: summ(oosAll, col), verdict: oos.length < 40 ? `waiting (${oos.length}/40 trades)` : (summ(oos, col).net ?? -1) > (summ(oosAll, col).net ?? -1) + 0.02 && (summ(oos, col).net ?? -1) > 0 ? "HOLDS UP" : "does not hold up" }); }
 if (asJson) { console.log(JSON.stringify(out, null, 1)); process.exit(0); }
 // Markdown
 const f3 = (v) => (v == null ? "—" : (v >= 0 ? "+" : "") + v.toFixed(3)); const p = (v) => (v == null ? "—" : Math.round(v * 100) + "%");
 const L = []; const c = out.counts;
-L.push(`## Data`, `Triggers since the price fix: **${c.triggers}** (${c.first} → ${c.last} UTC). A: ${c.A} fired, ${c.A_passed} passed the filters, ${c.A_closed_passed} closed. C passed: ${c.C_passed} · D passed: ${c.D_passed}. Live legs: ${c.live_legs} · shadow legs: ${c.shadow_legs}.`, `Skipped by the filters: ${Object.entries(c.skips).map(([k, n]) => `${k} ${n}`).join(" · ") || "none"}.`, "");
-L.push(`## Sell rules on A's coins (paper, before costs → net at 0.1 SOL with the measured costs)`, `| rule | n | avg/trade | net @0.1 | win | stopped | ≥2x |`, `|---|---|---|---|---|---|---|`);
+L.push(`## Data`, `Triggers since the price fix: **${c.triggers}** (${c.first} → ${c.last} UTC). A: ${c.A} fired, ${c.A_passed} passed the filters, ${c.A_closed_passed} closed. C passed: ${c.C_passed} · D passed: ${c.D_passed} · E ($100K/5 min) passed: ${c.E_passed}. Live legs: ${c.live_legs} · shadow legs: ${c.shadow_legs}.`, `Skipped by the filters: ${Object.entries(c.skips).map(([k, n]) => `${k} ${n}`).join(" · ") || "none"}.`, "");
+L.push(`## Sell rules on A's coins, then C / D / E (paper, before costs → net at 0.1 SOL with the measured costs)`, `| rule | n | avg/trade | net @0.1 | win | stopped | ≥2x |`, `|---|---|---|---|---|---|---|`);
 for (const [k, s] of Object.entries(out.exits)) L.push(`| ${k} | ${s.n} | ${pct(s.avg)} | ${pct(s.net)} | ${p(s.win)} | ${p(s.stop)} | ${p(s.big)} |`);
 L.push("", `## Time of day (UK) — A's coins`, `| band | n | runner | 5-min | 3-min | runner win |`, `|---|---|---|---|---|---|`);
 for (const [k, b] of Object.entries(out.bands)) L.push(`| ${k} | ${b.runner.n} | ${pct(b.runner.avg)} | ${pct(b.h5.avg)} | ${pct(b.h3.avg)} | ${p(b.runner.win)} |`);

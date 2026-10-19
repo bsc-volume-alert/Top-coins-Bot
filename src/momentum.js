@@ -13,6 +13,7 @@ import { retrySocials } from "./socials.js";
 import { volumeQuality, qualityLine } from "./quality.js";
 import { stopStep, stopFinal, flowStep, pathStep, ffStep, ffFinal, cleanFlow, splitStep, splitFinal, deadStep, p3dFinal, h2Step, h2Final, s15Step, s15Final, h5Step, h5Final, h5Key } from "./exits.js";
 import { openCopy } from "./copytrade.js";
+import { startTrace } from "./p5trace.js"; // v0.18.115: the core trigger's after-entry marks
 const coreListeners = []; export const onCoreEntry = (fn) => coreListeners.push(fn);
 import { feeInfo, feeLine } from "./fees.js";
 import { recordHoldersAsync, holdersLine } from "./holders.js";
@@ -232,6 +233,8 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
   try { const g = gmgnFor(mint); if (g) q.setGmgn.run(JSON.stringify(gmgnSummary(g)), pos.id); } catch {} // v0.18.52 GMGN rug / smart-money data at entry
   gmgnEntry(mint, pos.id); // v0.18.56 full GMGN token info + security snapshot at entry
   const core = kind === "vol5m" && tr.mc < CFG.MOM_CORE_MC && !reentry; // v0.18.4
+  if (core) { try { const solPx = solUsdCached(); if (solPx > 0) { const pf = preFeatures(s, now, solPx, meta); const bU = s.w5.filter((z) => z.b && now - z.ts <= 60).reduce((a, z) => a + z.usd, 0), wal = new Set(s.w5.filter((z) => z.b && z.w && now - z.ts <= 60).map((z) => z.w));
+    q.setEarly.run(JSON.stringify({ sol60: +(bU / solPx).toFixed(2), wal60: wal.size, pre: pf.pre, lv: pf.lv, bundle: pf.bundle, age: pf.age }), pos.id); startTrace(pos.id, mint, now, tr.price, pf.preBuyers, meta?.creator || null); } } catch (e) { console.error("[core trace]", e.message); } } // v0.18.115: book E in the data set
   const coreTight = core && tr.mc < CFG.MOM_CT_MC && ageS != null && ageS < CFG.MOM_CT_AGE_S && qv && qv.sizeCv < CFG.MOM_CT_SIZE_CV; // v0.18.7: under $60K, under 6 min, steady trade sizes
   try { q.setCore.run(core ? 1 : 0, coreTight ? 1 : 0, pos.id); } catch {}
   const coreV40 = core && v1 >= CFG.MOM_V40_USD && ageS != null && ageS < CFG.MOM_V40_AGE_S; // v0.18.17: the 16 Oct hypothesis — last-minute volume >= $40K and under 10 min old
@@ -295,6 +298,15 @@ export const p5 = { fired: 0, young: 0, sellHeavy: 0, byLevel: {}, wide: 0 }; //
 // (p5e30 / p5e50 / p5e80); first time per coin per level. Guards: MC < P5E_MAX_MC, coin ≥ P5_MIN_AGE_S old, buy $ ≥ sell $ and
 // ≥ P5E_MIN_WALLETS buyers in those 60 s. Exits: every recorded variant (1.5x/−40%, split, ½ at 2x…). Entry features stored.
 const P5E_LEVELS = String(process.env.P5E_LEVELS || "30,50,80").split(",").map(Number).filter((x) => x > 0);
+// v0.18.115 — the minutes before a trigger, the same for every trigger kind (P5 levels and the $100K/5-min core): volume, buys, sells, unique
+// buyers / sellers over the last 1, 2, 3, 5 min and per minute (min1 = the last 60 s … min5), the seconds before the trigger at which 30 / 40 / 50 / 80 SOL
+// of buying was crossed and the wallets by then, bundle %, age — plus the set of wallets that had already bought (the trace counts NEW buyers after).
+export function preFeatures(s, now, sol, meta) {
+  const agg = (lo, hi) => { let b = 0, sl = 0; const nb = new Set(), ns = new Set(); for (const z of s.w5) { const a = now - z.ts; if (a > hi || a < lo) continue; if (z.b) { b += z.usd; if (z.w) nb.add(z.w); } else { sl += z.usd; if (z.w) ns.add(z.w); } } return { b: Math.round(b), s: Math.round(sl), nb: nb.size, ns: ns.size }; };
+  const pre = { m1: agg(0, 60), m2: agg(0, 120), m3: agg(0, 180), m5: agg(0, 300), mins: [agg(0, 60), agg(60, 120), agg(120, 180), agg(180, 240), agg(240, 300)] };
+  const lv = {}; let cum = 0; const wl = new Set(); for (const z of s.w5.filter((z) => z.b && now - z.ts <= 60).sort((a, b) => a.ts - b.ts)) { cum += z.usd / sol; if (z.w) wl.add(z.w); for (const L of [30, 40, 50, 80]) if (cum >= L && !lv[L]) lv[L] = { t: now - z.ts, w: wl.size }; }
+  return { pre, lv, bundle: meta?.bundle_pct ?? null, age: meta?.create_ts ? now - meta.create_ts : null, preBuyers: new Set(s.w5.filter((z) => z.b && z.w).map((z) => z.w)) };
+}
 export function p5Check(mint, s, tr, now) {
   if (!(tr.mc > 0) || !(tr.price > 0) || tr.mc >= CFG.P5W_MAX_MC) return;
   const wall0 = Date.now(); // v0.18.89: when WE saw the triggering trade (wall clock) — feed lag = wall0 − its block time; the first-seconds price path counts from here
@@ -313,12 +325,7 @@ export function p5Check(mint, s, tr, now) {
     try { if (q.hasStrat.get(strat, mint)) continue; } catch {}
     const px = tr.price, mc = tr.mc, venue = tr.venue, v5 = s.w5.reduce((a, x) => a + x.usd, 0);
     const feat = { sol60: +bSol.toFixed(2), wal60: wal.size, n60: n, maxShare: bU > 0 ? +(maxB / bU).toFixed(3) : null, avgBuySol: n ? +(bSol / n).toFixed(3) : null, sell60: +(sU / sol).toFixed(2) };
-    { // v0.18.113 P5 data set — the minutes before the trigger: volume, buys, sells, unique buyers / sellers over 1, 2, 3, 5 min; when 30 / 40 / 50 / 80 SOL of buying was crossed (seconds before the trigger) and the wallets by then
-      const agg = (sec) => { let b = 0, sl = 0; const nb = new Set(), ns = new Set(); for (const z of s.w5) { if (now - z.ts > sec) continue; if (z.b) { b += z.usd; if (z.w) nb.add(z.w); } else { sl += z.usd; if (z.w) ns.add(z.w); } } return { b: Math.round(b), s: Math.round(sl), nb: nb.size, ns: ns.size }; };
-      feat.pre = { m1: agg(60), m2: agg(120), m3: agg(180), m5: agg(300) };
-      const lv = {}; let cum = 0; const wl = new Set(); for (const z of s.w5.filter((z) => z.b && now - z.ts <= 60).sort((a, b) => a.ts - b.ts)) { cum += z.usd / sol; if (z.w) wl.add(z.w); for (const L of [30, 40, 50, 80]) if (cum >= L && !lv[L]) lv[L] = { t: now - z.ts, w: wl.size }; }
-      feat.lv = lv; feat.bundle = meta?.bundle_pct ?? null; feat.age = meta?.create_ts ? now - meta.create_ts : null; }
-    const preBuyers = new Set(s.w5.filter((z) => z.b && z.w).map((z) => z.w)); // v0.18.113: who had already bought — the trace counts NEW buyers after the trigger
+    const pf = preFeatures(s, now, sol, meta); feat.pre = pf.pre; feat.lv = pf.lv; feat.bundle = pf.bundle; feat.age = pf.age; const preBuyers = pf.preBuyers; // v0.18.113/115 the data set's before-trigger features
     // v0.18.90: the website's Project 5 filters (launch seen · bundle < 70% · under 150 wallets in the 60 s), decided here so the executor buys exactly the website's book
     const solPaired = !venue || venue === "pumpswap" || venue === "pump"; // v0.18.94: pools quoted in ZEC / XMR / PUMP / stocks and Raydium venues are not tradable by the live wallet
     const skipWhy = !meta || meta.bundle_pct == null ? "launch not seen" : meta.bundle_pct >= 70 ? `bundled ${Math.round(meta.bundle_pct)}%` : wal.size >= 150 ? `${wal.size} wallets` : !solPaired ? `not SOL-paired (${venue})` : null;
