@@ -16,7 +16,7 @@ import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 import { newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, positionsOf, hasPosition, dayNet, net24, londonDayStart, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.3.7"; // four books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
+const VERSION = "0.3.8"; // four books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
 const EXIT_NAMES = { h5: "B", flow4: "A" };
 // wide = P5 Wide's EXTRA coins only (the $100K–$250K triggers, strategy p5w30): the rest of the paper Wide book is the Runner's coins, already traded by the runner book.
 // strict = the 50 SOL trigger (p5e50): its own paper trade on a coin the runner may already hold, bought later and higher — a separate leg, a separate test.
@@ -325,7 +325,7 @@ async function handleCmd(text) {
     const k = bookKey(arg), v = Number(k ? arg2 : arg); if (!(v > 0 && v <= 2)) return tg("usage: /live stake 0.25 · /live stake a 0.25 · /live stake c 0.01");
     if (k) { S.books[k].stake = v; } else { S.stake = v; for (const b of BOOK_IDS) S.books[b].stake = v; } saveOvr(); return tg(`stake: ${BOOK_IDS.map((b) => `${BOOKS[b].name} <b>${stakeOf(b)} SOL</b>`).join(" · ")}`); }
   if (sub === "book") { // /live book a|b|c|d|f|g off|shadow|live  ("on" = live if any book is live, else shadow)
-    const k = bookKey(arg); const want = arg2 === "on" ? (booksLive().length ? "live" : "shadow") : arg2; if (!k || !MODES.includes(want)) return tg("usage: /live book a|b|c|d|f|g off|shadow|live");
+    const k = bookKey(arg); const want = arg2 === "on" ? (booksLive().length ? "live" : "shadow") : arg2 === "paper" ? "off" : arg2; // v0.3.8: "paper" = off for the executor (the tracker's paper book always runs) if (!k || !MODES.includes(want)) return tg("usage: /live book a|b|c|d|f|g off|shadow|live");
     if (want === "live") { if (!S.kp) return tg("no wallet on the box yet"); if (bal == null || bal < lamports(stakeOf(k)) + lamports(0.02)) return tg(`balance ${bal != null ? sol(bal).toFixed(4) : "?"} SOL is below ${BOOKS[k].name}'s stake + fees — fund the wallet first`); S.stopOverrideDay = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" }); }
     S.books[k].mode = want; syncExitWord(); saveOvr();
     return tg(`${BOOKS[k].name} <b>${want.toUpperCase()}</b>${want === "off" ? " — no new buys for it; anything it holds still sells on its rule" : want === "shadow" ? ` at ${stakeOf(k)} SOL — simulated, nothing spent` : ` at ${stakeOf(k)} SOL — real money from the next trigger`}. Books now: ${booksLine()}.`); }
