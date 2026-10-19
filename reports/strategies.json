@@ -78,6 +78,61 @@
       "exit": "x_h5",
       "filter": [],
       "note": "the owner's E trigger ($100K traded in 5 min, MC under $100K) sold at 5 minutes: the best E exit so far, +8.8% net on 31 passed trades (runner +5.3%, 1.5x/-40% -0.1%); 31 trades is too few to mean anything."
+    },
+    {
+      "id": "F3",
+      "created": "2026-10-19T16:40Z",
+      "after_ts": 1792425897,
+      "book": "launch",
+      "exit": "launch_60s_to_5min",
+      "filter": [
+        {
+          "f": "bundle_wallets",
+          "op": "==",
+          "v": 10
+        },
+        {
+          "f": "bundle_pct",
+          "op": ">=",
+          "v": 37
+        },
+        {
+          "f": "bundle_pct",
+          "op": "<=",
+          "v": 41
+        },
+        {
+          "f": "bundle_sol",
+          "op": ">=",
+          "v": 20
+        },
+        {
+          "f": "bundle_sol",
+          "op": "<=",
+          "v": 28
+        },
+        {
+          "f": "dev_buy_sol",
+          "op": "<",
+          "v": 0.2
+        }
+      ],
+      "note": "study's own LAUNCH-TIME rule, scored by hand from launches.csv (create_ts > after_ts; the study.mjs table cannot score it). One operator's signature: the create block buys 37-41% of supply over exactly 10 wallets with 22-27 SOL, the creator's own buy is under 0.2 SOL, no socials. 14 launches in 24 h (18 Oct 16:21 to 19 Oct 10:23 UTC): all 14 peaked >= $200K and graduated; from the +4 s price (median MC $11K) the 60-s mark was 15-45x (median 19.5x, fill 13/14), the 5-min mark 16-24x on the 9 with a mark. Base rate for an ordinary launch: 0.12% reach $200K. Replaces F2 (verdict below): F2's lift was a different factory that buys the whole curve in one wallet (bundle 79.3%, 85 SOL) and cannot be bought at +4 s; S8's buyable tier-1 coins lose. Open questions: whether the +4 s price exists for an outside buyer (the 10 wallets may front-run the curve themselves), and whether the operator keeps launching. Hypothesis until 40 launches; judge from 20 given the base rate."
+    },
+    {
+      "id": "F4",
+      "created": "2026-10-19T16:40Z",
+      "after_ts": 1792425897,
+      "book": "G",
+      "exit": "x_h5",
+      "filter": [
+        {
+          "f": "pass",
+          "op": "==",
+          "v": 0
+        }
+      ],
+      "note": "study's own: the G book's coins (A's trigger, skipped by the website for 150-500 wallets) sold at 5 minutes instead of the runner. Score by hand from A rows with skip_why = N wallets (the study.mjs table scores on passed rows and will show 0). Evidence: 36 such trades since the price fix, 5-min sell +20.5% net (win 64%) and 1.5x/-40% +5.9%, against the runner -1.4% and G's 7 shadow runner legs -0.327 SOL (4 stops). At 13:28 it was +35.9% on 26, so the last 10 were about -20%: the edge is fading, which is why it is registered rather than recommended. Hypothesis until 40 out-of-sample trades."
     }
   ]
 }
