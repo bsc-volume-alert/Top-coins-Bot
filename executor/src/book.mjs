@@ -56,8 +56,8 @@ export const openPositions = (book = null) => (book ? db.prepare(`SELECT * FROM 
 export const positionOf = (paperId, exit) => db.prepare(`SELECT * FROM positions WHERE paper_id=? AND exit=?`).get(paperId, exit);
 export const positionsOf = (paperId) => db.prepare(`SELECT * FROM positions WHERE paper_id=?`).all(paperId);
 export const hasPosition = (mint, book) => !!db.prepare(`SELECT 1 FROM positions WHERE mint=? AND book=? AND status='open' LIMIT 1`).get(mint, book);
-const BOOK_SQL = { runner: "runner", hold5: "hold5", wide: "wide", strict: "strict" };
-const exitSql = (book) => (book && BOOK_SQL[book] ? ` AND book='${BOOK_SQL[book]}'` : "");
+const BOOK_SQL = { runner: "runner", hold5: "hold5", wide: "wide", strict: "strict", small: "small", crowd: "crowd" }; // v0.3.5: + F and G (an unknown book filtered on nothing and showed the wallet-wide totals)
+const exitSql = (book) => (book ? ` AND book='${BOOK_SQL[book] || String(book).replace(/[^a-z0-9_]/gi, "")}'` : "");
 /** start of today in the owner's time zone (Europe/London), as epoch seconds — v0.1.3: the day used to roll over at midnight UTC, 01:00 UK in summer */
 export function londonDayStart() {
   const now = new Date(); const parts = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(now).map((x) => [x.type, x.value]));
