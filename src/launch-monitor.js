@@ -10,6 +10,8 @@ import { getSocials, socialsLine } from "./socials.js";
 export const live = new Map();
 export const memStats = () => { let trades = 0; for (const t of live.values()) trades += t.trades?.length || 0; return { live: live.size, trades }; }; // v0.18.18
 export const counters = { txs: 0, creates: 0, trades: 0, tier1: 0, decodeErr: 0 };
+const launchRing = []; // v0.18.118 market heat: pump.fun launches in the last hour / 10 min (in memory)
+export function launchHeat(now = Math.floor(Date.now() / 1000)) { let i = 0; while (i < launchRing.length && now - launchRing[i] > 3600) i++; if (i) launchRing.splice(0, i); let m10 = 0; for (let j = launchRing.length - 1; j >= 0 && now - launchRing[j] <= 600; j--) m10++; return { launch1h: launchRing.length, launch10m: m10 }; }
 const listeners = new Map(); // event -> [fn(token, extra)]   events: create|finalized|trade|graduated|expire
 export const on = (ev, fn) => { if (!listeners.has(ev)) listeners.set(ev, []); listeners.get(ev).push(fn); };
 export const emit = (ev, t, extra) => { for (const fn of listeners.get(ev) || []) { try { fn(t, extra); } catch (e) { console.error(`[listener:${ev}]`, e.stack || e.message); } } };
@@ -28,7 +30,7 @@ export function handleTx({ sig, slot, logs, err }) {
       const t = { mint: e.mint, name: e.name, symbol: e.symbol, uri: e.uri, creator: e.creator, bc: e.bondingCurve,
         slot, ts: e.ts || ts, sig, trades: [], finalized: false, tier: 0, bundle: null, lastVsol: e.vsol, lastVtok: e.vtok,
         peakMc: 0, lastMc: 0, hold: false, factory: false, graduated: false };
-      live.set(e.mint, t);
+      live.set(e.mint, t); launchRing.push(t.ts);
       q.insToken.run(t.mint, t.name, t.symbol, t.uri, t.creator, t.bc, slot, t.ts, sig);
       if (q.creatorRecent.get(t.creator, t.ts - CFG.FACTORY_WINDOW_MIN * 60, t.mint) >= 1) { t.factory = true; q.setFactory.run(t.mint); }
       setTimeout(() => finalize(t), CFG.FINALIZE_MS);

@@ -166,6 +166,9 @@ for (const sql of [
   // v0.18.98: the website's queries filter paper_trades by strategy (and mint) — without these every page build scanned the whole table, 18 s a time, freezing the feed
   "CREATE INDEX IF NOT EXISTS pt_strat ON paper_trades(strategy, entry_ts)",
   "CREATE INDEX IF NOT EXISTS pt_mint ON paper_trades(mint)",
+  // v0.18.118: copycat lookups (same name / symbol launched in the last 24 h) at every trigger
+  "CREATE INDEX IF NOT EXISTS tokens_name ON tokens(name, create_ts)",
+  "CREATE INDEX IF NOT EXISTS tokens_symbol ON tokens(symbol, create_ts)",
 ]) { try { db.exec(sql); } catch {} }
 export const q = {
   insToken: db.prepare(`INSERT OR IGNORE INTO tokens (mint,name,symbol,uri,creator,bonding_curve,create_slot,create_ts,create_sig) VALUES (?,?,?,?,?,?,?,?,?)`),
@@ -177,6 +180,13 @@ export const q = {
   countSince: db.prepare(`SELECT COUNT(*) FROM tokens WHERE create_ts>=?`).pluck(),
   countTierSince: db.prepare(`SELECT COUNT(*) FROM tokens WHERE tier>=? AND create_ts>=?`).pluck(),
   creatorRecent: db.prepare(`SELECT COUNT(*) FROM tokens WHERE creator=? AND create_ts>=? AND mint<>?`).pluck(),
+  // v0.18.118 trigger context: the creator's earlier launches, copycats, market heat
+  creatorLast: db.prepare(`SELECT MAX(create_ts) FROM tokens WHERE creator=? AND mint<>? AND create_ts<?`).pluck(),
+  copycats: db.prepare(`SELECT COUNT(*) n, MAX(peak_mc_usd) best, MAX(create_ts) last, SUM(graduated) grads FROM tokens WHERE name=? AND mint<>? AND create_ts>=?`),
+  copySym: db.prepare(`SELECT COUNT(*) n FROM tokens WHERE symbol=? AND mint<>? AND create_ts>=?`).pluck(),
+  heatTrig: db.prepare(`SELECT COUNT(*) FROM paper_trades WHERE strategy IN ('p5e30','p5w30','p5e50') AND entry_ts>=? AND COALESCE(invalid,0)=0`).pluck(),
+  heatWin: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN MAX(COALESCE(json_extract(trace,'$.m.60.x'),0), COALESCE(json_extract(trace,'$.m.120.x'),0), COALESCE(json_extract(trace,'$.m.180.x'),0), COALESCE(json_extract(trace,'$.m.300.x'),0), COALESCE(json_extract(trace,'$.m.600.x'),0))>=1.5 THEN 1 ELSE 0 END) hit,
+    SUM(CASE WHEN COALESCE(json_extract(trace,'$.m.600.x'),1)<=0.5 THEN 1 ELSE 0 END) dead FROM paper_trades WHERE strategy='p5e30' AND entry_ts>=? AND entry_ts<=? AND COALESCE(invalid,0)=0`),
   setFactory: db.prepare(`UPDATE tokens SET factory=1 WHERE mint=?`),
   setGrad: db.prepare(`UPDATE tokens SET graduated=1 WHERE mint=?`),
   updFlows: db.prepare(`UPDATE tokens SET cluster_sol_in=?, cluster_sol_out=?, outside_sol_in=?, outside_sol_out=?, outside_buyers=?, handoffs=?, cluster_net_sol=?, peak_mc_usd=?, last_mc_usd=? WHERE mint=?`),

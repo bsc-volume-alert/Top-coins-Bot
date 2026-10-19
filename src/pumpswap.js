@@ -75,6 +75,9 @@ export function guardPx(tr0) {
   g.pend = { px: tr.price, ts }; pxg.held++; pxg.lastHeld = { mint: tr.mint, from: g.px, to: tr.price, venue: tr.venue, ts };
   const k = g.px / tr.price; return { ...tr, price: g.px, mc: tr.mc * k, pxHeld: true };
 }
+// v0.18.118 market heat: PumpSwap pools created and graduations seen in the last hour (in memory, so the first hour after a restart under-counts)
+const ring = { grad: [], pool: [] };
+export function psHeat(now = Math.floor(Date.now() / 1000)) { for (const k of ["grad", "pool"]) { const a = ring[k]; let i = 0; while (i < a.length && now - a[i] > 3600) i++; if (i) a.splice(0, i); } return { grad1h: ring.grad.length, pools1h: ring.pool.length }; }
 export const emitSwap = (tr0) => { const tr = guardPx(tr0); for (const fn of listeners) { try { fn(tr); } catch (x) { console.error("[ps listener]", x.message); } } };
 let samples = 0;
 // v0.18.13: pools quoted in something other than SOL (USDC, tokenized stocks such as TTWO…). The quote token's SOL price comes from
@@ -147,7 +150,7 @@ function handle({ sig, slot, logs, err }) {
   const route = routeOf(logs);
   for (const e of evs) {
     if (e.type === "claim") { ps.claims = (ps.claims || 0) + 1; emit("claim", null, { ...e, sig, venue: "pumpswap" }); continue; }
-    if (e.type === "pool") { ps.pools++; poolMint.set(e.pool, { mint: e.baseMint, quote: e.quoteMint }); savePool(e.pool, e.baseMint, e.quoteMint); continue; }
+    if (e.type === "pool") { ps.pools++; poolMint.set(e.pool, { mint: e.baseMint, quote: e.quoteMint }); savePool(e.pool, e.baseMint, e.quoteMint); ring.pool.push(e.ts || Math.floor(Date.now() / 1000)); continue; }
     if (e.isBuy) ps.buys++; else ps.sells++;
     const sol = Number(e.quoteAmt) / 1e9, tokens = Number(e.baseAmt) / 1e6; // sol: raw quote units/1e9, only used for the resolve gate
     const pm = poolMint.get(e.pool);
@@ -156,13 +159,13 @@ function handle({ sig, slot, logs, err }) {
     const qDiv = 10 ** qi.dec, solQ = (Number(e.quoteAmt) / qDiv) * qi.sol, poolQuoteSol = (Number(e.poolQuote) / qDiv) * qi.sol;
     if (!(solQ > 0) || solQ > CFG.PS_MAX_SWAP_SOL) { ps.oversize++; continue; }
     if (poolQuoteSol < CFG.PS_MIN_POOL_SOL) { ps.thinPool++; continue; } // v0.17: secondary/thin pools price the token wrongly
-    if (!gradSeen.has(pm.mint)) { gradSeen.add(pm.mint); if (gradSeen.size > 50000) gradSeen.delete(gradSeen.keys().next().value); try { q.setGrad.run(pm.mint); const t = live.get(pm.mint); if (t && !t.graduated) { t.graduated = true; emit("graduated", t, { price: poolQuoteSol / (Number(e.poolBase) / 1e6), ts: e.ts }); } ps.gradEvidence++; } catch {} } // v0.17: graduation flagged from PumpSwap evidence // v0.15: implausible single swap (instant-graduation curve buys decode with bogus amounts)
+    if (!gradSeen.has(pm.mint)) { gradSeen.add(pm.mint); ring.grad.push(e.ts || Math.floor(Date.now() / 1000)); if (gradSeen.size > 50000) gradSeen.delete(gradSeen.keys().next().value); try { q.setGrad.run(pm.mint); const t = live.get(pm.mint); if (t && !t.graduated) { t.graduated = true; emit("graduated", t, { price: poolQuoteSol / (Number(e.poolBase) / 1e6), ts: e.ts }); } ps.gradEvidence++; } catch {} } // v0.17: graduation flagged from PumpSwap evidence // v0.15: implausible single swap (instant-graduation curve buys decode with bogus amounts)
     // v0.18.95: price from the swap itself (quote in ÷ tokens out, before fees), not from the pool's token balances. pump.fun's pools now carry a
     // virtual quote reserve (seen in the pool account, 17.5 SOL on a 22.9 SOL pool on 18 Oct) that the balances do not show, so balance ÷ balance
     // under-priced pool-stage coins by 25–80% and put a fake drop into every coin at migration. Verified against the chain's own fills (executor selftest).
     const price = e.baseAmt > 0n && e.quoteAmt > 0n ? ((Number(e.quoteAmt) / qDiv) * qi.sol) / (Number(e.baseAmt) / 1e6) : poolQuoteSol / (Number(e.poolBase) / 1e6);
     const mc = price * CFG.TOTAL_SUPPLY * solUsdCached();
-    const tr = { mint: pm.mint, pool: e.pool, sig, slot, ts: e.ts, wallet: e.user, isBuy: e.isBuy, sol: solQ, tokens, price, mc, route, venue: pm.quote === WSOL ? "pumpswap" : `pumpswap/${qi.sym}`, quote: qi.sym, creatorFee: (Number(e.creatorFee || 0n) / qDiv) * qi.sol };
+    const tr = { mint: pm.mint, pool: e.pool, sig, slot, ts: e.ts, wallet: e.user, isBuy: e.isBuy, sol: solQ, tokens, price, mc, route, venue: pm.quote === WSOL ? "pumpswap" : `pumpswap/${qi.sym}`, quote: qi.sym, creatorFee: (Number(e.creatorFee || 0n) / qDiv) * qi.sol, poolSol: +poolQuoteSol.toFixed(2) }; // v0.18.118 poolSol = the pool's SOL side after this swap (depth)
     if (samples < 5) { samples++; console.log("[ps sample]", JSON.stringify({ mint: tr.mint.slice(0, 8), buy: tr.isBuy, sol: +sol.toFixed(4), mc: Math.round(mc), wallet: tr.wallet.slice(0, 6) })); }
     emitSwap(tr); // v0.18.43: through the bad-price guard
   }

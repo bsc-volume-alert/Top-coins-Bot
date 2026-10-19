@@ -17,7 +17,7 @@ import { gmgnFor, gmgnSummary, gmgnEntry } from "./gmgn.js"; // v0.18.52 · v0.1
 import { feeInfo, feeLine } from "./fees.js";
 import { recordHolders, holdersLine } from "./holders.js";
 import { execSend, noteFeed } from "./execlink.js"; // v0.18.90 → executor (live buy/sell bot)
-import { startTrace, traceTick, noteClose, sweepTraces } from "./p5trace.js"; // v0.18.113 P5 data set
+import { startTrace, traceTick, noteClose, sweepTraces, noteExits } from "./p5trace.js"; // v0.18.113 P5 data set
 
 const P = new Map(); // mint -> [{id, label, e, w5:[], closed, msgId}]
 export const cp = { entries: 0, closes: 0 };
@@ -88,6 +88,7 @@ function tick(mint, price, mc, sol, isBuy, ts, wallet = null) {
     p.lastMc = mc; p.lastPx = price; p.lastTs = ts;
     if (p.fs && !p.fs.done) { try { const d = Date.now() - p.wall0; let ch = false; for (const k of [1, 2, 5, 10]) if (d >= k * 1000 && p.fs["t" + k] == null) { p.fs["t" + k] = { m: +(price / p.e.entry).toFixed(4), d }; ch = true; } if (p.fs.t10) p.fs.done = true; if (ch) q.setFirstSecs.run(JSON.stringify(p.fs), p.id); } catch {} } // v0.18.89 price seen 1 / 2 / 5 / 10 s after the trigger (wall clock)
     const r = stepExits(p.e, price, mc, v5, bu, su, ts - p.entryTs); const x = p.e.x; // v0.18.17: seconds since entry for the fast-fail exit
+    if (p.wall0) { try { noteExits(p.id, mint, x, ts - p.entryTs); } catch {} } // v0.18.118: the data set's exit timings
     if (x.s15be != null && p.e.s15Saved !== x.s15be) { p.e.s15Saved = x.s15be; try { q.setS15.run(x.s15be, p.id); } catch {} } // v0.18.49
     { const kh = h5Key(x); if (p.e.h5Saved !== kh) { p.e.h5Saved = kh; try { q.setH5.run(x.h5 ?? null, x.h5f12 ?? null, x.h5f14 ?? null, x.h3 ?? null, x.h15 ?? null, x.h5fast ?? null, p.id); } catch {} } } // v0.18.81
     if (p.wall0) { if (x.h5 != null && !p.e.h5Sent) { p.e.h5Sent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "h5", mult: x.h5, why: x.h5why || null, ts }); } if (x.flow4 != null && !p.e.flow4Sent) { p.e.flow4Sent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "flow4", mult: x.flow4, why: x.flow4why || null, ts }); } } // v0.18.90 → executor

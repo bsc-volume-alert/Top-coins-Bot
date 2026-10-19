@@ -118,6 +118,9 @@ export function h5Step(e, x, mult, sinceS) {
 }
 export function h5Final(e, x, mult) { const o = {}; for (const k of H5_KEYS) o[k] = x[k] ?? mult; return o; }
 export const h5Key = (x) => H5_KEYS.map((k) => x[k]).join("|");
+/** v0.18.118: the second (since entry) at which each recorded exit fired — the data set prices the sale off the 5-s path from here. */
+export const EXIT_TIMED = ["flow4", "h5", "h3", "h15", "h5f14", "t15s40", "t2s40", "h2t40", "split", "tsl40", "flow", "tsl60", "tsl80"];
+export function markExitTimes(x, sinceS) { if (sinceS == null) return; for (const k of EXIT_TIMED) if (x[k] != null && x[k + "At"] == null) x[k + "At"] = Math.round(sinceS); }
 export function stepExits(e, price, mc, v5Usd, buyUsd, sellUsd, sinceS = null) {
   if (price > e.peak) e.peak = price;
   const mult = price / e.entry, fromPeak = price / e.peak - 1, x = e.x;
@@ -128,6 +131,7 @@ export function stepExits(e, price, mc, v5Usd, buyUsd, sellUsd, sinceS = null) {
   if (x.tsl40 == null && fromPeak <= -0.40) x.tsl40 = mult;
   if (x.tsl60 == null && fromPeak <= -0.60) x.tsl60 = mult;
   if (x.tsl80 == null && fromPeak <= -0.80) x.tsl80 = mult;
+  markExitTimes(x, sinceS); // v0.18.118: when each rule fired (seconds after entry) — the data set prices the sale off the 5-s path at that moment
   if (!e.half && mult >= 2) e.half = true;
   if (!e.s3 && mult >= 3) e.s3 = true;
   if (x.half60 == null && fromPeak <= -0.60) x.half60 = e.half ? 1 + 0.5 * mult : mult;

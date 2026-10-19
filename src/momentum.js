@@ -1,19 +1,19 @@
 // v0.5: momentum (volume) strategy on PumpSwap. Rolling 5m/1m USD volume per token → alert + paper trade with parallel exits.
 import { CFG } from "./config.js";
 import { db, q } from "./db.js";
-import { onSwap } from "./pumpswap.js";
-import { solUsdCached } from "./price.js";
+import { onSwap, psHeat } from "./pumpswap.js";
+import { solUsdCached, solChange } from "./price.js";
 import { tg } from "./telegram.js";
-import { esc, fmt, links } from "./launch-monitor.js";
+import { esc, fmt, links, launchHeat } from "./launch-monitor.js";
 import { getSocials, socialsLine } from "./socials.js";
 import { nextLevel, lastLevel, wallWarning, levelsStep, levelsFinal, newLevels, volStopExit } from "./levels.js";
 import { pumpSwapTick, clusterSnap } from "./signals.js";
 import { watch as afterWatch, tick as afterTick } from "./aftercare.js";
 import { retrySocials } from "./socials.js";
 import { volumeQuality, qualityLine } from "./quality.js";
-import { stopStep, stopFinal, flowStep, pathStep, ffStep, ffFinal, cleanFlow, splitStep, splitFinal, deadStep, p3dFinal, h2Step, h2Final, s15Step, s15Final, h5Step, h5Final, h5Key } from "./exits.js";
+import { markExitTimes, stopStep, stopFinal, flowStep, pathStep, ffStep, ffFinal, cleanFlow, splitStep, splitFinal, deadStep, p3dFinal, h2Step, h2Final, s15Step, s15Final, h5Step, h5Final, h5Key } from "./exits.js";
 import { openCopy } from "./copytrade.js";
-import { startTrace } from "./p5trace.js"; // v0.18.115: the core trigger's after-entry marks
+import { startTrace, noteExits } from "./p5trace.js"; // v0.18.115: the core trigger's after-entry marks
 const coreListeners = []; export const onCoreEntry = (fn) => coreListeners.push(fn);
 import { feeInfo, feeLine } from "./fees.js";
 import { recordHoldersAsync, holdersLine } from "./holders.js";
@@ -151,7 +151,7 @@ try { const n = db.prepare(`UPDATE paper_trades SET invalid=1 WHERE COALESCE(inv
 onSwap((tr) => {
   if (NOT_COINS.has(tr.mint)) return;
   const s = st(tr.mint), usd = tr.sol * solUsdCached(), now = tr.ts || Math.floor(Date.now() / 1000);
-  s.lastTs = now; s.lastPx = tr.price; s.lastMc = tr.mc; s.pxSrc = "trade"; s.pxTs = now;
+  s.lastTs = now; s.lastPx = tr.price; s.lastMc = tr.mc; s.pxSrc = "trade"; s.pxTs = now; if (tr.poolSol != null) s.poolSol = tr.poolSol; // v0.18.118 pool depth (PumpSwap)
   if (tr.mc > s.peakMc) s.peakMc = tr.mc;
   // level rejection: price fell >30% from a peak that was above a level → that level is "rejected"
   if (s.peakMc > 0 && tr.mc < s.peakMc * 0.7) { const L = lastLevel(s.peakMc); if (L && L > tr.mc) s.rejectedLevel = L; }
@@ -233,8 +233,9 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
   try { const g = gmgnFor(mint); if (g) q.setGmgn.run(JSON.stringify(gmgnSummary(g)), pos.id); } catch {} // v0.18.52 GMGN rug / smart-money data at entry
   gmgnEntry(mint, pos.id); // v0.18.56 full GMGN token info + security snapshot at entry
   const core = kind === "vol5m" && tr.mc < CFG.MOM_CORE_MC && !reentry; // v0.18.4
+  pos.core = core; // v0.18.118: book E's positions report their exit timings to the trace
   if (core) { try { const solPx = solUsdCached(); if (solPx > 0) { const pf = preFeatures(s, now, solPx, meta); const bU = s.w5.filter((z) => z.b && now - z.ts <= 60).reduce((a, z) => a + z.usd, 0), wal = new Set(s.w5.filter((z) => z.b && z.w && now - z.ts <= 60).map((z) => z.w));
-    q.setEarly.run(JSON.stringify({ sol60: +(bU / solPx).toFixed(2), wal60: wal.size, pre: pf.pre, lv: pf.lv, bundle: pf.bundle, age: pf.age }), pos.id); startTrace(pos.id, mint, now, tr.price, pf.preBuyers, meta?.creator || null); } } catch (e) { console.error("[core trace]", e.message); } } // v0.18.115: book E in the data set
+    q.setEarly.run(JSON.stringify({ sol60: +(bU / solPx).toFixed(2), wal60: wal.size, pre: pf.pre, lv: pf.lv, bundle: pf.bundle, age: pf.age, ctx: triggerContext(mint, { ...(meta || {}), name: name || meta?.name, symbol: symbol || meta?.symbol }, now, s) }), pos.id); startTrace(pos.id, mint, now, tr.price, pf.preBuyers, meta?.creator || null); } } catch (e) { console.error("[core trace]", e.message); } } // v0.18.115: book E in the data set
   const coreTight = core && tr.mc < CFG.MOM_CT_MC && ageS != null && ageS < CFG.MOM_CT_AGE_S && qv && qv.sizeCv < CFG.MOM_CT_SIZE_CV; // v0.18.7: under $60K, under 6 min, steady trade sizes
   try { q.setCore.run(core ? 1 : 0, coreTight ? 1 : 0, pos.id); } catch {}
   const coreV40 = core && v1 >= CFG.MOM_V40_USD && ageS != null && ageS < CFG.MOM_V40_AGE_S; // v0.18.17: the 16 Oct hypothesis — last-minute volume >= $40K and under 10 min old
@@ -307,6 +308,20 @@ export function preFeatures(s, now, sol, meta) {
   const lv = {}; let cum = 0; const wl = new Set(); for (const z of s.w5.filter((z) => z.b && now - z.ts <= 60).sort((a, b) => a.ts - b.ts)) { cum += z.usd / sol; if (z.w) wl.add(z.w); for (const L of [30, 40, 50, 80]) if (cum >= L && !lv[L]) lv[L] = { t: now - z.ts, w: wl.size }; }
   return { pre, lv, bundle: meta?.bundle_pct ?? null, age: meta?.create_ts ? now - meta.create_ts : null, preBuyers: new Set(s.w5.filter((z) => z.b && z.w).map((z) => z.w)) };
 }
+// v0.18.118 — the context every trigger is recorded with (owner, 19 Oct: "leave no stone unturned"): the pool's depth, how hot the market is
+// right now (triggers in the last hour / day, how the last two hours' A triggers did, launches, new pools and graduations in the last hour,
+// SOL's own move over 1 h and 24 h), the creator's record (earlier launches, best peak, graduations, how long since the last one, launches in
+// 24 h) and copycats (coins with the same name or ticker launched in the last 24 h, the best of them). Every part is best-effort.
+export function triggerContext(mint, meta, now, s) {
+  const o = { pool: s?.poolSol ?? null };
+  try { const w = q.heatWin.get(now - 7200, now - 600) || {}, ps = psHeat(now), lh = launchHeat(now);
+    o.heat = { trig1h: q.heatTrig.get(now - 3600), trig24h: q.heatTrig.get(now - 86400), win2h_n: w.n || 0, win2h_hit: w.hit || 0, win2h_dead: w.dead || 0, launch1h: lh.launch1h, launch10m: lh.launch10m, grad1h: ps.grad1h, pools1h: ps.pools1h, sol1h: solChange(3600), sol24h: solChange(86400), up: now - BOOT }; } catch (e) { console.error("[ctx heat]", e.message); }
+  if (meta?.creator) try { const ch = q.creatorHist.get(meta.creator, mint, now) || {}, last = q.creatorLast.get(meta.creator, mint, now);
+    o.cr = { n: ch.n || 0, best: ch.best ?? null, grads: ch.grads || 0, over100k: ch.over100k || 0, last_min: last ? Math.round((now - last) / 60) : null, n24h: q.creatorRecent.get(meta.creator, now - 86400, mint) }; } catch (e) { console.error("[ctx creator]", e.message); }
+  if (meta?.name) try { const cc = q.copycats.get(meta.name, mint, now - 86400) || {};
+    o.cc = { n24h: cc.n || 0, best24h: cc.best ?? null, grads24h: cc.grads || 0, last_min: cc.last ? Math.round((now - cc.last) / 60) : null, sym_n24h: meta.symbol ? q.copySym.get(meta.symbol, mint, now - 86400) : null }; } catch (e) { console.error("[ctx copycats]", e.message); }
+  return o;
+}
 export function p5Check(mint, s, tr, now) {
   if (!(tr.mc > 0) || !(tr.price > 0) || tr.mc >= CFG.P5W_MAX_MC) return;
   const wall0 = Date.now(); // v0.18.89: when WE saw the triggering trade (wall clock) — feed lag = wall0 − its block time; the first-seconds price path counts from here
@@ -336,7 +351,7 @@ export function p5Check(mint, s, tr, now) {
       if (ageS != null && (ageS < CFG.P5_MIN_AGE_S || ageS > CFG.MOM_MAX_AGE_D * 86400)) return;
       const pos = openCopy(strat, `${lv}SOL/60s`, mint, name || mint.slice(0, 8), symbol || "", px, mc, now, { v5, venue, ageS, wall0, blockTs: tr.ts, pass: !skipWhy, skipWhy, bundle: meta?.bundle_pct ?? null, wal60: wal.size, preBuyers, creator: meta?.creator || null });
       p5.fired++; if (wide) p5.wide++; else p5.byLevel[lv] = (p5.byLevel[lv] || 0) + 1;
-      if (pos?.id) { pos.alerted = false; try { q.setV2m.run(Math.round(bU), pos.id); q.setEarly.run(JSON.stringify(feat), pos.id); } catch {}
+      if (pos?.id) { pos.alerted = false; try { feat.ctx = triggerContext(mint, { ...(meta || {}), name: name || meta?.name, symbol: symbol || meta?.symbol }, now, s); } catch {} try { q.setV2m.run(Math.round(bU), pos.id); q.setEarly.run(JSON.stringify(feat), pos.id); } catch {}
         try { enrichEntry(pos.id, mint, s.w5, now); } catch (e) { console.error("[p5 enrich]", e.message); } } // v0.18.113: snipers, proven wallets, dex-paid, fresh wallets — the same enrichment the core trigger gets
     })().catch((e) => console.error("[p5 early]", e.message));
   }
@@ -369,6 +384,7 @@ function updatePos(mint, s, px, now) {
   if (x.tsl40 == null && fromPeak <= -0.40) x.tsl40 = mult;
   if (x.tsl60 == null && fromPeak <= -0.60) x.tsl60 = mult;
   if (x.tsl80 == null && fromPeak <= -0.80) x.tsl80 = mult;
+  markExitTimes(x, now - p.entryTs); if (p.core) { try { noteExits(p.id, mint, x, now - p.entryTs); } catch {} } // v0.18.118: exit timings for the data set (book E)
   // half at 2x + 60% trail on the rest
   if (!p.tp.half && mult >= 2) p.tp.half = true;
   if (x.half60 == null && fromPeak <= -0.60) x.half60 = p.tp.half ? 0.5 * 2 + 0.5 * mult : mult;
