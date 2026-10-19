@@ -154,7 +154,7 @@ Object.assign(CFG, {
   MOM_V40_USD: n("MOM_V40_USD", 40_000), MOM_V40_AGE_S: n("MOM_V40_AGE_S", 600), // v0.18.17 core_v40 tag: 1m volume >= $40K and under 10 min old at entry
   MOM_CORE_MC: n("MOM_CORE_MC", 100_000),          // v0.18.4: "core" momentum = $100K/5m trigger, entry below this, first entry
   PREPUMP_WINDOW_S: n("PREPUMP_WINDOW_S", 1800),  // v0.18.2: record wallets that bought in this window before a volume trigger
-  DEX_ENABLED: n("DEX_ENABLED", 1),                 // v0.18: Raydium CPMM/CLMM/LaunchLab + Meteora DLMM + Orca swap feed into momentum
+  DEX_ENABLED: n("DEX_ENABLED", 0),                 // v0.18.126: OFF by default — the Raydium / Meteora / Orca stream was most of the Helius credit burn (19 Oct: 1.6–3.3M a day on the WebSocket) and no book trades those venues; DEX_ENABLED=1 restores it // v0.18: Raydium CPMM/CLMM/LaunchLab + Meteora DLMM + Orca swap feed into momentum
   DEX_RESOLVE_SWAPS: n("DEX_RESOLVE_SWAPS", 30),    // look a pool up (1–2 credits) once it has this many swaps in 5 min
   DEX_POOL_DAILY_BUDGET: n("DEX_POOL_DAILY_BUDGET", 6000),
   DEX_IGNORE_MC: n("DEX_IGNORE_MC", 20_000_000),     // don't feed swaps on tokens above this MC (majors/stables; momentum caps at $2M anyway)
