@@ -20,7 +20,7 @@ import { isProven, walletRecord } from "./wallets.js";
 import { isSmart, smartInfo } from "./smartwallets.js"; // v0.18.121 S6
 import { openCopy, onCopyClose, positionsOf } from "./copytrade.js";
 import { triggerContext } from "./momentum.js";
-import { gmgnEntry, walletStatsFor } from "./gmgn.js";
+import { gmgnEntry, walletStatsFor, walletFollowers } from "./gmgn.js";
 import { onSmartBuy } from "./smartmoney.js"; // v0.18.122 S7
 import { live } from "./launch-monitor.js";
 import { solUsdCached } from "./price.js";
@@ -40,6 +40,9 @@ export const SN_BOOKS = {
   sn9: { id: "S9", name: "swarm dip", what: `${SN.SWARM_WALLETS}+ outside wallets each bought ≥ ${SN.SWARM_MIN_SOL} SOL in the first 60 s and the launch bundle was under ${SN.SWARM_BUNDLE}% — bought on the first trade at or after +${SN.SWARM_AT_S} s, sold at 5 min (B's rule). From the 15:40 launch study: 102 such launches in 24 h, +46% mean / +11% median at 5 min after 10% cost, 54% winners — the only rule that came out positive. Runs in the executor's shadow book S9`, exec: true },
   sn10: { id: "S10", name: "10-wallet operator", what: `one operator's launch fingerprint (the 17:41 study's F3: 14 of 14 such launches went past $200K): exactly 10 bundle wallets holding 37–41% of supply with 22–28 SOL, the dev's own buy under 0.2 SOL — bought on the first outside trade once the bundle is known (from +4 s, within 30 s), sold at 5 min (B's rule; the data set also has the 60-s price). The question is whether an outsider can buy near the launch price. Also the executor's shadow book S10`, exec: true },
   sn4b: { id: "S4b", name: "clean launch, bundle < 3%", what: `S4 with a tighter bundle (under 3% of supply) — the 19:41 split: under ~3% +25% (12) vs above −34% (7); a hypothesis on 19 trades. Paper only` },
+  sn6b: { id: "S6b", name: "famous smart wallet", what: `S6 when the smart wallet has 1,000+ GMGN followers (looked up when S6 fires, so bought a moment later at our feed's price) — the 20:20 split: +34% on 59 at real costs, +2% without the top 3, vs −17.5% for the rest. Also the executor's shadow book S6b, sold at 5 min — to measure whether famous wallets' coins can be bought near the paper price`, exec: true },
+  sn7b: { id: "S7b", name: "unknown feed wallet", what: `S7 when the buying wallet has fewer than 100 GMGN followers — the 20:20 split: +7% on 86 vs −23% when a famous (100+) wallet bought. Paper only` },
+  sn11: { id: "S11", name: "crowd at 1 minute", what: `300+ outside buyers in a launch's first 60 s — bought on the first trade at or after +60 s, sold at 5 min. The owner's Pump Pack idea; the 24-h launch file says −14% at 5 min on 70 (13% doubled, 5.7% reached $200K) — monitored on paper to see whether a tighter version pays` },
   sn6: { id: "S6", name: "GMGN smart wallet", what: `a wallet GMGN tags smart / renowned, or that was early and in profit on 2+ coins that peaked ≥ $300K (harvested from GMGN's top traders), buys ≥ ${SN.WALLET_MIN_SOL} SOL within ${SN.WALLET_BY_S} s — bought on that trade. Also the executor's shadow book S6 (runner exit) from v0.18.130`, exec: true },
 };
 export const SN_KINDS = Object.keys(SN_BOOKS);
@@ -66,15 +69,23 @@ on("trade", (t, tr) => {
   if (L.crOk && !L.fired.sn1 && age <= SN.FIRST_BY_S) fire("sn1", L, t, tr, age, `creator: ${L.cr.n} earlier launches, ${L.cr.grads} graduated, best $${fmt(L.cr.best || 0)}`, L.cr.grads);
   if (L.ccOk && !L.fired.sn3 && age <= SN.FIRST_BY_S) fire("sn3", L, t, tr, age, `copy of a $${fmt(L.cc.best)} coin launched ${L.cc.min} min ago (${L.cc.n} same-name in 24 h)`, L.cc.best);
   if (tr.isBuy && !L.fired.sn2 && age <= SN.WALLET_BY_S && tr.sol >= SN.WALLET_MIN_SOL && tr.wallet && isProven(tr.wallet)) { const rec = walletRecord(tr.wallet) || {}; fire("sn2", L, t, tr, age, `proven wallet ${short(tr.wallet)} (${rec.x5 ?? "?"}/${rec.n ?? "?"} reached 5x) bought ${tr.sol.toFixed(2)} SOL`, rec.rate ?? null, { wallet: tr.wallet, wallet_n: rec.n ?? null, wallet_x5: rec.x5 ?? null, wallet_x10: rec.x10 ?? null, wallet_rate: rec.rate ?? null }); }
-  if (tr.isBuy && !L.fired.sn6 && age <= SN.WALLET_BY_S && tr.sol >= SN.WALLET_MIN_SOL && tr.wallet && isSmart(tr.wallet)) { const si = smartInfo(tr.wallet) || {}; fire("sn6", L, t, tr, age, `smart wallet ${short(tr.wallet)} (${si.wins ?? 0} early wins on ${si.coins ?? 0} big coins${si.gmgn ? ", GMGN-tagged" : ""}) bought ${tr.sol.toFixed(2)} SOL`, si.wins ?? null, { wallet: tr.wallet, wallet_n: si.coins ?? null, wallet_x5: si.wins ?? null, wallet_x10: null, wallet_rate: si.coins ? +((si.wins || 0) / si.coins).toFixed(3) : null }); }
+  if (tr.isBuy && !L.fired.sn6 && age <= SN.WALLET_BY_S && tr.sol >= SN.WALLET_MIN_SOL && tr.wallet && isSmart(tr.wallet)) { const si = smartInfo(tr.wallet) || {}; followUp("sn6b", t.mint, tr.wallet, (f) => f >= 1000, (f) => `famous smart wallet ${short(tr.wallet)} (${f} GMGN followers) bought ${tr.sol.toFixed(2)} SOL`); fire("sn6", L, t, tr, age, `smart wallet ${short(tr.wallet)} (${si.wins ?? 0} early wins on ${si.coins ?? 0} big coins${si.gmgn ? ", GMGN-tagged" : ""}) bought ${tr.sol.toFixed(2)} SOL`, si.wins ?? null, { wallet: tr.wallet, wallet_n: si.coins ?? null, wallet_x5: si.wins ?? null, wallet_x10: null, wallet_rate: si.coins ? +((si.wins || 0) / si.coins).toFixed(3) : null }); }
   if (!L.fired.sn8 && age <= SN.BUNDLE_BY_S && t.bundle && t.bundle.pct >= SN.BUNDLE_MIN && t.bundle.pct <= SN.BUNDLE_MAX && t.bundle.sol >= SN.BUNDLE_SOL) fire("sn8", L, t, tr, age, `prepared launch: bundle ${t.bundle.pct.toFixed(1)}% / ${t.bundle.sol.toFixed(1)} SOL in ${t.bundle.wallets} wallets, dev ${t.bundle.devBuy.toFixed(2)} SOL`, t.bundle.pct); // v0.18.123 S8 (the study's F2)
   if (!L.fired.sn4 && age <= SN.CLEAN_BY_S && t.bundle && t.bundle.pct < SN.CLEAN_BUNDLE && t.bundle.devBuy >= SN.CLEAN_DEV_MIN && t.bundle.devBuy <= SN.CLEAN_DEV_MAX && L.buyers.size >= SN.CLEAN_BUYERS && L.outSol >= SN.CLEAN_SOL) fire("sn4", L, t, tr, age, `clean: bundle ${t.bundle.pct.toFixed(1)}%, dev ${t.bundle.devBuy.toFixed(2)} SOL, ${L.buyers.size} buyers / ${L.outSol.toFixed(1)} SOL by ${age} s`, L.buyers.size);
   if (!L.fired.sn9 && age >= SN.SWARM_AT_S && age <= SN.SWARM_BY_S && t.bundle && t.bundle.pct < SN.SWARM_BUNDLE) { let big = 0; for (const v of L.buyers.values()) if (v >= SN.SWARM_MIN_SOL) big++; if (big >= SN.SWARM_WALLETS) fire("sn9", L, t, tr, age, `swarm: ${big} wallets ≥ ${SN.SWARM_MIN_SOL} SOL of ${L.buyers.size} buyers, ${L.outSol.toFixed(1)} SOL in by 60 s, bundle ${t.bundle.pct.toFixed(1)}%`, big, { wal60: L.buyers.size }); else L.fired.sn9 = true; } // v0.18.129 S9: decided once, on the first trade at/after +60 s
   if (!L.fired.sn10 && age <= 30 && t.bundle && t.bundle.wallets === 10 && t.bundle.pct >= 37 && t.bundle.pct <= 41 && t.bundle.sol >= 22 && t.bundle.sol <= 28 && (t.bundle.devBuy ?? 0) < 0.2) fire("sn10", L, t, tr, age, `operator fingerprint: 10 wallets, ${t.bundle.pct.toFixed(1)}% / ${t.bundle.sol.toFixed(1)} SOL, dev ${(t.bundle.devBuy ?? 0).toFixed(2)} SOL`, t.bundle.pct); // v0.18.142 S10 (F3)
   if (L.fired.sn4 && !L.fired.sn4b && t.bundle && t.bundle.pct < 3) fire("sn4b", L, t, tr, age, `clean, bundle ${t.bundle.pct.toFixed(1)}% (< 3%)`, t.bundle.pct); // v0.18.142 S4b: same moment as S4, tighter bundle
+  if (!L.fired.sn11 && age >= 60 && age <= 90) { if (L.buyers.size >= 300) fire("sn11", L, t, tr, age, `crowd: ${L.buyers.size} outside buyers by 60 s, MC $${fmt(t.lastMc || 0)}`, L.buyers.size, { wal60: L.buyers.size }); else L.fired.sn11 = true; } // v0.18.143 S11
   if (!L.fired.sn5 && age <= SN.FLOW_BY_S && L.buyers.size >= SN.FLOW_WALLETS && L.outSol >= SN.FLOW_SOL) fire("sn5", L, t, tr, age, `${L.outSol.toFixed(1)} SOL from ${L.buyers.size} wallets by ${age} s`, L.outSol);
 });
 
+// v0.18.143: S6b / S7b — look the signal wallet's GMGN followers up, then buy at our feed's price at that moment (the lookup takes ~0.3–1 s; a real bot would wait for it too)
+function followUp(book, mint, wallet, ok, sig) {
+  walletFollowers(wallet).then((f) => { if (f == null || !ok(f)) return; const t = live.get(mint); if (!t || !(t.lastMc > 0)) return; const last = t.trades?.[t.trades.length - 1]; if (!last?.price) return;
+    const L = W.get(mint) || { mint, createTs: t.ts, slot: t.slot, buyers: new Map(), outSol: 0, solIn: 0, solOut: 0, sells: 0, n: t.trades?.length || 0, fired: {}, cr: null, cc: null, mcFirst: null }; if (L.fired[book]) return;
+    const now = Math.floor(Date.now() / 1000); fire(book, L, t, { ...last, ts: now, slot: (last.slot || t.slot) + 1, wallet, sol: 0, isBuy: true }, now - (t.ts || now), sig(f), f, { wallet, wallet_n: null, wallet_x5: null, wallet_x10: null, wallet_rate: null, followers: f });
+  }).catch(() => {});
+}
 function fire(book, L, t, tr, age, signal, signalN, extra = {}) {
   L.fired[book] = true; sn.fired[book] = (sn.fired[book] || 0) + 1;
   const mc = t.lastMc, now = tr.ts; if (!(tr.price > 0) || !(mc > 0)) return;
@@ -98,6 +109,7 @@ onSmartBuy(({ mint, wallet, usd, ts, kind, tags, seenTs }) => {
   const last = t.trades?.[t.trades.length - 1]; if (!last?.price) return; fired7.set(mint, seenTs); if (fired7.size > 2000) fired7.delete(fired7.keys().next().value);
   const L = W.get(mint) || { mint, createTs: t.ts, slot: t.slot, buyers: new Map(), outSol: 0, solIn: 0, solOut: 0, sells: 0, n: t.trades?.length || 0, fired: {}, cr: null, cc: null, mcFirst: null };
   const tr = { ...last, ts: seenTs, slot: (last.slot || t.slot) + 1, wallet, sol: 0, isBuy: true };
+  followUp("sn7b", mint, wallet, (f) => f < 100, (f) => `unknown feed wallet ${short(wallet)} (${f} GMGN followers) bought $${Math.round(usd)}`);
   fire("sn7", L, t, tr, age, `${kind === "kol" ? "KOL" : "smart money"} ${short(wallet)} bought $${Math.round(usd)} ${seenTs - ts} s ago (${tags || kind})`, usd, { wallet, wallet_n: null, wallet_x5: null, wallet_x10: null, wallet_rate: null, feed_lag_s: seenTs - ts });
 });
 onCopyClose((mint, p) => { if (!SN_KINDS.includes(p.kind)) return; sn.open = Math.max(0, sn.open - 1); if (!positionsOf(mint).some((x) => !x.closed && SN_KINDS.includes(x.kind))) holds.delete(mint); });

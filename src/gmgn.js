@@ -141,6 +141,8 @@ setInterval(async () => {
 try { db.exec("ALTER TABLE paper_trades ADD COLUMN gmgn_wallet_json TEXT"); } catch {}
 const qGetW = db.prepare(`SELECT gmgn_wallet_json FROM paper_trades WHERE id=?`).pluck(), qSetW = db.prepare(`UPDATE paper_trades SET gmgn_wallet_json=? WHERE id=?`);
 const wq = [], wCache = new Map(); let wBusy = false; gm.walletOk = 0; gm.walletFail = 0;
+// v0.18.143: a wallet's GMGN follower count now (cached 10 min, shared with the queue) — S6b / S7b decide on it at entry
+export async function walletFollowers(wallet) { if (!KEY() || !wallet) return null; let c = wCache.get(wallet); if (!c || Date.now() - c.t > 600000) { const d = await get("/v1/user/wallet_stats", { chain: "sol", wallet_address: wallet, period: "7d" }); c = { t: Date.now(), w: slimWallet(d) }; wCache.set(wallet, c); if (wCache.size > 2000) wCache.delete(wCache.keys().next().value); } return c.w?.followers ?? null; }
 export function walletStatsFor(id, role, wallet) { if (!KEY() || !id || !wallet || String(wallet).startsWith("tx:")) return; wq.push({ id, role, wallet }); if (wq.length > 400) wq.shift(); }
 export function slimWallet(d) { const w = Array.isArray(d) ? d[0] : d; if (!w || typeof w !== "object") return null; const c = w.common || {}; const n = (v) => (v == null || v === "" ? null : Number(v));
   return { winrate: n(w.winrate), pnl: n(w.pnl), realized: n(w.realized_profit), unrealized: n(w.unrealized_profit), cost: n(w.total_cost), buys: n(w.buy_count), sells: n(w.sell_count), tags: Array.isArray(c.tags) ? c.tags.join("|") : (c.tag || ""), followers: n(c.follow_count), age_d: c.created_at ? +((Date.now() / 1000 - Number(c.created_at)) / 86400).toFixed(1) : null, created: n(c.created_token_count), fund: c.fund_from || null }; }

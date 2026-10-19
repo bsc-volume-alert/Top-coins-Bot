@@ -1,6 +1,6 @@
 {
   "name": "executor",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "type": "module",
   "description": "Live buy/sell bot for the tracker's Project 5 signals — own wallet, pump.fun / PumpSwap direct, Helius Sender. Separate pm2 app.",

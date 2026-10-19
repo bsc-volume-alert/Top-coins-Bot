@@ -149,3 +149,6 @@ higher tip; fill confirmed by seeing our own swap in the feed. Slippage: 20% on 
 - **S10** (key `op`, strategy `sn10`): the 10-wallet operator's launch fingerprint (the study's F3); sold at 5 min; shadow 0.05 — answers whether the launch price can be bought.
 - **G** now sells at 5 min (`h5`) instead of the runner.
 - Guard: positions are keyed (paper id, exit), so two switched-on books with the same exit on the same trade (A and F) would collide; the second now skips with a reason instead of overwriting.
+
+## v0.4.1 — S6b (19 Oct 20:40 UK)
+- **S6b** (key `famous`, strategy `sn6b`): S6 when the smart wallet has 1,000+ GMGN followers; sold at 5 min; shadow 0.05.
