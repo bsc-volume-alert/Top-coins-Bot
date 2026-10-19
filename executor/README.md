@@ -125,3 +125,9 @@ pump.fun `buy` / `sell` built locally from the curve state our feed already trac
 tip, sent through Helius Sender (regional endpoint, every landing route at once; free, tip ≥ 0.001 SOL for the full route) with one retry at a
 higher tip; fill confirmed by seeing our own swap in the feed. Slippage: 20% on buys (tight slippage misses the fastest coins — the winners),
 30% on stop sells (not selling is worse than a bad price). Jupiter only when the venue is unknown.
+
+## v0.3.4 — books F and G (19 Oct)
+- Six books. **F** = A's trigger and skips, taken only when the launch bundle was ≤ 3 wallets (the 13:28 study's F1: 33 trades +18.4% vs 67 at −9.0%). **G** = A's trigger on the coins the website skips for 150–500 wallets in the trigger minute (26 trades, +13% to +36%). Both runner exit, both start in **shadow** at 0.05 SOL.
+- Each book now has a `take(m)` predicate; the website's pass flag is one input (A–D need it, F adds the bundle test, G takes the "N wallets" skips). The tracker's trigger message carries `bundleWallets`.
+- Commands: `/live book f|g off|shadow|live`, `/live stake f 0.05`.
+
