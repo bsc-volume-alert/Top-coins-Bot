@@ -16,7 +16,7 @@ import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 import { newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, positionsOf, hasPosition, dayNet, net24, londonDayStart, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.3.6"; // four books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
+const VERSION = "0.3.7"; // four books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
 const EXIT_NAMES = { h5: "B", flow4: "A" };
 // wide = P5 Wide's EXTRA coins only (the $100K–$250K triggers, strategy p5w30): the rest of the paper Wide book is the Runner's coins, already traded by the runner book.
 // strict = the 50 SOL trigger (p5e50): its own paper trade on a coin the runner may already hold, bought later and higher — a separate leg, a separate test.
@@ -28,7 +28,9 @@ const BOOKS = { runner: { name: "A", strategy: "p5e30", exit: "flow4", take: pas
   wide: { name: "C", strategy: "p5w30", exit: "flow4", take: passOk, rule: "same trigger and skips as A, MC $100K–$250K · runner exit" }, strict: { name: "D", strategy: "p5e50", exit: "flow4", take: passOk, rule: "50 SOL bought in 60 s, MC under $100K · runner exit" },
   small: { name: "F", strategy: "p5e30", exit: "flow4", take: (m) => passOk(m) && m.bundleWallets != null && m.bundleWallets <= 3, rule: "A's trigger and skips, only when the launch bundle was 3 wallets or fewer (the 13:28 study's F1) · runner exit" },
   crowd: { name: "G", strategy: "p5e30", exit: "flow4", take: (m) => /wallets/.test(String(m.skipWhy || "")) && m.wal60 != null && m.wal60 <= 500, rule: "A's trigger on the coins the page skips for 150–500 wallets in the trigger minute (the 13:28 study: 26 trades, +13% to +36%) · runner exit" },
-  swarm: { name: "S9", strategy: "sn9", exit: "h5", take: () => true, rule: "Project S book S9: 20+ outside wallets each ≥ 0.3 SOL in a launch's first 60 s, bundle under 20% — bought at +60 s on the bonding curve, sold at 5 min (B's rule). The 15:40 launch study: 102 in 24 h, +46% mean / +11% median at 5 min, 54% winners" } }; // v0.3.6 (owner, 19 Oct 15:48 UK: "every new analysis, straight onto shadow") // one letter per book, the same as the website: A runner · B hold-5 · C wide (runner exit) · D strict (runner exit)
+  swarm: { name: "S9", strategy: "sn9", exit: "h5", take: () => true, rule: "Project S book S9: 20+ outside wallets each ≥ 0.3 SOL in a launch's first 60 s, bundle under 20% — bought at +60 s on the bonding curve, sold at 5 min (B's rule). The 15:40 launch study: 102 in 24 h, +46% mean / +11% median at 5 min, 54% winners" },
+  dev: { name: "S1", strategy: "sn1", exit: "h5", take: () => true, rule: "Project S book S1: a creator with a record (≤ 30 launches, 2+ graduated or one over $100K, ≥ 10% of them) — bought on the first trade after the create block, sold at 5 min (B's rule)" },
+  smart: { name: "S6", strategy: "sn6", exit: "flow4", take: () => true, rule: "Project S book S6: a GMGN smart wallet buys ≥ 0.2 SOL within 60 s — bought on that trade · runner exit (the one positive paper line at 15:19 UK: +14.7% avg on 42)" } }; // v0.3.7 (owner, 19 Oct 15:57 UK): S1 and S6 in shadow too // v0.3.6 (owner, 19 Oct 15:48 UK: "every new analysis, straight onto shadow") // one letter per book, the same as the website: A runner · B hold-5 · C wide (runner exit) · D strict (runner exit)
 const BOOK_IDS = Object.keys(BOOKS);
 const nowS = () => Math.floor(Date.now() / 1000);
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -37,15 +39,15 @@ const short = (m) => (m ? `${m.slice(0, 4)}…${m.slice(-4)}` : "?");
 // ---- settings that can be changed from Telegram and survive restarts (mode, stake) ----
 const OVR = join(EXEC_HOME, "overrides.json");
 const ovr = (() => { try { return JSON.parse(readFileSync(OVR, "utf8")); } catch { return {}; } })();
-const S = { mode: ovr.mode || CFG.MODE, stake: ovr.stake || CFG.STAKE_SOL, exit: ovr.exit || CFG.EXIT, strategy: ovr.strategy || CFG.STRATEGY, stoppedDay: null, stopOverrideDay: null, lastTracker: Date.now(), lastFeed: 0, kp: null, pub: null, balance: null, balanceT: 0, buying: { runner: 0, hold5: 0, wide: 0, strict: 0, small: 0, crowd: 0, swarm: 0 }, lags: [] };
+const S = { mode: ovr.mode || CFG.MODE, stake: ovr.stake || CFG.STAKE_SOL, exit: ovr.exit || CFG.EXIT, strategy: ovr.strategy || CFG.STRATEGY, stoppedDay: null, stopOverrideDay: null, lastTracker: Date.now(), lastFeed: 0, kp: null, pub: null, balance: null, balanceT: 0, buying: { runner: 0, hold5: 0, wide: 0, strict: 0, small: 0, crowd: 0, swarm: 0, dev: 0, smart: 0 }, lags: [] };
 // v0.2.1: each book has its own switch and stake (owner's controls on the wallet box) · v0.3.0: books are named and tied to a strategy
 // v0.3.3: each book has its own MODE — off | shadow | live — so A can trade for real while C and D are simulated. The wallet-wide mode is derived from the books.
 const MODES = ["off", "shadow", "live"];
 S.books = (() => { const b = ovr.books || {}; const legacyMode = (on) => (!on ? "off" : S.mode === "live" ? "live" : S.mode === "shadow" ? "shadow" : "off");
-  if (b.runner && b.hold5) { const out = {}; for (const k of BOOK_IDS) { const x = b[k] || (k === "small" || k === "crowd" || k === "swarm" ? { mode: "shadow", stake: 0.05 } : { on: false, stake: 0.01 }); out[k] = { mode: MODES.includes(x.mode) ? x.mode : legacyMode(!!x.on), stake: x.stake || 0.01 }; } return out; } // v0.3.4: F and G start in shadow at 0.05
+  if (b.runner && b.hold5) { const out = {}; for (const k of BOOK_IDS) { const x = b[k] || (k === "small" || k === "crowd" || k === "swarm" || k === "dev" || k === "smart" ? { mode: "shadow", stake: 0.05 } : { on: false, stake: 0.01 }); out[k] = { mode: MODES.includes(x.mode) ? x.mode : legacyMode(!!x.on), stake: x.stake || 0.01 }; } return out; } // v0.3.4: F and G start in shadow at 0.05
   // migrate the v0.2 shape ({flow4, h5}) or the single-exit setting; Wide and Strict start off at 0.01
   const f = b.flow4 || { on: S.exit === "both" || S.exit === "flow4", stake: S.stake }, h = b.h5 || { on: S.exit === "both" || S.exit === "h5", stake: S.stake };
-  return { runner: { mode: legacyMode(!!f.on), stake: f.stake }, hold5: { mode: legacyMode(!!h.on), stake: h.stake }, wide: { mode: "off", stake: 0.01 }, strict: { mode: "off", stake: 0.01 }, small: { mode: "shadow", stake: 0.05 }, crowd: { mode: "shadow", stake: 0.05 }, swarm: { mode: "shadow", stake: 0.05 } }; })();
+  return { runner: { mode: legacyMode(!!f.on), stake: f.stake }, hold5: { mode: legacyMode(!!h.on), stake: h.stake }, wide: { mode: "off", stake: 0.01 }, strict: { mode: "off", stake: 0.01 }, small: { mode: "shadow", stake: 0.05 }, crowd: { mode: "shadow", stake: 0.05 }, swarm: { mode: "shadow", stake: 0.05 }, dev: { mode: "shadow", stake: 0.05 }, smart: { mode: "shadow", stake: 0.05 } }; })();
 const modeOf = (book) => S.books[book]?.mode || "off";
 const booksOn = () => BOOK_IDS.filter((k) => modeOf(k) !== "off");
 const booksLive = () => BOOK_IDS.filter((k) => modeOf(k) === "live");
@@ -53,7 +55,7 @@ const syncMode = () => { S.mode = booksLive().length ? "live" : booksOn().length
 syncMode();
 const exitsActive = () => [...new Set(booksOn().map((k) => BOOKS[k].exit))]; // the exit rules any switched-on book uses
 const stakeOf = (book) => Number(S.books[book]?.stake || S.stake);
-const bookKey = (word) => ({ a: "runner", runner: "runner", flow4: "runner", b: "hold5", "hold-5": "hold5", hold5: "hold5", h5: "hold5", c: "wide", wide: "wide", d: "strict", strict: "strict", f: "small", small: "small", g: "crowd", crowd: "crowd", s9: "swarm", swarm: "swarm" }[String(word || "").toLowerCase()] || null);
+const bookKey = (word) => ({ a: "runner", runner: "runner", flow4: "runner", b: "hold5", "hold-5": "hold5", hold5: "hold5", h5: "hold5", c: "wide", wide: "wide", d: "strict", strict: "strict", f: "small", small: "small", g: "crowd", crowd: "crowd", s9: "swarm", swarm: "swarm", s1: "dev", dev: "dev", s6: "smart", smart: "smart" }[String(word || "").toLowerCase()] || null);
 const STAKE_CHOICES = [0.01, 0.02, 0.05, 0.1, 0.25, 0.5, 1];
 const syncExitWord = () => { const r = modeOf("runner") !== "off", h = modeOf("hold5") !== "off"; S.exit = r && h ? "both" : r ? "flow4" : h ? "h5" : "off"; syncMode(); };
 const legKey = (paperId, exit) => `${paperId}:${exit}`;

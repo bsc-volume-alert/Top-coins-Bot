@@ -1,6 +1,6 @@
 {
   "name": "bundler-tracker",
-  "version": "0.18.129",
+  "version": "0.18.130",
   "private": true,
   "type": "module",
   "engines": { "node": ">=22" },

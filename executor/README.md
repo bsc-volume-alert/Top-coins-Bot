@@ -135,3 +135,7 @@ higher tip; fill confirmed by seeing our own swap in the feed. Slippage: 20% on 
 ## v0.3.6 — book S9 (19 Oct 15:50 UK)
 - Seventh book, **S9** (key `swarm`, strategy `sn9`): the first Project S sniper that reaches the executor. The tracker fires it on the first trade at/after +60 s when 20+ outside wallets each bought ≥ 0.3 SOL in the first minute and the launch bundle was under 20%; the executor quotes the bonding curve (venue `curve`) and sells on B's 5-minute rule (`h5`). Starts in **shadow** at 0.05 SOL. From the 15:40 launch study (43,835 launches, 24 h): 102 such launches, +46% mean / +11% median at 5 min after 10% cost, 54% winners, positive in both 12-hour halves.
 - Commands: `/live book s9 off|shadow|live`, `/live stake s9 0.05`.
+
+## v0.3.7 — books S1 and S6 (19 Oct 15:57 UK)
+- Nine books. **S1** (key `dev`, strategy `sn1`, sold at 5 min on `h5`) and **S6** (key `smart`, strategy `sn6`, runner exit) join S9 as Project S shadow books at 0.05 SOL. S2–S5, S7 and S8 stay paper: shadow re-prices a book, it cannot rescue one that loses on paper, and the curve slippage measured on S1/S6/S9 applies to all of them.
+- Commands: `/live book s1|s6 off|shadow|live`, `/live stake s1 0.05`.
