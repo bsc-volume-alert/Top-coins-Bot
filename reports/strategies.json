@@ -133,6 +133,51 @@
         }
       ],
       "note": "study's own: the G book's coins (A's trigger, skipped by the website for 150-500 wallets) sold at 5 minutes instead of the runner. Score by hand from A rows with skip_why = N wallets (the study.mjs table scores on passed rows and will show 0). Evidence: 36 such trades since the price fix, 5-min sell +20.5% net (win 64%) and 1.5x/-40% +5.9%, against the runner -1.4% and G's 7 shadow runner legs -0.327 SOL (4 stops). At 13:28 it was +35.9% on 26, so the last 10 were about -20%: the edge is fading, which is why it is registered rather than recommended. Hypothesis until 40 out-of-sample trades."
+    },
+    {
+      "id": "F5",
+      "created": "2026-10-19T21:00Z",
+      "after_ts": 1792437000,
+      "book": "A",
+      "exit": "x_flow4",
+      "filter": [
+        {
+          "f": "fs5_x",
+          "op": ">=",
+          "v": 1.02
+        }
+      ],
+      "note": "A5 itself (the owner's rule, book A5 / p5c5 from 19 Oct 19:10 UTC): A's coin bought 5 s after the trigger only if the price is still >= 1.02x, runner exit. PRICED FROM THE 5-s PRICE: score by hand as x_flow4 / fs5_x (the study.mjs table prices it at the trigger price and will overstate it by ~15 points). In sample on the rows the owner saw (to 16:05 UTC): 51 trades +4.4% net at real costs, win 63%, stopped 25% vs A -1.8%/39%. On the 10 rows from 16:05 to 19:10 UTC: -13.7%. Hypothesis until 40 out-of-sample trades; also score the real A5 rows/legs (book A5) side by side."
+    },
+    {
+      "id": "F6",
+      "created": "2026-10-19T21:00Z",
+      "after_ts": 1792440300,
+      "book": "A",
+      "exit": "x_flow4",
+      "filter": [
+        {
+          "f": "fs10_x",
+          "op": ">=",
+          "v": 1.05
+        }
+      ],
+      "note": "study's own: a stricter, later confirm than A5 — A's coin bought 10 s after the trigger only if the price is still >= 1.05x, runner exit. PRICED FROM THE 10-s PRICE: score by hand as x_flow4 / fs10_x. From 152 passed A trades: 56 qualify, +8.3% net at real costs, win 68%, stopped 12% (A: 39%); +8.4% on the 45 to 16:05 UTC and +7.7% on the 11 after; positive in 12 of 20 hours. The one re-priced confirm rule out of 75 tried (2-/5-/10-s price x 1.02-1.25 x 3 exits x 13 books) that is positive in both halves — the selection risk is real. Needs the executor to buy at the 10-s price, which the tracker only sees when its feed lag is under a second (19:39 UTC it was 21 s). Hypothesis until 40 out-of-sample trades."
+    },
+    {
+      "id": "F7",
+      "created": "2026-10-19T21:00Z",
+      "after_ts": 1792440300,
+      "book": "S3",
+      "exit": "x_h5",
+      "filter": [
+        {
+          "f": "sn_delay_s",
+          "op": ">=",
+          "v": 1
+        }
+      ],
+      "note": "study's own: S3 (copycat) only when the buy is at least 1 s after the launch (sn_delay_s >= 1), sold at 5 min, curve costs. From 91 closed S3 rows: 62 qualify, +13.9% net, win 37%, stopped 26%; +5.3% on the first half and +22.5% on the 31 since 16:05 UTC; the 29 same-second buys are -25.0% (win 14%). S3's shadow legs (34 since 16:15 UTC, +0.174 SOL, entry gap +1.4%) say the paper price is obtainable. Suspicion to check: the same-second rows may be priced at the create trade, which an outsider cannot get. Found among 4,821 rule tests; hypothesis until 40 out-of-sample trades."
     }
   ]
 }
