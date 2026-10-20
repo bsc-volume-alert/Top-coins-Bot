@@ -90,7 +90,9 @@ function followUp(book, mint, wallet, ok, sig) {
 }
 function fire(book, L, t, tr, age, signal, signalN, extra = {}) {
   L.fired[book] = true; sn.fired[book] = (sn.fired[book] || 0) + 1;
-  const mc = t.lastMc, now = tr.ts; if (!(tr.price > 0) || !(mc > 0)) return;
+  const mc = t.lastMc, now = tr.ts;
+  if (book === "sn10") console.log(`[sn10] ${t.mint} ${t.name} age ${age}s mc $${Math.round(mc || 0)} price ${tr.price} graduated ${!!t.graduated} bundle ${JSON.stringify(t.bundle)}`); // v0.18.154: every fingerprint decision is logged (29 launches, 0 rows - the executor never saw one)
+  if (!(tr.price > 0) || !(mc > 0)) return;
   if (t.graduated) { sn.graduated = sn.graduated || {}; sn.graduated[book] = (sn.graduated[book] || 0) + 1; return; } // v0.18.149: the coin has already left the curve (KFC, Super Saiyan: 85 SOL dev buy graduated them inside the launch transaction) - the curve's last price is not a price anyone can buy at; real trading was 9x higher on the pool
   if (mc > (SN_BOOKS[book].maxMc ?? SN.MAX_MC)) { sn.overMc[book] = (sn.overMc[book] || 0) + 1; return; } // v0.18.147: per-book cap — S10's coins are past $60K by the time the bundle is known (+4 s), so the global cap rejected all 10 of 19 Oct's evening launches
   const h = (hourly[book] = (hourly[book] || []).filter((x) => now - x < 3600)); if (h.length >= SN.MAX_PER_HOUR) { sn.capped[book] = (sn.capped[book] || 0) + 1; return; } h.push(now);

@@ -183,3 +183,9 @@ For any rule R on any row: `ex_R_t` says when it fired, `ex_R_x` the multiple at
 
 ## v0.18.153 (20 Oct 07:30 UK) — GR skips instant graduations
 - `grf` now needs the coin to be 10–185 s old at graduation (was ≤ 185 s). Coins that graduate inside their own launch transaction were bought on paper at the curve price; the real shadow buys paid +272% (Leonida) and +194% (MONUMENTAL EGO). The page's GR record leaves out the earlier instant ones and applies the 1-second price check.
+
+## v0.18.154 / executor v0.4.3 (20 Oct 15:45 UK)
+- The 24-h strip and box order rank by return per trade (net ÷ trades ÷ stake), not SOL at the box's stake: a 0.5-stake paper box was outranking a 0.05-stake shadow one.
+- GR box shows two paper variants on the same trades: under 70 buyers at graduation (`gr70`), 85 s or older at graduation (`gr85`).
+- Every S10 fingerprint decision is logged (`[sn10]` lines); `scripts/s10-check.cjs` (job `s10`) dumps each fingerprint launch's first 40 s from the DB.
+- S7b back to paper (m043): 41 shadow legs −0.553 SOL, win 20%.
