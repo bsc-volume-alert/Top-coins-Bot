@@ -189,3 +189,10 @@ For any rule R on any row: `ex_R_t` says when it fired, `ex_R_x` the multiple at
 - GR box shows two paper variants on the same trades: under 70 buyers at graduation (`gr70`), 85 s or older at graduation (`gr85`).
 - Every S10 fingerprint decision is logged (`[sn10]` lines); `scripts/s10-check.cjs` (job `s10`) dumps each fingerprint launch's first 40 s from the DB.
 - S7b back to paper (m043): 41 shadow legs −0.553 SOL, win 20%.
+
+## v0.18.155 (20 Oct 16:20 UK) — S10 on the pool; DC, R and GR-lock; sniper table at real costs
+- **S10 fires on the first PumpSwap swap** after the bundle is known (fingerprint launches graduate inside their first seconds, so the curve handler never saw a trade to fire on — the reason for 0 rows on 29 launches). Entry = that swap's pool price; `venue` = pumpswap. The curve path still fires if the coin is somehow still on the curve.
+- `dcopy` is not a strategy: it is D's passed rows filtered on `early_json.ctx.cc.best24h ≥ 72000` (a same-name coin reached $72K+ in 24 h). Book **DC** on the page, judged from 20 Oct 16:00 UK.
+- New strategy `rev` = book **R** (revival): coin ≥ 6 h old, pool price ≥ 2x its lowest 5-min close of the last 6 h, no 2x in the last 2 h, MC < $500K, one entry per coin per 2 h. Paper only; headline exit `x_tsl40`.
+- New exit column `x_h3l` ("GR-lock"): 3-min sale, floor 1.1x once 1.25x has been seen (plain h3 arms at 1.5x, floor 1.3x). Shown as a GR variant from 16:00 UK.
+- Project S table now at the real curve cost model (was a flat 10%).

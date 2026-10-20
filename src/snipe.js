@@ -24,6 +24,7 @@ import { gmgnEntry, walletStatsFor, walletFollowers } from "./gmgn.js";
 import { onSmartBuy } from "./smartmoney.js"; // v0.18.122 S7
 import { live } from "./launch-monitor.js";
 import { solUsdCached } from "./price.js";
+import { onSwap } from "./pumpswap.js"; // v0.18.155: S10 buys on the pool
 
 const N = (k, d) => { const v = Number(process.env[k]); return Number.isFinite(v) && process.env[k] !== undefined && process.env[k] !== "" ? v : d; };
 export const SN = { MAX_MC: N("SN_MAX_MC", 60_000), MAX_PER_HOUR: N("SN_MAX_PER_HOUR", 20), WATCH_S: N("SN_WATCH_S", 120), CREATOR_GRADS: N("SN_CREATOR_GRADS", 2), CREATOR_MAX_N: N("SN_CREATOR_MAX_N", 30), CREATOR_RATE: N("SN_CREATOR_RATE", 0.1), COPY_PEAK: N("SN_COPY_PEAK", 300_000),
@@ -90,16 +91,16 @@ function followUp(book, mint, wallet, ok, sig) {
 }
 function fire(book, L, t, tr, age, signal, signalN, extra = {}) {
   L.fired[book] = true; sn.fired[book] = (sn.fired[book] || 0) + 1;
-  const mc = t.lastMc, now = tr.ts;
+  const mc = extra.pool ? tr.mc : t.lastMc, now = tr.ts;
   if (book === "sn10") console.log(`[sn10] ${t.mint} ${t.name} age ${age}s mc $${Math.round(mc || 0)} price ${tr.price} graduated ${!!t.graduated} bundle ${JSON.stringify(t.bundle)}`); // v0.18.154: every fingerprint decision is logged (29 launches, 0 rows - the executor never saw one)
   if (!(tr.price > 0) || !(mc > 0)) return;
-  if (t.graduated) { sn.graduated = sn.graduated || {}; sn.graduated[book] = (sn.graduated[book] || 0) + 1; return; } // v0.18.149: the coin has already left the curve (KFC, Super Saiyan: 85 SOL dev buy graduated them inside the launch transaction) - the curve's last price is not a price anyone can buy at; real trading was 9x higher on the pool
+  if (t.graduated && !extra.pool) { sn.graduated = sn.graduated || {}; sn.graduated[book] = (sn.graduated[book] || 0) + 1; return; } // v0.18.149: the coin has already left the curve (KFC, Super Saiyan: 85 SOL dev buy graduated them inside the launch transaction) - the curve's last price is not a price anyone can buy at; real trading was 9x higher on the pool
   if (mc > (SN_BOOKS[book].maxMc ?? SN.MAX_MC)) { sn.overMc[book] = (sn.overMc[book] || 0) + 1; return; } // v0.18.147: per-book cap — S10's coins are past $60K by the time the bundle is known (+4 s), so the global cap rejected all 10 of 19 Oct's evening launches
   const h = (hourly[book] = (hourly[book] || []).filter((x) => now - x < 3600)); if (h.length >= SN.MAX_PER_HOUR) { sn.capped[book] = (sn.capped[book] || 0) + 1; return; } h.push(now);
   const feats = { book: SN_BOOKS[book].id, delay_s: age, slot_gap: tr.slot - L.slot, buyers: L.buyers.size, out_sol: +L.outSol.toFixed(2), sol_in: +L.solIn.toFixed(2), sol_out: +L.solOut.toFixed(2), sells: L.sells, trades: L.n, mc_first: L.mcFirst != null ? Math.round(L.mcFirst) : null,
     dev_buy: t.bundle?.devBuy ?? null, bundle_pct: t.bundle?.pct != null ? +t.bundle.pct.toFixed(2) : null, bundle_wallets: t.bundle?.wallets ?? null, bundle_sol: t.bundle?.sol != null ? +t.bundle.sol.toFixed(2) : null, signal, signal_n: signalN, cr: L.cr, cc: L.cc, ...extra };
   let pos = null;
-  try { pos = openCopy(book, SN_BOOKS[book].id, t.mint, t.name || t.mint.slice(0, 8), t.symbol || "", tr.price, mc, now, { ageS: age, venue: "pump", v5: Math.round((L.solIn + L.solOut) * solUsdCached()), wall0: Date.now(), blockTs: now, noExec: !SN_BOOKS[book].exec, pass: true, bundle: t.bundle?.pct ?? null, bundleWallets: t.bundle?.wallets ?? null, wal60: extra.wal60 ?? L.buyers.size, preBuyers: new Set((t.trades || []).filter((x) => x.isBuy && x.wallet).map((x) => x.wallet)), creator: t.creator || null }); } // pre-entry buyers incl. the create block: their selling is the trace's ps / psn
+  try { pos = openCopy(book, SN_BOOKS[book].id, t.mint, t.name || t.mint.slice(0, 8), t.symbol || "", tr.price, mc, now, { ageS: age, venue: extra.pool ? "pumpswap" : "pump", v5: Math.round((L.solIn + L.solOut) * solUsdCached()), wall0: Date.now(), blockTs: now, noExec: !SN_BOOKS[book].exec, pass: true, bundle: t.bundle?.pct ?? null, bundleWallets: t.bundle?.wallets ?? null, wal60: extra.wal60 ?? L.buyers.size, preBuyers: new Set((t.trades || []).filter((x) => x.isBuy && x.wallet).map((x) => x.wallet)), creator: t.creator || null }); } // pre-entry buyers incl. the create block: their selling is the trace's ps / psn
   catch (e) { console.error("[snipe open]", e.message); return; }
   if (!pos?.id) return;
   sn.taken[book] = (sn.taken[book] || 0) + 1; sn.open++; holds.add(t.mint);
@@ -107,6 +108,15 @@ function fire(book, L, t, tr, age, signal, signalN, extra = {}) {
   setTimeout(() => { try { gmgnEntry(t.mint, pos.id, { holders: true }); } catch {} }, 90_000);
   if (extra.wallet) { try { walletStatsFor(pos.id, "sig", extra.wallet); } catch {} } // v0.18.122: the signal wallet's 7-day GMGN record (gw_sig_*) // GMGN knows nothing at T+5 s; by +90 s its security / smart-money flags exist
 }
+// v0.18.155 S10 on the pool (owner, 20 Oct 15:55 UK: "get S10 running"). 29 fingerprint launches, 0 rows: the operator's coins graduate within the first
+// seconds (25 SOL bundle + the crowd), so by the time the bundle is known (+4 s) there are no more curve trades for the curve handler above to fire on.
+// The first PumpSwap swap after the bundle is known is the first moment an outsider can buy; S10 fires on that, at the pool price.
+const FP = (b) => b && b.wallets === 10 && b.pct >= 37 && b.pct <= 41 && b.sol >= 22 && b.sol <= 28 && (b.devBuy ?? 0) < 0.2;
+onSwap((tr) => {
+  const L = W.get(tr.mint); if (!L || L.fired.sn10) return; const t = live.get(tr.mint); if (!t?.bundle) return;
+  const age = (tr.ts || Math.floor(Date.now() / 1000)) - L.createTs; if (age > 60 || !(tr.price > 0) || !(tr.mc > 0)) return;
+  if (FP(t.bundle)) fire("sn10", L, t, { ...tr, ts: tr.ts || Math.floor(Date.now() / 1000), slot: (tr.slot || t.slot) + 1, isBuy: true, sol: tr.sol || 0 }, age, `operator fingerprint: 10 wallets, ${t.bundle.pct.toFixed(1)}% / ${t.bundle.sol.toFixed(1)} SOL, dev ${(t.bundle.devBuy ?? 0).toFixed(2)} — first pool trade at ${age} s`, t.bundle.pct, { pool: true });
+});
 // S7: a smart-money / KOL buy from GMGN's feed on a young coin we are tracking from launch → paper-buy at the last price our own feed saw
 const fired7 = new Map(); // mint -> ts
 onSmartBuy(({ mint, wallet, usd, ts, kind, tags, seenTs }) => {
