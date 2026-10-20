@@ -268,6 +268,36 @@
     }
    ],
    "note": "study's own: D's trigger (50 SOL in 60 s) on a coin whose name copies a coin that peaked above $19K in the last 24 h (cc_best_mc24h > 19000), runner exit. From 203 passed D trades: n61 +10.8% at real costs, median +16.5%, win 59%, stop 34%; halves +11.1% / +10.6%; 11 of 17 hours; +6.3% without the best coin; +9.3% at the 5-s price; +8.4% on the 41 since 19 Oct 20:10 UK. Threshold is a plateau (>$10K +8.9% on 67, >$30K +10.6% on 56, >$50K +10.3% on 54); D with a weaker copycat -11.7% on 61, with no same-name coin -2.1% on 81. Against it: 50 of 61 rows are F11 rows (max_share <= 0.11) and the other 11 are -22.9%, so it is F11's overlap; on A's trigger +1.4% on 79, on C -2.0% on 24. Six rules of this kind (F5-F9, F12) cleared the same bar in sample and failed out of sample. Hypothesis until 40 out-of-sample trades."
+  },
+  {
+   "id": "F14",
+   "created": "2026-10-20T16:38Z",
+   "after_ts": 1792512273,
+   "book": "80",
+   "exit": "x_flow4",
+   "filter": [
+    {
+     "f": "pre_30sol_t",
+     "op": "<=",
+     "v": 19
+    }
+   ],
+   "note": "Study 20 Oct 17:40 UK (own devising). The 80-SOL trigger (80 SOL in 60 s) only when 30 SOL of the minute's buying was crossed no more than 19 s before the trigger - about 50 SOL arrived in the last 19 s, a burst not a drift. In sample on the 80-SOL book's passed rows at real costs (PumpSwap x/1.02*0.967-0.016, stops -0.05): n40 +31.5%, median +40.1%, win 70%, stop 22%; halves +45.4% / +17.7%; 9 of 14 hours, 5 of 6 six-hour blocks; +16.3% without the best three; +33.3% at the 5-s price; rest of the book -15.2% on 39. Caveats: pre_30sol_t is blank on a third of the book's rows; 32 of the 40 are also F15 rows (pool_sol > 74) at +42.9%, the 8 that are not are -13.9%; the 80-SOL book has never had an executor leg so the entry gap on a burst buy is unmeasured; the book's own first half was -14.9%. Seven rules cleared this bar in sample before and none held out of sample."
+  },
+  {
+   "id": "F15",
+   "created": "2026-10-20T16:38Z",
+   "after_ts": 1792512273,
+   "book": "80",
+   "exit": "x_flow4",
+   "filter": [
+    {
+     "f": "pool_sol",
+     "op": ">",
+     "v": 74
+    }
+   ],
+   "note": "Study 20 Oct 17:40 UK (own devising). The 80-SOL trigger only when the PumpSwap pool's SOL side after the triggering trade is above 74 SOL (a deep pool). In sample at real costs: n58 +20.9%, median +35.3%, win 62%, stop 28%; halves +30.6% / +14.0%; 13 of 17 hours, 4 of 5 six-hour blocks; +11.2% without the best three; +24.3% at the 5-s price; rest of the book -27.1% on 18. The same cut on A is +5.7% on 56 (rest -4.3%) and on D +7.1% on 62 (rest -3.7%). Caveats: pool_sol is blank on a third of the book's rows; 32 rows shared with F14 (the edge lives in the overlap, a 50-SOL burst into a deep pool); no executor leg has ever run on the 80-SOL trigger; the two 4x-cap trades (Spidey Show, Cure Cancer) are in both rules."
   }
  ]
 }
