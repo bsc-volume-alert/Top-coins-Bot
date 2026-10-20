@@ -33,7 +33,8 @@ import { momStats, strategySummary } from "./momentum.js";
 import { wbStats, leaderboardText, creatorsText } from "./wallets.js";
 import { cpStats } from "./copytrade.js";
 import { snStats } from "./snipe.js";
-import "./revive.js"; // v0.18.155 book R (revival, paper) // v0.18.119 Project S paper snipers
+import "./revive.js"; // v0.18.155 book R (revival, paper)
+import "./keep.js"; // v0.18.157 book K (keeps going, paper) // v0.18.119 Project S paper snipers
 import { timed, slowJobs } from "./slow.js"; // v0.18.120: which synchronous job stalled the loop
 import { smartStats } from "./smartwallets.js"; // v0.18.121 GMGN smart wallets (Project S book S6)
 import { lcStats } from "./lifecycle.js";

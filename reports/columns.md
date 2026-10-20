@@ -201,3 +201,6 @@ For any rule R on any row: `ex_R_t` says when it fired, `ex_R_x` the multiple at
 - Every launch's metadata is fetched at creation (IPFS first, pump.fun API, DexScreener; 6 in flight), so `tokens.has_socials` (and so `has_socials` in abcd.csv / launches.csv) is known at entry for the sniper books and GR from now on. Before, it was only fetched for coins another book engaged with - the sniper books' socials figures before 16:35 UK are selection-biased.
 - **AS** = A skipping coins KNOWN to have no socials (unknown kept). **DS** = D skipping no-socials coins and whale-led minutes (`maxShare > 0.11`). Both are filters on A's / D's passed rows; their page record runs from the price fix and is partly in sample - judge from 16:30 UK.
 - GR box: `grsoc` variant (socials only, from 16:00 UK).
+
+## v0.18.157 (20 Oct 17:30 UK) — book K
+- New strategy `k` = **K** ("keeps going"): a coin that was $10–50K with 50+ buyers at its 5-min lifecycle checkpoint, bought when its MC reaches 2x that level before 15 min. Paper. Headline `x_h2t40` (half at 2x, trail 40%, −40% stop).
