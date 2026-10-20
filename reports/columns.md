@@ -225,3 +225,7 @@ For any rule R on any row: `ex_R_t` says when it fired, `ex_R_x` the multiple at
 ## v0.18.164 (20 Oct 19:15 UK) — the operator's coins are skipped everywhere except S10
 - Fingerprint = `tokens.bundle_wallets = 10`, `bundle_pct` 37–41, `bundle_sol` 22–28, `dev_buy_sol` < 0.2. 24 h: 31 launches, median MC $218K at 60 s → $150K at 5 min → $28K at 15 min → $4K at 1 h. A and D bought 20 / 19 of them (−11% a trade).
 - The tracker no longer sends a fingerprint coin to the executor for any book but S10 (`pos.noExec`). The page leaves them out of every book's record (past and future) except S10's, and out of the off-page box. Paper rows are still recorded in the DB and in abcd.csv / others.csv - studies should drop them (join `launches.csv` or `tokens` on mint) when scoring any book other than S10.
+
+## v0.18.168 (20 Oct 19:30 UK) — one combined 12-hour strip
+- The top strip ranks every book together (on the page and off it) on the last 12 h, by return per trade; the separate off-page box is hidden. Books on the page show their 6-h result beside the 12-h one; off-page books are marked "off the page".
+- "✓ worth a look" = 15+ trades in 12 h, still positive without its best trade (summaries now carry `mx`, the best single trade after costs), and positive over 24 h.
