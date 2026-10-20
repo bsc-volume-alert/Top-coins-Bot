@@ -213,3 +213,7 @@ For any rule R on any row: `ex_R_t` says when it fired, `ex_R_x` the multiple at
 
 ## v0.18.160 (20 Oct 17:55 UK) — before / since the change
 - Books whose rule changed show two records side by side: the same rule on the trades BEFORE the change (a back-test - the rule was chosen by looking at them) and on the trades SINCE (the real test). AS and DS: changed 17:45 UK (standard filters). DC: 16:00 UK. GR: 07:30 UK (instant graduations skipped), shown as a line in its shadow box. Books whose rule has not changed keep a single total.
+
+## v0.18.161 (20 Oct 18:35 UK) — off-page books box; profit / loss colours
+- New box under the 24-h strip: every book still recorded but not on the page (B, C, 80-SOL, E, S1–S3, S5–S9, S6b, S11, the background momentum/graduation books), last 12 h, closed trades, real costs, best first. Sniper books at the curve model with the 1-s late-price rule, at 5 min; B at 5 min; graduations at 3 min; the rest at the runner. Books with fewer than 3 trades in 12 h are left out.
+- Strip and off-page box colour profit cyan, loss pink.
