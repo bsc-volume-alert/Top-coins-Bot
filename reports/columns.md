@@ -176,3 +176,7 @@ For any rule R on any row: `ex_R_t` says when it fired, `ex_R_x` the multiple at
 ## v0.18.149 (20 Oct 05:40 UK) — sniper price fixes (owner: "why are we still getting price problems?")
 - Snipers no longer fire on a coin that has already graduated. KFC and Super Saiyan: an 85 SOL dev buy took the whole curve inside the launch transaction; the paper entry was the curve's final price while the coin was trading 9x higher on the pool.
 - Late-price rule on the page and in `abcd.csv`: `late_px_x` = the price 1 s after a sniper entry when it is above 1.5x. Score such trades as x / late_px_x. 14 trades on 20 Oct (S2, S3b, S5, S6, S7, S7b, S8), including S6/S7's Pump Pack 24x.
+
+## v0.18.150 (20 Oct 07:20 UK) — curve cost model fitted to real shadow sells
+- Page curve model is now x × 0.97 − 0.02, stops −0.01 more, floor sells −0.12 more (plus the 0.001 SOL a trade fixed fee). On the 384 real sniper shadow sells: real −11.8%, old model −7.8%, new −11.6%. Studies should use the same.
+- A hold-5/hold-3 sell counts as a floor sell when peak_mult ≥ 1.5 and 0.62 < x ≤ 1.32 (or use ex_h5_why = floor in abcd.csv).
