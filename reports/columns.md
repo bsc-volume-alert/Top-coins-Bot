@@ -172,3 +172,7 @@ For any rule R on any row: `ex_R_t` says when it fired, `ex_R_x` the multiple at
 - The executor now handles an `h3` exit leg (fallback sell at 5 min).
 - Shadow → paper: F, G, S3, S6b (migration m042). S7b → shadow (exec: true): paper +55% a trade on 33, median −4%, carried by two 10x coins.
 - Page shows A, A5, D, F6, S3b, S4, S4b, S7b, S10, GR. Off the page but still recorded: B, C, E, E2, F, G, A2, S1, S2, S3, S5–S9, S6b, S11.
+
+## v0.18.149 (20 Oct 05:40 UK) — sniper price fixes (owner: "why are we still getting price problems?")
+- Snipers no longer fire on a coin that has already graduated. KFC and Super Saiyan: an 85 SOL dev buy took the whole curve inside the launch transaction; the paper entry was the curve's final price while the coin was trading 9x higher on the pool.
+- Late-price rule on the page and in `abcd.csv`: `late_px_x` = the price 1 s after a sniper entry when it is above 1.5x. Score such trades as x / late_px_x. 14 trades on 20 Oct (S2, S3b, S5, S6, S7, S7b, S8), including S6/S7's Pump Pack 24x.
