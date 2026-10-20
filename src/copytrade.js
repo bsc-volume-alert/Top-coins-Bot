@@ -76,7 +76,11 @@ on("graduated", (t, tr) => {
   const cp5 = L.cp5;
   openCopy("grad", `${Math.round(ageS / 60)}m`, t.mint, t.name || t.mint.slice(0, 8), t.symbol || "", tr.price, t.lastMc, ts,
     { ageS, buyers: L.buyers, mc5: cp5?.mc ?? null, buyers5: cp5?.buyers ?? null, b5: cp5?.b ?? null, s5: cp5?.sl ?? null, maxBurst: L.maxBurst, bs: cp5 && cp5.sl > 0 ? cp5.b / cp5.sl : null });
+  // v0.18.148 GR: fast, thin graduations only (272 buyers or fewer AND graduated within 185 s of launch) - the one background slice that held up at real prices (94 trades, +33% mean, +16% median at a 3-min sale, 18 Oct-20 Oct). Shadow answers whether the graduation price can actually be bought on the new pool.
+  if (L.buyers <= GR.MAX_BUYERS && ageS <= GR.MAX_AGE_S) openCopy("grf", `${L.buyers}b ${ageS}s`, t.mint, t.name || t.mint.slice(0, 8), t.symbol || "", tr.price, t.lastMc, ts,
+    { ageS, buyers: L.buyers, mc5: cp5?.mc ?? null, buyers5: cp5?.buyers ?? null, b5: cp5?.b ?? null, s5: cp5?.sl ?? null, maxBurst: L.maxBurst, bs: cp5 && cp5.sl > 0 ? cp5.b / cp5.sl : null, wall0: Date.now(), blockTs: ts, venue: "pumpswap", pass: true });
 });
+export const GR = { MAX_BUYERS: 272, MAX_AGE_S: 185 };
 
 // v0.18.146: how far behind the chain the tracker is — newest block time seen on any trade vs the wall clock (normally 1–5 s: block times are whole seconds and lag
 // the wall clock; 20 s+ after a restart while the backlog replays). A5 / F6 read a price 5–10 s after a trigger and must not act on a stale one.
@@ -97,7 +101,7 @@ function tick(mint, price, mc, sol, isBuy, ts, wallet = null, quiet = false) {
     if (p.wall0) { try { noteExits(p.id, mint, x, ts - p.entryTs); } catch {} } // v0.18.118: the data set's exit timings
     if (x.s15be != null && p.e.s15Saved !== x.s15be) { p.e.s15Saved = x.s15be; try { q.setS15.run(x.s15be, p.id); } catch {} } // v0.18.49
     { const kh = h5Key(x); if (p.e.h5Saved !== kh) { p.e.h5Saved = kh; try { q.setH5.run(x.h5 ?? null, x.h5f12 ?? null, x.h5f14 ?? null, x.h3 ?? null, x.h15 ?? null, x.h5fast ?? null, p.id); } catch {} } } // v0.18.81
-    if (p.wall0 && !p.noExec) { if (x.h5 != null && !p.e.h5Sent) { p.e.h5Sent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "h5", mult: x.h5, why: x.h5why || null, ts }); } if (x.flow4 != null && !p.e.flow4Sent) { p.e.flow4Sent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "flow4", mult: x.flow4, why: x.flow4why || null, ts }); } } // v0.18.90 → executor
+    if (p.wall0 && !p.noExec) { if (p.kind === "grf" && x.h3 != null && !p.e.h3Sent) { p.e.h3Sent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "h3", mult: x.h3, why: x.h3why || null, ts }); } if (x.h5 != null && !p.e.h5Sent) { p.e.h5Sent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "h5", mult: x.h5, why: x.h5why || null, ts }); } if (x.flow4 != null && !p.e.flow4Sent) { p.e.flow4Sent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "flow4", mult: x.flow4, why: x.flow4why || null, ts }); } } // v0.18.90 → executor
     if (x.h2t40 != null && p.e.h2Saved !== x.h2t40) { p.e.h2Saved = x.h2t40; try { q.setH2.run(x.h2t40, p.id); } catch {} } // v0.18.35
     if (x.flow4ff != null && p.e.ffSaved !== x.flow4ff) { p.e.ffSaved = x.flow4ff; try { q.setFlow4ff.run(x.flow4ff, p.id); } catch {} }
     if ((x.dead != null || x.split != null) && p.e.deadSaved !== `${x.dead}|${x.split}`) { p.e.deadSaved = `${x.dead}|${x.split}`; try { q.setDead.run(x.dead ?? null, p3dFinal(p.e, x, r.mult), p.id); } catch {} } // v0.18.30
@@ -120,7 +124,7 @@ setInterval(() => { try { sweepTraces(); } catch {} }, 5000); // v0.18.113: mark
 setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [mint, arr] of P) { const p = arr.find((x) => !x.closed && x.e?.x?.h5 == null && now - x.entryTs >= 300 && x.lastTs > 0 && now - x.lastTs >= 5 && x.lastPx > 0); if (p) { try { tick(mint, p.lastPx, p.lastMc, 0, true, now, null, true); } catch (e) { console.error("[quiet tick]", e.message); } } } }, 5000); // v0.18.146: x.lastTs > 0 — a position restored after a restart has seen no trade yet, so its last price is only the entry price
 
 function close(mint, p, reason) {
-  if (p.wall0 && !p.noExec) { try { const cm = (p.lastPx || p.e.entry) / p.e.entry, v = finalExits(p.e, cm); execSend({ type: "close", id: Number(p.id), mint, reason, mult: cm, h5: v.h5 ?? null, flow4: v.flow4 ?? null }); } catch {} } // v0.18.90 → executor (backstop: sell if still held)
+  if (p.wall0 && !p.noExec) { try { const cm = (p.lastPx || p.e.entry) / p.e.entry, v = finalExits(p.e, cm); execSend({ type: "close", id: Number(p.id), mint, reason, mult: cm, h5: v.h5 ?? null, flow4: v.flow4 ?? null, h3: p.e.x.h3 ?? cm }); } catch {} } // v0.18.90 → executor (backstop: sell if still held)
   if (p.closed) return; p.closed = true; cp.closes++; try { noteClose(p.id); } catch {}
   const mult = p.lastPx / p.e.entry, v = finalExits(p.e, mult), peakMult = p.e.peak / p.e.entry, now = Math.floor(Date.now() / 1000);
   q.updMom.run(p.lastMc, peakMult, v.tp, v.tsl40, v.tsl60, v.tsl80, v.half60, v.twophase, v.ladder, v.time, now, p.lastMc, p.lastPx, reason, (v.time - 1) * 100, 1, v.levels, v.m1, v.m1vol, v.volstop, p.id);
@@ -165,7 +169,7 @@ export function restoreCopyFromDb() {
       e.flowArmed = e.x.tp15 != null; e.ffDone = now - r.entry_ts >= 120; e.splitBranch = r.split_branch && r.split_branch !== "sweep" ? r.split_branch : null; e.splitHalf = r.split_branch === "mid" && pk >= 1.5; e.ddPre15 = r.dd_pre15 ?? null;
       try { e.path = r.path ? JSON.parse(r.path) : {}; } catch { e.path = {}; }
       const pos = { id: r.id, label: (r.trigger_kind || "").split(":").slice(1).join(":") || r.strategy, e, w5: [], closed: false, entryTs: r.entry_ts, lastMc: r.entry_mc, lastPx: r.entry_price, name: r.name, kind: r.strategy, alerted: false, hit15Saved: r.t_hit15_s != null, restored: "db" };
-      if (/^p5[ewc]\d+$/.test(r.strategy) || /^sn(1|3|4|6|6b|9|10)$/.test(r.strategy)) { pos.wall0 = r.entry_ts * 1000; if (e.x.h5 != null) e.h5Sent = true; if (e.x.flow4 != null) e.flow4Sent = true; } // v0.18.90: a restored P5 position still tells the executor when its exit fires (rules already fired are not re-sent) // v0.18.146: + A5/F6 (p5c*) and the executor's sniper books — before, a restart cut their sell messages and the executor fell back to its 7-min / 6½-h backstop
+      if (/^p5[ewc]\d+$/.test(r.strategy) || /^sn(1|3|4|6|6b|7b|9|10)$/.test(r.strategy) || r.strategy === "grf") { pos.wall0 = r.entry_ts * 1000; if (e.x.h3 != null) e.h3Sent = true; if (e.x.h5 != null) e.h5Sent = true; if (e.x.flow4 != null) e.flow4Sent = true; } // v0.18.90: a restored P5 position still tells the executor when its exit fires (rules already fired are not re-sent) // v0.18.146: + A5/F6 (p5c*) and the executor's sniper books — before, a restart cut their sell messages and the executor fell back to its 7-min / 6½-h backstop
       const arr = P.get(r.mint) || []; arr.push(pos); P.set(r.mint, arr);
       setTimeout(() => close(r.mint, pos, "time"), Math.max(5_000, CFG.MOM_MAX_HOLD_MIN * 60_000 - (Date.now() - r.entry_ts * 1000))); n++;
     }

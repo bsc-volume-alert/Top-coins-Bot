@@ -166,3 +166,9 @@ For any rule R on any row: `ex_R_t` says when it fired, `ex_R_x` the multiple at
 
 **v0.18.146 (19 Oct 22:00 UK).** `x_flow4ff` (A2's exit) is now in abcd.csv. New paper books: `F6` = strategy p5c10 (10 s after A's trigger, opened only if the price is still ≥ 1.05x; early_json.a5 has waitS, lagA, lagNow) and `S3b` = sn3b (S3 bought at least 1 s after the launch). A5 and F6 stand down when A's own trigger was more than 8 s behind the chain or the tracker's feed is (the 20:39 UK A5 leg read a price 21 s stale). After a restart, A5/F6 and the executor's sniper books (sn1/3/4/6/6b/9/10) keep sending their exits to the executor (before, only A–D did), and a restored position's 5-min sale is not booked on the clock until a live trade has priced it. The website's real-cost model takes the fixed part of the fees per trade (0.001 SOL), so a 0.05 SOL stake pays about 2.6% on PumpSwap and 2% on the curve, 0.25 SOL about 1.0% / 0.4%.
 
+
+## v0.18.148 / executor v0.4.2 (20 Oct 05:30 UK) — owner: remove what isn't working, add what has potential
+- New strategy `grf` = **GR**: fast, thin graduations (≤ 272 buyers AND graduated ≤ 185 s after launch), sold at 3 min (`x_h3`). Shadow at 0.05. Back-test 18–20 Oct: 94 trades, +33% mean, +16% median at real prices (+8.5% without the top 3). The plain `grad` row keeps recording every graduation.
+- The executor now handles an `h3` exit leg (fallback sell at 5 min).
+- Shadow → paper: F, G, S3, S6b (migration m042). S7b → shadow (exec: true): paper +55% a trade on 33, median −4%, carried by two 10x coins.
+- Page shows A, A5, D, F6, S3b, S4, S4b, S7b, S10, GR. Off the page but still recorded: B, C, E, E2, F, G, A2, S1, S2, S3, S5–S9, S6b, S11.

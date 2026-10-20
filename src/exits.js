@@ -111,9 +111,9 @@ export function h5Step(e, x, mult, sinceS) {
   }
   for (const [k, [T, F]] of Object.entries(H5)) {
     if (x[k] != null) continue;
-    if (!e.h5Armed && mult <= 0.6) { x[k] = mult; if (k === "h5") x.h5why = "stop"; continue; }
-    if (e.h5Armed && mult <= F) { x[k] = mult; if (k === "h5") x.h5why = "floor"; continue; }
-    if (sinceS != null && sinceS >= T) { x[k] = mult; if (k === "h5") x.h5why = "time"; }
+    if (!e.h5Armed && mult <= 0.6) { x[k] = mult; if (k === "h5" || k === "h3") x[k + "why"] = "stop"; continue; }
+    if (e.h5Armed && mult <= F) { x[k] = mult; if (k === "h5" || k === "h3") x[k + "why"] = "floor"; continue; }
+    if (sinceS != null && sinceS >= T) { x[k] = mult; if (k === "h5" || k === "h3") x[k + "why"] = "time"; }
   }
 }
 export function h5Final(e, x, mult) { const o = {}; for (const k of H5_KEYS) o[k] = x[k] ?? mult; return o; }
