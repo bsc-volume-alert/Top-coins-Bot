@@ -21,12 +21,15 @@ const db = new Database(DB, { readonly: true, fileMustExist: true });
 const coins = db.prepare(`SELECT mint, name, symbol, create_ts, peak_mc_usd FROM tokens WHERE graduated=1 AND create_ts>=? ORDER BY create_ts`).all(FROM);
 console.log(`[revival] ${coins.length} graduated coins since ${new Date(FROM * 1000).toISOString()}`);
 
+let dbg = 0, MS = false;
 async function kline(mint, from, to) {
+  if (MS) { from *= 1000; to *= 1000; }
   for (let attempt = 0; attempt < 4; attempt++) {
     const q = new URLSearchParams({ chain: "sol", address: mint, resolution: "5m", from: String(from), to: String(to), timestamp: String(Math.floor(Date.now() / 1000)), client_id: randomUUID() });
     try {
       const r = await fetch(`${HOST}/v1/market/token_kline?${q}`, { headers: { "X-APIKEY": KEY, "Content-Type": "application/json" }, signal: AbortSignal.timeout(15000) });
-      const j = JSON.parse(await r.text());
+      const txt = await r.text(); if (dbg < 4) { dbg++; console.log(`[revival] debug ${MS ? "ms" : "s"} HTTP ${r.status}: ${txt.slice(0, 700)}`); }
+      const j = JSON.parse(txt);
       if (r.status === 429 || /RATE_LIMIT/.test(j.error || "")) { await sleep(5000 * (attempt + 1)); continue; }
       if (j.code !== 0) return { err: `${j.error || j.code}` };
       const d = j.data?.data && !Array.isArray(j.data.data) ? j.data.data : j.data;
@@ -36,6 +39,9 @@ async function kline(mint, from, to) {
   return { err: "rate limited" };
 }
 
+// v0.18.155: the first run got 0 candles for all 1,860 coins — find the time unit that works on a known coin (Pokémon) first
+const probeS = await kline("D42TjMjz5H7toPu5md5KBXreZkCSdZMEfLQwmBhJXvb1", Math.floor(Date.now() / 1000) - 86400, Math.floor(Date.now() / 1000));
+if (!probeS.list?.length) { MS = true; const probeM = await kline("D42TjMjz5H7toPu5md5KBXreZkCSdZMEfLQwmBhJXvb1", Math.floor(Date.now() / 1000) - 86400, Math.floor(Date.now() / 1000)); console.log(`[revival] probe: seconds ${probeS.list?.length ?? probeS.err} · ms ${probeM.list?.length ?? probeM.err}`); if (!probeM.list?.length) { console.log("[revival] no candles either way - stopping"); process.exit(1); } } else console.log(`[revival] probe: seconds ok, ${probeS.list.length} candles`);
 const gz = createGzip(), tmp = OUT + ".tmp", ws = createWriteStream(tmp); gz.pipe(ws);
 const now = Math.floor(Date.now() / 1000); let ok = 0, fail = 0, candles = 0;
 for (const [i, c] of coins.entries()) {
