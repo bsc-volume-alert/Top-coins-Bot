@@ -77,10 +77,10 @@ on("graduated", (t, tr) => {
   openCopy("grad", `${Math.round(ageS / 60)}m`, t.mint, t.name || t.mint.slice(0, 8), t.symbol || "", tr.price, t.lastMc, ts,
     { ageS, buyers: L.buyers, mc5: cp5?.mc ?? null, buyers5: cp5?.buyers ?? null, b5: cp5?.b ?? null, s5: cp5?.sl ?? null, maxBurst: L.maxBurst, bs: cp5 && cp5.sl > 0 ? cp5.b / cp5.sl : null });
   // v0.18.148 GR: fast, thin graduations only (272 buyers or fewer AND graduated within 185 s of launch) - the one background slice that held up at real prices (94 trades, +33% mean, +16% median at a 3-min sale, 18 Oct-20 Oct). Shadow answers whether the graduation price can actually be bought on the new pool.
-  if (L.buyers <= GR.MAX_BUYERS && ageS <= GR.MAX_AGE_S) openCopy("grf", `${L.buyers}b ${ageS}s`, t.mint, t.name || t.mint.slice(0, 8), t.symbol || "", tr.price, t.lastMc, ts,
+  if (L.buyers <= GR.MAX_BUYERS && ageS <= GR.MAX_AGE_S && ageS >= GR.MIN_AGE_S) openCopy("grf", `${L.buyers}b ${ageS}s`, t.mint, t.name || t.mint.slice(0, 8), t.symbol || "", tr.price, t.lastMc, ts,
     { ageS, buyers: L.buyers, mc5: cp5?.mc ?? null, buyers5: cp5?.buyers ?? null, b5: cp5?.b ?? null, s5: cp5?.sl ?? null, maxBurst: L.maxBurst, bs: cp5 && cp5.sl > 0 ? cp5.b / cp5.sl : null, wall0: Date.now(), blockTs: ts, venue: "pumpswap", pass: true });
 });
-export const GR = { MAX_BUYERS: 272, MAX_AGE_S: 185 };
+export const GR = { MAX_BUYERS: 272, MAX_AGE_S: 185, MIN_AGE_S: 10 }; // v0.18.153 (owner, 20 Oct 07:27 UK): skip coins that graduate inside their own launch (Leonida, MONUMENTAL EGO: paper took the curve price, the real buy paid +272% / +194%)
 
 // v0.18.146: how far behind the chain the tracker is — newest block time seen on any trade vs the wall clock (normally 1–5 s: block times are whole seconds and lag
 // the wall clock; 20 s+ after a restart while the backlog replays). A5 / F6 read a price 5–10 s after a trigger and must not act on a stale one.

@@ -180,3 +180,6 @@ For any rule R on any row: `ex_R_t` says when it fired, `ex_R_x` the multiple at
 ## v0.18.150 (20 Oct 07:20 UK) — curve cost model fitted to real shadow sells
 - Page curve model is now x × 0.97 − 0.02, stops −0.01 more, floor sells −0.12 more (plus the 0.001 SOL a trade fixed fee). On the 384 real sniper shadow sells: real −11.8%, old model −7.8%, new −11.6%. Studies should use the same.
 - A hold-5/hold-3 sell counts as a floor sell when peak_mult ≥ 1.5 and 0.62 < x ≤ 1.32 (or use ex_h5_why = floor in abcd.csv).
+
+## v0.18.153 (20 Oct 07:30 UK) — GR skips instant graduations
+- `grf` now needs the coin to be 10–185 s old at graduation (was ≤ 185 s). Coins that graduate inside their own launch transaction were bought on paper at the curve price; the real shadow buys paid +272% (Leonida) and +194% (MONUMENTAL EGO). The page's GR record leaves out the earlier instant ones and applies the 1-second price check.
