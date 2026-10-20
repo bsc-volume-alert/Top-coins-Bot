@@ -210,3 +210,6 @@ For any rule R on any row: `ex_R_t` says when it fired, `ex_R_x` the multiple at
 
 ## v0.18.159 / executor v0.4.4 (20 Oct 17:50 UK) — 6-hour figures
 - Every box shows a "last 6 hours" figure (paper boxes: trades opened in the last 6 h; shadow / live boxes: legs closed in the last 6 h), and the top strip shows each book's 6-h result next to its 24-h one. Executor status carries `h6Live` / `h6Shadow` per book.
+
+## v0.18.160 (20 Oct 17:55 UK) — before / since the change
+- Books whose rule changed show two records side by side: the same rule on the trades BEFORE the change (a back-test - the rule was chosen by looking at them) and on the trades SINCE (the real test). AS and DS: changed 17:45 UK (standard filters). DC: 16:00 UK. GR: 07:30 UK (instant graduations skipped), shown as a line in its shadow box. Books whose rule has not changed keep a single total.
