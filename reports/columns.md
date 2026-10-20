@@ -229,3 +229,6 @@ For any rule R on any row: `ex_R_t` says when it fired, `ex_R_x` the multiple at
 ## v0.18.168 (20 Oct 19:30 UK) — one combined 12-hour strip
 - The top strip ranks every book together (on the page and off it) on the last 12 h, by return per trade; the separate off-page box is hidden. Books on the page show their 6-h result beside the 12-h one; off-page books are marked "off the page".
 - "✓ worth a look" = 15+ trades in 12 h, still positive without its best trade (summaries now carry `mx`, the best single trade after costs), and positive over 24 h.
+
+## v0.18.171 (20 Oct 20:00 UK) — book H (low holder concentration)
+- **H** = A's passed rows (`p5e30`) where GMGN's top-10 holder share at entry (`gh_top10`, from `paper_trades.gmgn_entry.hold.top10`, snapshot ~1 s after the trigger) is under 0.23. Runner exit, paper. Found on 20 Oct across A, D and 80-SOL (+10.6% on 145, halves +21.0% / +0.4%); page record split before / after 20 Oct 20:00 UK. Rows without a snapshot are left out.
