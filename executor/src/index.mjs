@@ -16,7 +16,7 @@ import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 import { newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, positionsOf, hasPosition, dayNet, net24, londonDayStart, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.4.3"; // four books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
+const VERSION = "0.4.4"; // four books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
 const EXIT_NAMES = { h5: "B", flow4: "A", h3: "GR" };
 // wide = P5 Wide's EXTRA coins only (the $100K–$250K triggers, strategy p5w30): the rest of the paper Wide book is the Runner's coins, already traded by the runner book.
 // strict = the 50 SOL trigger (p5e50): its own paper trade on a coin the runner may already hold, bought later and higher — a separate leg, a separate test.
@@ -396,7 +396,7 @@ async function housekeeping() {
     const dayStart = londonDayStart(), tl = totals("live"), ts = totals("shadow");
     const openRow = (p) => ({ id: p.paper_id, exit: p.exit, book: p.book, name: p.name, mint: p.mint, mode: p.mode, opened_ts: p.opened_ts, cost: sol(p.cost_lamports), tokens: p.tokens, paperPx: p.paper_entry_price, livePx: p.tokens > 0 ? (p.cost_lamports / 1e9) / (p.tokens / 1e6) : null });
     const tot = (mode, x) => { const t = totals(mode, x); return { n: t.n, pnl: sol(t.pnl), win: t.n ? t.w / t.n : null }; };
-    const books = Object.fromEntries(BOOK_IDS.map((x) => [x, { name: BOOKS[x].name, strategy: BOOKS[x].strategy, exit: BOOKS[x].exit, rule: BOOKS[x].rule || null, mode: modeOf(x), on: modeOf(x) !== "off", stake: stakeOf(x), open: ops.filter((p) => p.book === x).map(openRow), dayLive: dayNet("live", x), dayShadow: dayNet("shadow", x), h24Live: net24("live", x), h24Shadow: net24("shadow", x), totalLive: tot("live", x), totalShadow: tot("shadow", x), recent: recentClosed(100, x) }]));
+    const books = Object.fromEntries(BOOK_IDS.map((x) => [x, { name: BOOKS[x].name, strategy: BOOKS[x].strategy, exit: BOOKS[x].exit, rule: BOOKS[x].rule || null, mode: modeOf(x), on: modeOf(x) !== "off", stake: stakeOf(x), open: ops.filter((p) => p.book === x).map(openRow), dayLive: dayNet("live", x), dayShadow: dayNet("shadow", x), h24Live: net24("live", x), h24Shadow: net24("shadow", x), h6Live: net24("live", x, 21600), h6Shadow: net24("shadow", x, 21600), totalLive: tot("live", x), totalShadow: tot("shadow", x), recent: recentClosed(100, x) }]));
     writeFileSync(join(EXEC_HOME, "status.json"), JSON.stringify({ version: VERSION, mode: S.mode, strategy: S.strategy, exit: S.exit, exits: exitsActive(), exitNames: EXIT_NAMES, stake: S.stake, stakeChoices: STAKE_CHOICES, wallet: S.pub?.toBase58() || null, balance: bal != null ? sol(bal) : null, sweepTo: CFG.SWEEP_TO || null,
       open: ops.map(openRow), books,
       dayLive: dayNet("live"), dayShadow: dayNet("shadow"), h24Live: net24("live"), h24Shadow: net24("shadow"), totalLive: tot("live"), totalShadow: tot("shadow"),

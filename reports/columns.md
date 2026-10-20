@@ -207,3 +207,6 @@ For any rule R on any row: `ex_R_t` says when it fired, `ex_R_x` the multiple at
 
 ## v0.18.158 (20 Oct 17:45 UK) — AS / DS = the owner's standard filter set
 - AS and DS are now A / D with: socials present (`tok_soc` ≠ 0), the creator has not bought-and-sold-out (`dev_hold_entry` = 0 with `dev_buy_sol` > 0 is the skip), and the biggest buyer in the trigger minute (`max_share × sol60`) between 3 and 5 SOL. The 11% whale-share rule is dropped (owner: a conviction buyer split over wallets defeats it). In sample: A +12.9% on 70, D +14.7% on 62, both halves positive on both; judge from 17:45 UK.
+
+## v0.18.159 / executor v0.4.4 (20 Oct 17:50 UK) — 6-hour figures
+- Every box shows a "last 6 hours" figure (paper boxes: trades opened in the last 6 h; shadow / live boxes: legs closed in the last 6 h), and the top strip shows each book's 6-h result next to its 24-h one. Executor status carries `h6Live` / `h6Shadow` per book.

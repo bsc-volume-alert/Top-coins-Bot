@@ -66,8 +66,8 @@ export function londonDayStart() {
 export function dayNet(mode = CFG.MODE, exit = null) { // today's realised result in lamports (UK day), closed positions only
   return db.prepare(`SELECT COALESCE(SUM(pnl_lamports),0) n, COUNT(*) c FROM positions WHERE status='closed' AND mode=? AND closed_ts>=?${exitSql(exit)}`).get(mode, londonDayStart());
 }
-export function net24(mode = CFG.MODE, exit = null) { // last 24 hours, closed positions only
-  return db.prepare(`SELECT COALESCE(SUM(pnl_lamports),0) n, COUNT(*) c FROM positions WHERE status='closed' AND mode=? AND closed_ts>=?${exitSql(exit)}`).get(mode, Math.floor(Date.now() / 1000) - 86400);
+export function net24(mode = CFG.MODE, exit = null, secs = 86400) { // last 24 hours (or `secs`), closed positions only
+  return db.prepare(`SELECT COALESCE(SUM(pnl_lamports),0) n, COUNT(*) c FROM positions WHERE status='closed' AND mode=? AND closed_ts>=?${exitSql(exit)}`).get(mode, Math.floor(Date.now() / 1000) - secs);
 }
 export const pendingBuys = () => db.prepare(`SELECT * FROM orders WHERE side='buy' AND mode='live' AND status IN ('sent','pending') ORDER BY id`).all();
 export const lastSellSig = (paperId, exit) => db.prepare(`SELECT id, sig FROM orders WHERE side='sell' AND paper_id=? AND (exit=? OR exit IS NULL) AND sig IS NOT NULL ORDER BY id DESC LIMIT 1`).get(paperId, exit);
