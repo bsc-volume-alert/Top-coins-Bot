@@ -1,243 +1,258 @@
 {
-  "_about": "The study's register. Each rule is scored only on trades entered AFTER after_ts (out of sample); the study adds rules here and never edits an existing one's filter or after_ts. filter ops: < <= > >= == != on columns of data/abcd.csv; exit is the paper column to score (x_flow4 runner, x_h5 5-min, x_h3 3-min, x_h15, x_h5f14, x_t15s40).",
-  "strategies": [
+ "_about": "The study's register. Each rule is scored only on trades entered AFTER after_ts (out of sample); the study adds rules here and never edits an existing one's filter or after_ts. filter ops: < <= > >= == != on columns of data/abcd.csv; exit is the paper column to score (x_flow4 runner, x_h5 5-min, x_h3 3-min, x_h15, x_h5f14, x_t15s40).",
+ "strategies": [
+  {
+   "id": "S1",
+   "created": "2026-10-19T09:30Z",
+   "after_ts": 1792401000,
+   "book": "A",
+   "exit": "x_h3",
+   "filter": [],
+   "note": "sell at 3 minutes instead of 5 (from 84 post-fix trades: +10.1% vs +5.0%)"
+  },
+  {
+   "id": "S2",
+   "created": "2026-10-19T09:30Z",
+   "after_ts": 1792401000,
+   "book": "A",
+   "exit": "x_flow4",
+   "filter": [
     {
-      "id": "S1",
-      "created": "2026-10-19T09:30Z",
-      "after_ts": 1792401000,
-      "book": "A",
-      "exit": "x_h3",
-      "filter": [],
-      "note": "sell at 3 minutes instead of 5 (from 84 post-fix trades: +10.1% vs +5.0%)"
-    },
-    {
-      "id": "S2",
-      "created": "2026-10-19T09:30Z",
-      "after_ts": 1792401000,
-      "book": "A",
-      "exit": "x_flow4",
-      "filter": [
-        {
-          "f": "wal60",
-          "op": "<=",
-          "v": 65
-        }
-      ],
-      "note": "fewer than 65 wallets in the trigger minute (from 49 live coins: 72% win vs 38%)"
-    },
-    {
-      "id": "S3",
-      "created": "2026-10-19T09:30Z",
-      "after_ts": 1792401000,
-      "book": "A",
-      "exit": "x_flow4",
-      "filter": [
-        {
-          "f": "max_share",
-          "op": ">",
-          "v": 0.1
-        }
-      ],
-      "note": "one buyer took more than 10% of the trigger minute's buying (from 49 live coins: 75% win vs 36%)"
-    },
-    {
-      "id": "F1",
-      "created": "2026-10-19T12:45Z",
-      "after_ts": 1792411500,
-      "book": "A",
-      "exit": "x_flow4",
-      "filter": [
-        {
-          "f": "bundle_wallets",
-          "op": "<=",
-          "v": 3
-        }
-      ],
-      "note": "study's own: A coins whose launch bundle was at most 3 wallets, runner exit. From 100 passed A trades: n33 +18.4% net, 76-85% win, 12% stopped vs n67 -9.0% net, 37-40% win; holds at the 5-s fill price (+13.9%), in 10 of 13 hours, and on D's coins (n27 +13.2% vs n53 -8.7%, mostly the same mints). Hypothesis until 40 out-of-sample trades."
-    },
-    {
-      "id": "F2",
-      "created": "2026-10-19T12:45Z",
-      "after_ts": 1792411500,
-      "book": "S7",
-      "exit": "launch_5min",
-      "filter": [
-        {
-          "f": "tier",
-          "op": "==",
-          "v": 1
-        }
-      ],
-      "note": "study's own LAUNCH-TIME rule (score by hand from launches.csv, create_ts > after_ts): a tier-1 bundled launch (bundle 40-79% of supply, median dev buy 4.9 SOL, ~25 an hour), bought at the +4 s price (median MC $32K), sold at 5 min. 604 launches in 24 h: 5-min multiple median 1.24 on the 86% still trading, 44% above the 10% cost, 28% reached 5x and 16% 10x by 5 min, 55% graduated; positive in all six 4-hour blocks. The website's bundled-70%+ skip and S4's clean-launch premise point the other way. Not yet a book: needs the executor to see whether the +4 s price is obtainable (bundle sells into the buy) — judge on the next 24 h of launches first."
-    },
-    {
-      "id": "S4",
-      "created": "2026-10-19T12:45Z",
-      "after_ts": 1792411500,
-      "book": "E",
-      "exit": "x_h5",
-      "filter": [],
-      "note": "the owner's E trigger ($100K traded in 5 min, MC under $100K) sold at 5 minutes: the best E exit so far, +8.8% net on 31 passed trades (runner +5.3%, 1.5x/-40% -0.1%); 31 trades is too few to mean anything."
-    },
-    {
-      "id": "F3",
-      "created": "2026-10-19T16:40Z",
-      "after_ts": 1792425897,
-      "book": "launch",
-      "exit": "launch_60s_to_5min",
-      "filter": [
-        {
-          "f": "bundle_wallets",
-          "op": "==",
-          "v": 10
-        },
-        {
-          "f": "bundle_pct",
-          "op": ">=",
-          "v": 37
-        },
-        {
-          "f": "bundle_pct",
-          "op": "<=",
-          "v": 41
-        },
-        {
-          "f": "bundle_sol",
-          "op": ">=",
-          "v": 20
-        },
-        {
-          "f": "bundle_sol",
-          "op": "<=",
-          "v": 28
-        },
-        {
-          "f": "dev_buy_sol",
-          "op": "<",
-          "v": 0.2
-        }
-      ],
-      "note": "study's own LAUNCH-TIME rule, scored by hand from launches.csv (create_ts > after_ts; the study.mjs table cannot score it). One operator's signature: the create block buys 37-41% of supply over exactly 10 wallets with 22-27 SOL, the creator's own buy is under 0.2 SOL, no socials. 14 launches in 24 h (18 Oct 16:21 to 19 Oct 10:23 UTC): all 14 peaked >= $200K and graduated; from the +4 s price (median MC $11K) the 60-s mark was 15-45x (median 19.5x, fill 13/14), the 5-min mark 16-24x on the 9 with a mark. Base rate for an ordinary launch: 0.12% reach $200K. Replaces F2 (verdict below): F2's lift was a different factory that buys the whole curve in one wallet (bundle 79.3%, 85 SOL) and cannot be bought at +4 s; S8's buyable tier-1 coins lose. Open questions: whether the +4 s price exists for an outside buyer (the 10 wallets may front-run the curve themselves), and whether the operator keeps launching. Hypothesis until 40 launches; judge from 20 given the base rate."
-    },
-    {
-      "id": "F4",
-      "created": "2026-10-19T16:40Z",
-      "after_ts": 1792425897,
-      "book": "G",
-      "exit": "x_h5",
-      "filter": [
-        {
-          "f": "pass",
-          "op": "==",
-          "v": 0
-        }
-      ],
-      "note": "study's own: the G book's coins (A's trigger, skipped by the website for 150-500 wallets) sold at 5 minutes instead of the runner. Score by hand from A rows with skip_why = N wallets (the study.mjs table scores on passed rows and will show 0). Evidence: 36 such trades since the price fix, 5-min sell +20.5% net (win 64%) and 1.5x/-40% +5.9%, against the runner -1.4% and G's 7 shadow runner legs -0.327 SOL (4 stops). At 13:28 it was +35.9% on 26, so the last 10 were about -20%: the edge is fading, which is why it is registered rather than recommended. Hypothesis until 40 out-of-sample trades."
-    },
-    {
-      "id": "F5",
-      "created": "2026-10-19T20:35Z",
-      "after_ts": 1792437000,
-      "book": "A",
-      "exit": "x_flow4",
-      "filter": [
-        {
-          "f": "fs5_x",
-          "op": ">=",
-          "v": 1.02
-        }
-      ],
-      "note": "A5 itself (the owner's rule, book A5 / p5c5 from 19 Oct 19:10 UTC): A's coin bought 5 s after the trigger only if the price is still >= 1.02x, runner exit. PRICED FROM THE 5-s PRICE: score by hand as x_flow4 / fs5_x (the study.mjs table prices it at the trigger price and will overstate it by ~15 points). In sample on the rows the owner saw (to 16:05 UTC): 51 trades +4.4% net at real costs, win 63%, stopped 25% vs A -1.8%/39%. On the 10 rows from 16:05 to 19:10 UTC: -13.7%. Hypothesis until 40 out-of-sample trades; also score the real A5 rows/legs (book A5) side by side."
-    },
-    {
-      "id": "F6",
-      "created": "2026-10-19T20:35Z",
-      "after_ts": 1792440300,
-      "book": "A",
-      "exit": "x_flow4",
-      "filter": [
-        {
-          "f": "fs10_x",
-          "op": ">=",
-          "v": 1.05
-        }
-      ],
-      "note": "study's own: a stricter, later confirm than A5 — A's coin bought 10 s after the trigger only if the price is still >= 1.05x, runner exit. PRICED FROM THE 10-s PRICE: score by hand as x_flow4 / fs10_x. From 152 passed A trades: 56 qualify, +8.3% net at real costs, win 68%, stopped 12% (A: 39%); +8.4% on the 45 to 16:05 UTC and +7.7% on the 11 after; positive in 12 of 20 hours. The one re-priced confirm rule out of 75 tried (2-/5-/10-s price x 1.02-1.25 x 3 exits x 13 books) that is positive in both halves — the selection risk is real. Needs the executor to buy at the 10-s price, which the tracker only sees when its feed lag is under a second (19:39 UTC it was 21 s). Hypothesis until 40 out-of-sample trades."
-    },
-    {
-      "id": "F7",
-      "created": "2026-10-19T20:35Z",
-      "after_ts": 1792440300,
-      "book": "S3",
-      "exit": "x_h5",
-      "filter": [
-        {
-          "f": "sn_delay_s",
-          "op": ">=",
-          "v": 1
-        }
-      ],
-      "note": "study's own: S3 (copycat) only when the buy is at least 1 s after the launch (sn_delay_s >= 1), sold at 5 min, curve costs. From 91 closed S3 rows: 62 qualify, +13.9% net, win 37%, stopped 26%; +5.3% on the first half and +22.5% on the 31 since 16:05 UTC; the 29 same-second buys are -25.0% (win 14%). S3's shadow legs (34 since 16:15 UTC, +0.174 SOL, entry gap +1.4%) say the paper price is obtainable. Suspicion to check: the same-second rows may be priced at the create trade, which an outsider cannot get. Found among 4,821 rule tests; hypothesis until 40 out-of-sample trades."
-    },
-    {
-      "id": "F8",
-      "created": "2026-10-20T00:55Z",
-      "after_ts": 1792454700,
-      "book": "D",
-      "exit": "x_flow4",
-      "filter": [
-        {
-          "f": "sol60",
-          "op": "<=",
-          "v": 51
-        }
-      ],
-      "note": "study's own: D's trigger (50 SOL in 60 s) only when the minute's buying reads 50-51 SOL at the trigger, i.e. the trade that crossed the line was small (no single big buy jumped it past 51). From 153 passed D trades: 81 qualify, +10.2% net at real costs, win 59%, stopped 31%; halves +11.0% / +9.4%; positive in 14 of 21 hours; +5.8% priced at the 5-s fill price; the 21 trades of the last 4 h +8.7%. The other 72 D trades are -10.0%. A's rows on the same coins split the same way (+14.3% on 80 vs -7.7% on 71); the threshold degrades smoothly (<= 52 +6.3%, <= 55 +4.8%, <= 60 +1.3%). Against it: the same logic on A's own level (sol60 <= 30.9) is -8.3% on 71, and it is one of ~50,000 rule tests. Hypothesis until 40 out-of-sample trades; score at the trigger price and at fs5_x."
-    },
-    {
-      "id": "F9",
-      "created": "2026-10-20T00:55Z",
-      "after_ts": 1792454700,
-      "book": "A",
-      "exit": "x_flow4",
-      "filter": [
-        {
-          "f": "n60",
-          "op": "<=",
-          "v": 57
-        }
-      ],
-      "note": "study's own: A's trigger only when the trigger minute had at most 57 buys (bigger buys, fewer of them). From 194 passed A trades: 50 qualify, +12.5% net at real costs, win 64%, stopped 26%; halves +14.5% / +10.4%; positive in 8 of 13 hours; +15.6% at the 5-s fill price, +10.6% sold at 5 min; the 10 of the last 4 h +39.4%. The other 144 A trades are -7.8%. Against it: the threshold is a cliff (<= 65 +2.8% on 66, <= 75 -0.3% on 87), its cousin S2 (wal60 <= 65) does not hold up (47 out of sample, -0.5%), and 22 of the 50 are also entry_mc > $54K rows (+25.6% on those, +2.2% on the other 28), so it may be two clusters rather than a rule. One of ~50,000 rule tests. Hypothesis until 40 out-of-sample trades."
-    },
-    {
-      "id": "F10",
-      "created": "2026-10-20T04:33:45Z",
-      "after_ts": 1792469093,
-      "book": "A",
-      "exit": "x_h3",
-      "filter": [
-        {
-          "f": "entry_mc",
-          "op": ">",
-          "v": 53000
-        }
-      ],
-      "note": "study's own (05:35 UK study): A's trigger only when the market cap at the trigger is above $53K (A takes anything under $100K), sold at 3 min. From 221 passed A trades: 58 qualify, +9.3% net at real costs, win 66%, stopped 17%; the other 165 A trades are -9.0% (win 47%, stopped 32%). Both halves positive (+11.1% / +7.9%); positive in 13 of 17 hours with 2+ trades; +9.0% priced at the 5-s price (fs5_x), where only 5% stop. Threshold degrades smoothly (> $45K -2.5% on 129, > $50K +3.1% on 77, > $56K +12.2% on 46, > $60K +15.9% on 36) and the likely mechanism is pool depth (median pool 84 SOL vs 68). Against it: one coin (French Piccolo, 5.1x at 3 min, a 10-wallet-operator coin) is most of the mean - without it +2.8% on 57, so the claim is the win and stop rates, not the mean; 25 of the 58 overlap F9 (n60 <= 57), and the non-F9 part is +11.1% on 31 at the trigger price but +3.9% at the 5-s price. One of ~1,400 rule tests (12-15 entry-time features filled on 60%+ of rows x quartile thresholds x both directions x 4 exits x 5 books); the last four finds (F6-F9) all fell to about zero or below within 4-8 hours out of sample. Hypothesis until 40 out-of-sample trades; score at the trigger price and at fs5_x."
-    },
-    {
-      "id": "F11",
-      "created": "2026-10-20T04:38:23Z",
-      "after_ts": 1792469093,
-      "book": "D",
-      "exit": "x_flow4",
-      "filter": [
-        {
-          "f": "max_share",
-          "op": "<=",
-          "v": 0.11
-        }
-      ],
-      "note": "study's own (05:35 UK study): D's trigger (50 SOL in 60 s) only when no single buy was more than 11% of the trigger minute's buying (spread-out buying, not one whale), runner exit. From 174 passed D trades: 130 qualify, +5.3% net at real costs, median +6.2%, win 55%, stopped 34%; the other 44 D trades are -18.2% (win 30%, stopped 52%). Both halves positive (+2.0% / +8.2%); positive in 20 of 30 hours with 2+ trades; +3.2% without its best coin (Spidey Show 4x); +3.3% priced at the 5-s price; +3.5% on the 48 since 19 Oct 20:10 UK and +5.4% on the 18 of the last 4 h. The biggest sample of any rule found so far. Against it: the threshold is a hump (<= 0.08 +0.6% on 73, <= 0.10 +4.5%, <= 0.11 +5.3%, <= 0.13 +3.4%, <= 0.15 +1.5%, <= 0.20 +0.3%) and 0.11 is the quartile the search tried, so some of the +5.3% is selection; and on A's own trigger the same rule is negative at every threshold (A max_share <= 0.11: -5.5% on 124), while the owner's S3 (A, max_share > 0.1) did not hold up either - so spread-out buying is a D-only effect, as F8 was, and may be the same thing (a D trigger made of many small buys). The edge is small (+3-5%), so judge it on 80+ out-of-sample trades, not 40. Hypothesis; score at the trigger price and at fs5_x."
+     "f": "wal60",
+     "op": "<=",
+     "v": 65
     }
-  ]
+   ],
+   "note": "fewer than 65 wallets in the trigger minute (from 49 live coins: 72% win vs 38%)"
+  },
+  {
+   "id": "S3",
+   "created": "2026-10-19T09:30Z",
+   "after_ts": 1792401000,
+   "book": "A",
+   "exit": "x_flow4",
+   "filter": [
+    {
+     "f": "max_share",
+     "op": ">",
+     "v": 0.1
+    }
+   ],
+   "note": "one buyer took more than 10% of the trigger minute's buying (from 49 live coins: 75% win vs 36%)"
+  },
+  {
+   "id": "F1",
+   "created": "2026-10-19T12:45Z",
+   "after_ts": 1792411500,
+   "book": "A",
+   "exit": "x_flow4",
+   "filter": [
+    {
+     "f": "bundle_wallets",
+     "op": "<=",
+     "v": 3
+    }
+   ],
+   "note": "study's own: A coins whose launch bundle was at most 3 wallets, runner exit. From 100 passed A trades: n33 +18.4% net, 76-85% win, 12% stopped vs n67 -9.0% net, 37-40% win; holds at the 5-s fill price (+13.9%), in 10 of 13 hours, and on D's coins (n27 +13.2% vs n53 -8.7%, mostly the same mints). Hypothesis until 40 out-of-sample trades."
+  },
+  {
+   "id": "F2",
+   "created": "2026-10-19T12:45Z",
+   "after_ts": 1792411500,
+   "book": "S7",
+   "exit": "launch_5min",
+   "filter": [
+    {
+     "f": "tier",
+     "op": "==",
+     "v": 1
+    }
+   ],
+   "note": "study's own LAUNCH-TIME rule (score by hand from launches.csv, create_ts > after_ts): a tier-1 bundled launch (bundle 40-79% of supply, median dev buy 4.9 SOL, ~25 an hour), bought at the +4 s price (median MC $32K), sold at 5 min. 604 launches in 24 h: 5-min multiple median 1.24 on the 86% still trading, 44% above the 10% cost, 28% reached 5x and 16% 10x by 5 min, 55% graduated; positive in all six 4-hour blocks. The website's bundled-70%+ skip and S4's clean-launch premise point the other way. Not yet a book: needs the executor to see whether the +4 s price is obtainable (bundle sells into the buy) — judge on the next 24 h of launches first."
+  },
+  {
+   "id": "S4",
+   "created": "2026-10-19T12:45Z",
+   "after_ts": 1792411500,
+   "book": "E",
+   "exit": "x_h5",
+   "filter": [],
+   "note": "the owner's E trigger ($100K traded in 5 min, MC under $100K) sold at 5 minutes: the best E exit so far, +8.8% net on 31 passed trades (runner +5.3%, 1.5x/-40% -0.1%); 31 trades is too few to mean anything."
+  },
+  {
+   "id": "F3",
+   "created": "2026-10-19T16:40Z",
+   "after_ts": 1792425897,
+   "book": "launch",
+   "exit": "launch_60s_to_5min",
+   "filter": [
+    {
+     "f": "bundle_wallets",
+     "op": "==",
+     "v": 10
+    },
+    {
+     "f": "bundle_pct",
+     "op": ">=",
+     "v": 37
+    },
+    {
+     "f": "bundle_pct",
+     "op": "<=",
+     "v": 41
+    },
+    {
+     "f": "bundle_sol",
+     "op": ">=",
+     "v": 20
+    },
+    {
+     "f": "bundle_sol",
+     "op": "<=",
+     "v": 28
+    },
+    {
+     "f": "dev_buy_sol",
+     "op": "<",
+     "v": 0.2
+    }
+   ],
+   "note": "study's own LAUNCH-TIME rule, scored by hand from launches.csv (create_ts > after_ts; the study.mjs table cannot score it). One operator's signature: the create block buys 37-41% of supply over exactly 10 wallets with 22-27 SOL, the creator's own buy is under 0.2 SOL, no socials. 14 launches in 24 h (18 Oct 16:21 to 19 Oct 10:23 UTC): all 14 peaked >= $200K and graduated; from the +4 s price (median MC $11K) the 60-s mark was 15-45x (median 19.5x, fill 13/14), the 5-min mark 16-24x on the 9 with a mark. Base rate for an ordinary launch: 0.12% reach $200K. Replaces F2 (verdict below): F2's lift was a different factory that buys the whole curve in one wallet (bundle 79.3%, 85 SOL) and cannot be bought at +4 s; S8's buyable tier-1 coins lose. Open questions: whether the +4 s price exists for an outside buyer (the 10 wallets may front-run the curve themselves), and whether the operator keeps launching. Hypothesis until 40 launches; judge from 20 given the base rate."
+  },
+  {
+   "id": "F4",
+   "created": "2026-10-19T16:40Z",
+   "after_ts": 1792425897,
+   "book": "G",
+   "exit": "x_h5",
+   "filter": [
+    {
+     "f": "pass",
+     "op": "==",
+     "v": 0
+    }
+   ],
+   "note": "study's own: the G book's coins (A's trigger, skipped by the website for 150-500 wallets) sold at 5 minutes instead of the runner. Score by hand from A rows with skip_why = N wallets (the study.mjs table scores on passed rows and will show 0). Evidence: 36 such trades since the price fix, 5-min sell +20.5% net (win 64%) and 1.5x/-40% +5.9%, against the runner -1.4% and G's 7 shadow runner legs -0.327 SOL (4 stops). At 13:28 it was +35.9% on 26, so the last 10 were about -20%: the edge is fading, which is why it is registered rather than recommended. Hypothesis until 40 out-of-sample trades."
+  },
+  {
+   "id": "F5",
+   "created": "2026-10-19T20:35Z",
+   "after_ts": 1792437000,
+   "book": "A",
+   "exit": "x_flow4",
+   "filter": [
+    {
+     "f": "fs5_x",
+     "op": ">=",
+     "v": 1.02
+    }
+   ],
+   "note": "A5 itself (the owner's rule, book A5 / p5c5 from 19 Oct 19:10 UTC): A's coin bought 5 s after the trigger only if the price is still >= 1.02x, runner exit. PRICED FROM THE 5-s PRICE: score by hand as x_flow4 / fs5_x (the study.mjs table prices it at the trigger price and will overstate it by ~15 points). In sample on the rows the owner saw (to 16:05 UTC): 51 trades +4.4% net at real costs, win 63%, stopped 25% vs A -1.8%/39%. On the 10 rows from 16:05 to 19:10 UTC: -13.7%. Hypothesis until 40 out-of-sample trades; also score the real A5 rows/legs (book A5) side by side."
+  },
+  {
+   "id": "F6",
+   "created": "2026-10-19T20:35Z",
+   "after_ts": 1792440300,
+   "book": "A",
+   "exit": "x_flow4",
+   "filter": [
+    {
+     "f": "fs10_x",
+     "op": ">=",
+     "v": 1.05
+    }
+   ],
+   "note": "study's own: a stricter, later confirm than A5 — A's coin bought 10 s after the trigger only if the price is still >= 1.05x, runner exit. PRICED FROM THE 10-s PRICE: score by hand as x_flow4 / fs10_x. From 152 passed A trades: 56 qualify, +8.3% net at real costs, win 68%, stopped 12% (A: 39%); +8.4% on the 45 to 16:05 UTC and +7.7% on the 11 after; positive in 12 of 20 hours. The one re-priced confirm rule out of 75 tried (2-/5-/10-s price x 1.02-1.25 x 3 exits x 13 books) that is positive in both halves — the selection risk is real. Needs the executor to buy at the 10-s price, which the tracker only sees when its feed lag is under a second (19:39 UTC it was 21 s). Hypothesis until 40 out-of-sample trades."
+  },
+  {
+   "id": "F7",
+   "created": "2026-10-19T20:35Z",
+   "after_ts": 1792440300,
+   "book": "S3",
+   "exit": "x_h5",
+   "filter": [
+    {
+     "f": "sn_delay_s",
+     "op": ">=",
+     "v": 1
+    }
+   ],
+   "note": "study's own: S3 (copycat) only when the buy is at least 1 s after the launch (sn_delay_s >= 1), sold at 5 min, curve costs. From 91 closed S3 rows: 62 qualify, +13.9% net, win 37%, stopped 26%; +5.3% on the first half and +22.5% on the 31 since 16:05 UTC; the 29 same-second buys are -25.0% (win 14%). S3's shadow legs (34 since 16:15 UTC, +0.174 SOL, entry gap +1.4%) say the paper price is obtainable. Suspicion to check: the same-second rows may be priced at the create trade, which an outsider cannot get. Found among 4,821 rule tests; hypothesis until 40 out-of-sample trades."
+  },
+  {
+   "id": "F8",
+   "created": "2026-10-20T00:55Z",
+   "after_ts": 1792454700,
+   "book": "D",
+   "exit": "x_flow4",
+   "filter": [
+    {
+     "f": "sol60",
+     "op": "<=",
+     "v": 51
+    }
+   ],
+   "note": "study's own: D's trigger (50 SOL in 60 s) only when the minute's buying reads 50-51 SOL at the trigger, i.e. the trade that crossed the line was small (no single big buy jumped it past 51). From 153 passed D trades: 81 qualify, +10.2% net at real costs, win 59%, stopped 31%; halves +11.0% / +9.4%; positive in 14 of 21 hours; +5.8% priced at the 5-s fill price; the 21 trades of the last 4 h +8.7%. The other 72 D trades are -10.0%. A's rows on the same coins split the same way (+14.3% on 80 vs -7.7% on 71); the threshold degrades smoothly (<= 52 +6.3%, <= 55 +4.8%, <= 60 +1.3%). Against it: the same logic on A's own level (sol60 <= 30.9) is -8.3% on 71, and it is one of ~50,000 rule tests. Hypothesis until 40 out-of-sample trades; score at the trigger price and at fs5_x."
+  },
+  {
+   "id": "F9",
+   "created": "2026-10-20T00:55Z",
+   "after_ts": 1792454700,
+   "book": "A",
+   "exit": "x_flow4",
+   "filter": [
+    {
+     "f": "n60",
+     "op": "<=",
+     "v": 57
+    }
+   ],
+   "note": "study's own: A's trigger only when the trigger minute had at most 57 buys (bigger buys, fewer of them). From 194 passed A trades: 50 qualify, +12.5% net at real costs, win 64%, stopped 26%; halves +14.5% / +10.4%; positive in 8 of 13 hours; +15.6% at the 5-s fill price, +10.6% sold at 5 min; the 10 of the last 4 h +39.4%. The other 144 A trades are -7.8%. Against it: the threshold is a cliff (<= 65 +2.8% on 66, <= 75 -0.3% on 87), its cousin S2 (wal60 <= 65) does not hold up (47 out of sample, -0.5%), and 22 of the 50 are also entry_mc > $54K rows (+25.6% on those, +2.2% on the other 28), so it may be two clusters rather than a rule. One of ~50,000 rule tests. Hypothesis until 40 out-of-sample trades."
+  },
+  {
+   "id": "F10",
+   "created": "2026-10-20T04:33:45Z",
+   "after_ts": 1792469093,
+   "book": "A",
+   "exit": "x_h3",
+   "filter": [
+    {
+     "f": "entry_mc",
+     "op": ">",
+     "v": 53000
+    }
+   ],
+   "note": "study's own (05:35 UK study): A's trigger only when the market cap at the trigger is above $53K (A takes anything under $100K), sold at 3 min. From 221 passed A trades: 58 qualify, +9.3% net at real costs, win 66%, stopped 17%; the other 165 A trades are -9.0% (win 47%, stopped 32%). Both halves positive (+11.1% / +7.9%); positive in 13 of 17 hours with 2+ trades; +9.0% priced at the 5-s price (fs5_x), where only 5% stop. Threshold degrades smoothly (> $45K -2.5% on 129, > $50K +3.1% on 77, > $56K +12.2% on 46, > $60K +15.9% on 36) and the likely mechanism is pool depth (median pool 84 SOL vs 68). Against it: one coin (French Piccolo, 5.1x at 3 min, a 10-wallet-operator coin) is most of the mean - without it +2.8% on 57, so the claim is the win and stop rates, not the mean; 25 of the 58 overlap F9 (n60 <= 57), and the non-F9 part is +11.1% on 31 at the trigger price but +3.9% at the 5-s price. One of ~1,400 rule tests (12-15 entry-time features filled on 60%+ of rows x quartile thresholds x both directions x 4 exits x 5 books); the last four finds (F6-F9) all fell to about zero or below within 4-8 hours out of sample. Hypothesis until 40 out-of-sample trades; score at the trigger price and at fs5_x."
+  },
+  {
+   "id": "F11",
+   "created": "2026-10-20T04:38:23Z",
+   "after_ts": 1792469093,
+   "book": "D",
+   "exit": "x_flow4",
+   "filter": [
+    {
+     "f": "max_share",
+     "op": "<=",
+     "v": 0.11
+    }
+   ],
+   "note": "study's own (05:35 UK study): D's trigger (50 SOL in 60 s) only when no single buy was more than 11% of the trigger minute's buying (spread-out buying, not one whale), runner exit. From 174 passed D trades: 130 qualify, +5.3% net at real costs, median +6.2%, win 55%, stopped 34%; the other 44 D trades are -18.2% (win 30%, stopped 52%). Both halves positive (+2.0% / +8.2%); positive in 20 of 30 hours with 2+ trades; +3.2% without its best coin (Spidey Show 4x); +3.3% priced at the 5-s price; +3.5% on the 48 since 19 Oct 20:10 UK and +5.4% on the 18 of the last 4 h. The biggest sample of any rule found so far. Against it: the threshold is a hump (<= 0.08 +0.6% on 73, <= 0.10 +4.5%, <= 0.11 +5.3%, <= 0.13 +3.4%, <= 0.15 +1.5%, <= 0.20 +0.3%) and 0.11 is the quartile the search tried, so some of the +5.3% is selection; and on A's own trigger the same rule is negative at every threshold (A max_share <= 0.11: -5.5% on 124), while the owner's S3 (A, max_share > 0.1) did not hold up either - so spread-out buying is a D-only effect, as F8 was, and may be the same thing (a D trigger made of many small buys). The edge is small (+3-5%), so judge it on 80+ out-of-sample trades, not 40. Hypothesis; score at the trigger price and at fs5_x."
+  },
+  {
+   "id": "F12",
+   "created": "2026-10-20T08:40:00Z",
+   "after_ts": 1792483431,
+   "book": "D",
+   "exit": "x_flow4",
+   "filter": [
+    {
+     "f": "avg_buy_sol",
+     "op": "<=",
+     "v": 0.4
+    }
+   ],
+   "note": "Study 20 Oct 09:35 UK (own devising). D's passed coins whose trigger minute was made of small buys (avg_buy_sol <= 0.40 SOL). In sample: n47 +14.0% at real costs (PumpSwap x/1.02*0.967-0.016, stops -0.05), win 62%, stop 30%; halves +16.5%/+11.7%; 11 of 14 hours positive; +11.7% without the best coin; +9.4% priced at fs5_x; +2.0% on the 19 since 19 Oct 20:10 UK; the other 141 D trades -5.8%. Against it: 44 of its 48 rows are F11 rows and 26 are F8's (the same D-only spread-out-buying family); the threshold is a hump (<=0.35 +11.9% on 24, <=0.45 +3.5% on 70, <=0.50 -3.0% on 103); the same rule on A is -6.3% on 93. Judge against F11 at 40 and at the 5-s price."
+  }
+ ]
 }
