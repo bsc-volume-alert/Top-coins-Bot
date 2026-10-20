@@ -35,6 +35,12 @@ export async function getSocials(mint, uri) {
   cache.set(mint, out); if (cache.size > 5000) cache.delete(cache.keys().next().value);
   return out;
 }
+// v0.18.156 (owner, 20 Oct 16:17 UK): socials for EVERY launch at creation, so the sniper books, GR, A and D know at entry whether the coin's
+// metadata carries a Twitter / website / Telegram link. The metadata URI is in the create event, so IPFS first (no per-coin rate limit), the
+// pump.fun API second, DexScreener last. At most 6 fetches in flight; a backlog over 300 drops the oldest (a launch storm is not worth stalling for).
+const Q = []; let inflight = 0; export const socStats = { queued: 0, done: 0, dropped: 0, ok: 0 };
+async function drain() { while (inflight < 6 && Q.length) { const { mint, uri, cb } = Q.shift(); inflight++; (async () => { const c = cache.get(mint); if (c?.fetched) { cb(c); return; } const out = mk(); for (const f of [() => viaIpfs(uri, out), () => viaPump(mint, out), () => viaDex(mint, out)]) { try { await f(); if (out.fetched) break; } catch {} } cache.set(mint, out); if (cache.size > 5000) cache.delete(cache.keys().next().value); socStats.done++; if (out.ok) socStats.ok++; cb(out); })().catch(() => {}).finally(() => { inflight--; drain(); }); } }
+export function socialsAtLaunch(mint, uri, cb) { Q.push({ mint, uri, cb }); socStats.queued++; if (Q.length > 300) { Q.shift(); socStats.dropped++; } drain(); }
 /** Retry in background up to n times; calls onResult(soc) when fetched. */
 export function retrySocials(mint, uri, onResult, n = 2, delayMs = 30000) {
   let left = n;

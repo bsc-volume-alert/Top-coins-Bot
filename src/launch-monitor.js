@@ -4,7 +4,7 @@ import { eventsFromLogs, lamports, rawTok, priceSol } from "./pump-decoder.js";
 import { getSolUsd, solUsdCached } from "./price.js";
 import { routeOf } from "./routes.js";
 import { tg } from "./telegram.js";
-import { getSocials, socialsLine } from "./socials.js";
+import { getSocials, socialsLine, socialsAtLaunch } from "./socials.js";
 
 /** In-memory token state. mint -> {create, slot, trades:[], finalized, tier, bundle:{...}} */
 export const live = new Map();
@@ -34,6 +34,7 @@ export function handleTx({ sig, slot, logs, err }) {
       q.insToken.run(t.mint, t.name, t.symbol, t.uri, t.creator, t.bc, slot, t.ts, sig);
       if (q.creatorRecent.get(t.creator, t.ts - CFG.FACTORY_WINDOW_MIN * 60, t.mint) >= 1) { t.factory = true; q.setFactory.run(t.mint); }
       setTimeout(() => finalize(t), CFG.FINALIZE_MS);
+      socialsAtLaunch(t.mint, t.uri, (soc) => { t.socOk = soc.fetched ? (soc.ok ? 1 : 0) : null; try { q.setTokenSocials.run(t.socOk, JSON.stringify({ t: soc.twitter, w: soc.website, k: soc.tiktok, g: soc.telegram }), t.mint); } catch {} }); // v0.18.156: every launch
       emit("create", t);
     } else if (e.type === "trade") {
       if (e.type === "claim") { emit("claim", null, { ...e, sig, venue: "pump" }); continue; }

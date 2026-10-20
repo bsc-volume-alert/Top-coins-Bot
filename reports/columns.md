@@ -196,3 +196,8 @@ For any rule R on any row: `ex_R_t` says when it fired, `ex_R_x` the multiple at
 - New strategy `rev` = book **R** (revival): coin ≥ 6 h old, pool price ≥ 2x its lowest 5-min close of the last 6 h, no 2x in the last 2 h, MC < $500K, one entry per coin per 2 h. Paper only; headline exit `x_tsl40`.
 - New exit column `x_h3l` ("GR-lock"): 3-min sale, floor 1.1x once 1.25x has been seen (plain h3 arms at 1.5x, floor 1.3x). Shown as a GR variant from 16:00 UK.
 - Project S table now at the real curve cost model (was a flat 10%).
+
+## v0.18.156 (20 Oct 16:35 UK) — socials at launch; AS, DS; GR socials variant
+- Every launch's metadata is fetched at creation (IPFS first, pump.fun API, DexScreener; 6 in flight), so `tokens.has_socials` (and so `has_socials` in abcd.csv / launches.csv) is known at entry for the sniper books and GR from now on. Before, it was only fetched for coins another book engaged with - the sniper books' socials figures before 16:35 UK are selection-biased.
+- **AS** = A skipping coins KNOWN to have no socials (unknown kept). **DS** = D skipping no-socials coins and whale-led minutes (`maxShare > 0.11`). Both are filters on A's / D's passed rows; their page record runs from the price fix and is partly in sample - judge from 16:30 UK.
+- GR box: `grsoc` variant (socials only, from 16:00 UK).
