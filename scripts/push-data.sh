@@ -21,6 +21,8 @@ cp -f "$E/status.json" data/status.json 2>/dev/null || true
 (cd "$T" && nice -n 19 ionice -c 3 node scripts/dump-launches.cjs wallets) > data/wallets.csv 2>/tmp/dump-wallets.err || { echo "[push-data] wallets dump failed: $(head -c 300 /tmp/dump-wallets.err)"; }
 (cd "$T" && nice -n 19 node scripts/dump-launches.cjs smart) > data/smart_wallets.csv 2>/dev/null || true
 (cd "$T" && nice -n 19 ionice -c 3 node scripts/dump-launches.cjs others) > data/others.csv 2>/tmp/dump-others.err || { echo "[push-data] others dump failed: $(head -c 300 /tmp/dump-others.err)"; } # v0.18.148: the paper strategies the website no longer shows
+[ -f "$T/data/revival_klines.jsonl.gz" ] && cp -f "$T/data/revival_klines.jsonl.gz" data/revival_klines.jsonl.gz # v0.18.154: the revival back-test candles (one-off job)
+[ -f "$T/data/job.log" ] && tail -c 4000 "$T/data/job.log" > data/job_log.txt
 date -u +%FT%TZ > data/pushed_at.txt
 git add -A data
 git -c user.name=droplet -c user.email=droplet@tracker commit -q -m "data $(date -u +%FT%TZ): $(($(wc -l < data/abcd.csv) - 1)) triggers, $(($(wc -l < data/launches.csv 2>/dev/null || echo 1) - 1)) launches" || { echo "[push-data] nothing new"; exit 0; }

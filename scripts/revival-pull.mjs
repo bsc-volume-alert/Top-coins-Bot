@@ -1,0 +1,55 @@
+// v0.18.154 (owner, 20 Oct 09:07 UK): the revival back-test. Pokémon (D42T…) sat at ~$50K for a day, then ran to $2.1M. To test
+// "catch the revival" honestly we need the long price history of EVERY coin that could have revived, not just the ones we remember.
+// This one-off job pulls 5-minute GMGN candles for every coin that graduated since 18 Oct 00:00 UTC, from launch to now, and writes them
+// to data/revival_klines.jsonl.gz (one coin per line). Read-only on the bot: opens the tracker DB read-only, uses only GMGN market data.
+// Run by deploy-step.sh when scripts/job-now.txt changes; push-data.sh then publishes the file on the data branch.
+import "../src/env.js";
+import Database from "better-sqlite3";
+import { randomUUID } from "node:crypto";
+import { createGzip } from "node:zlib";
+import { createWriteStream, renameSync } from "node:fs";
+
+const KEY = process.env.GMGN_API_KEY || "";
+if (!KEY) { console.error("[revival] GMGN_API_KEY not set"); process.exit(1); }
+const DB = process.env.DB_PATH || "/root/tracker/data/tracker.db";
+const FROM = Number(process.env.FROM_TS || Date.UTC(2026, 9, 18, 0, 0) / 1000);
+const OUT = process.env.OUT || "/root/tracker/data/revival_klines.jsonl.gz";
+const HOST = "https://openapi.gmgn.ai";
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const db = new Database(DB, { readonly: true, fileMustExist: true });
+const coins = db.prepare(`SELECT mint, name, symbol, create_ts, peak_mc_usd FROM tokens WHERE graduated=1 AND create_ts>=? ORDER BY create_ts`).all(FROM);
+console.log(`[revival] ${coins.length} graduated coins since ${new Date(FROM * 1000).toISOString()}`);
+
+async function kline(mint, from, to) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const q = new URLSearchParams({ chain: "sol", address: mint, resolution: "5m", from: String(from), to: String(to), timestamp: String(Math.floor(Date.now() / 1000)), client_id: randomUUID() });
+    try {
+      const r = await fetch(`${HOST}/v1/market/token_kline?${q}`, { headers: { "X-APIKEY": KEY, "Content-Type": "application/json" }, signal: AbortSignal.timeout(15000) });
+      const j = JSON.parse(await r.text());
+      if (r.status === 429 || /RATE_LIMIT/.test(j.error || "")) { await sleep(5000 * (attempt + 1)); continue; }
+      if (j.code !== 0) return { err: `${j.error || j.code}` };
+      const d = j.data?.data && !Array.isArray(j.data.data) ? j.data.data : j.data;
+      return { list: d?.list || (Array.isArray(d) ? d : []) };
+    } catch (e) { await sleep(2000); if (attempt === 3) return { err: e.message }; }
+  }
+  return { err: "rate limited" };
+}
+
+const gz = createGzip(), tmp = OUT + ".tmp", ws = createWriteStream(tmp); gz.pipe(ws);
+const now = Math.floor(Date.now() / 1000); let ok = 0, fail = 0, candles = 0;
+for (const [i, c] of coins.entries()) {
+  // 5-min candles, launch to now, in 2-day pages (GMGN may cap a page); stop paging when a page comes back short
+  const all = []; let err = null;
+  for (let from = c.create_ts - 300; from < now; from += 2 * 86400) {
+    const r = await kline(c.mint, from, Math.min(now, from + 2 * 86400)); await sleep(350); // ~3 calls/s, well under the 20/s bucket shared with the bot
+    if (r.err) { err = r.err; break; }
+    all.push(...r.list);
+  }
+  if (err && !all.length) fail++; else ok++;
+  candles += all.length;
+  gz.write(JSON.stringify({ mint: c.mint, name: c.name, symbol: c.symbol, create_ts: c.create_ts, peak_mc_usd: c.peak_mc_usd, err, k: all }) + "\n");
+  if (i % 50 === 0) console.log(`[revival] ${i}/${coins.length} · ok ${ok} · failed ${fail} · candles ${candles}`);
+}
+gz.end(); await new Promise((r) => ws.on("finish", r)); renameSync(tmp, OUT);
+console.log(`[revival] done: ${ok} coins, ${fail} failed, ${candles} candles → ${OUT}`);
