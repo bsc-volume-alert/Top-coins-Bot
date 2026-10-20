@@ -61,7 +61,7 @@ CREATE INDEX IF NOT EXISTS bb_mint ON big_buys(mint);
 `);
 // migrations (idempotent)
 for (const sql of [
-  "ALTER TABLE paper_trades ADD COLUMN x_h5 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h5f12 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h5f14 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h3l REAL", "ALTER TABLE paper_trades ADD COLUMN x_h3 REAL", "ALTER TABLE paper_trades ADD COLUMN h5_retro INTEGER", "ALTER TABLE paper_trades ADD COLUMN after_path TEXT", // v0.18.81
+  "ALTER TABLE paper_trades ADD COLUMN x_h5 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h5f12 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h5f14 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h3l REAL", "ALTER TABLE paper_trades ADD COLUMN x_t2n30 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h3 REAL", "ALTER TABLE paper_trades ADD COLUMN h5_retro INTEGER", "ALTER TABLE paper_trades ADD COLUMN after_path TEXT", // v0.18.81
   "ALTER TABLE paper_trades ADD COLUMN restart_span INTEGER", "ALTER TABLE paper_trades ADD COLUMN crashloop INTEGER", // v0.18.84 restart quarantine
   "ALTER TABLE paper_trades ADD COLUMN x_h15 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h5fast REAL", // v0.18.87 sell-rule variants
   "ALTER TABLE paper_trades ADD COLUMN first_secs TEXT", // v0.18.89 P5: feed lag at the trigger + price 1/2/5/10 s after we saw it (what a live buy would get)
@@ -241,7 +241,8 @@ export const q = {
   setStops: db.prepare(`UPDATE paper_trades SET x_tp15=?, x_tsl25=?, x_t15s25=?, x_t15s60=?, x_t2s25=?, x_t2s60=? WHERE id=?`),
   setPath: db.prepare(`UPDATE paper_trades SET path=? WHERE id=?`),
   setFirstSecs: db.prepare(`UPDATE paper_trades SET first_secs=? WHERE id=?`), // v0.18.89
-  setH5: db.prepare(`UPDATE paper_trades SET x_h5=?, x_h5f12=?, x_h5f14=?, x_h3=?, x_h15=?, x_h5fast=?, x_h3l=? WHERE id=?`), // v0.18.81 hold-5 exits · v0.18.87 + hold-15, fast-starters-run
+  setH5: db.prepare(`UPDATE paper_trades SET x_h5=?, x_h5f12=?, x_h5f14=?, x_h3=?, x_h15=?, x_h5fast=? WHERE id=?`), // v0.18.163: back to 7 values - v0.18.155 added x_h3l here and two callers kept passing 7, so the update threw (silently) from 16:25 to 19:00 UK 20 Oct
+  setH3L: db.prepare(`UPDATE paper_trades SET x_h3l=?, x_t2n30=? WHERE id=?`), // v0.18.163 GR-lock and PG-hold // v0.18.81 hold-5 exits · v0.18.87 + hold-15, fast-starters-run
   setH5Retro: db.prepare(`UPDATE paper_trades SET x_h5=?, x_h5f12=?, x_h5f14=?, x_h3=?, h5_retro=1 WHERE id=?`),
   setAfterPath: db.prepare(`UPDATE paper_trades SET after_path=? WHERE id=?`), // v0.18.81 7–30 min marks after entry
   setTrace: db.prepare(`UPDATE paper_trades SET trace=? WHERE id=?`), // v0.18.113 P5 data set: marks after entry

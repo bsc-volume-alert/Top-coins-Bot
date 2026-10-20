@@ -101,7 +101,7 @@ export const s15Final = (e, x, mult) => x.s15be ?? (e.s15Half ? 0.75 + 0.5 * Mat
 export const H5 = { h5: [300, 1.3], h5f12: [300, 1.2], h5f14: [300, 1.4], h3: [180, 1.3], h15: [900, 1.3], h3l: [180, 1.1, 1.25] }; // v0.18.155 h3l 'GR-lock': arms at 1.25x (not 1.5x), floor 1.1x - for the GR stops that peaked at ~1.3x and rolled over // v0.18.87: + hold-15
 // v0.18.87 "fast starters run": the state 60 s after entry decides — up 30%+ → hold until the position itself closes (golden rule / −80% / 6 h), no stop;
 // otherwise exactly hold-5 (floor 1.3). Recorded as x_h5fast. Before 60 s only the −40% stop applies.
-export const H5_KEYS = [...Object.keys(H5), "h5fast"];
+export const H5_KEYS = [...Object.keys(H5), "h5fast", "t2n30"];
 export function h5Step(e, x, mult, sinceS) {
   if (!e.h5Armed && mult >= 1.5) e.h5Armed = true;
   if (e.h5Fast == null && sinceS != null && sinceS >= 60) e.h5Fast = mult >= 1.3; // first tick at/after 60 s fixes the state (a restored position decides on its first tick)
@@ -109,6 +109,7 @@ export function h5Step(e, x, mult, sinceS) {
     if (!e.h5Armed && mult <= 0.6 && e.h5Fast !== true) x.h5fast = mult;
     else if (e.h5Fast === false) { if (e.h5Armed && mult <= 1.3) x.h5fast = mult; else if (sinceS != null && sinceS >= 300) x.h5fast = mult; }
   }
+  if (x.t2n30 == null) { if (mult >= 2) x.t2n30 = mult; else if (sinceS != null && sinceS >= 1800) x.t2n30 = mult; } // v0.18.163 PG-hold (owner, 20 Oct 18:42 UK): sell at 2x, otherwise at 30 min, no stop
   for (const [k, [T, F, ARM]] of Object.entries(H5)) {
     if (x[k] != null) continue;
     if (ARM) { e.armK = e.armK || {}; if (!e.armK[k] && mult >= ARM) e.armK[k] = true; const armed = !!e.armK[k]; if (!armed && mult <= 0.6) { x[k] = mult; continue; } if (armed && mult <= F) { x[k] = mult; continue; } if (sinceS != null && sinceS >= T) x[k] = mult; continue; }
