@@ -204,3 +204,6 @@ For any rule R on any row: `ex_R_t` says when it fired, `ex_R_x` the multiple at
 
 ## v0.18.157 (20 Oct 17:30 UK) — book K
 - New strategy `k` = **K** ("keeps going"): a coin that was $10–50K with 50+ buyers at its 5-min lifecycle checkpoint, bought when its MC reaches 2x that level before 15 min. Paper. Headline `x_h2t40` (half at 2x, trail 40%, −40% stop).
+
+## v0.18.158 (20 Oct 17:45 UK) — AS / DS = the owner's standard filter set
+- AS and DS are now A / D with: socials present (`tok_soc` ≠ 0), the creator has not bought-and-sold-out (`dev_hold_entry` = 0 with `dev_buy_sol` > 0 is the skip), and the biggest buyer in the trigger minute (`max_share × sol60`) between 3 and 5 SOL. The 11% whale-share rule is dropped (owner: a conviction buyer split over wallets defeats it). In sample: A +12.9% on 70, D +14.7% on 62, both halves positive on both; judge from 17:45 UK.
