@@ -45,10 +45,10 @@ if (!probeS.list?.length) { MS = true; const probeM = await kline("D42TjMjz5H7to
 const gz = createGzip(), tmp = OUT + ".tmp", ws = createWriteStream(tmp); gz.pipe(ws);
 const now = Math.floor(Date.now() / 1000); let ok = 0, fail = 0, candles = 0;
 for (const [i, c] of coins.entries()) {
-  // 5-min candles, launch to now, in 2-day pages (GMGN may cap a page); stop paging when a page comes back short
+  // v0.18.156: GMGN returns at most 100 candles a call (the LAST 100 in the window), so page backwards: 100 x 5 min = 500 min a page, from now back to launch
   const all = []; let err = null;
-  for (let from = c.create_ts - 300; from < now; from += 2 * 86400) {
-    const r = await kline(c.mint, from, Math.min(now, from + 2 * 86400)); await sleep(350); // ~3 calls/s, well under the 20/s bucket shared with the bot
+  for (let to = now; to > c.create_ts - 300; to -= 100 * 300) { // fixed 500-min pages, newest first; an empty page is a quiet spell, not the end
+    const r = await kline(c.mint, Math.max(c.create_ts - 300, to - 100 * 300), to); await sleep(150);
     if (r.err) { err = r.err; break; }
     all.push(...r.list);
   }
