@@ -253,6 +253,21 @@
     }
    ],
    "note": "Study 20 Oct 09:35 UK (own devising). D's passed coins whose trigger minute was made of small buys (avg_buy_sol <= 0.40 SOL). In sample: n47 +14.0% at real costs (PumpSwap x/1.02*0.967-0.016, stops -0.05), win 62%, stop 30%; halves +16.5%/+11.7%; 11 of 14 hours positive; +11.7% without the best coin; +9.4% priced at fs5_x; +2.0% on the 19 since 19 Oct 20:10 UK; the other 141 D trades -5.8%. Against it: 44 of its 48 rows are F11 rows and 26 are F8's (the same D-only spread-out-buying family); the threshold is a hump (<=0.35 +11.9% on 24, <=0.45 +3.5% on 70, <=0.50 -3.0% on 103); the same rule on A is -6.3% on 93. Judge against F11 at 40 and at the 5-s price."
+  },
+  {
+   "id": "F13",
+   "created": "2026-10-20T12:40Z",
+   "after_ts": 1792497763,
+   "book": "D",
+   "exit": "x_flow4",
+   "filter": [
+    {
+     "f": "cc_best_mc24h",
+     "op": ">",
+     "v": 19000
+    }
+   ],
+   "note": "study's own: D's trigger (50 SOL in 60 s) on a coin whose name copies a coin that peaked above $19K in the last 24 h (cc_best_mc24h > 19000), runner exit. From 203 passed D trades: n61 +10.8% at real costs, median +16.5%, win 59%, stop 34%; halves +11.1% / +10.6%; 11 of 17 hours; +6.3% without the best coin; +9.3% at the 5-s price; +8.4% on the 41 since 19 Oct 20:10 UK. Threshold is a plateau (>$10K +8.9% on 67, >$30K +10.6% on 56, >$50K +10.3% on 54); D with a weaker copycat -11.7% on 61, with no same-name coin -2.1% on 81. Against it: 50 of 61 rows are F11 rows (max_share <= 0.11) and the other 11 are -22.9%, so it is F11's overlap; on A's trigger +1.4% on 79, on C -2.0% on 24. Six rules of this kind (F5-F9, F12) cleared the same bar in sample and failed out of sample. Hypothesis until 40 out-of-sample trades."
   }
  ]
 }
