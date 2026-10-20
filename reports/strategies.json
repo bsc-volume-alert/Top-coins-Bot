@@ -178,6 +178,36 @@
         }
       ],
       "note": "study's own: S3 (copycat) only when the buy is at least 1 s after the launch (sn_delay_s >= 1), sold at 5 min, curve costs. From 91 closed S3 rows: 62 qualify, +13.9% net, win 37%, stopped 26%; +5.3% on the first half and +22.5% on the 31 since 16:05 UTC; the 29 same-second buys are -25.0% (win 14%). S3's shadow legs (34 since 16:15 UTC, +0.174 SOL, entry gap +1.4%) say the paper price is obtainable. Suspicion to check: the same-second rows may be priced at the create trade, which an outsider cannot get. Found among 4,821 rule tests; hypothesis until 40 out-of-sample trades."
+    },
+    {
+      "id": "F8",
+      "created": "2026-10-20T00:55Z",
+      "after_ts": 1792454700,
+      "book": "D",
+      "exit": "x_flow4",
+      "filter": [
+        {
+          "f": "sol60",
+          "op": "<=",
+          "v": 51
+        }
+      ],
+      "note": "study's own: D's trigger (50 SOL in 60 s) only when the minute's buying reads 50-51 SOL at the trigger, i.e. the trade that crossed the line was small (no single big buy jumped it past 51). From 153 passed D trades: 81 qualify, +10.2% net at real costs, win 59%, stopped 31%; halves +11.0% / +9.4%; positive in 14 of 21 hours; +5.8% priced at the 5-s fill price; the 21 trades of the last 4 h +8.7%. The other 72 D trades are -10.0%. A's rows on the same coins split the same way (+14.3% on 80 vs -7.7% on 71); the threshold degrades smoothly (<= 52 +6.3%, <= 55 +4.8%, <= 60 +1.3%). Against it: the same logic on A's own level (sol60 <= 30.9) is -8.3% on 71, and it is one of ~50,000 rule tests. Hypothesis until 40 out-of-sample trades; score at the trigger price and at fs5_x."
+    },
+    {
+      "id": "F9",
+      "created": "2026-10-20T00:55Z",
+      "after_ts": 1792454700,
+      "book": "A",
+      "exit": "x_flow4",
+      "filter": [
+        {
+          "f": "n60",
+          "op": "<=",
+          "v": 57
+        }
+      ],
+      "note": "study's own: A's trigger only when the trigger minute had at most 57 buys (bigger buys, fewer of them). From 194 passed A trades: 50 qualify, +12.5% net at real costs, win 64%, stopped 26%; halves +14.5% / +10.4%; positive in 8 of 13 hours; +15.6% at the 5-s fill price, +10.6% sold at 5 min; the 10 of the last 4 h +39.4%. The other 144 A trades are -7.8%. Against it: the threshold is a cliff (<= 65 +2.8% on 66, <= 75 -0.3% on 87), its cousin S2 (wal60 <= 65) does not hold up (47 out of sample, -0.5%), and 22 of the 50 are also entry_mc > $54K rows (+25.6% on those, +2.2% on the other 28), so it may be two clusters rather than a rule. One of ~50,000 rule tests. Hypothesis until 40 out-of-sample trades."
     }
   ]
 }

@@ -1,136 +1,139 @@
-# 4-hour study — 19 Oct 2026 21:40 UK
+# 4-hour study — 20 Oct 2026 01:45 UK
 
-**Data push:** 21:09 UK (fresh). 2,990 rows since the price fix (18 Oct 20:25 UK) to 19 Oct 21:05 UK. A: 359 fired, 152 passed and closed. C 47 · D 120 · 80-SOL 67 · E 50 passed. Executor legs: 88 live (none since 11:59 UK), 265 shadow. launches.csv: 48,022 launches to 20:05 UK. Every figure below is at the REAL costs (PumpSwap x/1.02 × 0.967 − 0.016, stops −0.05 more; curve x × 0.97 − 0.01, stops −0.06 more; prints above 15x capped), unless it says "paper".
+**Data push:** 01:08 UK (fresh). 4,047 rows since the price fix (18 Oct 20:25 UK) to 20 Oct 01:05 UK. A: 445 fired, 194 passed and closed. C 61 · D 153 · 80-SOL 88 · E 64 passed. Executor legs: 88 live (none since 19 Oct 11:59 UK), 474 shadow. launches.csv: 50,065 launches to 00:05 UK. Every figure below is at the REAL costs (PumpSwap x/1.02 × 0.967 − 0.016, stops −0.05 more; curve x × 0.97 − 0.01, stops −0.06 more; prints above 15x capped) unless it says "paper"; the cost section says where the model now needs correcting.
 
-**Since the 17:41 UK study:** 1,042 new rows, 972 of them snipers; A had 23 more passed trades (−1.3%, win 48%). The executor opened 83 shadow legs in the window: S3 34 (+0.174 SOL), S4 25 (+0.095), G 15 (−0.116), S6b 5 (−0.027), S9 3, S1 1 — and **one A5 leg, still open**. Books in shadow at the push: A5, B, F, G, S3, S4, S10, S6b; everything else paper or off. The new books have almost nothing yet: **A5 1 row** (its trigger has been live 55 minutes of data), **S10 0 rows and 0 legs** (the 10-wallet operator launched at 19:59 and 20:02 UK, eight and eleven minutes before the book started, and not since), **S4b 4 rows**, S6b 5, S7b 5, S11 1. The tracker lagged the chain badly after the 20:10 UK restart — feed lag median 3.8 s in the 20:00 UK hour (0.8–1.4 s in the hours before), 21 s on the one A5 coin, 56 s at worst — which matters for every rule that buys "5 s after the trigger". The A2 column (`x_flow4ff`) is **not in this push** (the columns note says it should be), so A2 is scored by hand from the 60-s mark. F still has no legs: no A coin since the 19:45 UK fix had a bundle of 3 wallets or fewer (0 qualifying rows), so that is not a bug this time.
+**Since the 21:40 UK study:** 1,055 new rows, 757 of them snipers; A had 39 more passed trades (**−7.6%, win 41%, stopped 56%** — the worst four hours in the file) and the whole 20:00–midnight UK band of 19 Oct is −5.6% on 38. The executor opened 209 shadow legs in the window: S6b 76 (−0.865 SOL), S3 50 (−0.517), S4 32 (−0.158), G 23 (−1.626 at 0.25 SOL), A5 15 (−0.115), F 12 (−0.677). **Every shadow book lost in the window.** The owner's v0.18.146 landed at 21:50 UK: `x_flow4ff` (A2) is in the push, F6 and S3b exist as paper books (13 and 41 rows), the A5 lag guard stood A5 down on the two coins with 9–13 s feed lag. Feed lag on A's rows was back to a 1.0–1.3 s median from 22:00 UK (3.0 s in the 21:00 UK hour), with single spikes to 40 s in every hour. **S10 has still never fired, although the operator launched 10 fingerprint coins in the window** — see the sniper section. The first A5 shadow leg (Rest in Piss Kim Jong-Un, 20:39 UK) is still open 4.4 hours after its paper row closed.
 
 ## Is anything profitable on real prices?
 
-**No book is profitable on real prices with enough trades to mean anything.** Two sniper books are positive on their 5-min exit and their shadow legs agree — **S3 copycat** (+1.5% on 91 paper, +8.7% on the 44 since 17:05 UK; 34 shadow legs **+0.174 SOL**, +10% a trade) and **S4 clean launch** (+6.3% on 48; 25 shadow legs **+0.095 SOL**) — but S3 is 3 winning hours out of 8 and S4 faded through the evening (shadow +0.29 SOL at 17:00 UK, then +0.02, −0.07, −0.15 by hour). Everything that trades A's trigger loses; G's 5-min sell, which was +20% on 36 at the last two studies, is −13.0% on the 19 since.
+**No. Nothing with 40 or more trades is positive at real costs, and every executor shadow book is now below zero** — S3 (+0.174 SOL at the last study) is −0.343 SOL, S4 (+0.095) is −0.063. The only positive numbers left are small or in-sample: S4b/S4-with-bundle-under-3% (+21.1% on 30 paper rows, picked from those rows), the 80-SOL book's +17.4% on 19 since the last study (Spidey Show 4x and Etchy Cat 2.1x), E's runner +3.5% on 12. F6's +5.0% on 13 is one 4x in a book that stopped 54% of the time.
 
-| book (exit) | trades | real net/trade | win | stop | since 17:05 UK | shadow / live legs (entry gap · exit gap) |
+| book (exit) | trades | real net/trade | win | stop | since 21:40 UK | shadow / live legs (entry gap · exit gap, medians) |
 |---|---|---|---|---|---|---|
-| A (runner) | 152 | −1.6% | 53% | 39% | n23 −1.3% | live 38 −0.376 SOL, shadow 31 −0.625 (+0.9% / +2.3% · see cost section) |
-| B (A sold at 5 min) | 152 | −6.0% | 56% | 33% | n23 −9.0% | live 50 −0.301, shadow 65 −0.711 (+1.9% / +2.2%) |
-| C (runner) | 47 | −12.5% | 43% | 40% | n8 +4.1% | shadow 7 +0.027 |
-| D (runner) | 120 | −0.9% | 50% | 38% | n18 +1.6% | shadow 26 +0.025 |
-| 80-SOL (runner) | 67 | −7.7% | 39% | 49% | n12 +26.5% | — |
-| E (runner / 5-min) | 50 | +0.3% / +1.0% | 42% / 48% | 50% / 46% | n10 +10.3% / −6.1% | — |
-| E2 (E, MC < 1.2× first A/C/D entry, 5-min) | 2 closed since 16:45 UK | −50.9% | 0% | 100% | — | — |
-| F (A, bundle ≤ 3 wallets, runner) | 51 | +6.6% | 71% | 24% | n9 −22.2% | **0 legs** (0 qualifying coins since the fix) |
-| G (A trigger, 150–500 wallets, 5-min) | 53 | +8.9% | 58% | 40% | n19 −13.0% | shadow 22 −0.442 (20 runner legs −0.333; 2 h5 legs −0.109) |
-| A5 (own row, runner) | 1 | −50.5% | 0% | 100% | n1 | 1 shadow leg, open 26 min, filled **31% below paper** |
-| A5 rule on A's rows at the 5-s price (F5) | 61 | +1.4% | 61% | 28% | n10 −13.7% | — |
-| A2 by hand (sell at 60 s if < 0.95, else runner) | 58 traced | −2.0% | 43% | 19% | n4 +13.0% (from 20:00 UK) | — |
-| S1 (5-min) | 93 | −14.7% | 38% | 52% | n40 −20.4% | shadow 9 −0.183 |
-| S2 (1.5x/−40%) | 375 | −8.5% | 31% | 30% | n142 −12.1% | — |
-| **S3 (5-min)** | 91 | **+1.5%** | 30% | 27% | n44 **+8.7%** | shadow 34 **+0.174** (+1.4% / −2.4%) |
-| **S4 (5-min)** | 48 | **+6.3%** | 40% | 15% | n24 +7.1% | shadow 25 **+0.095** (+0.9% / −2.0%) |
-| S4b (S4, bundle < 3%, 5-min) | 2 | −19.0% | 0% | 0% | n2 | — (by hand on S4's rows: bundle < 3% n19 +27.2%, 0 stops; ≥ 3% n29 −7.4%) |
-| S5 (1.5x/−40%) | 414 | −9.9% | 37% | 47% | n139 −6.5% | — |
-| S6 (runner) | 310 | −4.3% | 32% | 40% | n132 −12.9% | shadow 5 −0.079 |
-| S6b (5-min) | 3 | −3.2% | 67% | 33% | n3 | shadow 5 −0.027 (entry gap −9%) |
-| S7 (1.5x/−40%) | 187 | −12.2% | 25% | 35% | n54 −24.1% | — |
-| S7b (1.5x/−40%) | 5 | −0.1% | 40% | 20% | n5 | — |
-| S8 (1.5x/−40%) | 141 | −13.2% | 34% | 49% | n90 −16.2% | — |
-| S9 (5-min) | 115 | −14.3% | 22% | 32% | n83 −14.2% | shadow 31 −0.296 |
-| S10 (5-min) | 0 | — | — | — | — | 0 legs |
-| S11 (5-min) | 1 | −50.9% | — | — | n1 | — |
-
-The 80-SOL book's +26.5% on 12 is four coins (Cure Cancer 4.0x, the collectooor 1.8x, Clerk 1.8x, Universal Hype 1.8x) in a book that is −7.7% on 67; E's runner +10.3% on 10 is the same story. Neither is a book coming back.
+| A (runner) | 194 | −2.6% | 51% | 43% | n39 −7.6% | live 38 −0.376 SOL (+0.9% · −2.2%), shadow 31 −0.625 |
+| B (A sold at 5 min) | 194 | −6.0% | 53% | 37% | n39 −9.4% | live 50 −0.301, shadow 65 −0.711 (+1.9% · −3.8%) |
+| C (runner) | 61 | −12.7% | 43% | 41% | n13 −15.0% | shadow 7 +0.027 |
+| D (runner) | 153 | −0.4% | 50% | 39% | n30 −0.3% | shadow 26 +0.025 |
+| 80-SOL (runner) | 88 | −1.0% | 44% | 45% | n19 +17.4% | — |
+| E (runner / 5-min) | 64 | −0.2% / −1.0% | 42% / 50% | 48% / 44% | n12 +3.5% / −2.5% | — |
+| E2 (E, MC < 1.2× first A/C/D entry, 5-min) | 6 taken since 16:45 UK | −26.0% | 33% | 67% | n3 +14.4% | — |
+| F (A, bundle ≤ 3 wallets, runner) | 63 | +2.0% | 63% | 30% | n13 −19.9% | **shadow 12 −0.677 SOL** (+3.4% · −0.9%), all since 21:25 UK |
+| G (A trigger, 150–500 wallets, 5-min) | 82 | −1.6% | 46% | 49% | n32 −20.4% | **shadow 43 −1.959 SOL**; the 23 h5 legs since 20:10 UK −1.626 (+1.0% · −2.9%) |
+| **A5 (own row, runner)** | **16** | **−18.0%** | 38% | **56%** | n15 −15.8% | **shadow 15 −0.115 SOL** (+0.6% · −3.8%), 1 leg stuck open |
+| A5 rule on A's rows at the 5-s price (F5) | 79 | +1.9% | 58% | 32% | out of sample n19 +0.2%, stop 47% | — |
+| F6 (own row, 10 s ≥ 1.05x, runner) | 13 | +5.0% | 38% | 54% | n13 | — (rule on A's rows at the 10-s price: n15 +1.1% out of sample) |
+| A2 (A sold at 60 s if < 0.95, else runner) | 53 from 19:00 UTC | −11.0% | 36% | 40% | n39 −14.8% | — (A on the same 53: −5.8%) |
+| S1 (5-min) | 126 | −17.5% | 35% | 50% | n24 −23.7% | shadow 9 −0.183 |
+| S2 (1.5x/−40%) | 477 | −9.8% | 30% | 31% | n91 −17.9% | — |
+| S3 (5-min) | 147 | −3.3% | 34% | 28% | n54 −10.7% | **shadow 84 −0.343 SOL** (+1.4% · −3.7%); 50 since last −0.517 |
+| S3b (S3 ≥ 1 s after launch, 5-min) | 41 | −0.7% | 39% | 27% | n41 | — |
+| S4 (5-min) | 82 | +1.0% | 34% | 13% | n32 −6.6% | **shadow 57 −0.063 SOL** (+1.4% · −3.7%); 32 since last −0.158 |
+| S4b (S4, bundle < 3%, 5-min) | 13 | +6.1% | 23% | 15% | n9 +13.9% | — (by hand on S4's rows: < 3% n30 +21.1%, stop 7%; ≥ 3% n52 −10.6%) |
+| S5 (1.5x/−40%) | 523 | −10.4% | 37% | 49% | n88 −8.2% | — |
+| S6 (runner) | 423 | −4.8% | 32% | 39% | n90 −7.1% | shadow 9 −0.136 (**entry gap +10.6%**) |
+| S6b (5-min) | 81 | −17.6% | 37% | 42% | n76 −17.4% | **shadow 81 −0.892 SOL** (+1.4% · −4.1%) |
+| S7 (1.5x/−40%) | 220 | −13.6% | 25% | 37% | n31 −19.3% | — |
+| S7b (1.5x/−40%) | 19 | −3.1% | 37% | 26% | n14 −4.2% | — |
+| S8 (1.5x/−40%) | 207 | −13.9% | 36% | 51% | n56 −12.7% | — |
+| S9 (5-min) | 218 | −10.6% | 23% | 25% | n93 −5.0% | shadow 31 −0.296 |
+| S10 (5-min) | **0** | — | — | — | 0 rows, 0 legs, 0 skips | **10 fingerprint launches missed** |
+| S11 (5-min) | 31 | −4.8% | 45% | 35% | n30 −3.3% | — |
 
 ## A5 and A2
 
-**A5 out of sample: 1 row, 1 leg, no result yet — and the one leg is a warning.** The trigger has been live since 20:10 UK; in the 55 minutes of data after it, A passed 7 coins and A5 opened on one (Rest in Piss Kim Jong-Un, 20:39:42 UK). On that coin the tracker was **21 seconds behind the chain** (feed_lag_ms 20,990 on A's row; A5 fired 27 s after A's trigger, not 5), so the "5-s price still 1.16x the trigger" was a stale read: the executor's pool quote 267 ms later filled at **0.70x the paper price** (3.88e-7 vs 5.54e-7 SOL), i.e. the real price was already 21% *below* A's trigger price, not 16% above it. The paper row then fell to 0.21x and closed at 0.59 (tsl80, −50.5% real); the shadow leg is still open 26 minutes after the paper close. One trade says nothing about the rule; it says a lot about the tracker's clock after a restart — A5's whole premise is a price read 5 s after the trigger, and on the 20:00 UK hour the median lag was 3.8 s (max 56 s). A second coin at 20:59:15 UK (kum jung on) had fs5_x 1.0228 and no A5 row; the bot's own 5-s read presumably differed by a fraction.
+**A5 out of sample: 16 rows, 15 closed legs, −18.0% a trade on paper and −0.115 SOL (−15% of stake) in shadow; 9 of 16 stopped.** The book has been live since 20:10 UK; A passed 46 coins in that time and A5 opened on 16 of them, at 1.02–1.39x A's trigger price (median 1.09x). The execution side is clean: the shadow fill was a median +0.6% above the A5 paper price (the 20:39 UK leg's −31% is the stale-clock case and is excluded; the new lag guard stood A5 down on LEGOCAT and Corgi, 9 and 13 s behind). The premise is what failed: a coin still up 2% at 5 s stopped out **56%** of the time, against 54% for all of A in the same hours — the 25%-vs-40% stop gap the owner built A5 on (51 trades) did not appear on the next 16. The gate also agrees with the data set's `fs5_x` on 15 of 19 qualifying A coins; the two it missed that the column would have taken (kum jung on at 1.0228, NTS-1 at 1.085) both ran, 1.64x and 1.43x. The Rest in Piss shadow leg is still open 4.4 hours after its paper close (opened before the v0.18.146 re-link fix).
 
-**A5 scored on A's rows (buy at the 5-s price, runner exit) — in-sample and out-of-sample side by side:**
+**The rule scored on A's own rows (buy at the 5-s price, runner), in sample and out of sample side by side:**
 
-| window | A5 rule (fs5 ≥ 1.02, priced at fs5) | A on the same coins at the trigger price (paper, the misleading one) | all A |
-|---|---|---|---|
-| rows to 17:05 UK (the owner's 19:48 analysis) | **n51 +4.4%, win 63%, stop 25%** | n51 +19.8% | n129 −1.8%, stop 39% |
-| 17:05 → 20:10 UK (after the analysis, before the book) | **n10 −13.7%, win 50%, stop 40%** | — | n19 −1.3% |
-| all 61 | +1.4%, win 61%, stop 28% | +18.0% | n152 −1.6% |
-| first half / second half of the 61 | +4.5% (31) / −1.8% (30) | | |
-| hours with 3+ qualifying trades | positive in 5 of 10 | | |
+| window | A5 rule (fs5 ≥ 1.02, priced at fs5) | all A |
+|---|---|---|
+| rows to 17:05 UK (the owner's 19:48 analysis) | **n51 +4.4%, win 63%, stop 25%** | n129 −1.8%, stop 39% |
+| 17:05 → 20:10 UK (after the analysis, before the book) | n9 −8.7%, win 56%, stop 33% | — |
+| **20:10 UK → now (out of sample)** | **n19 +0.2%, win 47%, stop 47%** | n46 −5.2%, stop 54% |
+| all 79 | +1.9%, win 58%, stop 32% | n194 −2.6% |
 
-So the +4.4% the owner built A5 on is reproduced exactly (51 trades), and the 10 trades that came after it were −13.7%. Stricter thresholds do better in sample (fs5 ≥ 1.05: n43 +2.8%; ≥ 1.10: n29 +12.0%, stop 10%) and so does a later confirm: **fs10 ≥ 1.05 priced at the 10-s price is +8.3% on 56, +8.4% to 17:05 UK and +7.7% on the 11 after, stop 12%** — registered below as F6, with the same caveat about the clock. A5 with a 5-min exit instead of the runner is −5.4% (61); the runner is the right exit for a confirmed entry. The stop rate is the real thing in these numbers: a coin still up at 5–10 s stops out 12–28% of the time against A's 39%, and that is structural, not a sample of hours.
+So on 28 trades since the analysis the rule is −2.7%, and its stop rate has risen from 25% to 47%. The A5 book's own rows (−18.0%) are worse than the rule on A's rows (+0.2%) mainly because the book bought the coins at 1.09x where `fs5_x` says 1.02–1.17x and one row (Slop Coin) sold into a rug at 0.08 in shadow. **F6** (10 s, ≥ 1.05x) looks the same way: in sample +8.4% on 45 and +10.5% on 12, out of sample **+1.1% on 15 with 40% stopped**; the F6 book's 13 rows are +5.0% only because Spidey Show hit the 4x cap, 7 of the 13 stopped. Confirmation gates did not cut the stop rate tonight because the stops came from coins that were up at 5–10 s and collapsed from 1–3 minutes (the night's 55% stop rate on A).
 
-**A2 (sell at 60 s if below 0.95x, else the runner):** the `x_flow4ff` column is missing from this push, so this is by hand from the 60-s mark on A's traced passed rows. All 58 traced: **A2 −2.0% vs A −4.2%** on the same coins (36% sold at 60 s; stops 19% vs 43%; B −9.8%). From 20:00 UK as asked: 4 trades, +13.0% vs +3.6% — nothing. Halves: −4.4% vs −6.7%, then +0.5% vs −1.7%. A2 beats A by about 2 points in both halves by cutting the stop rate in half, and it is still negative; the old 120-s/0.90 version was worse (−6.3%). A2 is a better A, not a profitable one, on 58 trades.
+**A2 (sell at 60 s if below 0.95x, else the runner), on the 53 passed A coins since 19:00 UTC with the new `x_flow4ff`:** A2 **−11.0%** vs A −5.8% vs B −7.9% on the same coins; stops 40% vs 55%. The two rules differ on 12 of the 53 coins: A2 avoided 8 stops (sold at a mean 0.82 instead of 0.60, +26 points each) and missed 4 runners (1.35, 1.57, 1.40 and Spidey Show's 4.0). Without Spidey Show A2 is −10.7% vs A −11.2%: the two are the same rule within a point, and one 4x decides the comparison either way. By hour A2 is better in 3 of 6. Two coins (Beans, Rest in Piss) show A2 selling at the stop rather than at 60 s because no trade printed between 60 s and the stop — the 60-s sale needs a tick to price it. A2 is not a profitable A; on 53 trades it is a slightly different way to lose 6–11%.
 
 ## Snipers (S3, S4, S4b, S10, and the rest briefly)
 
-**S10 — no fill answer yet.** The fingerprint (10 bundle wallets, 37–41%, 22–28 SOL, dev buy < 0.2 SOL) now has **17 launches in the file, 17 of 17 to $200K+, 17 graduated**; four since the last study (Solya The Cat 17:52, Cat Bot 18:56, MAGA Coin 19:59, Moritz The Grok Cat 20:02 UK; 60-s multiple 13–24x from the +4 s price). The operator keeps launching, roughly every 1–3 hours in the evening. The S10 book started at 20:10 UK, eight minutes after the last one, so it has **0 rows and 0 legs**, and the launches file ends at 20:05 UK. The question — does the first outside curve trade fill near the +4 s price or 10x above it — is answered by the next launch. One clue already in the file: C caught all 17 at $150–250K about a minute after launch and A at ~$95K later; from those entries the 5-min result was mixed (C's 5-min sell on them: 9 up, 8 down).
+**S10 — the book never fired, and the operator launched 10 times.** The fingerprint (10 bundle wallets, 37–41%, 22–28 SOL, dev < 0.2 SOL) now has **21 launches in 24 h, 20 of 21 past $200K (Official Trump Coin, 16:14 UK, peaked $141K), 20 of 21 graduated** (GTA 6 Coin, 22:56 UK, peaked $324K and did not). Ten came after the book went live at 20:10 UK: Etchy Cat 20:58, Cateus Maximus 21:04, Lucia Caminos 21:16, boobs coin 21:54 / 22:08 / 22:24, LEGOCAT 22:13, Milo the Chonk 22:55, GTA 6 Coin 22:56, tit coin 23:55 UK. **S10 has 0 rows, 0 executor legs and 0 skips on any of them, and no other sniper book fired on them either** — S8 (bundle 40–79%, ≥ 20 SOL, from +4 s) should have taken the six at 40.0–41.0%. So the sniper's trade handler is not reaching `fire()` for these mints with the bundle set within 30 s; the two things to check in the code are whether `t.bundle` exists by the first outside trade (launch-monitor sets it at +4 s) and whether `fire()` is rejecting them at `SN_MAX_MC` ($60K — launches.csv says $11–12K at +4 s, but if the first outside trade the handler sees is later, the coin is past $60K by 20–30 s). The fill question (does the first outside trade price near the +4 s price or 10x above it) is therefore still unanswered. What the launches file adds: from the +4 s price the 60-s mark on the ten was 14–42x, **but the 5-min mark has decayed — 25x, 20x, 9.9x, 4.8x, 5.1x, 12x, 13x, 25x, 9.5x, 5.1x** (boobs coin twice and tit coin gave back three-quarters of the 60-s level by 5 min). If S10 ever trades, the exit is 60 s, not 5 min. C caught all 21 at $140–250K about a minute after launch (5-min sell: 11 up, 10 down, −1% net); since 20:10 UK A caught Etchy Cat (1.58x), Lucia Caminos and LEGOCAT (both stopped) and G caught boobs coin three times (one 3.8x, one stop, one rug) and tit coin twice (a rug and a stop).
 
-**S3 copycat (shadow since 17:15 UK): 34 legs, +0.174 SOL (+10.0% a trade), win 32%, entry gap +1.4%, exit gap −2.4%.** 18 timed exits +0.368 SOL, 8 stops −0.211, 8 floors +0.017. Paper on the same rows agrees (paper mult mean 1.20). By hour: +0.128, −0.007, −0.085, +0.134, +0.004 — 3 of 5 hours. Paper S3 all-time at 5 min is +1.5% on 91 (1.5x/−40% −5.4%); the 44 rows since the last study +8.7%. Inside S3 there is one split worth a register entry: **rows bought at least 1 s after the launch are +13.9% on 62 (+22.5% on the 31 since 17:05 UK); rows bought in the same second as the launch are −25.0% on 29, win 14%** — the same-second price may be the create trade, which no outsider gets. Registered as F7.
+**S3 copycat (shadow since 17:15 UK): 84 legs, −0.343 SOL; the 50 legs since the last study −0.517 SOL, negative in all four hours (−0.17, −0.07, −0.11, −0.17).** Paper on the same rows: mean multiple 1.054 against a shadow x of 0.918 — a 13-point gap, which is the curve's costs plus the floor problem in the cost section. Paper S3 at 5 min: −3.3% on 147, −10.7% on the 54 since the last study. The F7 split (bought ≥ 1 s after the launch) that was +13.9% on 62 in sample is **−13.1% on its 34 out-of-sample rows**, and the same-second rows it excluded are −6.5% on 20; the S3b book that trades it is −0.7% on 41. The split reversed within four hours.
 
-**S4 clean launch (shadow since 17:35 UK): 25 legs, +0.095 SOL (+7.5% a trade), win 28%, entry gap +0.9%.** 13 timed exits +0.163, 4 floors +0.047, 4 stops −0.097, 3 "no exit signal in 7 min" −0.023 (paper had no 5-min mark). By hour: **+0.291, +0.019, −0.069, −0.146** — all the profit was the first hour. Paper S4 at 5 min: +6.3% on 48 (+7.1% on the 24 since 17:05 UK), stop 15%. **S4b** (bundle < 3%) has 4 rows, 2 closed, both −19%; by hand on S4's own rows the split is striking — bundle < 3%: n19 +27.2%, 0 stops; bundle ≥ 3%: n29 −7.4% — but 19 trades, in sample, and the owner picked the threshold from these rows.
+**S4 clean launch (shadow since 17:35 UK): 57 legs, −0.063 SOL; 32 since the last study −0.158 (one positive hour of four).** Paper S4 at 5 min +1.0% on 82, −6.6% on the 32 since. The bundle split holds on paper: **bundle < 3% n30 +21.1% (stop 7%) vs ≥ 3% n52 −10.6%**, and the 9 new under-3% rows are +13.9%; the S4b book itself is 13 rows +6.1% with a 23% win rate (two winners carry it). That is the one sniper number still positive out of sample, on 9 trades.
 
-**The rest since 17:05 UK (closed, 5-min / 1.5x−40% / runner):** S1 n40 −20.4% / −8.4% / −26.3% (lottery book, 48% stopped) · S2 n142 −5.4% / −12.1% / −12.6% · S5 n139 −5.7% / −6.5% / −8.1% · **S6 n132 −3.0% / −11.9% / −12.9%** — S6 is now −4.3% on 310 on its runner and got worse (−12.9% in the window); the one thing in it that still works is cheap entries: entry MC ≤ $4.15K was +22.0% on 36 to 17:05 UK and +1.5% on the 12 since (0 stops in both; 5-min +6.2% on the 12) · S6b n3 and S7b n5: nothing yet (S6b's shadow entry gap is −9%: the famous wallet's buy moves the curve before the quote) · S7 n54 −24.1% on its rule (+1.7% at 5 min) · S8 n90 −16.2% / −23.6% · S9 n83 −14.2% on every exit (31 shadow legs −0.296) · S11 1 row. Nothing that was dead came back.
+**S6b (shadow since 20:40 UK): 81 legs, −0.892 SOL; paper −17.6% on 81.** This book settles something about S6: the S6 paper rows whose smart wallet has 750+ GMGN followers show **+25.7% on 97**, the best "rule" in the whole Project F search — and S6b, which buys the same coins about 1 s later at our feed's price, paid a median 9% (mean 22%) more on the 30 coins both hold and made 0.935 at 5 min where S6's paper made 1.162. S6's 9 shadow legs filled +10.6% above paper. **S6's paper price is the smart wallet's own fill, which no outsider gets; S6b is the honest version and loses 18%.** Every S6 paper result, including the cheap-entry split (first-trade MC ≤ $4.1K: +16.9% at 3 min on 106, stop 7%), is overstated by 10–20 points.
+
+**The rest since 21:40 UK (closed, main exit):** S1 n24 −23.7% · S2 n91 −17.9% · S5 n88 −8.2% · S6 n90 −7.1% · S7 n31 −19.3% · S7b n14 −4.2% · S8 n56 −12.7% · S9 n93 −5.0% (its best four hours, still negative) · S11 n30 −3.3%. Nothing came back.
 
 ## G, F, E2
 
-**G (A's trigger on 150–500-wallet coins).** The 5-min sell that F4 registered at +20.5% on 36 is **−13.0% on the 19 out-of-sample trades (win 53%, stop 42%)**; all 53: +8.9%. By hour it was positive in 9 of the first 13 hours and in 2 of the last 9. The executor's G leg sold at 5 min from 20:10 UK: **2 legs, −0.109 SOL** (one stop at 0.53, one timed +0.033); the 20 runner legs before that −0.333. F4 is 19/40 and losing; the edge the 13:28 and 17:41 studies saw has not survived the evening.
+**G (A's trigger on 150–500-wallet coins, sold at 5 min since 20:10 UK).** 23 h5 shadow legs: **−1.626 SOL at 0.25 SOL stake (−28% of stake), win 17%**, 17 stops; four legs sold a rug at 0.03–0.10 (boobs coin, Dacity Cat, Lucia the Baddie, tit coin) — boobs coin and tit coin are the 10-wallet operator's coins, caught at $60–100K after their run. Paper on the same coins since 20:10 UK: −20.4% on 32, 62% stopped. **F4 is 48 trades out of sample at −17.6%, win 35%: does not hold up.** All 43 G legs: −1.959 SOL.
 
-**F (A's coins with a launch bundle of ≤ 3 wallets).** Still 0 legs — but legitimately: **no passed A coin since the 19:45 UK fix had bundle_wallets ≤ 3** (the three such coins in the window were skipped: 224 wallets, DJT-paired, WBTC-paired). On paper F1 is **18 out of sample at −16.5%** (win 44%, stop 44%) against +2.1% for the rest of A in the same window; the 9 since the last study −22.2%. In sample it was +18.4% on 33. Heading for "does not hold up" at 40.
+**F (A's coins with a launch bundle of ≤ 3 wallets) — first legs.** 12 shadow legs since 21:25 UK, **−0.677 SOL (−22.5% of stake)**, 4 winners, 7 stops of which two sold into rugs (American Dream 0.20, LOTTO 0.08). The F leg's entry gap is a median +3.4% and five legs paid 7–26% over paper (MrDuck +14%, PackPump +26%, Trump Accounts +14%, LOTTO +10%, Quinelings +7%): the F leg is filled later than A's leg on the same trigger (A live +0.9%), presumably waiting for the bundle lookup. Paper F since the fix: −19.9% on 13; **F1 is 30 out of sample at −16.9% against +0.4% for the rest of A** — well behind, 10 trades from its verdict.
 
-**E2 (E skipping coins already ≥ 1.2× the MC at which A/C/D first bought them, sold at 5 min).** From 16:45 UK: 12 E rows, **9 skipped, 3 taken, 2 closed — both stopped (−50.9%)**; the 8 skipped-and-closed would have made +5.1% at 5 min. Too few to say anything. Over the whole file the split the owner built E2 on is there — taken n21 +25.4% (win 62%) vs skipped n26 −15.4% (win 38%) — but that is the in-sample picture, 47 trades, a 24-point win-rate gap that needs about 80 a side to trust. E itself: +1.0% at 5 min on 50, −6.1% on the 10 since the last study.
+**E2 (E skipping coins already ≥ 1.2× the MC at which A/C/D first bought them, sold at 5 min).** Since 16:45 UK: 24 E rows, 18 skipped, **6 taken: −26.0% at 5 min, 4 of 6 stopped**; the 18 skipped would have made −1.3%. The whole-file split the owner built it on is still there in sample (taken n29 +12.4% vs skipped n35 −12.2%) and the first 6 out-of-sample trades point the other way. Too few to judge; not encouraging.
 
 ## Real costs — does the model still match the legs?
 
-Measured on all 348 closed executor legs (239 PumpSwap, 109 curve; 88 live, the rest shadow at real pool quotes):
+Measured on all 558 closed executor legs (287 PumpSwap: 88 live, 199 shadow; 271 curve shadow), the stale-clock A5 leg excluded:
 
 | | model | measured (median · mean) | verdict |
 |---|---|---|---|
-| PumpSwap entry | +2.0% | +1.8% · +2.2% (A live +0.9%, shadow +2.3%; G +1.3%; B +1.9%) | right |
-| PumpSwap timed / 5-min / fade sale | −3.3% | h5 −1.7% · −2.8% (53); time −2.9% · −4.1% (26); fade-volume −1.3% · +0.7% (43); close:lowvol −1.5% (18) | right to slightly harsh |
-| PumpSwap floor | −3.3% | −2.1% · −6.8% (15) | mean worse than the model (one bad floor) |
-| PumpSwap stop | −3.3% − 5% = −8.3% | −2.8% · **−8.8%** (72) | right on the mean; the median stop is mild, a few are −30% |
-| curve entry | +0% (inside the 3%) | +1.4% · +1.5% (109) | right |
-| curve timed sale | −3% | −3.2% · −3.2% (40) | right |
-| curve floor | −3% | −2.7% · −4.2% (18) | right |
-| curve stop | −3% − 6% = −9% | −4.8% · **−8.7%** (31) | right |
+| PumpSwap entry | +2.0% | +1.6% · +2.2% (0.05 SOL +1.1%, 0.1 +1.7%, 0.25 +1.8%) | right |
+| PumpSwap 5-min / timed / fade sale | −3.3% | h5 −1.7% · −2.8% (53); time −2.3% · −3.5% (31); fade-volume −1.3% · +0.3% (51); close:lowvol −1.7% (22) | right |
+| PumpSwap floor | −3.3% | −2.1% · −6.5% (16); realised +10.9% vs model +18.0% | 7 points too kind on floors |
+| PumpSwap stop | −8.3% | −3.6% · −12.9% (102); realised −49.3% vs model −51.4% (126) | right on the mean; 13 legs sold rugs at 0.03–0.20 where paper said 0.55 |
+| curve entry | +0% | +1.4% · +2.9% (271) | right |
+| curve timed sale | −3% | −3.6% · −3.4% (94); realised +3.5% vs model +4.9% | right |
+| **curve floor** | −3% | **−3.0% median · −11.2% mean (71); realised +1.1% vs model +18.7%** | **18 points too kind** |
+| curve stop | −9% | −4.6% · −4.3% (78); realised −46.2% vs model −52.0% | 6 points too harsh |
 
-Realised net against the model applied to the same legs' paper multiples: **PumpSwap −5.9% realised vs −7.8% model (239 legs; stops −47.4% vs −51.4%, non-stops +22.0% vs +21.6%); curve −2.4% realised vs −1.2% model (93 legs with a paper mark; stops −48.7% vs −51.7%, non-stops +22.0% vs +25.3%).** The model is right to within 2 points and errs on the safe side for PumpSwap; on the curve it is 3 points too kind on winners (slippage out of a thin curve) and 3 points too harsh on stops, which cancel. One correction worth making: the fee term (−0.016 and −0.01) is for a 0.1 SOL stake; the shadow books run at 0.05 SOL, where the 0.001 SOL tip alone is 2% a trade — PumpSwap legs at 0.05 SOL realised −11.4% against a model −5.5%. **At 0.05 SOL use −0.026 / −0.02; at 0.25 SOL −0.011 / −0.006.** The S6b legs' −9% entry gap (5 legs) is the one place a book's entry differs from the model, and it is the signal wallet's own buy moving the curve, not the model.
-
-The A5 leg's −31% entry gap is excluded from the medians above: it is a stale paper price (21-s feed lag), not an execution cost — but it is exactly the failure mode an A5 or F6 live leg would meet after a tracker restart.
+Realised against the model on the same legs: **PumpSwap −8.7% realised vs −10.0% model (287)** — right to within 1.3 points and on the safe side, as last time; by stake the 0.05 SOL legs are −12.2% vs −7.9% (the fee term should be −0.026 at 0.05 SOL, as said last study; the owner's v0.18.146 makes the website stake-aware). **Curve −13.1% realised vs −8.7% model (247 legs with a paper mark; since the last study −19.6% vs −13.3% on 154)** — the model is now 4.4 points too kind, and the whole gap is the floor exit: the 1.3x floor after 1.5x fires on a thin curve that is already collapsing, and the 71 floor legs realised +1.1% where paper said +18.7%. Correction for the curve, checked on the same legs: **x × 0.97 − 0.02 (0.05 SOL stake), stops −0.01 more (not −0.06), floor exits −0.16 more** → overall −12.4% against −13.1% realised, floors +1.7% vs +1.1%, stops −48% vs −46%. The report's sniper figures above still use the old model, so every curve book with floor exits is 2–5 points better in this table than it would be live; S3's 13-point paper-vs-shadow gap is the live reading of it. The 24 curve legs closed by "no exit signal in 7 min" (no paper 5-min mark) are outside both models.
 
 ## Project F
 
-**Searched:** 4,821 rule tests (13 books × 60 entry-time features × quartile thresholds in both directions × 3 exits), plus 75 confirm-price rules (2-/5-/10-s price ≥ 1.02–1.25, re-priced at that price). Bar: ≥ 40 trades, positive at real costs in both halves of the period, judged by hours. 216 passed the raw filter, almost all of them the fs-price illusion (a rule that "knows" the price rose 10 s later and buys at the trigger price — S6 fs10 > 1.25 shows +49% that way and +1% when priced at the 10-s price). Re-priced, **one confirm rule survives and two entry-time rules are worth registering; nothing qualifies as a formula.**
+**Searched:** about 50,000 rule tests — 209 entry-time features × 3 quartile thresholds × both directions × 4 exits × every book with 80+ closed rows — with the bar ≥ 40 trades, positive at real costs in both halves of the period, positive in at least 60% of the hours with 2+ trades. 198 passed the raw filter; 114 of those used features a sniper cannot know at its entry (`outside_buyers`, the GMGN holder snapshot at +90 s, `gi_launchpad_progress`, holder counts — the usual look-ahead) and were discarded; of the 84 left, every S6 rule (the best: signal wallet with 750+ followers, +25.7% on 97; signal wallet realised profit > $4.9K, +28.3% on 98) is priced at the smart wallet's own fill and is contradicted by S6b's 81 real legs, so they are discarded too. What remains is PumpSwap:
 
-- **F6 — A, 10-s confirm ≥ 1.05, bought at the 10-s price, runner.** n56, **+8.3%**, win 68%, stop 12%; +8.4% on the 45 to 17:05 UK and +7.7% on the 11 after; positive in 12 of 20 hours. The one of 75 confirm rules that passes, so partly selection. Same mechanism as A5 (it is A5 with a later, stricter gate) and the same dependence on a tracker that is within a second of the chain.
-- **F7 — S3 copycat, bought ≥ 1 s after the launch, sold at 5 min.** n62, **+13.9%**, win 37%, stop 26%; +5.3% first half, +22.5% on the 31 since 17:05 UK; 6 of 8 hours. The excluded same-second rows are −25% on 29. S3's 34 shadow legs (+0.174 SOL, entry gap +1.4%) say the price is obtainable. Suspicion to settle: the same-second rows may be priced at the create trade.
-- **Not registered (max 3, and F5 is the owner's A5):** S6 with entry MC ≤ $4.15K, runner — +22.0% on 36 to 17:05 UK and +1.5% on the 12 since, 0 stops in 48 (flagged last study at 17 trades; the continuation is positive but thin); S4 with bundle < 3% (S4b covers it); E2's split (47 trades, the owner's own rule).
-- **Plainly:** no rule with 40+ trades is positive in both halves *and* in two-thirds of its hours *and* independent of the price-read problem. F6 is the closest and it is 56 trades over 20 hours.
+- **F8 — D, `sol60` ≤ 51, runner.** D's trigger (50 SOL in 60 s) where the trade that crossed the line was small, so the minute's buying reads 50–51 SOL at the trigger rather than jumping past it on one big buy. n81 **+10.2%**, win 59%, stop 31%; halves +11.0% / +9.4%; positive in 14 of 21 hours; at the 5-s fill price +5.8% (≤ 50.89); the 21 since the last study +8.7%. The other half of D (sol60 > 51) is −10.0% on 72. The threshold degrades smoothly (≤ 52: +6.3% on 100; ≤ 55: +4.8% on 118; ≤ 60: +1.3%), and A's rows on the same coins split the same way (+14.3% on 80 vs −7.7% on 71). **Against it:** the same logic on A's own trigger (sol60 ≤ 30.9) is −8.3% on 71, so the mechanism is not consistent across the two levels, and it is one of ~50,000 tests.
+- **F9 — A, `n60` ≤ 57, runner.** Fewer than 58 buys in the trigger minute (bigger buys, fewer of them). n50 **+12.5%**, win 64%, stop 26%; halves +14.5% / +10.4%; positive in 8 of 13 hours; at the 5-s fill price +15.6%; at 5 min +10.6%; the 10 since the last study +39.4%. The other 144 A trades are −7.8%. **Against it:** the threshold is a cliff (≤ 65: +2.8% on 66; ≤ 75: −0.3% on 87), its cousin S2 (`wal60` ≤ 65) is 47 out of sample at −0.5% and does not hold up, and 22 of the 50 are also the "entry MC > $54K" rows (+25.6% on those 22, +2.2% on the other 28) — so it may be two small clusters rather than a rule.
+- **Not registered:** A entry_mc > $54K runner (n49 +8.8%, 10 of 16 hours; overlaps F9); D `pre_m1_b` ≤ $5,294 (n42 +12.6%, 9 of 11 hours — but the column is filled on only 81 of 153 D rows and reads $5.2–5.5K on a 50-SOL trigger, which looks like a measurement quirk, not a signal); S6 cheap entries (price illusion, above); S4 bundle < 3% (S4b covers it; 30 trades).
+- **Plainly:** nothing qualifies as a formula. Two rules clear the arithmetic bar and are registered as hypotheses, with their contradictions written into the notes. The last study's F6 and F7 cleared the same bar and went to +1.1% and −13.1% out of sample within four hours; that is the base rate for finds from a search this wide, and F8/F9 should be read with it.
 
 ## Strategy register
 
-Scored only on trades after each rule's `after_ts`. No existing rule was edited.
+Scored only on trades after each rule's `after_ts`. No existing rule was edited. `study.mjs` prices F5 and F6 at the trigger price (its table shows +10.2% / +17.9%; the re-priced figures are below) and cannot score F7 (book S3) or F3/F4 (launch rows / skipped rows) — those are by hand.
 
 | id | rule | out of sample | verdict |
 |---|---|---|---|
-| S1 | A, sell at 3 min | −8.1% (61) vs baseline −8.1% | **does not hold up** (61/40) |
-| S2 | A, wal60 ≤ 65, runner | −11.3% (24) vs −4.1% (61) | waiting 24/40, behind baseline |
-| S3 | A, max_share > 0.1, runner | −4.7% (31) vs −4.1% (61) | waiting 31/40, at baseline |
-| F1 | A, bundle_wallets ≤ 3, runner | −16.5% (18) vs +2.1% rest of A | waiting 18/40, well behind |
+| S1 | A, sell at 3 min | −8.3% (103) vs baseline −8.3% | **does not hold up** |
+| S2 | A, wal60 ≤ 65, runner | −0.5% (47) vs −4.4% (103) | **does not hold up** (47/40: beats the baseline by 4 points, still negative) |
+| S3 | A, max_share > 0.1, runner | −1.1% (52) vs −4.4% | **does not hold up** (52/40) |
+| F1 | A, bundle_wallets ≤ 3, runner | **−16.9% (30)** vs +0.4% rest of A; 12 shadow legs −0.677 SOL | waiting 30/40, well behind |
 | F2 | tier-1 bundled launch | — | does not hold up (closed 17:41) |
-| S4 | E, sell at 5 min | −10.1% (19) | waiting 19/40 |
-| F3 | 10-wallet operator, +4 s, 60 s / 5 min (by hand) | 4 launches since: 4 of 4 to $200K+, 60-s 13–24x; fill unknown (S10 0 legs) | waiting 4/20 |
-| F4 | G's coins, sell at 5 min (by hand) | **−13.0% (19)**, win 53% | waiting 19/40, losing |
-| F5 (new) | A5: A, fs5 ≥ 1.02 at the 5-s price, runner (the owner's) | A5 book: 1 row −50.5%, leg open; rule on A's rows since 20:10 UK: 1 | waiting 1/40 |
-| F6 (new) | A, fs10 ≥ 1.05 at the 10-s price, runner | — | waiting 0/40 |
-| F7 (new) | S3, bought ≥ 1 s after launch, 5-min | — | waiting 0/40 |
+| S4 | E, sell at 5 min | −9.2% (33) | waiting 33/40, losing |
+| F3 | 10-wallet operator, +4 s, 60 s / 5 min (by hand) | 14 launches since 17:44 UK: 14 of 14 to $200K+, 13 graduated; 60-s 14–42x; 5-min 4.8–25x and falling; **fill unknown — S10 caught 0 of 10** | waiting 14/20; the book is broken |
+| F4 | G's coins, sell at 5 min (by hand) | **−17.6% (48)**, win 35%; 23 h5 legs −1.626 SOL | **does not hold up** |
+| F5 | A5: A, fs5 ≥ 1.02 at the 5-s price, runner (the owner's) | rule on A's rows: **+0.2% (19)**, stop 47%; A5 book: 16 rows −18.0%, 15 legs −0.115 SOL | waiting 19/40, behind the +4.4% in sample |
+| F6 | A, fs10 ≥ 1.05 at the 10-s price, runner | **+1.1% (15)**, stop 40%; F6 book 13 rows +5.0% (one 4x, 7 stops) | waiting 15/40 |
+| F7 | S3, bought ≥ 1 s after launch, 5-min | **−13.1% (34)**; S3b book 41 rows −0.7% | waiting 34/40, losing |
+| F8 (new) | D, sol60 ≤ 51, runner | — | waiting 0/40 |
+| F9 (new) | A, n60 ≤ 57, runner | — | waiting 0/40 |
 
-Note for the next study: study.mjs prices F5 and F6 at the trigger price; score them by hand as x_flow4 ÷ fs5_x and ÷ fs10_x.
+Of the eight rules old enough to have 15+ out-of-sample trades, none is positive. Note for the next study: score F8/F9 from the table (D and A passed rows, x_flow4) and check them at the 5-s price as well.
 
 ## What I would do now
 Nothing here changes the bot; the owner decides.
-- **Keep every PumpSwap trigger book off real money.** A −1.6% on 152, B −6.0%, C −12.5%, 80 −7.7%, D −0.9%; G's 5-min edge is gone (−13.0% on 19 out of sample); F1 −16.5% out of sample. The only PumpSwap rule above zero on 40+ trades is F6 (+8.3% on 56) and it is unproven and clock-dependent.
-- **A5: leave it in shadow and fix the clock before judging it.** The one leg filled 31% off paper because the tracker was 21 s behind the chain after the 20:10 UK restart. A5 needs the feed lag logged on its own row (it is on A's) and a guard: do not open if feed_lag_ms > 1,000. Judge it from 40 rows; the 10 A rows that came after the owner's analysis were −13.7%, so expect noise either way.
-- **S10: nothing to do but wait** — the operator launched twice in the ten minutes before the book went live and keeps a 1–3-hour cadence in the evening; the first S10 leg answers the fill question better than anything in this report.
-- **S3 and S4 are the only shadow books in profit (+0.174 and +0.095 SOL).** S4's profit was all in its first hour; S3's is 3 of 5 hours. If one shadow leg is to be trusted with 0.05 SOL live, S3 at 5 min with the ≥ 1-s filter (F7) is the candidate — after 40 more shadow legs, not now. S6 should drop the runner for its cheap entries only (≤ $4K: 0 stops in 48) or stay paper.
-- **Fix the push:** `x_flow4ff` (A2) is missing from abcd.csv; the shadow A5 leg should close when the paper row closes (it has been open 26 min past a tsl80 close).
-- **Costs:** keep the real-cost model; add the stake term (at 0.05 SOL the fee share is 2.6%, not 1.6%).
+- **No book to real money.** Every PumpSwap book is negative on 60–194 trades; every executor shadow book is below zero, and all six lost in the last four hours (−4.0 SOL of shadow stake in the window, most of it G and F at 0.25 SOL).
+- **A5: the first 16 say the premise did not hold, not that the execution failed.** The fill is at paper (+0.6%), the lag guard works, and the coins still stopped 56% of the time. Keep it in shadow to 40 rows, but expect the rule on A's rows (+0.2% on 19 out of sample) rather than the +4.4% in sample. Close the Rest in Piss leg by hand (open 4.4 hours past its paper close). F6 is the same story at +1.1% on 15.
+- **S10 is the one thing in this report with information still to come, and it is broken:** 10 fingerprint launches since 20:10 UK, 0 rows, 0 legs, no skip logged — and S8 missed the same coins. Check `fire()`'s `SN_MAX_MC` rejection counter and whether `t.bundle` is set by the first outside trade; log a skip when a fingerprint launch is seen and not taken. When it does trade, judge the fill against the +4 s price and **sell at 60 s** — the operator's 5-min mark has fallen to ~5x on three of the last ten while the 60-s mark is still 18–25x.
+- **Switch G and F off shadow.** G is −1.96 SOL on 43 legs (F4 does not hold up at 48 out of sample); F is −0.68 SOL on 12 and F1 is −16.9% on 30. They are costing nothing real but they are no longer telling us anything a paper row doesn't.
+- **S6b off; S6 paper is not real.** 81 legs −0.892 SOL, and the S6/S6b comparison shows S6's paper price is the smart wallet's own fill (9–22% below what the next buyer pays). Stop reading S6 paper results.
+- **S3 and S4 stay in shadow but are no longer candidates for live money:** S3 lost 0.52 SOL in the last four hours on 50 legs; S4's edge is now only the under-3% bundle split (S4b: +21% on 30 paper, 9 new rows +13.9%) — if anything sniper gets a shadow leg next, S4b is it.
+- **Costs:** correct the curve model — floors −0.16, stops −0.01 (not −0.06), fee −0.02 at 0.05 SOL; the PumpSwap model is right to within 1.3 points.
+- **Fixes:** the A5 leg stuck open; A2's 60-s sale when no trade prints at 60 s (it falls through to the stop on 2 of 22); a skip record for S10/S8 fingerprint launches not taken.
 
 ## Next
-S10's first legs (fill vs the +4 s price); A5's first 20 rows with the feed lag beside them; F6 and F7 from zero; F4 and F1 reaching 40 (both losing); S4b at 20+; whether S3's same-second rows are the create trade; the tracker's feed lag by hour (3.8 s median in the 20:00 UK hour); E2 on 20+ taken rows; the 20:00–midnight UK band for A (third night: 23 trades −1.3% so far).
+S10's first rows and legs once the trigger fires (fill vs +4 s; 60-s vs 5-min); A5 and F6 at 30–40 rows (both near zero now); F8 and F9 from zero at the trigger and 5-s prices; F1 and F7 reaching 40 (both losing); S4b at 20+ out-of-sample rows; whether the stop rate stays above 50% on A tonight (it was 39% over the file, 55% in the last four hours — a market change or a bad night); the curve floor exit after the model correction; the two rugs sold at 0.03–0.04 among the operator's coins (G caught them after the run — a reason for A/C/D/G to skip the fingerprint, not to buy it late).
