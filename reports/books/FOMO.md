@@ -58,10 +58,12 @@ Not in stage 1: no executor link (a feed that earns it later sends `trigger` / `
 5. Data push + notes. Then a week of scoring before any verdict.
 
 ## Verdict now
-No data yet. Build pending the owner's "go" on the list above (written 21 Oct 16:45 UK).
+No data yet. Stage 1 built and deployed 21 Oct 2026 ~17:10 UK (v0.18.179 → rebased onto v0.18.180, fomo 0.1.1). Scoring starts when the first wallets are watched; the trending table fills from the firehose on its own. No verdict before a week of data.
 
 ## Change history
 - 21 Oct 2026 16:45 UK — notes created; stage-1 change list written; facts above found (signer address, 26K trades/h, cope.capital API shape).
+- 21 Oct 2026 16:42 UK — owner: "Go."
+- 21 Oct 2026 ~17:10 UK — **stage 1 deployed** (commit 245210c + fomo 0.1.1): `fomo/` app as pm2 `fomo` (600 MB cap), `fomo.db`, page at `/fomo` via the tracker's proxy (src/web.js), deploy block in scripts/deploy-step.sh (fomo pushes never restart the tracker), three fomo CSVs in scripts/push-data.sh. Built as designed with these choices: firehose on the **public** RPC websocket first, Helius only when the public socket is quiet for 2 min and capped at 300K notifications a day (`FOMO_WS`, `FOMO_HELIUS_NOTIF_CAP`); pool lookups 3,000 a day; getTransaction 50,000 a day with a fifth reserved for watched wallets; pump.fun and PumpSwap wallets come from the events and are cross-checked against getTransaction on a 1-in-20 sample (`walletMatch` / `walletMismatch` on the Status tab decides whether to trust them); Raydium / Meteora / Orca legs get the wallet from getTransaction (top-30 coins first). Prices in USD (fomo buys in USDC). Entry = the trader's fill from the decoded transaction; marks at +5 / +30 / +120 s; exits h5, tsl40, t15s40, copy (their sell), 6 h; real costs applied on the page with the pool model. Candidates list = most active fomo buyers in 24 h from decoded transactions (our own data). Local checks: syntax, 12-s smoke boot, API round-trip, a synthetic pump.fun trade through decoder → flow → trending.
 - 21 Oct 2026 16:41 UK — **cope.capital is dead:** `api.cope.capital` returns NXDOMAIN (Cloudflare DNS, Status 3) from the tracker box; register and leaderboard unreachable. The endpoint list above is from a third-party skill page and is kept for the record only. Stage 1 runs with no third-party source: the "top wallets" list is built from our own decoded flow and scoring; theses wait for a source (fomoapi.io, paid, is the only other one seen — unverified). `fomo/src/cope.mjs` stays a stub behind `COPE_KEY`.
 
 ## Ideas tested
@@ -75,7 +77,9 @@ No data yet. Build pending the owner's "go" on the list above (written 21 Oct 16
 ## Open items
 - Done 16:30 UK: `free -m` 3,915 MB total, 2,851 available; tracker 511 MB, executor 124 MB — fomo fits. Tracker shows 753 restarts, executor 44 (check the logs for crashes once fomo is up).
 - Owner: any fomo handles he rates (typed from the app); their wallets get matched from the flow. No cope key possible (NXDOMAIN, 16:41 UK).
-- Owner: "go" on the stage-1 list.
+- Done 16:42 UK: "go".
+- Owner: add the first wallets on the Wallets tab (or from the Candidates list once decoded transactions appear).
+- Known small debt: comments in src/web.js say v0.18.179; the rebase landed the change inside v0.18.180 (another session's GR2 bump). Fix with the next tracker change.
 - Day 1: measure whether the signer stream on Helius is billed per notification; measure the public-WS drop rate; set `FOMO_WS` accordingly.
 - Day 1: confirm the DFlow route legs decode cleanly from logs (multi-leg routes, "Log truncated" on big transactions); record the share that needed `getTransaction`.
 - Stage 2 question: whether fomo's Base / BSC / ETH fills are separable from other Relay fills (a test buy on Base will show).
