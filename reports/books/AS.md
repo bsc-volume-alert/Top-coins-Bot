@@ -18,18 +18,18 @@ Best paper book on the page and the first candidate for a real-quote test, but n
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 08:43 UK; A + standard filters. Built by reports/books/numbers.py._
+_Data to 21 Oct 10:20 UK; A + standard filters. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 21:32 UK) | 86 | +9.7% | +6.6% | 58% | 31% | +0.75 |
+| all (from 18 Oct 21:32 UK) | 88 | +10.5% | +7.4% | 59% | 31% | +0.84 |
 | before the change (20 Oct 17:45 UK) — back-test | 64 | +8.8% | +4.5% | 56% | 34% | +0.50 |
-| since the change — the real test | 22 | +12.4% | +6.7% | 64% | 23% | +0.25 |
-| last 24 h | 31 | +9.8% | +5.7% | 61% | 23% | +0.27 |
-| last 12 h | 18 | +12.3% | +5.2% | 61% | 22% | +0.20 |
-| last 6 h | 5 | -11.1% | -27.3% | 40% | 40% | -0.06 |
+| since the change — the real test | 24 | +15.1% | +9.9% | 67% | 21% | +0.34 |
+| last 24 h | 32 | +11.4% | +7.4% | 62% | 22% | +0.33 |
+| last 12 h | 17 | +3.9% | -1.0% | 59% | 24% | +0.05 |
+| last 6 h | 6 | +14.2% | +4.8% | 67% | 17% | +0.08 |
 
-Executor book `asoc` (shadow, real quotes): 6 legs, -0.070 SOL, average -2.3% a leg, without best -15.6%, won 50%, 21 Oct 02:23 UK to 21 Oct 07:49 UK.
+Executor book `asoc` (shadow, real quotes): 8 legs, +0.383 SOL, average +9.6% a leg, without best +1.5%, won 62%, 21 Oct 02:23 UK to 21 Oct 09:39 UK.
 <!-- /NUMBERS -->
 
 ## Change history

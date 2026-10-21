@@ -17,25 +17,25 @@ Names that clash:
 
 ## Latest numbers, all off-page books
 <!-- NUMBERS -->
-_Data to 21 Oct 08:43 UK._
+_Data to 21 Oct 10:20 UK._
 
-- **early** (x_flow4): all 6450 at -33.9%; last 12 h 736 at -37.6%
-- **wave2** (x_flow4): all 868 at -11.7%; last 12 h 155 at -19.6%
+- **early** (x_flow4): all 6560 at -34.0%; last 12 h 603 at -39.6%
+- **wave2** (x_flow4): all 889 at -11.9%; last 12 h 137 at -21.2%
 - **copy** (x_flow4): all 664 at -12.6%; last 12 h 0 at +0.0%
-- **mom60** (x_flow4): all 653 at -11.6%; last 12 h 114 at -9.5%
-- **momfast** (x_flow4): all 507 at -10.9%; last 12 h 89 at -8.3%
-- **mom80** (x_flow4): all 474 at -11.1%; last 12 h 76 at -11.6%
-- **momentum** (x_flow4): all 355 at -9.6%; last 12 h 59 at -0.8%
-- **momconf** (x_flow4): all 78 at -0.1%; last 12 h 14 at +10.8%
-- **momdip** (x_flow4): all 100 at -7.7%; last 12 h 20 at -16.2%
-- **momre** (x_flow4): all 194 at -15.9%; last 12 h 35 at +2.0%
-- **gradrec** (x_flow4): all 474 at -20.7%; last 12 h 106 at -22.0%
-- **gradrun** (x_flow4): all 290 at -8.6%; last 12 h 59 at -7.0%
-- **revival** (x_flow4): all 184 at -13.6%; last 12 h 49 at -15.4%
-- **slow** (x_flow4): all 113 at -12.9%; last 12 h 28 at -16.0%
-- **climber** (x_flow4): all 25 at -12.5%; last 12 h 5 at -26.5%
-- **secondwave** (x_flow4): all 7 at -46.7%; last 12 h 2 at -50.8%
-- **confirm** (x_tsl40): all 1002 at -18.2%; last 12 h 213 at -12.8%
+- **mom60** (x_flow4): all 671 at -10.9%; last 12 h 111 at -7.3%
+- **momfast** (x_flow4): all 519 at -10.7%; last 12 h 81 at -8.6%
+- **mom80** (x_flow4): all 487 at -10.8%; last 12 h 71 at -9.4%
+- **momentum** (x_flow4): all 362 at -9.8%; last 12 h 56 at -7.8%
+- **momconf** (x_flow4): all 80 at -0.5%; last 12 h 12 at -2.2%
+- **momdip** (x_flow4): all 101 at -8.0%; last 12 h 18 at -26.2%
+- **momre** (x_flow4): all 198 at -14.0%; last 12 h 25 at +18.3%
+- **gradrec** (x_flow4): all 482 at -20.2%; last 12 h 91 at -22.2%
+- **gradrun** (x_flow4): all 296 at -8.6%; last 12 h 54 at -6.1%
+- **revival** (x_flow4): all 189 at -13.8%; last 12 h 43 at -13.6%
+- **slow** (x_flow4): all 116 at -12.8%; last 12 h 25 at -24.7%
+- **climber** (x_flow4): all 25 at -12.5%; last 12 h 4 at -19.3%
+- **secondwave** (x_flow4): all 8 at -44.7%; last 12 h 3 at -44.1%
+- **confirm** (x_tsl40): all 1020 at -18.3%; last 12 h 185 at -14.1%
 - **p6** (x_h5): all 0 at +0.0%; last 12 h 0 at +0.0%
 <!-- /NUMBERS -->
 
