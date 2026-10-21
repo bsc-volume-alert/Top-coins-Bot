@@ -89,6 +89,7 @@ export function record(sig, slot, ts, legs) {
   const tx = db.transaction(() => {
     for (const a of agg.values()) {
       if (!(a.usd >= 0)) continue;
+      if (a.usd > 1_000_000) { fo.oversize = (fo.oversize || 0) + 1; continue; } // a $1M+ leg is a decimals artefact (first hour: one $81M 'sell'), not a fomo trade
       q.insFlow.run(sig, slot, ts, a.mint, a.side, a.usd, a.quote, a.quoteAmt, a.tokens ?? null, a.venue, a.pool, a.wallet, 0);
       q.bumpHour.run(a.mint, hour, a.side === "buy" ? 1 : 0, a.side === "sell" ? 1 : 0, a.side === "buy" ? a.usd : 0, a.side === "sell" ? a.usd : 0);
       q.upCoin.run(a.mint, ts);

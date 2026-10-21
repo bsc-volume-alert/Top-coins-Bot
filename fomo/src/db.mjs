@@ -33,6 +33,8 @@ CREATE INDEX IF NOT EXISTS trades_open ON trades(closed, entry_ts);
 CREATE INDEX IF NOT EXISTS trades_wallet ON trades(wallet, entry_ts);
 CREATE TABLE IF NOT EXISTS theses (id INTEGER PRIMARY KEY, handle TEXT, ts INTEGER, mint TEXT, chain TEXT, text TEXT, type TEXT, trade_id INTEGER, px0 REAL, px1h REAL, px6h REAL, px24h REAL, poster_exit_s INTEGER, source TEXT);
 CREATE TABLE IF NOT EXISTS prices (mint TEXT, ts INTEGER, usd REAL, PRIMARY KEY (mint, ts));
+CREATE TABLE IF NOT EXISTS wallet_trades (sig TEXT, wallet TEXT, handle TEXT, ts INTEGER, mint TEXT, side TEXT, usd REAL, px REAL, mc_at REAL, trade_id INTEGER, PRIMARY KEY (sig, wallet, mint, side));
+CREATE INDEX IF NOT EXISTS wt_ts ON wallet_trades(ts);
 CREATE TABLE IF NOT EXISTS stats (k TEXT PRIMARY KEY, v REAL);
 CREATE TABLE IF NOT EXISTS buyers_seen (mint TEXT, wallet TEXT, ts INTEGER, PRIMARY KEY (mint, wallet)); -- unique fomo buyers per coin (from decoded transactions)
 CREATE INDEX IF NOT EXISTS bs_ts ON buyers_seen(ts);
@@ -73,6 +75,9 @@ export const q = {
   tradesCsv: db.prepare(`SELECT * FROM trades WHERE entry_ts>=? ORDER BY entry_ts`),
   hourlyCsv: db.prepare(`SELECT h.*, c.symbol FROM flow_hourly h LEFT JOIN coins c ON c.mint=h.mint WHERE hour>=? ORDER BY hour, mint`),
   thesesCsv: db.prepare(`SELECT * FROM theses WHERE ts>=? ORDER BY ts`),
+  insWT: db.prepare(`INSERT OR IGNORE INTO wallet_trades (sig, wallet, handle, ts, mint, side, usd, px, mc_at, trade_id) VALUES (?,?,?,?,?,?,?,?,?,?)`),
+  feed: db.prepare(`SELECT w.*, c.symbol, c.name, c.mc_usd mc_now, c.meta_ts, (SELECT t.text FROM theses t WHERE t.mint=w.mint AND (t.handle=w.handle OR t.handle=w.wallet) AND t.ts BETWEEN w.ts-86400 AND w.ts+86400 ORDER BY t.ts DESC LIMIT 1) thesis FROM wallet_trades w LEFT JOIN coins c ON c.mint=w.mint WHERE w.ts>=? ORDER BY w.ts DESC LIMIT ?`),
+  feedMints: db.prepare(`SELECT DISTINCT mint FROM wallet_trades WHERE ts>=? UNION SELECT DISTINCT mint FROM trades WHERE closed=0`).pluck(),
   insPrice: db.prepare(`INSERT OR IGNORE INTO prices (mint, ts, usd) VALUES (?,?,?)`),
   priceAt: db.prepare(`SELECT ts, usd FROM prices WHERE mint=? AND ts>=? ORDER BY ts LIMIT 1`),
   stat: db.prepare(`SELECT v FROM stats WHERE k=?`).pluck(), setStat: db.prepare(`INSERT INTO stats (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v=excluded.v`),
