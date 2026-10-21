@@ -17,7 +17,10 @@ on("trade", (t, tr) => { const s = SN.get(t.mint); if (s && tr.isBuy && tr.slot 
 on("expire", (t) => setTimeout(() => SN.delete(t.mint), 2 * 3600_000)); // keep a while past expiry — momentum entries come after the launch window
 
 export function sniperInfo(mint) {
-  const s = SN.get(mint); if (!s) return null;
+  const s = SN.get(mint);
+  // v0.18.172: the in-memory set is lost on every restart (32 restarts in 24 h left snipers_n blank on 58% of AS rows). Fall back to the saved launch data:
+  // snipers = launch-bundle wallets minus the creator if the creator bought (matches the live count on 1,295 of 1,308 rows). Held share unknown then.
+  if (!s) { try { const m = q.tokenMeta.get(mint); if (m && m.bundle_wallets != null) return { n: Math.max(0, m.bundle_wallets - ((m.dev_buy_sol || 0) > 0 ? 1 : 0)), heldPct: null }; } catch {} return null; }
   let held = 0; for (const w of s) held += Math.max(0, balanceOf(mint, w) || 0);
   return { n: s.size, heldPct: held / CFG.TOTAL_SUPPLY * 100 };
 }
@@ -63,4 +66,4 @@ export function enrichEntry(id, mint, w5, entryTs) {
   dexPaid(mint, entryTs).then((dp) => { if (dp) { try { q.setDexPaid.run(dp.paid, dp.types, dp.leadS, id); } catch {} } });
   freshShare(w5.filter((z) => z.b).map((z) => z.w)).then((fr) => { if (fr) { try { q.setFresh.run(fr.share, fr.n, id); } catch {} } }).catch(() => {});
 }
-export const enrichLine = (sn, pv) => [sn ? `snipers ${sn.n} hold ${sn.heldPct.toFixed(1)}%` : null, pv?.n ? `proven wallets ${pv.n} (${(pv.share * 100).toFixed(0)}% of buys)` : null].filter(Boolean).join(" · ");
+export const enrichLine = (sn, pv) => [sn ? (sn.heldPct == null ? `snipers ${sn.n}` : `snipers ${sn.n} hold ${sn.heldPct.toFixed(1)}%`) : null, pv?.n ? `proven wallets ${pv.n} (${(pv.share * 100).toFixed(0)}% of buys)` : null].filter(Boolean).join(" · ");

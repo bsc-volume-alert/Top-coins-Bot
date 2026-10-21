@@ -16,7 +16,7 @@ import { openCopy, positionsOf, feedBehindS } from "./copytrade.js";
 import { startTrace, noteExits } from "./p5trace.js"; // v0.18.115: the core trigger's after-entry marks
 const coreListeners = []; export const onCoreEntry = (fn) => coreListeners.push(fn);
 import { feeInfo, feeLine } from "./fees.js";
-import { recordHoldersAsync, holdersLine } from "./holders.js";
+import { recordHoldersAsync, holdersLine, holdersNow } from "./holders.js";
 import { readFileSync, writeFileSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { provenCount } from "./wallets.js";
@@ -352,7 +352,9 @@ export function p5Check(mint, s, tr, now) {
       if (!name || !createTs) { try { const d = await dexInfo(mint); name ||= d.name; symbol ||= d.symbol; createTs ||= d.createdAt; } catch {} }
       const ageS = createTs ? now - createTs : null;
       if (ageS != null && (ageS < CFG.P5_MIN_AGE_S || ageS > CFG.MOM_MAX_AGE_D * 86400)) return;
-      const pos = openCopy(strat, `${lv}SOL/60s`, mint, name || mint.slice(0, 8), symbol || "", px, mc, now, { v5, venue, ageS, wall0, blockTs: tr.ts, pass: !skipWhy, skipWhy, bundle: meta?.bundle_pct ?? null, bundleWallets: meta?.bundle_wallets ?? null, wal60: wal.size, preBuyers, creator: meta?.creator || null });
+      // v0.18.172 executor book AS (shadow): the page's standard filters decided at the trigger, from the same inputs - socials not known-absent, creator has not bought and sold out (ledger balance 0), biggest buyer in the trigger minute 3-5 SOL
+      let asStd = null; try { const h = holdersNow(mint, meta?.creator); const devOut = (meta?.dev_buy_sol || 0) > 0 && h?.dev != null && h.dev === 0; const bigSol = (feat.maxShare || 0) * bSol; asStd = meta?.has_socials !== 0 && !devOut && bigSol >= 3 && bigSol < 5; } catch {}
+      const pos = openCopy(strat, `${lv}SOL/60s`, mint, name || mint.slice(0, 8), symbol || "", px, mc, now, { v5, venue, ageS, wall0, blockTs: tr.ts, pass: !skipWhy, skipWhy, asStd, bundle: meta?.bundle_pct ?? null, bundleWallets: meta?.bundle_wallets ?? null, wal60: wal.size, preBuyers, creator: meta?.creator || null });
       p5.fired++; if (wide) p5.wide++; else p5.byLevel[lv] = (p5.byLevel[lv] || 0) + 1;
       if (pos?.id) { pos.alerted = false; try { feat.ctx = triggerContext(mint, { ...(meta || {}), name: name || meta?.name, symbol: symbol || meta?.symbol }, now, s); } catch {} try { q.setV2m.run(Math.round(bU), pos.id); q.setEarly.run(JSON.stringify(feat), pos.id); } catch {}
         try { enrichEntry(pos.id, mint, s.w5, now); } catch (e) { console.error("[p5 enrich]", e.message); } // v0.18.113: snipers, proven wallets, dex-paid, fresh wallets — the same enrichment the core trigger gets
