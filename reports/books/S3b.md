@@ -12,14 +12,14 @@ Not working: a lottery book. About −10% to −12% a trade at 5 min on 179 clos
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 00:09 UK; curve costs, 5-min exit. Built by reports/books/numbers.py._
+_Data to 21 Oct 00:59 UK; curve costs, 5-min exit. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 19 Oct 21:54 UK) | 179 | -12.2% | -16.8% | 21% | 32% | -2.37 |
-| last 24 h | 148 | -14.3% | -19.8% | 16% | 30% | -2.26 |
-| last 12 h | 93 | -23.0% | -23.6% | 15% | 32% | -2.23 |
-| last 6 h | 57 | -23.1% | -24.1% | 16% | 32% | -1.38 |
+| all (from 19 Oct 21:54 UK) | 180 | -12.3% | -16.8% | 21% | 32% | -2.39 |
+| last 24 h | 140 | -13.7% | -19.5% | 17% | 31% | -2.06 |
+| last 12 h | 92 | -22.7% | -23.2% | 15% | 32% | -2.18 |
+| last 6 h | 51 | -23.6% | -24.7% | 16% | 31% | -1.26 |
 <!-- /NUMBERS -->
 
 ## Change history

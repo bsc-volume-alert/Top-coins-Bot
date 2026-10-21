@@ -12,7 +12,7 @@ Undecided and mostly untestable: only 50 of 336 passed A rows carry a GMGN holde
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 00:09 UK; A, top-10 holders under 23%. Built by reports/books/numbers.py._
+_Data to 21 Oct 00:59 UK; A, top-10 holders under 23%. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|

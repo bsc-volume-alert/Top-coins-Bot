@@ -12,14 +12,14 @@ Not working. About −14% a trade at 5 min on 147 closed rows (27% won). Its rea
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 00:09 UK; curve costs, 5-min exit. Built by reports/books/numbers.py._
+_Data to 21 Oct 00:59 UK; curve costs, 5-min exit. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
 | all (from 19 Oct 20:42 UK) | 147 | -15.8% | -18.9% | 27% | 47% | -2.46 |
-| last 24 h | 131 | -17.5% | -21.1% | 27% | 49% | -2.42 |
+| last 24 h | 127 | -17.8% | -21.5% | 26% | 50% | -2.39 |
 | last 12 h | 91 | -13.4% | -18.6% | 25% | 44% | -1.31 |
-| last 6 h | 52 | -8.4% | -17.3% | 25% | 50% | -0.49 |
+| last 6 h | 35 | +2.0% | -11.1% | 26% | 46% | +0.04 |
 
 Executor book `sn7b` (shadow, real quotes): 47 legs, -0.627 SOL, average -26.1% a leg, without best -27.9%, won 19%, 20 Oct 05:22 UK to 20 Oct 15:30 UK.
 <!-- /NUMBERS -->

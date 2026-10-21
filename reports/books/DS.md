@@ -16,16 +16,16 @@ Not working since the change: the back-test was +12.7% on 60, but the 12 trades 
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 00:09 UK; D + standard filters. Built by reports/books/numbers.py._
+_Data to 21 Oct 00:59 UK; D + standard filters. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 20:27 UK) | 68 | +9.3% | +5.3% | 56% | 29% | +0.57 |
+| all (from 18 Oct 20:27 UK) | 69 | +9.3% | +5.4% | 57% | 29% | +0.57 |
 | before the change (20 Oct 17:45 UK) — back-test | 56 | +12.1% | +7.2% | 55% | 27% | +0.62 |
-| since the change — the real test | 12 | -3.5% | -15.8% | 58% | 42% | -0.05 |
-| last 24 h | 27 | +5.5% | +0.6% | 63% | 30% | +0.12 |
-| last 12 h | 14 | -4.1% | -14.6% | 57% | 36% | -0.07 |
-| last 6 h | 11 | +0.9% | -12.3% | 64% | 36% | -0.00 |
+| since the change — the real test | 13 | -2.7% | -13.9% | 62% | 38% | -0.05 |
+| last 24 h | 26 | +6.7% | +1.6% | 65% | 27% | +0.15 |
+| last 12 h | 14 | -1.8% | -12.2% | 64% | 36% | -0.04 |
+| last 6 h | 10 | +6.6% | -7.4% | 70% | 30% | +0.06 |
 <!-- /NUMBERS -->
 
 ## Change history

@@ -16,16 +16,16 @@ Best paper book on the page and the first candidate for a real-quote test, but n
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 00:09 UK; A + standard filters. Built by reports/books/numbers.py._
+_Data to 21 Oct 00:59 UK; A + standard filters. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 21:32 UK) | 78 | +11.5% | +8.1% | 59% | 32% | +0.82 |
+| all (from 18 Oct 21:32 UK) | 79 | +11.5% | +8.1% | 59% | 32% | +0.83 |
 | before the change (20 Oct 17:45 UK) — back-test | 64 | +8.8% | +4.5% | 56% | 34% | +0.50 |
-| since the change — the real test | 14 | +23.9% | +15.5% | 71% | 21% | +0.32 |
-| last 24 h | 34 | +7.2% | +3.4% | 59% | 26% | +0.21 |
-| last 12 h | 19 | +20.6% | +14.4% | 68% | 16% | +0.37 |
-| last 6 h | 13 | +29.6% | +21.0% | 77% | 15% | +0.37 |
+| since the change — the real test | 15 | +22.9% | +15.0% | 73% | 20% | +0.33 |
+| last 24 h | 33 | +8.5% | +4.7% | 61% | 24% | +0.25 |
+| last 12 h | 20 | +20.0% | +14.1% | 70% | 15% | +0.38 |
+| last 6 h | 13 | +28.0% | +19.2% | 77% | 15% | +0.35 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -73,6 +73,14 @@ All on AS's own trades at real costs, runner exit, unless stated. "In sample" = 
 - Rolling 14-trade blocks (83 trades, 00:09 UK data): 1–14 (18 Oct 21:32 – 19 Oct 01:45) +12.5%, 8 won; 15–28 (02:12 – 13:48) +14.6%, 10 won; 29–42 (14:12 – 21:13) +27.1%, 9 won; 43–56 (21:25 – 20 Oct 04:34) +3.0%, 5 won; 57–70 (04:51 – 18:09) −7.3%, 7 won; 71–83 (18:26 – 00:01) +29.6%, 10 of 13 won. With the operator-look coins removed the blocks read +16.4 / +5.6 / +30.0 / −11.9 / +18.5 / +9.6 (last block 8 trades). Lesson: expect a block like 57–70 again; do not size the stake off the last 14.
 - AS vs DS on the same coins (23:31 UK): D buys later and higher, so DS pays for the move A catches — Poke Packz AS $64K +30% vs DS $91K −53%; Unfazed Crane $50K +39% vs $84K 0%; MOCHI $68K +83% vs $85K +10%. 64 of AS's 78 coins were also bought by D.
 
+- 21 Oct 01:00 UK review of the trades since the 17:45 change (15 by 00:59 UK; data push 00:59 UK), each signal checked on the 64 earlier trades too (operator coins removed):
+  - At least 1 sniper (snipers known only — the count is blank on 46 of 79 AS rows, first recorded 19 Oct 12:36 UK): 24 trades +29.5% (without best +18.7%, 16 won) vs 0 snipers 9 at −21.9% (3 won). Holds in both halves (+42.1% vs −57.3%; +16.9% vs +6.3%) and since the change (8 at +33.1% vs 3 at −7.2%). Strongest signal so far. Proposed as a variant line.
+  - Entry MC ≥ $46K: before 27 at +15.0% vs 37 at +4.3%; since 11 at +36.3% vs 4 at −14.2%. Holds both times. Proposed as a variant line.
+  - Creator bought < 0.9 SOL: CORRECTION of the 00:18 UK verdict ("real"). On the earlier 64 it is carried by one coin (without best +4.5%) and REVERSES in the first half (kept +1.6% vs dropped +25.6%; second half +20.9% vs −26.3%). By creator-buy band (all 79): 0 SOL 25 at +13.7% (18 won); 0.01–0.5 10 at +57.0% (Spidey Show); 0.5–0.9 5 at −33.9%; 0.9–2 10 at +2.9%; 2–5 12 at −0.9%; 5+ 17 at +8.5% — no steady pattern. Judged NOT reliable; dropped as a filter idea.
+  - Copycats ≤ 5: before +17.7% vs −6.1%, but since the change it reverses (8 at +14.5% vs 7 at +32.4%). Dropped.
+  - First-minute sellers < 30 SOL: before 32 at +21.5% vs 32 at −3.9%; since no difference (+21.2% vs +24.7%). Undecided — watch.
+  - What the filters turned away since 17:45 (A 55 trades at −1.5%): biggest buyer ≥ 5 SOL 11 at −21.8%; creator sold out 10 at −16.5%; biggest buyer < 3 SOL 12 at −11.1%; no socials 7 at +16.3% (5 won). Over the full history no socials is −13.3% on 59, so the socials rule stays.
+
 ## Notable coins
 - Spidey Show (19 Oct 21:58 UK) — entry $59.7K, peaked 20.6x, sold at the 4x cap: +276.6%, AS's best trade. Also carries F6 and H.
 - French Piccolo (19 Oct 06:04 UK) — +115.6% paper, +110.9% live real money. Bundle 40.0% over 10 wallets, dev buy 0.049: matches the operator fingerprint (bundle_sol not in abcd.csv, so not fully confirmable from that file); socials unknown, which is how it passed. The page leaves it out since v0.18.164; the chat figures kept it.
@@ -83,6 +91,8 @@ All on AS's own trades at real costs, runner exit, unless stated. "In sample" = 
 - Pump.fun (21 Oct 00:01 UK) — bought at $6.1K MC with 61 holders and the platform's own name; every other AS coin entered at $29–98K. Probably a fake / copycat token with a non-standard supply, so our MC figure (price × 1B) is wrong. Its +20.7% should not be trusted. Led to the "skip MC ≠ price × 1B" proposal.
 - Recent stopped losers before the change: The Last Hope (20 Oct 11:55, peak 1.09x, −50.8%), Haiku (10:34, peak 1.22x, −52.9%), Tesla Roadster (04:34, −71.8%, the worst — creator bought 28.6 SOL, sellers 4 SOL, price 0.35x at 10 s). Cheap faders: NoahAI (14:14, −6.6%), Forever Laura (16:24, −8.1%).
 
+- King Of Larp (21 Oct 00:20 UK) — 15th trade since the change: entry $51.8K, 89 s old, 5 snipers, peaked 2.84x but sold at 1.18x when buying faded: +9.0%. Example of the runner exit giving back a big peak.
+
 ## What the owner said / decided
 - 20 Oct ~16:00 UK: "socials, let's do that … use GMGN … A and D are in desperate need of improvement … 279 trades … still at a loss" → AS created (socials only).
 - 20 Oct ~17:00–17:25 UK (exact wording only kept in summary form): a long message on snipers and creators as a chess game (17:02); creator dumping / copy the dev / dev out ideas (17:05); "you'd never want the dev out … CTO", then "Forget that. Forget the CTO … Dex is … a smart trick"; "If the dev is out, we shouldn't be involved … side wallets …"; "every coin is bundled … whales … socials 100% … What do you think?"; "I don't understand what you're doing … Is this another coin?"; then the instruction that became the standard set: "include it with all the coins … 3 to 5 SOL … socials … dev sold … ignore hand-offs … 11% … consistency of volume". Implemented: socials, creator-sold-out skip, 3–5 SOL biggest buyer, 11% rule dropped (a conviction buyer splits over wallets). "Ignore hand-offs" = hand-offs not used. "Consistency of volume" — not found in any rule (see Open items). "Include it with all the coins" — applied to AS and DS only.
@@ -92,10 +102,11 @@ All on AS's own trades at real costs, runner exit, unless stated. "In sample" = 
 - 21 Oct 00:17 UK: believes the 17:45 change caused the jump — "this change has made the average win percent has gone up 71% for 14 trades … 25% per trade … quite significant … what did you change to increase this win percentage? … focus on the last 14 trades … which ones failed? … is there a consistency in the ones that failed? … any correlation between the failures and the successes?" Also: the crash was only at 23:53 and AS was still going up.
   - Answer given (00:18 UK), recorded so it is not re-argued: the same rule applied to the 69 trades before 17:45 gave +10.9% and won 57%, so the 71% / +24% since is the same rule meeting a better stretch, not the change making it better. The filters do pick better coins than plain A (A +0.2% on 52 since 17:45). (Small correction at this rebuild: the 00:18 answer said 17:45 "is when AS was created"; AS was created at 16:35 UK as socials-only and 17:45 is when it became the standard set.)
 - 21 Oct 00:25 / 00:27 UK: asked for a per-book memory so that "when I talk about coin A … you refer to that first and then the fresh data" — this file is that memory; read it before any AS analysis.
+- 21 Oct 00:56 UK: asked to work AS first, on the history plus every coin since the 17:45 change, and how to improve it.
 - No reply yet to the AS proposals below.
 
 ## Open items
-- Awaiting go (21 Oct 00:01–00:18 UK): (1) an AS real-quote book in the executor at 0.1 SOL (shadow: quotes only, nothing bought) to measure AS's own fill gap; real money at 0.05 SOL once it has 30 real-quote trades in profit. (2) Variant lines on the AS box, testing forward without changing AS: "+ creator bought < 0.9 SOL", "+ ≥ 1 sniper", "+ MC ≥ $46K", "+ ≤ 5 copycats". (3) Skip any coin whose market cap does not match price × 1 billion tokens (the Pump.fun case) — applies to every book. (4) Record the bot's crash reason and show it on the page (crash ~23:53 UK 20 Oct; "up 14m, 32 restarts in 24 h").
+- Awaiting go (21 Oct 00:01–00:18 UK): (1) an AS real-quote book in the executor at 0.1 SOL (shadow: quotes only, nothing bought) to measure AS's own fill gap; real money at 0.05 SOL once it has 30 real-quote trades in profit. (2) Variant lines on the AS box, testing forward without changing AS — revised 21 Oct 01:00 UK to "+ ≥ 1 sniper" and "+ MC ≥ $46K" (creator < 0.9 SOL and ≤ 5 copycats dropped, see Ideas tested). (2b) Record the sniper count for every coin (blank on 58% of AS rows), so the sniper rule can be judged. (3) Skip any coin whose market cap does not match price × 1 billion tokens (the Pump.fun case) — applies to every book. (4) Record the bot's crash reason and show it on the page (crash ~23:53 UK 20 Oct; "up 14m, 32 restarts in 24 h").
 - Plan context: at 23:32 UK AS was named the best candidate to go live first, ahead of GR (GR failed its 40-trade real-quote test the same night).
 - Operator-fingerprint contamination: the chat's AS figures (78 / 83 trades, the 69-trade back-test, the loser-pattern tests and the 17-coin real-fill check) include 5 operator-look coins that the page excludes (abcd.csv has no bundle_sol; `full.py`'s check only had launches.csv's last 24 h). Without them: 78 trades +11.5%, before 17:45 +8.8% on 64. Future analyses should join on mint to the tokens table / full launches data, or at least drop bundle_wallets = 10 with bundle 37–41% and dev buy < 0.2.
 - `snipers_n` is blank on most AS rows — any sniper rule needs the blanks handled (unknown ≠ 0).

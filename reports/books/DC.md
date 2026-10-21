@@ -12,7 +12,7 @@ Not working yet: the back-test edge (+17.6% on 40) has not shown up on new trade
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 00:09 UK; D, copycat of a $72K+ coin. Built by reports/books/numbers.py._
+_Data to 21 Oct 00:59 UK; D, copycat of a $72K+ coin. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
@@ -20,8 +20,8 @@ _Data to 21 Oct 00:09 UK; D, copycat of a $72K+ coin. Built by reports/books/num
 | before the change (20 Oct 16:00 UK) — back-test | 40 | +17.6% | +10.9% | 65% | 30% | +0.66 |
 | since the change — the real test | 4 | -32.2% | -53.4% | 25% | 75% | -0.13 |
 | last 24 h | 22 | -1.8% | -5.1% | 55% | 41% | -0.06 |
-| last 12 h | 8 | -8.5% | -18.6% | 50% | 50% | -0.08 |
-| last 6 h | 2 | -54.5% | -57.6% | 0% | 100% | -0.11 |
+| last 12 h | 6 | -4.4% | -17.7% | 50% | 50% | -0.03 |
+| last 6 h | 1 | -51.4% | -51.4% | 0% | 100% | -0.05 |
 <!-- /NUMBERS -->
 
 ## Change history
