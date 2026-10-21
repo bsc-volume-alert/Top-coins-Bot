@@ -13,6 +13,7 @@ export const CFG = {
   SAMPLE_1_IN: n("FOMO_SAMPLE_1_IN", 20),         // 1-in-N of ordinary firehose trades get the buyer wallet decoded
   TOP_N_FULL: n("FOMO_TOP_N_FULL", 30),           // coins in the 1-h top N get every buyer decoded (exact unique-buyer counts)
   PORT: n("FOMO_PORT", 8789),
+  PUBLIC_PORT: n("FOMO_PUBLIC_PORT", 8790), PUBLIC_KEY: s("FOMO_KEY", "fomo"), // the watcher's own front door: http://<box>:8790/?key=<FOMO_KEY>
   DB_PATH: s("FOMO_DB_PATH", "/root/tracker/data/fomo.db"),
   RPC_URLS: [
     ...(s("HELIUS_API_KEY", "") ? [`https://mainnet.helius-rpc.com/?api-key=${s("HELIUS_API_KEY")}`] : []),
