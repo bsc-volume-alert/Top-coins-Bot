@@ -65,6 +65,7 @@ if (!ovr.m042) { for (const k of ["small", "crowd", "copy", "famous"]) if (S.boo
 if (!ovr.m045) { if (S.books.clean) S.books.clean.mode = "off"; ovr.m045 = true; S.mig039 = true; } // v0.4.7 one-time: S4 (clean) shadow off - the rule is being replaced; 217 real-quote legs -1.085 SOL (owner, 21 Oct 10:25 UK)
 if (!ovr.m044) { if (!S.books.asoc) S.books.asoc = { mode: "shadow", stake: 0.1 }; else { S.books.asoc.mode = "shadow"; S.books.asoc.stake = 0.1; } ovr.m044 = true; S.mig039 = true; } // v0.4.5 one-time: AS into shadow at 0.1 SOL (owner, 21 Oct 01:19 UK)
 if (!ovr.m043) { if (S.books.sn7b) S.books.sn7b.mode = "off"; ovr.m043 = true; S.mig039 = true; } // v0.4.3 one-time: S7b back to paper (41 shadow legs -0.553 SOL, win 20%; owner, 20 Oct 15:29 UK)
+if (!ovr.m048) { S.books.gr2 = { ...(S.books.gr2 || {}), mode: "shadow", stake: 0.25 }; ovr.m048 = true; S.mig039 = true; } // v0.4.9b: m047 left the loader default of 0.05 in place when the book already existed; GR2 shadow is 0.25 like GR
 if (!ovr.m047) { if (!S.books.gr2) S.books.gr2 = { mode: "shadow", stake: 0.25 }; else S.books.gr2.mode = "shadow"; ovr.m047 = true; S.mig039 = true; } // v0.4.9 one-time (owner go 21 Oct 16:44 UK): GR2 into shadow at 0.25 beside GR
 if (!ovr.m046) { if (!S.books.bl) S.books.bl = { mode: "shadow", stake: 0.05 }; else S.books.bl.mode = "shadow"; for (const k of ["confirm", "op"]) if (S.books[k]) S.books[k].mode = "off"; if (S.books.asoc) S.books.asoc.stake = 0.1; ovr.m046 = true; S.mig039 = true; } // v0.4.8 one-time (owner go 21 Oct 13:50 UK): BL into shadow at 0.05; A5 and S10 off; AS back to 0.1 SOL (the 0.5 quoting was unintended)
 const modeOf = (book) => S.books[book]?.mode || "off";
@@ -86,7 +87,7 @@ const selling = new Set();       // legKeys with a sell in progress
 let housekeepingBusy = false;
 const fallbackMin = (exit) => (exit === "flow4" || exit === "tsl40" ? CFG.FALLBACK_SELL_MIN_FLOW4 : exit === "h3" ? 5 : CFG.FALLBACK_SELL_MIN_H5); // v0.4.8: a BL trail leg may hold up to 6 h, so it gets the runner's fallback // v0.4.2: GR sells at 3 min - by 5 regardless
 const feedLagAvg = () => (S.lags.length ? S.lags.reduce((a, b) => a + b, 0) / S.lags.length : 0);
-const saveOvr = () => { try { writeFileSync(OVR, JSON.stringify({ mode: S.mode, stake: S.stake, exit: S.exit, strategy: S.strategy, books: S.books, m039: true, m040: true, m041: true, m042: true, m043: true, m044: true, m045: true, m046: true, m047: true })); } catch {} };
+const saveOvr = () => { try { writeFileSync(OVR, JSON.stringify({ mode: S.mode, stake: S.stake, exit: S.exit, strategy: S.strategy, books: S.books, m039: true, m040: true, m041: true, m042: true, m043: true, m044: true, m045: true, m046: true, m047: true, m048: true })); } catch {} };
 if (S.mig039) { syncMode(); saveOvr(); }
 
 // ---- Telegram (send only; commands arrive through the tracker, which owns the bot's polling) ----
