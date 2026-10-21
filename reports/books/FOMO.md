@@ -62,6 +62,7 @@ No data yet. Build pending the owner's "go" on the list above (written 21 Oct 16
 
 ## Change history
 - 21 Oct 2026 16:45 UK — notes created; stage-1 change list written; facts above found (signer address, 26K trades/h, cope.capital API shape).
+- 21 Oct 2026 16:41 UK — **cope.capital is dead:** `api.cope.capital` returns NXDOMAIN (Cloudflare DNS, Status 3) from the tracker box; register and leaderboard unreachable. The endpoint list above is from a third-party skill page and is kept for the record only. Stage 1 runs with no third-party source: the "top wallets" list is built from our own decoded flow and scoring; theses wait for a source (fomoapi.io, paid, is the only other one seen — unverified). `fomo/src/cope.mjs` stays a stub behind `COPE_KEY`.
 
 ## Ideas tested
 - (none yet)
@@ -72,8 +73,8 @@ No data yet. Build pending the owner's "go" on the list above (written 21 Oct 16
 - 21 Oct 16:17 UK: "let's begin … finalise as soon as possible."
 
 ## Open items
-- Owner: `free -m` and `pm2 status` from the tracker box (headroom check).
-- Owner: handle list (or "top 50" from the cope leaderboard); `COPE_KEY` set in `/root/tracker/.env` on the box.
+- Done 16:30 UK: `free -m` 3,915 MB total, 2,851 available; tracker 511 MB, executor 124 MB — fomo fits. Tracker shows 753 restarts, executor 44 (check the logs for crashes once fomo is up).
+- Owner: any fomo handles he rates (typed from the app); their wallets get matched from the flow. No cope key possible (NXDOMAIN, 16:41 UK).
 - Owner: "go" on the stage-1 list.
 - Day 1: measure whether the signer stream on Helius is billed per notification; measure the public-WS drop rate; set `FOMO_WS` accordingly.
 - Day 1: confirm the DFlow route legs decode cleanly from logs (multi-leg routes, "Log truncated" on big transactions); record the share that needed `getTransaction`.
