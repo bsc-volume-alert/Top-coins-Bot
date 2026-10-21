@@ -132,6 +132,7 @@ Costs on the bonding curve are about 10% a round trip (1% fee each way, slippage
 | x_h2t40 | −40% stop until 2x; at 2x sell half; the rest rides on a 40% trail from the peak |
 | x_split | −40% stop until the 2-min mark; at 2 min: below 0.9 → out; at or above 1.2x → ride a 40% trail from the peak (cap 4x); in between → half out at 1.5x, the rest on the trail |
 | x_tsl40 | 40% trailing stop from the peak (tsl60 / tsl80 = 60% / 80%) |
+| x_devout | creator-sold-out mark (S8 / GR rows, from 21 Oct 13:50 UK; record only, no book sells on it): price ÷ entry at the first tick after entry (checked at most every 5 s, on trades) when the creator wallet's ledger balance is 0 after it held tokens. Blank = never sold out while the position was open, launch not seen (no ledger), or the creator never bought. A creator already out before the entry gives ~1.0 at the first tick |
 | x_flow | the flow rule without the 4x cap |
 | x_time | the hold-limit close |
 | ex_{rule}_t | seconds after entry at which that rule FIRED (rules: flow4, h5, h3, h15, h5f14, t15s40, t2s40, h2t40, split, tsl40, flow, tsl60, tsl80) |
@@ -254,3 +255,9 @@ For any rule R on any row: `ex_R_t` says when it fired, `ex_R_x` the multiple at
 ## v0.18.175 / executor v0.4.7 (21 Oct 10:28 UK) — S4 revised; old S4 shadow off
 - Owner, 21 Oct 10:25 UK: revise S4 on the statistics and see if it works. **S4 (page box `s4`)** = S4's recorded trades (`sn4`: clean launch — bundle under 5%, creator bought 0.2–3 SOL, 10+ outside buyers and 5+ SOL within 15 s) filtered on the page: the coin has socials (`tokens.has_socials` = 1), the creator has never launched before (`early_json.ctx.cr.n` = 0) and the name is original (`ctx.cc.n24h` = 0). Curve costs, lateFix, 5-min sale. Back-test (19 Oct 13:10 – 21 Oct 10:28 UK): 32 trades +25.7% a trade (without best +9.7%), 41% won, 5 big winners vs −16.4% for the 204 it drops — in sample; judged from 10:28 UK (`CHG_S4`), at about 60 trades.
 - **Executor book `clean` (old S4) switched OFF** (migration m045): 217 real-quote legs −1.085 SOL. Its box leaves the page (hidden while off). The tracker still records `sn4` rows.
+
+## v0.18.176 (21 Oct 13:50 UK) — off-page books switched off; K's exit and the creator-sold-out mark exported
+- **Switched off** (no new paper positions; open ones close normally; tables and code kept; `OFFPAGE_BOOKS=1` re-enables): `early`, `secondwave`, `confirm` (the old curve confirmation, not A5), `copy` (watched wallets, not S3), `climber`, `wave2`, `revival`, `gradrun`, `gradrec`, `slow`, `momfast`, `momdip`, `momre`, `momconf`, and the non-core `momentum` trigger (burst / re-entry / MC ≥ $100K). Still running: the core momentum trigger (E / E2, `strategy = momentum AND core = 1`), `grad` (every graduation), `grf`, `k`, `pg`, `rev`, the P5 books, the S books, `mom60` / `mom80`, `copycreator`, P6, P7.
+- **others.csv** now carries `x_h2t40` (K's headline exit) and `x_devout`; **abcd.csv** carries `x_devout`.
+- **`x_devout`** (new column on `paper_trades`, S8 and GR rows only): see the exits table.
+

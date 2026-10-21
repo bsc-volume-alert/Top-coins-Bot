@@ -16,7 +16,7 @@ const r2 = (x, d = 2) => (x == null ? null : +Number(x).toFixed(d));
 const mode = process.argv[2] || "launches";
 if (mode === "others") { // v0.18.148: every paper strategy the website no longer shows (climber, wave2, grad*, revival, slow, copycreator, momdip, momconf, mom2m, core momentum, P6, P7 …) since the price fix — the study and the owner asked for "everything in the background"
   const FROM_FIX = Math.floor(Date.UTC(2026, 9, 18, 19, 25) / 1000);
-  const cols = ["id", "strategy", "name", "mint", "entry_ts", "entry_mc", "venue", "closed", "exit_reason", "peak_mult", "trigger_kind", "age_s", "buyers_entry", "vol5m_usd", "bundle_pct", "tier", "factory", "has_socials", "x_tp", "x_tp15", "x_tsl40", "x_tsl60", "x_t15s40", "x_t2s40", "x_flow4", "x_h5", "x_h3", "x_h15", "x_time", "core", "invalid", "crashloop"];
+  const cols = ["id", "strategy", "name", "mint", "entry_ts", "entry_mc", "venue", "closed", "exit_reason", "peak_mult", "trigger_kind", "age_s", "buyers_entry", "vol5m_usd", "bundle_pct", "tier", "factory", "has_socials", "x_tp", "x_tp15", "x_tsl40", "x_h2t40", "x_tsl60", "x_t15s40", "x_t2s40", "x_flow4", "x_h5", "x_h3", "x_h15", "x_time", "x_devout", "core", "invalid", "crashloop"]; // v0.18.176 (owner go 21 Oct 13:50 UK): + x_h2t40 (K's headline exit) and x_devout (creator-sold-out mark)
   let have = []; try { have = db.prepare("PRAGMA table_info(paper_trades)").all().map((c) => c.name); } catch {}
   const use = cols.filter((c) => have.includes(c));
   const rows = db.prepare(`SELECT ${use.join(", ")} FROM paper_trades WHERE entry_ts >= ? AND strategy NOT IN ('p5e30','p5w30','p5e50','p5e80','p5c5','p5c10','grf','pg') AND strategy NOT LIKE 'sn%' AND COALESCE(invalid,0)=0 ORDER BY entry_ts`).all(FROM_FIX);

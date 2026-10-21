@@ -171,6 +171,7 @@ for (const sql of [
   "CREATE INDEX IF NOT EXISTS tokens_symbol ON tokens(symbol, create_ts)",
   "CREATE INDEX IF NOT EXISTS wb_wallet ON wallet_buys(wallet)", // v0.18.119: a wallet's record at the moment it buys (Project S)
   "CREATE INDEX IF NOT EXISTS tokens_cts ON tokens(create_ts)", // v0.18.121: launches by time (smart-wallet harvest, heat)
+  "ALTER TABLE paper_trades ADD COLUMN x_devout REAL", // v0.18.176 creator-sold-out exit (record only): the multiple when the creator's ledger balance first hit 0 after entry (S8 / GR)
 ]) { try { db.exec(sql); } catch {} }
 export const q = {
   insToken: db.prepare(`INSERT OR IGNORE INTO tokens (mint,name,symbol,uri,creator,bonding_curve,create_slot,create_ts,create_sig) VALUES (?,?,?,?,?,?,?,?,?)`),
@@ -300,4 +301,5 @@ export const q = {
   listWatch: db.prepare(`SELECT wallet,label,source FROM watch_wallets ORDER BY added_ts`),
   openPapers: db.prepare(`SELECT COUNT(*) FROM paper_trades WHERE closed=0`).pluck(),
   closedSince: db.prepare(`SELECT COUNT(*) c, AVG(pnl_pct) p FROM paper_trades WHERE closed=1 AND exit_ts>=?`),
+  setDevOut: db.prepare(`UPDATE paper_trades SET x_devout=? WHERE id=?`), getDevOut: db.prepare(`SELECT x_devout FROM paper_trades WHERE id=?`).pluck(), // v0.18.176 creator-sold-out exit (record only)
 };

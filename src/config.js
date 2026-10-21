@@ -220,3 +220,7 @@ Object.assign(CFG, {
 });
 // --- v0.14: runner autopsy ---
 Object.assign(CFG, { RUNNER_MIN_MC: n("RUNNER_MIN_MC", 1_000_000) });
+// v0.18.176 (owner go 21 Oct 13:50 UK): the old off-page books are switched off — none of these kinds opens a NEW paper position (open ones still close normally; every table and
+// code path stays). "momentum" here = the non-core volume trigger (burst / re-entry / MC ≥ MOM_CORE_MC); the core trigger (book E / E2, strategy momentum + core=1) keeps running.
+// OFFPAGE_BOOKS=1 re-enables them all.
+export const OFF_KINDS = new Set(s("OFFPAGE_BOOKS", "0") === "1" ? [] : ["early", "wave2", "secondwave", "copy", "confirm", "climber", "revival", "gradrec", "gradrun", "slow", "momentum", "momfast", "momdip", "momre", "momconf"]);

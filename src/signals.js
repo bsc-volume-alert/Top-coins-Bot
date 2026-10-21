@@ -1,5 +1,5 @@
 // v0.3: cluster tracking, hand-off detection, early-inflow paper entries, parallel paper exits.
-import { CFG } from "./config.js";
+import { CFG, OFF_KINDS } from "./config.js"; // v0.18.176 OFF_KINDS: early / secondwave / confirm switched off
 import { db, q } from "./db.js";
 import { on, esc, fmt, links, live } from "./launch-monitor.js";
 const liveToken = (m) => live.get(m);
@@ -88,7 +88,7 @@ function afterTrade(t, s, tr, isCluster) {
   // entry trigger (early)
   if (!s.pos && t.finalized && !t.graduated && now - t.ts <= CFG.ENTRY_WINDOW_MIN * 60) {
     const wallets = new Set(s.win.map((x) => x.w)).size;
-    if (sol60 >= CFG.INFLOW_SOL && wallets >= CFG.INFLOW_WALLETS) openPaper(t, s, tr, sol60, wallets, "early");
+    if (sol60 >= CFG.INFLOW_SOL && wallets >= CFG.INFLOW_WALLETS && !OFF_KINDS.has("early")) openPaper(t, s, tr, sol60, wallets, "early"); // v0.18.176 (owner go 21 Oct 13:50 UK): early book off
   }
   if (s.pos) updatePaper(t, s, tr);
   if (s.confPos && !s.confPos.closed && s.confPos !== s.pos) { const keep = s.pos; s.pos = s.confPos; updatePaper(t, s, tr); s.pos = keep; }
@@ -104,7 +104,7 @@ function afterTrade(t, s, tr, isCluster) {
       const fresh = s.win.filter((x) => x.isBuy !== false && !s.seenBuyers.has(x.w)).map((x) => x.w);
       const wallets = new Set(fresh).size;
       if (sol60 >= CFG.SW_INFLOW_SOL && wallets >= CFG.SW_INFLOW_WALLETS && (!s.pos || s.pos.closed)) {
-        s.swDone = true; openPaper(t, s, tr, sol60, wallets, "secondwave");
+        s.swDone = true; if (!OFF_KINDS.has("secondwave")) openPaper(t, s, tr, sol60, wallets, "secondwave"); // v0.18.176 (owner go 21 Oct 13:50 UK): secondwave book off (the decision is still made once)
       }
     }
     if (!faded && s.fadeSince && !quietLong) s.fadeSince = 0; // bounce too soon, reset
@@ -119,10 +119,11 @@ function afterTrade(t, s, tr, isCluster) {
       const buyersNow = s.oBuyers.size + s.cluster.size;
       if (t.lastMc >= CFG.CONF_MC_MULT * s.rawEntryMc && ratio >= CFG.CONF_BS_RATIO && buyersNow - s.buyersAtRaw >= CFG.CONF_BUYERS_GROW) {
         s.confDone = true;
+        if (!OFF_KINDS.has("confirm")) { // v0.18.176 (owner go 21 Oct 13:50 UK): the old curve confirmation book off (not executor A5 / p5c5)
         const prev = s.pos; // raw position keeps running; confirmation is a separate trade
         const sol60 = s.win.reduce((a, x) => a + x.sol, 0), wallets = new Set(s.win.map((x) => x.w)).size;
         openPaper(t, s, tr, sol60, wallets, "confirm");
-        s.confPos = s.pos; s.pos = prev && !prev.closed ? prev : s.pos; // keep raw as primary for updates; confirm tracked via confPos
+        s.confPos = s.pos; s.pos = prev && !prev.closed ? prev : s.pos; } // keep raw as primary for updates; confirm tracked via confPos
       }
     }
   }

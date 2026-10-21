@@ -1,5 +1,5 @@
 // Copy strategy: paper-enter when a watched wallet buys; track on both feeds; same parallel exits.
-import { CFG } from "./config.js";
+import { CFG, OFF_KINDS } from "./config.js"; // v0.18.176 OFF_KINDS: the off-page books open nothing new
 import { db, q } from "./db.js";
 import { on } from "./launch-monitor.js";
 import { onSwap } from "./pumpswap.js";
@@ -15,7 +15,7 @@ import { clusterSnap } from "./signals.js";
 import { dexPrice } from "./sweeper.js"; // v0.18.36
 import { gmgnFor, gmgnSummary, gmgnEntry } from "./gmgn.js"; // v0.18.52 · v0.18.56 gmgnEntry
 import { feeInfo, feeLine } from "./fees.js";
-import { recordHolders, holdersLine } from "./holders.js";
+import { recordHolders, holdersLine, ledgerBal, LEDGER_DUST } from "./holders.js"; // v0.18.176 ledgerBal: creator-sold-out exit (record only)
 import { execSend, noteFeed } from "./execlink.js"; // v0.18.90 → executor (live buy/sell bot)
 import { startTrace, traceTick, noteClose, sweepTraces, noteExits } from "./p5trace.js"; // v0.18.113 P5 data set
 
@@ -55,20 +55,22 @@ export function openCopy(kind, who, mint, name, symbol, price, mc, ts, note) {
     pos.wall0 = note.wall0; pos.fs = { lag: note.blockTs ? Math.round(note.wall0 - note.blockTs * 1000) : null, open: Date.now() - note.wall0 }; try { q.setFirstSecs.run(JSON.stringify(pos.fs), pos.id); } catch {}
     const fpm = (() => { try { const m = q.tokenMeta.get(mint); return !!m && m.bundle_wallets === 10 && m.bundle_pct >= 37 && m.bundle_pct <= 41 && m.bundle_sol >= 22 && m.bundle_sol <= 28 && (m.dev_buy_sol ?? 0) < 0.2; } catch { return false; } })(); // v0.18.164 (owner, 20 Oct 19:07 UK): the 10-wallet operator's coins are a pump-and-dump (median $218K at 60 s, $4K at 1 h) - no book buys them for real except S10
     if (fpm && kind !== "sn10") pos.noExec = true;
-    if (!pos.noExec) execSend({ type: "trigger", id: Number(pos.id), strategy: kind, mint, name, price, mc, ts, wall0: note.wall0, lagMs: pos.fs.lag, venue: note.venue || null, pass: note.pass !== false, skipWhy: note.skipWhy || null, bundle: note.bundle ?? null, wal60: note.wal60 ?? null, bundleWallets: note.bundleWallets ?? null, asStd: note.asStd ?? null }); // v0.18.172 + asStd (executor book AS) · v0.18.124 + bundleWallets (book F) // v0.18.90 → executor (pass = the website's P5 filters)
+    pos.bl = blOf(kind, note.bundle, note.bundleWallets, mc); // v0.18.176 BL (owner go 21 Oct 13:50 UK): the executor's bundle-launch book takes only S8 fires with this flag
+    if (!pos.noExec) execSend({ type: "trigger", id: Number(pos.id), strategy: kind, mint, name, price, mc, ts, wall0: note.wall0, lagMs: pos.fs.lag, venue: note.venue || null, pass: note.pass !== false, skipWhy: note.skipWhy || null, bundle: note.bundle ?? null, wal60: note.wal60 ?? null, bundleWallets: note.bundleWallets ?? null, asStd: note.asStd ?? null, bl: pos.bl }); // v0.18.176 + bl (executor book BL) · v0.18.172 + asStd (executor book AS) · v0.18.124 + bundleWallets (book F) // v0.18.90 → executor (pass = the website's P5 filters)
     try { startTrace(pos.id, mint, ts, price, note.preBuyers || null, note.creator || null); } catch (e) { console.error("[p5trace]", e.message); } } // v0.18.113: the data set's after-entry marks, taken or skipped alike
   const arr = P.get(mint) || []; arr.push(pos); P.set(mint, arr); cp.entries++;
   afterWatch(mint, pos.id, price, mc, null, null, null, ts);
   setTimeout(() => close(mint, pos, "time"), CFG.MOM_MAX_HOLD_MIN * 60_000);
   return pos;
 }
-onCopy(({ wallet, label, mint, name, symbol, price, mc, ts }) => openCopy("copy", label || wallet.slice(0, 6), mint, name, symbol, price, mc, ts));
-onClimb((c) => { if (c.price > 0) openCopy("climber", `${Math.round(c.cp / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, c); });
-onWave2((c) => { if (c.price > 0) openCopy("wave2", `${Math.round(c.cp / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, buyers: c.buyers, bs: c.bs }); });
-onGradRunner((c) => { if (c.price > 0 && c.mc >= 20000) openCopy("gradrun", `${Math.round(c.sinceGrad / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, ageS: c.age }); });
-onGradRecovery((c) => { if (c.price > 0) openCopy("gradrec", `${Math.round(c.age / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, ageS: c.age, buyers: c.new5 }); });
-onSlowBuild((c) => { if (c.price > 0) openCopy("slow", `${Math.round(c.age / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, ageS: c.age, buyers: c.buyers }); });
-onRevival((c) => { if (c.price > 0) openCopy("revival", `${Math.round(c.age / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, buyers: c.new5 }); });
+// v0.18.176 (owner go 21 Oct 13:50 UK): copy / climber / wave2 / gradrun / gradrec / slow / revival are off-page books switched off — each listener opens nothing while its kind is in OFF_KINDS (open positions still close normally)
+onCopy(({ wallet, label, mint, name, symbol, price, mc, ts }) => !OFF_KINDS.has("copy") && openCopy("copy", label || wallet.slice(0, 6), mint, name, symbol, price, mc, ts));
+onClimb((c) => { if (c.price > 0 && !OFF_KINDS.has("climber")) openCopy("climber", `${Math.round(c.cp / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, c); });
+onWave2((c) => { if (c.price > 0 && !OFF_KINDS.has("wave2")) openCopy("wave2", `${Math.round(c.cp / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, buyers: c.buyers, bs: c.bs }); });
+onGradRunner((c) => { if (c.price > 0 && c.mc >= 20000 && !OFF_KINDS.has("gradrun")) openCopy("gradrun", `${Math.round(c.sinceGrad / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, ageS: c.age }); });
+onGradRecovery((c) => { if (c.price > 0 && !OFF_KINDS.has("gradrec")) openCopy("gradrec", `${Math.round(c.age / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, ageS: c.age, buyers: c.new5 }); });
+onSlowBuild((c) => { if (c.price > 0 && !OFF_KINDS.has("slow")) openCopy("slow", `${Math.round(c.age / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, ageS: c.age, buyers: c.buyers }); });
+onRevival((c) => { if (c.price > 0 && !OFF_KINDS.has("revival")) openCopy("revival", `${Math.round(c.age / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, buyers: c.new5 }); });
 onCreatorLaunch(({ creator, label, mint, name, symbol, price, mc, ts }) => { if (price > 0) openCopy("copycreator", label || creator.slice(0, 6), mint, name, symbol, price, mc, ts); });
 // v0.15: graduation strategy — paper-enter every graduation we watched from launch, with the +5m snapshot as features (alert only when buyers >= GRAD_ALERT_BUYERS)
 on("graduated", (t, tr) => {
@@ -82,6 +84,7 @@ on("graduated", (t, tr) => {
   if (L.buyers <= GR.MAX_BUYERS && ageS <= GR.MAX_AGE_S && ageS >= GR.MIN_AGE_S) openCopy("grf", `${L.buyers}b ${ageS}s`, t.mint, t.name || t.mint.slice(0, 8), t.symbol || "", tr.price, t.lastMc, ts,
     { ageS, buyers: L.buyers, mc5: cp5?.mc ?? null, buyers5: cp5?.buyers ?? null, b5: cp5?.b ?? null, s5: cp5?.sl ?? null, maxBurst: L.maxBurst, bs: cp5 && cp5.sl > 0 ? cp5.b / cp5.sl : null, wall0: Date.now(), blockTs: ts, venue: "pumpswap", pass: true });
 });
+export const blOf = (kind, bundlePct, bundleWallets, mc) => kind === "sn8" && bundlePct >= 70 && bundlePct < 80 && bundleWallets >= 4 && bundleWallets <= 10 && mc >= 25000; // v0.18.176 BL (owner go 21 Oct 13:50 UK): a launch whose bundle bought 70-80% of the supply over 4-10 wallets, first trade at $25K+ MC - back-test 101 trades +32.9% a trade on paper at a 40% trail from the peak
 export const GR = { MAX_BUYERS: 155, MAX_AGE_S: 185, MIN_AGE_S: 10 }; // v0.18.174 (owner go 21 Oct 09:40 UK): under 156 buyers (was 272) - real-quote legs < 156 buyers +16.5% a leg on 52 vs 156+ -9.8% on 11; paper 10-185 s < 156 +37.1% on 92 vs 156-272 -4.4% on 49 // v0.18.153 (owner, 20 Oct 07:27 UK): skip coins that graduate inside their own launch (Leonida, MONUMENTAL EGO: paper took the curve price, the real buy paid +272% / +194%)
 
 // v0.18.146: how far behind the chain the tracker is — newest block time seen on any trade vs the wall clock (normally 1–5 s: block times are whole seconds and lag
@@ -104,8 +107,9 @@ function tick(mint, price, mc, sol, isBuy, ts, wallet = null, quiet = false) {
     if (p.wall0) { try { noteExits(p.id, mint, x, ts - p.entryTs); } catch {} } // v0.18.118: the data set's exit timings
     if (x.s15be != null && p.e.s15Saved !== x.s15be) { p.e.s15Saved = x.s15be; try { q.setS15.run(x.s15be, p.id); } catch {} } // v0.18.49
     { const kh = h5Key(x); if (p.e.h5Saved !== kh) { p.e.h5Saved = kh; try { q.setH5.run(x.h5 ?? null, x.h5f12 ?? null, x.h5f14 ?? null, x.h3 ?? null, x.h15 ?? null, x.h5fast ?? null, p.id); q.setH3L.run(x.h3l ?? null, x.t2n30 ?? null, p.id); } catch {} } } // v0.18.81
-    if (p.wall0 && !p.noExec) { if (p.kind === "grf" && x.h3 != null && !p.e.h3Sent) { p.e.h3Sent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "h3", mult: x.h3, why: x.h3why || null, ts }); } if (x.h5 != null && !p.e.h5Sent) { p.e.h5Sent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "h5", mult: x.h5, why: x.h5why || null, ts }); } if (x.flow4 != null && !p.e.flow4Sent) { p.e.flow4Sent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "flow4", mult: x.flow4, why: x.flow4why || null, ts }); } } // v0.18.90 → executor
+    if (p.wall0 && !p.noExec) { if (p.kind === "grf" && x.h3 != null && !p.e.h3Sent) { p.e.h3Sent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "h3", mult: x.h3, why: x.h3why || null, ts }); } if (x.h5 != null && !p.e.h5Sent) { p.e.h5Sent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "h5", mult: x.h5, why: x.h5why || null, ts }); } if (x.flow4 != null && !p.e.flow4Sent) { p.e.flow4Sent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "flow4", mult: x.flow4, why: x.flow4why || null, ts }); } if (p.bl && x.tsl40 != null && !p.e.tslSent) { p.e.tslSent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "tsl40", mult: x.tsl40, why: "trail", ts }); } } // v0.18.176 BL: tsl40 (40% below the running peak) → executor (owner go 21 Oct 13:50 UK) // v0.18.90 → executor
     if (x.h2t40 != null && p.e.h2Saved !== x.h2t40) { p.e.h2Saved = x.h2t40; try { q.setH2.run(x.h2t40, p.id); } catch {} } // v0.18.35
+    if (p.dv !== false && (p.kind === "sn8" || p.kind === "grf") && !quiet && (ts - (p.dvTs || 0) >= 5 || (wallet && wallet === p.dv?.cr))) devOutStep(mint, p, price, ts); // v0.18.176 creator-sold-out exit (record only): every 5 s, or on the creator's own trade
     if (x.flow4ff != null && p.e.ffSaved !== x.flow4ff) { p.e.ffSaved = x.flow4ff; try { q.setFlow4ff.run(x.flow4ff, p.id); } catch {} }
     if ((x.dead != null || x.split != null) && p.e.deadSaved !== `${x.dead}|${x.split}`) { p.e.deadSaved = `${x.dead}|${x.split}`; try { q.setDead.run(x.dead ?? null, p3dFinal(p.e, x, r.mult), p.id); } catch {} } // v0.18.30
     { const ks = `${x.split}|${p.e.splitBranch}`; if (p.e.splitSaved !== ks) { p.e.splitSaved = ks; try { q.setSplit.run(x.split ?? null, p.e.splitBranch ?? null, p.id); } catch {} } } // v0.18.22
@@ -126,8 +130,21 @@ setInterval(() => { try { sweepTraces(); } catch {} }, 5000); // v0.18.113: mark
 // is stepped at its last price on the clock — the sale is booked at the price a seller would have met, and the exit message goes out on time.
 setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [mint, arr] of P) { const p = arr.find((x) => !x.closed && x.e?.x?.h5 == null && now - x.entryTs >= 300 && x.lastTs > 0 && now - x.lastTs >= 5 && x.lastPx > 0); if (p) { try { tick(mint, p.lastPx, p.lastMc, 0, true, now, null, true); } catch (e) { console.error("[quiet tick]", e.message); } } } }, 5000); // v0.18.146: x.lastTs > 0 — a position restored after a restart has seen no trade yet, so its last price is only the entry price
 
+// v0.18.176 creator-sold-out exit (record only, S8 / GR): x_devout = price ÷ entry at the first tick (checked at most once every 5 s per position, on trades only) when the creator wallet's
+// ledger balance is 0 after it has held tokens (a launch buy, dev_buy_sol > 0, or a balance seen on the ledger). Null when it never sold out while the position was open, when the launch was
+// not seen (no ledger), or when the creator never bought. Limitation: the ledger is built from the trades the feeds decode — a sell routed through an aggregator that only shows a "tx:" wallet is missed.
+function devOutStep(mint, p, price, ts) {
+  p.dvTs = ts;
+  if (p.dv === undefined) { try { if (p.restored && q.getDevOut.get(p.id) != null) { p.dv = false; return; } const m = q.tokenMeta.get(mint), cr = m?.creator || null; p.dv = cr ? { cr, held: (m.dev_buy_sol || 0) > 0 } : false; } catch { p.dv = false; } }
+  if (!p.dv) return;
+  const b = ledgerBal(mint, p.dv.cr); if (b == null) return;
+  if (b > LEDGER_DUST) { p.dv.held = true; return; }
+  if (!p.dv.held) return;
+  const mult = price / p.e.entry; p.e.x.devout = mult; p.dv = false; try { q.setDevOut.run(mult, p.id); } catch {}
+}
+
 function close(mint, p, reason) {
-  if (p.wall0 && !p.noExec) { try { const cm = (p.lastPx || p.e.entry) / p.e.entry, v = finalExits(p.e, cm); execSend({ type: "close", id: Number(p.id), mint, reason, mult: cm, h5: v.h5 ?? null, flow4: v.flow4 ?? null, h3: p.e.x.h3 ?? cm }); } catch {} } // v0.18.90 → executor (backstop: sell if still held)
+  if (p.wall0 && !p.noExec) { try { const cm = (p.lastPx || p.e.entry) / p.e.entry, v = finalExits(p.e, cm); execSend({ type: "close", id: Number(p.id), mint, reason, mult: cm, h5: v.h5 ?? null, flow4: v.flow4 ?? null, h3: p.e.x.h3 ?? cm, tsl40: v.tsl40 ?? cm }); } catch {} } // v0.18.176 + tsl40 (BL) // v0.18.90 → executor (backstop: sell if still held)
   if (p.closed) return; p.closed = true; cp.closes++; try { noteClose(p.id); } catch {}
   const mult = p.lastPx / p.e.entry, v = finalExits(p.e, mult), peakMult = p.e.peak / p.e.entry, now = Math.floor(Date.now() / 1000);
   q.updMom.run(p.lastMc, peakMult, v.tp, v.tsl40, v.tsl60, v.tsl80, v.half60, v.twophase, v.ladder, v.time, now, p.lastMc, p.lastPx, reason, (v.time - 1) * 100, 1, v.levels, v.m1, v.m1vol, v.volstop, p.id);
@@ -160,8 +177,8 @@ setInterval(async () => {
 
 // v0.18.28: variant positions (tiers, dip, re-entry, copy, wave2, grad…) still open in the database are rebuilt on startup, so a restart
 // never orphans them. Exits already recorded are kept; tracking resumes from the next swap.
-const qOpenCopy = db.prepare(`SELECT id, strategy, mint, name, entry_ts, entry_mc, entry_price, peak_mult, vol_at_entry, trigger_kind, x_tp, x_tp15, x_tsl25, x_tsl40, x_tsl60, x_tsl80, x_half60, x_twophase, x_ladder, x_levels, x_m1, x_m1vol, x_volstop, x_combo, x_h2t40, x_s15be, x_t15s25, x_t15s40, x_t15s60, x_t2s25, x_t2s40, x_t2s60, x_flow, x_flow4, x_flow4ff, x_split, split_branch, dd_pre15, path, t_hit15_s, x_h5, x_h5f12, x_h5f14, x_h3, x_h15, x_h5fast
-  FROM paper_trades WHERE strategy NOT IN ('momentum','early','confirm','secondwave','p6','p7') AND closed=0 AND COALESCE(invalid,0)=0 AND entry_ts > ? ORDER BY entry_ts`);
+const qOpenCopy = db.prepare(`SELECT p.id, p.strategy, p.mint, p.name, p.entry_ts, p.entry_mc, p.entry_price, p.peak_mult, p.vol_at_entry, p.trigger_kind, p.x_tp, p.x_tp15, p.x_tsl25, p.x_tsl40, p.x_tsl60, p.x_tsl80, p.x_half60, p.x_twophase, p.x_ladder, p.x_levels, p.x_m1, p.x_m1vol, p.x_volstop, p.x_combo, p.x_h2t40, p.x_s15be, p.x_t15s25, p.x_t15s40, p.x_t15s60, p.x_t2s25, p.x_t2s40, p.x_t2s60, p.x_flow, p.x_flow4, p.x_flow4ff, p.x_split, p.split_branch, p.dd_pre15, p.path, p.t_hit15_s, p.x_h5, p.x_h5f12, p.x_h5f14, p.x_h3, p.x_h15, p.x_h5fast, t.bundle_pct tb_pct, t.bundle_wallets tb_wallets
+  FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint WHERE p.strategy NOT IN ('momentum','early','confirm','secondwave','p6','p7') AND p.closed=0 AND COALESCE(p.invalid,0)=0 AND p.entry_ts > ? ORDER BY p.entry_ts`); // v0.18.176: + the launch bundle from tokens (paper_trades.bundle_pct is null for copy kinds) so a restored S8 position knows whether it is BL
 export function restoreCopyFromDb() {
   const now = Math.floor(Date.now() / 1000); let n = 0;
   try {
@@ -172,7 +189,8 @@ export function restoreCopyFromDb() {
       e.flowArmed = e.x.tp15 != null; e.ffDone = now - r.entry_ts >= 120; e.splitBranch = r.split_branch && r.split_branch !== "sweep" ? r.split_branch : null; e.splitHalf = r.split_branch === "mid" && pk >= 1.5; e.ddPre15 = r.dd_pre15 ?? null;
       try { e.path = r.path ? JSON.parse(r.path) : {}; } catch { e.path = {}; }
       const pos = { id: r.id, label: (r.trigger_kind || "").split(":").slice(1).join(":") || r.strategy, e, w5: [], closed: false, entryTs: r.entry_ts, lastMc: r.entry_mc, lastPx: r.entry_price, name: r.name, kind: r.strategy, alerted: false, hit15Saved: r.t_hit15_s != null, restored: "db" };
-      if (/^p5[ewc]\d+$/.test(r.strategy) || /^sn(1|3|4|6|6b|7b|9|10)$/.test(r.strategy) || r.strategy === "grf") { pos.wall0 = r.entry_ts * 1000; if (e.x.h3 != null) e.h3Sent = true; if (e.x.h5 != null) e.h5Sent = true; if (e.x.flow4 != null) e.flow4Sent = true; } // v0.18.90: a restored P5 position still tells the executor when its exit fires (rules already fired are not re-sent) // v0.18.146: + A5/F6 (p5c*) and the executor's sniper books — before, a restart cut their sell messages and the executor fell back to its 7-min / 6½-h backstop
+      pos.bl = blOf(r.strategy, r.tb_pct, r.tb_wallets, r.entry_mc); // v0.18.176 BL: recomputed from the launch bundle and the entry MC
+      if (/^p5[ewc]\d+$/.test(r.strategy) || /^sn(1|3|4|6|6b|7b|8|9|10)$/.test(r.strategy) || r.strategy === "grf") { pos.wall0 = r.entry_ts * 1000; if (e.x.h3 != null) e.h3Sent = true; if (e.x.h5 != null) e.h5Sent = true; if (e.x.flow4 != null) e.flow4Sent = true; if (e.x.tsl40 != null) e.tslSent = true; } // v0.18.176: + sn8 (BL) and its tsl40 // v0.18.90: a restored P5 position still tells the executor when its exit fires (rules already fired are not re-sent) // v0.18.146: + A5/F6 (p5c*) and the executor's sniper books — before, a restart cut their sell messages and the executor fell back to its 7-min / 6½-h backstop
       const arr = P.get(r.mint) || []; arr.push(pos); P.set(r.mint, arr);
       setTimeout(() => close(r.mint, pos, "time"), Math.max(5_000, CFG.MOM_MAX_HOLD_MIN * 60_000 - (Date.now() - r.entry_ts * 1000))); n++;
     }

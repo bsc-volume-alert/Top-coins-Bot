@@ -1,5 +1,5 @@
 // v0.5: momentum (volume) strategy on PumpSwap. Rolling 5m/1m USD volume per token → alert + paper trade with parallel exits.
-import { CFG } from "./config.js";
+import { CFG, OFF_KINDS } from "./config.js"; // v0.18.176 OFF_KINDS: the off-page books open nothing new
 import { db, q } from "./db.js";
 import { onSwap, psHeat } from "./pumpswap.js";
 import { solUsdCached, solChange } from "./price.js";
@@ -216,6 +216,7 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
     await tg(`ℹ️ <b>${kind === "burst" ? "BURST" : "VOLUME"} (above paper cap, info only)</b> — ${esc(name || mint.slice(0, 8))} ($${esc(symbol || "?")})\n5m vol <b>$${fmt(v5)}</b> (1m $${fmt(v1)}) · buys ${buys.length} / sells ${sells.length} · $${fmt(buyUsd)} in / $${fmt(sellUsd)} out · ${buyers} buyers\nMC <b>$${fmt(tr.mc)}</b> · ${ageStr0}\n${qLine}\n${socialsLine(soc)}\n${links(mint)}`);
     return;
   }
+  if (OFF_KINDS.has("momentum") && !(kind === "vol5m" && tr.mc < CFG.MOM_CORE_MC && !reentry)) { mom.offSkipped = (mom.offSkipped || 0) + 1; return; } // v0.18.176 (owner go 21 Oct 13:50 UK): the non-core momentum book (burst / re-entry / MC ≥ MOM_CORE_MC) opens nothing new; the core trigger (book E, strategy momentum + core=1) keeps running — same test as `core` below
   const r = q.insMom.run(mint, name || mint.slice(0, 8), symbol || "", now, tr.mc, tr.price, meta?.bundle_pct ?? null, meta?.bundle_sol ?? null, meta?.handoffs ?? null, meta?.tier ?? null, meta?.factory ?? null,
     soc.fetched ? (soc.ok ? 1 : 0) : null, JSON.stringify({ t: soc.twitter, w: soc.website, k: soc.tiktok, g: soc.telegram }), v5, v1, buys.length, sells.length, ageS, reentry, alert ? 1 : 0, tr.mc);
   const pos = { id: r.lastInsertRowid, entry: tr.price, entryMc: tr.mc, entryTs: now, peak: tr.price, x: {}, lad: { s2: false, s3: false }, tp: { half: false, twoHalf: false }, closed: false, msgId: null, alerted: alert, name: name || mint.slice(0, 8), lv: newLevels(), kind };
@@ -287,7 +288,7 @@ function confCheck(mint, s, px, mc, now, venue) {
   if (age > CFG.MOM_CONF_LATE_S) { c.ok = false; c.why = "no price by +" + CFG.MOM_CONF_LATE_S + "s"; conf.late++; }
   else if (c.ratio > CFG.MOM_CONF_MIN) {
     c.ok = true; conf.bought++;
-    try { openCopy("momconf", `${c.ratio.toFixed(2)}x@${age}s`, mint, c.name, c.symbol, px, mc, now, { v5: s.w5.reduce((a, x) => a + x.usd, 0), venue, ageS: (() => { const m = q.tokenMeta.get(mint); return m?.create_ts ? now - m.create_ts : null; })() }); } catch (e) { console.error("[momconf]", e.message); }
+    if (!OFF_KINDS.has("momconf")) try { openCopy("momconf", `${c.ratio.toFixed(2)}x@${age}s`, mint, c.name, c.symbol, px, mc, now, { v5: s.w5.reduce((a, x) => a + x.usd, 0), venue, ageS: (() => { const m = q.tokenMeta.get(mint); return m?.create_ts ? now - m.create_ts : null; })() }); } catch (e) { console.error("[momconf]", e.message); } // v0.18.176 (owner go 21 Oct 13:50 UK): momconf off — the confirmation result (conf_ok / conf_ratio on the core row) is still recorded
   } else { c.ok = false; c.why = `${c.ratio.toFixed(2)}x at +${age}s`; conf.skipped++; }
   try { q.setConf.run(c.ok ? 1 : 0, +c.ratio.toFixed(4), c.parentId); } catch {}
 }
@@ -379,7 +380,7 @@ const A5_MIN = Number(process.env.A5_MIN || 1.02), CONFIRM_MAX_LAG_S = Number(pr
 function dipCheck(mint, s, tr, now) {
   const d = s.dip; if (!d || d.done) return;
   if (now - d.ts > CFG.MOM_DIP_WINDOW_S || tr.price >= d.px * 1.5) { d.done = true; return; }
-  if (tr.price <= d.px * (1 - CFG.MOM_DIP_PCT)) { d.done = true; try { openCopy("momdip", `-${Math.round(CFG.MOM_DIP_PCT * 100)}%`, mint, d.name, d.symbol, tr.price, tr.mc, now, { v5: s.w5.reduce((a, x) => a + x.usd, 0), venue: tr.venue, ageS: (() => { const m = q.tokenMeta.get(mint); return m?.create_ts ? now - m.create_ts : null; })() }); } catch (e) { console.error("[momdip]", e.message); } }
+  if (tr.price <= d.px * (1 - CFG.MOM_DIP_PCT)) { d.done = true; if (!OFF_KINDS.has("momdip")) try { openCopy("momdip", `-${Math.round(CFG.MOM_DIP_PCT * 100)}%`, mint, d.name, d.symbol, tr.price, tr.mc, now, { v5: s.w5.reduce((a, x) => a + x.usd, 0), venue: tr.venue, ageS: (() => { const m = q.tokenMeta.get(mint); return m?.create_ts ? now - m.create_ts : null; })() }); } catch (e) { console.error("[momdip]", e.message); } } // v0.18.176 (owner go 21 Oct 13:50 UK): momdip off
 }
 function updatePos(mint, s, px, now) {
   const p = s.pos; if (!p || p.closed) return;

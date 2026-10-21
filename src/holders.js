@@ -62,6 +62,8 @@ export async function recordHoldersAsync(id, mint, creator = null) {
   return h;
 }
 export const balanceOf = (mint, wallet) => L.get(mint)?.get(wallet) ?? null; // v0.18.19
+export const ledgerBal = (mint, wallet) => { const m = L.get(mint); return m ? Math.max(0, m.get(wallet) || 0) : null; }; // v0.18.176 creator-sold-out exit: null = no ledger (launch not seen / expired); 0 = holds nothing (never bought, sold out, or pruned as sold out)
+export const LEDGER_DUST = DUST; // v0.18.176: the ledger's "holds nothing" line (tokens)
 /** v0.18.113: the ledger's view right now (no RPC, nothing written) — for the P5 data set's holder marks. Null when we did not see the launch. */
 export const holdersNow = (mint, creator = null) => fromLedger(mint, creator || live.get(mint)?.creator || q.tokenMeta.get(mint)?.creator || null);
 /** v0.18.113: holder count for a coin without a ledger — Helius DAS getTokenAccounts, paged (1000 a page, 5 pages max → "5000+"). Budgeted per day. */

@@ -3,7 +3,7 @@
 // a core coin — 5m volume >= VOL5M_USD, buyers outweigh sellers, under the paper cap — and price has reclaimed the exit price,
 // a new paper position is opened (max MOM_RE_MAX per coin, at least MOM_RE_GAP_S apart). Each re-entry carries the full exit set,
 // so the summary shows whether "buy and sell on the retraces" beats entering once.
-import { CFG } from "./config.js";
+import { CFG, OFF_KINDS } from "./config.js"; // v0.18.176 OFF_KINDS: the off-page books open nothing new
 import { q } from "./db.js";
 import { onSwap } from "./pumpswap.js";
 import { solUsdCached } from "./price.js";
@@ -32,6 +32,7 @@ onSwap((tr) => {
   const v5 = w.w5.reduce((a, x) => a + x.usd, 0); if (v5 < CFG.VOL5M_USD) return;
   const bu = w.w5.filter((x) => x.b).reduce((a, x) => a + x.usd, 0), su = v5 - bu; if (su > 0 && bu / su < CFG.MOM_BS_MIN) return;
   if (tr.mc > CFG.MOM_PAPER_MC_CAP || tr.mc <= 0) return;
+  if (OFF_KINDS.has("momre")) return; // v0.18.176 (owner go 21 Oct 13:50 UK): momre off — no re-entry position is opened (the watch itself is harmless)
   w.n++; mr.reentries++;
   const m = q.tokenMeta.get(tr.mint);
   try {
