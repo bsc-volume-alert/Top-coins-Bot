@@ -6,10 +6,10 @@
 import { CFG } from "./config.mjs";
 import { db, q, nowS } from "./db.mjs";
 import { typeOf } from "./theses.mjs";
-export const fa = { enabled: !!process.env.FOMO_COOKIE, calls: 0, errors: 0, lastErr: "", lastOk: 0, refreshes: 0, refreshErr: "", theses: 0, feedRows: 0, handles: 0, mode: "cookie" };
+export const fa = { enabled: !!process.env.FOMO_COOKIE, tokenExp: 0, calls: 0, errors: 0, lastErr: "", lastOk: 0, refreshes: 0, refreshErr: "", theses: 0, feedRows: 0, handles: 0, mode: "cookie" };
 const B = "https://prod-api.fomo.family";
 let access = process.env.FOMO_COOKIE || "", refresh = process.env.FOMO_REFRESH || "", accessExp = 0;
-try { if (access) { const p = JSON.parse(Buffer.from(access.split(".")[1], "base64url").toString()); accessExp = p.exp || 0; } } catch {}
+try { if (access) { const p = JSON.parse(Buffer.from(access.split(".")[1], "base64url").toString()); accessExp = p.exp || 0; fa.tokenExp = accessExp; } } catch {}
 const PRIVY_APP = (() => { try { return JSON.parse(Buffer.from(access.split(".")[1], "base64url").toString()).aud || ""; } catch { return ""; } })();
 async function doRefresh() {
   if (!refresh) return false; fa.refreshes++;
@@ -28,7 +28,10 @@ async function call(path, opts = {}) {
   if (!fa.enabled) throw new Error("no FOMO_COOKIE");
   if (accessExp && nowS() > accessExp - 120) await doRefresh();
   fa.calls++;
-  const r = await fetch(B + path, { ...opts, headers: { ...(opts.headers || {}), cookie: `privy-token=${access}`, authorization: `Bearer ${access}`, accept: "application/json" }, signal: AbortSignal.timeout(15000) });
+  // the browser sends privy-token + privy-session + privy-refresh-token cookies with an Origin of the app; a bare token gets 430 unauthorized
+  const cookie = [`privy-token=${access}`, `privy-session=privy.fomo.family`, refresh ? `privy-refresh-token=${refresh}` : null].filter(Boolean).join("; ");
+  const r = await fetch(B + path, { ...opts, headers: { ...(opts.headers || {}), cookie, authorization: `Bearer ${access}`, accept: "application/json, text/plain, */*", origin: "https://fomo.family", referer: "https://fomo.family/discover", "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36", "accept-language": "en-GB,en;q=0.9" }, signal: AbortSignal.timeout(15000) });
+  if (r.status === 430) { fa.lastErr = `430 unauthorized on ${path.split("?")[0]} (token ${accessExp && nowS() > accessExp ? "expired" : "valid"})`; }
   if (r.status === 401 || r.status === 403) { if (await doRefresh()) return call(path, { ...opts, _retried: true }); }
   const t = await r.text(); let j; try { j = JSON.parse(t); } catch { throw new Error(`HTTP ${r.status}: ${t.slice(0, 80)}`); }
   if (!r.ok) throw new Error(`HTTP ${r.status}: ${(j.message || t).slice(0, 120)}`);
@@ -39,7 +42,7 @@ export const userById = (id) => call(`/v2/users/${id}`);
 export async function usersByIds(ids) { const out = []; for (let i = 0; i < ids.length; i += 40) { const r = await call(`/v2/users?${ids.slice(i, i + 40).map((x) => "userIds=" + x).join("&")}`); out.push(...(r.users || [])); } return out; }
 export const followingIds = async () => (await call(`/v2/users/current/followingIds`)).followingIds || [];
 export async function probe() { // what the feed / theses endpoints want — recorded in fa.probe for the Status tab, so the shapes can be fixed from the box rather than the browser
-  const tries = ["/feed?feedTypes=swap&limit=5", "/feed?feedTypes[]=swap&limit=5", "/feed?feedTypes=SWAP,THESIS&limit=5", "/feed/tradingActivity?limit=5", "/v2/theses?limit=5", "/theses?limit=5"];
+  const tries = ["/v2/users/userHandle/Rowdy", "/v2/users/current/followingIds", "/feed?feedTypes=swap&limit=5", "/feed?feedTypes[]=swap&limit=5", "/feed?feedTypes=SWAP,THESIS&limit=5", "/feed/tradingActivity?limit=5", "/v2/theses?limit=5", "/theses?limit=5"];
   const out = {}; for (const p of tries) { try { const r = await call(p); out[p] = JSON.stringify(r).slice(0, 300); } catch (e) { out[p] = "ERR " + e.message.slice(0, 160); } }
   fa.probe = out; return out;
 }
