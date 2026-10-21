@@ -19,7 +19,7 @@ Whenever a book is discussed, analysed, changed or reported on, by a chat sessio
 |---|---|---|
 | [AS.md](AS.md) | A + standard filters | Best book. +11.5% on 79 (operator coins out); since 17:45 UK 20 Oct +22.9% on 15. In executor SHADOW at 0.1 SOL from 21 Oct 01:30 UK |
 | [AS2.md](AS2.md) · [AS3.md](AS3.md) | AS + launch bundle 2+ / 5+ wallets (snipers) | New 21 Oct 01:30 UK; back-test strong, real test starting |
-| [GR.md](GR.md) | Graduation, 3-min (+ variants, every-graduation) | Revised 21 Oct 09:47 UK (under 156 buyers, 10-second rule); shadow at 0.25 by owner's choice; 64 real-quote legs +11.7% before the revision |
+| [GR.md](GR.md) | Graduation, 3-min (+ GR2 = bundle-launch graduations on the 40% trail, shadow 0.25 from 21 Oct 17:00 UK; every-graduation) | Revised 21 Oct 09:47 UK (under 156 buyers, 10-second rule); shadow at 0.25 by owner's choice; 64 real-quote legs +11.7% before the revision |
 | [K.md](K.md) | K revised 21 Oct 14:50 UK: keeps going + under 912 buyers + MC ≥ $36K, 2x or −40% | Back-test 18 at +42.7% (luck 2/20); real test from 14:50 UK |
 | [DS.md](DS.md) | D + standard filters | Back-test good; since the change negative |
 | [DC.md](DC.md) | D, copycat of a $72K+ coin | Back-test good; 4 forward trades poor |

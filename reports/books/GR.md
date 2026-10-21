@@ -111,6 +111,7 @@ _Data to 21 Oct 13:20 UK; off-page grad, instant ones left out. Built by reports
 
 - 21 Oct 09:47 UK (v0.18.174 / executor v0.4.6, owner go 09:40 UK): GR revised — under 156 buyers (was 272), age 10–185 s unchanged; 10-second rule in the exit (price 10 s after the buy below the buy price → sell; `h3why` "10s"); executor retries a buy once after 1.5 s when the new pool isn't initialised; guard: a LIVE GR whose last 20 live legs are net negative goes back to shadow by itself with one alarm. Page record split at 09:47 UK. GR stays SHADOW (0.25) until the owner switches it to LIVE from the page.
 - 21 Oct 14:15 UK — v0.18.176: the GR box now shows the 40% trail on the same coins as a variant line (grtrail); the corrupt GR-lock line and the 85-s / socials lines are gone. Rule and shadow (0.25) unchanged; re-judge at 30–40 forward rows.
+- 21 Oct 17:00 UK — **GR2 added** (owner go 16:44 UK; v0.18.180 / executor v0.4.9): GR's rule only on bundle-launch coins (70–80% bundle over 4–10 wallets), 40% trail exit. Page box GR2 with the back-test (57 at +47.8%) and the since-the-change record from 17:00 UK; executor shadow book `gr2` at 0.25 — a tsl40 leg on the same paper position as GR's h3 leg, so both exits get real fills on the same coins. GR itself unchanged. Judge at 40 GR2 legs alongside BL's 40; then one of GR / GR2 / BL goes (GR2 and BL are the same coins at two entry points).
 
 ## Ideas tested
 - **The whole "every graduation" book (`grad`), 3-min sale, real costs, instant graduations left out** (20 Oct 23:27 UK data):
@@ -282,3 +283,4 @@ _Data to 21 Oct 13:20 UK; off-page grad, instant ones left out. Built by reports
   - No GMGN holder snapshot on GR rows.
 - **Next decision and its trigger:** whether to stop GR's shadow leg or test the $41.5K / trailing variants forward. Re-judge them on 20+ forward trades each from when they are added; never on the rows they were found on.
 - PROPOSAL (21 Oct 16:40 UK (data to 16:25 UK; scratchpad gr_deep2.py / gr_deep3.py)): add the 40% trail as a second executor shadow leg (`grad` tsl40) at 0.25 on the same coins; record the bundle-launch flag on GR rows; re-judge exit and bundle split at 40 / 60 forward rows. Awaiting the owner's go.
+- 21 Oct 17:00 UK: the 16:40 proposal (trail shadow leg + bundle flag) is DONE as GR2. Open: at 40 GR2 legs, compare GR (3-min, all coins), GR2 (trail, bundle coins) and BL (trail, 4-s entry) on real fills and keep at most two.
