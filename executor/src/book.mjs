@@ -73,12 +73,12 @@ export const pendingBuys = () => db.prepare(`SELECT * FROM orders WHERE side='bu
 export const lastSellSig = (paperId, exit) => db.prepare(`SELECT id, sig FROM orders WHERE side='sell' AND paper_id=? AND (exit=? OR exit IS NULL) AND sig IS NOT NULL ORDER BY id DESC LIMIT 1`).get(paperId, exit);
 /** last closed positions with their buy / sell orders, for the website's wallet box */
 export function recentClosed(n = 10, exit = null) {
-  return db.prepare(`SELECT p.*, b.fill_tokens b_tokens, b.stake_lamports b_stake, b.from_trigger_ms b_ms, b.sig b_sig, b.detail b_detail, s.sig s_sig, s.rule s_rule, s.detail s_detail, s.tip_lamports s_tip FROM positions p
+  return db.prepare(`SELECT p.*, b.fill_tokens b_tokens, b.stake_lamports b_stake, b.from_trigger_ms b_ms, b.sig b_sig, b.detail b_detail, s.sig s_sig, s.rule s_rule, s.detail s_detail, s.tip_lamports s_tip, s.send_ms s_ms FROM positions p
     LEFT JOIN orders b ON b.id=p.buy_order LEFT JOIN orders s ON s.id=p.sell_order WHERE p.status='closed'${exitSql(exit).replace(" AND book=", " AND p.book=")} ORDER BY p.closed_ts DESC LIMIT ?`).all(n)
     .map((r) => { let d = {}; try { d = JSON.parse(r.b_detail || "{}"); } catch {} const livePx = (r.b_stake || r.cost_lamports) > 0 && r.b_tokens > 0 ? ((r.b_stake || r.cost_lamports) / 1e9) / (r.b_tokens / 1e6) : null; // entry price from the SOL that went into the pool, not the tip
       let sd = {}; try { sd = JSON.parse(r.s_detail || "{}"); } catch {}
       return { id: r.paper_id, exit: r.exit, book: r.book, why: sd.why || null, name: r.name, mint: r.mint, mode: r.mode, opened_ts: r.opened_ts, closed_ts: r.closed_ts, cost: r.cost_lamports / 1e9, stake: (r.b_stake || r.cost_lamports) / 1e9, proceeds: (r.proceeds_lamports || 0) / 1e9, pnl: (r.pnl_lamports || 0) / 1e9,
-        liveX: r.cost_lamports > 0 ? (r.proceeds_lamports || 0) / r.cost_lamports : null, paperX: r.paper_exit_mult, rule: r.exit_rule, ms: r.b_ms, buySig: r.b_sig, sellSig: r.s_sig, gap: livePx && r.paper_entry_price ? livePx / r.paper_entry_price - 1 : null,
+        liveX: r.cost_lamports > 0 ? (r.proceeds_lamports || 0) / r.cost_lamports : null, paperX: r.paper_exit_mult, rule: r.exit_rule, ms: r.b_ms, sellMs: r.mode === "live" ? (r.s_ms ?? null) : null, buySig: r.b_sig, sellSig: r.s_sig, gap: livePx && r.paper_entry_price ? livePx / r.paper_entry_price - 1 : null,
         // exit gap: the price our sell achieved (proceeds before the tip ÷ tokens) against the price the paper book marked the exit at — the per-exit-type cost study
         exitGap: r.b_tokens > 0 && r.paper_entry_price > 0 && r.paper_exit_mult > 0 && r.proceeds_lamports > 0 ? ((((r.proceeds_lamports + (r.s_tip || 0) + 5000)) / 1e9) / (r.b_tokens / 1e6)) / (r.paper_entry_price * r.paper_exit_mult) - 1 : null }; });
 }
