@@ -51,6 +51,7 @@ _Data to 21 Oct 13:20 UK; page headline is x_h2t40, not in the data export; 5-mi
 - **20 Oct 16:25–19:05 UK, save bug:** final exit values were not saved when a copy position closed before the rule fired. K's first rows (18:00–19:05 UK: Gary, Xitter, Poke Packz, Packcoin, New York Shitcoin Exchange) may have incomplete `x_h5`. Fixed in v0.18.163.
 - No rule change since.
 - 21 Oct 14:15 UK — v0.18.176: x_h2t40 (K's headline exit) is now exported in others.csv, so the next study can score it. K kept on the page to 60 trades; K2 is the candidate.
+- 21 Oct 14:50 UK — **K REVISED in place** (owner, 14:30 UK: "just where you revised it, say I revised it, and that new formula should be used for all the existing trades"): v0.18.177. K's box now = K's trigger only with under 912 buyers at entry and entry MC ≥ $36K, exit 2x or −40% (x_t2s40). The box shows the same formula on all earlier K trades as the back-test (18 at +42.7% on the 10:36 data, 12 of 18 won, luck 2/20) and the trades since 14:50 UK as the real test. The old K (every coin, half at 2x + trail) is kept as the hidden record `kold` and in these notes: −0.4% a trade on 60 at the 5-min sale. The tracker's K trigger is unchanged; the filter is applied on the page like S3's and S4's revisions.
 
 ## Ideas tested
 - **K itself** (20 Oct 23:27 UK data, 26 closed trades, real PumpSwap costs; reported to the owner at 23:32 UK as "K 26, +15.4%, without best +7.1%, promising, only one day old"):
