@@ -14,16 +14,16 @@ Not yet tested. Fits the owner's "fewer trades, bigger profit each" side: keeps 
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:42 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
+_Data to 21 Oct 08:29 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 22:46 UK) | 35 | +29.7% | +22.5% | 71% | 20% | +1.01 |
+| all (from 18 Oct 22:46 UK) | 39 | +27.6% | +21.0% | 72% | 21% | +1.04 |
 | before the change (21 Oct 01:30 UK) — back-test | 35 | +29.7% | +22.5% | 71% | 20% | +1.01 |
-| since the change — the real test | 0 | — | — | — | — | — |
-| last 24 h | 13 | +13.1% | +3.2% | 62% | 15% | +0.16 |
-| last 12 h | 7 | +38.7% | +23.0% | 86% | 0% | +0.26 |
-| last 6 h | 5 | +44.3% | +22.1% | 80% | 0% | +0.22 |
+| since the change — the real test | 4 | +8.5% | -6.6% | 75% | 25% | +0.03 |
+| last 24 h | 13 | +15.4% | +5.7% | 69% | 23% | +0.19 |
+| last 12 h | 9 | +28.3% | +15.3% | 78% | 11% | +0.25 |
+| last 6 h | 3 | +5.7% | -18.3% | 67% | 33% | +0.01 |
 <!-- /NUMBERS -->
 
 ## Change history

@@ -15,14 +15,14 @@ Not working: E lost under every exit once past its first 31 trades (runner −6.
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:42 UK; abcd momentum rows. Built by reports/books/numbers.py._
+_Data to 21 Oct 08:29 UK; abcd momentum rows. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 20:28 UK) | 458 | -8.0% | -8.6% | 38% | 47% | -4.12 |
-| last 24 h | 179 | -4.6% | -6.1% | 40% | 42% | -1.00 |
-| last 12 h | 91 | +3.9% | +0.9% | 40% | 37% | +0.26 |
-| last 6 h | 51 | +11.7% | +6.4% | 37% | 45% | +0.54 |
+| all (from 18 Oct 20:28 UK) | 513 | -9.0% | -9.6% | 37% | 48% | -5.13 |
+| last 24 h | 184 | -5.7% | -7.3% | 37% | 45% | -1.24 |
+| last 12 h | 94 | -3.0% | -6.1% | 32% | 52% | -0.38 |
+| last 6 h | 37 | +0.4% | -7.3% | 35% | 46% | -0.02 |
 <!-- /NUMBERS -->
 
 ## Change history

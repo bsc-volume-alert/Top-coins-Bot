@@ -33,14 +33,14 @@ This file also holds the whole Pokémon revival study (GMGN 5-minute candle back
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:42 UK; real costs. Built by reports/books/numbers.py._
+_Data to 21 Oct 08:29 UK; real costs. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 20 Oct 20:46 UK) | 9 | +3.5% | -3.0% | 44% | 11% | +0.02 |
-| last 24 h | 9 | +3.5% | -3.0% | 44% | 11% | +0.02 |
-| last 12 h | 9 | +3.5% | -3.0% | 44% | 11% | +0.02 |
-| last 6 h | 9 | +3.5% | -3.0% | 44% | 11% | +0.02 |
+| all (from 20 Oct 20:46 UK) | 19 | -3.8% | -7.0% | 32% | 16% | -0.09 |
+| last 24 h | 19 | -3.8% | -7.0% | 32% | 16% | -0.09 |
+| last 12 h | 19 | -3.8% | -7.0% | 32% | 16% | -0.09 |
+| last 6 h | 10 | -10.3% | -16.5% | 20% | 20% | -0.11 |
 <!-- /NUMBERS -->
 
 ## Change history

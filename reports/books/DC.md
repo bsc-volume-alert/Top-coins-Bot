@@ -14,16 +14,16 @@ Not working yet: the back-test edge (+17.6% on 40) has not shown up on new trade
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:42 UK; D, copycat of a $72K+ coin. Built by reports/books/numbers.py._
+_Data to 21 Oct 08:29 UK; D, copycat of a $72K+ coin. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 19 Oct 12:36 UK) | 45 | +12.2% | +6.2% | 60% | 33% | +0.50 |
+| all (from 19 Oct 12:36 UK) | 47 | +11.4% | +5.7% | 60% | 34% | +0.49 |
 | before the change (20 Oct 16:00 UK) — back-test | 40 | +17.6% | +10.9% | 65% | 30% | +0.66 |
-| since the change — the real test | 5 | -30.9% | -46.5% | 20% | 60% | -0.16 |
-| last 24 h | 22 | -0.6% | -3.9% | 55% | 36% | -0.04 |
-| last 12 h | 5 | -30.9% | -46.5% | 20% | 60% | -0.16 |
-| last 6 h | 2 | -38.7% | -51.4% | 0% | 50% | -0.08 |
+| since the change — the real test | 7 | -23.8% | -34.7% | 29% | 57% | -0.17 |
+| last 24 h | 12 | -4.8% | -10.9% | 50% | 42% | -0.07 |
+| last 12 h | 4 | -22.4% | -43.7% | 25% | 50% | -0.09 |
+| last 6 h | 1 | +41.6% | +41.6% | 100% | 0% | +0.04 |
 <!-- /NUMBERS -->
 
 ## Change history

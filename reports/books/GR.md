@@ -42,29 +42,29 @@ This file also covers GR's paper variants (gr70, gr85, grlock, grsoc) and the of
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:42 UK; graduation book, 3-min exit. Built by reports/books/numbers.py._
+_Data to 21 Oct 08:29 UK; graduation book, 3-min exit. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 20 Oct 05:30 UK) | 50 | +9.9% | +4.0% | 66% | 32% | +0.45 |
+| all (from 20 Oct 05:30 UK) | 70 | +14.3% | +10.2% | 69% | 30% | +0.93 |
 | before the change (20 Oct 07:30 UK) — back-test | 10 | +47.1% | +26.1% | 90% | 10% | +0.46 |
-| since the change — the real test | 40 | +0.6% | -7.0% | 60% | 38% | -0.01 |
-| last 24 h | 50 | +9.9% | +4.0% | 66% | 32% | +0.45 |
-| last 12 h | 26 | -6.6% | -18.9% | 50% | 46% | -0.20 |
-| last 6 h | 13 | -10.3% | -12.9% | 62% | 38% | -0.15 |
+| since the change — the real test | 60 | +8.8% | +3.9% | 65% | 33% | +0.47 |
+| last 24 h | 60 | +8.8% | +3.9% | 65% | 33% | +0.47 |
+| last 12 h | 31 | +10.6% | +3.7% | 68% | 32% | +0.30 |
+| last 6 h | 19 | +25.6% | +14.9% | 74% | 26% | +0.47 |
 
-Executor book `grad` (shadow, real quotes): 45 legs, -0.262 SOL, average +4.3% a leg, without best -3.1%, won 53%, 20 Oct 05:30 UK to 21 Oct 00:44 UK.
+Executor book `grad` (shadow, real quotes): 64 legs, +1.137 SOL, average +11.7% a leg, without best +6.7%, won 59%, 20 Oct 05:30 UK to 21 Oct 08:24 UK.
 
 **GR every graduation**
 
-_Data to 21 Oct 01:42 UK; off-page grad, instant ones left out. Built by reports/books/numbers.py._
+_Data to 21 Oct 08:29 UK; off-page grad, instant ones left out. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 20:35 UK) | 375 | +3.3% | -0.2% | 51% | 33% | +0.87 |
-| last 24 h | 178 | +7.2% | -0.2% | 54% | 30% | +1.11 |
-| last 12 h | 81 | -1.1% | -5.6% | 52% | 36% | -0.17 |
-| last 6 h | 47 | +3.7% | -4.0% | 60% | 34% | +0.13 |
+| all (from 18 Oct 20:35 UK) | 423 | +4.2% | +1.1% | 52% | 33% | +1.34 |
+| last 24 h | 172 | +2.3% | +0.2% | 55% | 32% | +0.23 |
+| last 12 h | 89 | +7.3% | +3.3% | 57% | 35% | +0.56 |
+| last 6 h | 43 | +13.6% | +8.7% | 58% | 33% | +0.54 |
 <!-- /NUMBERS -->
 
 ## Change history

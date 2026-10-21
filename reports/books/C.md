@@ -14,14 +14,14 @@ Not working: the $100Kâ€“$250K band has lost under every exit in every study (âˆ
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:42 UK; real costs. Built by reports/books/numbers.py._
+_Data to 21 Oct 08:29 UK; real costs. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 20:34 UK) | 94 | -11.2% | -12.1% | 35% | 36% | -1.14 |
-| last 24 h | 38 | -6.0% | -8.2% | 42% | 29% | -0.26 |
-| last 12 h | 16 | -12.4% | -18.0% | 38% | 38% | -0.21 |
-| last 6 h | 8 | -12.4% | -24.4% | 38% | 38% | -0.11 |
+| all (from 18 Oct 20:34 UK) | 101 | -12.0% | -12.9% | 35% | 37% | -1.31 |
+| last 24 h | 31 | -6.4% | -9.0% | 48% | 29% | -0.23 |
+| last 12 h | 14 | -21.2% | -28.3% | 29% | 43% | -0.31 |
+| last 6 h | 6 | -16.4% | -26.1% | 33% | 33% | -0.10 |
 
 Executor book `wide` (shadow, real quotes): 7 legs, +0.027 SOL, average +11.7% a leg, without best -0.1%, won 57%, 19 Oct 10:10 UK to 19 Oct 15:39 UK.
 <!-- /NUMBERS -->

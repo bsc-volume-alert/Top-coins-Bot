@@ -28,14 +28,14 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:42 UK; page headline is x_h2t40, not in the data export; 5-min shown. Built by reports/books/numbers.py._
+_Data to 21 Oct 08:29 UK; page headline is x_h2t40, not in the data export; 5-min shown. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 20 Oct 18:00 UK) | 32 | +6.3% | -0.7% | 53% | 31% | +0.17 |
-| last 24 h | 32 | +6.3% | -0.7% | 53% | 31% | +0.17 |
-| last 12 h | 32 | +6.3% | -0.7% | 53% | 31% | +0.17 |
-| last 6 h | 25 | +10.9% | +2.1% | 52% | 28% | +0.25 |
+| all (from 20 Oct 18:00 UK) | 50 | +2.7% | -1.8% | 52% | 34% | +0.08 |
+| last 24 h | 50 | +2.7% | -1.8% | 52% | 34% | +0.08 |
+| last 12 h | 39 | +7.4% | +1.7% | 54% | 33% | +0.25 |
+| last 6 h | 16 | -15.1% | -21.3% | 44% | 44% | -0.26 |
 <!-- /NUMBERS -->
 
 ## Change history
