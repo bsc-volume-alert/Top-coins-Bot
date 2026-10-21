@@ -3,6 +3,7 @@
 // Paper only, one entry per coin per 2 h. The 20 Oct back-test on 1,337 coins' full 5-min history: 175 such events, -4% to -14% a trade at real
 // costs depending on the exit, +17.7x on Pokémon alone - so this book RECORDS the idea from today; it is not a trade until it has earned one.
 import { onSwap } from "./pumpswap.js";
+import { OFF_KINDS } from "./config.js";
 import { q } from "./db.js";
 import { openCopy } from "./copytrade.js";
 const R = { MIN_AGE_S: 6 * 3600, LOOK_S: 6 * 3600, BREAK_S: 2 * 3600, MULT: 2.0, COOL_S: 2 * 3600, MAX_MC: 500_000 };
@@ -19,5 +20,6 @@ onSwap((tr) => {
   let lo = Infinity, hi = 0; for (const x of win) { if (x[1] < lo) lo = x[1]; if (x[0] >= now - R.BREAK_S && x[1] > hi) hi = x[1]; }
   if (!(lo > 0) || tr.price < R.MULT * lo || hi >= R.MULT * lo) return;
   h.cool = now + R.COOL_S; rv.fired++;
+  if (OFF_KINDS.has("rev")) return; // v0.18.179
   try { openCopy("rev", `${Math.round((now - h.ct) / 3600)}h ${(tr.price / lo).toFixed(1)}x`, m, h.name || m.slice(0, 8), h.symbol || "", tr.price, tr.mc, now, { ageS: now - h.ct, venue: "pumpswap", noExec: true, pass: true }); } catch (e) { console.error("[rev]", e.message); }
 });

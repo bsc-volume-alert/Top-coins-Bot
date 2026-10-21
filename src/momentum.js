@@ -355,7 +355,7 @@ export function p5Check(mint, s, tr, now) {
       if (ageS != null && (ageS < CFG.P5_MIN_AGE_S || ageS > CFG.MOM_MAX_AGE_D * 86400)) return;
       // v0.18.172 executor book AS (shadow): the page's standard filters decided at the trigger, from the same inputs - socials not known-absent, creator has not bought and sold out (ledger balance 0), biggest buyer in the trigger minute 3-5 SOL
       let asStd = null; try { const h = holdersNow(mint, meta?.creator); const devOut = (meta?.dev_buy_sol || 0) > 0 && h?.dev != null && h.dev === 0; const bigSol = (feat.maxShare || 0) * bSol; asStd = meta?.has_socials !== 0 && !devOut && bigSol >= 3 && bigSol < 5; } catch {}
-      const pos = openCopy(strat, `${lv}SOL/60s`, mint, name || mint.slice(0, 8), symbol || "", px, mc, now, { v5, venue, ageS, wall0, blockTs: tr.ts, pass: !skipWhy, skipWhy, asStd, bundle: meta?.bundle_pct ?? null, bundleWallets: meta?.bundle_wallets ?? null, wal60: wal.size, preBuyers, creator: meta?.creator || null });
+      const pos = OFF_KINDS.has(strat) ? null : openCopy(strat, `${lv}SOL/60s`, mint, name || mint.slice(0, 8), symbol || "", px, mc, now, { v5, venue, ageS, wall0, blockTs: tr.ts, pass: !skipWhy, skipWhy, asStd, bundle: meta?.bundle_pct ?? null, bundleWallets: meta?.bundle_wallets ?? null, wal60: wal.size, preBuyers, creator: meta?.creator || null });
       p5.fired++; if (wide) p5.wide++; else p5.byLevel[lv] = (p5.byLevel[lv] || 0) + 1;
       if (pos?.id) { pos.alerted = false; try { feat.ctx = triggerContext(mint, { ...(meta || {}), name: name || meta?.name, symbol: symbol || meta?.symbol }, now, s); } catch {} try { q.setV2m.run(Math.round(bU), pos.id); q.setEarly.run(JSON.stringify(feat), pos.id); } catch {}
         try { enrichEntry(pos.id, mint, s.w5, now); } catch (e) { console.error("[p5 enrich]", e.message); } // v0.18.113: snipers, proven wallets, dex-paid, fresh wallets — the same enrichment the core trigger gets
@@ -364,7 +364,7 @@ export function p5Check(mint, s, tr, now) {
       // 5 s after A's own trigger, if A took the coin and the price is still ≥ A5_MIN x the trigger price, open book A5 (strategy p5c5) at that price — its own paper trade, its own executor leg
       // v0.18.146: the confirm books only read a price the tracker is current on: skipped when A's own trigger was > CONFIRM_MAX_LAG_S behind the chain or the feed is now
       // (19 Oct 20:39 UK: after a restart the tracker was 21 s behind; A5 saw "1.16x" while the pool was at 0.70x of paper and the shadow buy filled 31% below it)
-      const confirmBook = (book, waitMs, minR, label) => { if (pos?.id && strat === "p5e30" && !skipWhy) setTimeout(() => { try {
+      const confirmBook = (book, waitMs, minR, label) => { if (pos?.id && strat === "p5e30" && !skipWhy && !OFF_KINDS.has(book)) setTimeout(() => { try {
         p5[book + "c"] = (p5[book + "c"] || 0) + 1; const lagA = (pos.fs?.lag ?? 0) / 1000, lagNow = feedBehindS(); if (lagA > CONFIRM_MAX_LAG_S || lagNow > CONFIRM_MAX_LAG_S) { p5[book + "lag"] = (p5[book + "lag"] || 0) + 1; return; }
         const ap = positionsOf(mint).find((x) => x.id === pos.id), lp = ap?.lastPx, lmc = ap?.lastMc; if (!(lp > 0)) return;
         const r = lp / px; if (r < minR) { p5[book + "s"] = (p5[book + "s"] || 0) + 1; return; } try { if (q.hasStrat.get(book, mint)) return; } catch {}

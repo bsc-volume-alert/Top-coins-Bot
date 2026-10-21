@@ -33,6 +33,7 @@ onSwap((tr) => {
     const bu = s.w5.filter((x) => x.b).reduce((a, x) => a + x.usd, 0), su = v5 - bu; if (su > 0 && bu / su < CFG.MOM_BS_MIN) continue;
     s.last[tier] = now; mt.entries++;
     const kind = "mom" + Math.round(tier / 1000);
+    if (OFF_KINDS.has(kind)) continue; // v0.18.179
     try { openCopy(kind, `$${Math.round(tier / 1000)}K`, tr.mint, meta?.name || tr.mint.slice(0, 8), meta?.symbol || "", tr.price, tr.mc, now, { ageS: meta?.create_ts ? now - meta.create_ts : null, buyers: new Set(s.w5.filter((x) => x.b).map((x) => x.w)).size, bs: su > 0 ? bu / su : null, v5, venue: tr.venue }); } catch (e) { console.error("[momtiers]", e.message); }
   }
 });

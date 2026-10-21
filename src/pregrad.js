@@ -4,6 +4,7 @@
 // (−26%); 43% touched 2x within 30 min. Paper only. Exits recorded on the same trade: x_t2s40 (2x or −40%, "PG-stop", the headline),
 // x_t2n30 (2x or 30 min, no stop, "PG-hold"), x_h3 (sold at 3 min, GR's exit).
 import { on } from "./launch-monitor.js";
+import { OFF_KINDS } from "./config.js";
 import { lifeSnap } from "./lifecycle.js";
 import { openCopy } from "./copytrade.js";
 const PG = { MAX_AGE_S: 150, MIN_MC: 32_000, MAX_MC: 40_000, MAX_BUYERS: 272, MAX_DEV_SOL: 80 };
@@ -15,5 +16,6 @@ on("trade", (t, tr) => {
   if (!t.bundle || (t.bundle.devBuy ?? 0) >= PG.MAX_DEV_SOL) return; // bundle known at +4 s; whole-curve creators excluded
   const L = lifeSnap(t.mint); const buyers = L?.buyers ?? null; if (buyers != null && buyers > PG.MAX_BUYERS) { done.add(t.mint); return; }
   done.add(t.mint); if (done.size > 20000) done.delete(done.values().next().value); pg.fired++;
+  if (OFF_KINDS.has("pg")) return; // v0.18.179
   try { openCopy("pg", `${age}s $${Math.round(mc / 1000)}K`, t.mint, t.name || t.mint.slice(0, 8), t.symbol || "", tr.price, mc, ts, { ageS: age, venue: "pump", noExec: true, pass: true, buyers, wall0: Date.now(), blockTs: ts }); } catch (e) { console.error("[pg]", e.message); }
 });

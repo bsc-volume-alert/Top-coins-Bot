@@ -1,10 +1,11 @@
 import { CFG } from "./config.js";
 let used = 0, day = new Date().getUTCDate();
 export const rpcUsed = () => used;
+export const rpcBy = {}; // v0.18.179 (owner, 21 Oct 16:16 UK: 'if there's a big wastage, cull it'): calls today by method, shown in the page header
 export async function rpc(method, params) {
   if (new Date().getUTCDate() !== day) { day = new Date().getUTCDate(); used = 0; }
   if (used >= CFG.RPC_DAILY_BUDGET) throw new Error("rpc budget exhausted");
-  used++;
+  used++; rpcBy[method] = (rpcBy[method] || 0) + 1; if (rpcBy._day !== day) { for (const k of Object.keys(rpcBy)) delete rpcBy[k]; rpcBy._day = day; rpcBy[method] = 1; }
   let lastErr;
   for (const url of CFG.RPC_URLS) {
     if ((skipUntil.get(url) || 0) > Date.now()) continue;
