@@ -11,6 +11,8 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 ## Verdict now
 **21 Oct 02:30 UK:** A on its own does not make money; its value is as the feeder for AS. Keep recording, no executor book.
 
+**21 Oct 11:05 UK (revision search, data to 10:36 UK):** no profitable version of A exists in its own data — 0 of 259 passing filter×exit candidates beat luck, every rule ever registered on A has failed forward (the 02:30 UK quiet-minute cut included: −19.2% on its 4 forward trades), and winners and losers have the same entry-time medians. A stays only as the recording feeder for AS (and the other A-row books); the box can go.
+
 Not working as a stand-alone book: about break-even to slightly negative at real costs on 300+ trades (−2.4% on 284 at the 17:40 UK study; −2.7% on 324 at 23:27 UK; −3.2% on 336 at 00:09 UK 21 Oct), and its only real-money run lost (38 live legs −0.376 SOL). The value left in A is as the parent trigger: its filtered child AS has been positive in sample and on its first forward trades.
 
 ## Latest numbers
@@ -141,6 +143,13 @@ Searches
 
 - 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/A.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 331 trades −3.8% (without best −4.7%), 47% won, 40% stopped, ~150 a day, −0.72 SOL a day at 0.1; negative in all five time blocks bar one. Best exit 1.5x/−40% (−3.5%) — no exit makes A positive. Factor search: 8 pass vs 23 by luck; ONE real cut: first-minute selling (`sell60`) < 19.6 SOL — 50 trades +16.1% (no-best +10.8%), +17.2% / +21.5% / +9.8% by thirds, luck 2/20. Checked 02:25 UK: the gain sits entirely in coins AS also takes — on A's coins outside AS it is +0.2% on 33; inside AS it is 17 trades +47.0% (no-top3 +23.2%, 82% won). Threshold-sensitive (< 22 SOL: +5.2%; < 25: −1.7%). Same rule on C −12.7% on 37.
 
+- 21 Oct 11:05 UK — revision search (data to 10:36 UK; diag/rev_A.md; three price-glitch coins of 19 Oct now excluded by numbers.py):
+  - Book now: 370 trades −3.8% (no-best −4.5%), 47% won, 41% stopped, thirds −3.7% / −6.5% / −1.1%, last 24 h 134 at −2.4% (no-best −4.5%), 143 a day, −0.68 SOL a day at 0.1. Forward since the 02:30 UK diagnosis (01:42 UK data cut): 39 trades −3.6% (no-best −11.0%).
+  - Winners as a group (45 big ≥ +50%, 129 small): median entry MC $46K, 30 SOL / 64–68 wallets / 74–77 buys in the trigger minute, biggest buy 10–13% of the minute, 27–28 SOL sold in it, bundle 27–30%, 72–76% with socials. Losers (46 small, 150 stopped): entry MC $46–48K, 31–32 SOL, 54–72 wallets, 64–86 buys, biggest buy 10–12%, 25–29 SOL sold, 68–72% with socials. The only medians that move are age (big winners 1,160 s vs 440 s stopped — a look-alike of the "older than 30 min" line of 19 Oct, luck-level then and now) and buys per minute (74 vs 86). Nothing known at the moment of buying separates them.
+  - Exit verdict: no exit makes A positive on these 370 trades — t15s40 −4.1%, runner −3.8% (current), t2s40 −4.5%, flow4ff −4.8%, h3 −5.4%, split −5.5%, h5 −6.6%, tsl40 −7.5%, h15 −8.0%. The runner stays.
+  - Factor / pair verdict: 1,420 filters × 12 exits + 246 pairs; 259 pass the three-period test; **0 are unlikely to be luck** — shuffled outcomes produced +9.8% to +25.4% "without best" in every one of 20 runs. Best by SOL a day: first-minute selling < 22.8 SOL AND biggest buy ≥ 14.4% of the minute, x_split — 52 trades +23.5% (no-best +16.6%), won 33%, thirds +4.4 / +11.4 / +43.8, luck 11/20; the same rows on the runner only +7.5% (no-best +2.2%). The 02:30 UK quiet-minute cut (sell60 < 19.57, luck 2 then): all 54 +13.5% (no-best +8.6%) but FORWARD since 01:42 UK 4 trades −19.2%; its gain still sits inside AS (17 AS trades +47.0% vs 37 non-AS −1.9%); and it is a cliff (< 22.8: +4.5%, < 25: +0.4%, < 30: −2.3%). Treat it as an AS variant idea (AS4), not an A rule.
+  - Proposed revised rule: **no profitable version found.** Every registered A rule (S1, S2, S3, F1, F5, F6, F9, F10) failed out of sample, the search's luck base on 370 trades is +10–25%, and the forward record since 02:30 UK is −3.6%. A's value is unchanged: it is the trigger that AS (and B/F/G/A2/A5/F6/H/AS2/AS3) are cut from.
+
 ## Notable coins
 - Spidey Show (19–20 Oct night) — sold at the 4x cap, peaked ~20x; the single biggest A/AS/D win (+276.6% after costs) and the trade that decides A-vs-A2 comparisons.
 - French Piccolo (19 Oct ~06:04 UK) — a 10-wallet-operator coin A caught at $81K; live runner leg +110.9% (paper +115.6%), 5.1x at 3 min; most of F10's in-sample mean.
@@ -168,6 +177,7 @@ Searches
 - 21 Oct 00:27 UK: keep a notes file per book, read it before every analysis, then add fresh data (this file).
 
 ## Open items
+- PROPOSAL (21 Oct rev): KEEP — A unchanged, recording only as the feeder for AS and the other A-row books; no executor book, retire the box — exit x_flow4 — n370 -3.8% (no-best -4.5%) thirds -3.7/-6.5/-1.1 luck 11/20 — UNPROVEN — no profitable version found: 0 of 259 candidates beat luck, every registered A rule failed forward, forward since 02:30 UK −3.6% on 39.
 - awaiting go (21 Oct diagnosis): new variant AS4 = AS + first-minute selling < 20 SOL (see AS.md); retire the plain A box from the top of the page (data kept).
 - Nothing pending on A's own rule. A stays as the parent trigger and on the page.
 - Awaiting go (AS, from A's trigger): an AS real-quote (shadow) executor book at 0.1 SOL; AS variant lines "+ MC ≥ $46K", "+ ≤ 5 copycats", "+ creator bought < 0.9 SOL", "+ at least 1 sniper". See AS.md.

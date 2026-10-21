@@ -8,6 +8,8 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - Started 20 Oct 20:00 UK (v0.18.171; commit 19:51 UK; `CHG_H` 19:00 UTC). No rule change since. Page shows before 20:00 UK (back-test) and since.
 
 ## Verdict now
+**21 Oct 11:10 UK:** RETIRE (data kept); do not rebuild it on the ledger's top-10. The ledger column would fix the coverage (368 of 370 A rows against GMGN's 72, correlation 0.87, same side of 23% on 88% of rows) but the rule has no edge on it: A + ledger top-10 < 23% is 136 trades at −6.0% (no-best −8.1%, every third negative), and inside AS the 30%+ band does best. H's own forward test since 20:00 UK is −16.3% on 11 (6 stops).
+
 **21 Oct 02:30 UK:** Can't be judged.
 
 Undecided and mostly untestable: only 50 of 336 passed A rows carry a GMGN holder snapshot (21 Oct 00:09 UK data), so H has 18 trades in total and 2 since it started (catdog +32.4%, Mugshot Cat −54.5%). Its +14.5% on 18 is −0.9% without Spidey Show.
@@ -38,6 +40,14 @@ _Data to 21 Oct 10:20 UK; A, top-10 holders under 23%. Built by reports/books/nu
 
 - 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/H.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 18 trades +14.5% but without best −0.9% — one coin. GMGN top-10 data missing for most coins, so it barely trades (~12 a day at best).
 
+- 21 Oct 11:10 UK — revision search (data to 10:36 UK; diag/rev_H.md; scratch in scratchpad/rev_as/):
+  - The book now: 27 trades +3.8% (no-best −6.7%, no-top3 −13.1%), 44% won, 41% stopped, thirds +25.6 / +3.3 / −17.5, 14.6 a day, +0.04 SOL a day at 0.1. Since 20 Oct 20:00 UK (the real test): 11 at −16.3% (no-best −23.3%), 4 won, 6 stopped — catdog +32.4%, Mugshot Cat −54.5%, Larp Final Boss −51.5%, PHP-UP-2026 +34.2%, Aura Final Boss +20.3% and (a second coin of the same name, 09:44) −52.6%, CVE-2026-109618 −2.4%, X Holdings −53.4% and −54.6% (two same-name coins 5 min apart), Clout +53.7%, Cumchi −50.9%. Only 6 of H's 27 coins are AS coins.
+  - Can the ledger's top-10 replace GMGN? As a measurement, yes: GMGN's `gh_top10` exists on 72 of A's 370 passed rows, the ledger's `top10_entry` on 368 of 370; on the 72 rows with both they agree — correlation 0.87, medians 25.0% vs 25.5%, the same side of 23% on 88% of rows (the one big miss: Spidey Show, GMGN 19.5% vs ledger 42.1%).
+  - But the rule does not work on it: A + ledger top-10 < 23% = 136 trades −6.0% (no-best −8.1%), thirds −12.3 / −5.1 / −0.9; its 31 AS coins +8.5% (worse than AS's +10.8%), its 105 non-AS coins −10.3%. No threshold helps (< 15% n41 +3.2% / no-best −3.7%; < 19.6% n79 −1.4%; < 25% n187 −3.9%; < 30% n286 −4.3%) and the bands are not monotone (0–15% +3.2, 15–20% −7.3, 20–23% −12.4, 23–26% −0.4, 26–30% −5.1, 30–40% −6.0, 40%+ +0.6). Inside AS the best band is 30%+ (26 at +21.1%, no-best +10.9%) and 26–30% is the worst (−7.2%) — the 19 Oct study's hint (higher concentration did better) was right for AS, i.e. the opposite of H. On D: < 23% −4.7% vs ≥ 23% −4.5%, no difference. The GMGN version itself: A + gh < 0.23 n27 +3.8% vs ≥ 0.23 n45 −3.8% — the whole gap is Spidey Show.
+  - Winners vs losers: 12 winners (bundle 28–30% over 5–7 wallets, 75–80 wallets in the minute, peak 1.7–3.2x); 11 stopped at −51.0% (98 wallets in the minute, creator bought 3 SOL, 17 copycat names in 24 h, 60-s price 0.93x, 6 of 11 never saw 1.2x); 4 small losers (old coins, 29 min). Nothing separates them that is not AS's own story (quiet minute, small creator buy).
+  - Exit verdict: every exit is negative without the best trade; x_t15s40 (−3.6%, no-best −5.2%) is the least bad. Factor / pair: 1,618 filters × 12 exits + 98 pairs; 103 pass, **0 are unlikely to be luck**. revise.py's pick (biggest buyer ≥ 8.2% of the minute / x_time, n14 +25.9%, no-best +5.8%) is a hold-to-the-end exit on 14 trades, luck 20 — ignore.
+  - Proposed: RETIRE H (data kept); don't feed it from the ledger — the measurement is fine, the rule is not. Keep `top10_entry` in the data set for the AS analyses (where high concentration, not low, is the hint).
+
 ## Notable coins
 - Spidey Show (19 Oct 21:58 UK, top-10 19.4%) — +276.6% at the 4x cap; most of H's total.
 - Octo (19 Oct 16:39, +83.5%), Conviction (20 Oct 19:11, +58.5%), Poképad (20 Oct 17:34, +55.8%), Justice for Cole (19 Oct 14:25, +39.9%).
@@ -50,6 +60,7 @@ _Data to 21 Oct 10:20 UK; A, top-10 holders under 23%. Built by reports/books/nu
 - 20 Oct ~20:00–20:22 UK: "lots of coins small profit, or fewer coins big runners … H … 12 trades … minimum like 0.3 SOL" (his framework for judging books; H had about 12 trades in view then).
 
 ## Open items
-- awaiting go: feed H from our own ledger's top-10 share (top10_entry) instead of GMGN so it gets enough trades; else retire.
+- PROPOSAL (21 Oct rev): RETIRE — A + top-10 holders under 23% off the page, data kept; do not rebuild it on the ledger's top-10 — exit x_flow4 — n27 +3.8% (no-best −6.7%) thirds +25.6/+3.3/−17.5 luck 20/20 (best revision) — UNPROVEN — forward −16.3% on 11 (6 stops); the ledger column agrees with GMGN (0.87) and covers 368/370 rows, but A + ledger top-10 < 23% is −6.0% on 136 (no-best −8.1%, every third negative) and inside AS the 30%+ band does best.
+- awaiting go: feed H from our own ledger's top-10 share (top10_entry) instead of GMGN so it gets enough trades; else retire. [ANSWERED 21 Oct 11:10 UK: the ledger column works as a measurement but the rule is −6.0% on 136 with it — retire.]
 - Coverage is the blocker: GMGN's holder snapshot is missing on most A rows (50 of 336). Unanswered: why the snapshot is missing (rate limit? only taken for some triggers?) and whether to fall back to the tracker's own top-10 at entry (`top10_entry`) — not proposed yet, and the 19 Oct study hint on that column points the other way.
 - Next decision: at 20 trades since 20:00 UK (2 now) — at the current rate that is days away unless coverage improves.

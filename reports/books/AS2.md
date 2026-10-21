@@ -8,6 +8,8 @@ _Notes last rebuilt: 21 Oct 2026 01:35 UK._
 - Started 21 Oct 01:30 UK (`CHG_AS2`). Everything before is a back-test of a rule chosen by looking at those trades.
 
 ## Verdict now
+**21 Oct 11:10 UK:** KEEP running, nothing to change. The forward test is 9 trades at +9.3% (no-best +2.8%) and so far identical to AS (every AS trade since 01:30 had a 2+-wallet bundle). Its back-test edge is AS3's coins diluted: the 2–4-wallet bundles are 30 trades at +1.9% (no-best −1.0%). Nothing inside it beats luck; the runner stays.
+
 **21 Oct 02:30 UK:** Back-test strong and steady; forward test running since 01:30 UK.
 
 Not yet tested. Fits the owner's "many trades, small profit each" side: keeps about 4 in 5 of AS's trades and throws away the group that lost −17% a trade.
@@ -36,6 +38,14 @@ _Data to 21 Oct 10:20 UK; AS + launch bundle 2+ wallets. Built by reports/books/
 
 - 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/AS2.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 63 trades +18.6% (no-best +14.4%), 65% won, thirds +17.6 / +26.7 / +11.4, ~30 a day, +0.52 SOL a day at 0.1 — the highest SOL a day of any book with all thirds positive. Luck check inside AS2: nothing extra is beyond luck.
 
+- 21 Oct 11:10 UK — revision search (data to 10:36 UK; diag/rev_AS2.md; scratch in scratchpad/rev_as/):
+  - The book now: 72 trades +17.4% (no-best +13.8%, no-top3 +10.5%), 65% won, 25% stopped, thirds +22.7 / +11.7 / +17.9, 28.9 a day, +0.47 SOL a day at 0.1. Forward since 01:30 UK: 9 trades +9.3% (no-best +2.8%, no-top3 −10.7%, 6 of 9 won) — Chi +16.7%, buyoutSH −51.4%, Nodrel +14.8%, Cashfish −16.9%, Clout +53.7%, OTTR −55.7%, Banana Cat +60.9%, MEME +28.2%, Larry The Cat +33.1%. Every AS trade since 01:30 had a 2+-wallet bundle, so AS2 = AS so far and the forward test has not discriminated anything yet.
+  - Winners as a group (47): bundle 28–31% over 5 wallets, creator bought ~0.2 SOL, 27 SOL of first-minute selling across 58–68 wallets, price at 60 s 1.10–1.27x. Losers: 18 stopped at −52.0% — 36 SOL of selling, 75 wallets, creator 0.9 SOL, bundle 26% over 4 wallets, 60-s price 0.87x, 10 of 18 never saw 1.2x; 7 small losers at −14.9% are old coins (median 31 min) on 4 wallets.
+  - Where the edge is: AS2 minus AS3 (bundles of 2–4 wallets) = 30 trades +1.9% (no-best −1.0%, thirds +20.9 / −15.4 / +0.2); since 17:45 9 at +1.0%. AS2's +17.4% is AS3's 42 trades at +28.5% diluted. By wallet count inside AS: 1 wallet 17 at −17.4%, 2 wallets 8 at +17.2%, 3–4 wallets 22 at −3.7%, 5–6 wallets 23 at +28.5%, 7–9 15 at +26.3%, 10+ 4 at +36.8%. The "≥ 2" line therefore separates the single-wallet losers from the rest; it does not add winners of its own.
+  - Exit verdict: runner stays. Paired on the same 72: x_t2s40 −3.2 points (95% range −16 to +9, better on 25 of 72), x_t15s40 −4.3, x_flow4ff −4.6, x_h2t40 −8.4, x_tsl40 −13.6. 46% of AS2 coins reach 2x (the fixed 2x sale breaks even at 37%) — not enough margin to prefer x_t2s40.
+  - Factor / pair verdict: 1,207 filters × 12 exits + 193 pairs; 451 pass the three-period test, **0 are unlikely to be luck** (shuffles reach +35% to +70%). Top in-sample: quiet first minute AND under 60 trades in the minute / x_h2t40 n12 +78.9% luck 3; sol60 < 35.5 / x_t2s40 n54 +25.7% luck 20. Nothing to adopt.
+  - Proposed: KEEP as is, judge at 30 forward trades as planned (about a day at 29 a day). If AS3 keeps beating it on the same coins, AS2 is AS3 plus noise and can go; if the 2–4-wallet coins turn positive forward, AS2 earns its place.
+
 ## Notable coins
 - None yet in the real test.
 
@@ -43,6 +53,7 @@ _Data to 21 Oct 10:20 UK; AS + launch bundle 2+ wallets. Built by reports/books/
 - 21 Oct 01:09–01:19 UK: chose separate boxes over revising AS ("second option"); wanted a bigger reading for the sniper signal; asked for each new box to show the back-test on all data so far and a fresh record "starting now". Go given 01:19 UK.
 
 ## Open items
+- PROPOSAL (21 Oct rev): KEEP — AS + launch bundle 2+ wallets, unchanged, forward test to 30 trades — exit x_flow4 — n72 +17.4% (no-best +13.8%) thirds +22.7/+11.7/+17.9 luck 20/20 (best revision) — UNPROVEN — 9 forward trades +9.3% (no-best +2.8%) and identical to AS so far; its back-test edge is entirely the 5+-wallet coins (AS3), the 2–4-wallet coins are +1.9% on 30 (no-best −1.0%).
 - Judge at 30 trades since 01:30 UK (unchanged).
 - Judge at 30 trades since 01:30 UK: compare with AS on the same coins, using the average without the best trade, and the AS2 vs AS gap. Beats AS → candidate for its own executor shadow book; doesn't → drop and record why.
 - Coins whose launch the bot never saw have no bundle count and are skipped by AS2 (counted as 0).

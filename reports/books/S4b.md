@@ -8,6 +8,8 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - Started 19 Oct 20:01 UK (v0.18.142, owner 19:56; first row 20:19 UK). The rule has not changed since.
 
 ## Verdict now
+**21 Oct 11:05 UK:** Revision search done (data to 10:36 UK): no profitable version found. 58 trades −12.1% (−18.5% without best); the best exit (3-min or 40% trail) is −10.5%, 10.5 points from break-even; 0 of 666 filters × 12 exits pass. All 60 of its rows share a coin with S4 (it fires on S4's trade), so the revised S4 (10:28 UK) supersedes it; the 27 trades since socials were fetched at launch are −28.9% with 1 winner. RETIRE proposed (data kept).
+
 **21 Oct 02:30 UK:** Dead — buying new coins in their first seconds/minute loses at real costs whatever the filter or exit.
 
 Not working: a lottery book. About −6% to −8% a trade at 5 min on 48 closed rows, median about −25%, and only 12% won. Two coins (Unemployed, But Investing 4.5–4.7x; Eisley 3.8x) carry it. It is −14% without the best and −20% without the best two. The under-3% split that created it reversed out of sample within hours.
@@ -44,6 +46,13 @@ _Data to 21 Oct 10:20 UK; curve costs, 5-min exit. Built by reports/books/number
 
 - 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/S4b.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 48 −8.2% (no-best −15.9%) a trade at curve costs; best exit 40% trail −5.5%. Factor search with the luck check: nothing real — with hundreds of trades the test has power, so this is a firm no. No exit or slice makes it break even.
 
+- 21 Oct 11:05 UK — revision search (data to 10:36 UK; diag/rev_S4b.md; scratchpad/rev_sa/sa.py): 58 closed, −12.1% a trade at 5 min (without best −18.5%, without top 3 −26.0%, median −27.9%, 12% won, 28% stopped), 36 trades a day, −0.48 SOL a day at 0.1; thirds −8.0 / +0.6 / −29.1. **Shares every coin with S4** (60 of 60 rows; it fires on S4's trade when the bundle is under 3%), so nothing here is independent of S4.md's findings.
+  - **Winners as a group:** 3 big winners (5%: Unemployed, But Investing 4.5x, Eisley 3.8x, Formation 2.0x) and 4 small winners. What they share: bought 5 s in at $3.5–4K, socials (2 known, both yes), a first-time creator (2 of 3), an original name (2 of 3) — the same three traits S4 was revised to at 10:28 UK. Inside S4b those three traits are 6 trades +28.3%, −22.3% without the best coin: one coin.
+  - **Losers as a group:** 35 small losers (60%, −21.6%) and 16 stopped (28%, −46%). Same entry profile as the winners (MC $4–5K, bundle 1.75–2.1%, creator buy 0.5 SOL, socials on 55–84% of those known, first-time creator 44–80%); the losers drift to 0.9x at 30 s and are sold at 5 min. The 27 trades since the socials fix (20 Oct 16:35 UK) are −28.9%, 1 of 27 won.
+  - **Exit verdict:** 3-min −10.4% and the 40% trail −10.5% (without best −18.9%) are the best of 12; 5-min −12.1%; 1.5x/−40% −21.5% (worst — the 12% hit rate cannot pay for the stops). Distance to break-even under the best exit: 10.5 points a trade, and no exit is positive without the best coin.
+  - **Factor / pair verdict:** 666 filters × 12 exits; **0 pass the three-period test, 0 beat luck** (diagnose.py's one strict pass on 02:30 data, sn_sells ≥ 9, had luck 5/20 and is gone). The under-3% bundle idea that created the book reversed on 20 Oct and has not come back.
+  - **No profitable version found.** The book is a subset of S4; the revised S4 already carries its only promising traits.
+
 ## Notable coins
 - **Unemployed, But Investing (20 Oct 14:02 UK):** 4.5–4.7x at 5 min. This is the "4.7x coin" that put S4b in profit on the owner's screen. S4 and AS also took it.
 - **Eisley (19 Oct 22:10 UK):** 3.8x, the early coin behind the in-sample +27%.
@@ -55,5 +64,6 @@ _Data to 21 Oct 10:20 UK; curve costs, 5-min exit. Built by reports/books/number
 - 20 Oct (afternoon, after ~14:00): "But S4B's in profit, no?" with a screenshot of the S4b box in profit. He was told the profit was one or two coins (Unemployed, But Investing 4.7x, Formation 2.1x) in a book with an 18% win rate and a −26% median. He had seen S3b and S4b as the best books; the answer was that they are lottery books.
 
 ## Open items
+- PROPOSAL (21 Oct rev): RETIRE — S4's trade with a launch bundle under 3%; no revision passes and it is a subset of S4 — exit x_h5 (best alternative x_tsl40 −10.5%) — n58 −12.1% (no-best −18.5%) thirds −8.0/+0.6/−29.1 luck n/a (0 of 666 × 12 candidates pass the three-period test) — UNPROVEN — the revised S4 (10:28 UK) supersedes it; the last 27 trades are −28.9% with 1 winner.
 - awaiting go: retire from the page (data kept).
 - None pending. It stays on the page as paper at the owner's wish. The settled view is that new-coin sniping is negative across 3,500+ trades (20 Oct summary; 6,000+ by 23:32 UK). Any return of S4b to "profit" should be checked first for a single 4x+ coin.

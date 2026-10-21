@@ -1,54 +1,49 @@
-# Every book diagnosed: 21 Oct 2026, 02:30 UK
+# Every book revised on its own statistics: 21 Oct 2026, 12:30 UK
 
-**Data:** all trades since the 18 Oct 20:25 UK price fix, to 21 Oct 01:42 UK. Real costs throughout. The operator's pump-and-dump coins are left out.
+**Data:** everything since the 18 Oct 20:25 UK price fix, to 21 Oct 10:36 UK. Real costs. The operator's pump-and-dump coins are left out. Three price-glitch coins (peaks of 36,000–93,000x on 19 Oct, a feed error) are now excluded; they had been inflating A, D, 80 and the momentum books.
 
-**Method:** reports/books/diagnose.py was run on each book. It covers:
-- size and pace;
-- every exit, split into thirds of the book's history;
-- winners against losers;
-- every factor known at the moment of buying;
-- a **luck check**: the same search run on shuffled results. A filter only counts as real when chance matches it in at most 2 of 20 shuffled runs.
+**Method:** for every book, reports/books/revise.py tried every entry factor, pairs of factors, every recorded exit and early-exit rules. A revision counts as **real** only if it beats the book in all three periods of its history, is positive without its best coin, and the same search on shuffled outcomes (20 runs) cannot match it (luck ≤ 2 of 20) — or it has independent support (real-quote legs, a forward record, the same effect on other coins). Five analysts then grouped each book's winners and losers; every proposal was re-checked independently. Each book's notes carry the detail.
 
-Each book's full diagnosis is in reports/books/diag/, and its notes file now carries the verdict.
+## The answer in one paragraph
+Of about 50 books, **the data supports four that make money** (AS and its children, GR, a new bundle-launch book built from S8's only profitable slice, and S3/S4 as forward tests), **one optional one** (a revised E), and **nothing else**. For the other ~40, the most profitable version the statistics can produce still loses, or cannot be told apart from luck. That is the honest result of "revise every coin": most of them can't be revised into profit.
 
-## The headline
-- **Two real edges**, both inside books we already run:
-  1. **AS**, with one refinement: a quiet first minute.
-  2. **Graduations with few buyers** (the GR family), backed by real quotes.
-- **Everything else** either loses, or its "best filter" cannot be told apart from luck. That covers A–G, A2, A5, F6, 80, E, PG, all 15 snipers and the 18 off-page books.
-- **The snipers are settled.** Each has hundreds to 1,272 trades, so the luck check has real power there. Not one profitable slice survives, and no exit gets any of them to break even.
+## The one new finding worth building
+**Bundle launches.** A launch where the bundle buys **70–80% of the supply across 4–10 wallets**, and the first outside trade is at **$25K+ market cap**. About 50 a day are still on the curve when S8 fires (4 s after launch). Base rates from 49,500 launches: ordinary launches graduate 1.7% of the time; these graduate 83% of the time and 54% touch 2x. They are a few operators' repeating signatures (e.g. 28 launches at exactly 79.31% / 85.01 SOL).
 
-## Ranking (at 0.1 SOL a trade)
-| Book | Trades | Average a trade | Without best | Trades a day | SOL a day | Verdict |
-|---|---|---|---|---|---|---|
-| **AS4** (proposed) = AS + first-minute selling under 20 SOL | 17 | **+47.0%** | +32.7% | ~8 | +0.37 | Real on A's 331 trades (luck 2/20), but it only works inside AS. Add as a forward test |
-| AS3 = AS + bundle of 5+ wallets | 35 | +29.7% | +22.5% | ~16 | +0.47 | Running from 01:30 UK; unproven |
-| AS2 = AS + bundle of 2+ wallets | 63 | +18.6% | +14.4% | ~30 | +0.52 | Running from 01:30 UK; steady in every third |
-| **AS** | 80 | +10.9% | +7.6% | ~37 | +0.37 | Best proven book: positive in all three thirds; in executor shadow |
-| **GR2** (proposed) = graduations with under 156 buyers | 94 | **+37.9%** | +24.2% | ~44 | +1.62 (paper) | Real (luck 0/20). Real-quote legs agree: +9.0% vs −6.6%. Flat in the last third, and paper is ~14 points kind |
-| GR | 50 | +9.9% | +4.0% | — | — | 40-real-leg test failed (+5.1%, −3.2% without ARTEMI); stays shadow |
-| DC | 45 | +12.2% | +6.2% | — | — | Last third −3.1%; decide at 20 forward trades |
-| DS | 70 | +8.8% | +4.9% | — | — | Mostly AS's coins at a worse price; retire |
-| K / H / R | 32 / 18 / 9 | — | — | — | — | Too few trades to judge |
-| E | 458 | −8.0% | −8.6% | — | — | Volume ≥ $100K slice is real (luck 0) but only paid in the last third |
-| A / D / 80 / F / G / B / C / A2 / A5 / F6 | 54–331 | −1.9% to −11.2% | — | — | — | No edge; A and D only feed AS/DS/DC |
-| PG | 107 | −21.8% | −22.9% | — | — | Switch off |
-| S1–S11, S10 | 20–1,272 | −8% to −27% | — | — | — | Dead at real costs; best exits still −5% to −17% |
-| Off-page (18) | 0–5,520 | −2% to −34% | — | — | — | None worth a box |
+| Exit on those 91 trades | Avg a trade | Without best 3 | Won | Thirds | Last 24 h |
+|---|---|---|---|---|---|
+| **40% trailing stop** | **+33.7%** | +15.1% | 44% | +10.8 / +33.1 / +56.3 | 47 at +55.4% |
+| "Split" (half at 2x, trail the rest) | +25.8% | +17.0% | 47% | +22.1 / +36.9 / +18.7 | 47 at +29.1% |
+| 5-min sale (S8's current exit) | +13.0% | +4.9% | 59% | +11.4 / +11.0 / +16.3 | 47 at +16.6% |
 
-## What separates winners from losers (the books that work)
-- **AS's stopped losers never ran.** Their median peak was 1.14x, against 2.64x for big winners. They had more selling in the trigger minute (33 vs 26 SOL) and fewer snipers (0 vs 4). That is why "first-minute selling under 20 SOL" is the refinement.
-- **On graduations, fewer buyers at entry means more room to run.** Under 156 buyers made +37.9% on paper and +9.0% on real quotes. At 156 or more, real quotes made −6.6%.
+The other 630 S8 trades average −22.6% on the same exit. Permutation test: chance of this gap by luck, 0 in 2,000. PG's only profitable slice is the same coins bought at the same second. **Risks, plainly:** these coins are operator-controlled and are dumped within about 15 minutes, so the trailing stop gives back part of each run; no real fill exists yet (other curve books ran 0–6 points under paper); the executor has no trailing-stop exit leg yet (code to write). Paper and shadow first.
 
-## Proposed changes (awaiting the owner's go)
-1. **AS4 paper box**: AS + first-minute selling under 20 SOL, with a back-test record and a record from now. AS itself stays unchanged.
-2. **GR2 in executor shadow at 0.05 SOL**: graduations with under 156 buyers, any age of 10 s or more, sold at 3 min. It runs beside GR. Nothing goes live until 30 real legs are positive.
-3. **Switch off failed shadow books:** A5 (`confirm`, 80 legs −0.10 SOL), S4 (`clean`, 178 legs −0.77 SOL), S10 (`op`, 15 legs −9.1% a leg), and PG on paper.
-4. **Tidy the page.** Retire these boxes: B, C, 80, F, G, A2, A5, F6, DS, PG and all sniper boxes. Their data keeps recording. Keep AS, AS2, AS3, AS4, GR, GR2, DC, K, H and R. The 12-hour strip keeps gradrun and mom80 as watch lines only.
-5. **Data fixes:** feed H from our own holder ledger instead of GMGN, and persist R's 6-hour history.
-6. **Rewrite the 4-hourly study** so it follows the book-notes protocol and this method.
+## What survived, book by book
+| Book | Now | Proposal | Numbers behind it | Confidence |
+|---|---|---|---|---|
+| **AS** | 89, +10.8% a trade; since 17:45 UK 20 Oct 25 at +15.8%; 9 real-quote legs +13.7% (real ≥ paper) | **Keep.** Nothing on its own 89 trades beats luck | — | Real as a whole (forward record) |
+| **AS4** (new) | — | **Paper box:** AS + first-minute selling under 20 SOL | 18 at +47.8% (no-best +34.3%), thirds +52.5 / +65.7 / +25.2, ~7 a day | Unproven: carries all of AS's profit, but luck 20/20 on AS's own trades |
+| **AS2, AS3** | forward since 01:30 UK: AS2 9 at +9.3%, AS3 7 at +22.3% | **Keep,** judge at 30 forward. AS2 has been identical to AS so far; its back-test edge is AS3's coins | — | Unproven |
+| **GR** | 09:47 UK rule; 67 real-quote legs +10.6% a leg; 2 forward rows | **Keep** the rule. **Add the 40% trail as a line in the box**, decide at 40 forward rows | Paired on the same 62 coins: trail +36.2% vs 3-min +17.5% on average, but median difference 0, better on 25 / worse on 27, p 0.10 — six slow runners are the whole difference | The buyer rule is real (luck 0); the exit switch is unproven |
+| **BL = S8 revised** | S8: 721, −21.2% | **Revise S8 into the bundle-launch book** above; exit 40% trail (split recorded beside it); PG folded in and switched off; **executor shadow at 0.05 SOL** once the trail exit leg exists | 91 at +33.7% (+29.7% with a 4-point fill haircut), ~50 a day, +1.6 SOL a day at 0.1 on paper | Real slice (luck 0, p 0.000); fills unproven |
+| **S3** (revised 08:45 UK) | back-test 72 at +22.5% | **Keep as forward test**; 0 forward trades yet (10 fires since were sub-$1M copies, correctly skipped) | — | Unproven |
+| **S4** (revised 10:28 UK) | back-test 32 at +25.7% | **Keep as forward test**; 0 forward trades yet. Caveat found: half of its back-test is pre-16:35-UK rows where "socials known" was itself a selection bias; the clean half is +1.0% | — | Unproven, weaker than it looked |
+| **E** | 159 core trades, −4.5% | **Optional:** revise E to the mom80 slice: $80K-volume trigger on a coin under 6 min old and under $76K, sell everything at 1.5x (no stop) — paper only. Otherwise switch E off | 86 at +10.9% (no-best +10.5%), 76% won, thirds +1.9 / +21.0 / +9.4, last 24 h 35 at +14.5%, ~34 a day, +0.33 SOL a day; the 24% that miss 1.5x close at ~0.3x; most of its coins are GR coins bought later | Real in its own book (luck 0), modest |
+| **K** | 55, +3.0% at 5 min; its page headline exit isn't exported and is probably negative | Keep to 60 trades; export its headline exit first | — | Can't judge yet |
+| **A, D** | −3.8% / −4.3% | Keep recording as the feeders for AS/AS2/AS3/AS4 (and DS/DC data); retire their boxes | nothing beats luck; every registered A/D rule has now failed forward | High (that nothing is there) |
 
-## How to read this honestly
-- AS2, AS3 and AS4 come from AS's own 80 trades. Their back-tests are in-sample, and only their records from now prove anything.
-- GR2's paper figure is kinder than real fills. The real-quote shadow book is the test.
-- At 0.5 SOL a trade, AS's paper pace (+0.37 SOL a day at 0.1) would be about +1.8 SOL a day. That only counts once real fills confirm it.
+## Retire or switch off (data keeps recording unless stated)
+- **Page boxes:** B, C, 80, F, G, A2, A5, F6, DS, DC, H, PG, S1, S2, S4b, S5, S6, S6b, S7, S7b, S9, S10, S11, R.
+- **Executor shadow books off:** A5 (`confirm`, 101 legs −0.33 SOL) and S10 (`op`, 19 legs −0.10 SOL). (S4's `clean` is already off.)
+- **Old off-page books:** stop them all (early, wave2, secondwave, copy, confirm, climber, revival, gradrec, gradrun, slow, momentum, momfast, momdip, momre, momconf). "early" alone writes 2,500 rows a day for nothing.
+- Why, in short: snipers S1–S11 lose 9–22 points a trade at their best exit and nothing survives the luck check on hundreds to 1,470 trades each (the wallet-record idea for S6/S6b/S7 was tested properly and fails too). DS is AS's coins at the same price with a worse result; DC and H failed forward; R back-tests at −8.9% and never traded its rule; the rest are dominated by A's runner on the same coins.
+
+## Data fixes needed (no owner decision needed, but listed)
+1. E double-counts (abcd + others rows); fix numbers.py.
+2. GR-lock's exit column (x_h3l) is corrupt (6 of 45 rows show exits above the 3-min high): drop the GR-lock line from the page.
+3. K's headline exit (x_h2t40) isn't in the data export: add it.
+4. AS's executor shadow book is quoting at 0.5 SOL a leg, not 0.1 (set from the page?). Harmless in shadow; confirm it's intended.
+5. x_tsl40 on curve books is scored at curve costs even where the coin graduates mid-hold; approximate but consistent.
+
+## What this leaves running, if all approved
+Paper/shadow: AS, AS2, AS3, AS4, GR (+ trail line), BL, S3, S4, K, (E revised, optional). Executor shadow: AS, GR, BL. Nothing live. Next decision points: AS live at 0.1 once its shadow has 30 positive legs; GR at 30 forward rows under the revised rule; BL at 40 shadow legs.

@@ -10,6 +10,8 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 ## Verdict now
 **21 Oct 02:30 UK:** Dead.
 
+**21 Oct 11:05 UK (revision search, data to 10:36 UK):** still dead. +0.9% on 126 is −1.3% without its best trade; the second third was −12.0%; 0 of 380 passing candidates beat luck, and on 126 trades the search's luck base is +24% to +68% per run — nothing found on F can be believed. The last-12-h +24.2% on 21 is the same kind of swing that made F1 look good on 19 Oct.
+
 Failed. It was the 13:28 UK 19 Oct study's best find (+18.4% on 33, 85% won) and went −10% to −17% out of sample (study rule F1: −10.2% on 64 against 0.0% for the rest of A at 17:40 UK 20 Oct). Its 22 real-quote shadow legs lost −1.097 SOL (−20% of stake).
 
 ## Latest numbers
@@ -47,6 +49,13 @@ Executor book `small` (shadow, real quotes): 22 legs, -1.097 SOL, average -19.9%
 
 - 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/F.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 116 trades −1.9% (no-best −2.9%); first third +13.4% then −15.8% / −3.4%. 18 pass vs 46 by luck — nothing. Confirms the 19 Oct out-of-sample failure of bundle ≤ 3 wallets (and is the mirror image of AS2/AS3's bundle ≥ 2/5 finding).
 
+- 21 Oct 11:05 UK — revision search (data to 10:36 UK; diag/rev_F.md):
+  - Book now: 126 trades +0.9% (no-best −1.3%), 52% won, 33% stopped, thirds +11.8% / −12.0% / +3.0%, last 24 h 48 at +4.4% (no-best −1.4%), 49 a day, −0.00 SOL a day at 0.1. Shadow: 22 real-quote legs −1.097 SOL.
+  - Winners as a group (13 big, 52 small): median entry MC $44–47K, bundle 9–17% from 2 wallets, creator bought 0.25–1.0 SOL, 46–69% with socials. Losers (20 small, 41 stopped): $45–48K, bundle 11–15% from 1 wallet, creator bought 1.9 SOL, 65–73% with socials. The big winners' creator bought less (0.25 SOL median) — the "creator bought < 0.9 SOL" idea already listed on AS; on F it is the search's pick and luck 20/20.
+  - Exit verdict: split +3.9% (no-best +1.0%, thirds +8.2 / −0.3 / +3.8), t15s40 +0.4%, flow4ff +1.3%, runner +0.9% (current, no-best −1.3%), everything else negative. Nothing positive without its best trade in all three thirds.
+  - Factor / pair verdict: 1,205 filters × 12 exits + 336 pairs; 380 pass; **0 beat luck** — shuffled outcomes produced +24% to +68% in every one of 20 runs, the highest luck base of the A-family books (126 trades, many columns). The pick, creator bought < 0.86 SOL on x_split: 43 trades +26.7% (no-best +18.5%), luck 20/20.
+  - Proposed revised rule: **no profitable version found.** F1 is closed; small-bundle filters on A failed out of sample twice; the AS2/AS3 finding runs the other way (bundle 2+/5+ wallets).
+
 ## Notable coins
 - MrDuck (+14% entry gap), PackPump (+26%), Trump Accounts (+14%), LOTTO (+10%), Quinelings (+7%) — F legs that paid well over paper (19–20 Oct night).
 - American Dream (sold at 0.20) and LOTTO (0.08) — two of F's 11 shadow stops were rugs.
@@ -58,5 +67,6 @@ Executor book `small` (shadow, real quotes): 22 legs, -1.097 SOL, average -19.9%
 - 20 Oct 05:00 UK: "remove what isn't working" — F to paper and off the page.
 
 ## Open items
+- PROPOSAL (21 Oct rev): RETIRE — stop F as a book (executor book `small` stays off; rows are A's) — exit x_flow4 — n126 +0.9% (no-best -1.3%) thirds +11.8/-12.0/+3.0 luck 20/20 — UNPROVEN — F1 failed out of sample, no exit is positive without its best trade, and on 126 trades the search's luck base is +24–68%.
 - awaiting go: retire from the page.
 - None. F1 is closed as "does not hold up". Do not re-test small-bundle filters on A without reading this file; the D version (≤ 2 wallets) is the same coins.

@@ -1,34 +1,35 @@
 # Diagnosis — S6b
-_Data to 21 Oct 01:42 UK; curve costs, 5-min exit; exit x_h5; curve costs. Built by reports/books/diagnose.py._
+_Data to 21 Oct 10:35 UK; curve costs, 5-min exit; exit x_h5; curve costs. Built by reports/books/diagnose.py._
 
 ## 1. Size and pace
 | trades | avg | without best | median | won | stopped | trades a day | SOL a day at 0.1 | total at 0.1 |
 |---|---|---|---|---|---|---|---|---|
-| 524 | -16.7% | -18.1% | -38.9% | 30% | 54% | 433.6 | -7.692 | -9.30 |
+| 651 | -18.5% | -19.6% | -39.6% | 30% | 53% | 412.4 | -8.037 | -12.69 |
 
 ## 2. Exits on the same trades
 | exit | n | avg | without best | won | 1st third | 2nd third | last third | last 24 h |
 |---|---|---|---|---|---|---|---|---|
-| x_flow4ff | 524 | -14.1% | -14.6% | 26% | -13.3% | -15.6% | -13.2% | -13.8% |
-| x_flow4 | 524 | -14.6% | -15.2% | 27% | -14.1% | -16.7% | -12.9% | -14.3% |
-| x_t2s40 | 524 | -15.3% | -15.5% | 22% | -14.4% | -16.3% | -15.1% | -15.8% |
-| x_t15s40 | 524 | -15.7% | -15.8% | 31% | -15.1% | -16.7% | -15.2% | -16.0% |
-| x_tsl40 | 524 | -15.1% | -16.0% | 18% | -13.9% | -13.9% | -17.4% | -15.2% |
-| x_split | 524 | -15.6% | -16.1% | 16% | -11.7% | -13.7% | -21.2% | -15.7% |
-| x_h5f14 | 524 | -15.2% | -16.6% | 31% | -17.6% | -13.6% | -14.2% | -14.9% |
-| x_h2t40 | 524 | -16.3% | -16.9% | 22% | -16.1% | -15.9% | -17.1% | -16.7% |
-| x_h15 | 509 | -15.9% | -17.3% | 32% | -16.7% | -17.5% | -13.4% | -15.8% |
-| x_h3 | 524 | -16.5% | -17.4% | 30% | -17.1% | -16.0% | -16.5% | -15.8% |
-| x_h5 (current) | 524 | -16.7% | -18.1% | 30% | -21.0% | -14.6% | -14.7% | -15.7% |
-| x_time | 524 | -21.8% | -24.4% | 12% | -21.9% | -17.5% | -26.1% | -21.0% |
+| x_flow4ff | 651 | -14.2% | -14.7% | 26% | -11.8% | -18.4% | -12.5% | -16.0% |
+| x_flow4 | 651 | -14.8% | -15.3% | 27% | -12.7% | -19.1% | -12.6% | -16.6% |
+| x_t2s40 | 651 | -15.3% | -15.4% | 22% | -13.7% | -18.2% | -14.0% | -17.2% |
+| x_t15s40 | 651 | -15.4% | -15.5% | 31% | -13.9% | -19.0% | -13.2% | -16.8% |
+| x_tsl40 | 651 | -15.7% | -16.4% | 18% | -11.3% | -19.4% | -16.3% | -19.7% |
+| x_split | 651 | -16.0% | -16.4% | 16% | -10.0% | -19.7% | -18.2% | -20.4% |
+| x_h2t40 | 651 | -16.6% | -17.1% | 22% | -14.8% | -18.8% | -16.2% | -19.2% |
+| x_h5f14 | 651 | -16.1% | -17.3% | 31% | -14.5% | -19.6% | -14.3% | -18.9% |
+| x_h15 | 636 | -17.1% | -18.2% | 32% | -15.6% | -19.9% | -16.0% | -19.4% |
+| x_h3 | 651 | -17.9% | -18.6% | 30% | -15.1% | -19.9% | -18.6% | -21.2% |
+| x_h3l | 326 | -17.6% | -18.8% | 30% | — | -18.6% | -17.1% | -17.6% |
+| x_h5 (current) | 651 | -18.5% | -19.6% | 30% | -18.3% | -19.0% | -18.1% | -21.2% |
+| x_time | 650 | -22.8% | -24.9% | 12% | -21.7% | -24.0% | -22.6% | -24.3% |
 
 ## 3. Winners vs losers — share, average and feature medians
 | group | n | share | avg | entry_mc | age_s | bundle_pct | bundle_wallets | dev_buy_sol | dev_hold_entry | sol60 | wal60 | sell60 | max_share | holders_entry | top10_entry | has_socials | cc_n24h | snipers_n | hour_uk | peak_mult | fs10_x |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| big winners (>= +50%) | 22 | 4% | +244.0% | 7.49e+03 | 8.5 | 24.5 | 4 | 2.48 | 1.3e-15 | — | — | — | — | 16 | 31.4 | 1 | 2 | — | 10 | 4.94 | 1.24 |
-| winners (0 to +50%) | 137 | 26% | +7.9% | 6.02e+03 | 9 | 23 | 4 | 3 | 0 | — | — | — | — | 17 | 27.4 | 1 | 4 | — | 14 | 2.07 | 1.25 |
-| small losers (-35% to 0) | 84 | 16% | -22.5% | 3.99e+03 | 11 | 18.4 | 4 | 0.772 | 0 | — | — | — | — | 9 | 15.3 | 1 | 3.5 | — | 12 | 1.11 | 0.984 |
-| stopped (<= -35%) | 281 | 54% | -47.4% | 6.2e+03 | 9 | 22.7 | 4 | 2.96 | 0 | — | — | — | — | 16 | 29.2 | 1 | 4 | — | 16 | 1.12 | 0.87 |
+| big winners (>= +50%) | 24 | 4% | +230.1% | 7.22e+03 | 8.5 | 24.5 | 4 | 1.74 | 9.31e-16 | — | — | — | — | 15.5 | 31.4 | 1 | 2 | — | 10 | 4.63 | 1.24 |
+| winners (0 to +50%) | 170 | 26% | +8.1% | 5.98e+03 | 8 | 22.5 | 4 | 2.98 | 0 | — | — | — | — | 17 | 27.5 | 1 | 4 | — | 9 | 2.1 | 1.22 |
+| small losers (-35% to 0) | 109 | 17% | -21.8% | 3.95e+03 | 12 | 18.4 | 4 | 0.804 | 0 | — | — | — | — | 9 | 14.9 | 1 | 3 | — | 9 | 1.14 | 0.985 |
+| stopped (<= -35%) | 348 | 53% | -47.6% | 6.21e+03 | 9 | 23.4 | 4 | 2.96 | 0 | — | — | — | — | 17 | 29.3 | 1 | 4 | — | 12 | 1.12 | 0.871 |
 
 ## 4. Best 8 and worst 8 trades
 - 20 Oct 20:29 UK **Energy Coin** +712.5% — entry_mc 6.44e+03, age_s 12, bundle_pct 19.3, bundle_wallets 4, dev_buy_sol 3, dev_hold_entry 0, holders_entry 22, top10_entry 30.1, has_socials 1, cc_n24h 29, peak_mult 12.7, fs10_x 1.63
@@ -46,9 +47,9 @@ Worst:
 - 19 Oct 22:19 UK **paperlaunch** -77.4% — entry_mc 2.2e+04, age_s 2, bundle_pct 62.4, bundle_wallets 7, dev_buy_sol 0.57, dev_hold_entry 2, holders_entry 19, top10_entry 32.4, has_socials 0, cc_n24h 1, peak_mult 1.41, fs10_x 1.04
 - 20 Oct 09:12 UK **wrapped bulls** -74.5% — entry_mc 9.39e+03, age_s 5, bundle_pct 20.3, bundle_wallets 5, dev_buy_sol 1.28, dev_hold_entry 4.4, holders_entry 23, top10_entry 34.5, has_socials 0, cc_n24h 1, peak_mult 1.09, fs10_x 0.676
 - 21 Oct 00:49 UK **A trader in a world of insid** -71.3% — entry_mc 1.54e+04, age_s 7, bundle_pct 36.1, bundle_wallets 2, dev_buy_sol 14.8, dev_hold_entry 35.5, holders_entry 43, top10_entry 19.9, has_socials 0, cc_n24h 1, peak_mult 1.12, fs10_x 0.501
+- 21 Oct 09:43 UK **Girl With Balloon** -65.8% — entry_mc 8.21e+03, age_s 6, bundle_pct 20.5, bundle_wallets 5, dev_buy_sol 3, dev_hold_entry 2.8, holders_entry 12, top10_entry 38, has_socials 1, cc_n24h 3, peak_mult 2.17, fs10_x 1.01
 - 20 Oct 16:18 UK **Pussy** -59.9% — entry_mc 5.17e+03, age_s 4, bundle_pct 15.2, bundle_wallets 1, dev_buy_sol 0, dev_hold_entry 0, holders_entry 3, top10_entry 26.2, has_socials 1, cc_n24h 1, peak_mult 3.19, fs10_x 2.25
 - 20 Oct 15:33 UK **Powercoin** -58.4% — entry_mc 6.28e+03, age_s 11, bundle_pct 27.4, bundle_wallets 7, dev_buy_sol 0, dev_hold_entry 0, holders_entry 17, top10_entry 32.1, has_socials 1, cc_n24h 1, peak_mult 1.02, fs10_x 0.986
-- 20 Oct 18:46 UK **DIGITAL SUPER INU** -57.3% — entry_mc 1.7e+04, age_s 5, bundle_pct 30.4, bundle_wallets 1, dev_buy_sol 11.9, dev_hold_entry 21.1, holders_entry 22, top10_entry 52.3, has_socials 1, cc_n24h 3, peak_mult 1.54, fs10_x 0.495
 
 ## 5. Factor search (strict test) and luck check
 713 cuts tried on 54 entry-time columns; 0 pass the strict test, 0 pass on average when the results are shuffled at random (20 runs).
@@ -58,4 +59,4 @@ Worst:
 |---|---|---|---|---|---|---|---|
 
 ## 8. Five time blocks
-19 20:42 UK–20 02:18 UK: 105 at -21.1% · 20 02:22 UK–20 08:47 UK: 105 at -17.1% · 20 08:48 UK–20 15:18 UK: 105 at -10.2% · 20 15:21 UK–20 19:27 UK: 105 at -25.1% · 20 19:28 UK–21 01:22 UK: 104 at -10.2%
+19 20:42 UK–20 03:43 UK: 131 at -18.9% · 20 03:45 UK–20 11:37 UK: 130 at -10.0% · 20 11:45 UK–20 18:37 UK: 130 at -29.6% · 20 18:38 UK–21 01:16 UK: 130 at -8.4% · 21 01:18 UK–21 10:33 UK: 130 at -25.6%

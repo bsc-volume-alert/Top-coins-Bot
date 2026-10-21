@@ -10,6 +10,8 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 ## Verdict now
 **21 Oct 02:30 UK:** Dead.
 
+**21 Oct 11:05 UK (revision search, data to 10:36 UK):** dead, and the search's "real" find is rejected: "largest holder ≥ 4.8% AND before 14:39 UK, hold 15 min" is 15 trades carried by four coins at +192% to +600% (all between 01:25 and 04:18 UK), +3% without the top three, five of the fifteen stopped at −51 to −53%, and the hour cut merely removes 15 trades that averaged −21.5%. An hour-of-day pair on 15 trades from a search whose shuffled runs produced +27% to +87% is luck, whatever its luck score says.
+
 Failed. The 5-min sale on these coins was +20% to +36% on 26–36 trades in the first studies and then −13% to −22% on every later window (study rule F4: −17.7% on 71 OOS at 17:40 UK 20 Oct; G since 20:10 UK 19 Oct −19.3% on 55, 58% stopped). Its 47 shadow legs lost −2.198 SOL — the worst shadow book.
 
 ## Latest numbers
@@ -44,6 +46,13 @@ Executor book `crowd` (shadow, real quotes): 47 legs, -2.198 SOL, average -19.0%
 
 - 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/G.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 116 trades −3.7% (no-best −8.9%); first block +37.1% then four losing blocks. Best exit 15-min hold +3.6% but no-best −1.7%. Best cuts are all GMGN snapshots (†, timing not exact), luck 6.
 
+- 21 Oct 11:05 UK — revision search (data to 10:36 UK; diag/rev_G.md):
+  - Book now: 120 trades −3.1% (no-best −8.2%), 47% won, 41% stopped, thirds +16.5% / −21.0% / −4.9%, last 24 h 39 at −5.1%, 47 a day, −0.19 SOL a day at 0.1. By day at the 5-min exit: 18 Oct −9.5% (5), 19 Oct +1.5% (66), 20 Oct −15.7% (43), 21 Oct +41.1% (6). Shadow: 47 legs −2.198 SOL.
+  - Winners as a group: only 7 trades ever made +50% (median 100 SOL / 208 wallets / 280 buys in the trigger minute, entry MC $35K, 29% with socials — a different shape from the 49 small winners at $44K, 76 SOL, 76% with socials). Losers (15 small, 49 stopped): $47–50K, 30–94 SOL, 224–227 wallets, 65–87% with socials. With seven big winners the "group" cannot be characterised.
+  - Exit verdict: hold-15 +3.5% but −1.6% without its best trade (thirds +16.9 / −5.7 / −1.0); the 5-min sale (current) −3.1% / −8.2%; t15s40 −5.6%; runner −6.3%; tsl40 −9.1%; t2s40 −11.2%. No exit is positive without its best trade.
+  - Factor / pair verdict: 1,419 filters × 12 exits + 270 pairs; 371 pass the three-period test; 3 show luck ≤ 2 — but the shuffled runs' best values were +27% to +87% (median about +48%), so this book's search produces huge "rules" by chance every time. The proposal — largest holder at entry ≥ 4.785% AND hour_uk < 14.65, x_h15: 15 trades +112.1% (no-best +77.3%), won 67%, thirds +172.9 / +92.6 / +45.2, luck 1/20 — is four coins: Universal Basic Income +585% (19 Oct 01:43), SpaceXSITeslaBoringaLink +461% (19 Oct 04:18; A bought the same coin eight minutes later and lost 79.5%), GTAVI Mascot +600% (20 Oct 01:41), yumi umi +192% (21 Oct 01:25); without the top three the other 12 average about +3%; 5 of the 15 stopped at −51 to −53%; on G's own 5-min exit the same 15 are +68.4% (no-best +30.5%), on the runner +14.4% (no-best +5.9%). The single cuts: largest holder ≥ 4.785% alone 30 trades +45.3% (no-best +26.1%); before 14:39 UK alone 42 trades +34.7% — the hour condition only drops 15 trades that averaged −21.5%, i.e. it is fitted to where the four monsters fell in the day. The owner said on 19 Oct he does not accept hour-of-day rules without much longer data; this is the same artefact (G's "9 of the first 13 hours" on 19 Oct) with a holder-share cut added.
+  - Proposed revised rule: **no profitable version found.** The 150+-wallet coins remain a correct skip for A; G's hold-15 line can stay recorded as the comparison, nothing more.
+
 ## Notable coins
 - boobs coin and tit coin (19 Oct evening) — the 10-wallet operator's coins, caught by G at $60–100K after their run; G took boobs coin three times (one 3.8x, one stop, one rug) and tit coin twice (a rug and a stop). With Dacity Cat and Lucia the Baddie, four h5 legs sold rugs at 0.03–0.10. A reason for every book to skip the operator's coins (done 20 Oct 19:15 UK).
 - The 27 h5 legs (0.25 SOL): 19 stops −2.769 SOL, 7 timed sales +0.840, 1 floor +0.064 → −1.865 SOL (−27.6% of stake), win 19%.
@@ -54,5 +63,6 @@ Executor book `crowd` (shadow, real quotes): 47 legs, -2.198 SOL, average -19.0%
 - 20 Oct 05:00 UK: "remove what isn't working" — G to paper and off the page.
 
 ## Open items
+- PROPOSAL (21 Oct rev): RETIRE — stop G as a book; the page's 150+-wallet skip stays — exit x_h5 — n120 -3.1% (no-best -8.2%) thirds +16.5/-21.0/-4.9 luck 1/20 — UNPROVEN — the only luck-clearing find is an hour-of-day pair on 15 trades carried by four coins (+3% without the top three) from a search whose shuffled runs give +27–87%; F4 and the runner both failed in shadow.
 - awaiting go: retire from the page.
 - None. F4 is closed as "does not hold up". The page's 150+-wallet skip stays.

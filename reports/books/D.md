@@ -11,6 +11,8 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 ## Verdict now
 **21 Oct 02:30 UK:** Negative; useful only as the feeder for DS/DC.
 
+**21 Oct 11:05 UK (revision search, data to 10:36 UK):** confirmed — no profitable version of D in its own data (0 of 270 passing candidates beat luck; F8/F11/F12/F13 all negative out of sample; 99% of D's coins are A's coins bought later and higher). Keep recording as the feeder for DS and DC only; the box can go.
+
 Not working on its own: about break-even in every study (−0.4% to −1.3% from 80 to 217 trades), then worse on 20 Oct evening (−3.6% on 259 to 21 Oct 00:09 UK; last 6 h −11.4% on 39). Its 26 shadow legs were +0.025 SOL. Every rule found on D (F8, F11, F12, F13) faded or failed out of sample.
 
 ## Latest numbers
@@ -59,6 +61,13 @@ All at real costs; OOS = out of sample.
 
 - 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/D.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 257 trades −4.3% (no-best −5.4%), −0.62 SOL a day; last two blocks −8.8% / −8.4%. Best exit 1.5x/−40% −3.4%. 25 pass vs 18 by luck, none real (best luck 10: creator bought ≥ 5 SOL, +10.2% on 39).
 
+- 21 Oct 11:05 UK — revision search (data to 10:36 UK; diag/rev_D.md):
+  - Book now: 290 trades −4.3% (no-best −5.3%), 45% won, 42% stopped, thirds −4.5% / −2.9% / −5.7%, last 24 h 102 at −6.1%, 112 a day, −0.60 SOL a day at 0.1. 99% of D's coins are A's coins.
+  - Winners as a group (36 big, 95 small): median entry MC $47–50K, 50.7 SOL in the trigger minute, 88–112 wallets, biggest buy 8–9% of the minute, 45–46 SOL sold in it, bundle 26–28%, 76–78% with socials. Losers (38 small, 121 stopped): $48–53K, 50.8–51.5 SOL, 76–94 wallets, 9%, 42–46 SOL sold, bundle 19–29%, 72–76% with socials. Identical at entry.
+  - Exit verdict: t15s40 −4.0%, flow4ff −4.2%, runner −4.3% (current), t2s40 −5.9%, h3 −5.4%, h5 −6.9%, h15 −7.4%, split −8.7%, tsl40 −10.4% — none positive; the runner stays.
+  - Factor / pair verdict: 1,464 filters × 12 exits + 244 pairs; 270 pass; **0 beat luck** (shuffled runs give +13% to +38.5% every time). The search's pick — fresh-wallet share between 8% and 16%, x_h15: 50 trades +26.8% (no-best +19.0%), luck 11/20 — is a band with both neighbours deeply negative (< 8%: −8.0% on 37; ≥ 16%: −23.7% on 29) and the column blank on 173 of 290 rows: an artefact of the search, not a rule. Registered study rules, out of sample at 10:36 UK: F8 (sol60 ≤ 51) −4.5% on 70 vs −9.9% rest; F11 (max_share ≤ 0.11) −10.5% on 83 vs +1.2% rest; F12 (avg_buy_sol ≤ 0.40) −16.3% on 33; F13 (copycat of a $19K+ coin) −16.0% on 48 vs +2.9% rest — all four closed as "does not hold up".
+  - Proposed revised rule: **no profitable version found.** D pays for the move A catches; its only use is as the trigger that DS and DC are cut from.
+
 ## Notable coins
 - Spidey Show (night of 19–20 Oct) — 4x cap; F11's in-sample mean is +3.2% without it.
 - earth and moon (20 Oct 09:48 / 10:09 UK) — operator coins A and D bought on the pool at ~$99K: 2.15x and 1.62x on the runner (excluded since 19:15 UK).
@@ -74,6 +83,7 @@ All at real costs; OOS = out of sample.
 - 20 Oct 20:22 UK: agreed in principle to two or three separate profitable books including "the best D-family book".
 
 ## Open items
+- PROPOSAL (21 Oct rev): KEEP — D unchanged, recording only as the feeder for DS and DC; no executor book, retire the box — exit x_flow4 — n290 -4.3% (no-best -5.3%) thirds -4.5/-2.9/-5.7 luck 11/20 — UNPROVEN — no profitable version found: 0 of 270 candidates beat luck and F8/F11/F12/F13 are all negative out of sample.
 - awaiting go: retire the plain D box (data kept).
-- F8 and F11 continue as study rules (F8 waiting 31/40; F11 waiting 30/80); F12, F13 waiting.
+- F8 and F11 continue as study rules (F8 waiting 31/40; F11 waiting 30/80); F12, F13 waiting. **21 Oct 11:05 UK: all four scored out of sample (see Ideas tested) — closed as "does not hold up".**
 - The best-D-family-book decision depends on DS and DC forward results (DS since 17:45 UK 20 Oct: −3.5% on 12 to 00:09 UK; DC since 16:00 UK: −32.2% on 4). See DS.md, DC.md.

@@ -40,6 +40,7 @@ _Data to 21 Oct 10:20 UK; curve costs, 5-min exit. Built by reports/books/number
 - 20 Oct 19:15 UK (v0.18.164): fingerprint coins left out (see LESSONS.md).
 
 - 21 Oct 08:45 UK (v0.18.173): S3b's box removed from the page; its trades now feed the revised S3 box (filtered: $1M+ originals, serial creator skipped). The tracker still records `sn3b`.
+- 21 Oct 11:05 UK: the 21 Oct revision search for the revised rule (0 forward trades since 08:45 UK; back-test 72 at +22.5%; diag/rev_S3b.md's best pair is the $1M+ cut plus market heat, luck 5/20) is written up in S3.md under "Ideas tested". No proposal is made here; S3b's own 200-row record: −7.4%, without best −11.4%.
 
 ## Ideas tested
 - **F7 (≥ 1 s after launch)**: in sample +13.9% on 62. Out of sample it has drifted from −13.1% (34) to −2.6% (80), and it is −8% to −12% without cat cow at every check. **Does not hold up.**
