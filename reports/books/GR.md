@@ -107,6 +107,8 @@ _Data to 21 Oct 08:43 UK; off-page grad, instant ones left out. Built by reports
 - **20 Oct 19:15 UK (v0.18.164):** operator-fingerprint coins are skipped everywhere except S10, which covers GR's executor legs and its page record.
 - **20 Oct 23:32 UK, analysis:** GR failed the 40-trade test. It was proposed to stay in shadow, with two new variant lines (below). Awaiting go.
 
+- 21 Oct 09:47 UK (v0.18.174 / executor v0.4.6, owner go 09:40 UK): GR revised — under 156 buyers (was 272), age 10–185 s unchanged; 10-second rule in the exit (price 10 s after the buy below the buy price → sell; `h3why` "10s"); executor retries a buy once after 1.5 s when the new pool isn't initialised; guard: a LIVE GR whose last 20 live legs are net negative goes back to shadow by itself with one alarm. Page record split at 09:47 UK. GR stays SHADOW (0.25) until the owner switches it to LIVE from the page.
+
 ## Ideas tested
 - **The whole "every graduation" book (`grad`), 3-min sale, real costs, instant graduations left out** (20 Oct 23:27 UK data):
   - 358 trades, +4.3% (+0.6% without the best).
@@ -213,6 +215,7 @@ _Data to 21 Oct 08:43 UK; off-page grad, instant ones left out. Built by reports
 - **PvePad and Rosy (20 Oct):** bought by PG on the curve before graduation and then by GR at graduation. PvePad was +41.7% on GR's 0.25 leg.
 
 ## What the owner said / decided
+- 21 Oct 09:40 UK: "Okay, let's go" (GR plan). Asked what the point of 0.05 SOL live is, given fees. Answer: fixed costs ≈ 0.003 SOL a round trip (0.001 tip each way + ~0.0005 priority each way; the token-account deposit is refunded on the sale) = ~6% of a 0.05 stake, ~3% of 0.1, ~1.2% of 0.25. A real-money start tests what shadow can't: transactions landing, real sells in a crash, front-running at size. Recommended 0.1; the switch to LIVE and the stake are his, from the GR box.
 - 21 Oct 09:33 UK: "So you've analysed all the trades, and these are your conclusions how to make it more profitable … and minimise the losses." Answer: the loss side had not been grouped yet — done at 09:45 UK (10-second rule).
 - 21 Oct 08:37 UK: "let's move to the next coin" (after S3); his 08:26 screenshot showed GR shadow +1.137 SOL on 64, today +1.365 on 21.
 - **20 Oct ~05:15 UK:** "remove what isn't working, add what has potential". This led to GR in shadow, S7b into shadow, and F/G/S3/S6b back to paper.
@@ -228,7 +231,7 @@ _Data to 21 Oct 08:43 UK; off-page grad, instant ones left out. Built by reports
 - **20 Oct 23:32 UK:** told that GR failed the 40-trade test and that AS is now the better first live candidate. No reply on GR in the log (his next message, 23:51 UK, asked for the AS deep-dive).
 
 ## Open items
-- awaiting go (21 Oct 08:55 UK), replaces the GR2 idea (revise GR, no new book): (1) GR buyer cap 272 → under 156 (age 10–185 s unchanged), paper and executor; (2) GR LIVE at 0.05 SOL a trade (the 40-real-trade condition is met: 64 legs +1.137 SOL), stepping to 0.1 after 30 positive live legs with real ≈ paper, pause if 20 live legs are negative; (3) retry the buy once after ~1.5 s on "pool not initialised"; (4) [added 09:45 UK] the 10-second rule in GR's exit — sell if the price 10 s after the buy is below the buy price (paper and executor).
+- awaiting go (21 Oct 08:55 UK), replaces the GR2 idea (revise GR, no new book): DONE 09:47 UK: (1) buyer cap, (3) retry, (4) 10-second rule, guard. OPEN: (2) GR LIVE — the owner switches it on the page (recommended 0.1 SOL a trade) (the 40-real-trade condition is met: 64 legs +1.137 SOL), stepping to 0.1 after 30 positive live legs with real ≈ paper, pause if 20 live legs are negative; (3) retry the buy once after ~1.5 s on "pool not initialised"; (4) [added 09:45 UK] the 10-second rule in GR's exit — sell if the price 10 s after the buy is below the buy price (paper and executor).
 - awaiting go (21 Oct diagnosis): GR2 = graduation with fewer than 156 buyers (any age ≥ 10 s), 3-min exit, executor SHADOW at 0.05 SOL beside GR; GR stays shadow. Neither goes live until 30 real legs are positive.
 - **Awaiting his go (proposed 20 Oct 23:32 UK):**
   - GR stays shadow, **not live**.
