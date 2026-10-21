@@ -1,0 +1,6 @@
+# fomo handles to watch — handle | Solana wallet | EVM address | fomo user id   (from fomo's own API, 21 Oct 2026 21:20 UK)
+Rowdy | 6Y3j1cMgTtUpWSyvhA3fa79EZz91JiZd8YG7QDj9VDYA | 0x8a74e5f032469efe426ce4b77abc60662b9c7d36 | e89522ff-73b5-52f3-b1e3-ef8f60e90775
+rasmr | 6F7GEcDQQRBygxJy9KumtPTC58CRMq5ThT2iFibeRrPs | 0xc4db4c15b7a4005bb0bfc9d78d5688c6bf3a695b | e5b3a269-010a-511c-913a-1036fd1840b5
+TheSOLstice | GmfY52CC5BKt43xt9GSmZWNzsAv4ywE6qgguRM5fvAtN | 0xb3e029765eaa69123a5f0ad5294c746464b742ba | 888d8a2c-a25d-5543-86b2-1dbd03cf4479
+orangie | 4jf24uqj5tAtmXaHCiA1nbYH2RcF21RMdAv1BJdRv3V7 | 0x3624da608227176d8d61108f550a0ddb167d7d39 | a292ff07-9c95-5d47-8816-c36234deadcc
+SmokEy | 2CYnG2nnwv38AWuHWLcEmxMo8kQirESq7hD7WSTRhFT4 | 0x4d8e03a5571b4e00ee4406d8fda4a1ac5793f9b0 | a7883c43-7415-5448-809d-97f5982998e1
