@@ -31,14 +31,14 @@ This file also covers PG's variants `pgh` (PG-hold) and `pg3` (sold at 3 min).
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 00:59 UK; curve costs. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:27 UK; curve costs. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 20 Oct 18:50 UK) | 97 | -21.4% | -22.6% | 24% | 70% | -2.18 |
-| last 24 h | 97 | -21.4% | -22.6% | 24% | 70% | -2.18 |
-| last 12 h | 97 | -21.4% | -22.6% | 24% | 70% | -2.18 |
-| last 6 h | 95 | -20.6% | -21.8% | 24% | 69% | -2.05 |
+| all (from 20 Oct 18:50 UK) | 101 | -20.9% | -22.0% | 24% | 69% | -2.22 |
+| last 24 h | 101 | -20.9% | -22.0% | 24% | 69% | -2.22 |
+| last 12 h | 101 | -20.9% | -22.0% | 24% | 69% | -2.22 |
+| last 6 h | 93 | -20.0% | -21.1% | 25% | 69% | -1.95 |
 <!-- /NUMBERS -->
 
 ## Change history

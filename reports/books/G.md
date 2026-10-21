@@ -12,14 +12,14 @@ Failed. The 5-min sale on these coins was +20% to +36% on 26–36 trades in the 
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 00:59 UK; A's trigger on coins A skips for 150-500 wallets, 5-min. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:27 UK; A's trigger on coins A skips for 150-500 wallets, 5-min. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
 | all (from 18 Oct 21:10 UK) | 115 | -5.2% | -10.5% | 45% | 42% | -0.72 |
-| last 24 h | 43 | -14.0% | -16.1% | 44% | 37% | -0.65 |
+| last 24 h | 42 | -13.1% | -15.2% | 45% | 36% | -0.59 |
 | last 12 h | 33 | -11.3% | -12.6% | 48% | 30% | -0.40 |
-| last 6 h | 15 | -10.2% | -12.7% | 53% | 27% | -0.17 |
+| last 6 h | 13 | -12.2% | -15.2% | 54% | 31% | -0.17 |
 
 Executor book `crowd` (shadow, real quotes): 47 legs, -2.198 SOL, average -19.0% a leg, without best -25.8%, won 26%, 19 Oct 14:10 UK to 20 Oct 04:56 UK.
 <!-- /NUMBERS -->

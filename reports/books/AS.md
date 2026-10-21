@@ -16,16 +16,16 @@ Best paper book on the page and the first candidate for a real-quote test, but n
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 00:59 UK; A + standard filters. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:27 UK; A + standard filters. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 21:32 UK) | 79 | +11.5% | +8.1% | 59% | 32% | +0.83 |
+| all (from 18 Oct 21:32 UK) | 80 | +10.9% | +7.6% | 59% | 31% | +0.79 |
 | before the change (20 Oct 17:45 UK) — back-test | 64 | +8.8% | +4.5% | 56% | 34% | +0.50 |
-| since the change — the real test | 15 | +22.9% | +15.0% | 73% | 20% | +0.33 |
-| last 24 h | 33 | +8.5% | +4.7% | 61% | 24% | +0.25 |
-| last 12 h | 20 | +20.0% | +14.1% | 70% | 15% | +0.38 |
-| last 6 h | 13 | +28.0% | +19.2% | 77% | 15% | +0.35 |
+| since the change — the real test | 16 | +19.5% | +11.9% | 69% | 19% | +0.30 |
+| last 24 h | 33 | +7.2% | +3.3% | 58% | 24% | +0.20 |
+| last 12 h | 21 | +17.6% | +11.8% | 67% | 14% | +0.35 |
+| last 6 h | 13 | +21.0% | +11.7% | 69% | 15% | +0.26 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -35,6 +35,7 @@ _Data to 21 Oct 00:59 UK; A + standard filters. Built by reports/books/numbers.p
 - 20 Oct 17:55 UK (v0.18.160): AS's box shows two records side by side — the same rule BEFORE the change (back-test) and SINCE (the real test) — split at 17:45 UK (owner, 17:39 UK: "keep the profit aside … change began on this date … two kind of boxes … every single box").
 - 20 Oct 19:15 UK (v0.18.164): the 10-wallet operator's coins (bundle_wallets 10, bundle 37–41%, bundle SOL 22–28, dev buy < 0.2) are left out of every book's page record except S10's, past and future. This changed AS's page record retroactively. NOTE: the chat analyses of AS (23:28 – 00:18 UK) worked from abcd.csv, which has no bundle_sol column, and did NOT remove 5 such coins (see Notable coins / Open items).
 - 20 Oct 19:30 UK (v0.18.168) and 19:32 UK (v0.18.169): combined 12-hour strip ranking every book by return per trade; boxes ordered by their 6-hour SOL figure. Presentation only.
+- 21 Oct 01:30 UK (v0.18.172 / executor v0.4.5): AS itself unchanged. Children AS2 (+ launch bundle 2+ wallets) and AS3 (5+) added as separate paper books, judged from 01:30 UK. AS executor book `asoc` in SHADOW at 0.1 SOL (migration m044): real quotes, nothing bought — measures AS's real fills. The executor decides AS at the trigger from the tracker's `asStd` flag; small known difference from the page: socials fetched as missing after the trigger can leave a coin in the shadow book but not the paper one. Sniper count now falls back to saved launch data after a restart. The page's AS box now opens on its SHADOW tab (PAPER tab still there).
 
 ## Ideas tested
 All on AS's own trades at real costs, runner exit, unless stated. "In sample" = found on the same trades it is scored on.
@@ -96,7 +97,7 @@ All on AS's own trades at real costs, runner exit, unless stated. "In sample" = 
 - The Fearless Yorkie (19 Oct 15:41 UK, +118.6%; shadow real +126.1%), Clerk (19 Oct 20:13, +101.7%), SpaceX Universal Basic (19 Oct 01:42, +96.7%) — big early winners.
 - SpaceXSuperIntelligence (20 Oct 21:50 UK) — coin 60 s old, entry $46.1K, peak 2.68x, exit 2.48x: +132.7%, best since the change. 121.6 SOL of first-minute selling and creator bought 11.85 SOL — a winner that breaks the "creator bought < 0.9" pattern. D's later entry on the same coin (22:10 UK, $53.5K, DC row) stopped at −51%.
 - The 14 trades since 17:45 UK (exit multiple / result): won — SpaceXSuperIntelligence 21:50 2.48x (+132.7%), MOCHI 22:52 1.95x (+82.6%; entry $67.9K, peak 4.77x, sellers only 9.1 SOL), xingxing 21:04 1.85x (+72.6%), Conviction 19:11 1.70x (+58.5%), Melonie 23:47 1.53x (+42.7%; 27 copycat names in 24 h and still ran), The Unfazed Crane 21:59 1.49x (+38.6%), Poke Packz 18:26 1.40x (+30.0%), Fomochi 23:31 1.35x (+25.6%), Pump.fun 21 Oct 00:01 1.30x (+20.7%, SUSPECT — see below), shithouse 20:22 1.23x (+13.6%); lost — Cat Collector App 22:35 (peak 1.53x, buying dried up, fell to 0.79x: −27.3%), Xitter 18:09 (peak 1.14x, stop −50.8%), Pokemon Sol-Silver 23:33 (peak 1.06x, stop −52.3%; 47 SOL of selling in its first minute vs a typical winner's 27 — sellers already leaving), Hollow 23:28 (30 min old, creator still holding 3.2%, peak 1.12x, stop −53.5%; "nothing at entry looked wrong, it just never moved"). All four losers peaked at 1.06–1.53x — they never ran.
-- Pump.fun (21 Oct 00:01 UK) — bought at $6.1K MC with 61 holders and the platform's own name; every other AS coin entered at $29–98K. Probably a fake / copycat token with a non-standard supply, so our MC figure (price × 1B) is wrong. Its +20.7% should not be trusted. Led to the "skip MC ≠ price × 1B" proposal.
+- Pump.fun (21 Oct 00:01 UK) — bought at $6.1K MC with 61 holders. First suspected fake; checked 01:25 UK: a real coin that launched at $21–28K, graduated within a minute, crashed to $6K (GMGN $5.1K agrees, supply ~954M), and A bought the bounce. Its +20.7% stands.
 - Recent stopped losers before the change: The Last Hope (20 Oct 11:55, peak 1.09x, −50.8%), Haiku (10:34, peak 1.22x, −52.9%), Tesla Roadster (04:34, −71.8%, the worst — creator bought 28.6 SOL, sellers 4 SOL, price 0.35x at 10 s). Cheap faders: NoahAI (14:14, −6.6%), Forever Laura (16:24, −8.1%).
 
 - King Of Larp (21 Oct 00:20 UK) — 15th trade since the change: entry $51.8K, 89 s old, 5 snipers, peaked 2.84x but sold at 1.18x when buying faded: +9.0%. Example of the runner exit giving back a big peak.
@@ -112,10 +113,10 @@ All on AS's own trades at real costs, runner exit, unless stated. "In sample" = 
 - 21 Oct 00:25 / 00:27 UK: asked for a per-book memory so that "when I talk about coin A … you refer to that first and then the fresh data" — this file is that memory; read it before any AS analysis.
 - 21 Oct 00:56 UK: asked to work AS first, on the history plus every coin since the 17:45 change, and how to improve it.
 - 21 Oct 01:09–01:11 UK: chose separate books over revising AS ("second option"); wants a bigger reading for the sniper signal and asked what other factors would improve AS beyond snipers and MC ≥ $46K.
-- No reply yet to the AS proposals below.
+- 21 Oct 01:19 UK: "go" — AS2 and AS3 boxes (back-test plus from now), sniper count saved, AS real-quote book. Built and live 01:27–01:30 UK.
 
 ## Open items
-- Awaiting go (21 Oct 00:01–00:18 UK): (1) an AS real-quote book in the executor at 0.1 SOL (shadow: quotes only, nothing bought) to measure AS's own fill gap; real money at 0.05 SOL once it has 30 real-quote trades in profit. (2) Variant lines on the AS box, testing forward without changing AS — revised 21 Oct 01:20 UK to AS2 = AS + launch bundle ≥ 2 wallets and AS3 = AS + launch bundle ≥ 5 wallets (MC ≥ $46K dropped: fails the first half) (creator < 0.9 SOL and ≤ 5 copycats dropped, see Ideas tested). (2b) Record the sniper count for every coin (blank on 58% of AS rows), so the sniper rule can be judged. (3) Skip any coin whose market cap does not match price × 1 billion tokens (the Pump.fun case) — applies to every book. (4) Record the bot's crash reason and show it on the page (crash ~23:53 UK 20 Oct; "up 14m, 32 restarts in 24 h").
+- Awaiting go (21 Oct 00:01–00:18 UK): (1) DONE 01:30 UK — AS real-quote book (executor `asoc`, shadow 0.1 SOL). Next: real money at 0.05 SOL once it has 30 real-quote trades in profit and real ≈ paper. (2) Variant lines on the AS box, testing forward without changing AS — revised 21 Oct 01:20 UK to AS2 = AS + launch bundle ≥ 2 wallets and AS3 = AS + launch bundle ≥ 5 wallets (MC ≥ $46K dropped: fails the first half) (creator < 0.9 SOL and ≤ 5 copycats dropped, see Ideas tested). (2b) Record the sniper count for every coin (blank on 58% of AS rows), so the sniper rule can be judged. (3) [DROPPED 21 Oct 01:25 UK] the "MC ≠ price × 1B" fake-token skip — the Pump.fun coin was real (graduated in under a minute, crashed to $6K, GMGN agrees); the check would catch 1 coin in 2,478. (4) Record the bot's crash reason and show it on the page (crash ~23:53 UK 20 Oct; "up 14m, 32 restarts in 24 h").
 - Plan context: at 23:32 UK AS was named the best candidate to go live first, ahead of GR (GR failed its 40-trade real-quote test the same night).
 - Operator-fingerprint contamination: the chat's AS figures (78 / 83 trades, the 69-trade back-test, the loser-pattern tests and the 17-coin real-fill check) include 5 operator-look coins that the page excludes (abcd.csv has no bundle_sol; `full.py`'s check only had launches.csv's last 24 h). Without them: 78 trades +11.5%, before 17:45 +8.8% on 64. Future analyses should join on mint to the tokens table / full launches data, or at least drop bundle_wallets = 10 with bundle 37–41% and dev buy < 0.2.
 - `snipers_n` is blank on most AS rows — any sniper rule needs the blanks handled (unknown ≠ 0).

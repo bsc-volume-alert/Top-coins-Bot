@@ -12,14 +12,14 @@ Failed. It was the 13:28 UK 19 Oct study's best find (+18.4% on 33, 85% won) and
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 00:59 UK; A with launch bundle <= 3 wallets. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:27 UK; A with launch bundle <= 3 wallets. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
 | all (from 18 Oct 20:25 UK) | 116 | -1.9% | -2.9% | 51% | 33% | -0.34 |
-| last 24 h | 53 | -5.4% | -7.1% | 47% | 34% | -0.34 |
+| last 24 h | 51 | -6.8% | -8.6% | 45% | 35% | -0.40 |
 | last 12 h | 35 | -4.2% | -6.8% | 49% | 34% | -0.18 |
-| last 6 h | 17 | -3.8% | -9.2% | 47% | 41% | -0.08 |
+| last 6 h | 16 | -0.9% | -6.4% | 50% | 38% | -0.03 |
 
 Executor book `small` (shadow, real quotes): 22 legs, -1.097 SOL, average -19.9% a leg, without best -23.5%, won 32%, 19 Oct 21:25 UK to 20 Oct 05:14 UK.
 <!-- /NUMBERS -->
