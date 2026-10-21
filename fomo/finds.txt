@@ -7,3 +7,4 @@ TheSOLstice | BOOMER | buy | 51.08 | 1h | 2026-10-21T17:41+01:00
 TheSOLstice | BOOMER | buy | 241.72 | 11h | 2026-10-21T17:41+01:00
 orangie | Dacity | buy | 99.05 | 15h | 2026-10-21T17:41+01:00
 orangie | Dacity | buy | 4998.38 | 1d | 2026-10-21T17:41+01:00
+# touched 2026-10-21T16:46:00Z to run the resolver under the new deploy step
