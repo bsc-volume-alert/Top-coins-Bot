@@ -8,18 +8,20 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - Started 19 Oct 21:50 UK (v0.18.146, owner 21:45). The rule has not changed since.
 
 ## Verdict now
+**21 Oct 02:30 UK:** Dead — buying new coins in their first seconds/minute loses at real costs whatever the filter or exit.
+
 Not working: a lottery book. About −10% to −12% a trade at 5 min on 179 closed rows (23% won). It is positive only in snapshots that contain cat cow (9.0x) and Alt-coin (5.7x). Without its best coin it is about −15%, and without its best two about −17% to −20%.
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; curve costs, 5-min exit. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; curve costs, 5-min exit. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 19 Oct 21:54 UK) | 182 | -8.2% | -12.7% | 21% | 31% | -1.68 |
-| last 24 h | 134 | -7.2% | -13.3% | 18% | 29% | -1.10 |
-| last 12 h | 94 | -14.6% | -22.8% | 16% | 31% | -1.47 |
-| last 6 h | 50 | -8.3% | -23.7% | 18% | 30% | -0.47 |
+| all (from 19 Oct 21:54 UK) | 184 | -8.7% | -13.1% | 21% | 32% | -1.78 |
+| last 24 h | 130 | -7.6% | -13.8% | 18% | 31% | -1.11 |
+| last 12 h | 96 | -15.4% | -23.4% | 16% | 32% | -1.57 |
+| last 6 h | 52 | -10.0% | -24.7% | 17% | 33% | -0.57 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -45,6 +47,8 @@ _Data to 21 Oct 01:27 UK; curve costs, 5-min exit. Built by reports/books/number
 - **Improving it with a filter** (s3f.py on S3's rows, ranked without cat cow): no split positive without cat cow. The best was age ≥ 3 s at −1.5% (n46); copycat-count splits only look good in the half holding cat cow. Dropped.
 - **Re-run on the 21 Oct 00:10 UK data** (179 rows): 5-min −12.2%, median −19.0%, won 21%. First half −1.4%, second half −22.9%. The real legs are unchanged (no shadow since 20 Oct 05:19 UK).
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/S3b.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 184 −8.7% (no-best −13.1%) a trade at curve costs; best exit 3-min −7.4%. Factor search with the luck check: nothing real — with hundreds of trades the test has power, so this is a firm no. No exit or slice makes it break even.
+
 ## Notable coins
 - **cat cow (20 Oct 01:46 UK):** bought 1 s after launch, 9.0x at 5 min (S3's shadow leg made 7.7x, +0.343 SOL). This is the coin that makes S3b's mean.
 - **Alt-coin (19 Oct 22:32 UK):** 5.7x, the second prop.
@@ -57,4 +61,5 @@ _Data to 21 Oct 01:27 UK; curve costs, 5-min exit. Built by reports/books/number
 - 20 Oct (late morning / afternoon): grouped S3b with S4b, GR, F6 and D as the successes to analyse ("analyze the successes … GR and F6 … D … S3B and S4B"). The answer was the same: S3b and S4b are lottery books carried by one or two coins.
 
 ## Open items
+- awaiting go: retire from the page (data kept).
 - None pending. It stays on the page as paper. A candidate for removal from the page if the owner wants it tidied; no proposal has been made for S3b specifically. The settled view is that new-coin sniping is negative (3,500+ trades in the 20 Oct summary; 6,000+ by 23:32 UK).

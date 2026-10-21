@@ -9,18 +9,20 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - Started: the core trigger 13 Oct (v0.5.0 momentum); as book E in the data set 19 Oct 11:18 UK (v0.18.115); E2 19 Oct 16:40 UK. Last rule change: E2, 19 Oct 16:40 UK.
 
 ## Verdict now
+**21 Oct 02:30 UK:** Losing overall; one real-looking slice (core $100K-volume triggers) that has only paid recently.
+
 Not working: E lost under every exit once past its first 31 trades (runner −6.4%, 5-min −5.1% on ~77 at 17:40 UK 20 Oct; −8.2% on 449 abcd rows to 21 Oct 00:09 UK — see the count note under Open items). Its registered 5-min rule (study S4) failed at −14.7% on 44 OOS. E2 took 20 trades since 19 Oct 16:45 UK at −8.8% (the 7 that passed the page filters −29.5%) — nothing in it to want.
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; abcd momentum rows. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; abcd momentum rows. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 20:28 UK) | 459 | -8.3% | -9.0% | 38% | 47% | -4.28 |
-| last 24 h | 181 | -5.3% | -6.9% | 40% | 42% | -1.15 |
-| last 12 h | 95 | +2.3% | -0.6% | 39% | 37% | +0.12 |
-| last 6 h | 56 | +5.7% | +0.8% | 34% | 46% | +0.26 |
+| all (from 18 Oct 20:28 UK) | 458 | -8.0% | -8.6% | 38% | 47% | -4.12 |
+| last 24 h | 179 | -4.6% | -6.1% | 40% | 42% | -1.00 |
+| last 12 h | 91 | +3.9% | +0.9% | 40% | 37% | +0.26 |
+| last 6 h | 51 | +11.7% | +6.4% | 37% | 45% | +0.54 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -47,6 +49,8 @@ _Data to 21 Oct 01:27 UK; abcd momentum rows. Built by reports/books/numbers.py.
 - E2 (skip coins ≥ 1.2x above A/C/D's first buy): in sample (whole file) taken n21 +25.4% vs skipped n26 −15.4% (21:40 UK); n29 +12.4% vs n35 −12.2% (01:45 UK). Forward from 16:45 UK 19 Oct: 2 closed, both stopped (21:40); 6 taken −26.0%, 4 stopped, while the 18 skipped would have made −1.3% (01:45); unchanged at 05:35; 11 taken −8.8% (the 6 that passed the page filters −26.0%; 4 new takes all filter-skipped coins, all up) (09:35); 19 taken −7.8% (the 7 passed −29.5%, 5 of 7 stopped), 36 skipped −10.6% (13:35); 20 taken, 19 closed −8.8% at 5 min, the 37 skipped −10.2% (17:40). Verdict: nothing in it to want.
 - The broader lesson (18 Oct deep dive and the 17:41 UK 19 Oct "$5K → $200K" study): volume arrives with the move rather than ahead of it; by the time the 5-min volume says "winner" the price already says $100K. E's trigger is A's coin ~3 minutes later.
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/E.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 458 trades −8.0% (no-best −8.6%), −1.86 SOL a day. Real by the luck test: 5-min volume ≥ $100K at entry — 80 trades +10.7% (no-best +7.4%), luck 0 — BUT by thirds −0.1% / +0.8% / +28.8%: all the profit is in the last third. Entry MC < $60K: 115 trades +7.3%, luck 1, thirds +17.3 / −5.9 / +5.5. Off-page `momentum` shows the same (vol ≥ $100K 48 at +17.2%, luck 1, again last third only).
+
 ## Notable coins
 - JARVIS (20 Oct afternoon) — E2 take at $83K vs A's first entry at $76K: 1.42x on the runner (+34.7%).
 - Pepina (20 Oct afternoon) — E2 take at $63K vs $49K: stopped (−49.9%).
@@ -61,5 +65,6 @@ _Data to 21 Oct 01:27 UK; abcd momentum rows. Built by reports/books/numbers.py.
 - 20 Oct 05:00 UK: "remove what isn't working" — E/E2 off the page.
 
 ## Open items
+- awaiting go: optional paper variant E100 = E only when 5-min volume ≥ $100K, judged forward; otherwise retire.
 - None pending. E stays recorded off the page.
 - Count note for whoever fills the numbers: the studies count E's PASSED rows (77 at 17:40 UK 20 Oct); reports/books/numbers.py counted 449 "abcd momentum rows" to 00:09 UK 21 Oct, and the off-page `momentum` strategy (all rows) showed 311 — three different populations. Say which one a figure uses.

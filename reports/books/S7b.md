@@ -8,18 +8,20 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - Started 19 Oct 20:38 UK (v0.18.143, owner 20:36; first row 20:42). The rule has not changed.
 
 ## Verdict now
+**21 Oct 02:30 UK:** Dead — buying new coins in their first seconds/minute loses at real costs whatever the filter or exit.
+
 Not working. About −14% a trade at 5 min on 147 closed rows (27% won). Its real shadow legs were the worst per trade of any sniper book: 47 legs −0.627 SOL (−26% of stake), 19% won. The "+55% a trade" that put it into shadow was two price-error coins.
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; curve costs, 5-min exit. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; curve costs, 5-min exit. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
 | all (from 19 Oct 20:42 UK) | 147 | -15.8% | -18.9% | 27% | 47% | -2.46 |
 | last 24 h | 127 | -17.8% | -21.5% | 26% | 50% | -2.39 |
 | last 12 h | 91 | -13.4% | -18.6% | 25% | 44% | -1.31 |
-| last 6 h | 22 | -3.5% | -25.1% | 27% | 50% | -0.10 |
+| last 6 h | 16 | +0.3% | -29.6% | 25% | 56% | -0.01 |
 
 Executor book `sn7b` (shadow, real quotes): 47 legs, -0.627 SOL, average -26.1% a leg, without best -27.9%, won 19%, 20 Oct 05:22 UK to 20 Oct 15:30 UK.
 <!-- /NUMBERS -->
@@ -40,6 +42,8 @@ Executor book `sn7b` (shadow, real quotes): 47 legs, -0.627 SOL, average -26.1% 
 - **Unknown (< 100 follower) feed wallets beat famous ones.** In sample +7% on 86. After the price fix about −12% on 39–56, and −14% on 147 by 21 Oct. **Does not hold up.**
 - **Shadow at 0.05 SOL** (20 Oct 05:22–15:30 UK): 47 legs −0.627 SOL. Stops cost ~15% more than paper. Dropped (m043).
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/S7b.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 147 −15.8% a trade at curve costs; best exit −11.4%. Factor search with the luck check: nothing real — with hundreds of trades the test has power, so this is a firm no. No exit or slice makes it break even.
+
 ## Notable coins
 - **KFC and Super Saiyan (20 Oct 04:54–04:57 UK):** the two "10x" coins. They were instant graduations, priced at the curve's completion price while the pool traded ~9x higher. Really 1.16x and 1.08x. They are the reason v0.18.149's late-price rule exists.
 - the normie (19 Oct 22:04 UK): 3.9–4.1x. Without it the book was −16.6% on 38 (09:35 study).
@@ -51,4 +55,5 @@ Executor book `sn7b` (shadow, real quotes): 47 legs, -0.627 SOL, average -26.1% 
 - 20 Oct 15:29 UK: S7b back to paper (m043).
 
 ## Open items
+- awaiting go: retire from the page (data kept).
 - None. Note the count difference: 41 legs / −0.553 SOL at the decision, 47 legs / −0.627 SOL final. The settled view is that new-coin sniping is negative (3,500+ trades in the 20 Oct summary; 6,000+ by 23:32 UK).

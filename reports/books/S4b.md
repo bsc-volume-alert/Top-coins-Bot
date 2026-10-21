@@ -8,11 +8,13 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - Started 19 Oct 20:01 UK (v0.18.142, owner 19:56; first row 20:19 UK). The rule has not changed since.
 
 ## Verdict now
+**21 Oct 02:30 UK:** Dead — buying new coins in their first seconds/minute loses at real costs whatever the filter or exit.
+
 Not working: a lottery book. About −6% to −8% a trade at 5 min on 48 closed rows, median about −25%, and only 12% won. Two coins (Unemployed, But Investing 4.5–4.7x; Eisley 3.8x) carry it. It is −14% without the best and −20% without the best two. The under-3% split that created it reversed out of sample within hours.
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; curve costs, 5-min exit. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; curve costs, 5-min exit. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
@@ -40,6 +42,8 @@ _Data to 21 Oct 01:27 UK; curve costs, 5-min exit. Built by reports/books/number
 - **Bundle under 3% as the edge inside S4.** In sample +21% to +27% on 19–30. Out of sample −17.2% (9), −6.9% (25); the book −10.1% (27). It went to +1.8% (33) only through two coins, and was −6% to −8% (48) by 21 Oct. **Does not hold up.**
 - **Making it a shadow book.** Suggested at 01:45 UK as "if anything sniper gets a shadow leg next, S4b is it", then withdrawn at 05:35 UK after the reversal. Never done.
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/S4b.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 48 −8.2% (no-best −15.9%) a trade at curve costs; best exit 40% trail −5.5%. Factor search with the luck check: nothing real — with hundreds of trades the test has power, so this is a firm no. No exit or slice makes it break even.
+
 ## Notable coins
 - **Unemployed, But Investing (20 Oct 14:02 UK):** 4.5–4.7x at 5 min. This is the "4.7x coin" that put S4b in profit on the owner's screen. S4 and AS also took it.
 - **Eisley (19 Oct 22:10 UK):** 3.8x, the early coin behind the in-sample +27%.
@@ -51,4 +55,5 @@ _Data to 21 Oct 01:27 UK; curve costs, 5-min exit. Built by reports/books/number
 - 20 Oct (afternoon, after ~14:00): "But S4B's in profit, no?" with a screenshot of the S4b box in profit. He was told the profit was one or two coins (Unemployed, But Investing 4.7x, Formation 2.1x) in a book with an 18% win rate and a −26% median. He had seen S3b and S4b as the best books; the answer was that they are lottery books.
 
 ## Open items
+- awaiting go: retire from the page (data kept).
 - None pending. It stays on the page as paper at the owner's wish. The settled view is that new-coin sniping is negative across 3,500+ trades (20 Oct summary; 6,000+ by 23:32 UK). Any return of S4b to "profit" should be checked first for a single 4x+ coin.

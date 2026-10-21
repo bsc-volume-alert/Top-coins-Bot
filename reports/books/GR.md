@@ -33,6 +33,8 @@ This file also covers GR's paper variants (gr70, gr85, grlock, grsoc) and the of
 - **Last rule change:** 20 Oct 07:30 UK (v0.18.153): coins must be 10–185 s old at graduation, so instant graduations are skipped.
 
 ## Verdict now
+**21 Oct 02:30 UK:** The few-buyer graduation is the second real lead in the whole tracker, backed by real quotes, but it has gone flat in the last day.
+
 **Not working on real quotes. The 40-trade go-live test was failed (20 Oct 23:32 UK).**
 - The 40 shadow legs averaged +5.1% a trade at equal stake, but −3.2% without ARTEMI (+329%). They lost −0.231 SOL at the stakes actually used.
 - Paper is still +12.3% on 45 (+5.8% without the best trade), but the last 6 h were −15.1% on 13.
@@ -40,7 +42,7 @@ This file also covers GR's paper variants (gr70, gr85, grlock, grsoc) and the of
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; graduation book, 3-min exit. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; graduation book, 3-min exit. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
@@ -55,13 +57,13 @@ Executor book `grad` (shadow, real quotes): 45 legs, -0.262 SOL, average +4.3% a
 
 **GR every graduation**
 
-_Data to 21 Oct 01:27 UK; off-page grad, instant ones left out. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; off-page grad, instant ones left out. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
 | all (from 18 Oct 20:35 UK) | 375 | +3.3% | -0.2% | 51% | 33% | +0.87 |
-| last 24 h | 180 | +6.6% | -0.8% | 54% | 31% | +1.00 |
-| last 12 h | 82 | -1.1% | -5.5% | 51% | 35% | -0.17 |
+| last 24 h | 178 | +7.2% | -0.2% | 54% | 30% | +1.11 |
+| last 12 h | 81 | -1.1% | -5.6% | 52% | 36% | -0.17 |
 | last 6 h | 47 | +3.7% | -4.0% | 60% | 34% | +0.13 |
 <!-- /NUMBERS -->
 
@@ -170,6 +172,8 @@ _Data to 21 Oct 01:27 UK; off-page grad, instant ones left out. Built by reports
   - **UK hour:** slice entries 00:00–04:00 UK +77.9% on 21; 08:00–12:00 +0.4% on 15. Time of day not acted on.
 - **Not registered in the study** (17:40 UK): GR's variants (gr70, gr85, gr-lock), because the buyers-at-graduation count is not in abcd.csv and x_h3l had 2 rows then.
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/GR.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): Paper (grf) 50 trades +9.9% (no-best +4.0%), thirds +26.5 / +19.8 / −18.2. Real-quote legs (book grad): equal-stake +5.1% a leg on 45, −3.2% without ARTEMI. Exits: the 15-min hold (x_h15) beats the 3-min exit in all three thirds on paper (+16.6%, no-best +11.7%) but not on every-graduation's 375 trades — not changed. REAL finding (luck 0): on every graduation (375 trades, instant ones out), fewer than 156 buyers at entry — 94 trades +37.9% (no-best +24.2%, no-top3 +10.9%), 66% won, thirds +48.9 / +65.4 / +0.7. Real-quote support: GR's own legs with < 156 buyers +9.0% a leg on 32 vs ≥ 156 −6.6% on 10. Caution: last third ≈ 0, and paper overstates real by ~14 points at 0.05 SOL.
+
 ## Notable coins
 - **Leonida (20 Oct 05:38 UK):** an instant graduation. Paper 3.58x; real shadow buy paid +272% over paper and the leg returned −8.9%. One of the two coins behind the 07:30 UK rule change.
 - **MONUMENTAL EGO (20 Oct 06:17 UK):** an instant graduation. Paper 2.51x; real paid +194% over paper, leg −19.1%. The other coin behind the 07:30 change.
@@ -205,6 +209,7 @@ _Data to 21 Oct 01:27 UK; off-page grad, instant ones left out. Built by reports
 - **20 Oct 23:32 UK:** told that GR failed the 40-trade test and that AS is now the better first live candidate. No reply on GR in the log (his next message, 23:51 UK, asked for the AS deep-dive).
 
 ## Open items
+- awaiting go (21 Oct diagnosis): GR2 = graduation with fewer than 156 buyers (any age ≥ 10 s), 3-min exit, executor SHADOW at 0.05 SOL beside GR; GR stays shadow. Neither goes live until 30 real legs are positive.
 - **Awaiting his go (proposed 20 Oct 23:32 UK):**
   - GR stays shadow, **not live**.
   - Add two variant lines: **entry MC ≥ $41.5K**, and a **40% trailing-stop exit** (`x_tsl40`) so winners are not capped at about 1.28x.

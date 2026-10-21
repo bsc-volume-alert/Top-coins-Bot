@@ -12,11 +12,13 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - Started 20 Oct 16:35 UK (v0.18.156, socials-only version). Last rule change 20 Oct 17:45 UK (v0.18.158, standard filters; commit pushed 17:29 UK, the page counts "since the change" from 17:45 UK = `CHG_STD` 16:45 UTC). Page record runs from the price fix (18 Oct 20:25 UK); everything before 17:45 UK is a back-test of a rule chosen by looking at those trades.
 
 ## Verdict now
+**21 Oct 02:30 UK:** Still the best book; its edge is real as a whole but can't yet be split into proven parts. The quiet-first-minute signal is the strongest refinement found.
+
 Best paper book on the page and the first candidate for a real-quote test, but not proven: +11.5% a trade on 78 (+8.1% without its best trade, won 59%) to 21 Oct 00:09 UK with the operator's coins removed, as the page does. The 14 trades since the 17:45 change made +23.9% (won 10 of 14); the 64 before it +8.8% (in sample). The chat figures given on the night (+13.0% on 83, +10.9% on 69) wrongly included 5 operator coins; corrected 21 Oct 00:50 UK. Each stop costs about −51%, so the profit rests on a few runners a day; 14-trade blocks have ranged from −7.3% to +29.6%.
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; A + standard filters. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; A + standard filters. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
@@ -90,6 +92,8 @@ All on AS's own trades at real costs, runner exit, unless stated. "In sample" = 
   - Also passing the strict test (in sample, ~1,000 cuts tried, so some are luck): bundle ≥ 30.5% (27 at +31.5%); coin under 6 min old (26 at +31.6%); quieter trigger minute — fewer than 63 wallets (38 at +19.2%; but the same idea, study rule S2 wal60 ≤ 65, failed out of sample on A), first-minute selling < 33 SOL, fewer than 77 trades in the minute; socials known present (68 at +13.9% vs 11 unknown at −3.7%). Combinations: bundle ≥ 2 wallets AND under 6 min 22 at +34.6% (no-best +23.0%); bundle ≥ 5 AND under 6 min 13 at +55.9%. Watch list, not books.
   - Proposal (01:20 UK): AS2 = AS + launch bundle ≥ 2 wallets; AS3 = AS + launch bundle ≥ 5 wallets; record the sniper count to the database so restarts don't wipe it.
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/AS.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 80 trades +10.9% (no-best +7.6%), 59% won, 31% stopped, ~37 a day, +0.37 SOL a day at 0.1; positive in all three thirds (+11.7 / +7.6 / +13.6) and in 4 of 5 blocks. The runner exit is best of 12. Factor search on AS's own 80 trades: 76 pass vs 67 by luck — NO filter is clearly beyond luck (bundle wallets ≥ 5 luck 17, first-minute selling < 22 SOL luck 13). The one filter that is real on A's 331 trades (first-minute selling < 19.6 SOL, luck 2) works only inside AS: AS + selling < 19.6 SOL = 17 trades +47.0% (no-best +32.7%, no-top3 +23.2%), 82% won, thirds +58.3 / +70.0 / +14.7, ~8 a day, +0.37 SOL a day. Winners vs losers: stopped losers (31%) never ran (median peak 1.14x) and had more first-minute selling (33 vs 26 SOL) and fewer snipers (0 vs 4).
+
 ## Notable coins
 - Spidey Show (19 Oct 21:58 UK) — entry $59.7K, peaked 20.6x, sold at the 4x cap: +276.6%, AS's best trade. Also carries F6 and H.
 - French Piccolo (19 Oct 06:04 UK) — +115.6% paper, +110.9% live real money. Bundle 40.0% over 10 wallets, dev buy 0.049: matches the operator fingerprint (bundle_sol not in abcd.csv, so not fully confirmable from that file); socials unknown, which is how it passed. The page leaves it out since v0.18.164; the chat figures kept it.
@@ -116,6 +120,7 @@ All on AS's own trades at real costs, runner exit, unless stated. "In sample" = 
 - 21 Oct 01:19 UK: "go" — AS2 and AS3 boxes (back-test plus from now), sniper count saved, AS real-quote book. Built and live 01:27–01:30 UK.
 
 ## Open items
+- awaiting go (21 Oct diagnosis): AS4 = AS + first-minute selling < 20 SOL as a paper box (back-test + from-now), AS unchanged. AS live at 0.05 SOL once its shadow book has 30 legs in profit with real ≈ paper.
 - Awaiting go (21 Oct 00:01–00:18 UK): (1) DONE 01:30 UK — AS real-quote book (executor `asoc`, shadow 0.1 SOL). Next: real money at 0.05 SOL once it has 30 real-quote trades in profit and real ≈ paper. (2) Variant lines on the AS box, testing forward without changing AS — revised 21 Oct 01:20 UK to AS2 = AS + launch bundle ≥ 2 wallets and AS3 = AS + launch bundle ≥ 5 wallets (MC ≥ $46K dropped: fails the first half) (creator < 0.9 SOL and ≤ 5 copycats dropped, see Ideas tested). (2b) Record the sniper count for every coin (blank on 58% of AS rows), so the sniper rule can be judged. (3) [DROPPED 21 Oct 01:25 UK] the "MC ≠ price × 1B" fake-token skip — the Pump.fun coin was real (graduated in under a minute, crashed to $6K, GMGN agrees); the check would catch 1 coin in 2,478. (4) Record the bot's crash reason and show it on the page (crash ~23:53 UK 20 Oct; "up 14m, 32 restarts in 24 h").
 - Plan context: at 23:32 UK AS was named the best candidate to go live first, ahead of GR (GR failed its 40-trade real-quote test the same night).
 - Operator-fingerprint contamination: the chat's AS figures (78 / 83 trades, the 69-trade back-test, the loser-pattern tests and the 17-coin real-fill check) include 5 operator-look coins that the page excludes (abcd.csv has no bundle_sol; `full.py`'s check only had launches.csv's last 24 h). Without them: 78 trades +11.5%, before 17:45 +8.8% on 64. Future analyses should join on mint to the tokens table / full launches data, or at least drop bundle_wallets = 10 with bundle 37–41% and dev buy < 0.2.

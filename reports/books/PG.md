@@ -25,20 +25,22 @@ This file also covers PG's variants `pgh` (PG-hold) and `pg3` (sold at 3 min).
 - **Last rule change:** none since it started.
 
 ## Verdict now
+**21 Oct 02:30 UK:** Dead; the pre-graduation run-up is where the bundle sells.
+
 **Not working. Proposed for switch-off, awaiting the owner's go.**
 - On its first 76 trades (19:00–23:27 UK) the headline exit lost **−21.3% a trade**: median −48.9%, only 24% won, **70% hit the −40% stop**. −1.70 SOL at 0.1 a trade.
 - Every other exit on the same coins was also −18% to −25%.
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; curve costs. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; curve costs. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 20 Oct 18:50 UK) | 101 | -20.9% | -22.0% | 24% | 69% | -2.22 |
-| last 24 h | 101 | -20.9% | -22.0% | 24% | 69% | -2.22 |
-| last 12 h | 101 | -20.9% | -22.0% | 24% | 69% | -2.22 |
-| last 6 h | 93 | -20.0% | -21.1% | 25% | 69% | -1.95 |
+| all (from 20 Oct 18:50 UK) | 107 | -21.8% | -22.9% | 23% | 69% | -2.44 |
+| last 24 h | 107 | -21.8% | -22.9% | 23% | 69% | -2.44 |
+| last 12 h | 107 | -21.8% | -22.9% | 23% | 69% | -2.44 |
+| last 6 h | 98 | -20.5% | -21.7% | 24% | 68% | -2.11 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -71,6 +73,8 @@ _Data to 21 Oct 01:27 UK; curve costs. Built by reports/books/numbers.py._
   - The summary records "dip-buying after graduation" as strongly negative.
 - **Portfolio role:** PG was the third book in the plan agreed on 20 Oct 20:22 UK (GR + best D-family + PG, PG "if proven"). It is not proven.
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/PG.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 107 trades −21.8% (no-best −22.9%), 69% stopped, −8.5 SOL a day at 0.1 pace. Best exit (x_h3l) −14.0%. One slice: entry MC < $32.2K, 16 trades +15.8%, luck 2 — tiny.
+
 ## Notable coins
 - **Winners on PG-stop (2x hit):**
   - justice for jdot (19:03 UK, $36.4K, 18 s old, peak 2.60x). Its 3-min sale would have been 0.80.
@@ -93,6 +97,7 @@ _Data to 21 Oct 01:27 UK; curve costs. Built by reports/books/numbers.py._
 - **20 Oct 23:32 UK:** told "PG should be switched off … Failed: 70% hit the stop, only 24% won". No reply on PG in the log yet.
 
 ## Open items
+- awaiting go: switch PG off (all three variants).
 - **Proposed 20 Oct 23:32 UK, awaiting go:** switch PG off on the page and in the tracker.
 - **Possible double listing in the combined 12-h strip** (from reading the code; not checked on the live page):
   - `qBG` in src/web.js leaves out `grf`, `rev` and `k` but not `pg`.

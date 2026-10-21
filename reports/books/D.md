@@ -9,17 +9,19 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - D's filtered children (other notes files): **DS** (D + the owner's standard set: socials, creator not sold out, biggest buyer 3–5 SOL) and **DC** (D on copycats of a $72K+ coin). The 80-SOL level is 80.md.
 
 ## Verdict now
+**21 Oct 02:30 UK:** Negative; useful only as the feeder for DS/DC.
+
 Not working on its own: about break-even in every study (−0.4% to −1.3% from 80 to 217 trades), then worse on 20 Oct evening (−3.6% on 259 to 21 Oct 00:09 UK; last 6 h −11.4% on 39). Its 26 shadow legs were +0.025 SOL. Every rule found on D (F8, F11, F12, F13) faded or failed out of sample.
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; real costs. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; real costs. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
 | all (from 18 Oct 20:27 UK) | 257 | -4.3% | -5.4% | 46% | 41% | -1.37 |
-| last 24 h | 107 | -8.5% | -9.8% | 44% | 45% | -1.01 |
-| last 12 h | 60 | -7.6% | -10.0% | 47% | 47% | -0.52 |
+| last 24 h | 106 | -8.0% | -9.4% | 44% | 44% | -0.96 |
+| last 12 h | 59 | -8.4% | -10.9% | 46% | 47% | -0.56 |
 | last 6 h | 37 | -12.6% | -16.6% | 41% | 57% | -0.50 |
 
 Executor book `strict` (shadow, real quotes): 26 legs, +0.025 SOL, average +5.1% a leg, without best +0.3%, won 50%, 19 Oct 10:27 UK to 19 Oct 15:53 UK.
@@ -55,6 +57,8 @@ All at real costs; OOS = out of sample.
 - Biggest buyer in the trigger minute 10+ SOL: −18% on A and D (20 Oct afternoon) → DS's 3–5 SOL band.
 - Top-10 holders < 23% (GMGN) → H, found across A, D and 80 (+10.6% on 145); H trades A's trigger only. See H.md.
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/D.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 257 trades −4.3% (no-best −5.4%), −0.62 SOL a day; last two blocks −8.8% / −8.4%. Best exit 1.5x/−40% −3.4%. 25 pass vs 18 by luck, none real (best luck 10: creator bought ≥ 5 SOL, +10.2% on 39).
+
 ## Notable coins
 - Spidey Show (night of 19–20 Oct) — 4x cap; F11's in-sample mean is +3.2% without it.
 - earth and moon (20 Oct 09:48 / 10:09 UK) — operator coins A and D bought on the pool at ~$99K: 2.15x and 1.62x on the runner (excluded since 19:15 UK).
@@ -70,5 +74,6 @@ All at real costs; OOS = out of sample.
 - 20 Oct 20:22 UK: agreed in principle to two or three separate profitable books including "the best D-family book".
 
 ## Open items
+- awaiting go: retire the plain D box (data kept).
 - F8 and F11 continue as study rules (F8 waiting 31/40; F11 waiting 30/80); F12, F13 waiting.
 - The best-D-family-book decision depends on DS and DC forward results (DS since 17:45 UK 20 Oct: −3.5% on 12 to 00:09 UK; DC since 16:00 UK: −32.2% on 4). See DS.md, DC.md.

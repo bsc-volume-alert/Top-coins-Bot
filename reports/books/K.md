@@ -20,20 +20,22 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - **Last rule change:** none.
 
 ## Verdict now
+**21 Oct 02:30 UK:** Can't be judged yet.
+
 **Undecided; promising but tiny and one evening old.**
 - 26 trades (18:00–23:27 UK): the 5-min sale was **+15.4% a trade (+7.1% without the best)** and the runner exit +11.3% (+7.7% without the best).
 - The headline exit (`x_h2t40`) cannot be scored from the data file, because the column is missing from others.csv. The 40% trail alone was only +3.9% (−4.2% without the best).
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; page headline is x_h2t40, not in the data export; 5-min shown. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; page headline is x_h2t40, not in the data export; 5-min shown. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 20 Oct 18:00 UK) | 33 | +4.4% | -2.4% | 52% | 33% | +0.11 |
-| last 24 h | 33 | +4.4% | -2.4% | 52% | 33% | +0.11 |
-| last 12 h | 33 | +4.4% | -2.4% | 52% | 33% | +0.11 |
-| last 6 h | 26 | +8.4% | -0.2% | 50% | 31% | +0.19 |
+| all (from 20 Oct 18:00 UK) | 32 | +6.3% | -0.7% | 53% | 31% | +0.17 |
+| last 24 h | 32 | +6.3% | -0.7% | 53% | 31% | +0.17 |
+| last 12 h | 32 | +6.3% | -0.7% | 53% | 31% | +0.17 |
+| last 6 h | 25 | +10.9% | +2.1% | 52% | 28% | +0.25 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -56,6 +58,8 @@ _Data to 21 Oct 01:27 UK; page headline is x_h2t40, not in the data export; 5-mi
   - Still on test. No decision yet.
 - No filters tested on K yet.
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/K.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 32 trades +6.3% but without best −0.7%; one-coin result. Only 5 entry columns in its data.
+
 ## Notable coins
 - **WIPD (20 Oct 22:58 UK):**
   - K entry $54.9K, 570 s old. Peak 6.43x; 5-min sale 3.44x, trail 3.27x.
@@ -77,6 +81,7 @@ _Data to 21 Oct 01:27 UK; page headline is x_h2t40, not in the data export; 5-mi
 - **20 Oct 20:22 UK:** trading framework: either many trades with small profit each, or few trades with big profit (about 0.3 SOL a trade minimum).
 
 ## Open items
+- Keep on paper; judge at 60 trades.
 - **Add `x_h2t40` to others.csv** (the data dump) so K's headline exit can be scored outside the page. Until then, studies should say which column they used.
 - **Decide K's real exit.** On 26 trades the 5-min sale and the runner beat the trail. Don't switch on this sample; record all and compare at 40+.
 - **Overlap:** check how many K coins are also A/AS/GR/PG coins before treating it as a separate book in the "two or three non-overlapping books" plan.

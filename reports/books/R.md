@@ -25,13 +25,15 @@ This file also holds the whole Pokémon revival study (GMGN 5-minute candle back
   - This is why it had 0 fires for hours.
 
 ## Verdict now
+**21 Oct 02:30 UK:** Can't be judged; still starved by the restart bug.
+
 **Not a trade, and never was. R records an idea that the 5-minute candle back-tests already showed is negative.**
 - Fair test: −9% a trade with a 40% trail on 160 events, positive only because of Pokémon.
 - Live record: 4 trades by 23:27 UK (+10.7%, 2 won, −3.5% without the best) and 7 by 00:09 UK. Far too few, and distorted by the restart bug.
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; real costs. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; real costs. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
@@ -107,6 +109,8 @@ The figures below were re-run on 21 Oct 00:40 UK from the saved scripts and the 
   - 7 rows by 00:09 UK.
   - Still recording.
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/R.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 9 trades +3.5% (no-best −3.0%).
+
 ## Notable coins
 - **Pokémon (D42TjMjz5H7toPu5md5KBXreZkCSdZMEfLQwmBhJXvb1), 18–20 Oct:**
   - $50K to about $2.1M about a day after launch; the reason R exists.
@@ -127,6 +131,7 @@ The figures below were re-run on 21 Oct 00:40 UK from the saved scripts and the 
 - **20 Oct 18:45 UK** (in the PG discussion): "buy them on the first dump?". The dip-buying test above is negative.
 
 ## Open items
+- awaiting go: persist R's 6-h history so restarts don't wipe it (open since 20 Oct).
 - **Proposed, awaiting go:** persist R's 6-h price history to disk so it survives restarts (fix the restart bug). Until then R's live record is not the back-tested rule.
 - **Proposed 21 Oct 00:11 UK, awaiting go:** record the crash reason and show it on the page (the 23:53 UK crash). Every crash also wipes R's history.
 - **Decision for the owner:** R is a recording book with a negative back-test. Either fix the bug and let it record, or switch it off. No case for real money.

@@ -8,18 +8,20 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - Started 19 Oct 13:53 UK (v0.18.124 / executor v0.3.4, owner 13:48 UK); exit changed 19 Oct 20:01–20:10 UK (v0.18.142, owner 19:56 UK). No change since.
 
 ## Verdict now
+**21 Oct 02:30 UK:** Dead.
+
 Failed. The 5-min sale on these coins was +20% to +36% on 26–36 trades in the first studies and then −13% to −22% on every later window (study rule F4: −17.7% on 71 OOS at 17:40 UK 20 Oct; G since 20:10 UK 19 Oct −19.3% on 55, 58% stopped). Its 47 shadow legs lost −2.198 SOL — the worst shadow book.
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; A's trigger on coins A skips for 150-500 wallets, 5-min. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; A's trigger on coins A skips for 150-500 wallets, 5-min. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 21:10 UK) | 115 | -5.2% | -10.5% | 45% | 42% | -0.72 |
-| last 24 h | 42 | -13.1% | -15.2% | 45% | 36% | -0.59 |
-| last 12 h | 33 | -11.3% | -12.6% | 48% | 30% | -0.40 |
-| last 6 h | 13 | -12.2% | -15.2% | 54% | 31% | -0.17 |
+| all (from 18 Oct 21:10 UK) | 116 | -3.7% | -8.9% | 46% | 41% | -0.54 |
+| last 24 h | 41 | -9.6% | -14.2% | 46% | 34% | -0.44 |
+| last 12 h | 34 | -5.7% | -11.3% | 50% | 29% | -0.23 |
+| last 6 h | 14 | +1.2% | -12.2% | 57% | 29% | +0.00 |
 
 Executor book `crowd` (shadow, real quotes): 47 legs, -2.198 SOL, average -19.0% a leg, without best -25.8%, won 26%, 19 Oct 14:10 UK to 20 Oct 04:56 UK.
 <!-- /NUMBERS -->
@@ -40,6 +42,8 @@ Executor book `crowd` (shadow, real quotes): 47 legs, -2.198 SOL, average -19.0%
 - 1.5x/−40% on G's coins: +13.2% (26) → +5.9% (36) in sample; not pursued after F4 failed.
 - By hour (21:40 UK 19 Oct): positive in 9 of the first 13 hours and 2 of the last 9 — the edge was a few hours on 19 Oct.
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/G.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 116 trades −3.7% (no-best −8.9%); first block +37.1% then four losing blocks. Best exit 15-min hold +3.6% but no-best −1.7%. Best cuts are all GMGN snapshots (†, timing not exact), luck 6.
+
 ## Notable coins
 - boobs coin and tit coin (19 Oct evening) — the 10-wallet operator's coins, caught by G at $60–100K after their run; G took boobs coin three times (one 3.8x, one stop, one rug) and tit coin twice (a rug and a stop). With Dacity Cat and Lucia the Baddie, four h5 legs sold rugs at 0.03–0.10. A reason for every book to skip the operator's coins (done 20 Oct 19:15 UK).
 - The 27 h5 legs (0.25 SOL): 19 stops −2.769 SOL, 7 timed sales +0.840, 1 floor +0.064 → −1.865 SOL (−27.6% of stake), win 19%.
@@ -50,4 +54,5 @@ Executor book `crowd` (shadow, real quotes): 47 legs, -2.198 SOL, average -19.0%
 - 20 Oct 05:00 UK: "remove what isn't working" — G to paper and off the page.
 
 ## Open items
+- awaiting go: retire from the page.
 - None. F4 is closed as "does not hold up". The page's 150+-wallet skip stays.

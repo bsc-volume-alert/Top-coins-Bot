@@ -8,11 +8,13 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - Started 19 Oct 13:53 UK (v0.18.124 / executor v0.3.4, owner 13:48 UK); it could not trade until the 19:39 UK fix (v0.18.141). Rule unchanged since.
 
 ## Verdict now
+**21 Oct 02:30 UK:** Dead.
+
 Failed. It was the 13:28 UK 19 Oct study's best find (+18.4% on 33, 85% won) and went −10% to −17% out of sample (study rule F1: −10.2% on 64 against 0.0% for the rest of A at 17:40 UK 20 Oct). Its 22 real-quote shadow legs lost −1.097 SOL (−20% of stake).
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; A with launch bundle <= 3 wallets. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; A with launch bundle <= 3 wallets. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
@@ -43,6 +45,8 @@ Executor book `small` (shadow, real quotes): 22 legs, -1.097 SOL, average -19.9%
 - The F leg filled later than A's leg on the same trigger (presumably waiting for the bundle lookup): entry gap median +3.4% to +3.7%, 9 of 21 legs paid 5–26% over paper — the worst entry gap of the PumpSwap books.
 - Related cuts: bundle % < 28 on A (+10.0% vs −10.3% at 13:28; +4.0% vs −7.2% at 17:41) — same family, not registered. D with bundle_wallets ≤ 2 (+8.2% on 57 at 17:40 UK 20 Oct) — 43 of 44 are A's bundle-≤2 coins, where it failed; not registered.
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/F.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 116 trades −1.9% (no-best −2.9%); first third +13.4% then −15.8% / −3.4%. 18 pass vs 46 by luck — nothing. Confirms the 19 Oct out-of-sample failure of bundle ≤ 3 wallets (and is the mirror image of AS2/AS3's bundle ≥ 2/5 finding).
+
 ## Notable coins
 - MrDuck (+14% entry gap), PackPump (+26%), Trump Accounts (+14%), LOTTO (+10%), Quinelings (+7%) — F legs that paid well over paper (19–20 Oct night).
 - American Dream (sold at 0.20) and LOTTO (0.08) — two of F's 11 shadow stops were rugs.
@@ -54,4 +58,5 @@ Executor book `small` (shadow, real quotes): 22 legs, -1.097 SOL, average -19.9%
 - 20 Oct 05:00 UK: "remove what isn't working" — F to paper and off the page.
 
 ## Open items
+- awaiting go: retire from the page.
 - None. F1 is closed as "does not hold up". Do not re-test small-bundle filters on A without reading this file; the D version (≤ 2 wallets) is the same coins.

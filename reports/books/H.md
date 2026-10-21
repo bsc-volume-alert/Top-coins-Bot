@@ -8,11 +8,13 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - Started 20 Oct 20:00 UK (v0.18.171; commit 19:51 UK; `CHG_H` 19:00 UTC). No rule change since. Page shows before 20:00 UK (back-test) and since.
 
 ## Verdict now
+**21 Oct 02:30 UK:** Can't be judged.
+
 Undecided and mostly untestable: only 50 of 336 passed A rows carry a GMGN holder snapshot (21 Oct 00:09 UK data), so H has 18 trades in total and 2 since it started (catdog +32.4%, Mugshot Cat −54.5%). Its +14.5% on 18 is −0.9% without Spidey Show.
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; A, top-10 holders under 23%. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; A, top-10 holders under 23%. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
@@ -34,6 +36,8 @@ _Data to 21 Oct 01:27 UK; A, top-10 holders under 23%. Built by reports/books/nu
 - Holder concentration on AS's trades (23:31–00:01 UK) — no separation: tracker's own top-10 at entry 24.9% (winners) vs 24.6% (losers); GMGN top-10 0.25 vs 0.23.
 - Contrary early hint: 19 Oct 13:28 UK study, A's passed coins split at the median of the tracker's own `top10_entry` (24.25%): the higher-concentration half did better (+13.6%, win 63%) than the lower half (+0.4%, win 45%). Different column (tracker snapshot, not GMGN), older cost model, 98 trades — but it points the other way to H.
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/H.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 18 trades +14.5% but without best −0.9% — one coin. GMGN top-10 data missing for most coins, so it barely trades (~12 a day at best).
+
 ## Notable coins
 - Spidey Show (19 Oct 21:58 UK, top-10 19.4%) — +276.6% at the 4x cap; most of H's total.
 - Octo (19 Oct 16:39, +83.5%), Conviction (20 Oct 19:11, +58.5%), Poképad (20 Oct 17:34, +55.8%), Justice for Cole (19 Oct 14:25, +39.9%).
@@ -46,5 +50,6 @@ _Data to 21 Oct 01:27 UK; A, top-10 holders under 23%. Built by reports/books/nu
 - 20 Oct ~20:00–20:22 UK: "lots of coins small profit, or fewer coins big runners … H … 12 trades … minimum like 0.3 SOL" (his framework for judging books; H had about 12 trades in view then).
 
 ## Open items
+- awaiting go: feed H from our own ledger's top-10 share (top10_entry) instead of GMGN so it gets enough trades; else retire.
 - Coverage is the blocker: GMGN's holder snapshot is missing on most A rows (50 of 336). Unanswered: why the snapshot is missing (rate limit? only taken for some triggers?) and whether to fall back to the tracker's own top-10 at entry (`top10_entry`) — not proposed yet, and the 19 Oct study hint on that column points the other way.
 - Next decision: at 20 trades since 20:00 UK (2 now) — at the current rate that is days away unless coverage improves.

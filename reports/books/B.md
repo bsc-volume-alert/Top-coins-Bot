@@ -8,17 +8,19 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - Started: hold-5 recorded and retro-scored from 18 Oct 01:10 UK (v0.18.81); headline exit 18 Oct 19:53 UK → 19 Oct 02:04 UK; page record from the price fix 18 Oct 20:25 UK. No rule change since.
 
 ## Verdict now
+**21 Oct 02:30 UK:** Dominated by A's own exit on the same coins. Dead.
+
 Not working, and worse than A on the same coins in every window: −4.8% a trade on 284 at the 17:40 UK study (A −2.4%), −5.8% on 336 to 21 Oct 00:09 UK; real money lost −0.301 SOL on 50 live legs and −0.711 SOL on 65 shadow legs. Kept only as a recorded comparison.
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; A's coins sold at 5 min. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; A's coins sold at 5 min. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
 | all (from 18 Oct 20:25 UK) | 331 | -6.1% | -6.8% | 48% | 36% | -2.34 |
-| last 24 h | 143 | -5.5% | -7.1% | 48% | 32% | -0.93 |
-| last 12 h | 80 | -2.8% | -5.7% | 50% | 31% | -0.30 |
+| last 24 h | 142 | -5.4% | -7.1% | 48% | 32% | -0.91 |
+| last 12 h | 78 | -2.8% | -5.8% | 50% | 32% | -0.30 |
 | last 6 h | 45 | -6.9% | -12.2% | 47% | 42% | -0.35 |
 
 Executor book `hold5` (shadow, real quotes): 65 legs, -0.711 SOL, average -7.4% a leg, without best -9.6%, won 43%, 18 Oct 20:25 UK to 19 Oct 15:59 UK.
@@ -52,6 +54,8 @@ Executor book `hold5` (live, real quotes and real money): 50 legs, -0.301 SOL, a
 - G's coins (A's 150–500-wallet skips) sold at 5 min (F4) — failed; see G.md.
 - E sold at 5 min (study rule S4) — failed; see E.md.
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/B.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 331 trades −6.1% (no-best −6.8%), −1.05 SOL a day at 0.1. Same coins as A sold at 5 min — worse than A's runner exit in all three thirds (−6.6/−6.8/−4.7 vs −2.7/−5.1/−3.6). Factor search 11 pass vs 6 by luck, none real (best luck 7).
+
 ## Notable coins
 - The french savior (18 Oct 20:25 UK) — the first shadow hold-5 leg in the export (+17% at 0.1, lowvol close).
 - 19 Oct live night: 50 legs — 22 timed h5 sales −0.176 SOL (exit gap −1.2%), 10 "time" sales +0.063, 9 stops −0.247 (exit gap −5.5%), 8 floor sales +0.036 (exit gap −6.0%), 1 tsl80 close +0.023. Entry gap +1.7%. Paper on the same 50 at 0% cost was +0.041 SOL: fees and fills turned a flat book into −0.301.
@@ -63,4 +67,5 @@ Executor book `hold5` (live, real quotes and real money): 50 legs, -0.301 SOL, a
 - 20 Oct 05:00 UK: remove what isn't working — B off the page.
 
 ## Open items
+- awaiting go: retire from the page (data kept).
 - None. B stays recorded as the 5-min comparison for A and its children; any new 5-min idea on A's coins should be compared against B's record first.

@@ -8,19 +8,21 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - Started 20 Oct 16:20 UK (v0.18.155; commit 16:02 UK); judged from 20 Oct 16:00 UK (`V2_FROM` 15:00 UTC). No rule change since. The page shows before 16:00 UK (back-test) and since.
 
 ## Verdict now
+**21 Oct 02:30 UK:** Back-test edge has not carried forward.
+
 Not working yet: the back-test edge (+17.6% on 40) has not shown up on new trades — 4 trades since 16:00 UK, −32.2%, 3 of them stopped (to 21 Oct 00:09 UK). Far too few to judge either way; it fires about once every two hours.
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; D, copycat of a $72K+ coin. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; D, copycat of a $72K+ coin. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
 | all (from 19 Oct 12:36 UK) | 45 | +12.2% | +6.2% | 60% | 33% | +0.50 |
 | before the change (20 Oct 16:00 UK) — back-test | 40 | +17.6% | +10.9% | 65% | 30% | +0.66 |
 | since the change — the real test | 5 | -30.9% | -46.5% | 20% | 60% | -0.16 |
-| last 24 h | 23 | -2.8% | -6.0% | 52% | 39% | -0.09 |
-| last 12 h | 6 | -19.1% | -30.9% | 33% | 50% | -0.12 |
+| last 24 h | 22 | -0.6% | -3.9% | 55% | 36% | -0.04 |
+| last 12 h | 5 | -30.9% | -46.5% | 20% | 60% | -0.16 |
 | last 6 h | 2 | -38.7% | -51.4% | 0% | 50% | -0.08 |
 <!-- /NUMBERS -->
 
@@ -34,6 +36,8 @@ _Data to 21 Oct 01:27 UK; D, copycat of a $72K+ coin. Built by reports/books/num
 - DC itself ($72K bar) — back-test to 16:00 UK +17.6% on 40 (won 65%, no-top1 +10.9%); since 16:00 UK −32.2% on 4 (won 1, 3 stops). On test.
 - Copycat signals seen elsewhere: on AS's trades the COUNT of copycat names (`cc_n24h`) ≤ 5 looked better (+21.9% on 50 vs +0.2% on 28, in sample), and "copycats ≥ 2" reversed between samples (coincidence). Melonie (27 copycats) still ran. DC uses the best copycat's peak, not the count — a different measure.
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/DC.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 45 trades +12.2% (no-best +6.2%) but thirds +22.4 / +17.3 / −3.1 and last block −10.5%; 48 pass vs 69 by luck — nothing real.
+
 ## Notable coins
 - Trades since 16:00 UK: FREEZE AI NOW (20 Oct 17:42, $43.7K, copied a $72.0K coin, +31.6% on low volume); Xitter (18:09, $43.6K, copied $72.1K, peak 1.15x, stop −51.2% — also an AS and DS loser); memestock (18:57, $46.4K, copied $108K, peak 1.25x, stop −57.6%); SpaceXSuperIntelligence (22:10, $53.5K, copied $123K, peak 1.19x, stop −51.4% — the same coin AS bought 20 minutes earlier at $46.1K for +132.7%).
 
@@ -42,6 +46,7 @@ _Data to 21 Oct 01:27 UK; D, copycat of a $72K+ coin. Built by reports/books/num
 - No later comment on DC specifically.
 
 ## Open items
+- Keep on paper to 20 trades since its 16:00 UK change, then decide (4 so far).
 - Proposed 20 Oct 23:32 UK, awaiting go: keep DC (and DS) on the page with demoted ranking until it has 20 or more trades since its start.
 - Next decision: at 20 trades since 16:00 UK (4 now). If the stop rate stays near 75%, drop it.
 - Study rule F13 should be scored again at 40 out-of-sample trades (it was 6/40 at 17:40 UK; the study task has been failing since 21:25 UK).

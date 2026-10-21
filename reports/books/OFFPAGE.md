@@ -17,27 +17,35 @@ Names that clash:
 
 ## Latest numbers, all off-page books
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK._
+_Data to 21 Oct 01:42 UK._
 
-- **early** (x_flow4): all 5369 at -33.4%; last 12 h 748 at -29.7%
-- **wave2** (x_flow4): all 793 at -10.5%; last 12 h 209 at -13.6%
+- **early** (x_flow4): all 5520 at -33.5%; last 12 h 881 at -31.8%
+- **wave2** (x_flow4): all 800 at -10.8%; last 12 h 213 at -14.7%
 - **copy** (x_flow4): all 664 at -12.6%; last 12 h 0 at +0.0%
-- **mom60** (x_flow4): all 586 at -12.2%; last 12 h 133 at -12.7%
-- **momfast** (x_flow4): all 458 at -12.6%; last 12 h 102 at -15.8%
-- **mom80** (x_flow4): all 427 at -10.5%; last 12 h 92 at -7.2%
-- **momentum** (x_flow4): all 319 at -9.3%; last 12 h 67 at +2.8%
-- **momconf** (x_flow4): all 72 at -2.3%; last 12 h 15 at -12.9%
-- **momdip** (x_flow4): all 91 at -6.9%; last 12 h 17 at -7.5%
-- **momre** (x_flow4): all 177 at -18.6%; last 12 h 37 at -13.3%
-- **gradrec** (x_flow4): all 424 at -20.4%; last 12 h 97 at -21.6%
-- **gradrun** (x_flow4): all 257 at -9.5%; last 12 h 62 at -8.1%
-- **revival** (x_flow4): all 153 at -13.3%; last 12 h 39 at -9.2%
-- **slow** (x_flow4): all 99 at -10.5%; last 12 h 24 at -3.5%
+- **mom60** (x_flow4): all 586 at -11.6%; last 12 h 130 at -11.0%
+- **momfast** (x_flow4): all 461 at -11.1%; last 12 h 102 at -10.1%
+- **mom80** (x_flow4): all 429 at -9.9%; last 12 h 91 at -4.6%
+- **momentum** (x_flow4): all 318 at -8.8%; last 12 h 63 at +5.1%
+- **momconf** (x_flow4): all 72 at -1.9%; last 12 h 15 at -11.1%
+- **momdip** (x_flow4): all 90 at -6.0%; last 12 h 16 at -2.6%
+- **momre** (x_flow4): all 177 at -18.6%; last 12 h 34 at -12.4%
+- **gradrec** (x_flow4): all 419 at -21.0%; last 12 h 90 at -24.3%
+- **gradrun** (x_flow4): all 256 at -7.8%; last 12 h 58 at -1.9%
+- **revival** (x_flow4): all 155 at -13.5%; last 12 h 41 at -9.9%
+- **slow** (x_flow4): all 99 at -11.3%; last 12 h 21 at -4.1%
 - **climber** (x_flow4): all 22 at -13.0%; last 12 h 5 at -20.6%
 - **secondwave** (x_flow4): all 5 at -45.0%; last 12 h 1 at -70.9%
-- **confirm** (x_tsl40): all 875 at -17.1%; last 12 h 221 at -17.5%
+- **confirm** (x_tsl40): all 886 at -17.6%; last 12 h 229 at -19.7%
 - **p6** (x_h5): all 0 at +0.0%; last 12 h 0 at +0.0%
 <!-- /NUMBERS -->
+
+## Diagnosis 21 Oct 02:30 UK (all data to 01:42 UK; diag/OFF_*.md; luck-checked)
+- early −33.5% on 5,520 · confirm −17.6% on 886 · copy −12.6% on 664 (stopped 19 Oct) · wave2 −10.8% on 800 · mom60 −11.6% on 586 · momfast −11.1% on 461 · momre −18.6% on 177 · gradrec −21.0% on 419 · revival −13.5% on 155 · slow −11.3% on 99 · climber −13.0% on 22 · secondwave 5 trades · p6 0 trades — nothing passes the luck check in any of them; dead.
+- mom80 −9.9% on 429: one real cut (entry MC < $53.8K, 65 trades +9.9%, luck 0) but thirds +14.1 / +19.3 / −1.4 — faded.
+- momentum −8.8% on 318: 5-min volume ≥ $100K 48 trades +17.2% (luck 1) — only in the last third (same coins as page book E).
+- momconf −1.9% on 72: 15-min hold / 40% trail look +23% but without best +4–5% and last third negative.
+- momdip −6.0% on 90; gradrun −7.8% on 256 (take-profit at 1.5x −2.1%, last two thirds slightly positive) — near break-even, no real slice.
+- Verdict: none of the off-page books is worth a box. Proposal awaiting go: stop showing them in the 12-hour strip except gradrun and mom80 as watch lines.
 
 ## The combined 12-hour strip and the "✓ worth a look" rule
 - **What it is now:**

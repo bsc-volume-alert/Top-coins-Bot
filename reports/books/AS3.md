@@ -8,11 +8,13 @@ _Notes last rebuilt: 21 Oct 2026 01:35 UK._
 - Started 21 Oct 01:30 UK (`CHG_AS2`). Everything before is a back-test of a rule chosen by looking at those trades.
 
 ## Verdict now
+**21 Oct 02:30 UK:** Fewest trades, biggest win per trade of the running books; unproven.
+
 Not yet tested. Fits the owner's "fewer trades, bigger profit each" side: keeps under half of AS's trades.
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
@@ -32,6 +34,8 @@ _Data to 21 Oct 01:27 UK; AS + launch bundle 5+ wallets. Built by reports/books/
 - Why bundle wallets and not `snipers_n`: the sniper count lived only in memory and was blank on 46 of 79 AS rows after 32 restarts; it equals bundle wallets minus a buying creator on 1,295 of 1,308 rows, and bundle wallets is saved for every coin.
 - Independent support: book F (A with a launch bundle of 3 or fewer wallets) failed out of sample on A (−10% to −17% vs 0% for the rest of A) — the same effect seen from the other side.
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/AS3.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 35 trades +29.7% (no-best +22.5%), 71% won, thirds +14.7 / +56.6 / +16.9, ~16 a day, +0.47 SOL a day. On AS's 80 trades its rule (bundle ≥ 5 wallets) had luck 17/20 — not proven by itself; the support is the mirror-image failure of book F.
+
 ## Notable coins
 - None yet in the real test.
 
@@ -39,5 +43,6 @@ _Data to 21 Oct 01:27 UK; AS + launch bundle 5+ wallets. Built by reports/books/
 - 21 Oct 01:09–01:19 UK: chose separate boxes over revising AS ("second option"); wanted a bigger reading for the sniper signal; asked for each new box to show the back-test on all data so far and a fresh record "starting now". Go given 01:19 UK.
 
 ## Open items
+- Judge at 30 trades since 01:30 UK (unchanged).
 - Judge at 30 trades since 01:30 UK: compare with AS on the same coins, using the average without the best trade, and the AS3 vs AS gap. Beats AS → candidate for its own executor shadow book; doesn't → drop and record why.
 - Few trades a day (roughly 1 in 2–3 AS trades), so 30 trades may take several days.

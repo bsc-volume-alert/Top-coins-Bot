@@ -8,16 +8,18 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - Started 18 Oct 01:10 UK (v0.18.81, "P5 Wide", MC cap $250K); card narrowed to the extra $100K–$250K coins only 19 Oct 09:36 UK (v0.18.109). Page record from 18 Oct 20:25 UK. No rule change since.
 
 ## Verdict now
+**21 Oct 02:30 UK:** Dead — the $100–250K market-cap band loses in every block.
+
 Not working: the $100K–$250K band has lost under every exit in every study (−16.2% on 33 at 13:28 UK 19 Oct; −9.0% on 97 at 17:40 UK 20 Oct; −10.4% on 101 to 21 Oct 00:09 UK). Its 7 shadow legs were +0.027 SOL, too few to mean anything.
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; real costs. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; real costs. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
 | all (from 18 Oct 20:34 UK) | 94 | -11.2% | -12.1% | 35% | 36% | -1.14 |
-| last 24 h | 39 | -7.3% | -9.6% | 41% | 31% | -0.33 |
+| last 24 h | 38 | -6.0% | -8.2% | 42% | 29% | -0.26 |
 | last 12 h | 16 | -12.4% | -18.0% | 38% | 38% | -0.21 |
 | last 6 h | 8 | -12.4% | -24.4% | 38% | 38% | -0.11 |
 
@@ -43,6 +45,8 @@ Executor book `wide` (shadow, real quotes): 7 legs, +0.027 SOL, average +11.7% a
 - Project F scans (05:35–17:40 UK 20 Oct) included C's passed rows; no rule on C cleared the bar.
 - Buying the operator's coins on the pool at $140–250K a minute after launch (C's de-facto trade on them): 5-min sale 11 up / 10 down, about −1% net on 21 (01:45 UK); 10 up / 7 down on 17 (05:35 UK); pool-side A/C/D rows on fingerprint coins −13.2% on the runner, +0.3% at 5 min, 46–58% stopped (09:35 UK). The study's launches file says these coins peak in their first minute (5-min MC a median 0.76x the 1-min MC). Ended by v0.18.164.
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/C.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 94 trades −11.2% (no-best −12.1%), −0.52 SOL a day. Best exit 1.5x/−40% −9.2%. 7 pass vs 3 by luck; best cut 'fewer than 34 triggers in the last hour' 16 trades +11.7%, luck 3 — too small and too near luck. Quiet-minute rule (selling < 19.6 SOL) on C: −12.7% on 37.
+
 ## Notable coins
 - The 10-wallet operator's coins (19–20 Oct) — C caught all 21 of the first 24 h at $140–250K about a minute after launch (e.g. GTAVI AudaCity at $208K, 20 Oct 04:50 / 05:04 UK: 0.59 and 1.25 at 5 min); earth and moon (20 Oct 09:48 / 10:09 UK) bought at $173–216K and stopped (0.58, 0.60) while A/D, buying at $99K, made 2.15x / 1.62x.
 - 13:28 UK 19 Oct shadow: fade-volume winners +0.066 SOL on 2 legs; the 4 legs at 0.1 SOL made +0.120, the 3 at 0.25 lost −0.094.
@@ -53,4 +57,5 @@ Executor book `wide` (shadow, real quotes): 7 legs, +0.027 SOL, average +11.7% a
 - No recorded owner statement specific to C after the 13:28 UK 19 Oct study's advice to switch it off.
 
 ## Open items
+- awaiting go: retire from the page.
 - None. C stays recorded, off the page. If the operator's coins are ever traded again it will be through S10, not C.

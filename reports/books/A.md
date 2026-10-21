@@ -9,17 +9,19 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - A's filtered children (other notes files): **AS** (A + socials + creator not sold out + biggest buyer 3–5 SOL), **H** (A with GMGN top-10 holders < 23%), **A5** (A's coin re-bought 5 s later if ≥ 1.02x), **F6** (10 s later if ≥ 1.05x); D's children **DS**, **DC** come from D (D.md). Books in this set of notes built on A's trigger: **B** (A's coins sold at 5 min), **F** (A with bundle ≤ 3 wallets), **G** (A's trigger on the 150–500-wallet skips), **A2** (A with a 60-s cut).
 
 ## Verdict now
+**21 Oct 02:30 UK:** A on its own does not make money; its value is as the feeder for AS. Keep recording, no executor book.
+
 Not working as a stand-alone book: about break-even to slightly negative at real costs on 300+ trades (−2.4% on 284 at the 17:40 UK study; −2.7% on 324 at 23:27 UK; −3.2% on 336 at 00:09 UK 21 Oct), and its only real-money run lost (38 live legs −0.376 SOL). The value left in A is as the parent trigger: its filtered child AS has been positive in sample and on its first forward trades.
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; A's passed rows, runner exit. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; A's passed rows, runner exit. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
 | all (from 18 Oct 20:25 UK) | 331 | -3.8% | -4.7% | 47% | 40% | -1.59 |
-| last 24 h | 143 | -3.9% | -4.9% | 47% | 36% | -0.71 |
-| last 12 h | 80 | -0.2% | -1.9% | 50% | 35% | -0.10 |
+| last 24 h | 142 | -3.9% | -4.9% | 47% | 36% | -0.70 |
+| last 12 h | 78 | -0.0% | -1.8% | 50% | 35% | -0.08 |
 | last 6 h | 45 | -3.4% | -6.5% | 44% | 44% | -0.20 |
 
 Executor book `runner` (live, real quotes and real money): 38 legs, -0.376 SOL, average -9.6% a leg, without best -12.8%, won 45%, 19 Oct 02:19 UK to 19 Oct 10:50 UK.
@@ -137,6 +139,8 @@ Money management
 Searches
 - The study's Project F scans (13:28 ~70 features; 21:40 4,821 tests; 01:45 ~50,000; 05:35 ~1,400; 09:35 ~1,900; 13:35 ~2,000; 17:40 3,080) — every in-sample find that cleared the bar (F5–F13) fell to about zero or below out of sample. Read any new A rule against that base rate.
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/A.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 331 trades −3.8% (without best −4.7%), 47% won, 40% stopped, ~150 a day, −0.72 SOL a day at 0.1; negative in all five time blocks bar one. Best exit 1.5x/−40% (−3.5%) — no exit makes A positive. Factor search: 8 pass vs 23 by luck; ONE real cut: first-minute selling (`sell60`) < 19.6 SOL — 50 trades +16.1% (no-best +10.8%), +17.2% / +21.5% / +9.8% by thirds, luck 2/20. Checked 02:25 UK: the gain sits entirely in coins AS also takes — on A's coins outside AS it is +0.2% on 33; inside AS it is 17 trades +47.0% (no-top3 +23.2%, 82% won). Threshold-sensitive (< 22 SOL: +5.2%; < 25: −1.7%). Same rule on C −12.7% on 37.
+
 ## Notable coins
 - Spidey Show (19–20 Oct night) — sold at the 4x cap, peaked ~20x; the single biggest A/AS/D win (+276.6% after costs) and the trade that decides A-vs-A2 comparisons.
 - French Piccolo (19 Oct ~06:04 UK) — a 10-wallet-operator coin A caught at $81K; live runner leg +110.9% (paper +115.6%), 5.1x at 3 min; most of F10's in-sample mean.
@@ -164,6 +168,7 @@ Searches
 - 21 Oct 00:27 UK: keep a notes file per book, read it before every analysis, then add fresh data (this file).
 
 ## Open items
+- awaiting go (21 Oct diagnosis): new variant AS4 = AS + first-minute selling < 20 SOL (see AS.md); retire the plain A box from the top of the page (data kept).
 - Nothing pending on A's own rule. A stays as the parent trigger and on the page.
 - Awaiting go (AS, from A's trigger): an AS real-quote (shadow) executor book at 0.1 SOL; AS variant lines "+ MC ≥ $46K", "+ ≤ 5 copycats", "+ creator bought < 0.9 SOL", "+ at least 1 sniper". See AS.md.
 - Awaiting go: skip coins whose MC ≠ price × 1 billion (fake-supply tokens such as "Pump.fun"); log and show the crash reason (crash at ~23:53 UK 20 Oct; 32 restarts in 24 h); rewrite the 4-hourly study's prompt (stale books and cost model; the 21:25 UK 20 Oct run failed on the usage limit).

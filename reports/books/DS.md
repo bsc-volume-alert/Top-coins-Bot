@@ -12,11 +12,13 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - Started 20 Oct 16:35 UK (v0.18.156). Last rule change 20 Oct 17:45 UK (v0.18.158). Page splits the record before / since 17:45 UK.
 
 ## Verdict now
+**21 Oct 02:30 UK:** Mostly AS's coins at a worse price; adds nothing AS doesn't.
+
 Not working since the change: the back-test was +12.7% on 60, but the 12 trades since 17:45 UK are −3.5% (−15.8% without the best; 5 stops) to 21 Oct 00:09 UK. The same filters work better on A (AS) because D buys the same coins later and higher; too few trades to drop it, but it is behind AS on every comparison so far.
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 01:27 UK; D + standard filters. Built by reports/books/numbers.py._
+_Data to 21 Oct 01:42 UK; D + standard filters. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
@@ -41,6 +43,8 @@ _Data to 21 Oct 01:27 UK; D + standard filters. Built by reports/books/numbers.p
 - AS vs DS on the same coins (23:31 UK) — D's 50-SOL trigger fires after A's 30-SOL trigger on the same coin, at a higher price, so DS pays for the move AS catches: Poke Packz AS $64K +30% vs DS $91K −53%; The Unfazed Crane $50K +39% vs $84K 0%; MOCHI $68K +83% vs $85K +10%. Exception: Hollow — AS bought at $50.8K and stopped (−53.5%); DS bought at $41.1K and made +21.0%.
 - The chat's DS figures (68 / 72 trades) came from abcd.csv without bundle_sol, so like AS they may include operator-fingerprint coins the page leaves out (not checked for DS at this rebuild).
 
+- 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/DS.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): 70 trades +8.8% (no-best +4.9%), thirds +1.9 / +26.7 / −1.9, last block −4.3%; 64 of AS's 79 coins are also D's, bought later and higher (Poke Packz $64K vs $91K etc.). Best cuts (n60 ≥ 129, luck 5; creator still holding, luck 6) not beyond luck. Best exit 1.5x/−40% +9.2% but fails the middle third.
+
 ## Notable coins
 - Trades since 17:45 UK to 00:09 UK (entry MC, result): Xitter 18:09 ($43.6K, stop −51.2%); Poke Packz 18:26 ($90.9K, stop −53.1%; AS made +30% on it at $64K); Cumrocket 18:38 ($95.9K, peak 2.6x, +3.4%); catdog 20:12 ($44.8K, +31.8%); SpaceXSuperIntelligence 21:50 ($46.1K, +132.7% — same entry as AS); The Unfazed Crane 22:00 ($83.8K, 0.0%); Shirley Coin 22:44 ($53.4K, stop −57.8%); MOCHI 22:52 ($84.8K, +9.6%); Hollow 23:30 ($41.1K, +21.0%); Fomochi 23:31 ($44.9K, +25.6%); Pokemon Sol-Silver 23:33 ($45.6K, stop −51.5%); Mugshot Cat 23:55 ($62.9K, stop −52.1%).
 - Before the change: The Last Hope (20 Oct 12:25, −24.9%), Pokémon Arena (13:46, +9.0%).
@@ -52,6 +56,7 @@ _Data to 21 Oct 01:27 UK; D + standard filters. Built by reports/books/numbers.p
 - 20 Oct 20:22 UK: agreed in principle to a plan of two or three separate profitable books, one of them "the best D-family book" (DS, DC or plain D were the candidates then).
 
 ## Open items
+- awaiting go: retire DS from the page (data kept).
 - Proposed 20 Oct 23:32 UK, awaiting go: keep DS (and DC) on the page with demoted ranking until it has 20 or more trades since the change.
 - Next decision: at 20 trades since 17:45 UK (12 now), compare with AS on the same coins; if still behind, drop DS from the page and keep the standard set on A only.
 - Possible question for the owner: whether a D-level confirmation is wanted at all, given D enters the same coins higher than A (the AS/DS comparison).
