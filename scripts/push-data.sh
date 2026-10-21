@@ -22,6 +22,8 @@ cp -f "$E/status.json" data/status.json 2>/dev/null || true
 (cd "$T" && nice -n 19 node scripts/dump-launches.cjs smart) > data/smart_wallets.csv 2>/dev/null || true
 (cd "$T" && nice -n 19 ionice -c 3 node scripts/dump-launches.cjs others) > data/others.csv 2>/tmp/dump-others.err || { echo "[push-data] others dump failed: $(head -c 300 /tmp/dump-others.err)"; } # v0.18.148: the paper strategies the website no longer shows
 [ -f "$T/data/revival_klines.jsonl.gz" ] && cp -f "$T/data/revival_klines.jsonl.gz" data/revival_klines.jsonl.gz # v0.18.154: the revival back-test candles (one-off job)
+FP=$(grep -E '^FOMO_PORT=' $T/.env | cut -d= -f2- | tr -d '"'); FP=${FP:-8789} # v0.18.179: the fomo watcher's data (7 days) — hourly flow per coin, paper trades, theses
+for f in flow_hourly trades theses; do curl -s -m 60 "http://127.0.0.1:${FP}/api/csv/${f}?days=7" -o data/fomo_${f}.csv || echo "[push-data] fomo ${f} fetch failed"; done
 [ -f "$T/data/job.log" ] && tail -c 4000 "$T/data/job.log" > data/job_log.txt
 date -u +%FT%TZ > data/pushed_at.txt
 git add -A data

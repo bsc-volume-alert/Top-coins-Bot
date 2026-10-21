@@ -13,7 +13,7 @@ TOKEN=$(grep -E '^TG_BOT_TOKEN=' .env | cut -d= -f2-); CHAT=$(grep -E '^TG_CHAT_
 notify() { [ -n "$TOKEN" ] && curl -s -m 10 -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" -d chat_id="$CHAT" -d parse_mode=HTML --data-urlencode text="$1" >/dev/null 2>&1; }
 # v0.18.93: a push that touches only executor/ (and docs) leaves the tracker alone — no smoke boot, no reload, no lost P5 restore
 TRACKER_CHANGED=1
-if ! git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -vqE '^(executor/|reports/|scripts/push-data\.sh$|scripts/dump-live\.cjs$|scripts/dump-launches\.cjs$|scripts/study\.mjs$|scripts/push-now\.txt$|scripts/job-now\.txt$|scripts/revival-pull\.mjs$|scripts/s10-check\.cjs$|.*\.md$)'; then TRACKER_CHANGED=0; echo "[deploy] tracker untouched — executor / reports / data-script push"; fi # v0.18.114: the 4-hourly study's reports and the data scripts never restart the bot
+if ! git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -vqE '^(executor/|fomo/|reports/|scripts/push-data\.sh$|scripts/dump-live\.cjs$|scripts/dump-launches\.cjs$|scripts/study\.mjs$|scripts/push-now\.txt$|scripts/job-now\.txt$|scripts/revival-pull\.mjs$|scripts/s10-check\.cjs$|.*\.md$)'; then TRACKER_CHANGED=0; echo "[deploy] tracker untouched — executor / reports / data-script push"; fi # v0.18.114: the 4-hourly study's reports and the data scripts never restart the bot
 FAIL=""
 if [ "$TRACKER_CHANGED" = "1" ]; then
 for f in src/*.js; do node --check "$f" 2>/tmp/deploy-check.err || { FAIL="syntax: $f $(head -c 300 /tmp/deploy-check.err)"; break; }; done
@@ -46,6 +46,21 @@ if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^executor/'; t
   if [ -n "$EFAIL" ]; then echo "[deploy] EXECUTOR REJECTED: $EFAIL"; notify "⛔ <b>Executor deploy rejected</b> — the running executor stays as it was. Reason: <code>$(echo "$EFAIL" | head -c 500)</code>"
   elif pm2 startOrReload executor/ecosystem.config.cjs --only executor --update-env >/tmp/deploy-exec-pm2.log 2>&1; then pm2 save >/dev/null 2>&1; echo "[deploy] executor reloaded"
   else echo "[deploy] EXECUTOR START FAILED: $(tail -c 300 /tmp/deploy-exec-pm2.log)"; notify "⛔ <b>Executor start failed</b> — <code>$(tail -c 300 /tmp/deploy-exec-pm2.log)</code>"; fi
+fi
+# v0.18.179: the fomo watcher (fomo/, pm2 app `fomo`, own database and port) deploys only when its own folder changed — own npm install, syntax check, 20-s smoke boot, own reload; the tracker and the executor are never touched by it
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^fomo/'; then
+  echo "[deploy] fomo changed — installing and checking"
+  (cd fomo && npm install --omit=dev --no-audit --no-fund 2>&1 | tail -1)
+  FFAIL=""
+  for f in fomo/src/*.mjs; do node --check "$f" 2>/tmp/deploy-fomo.err || { FFAIL="syntax: $f $(head -c 300 /tmp/deploy-fomo.err)"; break; }; done
+  if [ -z "$FFAIL" ]; then
+    rm -f /root/tracker/data/fomo-smoke.db /root/tracker/data/fomo-smoke.db-wal /root/tracker/data/fomo-smoke.db-shm
+    (cd fomo && FOMO_SMOKE=1 FOMO_SMOKE_MS=20000 FOMO_DB_PATH=/root/tracker/data/fomo-smoke.db FOMO_PORT=18789 timeout 60 node src/index.mjs >/tmp/deploy-fomo-smoke.log 2>&1); FRC=$?
+    [ "$FRC" != "0" ] && FFAIL="fomo smoke boot exited with code $FRC: $(grep -E 'Error|error|at ' /tmp/deploy-fomo-smoke.log | head -5 | tr '\n' ' ' | head -c 400)"
+  fi
+  if [ -n "$FFAIL" ]; then echo "[deploy] FOMO REJECTED: $FFAIL"; notify "⛔ <b>fomo deploy rejected</b> — the running fomo watcher stays as it was. Reason: <code>$(echo "$FFAIL" | head -c 500)</code>"
+  elif pm2 startOrReload fomo/ecosystem.config.cjs --only fomo --update-env >/tmp/deploy-fomo-pm2.log 2>&1; then pm2 save >/dev/null 2>&1; echo "[deploy] fomo reloaded"
+  else echo "[deploy] FOMO START FAILED: $(tail -c 300 /tmp/deploy-fomo-pm2.log)"; notify "⛔ <b>fomo start failed</b> — <code>$(tail -c 300 /tmp/deploy-fomo-pm2.log)</code>"; fi
 fi
 # v0.18.143: an on-demand data push — changing scripts/push-now.txt makes the box run the 4-hourly push (abcd / executor / launches …) now, in the background, at low priority
 # v0.18.154: a one-off job — changing scripts/job-now.txt runs the revival price pull (GMGN 5-min candles for every graduated coin), then the data push
