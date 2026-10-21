@@ -80,3 +80,8 @@ _Data to 21 Oct 13:20 UK; abcd momentum rows. Built by reports/books/numbers.py.
 - awaiting go: optional paper variant E100 = E only when 5-min volume ≥ $100K, judged forward; otherwise retire. **21 Oct 11:05 UK: superseded by the proposal above.**
 - None pending. E stays recorded off the page.
 - Count note for whoever fills the numbers: the studies count E's PASSED rows (77 at 17:40 UK 20 Oct); reports/books/numbers.py counted 449 "abcd momentum rows" to 00:09 UK 21 Oct, and the off-page `momentum` strategy (all rows) showed 311 — three different populations. Say which one a figure uses.
+
+
+## Study 21 Oct 13:55 UK (4-hour study)
+- [4-hour study] E2 (skip coins ≥ 1.2x the MC at which A/C/D first bought them) from 16:45 UK 19 Oct: 32 at −10.7% vs the skipped 69 at −10.1%; removes nothing. E at 5 min 101 at −10.3%; runner 107 at +0.0%.
+- [4-hour study] NEW, registered as F16 in reports/strategies.json: E rows with cc_n24h ≤ 3 (at most 3 same-name launches in 24 h), exit x_split: 53 at +44.9% (without best +40.5%, without best 3 +31.0%, won 57%, stopped 23%, halves +29.1/+60.2, thirds +24.5/+20.2/+85.4, last 24 h 28 at +68%); the complement cc_n24h > 3 is 69 at −19.0% and negative on every exit; the kept coins are positive on every exit (runner +23.8%, tsl40 +27.9%, t2s40 +21.5%). Shuffle test 1 of 12 (borderline). 41 of 163 rows have no cc_n24h. In sample — judge at 40 forward from 13:17 UK 21 Oct. Not yet tested against the mom80 slice of the 12:30 UK report.

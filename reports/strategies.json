@@ -298,6 +298,21 @@
     }
    ],
    "note": "Study 20 Oct 17:40 UK (own devising). The 80-SOL trigger only when the PumpSwap pool's SOL side after the triggering trade is above 74 SOL (a deep pool). In sample at real costs: n58 +20.9%, median +35.3%, win 62%, stop 28%; halves +30.6% / +14.0%; 13 of 17 hours, 4 of 5 six-hour blocks; +11.2% without the best three; +24.3% at the 5-s price; rest of the book -27.1% on 18. The same cut on A is +5.7% on 56 (rest -4.3%) and on D +7.1% on 62 (rest -3.7%). Caveats: pool_sol is blank on a third of the book's rows; 32 rows shared with F14 (the edge lives in the overlap, a 50-SOL burst into a deep pool); no executor leg has ever run on the 80-SOL trigger; the two 4x-cap trades (Spidey Show, Cure Cancer) are in both rules."
+  },
+  {
+   "id": "F16",
+   "created": "2026-10-21T12:55Z",
+   "after_ts": 1792585039,
+   "book": "E",
+   "exit": "x_split",
+   "filter": [
+    {
+     "f": "cc_n24h",
+     "op": "<=",
+     "v": 3
+    }
+   ],
+   "note": "Study 21 Oct 13:55 UK (own devising). E's trigger ($100K traded in 5 min, MC under $100K) only when at most 3 coins with the same name launched in the last 24 h (cc_n24h <= 3: an original-ish name, not a copycat wave), exit x_split (-40% stop to 2 min; at 2 min below 0.9 out, >= 1.2 trail 40% capped 4x, else half at 1.5x). In sample on abcd E rows (operator coins out) 18-21 Oct: 53 trades +44.9% a trade at real costs, without best +40.5%, without best 3 +31.0%, won 57%, stopped 23%, halves +29.1/+60.2, thirds +24.5/+20.2/+85.4, last 24 h 28 at +68%. The complement (cc_n24h > 3, 69 trades) is -19.0% at the same exit and negative on every exit; the filter is positive on every recorded exit too (runner +23.8%, 40% trail +27.9%, 2x/-40% +21.5%, 5-min +0.1%). Permutation check: 1 of 12 shuffles found a rule this good (borderline). Eight of the 53 hit the 4x cap. Judge only on trades after after_ts; needs 40 forward trades."
   }
  ]
 }
