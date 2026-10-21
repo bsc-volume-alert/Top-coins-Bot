@@ -71,7 +71,7 @@ async function run(job, tolPct) {
   for (let i = 0; i < hits.length; i += 4) {
     if (job.credits >= CAP || budgetLeft() < 1000) { job.note += ` · stopped at ${job.scanned} transactions (credit cap)`; break; }
     const batch = hits.slice(i, i + 4); job.credits += batch.length; job.scanned += batch.length;
-    const txs = await Promise.all(batch.map((s) => rpc("getTransaction", [s.sig, { maxSupportedTransactionVersion: 0, encoding: "jsonParsed", commitment: "confirmed" }], { budget: false, retry: true }).catch(() => null))); await new Promise((x) => setTimeout(x, 150));
+    const txs = await Promise.all(batch.map((s) => rpc("getTransaction", [s.sig, { maxSupportedTransactionVersion: 1, encoding: "jsonParsed", commitment: "confirmed" }], { budget: false, retry: true }).catch(() => null))); await new Promise((x) => setTimeout(x, 150));
     batch.forEach((s, k) => {
       const d = decodeParsed(txs[k]); if (!d || d.failed) return;
       for (const leg of d.legs) {

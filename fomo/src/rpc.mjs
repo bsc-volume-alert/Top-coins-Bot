@@ -32,7 +32,7 @@ export async function rpc(method, params, { budget = true, retry = false } = {})
 }
 /** getTransaction → { ts, slot, legs: [{ mint, side, tokens, dec, usd, quote, quoteAmt, wallet }] } or null. One leg per (wallet, non-quote mint). */
 export async function decodeTx(sig) {
-  const tx = await rpc("getTransaction", [sig, { maxSupportedTransactionVersion: 0, encoding: "jsonParsed", commitment: "confirmed" }]);
+  const tx = await rpc("getTransaction", [sig, { maxSupportedTransactionVersion: 1, encoding: "jsonParsed", commitment: "confirmed" }]);
   return decodeParsed(tx);
 }
 /** The same decode on an already-fetched jsonParsed transaction (find.mjs). Adds feePayer. */
