@@ -215,6 +215,7 @@ _Data to 21 Oct 08:43 UK; off-page grad, instant ones left out. Built by reports
 - **PvePad and Rosy (20 Oct):** bought by PG on the curve before graduation and then by GR at graduation. PvePad was +41.7% on GR's 0.25 leg.
 
 ## What the owner said / decided
+- 21 Oct 10:15 UK: keep GR in SHADOW for now with the new changes (no live switch yet).
 - 21 Oct 09:40 UK: "Okay, let's go" (GR plan). Asked what the point of 0.05 SOL live is, given fees. Answer: fixed costs ≈ 0.003 SOL a round trip (0.001 tip each way + ~0.0005 priority each way; the token-account deposit is refunded on the sale) = ~6% of a 0.05 stake, ~3% of 0.1, ~1.2% of 0.25. A real-money start tests what shadow can't: transactions landing, real sells in a crash, front-running at size. Recommended 0.1; the switch to LIVE and the stake are his, from the GR box.
 - 21 Oct 09:33 UK: "So you've analysed all the trades, and these are your conclusions how to make it more profitable … and minimise the losses." Answer: the loss side had not been grouped yet — done at 09:45 UK (10-second rule).
 - 21 Oct 08:37 UK: "let's move to the next coin" (after S3); his 08:26 screenshot showed GR shadow +1.137 SOL on 64, today +1.365 on 21.
@@ -231,7 +232,7 @@ _Data to 21 Oct 08:43 UK; off-page grad, instant ones left out. Built by reports
 - **20 Oct 23:32 UK:** told that GR failed the 40-trade test and that AS is now the better first live candidate. No reply on GR in the log (his next message, 23:51 UK, asked for the AS deep-dive).
 
 ## Open items
-- awaiting go (21 Oct 08:55 UK), replaces the GR2 idea (revise GR, no new book): DONE 09:47 UK: (1) buyer cap, (3) retry, (4) 10-second rule, guard. OPEN: (2) GR LIVE — the owner switches it on the page (recommended 0.1 SOL a trade) (the 40-real-trade condition is met: 64 legs +1.137 SOL), stepping to 0.1 after 30 positive live legs with real ≈ paper, pause if 20 live legs are negative; (3) retry the buy once after ~1.5 s on "pool not initialised"; (4) [added 09:45 UK] the 10-second rule in GR's exit — sell if the price 10 s after the buy is below the buy price (paper and executor).
+- awaiting go (21 Oct 08:55 UK), replaces the GR2 idea (revise GR, no new book): DONE 09:47 UK: (1) buyer cap, (3) retry, (4) 10-second rule, guard. OPEN: (2) GR LIVE — owner chose to stay in shadow (21 Oct 10:15 UK). Revisit at 30 shadow legs under the revised rule (from 09:47 UK): live at 0.1 SOL if they are positive with real ≈ paper (the 40-real-trade condition is met: 64 legs +1.137 SOL), stepping to 0.1 after 30 positive live legs with real ≈ paper, pause if 20 live legs are negative; (3) retry the buy once after ~1.5 s on "pool not initialised"; (4) [added 09:45 UK] the 10-second rule in GR's exit — sell if the price 10 s after the buy is below the buy price (paper and executor).
 - awaiting go (21 Oct diagnosis): GR2 = graduation with fewer than 156 buyers (any age ≥ 10 s), 3-min exit, executor SHADOW at 0.05 SOL beside GR; GR stays shadow. Neither goes live until 30 real legs are positive.
 - **Awaiting his go (proposed 20 Oct 23:32 UK):**
   - GR stays shadow, **not live**.
