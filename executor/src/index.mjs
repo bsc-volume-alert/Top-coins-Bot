@@ -16,7 +16,7 @@ import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 import { db, newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, positionsOf, hasPosition, dayNet, net24, londonDayStart, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.4.9"; // v0.4.8 (owner go 21 Oct 13:50 UK): book BL (bundle launch, S8 fires, 40% trail from the peak); A5 and S10 off; AS stake back to 0.1 // books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
+const VERSION = "0.4.10"; // v0.4.8 (owner go 21 Oct 13:50 UK): book BL (bundle launch, S8 fires, 40% trail from the peak); A5 and S10 off; AS stake back to 0.1 // books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
 const EXIT_NAMES = { h5: "B", flow4: "A", h3: "GR", tsl40: "BL" };
 // wide = P5 Wide's EXTRA coins only (the $100K–$250K triggers, strategy p5w30): the rest of the paper Wide book is the Runner's coins, already traded by the runner book.
 // strict = the 50 SOL trigger (p5e50): its own paper trade on a coin the runner may already hold, bought later and higher — a separate leg, a separate test.
@@ -393,7 +393,8 @@ async function housekeeping() {
   try {
     await reconcilePending();
     // v0.4.6 guard (owner go 21 Oct 09:40 UK): a live GR whose last 20 live legs are net negative goes back to shadow by itself and raises an alarm (counted from the last guard trip, so switching it back on starts a fresh count)
-    for (const k of ["grad"]) { if (modeOf(k) !== "live") continue; const since = S.books[k].guardTs || 0; const r = db.prepare(`SELECT pnl_lamports FROM positions WHERE status='closed' AND book=? AND mode='live' AND opened_ts>? ORDER BY closed_ts DESC LIMIT 20`).all(k, since); const net = r.reduce((a, x) => a + (x.pnl_lamports || 0), 0); if (r.length >= 20 && net < 0) { S.books[k].mode = "shadow"; S.books[k].guardTs = nowS(); saveOvr(); log("guard", `${BOOKS[k].name} back to shadow: last 20 live legs ${(net / 1e9).toFixed(3)} SOL`); tg(`🛑 ${BOOKS[k].name} switched back to SHADOW - its last 20 live trades lost ${(net / 1e9).toFixed(3)} SOL. Switch it on again from the page when you want.`); } }
+    // v0.4.10 (owner, 21 Oct 17:50 UK): the guard watches every live book, not only GR
+    for (const k of BOOK_IDS) { if (modeOf(k) !== "live") continue; const since = S.books[k].guardTs || 0; const r = db.prepare(`SELECT pnl_lamports FROM positions WHERE status='closed' AND book=? AND mode='live' AND opened_ts>? ORDER BY closed_ts DESC LIMIT 20`).all(k, since); const net = r.reduce((a, x) => a + (x.pnl_lamports || 0), 0); if (r.length >= 20 && net < 0) { S.books[k].mode = "shadow"; S.books[k].guardTs = nowS(); saveOvr(); log("guard", `${BOOKS[k].name} back to shadow: last 20 live legs ${(net / 1e9).toFixed(3)} SOL`); tg(`🛑 ${BOOKS[k].name} switched back to SHADOW - its last 20 live trades lost ${(net / 1e9).toFixed(3)} SOL. Switch it on again from the page when you want.`); } }
     for (const [k, pe] of pendingExit) if (Date.now() - (pe.ts || 0) > 600_000) pendingExit.delete(k); // an exit noted for a buy that never booked
     const ops = openPositions(), n = nowS(), trackerSilent = Date.now() - S.lastTracker > 120_000, feedStale = S.lastFeed > 0 && Date.now() - S.lastFeed > 120_000;
     for (const p of ops) {
