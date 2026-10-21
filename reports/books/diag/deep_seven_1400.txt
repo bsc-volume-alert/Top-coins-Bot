@@ -1,0 +1,213 @@
+
+########## S7b (copy of unknown feed wallets): n148, exit x_h5, net -15.6%, won 27%; entry-time columns used: 56
+  WINNERS vs LOSERS, the columns that differ most at entry (AUC 0.5 = identical):
+    entry_mc             AUC 0.72   winners median 7894 | losers median 5157
+    entry_price          AUC 0.72   winners median 7.544e-08 | losers median 4.921e-08
+    h0_n                 AUC 0.72   winners median 28 | losers median 16.5
+    holders_entry        AUC 0.71   winners median 28 | losers median 17
+    sn_sol_in            AUC 0.68   winners median 35.66 | losers median 23.36
+    h0_t20               AUC 0.67   winners median 34.6 | losers median 27.9
+    sn_buyers            AUC 0.67   winners median 37 | losers median 21
+  WINNER BOX (10–90% range of winners on entry_mc, entry_price, h0_n): holds 68% of winners and 44% of losers; trading only inside it: n74 -14.0% vs outside n74 -17.2%; by thirds inside: -13.0 / -19.3 / -11.6
+  gradient boosting  OUT OF SAMPLE on the later 99 trades: AUC 0.63 (shuffled outcomes: median 0.51, ≥ this in 0% of runs); trading its top 30% (n29): -13.9% vs all -14.6% (gain +0.7 pts; shuffled gain ≥ this in 43% of runs)
+  logistic           OUT OF SAMPLE on the later 99 trades: AUC 0.53 (shuffled outcomes: median 0.51, ≥ this in 33% of runs); trading its top 30% (n29): -11.7% vs all -14.6% (gain +2.9 pts; shuffled gain ≥ this in 37% of runs)
+  READABLE RULE (depth-2 tree, best leaf, learned on the first 98): in sample n17 -2.1% (won 76%) → on the last 50 it selects n8: -17.7% vs the rest -5.7%
+    |--- h0_n <= 21.500
+    |   |--- h0_lg <= 10.105
+    |   |   |--- class: 0
+    |   |--- h0_lg >  10.105
+    |   |   |--- class: 0
+    |--- h0_n >  21.500
+    |   |--- h0_n <= 29.500
+    |   |   |--- class: 1
+    |   |--- h0_n >  29.500
+    |   |   |--- class: 0
+
+########## A (runner): n381, exit x_flow4, net -3.4%, won 48%; entry-time columns used: 77
+  WINNERS vs LOSERS, the columns that differ most at entry (AUC 0.5 = identical):
+    n60                  AUC 0.45   winners median 76 | losers median 80
+    avg_buy_sol          AUC 0.55   winners median 0.4555 | losers median 0.437
+    heat_sol1h_pct       AUC 0.55   winners median 0.1 | losers median 0.06
+    cr_n24h              AUC 0.46   winners median 0 | losers median 0
+    cr_n                 AUC 0.46   winners median 0 | losers median 0
+    wal60                AUC 0.46   winners median 63.5 | losers median 65
+    pre_30sol_w          AUC 0.47   winners median 60 | losers median 62
+  WINNER BOX (10–90% range of winners on n60, avg_buy_sol, heat_sol1h_pct): holds 63% of winners and 62% of losers; trading only inside it: n239 -3.1% vs outside n142 -4.0%; by thirds inside: -1.4 / -5.8 / -1.4
+  gradient boosting  OUT OF SAMPLE on the later 254 trades: AUC 0.49 (shuffled outcomes: median 0.50, ≥ this in 63% of runs); trading its top 30% (n76): -10.5% vs all -3.8% (gain -6.7 pts; shuffled gain ≥ this in 97% of runs)
+  logistic           OUT OF SAMPLE on the later 254 trades: AUC 0.49 (shuffled outcomes: median 0.49, ≥ this in 50% of runs); trading its top 30% (n76): -8.2% vs all -3.8% (gain -4.4 pts; shuffled gain ≥ this in 77% of runs)
+  READABLE RULE (depth-2 tree, best leaf, learned on the first 254): in sample n23 +11.2% (won 70%) → on the last 127 it selects n11: -1.7% vs the rest -0.3%
+    |--- top10_entry <= 13.582
+    |   |--- class: 1
+    |--- top10_entry >  13.582
+    |   |--- heat_grad1h <= 154.000
+    |   |   |--- class: 0
+    |   |--- heat_grad1h >  154.000
+    |   |   |--- class: 0
+
+########## S4b: n61, exit x_h5, net -12.0%, won 13%; entry-time columns used: 46
+  WINNERS vs LOSERS, the columns that differ most at entry (AUC 0.5 = identical):
+    heat_launch10m       AUC 0.30   winners median 303.5 | losers median 378
+    sn_dev_buy_sol       AUC 0.30   winners median 0.3012 | losers median 0.5
+    dev_buy_sol          AUC 0.30   winners median 0.3012 | losers median 0.5
+    heat_grad1h          AUC 0.32   winners median 79.5 | losers median 112
+    sn_sells             AUC 0.65   winners median 7 | losers median 4
+    cc_n24h              AUC 0.35   winners median 0.5 | losers median 1
+    feed_lag_ms          AUC 0.36   winners median 984.5 | losers median 1128
+  WINNER BOX (10–90% range of winners on heat_launch10m, sn_dev_buy_sol, dev_buy_sol): holds 62% of winners and 30% of losers; trading only inside it: n21 -5.2% vs outside n40 -15.5%; by thirds inside: -31.4 / +66.2 / -28.1
+  gradient boosting  OUT OF SAMPLE on the later 41 trades: AUC 0.42 (shuffled outcomes: median 0.48, ≥ this in 80% of runs); trading its top 30% (n12): -27.6% vs all -13.9% (gain -13.8 pts; shuffled gain ≥ this in 87% of runs)
+  logistic           OUT OF SAMPLE on the later 41 trades: AUC 0.51 (shuffled outcomes: median 0.45, ≥ this in 28% of runs); trading its top 30% (n12): -14.5% vs all -13.9% (gain -0.6 pts; shuffled gain ≥ this in 39% of runs)
+  READABLE RULE (depth-2 tree, best leaf, learned on the first 40): in sample n11 +20.7% (won 36%) → on the last 21 it selects n5: -22.0% vs the rest -29.2%
+    |--- sn_dev_buy_sol <= 0.310
+    |   |--- class: 0
+    |--- sn_dev_buy_sol >  0.310
+    |   |--- sn_sells <= 8.000
+    |   |   |--- class: 0
+    |   |--- sn_sells >  8.000
+    |   |   |--- class: 0
+
+########## S3 (old rule rows + S3b parent rows, one row per coin): n314, exit x_h5, net -10.2%, won 21%; entry-time columns used: 45
+  WINNERS vs LOSERS, the columns that differ most at entry (AUC 0.5 = identical):
+    entry_price          AUC 0.67   winners median 4.298e-08 | losers median 3.43e-08
+    sn_mc_first          AUC 0.67   winners median 4488 | losers median 3594
+    entry_mc             AUC 0.67   winners median 4488 | losers median 3594
+    h0_n                 AUC 0.66   winners median 4 | losers median 2
+    bundle_wallets       AUC 0.66   winners median 4 | losers median 1
+    sn_trades            AUC 0.66   winners median 5 | losers median 2
+    bundle_pct           AUC 0.65   winners median 20.02 | losers median 9.755
+  WINNER BOX (10–90% range of winners on entry_price, sn_mc_first, entry_mc): holds 79% of winners and 61% of losers; trading only inside it: n204 -17.7% vs outside n110 +3.7%; by thirds inside: -12.5 / -19.2 / -20.4
+  gradient boosting  OUT OF SAMPLE on the later 210 trades: AUC 0.55 (shuffled outcomes: median 0.49, ≥ this in 23% of runs); trading its top 30% (n63): -15.4% vs all -10.4% (gain -5.0 pts; shuffled gain ≥ this in 63% of runs)
+  logistic           OUT OF SAMPLE on the later 210 trades: AUC 0.65 (shuffled outcomes: median 0.48, ≥ this in 0% of runs); trading its top 30% (n63): -6.9% vs all -10.4% (gain +3.5 pts; shuffled gain ≥ this in 40% of runs)
+  READABLE RULE (depth-2 tree, best leaf, learned on the first 209): in sample n51 +15.0% (won 20%) → on the last 105 it selects n26: -24.9% vs the rest -9.9%
+    |--- bundle_pct <= 12.931
+    |   |--- cc_last_min <= 4.500
+    |   |   |--- class: 0
+    |   |--- cc_last_min >  4.500
+    |   |   |--- class: 0
+    |--- bundle_pct >  12.931
+    |   |--- heat_launch10m <= 381.000
+    |   |   |--- class: 0
+    |   |--- heat_launch10m >  381.000
+    |   |   |--- class: 1
+
+########## D (strict): n299, exit x_flow4, net -4.6%, won 45%; entry-time columns used: 81
+  WINNERS vs LOSERS, the columns that differ most at entry (AUC 0.5 = identical):
+    cc_best_mc24h        AUC 0.56   winners median 3.259e+04 | losers median 2.015e+04
+    pre_min1_nb          AUC 0.56   winners median 93 | losers median 89
+    dev_buy_sol          AUC 0.55   winners median 1.178 | losers median 0.9877
+    pre_m1_nb            AUC 0.55   winners median 93 | losers median 89
+    pre_30sol_w          AUC 0.55   winners median 62 | losers median 57.5
+    max_share            AUC 0.45   winners median 0.088 | losers median 0.092
+    pre_m2_nb            AUC 0.55   winners median 100 | losers median 94
+  WINNER BOX (10–90% range of winners on cc_best_mc24h, pre_min1_nb, dev_buy_sol): holds 65% of winners and 74% of losers; trading only inside it: n210 -7.8% vs outside n89 +2.9%; by thirds inside: -7.1 / +0.9 / -16.7
+  gradient boosting  OUT OF SAMPLE on the later 200 trades: AUC 0.52 (shuffled outcomes: median 0.51, ≥ this in 43% of runs); trading its top 30% (n60): -2.9% vs all -5.2% (gain +2.3 pts; shuffled gain ≥ this in 30% of runs)
+  logistic           OUT OF SAMPLE on the later 200 trades: AUC 0.50 (shuffled outcomes: median 0.50, ≥ this in 60% of runs); trading its top 30% (n60): -6.3% vs all -5.2% (gain -1.1 pts; shuffled gain ≥ this in 50% of runs)
+  READABLE RULE (depth-2 tree, best leaf, learned on the first 199): in sample n37 +19.3% (won 70%) → on the last 100 it selects n1: -7.4% vs the rest -7.7%
+    |--- n60 <= 67.000
+    |   |--- class: 0
+    |--- n60 >  67.000
+    |   |--- pre_m3_b <= 5284.500
+    |   |   |--- class: 1
+    |   |--- pre_m3_b >  5284.500
+    |   |   |--- class: 0
+
+########## PG: n273, exit x_t2s40, net -16.5%, won 29%; entry-time columns used: 17
+  WINNERS vs LOSERS, the columns that differ most at entry (AUC 0.5 = identical):
+    bundle_wallets       AUC 0.59   winners median 2 | losers median 1
+    entry_price          AUC 0.42   winners median 3.111e-07 | losers median 3.168e-07
+    entry_mc             AUC 0.43   winners median 3.303e+04 | losers median 3.366e+04
+    bundle_pct           AUC 0.57   winners median 1.738 | losers median 0.8759
+    top10_entry          AUC 0.56   winners median 11.57 | losers median 9.847
+    h0_t10               AUC 0.56   winners median 11.6 | losers median 9.8
+    h0_t20               AUC 0.55   winners median 12.1 | losers median 10.2
+  WINNER BOX (10–90% range of winners on bundle_wallets, entry_price, entry_mc): holds 69% of winners and 75% of losers; trading only inside it: n200 -17.8% vs outside n73 -12.9%; by thirds inside: -24.9 / -13.0 / -16.6
+  gradient boosting  OUT OF SAMPLE on the later 182 trades: AUC 0.50 (shuffled outcomes: median 0.48, ≥ this in 37% of runs); trading its top 30% (n54): -19.2% vs all -14.3% (gain -5.0 pts; shuffled gain ≥ this in 67% of runs)
+  logistic           OUT OF SAMPLE on the later 182 trades: AUC 0.51 (shuffled outcomes: median 0.49, ≥ this in 40% of runs); trading its top 30% (n54): -19.4% vs all -14.3% (gain -5.2 pts; shuffled gain ≥ this in 70% of runs)
+  READABLE RULE (depth-2 tree, best leaf, learned on the first 182): in sample n16 +48.9% (won 75%) → on the last 91 it selects n6: +8.4% vs the rest -16.5%
+    |--- entry_mc <= 32221.733
+    |   |--- entry_mc <= 32085.774
+    |   |   |--- class: 0
+    |   |--- entry_mc >  32085.774
+    |   |   |--- class: 1
+    |--- entry_mc >  32221.733
+    |   |--- h0_dev <= 2.770
+    |   |   |--- class: 0
+    |   |--- h0_dev >  2.770
+    |   |   |--- class: 0
+
+########## K (5-min): n60, exit x_h5, net -0.4%, won 50%; entry-time columns used: 4
+  WINNERS vs LOSERS, the columns that differ most at entry (AUC 0.5 = identical):
+    buyers_entry         AUC 0.42   winners median 465.5 | losers median 602
+    entry_mc             AUC 0.45   winners median 3.51e+04 | losers median 3.91e+04
+    hour_uk              AUC 0.53   winners median 18.5 | losers median 11
+    age_s                AUC 0.49   winners median 506.5 | losers median 553
+  WINNER BOX (10–90% range of winners on buyers_entry, entry_mc, hour_uk): holds 57% of winners and 33% of losers; trading only inside it: n27 +14.3% vs outside n33 -12.4%; by thirds inside: +15.8 / +16.7 / +11.1
+  gradient boosting  OUT OF SAMPLE on the later 40 trades: AUC 0.53 (shuffled outcomes: median 0.52, ≥ this in 40% of runs); trading its top 30% (n12): -5.1% vs all -3.8% (gain -1.3 pts; shuffled gain ≥ this in 57% of runs)
+  logistic           OUT OF SAMPLE on the later 40 trades: AUC 0.48 (shuffled outcomes: median 0.49, ≥ this in 60% of runs); trading its top 30% (n12): -8.3% vs all -3.8% (gain -4.5 pts; shuffled gain ≥ this in 63% of runs)
+  READABLE RULE (depth-2 tree, best leaf, learned on the first 40): in sample n14 +23.7% (won 79%) → on the last 20 it selects n13: +2.2% vs the rest -44.4%
+    |--- buyers_entry <= 668.000
+    |   |--- buyers_entry <= 281.500
+    |   |   |--- class: 0
+    |   |--- buyers_entry >  281.500
+    |   |   |--- class: 1
+    |--- buyers_entry >  668.000
+    |   |--- hour_uk <= 18.500
+    |   |   |--- class: 0
+    |   |--- hour_uk >  18.500
+    |   |   |--- class: 1
+
+
+########## ALL SEVEN POOLED (does any pattern hold across books?)
+  columns kept (filled on 50%+ of pooled rows): 43
+  n1536, net -8.8%, won 35%, columns 43
+  gradient boosting  OUT OF SAMPLE on the later 1024: AUC 0.57 (shuffled median 0.50, ≥ this in 0%); top 30% (n307) -12.1% vs all -10.4% (gain -1.7; shuffled ≥ in 73%)
+  logistic           OUT OF SAMPLE on the later 1024: AUC 0.61 (shuffled median 0.49, ≥ this in 0%); top 30% (n307) -10.6% vs all -10.4% (gain -0.1; shuffled ≥ in 47%)
+coins traded by the seven books: 1163
+coins traded by 2+ of them: 312
+book pairs sharing coins: pair, shared coins, same outcome %:
+   A   +D     297 coins, same win/loss 86%
+   A   +K      32 coins, same win/loss 59%
+   D   +K      30 coins, same win/loss 60%
+   A   +PG     28 coins, same win/loss 71%
+   D   +PG     23 coins, same win/loss 57%
+   K   +PG     10 coins, same win/loss 50%
+   A   +S7b     7 coins, same win/loss 43%
+   D   +S7b     6 coins, same win/loss 67%
+   PG  +S7b     2 coins, same win/loss 100%
+   A   +S3      2 coins, same win/loss 0%
+
+coins that WON in 2+ books: 138; coins that LOST in every book that traded them: 122
+  multi-book winners: n138 | bundle % median 28.7 (≥70%: 2%) | bundle wallets median 5 | creator buy median 1.00 SOL | socials known-yes 87% of 121
+  all-book losers: n122 | bundle % median 25.6 (≥70%: 0%) | bundle wallets median 4 | creator buy median 0.99 SOL | socials known-yes 78% of 110
+
+the multi-book winners, with the book that bought cheapest (entry MC) and each book's result:
+   Where's the Airdrop?   A:-32%@$53K  D:-26%@$49K  PG:+90%@$32K  S3:+743%@$8K   | cheapest S3
+   PvePad                 A:+39%@$98K  D:+39%@$98K  PG:+90%@$32K  S7b:+449%@$28K   | cheapest S7b
+   Unemployed, But Invest A:+42%@$46K  D:-51%@$59K  S4b:+351%@$7K   | cheapest S4b
+   the normie             A:-51%@$43K  D:+41%@$35K  S7b:+292%@$7K   | cheapest S7b
+   Spidey Show            A:+277%@$60K  D:+277%@$59K   | cheapest D
+   TOM BRADY 2000 DONRUSS A:+277%@$24K  D:+277%@$24K   | cheapest D
+   WIPD                   A:+59%@$54K  D:+73%@$49K  K:+224%@$55K   | cheapest D
+   77                     A:+29%@$44K  D:+45%@$43K  K:+172%@$23K   | cheapest K
+   SpaceXSuperIntelligenc A:+133%@$46K  D:+133%@$46K  K:+21%@$29K  PG:+90%@$32K   | cheapest K
+   The Fearless Yorkie    A:+119%@$27K  D:+119%@$27K   | cheapest A
+   Ultraviolet            A:+111%@$42K  D:+68%@$46K   | cheapest A
+   The Bee                A:+100%@$49K  D:+110%@$46K   | cheapest D
+   xingxing               A:+73%@$47K  D:+73%@$52K  K:+110%@$47K   | cheapest A
+   French Goku Hero       A:+100%@$42K  D:+42%@$53K   | cheapest A
+   SpaceX Universal Basic A:+97%@$57K  D:+95%@$58K   | cheapest A
+   the collectooor        A:+80%@$45K  D:+94%@$38K   | cheapest D
+   The Official Memecoin  A:+91%@$73K  D:+91%@$73K  K:+63%@$73K   | cheapest A
+   PokeSolBet             A:+46%@$46K  PG:+90%@$32K   | cheapest PG
+   Fomochi                A:+26%@$45K  D:+26%@$45K  PG:+90%@$32K   | cheapest PG
+   King Of Larp           A:+9%@$52K  D:+7%@$53K  PG:+90%@$33K   | cheapest PG
+   Chi                    A:+17%@$48K  D:-13%@$55K  PG:+90%@$32K   | cheapest PG
+   Netflix & Chills       A:+41%@$63K  PG:+90%@$32K   | cheapest PG
+   SYLPH                  A:+20%@$51K  D:+42%@$56K  PG:+90%@$32K   | cheapest PG
+   Aura Final Boss        A:+33%@$68K  D:+21%@$74K  PG:+90%@$33K   | cheapest PG
+   Rosy                   K:+7%@$65K  PG:+90%@$32K   | cheapest PG
+
+where the same coin was bought by A and D: who paid less, and who did better?
+   297 coins; A cheaper in 59%; A result +0.7% vs D -4.4% on the same coins
+   A+K: 32 coins; A result +15.8% vs K +17.1%; A cheaper in 44%
+S7b out-of-sample trades ranked by the model, best first: top 10% n9 -17.7% | top 20% +0.4% | top 30% -13.9% | bottom 50% -24.0% | won in top 20%: 32% vs bottom 50%: 16%
+S3 out-of-sample trades ranked by the model, best first: top 10% n21 -34.8% | top 20% -26.1% | top 30% -6.9% | bottom 50% -9.1% | won in top 20%: 29% vs bottom 50%: 13%

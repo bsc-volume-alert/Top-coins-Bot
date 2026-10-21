@@ -52,6 +52,7 @@ _Data to 21 Oct 13:20 UK; curve costs, 5-min exit. Built by reports/books/number
   - **Exit verdict:** 3-min −10.4% and the 40% trail −10.5% (without best −18.9%) are the best of 12; 5-min −12.1%; 1.5x/−40% −21.5% (worst — the 12% hit rate cannot pay for the stops). Distance to break-even under the best exit: 10.5 points a trade, and no exit is positive without the best coin.
   - **Factor / pair verdict:** 666 filters × 12 exits; **0 pass the three-period test, 0 beat luck** (diagnose.py's one strict pass on 02:30 data, sn_sells ≥ 9, had luck 5/20 and is gone). The under-3% bundle idea that created the book reversed on 20 Oct and has not come back.
   - **No profitable version found.** The book is a subset of S4; the revised S4 already carries its only promising traits.
+- 21 Oct 14:00 UK (data to 13:20 UK; method: scratchpad deep.py / cross.py / decile.py; full output in diag/deep_seven_1400.txt): Deep multivariate search (LESSONS 14:00 UK): 61 trades, 13% won; AUC 0.42 / 0.51 out of sample (chance); the models' top 30% −27.6% / −14.5%. The winner box (quiet launch minute, creator buy ~0.3 SOL) holds 62% of winners, 30% of losers, and still loses (−5.2%, thirds −31 / +66 / −28). Depth-2 rule +20.7% in sample → −22.0% on the last 21. **Nothing; too few winners to learn from.**
 
 ## Notable coins
 - **Unemployed, But Investing (20 Oct 14:02 UK):** 4.5–4.7x at 5 min. This is the "4.7x coin" that put S4b in profit on the owner's screen. S4 and AS also took it.

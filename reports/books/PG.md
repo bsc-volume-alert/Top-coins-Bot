@@ -85,6 +85,7 @@ _Data to 21 Oct 13:20 UK; curve costs. Built by reports/books/numbers.py._
   - **Which exit for the one book** (paired on S8's 91 rows, S8.md): 2x-or-30-min is a lottery — median −21 points against the trail, worse on 20 of 30, without top 3 −18 points; the trail beats 5-min by +20.7 (p 0.045) and split beats 5-min by +12.9 (p 0.054). Not PG's exit.
   - **Which entry:** PG's ($32–40K, under 150 s) and S8's (first trade after +4 s) are the same trade on this type because the bundle itself puts the first trade at $27–36K. S8's trigger is earlier by nothing and catches the under-$32K ones too; PG's 272-buyer and 80-SOL-dev gates add nothing here (creator buys are 0–0.3 SOL).
   - **Proposed: SWITCH PG OFF** (all three variants) and fold the slice into the revised S8 ("BL", S8.md). No profitable PG version exists that is not already S8's.
+- 21 Oct 14:00 UK (data to 13:20 UK; method: scratchpad deep.py / cross.py / decile.py; full output in diag/deep_seven_1400.txt): Deep multivariate search (LESSONS 14:00 UK): 17 entry columns; AUC 0.50 / 0.51 out of sample (chance); top 30% −19% vs −14%. The only separating columns are the launch bundle (bundle_wallets 0.59, bundle_pct 0.57, top-10 share 0.56) — the bundle-launch slice already folded into S8. Winner box holds 69% of winners and 75% of losers. Depth-2 rule (entry MC in a $32,086–32,222 band) +48.9% in sample → n6 +8.4% on the last 91 — a sliver, not a rule. **Nothing beyond the slice; switch-off stands.**
 
 ## Notable coins
 - **Winners on PG-stop (2x hit):**
