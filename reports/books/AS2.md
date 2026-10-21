@@ -8,7 +8,7 @@ _Notes last rebuilt: 21 Oct 2026 01:35 UK._
 - Started 21 Oct 01:30 UK (`CHG_AS2`). Everything before is a back-test of a rule chosen by looking at those trades.
 
 ## Verdict now
-**21 Oct 18:00 UK (4-hour study; data to 17:06 UK):** KEEP, judge at 30 forward (16 now). Forward 16 at +5.9% (no-best +2.2%, no-top3 −4.2%, won 69%) vs back-test 63 at +18.6%. Still almost the same coins as AS (every AS trade since 01:30 but DreamCoin, Finley and Nigga Its Over had a 2+-wallet bundle: AS2 skipped those three at +19.2%, +21.6%, −16.7%). The forward edge over AS is nil so far; the back-test gap (+18.6% vs AS's +8.8%) has not shown up forward.
+**21 Oct 17:35 UK (4-hour study; data to 17:06 UK):** KEEP, judge at 30 forward (16 now). Forward 16 at +5.9% (no-best +2.2%, no-top3 −4.2%, won 69%) vs back-test 63 at +18.6%. Still almost the same coins as AS (every AS trade since 01:30 but DreamCoin, Finley and Nigga Its Over had a 2+-wallet bundle: AS2 skipped those three at +19.2%, +21.6%, −16.7%). The forward edge over AS is nil so far; the back-test gap (+18.6% vs AS's +8.8%) has not shown up forward.
 
 **21 Oct 11:10 UK:** KEEP running, nothing to change. The forward test is 9 trades at +9.3% (no-best +2.8%) and so far identical to AS (every AS trade since 01:30 had a 2+-wallet bundle). Its back-test edge is AS3's coins diluted: the 2–4-wallet bundles are 30 trades at +1.9% (no-best −1.0%). Nothing inside it beats luck; the runner stays.
 
@@ -47,7 +47,7 @@ _Data to 21 Oct 17:06 UK; AS + launch bundle 2+ wallets. Built by reports/books/
   - Exit verdict: runner stays. Paired on the same 72: x_t2s40 −3.2 points (95% range −16 to +9, better on 25 of 72), x_t15s40 −4.3, x_flow4ff −4.6, x_h2t40 −8.4, x_tsl40 −13.6. 46% of AS2 coins reach 2x (the fixed 2x sale breaks even at 37%) — not enough margin to prefer x_t2s40.
   - Factor / pair verdict: 1,207 filters × 12 exits + 193 pairs; 451 pass the three-period test, **0 are unlikely to be luck** (shuffles reach +35% to +70%). Top in-sample: quiet first minute AND under 60 trades in the minute / x_h2t40 n12 +78.9% luck 3; sol60 < 35.5 / x_t2s40 n54 +25.7% luck 20. Nothing to adopt.
   - Proposed: KEEP as is, judge at 30 forward trades as planned (about a day at 29 a day). If AS3 keeps beating it on the same coins, AS2 is AS3 plus noise and can go; if the 2–4-wallet coins turn positive forward, AS2 earns its place.
-- 21 Oct 18:00 UK (4-hour study; data to 17:06 UK): Forward 16 grouped: 11 winners (big: Banana Cat +60.9%, Clout +53.7%), 3 stopped (buyoutSH, OTTR, Datacenter 13:37 — creator bought 0.9 SOL, 39 SOL sold in the minute, 72 wallets, peak 1.26x), 2 small losers (Cashfish, Alpenglow — old coins, 1.6 h median). Last 6 h 7 at +1.5%.
+- 21 Oct 17:35 UK (4-hour study; data to 17:06 UK): Forward 16 grouped: 11 winners (big: Banana Cat +60.9%, Clout +53.7%), 3 stopped (buyoutSH, OTTR, Datacenter 13:37 — creator bought 0.9 SOL, 39 SOL sold in the minute, 72 wallets, peak 1.26x), 2 small losers (Cashfish, Alpenglow — old coins, 1.6 h median). Last 6 h 7 at +1.5%.
 
 ## Notable coins
 - None yet in the real test.

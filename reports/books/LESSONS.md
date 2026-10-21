@@ -12,7 +12,7 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK. Read this before any book file._
 - **Halves:** split a book's trades by time; an edge must be positive in both halves.
 - **Before/since a change:** the "before" figure is a back-test. The rule was chosen by looking at those trades, so it's flattering. Only "since" is a real test.
 - **Blocks of 14 trades swing a lot** (AS: −7.3% to +29.6%). Never size stakes off the last block.
-- 21 Oct 18:00 UK (4-hour study; data to 17:06 UK): Cost check on the kept books' legs — AS `asoc` 18 legs real +5.8 points above the PumpSwap model (entry +1.6%, exit −1.4%); GR `grad` 84 legs 2.8 points below the model (since the 09:47 UK rule 18 legs +1.1 above; entry gap +9.4% median at 0.25 SOL on fresh bundle-launch pools, offset by floor sells filling above paper); BL `bl` 6 curve legs +3.6 points above the curve model (entry +1.6%). Both models still stand; the GR entry gap is the one number to keep watching, because GR2 buys the same coins at the same stake.
+- 21 Oct 17:35 UK (4-hour study; data to 17:06 UK): Cost check on the kept books' legs — AS `asoc` 18 legs real +5.8 points above the PumpSwap model (entry +1.6%, exit −1.4%); GR `grad` 84 legs 2.8 points below the model (since the 09:47 UK rule 18 legs +1.1 above; entry gap +9.4% median at 0.25 SOL on fresh bundle-launch pools, offset by floor sells filling above paper); BL `bl` 6 curve legs +3.6 points above the curve model (entry +1.6%). Both models still stand; the GR entry gap is the one number to keep watching, because GR2 buys the same coins at the same stake.
 
 ## Data events that change how history reads
 - **18 Oct 20:25 UK, price fix.** PumpSwap prices were corrected; everything before is unreliable. All books start their record here.
