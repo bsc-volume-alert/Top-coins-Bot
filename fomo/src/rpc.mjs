@@ -28,8 +28,13 @@ export async function rpc(method, params, { budget = true } = {}) {
 /** getTransaction → { ts, slot, legs: [{ mint, side, tokens, dec, usd, quote, quoteAmt, wallet }] } or null. One leg per (wallet, non-quote mint). */
 export async function decodeTx(sig) {
   const tx = await rpc("getTransaction", [sig, { maxSupportedTransactionVersion: 0, encoding: "jsonParsed", commitment: "confirmed" }]);
-  if (!tx || tx.meta?.err) return tx ? { ts: tx.blockTime, slot: tx.slot, legs: [], failed: true } : null;
+  return decodeParsed(tx);
+}
+/** The same decode on an already-fetched jsonParsed transaction (find.mjs). Adds feePayer. */
+export function decodeParsed(tx, solUsdAt = null) {
+  if (!tx || tx.meta?.err) return tx ? { ts: tx.blockTime, slot: tx.slot, legs: [], failed: true, feePayer: tx.transaction?.message?.accountKeys?.[0]?.pubkey || null } : null;
   const keys = (tx.transaction?.message?.accountKeys || []).map((k) => (typeof k === "string" ? k : k.pubkey));
+  const feePayer = keys[0] || null;
   const pre = tx.meta.preTokenBalances || [], post = tx.meta.postTokenBalances || [];
   const bal = new Map(); // owner|mint -> { owner, mint, dec, delta }
   const add = (b, sign) => { if (!b?.mint || !b.owner) return; const k = b.owner + "|" + b.mint; const o = bal.get(k) || { owner: b.owner, mint: b.mint, dec: b.uiTokenAmount?.decimals ?? null, delta: 0 }; o.delta += sign * Number(b.uiTokenAmount?.uiAmount || 0); bal.set(k, o); };
@@ -37,7 +42,7 @@ export async function decodeTx(sig) {
   // native SOL deltas per account (lamports), for wallets that paid in SOL rather than wrapped SOL / USDC
   const lam = new Map(); const preL = tx.meta.preBalances || [], postL = tx.meta.postBalances || [];
   for (let i = 0; i < keys.length; i++) lam.set(keys[i], ((postL[i] || 0) - (preL[i] || 0)) / 1e9);
-  const legs = [], su = solUsd();
+  const legs = [], su = solUsdAt || solUsd();
   for (const o of bal.values()) {
     if (QUOTES.has(o.mint) || Math.abs(o.delta) < 1e-9 || o.owner === CFG.SIGNER) continue;
     const side = o.delta > 0 ? "buy" : "sell";
@@ -52,5 +57,5 @@ export async function decodeTx(sig) {
   }
   // keep the biggest leg per mint (route scratch accounts can show tiny deltas for the same mint under other owners)
   const best = new Map(); for (const g of legs) { const b = best.get(g.mint); if (!b || g.tokens > b.tokens) best.set(g.mint, g); }
-  return { ts: tx.blockTime, slot: tx.slot, legs: [...best.values()] };
+  return { ts: tx.blockTime, slot: tx.slot, legs: [...best.values()], feePayer };
 }
