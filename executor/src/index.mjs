@@ -16,7 +16,7 @@ import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 import { db, newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, positionsOf, hasPosition, dayNet, net24, londonDayStart, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.4.16"; // v0.4.8 (owner go 21 Oct 13:50 UK): book BL (bundle launch, S8 fires, 40% trail from the peak); A5 and S10 off; AS stake back to 0.1 // books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
+const VERSION = "0.4.17"; // v0.4.8 (owner go 21 Oct 13:50 UK): book BL (bundle launch, S8 fires, 40% trail from the peak); A5 and S10 off; AS stake back to 0.1 // books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
 const EXIT_NAMES = { h5: "B", flow4: "A", h3: "GR", tsl40: "BL" };
 // wide = P5 Wide's EXTRA coins only (the $100K–$250K triggers, strategy p5w30): the rest of the paper Wide book is the Runner's coins, already traded by the runner book.
 // strict = the 50 SOL trigger (p5e50): its own paper trade on a coin the runner may already hold, bought later and higher — a separate leg, a separate test.
@@ -291,8 +291,9 @@ async function watchPosition(p, v) {
   const check = (px, slot) => { if (!(px > 0) || w.fired) return; w.px = px; w.ticks++; if (w.entry == null) w.entry = px; if (w.peak == null || px > w.peak) w.peak = px;
     const level = p.exit === "h3" ? 0.6 * w.entry : 0.6 * w.peak; if (px <= level) { w.fired = true; const mult = px / w.entry; log("stop-local", `${p.name} [${BOOKS[p.book]?.name || p.exit}] ${mult.toFixed(3)}x of entry (peak ${(w.peak / w.entry).toFixed(2)}x) after ${((Date.now() - w.t0) / 1000).toFixed(1)} s, ${w.ticks} ticks, slot ${slot ?? "?"}`);
       const q = positionOf(p.paper_id, p.exit); if (q && q.status === "open") sellPosition(q, "stop-local", mult, "stop").catch((e) => log("stop-local-error", `${p.name}: ${e.message}`)); } };
-  if (v.kind === "curve") { w.entry = spotCurve(v.curve); w.peak = w.entry; w.subs.push(onAccount(v.curvePk, (data, slot) => { const c = pump.decodeCurve(data); if (c) check(spotCurve(c), slot); })); }
-  else { w.entry = spotPool(w.quote, w.base); w.peak = w.entry;
+  const paid = p.cost_lamports > 0 && p.tokens > 0 ? p.cost_lamports / p.tokens : null; // v0.4.17: the entry is what we actually paid per token unit (lamports / base units - the same unit as the on-chain spot), so a position watched again after a restart keeps its real stop level instead of starting from the current price
+  if (v.kind === "curve") { w.entry = paid || spotCurve(v.curve); w.peak = w.entry; w.subs.push(onAccount(v.curvePk, (data, slot) => { const c = pump.decodeCurve(data); if (c) check(spotCurve(c), slot); })); }
+  else { w.entry = paid || spotPool(w.quote, w.base); w.peak = w.entry;
     w.subs.push(onAccount(v.pool.baseAcc, (data, slot) => { const a = parseTokenAccount(data)?.amount; if (a != null) { w.base = Number(a); check(spotPool(w.quote, w.base), slot); } }));
     w.subs.push(onAccount(v.pool.quoteAcc, (data, slot) => { const a = parseTokenAccount(data)?.amount; if (a != null) { w.quote = Number(a); check(spotPool(w.quote, w.base), slot); } })); }
   watching.set(k, w);
