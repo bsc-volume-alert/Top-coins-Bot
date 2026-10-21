@@ -10,6 +10,7 @@ Whenever a book is discussed, analysed, changed or reported on, by a chat sessio
 3. **Answer from both:** start from the book's latest conclusion, then say what the fresh data adds or changes. Refer back to past tests by name and date. Don't re-run a dropped idea as if it were new; say it was tested, when, and what came out.
 4. **Write back** in the same session: dated lines under Change history / Ideas tested / Notable coins / What the owner said / Open items, an updated Verdict, and refreshed numbers (`numbers.py <dir> --write`). Commit to `tracker`. reports/ changes never restart the bot.
 5. **Never delete history.** If a conclusion is overturned, add a dated line saying so and why.
+6. **Successes and failures, always.** Every analysis of a book groups its successful trades and says what made them succeed, groups its failures and says what made them fail and what would minimise them — in detail — before proposing a rule (owner, 21 Oct 11:31 UK). The per-book record of this lives under "Ideas tested" in the book's file; the consolidated version is reports/winners-losers.md.
 
 ## Index
 | File | Book | Status (21 Oct 12:30 UK — see reports/latest.md for the revision plan) |
