@@ -8,6 +8,8 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - Started 19 Oct 21:50 UK (v0.18.146, owner 21:45). The rule has not changed since.
 
 ## Verdict now
+**21 Oct 08:45 UK:** Replaced on the page by the revised S3 (see S3.md); this file keeps S3b's history.
+
 **21 Oct 08:40 UK:** Still a lottery (5 big winners in 189, −6.3% a trade). Two firm loser groups found: copies of coins that peaked under $1M (118 trades, −23%, no big winners) and one serial creator (26 trades, −29%). What remains (72 trades, +22.5%) rests on 5 coins and failed on S3's independent coins — worth a paper forward test only.
 
 **21 Oct 02:30 UK:** Dead — buying new coins in their first seconds/minute loses at real costs whatever the filter or exit.
@@ -36,6 +38,8 @@ _Data to 21 Oct 08:29 UK; curve costs, 5-min exit. Built by reports/books/number
 - 20 Oct 13:35 UK (study): 88 rows +0.6%; **−8.0% on 82 without cat cow**; the 8 in the window −26.9%, none won.
 - 20 Oct 17:41 UK (study): 104 rows −1.7%; F7 −2.6% on 80 out of sample, −11.9% on 71 without cat cow. **"Does not hold up."**
 - 20 Oct 19:15 UK (v0.18.164): fingerprint coins left out (see LESSONS.md).
+
+- 21 Oct 08:45 UK (v0.18.173): S3b's box removed from the page; its trades now feed the revised S3 box (filtered: $1M+ originals, serial creator skipped). The tracker still records `sn3b`.
 
 ## Ideas tested
 - **F7 (≥ 1 s after launch)**: in sample +13.9% on 62. Out of sample it has drifted from −13.1% (34) to −2.6% (80), and it is −8% to −12% without cat cow at every check. **Does not hold up.**
@@ -69,6 +73,7 @@ _Data to 21 Oct 08:29 UK; curve costs, 5-min exit. Built by reports/books/number
 - cat cow (19 Oct 22:42 UK, another launch of the name): 1.34x.
 
 ## What the owner said / decided
+- 21 Oct 08:35–08:37 UK: replace S3 with the revised version, keep the name S3 ("we've got too many coins now, we've got to start culling"); leave the wider cull for now.
 - 21 Oct 08:27 UK: "analyze S3B … all the big wins … all the failures … find the common factors … see if we can make this profitable" (screenshot: last 6 h +2.206 SOL on 3 trades at 0.5; 24 h −5.513 on 109; total −4.244 on 189).
 - 19 Oct 21:45 UK: build S3b (F7) as a paper book.
 - 20 Oct ~07:10 UK: "So S3B looks our best bet … improve it even more" (page screenshot). He was told it is one coin (cat cow) and that without it the book loses; no filter rescues it.

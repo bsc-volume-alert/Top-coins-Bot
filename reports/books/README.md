@@ -25,6 +25,7 @@ Whenever a book is discussed, analysed, changed or reported on, by a chat sessio
 | [A5.md](A5.md) · [F6.md](F6.md) | Early-confirmation variants | No edge |
 | [R.md](R.md) | Revival | Too few trades; restart bug |
 | [PG.md](PG.md) | Pre-graduation | Failed; switch-off proposed |
+| [S3.md](S3.md) | S3 revised 21 Oct 08:45 UK: copies of $1M+ coins, ≥ 1 s after launch, serial creator skipped | Lottery; back-test +22.5% on 72 (5 big winners); real test from 08:45 UK |
 | [S1.md](S1.md) … [S11.md](S11.md), [S3b.md](S3b.md), [S4b.md](S4b.md), [S6b.md](S6b.md), [S7b.md](S7b.md) | Curve snipers | All negative |
 | [S10.md](S10.md) | Operator coins on the pool | Negative; the pool price is the operator's exit |
 | [OFFPAGE.md](OFFPAGE.md) | Old tracker books not on the page | Nearly all negative |
