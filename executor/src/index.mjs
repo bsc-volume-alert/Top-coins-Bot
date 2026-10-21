@@ -16,7 +16,7 @@ import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 import { db, newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, positionsOf, hasPosition, dayNet, net24, londonDayStart, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.4.6"; // four books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
+const VERSION = "0.4.7"; // four books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
 const EXIT_NAMES = { h5: "B", flow4: "A", h3: "GR" };
 // wide = P5 Wide's EXTRA coins only (the $100K–$250K triggers, strategy p5w30): the rest of the paper Wide book is the Runner's coins, already traded by the runner book.
 // strict = the 50 SOL trigger (p5e50): its own paper trade on a coin the runner may already hold, bought later and higher — a separate leg, a separate test.
@@ -60,6 +60,7 @@ if (!ovr.m041) { if (S.books.famous) S.books.famous.mode = "shadow"; ovr.m041 = 
 if (!ovr.m040) { for (const k of ["confirm", "op"]) if (S.books[k]) S.books[k].mode = "shadow"; ovr.m040 = true; S.mig039 = true; } // v0.4.0 one-time: A5 and S10 in shadow at 0.05
 if (!ovr.m039) { for (const k of ["dev", "smart", "swarm"]) if (S.books[k]) S.books[k].mode = "off"; for (const k of ["copy", "clean"]) if (S.books[k]) S.books[k].mode = "shadow"; ovr.m039 = true; S.mig039 = true; } // v0.3.9 one-time: S1/S6/S9 back to paper, S3/S4 shadow (owner, 19 Oct 17:11 UK)
 if (!ovr.m042) { for (const k of ["small", "crowd", "copy", "famous"]) if (S.books[k]) S.books[k].mode = "off"; for (const k of ["grad", "sn7b"]) { if (!S.books[k]) S.books[k] = { mode: "shadow", stake: 0.05 }; else S.books[k].mode = "shadow"; } ovr.m042 = true; S.mig039 = true; } // v0.4.2 one-time: F, G, S3, S6b back to paper (losing at real prices); GR and S7b into shadow (owner, 20 Oct)
+if (!ovr.m045) { if (S.books.clean) S.books.clean.mode = "off"; ovr.m045 = true; S.mig039 = true; } // v0.4.7 one-time: S4 (clean) shadow off - the rule is being replaced; 217 real-quote legs -1.085 SOL (owner, 21 Oct 10:25 UK)
 if (!ovr.m044) { if (!S.books.asoc) S.books.asoc = { mode: "shadow", stake: 0.1 }; else { S.books.asoc.mode = "shadow"; S.books.asoc.stake = 0.1; } ovr.m044 = true; S.mig039 = true; } // v0.4.5 one-time: AS into shadow at 0.1 SOL (owner, 21 Oct 01:19 UK)
 if (!ovr.m043) { if (S.books.sn7b) S.books.sn7b.mode = "off"; ovr.m043 = true; S.mig039 = true; } // v0.4.3 one-time: S7b back to paper (41 shadow legs -0.553 SOL, win 20%; owner, 20 Oct 15:29 UK)
 const modeOf = (book) => S.books[book]?.mode || "off";
@@ -81,7 +82,7 @@ const selling = new Set();       // legKeys with a sell in progress
 let housekeepingBusy = false;
 const fallbackMin = (exit) => (exit === "flow4" ? CFG.FALLBACK_SELL_MIN_FLOW4 : exit === "h3" ? 5 : CFG.FALLBACK_SELL_MIN_H5); // v0.4.2: GR sells at 3 min - by 5 regardless
 const feedLagAvg = () => (S.lags.length ? S.lags.reduce((a, b) => a + b, 0) / S.lags.length : 0);
-const saveOvr = () => { try { writeFileSync(OVR, JSON.stringify({ mode: S.mode, stake: S.stake, exit: S.exit, strategy: S.strategy, books: S.books, m039: true, m040: true, m041: true, m042: true, m043: true, m044: true })); } catch {} };
+const saveOvr = () => { try { writeFileSync(OVR, JSON.stringify({ mode: S.mode, stake: S.stake, exit: S.exit, strategy: S.strategy, books: S.books, m039: true, m040: true, m041: true, m042: true, m043: true, m044: true, m045: true })); } catch {} };
 if (S.mig039) { syncMode(); saveOvr(); }
 
 // ---- Telegram (send only; commands arrive through the tracker, which owns the bot's polling) ----
