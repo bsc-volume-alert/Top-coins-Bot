@@ -16,7 +16,7 @@ import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 import { db, newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, positionsOf, hasPosition, dayNet, net24, londonDayStart, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.4.17"; // v0.4.8 (owner go 21 Oct 13:50 UK): book BL (bundle launch, S8 fires, 40% trail from the peak); A5 and S10 off; AS stake back to 0.1 // books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
+const VERSION = "0.4.18"; // v0.4.8 (owner go 21 Oct 13:50 UK): book BL (bundle launch, S8 fires, 40% trail from the peak); A5 and S10 off; AS stake back to 0.1 // books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
 const EXIT_NAMES = { h5: "B", flow4: "A", h3: "GR", tsl40: "BL" };
 // wide = P5 Wide's EXTRA coins only (the $100K–$250K triggers, strategy p5w30): the rest of the paper Wide book is the Runner's coins, already traded by the runner book.
 // strict = the 50 SOL trigger (p5e50): its own paper trade on a coin the runner may already hold, bought later and higher — a separate leg, a separate test.
@@ -297,6 +297,7 @@ async function watchPosition(p, v) {
     w.subs.push(onAccount(v.pool.baseAcc, (data, slot) => { const a = parseTokenAccount(data)?.amount; if (a != null) { w.base = Number(a); check(spotPool(w.quote, w.base), slot); } }));
     w.subs.push(onAccount(v.pool.quoteAcc, (data, slot) => { const a = parseTokenAccount(data)?.amount; if (a != null) { w.quote = Number(a); check(spotPool(w.quote, w.base), slot); } })); }
   watching.set(k, w);
+  check(v.kind === "curve" ? spotCurve(v.curve) : spotPool(w.quote, w.base), null); // v0.4.18: judge the price now as well - a coin with no trades since a restart never ticks, and one already below its stop must sell at once
 }
 async function sellPosition(p, rule, paperMult = null, why = null) {
   if (!S.pub) return; const t0 = Date.now(), mint = PK(p.mint), k = legKey(p.paper_id, p.exit), tag = BOOKS[p.book]?.name || EXIT_NAMES[p.exit] || p.exit;
