@@ -243,3 +243,10 @@ For any rule R on any row: `ex_R_t` says when it fired, `ex_R_x` the multiple at
 - Owner, 21 Oct 08:35–08:37 UK: "just keep it S3 … this is the revised version of S3"; culling of other boxes left for later.
 - **S3 (page box `s3`)** = S3b's recorded trades (`sn3b`: copycat name, bought ≥ 1 s after the launch, sold at 5 min) filtered on the page: the copied coin reached **$1M+ in the last 24 h** (`early_json.ctx.cc.best24h`), and the **serial creator is skipped** (token creator buy 0.055–0.062 SOL with a 0.15–0.26% launch bundle; ~250 launches a day). Curve costs, lateFix. Back-test (19 Oct 21:54 – 21 Oct 08:45 UK): 72 trades +22.5% a trade, without best +11.6%, without best 3 −5.9%, 25% won, 5 big winners — in sample. Judged from 08:45 UK (`CHG_S3`).
 - The old S3 (`sn3`) and S3b boxes and their off-page strip lines are gone from the page; the tracker still records `sn3` / `sn3b` rows (data kept; the export still labels them S3 / S3b).
+
+## v0.18.174 / executor v0.4.6 (21 Oct 09:47 UK) — GR revised
+- Owner go 21 Oct 09:40 UK. **GR (`grf`) now takes graduations with under 156 buyers** (GR.MAX_BUYERS 272 → 155; age 10–185 s unchanged).
+- **10-second rule in GR's exit:** on the first tick once the price 10 s after the buy is known (`first_secs.t10`), if it is below the buy price the 3-min exit (`x_h3`) closes there, with `h3why` = "10s". So for `grf` rows from now, `x_h3` includes the 10-s rule; older rows don't. The executor sells its `grad` leg on that signal.
+- Page GR box: record on the revised coins (rows with 156+ buyers left out), split at the change time (`CHG_GR`); the back-test uses the old exit on the < 156-buyer coins.
+- Executor: a GR buy that fails because the new pool isn't initialised yet (AccountNotInitialized / 3012) is retried once after 1.5 s with a fresh pool read. **Guard:** if GR is LIVE and its last 20 live legs (since the last guard trip) are net negative, it switches itself back to SHADOW and sends one Telegram alarm.
+- GR stays in SHADOW until the owner switches it to LIVE from the page.

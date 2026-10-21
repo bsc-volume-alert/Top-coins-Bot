@@ -14,9 +14,9 @@ import { getAccounts, getBalance, buildTx, simulate, send, sendUntilConfirmed, w
 import { ata, parseTokenAccount, ixBudget, ixTip, ixTransfer, PK, PUMP, PUMP_AMM } from "./solana.mjs";
 import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
-import { newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, positionsOf, hasPosition, dayNet, net24, londonDayStart, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
+import { db, newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, positionsOf, hasPosition, dayNet, net24, londonDayStart, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.4.5"; // four books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
+const VERSION = "0.4.6"; // four books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
 const EXIT_NAMES = { h5: "B", flow4: "A", h3: "GR" };
 // wide = P5 Wide's EXTRA coins only (the $100K–$250K triggers, strategy p5w30): the rest of the paper Wide book is the Runner's coins, already traded by the runner book.
 // strict = the 50 SOL trigger (p5e50): its own paper trade on a coin the runner may already hold, bought later and higher — a separate leg, a separate test.
@@ -37,7 +37,7 @@ const BOOKS = { runner: { name: "A", strategy: "p5e30", exit: "flow4", take: pas
   op: { name: "S10", strategy: "sn10", exit: "h5", take: () => true, rule: "S10: one operator's launch fingerprint (10 bundle wallets, 37–41% of supply, 22–28 SOL, dev < 0.2 SOL; 14 of 14 went past $200K) — bought on the first outside trade, sold at 5 min. Shadow answers whether the launch price can be bought" },
   famous: { name: "S6b", strategy: "sn6b", exit: "h5", take: () => true, rule: "S6b: a smart wallet with 1,000+ GMGN followers buys in a launch's first 60 s — bought at our feed's price once the follower count is known, sold at 5 min. Shadow measures the real buy price on famous wallets' coins (S6's was 13% above paper)" },
   sn7b: { name: "S7b", strategy: "sn7b", exit: "h5", take: () => true, rule: "S7b: GMGN smart-money feed buy by a wallet with under 100 GMGN followers - bought at our feed price once the follower count is known, sold at 5 min. Shadow asks whether that price is buyable (paper, corrected: about -2% a trade on 31)" },
-  grad: { name: "GR", strategy: "grf", exit: "h3", take: () => true, rule: "GR: fast, thin graduations (272 buyers or fewer, graduated 10-185 s after launch; instant graduations skipped) - bought on the new pool, sold at 3 min (floor 1.3x once armed, stop below 0.6x). Shadow answers whether the graduation price can really be bought." },
+  grad: { name: "GR", strategy: "grf", exit: "h3", take: () => true, rule: "GR (revised 21 Oct 09:47 UK): thin graduations - under 156 buyers, graduated 10-185 s after launch - bought on the new pool; sold if the price 10 s after the buy is below the buy price, else at 3 min (floor 1.3x once 1.5x is seen, stop below 0.6x). A live book that loses over its last 20 live legs goes back to shadow by itself." },
   asoc: { name: "AS", strategy: "p5e30", exit: "flow4", take: (m) => passOk(m) && m.asStd === true, rule: "AS: A's trigger with the owner's standard filters - socials not known to be missing, the creator has not bought and sold out, the biggest buyer in the trigger minute put in 3-5 SOL · runner exit. The best paper book (+11.5% a trade on 78 to 21 Oct 00:59 UK); shadow measures its real fills before any money goes in" } }; // v0.4.5 AS (owner, 21 Oct 01:19 UK) // v0.4.2 GR · v0.4.1 · v0.4.0 (owner, 19 Oct 19:56 UK) · v0.3.9 (owner, 19 Oct 17:11 UK): S3 and S4 into shadow; S1, S6, S9 back to paper // v0.3.7 (owner, 19 Oct 15:57 UK): S1 and S6 in shadow too // v0.3.6 (owner, 19 Oct 15:48 UK: "every new analysis, straight onto shadow") // one letter per book, the same as the website: A runner · B hold-5 · C wide (runner exit) · D strict (runner exit)
 const BOOK_IDS = Object.keys(BOOKS);
 const nowS = () => Math.floor(Date.now() / 1000);
@@ -200,7 +200,7 @@ async function handleTrigger(m) {
     await Promise.all(legs.map((book, i) => buyLeg(m, book, i, v, lamports(stakeOf(book)), pre, tVenue, fromTrig).catch((e) => { console.error("[buy]", e); log("buy-error", `${m.name} [${BOOKS[book].name}]: ${e.message}`); newOrder({ side: "buy", paper_id: m.id, exit: BOOKS[book].exit, book, mint: m.mint, name: m.name, strategy: m.strategy, status: "error", skip_reason: String(e.message).slice(0, 200), stake_lamports: lamports(stakeOf(book)), from_trigger_ms: fromTrig() }); })));
   } finally { for (const book of legs) { S.buying[book] = Math.max(0, S.buying[book] - 1); inflight.delete(inflightKey(m.mint, book)); } }
 }
-async function buyLeg(m, book, legIndex, v, stake, pre, tVenue, fromTrig) {
+async function buyLeg(m, book, legIndex, v, stake, pre, tVenue, fromTrig, retried = false) {
   const exit = BOOKS[book].exit, tip = lamports(CFG.TIP_SOL) + BOOK_IDS.indexOf(book), tag = BOOKS[book].name, mode = modeOf(book); // this leg's own mode: shadow legs simulate, live legs sign and send // the tip differs by book (1 lamport each) so two books' buys of one coin are never the same transaction — even at the same stake, from different triggers
   let b = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, v.kind === "amm" ? "amm" : "v3"); // curve: v3 first (simulated clean on a mayhem coin, 18 Oct); pool: classic first
   if (!(b.minOut > 0n)) { newOrder({ side: "buy", paper_id: m.id, exit, book, mint: m.mint, name: m.name, strategy: m.strategy, status: "skipped", skip_reason: "quote gave a zero minimum — pool state unreadable", stake_lamports: stake, from_trigger_ms: fromTrig() }); return; }
@@ -213,7 +213,10 @@ async function buyLeg(m, book, legIndex, v, stake, pre, tVenue, fromTrig) {
   if (progErr(sim)) { const altKind = v.kind === "curve" ? "classic" : "amm2"; const b3 = buyIxs(v, S.pub, stake, CFG.SLIP_BUY, altKind); const tx3 = await buildTx(S.pub, wrap(S.pub, [...pre, ...b3.ixs], tip, CFG.CU_PRICE)); const sim3 = await simulate(tx3, [myAta]);
     updOrder(id, { detail: { firstKind: b.ixKind, firstErr: sim.err, firstLogs: sim.logs.slice(-4) } }); if (sim3.ok || !progErr(sim3)) { b = b3; tx = tx3; sim = sim3; } }
   updOrder(id, { ix_kind: b.ixKind, quote_out: b.expected, min_out: b.minOut, sim_ok: sim.ok ? 1 : 0, sim_err: sim.err, sim_units: sim.units, sim_ms: sim.ms, status: sim.ok ? "simulated" : "sim-failed" });
-  if (!sim.ok) { log("sim-fail", `${m.name} [${tag}] ${b.ixKind}: ${sim.err} | ${sim.logs.slice(-3).join(" | ")}`); return; }
+  if (!sim.ok) { log("sim-fail", `${m.name} [${tag}] ${b.ixKind}: ${sim.err} | ${sim.logs.slice(-3).join(" | ")}`);
+    // v0.4.6 (owner go 21 Oct 09:40 UK): a graduation bought before its new pool exists fails with AccountNotInitialized (8 GR misses by 21 Oct) - wait 1.5 s, read the pool again, try once more
+    if (!retried && book === "grad" && /AccountNotInitialized|3012/.test(JSON.stringify(sim.err ?? "") + " " + sim.logs.join(" "))) { await new Promise((r) => setTimeout(r, 1500)); const v2 = await venueOf(m.mint).catch(() => ({ kind: "none" })); if (v2.kind !== "none") { log("retry", `${m.name} [${tag}] pool not ready - retried after 1.5 s`); return buyLeg(m, book, legIndex, v2, stake, await userVolPrefix(v2.kind), tVenue, fromTrig, true); } }
+    return; }
   if (mode !== "live") { // shadow: the chain's simulated fill is the fill (falls back to our quote if the post-state was not returned)
     const simTok = parseTokenAccount(sim.post?.[0])?.amount ?? null; const got = simTok != null && simTok > 0n ? simTok : b.expected; const off = simTok != null && simTok > 0n ? Number(simTok) / Number(b.expected) - 1 : null;
     if (off != null && Math.abs(off) > 0.05) log("quote-off", `${m.name} ${b.ixKind}: our quote ${b.expected} vs chain ${simTok} (${(off * 100).toFixed(1)}%)`);
@@ -383,6 +386,8 @@ async function housekeeping() {
   if (housekeepingBusy) return; housekeepingBusy = true;
   try {
     await reconcilePending();
+    // v0.4.6 guard (owner go 21 Oct 09:40 UK): a live GR whose last 20 live legs are net negative goes back to shadow by itself and raises an alarm (counted from the last guard trip, so switching it back on starts a fresh count)
+    for (const k of ["grad"]) { if (modeOf(k) !== "live") continue; const since = S.books[k].guardTs || 0; const r = db.prepare(`SELECT pnl_lamports FROM positions WHERE status='closed' AND book=? AND mode='live' AND opened_ts>? ORDER BY closed_ts DESC LIMIT 20`).all(k, since); const net = r.reduce((a, x) => a + (x.pnl_lamports || 0), 0); if (r.length >= 20 && net < 0) { S.books[k].mode = "shadow"; S.books[k].guardTs = nowS(); saveOvr(); log("guard", `${BOOKS[k].name} back to shadow: last 20 live legs ${(net / 1e9).toFixed(3)} SOL`); tg(`🛑 ${BOOKS[k].name} switched back to SHADOW - its last 20 live trades lost ${(net / 1e9).toFixed(3)} SOL. Switch it on again from the page when you want.`); } }
     for (const [k, pe] of pendingExit) if (Date.now() - (pe.ts || 0) > 600_000) pendingExit.delete(k); // an exit noted for a buy that never booked
     const ops = openPositions(), n = nowS(), trackerSilent = Date.now() - S.lastTracker > 120_000, feedStale = S.lastFeed > 0 && Date.now() - S.lastFeed > 120_000;
     for (const p of ops) {

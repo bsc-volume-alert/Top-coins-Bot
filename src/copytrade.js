@@ -82,7 +82,7 @@ on("graduated", (t, tr) => {
   if (L.buyers <= GR.MAX_BUYERS && ageS <= GR.MAX_AGE_S && ageS >= GR.MIN_AGE_S) openCopy("grf", `${L.buyers}b ${ageS}s`, t.mint, t.name || t.mint.slice(0, 8), t.symbol || "", tr.price, t.lastMc, ts,
     { ageS, buyers: L.buyers, mc5: cp5?.mc ?? null, buyers5: cp5?.buyers ?? null, b5: cp5?.b ?? null, s5: cp5?.sl ?? null, maxBurst: L.maxBurst, bs: cp5 && cp5.sl > 0 ? cp5.b / cp5.sl : null, wall0: Date.now(), blockTs: ts, venue: "pumpswap", pass: true });
 });
-export const GR = { MAX_BUYERS: 272, MAX_AGE_S: 185, MIN_AGE_S: 10 }; // v0.18.153 (owner, 20 Oct 07:27 UK): skip coins that graduate inside their own launch (Leonida, MONUMENTAL EGO: paper took the curve price, the real buy paid +272% / +194%)
+export const GR = { MAX_BUYERS: 155, MAX_AGE_S: 185, MIN_AGE_S: 10 }; // v0.18.174 (owner go 21 Oct 09:40 UK): under 156 buyers (was 272) - real-quote legs < 156 buyers +16.5% a leg on 52 vs 156+ -9.8% on 11; paper 10-185 s < 156 +37.1% on 92 vs 156-272 -4.4% on 49 // v0.18.153 (owner, 20 Oct 07:27 UK): skip coins that graduate inside their own launch (Leonida, MONUMENTAL EGO: paper took the curve price, the real buy paid +272% / +194%)
 
 // v0.18.146: how far behind the chain the tracker is — newest block time seen on any trade vs the wall clock (normally 1–5 s: block times are whole seconds and lag
 // the wall clock; 20 s+ after a restart while the backlog replays). A5 / F6 read a price 5–10 s after a trigger and must not act on a stale one.
@@ -100,6 +100,7 @@ function tick(mint, price, mc, sol, isBuy, ts, wallet = null, quiet = false) {
     p.lastMc = mc; p.lastPx = price; p.lastTs = ts;
     if (p.fs && !p.fs.done) { try { const d = Date.now() - p.wall0; let ch = false; for (const k of [1, 2, 5, 10]) if (d >= k * 1000 && p.fs["t" + k] == null) { p.fs["t" + k] = { m: +(price / p.e.entry).toFixed(4), d }; ch = true; } if (p.fs.t10) p.fs.done = true; if (ch) q.setFirstSecs.run(JSON.stringify(p.fs), p.id); } catch {} } // v0.18.89 price seen 1 / 2 / 5 / 10 s after the trigger (wall clock)
     const r = stepExits(p.e, price, mc, v5, bu, su, ts - p.entryTs); const x = p.e.x; // v0.18.17: seconds since entry for the fast-fail exit
+    if (p.kind === "grf" && !p.e.g10 && p.fs?.t10) { p.e.g10 = true; if (x.h3 == null && p.fs.t10.m < 1) { x.h3 = p.fs.t10.m; x.h3why = "10s"; } } // v0.18.174 GR 10-second rule (owner go 21 Oct 09:40 UK): price 10 s after the buy below the buy price -> sell now (the 3-min exit's x_h3). 64 real legs: +12.0% -> ~+15.5% a leg, 9 of 18 stops cut to small losses
     if (p.wall0) { try { noteExits(p.id, mint, x, ts - p.entryTs); } catch {} } // v0.18.118: the data set's exit timings
     if (x.s15be != null && p.e.s15Saved !== x.s15be) { p.e.s15Saved = x.s15be; try { q.setS15.run(x.s15be, p.id); } catch {} } // v0.18.49
     { const kh = h5Key(x); if (p.e.h5Saved !== kh) { p.e.h5Saved = kh; try { q.setH5.run(x.h5 ?? null, x.h5f12 ?? null, x.h5f14 ?? null, x.h3 ?? null, x.h15 ?? null, x.h5fast ?? null, p.id); q.setH3L.run(x.h3l ?? null, x.t2n30 ?? null, p.id); } catch {} } } // v0.18.81
