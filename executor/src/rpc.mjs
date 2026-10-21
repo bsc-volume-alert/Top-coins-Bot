@@ -63,7 +63,7 @@ export async function waitConfirm(sig, ms = 20000) {
     try { const r = await conn.getSignatureStatuses([sig]); const s = r.value[0];
       if (s) { if (s.err) return { status: "failed", slot: s.slot, err: JSON.stringify(s.err) }; if (s.confirmationStatus === "confirmed" || s.confirmationStatus === "finalized") return { status: "confirmed", slot: s.slot, err: null }; } }
     catch (e) { rpcStats.errors++; rpcStats.lastErr = e.message; }
-    await new Promise((r) => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 200)); // v0.4.11: notice the landing sooner (was 400 ms)
   }
   return { status: "timeout", slot: null, err: null };
 }

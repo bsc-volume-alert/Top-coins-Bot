@@ -11,12 +11,12 @@ import { CFG, EXEC_HOME, lamports, sol } from "./config.mjs";
 import { loadKeypair } from "./wallet.mjs";
 import bs58 from "bs58";
 import { getAccounts, getBalance, buildTx, simulate, send, sendUntilConfirmed, waitConfirm, readFill, blockHeight, signatureStatus, rpcStats } from "./rpc.mjs";
-import { ata, parseTokenAccount, ixBudget, ixTip, ixTransfer, PK, PUMP, PUMP_AMM } from "./solana.mjs";
+import { ata, parseTokenAccount, ixBudget, ixTip, ixTransfer, PK, PUMP, PUMP_AMM, TOKEN, WSOL } from "./solana.mjs";
 import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 import { db, newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, positionsOf, hasPosition, dayNet, net24, londonDayStart, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.4.10"; // v0.4.8 (owner go 21 Oct 13:50 UK): book BL (bundle launch, S8 fires, 40% trail from the peak); A5 and S10 off; AS stake back to 0.1 // books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
+const VERSION = "0.4.11"; // v0.4.8 (owner go 21 Oct 13:50 UK): book BL (bundle launch, S8 fires, 40% trail from the peak); A5 and S10 off; AS stake back to 0.1 // books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
 const EXIT_NAMES = { h5: "B", flow4: "A", h3: "GR", tsl40: "BL" };
 // wide = P5 Wide's EXTRA coins only (the $100K–$250K triggers, strategy p5w30): the rest of the paper Wide book is the Runner's coins, already traded by the runner book.
 // strict = the 50 SOL trigger (p5e50): its own paper trade on a coin the runner may already hold, bought later and higher — a separate leg, a separate test.
@@ -107,26 +107,27 @@ async function balance(force = false) {
 // ---- venue lookup: where does this coin trade right now? ----
 let globalCache = null, cfgCache = null;
 async function venueOf(mintStr, waitMs = 6000) {
-  const mint = PK(mintStr), curvePk = pump.curveOf(mint);
-  const [curveAcc, mintAcc, globalAcc] = await getAccounts([curvePk, mint, pump.GLOBAL]);
+  // v0.4.11 (owner go 21 Oct 18:21 UK: "reduce the transaction time"): ONE round trip for curve, mint, global, the migrated pool, its config and both reserve accounts (the pool's token accounts are
+  // its ATAs for mint and WSOL) instead of three in sequence; a second read only when the pool is not the migrated one or its accounts differ. Live GR buys were 1.5 s from trigger to fill with ~1.0 s of preparation.
+  const mint = PK(mintStr), curvePk = pump.curveOf(mint), poolPk0 = amm.migratedPoolOf(mint), guessBase = ata(poolPk0, mint, TOKEN), guessQuote = ata(poolPk0, WSOL, TOKEN);
+  let [curveAcc, mintAcc, globalAcc, poolAcc, cfgAcc, baseAcc, quoteAcc] = await getAccounts([curvePk, mint, pump.GLOBAL, poolPk0, amm.GLOBAL_CONFIG, guessBase, guessQuote]);
   if (globalAcc) globalCache = pump.decodeGlobal(globalAcc.data) || globalCache;
   const tokenProgram = pump.tokenProgramOf(mintAcc?.owner);
   const curve = curveAcc ? pump.decodeCurve(curveAcc.data) : null;
   if (curve && !curve.complete) return { kind: "curve", mint, curve, tokenProgram, global: globalCache, curvePk, solQuoted: curve.solQuoted };
-  let poolPk = amm.migratedPoolOf(mint);
-  let [poolAcc, cfgAcc] = await getAccounts([poolPk, amm.GLOBAL_CONFIG]);
+  let poolPk = poolPk0;
   if (cfgAcc) cfgCache = amm.decodeGlobalConfig(cfgAcc.data) || cfgCache;
   // at today's SOL price the curve completes at ≈ $40K — right where Project 5 buys — so the trigger often lands in the seconds between
   // the curve filling and pump.fun creating the pool. Wait for it (up to `waitMs`), then try DexScreener's pair address as a last resort.
   const t0 = Date.now(); let waited = 0;
-  while (!poolAcc && curve && Date.now() - t0 < waitMs) { await new Promise((r) => setTimeout(r, 400)); waited++; [poolAcc] = await getAccounts([poolPk]); }
+  while (!poolAcc && curve && Date.now() - t0 < waitMs) { await new Promise((r) => setTimeout(r, 250)); waited++; [poolAcc, baseAcc, quoteAcc] = await getAccounts([poolPk, guessBase, guessQuote]); }
   if (!poolAcc && curve) { try { const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mintStr}`, { signal: AbortSignal.timeout(2500) }); const j = await r.json();
-    const pair = (j.pairs || []).find((p) => p.chainId === "solana" && /pumpswap/i.test(p.dexId || "")); if (pair?.pairAddress) { poolPk = PK(pair.pairAddress); [poolAcc] = await getAccounts([poolPk]); } } catch {} }
+    const pair = (j.pairs || []).find((p) => p.chainId === "solana" && /pumpswap/i.test(p.dexId || "")); if (pair?.pairAddress) { poolPk = PK(pair.pairAddress); [poolAcc] = await getAccounts([poolPk]); baseAcc = quoteAcc = null; } } catch {} }
   const pool = poolAcc ? amm.decodePool(poolAcc.data) : null;
   if (!pool) return { kind: "none", mint, curve, tokenProgram, reason: curve ? `curve complete, pool not there after ${((Date.now() - t0) / 1000).toFixed(1)} s (migration pending)` : "no bonding curve for this mint" };
-  const [baseAcc, quoteAcc] = await getAccounts([pool.baseAcc, pool.quoteAcc]);
+  if (!baseAcc || !quoteAcc || !pool.baseAcc.equals(guessBase) || !pool.quoteAcc.equals(guessQuote)) [baseAcc, quoteAcc] = await getAccounts([pool.baseAcc, pool.quoteAcc]);
   const baseRes = parseTokenAccount(baseAcc?.data)?.amount ?? 0n, quoteRes = parseTokenAccount(quoteAcc?.data)?.amount ?? 0n;
-  return { kind: "amm", mint, pool, poolPk, cfg: cfgCache, tokenProgram, baseRes, quoteRes, curve };
+  return { kind: "amm", mint, pool, poolPk, cfg: cfgCache, tokenProgram, baseRes, quoteRes, curve, waited };
 }
 
 // ---- building ----
@@ -197,8 +198,8 @@ async function handleTrigger(m) {
   if (!legs.length) return;
   try {
     const liveLegs = legs.filter((b) => modeOf(b) === "live"), need = liveLegs.reduce((a, x) => a + lamports(stakeOf(x)), 0); // shadow legs spend nothing (the simulation only needs the wallet to hold the stake)
-    const bal = await balance(); if (need > 0 && bal != null && bal < need + lamports(0.02)) { for (const book of legs) skip(`balance ${sol(bal).toFixed(3)} SOL below ${sol(need).toFixed(2)} (the ${liveLegs.length > 1 ? liveLegs.length + " live books' stakes" : "live stake"}) + fees`, book); return; }
-    const v = await venueOf(m.mint); const tVenue = Date.now() - t0;
+    const [bal, v] = await Promise.all([balance(), venueOf(m.mint)]); const tVenue = Date.now() - t0; // v0.4.11: balance and venue read together, not one after the other
+    if (need > 0 && bal != null && bal < need + lamports(0.02)) { for (const book of legs) skip(`balance ${sol(bal).toFixed(3)} SOL below ${sol(need).toFixed(2)} (the ${liveLegs.length > 1 ? liveLegs.length + " live books' stakes" : "live stake"}) + fees`, book); return; }
     if (v.kind === "none") { for (const book of legs) skip(v.reason, book); return; }
     if (v.kind === "curve" && !v.solQuoted) { for (const book of legs) skip("curve not SOL-quoted", book); return; }
     const pre = await userVolPrefix(v.kind);
@@ -282,6 +283,7 @@ async function sellPosition(p, rule, paperMult = null, why = null) {
   try {
     const v = await venueOf(p.mint); if (v.kind === "none") { log("sell-novenue", `${p.name}: ${v.reason}`); return; }
     const isStop = paperMult != null && paperMult < 1, slip = isStop ? CFG.SLIP_STOP : CFG.SLIP_SELL;
+    const urgent = isStop || why === "10s", sTip = lamports(urgent ? CFG.TIP_RETRY_SOL : CFG.TIP_SOL), sCu = urgent ? CFG.CU_PRICE_RETRY : CFG.CU_PRICE; // v0.4.11: a stop sells into a dump - pay the retry-grade tip and priority fee on the FIRST attempt (live stops filled 22% under paper at 0.8-5.7 s to land)
     // the other book may still hold this coin: sell only this leg's tokens and leave the token account open for it
     const otherLegHolds = openPositions().some((q) => q.mode === p.mode && q.mint === p.mint && !(q.paper_id === p.paper_id && q.exit === p.exit)); // v0.3.3: only legs of the same mode count — a shadow leg holds no real tokens, so a live sell next to it still closes the account (and the rent comes back)
     let amount = BigInt(p.tokens || 0);
@@ -293,13 +295,13 @@ async function sellPosition(p, rule, paperMult = null, why = null) {
         return; } }
     const ixKind = v.kind === "amm" ? (p.ix_kind === "amm" ? "amm" : "amm2") : (p.ix_kind === "v3" ? "v3" : "classic"), closeAta = !otherLegHolds;
     let sIx = sellIxs(v, S.pub, amount, slip, ixKind, closeAta);
-    const id = newOrder({ side: "sell", paper_id: p.paper_id, exit: p.exit, book: p.book, mint: p.mint, name: p.name, strategy: p.strategy, rule, venue: v.kind, ix_kind: sIx.ixKind, amount_tokens: Number(amount), slippage: slip, quote_out: sIx.expected, min_out: sIx.minOut, tip_lamports: lamports(CFG.TIP_SOL), cu_price: CFG.CU_PRICE, detail: { why, paperMult, closeAta } });
+    const id = newOrder({ side: "sell", paper_id: p.paper_id, exit: p.exit, book: p.book, mint: p.mint, name: p.name, strategy: p.strategy, rule, venue: v.kind, ix_kind: sIx.ixKind, amount_tokens: Number(amount), slippage: slip, quote_out: sIx.expected, min_out: sIx.minOut, tip_lamports: sTip, cu_price: sCu, detail: { why, paperMult, closeAta, urgent } });
     if (p.mode !== "live") { // shadow: the quote at this moment is the fill (a sell cannot be simulated without holding the tokens)
       const proceeds = Number(sIx.expected) - lamports(CFG.TIP_SOL) - 10000;
       done(id, proceeds); updOrder(id, { status: "shadow-filled", fill_sol: proceeds, fill_tokens: -Number(amount) }); return;
     }
-    let tx = await buildTx(S.pub, wrap(S.pub, sIx.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); let sim = await simulate(tx);
-    if (progErr(sim)) { const altKind = v.kind === "amm" ? (sIx.ixKind === "amm" ? "amm2" : "amm") : (sIx.ixKind === "v3" ? "classic" : "v3"); const alt = sellIxs(v, S.pub, amount, slip, altKind, closeAta); const tx2 = await buildTx(S.pub, wrap(S.pub, alt.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); const sim2 = await simulate(tx2); if (sim2.ok) { sIx = alt; tx = tx2; sim = sim2; } }
+    let tx = await buildTx(S.pub, wrap(S.pub, sIx.ixs, sTip, sCu)); let sim = await simulate(tx);
+    if (progErr(sim)) { const altKind = v.kind === "amm" ? (sIx.ixKind === "amm" ? "amm2" : "amm") : (sIx.ixKind === "v3" ? "classic" : "v3"); const alt = sellIxs(v, S.pub, amount, slip, altKind, closeAta); const tx2 = await buildTx(S.pub, wrap(S.pub, alt.ixs, sTip, sCu)); const sim2 = await simulate(tx2); if (sim2.ok) { sIx = alt; tx = tx2; sim = sim2; } }
     updOrder(id, { ix_kind: sIx.ixKind, sim_ok: sim.ok ? 1 : 0, sim_err: sim.err, sim_units: sim.units, sim_ms: sim.ms });
     // a failed simulation on a sell is not a reason to hold a dumping coin: send anyway with the stop slippage
     if (!sim.ok) { log("sell-simfail", `${p.name} [${tag}]: ${sim.err} | ${sim.logs.slice(-3).join(" | ")}`); if (slip < CFG.SLIP_STOP) { sIx = sellIxs(v, S.pub, amount, CFG.SLIP_STOP, sIx.ixKind, closeAta); tx = await buildTx(S.pub, wrap(S.pub, sIx.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); } }
