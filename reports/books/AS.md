@@ -20,18 +20,18 @@ Best paper book on the page and the first candidate for a real-quote test, but n
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 10:20 UK; A + standard filters. Built by reports/books/numbers.py._
+_Data to 21 Oct 13:20 UK; A + standard filters. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 21:32 UK) | 88 | +10.5% | +7.4% | 59% | 31% | +0.84 |
+| all (from 18 Oct 21:32 UK) | 92 | +11.0% | +8.1% | 61% | 29% | +0.92 |
 | before the change (20 Oct 17:45 UK) — back-test | 64 | +8.8% | +4.5% | 56% | 34% | +0.50 |
-| since the change — the real test | 24 | +15.1% | +9.9% | 67% | 21% | +0.34 |
-| last 24 h | 32 | +11.4% | +7.4% | 62% | 22% | +0.33 |
-| last 12 h | 17 | +3.9% | -1.0% | 59% | 24% | +0.05 |
-| last 6 h | 6 | +14.2% | +4.8% | 67% | 17% | +0.08 |
+| since the change — the real test | 28 | +16.2% | +11.8% | 71% | 18% | +0.42 |
+| last 24 h | 33 | +15.5% | +11.8% | 70% | 15% | +0.48 |
+| last 12 h | 12 | +11.8% | +7.3% | 75% | 17% | +0.13 |
+| last 6 h | 7 | +17.8% | +10.6% | 86% | 14% | +0.12 |
 
-Executor book `asoc` (shadow, real quotes): 8 legs, +0.383 SOL, average +9.6% a leg, without best +1.5%, won 62%, 21 Oct 02:23 UK to 21 Oct 09:39 UK.
+Executor book `asoc` (shadow, real quotes): 12 legs, +0.979 SOL, average +16.3% a leg, without best +11.7%, won 75%, 21 Oct 02:23 UK to 21 Oct 13:08 UK.
 <!-- /NUMBERS -->
 
 ## Change history
@@ -107,6 +107,8 @@ All on AS's own trades at real costs, runner exit, unless stated. "In sample" = 
   - AS4 = AS + first-minute selling < 20 SOL, fresh: 18 trades +47.8% (no-best +34.3%, no-top3 +25.7%), 83% won, 11% stopped, thirds +52.5 / +65.7 / +25.2, last 24 h 4 at +48.2%, 7.2 a day, +0.34 SOL a day — the whole of AS's +0.87 SOL sits in these 18; AS + selling ≥ 20 SOL is 71 at +1.4% (no-best −0.5%). Monotone by quartile of sell60: 4–22 SOL +36.6% (77% won), 22–28 +5.0%, 30–35 +9.4%, 35–122 −7.1% (39% won); the threshold is not a cliff (< 19.6 n17 +47.0%, < 22 n20 +39.3%, < 25 n30 +26.6%, < 30 n45 +19.2%). Before 17:45: 15 at +45.8%; since: 3 at +57.8%. Against it: search-wide luck 20/20 inside AS; on A's coins outside AS the same cut is 42 at +2.1% (no-best −4.6%), so it is not a stand-alone signal (A all + sell60 < 20 = 60 at +15.8%, no-best +11.4%, but that is the AS part); 9 of the 18 are also AS3 coins. Status: forward-test variant only, UNPROVEN.
   - Overlaps that matter: AS2 = AS3 (42 at +28.5%) + 30 bundle-2–4 coins at +1.9% (no-best −1.0%); AS = those 72 + 17 single-wallet coins at −17.4%. By wallet count: 1 wallet 17 at −17.4%, 2 wallets 8 at +17.2%, 3–4 wallets 22 at −3.7%, 5–6 wallets 23 at +28.5%, 7–9 15 at +26.3%, 10+ 4 at +36.8%. Launch bundle % is monotone inside AS (0–5% −3.8, 5–20% −2.1, 20–35% +8.4, 35–45% +21.6, 45–58% +24.1, 58–70% +64.2 on 5) but not in A (58–70% band −5.1%) — like sell60, it works only inside the standard filters; A's trigger skips 70%+ bundles, so the 70–80% band where S8/PG/GR winners live never reaches AS. Coin age: 2–5 min old 10 at +64.5% (10 of 10 won), under 2 min 15 at +16.1%, 5–30 min about 0, over 1 h +0.9% — in sample and the threshold has moved at every analysis (5 min, 6 min, 68 min); watch only.
   - Proposed: KEEP AS unchanged (entry + runner exit). No profitable REVISION of AS itself found — every candidate is in-sample. AS4 as a paper box (back-test + from-now), judge at 30 trades (about 4 days at 7 a day).
+- 21 Oct 13:30 UK (data to 13:20 UK): Fresh: since the 17:45 UK (20 Oct) change 28 at +16.2% (no-top3 +6.6%, won 71%, thirds +39.0 / −8.2 / +17.6). Gross before costs +21.2% on the 89-trade book, costs 10.4 points.
+- 21 Oct 13:30 UK (data to 13:20 UK): Derived ratio "age per $K of entry MC < 4.74" (coins that reached their market cap fast — e.g. under 200 s at $45K): 24 at +33.5% (no-best +22.9%, no-top3 +13.1%, won 71%, thirds +7.4 / +69.2 / +23.8) vs the other 68 at +3.1% (won 57%). Passes its own luck check (2/200) but AS is 89 trades and every cut on it fails the family-wise check (20/20 in revise.py). Independent books: D fast +0.2% vs slow −6.1%; 80 fast +10.4% (no-top3 −3.2%) vs −7.5%; C −11.7 vs −11.7; A's filtered-out rows fast −13.2% vs slow −6.6%. Mixed → **recorded, not proposed.** Re-check at 150 AS trades; if it holds there, it is the AS4-style box to prefer (it is an entry-time fact, unlike first-minute selling).
 
 ## Notable coins
 - Spidey Show (19 Oct 21:58 UK) — entry $59.7K, peaked 20.6x, sold at the 4x cap: +276.6%, AS's best trade. Also carries F6 and H.

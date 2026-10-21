@@ -46,29 +46,29 @@ This file also covers GR's paper variants (gr70, gr85, grlock, grsoc) and the of
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 10:20 UK; graduation book, 3-min exit. Built by reports/books/numbers.py._
+_Data to 21 Oct 13:20 UK; graduation book, 3-min exit. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 20 Oct 05:30 UK) | 74 | +12.8% | +8.9% | 68% | 30% | +0.88 |
+| all (from 20 Oct 05:30 UK) | 80 | +11.6% | +8.0% | 66% | 30% | +0.85 |
 | before the change (20 Oct 07:30 UK) — back-test | 10 | +47.1% | +26.1% | 90% | 10% | +0.46 |
-| since the change — the real test | 64 | +7.5% | +2.8% | 64% | 33% | +0.41 |
-| last 24 h | 62 | +7.3% | +2.5% | 63% | 34% | +0.39 |
-| last 12 h | 31 | +13.6% | +6.8% | 71% | 26% | +0.39 |
-| last 6 h | 20 | +22.2% | +11.9% | 70% | 25% | +0.42 |
+| since the change — the real test | 70 | +6.5% | +2.3% | 63% | 33% | +0.39 |
+| last 24 h | 56 | +4.6% | -0.7% | 59% | 36% | +0.20 |
+| last 12 h | 30 | +14.4% | +7.4% | 67% | 27% | +0.40 |
+| last 6 h | 14 | -11.5% | -20.1% | 50% | 36% | -0.17 |
 
-Executor book `grad` (shadow, real quotes): 68 legs, +1.035 SOL, average +10.4% a leg, without best +5.7%, won 60%, 20 Oct 05:30 UK to 21 Oct 10:01 UK.
+Executor book `grad` (shadow, real quotes): 74 legs, +0.905 SOL, average +8.9% a leg, without best +4.5%, won 59%, 20 Oct 05:30 UK to 21 Oct 11:43 UK.
 
 **GR every graduation**
 
-_Data to 21 Oct 10:20 UK; off-page grad, instant ones left out. Built by reports/books/numbers.py._
+_Data to 21 Oct 13:20 UK; off-page grad, instant ones left out. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 20:35 UK) | 434 | +3.6% | +0.6% | 52% | 33% | +1.15 |
-| last 24 h | 169 | +1.9% | -0.2% | 54% | 34% | +0.15 |
-| last 12 h | 86 | +5.7% | +1.5% | 56% | 36% | +0.40 |
-| last 6 h | 42 | +10.0% | +4.9% | 52% | 40% | +0.38 |
+| all (from 18 Oct 20:35 UK) | 447 | +3.3% | +0.4% | 52% | 33% | +1.05 |
+| last 24 h | 156 | +1.3% | -1.0% | 53% | 35% | +0.05 |
+| last 12 h | 72 | +3.5% | +0.5% | 53% | 36% | +0.18 |
+| last 6 h | 30 | -5.2% | -12.6% | 43% | 40% | -0.19 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -209,6 +209,9 @@ _Data to 21 Oct 10:20 UK; off-page grad, instant ones left out. Built by reports
   - **x_h3l (GR-lock) is CORRUPT:** 6 of 45 GR rows show a 3-min exit above the highest price seen in the first 3 min (Guzzle Goat 6.86x against a 1.81x high by 180 s; RDSTR LEAGUE 7.97x after a 0.56x stop; CLAUS OTC 5.37 vs 1.67; Pepchi 3.53 vs 1.78). Its +46.5% is an artefact — ignore the column everywhere (PG's "best exit x_h3l" included) until the cause is found.
   - **Forward record under the 09:47 UK rule:** 2 rows — EMBER (107 buyers, stopped in 20 s: paper −59%, real −78%) and zonki (16 buyers, sold by the 10-s rule at 0.88x: paper −19%, real +6.6% because the real buy filled 30% under paper). Nothing to judge yet.
   - **Proposed rule: KEEP the 09:47 UK rule** (graduation 10–185 s after launch, under 156 buyers, 3-min sale with the 10-second rule, executor shadow at 0.25). Back-test on GR's own rows: **n62 +21.6% (without best +17.0%, without top 3 +9.9%), won 66%, stopped 15%, thirds +30.4 / +8.0 / +26.7, last 24 h 49 at +15.8%, ~51 trades a day, +1.05 SOL a day at 0.1.** The trail on the same rows: +38.1% (without best +31.5%, without top 3 +18.2%), won 44%, thirds +47.3 / −9.0 / +76.4, +1.90 SOL a day — higher, but a negative middle third and the paired test above. Decision rule for later: re-judge at 40 forward rows (about a day); switch the exit to the trail only if, on those rows, the trail is ahead of the 3-min without its best 3 coins.
+- 21 Oct 13:30 UK (data to 13:20 UK): Forward rows under the 09:47 rule so far: 8 — 3-min with the 10-s rule −12.3% (won 38%); 40% trail +83.1% (one coin; no-top3 −57%). Far too few; judge at 30–40 as agreed.
+- 21 Oct 13:30 UK (data to 13:20 UK): GR's coins split by launch type: bundle-launch coins (70–80% / 4–10 wallets) 42 at +14.1% (3-min, won 74%, last 24 h 25 at +14.5%) vs other coins 26 at +18.1% (won 62%); gap p 0.59. On the trail the bundle coins do better (+47.7% vs +19.2% on the 10:36 data, p 0.17). Not a rule; it says GR's edge is not only the bundle coins.
+- 21 Oct 13:30 UK (data to 13:20 UK): Derived ratio "buyers per second of age < 0.567" on every-graduation <156 rows: 26 at +97% but that is one 13x (144 s, 9 buyers) and one 6.4x; no-top3 +13.9% vs +0.7%, thirds +306 / −23 / +32, and on the trail no-top3 −3% vs +15%. Two-coin story; dropped. "MC per buyer" luck 17/200; dropped.
 
 ## Notable coins
 - Skibbin (21 Oct 07:05 UK) +245% real, The Last Dip (06:29) +205% real, Netflix & Chills (04:22) +95% — 52–74 buyers each.

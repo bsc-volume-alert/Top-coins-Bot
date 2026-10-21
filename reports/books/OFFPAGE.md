@@ -17,25 +17,25 @@ Names that clash:
 
 ## Latest numbers, all off-page books
 <!-- NUMBERS -->
-_Data to 21 Oct 10:20 UK._
+_Data to 21 Oct 13:20 UK._
 
-- **early** (x_flow4): all 6560 at -34.0%; last 12 h 603 at -39.6%
-- **wave2** (x_flow4): all 889 at -11.9%; last 12 h 137 at -21.2%
+- **early** (x_flow4): all 6781 at -34.2%; last 12 h 469 at -40.5%
+- **wave2** (x_flow4): all 924 at -12.1%; last 12 h 125 at -21.0%
 - **copy** (x_flow4): all 664 at -12.6%; last 12 h 0 at +0.0%
-- **mom60** (x_flow4): all 671 at -10.9%; last 12 h 111 at -7.3%
-- **momfast** (x_flow4): all 519 at -10.7%; last 12 h 81 at -8.6%
-- **mom80** (x_flow4): all 487 at -10.8%; last 12 h 71 at -9.4%
-- **momentum** (x_flow4): all 362 at -9.8%; last 12 h 56 at -7.8%
-- **momconf** (x_flow4): all 80 at -0.5%; last 12 h 12 at -2.2%
-- **momdip** (x_flow4): all 101 at -8.0%; last 12 h 18 at -26.2%
-- **momre** (x_flow4): all 198 at -14.0%; last 12 h 25 at +18.3%
-- **gradrec** (x_flow4): all 482 at -20.2%; last 12 h 91 at -22.2%
-- **gradrun** (x_flow4): all 296 at -8.6%; last 12 h 54 at -6.1%
-- **revival** (x_flow4): all 189 at -13.8%; last 12 h 43 at -13.6%
-- **slow** (x_flow4): all 116 at -12.8%; last 12 h 25 at -24.7%
-- **climber** (x_flow4): all 25 at -12.5%; last 12 h 4 at -19.3%
-- **secondwave** (x_flow4): all 8 at -44.7%; last 12 h 3 at -44.1%
-- **confirm** (x_tsl40): all 1020 at -18.3%; last 12 h 185 at -14.1%
+- **mom60** (x_flow4): all 689 at -12.3%; last 12 h 99 at -6.8%
+- **momfast** (x_flow4): all 533 at -12.4%; last 12 h 72 at -6.4%
+- **mom80** (x_flow4): all 499 at -12.1%; last 12 h 66 at -12.6%
+- **momentum** (x_flow4): all 379 at -9.8%; last 12 h 54 at -6.5%
+- **momconf** (x_flow4): all 81 at -5.3%; last 12 h 12 at +24.9%
+- **momdip** (x_flow4): all 102 at -8.4%; last 12 h 12 at -26.2%
+- **momre** (x_flow4): all 210 at -16.3%; last 12 h 36 at +12.8%
+- **gradrec** (x_flow4): all 507 at -21.0%; last 12 h 83 at -24.7%
+- **gradrun** (x_flow4): all 309 at -8.6%; last 12 h 48 at -1.9%
+- **revival** (x_flow4): all 197 at -13.7%; last 12 h 42 at -14.7%
+- **slow** (x_flow4): all 124 at -14.2%; last 12 h 25 at -25.9%
+- **climber** (x_flow4): all 28 at -14.8%; last 12 h 6 at -21.4%
+- **secondwave** (x_flow4): all 8 at -44.7%; last 12 h 1 at -30.8%
+- **confirm** (x_tsl40): all 1053 at -18.7%; last 12 h 155 at -21.4%
 - **p6** (x_h5): all 0 at +0.0%; last 12 h 0 at +0.0%
 <!-- /NUMBERS -->
 
@@ -230,6 +230,7 @@ _Data to 21 Oct 10:20 UK._
 - **Owner:** his 20 Oct 18:45 UK "buy them on the first dump?" is answered by this book and by the candle study: no.
 - **Open:** none.
 - PROPOSAL (21 Oct rev): SWITCH OFF — stop gradrec — exit x_flow4 — n481 -20.1% (no-best -20.7%) thirds -21.5/-18.2/-20.7 luck 0/20 (its one cut, +1.8% on 73) — no profitable version found — dip-buying after graduation loses −20% in every third; the one luck-0 cut is +0.6% without its best and −18.8% in the last 24 h.
+- 21 Oct 13:30 UK (data to 13:20 UK): On bundle-launch coins (70–80% / 4–10 wallets) gradrec is the worst trade in the data: 86 at −37.1% (won 12%); trail −25.8%, 1.5x take-profit −46.9%. On other known coins −16.4% on 378. The post-graduation dump of an operator coin is the exit, never a dip. Settled.
 
 ## slow — slow build (base breakout)
 - **Now:** `slow` (src/lifecycle.js). A coin **≥ 10 min old** with all of these:
