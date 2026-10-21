@@ -14,7 +14,7 @@ Whenever a book is discussed, analysed, changed or reported on, by a chat sessio
 ## Index
 | File | Book | Status (21 Oct 00:45 UK) |
 |---|---|---|
-| [AS.md](AS.md) | A + standard filters | Best book. +13.0% on 83; since 17:45 UK 20 Oct +23.9% on 14. Real fills match paper |
+| [AS.md](AS.md) | A + standard filters | Best book. +11.5% on 79 (operator coins out); since 17:45 UK 20 Oct +22.9% on 15. In executor SHADOW at 0.1 SOL from 21 Oct 01:30 UK |
 | [AS2.md](AS2.md) · [AS3.md](AS3.md) | AS + launch bundle 2+ / 5+ wallets (snipers) | New 21 Oct 01:30 UK; back-test strong, real test starting |
 | [GR.md](GR.md) | Graduation, 3-min (+ variants, every-graduation) | Failed its 40-real-trade test; shadow only |
 | [K.md](K.md) | Keeps going | New, small sample, positive |
