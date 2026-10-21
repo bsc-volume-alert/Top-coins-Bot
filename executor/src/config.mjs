@@ -23,7 +23,7 @@ export const CFG = {
   EXIT: s("EXEC_EXIT", "h5"),                     // which recorded exit to follow when it fires in the tracker: h5 (hold-5) | flow4 (runner)
   STAKE_SOL: n("EXEC_STAKE_SOL", 0.1),
   MAX_OPEN: n("EXEC_MAX_OPEN", 4),
-  DAILY_STOP_STAKES: n("EXEC_DAILY_STOP_STAKES", 6), // buying stops for the UTC day after this many stakes lost (net)
+  DAILY_STOP_STAKES: n("EXEC_DAILY_STOP_STAKES", 20), // v0.4.14 (owner, 21 Oct 22:34 UK: "we need to keep trading"): a backstop for a runaway bug only - 20 stakes lost net in a UK day; the 20-leg guard per book is the real brake (was 6, which stopped the live test after four stops)
   SLIP_BUY: n("EXEC_SLIP_BUY", 0.20),             // 20%: tight slippage misses the fastest coins — the winners
   SLIP_SELL: n("EXEC_SLIP_SELL", 0.15),
   SLIP_STOP: n("EXEC_SLIP_STOP", 0.30),           // stop sells into a dump: not selling is worse than a bad price
