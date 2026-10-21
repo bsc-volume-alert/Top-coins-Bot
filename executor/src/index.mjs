@@ -16,7 +16,7 @@ import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 import { db, newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, positionsOf, hasPosition, dayNet, net24, londonDayStart, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.4.14"; // v0.4.8 (owner go 21 Oct 13:50 UK): book BL (bundle launch, S8 fires, 40% trail from the peak); A5 and S10 off; AS stake back to 0.1 // books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
+const VERSION = "0.4.15"; // v0.4.8 (owner go 21 Oct 13:50 UK): book BL (bundle launch, S8 fires, 40% trail from the peak); A5 and S10 off; AS stake back to 0.1 // books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
 const EXIT_NAMES = { h5: "B", flow4: "A", h3: "GR", tsl40: "BL" };
 // wide = P5 Wide's EXTRA coins only (the $100K–$250K triggers, strategy p5w30): the rest of the paper Wide book is the Runner's coins, already traded by the runner book.
 // strict = the 50 SOL trigger (p5e50): its own paper trade on a coin the runner may already hold, bought later and higher — a separate leg, a separate test.
@@ -83,6 +83,7 @@ const inflight = new Set();      // "mint:book" legs with a buy in progress (a b
 const inflightKey = (mint, book) => `${mint}:${book}`, buyInFlight = (mint) => BOOK_IDS.some((b) => inflight.has(inflightKey(mint, b)));
 const pendingExit = new Map();   // legKey -> { rule, mult } : an exit that arrived while the buy was still in flight
 const needsSell = new Map();     // legKey -> { rule, mult, why } : legs that must be sold until they are
+const sellFails = new Map();     // v0.4.15: legKey -> consecutive failed sell attempts; after 3 the retry cadence drops from 20 s to 10 min (each failed on-chain attempt still pays ~0.004 SOL in fees)
 const selling = new Set();       // legKeys with a sell in progress
 let housekeepingBusy = false;
 const fallbackMin = (exit) => (exit === "flow4" || exit === "tsl40" ? CFG.FALLBACK_SELL_MIN_FLOW4 : exit === "h3" ? 5 : CFG.FALLBACK_SELL_MIN_H5); // v0.4.8: a BL trail leg may hold up to 6 h, so it gets the runner's fallback // v0.4.2: GR sells at 3 min - by 5 regardless
@@ -300,7 +301,7 @@ async function sellPosition(p, rule, paperMult = null, why = null) {
   if (!S.pub) return; const t0 = Date.now(), mint = PK(p.mint), k = legKey(p.paper_id, p.exit), tag = BOOKS[p.book]?.name || EXIT_NAMES[p.exit] || p.exit;
   if (selling.has(k)) return; if (Date.now() - (sellTry.get(k) || 0) < 20_000) return; sellTry.set(k, Date.now()); selling.add(k);
   needsSell.set(k, { rule, mult: paperMult, why });
-  const done = (sellOrder, proceeds, status = "closed") => { unwatch(k); closePosition.run({ paper_id: p.paper_id, exit: p.exit, sell_order: sellOrder, closed_ts: nowS(), proceeds_lamports: proceeds, pnl_lamports: proceeds - p.cost_lamports, exit_rule: rule, paper_exit_mult: paperMult, status }); needsSell.delete(k); };
+  const done = (sellOrder, proceeds, status = "closed") => { unwatch(k); sellFails.delete(k); closePosition.run({ paper_id: p.paper_id, exit: p.exit, sell_order: sellOrder, closed_ts: nowS(), proceeds_lamports: proceeds, pnl_lamports: proceeds - p.cost_lamports, exit_rule: rule, paper_exit_mult: paperMult, status }); needsSell.delete(k); };
   try {
     const v = await venueOf(p.mint); if (v.kind === "none") { log("sell-novenue", `${p.name}: ${v.reason}`); return; }
     const isStop = paperMult != null && paperMult < 1, slip = isStop ? CFG.SLIP_STOP : CFG.SLIP_SELL;
@@ -321,11 +322,16 @@ async function sellPosition(p, rule, paperMult = null, why = null) {
       const proceeds = Number(sIx.expected) - lamports(CFG.TIP_SOL) - 10000;
       done(id, proceeds); updOrder(id, { status: "shadow-filled", fill_sol: proceeds, fill_tokens: -Number(amount) }); return;
     }
-    let tx = await buildTx(S.pub, wrap(S.pub, sIx.ixs, sTip, sCu)); let sim = urgent ? { ok: true, err: null, logs: [], units: null, ms: 0, skipped: true } : await simulate(tx); // v0.4.12: an urgent sell goes straight out (the retry loop widens slippage if it fails)
+    let tx = await buildTx(S.pub, wrap(S.pub, sIx.ixs, sTip, sCu)); let sim = await simulate(tx); // v0.4.15: every sell simulates again (v0.4.12 had skipped it for urgent sells; a sell that fails on-chain still pays its fees, and a retry loop of those burnt ~0.5 SOL on Catzo, 21 Oct 22:48-23:20 UK)
     if (progErr(sim)) { const altKind = v.kind === "amm" ? (sIx.ixKind === "amm" ? "amm2" : "amm") : (sIx.ixKind === "v3" ? "classic" : "v3"); const alt = sellIxs(v, S.pub, amount, slip, altKind, closeAta); const tx2 = await buildTx(S.pub, wrap(S.pub, alt.ixs, sTip, sCu)); const sim2 = await simulate(tx2); if (sim2.ok) { sIx = alt; tx = tx2; sim = sim2; } }
     updOrder(id, { ix_kind: sIx.ixKind, sim_ok: sim.ok ? 1 : 0, sim_err: sim.err, sim_units: sim.units, sim_ms: sim.ms });
     // a failed simulation on a sell is not a reason to hold a dumping coin: send anyway with the stop slippage
-    if (!sim.ok) { log("sell-simfail", `${p.name} [${tag}]: ${sim.err} | ${sim.logs.slice(-3).join(" | ")}`); if (slip < CFG.SLIP_STOP) { sIx = sellIxs(v, S.pub, amount, CFG.SLIP_STOP, sIx.ixKind, closeAta); tx = await buildTx(S.pub, wrap(S.pub, sIx.ixs, lamports(CFG.TIP_SOL), CFG.CU_PRICE)); } }
+    if (!sim.ok) { log("sell-simfail", `${p.name} [${tag}]: ${sim.err} | ${sim.logs.slice(-3).join(" | ")}`);
+      if (progErr(sim) && !/TooLittleSolReceived|6003|slippage/i.test(JSON.stringify(sim.err ?? "") + sim.logs.join(" "))) { // v0.4.15: a program refusal that is not slippage will fail on-chain too - don't pay to find out; count it and back off
+        const f = (sellFails.get(k) || 0) + 1; sellFails.set(k, f); updOrder(id, { status: "sim-failed", sim_err: sim.err, detail: { why, paperMult, closeAta, urgent, logs: sim.logs.slice(-6), fails: f } });
+        if (f === 1 || f === 3 || f % 20 === 0) tg(`⚠️ ${esc(p.name)} [${tag}]: the sale is refused by the program (${esc(String(sim.err)).slice(0, 80)}) - attempt ${f}; not sent, no fee paid. Retrying ${f >= 3 ? "every 10 min" : "in 20 s"}; <code>/live sell ${p.paper_id} ${p.exit}</code> forces one.`);
+        if (f >= 3) sellTry.set(k, Date.now() + 580_000); return; }
+      if (slip < CFG.SLIP_STOP) { sIx = sellIxs(v, S.pub, amount, CFG.SLIP_STOP, sIx.ixKind, closeAta); tx = await buildTx(S.pub, wrap(S.pub, sIx.ixs, sTip, sCu)); } }
     tx.sign([S.kp]); const sigs = [bs58.encode(tx.signatures[0])]; updOrder(id, { sig: sigs[0], status: "sent" });
     let c = await sendUntilConfirmed(tx, 12000); let s = { sig: c.sig, via: c.via }; updOrder(id, { via: c.via, send_ms: c.ms });
     for (let attempt = 0; attempt < 3 && c.status !== "confirmed"; attempt++) { // sells keep trying: fresh quote, wider slippage, bigger tip (a duplicate sell cannot execute twice — the tokens are gone)
@@ -335,7 +341,7 @@ async function sellPosition(p, rule, paperMult = null, why = null) {
       if (c.status !== "confirmed") for (const old of sigs.slice(0, -1)) { const oc = await signatureStatus(old).catch(() => null); if (oc?.status === "confirmed") { c = oc; sr.sig = old; break; } } // an earlier attempt may have landed meanwhile
       if (c.status === "confirmed") { s = sr; updOrder(id, { sig: sr.sig, via: sr.via, tip_lamports: lamports(CFG.TIP_RETRY_SOL), cu_price: CFG.CU_PRICE_RETRY, slippage: Math.min(0.5, CFG.SLIP_STOP + 0.1 * attempt) }); }
     }
-    if (c.status !== "confirmed") { updOrder(id, { status: c.status === "failed" ? "failed" : "timeout", sim_err: c.err, detail: { sigs } }); tg(`🚨 <b>SELL NOT LANDED</b> — ${esc(p.name)} [${tag}] (${rule}) ${c.err ? `<code>${esc(c.err).slice(0, 120)}</code>` : ""}\nStill holding ${Number(amount)} tokens. Retrying every 20 s until it is gone; <code>/live sell ${p.paper_id} ${p.exit}</code> forces an attempt now.`); return; }
+    if (c.status !== "confirmed") { const f = (sellFails.get(k) || 0) + 1; sellFails.set(k, f); if (f >= 3) sellTry.set(k, Date.now() + 580_000); updOrder(id, { status: c.status === "failed" ? "failed" : "timeout", sim_err: c.err, detail: { sigs, fails: f } }); if (f === 1 || f === 3 || f % 20 === 0) tg(`🚨 <b>SELL NOT LANDED</b> — ${esc(p.name)} [${tag}] (${rule}) ${c.err ? `<code>${esc(c.err).slice(0, 120)}</code>` : ""}\nStill holding ${Number(amount)} tokens. Retrying every 20 s until it is gone; <code>/live sell ${p.paper_id} ${p.exit}</code> forces an attempt now.`); return; }
     const fill = await readFill(s.sig, S.pub, mint).catch(() => null); const proceeds = fill ? fill.solDelta : Number(sIx.expected);
     done(id, proceeds);
     updOrder(id, { status: "confirmed", confirm_slot: c.slot, fill_sol: proceeds, fill_tokens: fill?.tokenDelta ?? -Number(amount), fee: fill?.fee ?? null, send_ms: Date.now() - t0 });
