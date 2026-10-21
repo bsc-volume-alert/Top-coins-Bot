@@ -1,7 +1,7 @@
 // Adds every wallet in fomo/data/handles.txt to the watcher (deploy hook when the file changes). handle | sol | evm | id
 import { readFileSync } from "node:fs";
 const PORT = Number(process.env.FOMO_PORT || 8789), base = `http://127.0.0.1:${PORT}`;
-const lines = readFileSync(new URL("../data/handles.txt", import.meta.url), "utf8").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
+const lines = readFileSync(new URL("../watch/handles.txt", import.meta.url), "utf8").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
 for (const line of lines) {
   const [handle, sol, evm, id] = line.split("|").map((x) => x.trim());
   if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(sol || "")) { console.log("skip", line); continue; }

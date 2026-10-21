@@ -11,7 +11,7 @@ export const wa = { txs: 0, decoded: 0, buys: 0, sells: 0, errors: 0, lastTx: 0,
 const watched = new Map(); // wallet -> { handle, label }
 function reload() { watched.clear(); for (const r of q.listWallets.all()) watched.set(r.wallet, { handle: r.handle, label: r.label }); }
 for (const w of CFG.WALLETS) { const [addr, label] = w.split(":"); if (addr) q.addWallet.run(addr, null, label || null, "env", nowS()); }
-// fo../watch/handles.txt (handle | sol | evm | id) is read at every boot, so the owner's chosen traders are always watched whatever happened to the deploy hook
+// fomo/watch/handles.txt (handle | sol | evm | id) is read at every boot, so the owner's chosen traders are always watched whatever happened to the deploy hook
 try { const { readFileSync } = await import("node:fs"); for (const l of readFileSync(new URL("../watch/handles.txt", import.meta.url), "utf8").split("\n")) { const t = l.trim(); if (!t || t.startsWith("#")) continue; const [handle, sol] = t.split("|").map((x) => x.trim()); if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(sol || "")) q.addWallet.run(sol, handle, handle, "handles.txt", nowS()); } } catch (e) { console.error("[wallets] handles.txt", e.message); }
 reload();
 let sock = null; const seen = new Set(); let seenOrder = [];
