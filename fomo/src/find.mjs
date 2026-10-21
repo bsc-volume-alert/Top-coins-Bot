@@ -46,7 +46,7 @@ async function run(job, tolPct) {
   for (const p of job.pools) {
     let before = null;
     while (p.pages < 40 && job.credits < CAP) {
-      p.pages++; job.credits++; let arr; try { arr = await rpc("getSignaturesForAddress", [p.pool, { limit: 1000, ...(before ? { before } : {}) }], { budget: false }); } catch (e) { job.note += ` · ${p.symbol}: ${e.message.slice(0, 60)}`; break; }
+      p.pages++; job.credits++; let arr; try { arr = await rpc("getSignaturesForAddress", [p.pool, { limit: 1000, ...(before ? { before } : {}) }], { budget: false, retry: true }); } catch (e) { job.note += ` · ${p.symbol}: ${e.message.slice(0, 60)}`; break; }
       if (!arr?.length) break;
       for (const x of arr) if (x.blockTime >= tLo && x.blockTime <= tHi && !x.err) { poolSigs.set(x.signature, x.blockTime); p.inWin++; }
       const last = arr[arr.length - 1]; before = last.signature; if (!last.blockTime || last.blockTime < tLo) break;
@@ -57,7 +57,7 @@ async function run(job, tolPct) {
   // 2. fomo's signer transactions back to the window (1 credit per 1,000 — about 26 pages an hour of age)
   let before = null, signerPages = 0, hits = []; let reached = false;
   while (signerPages < 1300 && job.credits < CAP) {
-    signerPages++; job.credits++; let arr; try { arr = await rpc("getSignaturesForAddress", [CFG.SIGNER, { limit: 1000, ...(before ? { before } : {}) }], { budget: false }); } catch (e) { job.note += ` · signer walk: ${e.message.slice(0, 60)}`; break; }
+    signerPages++; job.credits++; let arr; try { arr = await rpc("getSignaturesForAddress", [CFG.SIGNER, { limit: 1000, ...(before ? { before } : {}) }], { budget: false, retry: true }); await new Promise((x) => setTimeout(x, 120)); } catch (e) { job.note += ` · signer walk: ${e.message.slice(0, 60)}`; break; }
     if (!arr?.length) break;
     for (const x of arr) if (!x.err && poolSigs.has(x.signature)) hits.push({ sig: x.signature, ts: x.blockTime });
     const last = arr[arr.length - 1]; before = last.signature; if (!last.blockTime || last.blockTime < tLo) { reached = true; break; }
@@ -71,13 +71,14 @@ async function run(job, tolPct) {
   for (let i = 0; i < hits.length; i += 4) {
     if (job.credits >= CAP || budgetLeft() < 1000) { job.note += ` · stopped at ${job.scanned} transactions (credit cap)`; break; }
     const batch = hits.slice(i, i + 4); job.credits += batch.length; job.scanned += batch.length;
-    const txs = await Promise.all(batch.map((s) => rpc("getTransaction", [s.sig, { maxSupportedTransactionVersion: 0, encoding: "jsonParsed", commitment: "confirmed" }], { budget: false }).catch(() => null)));
+    const txs = await Promise.all(batch.map((s) => rpc("getTransaction", [s.sig, { maxSupportedTransactionVersion: 0, encoding: "jsonParsed", commitment: "confirmed" }], { budget: false, retry: true }).catch(() => null))); await new Promise((x) => setTimeout(x, 150));
     batch.forEach((s, k) => {
       const d = decodeParsed(txs[k]); if (!d || d.failed) return;
       for (const leg of d.legs) {
         if (!mints.includes(leg.mint) || (job.side !== "any" && leg.side !== job.side)) continue;
+        job.seen = job.seen || []; if (job.seen.length < 12) job.seen.push(`${leg.side} $${leg.usd.toFixed(0)} ${leg.quote || "?"}/${leg.usdFrom}`);
         const off = Math.abs(leg.usd - target) / target;
-        if (off <= tolPct / 100 || (leg.quote === "SOL" && off <= 0.12)) job.candidates.push({ sig: s.sig, ts: d.ts, wallet: leg.wallet, side: leg.side, usd: +leg.usd.toFixed(2), quote: leg.quote, mint: leg.mint, off: +(off * 100).toFixed(1) });
+        if (off <= tolPct / 100 || (leg.quote === "SOL" && off <= 0.12)) job.candidates.push({ sig: s.sig, ts: d.ts, wallet: leg.wallet, side: leg.side, usd: +leg.usd.toFixed(2), quote: leg.quote, usdFrom: leg.usdFrom, mint: leg.mint, off: +(off * 100).toFixed(1) });
       }
     });
   }

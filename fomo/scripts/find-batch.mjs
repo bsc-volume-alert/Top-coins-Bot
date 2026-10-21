@@ -23,7 +23,7 @@ for (const line of lines) {
   const r = { line, label, coin, side, usd, ago };
   try {
     const s = await runFind({ coin, usd: Number(usd), ago, side: side || "any", at });
-    r.state = s.state; r.note = s.note; r.credits = s.credits; r.scanned = s.scanned; r.inWindow = s.inWindow; r.chains = s.chains; r.candidates = (s.candidates || []).slice(0, 5);
+    r.state = s.state; r.note = s.note; r.seen = s.seen || []; r.credits = s.credits; r.scanned = s.scanned; r.inWindow = s.inWindow; r.chains = s.chains; r.candidates = (s.candidates || []).slice(0, 5);
     const good = r.candidates.filter((c) => c.off <= 2), wallets = new Set(good.map((c) => c.wallet));
     if (wallets.size === 1) { const w = good[0].wallet; const a = await addWallet(w, label); r.added = a.ok ? w : null; r.addErr = a.ok ? null : a.error; }
     else if (/not a Solana coin|no coin called/.test(s.note || "")) r.skip = true;
