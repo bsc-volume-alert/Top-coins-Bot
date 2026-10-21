@@ -13,6 +13,7 @@ async function fetchSol() {
   ]) { try { const p = await f(); if (p > 0 && (!(sol > 0) || (p < sol * 1.2 && p > sol * 0.8))) { sol = p; solAt = Date.now(); return; } } catch {} }
 }
 export function startSolLoop() { fetchSol(); setInterval(fetchSol, 60_000).unref(); }
+export const fetchSolOnce = () => fetchSol();
 // --- coin prices ---
 const want = new Map();   // mint -> until (unix s) — who needs a price and for how long
 const last = new Map();   // mint -> { usd, ts }

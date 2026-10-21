@@ -22,6 +22,8 @@ export function startFind({ coin, usd, ago, side = "any", at = null, tolPct = 4 
   run(job, tolPct).catch((e) => { job.state = "error"; job.note = e.message; });
   return job;
 }
+/** The same search, awaited to completion (the batch resolver runs this in its own process, so an app reload cannot lose it). */
+export async function runFind(params) { const job = startFind(params); while (job.state === "running") await new Promise((r) => setTimeout(r, 500)); return job; }
 export const getFind = (id) => jobs.get(Number(id)) || null;
 async function run(job, tolPct) {
   const agoS = parseAgo(job.ago); if (agoS == null) { job.state = "error"; job.note = "when: use e.g. 45m, 17h or 2d"; return; }
@@ -48,17 +50,19 @@ async function run(job, tolPct) {
   }
   sigs.sort((a, b) => Math.abs(a.ts - tTarget) - Math.abs(b.ts - tTarget)); job.scanned = 0; job.inWindow = sigs.length;
   const seen = new Set();
-  for (const s of sigs) {
-    if (seen.has(s.sig)) continue; seen.add(s.sig);
+  const uniq = sigs.filter((s) => !seen.has(s.sig) && seen.add(s.sig));
+  for (let i = 0; i < uniq.length; i += 4) { // four transactions at a time
     if (job.credits >= CAP || budgetLeft() < 1000) { job.note += ` · stopped at ${job.scanned} transactions (credit cap)`; break; }
-    job.credits++; job.scanned++;
-    let tx; try { tx = await rpc("getTransaction", [s.sig, { maxSupportedTransactionVersion: 0, encoding: "jsonParsed", commitment: "confirmed" }], { budget: false }); } catch { continue; }
-    const d = decodeParsed(tx); if (!d || d.failed || d.feePayer !== CFG.SIGNER) continue;
-    for (const leg of d.legs) {
-      if (!mints.includes(leg.mint) || (job.side !== "any" && leg.side !== job.side)) continue;
-      const off = Math.abs(leg.usd - target) / target;
-      if (off <= tolPct / 100 || (leg.quote === "SOL" && off <= 0.12)) job.candidates.push({ sig: s.sig, ts: d.ts, wallet: leg.wallet, side: leg.side, usd: +leg.usd.toFixed(2), quote: leg.quote, mint: leg.mint, off: +(off * 100).toFixed(1) });
-    }
+    const batch = uniq.slice(i, i + 4); job.credits += batch.length; job.scanned += batch.length;
+    const txs = await Promise.all(batch.map((s) => rpc("getTransaction", [s.sig, { maxSupportedTransactionVersion: 0, encoding: "jsonParsed", commitment: "confirmed" }], { budget: false }).catch(() => null)));
+    batch.forEach((s, k) => {
+      const d = decodeParsed(txs[k]); if (!d || d.failed || d.feePayer !== CFG.SIGNER) return;
+      for (const leg of d.legs) {
+        if (!mints.includes(leg.mint) || (job.side !== "any" && leg.side !== job.side)) continue;
+        const off = Math.abs(leg.usd - target) / target;
+        if (off <= tolPct / 100 || (leg.quote === "SOL" && off <= 0.12)) job.candidates.push({ sig: s.sig, ts: d.ts, wallet: leg.wallet, side: leg.side, usd: +leg.usd.toFixed(2), quote: leg.quote, mint: leg.mint, off: +(off * 100).toFixed(1) });
+      }
+    });
     if (job.candidates.length >= 3 && job.candidates.some((c) => c.off < 1)) break;
   }
   job.candidates.sort((a, b) => a.off - b.off);

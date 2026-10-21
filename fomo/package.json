@@ -1,6 +1,6 @@
 {
   "name": "fomo-watcher",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "type": "module",
   "description": "fomo.family watcher — Solana signer firehose, trending, watched wallets scored as paper trades, theses. Own pm2 app beside the tracker; /fomo on the tracker website.",
