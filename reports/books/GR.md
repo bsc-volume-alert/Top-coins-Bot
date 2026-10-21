@@ -186,6 +186,9 @@ _Data to 21 Oct 08:43 UK; off-page grad, instant ones left out. Built by reports
 
 - 21 Oct 09:20 UK — owner: "last 6 hours made the same as the last 24 … what have we improved to minimise stop losses … why so effective?" (scratchpad/gr_win.py, data to 09:19 UK). Answer recorded: NOTHING was changed (rule unchanged since 20 Oct 07:30 UK). Last 6 h: 20 real legs, all at 0.25 SOL, +1.471 SOL; +29.3% a leg, 75% won, 5 legs ≥ 1.5x, 19 of 20 under 156 buyers. 6–24 h ago: 36 legs, +4.5% a leg but −0.276 SOL because the night's losers were at 0.25 while earlier winners were at 0.05 (at an equal 0.1 a leg it was +0.163). Stops were NOT smaller: 25% stopped in the last 6 h vs 33%, but the average stop was worse (−62% vs −50%; two −80%). The difference was the market: 61% of all graduations in the last 6 h had < 156 buyers (29% in the 18 h before) and those made +33.9% on paper (+0.1% before; +78% the day before) — the few-buyer slice swings a lot by period. By UK hour block (all 64 legs) no clean time-of-day pattern (04–08 +24%, 16–20 +28%, 08–12 −7.8%, 20–24 −8.1%).
 
+- 21 Oct 09:45 UK — LOSERS grouped (owner: "… and minimise the losses"; scratchpad/gr_loss.py, data to 09:19 UK). 64 real-quote legs: 13 big winners (> +30%), 26 small winners, 8 small losers, 18 stopped (≤ −35%). Stopped vs big winners (medians): price 10 s after the buy 0.97x vs 1.21x (5 s: 1.00 vs 1.21; 30 s: 0.84 vs 1.31); held 38 s vs 179 s; creator buy 0.17 vs 0.05 SOL; largest holder 9% vs 17%; launch bundle 52% vs 73% (these last three on small numbers, not luck-checked — not proposed). Age, entry MC, buyers (within < 156), venue: no difference.
+  - 10-SECOND RULE ("if the price 10 s after the buy is below the buy price, sell"): paper GR 71 rows +14.4% → +19.3% (< 156 buyers: +19.6% → +23.9%), no big winner lost. On the 64 REAL legs (estimate: exit at the 10-s paper price, pool costs, 4 points entry gap): +12.0% → +15.5% a leg, better in all three thirds (+3.9 / +5.6 / +26.0 → +6.7 / +7.9 / +31.4); cuts 11 legs — 9 stops (BRAIN'T −80, Mr.Zero −80, SYLPH −63, Top Cat −46, Punchdog −46, SpaceX −45, Punani −44, Lüh −42, BITFOLIO −40) turned into small losses, 2 small winners given up (−0.5 points). Cannot help the 3 that crashed within 1–2 s (GLITCHO, dog, WIPD) or the 6 that rose first and crashed later (LolliPop, Burnie, RDSTR, SNAILMAIL, Agentic Wif Inu, SYLPH). Differs from AS (early cuts hurt AS because AS winners often dip early; GR winners don't — 1.21x median at 10 s). Threshold 0.95 and 1.05 also help; 1.0 best and the natural line.
+
 ## Notable coins
 - Skibbin (21 Oct 07:05 UK) +245% real, The Last Dip (06:29) +205% real, Netflix & Chills (04:22) +95% — 52–74 buyers each.
 - Mr.Zero (07:50) and LolliPop (08:02): −80.4% real each — dumped through the stop within seconds.
@@ -210,6 +213,7 @@ _Data to 21 Oct 08:43 UK; off-page grad, instant ones left out. Built by reports
 - **PvePad and Rosy (20 Oct):** bought by PG on the curve before graduation and then by GR at graduation. PvePad was +41.7% on GR's 0.25 leg.
 
 ## What the owner said / decided
+- 21 Oct 09:33 UK: "So you've analysed all the trades, and these are your conclusions how to make it more profitable … and minimise the losses." Answer: the loss side had not been grouped yet — done at 09:45 UK (10-second rule).
 - 21 Oct 08:37 UK: "let's move to the next coin" (after S3); his 08:26 screenshot showed GR shadow +1.137 SOL on 64, today +1.365 on 21.
 - **20 Oct ~05:15 UK:** "remove what isn't working, add what has potential". This led to GR in shadow, S7b into shadow, and F/G/S3/S6b back to paper.
 - **20 Oct 07:27 UK:** go for the instant-graduation skip ("Okay, let's go … yes, go ahead with the proposed changes").
@@ -224,7 +228,7 @@ _Data to 21 Oct 08:43 UK; off-page grad, instant ones left out. Built by reports
 - **20 Oct 23:32 UK:** told that GR failed the 40-trade test and that AS is now the better first live candidate. No reply on GR in the log (his next message, 23:51 UK, asked for the AS deep-dive).
 
 ## Open items
-- awaiting go (21 Oct 08:55 UK), replaces the GR2 idea (revise GR, no new book): (1) GR buyer cap 272 → under 156 (age 10–185 s unchanged), paper and executor; (2) GR LIVE at 0.05 SOL a trade (the 40-real-trade condition is met: 64 legs +1.137 SOL), stepping to 0.1 after 30 positive live legs with real ≈ paper, pause if 20 live legs are negative; (3) retry the buy once after ~1.5 s on "pool not initialised".
+- awaiting go (21 Oct 08:55 UK), replaces the GR2 idea (revise GR, no new book): (1) GR buyer cap 272 → under 156 (age 10–185 s unchanged), paper and executor; (2) GR LIVE at 0.05 SOL a trade (the 40-real-trade condition is met: 64 legs +1.137 SOL), stepping to 0.1 after 30 positive live legs with real ≈ paper, pause if 20 live legs are negative; (3) retry the buy once after ~1.5 s on "pool not initialised"; (4) [added 09:45 UK] the 10-second rule in GR's exit — sell if the price 10 s after the buy is below the buy price (paper and executor).
 - awaiting go (21 Oct diagnosis): GR2 = graduation with fewer than 156 buyers (any age ≥ 10 s), 3-min exit, executor SHADOW at 0.05 SOL beside GR; GR stays shadow. Neither goes live until 30 real legs are positive.
 - **Awaiting his go (proposed 20 Oct 23:32 UK):**
   - GR stays shadow, **not live**.
