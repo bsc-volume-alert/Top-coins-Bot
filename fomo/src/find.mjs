@@ -16,8 +16,8 @@ async function lookupCoin(coin) {
   const want = coin.trim().toLowerCase();
   return { pairs: (j.pairs || []).filter((p) => (p.baseToken?.symbol || "").toLowerCase() === want || (p.baseToken?.name || "").toLowerCase() === want), exact: false };
 }
-export function startFind({ coin, usd, ago, tolPct = 4 }) {
-  const id = nextId++; const job = { id, coin, usd, ago, started: nowS(), state: "running", note: "", credits: 0, scanned: 0, candidates: [], chains: {}, pools: [] };
+export function startFind({ coin, usd, ago, side = "any", at = null, tolPct = 4 }) {
+  const id = nextId++; const job = { id, coin, usd, ago, side, at: at || null, started: nowS(), state: "running", note: "", credits: 0, scanned: 0, candidates: [], chains: {}, pools: [] };
   jobs.set(id, job); if (jobs.size > 20) jobs.delete(jobs.keys().next().value);
   run(job, tolPct).catch((e) => { job.state = "error"; job.note = e.message; });
   return job;
@@ -35,7 +35,7 @@ async function run(job, tolPct) {
   job.pools = sol.slice(0, 4).map((p) => ({ pool: p.pairAddress, dex: p.dexId, mint: p.baseToken?.address, symbol: p.baseToken?.symbol, liq: p.liquidity?.usd || 0 }));
   job.note = `Solana: ${job.pools.length} pool(s) for ${sol[0].baseToken?.symbol}${Object.keys(job.chains).length > 1 ? ` (also on ${Object.keys(job.chains).filter((c) => c !== "solana").join(", ")})` : ""}`;
   // the app rounds "17h" — search ±7% of the age, at least ±20 min, newest first from the top of the window
-  const tTarget = nowS() - agoS, half = Math.max(1200, Math.round(agoS * 0.07)), tHi = tTarget + half, tLo = tTarget - half;
+  const tTarget = (job.at || nowS()) - agoS, half = Math.max(1200, Math.round(agoS * 0.07)), tHi = tTarget + half, tLo = tTarget - half;
   const sigs = [];
   for (const p of job.pools) {
     let before = null, pages = 0;
@@ -55,9 +55,9 @@ async function run(job, tolPct) {
     let tx; try { tx = await rpc("getTransaction", [s.sig, { maxSupportedTransactionVersion: 0, encoding: "jsonParsed", commitment: "confirmed" }], { budget: false }); } catch { continue; }
     const d = decodeParsed(tx); if (!d || d.failed || d.feePayer !== CFG.SIGNER) continue;
     for (const leg of d.legs) {
-      if (!mints.includes(leg.mint) || leg.side !== "buy") continue;
+      if (!mints.includes(leg.mint) || (job.side !== "any" && leg.side !== job.side)) continue;
       const off = Math.abs(leg.usd - target) / target;
-      if (off <= tolPct / 100 || (leg.quote === "SOL" && off <= 0.12)) job.candidates.push({ sig: s.sig, ts: d.ts, wallet: leg.wallet, usd: +leg.usd.toFixed(2), quote: leg.quote, mint: leg.mint, off: +(off * 100).toFixed(1) });
+      if (off <= tolPct / 100 || (leg.quote === "SOL" && off <= 0.12)) job.candidates.push({ sig: s.sig, ts: d.ts, wallet: leg.wallet, side: leg.side, usd: +leg.usd.toFixed(2), quote: leg.quote, mint: leg.mint, off: +(off * 100).toFixed(1) });
     }
     if (job.candidates.length >= 3 && job.candidates.some((c) => c.off < 1)) break;
   }

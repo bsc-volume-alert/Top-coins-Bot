@@ -1,0 +1,9 @@
+# label | coin | side | usd | ago | asof (time of the screenshot, UK)  — resolved by fomo/scripts/find-batch.mjs on the box
+Rowdy | pill | buy | 9995.5 | 17h | 2026-10-21T17:25+01:00
+Rowdy | bibi | buy | 2214.31 | 17h | 2026-10-21T17:25+01:00
+rasmr | Dacity | sell | 11016.57 | 7h | 2026-10-21T17:41+01:00
+rasmr | CARDS | sell | 47265.48 | 16h | 2026-10-21T17:41+01:00
+TheSOLstice | BOOMER | buy | 51.08 | 1h | 2026-10-21T17:41+01:00
+TheSOLstice | BOOMER | buy | 241.72 | 11h | 2026-10-21T17:41+01:00
+orangie | Dacity | buy | 99.05 | 15h | 2026-10-21T17:41+01:00
+orangie | Dacity | buy | 4998.38 | 1d | 2026-10-21T17:41+01:00
