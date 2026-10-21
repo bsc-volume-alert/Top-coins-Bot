@@ -18,7 +18,7 @@ Not working since the change: the back-test was +12.7% on 60, but the 12 trades 
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 08:29 UK; D + standard filters. Built by reports/books/numbers.py._
+_Data to 21 Oct 08:43 UK; D + standard filters. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|

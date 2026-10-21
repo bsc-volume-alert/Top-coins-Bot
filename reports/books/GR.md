@@ -33,6 +33,8 @@ This file also covers GR's paper variants (gr70, gr85, grlock, grsoc) and the of
 - **Last rule change:** 20 Oct 07:30 UK (v0.18.153): coins must be 10–185 s old at graduation, so instant graduations are skipped.
 
 ## Verdict now
+**21 Oct 08:55 UK:** Overturns the 23:32 UK "failed" verdict. 64 real-quote legs +11.7% a leg, +1.137 SOL; the 24 since the verdict +22.7% with real beating paper. The original go-live condition (40 real trades positive) is now met. The few-buyer rule (< 156) is confirmed forward on real quotes. Still dependent on regular 2–3x winners (without best 3 ≈ 0).
+
 **21 Oct 02:30 UK:** The few-buyer graduation is the second real lead in the whole tracker, backed by real quotes, but it has gone flat in the last day.
 
 **Not working on real quotes. The 40-trade go-live test was failed (20 Oct 23:32 UK).**
@@ -42,7 +44,7 @@ This file also covers GR's paper variants (gr70, gr85, grlock, grsoc) and the of
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 08:29 UK; graduation book, 3-min exit. Built by reports/books/numbers.py._
+_Data to 21 Oct 08:43 UK; graduation book, 3-min exit. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
@@ -57,14 +59,14 @@ Executor book `grad` (shadow, real quotes): 64 legs, +1.137 SOL, average +11.7% 
 
 **GR every graduation**
 
-_Data to 21 Oct 08:29 UK; off-page grad, instant ones left out. Built by reports/books/numbers.py._
+_Data to 21 Oct 08:43 UK; off-page grad, instant ones left out. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
 | all (from 18 Oct 20:35 UK) | 423 | +4.2% | +1.1% | 52% | 33% | +1.34 |
-| last 24 h | 172 | +2.3% | +0.2% | 55% | 32% | +0.23 |
-| last 12 h | 89 | +7.3% | +3.3% | 57% | 35% | +0.56 |
-| last 6 h | 43 | +13.6% | +8.7% | 58% | 33% | +0.54 |
+| last 24 h | 171 | +2.7% | +0.6% | 55% | 32% | +0.28 |
+| last 12 h | 88 | +7.5% | +3.5% | 58% | 35% | +0.58 |
+| last 6 h | 41 | +13.2% | +8.1% | 56% | 34% | +0.50 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -174,7 +176,17 @@ _Data to 21 Oct 08:29 UK; off-page grad, instant ones left out. Built by reports
 
 - 21 Oct 02:30 UK — full diagnosis (all data since 18 Oct, to 21 Oct 01:42 UK; reports/books/diag/GR.md; method: diagnose.py with the family-wise luck check — a filter counts as real only if luck matches it in ≤ 2 of 20 shuffled runs): Paper (grf) 50 trades +9.9% (no-best +4.0%), thirds +26.5 / +19.8 / −18.2. Real-quote legs (book grad): equal-stake +5.1% a leg on 45, −3.2% without ARTEMI. Exits: the 15-min hold (x_h15) beats the 3-min exit in all three thirds on paper (+16.6%, no-best +11.7%) but not on every-graduation's 375 trades — not changed. REAL finding (luck 0): on every graduation (375 trades, instant ones out), fewer than 156 buyers at entry — 94 trades +37.9% (no-best +24.2%, no-top3 +10.9%), 66% won, thirds +48.9 / +65.4 / +0.7. Real-quote support: GR's own legs with < 156 buyers +9.0% a leg on 32 vs ≥ 156 −6.6% on 10. Caution: last third ≈ 0, and paper overstates real by ~14 points at 0.05 SOL.
 
+- 21 Oct 08:55 UK — review on fresh data (to 08:43 UK; scratchpad/gr_rev.py), started from the 23:32 UK "failed" verdict and the 02:30 UK few-buyer finding:
+  - Real-quote legs (executor `grad`, shadow): all 64 legs +11.7% a leg (without best +6.7%, without best 3 −0.5%), median +10.3%, 59% won, +1.137 SOL at the stakes used (0.05 then 0.25). Up to the 23:32 verdict: 40 legs +5.1%; SINCE it: 24 legs +22.7% (without best +13.0%), median +21.2%, 71% won, +1.368 SOL.
+  - Real vs paper on the same 24 coins since the verdict: real +22.7% vs paper +17.8% — real BETTER by 4.9 points (at 0.25 SOL).
+  - Few-buyer split on real legs: under 156 buyers 52 legs +16.5% (without best +10.4%), 63% won, +1.465 SOL; 156+ buyers 11 legs −9.8%, −0.327 SOL. Out-of-sample check (found 02:30 UK on paper + 32 legs): the legs since then with < 156 buyers ≈ +33% a leg on 18.
+  - Winners are no longer capped near 1.28x: Skibbin 3.38x, The Last Dip 3.14x, Netflix & Chills 2.0x, SOLMATE 1.73x, SYLPH 1.58x (the 1.3x floor only starts after 1.5x, so runners keep running to 3 min).
+  - Weakness: fast dumps slip past the stop — Mr.Zero and LolliPop −80.4% real (paper 0.52x / 0.40x), both sold within 15–24 s. 8 "pool not initialised" sim-fails (missed buys).
+  - Paper, every graduation by age window (3-min exit): 10–185 s with < 156 buyers 92 trades +37.1% (without best 3 +11.9%), 70% won, thirds +86.8 / +2.3 / +23.7, ~38 a day; 10–185 s with 156–272 buyers 49 trades −4.4%; older than 185 s with < 156 buyers 27 trades +34.0% but without best 3 −3.9% and a −17.3% middle third. → tighten GR's buyer cap, keep its age window.
+
 ## Notable coins
+- Skibbin (21 Oct 07:05 UK) +245% real, The Last Dip (06:29) +205% real, Netflix & Chills (04:22) +95% — 52–74 buyers each.
+- Mr.Zero (07:50) and LolliPop (08:02): −80.4% real each — dumped through the stop within seconds.
 - **Leonida (20 Oct 05:38 UK):** an instant graduation. Paper 3.58x; real shadow buy paid +272% over paper and the leg returned −8.9%. One of the two coins behind the 07:30 UK rule change.
 - **MONUMENTAL EGO (20 Oct 06:17 UK):** an instant graduation. Paper 2.51x; real paid +194% over paper, leg −19.1%. The other coin behind the 07:30 change.
 - **ARTEMI (20 Oct 17:12 UK):**
@@ -196,6 +208,7 @@ _Data to 21 Oct 08:29 UK; off-page grad, instant ones left out. Built by reports
 - **PvePad and Rosy (20 Oct):** bought by PG on the curve before graduation and then by GR at graduation. PvePad was +41.7% on GR's 0.25 leg.
 
 ## What the owner said / decided
+- 21 Oct 08:37 UK: "let's move to the next coin" (after S3); his 08:26 screenshot showed GR shadow +1.137 SOL on 64, today +1.365 on 21.
 - **20 Oct ~05:15 UK:** "remove what isn't working, add what has potential". This led to GR in shadow, S7b into shadow, and F/G/S3/S6b back to paper.
 - **20 Oct 07:27 UK:** go for the instant-graduation skip ("Okay, let's go … yes, go ahead with the proposed changes").
 - **20 Oct morning (time not recorded):** "Yes, go ahead … but you want to get the prices accurate as possible" (on GR). Also: "We need it to be as accurate as possible" (on the cost models).
@@ -209,6 +222,7 @@ _Data to 21 Oct 08:29 UK; off-page grad, instant ones left out. Built by reports
 - **20 Oct 23:32 UK:** told that GR failed the 40-trade test and that AS is now the better first live candidate. No reply on GR in the log (his next message, 23:51 UK, asked for the AS deep-dive).
 
 ## Open items
+- awaiting go (21 Oct 08:55 UK), replaces the GR2 idea (revise GR, no new book): (1) GR buyer cap 272 → under 156 (age 10–185 s unchanged), paper and executor; (2) GR LIVE at 0.05 SOL a trade (the 40-real-trade condition is met: 64 legs +1.137 SOL), stepping to 0.1 after 30 positive live legs with real ≈ paper, pause if 20 live legs are negative; (3) retry the buy once after ~1.5 s on "pool not initialised".
 - awaiting go (21 Oct diagnosis): GR2 = graduation with fewer than 156 buyers (any age ≥ 10 s), 3-min exit, executor SHADOW at 0.05 SOL beside GR; GR stays shadow. Neither goes live until 30 real legs are positive.
 - **Awaiting his go (proposed 20 Oct 23:32 UK):**
   - GR stays shadow, **not live**.

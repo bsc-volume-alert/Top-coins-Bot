@@ -18,7 +18,7 @@ Best paper book on the page and the first candidate for a real-quote test, but n
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 08:29 UK; A + standard filters. Built by reports/books/numbers.py._
+_Data to 21 Oct 08:43 UK; A + standard filters. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|

@@ -14,7 +14,7 @@ Not working yet: the back-test edge (+17.6% on 40) has not shown up on new trade
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 08:29 UK; D, copycat of a $72K+ coin. Built by reports/books/numbers.py._
+_Data to 21 Oct 08:43 UK; D, copycat of a $72K+ coin. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|

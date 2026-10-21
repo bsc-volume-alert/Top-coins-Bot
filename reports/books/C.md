@@ -14,12 +14,12 @@ Not working: the $100Kâ€“$250K band has lost under every exit in every study (âˆ
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 08:29 UK; real costs. Built by reports/books/numbers.py._
+_Data to 21 Oct 08:43 UK; real costs. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
 | all (from 18 Oct 20:34 UK) | 101 | -12.0% | -12.9% | 35% | 37% | -1.31 |
-| last 24 h | 31 | -6.4% | -9.0% | 48% | 29% | -0.23 |
+| last 24 h | 29 | -9.0% | -11.9% | 45% | 31% | -0.29 |
 | last 12 h | 14 | -21.2% | -28.3% | 29% | 43% | -0.31 |
 | last 6 h | 6 | -16.4% | -26.1% | 33% | 33% | -0.10 |
 

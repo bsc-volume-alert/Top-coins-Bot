@@ -14,7 +14,7 @@ Not yet tested. Fits the owner's "fewer trades, bigger profit each" side: keeps 
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 08:29 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
+_Data to 21 Oct 08:43 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
