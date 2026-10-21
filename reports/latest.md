@@ -1,5 +1,7 @@
 # Every book revised on its own statistics: 21 Oct 2026, 12:30 UK
 
+**Companion:** "Successes and failures, coin by coin" (reports/winners-losers.md; on this page as the 2026-10-21-1200-utc-winners-losers entry) holds, for every book, the winners grouped with what they had in common, the losers grouped with what they had in common, every idea tested to minimise the failures, and the proposal it leads to.
+
 **Data:** everything since the 18 Oct 20:25 UK price fix, to 21 Oct 10:36 UK. Real costs. The operator's pump-and-dump coins are left out. Three price-glitch coins (peaks of 36,000–93,000x on 19 Oct, a feed error) are now excluded; they had been inflating A, D, 80 and the momentum books.
 
 **Method:** for every book, reports/books/revise.py tried every entry factor, pairs of factors, every recorded exit and early-exit rules. A revision counts as **real** only if it beats the book in all three periods of its history, is positive without its best coin, and the same search on shuffled outcomes (20 runs) cannot match it (luck ≤ 2 of 20) — or it has independent support (real-quote legs, a forward record, the same effect on other coins). Five analysts then grouped each book's winners and losers; every proposal was re-checked independently. Each book's notes carry the detail.
