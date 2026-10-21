@@ -8,13 +8,15 @@ import { startFlow, fo } from "./flow.mjs";
 import { startWallets, wa } from "./wallets.mjs";
 import { openCount, sc } from "./score.mjs";
 import { startTheses } from "./theses.mjs";
+import { startFomoApi } from "./fomoapi.mjs";
+import { watchedList } from "./wallets.mjs";
 import { startWeb } from "./web.mjs";
 import { alarm } from "./telegram.mjs";
 import { rpcStat, budgetLeft } from "./rpc.mjs";
 const v = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 console.log(`fomo watcher v${v} starting (node ${process.version}) signer=${CFG.SIGNER.slice(0, 8)}… ws=${CFG.WS_MODE} helius=${CFG.HELIUS_KEY ? "yes" : "no"} smoke=${CFG.SMOKE ? "yes" : "no"}`);
 if (CFG.SMOKE) setTimeout(() => { console.log("[smoke] alive after", process.env.FOMO_SMOKE_MS || 20000, "ms — ok"); process.exit(0); }, Number(process.env.FOMO_SMOKE_MS || 20000));
-startSolLoop(); startPriceLoop(); startWeb(); startFlow(); startWallets(); startTheses();
+startSolLoop(); startPriceLoop(); startWeb(); startFlow(); startWallets(); startTheses(); startFomoApi(watchedList);
 process.on("unhandledRejection", (e) => console.error("[unhandled]", e));
 process.on("uncaughtException", (e) => { console.error("[uncaught]", e); alarm("uncaught", `uncaught error (kept running): <code>${String(e?.message || e).slice(0, 200)}</code>`); });
 // one log line a minute; alarms every 2 min (each at most once per 30 min)
