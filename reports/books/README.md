@@ -13,6 +13,8 @@ Whenever a book is discussed, analysed, changed or reported on, by a chat sessio
 6. **Successes and failures, always.** Every analysis of a book groups its successful trades and says what made them succeed, groups its failures and says what made them fail and what would minimise them — in detail — before proposing a rule (owner, 21 Oct 11:31 UK). The per-book record of this lives under "Ideas tested" in the book's file; the consolidated version is reports/winners-losers.md.
 
 ## Index
+**The cull (owner, 21 Oct 13:50 UK; done 14:45 UK, v0.18.176):** kept on the page AS, AS2, AS3, AS4, GR, BL, K, S3, S4. Everything else is retired from the page and the old off-page books are stopped; their data keeps recording. Retired books are not re-analysed unless the owner asks.
+
 | File | Book | Status (21 Oct 12:30 UK — see reports/latest.md for the revision plan) |
 |---|---|---|
 | [AS.md](AS.md) | A + standard filters | Best book. +11.5% on 79 (operator coins out); since 17:45 UK 20 Oct +22.9% on 15. In executor SHADOW at 0.1 SOL from 21 Oct 01:30 UK |
@@ -25,10 +27,10 @@ Whenever a book is discussed, analysed, changed or reported on, by a chat sessio
 | [A.md](A.md) · [B.md](B.md) · [C.md](C.md) · [D.md](D.md) · [80.md](80.md) · [E.md](E.md) · [F.md](F.md) · [G.md](G.md) · [A2.md](A2.md) | Momentum family | Break-even to negative |
 | [A5.md](A5.md) · [F6.md](F6.md) | Early-confirmation variants | No edge |
 | [R.md](R.md) | Revival | Too few trades; restart bug |
-| [PG.md](PG.md) | Pre-graduation | Failed; switch-off proposed |
+| [PG.md](PG.md) | Pre-graduation | OFF 21 Oct 14:45 UK; folded into BL |
 | [S3.md](S3.md) | S3 revised 21 Oct 08:45 UK: copies of $1M+ coins, ≥ 1 s after launch, serial creator skipped | Lottery; back-test +22.5% on 72 (5 big winners); real test from 08:45 UK |
 | [S4.md](S4.md) | S4 revised 21 Oct 10:28 UK: clean launch + socials + first-time creator + original name | Back-test +25.7% on 32 (in sample); real test from 10:28 UK; old shadow book off |
-| [S8.md](S8.md) | S8 → proposed bundle-launch book (70–80% bundle over 4–10 wallets, first trade $25K+, 40% trail) | Awaiting go: 91 at +33.7% in back-test, luck 0 |
+| [S8.md](S8.md) | **BL** = S8 revised: bundle-launch book (70–80% bundle over 4–10 wallets, first trade $25K+, 40% trail) | ON since 21 Oct 14:45 UK: paper box + executor shadow 0.05; back-test 101 at +32.9%, luck 0 |
 | [S1.md](S1.md) … [S11.md](S11.md), [S3b.md](S3b.md), [S4b.md](S4b.md), [S6b.md](S6b.md), [S7b.md](S7b.md) | Curve snipers | All negative |
 | [S10.md](S10.md) | Operator coins on the pool | Negative; the pool price is the operator's exit |
 | [OFFPAGE.md](OFFPAGE.md) | Old tracker books not on the page | Nearly all negative |

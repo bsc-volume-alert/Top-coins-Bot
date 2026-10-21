@@ -110,6 +110,7 @@ _Data to 21 Oct 13:20 UK; off-page grad, instant ones left out. Built by reports
 - **20 Oct 23:32 UK, analysis:** GR failed the 40-trade test. It was proposed to stay in shadow, with two new variant lines (below). Awaiting go.
 
 - 21 Oct 09:47 UK (v0.18.174 / executor v0.4.6, owner go 09:40 UK): GR revised — under 156 buyers (was 272), age 10–185 s unchanged; 10-second rule in the exit (price 10 s after the buy below the buy price → sell; `h3why` "10s"); executor retries a buy once after 1.5 s when the new pool isn't initialised; guard: a LIVE GR whose last 20 live legs are net negative goes back to shadow by itself with one alarm. Page record split at 09:47 UK. GR stays SHADOW (0.25) until the owner switches it to LIVE from the page.
+- 21 Oct 14:15 UK — v0.18.176: the GR box now shows the 40% trail on the same coins as a variant line (grtrail); the corrupt GR-lock line and the 85-s / socials lines are gone. Rule and shadow (0.25) unchanged; re-judge at 30–40 forward rows.
 
 ## Ideas tested
 - **The whole "every graduation" book (`grad`), 3-min sale, real costs, instant graduations left out** (20 Oct 23:27 UK data):

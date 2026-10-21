@@ -59,6 +59,7 @@ _Data to 21 Oct 13:20 UK; curve costs. Built by reports/books/numbers.py._
   - Exits: `x_t2s40` (headline), the new `x_t2n30` (PG-hold), and `x_h3`.
   - The same release fixed the hold-exit save bug (16:25–19:05 UK). `x_t2n30` is saved by its own update (`setH3L`), so PG rows are not affected by that bug.
 - No rule change since.
+- 21 Oct 14:15 UK — SWITCHED OFF the page (v0.18.176); folded into BL (S8.md). Data keeps recording.
 
 ## Ideas tested
 - **Buy the coin on the curve at $32–40K, under 150 s old, before it graduates** (PG itself). 20 Oct 19:00–23:27 UK, 76 trades, real curve costs, as reported to the owner at 23:32 UK:

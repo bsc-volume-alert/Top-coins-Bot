@@ -38,6 +38,7 @@ _Data to 21 Oct 13:20 UK._
 - **confirm** (x_tsl40): all 1053 at -18.7%; last 12 h 155 at -21.4%
 - **p6** (x_h5): all 0 at +0.0%; last 12 h 0 at +0.0%
 <!-- /NUMBERS -->
+- 21 Oct 14:15 UK — v0.18.176: all 15 old off-page books stopped opening positions (config OFF_KINDS; env OFFPAGE_BOOKS=1 re-enables). Core momentum trigger (E's rows) keeps recording; mom60/mom80 and copycreator keep recording. Open positions closed normally.
 
 ## Diagnosis 21 Oct 02:30 UK (all data to 01:42 UK; diag/OFF_*.md; luck-checked)
 - early −33.5% on 5,520 · confirm −17.6% on 886 · copy −12.6% on 664 (stopped 19 Oct) · wave2 −10.8% on 800 · mom60 −11.6% on 586 · momfast −11.1% on 461 · momre −18.6% on 177 · gradrec −21.0% on 419 · revival −13.5% on 155 · slow −11.3% on 99 · climber −13.0% on 22 · secondwave 5 trades · p6 0 trades — nothing passes the luck check in any of them; dead.

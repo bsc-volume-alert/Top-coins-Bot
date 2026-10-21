@@ -50,6 +50,7 @@ _Data to 21 Oct 13:20 UK; page headline is x_h2t40, not in the data export; 5-mi
   - The owner gave the go: "Cool, let's go ahead with K".
 - **20 Oct 16:25–19:05 UK, save bug:** final exit values were not saved when a copy position closed before the rule fired. K's first rows (18:00–19:05 UK: Gary, Xitter, Poke Packz, Packcoin, New York Shitcoin Exchange) may have incomplete `x_h5`. Fixed in v0.18.163.
 - No rule change since.
+- 21 Oct 14:15 UK — v0.18.176: x_h2t40 (K's headline exit) is now exported in others.csv, so the next study can score it. K kept on the page to 60 trades; K2 is the candidate.
 
 ## Ideas tested
 - **K itself** (20 Oct 23:27 UK data, 26 closed trades, real PumpSwap costs; reported to the owner at 23:32 UK as "K 26, +15.4%, without best +7.1%, promising, only one day old"):
