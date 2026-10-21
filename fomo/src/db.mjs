@@ -36,6 +36,8 @@ CREATE TABLE IF NOT EXISTS prices (mint TEXT, ts INTEGER, usd REAL, PRIMARY KEY 
 CREATE TABLE IF NOT EXISTS wallet_trades (sig TEXT, wallet TEXT, handle TEXT, ts INTEGER, mint TEXT, side TEXT, usd REAL, px REAL, mc_at REAL, trade_id INTEGER, PRIMARY KEY (sig, wallet, mint, side));
 CREATE INDEX IF NOT EXISTS wt_ts ON wallet_trades(ts);
 CREATE TABLE IF NOT EXISTS stats (k TEXT PRIMARY KEY, v REAL);
+CREATE TABLE IF NOT EXISTS ff (id INTEGER PRIMARY KEY, mint TEXT, win TEXT, ts INTEGER, rank INTEGER, buyers INTEGER, buy_usd REAL, net_usd REAL, mc REAL, px REAL, px15 REAL, px60 REAL, px360 REAL, peak REAL, UNIQUE(mint, win, ts));
+CREATE INDEX IF NOT EXISTS ff_ts ON ff(ts);
 CREATE TABLE IF NOT EXISTS buyers_seen (mint TEXT, wallet TEXT, ts INTEGER, PRIMARY KEY (mint, wallet)); -- unique fomo buyers per coin (from decoded transactions)
 CREATE INDEX IF NOT EXISTS bs_ts ON buyers_seen(ts);
 `);
@@ -78,6 +80,13 @@ export const q = {
   insWT: db.prepare(`INSERT OR IGNORE INTO wallet_trades (sig, wallet, handle, ts, mint, side, usd, px, mc_at, trade_id) VALUES (?,?,?,?,?,?,?,?,?,?)`),
   feed: db.prepare(`SELECT w.*, c.symbol, c.name, c.mc_usd mc_now, c.meta_ts, (SELECT t.text FROM theses t WHERE t.mint=w.mint AND (t.handle=w.handle OR t.handle=w.wallet) AND t.ts BETWEEN w.ts-86400 AND w.ts+86400 ORDER BY t.ts DESC LIMIT 1) thesis FROM wallet_trades w LEFT JOIN coins c ON c.mint=w.mint WHERE w.ts>=? ORDER BY w.ts DESC LIMIT ?`),
   stream: db.prepare(`SELECT w.*, c.symbol, c.name, c.mc_usd mc_now, (SELECT t.text FROM theses t WHERE t.mint=w.mint AND (t.handle=w.handle OR t.handle=w.wallet) AND t.ts BETWEEN w.ts-86400 AND w.ts+86400 ORDER BY t.ts DESC LIMIT 1) thesis, (SELECT COUNT(DISTINCT wallet) FROM wallet_trades x WHERE x.mint=w.mint AND x.side='buy' AND x.ts BETWEEN w.ts-3600 AND w.ts) buyers_1h FROM wallet_trades w LEFT JOIN coins c ON c.mint=w.mint ORDER BY w.ts DESC LIMIT ?`),
+  hot: db.prepare(`SELECT mint, COUNT(DISTINCT CASE WHEN side='buy' AND wallet IS NOT NULL THEN wallet END) buyers, SUM(CASE WHEN side='buy' THEN 1 ELSE 0 END) buys, SUM(CASE WHEN side='sell' THEN 1 ELSE 0 END) sells, SUM(CASE WHEN side='buy' THEN usd ELSE 0 END) buy_usd, SUM(CASE WHEN side='sell' THEN usd ELSE 0 END) sell_usd, MIN(ts) first_ts FROM flow WHERE ts>=? AND mint IS NOT NULL GROUP BY mint ORDER BY buyers DESC, buys DESC, buy_usd DESC LIMIT ?`),
+  whoIn: db.prepare(`SELECT handle, wallet, side, usd, mc_at, ts FROM wallet_trades WHERE mint=? AND ts>=? ORDER BY ts DESC LIMIT 20`),
+  priceBefore: db.prepare(`SELECT usd FROM prices WHERE mint=? AND ts<=? ORDER BY ts DESC LIMIT 1`).pluck(),
+  insFF: db.prepare(`INSERT OR IGNORE INTO ff (mint, win, ts, rank, buyers, buy_usd, net_usd, mc, px, peak) VALUES (?,?,?,?,?,?,?,?,?,1)`),
+  ffOpen: db.prepare(`SELECT * FROM ff WHERE px>0 AND (px15 IS NULL OR px60 IS NULL OR px360 IS NULL) AND ts>=?`),
+  updFF: db.prepare(`UPDATE ff SET px15=COALESCE(px15,?), px60=COALESCE(px60,?), px360=COALESCE(px360,?), peak=MAX(peak,?) WHERE id=?`),
+  ffStats: db.prepare(`SELECT win, COUNT(*) n, AVG(px15/px) m15, AVG(px60/px) m60, AVG(px360/px) m360, AVG(peak) peak, SUM(CASE WHEN peak>=1.5 THEN 1 ELSE 0 END) hit15, SUM(CASE WHEN px60/px<=0.6 THEN 1 ELSE 0 END) dead60 FROM ff WHERE px>0 AND px60 IS NOT NULL GROUP BY win`),
   feedMints: db.prepare(`SELECT DISTINCT mint FROM wallet_trades WHERE ts>=? UNION SELECT DISTINCT mint FROM trades WHERE closed=0`).pluck(),
   insPrice: db.prepare(`INSERT OR IGNORE INTO prices (mint, ts, usd) VALUES (?,?,?)`),
   priceAt: db.prepare(`SELECT ts, usd FROM prices WHERE mint=? AND ts>=? ORDER BY ts LIMIT 1`),

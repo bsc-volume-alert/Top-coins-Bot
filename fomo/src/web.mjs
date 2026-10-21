@@ -6,8 +6,8 @@ import { CFG } from "./config.mjs";
 import { db, q, nowS } from "./db.mjs";
 import { fo, flowSockets } from "./flow.mjs";
 import { wa, walletsStatus, watchedList, addWallet, removeWallet } from "./wallets.mjs";
-import { sc, realCost, openCount } from "./score.mjs";
-import { px, solUsd, lastPx, ensureMeta } from "./price.mjs";
+import { sc, realCost, openCount, logHot, ff } from "./score.mjs";
+import { px, solUsd, lastPx, ensureMeta, wantPrice } from "./price.mjs";
 import { rpcStat, budgetLeft } from "./rpc.mjs";
 import { thesesStatus } from "./theses.mjs";
 import { startFind, getFind } from "./find.mjs";
@@ -25,6 +25,13 @@ function trending(w) {
   const rows = q.trending.all(nowS() - (W[w] || 3600), 60);
   for (const r of rows) { const c = q.coin.get(r.mint); r.symbol = c?.symbol || null; r.name = c?.name || null; r.mc_usd = c?.mc_usd ?? null; r.liq_usd = c?.liq_usd ?? null; r.px_usd = lastPx(r.mint)?.usd ?? c?.px_usd ?? null; r.net_usd = (r.buy_usd || 0) - (r.sell_usd || 0); }
   rows.sort((a, b) => (b.buyers - a.buyers) || (b.buys - a.buys) || (b.buy_usd - a.buy_usd));
+  return rows;
+}
+function hot(win) {
+  const secs = win === "5m" ? 300 : 900, now = nowS();
+  const rows = q.hot.all(now - secs, 5);
+  for (const r of rows) { const c = q.coin.get(r.mint); r.symbol = c?.symbol || null; r.name = c?.name || null; r.mc_usd = c?.mc_usd ?? null; r.liq_usd = c?.liq_usd ?? null; const px = lastPx(r.mint)?.usd ?? c?.px_usd ?? null; r.px = px; const before = q.priceBefore.get(r.mint, now - secs); r.change = px && before ? px / before : null; r.net_usd = (r.buy_usd || 0) - (r.sell_usd || 0); r.who = q.whoIn.all(r.mint, now - 6 * 3600); wantPrice(r.mint, 1800); ensureMeta(r.mint, 120).catch(() => {}); }
+  try { logHot(win, rows, now); } catch (e) { console.error("[hot log]", e.message); }
   return rows;
 }
 function stream() { return q.stream.all(150).map((f) => ({ ...f, change: f.mc_now && f.mc_at ? f.mc_now / f.mc_at : null })); }
@@ -53,6 +60,7 @@ export function startWeb() {
       if (p === "/" || p === "/index.html") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(PAGE); }
       if (p === "/api/status") return json(res, status());
       if (p === "/api/trending") return json(res, { window: u.searchParams.get("w") || "1h", rows: trending(u.searchParams.get("w") || "1h"), ts: nowS() });
+      if (p === "/api/hot") return json(res, { m5: hot("5m"), m15: hot("15m"), ff: q.ffStats.all(), ts: nowS(), executor: false });
       if (p === "/api/traders") return json(res, traders());
       if (p === "/api/wallets" && req.method === "GET") return json(res, wallets());
       if (p === "/api/wallets" && req.method === "POST") { let body = ""; req.on("data", (c) => { body += c; if (body.length > 1e4) req.destroy(); }); req.on("end", () => { try { const b = JSON.parse(body || "{}"); const w = String(b.wallet || "").trim(); if (b.action !== "handle" && !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(w)) return json(res, { ok: false, error: "not a Solana address" }, 400); if (b.action === "handle") { userByHandle(String(b.handle || "").trim()).then((u) => { if (!u?.address) return json(res, { ok: false, error: "handle not found" }, 404); addWallet(u.address, { handle: u.userHandle, label: u.displayName || u.userHandle, source: "api" }); json(res, { ok: true, wallet: u.address, evm: u.evmAddress || null }); }).catch((e) => json(res, { ok: false, error: e.message }, 502)); return; } if (b.action === "remove") removeWallet(w); else addWallet(w, { label: b.label ? String(b.label).slice(0, 40) : null, handle: b.handle ? String(b.handle).slice(0, 40) : null }); json(res, { ok: true }); } catch (e) { json(res, { ok: false, error: e.message }, 400); } }); return; }
@@ -85,8 +93,8 @@ a.coin{color:var(--tx);text-decoration:underline;font-weight:600}.th{white-space
 input{background:rgba(0,0,0,.3);color:var(--tx);border:1px solid var(--line);border-radius:7px;padding:5px 8px;font:inherit;font-size:12px}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}h3{margin:4px 0 6px;font-size:13px;color:var(--mut);font-weight:500}.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px 14px;font-size:12px}.kv div span{color:var(--mut)}
 </style></head><body>
 <header><h1>fomo — traders</h1><a id="back" href="#">← tracker</a><div class="sub" id="sub">loading…</div></header>
-<nav><a href="#traders"><button>Traders</button></a><a href="#trending"><button>Trending</button></a><a href="#wallets"><button>Add wallets</button></a><a href="#theses"><button>Theses</button></a><a href="#status"><button>Status</button></a></nav>
-<main><div id="traders"></div><div id="trending"></div><div id="wallets"></div><div id="theses"></div><div id="status"></div></main>
+<nav><a href="#hot"><button>Hot now</button></a><a href="#traders"><button>Traders</button></a><a href="#trending"><button>Trending</button></a><a href="#wallets"><button>Add wallets</button></a><a href="#theses"><button>Theses</button></a><a href="#status"><button>Status</button></a></nav>
+<main><div id="hot"></div><div id="traders"></div><div id="trending"></div><div id="wallets"></div><div id="theses"></div><div id="status"></div></main>
 <script>
 const key=new URLSearchParams(location.search).get('key')||'';const OWN=!location.pathname.startsWith('/fomo');const P=OWN?'':'/fomo';document.getElementById('back').href=OWN?'http://'+location.hostname+':8787/?key=':'/?key='+encodeURIComponent(key);if(OWN)document.getElementById('back').style.display='none';
 const $=s=>document.querySelector(s);const api=p=>fetch(P+p+(p.includes('?')?'&':'?')+'key='+encodeURIComponent(key)).then(r=>r.json());
@@ -94,7 +102,14 @@ const uk=ts=>new Date(ts*1000).toLocaleString('en-GB',{timeZone:'Europe/London',
 const fmt=n=>n==null?'—':n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':Number(n).toFixed(0);const pc=x=>x==null?'—':'<span class="'+(x>0?'up':x<0?'dn':'')+'">'+(x>0?'+':'')+(x*100).toFixed(1)+'%</span>';const mx=x=>x==null?'—':'<span class="'+(x>1?'up':x<1?'dn':'')+'">'+Number(x).toFixed(2)+'x</span>';
 const ago=ts=>{const d=Math.floor(Date.now()/1000-ts);return d<60?d+'s':d<3600?Math.floor(d/60)+'m':d<86400?(d/3600).toFixed(1)+'h':(d/86400).toFixed(1)+'d'};const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let WIN='1h',STAKE={};try{STAKE=JSON.parse(localStorage.getItem('fomo_stake')||'{}')}catch(e){}
-async function load(){for(const f of [traders,trending,wallets,theses,status]){try{await f()}catch(e){console.error(f.name,e);$('#sub').textContent='page error in '+f.name+': '+e.message}}}
+async function load(){for(const f of [hotnow,traders,trending,wallets,theses,status]){try{await f()}catch(e){console.error(f.name,e);$('#sub').textContent='page error in '+f.name+': '+e.message}}}
+async function hotnow(){const j=await api('/api/hot');const card=(r,i)=>{const who=(r.who||[]);const inn=who.filter(w=>w.side==='buy');return '<div class="card"><div class="hd"><span class="n">#'+(i+1)+'</span><b><a class="coin" href="https://dexscreener.com/solana/'+r.mint+'" target="_blank">'+esc(r.symbol||r.mint.slice(0,6))+'</a></b><span class="mut">'+esc((r.name||'').slice(0,20))+'</span></div><div class="kv" style="margin-top:6px"><div><span>fomo buyers</span><br><b class="big">'+r.buyers+'</b></div><div><span>buys / sells</span><br>'+r.buys+' / '+r.sells+'</div><div><span>$ in / net</span><br>$'+fmt(r.buy_usd)+' / '+(r.net_usd>=0?'<span class="up">+$'+fmt(r.net_usd)+'</span>':'<span class="dn">-$'+fmt(-r.net_usd)+'</span>')+'</div><div><span>MC now</span><br>'+(r.mc_usd?'$'+fmt(r.mc_usd):'—')+'</div><div><span>price vs window start</span><br>'+mx(r.change)+'</div><div><span>liq</span><br>'+(r.liq_usd?'$'+fmt(r.liq_usd):'—')+'</div><div><span>first fomo buy</span><br>'+ago(r.first_ts)+' ago</div></div>'+
+'<div class="k">YOUR TRADERS IN IT (6 h)</div>'+(inn.length?'<div>'+inn.map(w=>'<span class="pill" style="margin:2px 4px 2px 0">'+esc(w.handle||w.wallet.slice(0,6))+' $'+fmt(w.usd)+(w.mc_at?' @ $'+fmt(w.mc_at):'')+'</span>').join('')+'</div>':'<div class="mut">none of your traders yet'+(who.length?' (sells only)':'')+'</div>')+
+'<div class="k">BUY</div><div class="act"><button disabled title="executor book FW not built yet — proposed">0.2 SOL</button><button disabled title="executor book FW not built yet — proposed">0.5 SOL</button><button disabled title="executor book FW not built yet — proposed">1 SOL</button></div></div>'};
+const ffs=(j.ff||[]).map(f=>'<span class="pill">'+f.win+': '+f.n+' coins · +15m '+mx(f.m15)+' · +1h '+mx(f.m60)+' · +6h '+mx(f.m360)+' · reached 1.5x '+Math.round(100*f.hit15/f.n)+'% · dead at 1h '+Math.round(100*f.dead60/f.n)+'%</span>').join(' ');
+$('#hot').innerHTML='<div class="card"><h3>HOT NOW — the 5 coins most bought on fomo (Solana, from the chain, before the fomo app shows them as trending) · '+uk(j.ts)+' UK</h3><div class="mut" style="font-size:12px">FF book (every coin that enters a top 5 is logged and marked at +15m / +1h / +6h): '+(ffs||'collecting')+'</div></div>'+
+'<div class="k" style="margin:0 2px">LAST 5 MINUTES</div><div class="grid">'+(j.m5.length?j.m5.map(card).join(''):'<div class="card mut">quiet</div>')+'</div>'+
+'<div class="k" style="margin:10px 2px 0">LAST 15 MINUTES</div><div class="grid">'+(j.m15.length?j.m15.map(card).join(''):'<div class="card mut">quiet</div>')+'</div>'}
 async function traders(){const j=await api('/api/traders');const n=j.list.length;$('#sub').textContent=n+' traders watched · every buy is a paper trade at their fill, scored at real costs · copy / sell buttons arm when the executor book FW exists · '+uk(j.ts)+' UK';
 const stakes=['0.01','0.02','0.05','0.1','0.25','0.5','1'];
 const st=j.stream||[];const streamHtml='<div class="card"><h3>LIVE — every trade by your traders, newest first (Solana; BNB / Base / Robinhood come with stage 2)</h3>'+(st.length?'<div class="wrap" style="max-height:520px"><table><thead><tr><th>when</th><th>trader</th><th></th><th>coin</th><th>$</th><th>MC at trade</th><th>MC now</th><th>since</th><th>your traders in (1h)</th><th>thesis</th></tr></thead><tbody>'+st.map(f=>'<tr><td class="mut">'+ukd(f.ts)+'</td><td><b>'+esc(f.handle||f.wallet.slice(0,6))+'</b></td><td>'+(f.side==='buy'?'<span class="up">BUY</span>':'<span class="dn">SELL</span>')+'</td><td><a class="coin" href="https://dexscreener.com/solana/'+f.mint+'" target="_blank">'+esc(f.symbol||f.mint.slice(0,6))+'</a></td><td>$'+fmt(f.usd)+'</td><td>'+(f.mc_at?'$'+fmt(f.mc_at):'—')+'</td><td>'+(f.mc_now?'$'+fmt(f.mc_now):'—')+'</td><td>'+mx(f.change)+'</td><td>'+(f.buyers_1h>1?'<span class="amb">'+f.buyers_1h+'</span>':f.buyers_1h||'')+'</td><td class="th">'+(f.thesis?esc(f.thesis):'<span class="mut">—</span>')+'</td></tr>').join('')+'</tbody></table></div>':'<div class="mut">no trades yet from the watched wallets — they appear here the moment one buys or sells on Solana</div>')+'</div>';
