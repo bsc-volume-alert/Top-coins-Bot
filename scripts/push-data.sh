@@ -25,6 +25,7 @@ cp -f "$E/status.json" data/status.json 2>/dev/null || true
 FP=$(grep -E '^FOMO_PORT=' $T/.env | cut -d= -f2- | tr -d '"'); FP=${FP:-8789} # v0.18.179: the fomo watcher's data (7 days) — hourly flow per coin, paper trades, theses
 for f in flow_hourly trades theses; do curl -s -m 60 "http://127.0.0.1:${FP}/api/csv/${f}?days=7" -o data/fomo_${f}.csv || echo "[push-data] fomo ${f} fetch failed"; done
 [ -f "$T/data/fomo_finds.json" ] && cp -f "$T/data/fomo_finds.json" data/fomo_finds.json; [ -f "$T/data/fomo_finds.log" ] && tail -c 4000 "$T/data/fomo_finds.log" > data/fomo_finds_log.txt
+[ -f "$T/data/fomo_following.csv" ] && cp -f "$T/data/fomo_following.csv" data/fomo_following.csv; [ -f "$T/data/fomo_import.log" ] && tail -c 3000 "$T/data/fomo_import.log" > data/fomo_import_log.txt; curl -s -m 30 "http://127.0.0.1:${FP}/api/status" -o data/fomo_status.json || true
 [ -f "$T/data/job.log" ] && tail -c 4000 "$T/data/job.log" > data/job_log.txt
 date -u +%FT%TZ > data/pushed_at.txt
 git add -A data
