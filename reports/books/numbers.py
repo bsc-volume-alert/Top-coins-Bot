@@ -35,8 +35,11 @@ def U(day, h, m):  # UTC timestamp, October 2026
 def uk(t, fmt="%d %b %H:%M"):
     return dt.datetime.fromtimestamp(int(t) + 3600, dt.timezone.utc).strftime(fmt) + " UK"
 
-A = list(csv.DictReader(open(f"{D}/abcd.csv")))
-O = [r for r in csv.DictReader(open(f"{D}/others.csv")) if r.get("invalid") in ("", "0", None)]
+def _glitch(r):  # 21 Oct 10:50 UK: three coins on 19 Oct 11:04-11:34 UK carry peaks of 36,000-93,000x (a price-feed error); capped at 15x they inflated A, D, 80 and the momentum books. Nothing real prints above a few hundred x in 6 h.
+    try: return float(r.get("peak_mult") or 0) > 500
+    except Exception: return False
+A = [r for r in csv.DictReader(open(f"{D}/abcd.csv")) if not _glitch(r)]
+O = [r for r in csv.DictReader(open(f"{D}/others.csv")) if r.get("invalid") in ("", "0", None) and not _glitch(r)]
 ALL = A + O
 NOW = max(int(r["entry_ts"]) for r in ALL)
 FPM = set()
