@@ -20,6 +20,8 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - **Last rule change:** none.
 
 ## Verdict now
+**21 Oct 21:30 UK (4-hour study; data to 19:49 UK):** Revised K forward since 14:50 UK: 5 trades −24.1% (one 2x +87%, four stops at −51% to −54%: night coziness, Gifpad (open, at the stop), plus the two from 17:35 UK); stop rate 80% vs 36% in the 22-trade back-test (+31.8%). Checkpoint 40: 5 of 40. Watch the stop rate at 20; if still above half, the 2x-or-−40% exit is wrong for these coins.
+
 **21 Oct 17:35 UK (4-hour study; data to 17:06 UK):** Revised K (under 912 buyers, MC ≥ $36K, 2x or −40%) forward since 14:50 UK: 3 trades −5.0% (one 2x at +87%, two stops at −51%). Back-test on all 22 earlier qualifying trades now +31.8% (no-best +29.1%, no-top3 +23.1%, won 59%, stopped 36%, thirds +33 / +67 / 0) — the 18 at +42.7% from the 10:36 data plus 4 later trades that added nothing. Checkpoint 40 forward: 3 of 40. Nothing to say yet.
 
 **21 Oct 11:10 UK:** Not profitable as a book. On 55 trades (16.6 h) the 5-min sale — the column quoted to the owner — is +3.0% (no-best −1.1%), the runner +1.2%, the 40% trail −10.3%, and the page's headline exit (x_h2t40, still not exported) approximated from the exported columns is about −8% to −11% a trade. K's coins are mostly GR's and A's bought later (37 of 55 are graduation coins, 28 are A's). One pair — under 912 buyers at entry and entry MC ≥ $36K, with the 2x-or-−40% exit — is 18 trades at +42.7% and passes the luck bar exactly (2 of 20): forward test as a paper variant (K2), UNPROVEN. K itself to the planned 60 trades, then retire unless its exported headline says otherwise.
@@ -32,14 +34,14 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 17:06 UK; page headline is x_h2t40, not in the data export; 5-min shown. Built by reports/books/numbers.py._
+_Data to 21 Oct 19:49 UK; page headline is x_h2t40, not in the data export; 5-min shown. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 20 Oct 18:00 UK) | 69 | -1.5% | -4.8% | 51% | 36% | -0.17 |
-| last 24 h | 69 | -1.5% | -4.8% | 51% | 36% | -0.17 |
-| last 12 h | 30 | -13.8% | -16.9% | 43% | 43% | -0.44 |
-| last 6 h | 13 | -16.6% | -20.8% | 38% | 38% | -0.23 |
+| all (from 20 Oct 18:00 UK) | 74 | -0.8% | -3.8% | 51% | 36% | -0.13 |
+| last 24 h | 67 | +0.2% | -3.1% | 51% | 36% | -0.05 |
+| last 12 h | 26 | -7.4% | -12.1% | 50% | 38% | -0.22 |
+| last 6 h | 12 | -6.7% | -17.5% | 50% | 42% | -0.09 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -103,3 +105,4 @@ _Data to 21 Oct 17:06 UK; page headline is x_h2t40, not in the data export; 5-mi
 - **Decide K's real exit.** On 26 trades the 5-min sale and the runner beat the trail. Don't switch on this sample; record all and compare at 40+.
 - **Overlap:** check how many K coins are also A/AS/GR/PG coins before treating it as a separate book in the "two or three non-overlapping books" plan.
 - **Next review trigger:** 40+ closed trades, judged by halves and without the best trade.
+- 21 Oct 21:30 UK (4-hour study; data to 19:49 UK): 5 forward at −24.1%, 4 stops. Read again at 20.

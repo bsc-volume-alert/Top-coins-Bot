@@ -18,16 +18,16 @@ Not yet tested. Fits the owner's "fewer trades, bigger profit each" side: keeps 
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 17:06 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
+_Data to 21 Oct 19:49 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 22:46 UK) | 48 | +24.5% | +19.1% | 73% | 19% | +1.13 |
+| all (from 18 Oct 22:46 UK) | 50 | +25.0% | +19.9% | 74% | 18% | +1.20 |
 | before the change (21 Oct 01:30 UK) — back-test | 35 | +29.7% | +22.5% | 71% | 20% | +1.01 |
-| since the change — the real test | 13 | +10.4% | +6.2% | 77% | 15% | +0.12 |
-| last 24 h | 19 | +20.4% | +14.1% | 79% | 11% | +0.37 |
-| last 12 h | 10 | +15.6% | +10.5% | 80% | 10% | +0.15 |
-| last 6 h | 6 | -3.4% | -9.0% | 67% | 17% | -0.03 |
+| since the change — the real test | 15 | +14.0% | +10.7% | 80% | 13% | +0.20 |
+| last 24 h | 20 | +21.6% | +15.7% | 80% | 10% | +0.41 |
+| last 12 h | 11 | +16.0% | +11.5% | 82% | 9% | +0.17 |
+| last 6 h | 6 | +16.4% | +10.7% | 83% | 0% | +0.09 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -60,3 +60,4 @@ _Data to 21 Oct 17:06 UK; AS + launch bundle 5+ wallets. Built by reports/books/
 - Judge at 30 trades since 01:30 UK (unchanged).
 - Judge at 30 trades since 01:30 UK: compare with AS on the same coins, using the average without the best trade, and the AS3 vs AS gap. Beats AS → candidate for its own executor shadow book; doesn't → drop and record why.
 - Few trades a day (roughly 1 in 2–3 AS trades), so 30 trades may take several days.
+- 21 Oct 21:30 UK (4-hour study; data to 19:49 UK): forward 15 at +14.0% (no-best +10.7%, no-top3 +4.2%, won 80%); 9 of 15 reached 2x (break-even 37%); 15 of 30. Nothing to decide yet.
