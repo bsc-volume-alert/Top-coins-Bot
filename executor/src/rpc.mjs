@@ -15,6 +15,9 @@ export async function blockhash(maxAgeMs = 1500) {
 export async function getAccounts(pubkeys, commitment = "processed") {
   rpcStats.calls++; try { return await conn.getMultipleAccountsInfo(pubkeys.map((p) => (p instanceof PublicKey ? p : new PublicKey(p))), { commitment }); } catch (e) { rpcStats.errors++; rpcStats.lastErr = e.message; throw e; }
 }
+/** v0.4.12 local stops: push notifications for an account (the bonding curve, or a pool's reserve accounts) at 'processed' commitment - the executor sees the price move within a slot. */
+export function onAccount(pubkey, cb) { rpcStats.subs = (rpcStats.subs || 0) + 1; return conn.onAccountChange(pubkey instanceof PublicKey ? pubkey : new PublicKey(pubkey), (info, ctx) => { try { cb(info.data, ctx?.slot); } catch (e) { rpcStats.lastErr = "sub: " + e.message; } }, "processed"); }
+export async function offAccount(id) { try { await conn.removeAccountChangeListener(id); rpcStats.subs = Math.max(0, (rpcStats.subs || 1) - 1); } catch {} }
 export async function getBalance(pubkey) { rpcStats.calls++; return conn.getBalance(pubkey, "confirmed"); }
 export async function buildTx(payer, ixs, signer = null) {
   const { blockhash: b, lastValidBlockHeight } = await blockhash();

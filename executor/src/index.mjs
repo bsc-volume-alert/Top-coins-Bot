@@ -10,13 +10,13 @@ import { Keypair } from "@solana/web3.js";
 import { CFG, EXEC_HOME, lamports, sol } from "./config.mjs";
 import { loadKeypair } from "./wallet.mjs";
 import bs58 from "bs58";
-import { getAccounts, getBalance, buildTx, simulate, send, sendUntilConfirmed, waitConfirm, readFill, blockHeight, signatureStatus, rpcStats } from "./rpc.mjs";
+import { getAccounts, getBalance, buildTx, simulate, send, sendUntilConfirmed, waitConfirm, readFill, blockHeight, signatureStatus, rpcStats, onAccount, offAccount } from "./rpc.mjs";
 import { ata, parseTokenAccount, ixBudget, ixTip, ixTransfer, PK, PUMP, PUMP_AMM, TOKEN, WSOL } from "./solana.mjs";
 import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 import { db, newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, positionsOf, hasPosition, dayNet, net24, londonDayStart, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.4.11"; // v0.4.8 (owner go 21 Oct 13:50 UK): book BL (bundle launch, S8 fires, 40% trail from the peak); A5 and S10 off; AS stake back to 0.1 // books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
+const VERSION = "0.4.12"; // v0.4.8 (owner go 21 Oct 13:50 UK): book BL (bundle launch, S8 fires, 40% trail from the peak); A5 and S10 off; AS stake back to 0.1 // books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
 const EXIT_NAMES = { h5: "B", flow4: "A", h3: "GR", tsl40: "BL" };
 // wide = P5 Wide's EXTRA coins only (the $100K–$250K triggers, strategy p5w30): the rest of the paper Wide book is the Runner's coins, already traded by the runner book.
 // strict = the 50 SOL trigger (p5e50): its own paper trade on a coin the runner may already hold, bought later and higher — a separate leg, a separate test.
@@ -251,6 +251,7 @@ async function bookBuy(id, book, sig, m, b, v, stake, slot, fromTrigMs) {
   const livePx = tokens > 0 ? (spent / 1e9) / (tokens / 1e6) : null; // SOL per whole token (6 decimals), same unit as the paper price
   const gap = livePx && m.price ? ((livePx / m.price) - 1) * 100 : null;
   tg(`🟢 <b>BOUGHT</b> ${esc(m.name)} [${BOOKS[book].name}] — ${sol(spent).toFixed(4)} SOL incl. fees · ${(fromTrigMs / 1000).toFixed(1)} s after the trigger${gap != null ? ` · ${gap >= 0 ? "+" : ""}${gap.toFixed(1)}% vs paper price` : ""} · ${v.kind}/${b.ixKind}${fill ? "" : " · fill not read yet"}\n<code>${sig}</code>`);
+  try { const q = positionOf(m.id, exit); if (q) await watchPosition(q, v); } catch (e) { log("watch-error", `${m.name}: ${e.message}`); } // v0.4.12 local stops
   afterOpen(m.id, exit);
 }
 /** An exit that arrived while the buy was in flight is acted on the moment the position exists. */
@@ -275,11 +276,31 @@ async function reconcilePending() {
 
 // ---- the sell ----
 const sellTry = new Map(); // legKey -> last attempt ms (a sell that will not land is retried every 20 s, not every tick)
+// ---- v0.4.12 local stops (owner, 21 Oct 18:27 UK: "we need a faster way to buy and sell") ----
+// Every live h3 / tsl40 leg is watched on-chain by the executor itself: the bonding curve account (curve coins) or the pool's two reserve accounts (PumpSwap),
+// pushed at 'processed' commitment. The stop fires here the moment the price crosses it - no tracker lag, no message hop. h3 legs (GR): stop at 0.6x the entry
+// price, as the rule says; tsl40 legs (BL, GR2): 40% below the running peak, entry counting as the first peak. Profit exits (floor, 3-min, time) still come from the tracker.
+const LOCAL_STOP_EXITS = new Set(["h3", "tsl40"]), watching = new Map(); // legKey -> { subs, entry, peak, px, fired, base, quote }
+const spotCurve = (c) => (c && Number(c.vTok) > 0 ? Number(c.vSol) / Number(c.vTok) : null), spotPool = (q, b) => (b > 0 ? q / b : null);
+function unwatch(k) { const w = watching.get(k); if (!w) return; watching.delete(k); for (const id of w.subs) offAccount(id); }
+async function watchPosition(p, v) {
+  const k = legKey(p.paper_id, p.exit); if (watching.has(k) || p.mode !== "live" || !LOCAL_STOP_EXITS.has(p.exit) || !v || v.kind === "none") return;
+  if ((v.kind === "curve" && !v.curvePk) || (v.kind === "amm" && !v.pool)) { v = await venueOf(p.mint).catch(() => null); if (!v || v.kind === "none" || (v.kind === "amm" && !v.pool)) return; } // the reconciler passes a bare venue; read the real one
+  const w = { subs: [], entry: null, peak: null, px: null, fired: false, base: Number(v.baseRes || 0), quote: Number(v.quoteRes || 0), kind: v.kind, t0: Date.now(), ticks: 0 };
+  const check = (px, slot) => { if (!(px > 0) || w.fired) return; w.px = px; w.ticks++; if (w.entry == null) w.entry = px; if (w.peak == null || px > w.peak) w.peak = px;
+    const level = p.exit === "h3" ? 0.6 * w.entry : 0.6 * w.peak; if (px <= level) { w.fired = true; const mult = px / w.entry; log("stop-local", `${p.name} [${BOOKS[p.book]?.name || p.exit}] ${mult.toFixed(3)}x of entry (peak ${(w.peak / w.entry).toFixed(2)}x) after ${((Date.now() - w.t0) / 1000).toFixed(1)} s, ${w.ticks} ticks, slot ${slot ?? "?"}`);
+      const q = positionOf(p.paper_id, p.exit); if (q && q.status === "open") sellPosition(q, "stop-local", mult, "stop").catch((e) => log("stop-local-error", `${p.name}: ${e.message}`)); } };
+  if (v.kind === "curve") { w.entry = spotCurve(v.curve); w.peak = w.entry; w.subs.push(onAccount(v.curvePk, (data, slot) => { const c = pump.decodeCurve(data); if (c) check(spotCurve(c), slot); })); }
+  else { w.entry = spotPool(w.quote, w.base); w.peak = w.entry;
+    w.subs.push(onAccount(v.pool.baseAcc, (data, slot) => { const a = parseTokenAccount(data)?.amount; if (a != null) { w.base = Number(a); check(spotPool(w.quote, w.base), slot); } }));
+    w.subs.push(onAccount(v.pool.quoteAcc, (data, slot) => { const a = parseTokenAccount(data)?.amount; if (a != null) { w.quote = Number(a); check(spotPool(w.quote, w.base), slot); } })); }
+  watching.set(k, w);
+}
 async function sellPosition(p, rule, paperMult = null, why = null) {
   if (!S.pub) return; const t0 = Date.now(), mint = PK(p.mint), k = legKey(p.paper_id, p.exit), tag = BOOKS[p.book]?.name || EXIT_NAMES[p.exit] || p.exit;
   if (selling.has(k)) return; if (Date.now() - (sellTry.get(k) || 0) < 20_000) return; sellTry.set(k, Date.now()); selling.add(k);
   needsSell.set(k, { rule, mult: paperMult, why });
-  const done = (sellOrder, proceeds, status = "closed") => { closePosition.run({ paper_id: p.paper_id, exit: p.exit, sell_order: sellOrder, closed_ts: nowS(), proceeds_lamports: proceeds, pnl_lamports: proceeds - p.cost_lamports, exit_rule: rule, paper_exit_mult: paperMult, status }); needsSell.delete(k); };
+  const done = (sellOrder, proceeds, status = "closed") => { unwatch(k); closePosition.run({ paper_id: p.paper_id, exit: p.exit, sell_order: sellOrder, closed_ts: nowS(), proceeds_lamports: proceeds, pnl_lamports: proceeds - p.cost_lamports, exit_rule: rule, paper_exit_mult: paperMult, status }); needsSell.delete(k); };
   try {
     const v = await venueOf(p.mint); if (v.kind === "none") { log("sell-novenue", `${p.name}: ${v.reason}`); return; }
     const isStop = paperMult != null && paperMult < 1, slip = isStop ? CFG.SLIP_STOP : CFG.SLIP_SELL;
@@ -300,7 +321,7 @@ async function sellPosition(p, rule, paperMult = null, why = null) {
       const proceeds = Number(sIx.expected) - lamports(CFG.TIP_SOL) - 10000;
       done(id, proceeds); updOrder(id, { status: "shadow-filled", fill_sol: proceeds, fill_tokens: -Number(amount) }); return;
     }
-    let tx = await buildTx(S.pub, wrap(S.pub, sIx.ixs, sTip, sCu)); let sim = await simulate(tx);
+    let tx = await buildTx(S.pub, wrap(S.pub, sIx.ixs, sTip, sCu)); let sim = urgent ? { ok: true, err: null, logs: [], units: null, ms: 0, skipped: true } : await simulate(tx); // v0.4.12: an urgent sell goes straight out (the retry loop widens slippage if it fails)
     if (progErr(sim)) { const altKind = v.kind === "amm" ? (sIx.ixKind === "amm" ? "amm2" : "amm") : (sIx.ixKind === "v3" ? "classic" : "v3"); const alt = sellIxs(v, S.pub, amount, slip, altKind, closeAta); const tx2 = await buildTx(S.pub, wrap(S.pub, alt.ixs, sTip, sCu)); const sim2 = await simulate(tx2); if (sim2.ok) { sIx = alt; tx = tx2; sim = sim2; } }
     updOrder(id, { ix_kind: sIx.ixKind, sim_ok: sim.ok ? 1 : 0, sim_err: sim.err, sim_units: sim.units, sim_ms: sim.ms });
     // a failed simulation on a sell is not a reason to hold a dumping coin: send anyway with the stop slippage
@@ -397,6 +418,7 @@ async function housekeeping() {
     // v0.4.6 guard (owner go 21 Oct 09:40 UK): a live GR whose last 20 live legs are net negative goes back to shadow by itself and raises an alarm (counted from the last guard trip, so switching it back on starts a fresh count)
     // v0.4.10 (owner, 21 Oct 17:50 UK): the guard watches every live book, not only GR
     for (const k of BOOK_IDS) { if (modeOf(k) !== "live") continue; const since = S.books[k].guardTs || 0; const r = db.prepare(`SELECT pnl_lamports FROM positions WHERE status='closed' AND book=? AND mode='live' AND opened_ts>? ORDER BY closed_ts DESC LIMIT 20`).all(k, since); const net = r.reduce((a, x) => a + (x.pnl_lamports || 0), 0); if (r.length >= 20 && net < 0) { S.books[k].mode = "shadow"; S.books[k].guardTs = nowS(); saveOvr(); log("guard", `${BOOKS[k].name} back to shadow: last 20 live legs ${(net / 1e9).toFixed(3)} SOL`); tg(`🛑 ${BOOKS[k].name} switched back to SHADOW - its last 20 live trades lost ${(net / 1e9).toFixed(3)} SOL. Switch it on again from the page when you want.`); } }
+    for (const q of openPositions()) { const kk = legKey(q.paper_id, q.exit); if (q.mode === "live" && LOCAL_STOP_EXITS.has(q.exit) && !watching.has(kk) && !selling.has(kk)) { try { await watchPosition(q, await venueOf(q.mint)); } catch (e) { log("watch-error", `${q.name}: ${e.message}`); } } } // v0.4.12: after a restart, watch every open live leg again
     for (const [k, pe] of pendingExit) if (Date.now() - (pe.ts || 0) > 600_000) pendingExit.delete(k); // an exit noted for a buy that never booked
     const ops = openPositions(), n = nowS(), trackerSilent = Date.now() - S.lastTracker > 120_000, feedStale = S.lastFeed > 0 && Date.now() - S.lastFeed > 120_000;
     for (const p of ops) {
