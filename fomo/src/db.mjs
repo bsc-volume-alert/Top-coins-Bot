@@ -77,6 +77,7 @@ export const q = {
   thesesCsv: db.prepare(`SELECT * FROM theses WHERE ts>=? ORDER BY ts`),
   insWT: db.prepare(`INSERT OR IGNORE INTO wallet_trades (sig, wallet, handle, ts, mint, side, usd, px, mc_at, trade_id) VALUES (?,?,?,?,?,?,?,?,?,?)`),
   feed: db.prepare(`SELECT w.*, c.symbol, c.name, c.mc_usd mc_now, c.meta_ts, (SELECT t.text FROM theses t WHERE t.mint=w.mint AND (t.handle=w.handle OR t.handle=w.wallet) AND t.ts BETWEEN w.ts-86400 AND w.ts+86400 ORDER BY t.ts DESC LIMIT 1) thesis FROM wallet_trades w LEFT JOIN coins c ON c.mint=w.mint WHERE w.ts>=? ORDER BY w.ts DESC LIMIT ?`),
+  stream: db.prepare(`SELECT w.*, c.symbol, c.name, c.mc_usd mc_now, (SELECT t.text FROM theses t WHERE t.mint=w.mint AND (t.handle=w.handle OR t.handle=w.wallet) AND t.ts BETWEEN w.ts-86400 AND w.ts+86400 ORDER BY t.ts DESC LIMIT 1) thesis, (SELECT COUNT(DISTINCT wallet) FROM wallet_trades x WHERE x.mint=w.mint AND x.side='buy' AND x.ts BETWEEN w.ts-3600 AND w.ts) buyers_1h FROM wallet_trades w LEFT JOIN coins c ON c.mint=w.mint ORDER BY w.ts DESC LIMIT ?`),
   feedMints: db.prepare(`SELECT DISTINCT mint FROM wallet_trades WHERE ts>=? UNION SELECT DISTINCT mint FROM trades WHERE closed=0`).pluck(),
   insPrice: db.prepare(`INSERT OR IGNORE INTO prices (mint, ts, usd) VALUES (?,?,?)`),
   priceAt: db.prepare(`SELECT ts, usd FROM prices WHERE mint=? AND ts>=? ORDER BY ts LIMIT 1`),
