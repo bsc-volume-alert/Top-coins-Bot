@@ -7,9 +7,9 @@ import { CFG } from "./config.mjs";
 import { rpc, decodeParsed, budgetLeft } from "./rpc.mjs";
 import { nowS } from "./db.mjs";
 const jobs = new Map(); let nextId = 1;
-const CAP = Number(process.env.FOMO_FIND_CAP || 1200); // credits per search (a 17-h-old trade needs ~450 pages of the signer walk)
+const CAP = Number(process.env.FOMO_FIND_CAP || 5000); // credits per search (a 17-h-old trade needs ~450 pages of the signer walk plus one read per fomo trade on the coin in the window; 5,000 credits is about 2.5p on the £49 / 10M plan)
 const isMint = (s) => /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s);
-export function parseAgo(s) { const m = String(s || "").trim().match(/^(\d+(?:\.\d+)?)\s*([mhd])?$/i); if (!m) return null; const n = Number(m[1]), u = (m[2] || "h").toLowerCase(); return Math.round(n * (u === "m" ? 60 : u === "d" ? 86400 : 3600)); }
+export function parseAgo(s) { const m = String(s || "").trim().match(/^(\d+(?:\.\d+)?)\s*([mhd])?$/i); if (!m) return null; const n = Number(m[1]), u = (m[2] || "h").toLowerCase(), unit = u === "m" ? 60 : u === "d" ? 86400 : 3600; return { s: Math.round(n * unit), unit, n }; }
 async function lookupCoin(coin) {
   if (isMint(coin)) { const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${coin}`, { signal: AbortSignal.timeout(8000) }); const j = await r.json(); return { pairs: (j.pairs || []), exact: true }; }
   const r = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(coin)}`, { signal: AbortSignal.timeout(8000) }); const j = await r.json();
@@ -26,7 +26,8 @@ export function startFind({ coin, usd, ago, side = "any", at = null, tolPct = 4 
 export async function runFind(params) { const job = startFind(params); while (job.state === "running") await new Promise((r) => setTimeout(r, 500)); return job; }
 export const getFind = (id) => jobs.get(Number(id)) || null;
 async function run(job, tolPct) {
-  const agoS = parseAgo(job.ago); if (agoS == null) { job.state = "error"; job.note = "when: use e.g. 45m, 17h or 2d"; return; }
+  const ag = parseAgo(job.ago); if (ag == null) { job.state = "error"; job.note = "when: use e.g. 45m or 17h (as the app shows it)"; return; }
+  if (ag.s >= 86400) { job.state = "done"; job.note = "trades the app labels in days are out of reach (a day or more of fomo history to walk) — use one of their trades shown in hours"; return; }
   const target = Number(job.usd); if (!(target > 0)) { job.state = "error"; job.note = "amount: a dollar figure, e.g. 9995"; return; }
   const { pairs } = await lookupCoin(job.coin);
   for (const p of pairs) job.chains[p.chainId] = (job.chains[p.chainId] || 0) + 1;
@@ -38,8 +39,8 @@ async function run(job, tolPct) {
   const mints = [...volByMint.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([m]) => m);
   job.pools = sol.filter((p) => mints.includes(p.baseToken?.address)).sort((a, b) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0)).slice(0, 8).map((p) => ({ pool: p.pairAddress, dex: p.dexId, mint: p.baseToken?.address, symbol: p.baseToken?.symbol, vol24: Math.round(p.volume?.h24 || 0), pages: 0, inWin: 0 }));
   job.note = `Solana: ${job.pools.length} pool(s) for ${sol[0].baseToken?.symbol}${Object.keys(job.chains).length > 1 ? ` (also on ${Object.keys(job.chains).filter((c) => c !== "solana").join(", ")})` : ""}`;
-  // the app rounds "17h" — search ±7% of the age, at least ±20 min
-  const tTarget = (job.at || nowS()) - agoS, half = Math.max(1200, Math.round(agoS * 0.07)), tHi = tTarget + half, tLo = tTarget - half;
+  // the app's "17h" means 17–18 hours before the screenshot: the window is [age, age + one unit], with 5 minutes' margin each side
+  const at = job.at || nowS(), tHi = at - ag.s + 300, tLo = at - ag.s - ag.unit - 300, tTarget = (tHi + tLo) / 2;
   // 1. the coin's transactions in the window (pool side)
   const poolSigs = new Map();
   for (const p of job.pools) {
@@ -55,7 +56,7 @@ async function run(job, tolPct) {
   if (!poolSigs.size) { job.state = "done"; job.note += ` · the coin's pools show no trades in the window (${new Date(tLo * 1000).toISOString().slice(11, 16)}–${new Date(tHi * 1000).toISOString().slice(11, 16)} UTC) — wrong coin/pool, or the trade was on another chain`; return; }
   // 2. fomo's signer transactions back to the window (1 credit per 1,000 — about 26 pages an hour of age)
   let before = null, signerPages = 0, hits = []; let reached = false;
-  while (signerPages < 700 && job.credits < CAP) {
+  while (signerPages < 1300 && job.credits < CAP) {
     signerPages++; job.credits++; let arr; try { arr = await rpc("getSignaturesForAddress", [CFG.SIGNER, { limit: 1000, ...(before ? { before } : {}) }], { budget: false }); } catch (e) { job.note += ` · signer walk: ${e.message.slice(0, 60)}`; break; }
     if (!arr?.length) break;
     for (const x of arr) if (!x.err && poolSigs.has(x.signature)) hits.push({ sig: x.signature, ts: x.blockTime });
