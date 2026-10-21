@@ -16,7 +16,7 @@ import * as pump from "./pump.mjs";
 import * as amm from "./amm.mjs";
 import { db, newOrder, updOrder, openPosition, closePosition, openPositions, positionOf, positionsOf, hasPosition, dayNet, net24, londonDayStart, recentOrders, stats, log, pendingBuys, lastSellSig, recentClosed, skipSummary, totals } from "./book.mjs";
 
-const VERSION = "0.4.15"; // v0.4.8 (owner go 21 Oct 13:50 UK): book BL (bundle launch, S8 fires, 40% trail from the peak); A5 and S10 off; AS stake back to 0.1 // books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
+const VERSION = "0.4.16"; // v0.4.8 (owner go 21 Oct 13:50 UK): book BL (bundle launch, S8 fires, 40% trail from the peak); A5 and S10 off; AS stake back to 0.1 // books: each is (paper strategy, exit) — a trigger is bought once per switched-on book that follows its strategy, each leg sold on its own rule
 const EXIT_NAMES = { h5: "B", flow4: "A", h3: "GR", tsl40: "BL" };
 // wide = P5 Wide's EXTRA coins only (the $100K–$250K triggers, strategy p5w30): the rest of the paper Wide book is the Runner's coins, already traded by the runner book.
 // strict = the 50 SOL trigger (p5e50): its own paper trade on a coin the runner may already hold, bought later and higher — a separate leg, a separate test.
@@ -315,7 +315,7 @@ async function sellPosition(p, rule, paperMult = null, why = null) {
         if (f && f.tokenDelta < 0) { done(prev.id, f.solDelta); updOrder(prev.id, { status: "confirmed", fill_sol: f.solDelta, fill_tokens: f.tokenDelta, fee: f.fee }); log("sell-late", `${p.name} [${tag}]: earlier sell had landed, booked ${sol(f.solDelta).toFixed(4)} SOL`); }
         else { done(null, 0); log("sell-empty", `${p.name} [${tag}]: no tokens in wallet and no sell found — booked as lost`); tg(`⚠️ ${esc(p.name)} [${tag}]: wallet holds none of this coin and no sell of ours landed — booked as a full loss. Check the wallet on Solscan.`); }
         return; } }
-    const ixKind = v.kind === "amm" ? (p.ix_kind === "amm" ? "amm" : "amm2") : (p.ix_kind === "v3" ? "v3" : "classic"), closeAta = !otherLegHolds;
+    const ixKind = v.kind === "amm" ? "amm" : (p.ix_kind === "v3" ? "v3" : "classic"), closeAta = !otherLegHolds; // v0.4.16: a pool sale always starts from the classic AMM form - the v2 form fails 6027; a coin bought on the curve (ix_kind v3) that graduated while held used to be sent v2 (Catzo, 21 Oct 22:48 UK)
     let sIx = sellIxs(v, S.pub, amount, slip, ixKind, closeAta);
     const id = newOrder({ side: "sell", paper_id: p.paper_id, exit: p.exit, book: p.book, mint: p.mint, name: p.name, strategy: p.strategy, rule, venue: v.kind, ix_kind: sIx.ixKind, amount_tokens: Number(amount), slippage: slip, quote_out: sIx.expected, min_out: sIx.minOut, tip_lamports: sTip, cu_price: sCu, detail: { why, paperMult, closeAta, urgent } });
     if (p.mode !== "live") { // shadow: the quote at this moment is the fill (a sell cannot be simulated without holding the tokens)
