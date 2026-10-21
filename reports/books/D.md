@@ -17,14 +17,14 @@ Not working on its own: about break-even in every study (−0.4% to −1.3% from
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 13:20 UK; real costs. Built by reports/books/numbers.py._
+_Data to 21 Oct 17:06 UK; real costs. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 20:27 UK) | 299 | -4.6% | -5.5% | 45% | 42% | -1.67 |
-| last 24 h | 103 | -6.5% | -9.3% | 46% | 46% | -0.78 |
-| last 12 h | 42 | -6.2% | -13.1% | 43% | 45% | -0.30 |
-| last 6 h | 19 | -7.3% | -10.5% | 53% | 37% | -0.16 |
+| all (from 18 Oct 20:27 UK) | 319 | -3.5% | -4.4% | 46% | 41% | -1.44 |
+| last 24 h | 111 | -4.7% | -7.2% | 45% | 44% | -0.63 |
+| last 12 h | 49 | -1.1% | -6.9% | 49% | 35% | -0.10 |
+| last 6 h | 27 | +9.0% | -1.3% | 56% | 26% | +0.22 |
 
 Executor book `strict` (shadow, real quotes): 26 legs, +0.025 SOL, average +5.1% a leg, without best +0.3%, won 50%, 19 Oct 10:27 UK to 19 Oct 15:53 UK.
 <!-- /NUMBERS -->

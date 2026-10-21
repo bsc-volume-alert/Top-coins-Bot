@@ -16,14 +16,14 @@ Not working. About −15% a trade at 5 min on 498 closed rows (31% won). It has 
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 13:20 UK; curve costs, 5-min exit. Built by reports/books/numbers.py._
+_Data to 21 Oct 17:06 UK; curve costs, 5-min exit. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 19 Oct 20:42 UK) | 682 | -18.7% | -19.8% | 30% | 53% | -13.46 |
-| last 24 h | 392 | -21.2% | -23.1% | 29% | 54% | -8.70 |
-| last 12 h | 159 | -25.2% | -26.1% | 28% | 51% | -4.17 |
-| last 6 h | 64 | -22.0% | -24.1% | 31% | 50% | -1.47 |
+| all (from 19 Oct 20:42 UK) | 745 | -19.3% | -20.3% | 30% | 53% | -15.14 |
+| last 24 h | 391 | -20.4% | -22.3% | 31% | 52% | -8.39 |
+| last 12 h | 167 | -25.6% | -26.4% | 29% | 54% | -4.44 |
+| last 6 h | 84 | -24.0% | -25.6% | 32% | 51% | -2.10 |
 
 Executor book `famous` (shadow, real quotes): 152 legs, -1.264 SOL, average -16.3% a leg, without best -19.3%, won 25%, 19 Oct 20:42 UK to 20 Oct 05:08 UK.
 <!-- /NUMBERS -->

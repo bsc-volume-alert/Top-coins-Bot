@@ -12,6 +12,8 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - Started 20 Oct 16:35 UK (v0.18.156, socials-only version). Last rule change 20 Oct 17:45 UK (v0.18.158, standard filters; commit pushed 17:29 UK, the page counts "since the change" from 17:45 UK = `CHG_STD` 16:45 UTC). Page record runs from the price fix (18 Oct 20:25 UK); everything before 17:45 UK is a back-test of a rule chosen by looking at those trades.
 
 ## Verdict now
+**21 Oct 18:00 UK (4-hour study; data to 17:06 UK):** KEEP. Forward since 17:45 UK (20 Oct): 35 trades +12.3% (no-best +8.7%, no-top3 +4.4%, won 69%, stopped 17%, thirds +29 / −5 / +12) against the 64-trade back-test at +8.8%. Shadow `asoc`: 18 legs +0.870 SOL, +13.5% a leg (no-best +10.4%, 13 of 18 won), real 5.8 points ABOVE the model on the same coins; entry gap +1.6% median, exit −1.4%. The live checkpoint (30 positive legs, real ≈ paper) is 18 of 30 — on course, not reached; about 10 more hours at the last day's rate. Last 6 h soft: 9 at +1.7%.
+
 **21 Oct 11:10 UK:** KEEP as is. The revision search on its own 89 trades finds nothing that can be told from luck (0 of 462 passing candidates); what carries AS is the forward record — 25 trades since 17:45 UK at +15.8% (no-best +10.9%, won 68%) and 9 real-quote legs at +13.7% a leg (paper +9.3% on the same coins). The one refinement worth a paper line is AS4 (first-minute selling under 20 SOL): the whole of AS's +0.87 SOL sits in those 18 trades, but it is in-sample and does nothing outside AS, so forward test only. AS2/AS3 are already running; AS2's back-test edge is AS3's coins diluted.
 
 **21 Oct 02:30 UK:** Still the best book; its edge is real as a whole but can't yet be split into proven parts. The quiet-first-minute signal is the strongest refinement found.
@@ -20,18 +22,18 @@ Best paper book on the page and the first candidate for a real-quote test, but n
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 13:20 UK; A + standard filters. Built by reports/books/numbers.py._
+_Data to 21 Oct 17:06 UK; A + standard filters. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 21:32 UK) | 92 | +11.0% | +8.1% | 61% | 29% | +0.92 |
+| all (from 18 Oct 21:32 UK) | 99 | +10.0% | +7.3% | 61% | 28% | +0.89 |
 | before the change (20 Oct 17:45 UK) — back-test | 64 | +8.8% | +4.5% | 56% | 34% | +0.50 |
-| since the change — the real test | 28 | +16.2% | +11.8% | 71% | 18% | +0.42 |
-| last 24 h | 33 | +15.5% | +11.8% | 70% | 15% | +0.48 |
-| last 12 h | 12 | +11.8% | +7.3% | 75% | 17% | +0.13 |
-| last 6 h | 7 | +17.8% | +10.6% | 86% | 14% | +0.12 |
+| since the change — the real test | 35 | +12.3% | +8.7% | 69% | 17% | +0.39 |
+| last 24 h | 35 | +12.3% | +8.7% | 69% | 17% | +0.39 |
+| last 12 h | 16 | +8.6% | +5.1% | 69% | 12% | +0.12 |
+| last 6 h | 9 | +1.7% | -1.9% | 67% | 11% | +0.01 |
 
-Executor book `asoc` (shadow, real quotes): 12 legs, +0.979 SOL, average +16.3% a leg, without best +11.7%, won 75%, 21 Oct 02:23 UK to 21 Oct 13:08 UK.
+Executor book `asoc` (shadow, real quotes): 18 legs, +0.870 SOL, average +13.5% a leg, without best +10.4%, won 72%, 21 Oct 02:23 UK to 21 Oct 16:59 UK.
 <!-- /NUMBERS -->
 
 ## Change history
@@ -43,6 +45,7 @@ Executor book `asoc` (shadow, real quotes): 12 legs, +0.979 SOL, average +16.3% 
 - 20 Oct 19:30 UK (v0.18.168) and 19:32 UK (v0.18.169): combined 12-hour strip ranking every book by return per trade; boxes ordered by their 6-hour SOL figure. Presentation only.
 - 21 Oct 01:30 UK (v0.18.172 / executor v0.4.5): AS itself unchanged. Children AS2 (+ launch bundle 2+ wallets) and AS3 (5+) added as separate paper books, judged from 01:30 UK. AS executor book `asoc` in SHADOW at 0.1 SOL (migration m044): real quotes, nothing bought — measures AS's real fills. The executor decides AS at the trigger from the tracker's `asStd` flag; small known difference from the page: socials fetched as missing after the trigger can leave a coin in the shadow book but not the paper one. Sniper count now falls back to saved launch data after a restart. The page's AS box now opens on its SHADOW tab (PAPER tab still there).
 - 21 Oct 14:15 UK — v0.18.176: AS4 added as a paper box (AS + under 20 SOL sold in the trigger minute, runner exit; judged from 14:45 UK at 30 forward). Executor AS shadow stake reset from 0.5 to 0.1 (migration m046). AS, AS2, AS3, AS4 are the only A-family boxes left on the page; A stays as the yardstick table, D's box retired (data recording).
+- 21 Oct 18:00 UK (4-hour study; data to 17:06 UK): nothing changed. Executor stake now 0.1 (legs from 14:41 UK cost 0.101; the 13 earlier legs were at 0.5).
 
 ## Ideas tested
 All on AS's own trades at real costs, runner exit, unless stated. "In sample" = found on the same trades it is scored on.
@@ -110,6 +113,7 @@ All on AS's own trades at real costs, runner exit, unless stated. "In sample" = 
   - Proposed: KEEP AS unchanged (entry + runner exit). No profitable REVISION of AS itself found — every candidate is in-sample. AS4 as a paper box (back-test + from-now), judge at 30 trades (about 4 days at 7 a day).
 - 21 Oct 13:30 UK (data to 13:20 UK): Fresh: since the 17:45 UK (20 Oct) change 28 at +16.2% (no-top3 +6.6%, won 71%, thirds +39.0 / −8.2 / +17.6). Gross before costs +21.2% on the 89-trade book, costs 10.4 points.
 - 21 Oct 13:30 UK (data to 13:20 UK): Derived ratio "age per $K of entry MC < 4.74" (coins that reached their market cap fast — e.g. under 200 s at $45K): 24 at +33.5% (no-best +22.9%, no-top3 +13.1%, won 71%, thirds +7.4 / +69.2 / +23.8) vs the other 68 at +3.1% (won 57%). Passes its own luck check (2/200) but AS is 89 trades and every cut on it fails the family-wise check (20/20 in revise.py). Independent books: D fast +0.2% vs slow −6.1%; 80 fast +10.4% (no-top3 −3.2%) vs −7.5%; C −11.7 vs −11.7; A's filtered-out rows fast −13.2% vs slow −6.6%. Mixed → **recorded, not proposed.** Re-check at 150 AS trades; if it holds there, it is the AS4-style box to prefer (it is an entry-time fact, unlike first-minute selling).
+- 21 Oct 18:00 UK (4-hour study; data to 17:06 UK): Forward 35 since 17:45 UK grouped: 24 winners (6 at +50% or more: SpaceXSuperIntelligence, MOCHI, xingxing, Banana Cat, Conviction, Clout), 6 stopped (Xitter, Hollow, Pokemon Sol-Silver, buyoutSH, OTTR, Datacenter 13:37), 5 small losers. Stopped vs winners, medians: coin age 20 min vs 12; creator bought 1.2 SOL vs 0; 38 vs 28 SOL sold in the trigger minute across 80 vs 58 wallets; price at 60 s 0.90x vs 1.21x; peak 1.13x — the same picture as the 11:10 UK analysis, and none of it is a filter that passed the luck check there. Reached 2x: 15 of 35 (43%); x_t2s40 on the same 35 +14.5% vs the runner's +12.3% (won 49% vs 69%) — a tie again, as at 11:10 UK. AS4 (paper box from 14:45 UK; no file of its own yet — tracked here): 1 forward trade (Nigga Its Over −16.7%); back-test 18 at +47.8%. Nothing to judge.
 
 ## Notable coins
 - Spidey Show (19 Oct 21:58 UK) — entry $59.7K, peaked 20.6x, sold at the 4x cap: +276.6%, AS's best trade. Also carries F6 and H.
@@ -147,3 +151,4 @@ All on AS's own trades at real costs, runner exit, unless stated. "In sample" = 
 - "Consistency of volume" (owner, ~17:25 UK) — not implemented anywhere I can find; ask whether he still wants it and what he means (steady buying across the trigger minute(s)?).
 - Next decision: AS's real test is the trades from 17:45 UK on. Judge at 40 trades since the change, with the 14-trade blocks and the without-best figure beside the mean; if the real-quote book goes in, judge its fill gap from its first 20 legs.
 - The 4-hourly study task last failed (usage limit, 20 Oct 21:25 UK) and its prompt is stale (describes 19 Oct books and the old cost model); it has never scored AS. Proposed rewrite awaiting go.
+- 21 Oct 18:00 UK (4-hour study; data to 17:06 UK): AS live decision expected at 30 shadow legs (18 now, all positive on net). Give AS4 its own file when it has forward trades.

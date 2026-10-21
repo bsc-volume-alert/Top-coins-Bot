@@ -33,6 +33,8 @@ This file also covers GR's paper variants (gr70, gr85, grlock, grsoc) and the of
 - **Last rule change:** 20 Oct 07:30 UK (v0.18.153): coins must be 10–185 s old at graduation, so instant graduations are skipped.
 
 ## Verdict now
+**21 Oct 18:00 UK (4-hour study; data to 17:06 UK):** KEEP the 09:47 UK rule; no exit switch. Forward under the rule: 19 paper rows +9.4% (no-best −0.6%, no-top3 −16.9%, median −11.4%, won 47%, stopped 32%) and 18 real-quote legs +0.582 SOL, +12.9% a leg (no-best +3.6%, won 56%), real 1.1 points above the model on the same coins. Against the 57-row back-test at +13.6% (no-best +8.5%). The decision rule (switch to the trail only if it leads without its best 3 on the forward rows): trail +39.6% on the 19 but no-top3 −16.6% vs the 3-min's −16.9% — level, no switch. Checkpoint 30–40 forward rows: 19 of 30. Inside the 19 the split the 16:40 UK analysis predicted holds again: bundle-launch coins 10 at +32.3% (3-min; legs +21.4%, +0.538 SOL) vs other coins 9 at −15.9% (legs +2.2%, +0.044 SOL) — that is GR2's forward test, which starts from 17:00 UK with 0 legs so far. New: the shadow entry gap since 09:47 UK is +9.4% median at 0.25 SOL (whole record +3.9%; lag 0.5–1.9 s on the wide ones), offset on net by floor sells filling above paper (+33.6% real vs +19.5% model on 5).
+
 **21 Oct 11:30 UK:** Keep the 09:47 UK rule (under 156 buyers, 10–185 s, 3-min sale with the 10-second rule). The 40% trailing stop is NOT a proven improvement: its gain is five slow runners on 20–21 Oct (Guzzle Goat, GTA6, CLAUS OTC, Pixel Prowler, CAPDOG), it was worse than the 3-min sale on every graduation before 20 Oct (−22 points), and without the top 3 coins it is level with the 3-min on paper (−0.3 pts) and on real quotes (−1.6% vs −1.1% a leg). Paired sign test p = 0.09. Re-judge at 40 forward rows; x_tsl40 is already recorded on every GR row, so that costs nothing. Only 2 rows under the revised rule so far.
 
 **21 Oct 08:55 UK:** Overturns the 23:32 UK "failed" verdict. 64 real-quote legs +11.7% a leg, +1.137 SOL; the 24 since the verdict +22.7% with real beating paper. The original go-live condition (40 real trades positive) is now met. The few-buyer rule (< 156) is confirmed forward on real quotes. Still dependent on regular 2–3x winners (without best 3 ≈ 0).
@@ -46,29 +48,29 @@ This file also covers GR's paper variants (gr70, gr85, grlock, grsoc) and the of
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 13:20 UK; graduation book, 3-min exit. Built by reports/books/numbers.py._
+_Data to 21 Oct 17:06 UK; graduation book, 3-min exit. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 20 Oct 05:30 UK) | 80 | +11.6% | +8.0% | 66% | 30% | +0.85 |
+| all (from 20 Oct 05:30 UK) | 91 | +13.3% | +10.1% | 65% | 30% | +1.12 |
 | before the change (20 Oct 07:30 UK) — back-test | 10 | +47.1% | +26.1% | 90% | 10% | +0.46 |
-| since the change — the real test | 70 | +6.5% | +2.3% | 63% | 33% | +0.39 |
-| last 24 h | 56 | +4.6% | -0.7% | 59% | 36% | +0.20 |
-| last 12 h | 30 | +14.4% | +7.4% | 67% | 27% | +0.40 |
-| last 6 h | 14 | -11.5% | -20.1% | 50% | 36% | -0.17 |
+| since the change — the real test | 81 | +9.1% | +5.5% | 62% | 32% | +0.65 |
+| last 24 h | 60 | +12.6% | +7.7% | 62% | 32% | +0.69 |
+| last 12 h | 32 | +20.6% | +14.2% | 62% | 25% | +0.63 |
+| last 6 h | 13 | +28.2% | +14.8% | 54% | 23% | +0.35 |
 
-Executor book `grad` (shadow, real quotes): 74 legs, +0.905 SOL, average +8.9% a leg, without best +4.5%, won 59%, 20 Oct 05:30 UK to 21 Oct 11:43 UK.
+Executor book `grad` (shadow, real quotes): 84 legs, +1.796 SOL, average +12.0% a leg, without best +8.2%, won 60%, 20 Oct 05:30 UK to 21 Oct 16:33 UK.
 
 **GR every graduation**
 
-_Data to 21 Oct 13:20 UK; off-page grad, instant ones left out. Built by reports/books/numbers.py._
+_Data to 21 Oct 17:06 UK; off-page grad, instant ones left out. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 20:35 UK) | 447 | +3.3% | +0.4% | 52% | 33% | +1.05 |
-| last 24 h | 156 | +1.3% | -1.0% | 53% | 35% | +0.05 |
-| last 12 h | 72 | +3.5% | +0.5% | 53% | 36% | +0.18 |
-| last 6 h | 30 | -5.2% | -12.6% | 43% | 40% | -0.19 |
+| all (from 18 Oct 20:35 UK) | 468 | +3.4% | +0.6% | 52% | 34% | +1.13 |
+| last 24 h | 156 | +3.2% | +1.0% | 54% | 38% | +0.35 |
+| last 12 h | 68 | +5.5% | +2.4% | 53% | 38% | +0.31 |
+| last 6 h | 29 | +4.8% | -1.8% | 55% | 38% | +0.11 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -224,6 +226,7 @@ _Data to 21 Oct 13:20 UK; off-page grad, instant ones left out. Built by reports
   - **Time of day (1.5 days, caution):** 04–07 UK +19.4% (22), 12–15 +20.5% (17); 20–03 UK negative on 12 legs.
   - **Proposal:** (a) keep the 3-min rule to the agreed 40 forward rows (17 now), **(b) add the 40% trail as a second shadow leg on the same coins at 0.25** so both exits get real fills side by side (the paper comparison is now at P 0.044; real stops fill 8% under paper and the trail stops more often), (c) record the bundle-launch flag on every GR row and re-check the bundle/other split at 60 forward legs — if it holds, GR's rule becomes "thin graduation of a bundle launch" (the same coin type as BL, bought later). No change to the live/shadow mode.
 - 21 Oct 16:50 UK (data to 16:25 UK; scratchpad gr2.py) — **GR2 candidate = GR's rule on bundle-launch coins only** (70–80% bundle over 4–10 wallets), tested on all 112 every-graduation rows under the rule (108 with launch facts): 3-min: bundle 57 at +18.5% (won 75%, no-top3 +8.3%, thirds +9.8 / +4.6 / +40.9) vs other 51 at +25.6% (won 59%, no-top3 −0.5%, thirds +80.2 / +3.8 / −7.1 — the first third is early big coins; the recent two-thirds of "other" make nothing); **trail: bundle 57 at +47.8% (no-best +40.0%, no-top3 +25.3%, won 46%, median −7.4%, thirds −0.2 / +40.8 / +102.8, last 24 h 28 at +82%, ~23 a day, +2.68 SOL/day at 0.25) vs other 51 at +12.1% (no-top3 −3.4%); gap +35.7 pts, permutation p 0.059.** Half-at-2x-then-trail: +26.9% vs +11.1% (p 0.19). Same coins as BL: 49 of the 57 are BL trades; bought at 4 s (BL, curve costs) the trail makes +95.7% (won 61%) vs +54.3% (won 45%) bought at graduation — GR better on 2 of 49, so GR2 is the later, safer, smaller version of the same trade (fills proven on 83 legs; BL's not yet). 58 of 107 BL coins never reach GR's rule. Verdict: not luck-proof (p 0.06, one factor family); strong enough for a paper box + shadow leg, not for a rule change.
+- 21 Oct 18:00 UK (4-hour study; data to 17:06 UK): Forward 19 rows (09:55–16:33 UK) grouped. Successes: 9 winners, 4 big (Ricechi +190%, KIMCHINU +159%, Kimchi Phil +101%, Speed of Light +79%); medians bundle 70% over 6 wallets, graduated at 77 s, 1.12x at 10 s, 1.27x at 60 s. Failures: 6 stopped (EMBER −59%, Kimchi Final Boss −54%, GONE −95%, The Genesis Block −51%, Super Finu −52%, Sol Cat −51%) — at 60 s they were at 0.27x: one-transaction dumps that no exit catches; 4 small losers, 3 of them cut by the 10-s rule at −11% to −28% (zonki, The Last Agency — which then peaked 17.5x — and The Kimchi Collection) and Super Finu bought twice (15:10 stop, 15:11 −33.5%). Exits paired on the 19: 3-min +9.4%, 5-min +6.2%, split +23.0%, trail +39.6%, 2x/−40% −5.1%; without the top 3 every one is −17% to −25%. Shadow since 09:47: stops 6 legs −55.2% (model −60.2%), 10-s 3 at −11.4%, floors 5 at +33.6%, 3-min runners 4 at +107%. Entry gap by leg: 0.7–1.5% on 6 legs, 6–20% on 11 (EMBER +19.5%, KIMCHINU +18.8%, Kimchi Phil +18.6%, The Kimchi Collection +17.7%), zonki −30% (paper print stale).
 
 ## Notable coins
 - Skibbin (21 Oct 07:05 UK) +245% real, The Last Dip (06:29) +205% real, Netflix & Chills (04:22) +95% — 52–74 buyers each.
@@ -284,3 +287,4 @@ _Data to 21 Oct 13:20 UK; off-page grad, instant ones left out. Built by reports
 - **Next decision and its trigger:** whether to stop GR's shadow leg or test the $41.5K / trailing variants forward. Re-judge them on 20+ forward trades each from when they are added; never on the rows they were found on.
 - PROPOSAL (21 Oct 16:40 UK (data to 16:25 UK; scratchpad gr_deep2.py / gr_deep3.py)): add the 40% trail as a second executor shadow leg (`grad` tsl40) at 0.25 on the same coins; record the bundle-launch flag on GR rows; re-judge exit and bundle split at 40 / 60 forward rows. Awaiting the owner's go.
 - 21 Oct 17:00 UK: the 16:40 proposal (trail shadow leg + bundle flag) is DONE as GR2. Open: at 40 GR2 legs, compare GR (3-min, all coins), GR2 (trail, bundle coins) and BL (trail, 4-s entry) on real fills and keep at most two.
+- 21 Oct 18:00 UK (4-hour study; data to 17:06 UK): GR2 has 0 legs (started 17:00 UK). First read at the next study; judge at 40 legs with BL as agreed at 17:00 UK. Watch the 0.25-SOL entry gap on bundle-launch graduations (+9.4% median since 09:47) — it is GR2's entry too.

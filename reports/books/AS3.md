@@ -8,6 +8,8 @@ _Notes last rebuilt: 21 Oct 2026 01:35 UK._
 - Started 21 Oct 01:30 UK (`CHG_AS2`). Everything before is a back-test of a rule chosen by looking at those trades.
 
 ## Verdict now
+**21 Oct 18:00 UK (4-hour study; data to 17:06 UK):** KEEP, judge at 30 forward (13 now). Forward 13 at +10.4% (no-best +6.2%, no-top3 −1.2%, won 77%, stopped 15%) vs back-test 35 at +29.7%; the 22 AS trades since 01:30 with under 5 bundle wallets are at about +2% (no-best negative), so the split still points the right way but the forward gap is 8 points on 13 vs 22 trades — inside noise. The pre-registered exit check: 7 of 13 forward coins reached 2x (54%; break-even for the fixed 2x sale 37%); x_t2s40 on the same 13 is +36.4% (no-top3 +21.2%, won 69%) against the runner's +10.4% — the runner sold Chi, Nodrel, MEME, Larry The Cat and Valley of Juárez at 1.2–1.4x after peaks of 2.1–6.9x. Still 13 trades and the same in-sample warning as at 11:10 UK; decide at 30.
+
 **21 Oct 11:10 UK:** KEEP, runner exit, judge at 30 forward trades. 7 forward trades since 01:30 UK at +22.3% (6 won); the 2 AS trades with smaller bundles in the same window lost −36% between them. The 2x-or-−40% exit (x_t2s40) that revise.py keeps picking ties the runner on the 42 (+0.6 points, range −19 to +18) and only wins on the 7 forward trades; it is recorded on every row, so it needs no box — judge it at 30 by the share of coins reaching 2x (57% so far; it breaks even at 37%). No age filter.
 
 **21 Oct 02:30 UK:** Fewest trades, biggest win per trade of the running books; unproven.
@@ -16,16 +18,16 @@ Not yet tested. Fits the owner's "fewer trades, bigger profit each" side: keeps 
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 13:20 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
+_Data to 21 Oct 17:06 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 22:46 UK) | 43 | +28.0% | +22.1% | 74% | 19% | +1.16 |
+| all (from 18 Oct 22:46 UK) | 48 | +24.5% | +19.1% | 73% | 19% | +1.13 |
 | before the change (21 Oct 01:30 UK) — back-test | 35 | +29.7% | +22.5% | 71% | 20% | +1.01 |
-| since the change — the real test | 8 | +20.5% | +14.7% | 88% | 12% | +0.16 |
-| last 24 h | 15 | +29.0% | +21.6% | 87% | 7% | +0.42 |
-| last 12 h | 8 | +20.5% | +14.7% | 88% | 12% | +0.16 |
-| last 6 h | 4 | +32.6% | +23.1% | 100% | 0% | +0.13 |
+| since the change — the real test | 13 | +10.4% | +6.2% | 77% | 15% | +0.12 |
+| last 24 h | 19 | +20.4% | +14.1% | 79% | 11% | +0.37 |
+| last 12 h | 10 | +15.6% | +10.5% | 80% | 10% | +0.15 |
+| last 6 h | 6 | -3.4% | -9.0% | 67% | 17% | -0.03 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -45,6 +47,7 @@ _Data to 21 Oct 13:20 UK; AS + launch bundle 5+ wallets. Built by reports/books/
   - Exit verdict — the x_t2s40 question: on the 42, x_t2s40 (sell everything at 2x, or at −40% from entry) is +29.1% (no-best +27.7%) vs the runner's +28.5% (no-best +22.4%) — paired difference +0.6 points (95% range −19 to +18), better on 17, same on 11, worse on 14: a tie. Its better "no-best" is an artefact: it caps Spidey Show (+276.6% on the runner) at 2x, so removing the best trade costs it less. Thirds +7.4 / +30.9 / +49.0 against the runner's +24.0 / +31.0 / +30.5. Where it wins: the 7 forward trades (+60.4% vs +22.3%) — the runner sold Chi, Nodrel and MEME at 1.2–1.3x on a volume fade after peaks of 2.1x, 2.1x and 6.9x, where x_t2s40 took 2x on each (and King Of Larp: peak 2.84x, runner +9.0%). Where it loses: every other coin set — AS −2.4 points, AS2 −3.2, AS minus AS3 −5.0, A −0.7 — so choosing it for AS3 alone would be exactly the in-sample exit choice the brief warns against. 57% of AS3 coins reached 2x (AS 40%, A 30%; the fixed 2x sale breaks even at 37%). Verdict: no variant line now. x_t2s40 is recorded on every row, so it needs no box: judge at 30 forward trades, and the stat to watch is the forward share reaching 2x — if it stays above about 45%, the fixed 2x sale beats the runner on these coins and can be proposed then.
   - Factor / pair verdict: 1,162 filters × 12 exits + 140 pairs; 209 pass the three-period test, **0 are unlikely to be luck** (shuffles reach +53% to +87%). revise.py's own pick, coin under 68 min old / x_t2s40 n31 +40.8% luck 20: on the runner, AS3 coins over 68 min old are 11 at +5.1% (no-best +0.1%) and under 68 min 31 at +36.8% (no-best +28.8%). Old coins that suddenly print 30 SOL in a minute are the fade-and-stop group — plausible, luck 20, and the age threshold has moved at every analysis (5 min, 6 min, now 68 min): watch, not a rule.
   - Proposed: KEEP, runner exit, no exit change, no age filter; judge at 30 forward trades (about 2 days at 17 a day), comparing with AS on the same coins and tracking the forward 2x rate.
+- 21 Oct 18:00 UK (4-hour study; data to 17:06 UK): Forward 13 grouped: 10 winners (Banana Cat +60.9%, Clout +53.7%, Larry The Cat +33.1%, MEME +28.2%, Datacenter 16:42 +24.7%…), 2 stopped (buyoutSH 78 min old / 54 SOL sold; Datacenter 13:37, 11 wallets, 47 SOL sold — both had 2.6 SOL creator buys and 85 wallets in the minute), 1 small loser (Alpenglow −20.8%). The stopped pair repeat the 11:10 UK loser profile (older coin, heavy first-minute selling, big creator buy).
 
 ## Notable coins
 - None yet in the real test.

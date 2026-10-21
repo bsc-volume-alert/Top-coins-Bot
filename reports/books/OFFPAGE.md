@@ -17,25 +17,25 @@ Names that clash:
 
 ## Latest numbers, all off-page books
 <!-- NUMBERS -->
-_Data to 21 Oct 13:20 UK._
+_Data to 21 Oct 17:06 UK._
 
-- **early** (x_flow4): all 6781 at -34.2%; last 12 h 469 at -40.5%
-- **wave2** (x_flow4): all 924 at -12.1%; last 12 h 125 at -21.0%
+- **early** (x_flow4): all 7069 at -34.2%; last 12 h 459 at -37.9%
+- **wave2** (x_flow4): all 939 at -11.8%; last 12 h 108 at -17.6%
 - **copy** (x_flow4): all 664 at -12.6%; last 12 h 0 at +0.0%
-- **mom60** (x_flow4): all 689 at -12.3%; last 12 h 99 at -6.8%
-- **momfast** (x_flow4): all 533 at -12.4%; last 12 h 72 at -6.4%
-- **mom80** (x_flow4): all 499 at -12.1%; last 12 h 66 at -12.6%
-- **momentum** (x_flow4): all 379 at -9.8%; last 12 h 54 at -6.5%
-- **momconf** (x_flow4): all 81 at -5.3%; last 12 h 12 at +24.9%
-- **momdip** (x_flow4): all 102 at -8.4%; last 12 h 12 at -26.2%
-- **momre** (x_flow4): all 210 at -16.3%; last 12 h 36 at +12.8%
-- **gradrec** (x_flow4): all 507 at -21.0%; last 12 h 83 at -24.7%
-- **gradrun** (x_flow4): all 309 at -8.6%; last 12 h 48 at -1.9%
-- **revival** (x_flow4): all 197 at -13.7%; last 12 h 42 at -14.7%
-- **slow** (x_flow4): all 124 at -14.2%; last 12 h 25 at -25.9%
-- **climber** (x_flow4): all 28 at -14.8%; last 12 h 6 at -21.4%
-- **secondwave** (x_flow4): all 8 at -44.7%; last 12 h 1 at -30.8%
-- **confirm** (x_tsl40): all 1053 at -18.7%; last 12 h 155 at -21.4%
+- **mom60** (x_flow4): all 721 at -11.8%; last 12 h 84 at -3.2%
+- **momfast** (x_flow4): all 536 at -11.9%; last 12 h 41 at -3.5%
+- **mom80** (x_flow4): all 524 at -11.3%; last 12 h 60 at -2.7%
+- **momentum** (x_flow4): all 392 at -10.2%; last 12 h 41 at -4.0%
+- **momconf** (x_flow4): all 80 at -5.7%; last 12 h 7 at +21.9%
+- **momdip** (x_flow4): all 102 at -8.4%; last 12 h 6 at -7.9%
+- **momre** (x_flow4): all 209 at -16.1%; last 12 h 27 at +12.8%
+- **gradrec** (x_flow4): all 504 at -21.1%; last 12 h 43 at -35.5%
+- **gradrun** (x_flow4): all 312 at -8.3%; last 12 h 25 at +3.7%
+- **revival** (x_flow4): all 197 at -13.7%; last 12 h 31 at -12.3%
+- **slow** (x_flow4): all 125 at -15.2%; last 12 h 16 at -33.3%
+- **climber** (x_flow4): all 26 at -14.0%; last 12 h 1 at -51.3%
+- **secondwave** (x_flow4): all 8 at -44.7%; last 12 h 0 at +0.0%
+- **confirm** (x_tsl40): all 1065 at -18.4%; last 12 h 123 at -22.0%
 - **p6** (x_h5): all 0 at +0.0%; last 12 h 0 at +0.0%
 <!-- /NUMBERS -->
 - 21 Oct 14:15 UK — v0.18.176: all 15 old off-page books stopped opening positions (config OFF_KINDS; env OFFPAGE_BOOKS=1 re-enables). Core momentum trigger (E's rows) keeps recording; mom60/mom80 and copycreator keep recording. Open positions closed normally.
