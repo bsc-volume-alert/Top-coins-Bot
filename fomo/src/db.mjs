@@ -41,6 +41,8 @@ CREATE INDEX IF NOT EXISTS ff_ts ON ff(ts);
 CREATE TABLE IF NOT EXISTS buyers_seen (mint TEXT, wallet TEXT, ts INTEGER, PRIMARY KEY (mint, wallet)); -- unique fomo buyers per coin (from decoded transactions)
 CREATE INDEX IF NOT EXISTS bs_ts ON buyers_seen(ts);
 `);
+// FF exits (22 Oct): scored on the 30-s marker — x_t2s40 = first touch of 2x or −40% (value = the multiple sold at), x_t15s40 = 1.5x or −40%, trough = lowest multiple seen
+for (const col of ["x_t2s40 REAL", "x_t15s40 REAL", "trough REAL DEFAULT 1"]) { try { db.exec(`ALTER TABLE ff ADD COLUMN ${col}`); } catch {} }
 export const q = {
   insFlow: db.prepare(`INSERT INTO flow (sig, slot, ts, mint, side, usd, quote, quote_amt, tokens, venue, pool, wallet, decoded) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`),
   seenSig: db.prepare(`SELECT 1 FROM flow WHERE sig=? LIMIT 1`).pluck(),
@@ -85,8 +87,11 @@ export const q = {
   priceBefore: db.prepare(`SELECT usd FROM prices WHERE mint=? AND ts<=? ORDER BY ts DESC LIMIT 1`).pluck(),
   insFF: db.prepare(`INSERT OR IGNORE INTO ff (mint, win, ts, rank, buyers, buy_usd, net_usd, mc, px, peak) VALUES (?,?,?,?,?,?,?,?,?,1)`),
   ffOpen: db.prepare(`SELECT * FROM ff WHERE px>0 AND (px15 IS NULL OR px60 IS NULL OR px360 IS NULL) AND ts>=?`),
-  updFF: db.prepare(`UPDATE ff SET px15=COALESCE(px15,?), px60=COALESCE(px60,?), px360=COALESCE(px360,?), peak=MAX(peak,?) WHERE id=?`),
-  ffStats: db.prepare(`SELECT win, COUNT(*) n, AVG(px15/px) m15, AVG(px60/px) m60, AVG(px360/px) m360, AVG(peak) peak, SUM(CASE WHEN peak>=1.5 THEN 1 ELSE 0 END) hit15, SUM(CASE WHEN px60/px<=0.6 THEN 1 ELSE 0 END) dead60 FROM ff WHERE px>0 AND px60 IS NOT NULL GROUP BY win`),
+  updFF: db.prepare(`UPDATE ff SET px15=COALESCE(px15,?), px60=COALESCE(px60,?), px360=COALESCE(px360,?), peak=MAX(peak,?), trough=MIN(COALESCE(trough,1),?), x_t2s40=COALESCE(x_t2s40,?), x_t15s40=COALESCE(x_t15s40,?) WHERE id=?`),
+  ffStats: db.prepare(`SELECT win, COUNT(*) n, AVG(px15/px) m15, AVG(px60/px) m60, AVG(px360/px) m360, AVG(peak) peak, SUM(CASE WHEN peak>=1.5 THEN 1 ELSE 0 END) hit15, SUM(CASE WHEN px60/px<=0.6 THEN 1 ELSE 0 END) dead60,
+    SUM(CASE WHEN x_t2s40 IS NOT NULL THEN 1 ELSE 0 END) n2, SUM(CASE WHEN x_t2s40>=2 THEN 1 ELSE 0 END) won2, AVG(x_t2s40) m2, SUM(CASE WHEN x_t15s40 IS NOT NULL THEN 1 ELSE 0 END) n15x, SUM(CASE WHEN x_t15s40>=1.5 THEN 1 ELSE 0 END) won15x, AVG(x_t15s40) m15x
+    FROM ff WHERE px>0 AND px60 IS NOT NULL GROUP BY win`),
+  ffCsv: db.prepare(`SELECT f.id, f.mint, c.symbol, f.win, f.ts, f.rank, f.buyers, f.buy_usd, f.net_usd, f.mc, f.px, f.px15, f.px60, f.px360, f.peak, f.trough, f.x_t2s40, f.x_t15s40 FROM ff f LEFT JOIN coins c ON c.mint=f.mint ORDER BY f.ts`),
   feedMints: db.prepare(`SELECT DISTINCT mint FROM wallet_trades WHERE ts>=? UNION SELECT DISTINCT mint FROM trades WHERE closed=0`).pluck(),
   insPrice: db.prepare(`INSERT OR IGNORE INTO prices (mint, ts, usd) VALUES (?,?,?)`),
   priceAt: db.prepare(`SELECT ts, usd FROM prices WHERE mint=? AND ts>=? ORDER BY ts LIMIT 1`),
