@@ -44,6 +44,8 @@ function step(row, px, ts) {
   if (row.x_t3s40 == null) { if (mult >= 3) { row.x_t3s40 = 3; ch = true; } else if (low <= 0.6) { row.x_t3s40 = mult; ch = true; } if (row.x_t3s40 != null) { try { q.setX3.run(row.x_t3s40, row.id); } catch {} } }
   if (row.x_t2s40 == null) { if (mult >= 2) { row.x_t2s40 = 2; ch = true; } else if (low <= 0.6) { row.x_t2s40 = mult; ch = true; } if (row.x_t2s40 != null) { try { q.setX2.run(row.x_t2s40, row.id); } catch {} } }
   if (since >= CFG.MAX_HOLD_S) { for (const k of ["x_h5", "x_tsl40", "x_t15s40", "x_copy", "x_time"]) if (row[k] == null) row[k] = mult; if (row.x_t2s40 == null) { row.x_t2s40 = mult; try { q.setX2.run(mult, row.id); } catch {} } if (row.x_t3s40 == null) { row.x_t3s40 = mult; try { q.setX3.run(mult, row.id); } catch {} } for (const k of ["x_t13s40", "x_t18s40"]) if (row[k] == null) { row[k] = mult; try { q.setTP[k].run(mult, row.id); } catch {} } if (!row.x_tsl40_at) { row.x_tsl40_at = ts; try { q.setTslAt.run(ts, row.id); } catch {} } row.exit_reason = "time"; ch = true; }
+  const bk = isBook(row.wallet) ? BOOKS.find((b) => b.name === row.wallet) : null;
+  if (bk?.exit && row.x_book == null) { const lvl = Math.max(1 - bk.exit.stop, row.peak * (1 - bk.exit.trail)); if (low <= lvl || since >= CFG.MAX_HOLD_S) { row.x_book = mult; row.x_book_at = ts; row.exit_reason ||= since >= CFG.MAX_HOLD_S ? "time" : row.peak * (1 - bk.exit.trail) > 1 - bk.exit.stop ? "trail" : "stop"; try { q.setBookExit.run(mult, ts, row.id); } catch {} ch = true; } }
   if (row.x_fade == null && isBook(row.wallet) && low <= 0.6) { row.x_fade = mult; try { q.setFade.run(mult, row.id); } catch {} ch = true; }
   if (since >= CFG.MAX_HOLD_S && row.x_fade == null && isBook(row.wallet)) { row.x_fade = mult; try { q.setFade.run(mult, row.id); } catch {} }
   if (isBook(row.wallet)) ff2Watch(row, mult, ts);
@@ -79,6 +81,11 @@ import { solUsd } from "./price.mjs";
 import { send } from "./telegram.mjs";
 export const ff2 = { checks: 0, opened: 0, closed: 0, last: null, lastReason: "" };
 const BOOKS = [
+  // 22 Oct 20:30 UK (owner go): the grid's exit — stop −10%, trail 20% from the peak — on the clean entry (first entry per coin, under 1.5x of the window start)
+  { name: "FF6", win: "5m", secs: 300, NET_MIN: 1000, X_MAX: 1.5, AGE_MAX: Infinity, MC_MIN: 15000, COOLDOWN_S: 86400, exit: { stop: 0.1, trail: 0.2 }, label: "clean entry · stop −10% · trail 20%" },
+  { name: "FF6b", win: "5m", secs: 300, NET_MIN: 1000, X_MAX: 1.5, AGE_MAX: Infinity, MC_MIN: 15000, COOLDOWN_S: 86400, exit: { stop: 0.2, trail: 0.2 }, label: "clean entry · stop −20% · trail 20%" },
+  // really early: below the lists — first 8 fomo buyers within 3 min of the coin's first fomo buy, net > 0, under 1.3x of the first fill
+  { name: "FF7", early: true, secs: 180, BUYERS_MIN: 8, NET_MIN: 1, X_MAX: 1.3, AGE_MAX: 180, MC_MIN: 10000, MC_MAX: 500000, COOLDOWN_S: 86400, exit: { stop: 0.1, trail: 0.2 }, label: "really early · first 8 fomo buyers in 3 min · stop −10% · trail 20%" },
   { name: "FF5", win: "5m", secs: 300, NET_MIN: Number(process.env.FF5_NET_MIN || 2000), X_MAX: Infinity, AGE_MAX: Infinity, label: "the 5-minute list" },
   { name: "FF2", win: "15m", secs: 900, NET_MIN: Number(process.env.FF2_NET_MIN || 3000), X_MAX: Infinity, AGE_MAX: Infinity, label: "the 15-minute list" },
   // early variants (owner, 22 Oct 14:55 UK): lower net bar, price no more than 1.3x the window start, first fomo buy within 10 min
@@ -88,23 +95,25 @@ const BOOKS = [
 const FF2 = { MC_MAX: Number(process.env.FF2_MC_MAX || 1e6), STAKE_SOL: Number(process.env.FF2_STAKE || 0.1), COOLDOWN_S: 6 * 3600, RANKS: [2, 3, 4, 5] };
 const isBook = (w) => BOOKS.some((b) => b.name === w);
 function ff2Watch(row, mult, ts) {
-  if (row.x_tsl40 != null && !row._ff2Told) { row._ff2Told = true; ff2.closed++; const r = realCost(row.x_tsl40); send(`${row.wallet} <b>${row.exit_reason === "time" ? "time out" : "trail exit"}</b> ${row.symbol || row.mint.slice(0, 6)} at ${row.x_tsl40.toFixed(2)}x · ${(r * 100).toFixed(0)}% at real costs · peak ${row.peak.toFixed(2)}x · held ${Math.round((ts - row.entry_ts) / 60)} min`).catch(() => {}); }
+  const bk = BOOKS.find((b) => b.name === row.wallet); const k = bk?.exit ? "x_book" : "x_tsl40";
+  if (row[k] != null && !row._ff2Told) { row._ff2Told = true; ff2.closed++; const r = realCost(row[k]); send(`${row.wallet} <b>${row.exit_reason === "time" ? "time out" : row.exit_reason || "exit"}</b> ${row.symbol || row.mint.slice(0, 6)} at ${row[k].toFixed(2)}x · ${(r * 100).toFixed(0)}% at real costs · peak ${row.peak.toFixed(2)}x · held ${Math.round((ts - row.entry_ts) / 60)} min`).catch(() => {}); return; }
+  if (false) { row._ff2Told = true; ff2.closed++; const r = realCost(row.x_tsl40); send(`${row.wallet} <b>${row.exit_reason === "time" ? "time out" : "trail exit"}</b> ${row.symbol || row.mint.slice(0, 6)} at ${row.x_tsl40.toFixed(2)}x · ${(r * 100).toFixed(0)}% at real costs · peak ${row.peak.toFixed(2)}x · held ${Math.round((ts - row.entry_ts) / 60)} min`).catch(() => {}); }
 }
 setInterval(() => {
   try {
     const now = nowS(); ff2.checks++; const reasons = [];
     for (const b of BOOKS) {
-      const rows = q.hot.all(now - b.secs, 5);
-      try { logHot(b.win, rows, now); } catch {}
+      const rows = b.early ? q.early.all(now - b.secs, now - b.secs, b.BUYERS_MIN) : q.hot.all(now - b.secs, 5);
+      if (!b.early && b.win) try { logHot(b.win, rows, now); } catch {}
       rows.forEach((r, i) => {
-        const rank = i + 1; if (!FF2.RANKS.includes(rank)) return;
+        const rank = i + 1; if (!b.early && !FF2.RANKS.includes(rank)) return;
         const net = (r.buy_usd || 0) - (r.sell_usd || 0); if (net < b.NET_MIN) return;
-        const c = q.coin.get(r.mint); const sym = c?.symbol || r.mint.slice(0, 6); const mc = c?.mc_usd; if (!(mc > 0) || mc >= FF2.MC_MAX) { reasons.push(`${b.name} ${sym}: mc ${mc ? "$" + Math.round(mc / 1e3) + "K" : "unknown"}`); return; }
+        const c = q.coin.get(r.mint); const sym = c?.symbol || r.mint.slice(0, 6); const mc = c?.mc_usd; if (!(mc > 0) || mc >= (b.MC_MAX || FF2.MC_MAX) || mc < (b.MC_MIN || 0)) { reasons.push(`${b.name} ${sym}: mc ${mc ? "$" + Math.round(mc / 1e3) + "K" : "unknown"}`); return; }
         const px = _lp(r.mint)?.usd; if (!(px > 0)) { wantPrice(r.mint, 1800); reasons.push(`${b.name} ${sym}: no price yet`); return; }
         const before = q.priceBefore.get(r.mint, now - b.secs) || q.firstBuyPx.get(r.mint, now - b.secs); if (!(before > 0) || px <= before) { reasons.push(`${b.name} ${sym}: not running (${before > 0 ? (px / before).toFixed(2) + "x" : "no start price"})`); return; }
         const xstart = px / before; if (xstart > b.X_MAX) { reasons.push(`${b.name} ${sym}: already ${xstart.toFixed(2)}x`); return; }
         const age = now - (r.first_ts || now); if (age > b.AGE_MAX) { reasons.push(`${b.name} ${sym}: first fomo buy ${Math.round(age / 60)} min ago`); return; }
-        if (q.ffRecent.get(b.name, r.mint, now - FF2.COOLDOWN_S)) return;
+        if (q.ffRecent.get(b.name, r.mint, now - (b.COOLDOWN_S || FF2.COOLDOWN_S))) return;
         const usd = FF2.STAKE_SOL * (solUsd() || 0);
         const row = openTrade({ wallet: b.name, handle: b.name, mint: r.mint, symbol: c?.symbol || null, sig: `${b.name.toLowerCase()}-${now}-${r.mint.slice(0, 8)}`, ts: now, px, usd, mc });
         if (!row) return; ff2.opened++; ff2.last = now; reasons.push(`${b.name} opened ${sym}`);
@@ -123,12 +132,12 @@ export function ff2Status() {
   const rec = (arr, k) => { const done = arr.filter((r) => r[k] != null); return { n: done.length, won: done.filter((r) => r[k] > 1).length, ret: done.length ? sum(done, (r) => realCost(r[k])) / done.length : null, sol: sum(done, (r) => realCost(r[k]) * FF2.STAKE_SOL) }; };
   const since = (rows, k, t) => rec(rows.filter((r) => r.entry_ts >= t), k);
   // P&L of the book = sold trades at their exit + open trades at the current price (both at real costs, in SOL at the paper stake)
-  const pnl = (rows, t) => { const rs = rows.filter((r) => r.entry_ts >= t); let sold = 0, open = 0, n = 0, no = 0, won = 0; for (const r of rs) { if (r.x_tsl40 != null) { sold += realCost(r.x_tsl40) * FF2.STAKE_SOL; n++; if (r.x_tsl40 > 1) won++; } else if (r.last_px > 0) { open += realCost(r.last_px / r.entry_px) * FF2.STAKE_SOL; no++; } } return { sol: sold + open, sold, open, n, no, won }; };
+  const pnl = (rows, t, K = "x_tsl40") => { const rs = rows.filter((r) => r.entry_ts >= t); let sold = 0, open = 0, n = 0, no = 0, won = 0; for (const r of rs) { if (r[K] != null) { sold += realCost(r[K]) * FF2.STAKE_SOL; n++; if (r[K] > 1) won++; } else if (r.last_px > 0) { open += realCost(r.last_px / r.entry_px) * FF2.STAKE_SOL; no++; } } return { sol: sold + open, sold, open, n, no, won }; };
   const books = BOOKS.map((b) => {
-    const rows = q.ff2Rows.all(b.name); const open = rows.filter((r) => r.x_tsl40 == null), closed = rows.filter((r) => r.x_tsl40 != null);
-    const exits = [["x_tsl40", "trail 40% (the book)"], ["x_fade", "sell when fomo buying fades (2-min net ≤ 0)"], ["x_t13s40", "sell at 1.3x"], ["x_t15s40", "sell at 1.5x"], ["x_t18s40", "sell at 1.8x"], ["x_t2s40", "sell at 2x"], ["x_t3s40", "sell at 3x"], ["x_h5", "sell at 5 min"]].map(([k, label]) => ({ k, label, h1: since(rows, k, now - 3600), h4: since(rows, k, now - 4 * 3600), today: since(rows, k, dayStart), all: rec(rows, k) }));
-    const p = { h1: pnl(rows, now - 3600), h4: pnl(rows, now - 4 * 3600), today: pnl(rows, dayStart), all: pnl(rows, 0) };
-    return { name: b.name, win: b.win, net_min: b.NET_MIN, pnl: p, label: b.label, rule: `${b.win} list, positions 2–5 · fomo net buying ≥ $${b.NET_MIN.toLocaleString()} in the window · MC < $${FF2.MC_MAX / 1e6}M · price above the window start${b.X_MAX < Infinity ? ` but under ${b.X_MAX}x of it` : ""}${b.AGE_MAX < Infinity ? ` · first fomo buy within ${b.AGE_MAX / 60} min` : ""} · ${FF2.STAKE_SOL} SOL paper at the live price · sell 40% below the peak, or at 6 h · one entry per coin per 6 h`, started: rows.length ? rows[rows.length - 1].entry_ts : null, open: open.map((r) => ({ ...r, mult: r.last_px && r.entry_px ? r.last_px / r.entry_px : null, sell_px: r.entry_px * r.peak * 0.6, sell_by: r.entry_ts + CFG.MAX_HOLD_S })), closed: closed.slice(0, 40), exits };
+    const rows = q.ff2Rows.all(b.name); const K = b.exit ? "x_book" : "x_tsl40"; const open = rows.filter((r) => r[K] == null), closed = rows.filter((r) => r[K] != null);
+    const exits = [...(b.exit ? [["x_book", `stop −${b.exit.stop * 100}% · trail ${b.exit.trail * 100}% (the book)`], ["x_tsl40", "trail 40%"]] : [["x_tsl40", "trail 40% (the book)"]]), ["x_fade", "sell when fomo buying fades (2-min net ≤ 0)"], ["x_t13s40", "sell at 1.3x"], ["x_t15s40", "sell at 1.5x"], ["x_t18s40", "sell at 1.8x"], ["x_t2s40", "sell at 2x"], ["x_t3s40", "sell at 3x"], ["x_h5", "sell at 5 min"]].map(([k, label]) => ({ k, label, h1: since(rows, k, now - 3600), h4: since(rows, k, now - 4 * 3600), today: since(rows, k, dayStart), all: rec(rows, k) }));
+    const p = { h1: pnl(rows, now - 3600, K), h4: pnl(rows, now - 4 * 3600, K), today: pnl(rows, dayStart, K), all: pnl(rows, 0, K) };
+    return { name: b.name, win: b.win, net_min: b.NET_MIN, pnl: p, label: b.label, exitKey: K, rule: (b.early ? `brand-new on fomo: ≥ ${b.BUYERS_MIN} fomo buyers within ${b.secs / 60} min of its first fomo buy · net buying > 0 · under ${b.X_MAX}x of the first fill · MC $${b.MC_MIN / 1e3}K–$${b.MC_MAX / 1e3}K` : `${b.win} list, positions 2–5 · fomo net buying ≥ $${b.NET_MIN.toLocaleString()} in the window · MC ${b.MC_MIN ? "$" + b.MC_MIN / 1e3 + "K–" : "< "}$${FF2.MC_MAX / 1e6}M · price above the window start${b.X_MAX < Infinity ? ` but under ${b.X_MAX}x of it` : ""}${b.AGE_MAX < Infinity ? ` · first fomo buy within ${b.AGE_MAX / 60} min` : ""}`) + (b.COOLDOWN_S >= 86400 ? " · first entry per coin only" : "") + ` · ${FF2.STAKE_SOL} SOL paper at the live price · ${b.exit ? `stop −${b.exit.stop * 100}%, trailing stop ${b.exit.trail * 100}% below the peak` : "sell 40% below the peak"}, or at 6 h${b.COOLDOWN_S >= 86400 ? "" : " · one entry per coin per 6 h"}`, started: rows.length ? rows[rows.length - 1].entry_ts : null, open: open.map((r) => ({ ...r, mult: r.last_px && r.entry_px ? r.last_px / r.entry_px : null, sell_px: r.entry_px * (b.exit ? Math.max(1 - b.exit.stop, r.peak * (1 - b.exit.trail)) : r.peak * 0.6), sell_by: r.entry_ts + CFG.MAX_HOLD_S })), closed: closed.slice(0, 40), exits };
   });
   const total = (k) => books.reduce((a, b) => ({ sol: a.sol + b.pnl[k].sol, sold: a.sold + b.pnl[k].sold, open: a.open + b.pnl[k].open, n: a.n + b.pnl[k].n, no: a.no + b.pnl[k].no, won: a.won + b.pnl[k].won }), { sol: 0, sold: 0, open: 0, n: 0, no: 0, won: 0 });
   return { books, total: { h1: total("h1"), h4: total("h4"), today: total("today"), all: total("all") }, checks: ff2.checks, lastReason: ff2.lastReason, stake: FF2.STAKE_SOL, sol_usd: solUsd(), held: books.flatMap((b) => b.open.map((t) => ({ book: b.name, mint: t.mint }))) };

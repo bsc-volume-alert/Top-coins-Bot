@@ -48,7 +48,7 @@ try { db.exec(`ALTER TABLE trades ADD COLUMN x_tsl40_at INTEGER`); } catch {}
 try { db.exec(`ALTER TABLE trades ADD COLUMN x_t3s40 REAL`); } catch {} // 3x-or-−40% exit
 for (const col of ["x_t13s40", "x_t18s40"]) { try { db.exec(`ALTER TABLE trades ADD COLUMN ${col} REAL`); } catch {} } // 1.3x / 1.8x take-profits (owner, 22 Oct 14:08 UK)
 // entry stamps (22 Oct 15:00 UK): price vs window start, fomo net $ and buyers in the window, minutes since the first fomo buy, rank — and x_fade = sold when fomo buying faded (2-min net ≤ 0 after entry), −40% stop
-for (const col of ["e_xstart REAL", "e_net REAL", "e_buyers INTEGER", "e_age_s INTEGER", "e_rank INTEGER", "x_fade REAL", "trough REAL DEFAULT 1", "low_before_peak REAL DEFAULT 1"]) { try { db.exec(`ALTER TABLE trades ADD COLUMN ${col}`); } catch {} } // when the trail exit fired (FF2 card) // 2x-or-−40% exit, scored on every trade (FF2 book, 22 Oct)
+for (const col of ["e_xstart REAL", "e_net REAL", "e_buyers INTEGER", "e_age_s INTEGER", "e_rank INTEGER", "x_fade REAL", "trough REAL DEFAULT 1", "low_before_peak REAL DEFAULT 1", "x_book REAL", "x_book_at INTEGER"]) { try { db.exec(`ALTER TABLE trades ADD COLUMN ${col}`); } catch {} } // when the trail exit fired (FF2 card) // 2x-or-−40% exit, scored on every trade (FF2 book, 22 Oct)
 export const q = {
   insFlow: db.prepare(`INSERT INTO flow (sig, slot, ts, mint, side, usd, quote, quote_amt, tokens, venue, pool, wallet, decoded) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`),
   seenSig: db.prepare(`SELECT 1 FROM flow WHERE sig=? LIMIT 1`).pluck(),
@@ -103,6 +103,8 @@ export const q = {
   setX2: db.prepare(`UPDATE trades SET x_t2s40=? WHERE id=?`),
   setX3: db.prepare(`UPDATE trades SET x_t3s40=? WHERE id=?`),
   setEntry: db.prepare(`UPDATE trades SET e_xstart=?, e_net=?, e_buyers=?, e_age_s=?, e_rank=? WHERE id=?`),
+  setBookExit: db.prepare(`UPDATE trades SET x_book=?, x_book_at=? WHERE id=? AND x_book IS NULL`),
+  early: db.prepare(`SELECT f.mint, COUNT(DISTINCT CASE WHEN f.side='buy' AND f.wallet IS NOT NULL THEN f.wallet END) buyers, SUM(CASE WHEN f.side='buy' THEN f.usd ELSE 0 END) buy_usd, SUM(CASE WHEN f.side='sell' THEN f.usd ELSE 0 END) sell_usd, MIN(f.ts) first_ts FROM flow f JOIN coins c ON c.mint=f.mint WHERE f.ts>=? AND c.first_seen>=? GROUP BY f.mint HAVING buyers>=? ORDER BY buyers DESC LIMIT 20`), // coins first seen on the fomo firehose within the window (brand new on fomo) with at least N buyers
   setLows: db.prepare(`UPDATE trades SET trough=?, low_before_peak=? WHERE id=?`),
   setFade: db.prepare(`UPDATE trades SET x_fade=? WHERE id=? AND x_fade IS NULL`),
   net2m: db.prepare(`SELECT COALESCE(SUM(CASE WHEN side='buy' THEN usd ELSE -usd END),0) FROM flow WHERE mint=? AND ts>=?`).pluck(),
