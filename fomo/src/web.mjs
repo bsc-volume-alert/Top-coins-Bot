@@ -30,7 +30,7 @@ function trending(w) {
 function hot(win) {
   const secs = win === "5m" ? 300 : 900, now = nowS();
   const rows = q.hot.all(now - secs, 5);
-  for (const r of rows) { const c = q.coin.get(r.mint); r.symbol = c?.symbol || null; r.name = c?.name || null; r.mc_usd = c?.mc_usd ?? null; r.liq_usd = c?.liq_usd ?? null; const px = lastPx(r.mint)?.usd ?? c?.px_usd ?? null; r.px = px; const before = q.priceBefore.get(r.mint, now - secs); r.change = px && before ? px / before : null; r.net_usd = (r.buy_usd || 0) - (r.sell_usd || 0); r.who = q.whoIn.all(r.mint, now - 6 * 3600); wantPrice(r.mint, 1800); ensureMeta(r.mint, 120).catch(() => {}); }
+  for (const r of rows) { const c = q.coin.get(r.mint); r.symbol = c?.symbol || null; r.name = c?.name || null; r.mc_usd = c?.mc_usd ?? null; r.liq_usd = c?.liq_usd ?? null; const px = lastPx(r.mint)?.usd ?? c?.px_usd ?? null; r.px = px; const before = q.priceBefore.get(r.mint, now - secs) || q.firstBuyPx.get(r.mint, now - secs); r.change = px && before ? px / before : null; r.net_usd = (r.buy_usd || 0) - (r.sell_usd || 0); r.who = q.whoIn.all(r.mint, now - 6 * 3600); wantPrice(r.mint, 1800); ensureMeta(r.mint, 120).catch(() => {}); }
   try { logHot(win, rows, now); } catch (e) { console.error("[hot log]", e.message); }
   return rows;
 }

@@ -94,6 +94,7 @@ export const q = {
     SUM(CASE WHEN x_t2s40 IS NOT NULL THEN 1 ELSE 0 END) n2, SUM(CASE WHEN x_t2s40>=2 THEN 1 ELSE 0 END) won2, AVG(x_t2s40) m2, SUM(CASE WHEN x_t15s40 IS NOT NULL THEN 1 ELSE 0 END) n15x, SUM(CASE WHEN x_t15s40>=1.5 THEN 1 ELSE 0 END) won15x, AVG(x_t15s40) m15x
     FROM ff WHERE px>0 AND px60 IS NOT NULL GROUP BY win`),
   ff2Rows: db.prepare(`SELECT t.*, c.mc_usd mc_now FROM trades t LEFT JOIN coins c ON c.mint=t.mint WHERE t.wallet=? ORDER BY t.entry_ts DESC LIMIT 200`),
+  firstBuyPx: db.prepare(`SELECT usd/tokens FROM flow WHERE mint=? AND ts>=? AND side='buy' AND tokens>0 AND usd>0 ORDER BY ts LIMIT 1`).pluck(), // window-start price for a coin too new to have a price tick (the first fomo fill in the window)
   ffRecent: db.prepare(`SELECT 1 FROM trades WHERE wallet=? AND mint=? AND entry_ts>=? LIMIT 1`).pluck(),
   setX2: db.prepare(`UPDATE trades SET x_t2s40=? WHERE id=?`),
   setTslAt: db.prepare(`UPDATE trades SET x_tsl40_at=? WHERE id=? AND x_tsl40_at IS NULL`),

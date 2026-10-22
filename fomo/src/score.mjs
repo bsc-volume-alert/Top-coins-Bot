@@ -90,7 +90,7 @@ setInterval(() => {
         const net = (r.buy_usd || 0) - (r.sell_usd || 0); if (net < b.NET_MIN) return;
         const c = q.coin.get(r.mint); const sym = c?.symbol || r.mint.slice(0, 6); const mc = c?.mc_usd; if (!(mc > 0) || mc >= FF2.MC_MAX) { reasons.push(`${b.name} ${sym}: mc ${mc ? "$" + Math.round(mc / 1e3) + "K" : "unknown"}`); return; }
         const px = _lp(r.mint)?.usd; if (!(px > 0)) { wantPrice(r.mint, 1800); reasons.push(`${b.name} ${sym}: no price yet`); return; }
-        const before = q.priceBefore.get(r.mint, now - b.secs); if (!(before > 0) || px <= before) { reasons.push(`${b.name} ${sym}: not running (${before > 0 ? (px / before).toFixed(2) + "x" : "no start price"})`); return; }
+        const before = q.priceBefore.get(r.mint, now - b.secs) || q.firstBuyPx.get(r.mint, now - b.secs); if (!(before > 0) || px <= before) { reasons.push(`${b.name} ${sym}: not running (${before > 0 ? (px / before).toFixed(2) + "x" : "no start price"})`); return; }
         if (q.ffRecent.get(b.name, r.mint, now - FF2.COOLDOWN_S)) return;
         const usd = FF2.STAKE_SOL * (solUsd() || 0);
         const row = openTrade({ wallet: b.name, handle: b.name, mint: r.mint, symbol: c?.symbol || null, sig: `${b.name.toLowerCase()}-${now}-${r.mint.slice(0, 8)}`, ts: now, px, usd, mc });
