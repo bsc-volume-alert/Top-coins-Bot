@@ -33,6 +33,8 @@ This file also covers GR's paper variants (gr70, gr85, grlock, grsoc) and the of
 - **Last rule change:** 20 Oct 07:30 UK (v0.18.153): coins must be 10–185 s old at graduation, so instant graduations are skipped.
 
 ## Verdict now
+**22 Oct 05:50 UK (4-hour study; data to 05:04 UK):** 40-ROW CHECKPOINT REACHED (41 rows since 09:47 UK 21 Oct): +4.2% a trade, but −0.5% without its best and −9.4% without its best 3 (median −9.7%, won 49%, stopped 29%; thirds +7 / −9 / +15) vs back-test 57 at +13.6%. The period's 8 rows made +29.8% (6 won of 8, no stops) and one coin, moggersha (04:10 UK, 17.3x peak, +179.8% on the 3-min at the 4x cap), is the whole of the forward profit: without it the 40 rows are −0.5%. On the pre-registered rule (positive without its best 3) the answer is still NO. Trail on the same 41 rows: +36.0% (moggersha again), paired count 19 better / 19 worse / 3 level; each exit without its own best 3: trail −6.3% vs 3-min −9.4% — the trail now leads by 3 points on the letter of the switch rule, on a dead-level paired count, and live trail sells on the same coin type (BL, 6 legs) filled a median 52% under paper tonight. No switch. Bundle split on the 41: bundle-launch 20 at +23.3% (no-top3 −3.7%) vs other 21 at −14.1%; label-shuffle luck 54/2000 with moggersha, 108/2000 without — cannot be told from luck family-wise, and the bundle half is negative without its best 3. Live: 6 legs −0.434 SOL, 1 won (BROZO 03:56 UK, 10-s rule, sold 0.799x vs paper 0.975x, −20.1%); the live book then stopped buying for balance (wallet 0.09 SOL) and the 3 best paper rows of the night (Fishfather, moggersha, NOOX) had no live leg. Shadow since 09:47: 19 legs +0.587 SOL, +1.7 pts above the model (frozen). Recommendation: retire GR, or at most keep it on paper; no live money.
+
 **22 Oct 01:50 UK (4-hour study; data to 01:04 UK):** CHECKPOINT REACHED (30–40 forward rows) — NEGATIVE. 33 rows since 09:47 UK: −2.1% (no-best −8.1%, no-top3 −17.3%, median −13.5%, won 42%, stopped 36%, thirds +3 / 0 / −9) against the 57-row back-test at +13.6%. Trail on the same 33: +17.5% but no-top3 −14.7% vs 3-min −17.3%, better on 15 / worse on 15 — level, no switch (pre-registered rule). Bundle split: bundle-launch 15 at +14.2% (no-top3 −19.7%) vs other 18 at −15.7% — cannot be told from luck. Still LIVE at 0.05 (v0.4.18): 5 live legs −0.424 SOL, 1 won; the 4th (cybercurrency 23:22 UK) was a v0.4.18 local stop that fired at 0.592x after 6.8 s and 129 ticks and sold at 0.246x (−58% below paper, real −78%); the 5th (cybercurrency 23:23, 10-s rule) sold +33% above a stale paper print. Shadow since 09:47: 17 legs +0.766 SOL (frozen in live mode). Recommendation: out of live now; on the pre-registered rule GR is a 'no' at 33 rows — retire, or let the last 7 rows to 40 close on paper only.
 
 **21 Oct 21:30 UK (4-hour study; data to 19:49 UK):** GR WENT LIVE at about 17:45 UK (owner; executor v0.4.10 17:53 UK) before its checkpoints: 3 live legs at 0.25 SOL, −0.399 SOL, 0 won (COSMOPUSSY −65.4%, Openape −47.7%, night coziness −44.5%); the daily stop then halted live buys, and in live mode no shadow legs are recorded, so the `grad` shadow count stays at 18 since 09:47 UK. Live sells filled below paper: stop at 0.346x vs paper 0.548x (−28%), 10-s sell 0.523x vs 0.704x (−21%), one at +8% (sell took 5.7 s); entries +4% to +11% above paper. Paper forward under the 09:47 rule: 25 rows +0.3% (no-best −7.6%, no-top3 −20.1%, median −19.0%, won 44%, stopped 40%) — down from +9.4% on 19 at 17:35 UK after 4 stops in the last 6 rows. Checkpoint 30–40 rows: 25 of 30. Trail on the same 25: +25.8%, no-top3 −17.0% vs 3-min −20.1% — level, no switch. Bundle split narrowed: bundle 14 at +12.0% vs other 11 at −14.5%. GR2 (trail, bundle coins, from 17:00 UK): 4 rows −23.6%, 0 won; `gr2` 3 legs −0.191 SOL, real −25.4% vs model −23.9%, entry +9.5%. Recommendation: back to shadow until the 30-row read and until live stop fills are understood; the live conditions (30 positive shadow legs under the revised rule) were not met.
@@ -52,30 +54,30 @@ This file also covers GR's paper variants (gr70, gr85, grlock, grsoc) and the of
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 22 Oct 01:04 UK; graduation book, 3-min exit. Built by reports/books/numbers.py._
+_Data to 22 Oct 05:04 UK; graduation book, 3-min exit. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 20 Oct 05:30 UK) | 105 | +9.1% | +6.3% | 61% | 31% | +0.85 |
+| all (from 20 Oct 05:30 UK) | 113 | +10.6% | +8.0% | 62% | 29% | +1.08 |
 | before the change (20 Oct 07:30 UK) — back-test | 10 | +47.1% | +26.1% | 90% | 10% | +0.46 |
-| since the change — the real test | 95 | +5.1% | +2.0% | 58% | 34% | +0.39 |
-| last 24 h | 55 | +8.4% | +4.5% | 56% | 31% | +0.41 |
-| last 12 h | 25 | +1.2% | -6.7% | 44% | 36% | +0.00 |
-| last 6 h | 9 | -7.1% | -13.8% | 44% | 22% | -0.07 |
+| since the change — the real test | 103 | +7.1% | +4.2% | 59% | 31% | +0.62 |
+| last 24 h | 54 | +12.0% | +8.1% | 57% | 26% | +0.59 |
+| last 12 h | 22 | -0.4% | -9.0% | 50% | 27% | -0.03 |
+| last 6 h | 12 | +15.4% | +0.5% | 58% | 8% | +0.17 |
 
 Executor book `grad` (shadow, real quotes): 85 legs, +1.800 SOL, average +12.0% a leg, without best +8.2%, won 60%, 20 Oct 05:30 UK to 21 Oct 23:37 UK.
-Executor book `grad` (live, real quotes and real money): 5 legs, -0.424 SOL, average -40.9% a leg, without best -58.9%, won 20%, 21 Oct 17:47 UK to 21 Oct 23:23 UK.
+Executor book `grad` (live, real quotes and real money): 6 legs, -0.434 SOL, average -37.4% a leg, without best -51.1%, won 17%, 21 Oct 17:47 UK to 22 Oct 03:56 UK.
 
 **GR every graduation**
 
-_Data to 22 Oct 01:04 UK; off-page grad, instant ones left out. Built by reports/books/numbers.py._
+_Data to 22 Oct 05:04 UK; off-page grad, instant ones left out. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 20:35 UK) | 509 | +1.6% | -1.0% | 51% | 35% | +0.28 |
-| last 24 h | 134 | -3.4% | -5.0% | 49% | 40% | -0.58 |
-| last 12 h | 62 | -11.4% | -14.7% | 44% | 44% | -0.77 |
-| last 6 h | 32 | -16.5% | -18.5% | 41% | 41% | -0.56 |
+| all (from 18 Oct 20:35 UK) | 529 | +2.2% | -0.3% | 51% | 34% | +0.62 |
+| last 24 h | 129 | -0.6% | -2.3% | 50% | 36% | -0.21 |
+| last 12 h | 61 | -7.4% | -10.6% | 46% | 34% | -0.51 |
+| last 6 h | 36 | +0.7% | -4.4% | 53% | 28% | -0.01 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -120,6 +122,8 @@ _Data to 22 Oct 01:04 UK; off-page grad, instant ones left out. Built by reports
 - 21 Oct 14:15 UK — v0.18.176: the GR box now shows the 40% trail on the same coins as a variant line (grtrail); the corrupt GR-lock line and the 85-s / socials lines are gone. Rule and shadow (0.25) unchanged; re-judge at 30–40 forward rows.
 - 21 Oct 17:00 UK — **GR2 added** (owner go 16:44 UK; v0.18.180 / executor v0.4.9): GR's rule only on bundle-launch coins (70–80% bundle over 4–10 wallets), 40% trail exit. Page box GR2 with the back-test (57 at +47.8%) and the since-the-change record from 17:00 UK; executor shadow book `gr2` at 0.25 — a tsl40 leg on the same paper position as GR's h3 leg, so both exits get real fills on the same coins. GR itself unchanged. Judge at 40 GR2 legs alongside BL's 40; then one of GR / GR2 / BL goes (GR2 and BL are the same coins at two entry points).
 - 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): no rule change. Executor v0.4.18 (local on-chain stop, "stop-local"); GR still live at 0.05; shadow legs frozen at 17 since 09:47 UK.
+- 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): no change; 41 rows since 09:47 UK. Live mode still on (v0.4.18, 0.05) but buying stopped for balance.
+
 
 ## Ideas tested
 - **The whole "every graduation" book (`grad`), 3-min sale, real costs, instant graduations left out** (20 Oct 23:27 UK data):
@@ -235,6 +239,8 @@ _Data to 22 Oct 01:04 UK; off-page grad, instant ones left out. Built by reports
 - 21 Oct 17:35 UK (4-hour study; data to 17:06 UK): Forward 19 rows (09:55–16:33 UK) grouped. Successes: 9 winners, 4 big (Ricechi +190%, KIMCHINU +159%, Kimchi Phil +101%, Speed of Light +79%); medians bundle 70% over 6 wallets, graduated at 77 s, 1.12x at 10 s, 1.27x at 60 s. Failures: 6 stopped (EMBER −59%, Kimchi Final Boss −54%, GONE −95%, The Genesis Block −51%, Super Finu −52%, Sol Cat −51%) — at 60 s they were at 0.27x: one-transaction dumps that no exit catches; 4 small losers, 3 of them cut by the 10-s rule at −11% to −28% (zonki, The Last Agency — which then peaked 17.5x — and The Kimchi Collection) and Super Finu bought twice (15:10 stop, 15:11 −33.5%). Exits paired on the 19: 3-min +9.4%, 5-min +6.2%, split +23.0%, trail +39.6%, 2x/−40% −5.1%; without the top 3 every one is −17% to −25%. Shadow since 09:47: stops 6 legs −55.2% (model −60.2%), 10-s 3 at −11.4%, floors 5 at +33.6%, 3-min runners 4 at +107%. Entry gap by leg: 0.7–1.5% on 6 legs, 6–20% on 11 (EMBER +19.5%, KIMCHINU +18.8%, Kimchi Phil +18.6%, The Kimchi Collection +17.7%), zonki −30% (paper print stale).
 - 21 Oct 21:30 UK (4-hour study; data to 19:49 UK): 6 new forward rows: 4 stops (COSMOPUSSY −55.7%, night coziness −53.3%, FIXJAK −58.7% — bundle-launch coins peaking 1.4–1.6x inside 30 s then dumped in one transaction; Openape −35.8% on the 10-s rule), BetPlaza +19.2%, Jeetjak +12.2% (open; peak 10.7x after the trail leg sold at 0.82x). The 17:35 UK bundle-vs-other split went the other way this period (bundle 3-min 14 at +12.0% vs other 11 at −14.5% on all 25 forward). GR2's first 4 rows all lost −23 to −25% on the trail: the trail arms on the first spike and the dump goes through the 40% line inside a tick. Live legs: 3, −0.399 SOL; exits 21–28% below paper on two of three (see LESSONS 21:30 UK).
 - 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): 8 new forward rows (4 of them coins named "cybercurrency" inside 15 minutes, 2 Capy Wif Hat). Successes: Trump Unseen +46.3% (peak 3.61x, held to 3 min), cybercurrency 23:29 +20.5% (peak 6.46x), Capy Wif Hat 2nd +3.6%. Failures: Capy Wif Hat 1st −51.5% (14 s old), cybercurrency 23:22 −51.3% (0.59x in 7 s — dumped into the entry; live −78%), 8Legs.ai −20.3% (low volume), cybercurrency 23:23 −13.5% and 23:37 −9.7% (10-s rule; the first then peaked 2.90x). Nothing at entry separates them (MC $43–44K, buyers 42–154, age 14–64 s). 33-row checkpoint read: negative without best 3 on both exits; trail paired +19.6 pts mean, median 0, 15/15. GR2 forward 5 rows, 5 trail stops at −21 to −25% (Trump Unseen sold 0.86x, then 3.61x).
+- 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): 40-row read: successes this period — idle +20.2%, Pepetanya +20.4%, GLITCH SHIBA +13.9% (peak 3.08x), Chefito +18.7%, The Fishfather +20.1% (peak 3.89x), moggersha +179.8% (peak 17.3x): all sold at the 1.3x floor or the 3-min, the floor is what the winners pay (five 1.5–3.9x coins returned +14 to +20%). Failures — BROZO −10.2% (low volume), NOOX −24.0% (peak 2.04x then low volume). Across the 41: 20 won, 12 stopped, 9 small losers; what made the winners was the coin still rising at 3 min; what made the losers was a dump inside 30 s; nothing at entry separates them (MC $42–44K on every row, same age band). The trail/3-min paired test and the bundle split are above (Verdict).
+
 
 ## Notable coins
 - Skibbin (21 Oct 07:05 UK) +245% real, The Last Dip (06:29) +205% real, Netflix & Chills (04:22) +95% — 52–74 buyers each.
@@ -260,6 +266,8 @@ _Data to 22 Oct 01:04 UK; off-page grad, instant ones left out. Built by reports
 - **PvePad and Rosy (20 Oct):** bought by PG on the curve before graduation and then by GR at graduation. PvePad was +41.7% on GR's 0.25 leg.
 - 21 Oct 16:40 UK (data to 16:25 UK; scratchpad gr_deep2.py / gr_deep3.py): Ricechi (15:40 UK) real 2.71x, paper 3.09x at 3 min, peak 5.17x — the trail's case in one coin; GONE (10:59 UK) real 0.12x: a bundle-launch coin that was dumped inside the first minute (paper 0.13x) — the stop's case; SYLPH bought twice (04:34 stop 0.37x, 04:46 +1.54x).
 - 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): cybercurrency (23:22 UK; FFHp…pump) — live leg: local stop at 0.592x, sale landed 0.246x, −0.041 SOL at 0.05; the one-transaction dump seen on real money again. Trump Unseen (21:53 UK) — 3-min +46.3%, trail −20.9% (GR2) and BL's 4-s entry −8.5%: the same coin lost on both trail entries and won on the 3-min.
+- 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): moggersha (04:10 UK, bundle-launch coin, 96 s old, $42.7K): peak 17.3x; GR 3-min +179.8% (4x cap), GR trail +844%, BL +1190% (15x cap). No live leg (balance). One coin carries GR's, GR2's and BL's forward records tonight.
+
 
 ## What the owner said / decided
 - 21 Oct 10:15 UK: keep GR in SHADOW for now with the new changes (no live switch yet).
@@ -299,4 +307,4 @@ _Data to 22 Oct 01:04 UK; off-page grad, instant ones left out. Built by reports
 - 21 Oct 17:35 UK (4-hour study; data to 17:06 UK): GR2 has 0 legs (started 17:00 UK). First read at the next study; judge at 40 legs with BL as agreed at 17:00 UK. Watch the 0.25-SOL entry gap on bundle-launch graduations (+9.4% median since 09:47) — it is GR2's entry too.
 - 21 Oct 21:30 UK (4-hour study; data to 19:49 UK): GR is in LIVE mode (stake now 0.05) with the daily stop tripped; shadow legs frozen at 18 since 09:47 UK. The 30-row paper read is 5 rows away. Owner's decision: shadow again (tests resume) or live under v0.4.12's on-chain stops at 0.05. Compare any new live stop fills against the three above.
 - 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): 30-row checkpoint reached: negative, negative without best 3, trail level — the pre-registered answer is "no". GR and GR2 still live/shadow; owner to decide: out of live now (my recommendation), retire or finish 40 rows on paper.
-
+- 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): checkpoint answered (no). Owner to decide: retire, or paper only. GR2 paper rows 10 at +75.3% (no-best −10.1%, no-top3 −31.2%, 3 won of 10); `gr2` shadow 4 legs −0.228 SOL, no new legs since 21:54 UK (shadow book, 0.25 — why no legs on tonight's five bundle graduations? possibly the executor's balance check applies to shadow quotes too; code question).

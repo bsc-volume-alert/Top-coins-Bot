@@ -20,6 +20,8 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - **Last rule change:** none.
 
 ## Verdict now
+**22 Oct 05:50 UK (4-hour study; data to 05:04 UK):** RETIRE (recommendation repeated). Forward since 14:50 UK: 16 trades −42.3% (no-best −51.0%), 1 won, 15 stops; thirds −24 / −49 / −52; 4 of 16 reached 2x after entry (back-test 12 of 18). New: Fusion Gold −50.9% (peak 2.06x — reached 2x before falling back; x_t2s40 recorded as a stop), The COGE −54.4%, Black October −51.0% (open at the stop at 05:04 UK). 1 won of 16 against a 59% back-test rate: under 1 in 10,000.
+
 **22 Oct 01:50 UK (4-hour study; data to 01:04 UK):** RETIRE (recommendation). Forward since 14:50 UK: 13 trades −40.1% (no-best −50.7%), 1 won (the one 2x), 12 stops at −38% to −55%, −0.53 SOL at 0.1; thirds −17 / −49 / −51. The 8 new trades all stopped (The Odyssean turtle, eMudhra's Private Key, Justice For Memphis, bookie, offline, afk, Burger Shot, Cyber Acceleration; peaks 1.00–1.52x). 2 of 13 reached 2x against 12 of 18 in the back-test. 1 won of 13 against the back-test's 59%: about 2 in 10,000 if the back-test rate were true — the 18-trade finding (luck 2/20, 11:10 UK) was luck. Checkpoint 40: 13 of 40, but the answer will not change.
 
 **21 Oct 21:30 UK (4-hour study; data to 19:49 UK):** Revised K forward since 14:50 UK: 5 trades −24.1% (one 2x +87%, four stops at −51% to −54%: night coziness, Gifpad (open, at the stop), plus the two from 17:35 UK); stop rate 80% vs 36% in the 22-trade back-test (+31.8%). Checkpoint 40: 5 of 40. Watch the stop rate at 20; if still above half, the 2x-or-−40% exit is wrong for these coins.
@@ -36,14 +38,14 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 22 Oct 01:04 UK; page headline is x_h2t40, not in the data export; 5-min shown. Built by reports/books/numbers.py._
+_Data to 22 Oct 05:04 UK; page headline is x_h2t40, not in the data export; 5-min shown. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 20 Oct 18:00 UK) | 86 | -6.3% | -9.1% | 47% | 43% | -0.63 |
-| last 24 h | 54 | -13.8% | -17.3% | 43% | 50% | -0.80 |
-| last 12 h | 26 | -20.1% | -25.4% | 38% | 58% | -0.55 |
-| last 6 h | 15 | -27.4% | -37.4% | 27% | 73% | -0.43 |
+| all (from 20 Oct 18:00 UK) | 91 | -7.6% | -10.2% | 45% | 44% | -0.79 |
+| last 24 h | 52 | -19.4% | -21.9% | 37% | 54% | -1.06 |
+| last 12 h | 22 | -27.0% | -33.6% | 27% | 68% | -0.62 |
+| last 6 h | 7 | -26.1% | -33.6% | 29% | 57% | -0.19 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -58,6 +60,8 @@ _Data to 22 Oct 01:04 UK; page headline is x_h2t40, not in the data export; 5-mi
 - No rule change since.
 - 21 Oct 14:15 UK — v0.18.176: x_h2t40 (K's headline exit) is now exported in others.csv, so the next study can score it. K kept on the page to 60 trades; K2 is the candidate.
 - 21 Oct 14:50 UK — **K REVISED in place** (owner, 14:30 UK: "just where you revised it, say I revised it, and that new formula should be used for all the existing trades"): v0.18.177. K's box now = K's trigger only with under 912 buyers at entry and entry MC ≥ $36K, exit 2x or −40% (x_t2s40). The box shows the same formula on all earlier K trades as the back-test (18 at +42.7% on the 10:36 data, 12 of 18 won, luck 2/20) and the trades since 14:50 UK as the real test. The old K (every coin, half at 2x + trail) is kept as the hidden record `kold` and in these notes: −0.4% a trade on 60 at the 5-min sale. The tracker's K trigger is unchanged; the filter is applied on the page like S3's and S4's revisions.
+- 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): no change; 16 forward.
+
 
 ## Ideas tested
 - **K itself** (20 Oct 23:27 UK data, 26 closed trades, real PumpSwap costs; reported to the owner at 23:32 UK as "K 26, +15.4%, without best +7.1%, promising, only one day old"):
@@ -80,6 +84,8 @@ _Data to 22 Oct 01:04 UK; page headline is x_h2t40, not in the data export; 5-mi
 - 21 Oct 14:00 UK (data to 13:20 UK; method: scratchpad deep.py / cross.py / decile.py; full output in diag/deep_seven_1400.txt): Deep multivariate search (LESSONS 14:00 UK): only 4 entry columns exist (buyers, MC, age, hour); 60 trades, 50% won, −0.4% at 5 min. AUC 0.53 / 0.48 out of sample (chance); top 30% −5.1% / −8.3% vs −3.8%. Winner box (fewer buyers 466 vs 602, smaller MC, evening hours) holds 57% of winners and 33% of losers: inside n27 +14.3% with thirds +15.8 / +16.7 / +11.1 — the same thing as the K2 pair (under 912 buyers, MC ≥ $36K) seen from another angle, and in sample. Depth-2 rule (282–668 buyers) +23.7% in sample → n13 +2.2% vs −44.4% for the rest on the last 20. **Consistent with K2 as the only candidate; nothing else to learn from 4 columns. The crowd size at entry is K's one real-looking number.**
 - 21 Oct 17:35 UK (4-hour study; data to 17:06 UK): the 3 forward trades: 1 reached 2x, 2 were stopped. The 5-min, runner and trail exits on the same 3 are all worse (−14% to −27%).
 - 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): forward 13 at −40.1%, 12 stops; the revised rule's back-test (22 at +31.8%) is ruled out by its forward record. Stop rate 92% vs 36%. Nothing at entry separates the 8 new stops from the one winner (entry $42–90K, 365–725 s old).
+- 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): all 15 failures are stops at −38% to −55%; peaks 1.00–2.13x. Two coins (Fusion Gold, Black October) touched 2x and still show as stops — the 2x sale did not trigger on the recorded x_t2s40; either the 2x was a one-tick spike the exit cannot catch or the column lags the peak. Record only; the book is negative either way.
+
 
 ## Notable coins
 - **WIPD (20 Oct 22:58 UK):**
@@ -110,4 +116,4 @@ _Data to 22 Oct 01:04 UK; page headline is x_h2t40, not in the data export; 5-mi
 - **Next review trigger:** 40+ closed trades, judged by halves and without the best trade.
 - 21 Oct 21:30 UK (4-hour study; data to 19:49 UK): 5 forward at −24.1%, 4 stops. Read again at 20.
 - 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): RETIRE proposed on 13 forward trades (1 won); owner's 40-trade plan would cost ~27 more trades for the same answer.
-
+- 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): retire; the answer at 40 will not differ (16 of 40).

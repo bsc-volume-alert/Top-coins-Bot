@@ -8,6 +8,8 @@ _Notes last rebuilt: 21 Oct 2026 01:35 UK._
 - Started 21 Oct 01:30 UK (`CHG_AS2`). Everything before is a back-test of a rule chosen by looking at those trades.
 
 ## Verdict now
+**22 Oct 05:50 UK (4-hour study; data to 05:04 UK):** Checkpoint (30 forward) passed at 01:50 UK; now 34 at +1.8% (no-best −0.9%, no-top3 −4.7%, won 62%, stopped 32%; thirds +11 / +1 / −6) vs back-test 63 at +18.6%. No edge over AS (it is AS minus 4 trades). Candidate to drop from the page.
+
 **22 Oct 01:50 UK (4-hour study; data to 01:04 UK):** CHECKPOINT REACHED (30 forward): 32 trades +2.8% (no-best −0.1%, no-top3 −4.0%, won 62%, stopped 31%, thirds +11 / +2 / −1) against the 63-trade back-test at +18.6%. AS2 kept 32 of AS's 37 trades since 01:30 UK; the 5 it skipped were about break-even. No edge over AS forward; recommendation: drop the box (AS3 carries the bundle idea).
 
 **21 Oct 17:35 UK (4-hour study; data to 17:06 UK):** KEEP, judge at 30 forward (16 now). Forward 16 at +5.9% (no-best +2.2%, no-top3 −4.2%, won 69%) vs back-test 63 at +18.6%. Still almost the same coins as AS (every AS trade since 01:30 but DreamCoin, Finley and Nigga Its Over had a 2+-wallet bundle: AS2 skipped those three at +19.2%, +21.6%, −16.7%). The forward edge over AS is nil so far; the back-test gap (+18.6% vs AS's +8.8%) has not shown up forward.
@@ -20,20 +22,22 @@ Not yet tested. Fits the owner's "many trades, small profit each" side: keeps ab
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 22 Oct 01:04 UK; AS + launch bundle 2+ wallets. Built by reports/books/numbers.py._
+_Data to 22 Oct 05:04 UK; AS + launch bundle 2+ wallets. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 22:46 UK) | 95 | +13.3% | +10.5% | 64% | 27% | +1.17 |
+| all (from 18 Oct 22:46 UK) | 97 | +12.7% | +10.0% | 64% | 28% | +1.14 |
 | before the change (21 Oct 01:30 UK) — back-test | 63 | +18.6% | +14.4% | 65% | 25% | +1.11 |
-| since the change — the real test | 32 | +2.8% | -0.1% | 62% | 31% | +0.06 |
-| last 24 h | 32 | +2.8% | -0.1% | 62% | 31% | +0.06 |
-| last 12 h | 22 | -1.1% | -5.6% | 59% | 36% | -0.05 |
-| last 6 h | 13 | -7.5% | -15.9% | 46% | 54% | -0.11 |
+| since the change — the real test | 34 | +1.8% | -0.9% | 62% | 32% | +0.03 |
+| last 24 h | 31 | +2.7% | -0.3% | 61% | 32% | +0.05 |
+| last 12 h | 18 | -1.7% | -7.3% | 56% | 44% | -0.05 |
+| last 6 h | 9 | +9.2% | -1.3% | 67% | 33% | +0.07 |
 <!-- /NUMBERS -->
 
 ## Change history
 - 21 Oct 01:30 UK (v0.18.172): created on the owner's go (01:19 UK), as a separate book rather than revising AS, so AS's own real test (from 20 Oct 17:45 UK) keeps running untouched.
+- 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): no change; 34 forward.
+
 
 ## Ideas tested
 - The finding behind it (21 Oct 01:20 UK, AS's 79 trades, operator coins removed; see AS.md "Ideas tested"): bundle wallets ≥ 2 kept 62 at +19.4% (without best +15.2%) vs 17 at −17.4%; first half of the earlier trades +23.2% vs −23.6%, second half +9.2% vs −17.4%; since 20 Oct 17:45 UK 12 at +30.4% vs 3 at −7.2%. At 0.1 SOL a trade about +1.14 SOL on 62 trades vs AS +0.83 on 79.
@@ -50,6 +54,8 @@ _Data to 22 Oct 01:04 UK; AS + launch bundle 2+ wallets. Built by reports/books/
   - Factor / pair verdict: 1,207 filters × 12 exits + 193 pairs; 451 pass the three-period test, **0 are unlikely to be luck** (shuffles reach +35% to +70%). Top in-sample: quiet first minute AND under 60 trades in the minute / x_h2t40 n12 +78.9% luck 3; sol60 < 35.5 / x_t2s40 n54 +25.7% luck 20. Nothing to adopt.
   - Proposed: KEEP as is, judge at 30 forward trades as planned (about a day at 29 a day). If AS3 keeps beating it on the same coins, AS2 is AS3 plus noise and can go; if the 2–4-wallet coins turn positive forward, AS2 earns its place.
 - 21 Oct 17:35 UK (4-hour study; data to 17:06 UK): Forward 16 grouped: 11 winners (big: Banana Cat +60.9%, Clout +53.7%), 3 stopped (buyoutSH, OTTR, Datacenter 13:37 — creator bought 0.9 SOL, 39 SOL sold in the minute, 72 wallets, peak 1.26x), 2 small losers (Cashfish, Alpenglow — old coins, 1.6 h median). Last 6 h 7 at +1.5%.
+- 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): 30-forward checkpoint: no edge over AS (34 at +1.8% vs AS's +7.0% on 55 in the same period; AS2 kept 34 of AS's 38 trades since 01:30 UK).
+
 
 ## Notable coins
 - None yet in the real test.
@@ -64,4 +70,4 @@ _Data to 22 Oct 01:04 UK; AS + launch bundle 2+ wallets. Built by reports/books/
 - Coins whose launch the bot never saw have no bundle count and are skipped by AS2 (counted as 0).
 - 21 Oct 21:30 UK (4-hour study; data to 19:49 UK): forward 19 at +9.9% (no-best +7.1%, no-top3 +1.8%, won 74%); 19 of 30. Nothing to decide yet.
 - 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): 30-forward checkpoint reached: +2.8% on 32, no edge over AS. Proposed: retire AS2 from the page; owner decides.
-
+- 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): drop or keep is the owner's call; the data says it adds nothing to AS.
