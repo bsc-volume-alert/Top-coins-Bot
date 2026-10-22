@@ -32,7 +32,9 @@ function step(row, px, ts) {
   const mult = px / row.entry_px, since = ts - row.entry_ts; let ch = false;
   // one-tick collapses (a bad quote) must not fill a stop: a stop level counts only when the previous tick was also at or under it (22 Oct 15:00 UK, after Nailong 0.003x / RDCTRD 0.02x)
   const prev = row._prevMult ?? mult; row._prevMult = mult; const low = Math.max(mult, prev);
-  if (mult > row.peak) { row.peak = mult; ch = true; }
+  if (mult > row.peak) { row.peak = mult; row.low_before_peak = row.trough ?? 1; ch = true; }
+  if (mult < (row.trough ?? 1)) { row.trough = mult; ch = true; }
+  if (ch && isBook(row.wallet)) { try { q.setLows.run(row.trough ?? 1, row.low_before_peak ?? 1, row.id); } catch {} }
   row.last_px = px; row.last_ts = ts;
   for (const [k, s] of [["px5", 5], ["px30", 30], ["px120", 120]]) if (row[k] == null && since >= s) { row[k] = px; row[k + "_at"] = since; ch = true; }
   if (row.x_h5 == null && since >= 300) { row.x_h5 = mult; ch = true; }
