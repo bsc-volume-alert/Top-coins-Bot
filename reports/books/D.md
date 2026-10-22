@@ -17,12 +17,12 @@ Not working on its own: about break-even in every study (−0.4% to −1.3% from
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 22 Oct 05:04 UK; real costs. Built by reports/books/numbers.py._
+_Data to 22 Oct 13:03 UK; real costs. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
 | all (from 18 Oct 20:27 UK) | 319 | -3.5% | -4.4% | 46% | 41% | -1.44 |
-| last 24 h | 49 | -1.1% | -6.9% | 49% | 35% | -0.10 |
+| last 24 h | 21 | +12.7% | -0.5% | 57% | 24% | +0.25 |
 | last 12 h | 0 | — | — | — | — | — |
 | last 6 h | 0 | — | — | — | — | — |
 

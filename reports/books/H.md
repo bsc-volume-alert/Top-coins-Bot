@@ -16,16 +16,16 @@ Undecided and mostly untestable: only 50 of 336 passed A rows carry a GMGN holde
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 22 Oct 05:04 UK; A, top-10 holders under 23%. Built by reports/books/numbers.py._
+_Data to 22 Oct 13:03 UK; A, top-10 holders under 23%. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 19 Oct 14:07 UK) | 38 | +1.0% | -6.5% | 45% | 39% | -0.00 |
+| all (from 19 Oct 14:07 UK) | 42 | +2.0% | -4.7% | 48% | 38% | +0.04 |
 | before the change (20 Oct 20:00 UK) — back-test | 16 | +17.7% | +0.4% | 50% | 31% | +0.27 |
-| since the change — the real test | 22 | -11.2% | -14.9% | 41% | 45% | -0.27 |
-| last 24 h | 20 | -11.2% | -15.3% | 40% | 45% | -0.24 |
-| last 12 h | 6 | -11.2% | -23.9% | 50% | 50% | -0.07 |
-| last 6 h | 2 | -51.0% | -51.0% | 0% | 100% | -0.10 |
+| since the change — the real test | 26 | -7.6% | -10.6% | 46% | 42% | -0.22 |
+| last 24 h | 11 | -4.1% | -9.8% | 55% | 36% | -0.06 |
+| last 12 h | 4 | +12.0% | +3.7% | 75% | 25% | +0.04 |
+| last 6 h | 4 | +12.0% | +3.7% | 75% | 25% | +0.04 |
 <!-- /NUMBERS -->
 
 ## Change history

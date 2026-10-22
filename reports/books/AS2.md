@@ -8,6 +8,8 @@ _Notes last rebuilt: 21 Oct 2026 01:35 UK._
 - Started 21 Oct 01:30 UK (`CHG_AS2`). Everything before is a back-test of a rule chosen by looking at those trades.
 
 ## Verdict now
+**22 Oct 13:50 UK (4-hour study; data to 13:03 UK):** DROP (recommendation repeated). Forward 44 at −1.7% (no-best −3.9%, no-top3 −7.2%, won 57%, stopped 39%; thirds +4 / +2 / −11) vs back-test 63 at +18.6%; 10 new trades −13.9%. It is AS minus a handful of single-wallet coins and tracks AS down.
+
 **22 Oct 05:50 UK (4-hour study; data to 05:04 UK):** Checkpoint (30 forward) passed at 01:50 UK; now 34 at +1.8% (no-best −0.9%, no-top3 −4.7%, won 62%, stopped 32%; thirds +11 / +1 / −6) vs back-test 63 at +18.6%. No edge over AS (it is AS minus 4 trades). Candidate to drop from the page.
 
 **22 Oct 01:50 UK (4-hour study; data to 01:04 UK):** CHECKPOINT REACHED (30 forward): 32 trades +2.8% (no-best −0.1%, no-top3 −4.0%, won 62%, stopped 31%, thirds +11 / +2 / −1) against the 63-trade back-test at +18.6%. AS2 kept 32 of AS's 37 trades since 01:30 UK; the 5 it skipped were about break-even. No edge over AS forward; recommendation: drop the box (AS3 carries the bundle idea).
@@ -22,16 +24,16 @@ Not yet tested. Fits the owner's "many trades, small profit each" side: keeps ab
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 22 Oct 05:04 UK; AS + launch bundle 2+ wallets. Built by reports/books/numbers.py._
+_Data to 22 Oct 13:03 UK; AS + launch bundle 2+ wallets. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 22:46 UK) | 97 | +12.7% | +10.0% | 64% | 28% | +1.14 |
+| all (from 18 Oct 22:46 UK) | 107 | +10.2% | +7.7% | 62% | 31% | +0.99 |
 | before the change (21 Oct 01:30 UK) — back-test | 63 | +18.6% | +14.4% | 65% | 25% | +1.11 |
-| since the change — the real test | 34 | +1.8% | -0.9% | 62% | 32% | +0.03 |
-| last 24 h | 31 | +2.7% | -0.3% | 61% | 32% | +0.05 |
-| last 12 h | 18 | -1.7% | -7.3% | 56% | 44% | -0.05 |
-| last 6 h | 9 | +9.2% | -1.3% | 67% | 33% | +0.07 |
+| since the change — the real test | 44 | -1.7% | -3.9% | 57% | 39% | -0.12 |
+| last 24 h | 34 | -5.6% | -8.6% | 53% | 44% | -0.22 |
+| last 12 h | 12 | -13.9% | -21.1% | 42% | 58% | -0.18 |
+| last 6 h | 7 | -12.9% | -25.9% | 43% | 57% | -0.10 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -71,3 +73,5 @@ _Data to 22 Oct 05:04 UK; AS + launch bundle 2+ wallets. Built by reports/books/
 - 21 Oct 21:30 UK (4-hour study; data to 19:49 UK): forward 19 at +9.9% (no-best +7.1%, no-top3 +1.8%, won 74%); 19 of 30. Nothing to decide yet.
 - 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): 30-forward checkpoint reached: +2.8% on 32, no edge over AS. Proposed: retire AS2 from the page; owner decides.
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): drop or keep is the owner's call; the data says it adds nothing to AS.
+- 22 Oct 13:50 UK (4-hour study; data to 13:03 UK): 44 forward at −1.7%; the owner's call to drop stands as proposed 22 Oct 01:50 UK.
+

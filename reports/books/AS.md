@@ -12,6 +12,8 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - Started 20 Oct 16:35 UK (v0.18.156, socials-only version). Last rule change 20 Oct 17:45 UK (v0.18.158, standard filters; commit pushed 17:29 UK, the page counts "since the change" from 17:45 UK = `CHG_STD` 16:45 UTC). Page record runs from the price fix (18 Oct 20:25 UK); everything before 17:45 UK is a back-test of a rule chosen by looking at those trades.
 
 ## Verdict now
+**22 Oct 13:50 UK (4-hour study; data to 13:03 UK):** KEEP ON PAPER/SHADOW; the live case has weakened. Forward since 17:45 UK (20 Oct): 66 trades +4.1% (no-best +2.1%, no-top3 −0.6%, median +15.7%, won 61%, stopped 32%; thirds +12 / +6 / −6; 14-trade blocks +23.9 / +8.5 / −2.4 / −0.9 / −13.9 on 10) vs back-test 64 at +8.8%. The 11 new trades (05:48–12:35 UK) −10.5%: 5 won (+37% avg: Shamonda virus +65.2%, Gooncoin +53.2%, Capycoin +30.2%, Nagi and Pokke +23.4%, Artex +12.0%), 6 stopped (−50% each: fartless, Cream of Shrimp Soup Can, Black October, PHP//NULL, Secure The Web, CARLIY0S). The last 38 forward trades are −5% a trade; the whole forward profit is the first 28. Shadow `asoc`: 37 legs +0.586 SOL (−1.1% a leg, no-best −2.9%, 21 won; +4.1 pts above the model; entry +1.9%, exit −2.2% median) — but only ONE leg in eight hours: 10 AS triggers between 05:48 and 10:33 UK were lost to 'sim-failed: Transfer: insufficient lamports' (the wallet was 0.07 SOL; the shadow simulation uses the real balance), so the 40-leg checkpoint is 3 away on a count that stopped moving. The 30-leg condition (positive, real ≈ paper) still holds on its wording; the paper book since has not. Recommendation: no live switch now — three negative blocks in a row and the forward no-top3 at −0.6% say the edge is inside noise; read again at 40 legs once the wallet (0.58 SOL at 13:03 UK) lets shadow legs record.
+
 **22 Oct 05:50 UK (4-hour study; data to 05:04 UK):** KEEP; no live switch yet. Forward since 17:45 UK (20 Oct): 55 trades +7.0% (no-best +4.6%, no-top3 +1.5%, median +16.7%, won 64%, stopped 27%; thirds +15 / +10 / −4; 14-trade blocks +23.9 / +8.5 / −2.4 / −2.7 on 13) vs back-test 64 at +8.8%. Only 2 new trades in four hours (block chain +23.5%, The COGE −50.8% after a 3.33x peak that came after the stop). Shadow `asoc`: 36 legs +0.634 SOL, +0.3% a leg (no-best −1.6%), 21 won; cumulative +0.822 at leg 20, +0.713 at leg 30, +0.634 at leg 36 — the book has given back 0.19 SOL over its last 16 legs. Real still slightly above the model (+4.0 pts; stops −46.5% real vs −53.7% model); entry gap +1.6% median, exit −1.2%. The 30-leg condition stays met on its wording; the trend since has not reversed. 40 legs is 4 away. Recommendation unchanged: if live, 0.05 with the 20-leg self-stop; the wallet (0.09 SOL at 05:05 UK) cannot fund it until it is topped up.
 
 **22 Oct 01:50 UK (4-hour study; data to 01:04 UK):** KEEP, and the 30-leg checkpoint is REACHED. `asoc` hit 30 legs at 23:38 UK: +0.713 SOL, 18 of 30 won, entry +1.1% median, exit −2.3% — positive on net with real ≈ paper, so the pre-agreed condition for live at 0.1 is met on its wording. But legs 22–34 lost −0.184 SOL (34 legs +0.673 SOL, +1.4% a leg, no-best −0.6%), and the paper book's 15 new trades since 19:49 UK are −7.5% with 8 stops (forward 53 at +7.7%, no-best +5.3%, no-top3 +2.1%, won 64%, stopped 26%, thirds +19 / +7 / +4; 14-trade blocks +12.2 / +4.5 / −19.5 on the last 9). Real fills remain slightly better than paper (shadow stops −46.6% real vs −53.9% model; non-stops +27.6% vs +24.4%). Recommendation: the rule is unchanged and the block swing is the known one; if the owner goes live, 0.05 SOL with the 20-leg self-stop, not 0.1; otherwise read again at 40 legs. BetPlaza exit mismatch still open. AS2 reached 30 forward (32 at +2.8%, no edge over AS); AS3 23 at +4.7%; AS4 4 at −25.5%.
@@ -28,18 +30,18 @@ Best paper book on the page and the first candidate for a real-quote test, but n
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 22 Oct 05:04 UK; A + standard filters. Built by reports/books/numbers.py._
+_Data to 22 Oct 13:03 UK; A + standard filters. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 21:32 UK) | 119 | +7.9% | +5.7% | 60% | 31% | +0.83 |
+| all (from 18 Oct 21:32 UK) | 130 | +6.4% | +4.3% | 58% | 33% | +0.70 |
 | before the change (20 Oct 17:45 UK) — back-test | 64 | +8.8% | +4.5% | 56% | 34% | +0.50 |
-| since the change — the real test | 55 | +7.0% | +4.6% | 64% | 27% | +0.33 |
-| last 24 h | 36 | +2.6% | -0.0% | 61% | 31% | +0.06 |
-| last 12 h | 20 | -2.3% | -7.3% | 55% | 45% | -0.07 |
-| last 6 h | 10 | +3.2% | -6.8% | 60% | 40% | +0.02 |
+| since the change — the real test | 66 | +4.1% | +2.1% | 61% | 32% | +0.20 |
+| last 24 h | 39 | -4.5% | -7.1% | 54% | 41% | -0.22 |
+| last 12 h | 13 | -11.0% | -17.4% | 46% | 54% | -0.16 |
+| last 6 h | 7 | -12.9% | -25.9% | 43% | 57% | -0.10 |
 
-Executor book `asoc` (shadow, real quotes): 36 legs, +0.634 SOL, average +0.3% a leg, without best -1.6%, won 58%, 21 Oct 02:23 UK to 22 Oct 04:02 UK.
+Executor book `asoc` (shadow, real quotes): 37 legs, +0.586 SOL, average -1.1% a leg, without best -2.9%, won 57%, 21 Oct 02:23 UK to 22 Oct 12:35 UK.
 <!-- /NUMBERS -->
 
 ## Change history
@@ -54,7 +56,7 @@ Executor book `asoc` (shadow, real quotes): 36 legs, +0.634 SOL, average +0.3% a
 - 21 Oct 17:35 UK (4-hour study; data to 17:06 UK): nothing changed. Executor stake now 0.1 (legs from 14:41 UK cost 0.101; the 13 earlier legs were at 0.5).
 - 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): nothing changed in the rule. Executor v0.4.18; `asoc` still shadow at 0.1; 34 legs.
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): no change. Last 4 h: 2 forward trades (55 since 17:45 UK 20 Oct); `asoc` 36 legs.
-
+- 22 Oct 13:50 UK (4-hour study; data to 13:03 UK): no rule change; `asoc` shadow at 0.1; 37 legs. Wallet topped up to 0.58 SOL by ~11:00 UK; 10 shadow legs lost 05:48–10:33 UK to 'insufficient lamports' sim-fails.
 
 ## Ideas tested
 All on AS's own trades at real costs, runner exit, unless stated. "In sample" = found on the same trades it is scored on.
@@ -126,7 +128,7 @@ All on AS's own trades at real costs, runner exit, unless stated. "In sample" = 
 - 21 Oct 21:30 UK (4-hour study; data to 19:49 UK): 3 new forward trades, all won (Man, I Love Kimchi +29.4%, BetPlaza +45.1% on x_flow4, larpurr +19.7%); 38 forward: 27 won, 6 stopped, 5 small losers — grouping unchanged from 17:35 UK. AS2 19 at +9.9% (no-top3 +1.8%), AS3 15 at +14.0% (9 of 15 reached 2x), AS4 still 1 trade. Shadow legs 21: last three −0.014 SOL (BetPlaza real −67.5% on a 0.36x paper close).
 - 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): 15 new forward trades grouped (study: scratchpad grp.py). Successes (7): Anti-AI Plugin +52.2%, cybercurrency 23:36 +92.6%, cybercurrency 23:29 +45.3%, Act III +41.7%, PHP2SHELL (2nd) +36.0%, CYBERINU +18.6% (peak 10.3x, sold 1.28x), Caillou +15.0%. Failures (8 stops −50.7 to −53.0%): Millionaire In 30 Days ($99.9K entry; peak 3.47x after the stop), Poketide (24 h old), BLUE CHIP, PHP2SHELL (1st), afk, cybercurrency 23:38, Wikimasters, Ryan Garcia. Medians stopped vs winners: peak 1.12x vs 2.48x, wallets in the minute 67 vs 49, 10-s price 0.91 vs 0.94; all 53 forward: creator bought 1.01 vs 0.05 SOL, 70 vs 58 wallets — same picture as 11:10 / 17:35 UK, not luck-checked then or now. Repeat-name buys (cybercurrency ×3, PHP2SHELL ×2, Datacenter ×2): 7 at +6.0% (no-top3 −32.9%) vs 46 at +8.0%. Copycats > 3 in 24 h: 34 at +12.5% vs ≤ 3 19 at −0.7% — the REVERSE of the "≤ 5 copycats" cut dropped 21 Oct 01:00 UK; recorded as the reason such cuts are not rules. AS3 2x check: 12 of 23 reached 2x; x_t2s40 +22.2% (no-top3 +12.5%) vs runner +4.7% on the same 23 — decide at 30. AS x_t2s40 on all 53 forward +10.3% vs runner +7.7% (won 45% vs 64%).
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): successes/failures over the 55 forward: 35 won, 15 stopped, 5 small losers. Winners vs stopped (medians): peak 2.21x vs 1.14x; 10-s price 1.006x vs 0.973x; 60 vs 72 wallets in the trigger minute; creator bought 0.10 vs 1.09 SOL; first-minute selling 28 vs 30 SOL; entry MC $46K vs $44K; age 633 vs 705 s; copycat names in 24 h 12 vs 4. Same picture as 21 Oct 11:10 / 17:35 UK and 22 Oct 01:50 UK; none of it passed the luck check then and nothing new was searched (cull rule). AS2 forward 34 at +1.8% (no-best −0.9%), AS3 24 at +5.5% (x_t2s40 on the same 24 +18.6%, no-top3 +8.8%; 12 of 24 reached 2x), AS4 4 at −25.5% — no AS4 trade in 14 h.
-
+- 22 Oct 13:50 UK (4-hour study; data to 13:03 UK): 11 new forward trades grouped. Successes (5): median peak 2.51x, sold on fading volume or the 80% trail at 1.21–1.77x. Failures (6 stops): median peak 1.18x — never ran; fartless peaked 2.54x AFTER the stop. Entry medians won vs stopped: MC $44K vs $44K, age 654 vs 1,060 s, first-minute selling 28 vs 29 SOL, 63 vs 67 wallets, creator buy 0 vs 0, bundle 23.5% vs 31.5% over 5 vs 5 wallets — nothing at entry separates them (same as every reading since 21 Oct 11:10 UK). x_t2s40 on the 66 forward: +6.5% (no-top3 +2.6%, won 42%, stopped 50%) vs runner +4.1% — still a tie. AS since 01:30 UK 21 Oct: 50 at −0.9%; of those, AS3's coins 31 at +4.4%, the rest 19 at −9.4%.
 
 ## Notable coins
 - Spidey Show (19 Oct 21:58 UK) — entry $59.7K, peaked 20.6x, sold at the 4x cap: +276.6%, AS's best trade. Also carries F6 and H.
@@ -140,7 +142,7 @@ All on AS's own trades at real costs, runner exit, unless stated. "In sample" = 
 
 - King Of Larp (21 Oct 00:20 UK) — 15th trade since the change: entry $51.8K, 89 s old, 5 snipers, peaked 2.84x but sold at 1.18x when buying faded: +9.0%. Example of the runner exit giving back a big peak.
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): The COGE (04:02 UK): AS stop −50.8% (shadow leg −45.5%, fill 0.545x vs paper 0.599x); peak 3.33x came after the stop. K also bought it at $82K at 04:03 UK and stopped −54.4%.
-
+- 22 Oct 13:50 UK (4-hour study; data to 13:03 UK): Shamonda virus (10:19 UK, 141 s old, $52K): +65.2% on the runner, peak 2.51x. CARLIY0S (12:35 UK): stop −54.2%; shadow leg real −48.3% (entry +8.5% above paper, exit +0.7%).
 
 ## What the owner said / decided
 - 20 Oct ~16:00 UK: "socials, let's do that … use GMGN … A and D are in desperate need of improvement … 279 trades … still at a loss" → AS created (socials only).
@@ -170,3 +172,5 @@ All on AS's own trades at real costs, runner exit, unless stated. "In sample" = 
 - 21 Oct 21:30 UK (4-hour study; data to 19:49 UK): BetPlaza exit mismatch — `asoc` leg closed on 'close:tsl80' at paper 0.36x, export x_flow4 1.55x with exit reason tsl80. Which is the page's AS record? Needs a look at the close path (code; owner's call) before the 30-leg live decision. AS4 still has no file of its own (1 forward trade).
 - 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): 30-leg live checkpoint reached and met on its wording (+0.713 SOL at leg 30, 18 won, real ≈ paper); the last 13 legs −0.184 SOL and the last paper block −19.5% argue for 0.05 if live, or waiting to 40 legs. Owner's decision. BetPlaza exit mismatch unresolved. AS2 at its 30-forward checkpoint: +2.8% on 32, no edge over AS — candidate to drop. AS4 still has no file of its own (4 forward trades).
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): live decision unchanged (owner); `asoc` 36 legs, 40-leg read next study. The executor wallet is at 0.09 SOL (05:05 UK) after the GR/BL live legs, with 6 'balance' skips today — any AS live test needs a top-up first. BetPlaza exit mismatch still open. AS4 still has no file (4 forward).
+- 22 Oct 13:50 UK (4-hour study; data to 13:03 UK): 40-leg read still 3 legs away because shadow simulation fails when the wallet is near empty ('Transfer: insufficient lamports', 10 AS legs lost 05:48–10:33 UK) — the same code question as the gr2 balance skips (GR.md 09:32 UK). BetPlaza exit mismatch still open. AS4 still has no file (4 forward, none new).
+

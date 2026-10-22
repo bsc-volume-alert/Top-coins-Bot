@@ -17,20 +17,20 @@ Names that clash:
 
 ## Latest numbers, all off-page books
 <!-- NUMBERS -->
-_Data to 22 Oct 05:04 UK._
+_Data to 22 Oct 13:03 UK._
 
 - **early** (x_flow4): all 7335 at -34.0%; last 12 h 0 at +0.0%
 - **wave2** (x_flow4): all 939 at -11.8%; last 12 h 0 at +0.0%
 - **copy** (x_flow4): all 664 at -12.6%; last 12 h 0 at +0.0%
-- **mom60** (x_flow4): all 758 at -11.8%; last 12 h 0 at +0.0%
-- **momfast** (x_flow4): all 566 at -12.3%; last 12 h 0 at +0.0%
-- **mom80** (x_flow4): all 553 at -11.5%; last 12 h 0 at +0.0%
-- **momentum** (x_flow4): all 439 at -10.1%; last 12 h 34 at -12.7%
+- **mom60** (x_flow4): all 760 at -11.8%; last 12 h 0 at +0.0%
+- **momfast** (x_flow4): all 568 at -12.4%; last 12 h 0 at +0.0%
+- **mom80** (x_flow4): all 555 at -11.6%; last 12 h 0 at +0.0%
+- **momentum** (x_flow4): all 473 at -9.0%; last 12 h 46 at +0.0%
 - **momconf** (x_flow4): all 80 at -5.7%; last 12 h 0 at +0.0%
 - **momdip** (x_flow4): all 102 at -8.4%; last 12 h 0 at +0.0%
 - **momre** (x_flow4): all 209 at -16.1%; last 12 h 0 at +0.0%
-- **gradrec** (x_flow4): all 514 at -20.5%; last 12 h 0 at +0.0%
-- **gradrun** (x_flow4): all 324 at -8.2%; last 12 h 0 at +0.0%
+- **gradrec** (x_flow4): all 516 at -20.7%; last 12 h 0 at +0.0%
+- **gradrun** (x_flow4): all 326 at -8.5%; last 12 h 0 at +0.0%
 - **revival** (x_flow4): all 197 at -13.7%; last 12 h 0 at +0.0%
 - **slow** (x_flow4): all 127 at -15.3%; last 12 h 0 at +0.0%
 - **climber** (x_flow4): all 26 at -14.0%; last 12 h 0 at +0.0%

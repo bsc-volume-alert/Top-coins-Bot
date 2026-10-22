@@ -20,6 +20,8 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - **Last rule change:** none.
 
 ## Verdict now
+**22 Oct 13:50 UK (4-hour study; data to 13:03 UK):** RETIRE (recommendation repeated, third time). Forward since 14:50 UK: 26 trades −29.9% (no-best −34.6%, no-top3 −45.2%, median −51.0%, won 15%, stopped 85%; thirds −33 / −36 / −21) vs the 22-trade back-test at +31.8%. The 10 new trades: 3 won at the 2x sale (+87.0% each: Nagi and Pokke, Artex, Dodo The Blackswan — all three later peaked 2.4–5.5x), 7 stopped at −51% to −53% (The Gus $98K, fartless $69K, Poop Worker $87K, Trump In Box, Act III, PHP//NULL, Capycoin; peaks 1.00–1.59x). 4 won of 26 against a 59% back-test rate: under 1 in 10,000. 26 of 40; the answer will not change.
+
 **22 Oct 05:50 UK (4-hour study; data to 05:04 UK):** RETIRE (recommendation repeated). Forward since 14:50 UK: 16 trades −42.3% (no-best −51.0%), 1 won, 15 stops; thirds −24 / −49 / −52; 4 of 16 reached 2x after entry (back-test 12 of 18). New: Fusion Gold −50.9% (peak 2.06x — reached 2x before falling back; x_t2s40 recorded as a stop), The COGE −54.4%, Black October −51.0% (open at the stop at 05:04 UK). 1 won of 16 against a 59% back-test rate: under 1 in 10,000.
 
 **22 Oct 01:50 UK (4-hour study; data to 01:04 UK):** RETIRE (recommendation). Forward since 14:50 UK: 13 trades −40.1% (no-best −50.7%), 1 won (the one 2x), 12 stops at −38% to −55%, −0.53 SOL at 0.1; thirds −17 / −49 / −51. The 8 new trades all stopped (The Odyssean turtle, eMudhra's Private Key, Justice For Memphis, bookie, offline, afk, Burger Shot, Cyber Acceleration; peaks 1.00–1.52x). 2 of 13 reached 2x against 12 of 18 in the back-test. 1 won of 13 against the back-test's 59%: about 2 in 10,000 if the back-test rate were true — the 18-trade finding (luck 2/20, 11:10 UK) was luck. Checkpoint 40: 13 of 40, but the answer will not change.
@@ -38,14 +40,14 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 22 Oct 05:04 UK; page headline is x_h2t40, not in the data export; 5-min shown. Built by reports/books/numbers.py._
+_Data to 22 Oct 13:03 UK; page headline is x_h2t40, not in the data export; 5-min shown. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 20 Oct 18:00 UK) | 91 | -7.6% | -10.2% | 45% | 44% | -0.79 |
-| last 24 h | 52 | -19.4% | -21.9% | 37% | 54% | -1.06 |
-| last 12 h | 22 | -27.0% | -33.6% | 27% | 68% | -0.62 |
-| last 6 h | 7 | -26.1% | -33.6% | 29% | 57% | -0.19 |
+| all (from 20 Oct 18:00 UK) | 105 | -9.4% | -11.6% | 44% | 45% | -1.09 |
+| last 24 h | 45 | -21.3% | -24.3% | 36% | 56% | -1.00 |
+| last 12 h | 19 | -22.9% | -25.9% | 32% | 53% | -0.45 |
+| last 6 h | 10 | -23.4% | -28.7% | 30% | 50% | -0.24 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -85,7 +87,7 @@ _Data to 22 Oct 05:04 UK; page headline is x_h2t40, not in the data export; 5-mi
 - 21 Oct 17:35 UK (4-hour study; data to 17:06 UK): the 3 forward trades: 1 reached 2x, 2 were stopped. The 5-min, runner and trail exits on the same 3 are all worse (−14% to −27%).
 - 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): forward 13 at −40.1%, 12 stops; the revised rule's back-test (22 at +31.8%) is ruled out by its forward record. Stop rate 92% vs 36%. Nothing at entry separates the 8 new stops from the one winner (entry $42–90K, 365–725 s old).
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): all 15 failures are stops at −38% to −55%; peaks 1.00–2.13x. Two coins (Fusion Gold, Black October) touched 2x and still show as stops — the 2x sale did not trigger on the recorded x_t2s40; either the 2x was a one-tick spike the exit cannot catch or the column lags the peak. Record only; the book is negative either way.
-
+- 22 Oct 13:50 UK (4-hour study; data to 13:03 UK): 10 new trades grouped: winners' median peak 4.54x vs stopped 1.21x; entry MC $43K vs $49K (the three $69–98K entries all stopped); age 819 vs 638 s. In-sample observation, not a rule: K's wins are coins that double a second time, and nothing at the trigger says which will.
 
 ## Notable coins
 - **WIPD (20 Oct 22:58 UK):**
@@ -117,3 +119,5 @@ _Data to 22 Oct 05:04 UK; page headline is x_h2t40, not in the data export; 5-mi
 - 21 Oct 21:30 UK (4-hour study; data to 19:49 UK): 5 forward at −24.1%, 4 stops. Read again at 20.
 - 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): RETIRE proposed on 13 forward trades (1 won); owner's 40-trade plan would cost ~27 more trades for the same answer.
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): retire; the answer at 40 will not differ (16 of 40).
+- 22 Oct 13:50 UK (4-hour study; data to 13:03 UK): retire; 26 of 40 at −29.9%, 4 won.
+

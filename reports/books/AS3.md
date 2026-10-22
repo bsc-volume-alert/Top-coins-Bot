@@ -8,6 +8,8 @@ _Notes last rebuilt: 21 Oct 2026 01:35 UK._
 - Started 21 Oct 01:30 UK (`CHG_AS2`). Everything before is a back-test of a rule chosen by looking at those trades.
 
 ## Verdict now
+**22 Oct 13:50 UK (4-hour study; data to 13:03 UK):** 30-FORWARD CHECKPOINT REACHED (31): +4.4% on the runner (no-best +1.4%, no-top3 −3.0%, median +16.5%, won 65%, stopped 32%; thirds +9 / −4 / +8) vs the 35-trade back-test at +29.7% — the back-test edge has NOT shown up forward; it is 5 points better than the AS trades it leaves out (19 at −9.4% since 01:30 UK), which is inside noise on 31 vs 19. The pre-registered exit question: 17 of 31 reached 2x (break-even for the fixed 2x sale 37%); x_t2s40 on the same 31 +16.1% (no-top3 +8.5%, won 52%, stopped 45%) vs the runner +4.4%, paired +11.7 points, 2x better on 13 / worse on 6 / level 12, sign-flip p 0.10 — a lead that cannot be told from luck at 31, and the exit was first picked by looking at the early forward rows. Verdict: AS3 on the runner is not a book (no-top3 negative); AS3 with the 2x-or-−40% exit is the one AS-family line still positive without its best 3 forward (+8.5%), and that is a watch, not a result. Recommendation: keep AS3 on paper, record x_t2s40 beside it, re-read at 60; nothing goes live on it.
+
 **22 Oct 05:50 UK (4-hour study; data to 05:04 UK):** 24 forward (+1: block chain +23.5%) at +5.5% (no-best +1.7%, no-top3 −3.6%, won 67%, stopped 29%; thirds +21 / −1 / −3) vs back-test 35 at +29.7%. 6 trades to the 30 checkpoint. Pre-registered exit check on the same 24: x_t2s40 (sell at 2x or −40%) +18.6% (no-top3 +8.8%, won 54%, stopped 42%) vs the runner's +5.5%; 12 of 24 reached 2x. Still in sample for the exit choice; decide at 30.
 
 **22 Oct 01:50 UK (4-hour study; data to 01:04 UK):** KEEP to 30 (23 now). Forward 23 at +4.7% (no-best +0.7%, no-top3 −5.0%, won 65%, stopped 30%, thirds +22 / +1 / −4) vs back-test 35 at +29.7%; the 8 new trades −12.8% (5 stops). 2x share 12 of 23 (52%; break-even for the fixed 2x sale 37%); x_t2s40 on the same 23 +22.2% (no-top3 +12.5%, won 57%) vs the runner's +4.7% — still in sample for the exit choice; decide at 30.
@@ -22,16 +24,16 @@ Not yet tested. Fits the owner's "fewer trades, bigger profit each" side: keeps 
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 22 Oct 05:04 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
+_Data to 22 Oct 13:03 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 22:46 UK) | 59 | +19.9% | +15.4% | 69% | 24% | +1.11 |
+| all (from 18 Oct 22:46 UK) | 66 | +17.8% | +13.8% | 68% | 26% | +1.11 |
 | before the change (21 Oct 01:30 UK) — back-test | 35 | +29.7% | +22.5% | 71% | 20% | +1.01 |
-| since the change — the real test | 24 | +5.5% | +1.7% | 67% | 29% | +0.11 |
-| last 24 h | 21 | +7.2% | +2.9% | 67% | 29% | +0.13 |
-| last 12 h | 11 | -0.4% | -9.7% | 55% | 45% | -0.02 |
-| last 6 h | 5 | +25.8% | +9.1% | 80% | 20% | +0.12 |
+| since the change — the real test | 31 | +4.4% | +1.4% | 65% | 32% | +0.10 |
+| last 24 h | 24 | -0.9% | -4.9% | 58% | 38% | -0.04 |
+| last 12 h | 8 | +3.5% | -5.4% | 62% | 38% | +0.02 |
+| last 6 h | 4 | +13.3% | -4.0% | 75% | 25% | +0.05 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -55,7 +57,7 @@ _Data to 22 Oct 05:04 UK; AS + launch bundle 5+ wallets. Built by reports/books/
   - Proposed: KEEP, runner exit, no exit change, no age filter; judge at 30 forward trades (about 2 days at 17 a day), comparing with AS on the same coins and tracking the forward 2x rate.
 - 21 Oct 17:35 UK (4-hour study; data to 17:06 UK): Forward 13 grouped: 10 winners (Banana Cat +60.9%, Clout +53.7%, Larry The Cat +33.1%, MEME +28.2%, Datacenter 16:42 +24.7%…), 2 stopped (buyoutSH 78 min old / 54 SOL sold; Datacenter 13:37, 11 wallets, 47 SOL sold — both had 2.6 SOL creator buys and 85 wallets in the minute), 1 small loser (Alpenglow −20.8%). The stopped pair repeat the 11:10 UK loser profile (older coin, heavy first-minute selling, big creator buy).
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): x_t2s40 vs runner on 24 forward: +18.6% vs +5.5% (paired on the same coins); the gap is the 2x sale catching peaks the runner's 50% trail gives back. Decide at 30 as agreed, not before.
-
+- 22 Oct 13:50 UK (4-hour study; data to 13:03 UK): 7 new forward trades: won 4 (Shamonda virus +65.2%, Gooncoin +53.2%, Capycoin +30.2%, Artex +12.0%), stopped 3 (fartless, Cream of Shrimp Soup Can, CARLIY0S). Winners' median peak 2.49x vs 1.19x — nothing at entry separates them (bundle 26.5% over 6.5 wallets vs 36.8% over 9). Paired exit test at 31 above (Verdict).
 
 ## Notable coins
 - None yet in the real test.
@@ -71,3 +73,5 @@ _Data to 22 Oct 05:04 UK; AS + launch bundle 5+ wallets. Built by reports/books/
 - 21 Oct 21:30 UK (4-hour study; data to 19:49 UK): forward 15 at +14.0% (no-best +10.7%, no-top3 +4.2%, won 80%); 9 of 15 reached 2x (break-even 37%); 15 of 30. Nothing to decide yet.
 - 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): 23 of 30; x_t2s40 vs runner paired at 30 is the decision.
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): 6 to 30; the x_t2s40-vs-runner question is the one decision there.
+- 22 Oct 13:50 UK (4-hour study; data to 13:03 UK): checkpoint answered: runner +4.4% / no-top3 −3.0% on 31 — not a book on the runner; x_t2s40 +16.1% / no-top3 +8.5%, p 0.10 vs the runner — watch to 60. Owner decides whether the box's headline switches to x_t2s40 (paper only).
+
