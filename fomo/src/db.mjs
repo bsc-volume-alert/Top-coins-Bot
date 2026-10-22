@@ -45,7 +45,8 @@ CREATE INDEX IF NOT EXISTS bs_ts ON buyers_seen(ts);
 for (const col of ["x_t2s40 REAL", "x_t15s40 REAL", "trough REAL DEFAULT 1"]) { try { db.exec(`ALTER TABLE ff ADD COLUMN ${col}`); } catch {} }
 try { db.exec(`ALTER TABLE trades ADD COLUMN x_t2s40 REAL`); } catch {}
 try { db.exec(`ALTER TABLE trades ADD COLUMN x_tsl40_at INTEGER`); } catch {}
-try { db.exec(`ALTER TABLE trades ADD COLUMN x_t3s40 REAL`); } catch {} // 3x-or-−40% exit // when the trail exit fired (FF2 card) // 2x-or-−40% exit, scored on every trade (FF2 book, 22 Oct)
+try { db.exec(`ALTER TABLE trades ADD COLUMN x_t3s40 REAL`); } catch {} // 3x-or-−40% exit
+for (const col of ["x_t13s40", "x_t18s40"]) { try { db.exec(`ALTER TABLE trades ADD COLUMN ${col} REAL`); } catch {} } // 1.3x / 1.8x take-profits (owner, 22 Oct 14:08 UK) // when the trail exit fired (FF2 card) // 2x-or-−40% exit, scored on every trade (FF2 book, 22 Oct)
 export const q = {
   insFlow: db.prepare(`INSERT INTO flow (sig, slot, ts, mint, side, usd, quote, quote_amt, tokens, venue, pool, wallet, decoded) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`),
   seenSig: db.prepare(`SELECT 1 FROM flow WHERE sig=? LIMIT 1`).pluck(),
@@ -99,6 +100,7 @@ export const q = {
   ffRecent: db.prepare(`SELECT 1 FROM trades WHERE wallet=? AND mint=? AND entry_ts>=? LIMIT 1`).pluck(),
   setX2: db.prepare(`UPDATE trades SET x_t2s40=? WHERE id=?`),
   setX3: db.prepare(`UPDATE trades SET x_t3s40=? WHERE id=?`),
+  setTP: { x_t13s40: db.prepare(`UPDATE trades SET x_t13s40=? WHERE id=?`), x_t18s40: db.prepare(`UPDATE trades SET x_t18s40=? WHERE id=?`) },
   setTslAt: db.prepare(`UPDATE trades SET x_tsl40_at=? WHERE id=? AND x_tsl40_at IS NULL`),
   ffCsv: db.prepare(`SELECT f.id, f.mint, c.symbol, f.win, f.ts, f.rank, f.buyers, f.buy_usd, f.net_usd, f.mc, f.px, f.px15, f.px60, f.px360, f.peak, f.trough, f.x_t2s40, f.x_t15s40 FROM ff f LEFT JOIN coins c ON c.mint=f.mint ORDER BY f.ts`),
   feedMints: db.prepare(`SELECT DISTINCT mint FROM wallet_trades WHERE ts>=? UNION SELECT DISTINCT mint FROM trades WHERE closed=0`).pluck(),
