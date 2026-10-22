@@ -43,6 +43,7 @@ CREATE INDEX IF NOT EXISTS bs_ts ON buyers_seen(ts);
 `);
 // FF exits (22 Oct): scored on the 30-s marker — x_t2s40 = first touch of 2x or −40% (value = the multiple sold at), x_t15s40 = 1.5x or −40%, trough = lowest multiple seen
 for (const col of ["x_t2s40 REAL", "x_t15s40 REAL", "trough REAL DEFAULT 1"]) { try { db.exec(`ALTER TABLE ff ADD COLUMN ${col}`); } catch {} }
+try { db.exec(`ALTER TABLE trades ADD COLUMN x_t2s40 REAL`); } catch {} // 2x-or-−40% exit, scored on every trade (FF2 book, 22 Oct)
 export const q = {
   insFlow: db.prepare(`INSERT INTO flow (sig, slot, ts, mint, side, usd, quote, quote_amt, tokens, venue, pool, wallet, decoded) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`),
   seenSig: db.prepare(`SELECT 1 FROM flow WHERE sig=? LIMIT 1`).pluck(),
@@ -91,6 +92,9 @@ export const q = {
   ffStats: db.prepare(`SELECT win, COUNT(*) n, AVG(px15/px) m15, AVG(px60/px) m60, AVG(px360/px) m360, AVG(peak) peak, SUM(CASE WHEN peak>=1.5 THEN 1 ELSE 0 END) hit15, SUM(CASE WHEN px60/px<=0.6 THEN 1 ELSE 0 END) dead60,
     SUM(CASE WHEN x_t2s40 IS NOT NULL THEN 1 ELSE 0 END) n2, SUM(CASE WHEN x_t2s40>=2 THEN 1 ELSE 0 END) won2, AVG(x_t2s40) m2, SUM(CASE WHEN x_t15s40 IS NOT NULL THEN 1 ELSE 0 END) n15x, SUM(CASE WHEN x_t15s40>=1.5 THEN 1 ELSE 0 END) won15x, AVG(x_t15s40) m15x
     FROM ff WHERE px>0 AND px60 IS NOT NULL GROUP BY win`),
+  ff2Rows: db.prepare(`SELECT t.*, c.mc_usd mc_now FROM trades t LEFT JOIN coins c ON c.mint=t.mint WHERE t.wallet='FF2' ORDER BY t.entry_ts DESC LIMIT 200`),
+  ff2Recent: db.prepare(`SELECT 1 FROM trades WHERE wallet='FF2' AND mint=? AND entry_ts>=? LIMIT 1`).pluck(),
+  setX2: db.prepare(`UPDATE trades SET x_t2s40=? WHERE id=?`),
   ffCsv: db.prepare(`SELECT f.id, f.mint, c.symbol, f.win, f.ts, f.rank, f.buyers, f.buy_usd, f.net_usd, f.mc, f.px, f.px15, f.px60, f.px360, f.peak, f.trough, f.x_t2s40, f.x_t15s40 FROM ff f LEFT JOIN coins c ON c.mint=f.mint ORDER BY f.ts`),
   feedMints: db.prepare(`SELECT DISTINCT mint FROM wallet_trades WHERE ts>=? UNION SELECT DISTINCT mint FROM trades WHERE closed=0`).pluck(),
   insPrice: db.prepare(`INSERT OR IGNORE INTO prices (mint, ts, usd) VALUES (?,?,?)`),

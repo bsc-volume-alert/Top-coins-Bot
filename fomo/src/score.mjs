@@ -36,7 +36,9 @@ function step(row, px, ts) {
   if (row.x_h5 == null && since >= 300) { row.x_h5 = mult; ch = true; }
   if (row.x_tsl40 == null && row.peak >= 1 && mult <= row.peak * 0.6) { row.x_tsl40 = mult; ch = true; }
   if (row.x_t15s40 == null) { if (mult >= 1.5) { row.x_t15s40 = 1.5; ch = true; } else if (mult <= 0.6) { row.x_t15s40 = mult; ch = true; } }
-  if (since >= CFG.MAX_HOLD_S) { for (const k of ["x_h5", "x_tsl40", "x_t15s40", "x_copy", "x_time"]) if (row[k] == null) row[k] = mult; row.exit_reason = "time"; ch = true; }
+  if (row.x_t2s40 == null) { if (mult >= 2) { row.x_t2s40 = 2; ch = true; } else if (mult <= 0.6) { row.x_t2s40 = mult; ch = true; } if (row.x_t2s40 != null) { try { q.setX2.run(row.x_t2s40, row.id); } catch {} } }
+  if (since >= CFG.MAX_HOLD_S) { for (const k of ["x_h5", "x_tsl40", "x_t15s40", "x_copy", "x_time"]) if (row[k] == null) row[k] = mult; if (row.x_t2s40 == null) { row.x_t2s40 = mult; try { q.setX2.run(mult, row.id); } catch {} } row.exit_reason = "time"; ch = true; }
+  if (row.wallet === "FF2") ff2Watch(row, mult, ts);
   if (ch) save(row); else if (sc.ticks % 30 === 0) q.updTrade.run(row.px5, row.px30, row.px120, row.px5_at, row.px30_at, row.px120_at, row.peak, row.last_px, row.last_ts, row.x_h5, row.x_tsl40, row.x_t15s40, row.x_copy, row.x_time, row.closed, row.exit_reason, row.id);
 }
 onPrices((got, ts) => { sc.ticks++; const tx = db.transaction(() => { for (const row of [...open.values()]) { const p = got[row.mint]; if (p > 0) step(row, p, ts); } }); tx(); });
@@ -59,3 +61,41 @@ export function logHot(win, rows, ts) {
   rows.slice(0, 5).forEach((r, i) => { const p = _lp(r.mint)?.usd || null; const c = q.coin.get(r.mint); if (!(p > 0)) { wantPrice(r.mint, 7200); return; } const bucket = Math.floor(ts / 300) * 300; const res = q.insFF.run(r.mint, win, bucket, i + 1, r.buyers, r.buy_usd, (r.buy_usd || 0) - (r.sell_usd || 0), c?.mc_usd ?? null, p); if (res.changes) { ff.logged++; wantPrice(r.mint, 7200); } });
 }
 setInterval(() => { try { const now = nowS(); for (const r of q.ffOpen.all(now - 8 * 3600)) { const p = _lp(r.mint)?.usd; if (!(p > 0)) continue; const age = now - r.ts, m = p / r.px; q.updFF.run(age >= 900 ? p : null, age >= 3600 ? p : null, age >= 21600 ? p : null, m, m, m >= 2 ? 2 : m <= 0.6 ? m : null, m >= 1.5 ? 1.5 : m <= 0.6 ? m : null, r.id); ff.marked++; } } catch (e) { console.error("[ff]", e.message); } }, 30_000).unref();
+
+// --- FF2 book (owner's go, 22 Oct 2026 13:08 UK): paper-buy a coin on the 15-min HOT list at rank 2–5 when fomo's net buying in the window
+// is ≥ $3K, MC under $1M and the price is above the window start (running). 0.1 SOL paper at the live price; exits scored by the engine
+// above: trail 40% below the peak (x_tsl40, the book's exit), 2x-or-−40% (x_t2s40) and 1.5x-or-−40% alongside; 6-h time stop. One entry
+// per coin per 6 h. Telegram on entry and on the trail exit. Runs on its own 30-s timer, so it does not depend on anyone having the page open.
+import { solUsd } from "./price.mjs";
+import { send } from "./telegram.mjs";
+export const ff2 = { checks: 0, opened: 0, closed: 0, last: null, lastReason: "" };
+const FF2 = { NET_MIN: Number(process.env.FF2_NET_MIN || 3000), MC_MAX: Number(process.env.FF2_MC_MAX || 1e6), STAKE_SOL: Number(process.env.FF2_STAKE || 0.1), COOLDOWN_S: 6 * 3600, RANKS: [2, 3, 4, 5] };
+function ff2Watch(row, mult, ts) {
+  if (row.x_tsl40 != null && !row._ff2Told) { row._ff2Told = true; ff2.closed++; const r = realCost(row.x_tsl40); send(`FF2 <b>${row.exit_reason === "time" ? "time out" : "trail exit"}</b> ${row.symbol || row.mint.slice(0, 6)} at ${row.x_tsl40.toFixed(2)}x · ${(r * 100).toFixed(0)}% at real costs · peak ${row.peak.toFixed(2)}x · held ${Math.round((ts - row.entry_ts) / 60)} min`).catch(() => {}); }
+}
+setInterval(() => {
+  try {
+    const now = nowS(); ff2.checks++;
+    const rows = q.hot.all(now - 900, 5);
+    try { logHot("15m", rows, now); logHot("5m", q.hot.all(now - 300, 5), now); } catch {}
+    rows.forEach((r, i) => {
+      const rank = i + 1; if (!FF2.RANKS.includes(rank)) return;
+      const net = (r.buy_usd || 0) - (r.sell_usd || 0); if (net < FF2.NET_MIN) return;
+      const c = q.coin.get(r.mint); const mc = c?.mc_usd; if (!(mc > 0) || mc >= FF2.MC_MAX) { ff2.lastReason = `${c?.symbol || r.mint.slice(0, 6)}: mc ${mc ? Math.round(mc) : "unknown"}`; return; }
+      const px = _lp(r.mint)?.usd; if (!(px > 0)) { wantPrice(r.mint, 1800); ff2.lastReason = `${c?.symbol || r.mint.slice(0, 6)}: no price yet`; return; }
+      const before = q.priceBefore.get(r.mint, now - 900); if (!(before > 0) || px <= before) { ff2.lastReason = `${c?.symbol || r.mint.slice(0, 6)}: not running (${before > 0 ? (px / before).toFixed(2) + "x" : "no start price"})`; return; }
+      if (q.ff2Recent.get(r.mint, now - FF2.COOLDOWN_S)) return;
+      const usd = FF2.STAKE_SOL * (solUsd() || 0);
+      const row = openTrade({ wallet: "FF2", handle: "FF2", mint: r.mint, symbol: c?.symbol || null, sig: `ff2-${now}-${r.mint.slice(0, 8)}`, ts: now, px, usd, mc });
+      if (!row) return; ff2.opened++; ff2.last = now; ff2.lastReason = `opened ${c?.symbol || r.mint.slice(0, 6)}`;
+      console.log(`[ff2] buy ${c?.symbol || r.mint.slice(0, 6)} rank ${rank} net $${net.toFixed(0)} mc $${Math.round(mc)} px ${px.toExponential(3)} (${(px / before).toFixed(2)}x vs window start)`);
+      send(`FF2 <b>paper buy</b> ${c?.symbol || r.mint.slice(0, 6)} · rank #${rank} on the 15-min list · fomo net +$${net.toFixed(0)} · MC $${(mc / 1e3).toFixed(0)}K · ${(px / before).toFixed(2)}x vs window start · ${FF2.STAKE_SOL} SOL paper · exit: trail 40% / 6 h\nhttps://fomo.family/tokens/solana/${r.mint}`).catch(() => {});
+    });
+  } catch (e) { console.error("[ff2]", e.message); ff2.lastReason = "error: " + e.message; }
+}, 30_000).unref();
+export function ff2Status() {
+  const rows = q.ff2Rows.all(); const open = rows.filter((r) => r.x_tsl40 == null), closed = rows.filter((r) => r.x_tsl40 != null);
+  const sum = (arr, f) => arr.reduce((a, r) => a + (f(r) ?? 0), 0);
+  const rec = (arr, k) => { const done = arr.filter((r) => r[k] != null); return { n: done.length, won: done.filter((r) => r[k] > 1).length, ret: done.length ? sum(done, (r) => realCost(r[k])) / done.length : null, sol: sum(done, (r) => realCost(r[k]) * FF2.STAKE_SOL) }; };
+  return { rule: `15-min list rank 2–5 · fomo net ≥ $${FF2.NET_MIN} · MC < $${FF2.MC_MAX / 1e6}M · price above window start · ${FF2.STAKE_SOL} SOL paper · trail 40% / 6 h`, checks: ff2.checks, lastReason: ff2.lastReason, open: open.map((r) => ({ ...r, mult: r.last_px && r.entry_px ? r.last_px / r.entry_px : null })), closed: closed.slice(0, 60), trail: rec(closed, "x_tsl40"), x2: rec(rows, "x_t2s40"), x15: rec(rows, "x_t15s40"), h5: rec(rows, "x_h5"), stake: FF2.STAKE_SOL };
+}
