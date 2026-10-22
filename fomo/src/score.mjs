@@ -34,10 +34,10 @@ function step(row, px, ts) {
   row.last_px = px; row.last_ts = ts;
   for (const [k, s] of [["px5", 5], ["px30", 30], ["px120", 120]]) if (row[k] == null && since >= s) { row[k] = px; row[k + "_at"] = since; ch = true; }
   if (row.x_h5 == null && since >= 300) { row.x_h5 = mult; ch = true; }
-  if (row.x_tsl40 == null && row.peak >= 1 && mult <= row.peak * 0.6) { row.x_tsl40 = mult; ch = true; }
+  if (row.x_tsl40 == null && row.peak >= 1 && mult <= row.peak * 0.6) { row.x_tsl40 = mult; row.x_tsl40_at = ts; try { q.setTslAt.run(ts, row.id); } catch {} ch = true; }
   if (row.x_t15s40 == null) { if (mult >= 1.5) { row.x_t15s40 = 1.5; ch = true; } else if (mult <= 0.6) { row.x_t15s40 = mult; ch = true; } }
   if (row.x_t2s40 == null) { if (mult >= 2) { row.x_t2s40 = 2; ch = true; } else if (mult <= 0.6) { row.x_t2s40 = mult; ch = true; } if (row.x_t2s40 != null) { try { q.setX2.run(row.x_t2s40, row.id); } catch {} } }
-  if (since >= CFG.MAX_HOLD_S) { for (const k of ["x_h5", "x_tsl40", "x_t15s40", "x_copy", "x_time"]) if (row[k] == null) row[k] = mult; if (row.x_t2s40 == null) { row.x_t2s40 = mult; try { q.setX2.run(mult, row.id); } catch {} } row.exit_reason = "time"; ch = true; }
+  if (since >= CFG.MAX_HOLD_S) { for (const k of ["x_h5", "x_tsl40", "x_t15s40", "x_copy", "x_time"]) if (row[k] == null) row[k] = mult; if (row.x_t2s40 == null) { row.x_t2s40 = mult; try { q.setX2.run(mult, row.id); } catch {} } if (!row.x_tsl40_at) { row.x_tsl40_at = ts; try { q.setTslAt.run(ts, row.id); } catch {} } row.exit_reason = "time"; ch = true; }
   if (row.wallet === "FF2") ff2Watch(row, mult, ts);
   if (ch) save(row); else if (sc.ticks % 30 === 0) q.updTrade.run(row.px5, row.px30, row.px120, row.px5_at, row.px30_at, row.px120_at, row.peak, row.last_px, row.last_ts, row.x_h5, row.x_tsl40, row.x_t15s40, row.x_copy, row.x_time, row.closed, row.exit_reason, row.id);
 }
@@ -97,5 +97,5 @@ export function ff2Status() {
   const rows = q.ff2Rows.all(); const open = rows.filter((r) => r.x_tsl40 == null), closed = rows.filter((r) => r.x_tsl40 != null);
   const sum = (arr, f) => arr.reduce((a, r) => a + (f(r) ?? 0), 0);
   const rec = (arr, k) => { const done = arr.filter((r) => r[k] != null); return { n: done.length, won: done.filter((r) => r[k] > 1).length, ret: done.length ? sum(done, (r) => realCost(r[k])) / done.length : null, sol: sum(done, (r) => realCost(r[k]) * FF2.STAKE_SOL) }; };
-  return { rule: `15-min list rank 2–5 · fomo net ≥ $${FF2.NET_MIN} · MC < $${FF2.MC_MAX / 1e6}M · price above window start · ${FF2.STAKE_SOL} SOL paper · trail 40% / 6 h`, checks: ff2.checks, lastReason: ff2.lastReason, open: open.map((r) => ({ ...r, mult: r.last_px && r.entry_px ? r.last_px / r.entry_px : null })), closed: closed.slice(0, 60), trail: rec(closed, "x_tsl40"), x2: rec(rows, "x_t2s40"), x15: rec(rows, "x_t15s40"), h5: rec(rows, "x_h5"), stake: FF2.STAKE_SOL };
+  return { rule: `15-min list rank 2–5 · fomo net ≥ $${FF2.NET_MIN} · MC < $${FF2.MC_MAX / 1e6}M · price above window start · ${FF2.STAKE_SOL} SOL paper · trail 40% / 6 h`, checks: ff2.checks, lastReason: ff2.lastReason, open: open.map((r) => ({ ...r, mult: r.last_px && r.entry_px ? r.last_px / r.entry_px : null, sell_px: r.entry_px * r.peak * 0.6, sell_by: r.entry_ts + CFG.MAX_HOLD_S })), sol_usd: solUsd(), closed: closed.slice(0, 60), trail: rec(closed, "x_tsl40"), x2: rec(rows, "x_t2s40"), x15: rec(rows, "x_t15s40"), h5: rec(rows, "x_h5"), stake: FF2.STAKE_SOL };
 }
