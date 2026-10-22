@@ -34,6 +34,6 @@ Whenever a book is discussed, analysed, changed or reported on, by a chat sessio
 | [S1.md](S1.md) … [S11.md](S11.md), [S3b.md](S3b.md), [S4b.md](S4b.md), [S6b.md](S6b.md), [S7b.md](S7b.md) | Curve snipers | All negative |
 | [S10.md](S10.md) | Operator coins on the pool | Negative; the pool price is the operator's exit |
 | [OFFPAGE.md](OFFPAGE.md) | Old tracker books not on the page | Nearly all negative |
-| [FOMO.md](FOMO.md) | The fomo.family watcher (site on :8790): books FW (fomo traders) and FF (fomo hot coins) | FF 22 Oct 13:05 UK: 107 coins, +1h 0.89x, +6h 0.70x — losing; FW: 0 trades — fomo is custodial, traders cannot be followed on-chain, needs the browser relay |
+| [FOMO.md](FOMO.md) | The fomo.family watcher (site on :8790): books FW (fomo traders) and FF (fomo hot coins) | FF2 paper book live 22 Oct 13:12 UK (15-min list rank 2–5, net ≥ $3K, MC < $1M, trail 40%), judge at 40; FF hold-the-top-5 losing; FW: fomo is custodial, traders cannot be followed on-chain |
 | [LESSONS.md](LESSONS.md) | Cost models, data events, settled conclusions, owner's rules | — |
 | numbers.py | Builds every "Latest numbers" block | — |
