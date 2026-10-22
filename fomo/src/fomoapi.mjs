@@ -12,6 +12,7 @@ let access = process.env.FOMO_COOKIE || "", refresh = process.env.FOMO_REFRESH |
 try { if (access) { const p = JSON.parse(Buffer.from(access.split(".")[1], "base64url").toString()); accessExp = p.exp || 0; fa.tokenExp = accessExp; } } catch {}
 const PRIVY_APP = (() => { try { return JSON.parse(Buffer.from(access.split(".")[1], "base64url").toString()).aud || ""; } catch { return ""; } })();
 async function doRefresh() {
+  if (process.env.FOMO_REFRESH_ENABLED !== "1") { fa.refreshErr = "refresh disabled (FOMO_REFRESH_ENABLED=1 to enable) — a box-side refresh can log the owner's browser out"; return false; } // 22 Oct 2026: the owner's fomo session dropped after the box tried the refresh; off until the API route is proven
   if (!refresh) return false; fa.refreshes++;
   // Privy's session refresh: POST /api/v1/sessions with the refresh token; the app id is the token's audience
   for (const url of ["https://privy.fomo.family/api/v1/sessions", "https://auth.privy.io/api/v1/sessions"]) {
@@ -54,6 +55,7 @@ export async function syncHandles(watched) {
 export function startFomoApi(watchedList) {
   if (!fa.enabled) { fa.lastErr = "FOMO_COOKIE not set"; return; }
   if (CFG.SMOKE) return;
+  if (process.env.FOMO_API_ENABLED !== "1") { fa.lastErr = "API calls off (FOMO_API_ENABLED=1 to enable) — every call returns 430 from the box; see FOMO.md"; return; }
   setTimeout(() => probe().catch((e) => { fa.errors++; fa.lastErr = e.message; }), 8000);
   setInterval(() => syncHandles(watchedList()).catch((e) => { fa.errors++; fa.lastErr = e.message; }), 10 * 60_000).unref();
 }
