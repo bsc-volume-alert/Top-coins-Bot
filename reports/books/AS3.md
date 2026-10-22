@@ -8,6 +8,8 @@ _Notes last rebuilt: 21 Oct 2026 01:35 UK._
 - Started 21 Oct 01:30 UK (`CHG_AS2`). Everything before is a back-test of a rule chosen by looking at those trades.
 
 ## Verdict now
+**22 Oct 01:50 UK (4-hour study; data to 01:04 UK):** KEEP to 30 (23 now). Forward 23 at +4.7% (no-best +0.7%, no-top3 −5.0%, won 65%, stopped 30%, thirds +22 / +1 / −4) vs back-test 35 at +29.7%; the 8 new trades −12.8% (5 stops). 2x share 12 of 23 (52%; break-even for the fixed 2x sale 37%); x_t2s40 on the same 23 +22.2% (no-top3 +12.5%, won 57%) vs the runner's +4.7% — still in sample for the exit choice; decide at 30.
+
 **21 Oct 17:35 UK (4-hour study; data to 17:06 UK):** KEEP, judge at 30 forward (13 now). Forward 13 at +10.4% (no-best +6.2%, no-top3 −1.2%, won 77%, stopped 15%) vs back-test 35 at +29.7%; the 22 AS trades since 01:30 with under 5 bundle wallets are at about +2% (no-best negative), so the split still points the right way but the forward gap is 8 points on 13 vs 22 trades — inside noise. The pre-registered exit check: 7 of 13 forward coins reached 2x (54%; break-even for the fixed 2x sale 37%); x_t2s40 on the same 13 is +36.4% (no-top3 +21.2%, won 69%) against the runner's +10.4% — the runner sold Chi, Nodrel, MEME, Larry The Cat and Valley of Juárez at 1.2–1.4x after peaks of 2.1–6.9x. Still 13 trades and the same in-sample warning as at 11:10 UK; decide at 30.
 
 **21 Oct 11:10 UK:** KEEP, runner exit, judge at 30 forward trades. 7 forward trades since 01:30 UK at +22.3% (6 won); the 2 AS trades with smaller bundles in the same window lost −36% between them. The 2x-or-−40% exit (x_t2s40) that revise.py keeps picking ties the runner on the 42 (+0.6 points, range −19 to +18) and only wins on the 7 forward trades; it is recorded on every row, so it needs no box — judge it at 30 by the share of coins reaching 2x (57% so far; it breaks even at 37%). No age filter.
@@ -18,16 +20,16 @@ Not yet tested. Fits the owner's "fewer trades, bigger profit each" side: keeps 
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 19:49 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
+_Data to 22 Oct 01:04 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 22:46 UK) | 50 | +25.0% | +19.9% | 74% | 18% | +1.20 |
+| all (from 18 Oct 22:46 UK) | 58 | +19.8% | +15.3% | 69% | 24% | +1.09 |
 | before the change (21 Oct 01:30 UK) — back-test | 35 | +29.7% | +22.5% | 71% | 20% | +1.01 |
-| since the change — the real test | 15 | +14.0% | +10.7% | 80% | 13% | +0.20 |
-| last 24 h | 20 | +21.6% | +15.7% | 80% | 10% | +0.41 |
-| last 12 h | 11 | +16.0% | +11.5% | 82% | 9% | +0.17 |
-| last 6 h | 6 | +16.4% | +10.7% | 83% | 0% | +0.09 |
+| since the change — the real test | 23 | +4.7% | +0.7% | 65% | 30% | +0.08 |
+| last 24 h | 23 | +4.7% | +0.7% | 65% | 30% | +0.08 |
+| last 12 h | 16 | -3.0% | -9.4% | 56% | 38% | -0.06 |
+| last 6 h | 8 | -12.8% | -27.9% | 38% | 62% | -0.11 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -61,3 +63,5 @@ _Data to 21 Oct 19:49 UK; AS + launch bundle 5+ wallets. Built by reports/books/
 - Judge at 30 trades since 01:30 UK: compare with AS on the same coins, using the average without the best trade, and the AS3 vs AS gap. Beats AS → candidate for its own executor shadow book; doesn't → drop and record why.
 - Few trades a day (roughly 1 in 2–3 AS trades), so 30 trades may take several days.
 - 21 Oct 21:30 UK (4-hour study; data to 19:49 UK): forward 15 at +14.0% (no-best +10.7%, no-top3 +4.2%, won 80%); 9 of 15 reached 2x (break-even 37%); 15 of 30. Nothing to decide yet.
+- 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): 23 of 30; x_t2s40 vs runner paired at 30 is the decision.
+

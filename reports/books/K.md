@@ -20,6 +20,8 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - **Last rule change:** none.
 
 ## Verdict now
+**22 Oct 01:50 UK (4-hour study; data to 01:04 UK):** RETIRE (recommendation). Forward since 14:50 UK: 13 trades −40.1% (no-best −50.7%), 1 won (the one 2x), 12 stops at −38% to −55%, −0.53 SOL at 0.1; thirds −17 / −49 / −51. The 8 new trades all stopped (The Odyssean turtle, eMudhra's Private Key, Justice For Memphis, bookie, offline, afk, Burger Shot, Cyber Acceleration; peaks 1.00–1.52x). 2 of 13 reached 2x against 12 of 18 in the back-test. 1 won of 13 against the back-test's 59%: about 2 in 10,000 if the back-test rate were true — the 18-trade finding (luck 2/20, 11:10 UK) was luck. Checkpoint 40: 13 of 40, but the answer will not change.
+
 **21 Oct 21:30 UK (4-hour study; data to 19:49 UK):** Revised K forward since 14:50 UK: 5 trades −24.1% (one 2x +87%, four stops at −51% to −54%: night coziness, Gifpad (open, at the stop), plus the two from 17:35 UK); stop rate 80% vs 36% in the 22-trade back-test (+31.8%). Checkpoint 40: 5 of 40. Watch the stop rate at 20; if still above half, the 2x-or-−40% exit is wrong for these coins.
 
 **21 Oct 17:35 UK (4-hour study; data to 17:06 UK):** Revised K (under 912 buyers, MC ≥ $36K, 2x or −40%) forward since 14:50 UK: 3 trades −5.0% (one 2x at +87%, two stops at −51%). Back-test on all 22 earlier qualifying trades now +31.8% (no-best +29.1%, no-top3 +23.1%, won 59%, stopped 36%, thirds +33 / +67 / 0) — the 18 at +42.7% from the 10:36 data plus 4 later trades that added nothing. Checkpoint 40 forward: 3 of 40. Nothing to say yet.
@@ -34,14 +36,14 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 19:49 UK; page headline is x_h2t40, not in the data export; 5-min shown. Built by reports/books/numbers.py._
+_Data to 22 Oct 01:04 UK; page headline is x_h2t40, not in the data export; 5-min shown. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 20 Oct 18:00 UK) | 74 | -0.8% | -3.8% | 51% | 36% | -0.13 |
-| last 24 h | 67 | +0.2% | -3.1% | 51% | 36% | -0.05 |
-| last 12 h | 26 | -7.4% | -12.1% | 50% | 38% | -0.22 |
-| last 6 h | 12 | -6.7% | -17.5% | 50% | 42% | -0.09 |
+| all (from 20 Oct 18:00 UK) | 86 | -6.3% | -9.1% | 47% | 43% | -0.63 |
+| last 24 h | 54 | -13.8% | -17.3% | 43% | 50% | -0.80 |
+| last 12 h | 26 | -20.1% | -25.4% | 38% | 58% | -0.55 |
+| last 6 h | 15 | -27.4% | -37.4% | 27% | 73% | -0.43 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -77,6 +79,7 @@ _Data to 21 Oct 19:49 UK; page headline is x_h2t40, not in the data export; 5-mi
   - Proposed: K itself — no profitable version at the book level; keep it on paper to the planned 60 trades (5 more), then retire unless the headline, once exported, says otherwise. Variant for a forward test: K2 = K's trigger + under 912 buyers at entry + entry MC ≥ $36K, exit 2x-or-−40% (x_t2s40), paper box with back-test plus from-now, judge at 40 forward trades (about 2 days). Still wanted: x_h2t40 in others.csv; bundle_pct and vol5m_usd on K rows.
 - 21 Oct 14:00 UK (data to 13:20 UK; method: scratchpad deep.py / cross.py / decile.py; full output in diag/deep_seven_1400.txt): Deep multivariate search (LESSONS 14:00 UK): only 4 entry columns exist (buyers, MC, age, hour); 60 trades, 50% won, −0.4% at 5 min. AUC 0.53 / 0.48 out of sample (chance); top 30% −5.1% / −8.3% vs −3.8%. Winner box (fewer buyers 466 vs 602, smaller MC, evening hours) holds 57% of winners and 33% of losers: inside n27 +14.3% with thirds +15.8 / +16.7 / +11.1 — the same thing as the K2 pair (under 912 buyers, MC ≥ $36K) seen from another angle, and in sample. Depth-2 rule (282–668 buyers) +23.7% in sample → n13 +2.2% vs −44.4% for the rest on the last 20. **Consistent with K2 as the only candidate; nothing else to learn from 4 columns. The crowd size at entry is K's one real-looking number.**
 - 21 Oct 17:35 UK (4-hour study; data to 17:06 UK): the 3 forward trades: 1 reached 2x, 2 were stopped. The 5-min, runner and trail exits on the same 3 are all worse (−14% to −27%).
+- 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): forward 13 at −40.1%, 12 stops; the revised rule's back-test (22 at +31.8%) is ruled out by its forward record. Stop rate 92% vs 36%. Nothing at entry separates the 8 new stops from the one winner (entry $42–90K, 365–725 s old).
 
 ## Notable coins
 - **WIPD (20 Oct 22:58 UK):**
@@ -106,3 +109,5 @@ _Data to 21 Oct 19:49 UK; page headline is x_h2t40, not in the data export; 5-mi
 - **Overlap:** check how many K coins are also A/AS/GR/PG coins before treating it as a separate book in the "two or three non-overlapping books" plan.
 - **Next review trigger:** 40+ closed trades, judged by halves and without the best trade.
 - 21 Oct 21:30 UK (4-hour study; data to 19:49 UK): 5 forward at −24.1%, 4 stops. Read again at 20.
+- 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): RETIRE proposed on 13 forward trades (1 won); owner's 40-trade plan would cost ~27 more trades for the same answer.
+

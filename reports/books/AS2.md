@@ -8,6 +8,8 @@ _Notes last rebuilt: 21 Oct 2026 01:35 UK._
 - Started 21 Oct 01:30 UK (`CHG_AS2`). Everything before is a back-test of a rule chosen by looking at those trades.
 
 ## Verdict now
+**22 Oct 01:50 UK (4-hour study; data to 01:04 UK):** CHECKPOINT REACHED (30 forward): 32 trades +2.8% (no-best −0.1%, no-top3 −4.0%, won 62%, stopped 31%, thirds +11 / +2 / −1) against the 63-trade back-test at +18.6%. AS2 kept 32 of AS's 37 trades since 01:30 UK; the 5 it skipped were about break-even. No edge over AS forward; recommendation: drop the box (AS3 carries the bundle idea).
+
 **21 Oct 17:35 UK (4-hour study; data to 17:06 UK):** KEEP, judge at 30 forward (16 now). Forward 16 at +5.9% (no-best +2.2%, no-top3 −4.2%, won 69%) vs back-test 63 at +18.6%. Still almost the same coins as AS (every AS trade since 01:30 but DreamCoin, Finley and Nigga Its Over had a 2+-wallet bundle: AS2 skipped those three at +19.2%, +21.6%, −16.7%). The forward edge over AS is nil so far; the back-test gap (+18.6% vs AS's +8.8%) has not shown up forward.
 
 **21 Oct 11:10 UK:** KEEP running, nothing to change. The forward test is 9 trades at +9.3% (no-best +2.8%) and so far identical to AS (every AS trade since 01:30 had a 2+-wallet bundle). Its back-test edge is AS3's coins diluted: the 2–4-wallet bundles are 30 trades at +1.9% (no-best −1.0%). Nothing inside it beats luck; the runner stays.
@@ -18,16 +20,16 @@ Not yet tested. Fits the owner's "many trades, small profit each" side: keeps ab
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 21 Oct 19:49 UK; AS + launch bundle 2+ wallets. Built by reports/books/numbers.py._
+_Data to 22 Oct 01:04 UK; AS + launch bundle 2+ wallets. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 22:46 UK) | 82 | +16.6% | +13.4% | 67% | 23% | +1.28 |
+| all (from 18 Oct 22:46 UK) | 95 | +13.3% | +10.5% | 64% | 27% | +1.17 |
 | before the change (21 Oct 01:30 UK) — back-test | 63 | +18.6% | +14.4% | 65% | 25% | +1.11 |
-| since the change — the real test | 19 | +9.9% | +7.1% | 74% | 16% | +0.17 |
-| last 24 h | 30 | +14.4% | +10.3% | 73% | 13% | +0.40 |
-| last 12 h | 14 | +12.2% | +8.5% | 79% | 14% | +0.16 |
-| last 6 h | 7 | +16.9% | +12.2% | 86% | 0% | +0.11 |
+| since the change — the real test | 32 | +2.8% | -0.1% | 62% | 31% | +0.06 |
+| last 24 h | 32 | +2.8% | -0.1% | 62% | 31% | +0.06 |
+| last 12 h | 22 | -1.1% | -5.6% | 59% | 36% | -0.05 |
+| last 6 h | 13 | -7.5% | -15.9% | 46% | 54% | -0.11 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -61,3 +63,5 @@ _Data to 21 Oct 19:49 UK; AS + launch bundle 2+ wallets. Built by reports/books/
 - Judge at 30 trades since 01:30 UK: compare with AS on the same coins, using the average without the best trade, and the AS2 vs AS gap. Beats AS → candidate for its own executor shadow book; doesn't → drop and record why.
 - Coins whose launch the bot never saw have no bundle count and are skipped by AS2 (counted as 0).
 - 21 Oct 21:30 UK (4-hour study; data to 19:49 UK): forward 19 at +9.9% (no-best +7.1%, no-top3 +1.8%, won 74%); 19 of 30. Nothing to decide yet.
+- 22 Oct 01:50 UK (4-hour study; data to 01:04 UK): 30-forward checkpoint reached: +2.8% on 32, no edge over AS. Proposed: retire AS2 from the page; owner decides.
+
