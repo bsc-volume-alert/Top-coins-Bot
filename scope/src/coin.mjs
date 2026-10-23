@@ -183,9 +183,10 @@ async function venueNow(mint, dec, supply, tokenProg, curve, pool, pairs = []) {
   if (cv) { const b = Buffer.from(cv.data[0], "base64");
     if (b.length >= 49) { const vTok = b.readBigUInt64LE(8), vSol = b.readBigUInt64LE(16); complete = b[48] === 1; if (b.length >= 81) creator = bs58(b.subarray(49, 81));
       if (!complete && vTok > 0n) { priceSol = (Number(vSol) / 1e9) / (Number(vTok) / 10 ** dec); venue = "bonding curve"; progress = Math.min(100, (Number(b.readBigUInt64LE(32)) / 1e9 / 85) * 100); } } }
-  if (complete !== false) for (let i = 0; i < cands.length; i++) { const a = accs[i + 1]; if (!a) continue; const d = decodePool(Buffer.from(a.data[0], "base64")); if (!d || (d.baseMint !== mint && d.quoteMint !== mint)) continue;
+  if (complete !== false) for (let i = 0; i < cands.length; i++) { const a = accs[i + 1]; if (!a) continue; const d = decodePool(Buffer.from(a.data[0], "base64")); if (!d || (d.baseMint !== mint && d.quoteMint !== mint) || (d.baseMint !== WSOL && d.quoteMint !== WSOL)) continue;
     const [pa, pb] = (await call("getMultipleAccounts", [[d.baseAcc, d.quoteAcc], { encoding: "jsonParsed" }])).value; const base = Number(pa?.data?.parsed?.info?.tokenAmount?.uiAmount || 0), quote = Number(pb?.data?.parsed?.info?.tokenAmount?.uiAmount || 0);
-    if (base > 0 && quote > 0) { const flip = d.baseMint !== mint; priceSol = flip ? base / quote : quote / base; poolSol = flip ? base : quote; venue = "PumpSwap pool"; poolUsed = cands[i]; P = d; break; } }
+    const flip = d.baseMint !== mint, sol = flip ? base : quote; // 0.4.1: the pool with the most SOL wins (not the first found)
+    if (base > 0 && quote > 0 && sol > (poolSol || 0)) { priceSol = flip ? base / quote : quote / base; poolSol = sol; venue = "PumpSwap pool"; poolUsed = cands[i]; P = d; } }
   return { cv: !!cv, complete, creator, priceSol, venue, progress, poolSol, pool: poolUsed, poolInfo: P };
 }
 function readTrades(txs, mint, skip) { // every wallet's change in this coin per transaction
@@ -238,6 +239,7 @@ async function build(mint) {
   R.curveProgress = V.progress; R.nowMarket = { venue: V.venue === "unknown" && R.dex ? R.dex.dex + " (from DexScreener)" : V.venue, priceSol: V.priceSol, mcUsd: null, graduated: V.complete, pool, curve, poolSol: V.poolSol, pairs };
   if (!V.cv) R.notes.push("Not a pump.fun coin (no bonding curve): the launch section is skipped; holders and the now section still work.");
   R.solUsd = solUsd; if (V.priceSol && solUsd) R.nowMarket.mcUsd = V.priceSol * supply * solUsd; else if (R.dex?.mc) R.nowMarket.mcUsd = R.dex.mc;
+  if (R.dex?.mc && R.nowMarket.mcUsd && (R.nowMarket.mcUsd / R.dex.mc > 3 || R.dex.mc / R.nowMarket.mcUsd > 3)) { R.notes.push(`Our market cap from the pool ($${Math.round(R.nowMarket.mcUsd / 1000)}K) disagrees with DexScreener's ($${Math.round(R.dex.mc / 1000)}K) by more than 3x — DexScreener's is shown; the pool reading is being checked.`); R.nowMarket.mcOurs = R.nowMarket.mcUsd; R.nowMarket.mcUsd = R.dex.mc; R.nowMarket.mcSuspect = true; }
 
   // liquidity: how much is in the pool, and whether the LP tokens were burned (pump.fun burns them at migration) or who holds them
   if (V.poolInfo) { const P = V.poolInfo; const LQ = { pool, lpMint: P.lpMint, poolSol: V.poolSol, poolUsd: V.poolSol && solUsd ? V.poolSol * solUsd * 2 : null, creator: P.creator, coinCreator: P.coinCreator };
@@ -448,6 +450,8 @@ async function build(mint) {
     checked: R.window.filter((p) => p.fresh != null).length, fresh: R.window.filter((p) => p.fresh).length, freshHoldPct: wsum((p) => p.fresh), launchLinked: R.window.filter((p) => p.launchLinked).length, launchLinkedHoldPct: wsum((p) => p.launchLinked),
     devBundleHoldPct: wsum((p) => p.role === "dev" || p.role === "bundle"), sniperHoldPct: wsum((p) => p.role === "sniper"), traders: R.window.filter((p) => /in and out/.test(p.behaviour || "")).length,
     soldPct: R.window.reduce((a, p) => a + (p.soldPct || 0), 0), soldPct1h: R.window.reduce((a, p) => a + (p.soldPct1h || 0), 0), sellers1h: R.window.filter((p) => p.soldPct1h > 0).length, sellingNow: R.window.filter((p) => p.sellingNow).length,
+    firstHold: R.window.filter((p) => p.rank && (p.nowPct || 0) > 0.001).length, firstMoved: R.window.filter((p) => p.rank && (p.sentTo || []).length).length, firstSoldAll: R.window.filter((p) => p.rank && (p.nSells || 0) > 0 && !((p.nowPct || 0) > 0.001)).length,
+    firstSoldSome: R.window.filter((p) => p.rank && (p.nSells || 0) > 0 && (p.nowPct || 0) > 0.001).length, firstNone: R.window.filter((p) => p.rank && !(p.nSells > 0) && !(p.sentTo || []).length && !((p.nowPct || 0) > 0.001)).length, firstHoldPct: R.window.filter((p) => p.rank).reduce((a, p) => a + (p.nowPct || 0), 0),
     sideN: R.side.length, sideHoldPct: R.side.reduce((a, p) => a + (p.nowPct || 0), 0), whales: R.window.filter((p) => p.whale).length, whaleHoldPct: wsum((p) => p.whale), lastBuyerSec: L.lastBuyerSec, firstN: L.firstN };
   for (const h of holders) { const p = W.get(h.owner); if (p) Object.assign(h, { fresh: p.fresh ?? null, ageH: p.ageH ?? null, funder: p.funder, group: p.group || null, launchLinked: !!p.launchLinked, behaviour: p.behaviour, firstBuySec: p.secAfter ?? null, gm: p.gm || null, gmStats: p.gmStats || null, whale: !!p.whale, bundled: !!p.bundled, sol: p.sol ?? null, portfolioUsd: p.portfolioUsd ?? null }); }
   if (recent) { for (const b of recent.list) { const p = W.get(b.wallet); Object.assign(b, { fresh: p?.fresh ?? null, ageH: p?.ageH ?? null, funder: p?.funder || null, group: p?.group || null, launchLinked: !!p?.launchLinked, role: p?.role || null }); }
@@ -505,7 +509,7 @@ export async function coinLive(mint) {
     const solUsd = Lv.solUsd, groups = (R.groups || []).map((g) => ({ id: g.id, nowPct: g.wallets.reduce((a, w) => a + (bal.get(w) || 0), 0) }));
     coinStat.liveCalls = (coinStat.liveCalls || 0) + used;
     const poolNow = top.filter((h) => h.owner === R.nowMarket.pool || h.owner === R.nowMarket.curve || h.owner === pda(["pool-authority", R.mint], PUMP)).reduce((a, h) => a + h.pct, 0);
-    return { ok: true, at: Math.floor(Date.now() / 1000), calls: used, poolPct: poolNow, mcUsd: V.priceSol && solUsd ? V.priceSol * Lv.supply * solUsd : null, venue: V.venue, progress: V.progress, balances: Object.fromEntries(bal), groups, top, trades };
+    return { ok: true, at: Math.floor(Date.now() / 1000), calls: used, poolPct: poolNow, mcUsd: R.nowMarket.mcSuspect ? R.nowMarket.mcUsd : V.priceSol && solUsd ? V.priceSol * Lv.supply * solUsd : null, venue: V.venue, progress: V.progress, balances: Object.fromEntries(bal), groups, top, trades };
   } catch (e) { return { ok: false, error: e.message }; }
 }
 
