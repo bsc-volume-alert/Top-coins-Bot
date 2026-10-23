@@ -58,21 +58,45 @@ function charge(method, n = 1) {
   if (used + n > PER_LOOKUP) throw new Error(`this lookup hit its ${PER_LOOKUP}-call cap`);
   coinStat.calls += n; used += n;
 }
+// 0.2.1: Helius answered "Too Many Requests" to the first real lookup (23 Oct 19:24 UK). Every request now goes through a rate limiter
+// (SCOPE_RPS items a second, default 10 — the bots share this Helius key, so the coin site must never crowd them out), batches are small,
+// and a 429 or a non-JSON reply waits and retries (1, 2, 4, 8, 16 s) instead of failing the lookup.
+const RPS = Number(process.env.SCOPE_RPS || 8); let tokens = RPS, lastFill = Date.now();
+const nap = (ms) => new Promise((r) => setTimeout(r, ms));
+async function take(n) { for (;;) { const now = Date.now(); tokens = Math.min(RPS, tokens + ((now - lastFill) / 1000) * RPS); lastFill = now; if (tokens >= Math.min(n, RPS)) { tokens -= n; return; } await nap(Math.ceil(((Math.min(n, RPS) - tokens) / RPS) * 1000) + 20); } }
+async function post(body, n, timeout) {
+  let wait = 1000, last = "";
+  for (let attempt = 0; attempt < 6; attempt++) {
+    await take(n);
+    try { const r = await fetch(URL_(), { method: "POST", headers: { "content-type": "application/json" }, body, signal: AbortSignal.timeout(timeout) }); const text = await r.text();
+      if (r.status === 429 || !/^\s*[[{]/.test(text)) { last = `HTTP ${r.status}: ${text.slice(0, 60)}`; coinStat.throttled = (coinStat.throttled || 0) + 1; await nap(wait + Math.random() * 300); wait *= 2; continue; }
+      return JSON.parse(text);
+    } catch (e) { last = e.message; await nap(wait); wait *= 2; }
+  }
+  throw new Error("Helius is busy (" + last + ") — try again in a minute");
+}
 async function call(method, params) {
   charge(method);
-  const r = await fetch(URL_(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(15000) });
-  const j = await r.json(); if (j.error) throw new Error(`${method}: ${j.error.message || JSON.stringify(j.error).slice(0, 80)}`); return j.result;
+  const j = await post(JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), 1, 15000);
+  if (j.error) throw new Error(`${method}: ${j.error.message || JSON.stringify(j.error).slice(0, 80)}`); return j.result;
 }
-async function batch(method, list, size = 40) { // JSON-RPC batch: many getTransaction in one HTTP request
-  const out = [];
+// 0.2.2: no JSON-RPC batches by default — Helius rate-limited the batched form at once (23 Oct 19:24 UK) while single requests from the bots ran clean.
+// Each item is its own request, five in flight at a time, all through the rate limiter. SCOPE_BATCH=n turns batching back on.
+const BATCH = Number(process.env.SCOPE_BATCH || 1);
+async function batch(method, list, size = BATCH) {
+  const out = new Array(list.length).fill(null);
+  if (size <= 1) { let next = 0, done = 0;
+    await Promise.all(Array.from({ length: Math.min(5, list.length) }, async () => { while (next < list.length) { const i = next++; try { out[i] = await call(method, list[i]); } catch (e) { if (/budget|cap|busy/.test(e.message)) throw e; } done++; if (stageCb && done % 10 === 0) stageCb(done, list.length); } }));
+    return out; }
   for (let i = 0; i < list.length; i += size) {
     const part = list.slice(i, i + size); charge(method, part.length);
-    const r = await fetch(URL_(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(part.map((p, k) => ({ jsonrpc: "2.0", id: k, method, params: p }))), signal: AbortSignal.timeout(30000) });
-    const j = await r.json(); const arr = Array.isArray(j) ? j : [];
-    const byId = new Map(arr.map((x) => [x.id, x.result ?? null])); for (let k = 0; k < part.length; k++) out.push(byId.get(k) ?? null);
+    const j = await post(JSON.stringify(part.map((p, k) => ({ jsonrpc: "2.0", id: k, method, params: p }))), part.length, 30000); const arr = Array.isArray(j) ? j : [];
+    const byId = new Map(arr.map((x) => [x.id, x.result ?? null])); for (let k = 0; k < part.length; k++) out[i + k] = byId.get(k) ?? null;
+    if (stageCb) stageCb(i + part.length, list.length);
   }
   return out;
 }
+let stageCb = null; const stage = (txt) => { coinStat.stage = txt; stageCb = (a, b) => { coinStat.stage = `${txt} (${a} of ${b})`; }; };
 const TX = (sig) => [sig, { maxSupportedTransactionVersion: 0, encoding: "json", commitment: "confirmed" }];
 
 // ---------- transaction reading ----------
@@ -112,17 +136,20 @@ async function walletAge(w) { // first transaction time, funder of a young walle
 // 0.2.0 (owner, 23 Oct 17:17 UK): the centre is the first two minutes — every wallet that bought after the dev and the bundle, what each holds now,
 // which are fresh, which are the same person (grouped), and who holds the supply; plus a live refresh (/api/live) that re-reads balances and new trades.
 const WINDOW_S = Number(process.env.SCOPE_WINDOW_S || 120), FRESH = 86400;
-const cache = new Map(); let running = null;
+const cache = new Map(), jobs = new Map(); let chain = Promise.resolve(), current = null;
+// 0.2.1: a lookup runs as a background job (one at a time); /api/coin answers at once with {pending, stage} until the report is ready
 export async function coinReport(mint, force = false) {
   mint = String(mint || "").trim();
   try { if (unb58(mint).length !== 32) throw 0; } catch { return { ok: false, error: "that is not a Solana address" }; }
-  const c = cache.get(mint); if (!force && c && Date.now() - c.at < 60_000) return c.r;
-  if (running) { try { await running; } catch {} } // one full lookup at a time
-  const t0 = Date.now(); used = 0; coinStat.lookups++;
-  running = build(mint).catch((e) => ({ ok: false, error: e.message }));
-  const r = await running; running = null; r.calls = used; r.ms = Date.now() - t0; coinStat.lastMs = r.ms; if (!r.ok) coinStat.lastErr = r.error;
-  if (r.ok) { cache.set(mint, { at: Date.now(), r }); if (cache.size > 100) cache.delete(cache.keys().next().value); }
-  return r;
+  const c = cache.get(mint); if (!force && c && Date.now() - c.at < 120_000) return c.r;
+  const j = jobs.get(mint);
+  if (j) { if (j.done) { jobs.delete(mint); return j.r; } return { ok: false, pending: true, stage: current === mint ? coinStat.stage || "starting" : "waiting for another lookup to finish", elapsed: Math.round((Date.now() - j.t0) / 1000) }; }
+  const job = { t0: Date.now(), done: false }; jobs.set(mint, job);
+  chain = chain.then(async () => { current = mint; used = 0; coinStat.lookups++; coinStat.stage = "starting"; const t0 = Date.now();
+    const r = await build(mint).catch((e) => ({ ok: false, error: e.message })); r.calls = used; r.ms = Date.now() - t0; coinStat.lastMs = r.ms; if (!r.ok) coinStat.lastErr = r.error;
+    if (r.ok) { cache.set(mint, { at: Date.now(), r }); if (cache.size > 100) cache.delete(cache.keys().next().value); }
+    job.r = r; job.done = true; current = null; coinStat.stage = ""; setTimeout(() => { if (jobs.get(mint) === job) jobs.delete(mint); }, 600_000).unref(); });
+  return { ok: false, pending: true, stage: "starting", elapsed: 0 };
 }
 
 const BOOK = { grf: "GR (GR2 if a bundle launch)", sn8: "S8 (BL if a bundle launch)", p5e30: "A (AS if it passed)", grad: "every graduation", momentum: "E momentum", k: "K", sn3: "S3", sn4: "S4", gradrec: "gradrec", early: "early" };
@@ -188,6 +215,7 @@ async function build(mint) {
   R.solUsd = solUsd; if (V.priceSol && solUsd) R.nowMarket.mcUsd = V.priceSol * supply * solUsd;
   const mcAt = (solAbs, tokRaw) => (solUsd && tokRaw > 0 ? (solAbs / (tokRaw / 10 ** dec)) * supply * solUsd : null);
 
+  stage("the launch: first two minutes of trades");
   // 4. the launch: every trade in the first WINDOW_S seconds, from the curve's oldest transactions
   let L = null; const W = new Map(); // wallet -> profile
   const prof = (w) => { let p = W.get(w); if (!p) { p = { wallet: w, role: null, boughtRaw: 0n, solIn: 0, firstTs: null, firstSlot: null, inWindow: false, nowPct: null, ev: [] }; W.set(w, p); } return p; };
@@ -218,6 +246,7 @@ async function build(mint) {
   const launchW = [...W.values()].filter((p) => p.inWindow && p.boughtRaw > 0n);
   if (launchW.length) { const b = await balances(launchW.map((p) => p.wallet), mint, tokenProg, pctOf); for (const p of launchW) p.nowPct = b.get(p.wallet) ?? 0; }
 
+  stage("holders now");
   // 6. holders now: largest 20 accounts with owners; holder count
   const big = (await call("getTokenLargestAccounts", [mint, { commitment: "confirmed" }]))?.value || [];
   const owners = big.length ? (await call("getMultipleAccounts", [big.map((b) => b.address), { encoding: "jsonParsed" }])).value : [];
@@ -226,12 +255,13 @@ async function build(mint) {
   const real = holders.filter((h) => !/pool|curve/.test(h.label));
   for (const h of real) { const p = prof(h.owner); p.nowPct = Math.max(p.nowPct ?? 0, h.pct); p.topHolder = true; }
   R.holders = { top: holders, top10Pct: real.slice(0, 10).reduce((a, h) => a + h.pct, 0), top20Pct: real.slice(0, 20).reduce((a, h) => a + h.pct, 0), largestPct: real[0]?.pct ?? null };
-  try { let n = 0; for (let page = 1; page <= 5; page++) { charge("getTokenAccounts"); const r = await fetch(URL_(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getTokenAccounts", params: { mint, limit: 1000, page, options: { showZeroBalance: false } } }), signal: AbortSignal.timeout(10000) });
-    const j = await r.json(); const accs = j?.result?.token_accounts || []; n += accs.filter((a) => Number(a.amount || 0) > 0).length; if (accs.length < 1000) { R.holders.count = n; break; } if (page === 5) R.holders.count = "5,000+"; } } catch {}
+  try { let n = 0; for (let page = 1; page <= 5; page++) { charge("getTokenAccounts"); const j = await post(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getTokenAccounts", params: { mint, limit: 1000, page, options: { showZeroBalance: false } } }), 1, 10000);
+    const accs = j?.result?.token_accounts || []; n += accs.filter((a) => Number(a.amount || 0) > 0).length; if (accs.length < 1000) { R.holders.count = n; break; } if (page === 5) R.holders.count = "5,000+"; } } catch {}
 
+  stage("who is buying now");
   // 7. who is buying now: the last 200 trades on the pool (or the curve)
   let recent = null;
-  try { const venueAddr = V.complete ? pool : curve; const sg = ((await call("getSignaturesForAddress", [venueAddr, { limit: 250 }])) || []).filter((x) => !x.err).slice(0, 200);
+  try { const venueAddr = V.complete ? pool : curve; const sg = ((await call("getSignaturesForAddress", [venueAddr, { limit: 150 }])) || []).filter((x) => !x.err).slice(0, 100);
     const tr = readTrades(await batch("getTransaction", sg.map((x) => TX(x.signature))), mint, skip); const B = new Map(); let sells = 0, from = null, to = null;
     for (const t of tr) { from = from == null ? t.ts : Math.min(from, t.ts); to = Math.max(to || 0, t.ts);
       if (t.kind === "buy") { const b = B.get(t.wallet) || { wallet: t.wallet, sol: 0, buys: 0, last: 0, raw: 0n }; b.sol += -t.sol / 1e9; b.buys++; b.last = Math.max(b.last, t.ts); b.raw += t.tok; B.set(t.wallet, b); } else if (t.kind === "sell") sells++; }
@@ -242,8 +272,8 @@ async function build(mint) {
   // 8. wallet ages and funders — dev, bundle, snipers first, then whoever holds the most now, then recent buyers (at most 180 wallets)
   const RO = { dev: 0, bundle: 1, sniper: 2 };
   const order = [...W.values()].sort((a, b) => (RO[a.role] ?? 9) - (RO[b.role] ?? 9) || (b.nowPct || 0) - (a.nowPct || 0) || (b.boughtPct || 0) - (a.boughtPct || 0) || (b.recentSol || 0) - (a.recentSol || 0));
-  const toAge = order.slice(0, 180).map((p) => p.wallet), ages = new Map(); let capped = false;
-  for (const part of chunks(toAge, 10)) { if (capped) break; await Promise.all(part.map(async (w) => { try { ages.set(w, await walletAge(w)); } catch (e) { if (/budget|cap/.test(e.message) && !capped) { capped = true; R.notes.push(e.message + " — wallet ages are partial."); } } })); }
+  stage("wallet ages and funders"); const toAge = order.slice(0, 120).map((p) => p.wallet), ages = new Map(); let capped = false;
+  for (const part of chunks(toAge, 4)) { if (capped) break; coinStat.stage = `wallet ages and funders (${ages.size} of ${toAge.length})`; await Promise.all(part.map(async (w) => { try { ages.set(w, await walletAge(w)); } catch (e) { if (/budget|cap/.test(e.message) && !capped) { capped = true; R.notes.push(e.message + " — wallet ages are partial."); } } })); }
   const ref = L?.createTs || tok?.create_ts || R.now;
   for (const p of W.values()) { const a = ages.get(p.wallet); if (!a) continue; p.ageAtLaunchH = a.firstTs ? +((ref - a.firstTs) / 3600).toFixed(1) : null; p.ageH = a.firstTs ? +((R.now - a.firstTs) / 3600).toFixed(1) : null;
     p.fresh = !!(a.firstTs != null && !a.old && a.firstTs > ref - FRESH); p.funder = a.funder || null; p.fundedSol = a.fundedSol ?? null; p.walletTxs = a.txs; }
@@ -252,10 +282,10 @@ async function build(mint) {
   const busy = new Set(); for (const [f, n] of [...fundCount.entries()].filter(([, n]) => n >= 2).slice(0, 40)) { if (W.has(f)) continue; try { const a = await walletAge(f); if (a.old) busy.add(f); } catch { break; } }
 
   // 9. behaviour on this coin: the token-account history of dev, bundle, snipers and the biggest holders (at most 40 wallets, last 25 transactions each)
-  const hist = order.filter((p) => RO[p.role] != null || (p.nowPct || 0) >= 0.3).slice(0, 40);
+  stage("what the biggest wallets did"); const hist = order.filter((p) => RO[p.role] != null || (p.nowPct || 0) >= 0.3).slice(0, 25);
   if (hist.length) {
-    const sigLists = await batch("getSignaturesForAddress", hist.map((p) => [ataOf(p.wallet, mint, tokenProg), { limit: 25 }]), 20);
-    const want = []; hist.forEach((p, i) => { const s = (sigLists[i] || []).filter((x) => !x.err); p.histPartial = s.length >= 25; for (const x of s) want.push([i, x.signature]); });
+    const sigLists = await batch("getSignaturesForAddress", hist.map((p) => [ataOf(p.wallet, mint, tokenProg), { limit: 15 }]));
+    const want = []; hist.forEach((p, i) => { const s = (sigLists[i] || []).filter((x) => !x.err); p.histPartial = s.length >= 15; for (const x of s) want.push([i, x.signature]); });
     const htx = await batch("getTransaction", want.map(([, s]) => TX(s)));
     const seen = new Set(); hist.forEach((p) => { p.ev = []; });
     want.forEach(([i, s], k) => { const tx = htx[k]; if (!tx || seen.has(i + s)) return; seen.add(i + s); const t = readTrades([tx], mint, skip).find((x) => x.wallet === hist[i].wallet); if (!t) return;
@@ -276,6 +306,7 @@ async function build(mint) {
     delete p.ev; delete p.boughtRaw;
   }
 
+  stage("grouping wallets into owners");
   // 10. who is the same person: group wallets by funding and by token transfers (dev + bundle are one group by construction)
   const parent = new Map(), find = (x) => { while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
   const node = (x) => { if (!parent.has(x)) parent.set(x, x); }, why = new Map(), join = (a, b, reason) => { node(a); node(b); const ra = find(a), rb = find(b); if (ra !== rb) parent.set(ra, rb); why.set(a, [...(why.get(a) || []), reason]); why.set(b, [...(why.get(b) || []), reason]); };
