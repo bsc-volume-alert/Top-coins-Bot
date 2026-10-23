@@ -1,5 +1,5 @@
 // v0.3: cluster tracking, hand-off detection, early-inflow paper entries, parallel paper exits.
-import { CFG, OFF_KINDS } from "./config.js"; // v0.18.176 OFF_KINDS: early / secondwave / confirm switched off
+import { CFG, OFF_KINDS, BOOKS_OFF } from "./config.js"; // v0.18.176 OFF_KINDS: early / secondwave / confirm switched off
 import { db, q } from "./db.js";
 import { on, esc, fmt, links, live } from "./launch-monitor.js";
 const liveToken = (m) => live.get(m);
@@ -143,6 +143,7 @@ function flush(t, s) {
 }
 
 function openPaper(t, s, tr, inflowSol, wallets, strategy = "early") {
+  if (BOOKS_OFF) return; // v0.18.185 all books off
   const outsideShare = inflowSol > 0 ? s.win.filter((x) => !x.c).reduce((a, x) => a + x.sol, 0) / inflowSol : 0;
   const entryAge = tr.ts - t.ts;
   s.buyersAt.entry = s.oBuyers.size + s.cluster.size;

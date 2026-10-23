@@ -19,7 +19,7 @@ import { on, holds, fmt } from "./launch-monitor.js";
 import { isProven, walletRecord } from "./wallets.js";
 import { isSmart, smartInfo } from "./smartwallets.js"; // v0.18.121 S6
 import { openCopy, onCopyClose, positionsOf } from "./copytrade.js";
-import { OFF_KINDS } from "./config.js";
+import { OFF_KINDS, BOOKS_OFF } from "./config.js";
 import { triggerContext } from "./momentum.js";
 import { gmgnEntry, walletStatsFor, walletFollowers } from "./gmgn.js";
 import { onSmartBuy } from "./smartmoney.js"; // v0.18.122 S7
@@ -100,7 +100,7 @@ function fire(book, L, t, tr, age, signal, signalN, extra = {}) {
   const h = (hourly[book] = (hourly[book] || []).filter((x) => now - x < 3600)); if (h.length >= SN.MAX_PER_HOUR) { sn.capped[book] = (sn.capped[book] || 0) + 1; return; } h.push(now);
   const feats = { book: SN_BOOKS[book].id, delay_s: age, slot_gap: tr.slot - L.slot, buyers: L.buyers.size, out_sol: +L.outSol.toFixed(2), sol_in: +L.solIn.toFixed(2), sol_out: +L.solOut.toFixed(2), sells: L.sells, trades: L.n, mc_first: L.mcFirst != null ? Math.round(L.mcFirst) : null,
     dev_buy: t.bundle?.devBuy ?? null, bundle_pct: t.bundle?.pct != null ? +t.bundle.pct.toFixed(2) : null, bundle_wallets: t.bundle?.wallets ?? null, bundle_sol: t.bundle?.sol != null ? +t.bundle.sol.toFixed(2) : null, signal, signal_n: signalN, cr: L.cr, cc: L.cc, ...extra };
-  if (OFF_KINDS.has(book)) return; // v0.18.179: retired sniper books no longer open paper positions (the fire is still counted above)
+  if (BOOKS_OFF || OFF_KINDS.has(book)) return; // v0.18.185 all books off · v0.18.179: retired sniper books no longer open paper positions (the fire is still counted above)
   let pos = null;
   try { pos = openCopy(book, SN_BOOKS[book].id, t.mint, t.name || t.mint.slice(0, 8), t.symbol || "", tr.price, mc, now, { ageS: age, venue: extra.pool ? "pumpswap" : "pump", v5: Math.round((L.solIn + L.solOut) * solUsdCached()), wall0: Date.now(), blockTs: now, noExec: !SN_BOOKS[book].exec, pass: true, bundle: t.bundle?.pct ?? null, bundleWallets: t.bundle?.wallets ?? null, wal60: extra.wal60 ?? L.buyers.size, preBuyers: new Set((t.trades || []).filter((x) => x.isBuy && x.wallet).map((x) => x.wallet)), creator: t.creator || null }); } // pre-entry buyers incl. the create block: their selling is the trace's ps / psn
   catch (e) { console.error("[snipe open]", e.message); return; }

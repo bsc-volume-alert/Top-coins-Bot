@@ -1,3 +1,4 @@
+import { BOOKS_OFF } from "./config.js"; // v0.18.185
 // v0.18.69 Project 7 — "slow sleepers" (owner, 17 Oct 19:25–19:33). A coin at least 6 h old, $300K–$1.5M, that trades ≥ $50K in each of
 // three back-to-back minutes (1-minute volume checked at the first sighting, +1 min and +2 min), and whose holders look
 // clean on GMGN just before buying: top 10 hold < 20%, dev (creator / dev team) holds < 5%, bundle wallets hold < 15%. Any Solana DEX (our feed
@@ -71,6 +72,7 @@ export function p7Observe(c) {
 }
 
 async function buy(c, v5, v1 = null) {
+  if (BOOKS_OFF) return; // v0.18.185 all books off
   const ds = await dsInfo(c.mint).catch(() => null);
   const meta = (() => { try { return q.tokenMeta.get(c.mint); } catch { return null; } })();
   const created = meta?.create_ts || c.created || ds?.created || null, ts = nowS();

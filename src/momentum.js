@@ -1,5 +1,5 @@
 // v0.5: momentum (volume) strategy on PumpSwap. Rolling 5m/1m USD volume per token → alert + paper trade with parallel exits.
-import { CFG, OFF_KINDS } from "./config.js"; // v0.18.176 OFF_KINDS: the off-page books open nothing new
+import { CFG, OFF_KINDS, BOOKS_OFF } from "./config.js"; // v0.18.176 OFF_KINDS: the off-page books open nothing new
 import { db, q } from "./db.js";
 import { onSwap, psHeat } from "./pumpswap.js";
 import { solUsdCached, solChange } from "./price.js";
@@ -216,6 +216,7 @@ async function trigger(mint, s, tr, v5, now, kind = "vol5m") {
     await tg(`ℹ️ <b>${kind === "burst" ? "BURST" : "VOLUME"} (above paper cap, info only)</b> — ${esc(name || mint.slice(0, 8))} ($${esc(symbol || "?")})\n5m vol <b>$${fmt(v5)}</b> (1m $${fmt(v1)}) · buys ${buys.length} / sells ${sells.length} · $${fmt(buyUsd)} in / $${fmt(sellUsd)} out · ${buyers} buyers\nMC <b>$${fmt(tr.mc)}</b> · ${ageStr0}\n${qLine}\n${socialsLine(soc)}\n${links(mint)}`);
     return;
   }
+  if (BOOKS_OFF) { mom.offSkipped = (mom.offSkipped || 0) + 1; return; } // v0.18.185 all books off
   if (OFF_KINDS.has("momentum") && !(kind === "vol5m" && tr.mc < CFG.MOM_CORE_MC && !reentry)) { mom.offSkipped = (mom.offSkipped || 0) + 1; return; } // v0.18.176 (owner go 21 Oct 13:50 UK): the non-core momentum book (burst / re-entry / MC ≥ MOM_CORE_MC) opens nothing new; the core trigger (book E, strategy momentum + core=1) keeps running — same test as `core` below
   const r = q.insMom.run(mint, name || mint.slice(0, 8), symbol || "", now, tr.mc, tr.price, meta?.bundle_pct ?? null, meta?.bundle_sol ?? null, meta?.handoffs ?? null, meta?.tier ?? null, meta?.factory ?? null,
     soc.fetched ? (soc.ok ? 1 : 0) : null, JSON.stringify({ t: soc.twitter, w: soc.website, k: soc.tiktok, g: soc.telegram }), v5, v1, buys.length, sells.length, ageS, reentry, alert ? 1 : 0, tr.mc);

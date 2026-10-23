@@ -223,5 +223,7 @@ Object.assign(CFG, { RUNNER_MIN_MC: n("RUNNER_MIN_MC", 1_000_000) });
 // v0.18.176 (owner go 21 Oct 13:50 UK): the old off-page books are switched off — none of these kinds opens a NEW paper position (open ones still close normally; every table and
 // code path stays). "momentum" here = the non-core volume trigger (burst / re-entry / MC ≥ MOM_CORE_MC); the core trigger (book E / E2, strategy momentum + core=1) keeps running.
 // OFFPAGE_BOOKS=1 re-enables them all.
+// v0.18.185 (owner, 23 Oct 19:34 UK: "these bots are definitely not working… stop using them for now, stop wasting APIs"): every paper book stops opening positions; the launch recorder (tokens, bundles, creators) keeps running for coin scope. BOOKS_OFF=0 in .env turns the books back on.
+export const BOOKS_OFF = s("BOOKS_OFF", "1") === "1";
 export const OFF_KINDS = new Set(s("OFFPAGE_BOOKS", "0") === "1" ? [] : ["early", "wave2", "secondwave", "copy", "confirm", "climber", "revival", "gradrec", "gradrun", "slow", "momentum", "momfast", "momdip", "momre", "momconf",
   "sn1", "sn2", "sn3", "sn5", "sn6", "sn6b", "sn7", "sn7b", "sn9", "sn10", "sn11", "sn4b", "p5e50", "p5e80", "p5w30", "p5c5", "p5c10", "mom60", "mom80", "pg", "rev"]); // v0.18.179 (owner, 21 Oct 16:16 UK): the retired books stop opening paper positions too - kept: A (p5e30, AS source), S8 (BL source), S3b/S4 (forward tests), every-graduation + GR, K. Set OFFPAGE_BOOKS=1 to turn everything back on.

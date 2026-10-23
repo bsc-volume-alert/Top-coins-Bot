@@ -16,7 +16,7 @@
 // peak · 6 h limit · NO golden rule (the $15K rule was 3.6% of these coins' market cap and closed 8 of 11 inside two hours; where it would have sold
 // is still recorded as a what-if). A / B / C / old exits keep being recorded on the same coins. Project 7 folded in: its "sustained volume" (1-min
 // volume at entry, +60 s, +120 s) and "holders clean" (GMGN top 10 < 20%, dev < 5%, bundle < 15%) become flags on every P6 trade (p6_flags).
-import { CFG } from "./config.js";
+import { CFG, BOOKS_OFF } from "./config.js";
 import { watch as afterWatch, tick as afterTick } from "./aftercare.js"; // v0.18.88: 24 h after-watch for P6 too ("how high after we sold")
 import { db, q } from "./db.js";
 import { on, links, esc, fmt } from "./launch-monitor.js";
@@ -101,6 +101,7 @@ async function holderFlags(mint) {
 const dsCache = new Map(); // mint -> { t, d } (one DexScreener look per coin per 20 s across levels)
 async function dsCached(mint) { const x = dsCache.get(mint); if (x && Date.now() - x.t < 20_000) return x.d; const d = await dsInfo(mint).catch(() => null); dsCache.set(mint, { t: Date.now(), d }); if (dsCache.size > 2000) dsCache.delete(dsCache.keys().next().value); return d; }
 async function enter(c, tier) {
+  if (BOOKS_OFF) return; // v0.18.185 all books off
   const key = K(c.mint, tier);
   const ds = await dsCached(c.mint);
   const meta = (() => { try { return q.tokenMeta.get(c.mint); } catch { return null; } })();

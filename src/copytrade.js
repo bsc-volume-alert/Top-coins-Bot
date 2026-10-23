@@ -1,5 +1,5 @@
 // Copy strategy: paper-enter when a watched wallet buys; track on both feeds; same parallel exits.
-import { CFG, OFF_KINDS } from "./config.js"; // v0.18.176 OFF_KINDS: the off-page books open nothing new
+import { CFG, OFF_KINDS, BOOKS_OFF } from "./config.js"; // v0.18.176 OFF_KINDS: the off-page books open nothing new
 import { db, q } from "./db.js";
 import { on } from "./launch-monitor.js";
 import { onSwap } from "./pumpswap.js";
@@ -31,6 +31,7 @@ export function copyManualSell(id) {
 export const openOfKind = (kind) => [...P.entries()].flatMap(([mint, arr]) => arr.filter((p) => !p.closed && p.kind === kind).map((p) => ({ mint, p }))); // v0.18.32
 
 export function openCopy(kind, who, mint, name, symbol, price, mc, ts, note) {
+  if (BOOKS_OFF) return null; // v0.18.185 all books off
   const ageS = note?.ageS ?? null;
   const r = q.insMom.run(mint, name, symbol, ts, mc, price, null, null, null, null, null, null, null, 0, 0, 0, 0, ageS, 0, 1, mc);
   q.setPaperExtra.run(null, kind + ":" + who, r.lastInsertRowid);
