@@ -6,6 +6,8 @@
 import { createHash } from "node:crypto";
 import "./env.mjs";
 import Database from "better-sqlite3";
+import { gget, gmgnOn, gmStat, walletRow, walletStats, facts, fromRate, TAG } from "./gmgn.mjs";
+import { writeFileSync, mkdirSync, readdirSync, statSync, unlinkSync } from "node:fs";
 // Reads the tracker's database read-only (launch facts, checkpoints, books) when it is there; works without it.
 let db = null; try { db = new Database(process.env.TRACKER_DB || "/root/tracker/data/tracker.db", { readonly: true, fileMustExist: true }); } catch (e) { console.log("[scope] tracker database not available:", e.message); }
 const HELIUS = () => process.env.HELIUS_API_KEY ? `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}` : (process.env.SCOPE_RPC_URL || "");
@@ -152,11 +154,14 @@ export async function coinReport(mint, force = false) {
   chain = chain.then(async () => { current = mint; used = 0; coinStat.lookups++; coinStat.stage = "starting"; const t0 = Date.now();
     const r = await build(mint).catch((e) => ({ ok: false, error: e.message })); r.calls = used; r.ms = Date.now() - t0; coinStat.lastMs = r.ms; if (!r.ok) coinStat.lastErr = r.error;
     if (r.ok) { cache.set(mint, { at: Date.now(), r }); if (cache.size > 100) cache.delete(cache.keys().next().value); }
+    try { const dir = process.env.SCOPE_DUMP_DIR || "/root/tracker/data/scope_last"; mkdirSync(dir, { recursive: true }); writeFileSync(`${dir}/${mint}.json`, JSON.stringify({ at: Date.now(), r }, (k, v) => (typeof v === "bigint" ? v.toString() : v)));
+      const files = readdirSync(dir).map((f) => ({ f, t: statSync(`${dir}/${f}`).mtimeMs })).sort((a, b) => b.t - a.t); for (const x of files.slice(5)) unlinkSync(`${dir}/${x.f}`); } catch {} // 0.4.0: the last 5 lookups, for the data push
     job.r = r; job.done = true; current = null; coinStat.stage = ""; setTimeout(() => { if (jobs.get(mint) === job) jobs.delete(mint); }, 600_000).unref(); });
   return { ok: false, pending: true, stage: "starting", elapsed: 0 };
 }
 
 const BOOK = { grf: "GR (GR2 if a bundle launch)", sn8: "S8 (BL if a bundle launch)", p5e30: "A (AS if it passed)", grad: "every graduation", momentum: "E momentum", k: "K", sn3: "S3", sn4: "S4", gradrec: "gradrec", early: "early" };
+const N0 = (v) => (v == null || v === "" || isNaN(Number(v)) ? null : Number(v));
 const one = (sql, ...a) => { try { return db ? db.prepare(sql).get(...a) : null; } catch { return null; } };
 const all = (sql, ...a) => { try { return db ? db.prepare(sql).all(...a) : []; } catch { return []; } };
 const chunks = (a, n) => { const o = []; for (let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; };
@@ -166,16 +171,22 @@ async function balances(wallets, mint, tokenProg, pctOf) { // current holding of
     part.forEach((w, i) => { const a = v[i]?.data?.parsed?.info?.tokenAmount; out.set(w, a ? pctOf(BigInt(a.amount)) : 0); }); }
   return out;
 }
-async function venueNow(mint, dec, supply, tokenProg, curve, pool) { // price from the curve or the pool, now
-  const [cv] = (await call("getMultipleAccounts", [[curve], { encoding: "base64" }])).value;
-  let complete = null, creator = null, priceSol = null, venue = "unknown", progress = null, poolSol = null;
+function decodePool(b) { // PumpSwap pool account: base/quote mints, LP mint, its two token accounts, LP supply
+  if (!b || b.length < 243) return null; const pk = (o) => bs58(b.subarray(o, o + 32));
+  return { index: b.readUInt16LE(9), creator: pk(11), baseMint: pk(43), quoteMint: pk(75), lpMint: pk(107), baseAcc: pk(139), quoteAcc: pk(171), lpSupply: b.readBigUInt64LE(203), coinCreator: b.length >= 243 ? pk(211) : null };
+}
+async function venueNow(mint, dec, supply, tokenProg, curve, pool, pairs = []) { // price from the curve or the pool, now
+  // 0.4.0: the canonical PumpSwap pool first, then every pool DexScreener lists for the coin (YMB, 23 Oct: "trading on unknown")
+  const cands = [pool, ...pairs.filter((x) => x && x !== pool)].slice(0, 4);
+  const accs = (await call("getMultipleAccounts", [[curve, ...cands], { encoding: "base64" }])).value, cv = accs[0];
+  let complete = null, creator = null, priceSol = null, venue = "unknown", progress = null, poolSol = null, poolUsed = null, P = null;
   if (cv) { const b = Buffer.from(cv.data[0], "base64");
     if (b.length >= 49) { const vTok = b.readBigUInt64LE(8), vSol = b.readBigUInt64LE(16); complete = b[48] === 1; if (b.length >= 81) creator = bs58(b.subarray(49, 81));
       if (!complete && vTok > 0n) { priceSol = (Number(vSol) / 1e9) / (Number(vTok) / 10 ** dec); venue = "bonding curve"; progress = Math.min(100, (Number(b.readBigUInt64LE(32)) / 1e9 / 85) * 100); } } }
-  if (complete !== false) { const [pa, pb] = (await call("getMultipleAccounts", [[ataOf(pool, mint, tokenProg), ataOf(pool, WSOL, TOKEN)], { encoding: "jsonParsed" }])).value;
-    const base = Number(pa?.data?.parsed?.info?.tokenAmount?.uiAmount || 0), quote = Number(pb?.data?.parsed?.info?.tokenAmount?.uiAmount || 0);
-    if (base > 0 && quote > 0) { priceSol = quote / base; venue = "PumpSwap pool"; poolSol = quote; } }
-  return { cv: !!cv, complete, creator, priceSol, venue, progress, poolSol };
+  if (complete !== false) for (let i = 0; i < cands.length; i++) { const a = accs[i + 1]; if (!a) continue; const d = decodePool(Buffer.from(a.data[0], "base64")); if (!d || (d.baseMint !== mint && d.quoteMint !== mint)) continue;
+    const [pa, pb] = (await call("getMultipleAccounts", [[d.baseAcc, d.quoteAcc], { encoding: "jsonParsed" }])).value; const base = Number(pa?.data?.parsed?.info?.tokenAmount?.uiAmount || 0), quote = Number(pb?.data?.parsed?.info?.tokenAmount?.uiAmount || 0);
+    if (base > 0 && quote > 0) { const flip = d.baseMint !== mint; priceSol = flip ? base / quote : quote / base; poolSol = flip ? base : quote; venue = "PumpSwap pool"; poolUsed = cands[i]; P = d; break; } }
+  return { cv: !!cv, complete, creator, priceSol, venue, progress, poolSol, pool: poolUsed, poolInfo: P };
 }
 function readTrades(txs, mint, skip) { // every wallet's change in this coin per transaction
   // 0.3.1: a trade is recognised from the pool / curve side (its tokens went the other way in the same transaction), whoever paid the SOL —
@@ -212,23 +223,35 @@ async function build(mint) {
   const info = mi.value.data?.parsed?.info || {}, tokenProg = mi.value.owner, dec = Number(info.decimals ?? 6), supply = Number(BigInt(info.supply || 0)) / 10 ** dec;
   const pctOf = (raw) => (supply > 0 ? (Number(raw) / 10 ** dec / supply) * 100 : null);
   R.token = { decimals: dec, supply, program: tokenProg === TOKEN ? "SPL Token" : "Token-2022", mintAuthority: info.mintAuthority || null, freezeAuthority: info.freezeAuthority || null };
-  const curve = curveOf(mint), pool = poolOf(mint), poolAuth = pda(["pool-authority", mint], PUMP), skip = new Set([curve, pool, poolAuth]);
-  const V = await venueNow(mint, dec, supply, tokenProg, curve, pool);
-  R.curveProgress = V.progress; R.nowMarket = { venue: V.venue, priceSol: V.priceSol, mcUsd: null, graduated: V.complete, pool, curve, poolSol: V.poolSol };
-  if (!V.cv) R.notes.push("Not a pump.fun coin (no bonding curve): the launch section is skipped; holders and the now section still work.");
-
-  // 3. DexScreener (free, from the box)
+  // GMGN runs beside the chain reading (own pace): token info, security, top 100 holders and top 100 traders with GMGN's tags
+  const gmP = gmgnOn() ? Promise.all([gget("/v1/token/info", { chain: "sol", address: mint }), gget("/v1/token/security", { chain: "sol", address: mint }), gget("/v1/market/token_top_holders", { chain: "sol", address: mint, limit: "100" }), gget("/v1/market/token_top_traders", { chain: "sol", address: mint, limit: "100" })].map((p) => p.catch((e) => ({ _err: e.message })))) : Promise.resolve(null);
+  // DexScreener (free, from the box) — first, because its pool addresses are the fallback for finding the pool
+  let pairs = [];
   try { const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`, { signal: AbortSignal.timeout(6000) }); const j = await r.json();
-    const p = (j.pairs || []).sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
-    if (p) { R.dex = { dex: p.dexId, mc: p.marketCap || p.fdv, liq: p.liquidity?.usd, vol24: p.volume?.h24, vol1h: p.volume?.h1, ch5m: p.priceChange?.m5, ch1h: p.priceChange?.h1, ch6h: p.priceChange?.h6, ch24: p.priceChange?.h24,
-      buys24: p.txns?.h24?.buys, sells24: p.txns?.h24?.sells, name: p.baseToken?.name, symbol: p.baseToken?.symbol, links: [...(p.info?.websites || []).map((w) => w.url), ...(p.info?.socials || []).map((s) => s.url)] };
+    const all_ = (j.pairs || []).filter((x) => x.chainId === "solana").sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0)), p = all_[0]; pairs = all_.map((x) => x.pairAddress).filter(Boolean);
+    if (p) { R.dex = { dex: p.dexId, pair: p.pairAddress, mc: p.marketCap || p.fdv, liq: p.liquidity?.usd, liqSol: p.liquidity?.quote ?? null, vol24: p.volume?.h24, vol1h: p.volume?.h1, ch5m: p.priceChange?.m5, ch1h: p.priceChange?.h1, ch6h: p.priceChange?.h6, ch24: p.priceChange?.h24,
+      buys24: p.txns?.h24?.buys, sells24: p.txns?.h24?.sells, name: p.baseToken?.name, symbol: p.baseToken?.symbol, pairCreated: p.pairCreatedAt ? Math.floor(p.pairCreatedAt / 1000) : null, links: [...(p.info?.websites || []).map((w) => w.url), ...(p.info?.socials || []).map((s) => s.url)], pools: all_.slice(0, 5).map((x) => ({ dex: x.dexId, pair: x.pairAddress, liq: x.liquidity?.usd })) };
       if (!solUsd && Number(p.priceNative) > 0 && Number(p.priceUsd) > 0) solUsd = Number(p.priceUsd) / Number(p.priceNative); } } catch {}
-  R.solUsd = solUsd; if (V.priceSol && solUsd) R.nowMarket.mcUsd = V.priceSol * supply * solUsd;
+  const curve = curveOf(mint), poolAuth = pda(["pool-authority", mint], PUMP);
+  const V = await venueNow(mint, dec, supply, tokenProg, curve, poolOf(mint), pairs);
+  const pool = V.pool || poolOf(mint), skip = new Set([curve, pool, poolAuth, ...pairs]);
+  R.curveProgress = V.progress; R.nowMarket = { venue: V.venue === "unknown" && R.dex ? R.dex.dex + " (from DexScreener)" : V.venue, priceSol: V.priceSol, mcUsd: null, graduated: V.complete, pool, curve, poolSol: V.poolSol, pairs };
+  if (!V.cv) R.notes.push("Not a pump.fun coin (no bonding curve): the launch section is skipped; holders and the now section still work.");
+  R.solUsd = solUsd; if (V.priceSol && solUsd) R.nowMarket.mcUsd = V.priceSol * supply * solUsd; else if (R.dex?.mc) R.nowMarket.mcUsd = R.dex.mc;
+
+  // liquidity: how much is in the pool, and whether the LP tokens were burned (pump.fun burns them at migration) or who holds them
+  if (V.poolInfo) { const P = V.poolInfo; const LQ = { pool, lpMint: P.lpMint, poolSol: V.poolSol, poolUsd: V.poolSol && solUsd ? V.poolSol * solUsd * 2 : null, creator: P.creator, coinCreator: P.coinCreator };
+    try { const sup = await call("getTokenSupply", [P.lpMint]); const now = Number(sup?.value?.amount || 0), minted = Number(P.lpSupply); LQ.lpNow = now; LQ.lpMinted = minted;
+      LQ.burnedPct = minted > 0 ? Math.max(0, Math.min(100, (1 - now / minted) * 100)) : null;
+      if (now > 0) { const lb = (await call("getTokenLargestAccounts", [P.lpMint]))?.value || []; const lo = lb.length ? (await call("getMultipleAccounts", [lb.slice(0, 5).map((x) => x.address), { encoding: "jsonParsed" }])).value : [];
+        LQ.lpHolders = lb.slice(0, 5).map((x, i) => ({ owner: lo[i]?.data?.parsed?.info?.owner || x.address, pctOfLp: (Number(x.amount) / now) * 100, pctOfMinted: minted ? (Number(x.amount) / minted) * 100 : null })); } } catch (e) { LQ.err = e.message; }
+    R.liquidity = LQ; }
+
   const mcAt = (solAbs, tokRaw) => (solUsd && tokRaw > 0 ? (solAbs / (tokRaw / 10 ** dec)) * supply * solUsd : null);
 
   stage("the launch: the dev, the bundle and the first buyers");
   // 4. the launch: every trade in the first WINDOW_S seconds, from the curve's oldest transactions
-  let L = null; const W = new Map(); // wallet -> profile
+  let L = null, LT = []; const W = new Map(); // wallet -> profile; LT = every trade read at launch
   const prof = (w) => { let p = W.get(w); if (!p) { p = { wallet: w, role: null, boughtRaw: 0n, solIn: 0, firstTs: null, firstSlot: null, inWindow: false, nowPct: null, ev: [] }; W.set(w, p); } return p; };
   if (V.cv) {
     const { sigs, complete: reached } = await allSigs(curve, 30);
@@ -241,7 +264,7 @@ async function build(mint) {
         for (const t of readTrades(got, mint, skip)) if (t.kind === "buy" && t.slot !== slot0 && t.wallet !== creator0) firstBuyers.add(t.wallet); coinStat.stage = `the launch: ${Math.min(firstBuyers.size, FIRST_N)} of the first ${FIRST_N} buyers found`; }
       const early = asc.slice(0, idx);
       const creator = V.creator || tok?.creator || keysOf(txs.find(Boolean))[0], createTs = txs.find(Boolean)?.blockTime || t0;
-      for (const t of readTrades(txs, mint, skip)) { const p = prof(t.wallet); p.inWindow = true;
+      LT = readTrades(txs, mint, skip); for (const t of LT) { const p = prof(t.wallet); p.inWindow = true;
         if (p.firstSlot == null) { p.firstSlot = t.slot; p.firstTs = t.ts; }
         if (t.kind === "buy" && p.firstBuySlot == null) p.firstBuySlot = t.slot;
         if (t.kind === "buy" && t.slot === slot0) p.launchRaw = (p.launchRaw || 0n) + t.tok; if (t.kind === "buy" && t.slot === slot0) p.launchSol = (p.launchSol || 0) + -t.sol / 1e9; // what the dev and bundle took in the create block
@@ -376,9 +399,47 @@ async function build(mint) {
   const linkedToLaunch = new Set(groups.filter((g) => g.launch).flatMap((g) => g.wallets));
   for (const p of W.values()) p.launchLinked = linkedToLaunch.has(p.wallet) && p.role !== "dev" && p.role !== "bundle";
 
+  // 10b. our GMGN-style bundle measure: wallets that bought together — in the create block, in the same transaction, or two+ wallets of one owner in the same block
+  { const bundledW = new Set(), bySig = new Map(), bySlot = new Map();
+    for (const t of LT) { if (t.kind !== "buy") continue; if (t.slot === L?.slot0) bundledW.add(t.wallet);
+      if (!bySig.has(t.sig)) bySig.set(t.sig, new Set()); bySig.get(t.sig).add(t.wallet);
+      const g = W.get(t.wallet)?.group; if (g) { const k = t.slot + ":" + g; if (!bySlot.has(k)) bySlot.set(k, new Set()); bySlot.get(k).add(t.wallet); } }
+    for (const set of [...bySig.values(), ...bySlot.values()]) if (set.size >= 2) for (const w of set) bundledW.add(w);
+    const raw = LT.filter((t) => t.kind === "buy" && bundledW.has(t.wallet)).reduce((a, t) => a + Number(t.tok), 0);
+    R.bundled = { wallets: bundledW.size, boughtPct: (raw / 10 ** dec / supply) * 100, holdNow: [...bundledW].reduce((a, w) => a + (W.get(w)?.nowPct || 0), 0), list: [...bundledW] };
+    for (const w of bundledW) { const q = W.get(w); if (q) q.bundled = true; } }
+
+  // 10c. GMGN's view, wallet by wallet and in total — then the two side by side
+  stage("GMGN: tags, bundlers, whales");
+  const GM = await gmP;
+  if (GM) { const [info, sec, hold, trad] = GM, list = (d) => (d?.list || (Array.isArray(d) ? d : [])).filter((w) => w && w.address);
+    const hl = list(hold).map(walletRow), tl = list(trad).map(walletRow), byW = new Map();
+    for (const x of tl) byW.set(x.wallet, x); for (const x of hl) byW.set(x.wallet, { ...(byW.get(x.wallet) || {}), ...x });
+    const realH = hl.filter((x) => !x.pool), has = (x, t) => x.tags.includes(t), share = (f) => realH.filter(f).reduce((a, x) => a + (x.pct || 0), 0), cnt = (f) => realH.filter(f).length;
+    const st = info?.stat || {}, wts = info?.wallet_tags_stat || {};
+    const devTag = (x) => has(x, "dev") || has(x, "dev_team") || has(x, "creator");
+    R.gmgn = { ok: !info?._err, err: info?._err || sec?._err || hold?._err || null, holders: N0(info?.holder_count), top10: fromRate(st.top_10_holder_rate ?? info?.top_10_holder_rate), bundlerShare: fromRate(st.top_bundler_trader_percentage),
+      devHold: fromRate(st.dev_team_hold_rate ?? st.creator_hold_rate), freshRate: fromRate(st.fresh_wallet_rate), insiderHold: fromRate(sec?.suspected_insider_hold_rate), rug: fromRate(sec?.rug_ratio ?? info?.rug_ratio), wash: sec?.is_wash_trading ?? info?.is_wash_trading ?? null,
+      now: { bundler: share((x) => has(x, "bundler")), sniper: share((x) => has(x, "sniper")), insider: share((x) => has(x, "rat_trader")), fresh: share((x) => has(x, "fresh_wallet") || x.isNew), smart: share((x) => has(x, "smart_degen")), kol: share((x) => has(x, "renowned")), dev: share(devTag), pool: hl.filter((x) => x.pool).reduce((a, x) => a + (x.pct || 0), 0) },
+      n: { bundler: cnt((x) => has(x, "bundler")), sniper: cnt((x) => has(x, "sniper")), insider: cnt((x) => has(x, "rat_trader")), fresh: cnt((x) => has(x, "fresh_wallet") || x.isNew), smart: cnt((x) => has(x, "smart_degen")), kol: cnt((x) => has(x, "renowned")) },
+      tagCounts: facts(wts), facts: { ...facts(st, "stat"), ...facts(sec, "security"), ...facts({ holder_count: info?.holder_count, launchpad: info?.launchpad, creator_token_status: info?.creator_token_status, liquidity: info?.liquidity, circulating_supply: info?.circulating_supply }, "info") } };
+    for (const p of W.values()) { const g = byW.get(p.wallet); if (g) p.gm = { tags: g.tags.map((t) => TAG[t] || t), soldPct: g.soldPct, profit: g.profit, realized: g.realized, buyUsd: g.buyUsd, sellUsd: g.sellUsd, isNew: g.isNew, suspicious: g.suspicious, fund: g.fund, tIn: g.tIn, tOut: g.tOut, pct: g.pct }; }
+    // wallets GMGN flags that are not in our launch / grouping picture
+    R.gmgnOnly = realH.filter((x) => (has(x, "bundler") || has(x, "rat_trader") || has(x, "sniper")) && (x.pct || 0) >= 0.05 && !(W.get(x.wallet)?.first || W.get(x.wallet)?.group)).slice(0, 25).map((x) => ({ wallet: x.wallet, tags: x.tags.map((t) => TAG[t] || t), pct: x.pct, soldPct: x.soldPct, fund: x.fund, isNew: x.isNew }));
+    // agreement: of the wallets GMGN calls bundler / insider and that hold, how many we put with the dev / bundle (or in any owner group)
+    const flagged = realH.filter((x) => has(x, "bundler") || has(x, "rat_trader")), inOurs = flagged.filter((x) => W.get(x.wallet)?.group || W.get(x.wallet)?.bundled || ["dev", "bundle"].includes(W.get(x.wallet)?.role));
+    R.gmgn.agree = { flagged: flagged.length, inOurs: inOurs.length };
+    // whales: GMGN wallet stats for the 12 biggest holders and the dev
+    const devAddr2 = L?.creator || tok?.creator || null, ws2 = [...new Set([...(devAddr2 ? [devAddr2] : []), ...realH.slice(0, 12).map((x) => x.wallet)])];
+    await Promise.all(ws2.map(async (w) => { try { const d = walletStats(await gget("/v1/user/wallet_stats", { chain: "sol", wallet_address: w, period: "30d" })); const q = prof(w); q.gmStats = d; if (d && ((d.balanceSol || 0) >= 50 || (d.cost || 0) >= 50000)) q.whale = true; } catch {} }));
+    if (devAddr2) { try { const ct = await gget("/v1/user/created_tokens", { chain: "sol", wallet_address: devAddr2 }); const arr = ct?.tokens || ct?.list || (Array.isArray(ct) ? ct : []);
+      R.gmgn.devTokens = { n: N0(ct?.token_count ?? ct?.total ?? arr.length), facts: facts(ct?.stat || ct?.summary || {}), list: arr.slice(0, 30).map((t) => ({ mint: t.address || t.token_address, symbol: t.symbol, mc: N0(t.market_cap ?? t.usd_market_cap), ath: N0(t.ath_mc ?? t.ath_market_cap), created: N0(t.created_timestamp ?? t.open_timestamp), graduated: t.is_complete ?? t.complete ?? null })) }; } catch (e) { R.gmgn.devTokensErr = e.message; } }
+    R.gmgnRaw = { info: facts(info), sec: facts(sec), holdersSample: list(hold).slice(0, 3), tradersSample: list(trad).slice(0, 2), wts };
+  } else R.gmgn = { ok: false, err: "no GMGN key on the box" };
+
   // 11. tables for the page
   const pub = (p) => ({ wallet: p.wallet, role: p.role || (p.topHolder ? "holder" : "buyer"), secAfter: p.secAfter ?? null, boughtPct: p.boughtPct ?? null, solIn: p.solIn ? +p.solIn.toFixed(3) : null, nowPct: p.nowPct, fresh: p.fresh ?? null, ageAtLaunchH: p.ageAtLaunchH ?? null, ageH: p.ageH ?? null,
-    funder: p.funder || null, group: p.group || null, launchLinked: !!p.launchLinked, behaviour: p.behaviour, rank: p.rank ?? null, launchPct: p.launchPct ?? null, sol: p.sol ?? null, portfolioUsd: p.portfolioUsd ?? null, tokenCount: p.tokenCount ?? null, otherCoins: p.otherCoins || [], whale: !!p.whale,
+    funder: p.funder || null, group: p.group || null, launchLinked: !!p.launchLinked, behaviour: p.behaviour, rank: p.rank ?? null, launchPct: p.launchPct ?? null, gm: p.gm || null, gmStats: p.gmStats || null, bundled: !!p.bundled, sol: p.sol ?? null, portfolioUsd: p.portfolioUsd ?? null, tokenCount: p.tokenCount ?? null, otherCoins: p.otherCoins || [], whale: !!p.whale,
     soldPct: p.soldPct || 0, soldPct1h: p.soldPct1h || 0, lastSell: p.lastSell || null, sellingNow: !!p.sellingNow, sideN: p.sideN || 0, sideHoldPct: p.sideHoldPct || 0, nBuys: p.nBuys, nSells: p.nSells, soldSol: p.soldSol || null, firstSellMc: p.firstSellMc, sentTo: p.sentTo, gotFrom: p.gotFrom, events: p.events, histPartial: !!p.histPartial });
   R.window = [...W.values()].filter((p) => p.first && p.boughtPct > 0).sort((a, b) => RK(a) - RK(b) || (a.rank ?? 0) - (b.rank ?? 0)).map(pub);
   R.side = [...W.values()].filter((p) => p.role === "side wallet").sort((a, b) => (b.nowPct || 0) - (a.nowPct || 0)).map(pub);
@@ -388,7 +449,7 @@ async function build(mint) {
     devBundleHoldPct: wsum((p) => p.role === "dev" || p.role === "bundle"), sniperHoldPct: wsum((p) => p.role === "sniper"), traders: R.window.filter((p) => /in and out/.test(p.behaviour || "")).length,
     soldPct: R.window.reduce((a, p) => a + (p.soldPct || 0), 0), soldPct1h: R.window.reduce((a, p) => a + (p.soldPct1h || 0), 0), sellers1h: R.window.filter((p) => p.soldPct1h > 0).length, sellingNow: R.window.filter((p) => p.sellingNow).length,
     sideN: R.side.length, sideHoldPct: R.side.reduce((a, p) => a + (p.nowPct || 0), 0), whales: R.window.filter((p) => p.whale).length, whaleHoldPct: wsum((p) => p.whale), lastBuyerSec: L.lastBuyerSec, firstN: L.firstN };
-  for (const h of holders) { const p = W.get(h.owner); if (p) Object.assign(h, { fresh: p.fresh ?? null, ageH: p.ageH ?? null, funder: p.funder, group: p.group || null, launchLinked: !!p.launchLinked, behaviour: p.behaviour, firstBuySec: p.secAfter ?? null }); }
+  for (const h of holders) { const p = W.get(h.owner); if (p) Object.assign(h, { fresh: p.fresh ?? null, ageH: p.ageH ?? null, funder: p.funder, group: p.group || null, launchLinked: !!p.launchLinked, behaviour: p.behaviour, firstBuySec: p.secAfter ?? null, gm: p.gm || null, gmStats: p.gmStats || null, whale: !!p.whale, bundled: !!p.bundled, sol: p.sol ?? null, portfolioUsd: p.portfolioUsd ?? null }); }
   if (recent) { for (const b of recent.list) { const p = W.get(b.wallet); Object.assign(b, { fresh: p?.fresh ?? null, ageH: p?.ageH ?? null, funder: p?.funder || null, group: p?.group || null, launchLinked: !!p?.launchLinked, role: p?.role || null }); }
     const chk = recent.list.filter((b) => b.fresh != null); Object.assign(recent, { checked: chk.length, fresh: chk.filter((b) => b.fresh).length, freshSol: +chk.filter((b) => b.fresh).reduce((a, b) => a + b.sol, 0).toFixed(2), sol: +chk.reduce((a, b) => a + b.sol, 0).toFixed(2), linked: recent.list.filter((b) => b.launchLinked || b.role === "dev" || b.role === "bundle").length }); }
   R.recent = recent; R.tracked = [...W.values()].filter((p) => RO[p.role] != null).map(pub);
@@ -402,6 +463,22 @@ async function build(mint) {
   // what the early wallets (dev, bundle, first buyers) sold over time: running total of their sales and transfers out, % of supply
   const evs = []; for (const p of W.values()) if (p.first) for (const e of p.events || []) if (e.kind === "sell" || e.kind === "out") evs.push({ ts: e.ts, pct: e.pct || 0, kind: e.kind });
   evs.sort((a, b) => a.ts - b.ts); let cs = 0, co = 0; R.sellCurve = { start: L?.createTs || null, points: evs.map((e) => { if (e.kind === "sell") cs += e.pct; else co += e.pct; return [e.ts, +cs.toFixed(2), +co.toFixed(2)]; }), heldAtLaunch: (L?.dev?.pct || 0) + (L?.bundle?.pct || 0) + R.window.filter((p) => p.rank).reduce((a, p) => a + (p.boughtPct || 0), 0) };
+  // us vs GMGN, line by line (null = that side has no such number)
+  { const Gm = R.gmgn || {}, S2 = R.windowSummary || {}, Pq = R.pie || {}, Hq = R.holders || {}, fr = (R.fresh || null);
+    const topFresh = (Hq.top || []).filter((h) => !/pool|curve/.test(h.label || "") && h.fresh).reduce((a, h) => a + (h.pct || 0), 0);
+    R.compare = [
+      ["Bundle in the create block (% of supply bought)", L?.bundle?.pct ?? R.db.bundle_pct ?? null, null, "GMGN has no create-block figure"],
+      ["Bundled buys (% of supply bought by wallets buying together)", R.bundled?.boughtPct ?? null, Gm.bundlerShare ?? null, "ours: create block, same transaction, or one owner's wallets in the same block — first " + (L?.txs || 0) + " launch transactions"],
+      ["Bundlers still holding (% of supply)", R.bundled?.holdNow ?? null, Gm.now?.bundler ?? null, "GMGN: top 100 holders tagged bundler"],
+      ["Dev holding now", S2.devBundleHoldPct != null ? (R.tracked || []).filter((p) => p.role === "dev").reduce((a, p) => a + (p.nowPct || 0), 0) : null, Gm.devHold ?? Gm.now?.dev ?? null, ""],
+      ["Snipers holding now", S2.sniperHoldPct ?? null, Gm.now?.sniper ?? null, "ours: bought in the 4 blocks after the create"],
+      ["Insiders holding now", (Pq.dev || 0) + (Pq.linked || 0) + (Pq.side || 0), Gm.insiderHold ?? Gm.now?.insider ?? null, "ours: dev + bundle + linked + side wallets; GMGN: 'insider' (rat trader)"],
+      ["Fresh wallets holding (top holders)", topFresh, Gm.now?.fresh ?? null, ""],
+      ["Top 10 hold", Hq.top10Pct ?? null, Gm.top10 ?? null, ""],
+      ["Holders", typeof Hq.count === "number" ? Hq.count : null, Gm.holders ?? null, ""],
+      ["Dev's other coins", R.dev?.summary?.n ?? null, Gm.devTokens?.n ?? null, ""],
+      ["Biggest single owner (linked wallets)", (R.groups || [])[0]?.nowPct ?? null, null, "GMGN does not group wallets by owner"]];
+  }
   R.live = { wallets: [...W.values()].sort((a, b) => RK(a) - RK(b)).map((p) => p.wallet).slice(0, 400), lastSig: recent?.lastSig || null, venueAddr: recent?.venueAddr || null, tokenProg, dec, supply, solUsd };
   R.diag = diagnose(R);
   R.name = R.db.name || R.dex?.name || null; R.symbol = R.db.symbol || R.dex?.symbol || null;
@@ -413,9 +490,9 @@ export async function coinLive(mint) {
   const c = cache.get(String(mint || "").trim()); if (!c) return { ok: false, error: "look the coin up first" };
   const R = c.r, Lv = R.live; used = 0;
   try {
-    const pctOf = (raw) => (Number(raw) / 10 ** Lv.dec / Lv.supply) * 100, skip = new Set([R.nowMarket.curve, R.nowMarket.pool, pda(["pool-authority", R.mint], PUMP)]);
+    const pctOf = (raw) => (Number(raw) / 10 ** Lv.dec / Lv.supply) * 100, skip = new Set([R.nowMarket.curve, R.nowMarket.pool, pda(["pool-authority", R.mint], PUMP), ...(R.nowMarket.pairs || [])]);
     const bal = await balances(Lv.wallets, R.mint, Lv.tokenProg, pctOf);
-    const V = await venueNow(R.mint, Lv.dec, Lv.supply, Lv.tokenProg, R.nowMarket.curve, R.nowMarket.pool);
+    const V = await venueNow(R.mint, Lv.dec, Lv.supply, Lv.tokenProg, R.nowMarket.curve, R.nowMarket.pool, R.nowMarket.pairs || []);
     const big = (await call("getTokenLargestAccounts", [R.mint, { commitment: "confirmed" }]))?.value || [];
     const owners = big.length ? (await call("getMultipleAccounts", [big.map((b) => b.address), { encoding: "jsonParsed" }])).value : [];
     const top = big.map((b, i) => ({ owner: owners[i]?.data?.parsed?.info?.owner || null, pct: pctOf(BigInt(b.amount)) })).filter((h) => h.owner);
@@ -436,6 +513,9 @@ function diagnose(R) {
   const d = [], add = (lvl, txt) => d.push({ lvl, txt }), f1 = (x) => (x == null ? "?" : x.toFixed(1)), L = R.launch, S = R.windowSummary, H = R.holders, T = (r) => (R.tracked || []).filter((p) => p.role === r);
   if (R.token.mintAuthority) add("red", `Mint authority is NOT revoked (${R.token.mintAuthority.slice(0, 6)}…): more tokens can be printed.`);
   if (R.token.freezeAuthority) add("red", "Freeze authority is set: wallets can be frozen so they cannot sell.");
+  const LQ = R.liquidity; if (LQ) { if (LQ.burnedPct != null) add(LQ.burnedPct >= 99 ? "ok" : LQ.burnedPct >= 90 ? "amber" : "red", LQ.burnedPct >= 99 ? `Liquidity: ${LQ.poolSol ? LQ.poolSol.toFixed(1) + " SOL" : "?"} in the pool; ${f1(LQ.burnedPct)}% of the LP tokens are burned — the liquidity cannot be pulled.` : `Liquidity: only ${f1(LQ.burnedPct)}% of the LP tokens are burned; the rest${LQ.lpHolders?.[0] ? " is held by " + LQ.lpHolders[0].owner.slice(0, 6) + "…" : ""} — that holder can remove liquidity.`); }
+  const GMq = R.gmgn; if (GMq?.ok && GMq.agree?.flagged) add(GMq.agree.inOurs / GMq.agree.flagged >= 0.6 ? "ok" : "amber", `GMGN tags ${GMq.agree.flagged} holder${GMq.agree.flagged === 1 ? "" : "s"} as bundler or insider; ${GMq.agree.inOurs} of them are also in our bundle / owner groups.`);
+  if (GMq?.ok && GMq.bundlerShare != null && R.bundled) add(Math.abs(GMq.bundlerShare - R.bundled.boughtPct) <= 10 ? "ok" : "amber", `Bundles: GMGN says bundlers bought ${f1(GMq.bundlerShare)}% and hold ${f1(GMq.now?.bundler)}% now; we measure ${f1(R.bundled.boughtPct)}% bought together and ${f1(R.bundled.holdNow)}% still held.`);
   const g1 = (R.groups || [])[0]; if (g1 && g1.nowPct >= 10) add(g1.nowPct >= 25 ? "red" : "amber", `One owner holds ${f1(g1.nowPct)}% of the supply across ${g1.n} linked wallet${g1.n === 1 ? "" : "s"}${g1.launch ? " — the dev and bundle's group" : ""} (linked by ${g1.links.slice(0, 3).join(", ")}).`);
   const lg = (R.groups || []).find((g) => g.launch); if (lg && lg !== g1) add(lg.nowPct >= 10 ? "amber" : "ok", `The dev and bundle's group (${lg.n} wallets including wallets linked to them) holds ${f1(lg.nowPct)}% now.`);
   if (S?.launchLinked) add("red", `${S.launchLinked} of the first buyers trace back to the dev or bundle (funded by them, same funder, or tokens passed between them); they hold ${f1(S.launchLinkedHoldPct)}% now.`);
