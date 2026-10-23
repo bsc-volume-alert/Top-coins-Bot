@@ -16,12 +16,12 @@ Not working. About −15% a trade at 5 min on 498 closed rows (31% won). It has 
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 22 Oct 13:03 UK; curve costs, 5-min exit. Built by reports/books/numbers.py._
+_Data to 23 Oct 07:09 UK; curve costs, 5-min exit. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
 | all (from 19 Oct 20:42 UK) | 745 | -19.3% | -20.3% | 30% | 53% | -15.14 |
-| last 24 h | 63 | -25.7% | -27.3% | 32% | 56% | -1.68 |
+| last 24 h | 0 | — | — | — | — | — |
 | last 12 h | 0 | — | — | — | — | — |
 | last 6 h | 0 | — | — | — | — | — |
 

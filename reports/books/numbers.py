@@ -67,7 +67,11 @@ def real(x, curve=False):
 def rv(r, col, curve):
     x = f(r, col)
     if x is None: return None
-    late = f(r, "fs1_x") if curve else None
+    # 23 Oct 09:30 UK (4-hour study): lateFix also on GR's rows (strategy grf). Three GR paper rows of 22 Oct
+    # (Grand Trump Auto 18:39 UK, The McRib Index 20:26 and 21:04 UK) carried fs1_x 6.6-8.1: the paper entry
+    # was 6-8x below the pool's first price, and the executor's shadow quotes on the same coins were +563% to
+    # +717% above paper. Scored raw they printed 5.2-7.3x on the 3-min and were GR's whole forward profit.
+    late = f(r, "fs1_x") if (curve or r.get("strategy") == "grf") else None
     div = late if (late and late > 1.5) else 1
     x /= div
     pk = (f(r, "peak_mult") or 0) / div

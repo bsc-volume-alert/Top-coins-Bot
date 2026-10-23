@@ -8,6 +8,8 @@ _Notes last rebuilt: 21 Oct 2026 01:35 UK._
 - Started 21 Oct 01:30 UK (`CHG_AS2`). Everything before is a back-test of a rule chosen by looking at those trades.
 
 ## Verdict now
+**23 Oct 09:35 UK (4-hour study; data to 07:09 UK — the first push after the 18-hour gap):** DROP (repeated). Forward since 01:30 UK 21 Oct: 60 at −1.6% (no-best −3.5%, no-top3 −6.5%, won 53%, stopped 42%; thirds +7 / −10 / −2) vs back-test 63 at +18.6%. The 16 gap trades −1.3% (no-top3 −20.0%). No edge over AS (90 at +3.9%) on 60 trades; the 30-trade checkpoint said the same at 22 Oct 01:50 UK.
+
 **22 Oct 13:50 UK (4-hour study; data to 13:03 UK):** DROP (recommendation repeated). Forward 44 at −1.7% (no-best −3.9%, no-top3 −7.2%, won 57%, stopped 39%; thirds +4 / +2 / −11) vs back-test 63 at +18.6%; 10 new trades −13.9%. It is AS minus a handful of single-wallet coins and tracks AS down.
 
 **22 Oct 05:50 UK (4-hour study; data to 05:04 UK):** Checkpoint (30 forward) passed at 01:50 UK; now 34 at +1.8% (no-best −0.9%, no-top3 −4.7%, won 62%, stopped 32%; thirds +11 / +1 / −6) vs back-test 63 at +18.6%. No edge over AS (it is AS minus 4 trades). Candidate to drop from the page.
@@ -24,22 +26,22 @@ Not yet tested. Fits the owner's "many trades, small profit each" side: keeps ab
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 22 Oct 13:03 UK; AS + launch bundle 2+ wallets. Built by reports/books/numbers.py._
+_Data to 23 Oct 07:09 UK; AS + launch bundle 2+ wallets. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 22:46 UK) | 107 | +10.2% | +7.7% | 62% | 31% | +0.99 |
+| all (from 18 Oct 22:46 UK) | 123 | +8.7% | +6.5% | 59% | 33% | +0.95 |
 | before the change (21 Oct 01:30 UK) — back-test | 63 | +18.6% | +14.4% | 65% | 25% | +1.11 |
-| since the change — the real test | 44 | -1.7% | -3.9% | 57% | 39% | -0.12 |
-| last 24 h | 34 | -5.6% | -8.6% | 53% | 44% | -0.22 |
-| last 12 h | 12 | -13.9% | -21.1% | 42% | 58% | -0.18 |
-| last 6 h | 7 | -12.9% | -25.9% | 43% | 57% | -0.10 |
+| since the change — the real test | 60 | -1.6% | -3.5% | 53% | 42% | -0.16 |
+| last 24 h | 23 | -4.8% | -10.0% | 43% | 52% | -0.13 |
+| last 12 h | 9 | +3.6% | -9.7% | 44% | 56% | +0.02 |
+| last 6 h | 6 | -12.7% | -29.5% | 33% | 67% | -0.08 |
 <!-- /NUMBERS -->
 
 ## Change history
 - 21 Oct 01:30 UK (v0.18.172): created on the owner's go (01:19 UK), as a separate book rather than revising AS, so AS's own real test (from 20 Oct 17:45 UK) keeps running untouched.
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): no change; 34 forward.
-
+- 23 Oct 09:35 UK (4-hour study; data to 07:09 UK — the first push after the 18-hour gap): no change; 16 trades in the data gap; 60 forward.
 
 ## Ideas tested
 - The finding behind it (21 Oct 01:20 UK, AS's 79 trades, operator coins removed; see AS.md "Ideas tested"): bundle wallets ≥ 2 kept 62 at +19.4% (without best +15.2%) vs 17 at −17.4%; first half of the earlier trades +23.2% vs −23.6%, second half +9.2% vs −17.4%; since 20 Oct 17:45 UK 12 at +30.4% vs 3 at −7.2%. At 0.1 SOL a trade about +1.14 SOL on 62 trades vs AS +0.83 on 79.

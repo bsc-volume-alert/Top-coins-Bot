@@ -8,6 +8,8 @@ _Notes last rebuilt: 21 Oct 2026 01:35 UK._
 - Started 21 Oct 01:30 UK (`CHG_AS2`). Everything before is a back-test of a rule chosen by looking at those trades.
 
 ## Verdict now
+**23 Oct 09:35 UK (4-hour study; data to 07:09 UK — the first push after the 18-hour gap):** PAPER TO 60 (unchanged). Forward since 01:30 UK 21 Oct: 45 at +4.8% (no-best +2.4%, no-top3 −1.4%, median +16.5%, won 60%, stopped 36%; thirds +14 / −1 / +2) vs back-test 35 at +29.7%. The 14 gap trades +5.8% (no-best −2.2%). The 2x-or-−40% exit (x_t2s40) on the same 45: +11.3% (no-best +9.6%, no-top3 +5.9%, won 47%, stopped 49%; thirds +34 / +3 / −3; the 14 new +0.6%) — its lead over the runner is the first third only, so the 22 Oct 'watch to 60' stands with less behind it. 45 of 60.
+
 **22 Oct 13:50 UK (4-hour study; data to 13:03 UK):** 30-FORWARD CHECKPOINT REACHED (31): +4.4% on the runner (no-best +1.4%, no-top3 −3.0%, median +16.5%, won 65%, stopped 32%; thirds +9 / −4 / +8) vs the 35-trade back-test at +29.7% — the back-test edge has NOT shown up forward; it is 5 points better than the AS trades it leaves out (19 at −9.4% since 01:30 UK), which is inside noise on 31 vs 19. The pre-registered exit question: 17 of 31 reached 2x (break-even for the fixed 2x sale 37%); x_t2s40 on the same 31 +16.1% (no-top3 +8.5%, won 52%, stopped 45%) vs the runner +4.4%, paired +11.7 points, 2x better on 13 / worse on 6 / level 12, sign-flip p 0.10 — a lead that cannot be told from luck at 31, and the exit was first picked by looking at the early forward rows. Verdict: AS3 on the runner is not a book (no-top3 negative); AS3 with the 2x-or-−40% exit is the one AS-family line still positive without its best 3 forward (+8.5%), and that is a watch, not a result. Recommendation: keep AS3 on paper, record x_t2s40 beside it, re-read at 60; nothing goes live on it.
 
 **22 Oct 05:50 UK (4-hour study; data to 05:04 UK):** 24 forward (+1: block chain +23.5%) at +5.5% (no-best +1.7%, no-top3 −3.6%, won 67%, stopped 29%; thirds +21 / −1 / −3) vs back-test 35 at +29.7%. 6 trades to the 30 checkpoint. Pre-registered exit check on the same 24: x_t2s40 (sell at 2x or −40%) +18.6% (no-top3 +8.8%, won 54%, stopped 42%) vs the runner's +5.5%; 12 of 24 reached 2x. Still in sample for the exit choice; decide at 30.
@@ -24,22 +26,22 @@ Not yet tested. Fits the owner's "fewer trades, bigger profit each" side: keeps 
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 22 Oct 13:03 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
+_Data to 23 Oct 07:09 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 22:46 UK) | 66 | +17.8% | +13.8% | 68% | 26% | +1.11 |
+| all (from 18 Oct 22:46 UK) | 80 | +15.7% | +12.4% | 65% | 29% | +1.18 |
 | before the change (21 Oct 01:30 UK) — back-test | 35 | +29.7% | +22.5% | 71% | 20% | +1.01 |
-| since the change — the real test | 31 | +4.4% | +1.4% | 65% | 32% | +0.10 |
-| last 24 h | 24 | -0.9% | -4.9% | 58% | 38% | -0.04 |
-| last 12 h | 8 | +3.5% | -5.4% | 62% | 38% | +0.02 |
-| last 6 h | 4 | +13.3% | -4.0% | 75% | 25% | +0.05 |
+| since the change — the real test | 45 | +4.8% | +2.4% | 60% | 36% | +0.17 |
+| last 24 h | 18 | +7.5% | +1.4% | 56% | 39% | +0.12 |
+| last 12 h | 7 | +19.2% | +4.0% | 57% | 43% | +0.13 |
+| last 6 h | 4 | +6.5% | -15.1% | 50% | 50% | +0.02 |
 <!-- /NUMBERS -->
 
 ## Change history
 - 21 Oct 01:30 UK (v0.18.172): created on the owner's go (01:19 UK), as a separate book rather than revising AS, so AS's own real test (from 20 Oct 17:45 UK) keeps running untouched.
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): no change; 24 forward.
-
+- 23 Oct 09:35 UK (4-hour study; data to 07:09 UK — the first push after the 18-hour gap): no change; 14 trades in the data gap; 45 forward.
 
 ## Ideas tested
 - The finding behind it (21 Oct 01:20 UK, AS's 79 trades, operator coins removed; see AS.md "Ideas tested"): bundle wallets ≥ 5 kept 34 at +31.5% (without best +24.1%) vs 45 at −3.7%; first half +27.9% vs +5.2%, second half +26.5% vs −17.5%; since 20 Oct 17:45 UK 5 at +56.6% vs 10 at +6.0%. At 0.1 SOL a trade about +1.04 SOL on 34 trades. Watch: very large bundles sit next to the operator fingerprint (10 wallets, 37–41%), which is already excluded.
