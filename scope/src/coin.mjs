@@ -8,6 +8,9 @@ import "./env.mjs";
 import Database from "better-sqlite3";
 import { gget, gmgnOn, gmStat, walletRow, walletStats, facts, fromRate, TAG } from "./gmgn.mjs";
 import { writeFileSync, mkdirSync, readdirSync, statSync, unlinkSync } from "node:fs";
+import { execFile } from "node:child_process";
+let dumpBusy = false, dumpAgain = false; // 0.4.2: send the saved lookups to the repo (scope-data branch) right after each lookup
+function pushDump() { if (process.env.SCOPE_SMOKE) return; if (dumpBusy) { dumpAgain = true; return; } dumpBusy = true; execFile("bash", [new URL("../push-dump.sh", import.meta.url).pathname], { timeout: 120000 }, () => { dumpBusy = false; if (dumpAgain) { dumpAgain = false; pushDump(); } }); }
 // Reads the tracker's database read-only (launch facts, checkpoints, books) when it is there; works without it.
 let db = null; try { db = new Database(process.env.TRACKER_DB || "/root/tracker/data/tracker.db", { readonly: true, fileMustExist: true }); } catch (e) { console.log("[scope] tracker database not available:", e.message); }
 const HELIUS = () => process.env.HELIUS_API_KEY ? `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}` : (process.env.SCOPE_RPC_URL || "");
@@ -156,6 +159,7 @@ export async function coinReport(mint, force = false) {
     if (r.ok) { cache.set(mint, { at: Date.now(), r }); if (cache.size > 100) cache.delete(cache.keys().next().value); }
     try { const dir = process.env.SCOPE_DUMP_DIR || "/root/tracker/data/scope_last"; mkdirSync(dir, { recursive: true }); writeFileSync(`${dir}/${mint}.json`, JSON.stringify({ at: Date.now(), r }, (k, v) => (typeof v === "bigint" ? v.toString() : v)));
       const files = readdirSync(dir).map((f) => ({ f, t: statSync(`${dir}/${f}`).mtimeMs })).sort((a, b) => b.t - a.t); for (const x of files.slice(5)) unlinkSync(`${dir}/${x.f}`); } catch {} // 0.4.0: the last 5 lookups, for the data push
+    pushDump();
     job.r = r; job.done = true; current = null; coinStat.stage = ""; setTimeout(() => { if (jobs.get(mint) === job) jobs.delete(mint); }, 600_000).unref(); });
   return { ok: false, pending: true, stage: "starting", elapsed: 0 };
 }
