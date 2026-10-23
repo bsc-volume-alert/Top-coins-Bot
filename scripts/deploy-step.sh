@@ -62,16 +62,16 @@ if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep '^fomo/' | grep -v
   elif pm2 startOrReload fomo/ecosystem.config.cjs --only fomo --update-env >/tmp/deploy-fomo-pm2.log 2>&1; then pm2 save >/dev/null 2>&1; echo "[deploy] fomo reloaded"
   else echo "[deploy] FOMO START FAILED: $(tail -c 300 /tmp/deploy-fomo-pm2.log)"; notify "⛔ <b>fomo start failed</b> — <code>$(tail -c 300 /tmp/deploy-fomo-pm2.log)</code>"; fi
 fi
-# scope 0.1.0 (owner, 23 Oct 2026: a separate website for coin analysis): coin scope (scope/, pm2 app `scope`, port SCOPE_PORT 8790, same key as the tracker page) deploys only when its own folder changed — own npm install, syntax check, smoke boot, own reload; the tracker, the executor and fomo are never touched by it
+# scope 0.1.0 (owner, 23 Oct 2026: a separate website for coin analysis): coin scope (scope/, pm2 app `scope`, port SCOPE_PORT 8791 (8790 is fomo's public page), same key as the tracker page) deploys only when its own folder changed — own npm install, syntax check, smoke boot, own reload; the tracker, the executor and fomo are never touched by it
 if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^scope/'; then
   echo "[deploy] scope changed — installing and checking"
   (cd scope && npm install --omit=dev --no-audit --no-fund 2>&1 | tail -1)
   SFAIL=""
   for f in scope/src/*.mjs; do node --check "$f" 2>/tmp/deploy-scope.err || { SFAIL="syntax: $f $(head -c 300 /tmp/deploy-scope.err)"; break; }; done
-  if [ -z "$SFAIL" ]; then (cd scope && SCOPE_SMOKE=1 SCOPE_SMOKE_MS=5000 SCOPE_PORT=18790 timeout 40 node src/index.mjs >/tmp/deploy-scope-smoke.log 2>&1); SRC=$?; [ "$SRC" != "0" ] && SFAIL="scope smoke boot exited with code $SRC: $(grep -E 'Error|error|at ' /tmp/deploy-scope-smoke.log | head -5 | tr '\n' ' ' | head -c 400)"; fi
+  if [ -z "$SFAIL" ]; then (cd scope && SCOPE_SMOKE=1 SCOPE_SMOKE_MS=5000 SCOPE_PORT=18791 timeout 40 node src/index.mjs >/tmp/deploy-scope-smoke.log 2>&1); SRC=$?; [ "$SRC" != "0" ] && SFAIL="scope smoke boot exited with code $SRC: $(grep -E 'Error|error|at ' /tmp/deploy-scope-smoke.log | head -5 | tr '\n' ' ' | head -c 400)"; fi
   if [ -n "$SFAIL" ]; then echo "[deploy] SCOPE REJECTED: $SFAIL"; notify "⛔ <b>coin scope deploy rejected</b> — Reason: <code>$(echo "$SFAIL" | head -c 500)</code>"
   elif pm2 startOrReload scope/ecosystem.config.cjs --only scope --update-env >/tmp/deploy-scope-pm2.log 2>&1; then pm2 save >/dev/null 2>&1; echo "[deploy] scope reloaded"
-    SP=$(grep -E '^SCOPE_PORT=' .env | cut -d= -f2- | tr -d '"'); SP=${SP:-8790}
+    SP=$(grep -E '^SCOPE_PORT=' .env | cut -d= -f2- | tr -d '"'); SP=${SP:-8791}
     if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active" && ! ufw status | grep -q "^$SP/tcp"; then ufw allow "$SP/tcp" >/dev/null 2>&1 && echo "[deploy] firewall: opened $SP/tcp for coin scope"; fi
   else echo "[deploy] SCOPE START FAILED: $(tail -c 300 /tmp/deploy-scope-pm2.log)"; notify "⛔ <b>coin scope start failed</b> — <code>$(tail -c 300 /tmp/deploy-scope-pm2.log)</code>"; fi
 fi

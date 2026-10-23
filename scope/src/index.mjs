@@ -5,7 +5,7 @@ import "./env.mjs";
 import { createServer } from "node:http";
 import { coinReport, coinStat } from "./coin.mjs";
 import { PAGE } from "./page.mjs";
-const PORT = Number(process.env.SCOPE_PORT || 8790), KEY = process.env.SCOPE_KEY || process.env.WEB_KEY || "";
+const PORT = Number(process.env.SCOPE_PORT || 8791), KEY = process.env.SCOPE_KEY || process.env.WEB_KEY || "";
 if (!KEY) { console.log("[scope] no SCOPE_KEY / WEB_KEY in .env — not starting"); process.exit(process.env.SCOPE_SMOKE ? 0 : 1); }
 const srv = createServer(async (req, res) => {
   try {
