@@ -61,7 +61,7 @@ export function startWeb() {
       if (p === "/" || p === "/index.html") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(PAGE.replace("__PAGE_VERSION__", VERSION)); }
       if (p === "/api/status") return json(res, status());
       if (p === "/api/trending") return json(res, { window: u.searchParams.get("w") || "1h", rows: trending(u.searchParams.get("w") || "1h"), ts: nowS() });
-      if (p === "/api/sim") return json(res, simulate({ firstOnly: u.searchParams.get("first") === "1", xmax: u.searchParams.get("xmax") ? Number(u.searchParams.get("xmax")) : null, since: u.searchParams.get("h") ? nowS() - Number(u.searchParams.get("h")) * 3600 : undefined }));
+      if (p === "/api/sim") return json(res, simulate({ book: u.searchParams.get("book") || "FF6", firstOnly: u.searchParams.get("first") === "1", xmax: u.searchParams.get("xmax") ? Number(u.searchParams.get("xmax")) : null, since: u.searchParams.get("h") ? nowS() - Number(u.searchParams.get("h")) * 3600 : undefined }));
       if (p === "/api/ff2") return json(res, { ...ff2Status(), ts: nowS(), version: VERSION });
       if (p === "/api/hot") return json(res, { m5: hot("5m"), m15: hot("15m"), ff: q.ffStats.all(), ts: nowS(), executor: false });
       if (p === "/api/traders") return json(res, traders());

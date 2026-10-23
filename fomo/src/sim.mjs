@@ -4,7 +4,7 @@ import { db, q, nowS } from "./db.mjs";
 import { realCost } from "./score.mjs";
 import { CFG } from "./config.mjs";
 const ticks = db.prepare(`SELECT ts, usd FROM prices WHERE mint=? AND ts>=? AND ts<=? ORDER BY ts`);
-const entries = db.prepare(`SELECT id, wallet, mint, symbol, entry_ts, entry_px, entry_mc, e_xstart FROM trades WHERE wallet IN ('FF5','FF2','FF5e','FF2e') AND entry_ts>=? ORDER BY entry_ts`);
+const entries = db.prepare(`SELECT id, wallet, mint, symbol, entry_ts, entry_px, entry_mc, e_xstart FROM trades WHERE wallet=? AND entry_ts>=? ORDER BY entry_ts`);
 /** One rule: stop (fraction, e.g. 0.15), be (arm break-even stop once +be seen; null = never), tp (sell all at tp; null = none), half (sell half at `half` then trail the rest), trail (fraction below peak; null = none), hold (s). */
 export function replay(path, r) {
   // path = [{ts, usd}] from entry; returns the multiple sold at (position-weighted) and the reason
@@ -24,6 +24,8 @@ export function replay(path, r) {
   const last = path[path.length - 1].usd / e; return { x: halfDone ? (halfMult + last) / 2 : last, reason: "open", peak, t: path[path.length - 1].ts - path[0].ts, open: true };
 }
 const GRID = [];
+// "take the pop": quick exits — the owner's point that nearly every coin prints above the buy for a moment (23 Oct 04:03 UK)
+for (const hold of [60, 120, 180, 300]) { GRID.push({ name: `sell at ${hold / 60} min whatever the price`, stop: 0.99, hold }); for (const tp of [1.15, 1.2, 1.3]) for (const stop of [0.1, 0.15, 0.2]) GRID.push({ name: `stop −${stop * 100}%, sell at ${tp}x or at ${hold / 60} min`, stop, tp, hold }); }
 for (const stop of [0.1, 0.15, 0.2, 0.3, 0.4]) {
   for (const tp of [1.1, 1.2, 1.3, 1.4, 1.5, 2, 3]) GRID.push({ name: `stop −${stop * 100}%, sell all at ${tp}x`, stop, tp });
   for (const trail of [0.1, 0.15, 0.2, 0.3, 0.4]) GRID.push({ name: `stop −${stop * 100}%, trailing stop ${trail * 100}% below the peak`, stop, trail });
@@ -40,8 +42,8 @@ export function dips(paths) {
   const table = buckets.map(([name, lo, hi]) => { const rs = rows.filter((r) => r.peak >= lo && r.peak < hi); const n = rs.length; const under = (d) => rs.filter((r) => r.lowBeforePeak <= 1 - d).length; return { peak: name, n, dip10: under(0.1), dip15: under(0.15), dip20: under(0.2), dip30: under(0.3), dip40: under(0.4) }; });
   return { table, rows: rows.sort((a, b) => b.peak - a.peak).slice(0, 30) };
 }
-export function simulate({ since = nowS() - 36 * 3600, firstOnly = false, xmax = null } = {}) {
-  let rows = entries.all(since); const seen = new Set();
+export function simulate({ since = nowS() - 36 * 3600, firstOnly = false, xmax = null, book = "FF6" } = {}) {
+  let rows = entries.all(book, since); const seen = new Set();
   rows = rows.filter((r) => { if (xmax != null && r.e_xstart != null && r.e_xstart > xmax) return false; if (firstOnly) { if (seen.has(r.mint)) return false; seen.add(r.mint); } return true; });
   const paths = rows.map((r) => ({ r, path: [{ ts: r.entry_ts, usd: r.entry_px }, ...ticks.all(r.mint, r.entry_ts + 1, r.entry_ts + CFG.MAX_HOLD_S + 60)] })).filter((p) => p.path.length > 2);
   const stake = Number(process.env.FF2_STAKE || 0.1);
