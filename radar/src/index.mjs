@@ -21,6 +21,9 @@
 // each coin the moment it first trades $50K, $100K and $200K in 5 minutes. Every level (and every early trigger) is a PAPER buy at that
 // moment's price; 6 h later GMGN's 1-minute / 5-minute candles score it — held 6 h, 40% trailing stop, 2x take-profit / 50% stop — after real costs.
 // A short summary of the labels at the first snapshot is kept on the coin for the /radar page of the coin site.
+// 0.4.0 (owner, 17:34 UK: "if coin scope offers one or two things GMGN and Birdeye can't, add it onto this website"): at the first snapshot the
+// radar also reads the chain itself (chain.mjs, ~3 calls): who really launched the coin, Token-2022 risks, and how much the dev and the launch
+// wallets still hold at that moment (our books found dev-still-holding vs dev-sold the strongest split: +126% vs -50% on 44 bundle coins).
 import "./env.mjs";
 import Database from "better-sqlite3";
 import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from "node:fs";
@@ -28,6 +31,7 @@ import { gzipSync } from "node:zlib";
 import { execFile } from "node:child_process";
 import { gget, gmgnOn, gmStat } from "./gmgn.mjs";
 import { bget, birdOn, bdStat } from "./birdeye.mjs";
+import { rpc, chainOn, hStat, ataOf, TX, keysOf, TOKEN } from "./chain.mjs";
 
 const VER = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 const DATA = process.env.RADAR_DATA_DIR || "/root/tracker/data";
@@ -108,12 +112,35 @@ async function birdSnap(mint) {
   return { holders: holders?._err ? holders : clean(holders), traders: traders?._err ? traders : clean(traders), sec: sec?._err ? sec : clean(sec) };
 }
 
+// what only the chain itself tells us (see the header)
+async function chainSnap(mint) {
+  if (!chainOn()) return { _err: "no Helius key" };
+  const out = {}; const mi = await rpc("getAccountInfo", [mint, { encoding: "jsonParsed" }]); const info = mi?.value?.data?.parsed?.info || {}, prog = mi?.value?.owner || TOKEN, supplyRaw = Number(info.supply || 0);
+  out.program = prog === TOKEN ? "spl" : "token2022"; out.mintAuth = info.mintAuthority || null; out.freezeAuth = info.freezeAuthority || null;
+  for (const x of info.extensions || []) { const st0 = x.state || {}; if (x.extension === "permanentDelegate") out.permDelegate = st0.delegate || null;
+    if (x.extension === "transferFeeConfig") { const fee = st0.newerTransferFee || st0.olderTransferFee || {}; out.transferFeeBps = N(fee.transferFeeBasisPoints); }
+    if (x.extension === "transferHook") out.hook = st0.programId || null; }
+  const tok = tAll("SELECT creator, create_sig, create_ts, bundle_pct, bundle_wallets, bundle_sol, dev_buy_sol, tier FROM tokens WHERE mint=?", mint)[0];
+  if (!tok) { out.trackerSeen = 0; return out; } // launched before the tracker started, or not on pump.fun
+  Object.assign(out, { trackerSeen: 1, bundlePct: tok.bundle_pct, bundleWallets: tok.bundle_wallets, bundleSol: tok.bundle_sol, devBuySol: tok.dev_buy_sol, namedCreator: tok.creator });
+  if (tok.create_sig) { const tx = await rpc("getTransaction", TX(tok.create_sig)); const ks = keysOf(tx); out.deployer = ks[0] || null; out.devIsNamed = out.deployer && tok.creator ? (out.deployer === tok.creator ? 1 : 0) : null;
+    let d = 0n; for (const b of tx?.meta?.postTokenBalances || []) if (b.mint === mint && b.owner === out.deployer) d += BigInt(b.uiTokenAmount.amount); for (const b of tx?.meta?.preTokenBalances || []) if (b.mint === mint && b.owner === out.deployer) d -= BigInt(b.uiTokenAmount.amount);
+    out.deployerBuyPct = supplyRaw ? +(Number(d) / supplyRaw * 100).toFixed(3) : null; }
+  const cl = tAll("SELECT wallet FROM cluster_wallets WHERE mint=?", mint).map((r) => r.wallet), ws = [...new Set([...cl, out.deployer, tok.creator].filter(Boolean))].filter((w) => { try { ataOf(w, mint, prog); return true; } catch { return false; } }).slice(0, 100);
+  out.launchWalletsFrom = cl.length ? "tracker bundle record" : "dev only";
+  if (ws.length && supplyRaw) { const v = (await rpc("getMultipleAccounts", [ws.map((w) => ataOf(w, mint, prog)), { encoding: "jsonParsed" }]))?.value || []; let sum = 0;
+    ws.forEach((w, i) => { const a = v[i]?.data?.parsed?.info?.tokenAmount?.amount, pc = a ? Number(a) / supplyRaw * 100 : 0; sum += pc; if (w === out.deployer) out.devHoldNowPct = +pc.toFixed(3); if (w === tok.creator && w !== out.deployer) out.namedHoldNowPct = +pc.toFixed(3); });
+    out.launchWallets = ws.length; out.launchHoldNowPct = +sum.toFixed(3); }
+  return out;
+}
 // a short summary of the labels at the first snapshot (for the /radar page)
-function summary(g, fm) { const i = g.info || {}, s = i.stat || {}, w = i.wallet_tags_stat || {}, dv = i.dev || {}, P = (x) => (N(x) == null ? null : +(N(x) * 100).toFixed(1));
+function summary(g, fm, ch) { const i = g.info || {}, s = i.stat || {}, w = i.wallet_tags_stat || {}, dv = i.dev || {}, P = (x) => (N(x) == null ? null : +(N(x) * 100).toFixed(1));
   return { top10: P(s.top_10_holder_rate), dev: P(s.dev_team_hold_rate ?? s.creator_hold_rate), bundler: P(s.top_bundler_trader_percentage), insider: P(s.top_rat_trader_percentage), fresh: P(s.fresh_wallet_rate),
     bots: P(s.bot_degen_rate), phishing: P(s.top_entrapment_trader_percentage), sniperHold: P(s.top70_sniper_hold_rate), smart: N(w.smart_wallets), kol: N(w.renowned_wallets), snipers: N(w.sniper_wallets), bundlers: N(w.bundler_wallets),
     holders: N(i.holder_count), devLaunches: N(dv.creator_open_count ?? s.creator_created_count), devStatus: dv.creator_token_status ?? null, liq: N(i.liquidity), launchpad: i.launchpad ?? null, cto: dv.cto_flag ?? null,
-    dexPaid: dv.dexscr_ad ?? null, rug: N(g.sec?.rug_ratio), fomoBuyers: fm?.buyers ?? null, fomoFollowed: (fm?.followedTrades || []).filter((x) => x.side === "buy").length }; }
+    dexPaid: dv.dexscr_ad ?? null, rug: N(g.sec?.rug_ratio), fomoBuyers: fm?.buyers ?? null, fomoFollowed: (fm?.followedTrades || []).filter((x) => x.side === "buy").length,
+    chain: ch && !ch._err ? { delegate: ch.permDelegate || null, taxBps: ch.transferFeeBps ?? null, hook: ch.hook || null, mintAuth: !!ch.mintAuth, freezeAuth: !!ch.freezeAuth, seen: ch.trackerSeen, bundlePct: ch.bundlePct ?? null, bundleWallets: ch.bundleWallets ?? null,
+      bundleSol: ch.bundleSol ?? null, deployer: ch.deployer || null, devIsNamed: ch.devIsNamed ?? null, deployerBuyPct: ch.deployerBuyPct ?? null, launchHoldNowPct: ch.launchHoldNowPct ?? null, devHoldNowPct: ch.devHoldNowPct ?? null, launchWallets: ch.launchWallets ?? null, from: ch.launchWalletsFrom || null } : null }; }
 // paper result 6 h after entry, from GMGN's candles (1-minute for the first 100 min, 5-minute after), after real costs
 const realX = (x, curve) => (curve ? x * 0.97 - 0.02 - 1 - 0.02 - (x <= 0.62 ? 0.01 : 0) : x / 1.02 * 0.967 - 1 - 0.006 - 0.02 - (x <= 0.62 ? 0.05 : 0));
 async function scorePaper(mint) {
@@ -197,7 +224,9 @@ async function runJob(j) {
     save(j.mint, j.flag_ts, "fomo", true, fomoSnap(j.mint, now()));
     if (kind.endsWith("0")) save(j.mint, j.flag_ts, "tracker", true, trackerSnap(j.mint));
     if (kind === "e0" && !g.info?._err) paperBuy(j.mint, "early", now(), N(g.info?.price?.price), mcOf(g.info), g.info?.pool?.exchange || (N(g.info?.launchpad_progress) != null && N(g.info.launchpad_progress) < 1 ? "pump" : null));
-    if (kind === "v0" || kind === "e0") { const fm = fomoSnap(j.mint, now()); rdb.prepare("UPDATE coins SET sum0=COALESCE(sum0, ?) WHERE mint=?").run(JSON.stringify(summary(g, fm)), j.mint); }
+    if (kind === "v0" || kind === "e0") { const fm = fomoSnap(j.mint, now()); let ch = null; const has = rdb.prepare("SELECT sum0 FROM coins WHERE mint=?").get(j.mint)?.sum0;
+      if (!has) { ch = await chainSnap(j.mint).catch((e) => ({ _err: e.message })); save(j.mint, j.flag_ts, "chain", !ch._err, ch); }
+      rdb.prepare("UPDATE coins SET sum0=COALESCE(sum0, ?) WHERE mint=?").run(JSON.stringify(summary(g, fm, ch)), j.mint); }
     const mc0 = mcOf(g.info); if (mc0 != null) rdb.prepare("UPDATE coins SET base_mc=COALESCE(base_mc, ?) WHERE mint=?").run(mc0, j.mint); // market cap at the first snapshot = the price a trade would have paid
     if (!g.info?._err) rdb.prepare("UPDATE coins SET name=COALESCE(name, ?), symbol=COALESCE(symbol, ?), launchpad=COALESCE(launchpad, ?), created_ts=COALESCE(created_ts, ?) WHERE mint=?").run(g.info?.name ?? null, g.info?.symbol ?? null, g.info?.launchpad ?? null, N(g.info?.creation_timestamp), j.mint);
     if (kind === "v2") { const v5 = vol5Of(g.info), ok = v5 != null && v5 >= CONFIRM;
@@ -247,6 +276,7 @@ function features(c) {
     else if (r.src === "tracker") { f["t.seen"] = d.seen ? 1 : 0; if (d.token) for (const x of ["bundle_pct", "bundle_sol", "bundle_wallets", "dev_buy_sol", "tier", "factory", "has_socials", "creator_age_s", "creator_funded_sol", "graduated", "outside_buyers"]) f["t." + x] = d.token[x]; f["t.cluster_n"] = (d.cluster || []).length; }
     else if (r.src === "birdeye") { flat(d.sec, "b.sec", f); const hl = d.holders?.items || d.holders?.list || (Array.isArray(d.holders) ? d.holders : null); f["b.holders_n"] = hl ? hl.length : null; f["b.holders_err"] = d.holders?._err ? 1 : 0;
       const tl = d.traders?.items || d.traders?.list || (Array.isArray(d.traders) ? d.traders : null); f["b.traders_n"] = tl ? tl.length : null; f["b.traders_err"] = d.traders?._err ? 1 : 0; if (tl) flat(tl[0], "b.trader1", f); }
+    else if (r.src === "chain") flat(d, "ch", f);
     else if (r.src === "out") { for (const x of ["mc", "vol5m", "holders", "athMc", "liquidity"]) f[k + "." + x] = d[x] ?? null; } }
   return f;
 }
@@ -305,7 +335,7 @@ function exportNow() {
     execFile("bash", [new URL("../push.sh", import.meta.url).pathname], { timeout: 180000 }, (e, so, se) => { pushing = false; st.lastPush = e ? "failed: " + (se || e.message).slice(0, 160) : "ok " + new Date().toISOString(); });
   } catch (e) { st.errors++; st.lastErr = "export: " + e.message; }
 }
-function status() { return { ...st, at: now(), gmgn: { on: gmgnOn(), ...gmStat }, birdeye: { on: birdOn(), ...bdStat }, trackerDb: !!tdb, fomoDb: !!fdb, confirmVol5m: CONFIRM,
+function status() { return { ...st, at: now(), gmgn: { on: gmgnOn(), ...gmStat }, birdeye: { on: birdOn(), ...bdStat }, helius: { on: chainOn(), ...hStat }, trackerDb: !!tdb, fomoDb: !!fdb, confirmVol5m: CONFIRM,
   coinsTotal: rdb.prepare("SELECT COUNT(*) n FROM coins").get().n, coins24h: rdb.prepare("SELECT COUNT(*) n FROM coins WHERE flag_ts>?").get(now() - 86400).n, confirmed24h: rdb.prepare("SELECT COUNT(*) n FROM coins WHERE flag_ts>? AND confirmed=1").get(now() - 86400).n }; }
 
 if (process.env.RADAR_SMOKE) { pollFlags(); pollHits(); console.log("[radar] smoke ok", JSON.stringify({ trackerDb: !!tdb, fomoDb: !!fdb, gmgn: gmgnOn(), birdeye: birdOn() })); process.exit(0); }
