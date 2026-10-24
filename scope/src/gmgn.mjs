@@ -28,7 +28,7 @@ export const TAG = { bundler: "bundler", sniper: "sniper", rat_trader: "insider"
 export function walletRow(w) { // one holder / trader line from GMGN
   return { wallet: w.address, tags: tagsOf(w), pct: N(w.amount_percentage) != null ? N(w.amount_percentage) * 100 : null, soldPct: N(w.sell_amount_percentage) != null ? N(w.sell_amount_percentage) * 100 : null,
     buyUsd: N(w.buy_volume_cur), sellUsd: N(w.sell_volume_cur), buys: N(w.buy_tx_count_cur), sells: N(w.sell_tx_count_cur), profit: N(w.profit), realized: N(w.realized_profit), avgCost: N(w.avg_cost), avgSold: N(w.avg_sold),
-    isNew: !!w.is_new, suspicious: !!w.is_suspicious, tIn: N(w.history_transfer_in_amount), tOut: N(w.history_transfer_out_amount), fund: w.native_transfer ? { wallet: w.native_transfer.address || null, name: w.native_transfer.name || null, ts: N(w.native_transfer.timestamp) } : null,
+    isNew: !!w.is_new, suspicious: !!w.is_suspicious, tIn: N(w.history_transfer_in_amount), tOut: N(w.history_transfer_out_amount), fund: w.native_transfer ? { wallet: w.native_transfer.from_address || w.native_transfer.address || null, name: w.native_transfer.name || null, ts: N(w.native_transfer.timestamp) } : null,
     start: N(w.start_holding_at), end: N(w.end_holding_at), last: N(w.last_active_timestamp), pool: Number(w.addr_type) === 2, balanceSol: N(w.native_balance) != null ? N(w.native_balance) / 1e9 : null };
 }
 export function walletStats(d) { const w = Array.isArray(d) ? d[0] : d; if (!w || typeof w !== "object") return null; const c = w.common || {};

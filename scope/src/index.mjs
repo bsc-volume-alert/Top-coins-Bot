@@ -19,4 +19,10 @@ const srv = createServer(async (req, res) => {
   } catch (e) { try { res.writeHead(500, { "content-type": "text/plain" }); res.end(e.message); } catch {} }
 });
 srv.listen(PORT, "0.0.0.0", () => console.log(`[scope] coin scope on :${PORT}`));
+// 0.6.0: coins listed in scope/relookup.txt are looked up once after a new version starts, so each fix is checked on real coins at once
+// (the saved lookups go to the scope-data branch as usual). A done-file stops it repeating on restarts.
+if (!process.env.SCOPE_SMOKE) setTimeout(async () => { try { const fs = await import("node:fs"); const ver = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
+  const mints = fs.readFileSync(new URL("../relookup.txt", import.meta.url), "utf8").split(/\s+/).filter((x) => /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(x)); const done = "/root/tracker/data/scope_relookup_done";
+  const key = ver + ":" + mints.join(","); let prev = ""; try { prev = fs.readFileSync(done, "utf8"); } catch {} if (!mints.length || prev === key) return; fs.writeFileSync(done, key);
+  for (const m of mints) { console.log("[scope] re-lookup", m); await coinReport(m, true); for (let i = 0; i < 600; i++) { await new Promise((r) => setTimeout(r, 2000)); const r = await coinReport(m); if (!r.pending) break; } } } catch (e) { console.log("[scope] re-lookup:", e.message); } }, 20000);
 if (process.env.SCOPE_SMOKE) setTimeout(() => { console.log("[scope] smoke ok"); process.exit(0); }, Number(process.env.SCOPE_SMOKE_MS || 8000));
