@@ -16,6 +16,11 @@
 //   radar  — bought before the trigger on 2+ recorded coins, and 2+ of them (half or more) went on to 3x within 6 h
 //   gmgn_smart / gmgn_kol — wallets GMGN tagged smart money / KOL in a snapshot (from that snapshot's time)
 //   fomo   — the traders followed in the fomo app; and the tracker adds its own proven wallets and watch list
+// 0.3.0 (owner, 17:06 UK: "50k, 100k and 200k 5-minute volume… any coin under 2 million… any time scale… we buy it, hold it, put it on our
+// database"): the radar reads GMGN's 5-minute volume ranking itself every 15 s (all Solana DEXes, any coin age, market cap under $2M) and marks
+// each coin the moment it first trades $50K, $100K and $200K in 5 minutes. Every level (and every early trigger) is a PAPER buy at that
+// moment's price; 6 h later GMGN's 1-minute / 5-minute candles score it — held 6 h, 40% trailing stop, 2x take-profit / 50% stop — after real costs.
+// A short summary of the labels at the first snapshot is kept on the coin for the /radar page of the coin site.
 import "./env.mjs";
 import Database from "better-sqlite3";
 import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from "node:fs";
@@ -30,6 +35,7 @@ const CONFIRM = Number(process.env.RADAR_CONFIRM_VOL5M || 100000);
 const OUT_MIN = [5, 15, 30, 60, 120, 360, 1440];
 const now = () => Math.floor(Date.now() / 1000);
 const nap = (ms) => new Promise((r) => setTimeout(r, ms));
+const PAPER_WAIT = Number(process.env.RADAR_PAPER_WAIT_S || 6 * 3600 + 180), TIERS = [50000, 100000, 200000], MAX_MC = Number(process.env.RADAR_MAX_MC || 2000000), RANK_MS = Number(process.env.RADAR_RANK_MS || 15000);
 const EARLY_MIN = Number(process.env.RADAR_EARLY_MIN || 2), EARLY_MAX_MC = Number(process.env.RADAR_EARLY_MAX_MC || 500000), EARLY_MAX_H = Number(process.env.RADAR_EARLY_MAX_H || 60);
 const st = { ver: VER, started: now(), hitsSeen: 0, earlyTriggers: 0, earlySkippedCap: 0, listSize: 0, flagsSeen: 0, coins: 0, snaps: 0, jobsDone: 0, jobsLate: 0, confirmed: 0, birdSnaps: 0, errors: 0, lastErr: "", lastFlagId: 0, backlog: 0, exports: 0, lastExport: 0, lastPush: "" };
 
@@ -47,7 +53,9 @@ rdb.exec(`CREATE TABLE IF NOT EXISTS coins (mint TEXT PRIMARY KEY, flag_id INTEG
   CREATE TABLE IF NOT EXISTS feat (mint TEXT PRIMARY KEY, json TEXT);
   CREATE TABLE IF NOT EXISTS wallets (wallet TEXT PRIMARY KEY, src TEXT, listed_ts INTEGER, n_coins INTEGER, n_runs INTEGER, note TEXT);
   CREATE TABLE IF NOT EXISTS wallet_coin (wallet TEXT, mint TEXT, start_ts INTEGER, trigger_ts INTEGER, known_ts INTEGER, run_x REAL, PRIMARY KEY (wallet, mint));`);
-for (const c of ["trig TEXT", "vol_ts INTEGER", "early_ts INTEGER", "early_n INTEGER", "early_mc REAL", "early_wallets TEXT", "base_mc REAL", "wc_done INTEGER DEFAULT 0"]) { try { rdb.exec(`ALTER TABLE coins ADD COLUMN ${c}`); } catch {} }
+rdb.exec(`CREATE TABLE IF NOT EXISTS paper (id INTEGER PRIMARY KEY AUTOINCREMENT, mint TEXT, trig TEXT, entry_ts INTEGER, entry_price REAL, entry_mc REAL, exchange TEXT, curve INTEGER,
+    done INTEGER DEFAULT 0, x5 REAL, x15 REAL, x60 REAL, peak60 REAL, peak360 REAL, low_before_peak REAL, x_hold REAL, x_trail40 REAL, x_tp2sl50 REAL, r_hold REAL, r_trail40 REAL, r_tp2sl50 REAL, candles INTEGER, err TEXT, UNIQUE(mint, trig));`);
+for (const c of ["t50 INTEGER", "t100 INTEGER", "t200 INTEGER", "mc50 REAL", "mc100 REAL", "mc200 REAL", "sum0 TEXT", "trig TEXT", "vol_ts INTEGER", "early_ts INTEGER", "early_n INTEGER", "early_mc REAL", "early_wallets TEXT", "base_mc REAL", "wc_done INTEGER DEFAULT 0"]) { try { rdb.exec(`ALTER TABLE coins ADD COLUMN ${c}`); } catch {} }
 try { rdb.exec("ALTER TABLE snaps ADD COLUMN kind TEXT"); } catch {}
 rdb.exec("UPDATE coins SET trig='vol', vol_ts=flag_ts WHERE trig IS NULL AND flag_id IS NOT NULL");
 const kvGet = (k) => rdb.prepare("SELECT v FROM kv WHERE k=?").get(k)?.v ?? null, kvSet = (k, v) => rdb.prepare("INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)").run(k, String(v));
@@ -100,6 +108,31 @@ async function birdSnap(mint) {
   return { holders: holders?._err ? holders : clean(holders), traders: traders?._err ? traders : clean(traders), sec: sec?._err ? sec : clean(sec) };
 }
 
+// a short summary of the labels at the first snapshot (for the /radar page)
+function summary(g, fm) { const i = g.info || {}, s = i.stat || {}, w = i.wallet_tags_stat || {}, dv = i.dev || {}, P = (x) => (N(x) == null ? null : +(N(x) * 100).toFixed(1));
+  return { top10: P(s.top_10_holder_rate), dev: P(s.dev_team_hold_rate ?? s.creator_hold_rate), bundler: P(s.top_bundler_trader_percentage), insider: P(s.top_rat_trader_percentage), fresh: P(s.fresh_wallet_rate),
+    bots: P(s.bot_degen_rate), phishing: P(s.top_entrapment_trader_percentage), sniperHold: P(s.top70_sniper_hold_rate), smart: N(w.smart_wallets), kol: N(w.renowned_wallets), snipers: N(w.sniper_wallets), bundlers: N(w.bundler_wallets),
+    holders: N(i.holder_count), devLaunches: N(dv.creator_open_count ?? s.creator_created_count), devStatus: dv.creator_token_status ?? null, liq: N(i.liquidity), launchpad: i.launchpad ?? null, cto: dv.cto_flag ?? null,
+    dexPaid: dv.dexscr_ad ?? null, rug: N(g.sec?.rug_ratio), fomoBuyers: fm?.buyers ?? null, fomoFollowed: (fm?.followedTrades || []).filter((x) => x.side === "buy").length }; }
+// paper result 6 h after entry, from GMGN's candles (1-minute for the first 100 min, 5-minute after), after real costs
+const realX = (x, curve) => (curve ? x * 0.97 - 0.02 - 1 - 0.02 - (x <= 0.62 ? 0.01 : 0) : x / 1.02 * 0.967 - 1 - 0.006 - 0.02 - (x <= 0.62 ? 0.05 : 0));
+async function scorePaper(mint) {
+  for (const p of rdb.prepare("SELECT * FROM paper WHERE mint=? AND done=0 AND entry_ts<=?").all(mint, now() - PAPER_WAIT + 180)) {
+    try { const e = p.entry_ts, k = async (res, from, to) => { const d = await gget("/v1/market/token_kline", { chain: "sol", address: mint, resolution: res, from: String(from * 1000), to: String(to * 1000) }); return (d?.list || (Array.isArray(d) ? d : [])).map((c) => ({ t: Math.floor(Number(c.time) / 1000), o: N(c.open), h: N(c.high), l: N(c.low), c: N(c.close) })).filter((c) => c.h > 0); };
+      const m1 = await k("1m", e, e + 100 * 60), m5 = await k("5m", e, e + 6 * 3600), last1 = m1.length ? Math.max(...m1.map((c) => c.t)) : e;
+      const path = [...m1, ...m5.filter((c) => c.t > last1)].filter((c) => c.t >= e - 60 && c.t <= e + 6 * 3600).sort((a, b) => a.t - b.t);
+      if (!path.length) { rdb.prepare("UPDATE paper SET done=1, err=? WHERE id=?").run("no candles", p.id); continue; }
+      const X = (v) => v / p.entry_price, at = (min) => { const c = [...path].reverse().find((x) => x.t <= e + min * 60); return c ? X(c.c) : null; };
+      let peak = 0, peakI = 0, p60 = 0; path.forEach((c, i) => { if (X(c.h) > peak) { peak = X(c.h); peakI = i; } if (c.t <= e + 3600) p60 = Math.max(p60, X(c.h)); });
+      const lowBefore = Math.min(...path.slice(0, peakI + 1).map((c) => X(c.l)));
+      let hi = 1, trail = null; for (const c of path) { if (X(c.l) <= hi * 0.6) { trail = hi * 0.6; break; } hi = Math.max(hi, X(c.h)); } if (trail == null) trail = X(path[path.length - 1].c);
+      let tp = null; for (const c of path) { if (X(c.l) <= 0.5) { tp = 0.5; break; } if (X(c.h) >= 2) { tp = 2; break; } } if (tp == null) tp = X(path[path.length - 1].c); // stop checked first in a candle: the worse case
+      const hold = X(path[path.length - 1].c), cv = p.curve === 1;
+      rdb.prepare(`UPDATE paper SET done=1, x5=?, x15=?, x60=?, peak60=?, peak360=?, low_before_peak=?, x_hold=?, x_trail40=?, x_tp2sl50=?, r_hold=?, r_trail40=?, r_tp2sl50=?, candles=? WHERE id=?`)
+        .run(at(5), at(15), at(60), p60, peak, lowBefore, hold, trail, tp, realX(hold, cv), realX(trail, cv), realX(tp, cv), path.length, p.id); st.paperScored = (st.paperScored || 0) + 1;
+    } catch (er) { if (/rate limited/i.test(er.message)) throw er; rdb.prepare("UPDATE paper SET done=1, err=? WHERE id=?").run(er.message.slice(0, 120), p.id); } }
+}
+
 // ---------- jobs ----------
 const qCoin = rdb.prepare(`INSERT OR IGNORE INTO coins (mint, flag_id, flag_ts, name, symbol, launchpad, exchange, created_ts, flag_vol5m, flag_mc) VALUES (?,?,?,?,?,?,?,?,?,?)`);
 const qJob = rdb.prepare("INSERT INTO jobs (mint, due, kind) VALUES (?, ?, ?)");
@@ -118,6 +151,20 @@ function pollFlags() {
           qJob.run(r.mint, r.ts, "v0"); qJob.run(r.mint, r.ts + 120, "v2"); } } }
     kvSet("lastFlag", last); });
   tx(); st.lastFlagId = last;
+}
+// GMGN's 5-minute volume ranking: tiers $50K / $100K / $200K, market cap under $2M, any age
+const qPaper = rdb.prepare("INSERT OR IGNORE INTO paper (mint, trig, entry_ts, entry_price, entry_mc, exchange, curve) VALUES (?,?,?,?,?,?,?)");
+function paperBuy(mint, trig, ts, price, mc, exchange) { if (!(price > 0)) return; const curve = exchange ? (/^pump(fun|_fun)?$|bonding|curve/i.test(exchange) ? 1 : 0) : null;
+  if (qPaper.run(mint, trig, ts, price, mc, exchange || null, curve).changes) { qJob.run(mint, ts + PAPER_WAIT, "paper"); st.paperBuys = (st.paperBuys || 0) + 1; } }
+async function pollRank() {
+  if (!gmgnOn()) return; const d = await gget("/v1/market/rank", { chain: "sol", interval: "5m", order_by: "volume", limit: "100" });
+  const rows = Array.isArray(d?.rank) ? d.rank : Array.isArray(d) ? d : []; st.rankPolls = (st.rankPolls || 0) + 1; st.rankRows = rows.length; const t = now();
+  for (const r of rows) { const mint = r.address, v5 = N(r.volume), mc = N(r.market_cap), px = N(r.price); if (!mint || !(mc > 0) || mc > MAX_MC || !(v5 >= TIERS[0])) continue;
+    let c = rdb.prepare("SELECT mint, t50, t100, t200, flag_ts FROM coins WHERE mint=?").get(mint);
+    if (!c) { rdb.prepare("INSERT INTO coins (mint, flag_ts, name, symbol, launchpad, exchange, created_ts, flag_vol5m, flag_mc, trig, vol_ts) VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(mint, t, r.name ?? null, r.symbol ?? null, r.launchpad_platform ?? null, r.exchange ?? null, N(r.creation_timestamp), v5, mc, "vol" + Math.round(TIERS.filter((x) => v5 >= x).pop() / 1000), t);
+      st.coins++; qJob.run(mint, t, "v0"); qJob.run(mint, t + 120, "v2"); for (const m of OUT_MIN) qJob.run(mint, t + m * 60, "out" + m); c = { mint, flag_ts: t }; }
+    for (const tier of TIERS) { const k = Math.round(tier / 1000); if (v5 >= tier && c["t" + k] == null) { rdb.prepare(`UPDATE coins SET t${k}=?, mc${k}=? WHERE mint=?`).run(t, mc, mint); c["t" + k] = t;
+        paperBuy(mint, "v" + k, t, px, mc, r.exchange); if (c.flag_ts !== t && tier > TIERS[0]) qJob.run(mint, t, "t" + k); } } } // a later level gets its own snapshot
 }
 // early trigger: listed wallets buying (tracker.db radar_hits)
 const recentHits = new Map(); // mint -> [{wallet, ts, mc, src}]
@@ -144,10 +191,13 @@ const qDone = rdb.prepare("UPDATE jobs SET done=1 WHERE id=?");
 async function runJob(j) {
   const late = now() - j.due; if (late > 60) st.jobsLate++;
   const kind = j.kind === "snap0" ? "v0" : j.kind === "snap2" ? "v2" : j.kind; curKind = kind;
-  if (/^[ve][02]$/.test(kind)) {
+  if (kind === "paper") { await scorePaper(j.mint); qDone.run(j.id); st.jobsDone++; return; }
+  if (/^([ve][02]|t\d+)$/.test(kind)) {
     const g = await gmgnSnap(j.mint); save(j.mint, j.flag_ts, "gmgn", !g.info?._err, g);
     save(j.mint, j.flag_ts, "fomo", true, fomoSnap(j.mint, now()));
     if (kind.endsWith("0")) save(j.mint, j.flag_ts, "tracker", true, trackerSnap(j.mint));
+    if (kind === "e0" && !g.info?._err) paperBuy(j.mint, "early", now(), N(g.info?.price?.price), mcOf(g.info), g.info?.pool?.exchange || (N(g.info?.launchpad_progress) != null && N(g.info.launchpad_progress) < 1 ? "pump" : null));
+    if (kind === "v0" || kind === "e0") { const fm = fomoSnap(j.mint, now()); rdb.prepare("UPDATE coins SET sum0=COALESCE(sum0, ?) WHERE mint=?").run(JSON.stringify(summary(g, fm)), j.mint); }
     const mc0 = mcOf(g.info); if (mc0 != null) rdb.prepare("UPDATE coins SET base_mc=COALESCE(base_mc, ?) WHERE mint=?").run(mc0, j.mint); // market cap at the first snapshot = the price a trade would have paid
     if (!g.info?._err) rdb.prepare("UPDATE coins SET name=COALESCE(name, ?), symbol=COALESCE(symbol, ?), launchpad=COALESCE(launchpad, ?), created_ts=COALESCE(created_ts, ?) WHERE mint=?").run(g.info?.name ?? null, g.info?.symbol ?? null, g.info?.launchpad ?? null, N(g.info?.creation_timestamp), j.mint);
     if (kind === "v2") { const v5 = vol5Of(g.info), ok = v5 != null && v5 >= CONFIRM;
@@ -188,7 +238,7 @@ function walletSummary(list, pre, out) { if (!Array.isArray(list)) { out[pre + "
 const qFeat = rdb.prepare("SELECT ts, at_s, src, ok, json, kind FROM snaps WHERE mint=? ORDER BY id");
 function features(c) {
   const ew = (() => { try { return JSON.parse(c.early_wallets || "[]"); } catch { return []; } })(), bySrc = {}; for (const x of ew) bySrc[x.src] = (bySrc[x.src] || 0) + 1;
-  const f = { mint: c.mint, name: c.name, symbol: c.symbol, launchpad: c.launchpad, exchange: c.exchange, trig: c.trig, vol_ts: c.vol_ts, early_ts: c.early_ts, early_n: c.early_n, early_mc: c.early_mc, early_srcs: Object.entries(bySrc).map(([k, v]) => k + ":" + v).join(" "), base_mc: c.base_mc, flag_ts: c.flag_ts, created_ts: c.created_ts, age_at_flag_s: c.created_ts ? c.flag_ts - c.created_ts : null, flag_vol5m: c.flag_vol5m, flag_mc: c.flag_mc, confirmed: c.confirmed, confirm_vol5m: c.confirm_vol5m, bird: c.bird, peak_mc: c.peak_mc, last_mc: c.last_mc, ath_mc: c.ath_mc };
+  const f = { t50: c.t50, t100: c.t100, t200: c.t200, mc50: c.mc50, mc100: c.mc100, mc200: c.mc200, mint: c.mint, name: c.name, symbol: c.symbol, launchpad: c.launchpad, exchange: c.exchange, trig: c.trig, vol_ts: c.vol_ts, early_ts: c.early_ts, early_n: c.early_n, early_mc: c.early_mc, early_srcs: Object.entries(bySrc).map(([k, v]) => k + ":" + v).join(" "), base_mc: c.base_mc, flag_ts: c.flag_ts, created_ts: c.created_ts, age_at_flag_s: c.created_ts ? c.flag_ts - c.created_ts : null, flag_vol5m: c.flag_vol5m, flag_mc: c.flag_mc, confirmed: c.confirmed, confirm_vol5m: c.confirm_vol5m, bird: c.bird, peak_mc: c.peak_mc, last_mc: c.last_mc, ath_mc: c.ath_mc };
   const seen = {}; for (const r of qFeat.all(c.mint)) { const d = JSON.parse(r.json), stage = r.kind && /^[ve][02]$/.test(r.kind) ? r.kind : (seen[r.src] ? "v2" : "v0"), k = r.src === "gmgn" || r.src === "fomo" ? stage + "." + r.src : r.src === "out" ? "out" + (d.min ?? "") : r.src; seen[r.src] = (seen[r.src] || 0) + 1;
     f[k + "_at_s"] = r.at_s;
     if (r.src === "gmgn") { flat(d.info, k + ".info", f); flat(d.sec, k + ".sec", f); walletSummary(d.holders, k + ".h.", f); walletSummary(d.traders, k + ".t.", f); }
@@ -244,6 +294,7 @@ function exportNow() {
     const z = []; for (const r of rdb.prepare("SELECT mint, ts, at_s, src, ok, json FROM snaps WHERE ts>=? ORDER BY id").iterate(now() - 86400)) z.push(`{"mint":"${r.mint}","ts":${r.ts},"at_s":${r.at_s},"src":"${r.src}","ok":${r.ok},"d":${r.json}}`);
     writeFileSync(`${out}/snaps_24h.jsonl.gz`, gzipSync(z.join("\n"))); z.length = 0;
     writeFileSync(`${out}/gmgn_flags.csv`, csv(tAll("SELECT id, chain, mint, ts, name, symbol, exchange, launchpad, created_ts, mc, price, liquidity, vol5m, vol1m, buys, sells, swaps, holders, rug_ratio, bundler_rate, top10, smart, renowned, wash, dev_status, ath_mc, our_v5, our_seen, our_trade, mc5, mc15, mc60, peak_mc FROM gmgn_flags ORDER BY id")));
+    writeFileSync(`${out}/paper.csv`, csv(rdb.prepare("SELECT p.*, c.name, c.symbol, c.trig AS first_trig, c.created_ts, c.sum0 FROM paper p JOIN coins c ON c.mint=p.mint ORDER BY p.entry_ts").all()));
     writeFileSync(`${out}/wallets.csv`, csv(rdb.prepare("SELECT * FROM wallets ORDER BY listed_ts").all()));
     writeFileSync(`${out}/wallet_coin.csv`, csv(rdb.prepare("SELECT * FROM wallet_coin ORDER BY known_ts").all()));
     writeFileSync(`${out}/radar_hits.csv`, csv(tAll("SELECT * FROM radar_hits WHERE ts>=? ORDER BY id", now() - 3 * 86400)));
@@ -260,6 +311,7 @@ function status() { return { ...st, at: now(), gmgn: { on: gmgnOn(), ...gmStat }
 if (process.env.RADAR_SMOKE) { pollFlags(); pollHits(); console.log("[radar] smoke ok", JSON.stringify({ trackerDb: !!tdb, fomoDb: !!fdb, gmgn: gmgnOn(), birdeye: birdOn() })); process.exit(0); }
 console.log(`[radar] ${VER} up — GMGN ${gmgnOn() ? "on" : "OFF"}, Birdeye ${birdOn() ? "on" : "off (no BIRDEYE_API_KEY)"}`);
 pollFlags(); setInterval(() => { try { pollFlags(); } catch (e) { st.errors++; st.lastErr = "flags: " + e.message; } }, 10000);
+const rk = async () => { try { await pollRank(); } catch (e) { st.errors++; st.lastErr = "rank: " + e.message; } }; rk(); setInterval(rk, RANK_MS);
 setInterval(() => { try { pollHits(); } catch (e) { st.errors++; st.lastErr = "hits: " + e.message; } }, 5000);
 const wl = () => { try { buildWallets(); } catch (e) { st.errors++; st.lastErr = "wallets: " + e.message; } }; setTimeout(wl, Number(process.env.RADAR_WALLETS_FIRST_MS || 60000)); setInterval(wl, 3600000);
 setInterval(() => { try { writeFileSync(`${DATA}/radar_status.json`, JSON.stringify(status())); } catch {} }, 60000);

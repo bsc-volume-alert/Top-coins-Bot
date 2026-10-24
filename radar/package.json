@@ -1,6 +1,6 @@
 {
   "name": "radar",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Radar — records what GMGN, Birdeye and FOMO say about every Solana coin that trades $100K in 5 minutes, at the moment it is flagged and 2 minutes later, then the coin's outcome; for testing which of their labels pick runners. Read-only on everything else.",
