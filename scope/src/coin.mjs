@@ -323,12 +323,12 @@ async function build(mint) {
       // read in order until the first FIRST_N buyers after the create block are found (that whole block included)
       const firstBuyers = new Set(), at0 = new Set(); let lastSlot = null, used0 = 0;
       for (const tx of txAll) { if (tx.slot < slot0) continue; if (firstBuyers.size >= FIRST_N && tx.slot !== lastSlot) break;
-        const tr = readTrades([tx], mint, skip), oc = deltas(tx, mint, new Set([curve])).venueTok !== 0n; for (const t of tr) t.onCurve = oc; LT.push(...tr); used0++; lastSlot = tx.slot; for (const t of tr) { if (t.slot === slot0) at0.add(t.wallet); else if (t.kind === "buy" && t.wallet !== creator && !at0.has(t.wallet)) firstBuyers.add(t.wallet); } }
+        const tr = readTrades([tx], mint, skip), op = deltas(tx, mint, new Set([pool, ...pairs].filter(Boolean))).venueTok !== 0n; for (const t of tr) t.onPool = op; /* a trade against the pool (after graduation), not the curve */ LT.push(...tr); used0++; lastSlot = tx.slot; for (const t of tr) { if (t.slot === slot0) at0.add(t.wallet); else if (t.kind === "buy" && t.wallet !== creator && !at0.has(t.wallet)) firstBuyers.add(t.wallet); } }
       for (const t of LT) { const p = prof(t.wallet); p.inWindow = true;
         if (p.firstSlot == null) { p.firstSlot = t.slot; p.firstTs = t.ts; }
         if (t.kind === "buy" && p.firstBuySlot == null) p.firstBuySlot = t.slot;
-        if (t.kind === "buy" && t.slot === slot0 && t.onCurve) { p.launchRaw = (p.launchRaw || 0n) + t.tok; p.launchSol = (p.launchSol || 0) + -t.sol / 1e9; } // what the dev and bundle took on the curve in the create block
-        if (t.kind === "buy" && t.slot === slot0 && !t.onCurve) p.poolInLaunchBlock = true; // 0.6.2: the coin graduated inside the create block and this wallet bought on the new pool, after the bundle
+        if (t.kind === "buy" && t.slot === slot0 && !t.onPool) { p.launchRaw = (p.launchRaw || 0n) + t.tok; p.launchSol = (p.launchSol || 0) + -t.sol / 1e9; } // what the dev and bundle took on the curve in the create block
+        if (t.kind === "buy" && t.slot === slot0 && t.onPool) p.poolInLaunchBlock = true; // 0.6.2: the coin graduated inside the create block and this wallet bought on the new pool, after the bundle
         if (t.kind === "buy" || t.kind === "in") { p.boughtRaw += t.tok; if (t.kind === "buy") p.solIn += -t.sol / 1e9; }
         p.ev.push({ ts: t.ts, kind: t.kind, raw: t.tok < 0n ? -t.tok : t.tok, sol: t.sol / 1e9, other: t.other, w: true }); }
       for (const p of W.values()) { p.role = p.wallet === creator ? "dev" : p.firstSlot === slot0 && (p.launchRaw || 0n) > 0n ? "bundle" : p.firstSlot === slot0 && !p.poolInLaunchBlock ? "bundle" : p.firstSlot <= slot0 + 4 ? "sniper" : "early";
@@ -618,7 +618,7 @@ async function build(mint) {
 
   // 10b. our GMGN-style bundle measure: wallets that bought together — in the create block, in the same transaction, or two+ wallets of one owner in the same block
   { const bundledW = new Set(), bySig = new Map(), bySlot = new Map();
-    for (const t of LT) { if (t.kind !== "buy") continue; if (t.slot === L?.slot0 && t.onCurve) bundledW.add(t.wallet);
+    for (const t of LT) { if (t.kind !== "buy") continue; if (t.slot === L?.slot0 && !t.onPool) bundledW.add(t.wallet);
       if (!bySig.has(t.sig)) bySig.set(t.sig, new Set()); bySig.get(t.sig).add(t.wallet);
       const g = W.get(t.wallet)?.group; if (g) { const k = t.slot + ":" + g; if (!bySlot.has(k)) bySlot.set(k, new Set()); bySlot.get(k).add(t.wallet); } }
     for (const set of [...bySig.values(), ...bySlot.values()]) if (set.size >= 2) for (const w of set) bundledW.add(w);
