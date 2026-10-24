@@ -13,7 +13,7 @@ TOKEN=$(grep -E '^TG_BOT_TOKEN=' .env | cut -d= -f2-); CHAT=$(grep -E '^TG_CHAT_
 notify() { [ -n "$TOKEN" ] && curl -s -m 10 -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" -d chat_id="$CHAT" -d parse_mode=HTML --data-urlencode text="$1" >/dev/null 2>&1; }
 # v0.18.93: a push that touches only executor/ (and docs) leaves the tracker alone — no smoke boot, no reload, no lost P5 restore
 TRACKER_CHANGED=1
-if ! git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -vqE '^(executor/|fomo/|scope/|radar/|reports/|scripts/push-data\.sh$|scripts/dump-live\.cjs$|scripts/dump-launches\.cjs$|scripts/study\.mjs$|scripts/push-now\.txt$|scripts/job-now\.txt$|scripts/executor-off$|scripts/revival-pull\.mjs$|scripts/s10-check\.cjs$|.*\.md$)'; then TRACKER_CHANGED=0; echo "[deploy] tracker untouched — executor / reports / data-script push"; fi # v0.18.114: the 4-hourly study's reports and the data scripts never restart the bot
+if ! git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -vqE '^(executor/|fomo/|scope/|radar/|launcher/|reports/|scripts/push-data\.sh$|scripts/dump-live\.cjs$|scripts/dump-launches\.cjs$|scripts/study\.mjs$|scripts/push-now\.txt$|scripts/job-now\.txt$|scripts/executor-off$|scripts/revival-pull\.mjs$|scripts/s10-check\.cjs$|.*\.md$)'; then TRACKER_CHANGED=0; echo "[deploy] tracker untouched — executor / reports / data-script push"; fi # v0.18.114: the 4-hourly study's reports and the data scripts never restart the bot
 FAIL=""
 if [ "$TRACKER_CHANGED" = "1" ]; then
 for f in src/*.js; do node --check "$f" 2>/tmp/deploy-check.err || { FAIL="syntax: $f $(head -c 300 /tmp/deploy-check.err)"; break; }; done
@@ -93,6 +93,20 @@ if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^radar/'; then
   elif pm2 startOrReload radar/ecosystem.config.cjs --only radar --update-env >/tmp/deploy-radar-pm2.log 2>&1; then pm2 save >/dev/null 2>&1; echo "[deploy] radar reloaded"
   else echo "[deploy] RADAR START FAILED: $(tail -c 300 /tmp/deploy-radar-pm2.log)"; notify "⛔ <b>radar start failed</b> — <code>$(tail -c 300 /tmp/deploy-radar-pm2.log)</code>"; fi
 fi
+# launcher 0.1.0 (owner, 24 Oct 2026 20:08–20:15 UK): X posts → pump.fun coins from its own wallet — own pm2 app `launcher`, deploys only when launcher/
+# changed (own npm install, syntax check, smoke run, own reload). Its mode (paper / shadow / live) is set only in /root/launcher/.env, never by a push.
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep '^launcher/' | grep -vq '^launcher/push-now\.txt$'; then
+  echo "[deploy] launcher changed — installing and checking"
+  (cd launcher && npm install --omit=dev --no-audit --no-fund 2>&1 | tail -1)
+  LFAIL=""
+  for f in launcher/src/*.mjs; do node --check "$f" 2>/tmp/deploy-launcher.err || { LFAIL="syntax: $f $(head -c 300 /tmp/deploy-launcher.err)"; break; }; done
+  if [ -z "$LFAIL" ]; then (cd launcher && LAUNCH_SMOKE=1 LAUNCH_HOME=/tmp/launcher-smoke LAUNCH_DB=/tmp/launcher-smoke.db LAUNCH_OUT=/tmp/launcher-smoke-out timeout 40 node src/index.mjs >/tmp/deploy-launcher-smoke.log 2>&1); LRC=$?; rm -rf /tmp/launcher-smoke.db* /tmp/launcher-smoke /tmp/launcher-smoke-out; [ "$LRC" != "0" ] && LFAIL="launcher smoke run exited with code $LRC: $(grep -E 'Error|error|at ' /tmp/deploy-launcher-smoke.log | head -5 | tr '\n' ' ' | head -c 400)"; fi
+  if [ -n "$LFAIL" ]; then echo "[deploy] LAUNCHER REJECTED: $LFAIL"; notify "⛔ <b>launcher deploy rejected</b> — Reason: <code>$(echo "$LFAIL" | head -c 500)</code>"
+  elif pm2 startOrReload launcher/ecosystem.config.cjs --only launcher --update-env >/tmp/deploy-launcher-pm2.log 2>&1; then pm2 save >/dev/null 2>&1; echo "[deploy] launcher reloaded"
+  else echo "[deploy] LAUNCHER START FAILED: $(tail -c 300 /tmp/deploy-launcher-pm2.log)"; notify "⛔ <b>launcher start failed</b> — <code>$(tail -c 300 /tmp/deploy-launcher-pm2.log)</code>"; fi
+fi
+# launcher: changing launcher/push-now.txt makes the box push the launcher's data now
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^launcher/push-now\.txt$'; then (nohup bash /root/tracker/launcher/push.sh >> /root/tracker/data/push-now.log 2>&1 &); fi
 # fomo 0.1.3: a change to fomo/finds.txt resolves those trades to wallets on the box (fomo/scripts/find-batch.mjs against the running fomo app), then pushes the data
 if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^fomo/finds\.txt$'; then echo "[deploy] fomo finds"; (cd /root/tracker/fomo && nohup nice -n 19 bash -c 'sleep 25; node scripts/find-batch.mjs > /root/tracker/data/fomo_finds.log 2>&1; bash /root/tracker/scripts/push-data.sh >> /root/tracker/data/push-now.log 2>&1' >/dev/null 2>&1 &); fi
 # fomo 0.1.9: a change to fomo/data/handles.txt adds those wallets to the watcher
