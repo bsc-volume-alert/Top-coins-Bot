@@ -233,6 +233,11 @@ async function build(mint) {
   const info = mi.value.data?.parsed?.info || {}, tokenProg = mi.value.owner, dec = Number(info.decimals ?? 6), supply = Number(BigInt(info.supply || 0)) / 10 ** dec;
   const pctOf = (raw) => (supply > 0 ? (Number(raw) / 10 ** dec / supply) * 100 : null);
   R.token = { decimals: dec, supply, program: tokenProg === TOKEN ? "SPL Token" : "Token-2022", mintAuthority: info.mintAuthority || null, freezeAuthority: info.freezeAuthority || null };
+  // 0.6.5: Token-2022 extensions — a permanent delegate can move or burn tokens out of ANY wallet (YMB, 24 Oct); a transfer fee is a tax on every move
+  for (const x of info.extensions || []) { const st0 = x.state || {}; if (x.extension === "permanentDelegate") R.token.permanentDelegate = st0.delegate || null;
+    if (x.extension === "transferFeeConfig") { const fee = st0.newerTransferFee || st0.olderTransferFee || {}; R.token.transferFeeBps = N0(fee.transferFeeBasisPoints); }
+    if (x.extension === "transferHook") R.token.transferHook = st0.programId || null; }
+  R.token.extensions = (info.extensions || []).map((x) => x.extension);
   // GMGN runs beside the chain reading (own pace): token info, security, top 100 holders and top 100 traders with GMGN's tags
   const gmP = gmgnOn() ? Promise.all([gget("/v1/token/info", { chain: "sol", address: mint }), gget("/v1/token/security", { chain: "sol", address: mint }), gget("/v1/market/token_top_holders", { chain: "sol", address: mint, limit: "100" }), gget("/v1/market/token_top_traders", { chain: "sol", address: mint, limit: "100" })].map((p) => p.catch((e) => ({ _err: e.message })))) : Promise.resolve(null);
   // DexScreener (free, from the box) — first, because its pool addresses are the fallback for finding the pool
@@ -319,7 +324,9 @@ async function build(mint) {
       LS.missing = !txAll.length ? "no launch transactions could be read" : slot0 == null ? `the create transaction was not among the ${txAll.length} transactions read (searched the bonding curve, the coin's own address${LS.devSearched ? " and the dev's wallet" : ""})` : `the create block (slot ${slot0}) could not be read — the oldest transaction read is from slot ${txAll[0].slot}`;
       R.notes.push("LAUNCH NOT FOUND: " + LS.missing + ". Dev, bundle, sniper and first-buyer figures are UNKNOWN (not zero)."); }
     else {
-      const creator = V.creator || tok?.creator || keysOf(createTx)[0], createTs = tok?.create_ts ?? createTx?.blockTime ?? txAll.find((t) => t.slot === slot0)?.blockTime;
+      // 0.6.5: on pump.fun's newer launches the wallet that signs the create transaction (and often buys in it) is not the "creator" stored on the
+      // curve (the wallet that receives creator fees). Moustache: ByYc signed and bought 10%; the curve names DGqA. The signer is the dev here.
+      const feeCreator = V.creator || tok?.creator || null, creator = createTx ? keysOf(createTx)[0] : feeCreator, createTs = tok?.create_ts ?? createTx?.blockTime ?? txAll.find((t) => t.slot === slot0)?.blockTime;
       // read in order until the first FIRST_N buyers after the create block are found (that whole block included)
       const firstBuyers = new Set(), at0 = new Set(); let lastSlot = null, used0 = 0;
       for (const tx of txAll) { if (tx.slot < slot0) continue; if (firstBuyers.size >= FIRST_N && tx.slot !== lastSlot) break;
@@ -333,6 +340,7 @@ async function build(mint) {
         p.ev.push({ ts: t.ts, kind: t.kind, raw: t.tok < 0n ? -t.tok : t.tok, sol: t.sol / 1e9, other: t.other, w: true }); }
       for (const p of W.values()) { p.role = p.wallet === creator ? "dev" : p.firstSlot === slot0 && (p.launchRaw || 0n) > 0n ? "bundle" : p.firstSlot === slot0 && !p.poolInLaunchBlock ? "bundle" : p.firstSlot <= slot0 + 4 ? "sniper" : "early";
         p.secAfter = p.firstTs != null ? p.firstTs - createTs : null; p.boughtPct = pctOf(p.boughtRaw); p.launchPct = pctOf(p.launchRaw || 0n); }
+      if (feeCreator && feeCreator !== creator && W.has(feeCreator)) W.get(feeCreator).feeWallet = true;
       if (!W.has(creator)) { const d = prof(creator); d.role = "dev"; d.boughtPct = 0; d.launchPct = 0; d.noBuy = true; } // the dev is always in the picture, even with no buy
       // 0.6.4: the raw create-block transactions, trimmed, kept in the saved lookup so any launch can be checked by hand later
       R.launchRaw = txAll.filter((t) => t.slot === slot0).slice(0, 12).map((t) => ({ sig: t.transaction?.signatures?.[0], idx: t.transactionIndex ?? null, version: t.version ?? null, payer: keysOf(t)[0], fee: t.meta?.fee,
@@ -341,7 +349,7 @@ async function build(mint) {
       const grp = (r) => [...W.values()].filter((p) => p.role === r), sum = (a, k = "boughtPct") => ({ n: a.filter((p) => (p[k] || 0) > 0).length, pct: a.reduce((x, p) => x + (p[k] || 0), 0), sol: a.reduce((x, p) => x + (k === "launchPct" ? p.launchSol || 0 : p.solIn), 0) });
       const order1 = [...W.values()].filter((p) => p.role !== "dev" && p.role !== "bundle" && p.firstBuySlot != null).sort((a, b) => a.firstSlot - b.firstSlot || (a.firstTs ?? 0) - (b.firstTs ?? 0)).slice(0, FIRST_N);
       order1.forEach((p, i) => { p.rank = i + 1; p.first = true; }); for (const p of W.values()) if (p.role === "dev" || p.role === "bundle") p.first = true;
-      L = { createTs, slot0, creator, txs: used0, lastBuyerSec: order1.length ? order1[order1.length - 1].secAfter : null, firstN: order1.length, dev: sum(grp("dev"), "launchPct"), bundle: sum(grp("bundle"), "launchPct"), snipers: sum(grp("sniper")), early: sum(grp("early")), curveTxs: txAll.length };
+      L = { createTs, slot0, creator, feeCreator: feeCreator && feeCreator !== creator ? feeCreator : null, txs: used0, lastBuyerSec: order1.length ? order1[order1.length - 1].secAfter : null, firstN: order1.length, dev: sum(grp("dev"), "launchPct"), bundle: sum(grp("bundle"), "launchPct"), snipers: sum(grp("sniper")), early: sum(grp("early")), curveTxs: txAll.length };
       L.buyers = [...W.values()].filter((p) => p.boughtRaw > 0n).length; L.onPool = order1.filter((p) => { const e = LT.find((t) => t.wallet === p.wallet && t.kind === "buy"); return e && TXM.get(e.sig) && keysOf(TXM.get(e.sig)).includes(pool); }).length;
       if (V.complete) { const gradTx = txAll.find((t) => (t.meta?.logMessages || []).some((l) => /Instruction: Migrate/.test(l))); L.gradAfterS = gradTx?.blockTime != null && createTs ? gradTx.blockTime - createTs : null;
         // self-check that needs no outside source: a pump.fun curve sells 793.1M tokens before it graduates — the buys we read before the migration must add up to that
@@ -510,6 +518,7 @@ async function build(mint) {
   // token transfers are always the same owner (or a sale off-market)
   for (const p of W.values()) for (const o of p.sentTo || []) { const e = (p.events || []).find((x) => x.kind === "out" && x.other === o); edge(p.wallet, o, "tokens sent " + (W.get(o)?.role === "side wallet" ? "to a side wallet" : "between them"), e?.sig); }
   if (L?.creator) for (const p of W.values()) if (p.role === "bundle") edge(L.creator, p.wallet, "bought in the create block with the dev", null);
+  if (L?.feeCreator) { prof(L.feeCreator); edge(L.creator, L.feeCreator, "the coin's creator-fee wallet, named by the dev in the create transaction", null); }
 
   // 10. sell and replace — 0.5.2 (owner, 24 Oct 01:48 UK: "where the 60 wallets sold and rebought, or moved via fresh wallets… how the dev split his wallet and the bundles"):
   //     the dev and every bundle wallet are followed from the moment of launch (they often fund fresh wallets before selling); every first buyer and side wallet from its first sale.
@@ -571,11 +580,13 @@ async function build(mint) {
     try { const a = await walletAge(devAddr, true); D.firstTs = a.firstTs; D.txs = a.txs; D.old = !!a.old; D.funder = a.funder || null; D.fundedSol = a.fundedSol ?? null;
       if (D.funder) { const b = await walletAge(D.funder, true); D.funderFirstTs = b.firstTs; D.funderBusy = !!b.old; D.funder2 = b.funder || null; } } catch {}
     try { D.sol = +((await call("getBalance", [devAddr]))?.value / 1e9).toFixed(2); } catch {}
-    try { const r = await fetch(`https://frontend-api-v3.pump.fun/coins/user-created-coins/${devAddr}?offset=0&limit=100&includeNsfw=true`, { headers: { accept: "application/json", "user-agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(8000) });
-      const j = await r.json(), arr = Array.isArray(j) ? j : j?.coins || [];
-      D.coins = arr.map((c) => ({ mint: c.mint, name: c.name, symbol: c.symbol, created: c.created_timestamp ? Math.floor(c.created_timestamp / 1000) : null, mc: c.usd_market_cap ?? null, ath: c.ath_market_cap ?? null, graduated: !!c.complete || !!c.raydium_pool || !!c.pump_swap_pool })).filter((c) => c.mint !== mint).sort((a, b) => (b.created || 0) - (a.created || 0));
+    if (L?.feeCreator) D.feeWallet = L.feeCreator;
+    const devKeys = [devAddr, ...(L?.feeCreator ? [L.feeCreator] : [])];
+    try { const arr = []; for (const k of devKeys) { const r = await fetch(`https://frontend-api-v3.pump.fun/coins/user-created-coins/${k}?offset=0&limit=100&includeNsfw=true`, { headers: { accept: "application/json", "user-agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(8000) });
+        const j = await r.json(); arr.push(...(Array.isArray(j) ? j : j?.coins || [])); }
+      D.coins = [...new Map(arr.map((c) => [c.mint, c])).values()].map((c) => ({ mint: c.mint, name: c.name, symbol: c.symbol, created: c.created_timestamp ? Math.floor(c.created_timestamp / 1000) : null, mc: c.usd_market_cap ?? null, ath: c.ath_market_cap ?? null, graduated: !!c.complete || !!c.raydium_pool || !!c.pump_swap_pool })).filter((c) => c.mint !== mint).sort((a, b) => (b.created || 0) - (a.created || 0));
       D.source = "pump.fun"; } catch (e) { D.coinsErr = e.message; }
-    if (!D.coins?.length) { const rows = all(`SELECT mint, name, symbol, create_ts, peak_mc_usd, graduated FROM tokens WHERE creator=? AND mint<>? ORDER BY create_ts DESC LIMIT 100`, devAddr, mint);
+    if (!D.coins?.length) { const rows = all(`SELECT mint, name, symbol, create_ts, peak_mc_usd, graduated FROM tokens WHERE creator IN (?, ?) AND mint<>? ORDER BY create_ts DESC LIMIT 100`, devAddr, L?.feeCreator || devAddr, mint);
       if (rows.length) { D.coins = rows.map((r) => ({ mint: r.mint, name: r.name, symbol: r.symbol, created: r.create_ts, mc: null, ath: r.peak_mc_usd, graduated: !!r.graduated })); D.source = "our tracker (since 18 Oct" + (D.coinsErr ? "; pump.fun did not answer" : "") + ")"; } }
     D.mkSummary = () => { const dc = D.coins || []; D.summary = { n: D.source ? dc.length : null, graduated: dc.filter((c) => c.graduated).length, best: dc.reduce((m, c) => Math.max(m, c.ath || c.mc || 0), 0), last24h: dc.filter((c) => c.created && c.created > R.now - 86400).length }; };
     D.mkSummary(); const dc = D.coins || []; // 0.6.0: n stays null ("couldn't check") when pump.fun did not answer and nothing else had a list — never "first coin" by default
@@ -748,6 +759,12 @@ function diagnose(R) {
   if (L?.check && !L.check.agree) add(L.check.oursPct < L.check.trackerPct - 2 ? "red" : "amber", `Launch check: our tracker saw ${f1(L.check.trackerPct)}% bought in the create block by ${L.check.trackerWallets} wallets; this lookup found ${f1(L.check.oursPct)}% by ${L.check.oursWallets}${L.check.oursPct < L.check.trackerPct - 2 ? " — less than the tracker, so the launch figures here are too low" : L.check.oursPct > L.check.trackerPct + 2 ? " — more than the tracker (it may have missed a transaction live)" : " — the same total"}${L.check.missing.length ? `; the tracker names ${L.check.missing.length} wallet${L.check.missing.length === 1 ? "" : "s"} this lookup does not (${L.check.missing.slice(0, 3).map((w) => w.slice(0, 4)).join(", ")}) — the tracker records who signed, this lookup who received the tokens` : ""}.`);
   else if (L?.check) add("ok", `Launch checked against our tracker's live record: both see ${f1(L.check.oursPct)}% bought in the create block by ${L.check.oursWallets} wallets.`);
   if (L?.gradAfterS != null && L.gradAfterS <= 5) add("red", `Graduated ${L.gradAfterS <= 1 ? "in the same second it was created" : L.gradAfterS + " s after it was created"}: the bundle bought the whole bonding curve — nobody outside could buy before it hit the pool.`);
+  if (R.token.permanentDelegate) add("red", `Permanent delegate set (${R.token.permanentDelegate.slice(0, 6)}…): that address can move or burn this coin out of ANY wallet, yours included, at any time.`);
+  if (R.token.transferFeeBps) add("amber", `Transfer tax: ${(R.token.transferFeeBps / 100).toFixed(2)}% is taken on every buy, sell and transfer.`);
+  if (R.token.transferHook) add("amber", `Transfer hook (${R.token.transferHook.slice(0, 6)}…): another program runs on every transfer and can block sales.`);
+  if (L?.feeCreator) add("amber", `The dev launched it from ${L.creator.slice(0, 6)}… but named a different wallet, ${L.feeCreator.slice(0, 6)}…, as the coin's creator (that wallet gets the creator fees) — sites that show "dev" usually show the second one.`);
+  const qb = (R.tracked || []).filter((p) => (p.role === "dev" || p.role === "bundle") && (p.launchPct || 0) >= 1 && (p.solIn || 0) < 0.03 * p.launchPct);
+  if (qb.length) add("amber", `${qb.length} launch wallet${qb.length === 1 ? "" : "s"} took ${f1(qb.reduce((a, p) => a + (p.launchPct || 0), 0))}% while paying almost no SOL — paid in another token, or given the tokens; the SOL figures for ${qb.length === 1 ? "it" : "them"} are not what was paid.`);
   if (R.token.mintAuthority) add("red", `Mint authority is NOT revoked (${R.token.mintAuthority.slice(0, 6)}…): more tokens can be printed.`);
   if (R.token.freezeAuthority) add("red", "Freeze authority is set: wallets can be frozen so they cannot sell.");
   const LQ = R.liquidity; if (LQ) { if (LQ.burnedPct != null) add(LQ.burnedPct >= 99 ? "ok" : LQ.burnedPct >= 90 ? "amber" : "red", LQ.burnedPct >= 99 ? `Liquidity: ${LQ.poolSol ? LQ.poolSol.toFixed(1) + " SOL" : "?"} in the pool; ${f1(LQ.burnedPct)}% of the LP tokens are burned — the liquidity cannot be pulled.` : `Liquidity: only ${f1(LQ.burnedPct)}% of the LP tokens are burned; the rest${LQ.lpHolders?.[0] ? " is held by " + LQ.lpHolders[0].owner.slice(0, 6) + "…" : ""} — that holder can remove liquidity.`); }
