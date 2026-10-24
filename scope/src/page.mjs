@@ -124,6 +124,7 @@ function trustHtml(){var h='',C=R.coverage||{},X=R.disagree||[];
    line(C.histRead===C.histWallets&&!C.histCut,'Coin history read for '+C.histRead+' of '+C.histWallets+' wallets; '+C.histCut+' had more transactions than were read ('+esc(C.histDepth||'')+')')+
    line(C.fundingFound>=0.8*C.profileWanted,'Funding traced for '+C.fundingFound+' of '+C.profileWanted+' wallets'+(C.busyFunders?' · '+C.busyFunders+' funders were busy (exchange-like) and not used to link wallets':''))+
    line(C.sellers>=C.sellersWithSales,'Money followed out of '+C.sellers+' of '+C.sellersWithSales+' wallets (dev and bundle from launch, first buyers and side wallets from their first sale), two steps deep; '+(C.receiversChecked||0)+' receiving wallets checked for buys of this coin')+
+   line(!C.readFail,C.readFail?'<b>'+C.readFail+' reads failed</b> and were skipped (last: '+esc(C.readFailLast||'')+')':'Every transaction asked for was read (none failed)')+
    line(C.holdersComplete,'Holdings: '+(C.holdersComplete?'every token account read ('+C.holdersRead+' wallets)':C.holdersRead+' wallets read in full; the rest one by one'))+
    line(true,'Side wallets followed '+(C.sideSteps||0)+' step'+(C.sideSteps===1?'':'s')+' out')+
    (C.callCapHit?line(false,'The lookup hit its call limit — some sections are partial (see the notes in the diagnosis)'):'')+

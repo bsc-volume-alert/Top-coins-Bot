@@ -56,7 +56,7 @@ export const ataOf = (owner, mint, tokenProg = TOKEN) => pda([unb58(owner), unb5
 
 // ---------- calls (own counter, own budget) ----------
 const URL_ = HELIUS;
-let used = 0;
+let used = 0; const readFail = { n: 0, last: "" }; // reads that failed and were skipped, per lookup — shown on the page
 function charge(method, n = 1) {
   const d = new Date().getUTCDate(); if (d !== coinStat.day) { coinStat.day = d; coinStat.calls = 0; }
   if (coinStat.calls + n > DAILY) throw new Error(`coin lookup budget used up today (${DAILY} calls)`);
@@ -91,7 +91,7 @@ const BATCH = Number(process.env.SCOPE_BATCH || 1);
 async function batch(method, list, size = BATCH) {
   const out = new Array(list.length).fill(null);
   if (size <= 1) { let next = 0, done = 0;
-    await Promise.all(Array.from({ length: Math.min(5, list.length) }, async () => { while (next < list.length) { const i = next++; try { out[i] = await call(method, list[i]); } catch (e) { if (/budget|cap|busy/.test(e.message)) throw e; } done++; if (stageCb && done % 10 === 0) stageCb(done, list.length); } }));
+    await Promise.all(Array.from({ length: Math.min(5, list.length) }, async () => { while (next < list.length) { const i = next++; try { out[i] = await call(method, list[i]); } catch (e) { if (/budget|cap|busy/.test(e.message)) throw e; readFail.n++; readFail.last = `${method}: ${e.message}`.slice(0, 160); } done++; if (stageCb && done % 10 === 0) stageCb(done, list.length); } }));
     return out; }
   for (let i = 0; i < list.length; i += size) {
     const part = list.slice(i, i + size); charge(method, part.length);
@@ -102,7 +102,9 @@ async function batch(method, list, size = BATCH) {
   return out;
 }
 let stageCb = null; const stage = (txt) => { coinStat.stage = txt; stageCb = (a, b) => { coinStat.stage = `${txt} (${a} of ${b})`; }; };
-const TX = (sig) => [sig, { maxSupportedTransactionVersion: 0, encoding: "json", commitment: "confirmed" }];
+// 0.6.1: version 1 — Solana now has v1 transactions; asking for at most v0 made every v1 transaction come back as an error, silently dropped
+// (the real lookups of 24 Oct: the launch bundles of Privacycoin, Moustache and YMB were v1 transactions and were never read)
+const TX = (sig) => [sig, { maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed" }];
 
 // ---------- transaction reading ----------
 const keysOf = (tx) => [...(tx?.transaction?.message?.accountKeys || []).map((k) => (typeof k === "string" ? k : k.pubkey)), ...(tx?.meta?.loadedAddresses?.writable || []), ...(tx?.meta?.loadedAddresses?.readonly || [])];
@@ -154,7 +156,7 @@ export async function coinReport(mint, force = false) {
   const j = jobs.get(mint);
   if (j) { if (j.done) { jobs.delete(mint); return j.r; } return { ok: false, pending: true, stage: current === mint ? coinStat.stage || "starting" : "waiting for another lookup to finish", elapsed: Math.round((Date.now() - j.t0) / 1000) }; }
   const job = { t0: Date.now(), done: false }; jobs.set(mint, job);
-  chain = chain.then(async () => { current = mint; used = 0; coinStat.lookups++; coinStat.stage = "starting"; const t0 = Date.now();
+  chain = chain.then(async () => { current = mint; used = 0; readFail.n = 0; readFail.last = ""; coinStat.lookups++; coinStat.stage = "starting"; const t0 = Date.now();
     const r = await build(mint).catch((e) => ({ ok: false, error: e.message })); r.calls = used; r.ms = Date.now() - t0; coinStat.lastMs = r.ms; if (!r.ok) coinStat.lastErr = r.error;
     if (r.ok) { cache.set(mint, { at: Date.now(), r }); if (cache.size > 100) cache.delete(cache.keys().next().value); }
     try { const dir = process.env.SCOPE_DUMP_DIR || "/root/tracker/data/scope_last"; mkdirSync(dir, { recursive: true }); writeFileSync(`${dir}/${mint}.json`, JSON.stringify({ at: Date.now(), r }, (k, v) => (typeof v === "bigint" ? v.toString() : v)));
@@ -279,7 +281,7 @@ async function build(mint) {
     // (2) oldest first
     async function oldest(addr, maxPages) { let token = null, n = 0;
       for (let pg = 0; pg < maxPages; pg++) { let res;
-        try { res = await call("getTransactionsForAddress", [addr, { transactionDetails: "full", sortOrder: "asc", limit: 100, maxSupportedTransactionVersion: 0, encoding: "json", commitment: "confirmed", filters: { status: "succeeded" }, ...(token ? { paginationToken: token } : {}) }]); }
+        try { res = await call("getTransactionsForAddress", [addr, { transactionDetails: "full", sortOrder: "asc", limit: 100, maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed", filters: { status: "succeeded" }, ...(token ? { paginationToken: token } : {}) }]); }
         catch (e) { if (/budget|cap|busy/.test(e.message)) throw e; if (pg === 0) { LS.oldestFirst = false; LS.oldestErr = e.message.slice(0, 140); return -1; } break; }
         const data = res?.data || []; for (const t of data) addTx(t); n += data.length; LS.oldestFirst = true; token = res?.paginationToken;
         coinStat.stage = `the launch: ${TXM.size} transactions read, oldest first`; if (!token || data.length < 100 || buyersAfter() >= FIRST_N) break; }
@@ -301,7 +303,7 @@ async function build(mint) {
       // the create block itself, read whole: every transaction in them that touches this coin, whatever any address index returns
       const s0b = tok?.create_slot ?? [...TXM.values()].find(isCreate)?.slot;
       if (s0b != null) for (let k = 0; k <= 0; k++) { coinStat.stage = "the launch: reading the create block in full"; // one block only: a full block is several MB
-        try { const b = await call("getBlock", [s0b + k, { encoding: "json", maxSupportedTransactionVersion: 0, transactionDetails: "full", rewards: false, commitment: "confirmed" }], 45000); LS.blocksRead = (LS.blocksRead || 0) + 1;
+        try { const b = await call("getBlock", [s0b + k, { encoding: "json", maxSupportedTransactionVersion: 1, transactionDetails: "full", rewards: false, commitment: "confirmed" }], 45000); LS.blocksRead = (LS.blocksRead || 0) + 1;
           (b?.transactions || []).forEach((t, i) => { if (t?.meta?.err) return; if (keysOf(t).includes(mint) || (t.meta?.postTokenBalances || []).some((x) => x.mint === mint)) { if (addTx({ ...t, slot: s0b + k, blockTime: b.blockTime, transactionIndex: i })) LS.block = (LS.block || 0) + 1; } }); }
         catch (e) { if (/budget|cap/.test(e.message)) throw e; LS.blockErr = e.message.slice(0, 120); } }
       // graduated before 60 buyers bought on the curve: the next buyers are on the pool
@@ -604,7 +606,7 @@ async function build(mint) {
   // 0.5.1 (owner, 24 Oct 01:40 UK: "how do I know it's correct this time"): what was actually checked, so a zero can never pass for "nothing there"
   { const histT = order.filter((p) => RK(p) <= 3 || (p.topHolder && (p.nowPct || 0) >= 0.2)).slice(0, 110), firstT = [...W.values()].filter((p) => p.rank);
     const picW = [...PIC], fundOk = picW.filter((w) => { const P = PROF.get(w); return P && (P.first || P.pre || P.old); }).length;
-    R.coverage = { launchRebuilt: !!L, launchTxs: L?.txs ?? null, curveTxs: L?.curveTxs ?? null, launchSrc: R.launchSrc || null, launchMissing: R.launchSrc?.missing || (V.cv ? null : "not a pump.fun coin"), launchIncomplete: R.launchSrc?.incomplete || null, curveSoldRead: L?.curveSoldRead ?? null, curveComplete: L?.curveComplete ?? null, launchCheck: L?.check || null, trackerSaw: !!tok, firstFound: firstT.length, firstWanted: FIRST_N,
+    R.coverage = { launchRebuilt: !!L, launchTxs: L?.txs ?? null, curveTxs: L?.curveTxs ?? null, launchSrc: R.launchSrc || null, launchMissing: R.launchSrc?.missing || (V.cv ? null : "not a pump.fun coin"), launchIncomplete: R.launchSrc?.incomplete || null, readFail: readFail.n, readFailLast: readFail.last, curveSoldRead: L?.curveSoldRead ?? null, curveComplete: L?.curveComplete ?? null, launchCheck: L?.check || null, trackerSaw: !!tok, firstFound: firstT.length, firstWanted: FIRST_N,
       histWallets: histT.length, histRead: histT.filter((p) => p.histRead).length, histCut: histT.filter((p) => p.histPartial).length, histDepth: "dev / bundle / first 3 blocks: last 40 transactions · first buyers: last 25 · big holders: last 10",
       profiled: picW.filter((w) => PROF.has(w)).length, profileWanted: picW.length, fundingFound: fundOk, busyFunders: busy.size,
       sellers: R.saleTrail.sellers, sellersWithSales: order.filter((p) => p.role === "dev" || p.role === "bundle" || ((RK(p) <= 3 || p.role === "side wallet") && p.firstSellTs)).length, receiversChecked: R.saleTrail.receiversChecked || 0,
