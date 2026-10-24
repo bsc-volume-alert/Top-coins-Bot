@@ -13,7 +13,7 @@ TOKEN=$(grep -E '^TG_BOT_TOKEN=' .env | cut -d= -f2-); CHAT=$(grep -E '^TG_CHAT_
 notify() { [ -n "$TOKEN" ] && curl -s -m 10 -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" -d chat_id="$CHAT" -d parse_mode=HTML --data-urlencode text="$1" >/dev/null 2>&1; }
 # v0.18.93: a push that touches only executor/ (and docs) leaves the tracker alone — no smoke boot, no reload, no lost P5 restore
 TRACKER_CHANGED=1
-if ! git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -vqE '^(executor/|fomo/|scope/|reports/|scripts/push-data\.sh$|scripts/dump-live\.cjs$|scripts/dump-launches\.cjs$|scripts/study\.mjs$|scripts/push-now\.txt$|scripts/job-now\.txt$|scripts/executor-off$|scripts/revival-pull\.mjs$|scripts/s10-check\.cjs$|.*\.md$)'; then TRACKER_CHANGED=0; echo "[deploy] tracker untouched — executor / reports / data-script push"; fi # v0.18.114: the 4-hourly study's reports and the data scripts never restart the bot
+if ! git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -vqE '^(executor/|fomo/|scope/|radar/|reports/|scripts/push-data\.sh$|scripts/dump-live\.cjs$|scripts/dump-launches\.cjs$|scripts/study\.mjs$|scripts/push-now\.txt$|scripts/job-now\.txt$|scripts/executor-off$|scripts/revival-pull\.mjs$|scripts/s10-check\.cjs$|.*\.md$)'; then TRACKER_CHANGED=0; echo "[deploy] tracker untouched — executor / reports / data-script push"; fi # v0.18.114: the 4-hourly study's reports and the data scripts never restart the bot
 FAIL=""
 if [ "$TRACKER_CHANGED" = "1" ]; then
 for f in src/*.js; do node --check "$f" 2>/tmp/deploy-check.err || { FAIL="syntax: $f $(head -c 300 /tmp/deploy-check.err)"; break; }; done
@@ -80,6 +80,18 @@ if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^scope/'; then
     if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active" && ! ufw status | grep -q "^$SP/tcp"; then ufw allow "$SP/tcp" >/dev/null 2>&1 && echo "[deploy] firewall: opened $SP/tcp for coin scope"; fi
     else echo "[deploy] SCOPE START FAILED: $(tail -c 300 /tmp/deploy-scope-pm2.log)"; notify "⛔ <b>coin scope start failed</b> — <code>$(tail -c 300 /tmp/deploy-scope-pm2.log)</code>"; fi
   fi
+fi
+# radar 0.1.0 (owner, 24 Oct 2026 16:22 UK): records GMGN / Birdeye / FOMO on every coin the tracker's GMGN scanner flags ($100K in 5 min) — own pm2 app
+# `radar`, deploys only when radar/ changed (own npm install, syntax check, smoke run, own reload); never touches the tracker, executor, fomo or coin scope
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^radar/'; then
+  echo "[deploy] radar changed — installing and checking"
+  (cd radar && npm install --omit=dev --no-audit --no-fund 2>&1 | tail -1)
+  RFAIL=""
+  for f in radar/src/*.mjs; do node --check "$f" 2>/tmp/deploy-radar.err || { RFAIL="syntax: $f $(head -c 300 /tmp/deploy-radar.err)"; break; }; done
+  if [ -z "$RFAIL" ]; then (cd radar && RADAR_SMOKE=1 RADAR_DB=/tmp/radar-smoke.db timeout 40 node src/index.mjs >/tmp/deploy-radar-smoke.log 2>&1); RRC=$?; rm -f /tmp/radar-smoke.db*; [ "$RRC" != "0" ] && RFAIL="radar smoke run exited with code $RRC: $(grep -E 'Error|error|at ' /tmp/deploy-radar-smoke.log | head -5 | tr '\n' ' ' | head -c 400)"; fi
+  if [ -n "$RFAIL" ]; then echo "[deploy] RADAR REJECTED: $RFAIL"; notify "⛔ <b>radar deploy rejected</b> — Reason: <code>$(echo "$RFAIL" | head -c 500)</code>"
+  elif pm2 startOrReload radar/ecosystem.config.cjs --only radar --update-env >/tmp/deploy-radar-pm2.log 2>&1; then pm2 save >/dev/null 2>&1; echo "[deploy] radar reloaded"
+  else echo "[deploy] RADAR START FAILED: $(tail -c 300 /tmp/deploy-radar-pm2.log)"; notify "⛔ <b>radar start failed</b> — <code>$(tail -c 300 /tmp/deploy-radar-pm2.log)</code>"; fi
 fi
 # fomo 0.1.3: a change to fomo/finds.txt resolves those trades to wallets on the box (fomo/scripts/find-batch.mjs against the running fomo app), then pushes the data
 if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^fomo/finds\.txt$'; then echo "[deploy] fomo finds"; (cd /root/tracker/fomo && nohup nice -n 19 bash -c 'sleep 25; node scripts/find-batch.mjs > /root/tracker/data/fomo_finds.log 2>&1; bash /root/tracker/scripts/push-data.sh >> /root/tracker/data/push-now.log 2>&1' >/dev/null 2>&1 &); fi
