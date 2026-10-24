@@ -10,7 +10,7 @@ import { gget, gmgnOn, gmStat, walletRow, walletStats, facts, fromRate, TAG } fr
 import { writeFileSync, mkdirSync, readdirSync, statSync, unlinkSync } from "node:fs";
 import { execFile } from "node:child_process";
 let dumpBusy = false, dumpAgain = false; // 0.4.2: send the saved lookups to the repo (scope-data branch) right after each lookup
-function pushDump() { if (process.env.SCOPE_SMOKE) return; if (dumpBusy) { dumpAgain = true; return; } dumpBusy = true; execFile("bash", [new URL("../push-dump.sh", import.meta.url).pathname], { timeout: 120000 }, () => { dumpBusy = false; if (dumpAgain) { dumpAgain = false; pushDump(); } }); }
+function pushDump() { if (process.env.SCOPE_SMOKE || process.env.SCOPE_NO_PUSH) return; if (dumpBusy) { dumpAgain = true; return; } dumpBusy = true; execFile("bash", [new URL("../push-dump.sh", import.meta.url).pathname], { timeout: 120000 }, () => { dumpBusy = false; if (dumpAgain) { dumpAgain = false; pushDump(); } }); }
 // Reads the tracker's database read-only (launch facts, checkpoints, books) when it is there; works without it.
 let db = null; try { db = new Database(process.env.TRACKER_DB || "/root/tracker/data/tracker.db", { readonly: true, fileMustExist: true }); } catch (e) { console.log("[scope] tracker database not available:", e.message); }
 const HELIUS = () => process.env.HELIUS_API_KEY ? `https://mainnet.helius-rpc.com/?api-key=${process.env.HELIUS_API_KEY}` : (process.env.SCOPE_RPC_URL || "");
