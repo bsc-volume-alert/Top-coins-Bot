@@ -323,7 +323,7 @@ async function build(mint) {
       // read in order until the first FIRST_N buyers after the create block are found (that whole block included)
       const firstBuyers = new Set(), at0 = new Set(); let lastSlot = null, used0 = 0;
       for (const tx of txAll) { if (tx.slot < slot0) continue; if (firstBuyers.size >= FIRST_N && tx.slot !== lastSlot) break;
-        const tr = readTrades([tx], mint, skip), op = deltas(tx, mint, new Set([pool, ...pairs].filter(Boolean))).venueTok !== 0n; for (const t of tr) t.onPool = op; /* a trade against the pool (after graduation), not the curve */ LT.push(...tr); used0++; lastSlot = tx.slot; for (const t of tr) { if (t.slot === slot0) at0.add(t.wallet); else if (t.kind === "buy" && t.wallet !== creator && !at0.has(t.wallet)) firstBuyers.add(t.wallet); } }
+        const tr = readTrades([tx], mint, skip), op = deltas(tx, mint, new Set([pool, ...pairs].filter((x) => x && x !== curve))).venueTok !== 0n; /* 0.6.4: DexScreener lists the bonding curve as a pair too — it must not count as the pool */ for (const t of tr) t.onPool = op; /* a trade against the pool (after graduation), not the curve */ LT.push(...tr); used0++; lastSlot = tx.slot; for (const t of tr) { if (t.slot === slot0) at0.add(t.wallet); else if (t.kind === "buy" && t.wallet !== creator && !at0.has(t.wallet)) firstBuyers.add(t.wallet); } }
       for (const t of LT) { const p = prof(t.wallet); p.inWindow = true;
         if (p.firstSlot == null) { p.firstSlot = t.slot; p.firstTs = t.ts; }
         if (t.kind === "buy" && p.firstBuySlot == null) p.firstBuySlot = t.slot;
@@ -334,6 +334,10 @@ async function build(mint) {
       for (const p of W.values()) { p.role = p.wallet === creator ? "dev" : p.firstSlot === slot0 && (p.launchRaw || 0n) > 0n ? "bundle" : p.firstSlot === slot0 && !p.poolInLaunchBlock ? "bundle" : p.firstSlot <= slot0 + 4 ? "sniper" : "early";
         p.secAfter = p.firstTs != null ? p.firstTs - createTs : null; p.boughtPct = pctOf(p.boughtRaw); p.launchPct = pctOf(p.launchRaw || 0n); }
       if (!W.has(creator)) { const d = prof(creator); d.role = "dev"; d.boughtPct = 0; d.launchPct = 0; d.noBuy = true; } // the dev is always in the picture, even with no buy
+      // 0.6.4: the raw create-block transactions, trimmed, kept in the saved lookup so any launch can be checked by hand later
+      R.launchRaw = txAll.filter((t) => t.slot === slot0).slice(0, 12).map((t) => ({ sig: t.transaction?.signatures?.[0], idx: t.transactionIndex ?? null, version: t.version ?? null, payer: keysOf(t)[0], fee: t.meta?.fee,
+        logs: (t.meta?.logMessages || []).filter((l) => !/consumed|^Program [1-9A-HJ-NP-Za-km-z]+ (invoke|success)/.test(l)).slice(0, 30).map((l) => l.slice(0, 160)),
+        tok: [...deltas(t, mint, skip).out.entries()].map(([o, v]) => [o, pctOf(v.tok), v.sol / 1e9]), venueTok: pctOf(deltas(t, mint, skip).venueTok), venueSol: deltas(t, mint, skip).venueSol / 1e9 }));
       const grp = (r) => [...W.values()].filter((p) => p.role === r), sum = (a, k = "boughtPct") => ({ n: a.filter((p) => (p[k] || 0) > 0).length, pct: a.reduce((x, p) => x + (p[k] || 0), 0), sol: a.reduce((x, p) => x + (k === "launchPct" ? p.launchSol || 0 : p.solIn), 0) });
       const order1 = [...W.values()].filter((p) => p.role !== "dev" && p.role !== "bundle" && p.firstBuySlot != null).sort((a, b) => a.firstSlot - b.firstSlot || (a.firstTs ?? 0) - (b.firstTs ?? 0)).slice(0, FIRST_N);
       order1.forEach((p, i) => { p.rank = i + 1; p.first = true; }); for (const p of W.values()) if (p.role === "dev" || p.role === "bundle") p.first = true;
