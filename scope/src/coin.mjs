@@ -503,6 +503,14 @@ async function build(mint) {
   for (const p of W.values()) { p.launchLinked = linkedToLaunch.has(p.wallet) && p.role !== "dev" && p.role !== "bundle"; p.launchProbable = !linkedToLaunch.has(p.wallet) && probLaunch.has(p.wallet); if (p.launchLinked && early3(p) && p.role === "sniper") p.delayedBundle = true; }
   R.delayedBundle = { n: [...W.values()].filter((p) => p.delayedBundle).length, boughtPct: [...W.values()].filter((p) => p.delayedBundle).reduce((a, p) => a + (p.boughtPct || 0), 0), holdNow: [...W.values()].filter((p) => p.delayedBundle).reduce((a, p) => a + (p.nowPct || 0), 0) };
   R.edgesCount = { strong: strongE.length, probable: EDGES.length - strongE.length };
+  // 0.5.1 (owner, 24 Oct 01:40 UK: "how do I know it's correct this time"): what was actually checked, so a zero can never pass for "nothing there"
+  { const histT = order.filter((p) => RK(p) <= 3 || (p.topHolder && (p.nowPct || 0) >= 0.2)).slice(0, 110), firstT = [...W.values()].filter((p) => p.rank);
+    const picW = [...PIC], fundOk = picW.filter((w) => { const P = PROF.get(w); return P && (P.first || P.pre || P.old); }).length;
+    R.coverage = { launchRebuilt: !!L, launchTxs: L?.txs ?? null, curveTxs: L?.curveTxs ?? null, firstFound: firstT.length, firstWanted: FIRST_N,
+      histWallets: histT.length, histRead: histT.filter((p) => p.histRead).length, histCut: histT.filter((p) => p.histPartial).length, histDepth: "dev / bundle / first 3 blocks: last 40 transactions · first buyers: last 15 · big holders: last 10",
+      profiled: picW.filter((w) => PROF.has(w)).length, profileWanted: picW.length, fundingFound: fundOk, busyFunders: busy.size,
+      sellers: R.saleTrail.sellers, sellersWithSales: order.filter((p) => (RK(p) <= 3 || p.role === "side wallet") && p.firstSellTs).length,
+      holdersRead: HM.size, holdersComplete: hmComplete, sideSteps: Math.max(0, ...[...W.values()].map((p) => p.sideStep || 0)), callCapHit: R.notes.some((n) => /hit its .*call cap|budget used up/.test(n)) }; }
 
   // 10b. our GMGN-style bundle measure: wallets that bought together — in the create block, in the same transaction, or two+ wallets of one owner in the same block
   { const bundledW = new Set(), bySig = new Map(), bySlot = new Map();
@@ -587,6 +595,9 @@ async function build(mint) {
       ["Biggest single owner (linked wallets)", (R.groups || [])[0]?.nowPct ?? null, null, "GMGN does not group wallets by owner"]];
   }
   R.live = { wallets: [...W.values()].sort((a, b) => RK(a) - RK(b)).map((p) => p.wallet).slice(0, 400), lastSig: recent?.lastSig || null, venueAddr: recent?.venueAddr || null, tokenProg, dec, supply, solUsd };
+  // where GMGN and we disagree by 10 points or more (shown at the top of the page, in red)
+  R.disagree = (R.compare || []).filter((r) => typeof r[1] === "number" && typeof r[2] === "number" && r[0] !== "Holders" && r[0] !== "Dev's other coins" && Math.abs(r[1] - r[2]) >= 10).map((r) => ({ what: r[0], ours: r[1], gmgn: r[2] }));
+  R.verified = process.env.SCOPE_VERIFIED === "1";
   R.diag = diagnose(R);
   R.name = R.db.name || R.dex?.name || null; R.symbol = R.db.symbol || R.dex?.symbol || null;
   return R;
