@@ -331,7 +331,7 @@ async function build(mint) {
   const early3 = (p) => p.blockAfter != null && p.blockAfter <= 3 && p.firstBuySlot != null;
   const RK = (p) => (p.role === "dev" ? 0 : p.role === "bundle" ? 1 : early3(p) ? 2 : p.first ? 3 : p.topHolder ? 4 : 9);
   const order = [...W.values()].sort((a, b) => RK(a) - RK(b) || (a.rank ?? 1e9) - (b.rank ?? 1e9) || (b.nowPct || 0) - (a.nowPct || 0) || (b.recentSol || 0) - (a.recentSol || 0));
-  const depth = (p) => (RK(p) <= 2 ? 40 : p.first ? 15 : 10);
+  const depth = (p) => (RK(p) <= 2 ? 40 : p.first ? 25 : 10);
   async function readHist(list, label) {
     if (!list.length) return; coinStat.stage = label;
     const acct = (p) => [...new Set([...(HACC.get(p.wallet) || []), ataOf(p.wallet, mint, tokenProg)])].slice(0, 3);
@@ -427,9 +427,11 @@ async function build(mint) {
   for (const p of W.values()) for (const o of p.sentTo || []) { const e = (p.events || []).find((x) => x.kind === "out" && x.other === o); edge(p.wallet, o, "tokens sent " + (W.get(o)?.role === "side wallet" ? "to a side wallet" : "between them"), e?.sig); }
   if (L?.creator) for (const p of W.values()) if (p.role === "bundle") edge(L.creator, p.wallet, "bought in the create block with the dev", null);
 
-  // 10. sell and replace: follow the SOL out of every sale by the dev, bundle, early blocks and first buyers (two steps). A wallet that received it and then bought or holds this coin is the same money.
-  stage("following the SOL from their sales");
-  const sellers = order.filter((p) => (RK(p) <= 3 || p.role === "side wallet") && p.firstSellTs).sort((a, b) => (b.soldSol || 0) - (a.soldSol || 0)).slice(0, 30);
+  // 10. sell and replace — 0.5.2 (owner, 24 Oct 01:48 UK: "where the 60 wallets sold and rebought, or moved via fresh wallets… how the dev split his wallet and the bundles"):
+  //     the dev and every bundle wallet are followed from the moment of launch (they often fund fresh wallets before selling); every first buyer and side wallet from its first sale.
+  //     Two steps of SOL; a receiver is checked on its own token history, so "rebought, then sold again" counts too.
+  stage("following the money out of the dev, bundle and first buyers");
+  const tracers = order.filter((p) => p.role === "dev" || p.role === "bundle" || ((RK(p) <= 3 || p.role === "side wallet") && p.firstSellTs)).slice(0, 90);
   const sent = []; // { from, to, sol, ts, sig, step, root }
   async function outflows(w, afterTs, limitTx) { let P = PROF.get(w); if (!P) P = await profile(w, null); const s = (P.sigs || []).filter((x) => !x.err && x.blockTime != null && x.blockTime >= afterTs).reverse().slice(0, limitTx);
     const txs = await batch("getTransaction", s.map((x) => TX(x.signature))); const out = [];
@@ -437,20 +439,30 @@ async function build(mint) {
       const bought = readTrades([tx], mint, skip).find((t) => t.wallet === w && t.kind === "buy"); if (bought) continue; // its own rebuy of this coin, not a transfer
       for (const r of f.filter((x) => x.k !== w && x.d >= 5e7 && !isVenue(x.k))) out.push({ to: r.k, sol: r.d / 1e9, ts: tx.blockTime, sig: tx.transaction?.signatures?.[0], swap: !pureSol(tx, w) }); }
     return out; }
-  let ns = 0; await Promise.all(Array.from({ length: 3 }, async () => { while (ns < sellers.length) { const p = sellers[ns++]; try { for (const o of await outflows(p.wallet, p.firstSellTs, 25)) if (!o.swap) sent.push({ from: p.wallet, ...o, step: 1, root: p.wallet }); } catch (e) { if (/budget|cap/.test(e.message)) return; } coinStat.stage = `following the SOL from their sales (${ns} of ${sellers.length} sellers)`; } }));
-  const step1 = [...new Map(sent.filter((x) => x.sol >= 0.3).map((x) => [x.to, x])).values()].slice(0, 40); let n2 = 0;
-  await Promise.all(Array.from({ length: 3 }, async () => { while (n2 < step1.length) { const x = step1[n2++]; try { const P = await profile(x.to, null); if (P.old) { x.exchange = true; continue; }
-        for (const o of await outflows(x.to, x.ts, 12)) if (!o.swap) sent.push({ from: x.to, ...o, step: 2, root: x.root }); } catch (e) { if (/budget|cap/.test(e.message)) return; } } }));
-  // did any receiver buy or hold this coin?
-  const recv = [...new Set(sent.map((x) => x.to))].filter((w) => !busy.has(w));
+  let ns = 0; await Promise.all(Array.from({ length: 4 }, async () => { while (ns < tracers.length) { const p = tracers[ns++]; const fromTs = p.role === "dev" || p.role === "bundle" ? (L?.createTs ?? p.firstTs ?? 0) : p.firstSellTs;
+      try { for (const o of await outflows(p.wallet, fromTs, p.role === "dev" || p.role === "bundle" ? 40 : 25)) if (!o.swap) sent.push({ from: p.wallet, ...o, step: 1, root: p.wallet, beforeSale: !p.firstSellTs || o.ts < p.firstSellTs }); } catch (e) { if (/budget|cap/.test(e.message)) return; }
+      coinStat.stage = `following the money (${ns} of ${tracers.length} wallets)`; } }));
+  const step1 = [...new Map(sent.filter((x) => x.sol >= 0.1 && !W.get(x.to)?.first).map((x) => [x.to, x])).values()].slice(0, 80); let n2 = 0;
+  await Promise.all(Array.from({ length: 4 }, async () => { while (n2 < step1.length) { const x = step1[n2++]; try { const P = await profile(x.to, null); if (P.old) { x.exchange = true; continue; }
+        for (const o of await outflows(x.to, x.ts, 12)) if (!o.swap) sent.push({ from: x.to, ...o, step: 2, root: x.root, beforeSale: x.beforeSale }); } catch (e) { if (/budget|cap/.test(e.message)) return; } } }));
+  // did a receiver buy this coin (now or earlier), and does it still hold?
+  const recv = [...new Set(sent.map((x) => x.to))].filter((w) => !busy.has(w) && !isVenue(w));
   const recvW = recv.map((w) => ({ wallet: w })); await fillNow(recvW);
-  const boughtByRecv = new Set([...(recent?.list || []).map((b) => b.wallet), ...LT.filter((t) => t.kind === "buy").map((t) => t.wallet)]);
+  const knownBuy = new Set([...(recent?.list || []).map((b) => b.wallet), ...LT.filter((t) => t.kind === "buy").map((t) => t.wallet), ...[...W.values()].filter((p) => (p.nBuys || 0) > 0).map((p) => p.wallet)]);
+  const check = recvW.filter((r) => !W.get(r.wallet)?.first).sort((a, b) => Number(knownBuy.has(b.wallet)) - Number(knownBuy.has(a.wallet))).slice(0, 80); // known buyers first: their sell-again is what we need
+  if (check.length) { coinStat.stage = `checking ${check.length} receiving wallets for buys of this coin`;
+    const sl = await batch("getSignaturesForAddress", check.map((r) => [ataOf(r.wallet, mint, tokenProg), { limit: 10 }])); const jobsR = []; check.forEach((r, i) => { for (const x of (sl[i] || []).filter((y) => !y.err)) jobsR.push([r, x.signature]); });
+    const tx2 = await batch("getTransaction", jobsR.map(([, s]) => TX(s)));
+    jobsR.forEach(([r], k) => { for (const t of readTrades([tx2[k]], mint, skip)) if (t.wallet === r.wallet) { if (t.kind === "buy") { r.bought = true; r.solIn = (r.solIn || 0) + -t.sol / 1e9; } if (t.kind === "sell") { r.sold = true; r.solOut = (r.solOut || 0) + t.sol / 1e9; } } }); }
   const replaced = [];
-  for (const r of recvW) { const holds = (r.nowPct || 0) > 0.001, bought = boughtByRecv.has(r.wallet) || (W.get(r.wallet)?.nBuys || 0) > 0; if (!holds && !bought) continue;
-    const x = sent.find((s) => s.to === r.wallet), root = W.get(x.root); const q = prof(r.wallet); if (q.nowPct == null || q.nowPct < r.nowPct) q.nowPct = r.nowPct; if (!q.role || q.role === "early") q.role = q.role || "rebuyer"; q.rebuyer = true;
-    replaced.push({ wallet: r.wallet, from: x.root, fromRole: root?.role || "", via: x.step === 2 ? x.from : null, sol: x.sol, ts: x.ts, sig: x.sig, holds: r.nowPct, bought });
-    edge(x.root, r.wallet, `received ${x.sol.toFixed(2)} SOL from ${root?.role || "a"} wallet ${x.root.slice(0, 4)}'s sale${x.step === 2 ? " (through " + x.from.slice(0, 4) + ")" : ""} and ${bought ? "bought" : "holds"} this coin`, x.sig); }
-  R.replaced = replaced; R.saleTrail = { sellers: sellers.length, transfers: sent.length, toExchanges: step1.filter((x) => x.exchange).length };
+  for (const r of recvW) { const holds = (r.nowPct || 0) > 0.001, bought = r.bought || knownBuy.has(r.wallet); if (!holds && !bought) continue;
+    const x = sent.filter((s) => s.to === r.wallet).sort((a, b) => a.step - b.step || b.sol - a.sol)[0], root = W.get(x.root);
+    if (W.get(r.wallet)?.first) { replaced.push({ wallet: r.wallet, from: x.root, fromRole: root?.role || "", fromRank: root?.rank || null, via: x.step === 2 ? x.from : null, sol: x.sol, ts: x.ts, sig: x.sig, holds: r.nowPct ?? W.get(r.wallet).nowPct, bought: true, soldAgain: (W.get(r.wallet).nSells || 0) > 0, beforeSale: !!x.beforeSale, isFirst: true, toRank: W.get(r.wallet).rank || null, toRole: W.get(r.wallet).role });
+      edge(x.root, r.wallet, `received ${x.sol.toFixed(2)} SOL from ${root?.role || "a"} wallet ${x.root.slice(0, 4)} after launch${x.step === 2 ? " through " + x.from.slice(0, 4) : ""} — both are among the first buyers`, x.sig); continue; } const q = prof(r.wallet); if (q.nowPct == null || q.nowPct < r.nowPct) q.nowPct = r.nowPct; if (!q.role || q.role === "early") q.role = q.role || "rebuyer"; q.rebuyer = true;
+    replaced.push({ wallet: r.wallet, from: x.root, fromRole: root?.role || "", fromRank: root?.rank || null, via: x.step === 2 ? x.from : null, sol: x.sol, ts: x.ts, sig: x.sig, holds: r.nowPct, bought, soldAgain: !!r.sold, beforeSale: !!x.beforeSale });
+    edge(x.root, r.wallet, `received ${x.sol.toFixed(2)} SOL from ${root?.role || "a"} wallet ${x.root.slice(0, 4)}${x.beforeSale ? " (before it sold)" : " after its sale"}${x.step === 2 ? " through " + x.from.slice(0, 4) : ""} and ${bought ? "bought" : "holds"} this coin${r.sold ? " (then sold again)" : ""}`, x.sig); }
+  R.replaced = replaced; R.saleTrail = { sellers: tracers.length, transfers: sent.length, toExchanges: step1.filter((x) => x.exchange).length, receiversChecked: recvW.length };
+
 
   // 11. probable links (shown separately, never counted as insiders on their own): same exchange + near-identical amount + within 15 min; identical buy sizes in the launch window
   const exByF = new Map(); for (const P of PROF.values()) { const f = P.pre || P.first; if (f && PIC.has(P.w) && busy.has(f.funder)) { if (!exByF.has(f.funder)) exByF.set(f.funder, []); exByF.get(f.funder).push({ w: P.w, f }); } }
@@ -497,6 +509,17 @@ async function build(mint) {
         roles: [...new Set(m.map((p) => p.role).filter(Boolean))], fresh: m.filter((p) => p.fresh).length, links: [...new Set(ev.map((e) => e.why.replace(/ \(.*$/, "").replace(/ [1-9A-HJ-NP-Za-km-z]{4}\b.*$/, "")))].slice(0, 6),
         evidence: ev.slice(0, 40).map((e) => ({ a: e.a, b: e.b, why: e.why, sig: e.sig, strong: e.strong })), launch: m.some((p) => p.role === "dev" || p.role === "bundle") }; }).sort((a, b) => b.nowPct - a.nowPct); };
   const groups = mk(findS, strongE); groups.forEach((g, i) => { g.id = i + 1; for (const w of g.wallets) W.get(w).group = g.id; });
+  // 10b-trail. where the launch supply went: for the dev, every bundle wallet and each of the first buyers — still held / moved to side wallets / came back through new wallets / sold
+  { const owned = new Set(), rows = [];
+    const origins = [...W.values()].filter((p) => p.role === "dev" || p.role === "bundle" || p.rank).sort((a, b) => RK(a) - RK(b) || (a.rank ?? 0) - (b.rank ?? 0));
+    for (const o of origins) { const start = o.role === "dev" || o.role === "bundle" ? o.launchPct || o.boughtPct || 0 : o.boughtPct || 0;
+      const side = []; const walk = (w, d) => { for (const x of W.get(w)?.sentTo || []) { const q = W.get(x); if (!q || owned.has(x) || q.first) continue; owned.add(x); side.push({ wallet: x, pct: q.nowPct || 0, step: d }); if (d < 2) walk(x, d + 1); } }; walk(o.wallet, 1);
+      const back = replaced.filter((r) => r.from === o.wallet && !r.isFirst && !owned.has(r.wallet)); const paidBy = replaced.filter((r) => r.wallet === o.wallet).map((r) => ({ wallet: r.from, role: r.fromRole, rank: r.fromRank, sol: r.sol, via: r.via, sig: r.sig })); back.forEach((r) => owned.add(r.wallet));
+      rows.push({ wallet: o.wallet, role: o.role, rank: o.rank || null, start, holds: o.nowPct || 0, movedPct: o.movedPct || 0, soldPct: o.soldPct || 0, side, sideHolds: side.reduce((a, x) => a + x.pct, 0),
+        back: back.map((r) => ({ wallet: r.wallet, pct: r.holds || 0, sol: r.sol, via: r.via, soldAgain: r.soldAgain, beforeSale: r.beforeSale, sig: r.sig })), backHolds: back.reduce((a, r) => a + (r.holds || 0), 0), histPartial: !!o.histPartial, group: o.group || null, paidBy }); }
+    const T = (k) => rows.reduce((a, r) => a + (r[k] || 0), 0);
+    R.trail = { rows, start: T("start"), holds: T("holds"), sideHolds: T("sideHolds"), backHolds: T("backHolds"), soldPct: T("soldPct"), movedPct: T("movedPct"), n: rows.length,
+      hiddenWallets: rows.reduce((a, r) => a + r.side.length + r.back.length, 0), cut: rows.filter((r) => r.histPartial).length }; }
   const pgroups = mk(findP, EDGES).filter((g) => !groups.some((c) => c.n === g.n && c.wallets[0] && g.wallets.includes(c.wallets[0])));
   R.groups = groups.slice(0, 30); R.probableGroups = pgroups.slice(0, 15).map((g, i) => ({ ...g, id: "P" + (i + 1) })); R.busyFunders = [...busy].slice(0, 50);
   const linkedToLaunch = new Set(groups.filter((g) => g.launch).flatMap((g) => g.wallets)), probLaunch = new Set(pgroups.filter((g) => g.launch).flatMap((g) => g.wallets));
@@ -507,9 +530,9 @@ async function build(mint) {
   { const histT = order.filter((p) => RK(p) <= 3 || (p.topHolder && (p.nowPct || 0) >= 0.2)).slice(0, 110), firstT = [...W.values()].filter((p) => p.rank);
     const picW = [...PIC], fundOk = picW.filter((w) => { const P = PROF.get(w); return P && (P.first || P.pre || P.old); }).length;
     R.coverage = { launchRebuilt: !!L, launchTxs: L?.txs ?? null, curveTxs: L?.curveTxs ?? null, firstFound: firstT.length, firstWanted: FIRST_N,
-      histWallets: histT.length, histRead: histT.filter((p) => p.histRead).length, histCut: histT.filter((p) => p.histPartial).length, histDepth: "dev / bundle / first 3 blocks: last 40 transactions · first buyers: last 15 · big holders: last 10",
+      histWallets: histT.length, histRead: histT.filter((p) => p.histRead).length, histCut: histT.filter((p) => p.histPartial).length, histDepth: "dev / bundle / first 3 blocks: last 40 transactions · first buyers: last 25 · big holders: last 10",
       profiled: picW.filter((w) => PROF.has(w)).length, profileWanted: picW.length, fundingFound: fundOk, busyFunders: busy.size,
-      sellers: R.saleTrail.sellers, sellersWithSales: order.filter((p) => (RK(p) <= 3 || p.role === "side wallet") && p.firstSellTs).length,
+      sellers: R.saleTrail.sellers, sellersWithSales: order.filter((p) => p.role === "dev" || p.role === "bundle" || ((RK(p) <= 3 || p.role === "side wallet") && p.firstSellTs)).length, receiversChecked: R.saleTrail.receiversChecked || 0,
       holdersRead: HM.size, holdersComplete: hmComplete, sideSteps: Math.max(0, ...[...W.values()].map((p) => p.sideStep || 0)), callCapHit: R.notes.some((n) => /hit its .*call cap|budget used up/.test(n)) }; }
 
   // 10b. our GMGN-style bundle measure: wallets that bought together — in the create block, in the same transaction, or two+ wallets of one owner in the same block
