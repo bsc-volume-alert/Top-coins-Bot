@@ -5,6 +5,7 @@ import { on, esc, fmt, links, live } from "./launch-monitor.js";
 import { onSwap } from "./pumpswap.js";
 import { tg } from "./telegram.js";
 import { solUsdCached } from "./price.js";
+import { readFileSync } from "node:fs";
 
 export const wb = { recorded: 0, tokensScored: 0, copies: 0 };
 const early = new Map();   // mint -> { buyers: Map(wallet -> {ts, age, sol, mc}), cluster:Set, createTs, maxMc, committed }
@@ -47,8 +48,23 @@ export const provenSize = () => proven.size;
 export const isProven = (w) => proven.has(w); // v0.18.19
 // v0.18.119 Project S: a wallet's scored record — resolved non-bundle early buys (≥ PROVEN_MIN_SOL, ≥ 3 s after launch), how many reached 5x / 10x within 24 h
 export function walletRecord(w) { try { const r = q.walletRecord.get(w, CFG.PROVEN_MIN_SOL); return r ? { n: r.n || 0, x5: r.x5 || 0, x10: r.x10 || 0, rate: r.n ? +((r.x5 || 0) / r.n).toFixed(3) : null } : null; } catch { return null; } }
+// v0.18.186 radar hits (owner, 24 Oct 16:44 UK: "come in before the crowd"): every buy of 0.1 SOL+ by a listed wallet — the radar's list
+// (/root/tracker/data/radar_wallets.json: early buyers of coins that ran, GMGN smart / KOL, FOMO followed traders), our proven wallets, the watch list —
+// is written once per wallet and coin to radar_hits. Record-only; the radar app reads it and snapshots a coin when two or more listed wallets buy it.
+db.exec(`CREATE TABLE IF NOT EXISTS radar_hits (id INTEGER PRIMARY KEY AUTOINCREMENT, mint TEXT, ts INTEGER, wallet TEXT, sol REAL, mc REAL, age_s INTEGER, venue TEXT, src TEXT);
+  CREATE INDEX IF NOT EXISTS rh_ts ON radar_hits(ts); CREATE INDEX IF NOT EXISTS rh_mint ON radar_hits(mint);`);
+const qHit = db.prepare(`INSERT INTO radar_hits (mint, ts, wallet, sol, mc, age_s, venue, src) VALUES (?,?,?,?,?,?,?,?)`);
+let radarList = new Map(); const hitSeen = new Map(); export const rh = { listed: 0, hits: 0, loaded: 0, err: null };
+function loadRadar() { try { const j = JSON.parse(readFileSync(process.env.RADAR_WALLETS || "/root/tracker/data/radar_wallets.json", "utf8")); radarList = new Map(Object.entries(j.wallets || {})); rh.listed = radarList.size; rh.loaded = Math.floor(Date.now() / 1000); rh.err = null; } catch (e) { rh.err = e.code === "ENOENT" ? "no list yet" : e.message; } }
+loadRadar(); setInterval(loadRadar, 600_000);
+function radarHit(wallet, mint, tr, mc, ageS, venue) {
+  if (!(tr.sol >= 0.1) || spam.has(wallet)) return; const src = radarList.get(wallet) || (proven.has(wallet) ? "proven" : watch.has(wallet) ? "watch" : null); if (!src) return;
+  const k = wallet + "|" + mint; if (hitSeen.has(k)) return; hitSeen.set(k, tr.ts); if (hitSeen.size > 200000) hitSeen.delete(hitSeen.keys().next().value);
+  try { qHit.run(mint, tr.ts, wallet, tr.sol, mc ?? null, ageS ?? null, venue, src); rh.hits++; } catch {}
+}
 on("trade", (t, tr) => {
   const now = tr.ts;
+  if (tr.isBuy) radarHit(tr.wallet, t.mint, tr, t.lastMc, now - t.ts, "curve");
   peakTick(t.mint, t.lastMc, now);
   const e = early.get(t.mint); if (!e) return;
   if (t.lastMc > e.maxMc) e.maxMc = t.lastMc;
@@ -77,6 +93,7 @@ function commit(t, e) {
 // --- PumpSwap: peaks continue; watched wallets on PumpSwap ---
 onSwap((tr) => {
   peakTick(tr.mint, tr.mc, tr.ts);
+  if (tr.isBuy) radarHit(tr.wallet, tr.mint, tr, tr.mc, null, "pumpswap");
   if (tr.isBuy && watch.has(tr.wallet) && tr.sol >= CFG.WB_COPY_MIN_SOL) {
     const m = q.tokenMeta.get(tr.mint); copySignal(tr.wallet, tr.mint, m?.name || tr.mint.slice(0, 8), m?.symbol || "", tr, tr.mc, "pumpswap");
   }
@@ -104,7 +121,7 @@ setInterval(() => {
 }, 60_000);
 setInterval(() => {
   const now = Math.floor(Date.now() / 1000);
-  q.pruneWB.run(now - CFG.WB_RETAIN_D * 86400); q.prunePeaks.run(now - 2 * 86400);
+  q.pruneWB.run(now - CFG.WB_RETAIN_D * 86400); q.prunePeaks.run(now - 2 * 86400); try { db.prepare("DELETE FROM radar_hits WHERE ts<?").run(now - 7 * 86400); } catch {}
   spam = new Set(q.spamWallets.all(now - 86400, CFG.WB_MAX_BUYS_PER_DAY).map((r) => r.wallet));
 }, 3600_000);
 

@@ -9,9 +9,16 @@
 //   +5, 15, 30, 60, 120, 360, 1440 min   the outcome: price, market cap, 5-minute volume, holders, all-time-high price (GMGN token info)
 // Labels are saved exactly as each site showed them at that moment — never looked up again later — so a test cannot use hindsight.
 // Every hour the data goes to the repo's `radar-data` branch (coins, snapshots, and the tracker's whole GMGN flag history).
+// 0.2.0 (owner, 16:44 UK: "come in before the crowd… build everything you can"): an EARLY trigger beside the volume one. The tracker writes every
+// buy by a listed wallet to radar_hits (it sees every pump.fun / PumpSwap trade live); when RADAR_EARLY_MIN (2) listed wallets buy the same coin
+// within 15 min below RADAR_EARLY_MAX_MC ($500K), the coin is snapshotted at once and 2 min later ("e0", "e2"), and its outcome followed.
+// The list is the radar's own wallet memory, rebuilt hourly and dated (a wallet counts only from the moment it qualified):
+//   radar  — bought before the trigger on 2+ recorded coins, and 2+ of them (half or more) went on to 3x within 6 h
+//   gmgn_smart / gmgn_kol — wallets GMGN tagged smart money / KOL in a snapshot (from that snapshot's time)
+//   fomo   — the traders followed in the fomo app; and the tracker adds its own proven wallets and watch list
 import "./env.mjs";
 import Database from "better-sqlite3";
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { execFile } from "node:child_process";
 import { gget, gmgnOn, gmStat } from "./gmgn.mjs";
@@ -23,7 +30,8 @@ const CONFIRM = Number(process.env.RADAR_CONFIRM_VOL5M || 100000);
 const OUT_MIN = [5, 15, 30, 60, 120, 360, 1440];
 const now = () => Math.floor(Date.now() / 1000);
 const nap = (ms) => new Promise((r) => setTimeout(r, ms));
-const st = { ver: VER, started: now(), flagsSeen: 0, coins: 0, snaps: 0, jobsDone: 0, jobsLate: 0, confirmed: 0, birdSnaps: 0, errors: 0, lastErr: "", lastFlagId: 0, backlog: 0, exports: 0, lastExport: 0, lastPush: "" };
+const EARLY_MIN = Number(process.env.RADAR_EARLY_MIN || 2), EARLY_MAX_MC = Number(process.env.RADAR_EARLY_MAX_MC || 500000), EARLY_MAX_H = Number(process.env.RADAR_EARLY_MAX_H || 60);
+const st = { ver: VER, started: now(), hitsSeen: 0, earlyTriggers: 0, earlySkippedCap: 0, listSize: 0, flagsSeen: 0, coins: 0, snaps: 0, jobsDone: 0, jobsLate: 0, confirmed: 0, birdSnaps: 0, errors: 0, lastErr: "", lastFlagId: 0, backlog: 0, exports: 0, lastExport: 0, lastPush: "" };
 
 // ---------- databases ----------
 mkdirSync(DATA, { recursive: true });
@@ -36,7 +44,12 @@ rdb.exec(`CREATE TABLE IF NOT EXISTS coins (mint TEXT PRIMARY KEY, flag_id INTEG
   CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY AUTOINCREMENT, mint TEXT, due INTEGER, kind TEXT, done INTEGER DEFAULT 0);
   CREATE INDEX IF NOT EXISTS jobs_due ON jobs(done, due);
   CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT);
-  CREATE TABLE IF NOT EXISTS feat (mint TEXT PRIMARY KEY, json TEXT);`);
+  CREATE TABLE IF NOT EXISTS feat (mint TEXT PRIMARY KEY, json TEXT);
+  CREATE TABLE IF NOT EXISTS wallets (wallet TEXT PRIMARY KEY, src TEXT, listed_ts INTEGER, n_coins INTEGER, n_runs INTEGER, note TEXT);
+  CREATE TABLE IF NOT EXISTS wallet_coin (wallet TEXT, mint TEXT, start_ts INTEGER, trigger_ts INTEGER, known_ts INTEGER, run_x REAL, PRIMARY KEY (wallet, mint));`);
+for (const c of ["trig TEXT", "vol_ts INTEGER", "early_ts INTEGER", "early_n INTEGER", "early_mc REAL", "early_wallets TEXT", "base_mc REAL", "wc_done INTEGER DEFAULT 0"]) { try { rdb.exec(`ALTER TABLE coins ADD COLUMN ${c}`); } catch {} }
+try { rdb.exec("ALTER TABLE snaps ADD COLUMN kind TEXT"); } catch {}
+rdb.exec("UPDATE coins SET trig='vol', vol_ts=flag_ts WHERE trig IS NULL AND flag_id IS NOT NULL");
 const kvGet = (k) => rdb.prepare("SELECT v FROM kv WHERE k=?").get(k)?.v ?? null, kvSet = (k, v) => rdb.prepare("INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)").run(k, String(v));
 let tdb = null, fdb = null;
 function openRO(path) { try { return existsSync(path) ? new Database(path, { readonly: true, fileMustExist: true }) : null; } catch (e) { console.log("[radar] cannot open", path, e.message); return null; } }
@@ -59,8 +72,9 @@ function mcOf(info) { const p = N(info?.price?.price ?? info?.price), s = N(info
 const vol5Of = (info) => N(info?.price?.volume_5m);
 
 // ---------- one snapshot ----------
-const qSnap = rdb.prepare("INSERT INTO snaps (mint, ts, at_s, src, ok, json) VALUES (?, ?, ?, ?, ?, ?)");
-const save = (mint, flagTs, src, ok, obj) => { const t = now(); qSnap.run(mint, t, t - flagTs, src, ok ? 1 : 0, JSON.stringify(obj)); st.snaps++; };
+const qSnap = rdb.prepare("INSERT INTO snaps (mint, ts, at_s, src, ok, json, kind) VALUES (?, ?, ?, ?, ?, ?, ?)");
+let curKind = null; // the job being run (v0, v2, e0, e2, out…) — stored with each snapshot
+const save = (mint, flagTs, src, ok, obj) => { const t = now(); qSnap.run(mint, t, t - flagTs, src, ok ? 1 : 0, JSON.stringify(obj), curKind); st.snaps++; };
 const safe = (p) => p.catch((e) => ({ _err: e.message }));
 async function gmgnSnap(mint) {
   const [info, sec, hold, trad] = await Promise.all([safe(gget("/v1/token/info", { chain: "sol", address: mint })), safe(gget("/v1/token/security", { chain: "sol", address: mint })),
@@ -97,19 +111,46 @@ function pollFlags() {
   const rows = tAll("SELECT id, chain, mint, ts, name, symbol, exchange, launchpad, created_ts, vol5m, mc FROM gmgn_flags WHERE id > ? ORDER BY id LIMIT 300", last);
   const tx = rdb.transaction(() => { for (const r of rows) { st.flagsSeen++; last = r.id; if ((r.chain || "sol") !== "sol") continue;
       if (qCoin.run(r.mint, r.id, r.ts, r.name, r.symbol, r.launchpad, r.exchange, r.created_ts, r.vol5m, r.mc).changes) { st.coins++;
-        qJob.run(r.mint, r.ts, "snap0"); qJob.run(r.mint, r.ts + 120, "snap2"); for (const m of OUT_MIN) qJob.run(r.mint, r.ts + m * 60, "out" + m); } }
+        rdb.prepare("UPDATE coins SET trig='vol', vol_ts=? WHERE mint=?").run(r.ts, r.mint);
+        qJob.run(r.mint, r.ts, "v0"); qJob.run(r.mint, r.ts + 120, "v2"); for (const m of OUT_MIN) qJob.run(r.mint, r.ts + m * 60, "out" + m); }
+      else { const c = rdb.prepare("SELECT vol_ts FROM coins WHERE mint=?").get(r.mint); // flagged early first: add the volume snapshots, keep the outcomes already planned
+        if (c && c.vol_ts == null) { rdb.prepare("UPDATE coins SET vol_ts=?, flag_id=?, flag_vol5m=?, flag_mc=?, name=COALESCE(name, ?), symbol=COALESCE(symbol, ?), launchpad=COALESCE(launchpad, ?), created_ts=COALESCE(created_ts, ?) WHERE mint=?").run(r.ts, r.id, r.vol5m, r.mc, r.name, r.symbol, r.launchpad, r.created_ts, r.mint);
+          qJob.run(r.mint, r.ts, "v0"); qJob.run(r.mint, r.ts + 120, "v2"); } } }
     kvSet("lastFlag", last); });
   tx(); st.lastFlagId = last;
 }
-const qDue = rdb.prepare("SELECT j.id, j.mint, j.due, j.kind, c.flag_ts FROM jobs j JOIN coins c ON c.mint=j.mint WHERE j.done=0 AND j.due<=? ORDER BY CASE WHEN j.kind LIKE 'snap%' THEN 0 ELSE 1 END, j.due LIMIT 1");
+// early trigger: listed wallets buying (tracker.db radar_hits)
+const recentHits = new Map(); // mint -> [{wallet, ts, mc, src}]
+function pollHits() {
+  if (!tdb) return; let last = Number(kvGet("lastHit") ?? NaN);
+  if (!isFinite(last)) { last = tAll("SELECT COALESCE(MAX(id), 0) m FROM radar_hits")[0]?.m ?? 0; kvSet("lastHit", last); }
+  const rows = tAll("SELECT id, mint, ts, wallet, sol, mc, age_s, venue, src FROM radar_hits WHERE id > ? ORDER BY id LIMIT 2000", last); if (!rows.length) return;
+  const t = now(), hourAgo = t - 3600;
+  for (const r of rows) { last = r.id; st.hitsSeen++; const l = recentHits.get(r.mint) || []; l.push(r); recentHits.set(r.mint, l.filter((x) => x.ts >= r.ts - 900));
+    const ws = [...new Map(recentHits.get(r.mint).map((x) => [x.wallet, x])).values()];
+    if (ws.length < EARLY_MIN || (r.mc != null && r.mc > EARLY_MAX_MC)) continue;
+    const c = rdb.prepare("SELECT early_ts FROM coins WHERE mint=?").get(r.mint); if (c && c.early_ts != null) continue;
+    const firedH = rdb.prepare("SELECT COUNT(*) n FROM coins WHERE early_ts>=?").get(hourAgo).n; if (firedH >= EARLY_MAX_H) { st.earlySkippedCap++; continue; }
+    const tok = tAll("SELECT name, symbol, create_ts FROM tokens WHERE mint=?", r.mint)[0] || {};
+    const desc = JSON.stringify(ws.map((x) => ({ w: x.wallet, src: x.src, ts: x.ts, sol: x.sol, mc: x.mc, age: x.age_s, venue: x.venue })));
+    if (!c) { rdb.prepare("INSERT INTO coins (mint, flag_ts, name, symbol, launchpad, created_ts, trig, early_ts, early_n, early_mc, early_wallets) VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(r.mint, t, tok.name || null, tok.symbol || null, null, tok.create_ts || null, "early", t, ws.length, r.mc, desc);
+      st.coins++; qJob.run(r.mint, t, "e0"); qJob.run(r.mint, t + 120, "e2"); for (const m of OUT_MIN) qJob.run(r.mint, t + m * 60, "out" + m); }
+    else rdb.prepare("UPDATE coins SET early_ts=?, early_n=?, early_mc=?, early_wallets=? WHERE mint=?").run(t, ws.length, r.mc, desc, r.mint); // already flagged on volume: noted, no extra snapshots
+    st.earlyTriggers++; }
+  kvSet("lastHit", last); if (recentHits.size > 5000) for (const [m, l] of recentHits) if (l[l.length - 1].ts < t - 900) recentHits.delete(m);
+}
+const qDue = rdb.prepare("SELECT j.id, j.mint, j.due, j.kind, c.flag_ts FROM jobs j JOIN coins c ON c.mint=j.mint WHERE j.done=0 AND j.due<=? ORDER BY CASE WHEN j.kind LIKE 'out%' THEN 1 ELSE 0 END, j.due LIMIT 1");
 const qDone = rdb.prepare("UPDATE jobs SET done=1 WHERE id=?");
 async function runJob(j) {
   const late = now() - j.due; if (late > 60) st.jobsLate++;
-  if (j.kind === "snap0" || j.kind === "snap2") {
+  const kind = j.kind === "snap0" ? "v0" : j.kind === "snap2" ? "v2" : j.kind; curKind = kind;
+  if (/^[ve][02]$/.test(kind)) {
     const g = await gmgnSnap(j.mint); save(j.mint, j.flag_ts, "gmgn", !g.info?._err, g);
     save(j.mint, j.flag_ts, "fomo", true, fomoSnap(j.mint, now()));
-    if (j.kind === "snap0") save(j.mint, j.flag_ts, "tracker", true, trackerSnap(j.mint));
-    if (j.kind === "snap2") { const v5 = vol5Of(g.info), ok = v5 != null && v5 >= CONFIRM;
+    if (kind.endsWith("0")) save(j.mint, j.flag_ts, "tracker", true, trackerSnap(j.mint));
+    const mc0 = mcOf(g.info); if (mc0 != null) rdb.prepare("UPDATE coins SET base_mc=COALESCE(base_mc, ?) WHERE mint=?").run(mc0, j.mint); // market cap at the first snapshot = the price a trade would have paid
+    if (!g.info?._err) rdb.prepare("UPDATE coins SET name=COALESCE(name, ?), symbol=COALESCE(symbol, ?), launchpad=COALESCE(launchpad, ?), created_ts=COALESCE(created_ts, ?) WHERE mint=?").run(g.info?.name ?? null, g.info?.symbol ?? null, g.info?.launchpad ?? null, N(g.info?.creation_timestamp), j.mint);
+    if (kind === "v2") { const v5 = vol5Of(g.info), ok = v5 != null && v5 >= CONFIRM;
       rdb.prepare("UPDATE coins SET confirmed=?, confirm_vol5m=? WHERE mint=?").run(ok ? 1 : 0, v5, j.mint);
       if (ok) { st.confirmed++; if (birdOn()) { const b = await birdSnap(j.mint); save(j.mint, j.flag_ts, "birdeye", !(b.holders?._err && b.traders?._err), b); rdb.prepare("UPDATE coins SET bird=1 WHERE mint=?").run(j.mint); st.birdSnaps++; } } }
   } else { // outcome
@@ -144,10 +185,11 @@ function walletSummary(list, pre, out) { if (!Array.isArray(list)) { out[pre + "
   out[pre + "suspicious_n"] = real.filter((w) => w.is_suspicious).length; out[pre + "soldout_n"] = real.filter((w) => Number(w.sell_amount_percentage) >= 0.99).length;
   const ex = {}; for (const w of real) { const n = w.native_transfer?.name; if (n) ex[n] = (ex[n] || 0) + 1; } out[pre + "exchange_funded_n"] = Object.values(ex).reduce((a, x) => a + x, 0); out[pre + "exchange_top"] = Object.entries(ex).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
   const prof = real.map((w) => N(w.profit)).filter((x) => x != null); out[pre + "profit_sum"] = prof.length ? Math.round(prof.reduce((a, x) => a + x, 0)) : null; out[pre + "in_profit_n"] = prof.filter((x) => x > 0).length; }
-const qFeat = rdb.prepare("SELECT ts, at_s, src, ok, json FROM snaps WHERE mint=? ORDER BY id");
+const qFeat = rdb.prepare("SELECT ts, at_s, src, ok, json, kind FROM snaps WHERE mint=? ORDER BY id");
 function features(c) {
-  const f = { mint: c.mint, name: c.name, symbol: c.symbol, launchpad: c.launchpad, exchange: c.exchange, flag_ts: c.flag_ts, created_ts: c.created_ts, age_at_flag_s: c.created_ts ? c.flag_ts - c.created_ts : null, flag_vol5m: c.flag_vol5m, flag_mc: c.flag_mc, confirmed: c.confirmed, confirm_vol5m: c.confirm_vol5m, bird: c.bird, peak_mc: c.peak_mc, last_mc: c.last_mc, ath_mc: c.ath_mc };
-  const seen = {}; for (const r of qFeat.all(c.mint)) { const d = JSON.parse(r.json), k = r.src === "gmgn" || r.src === "fomo" ? r.src + (seen[r.src] ? "2" : "0") : r.src === "out" ? "out" + (d.min ?? "") : r.src; seen[r.src] = (seen[r.src] || 0) + 1;
+  const ew = (() => { try { return JSON.parse(c.early_wallets || "[]"); } catch { return []; } })(), bySrc = {}; for (const x of ew) bySrc[x.src] = (bySrc[x.src] || 0) + 1;
+  const f = { mint: c.mint, name: c.name, symbol: c.symbol, launchpad: c.launchpad, exchange: c.exchange, trig: c.trig, vol_ts: c.vol_ts, early_ts: c.early_ts, early_n: c.early_n, early_mc: c.early_mc, early_srcs: Object.entries(bySrc).map(([k, v]) => k + ":" + v).join(" "), base_mc: c.base_mc, flag_ts: c.flag_ts, created_ts: c.created_ts, age_at_flag_s: c.created_ts ? c.flag_ts - c.created_ts : null, flag_vol5m: c.flag_vol5m, flag_mc: c.flag_mc, confirmed: c.confirmed, confirm_vol5m: c.confirm_vol5m, bird: c.bird, peak_mc: c.peak_mc, last_mc: c.last_mc, ath_mc: c.ath_mc };
+  const seen = {}; for (const r of qFeat.all(c.mint)) { const d = JSON.parse(r.json), stage = r.kind && /^[ve][02]$/.test(r.kind) ? r.kind : (seen[r.src] ? "v2" : "v0"), k = r.src === "gmgn" || r.src === "fomo" ? stage + "." + r.src : r.src === "out" ? "out" + (d.min ?? "") : r.src; seen[r.src] = (seen[r.src] || 0) + 1;
     f[k + "_at_s"] = r.at_s;
     if (r.src === "gmgn") { flat(d.info, k + ".info", f); flat(d.sec, k + ".sec", f); walletSummary(d.holders, k + ".h.", f); walletSummary(d.traders, k + ".t.", f); }
     else if (r.src === "fomo") { f[k + ".buyers"] = d.buyers; f[k + ".followed_buys"] = (d.followedTrades || []).filter((x) => x.side === "buy").length; f[k + ".followed_handles"] = [...new Set((d.followedTrades || []).map((x) => x.handle))].join(" ").slice(0, 120);
@@ -159,6 +201,38 @@ function features(c) {
   return f;
 }
 let pushing = false;
+// ---------- the wallet memory (hourly) ----------
+const qWC = rdb.prepare("INSERT OR IGNORE INTO wallet_coin (wallet, mint, start_ts, trigger_ts, known_ts, run_x) VALUES (?,?,?,?,?,?)");
+const qW = rdb.prepare(`INSERT INTO wallets (wallet, src, listed_ts, n_coins, n_runs, note) VALUES (?,?,?,?,?,?)
+  ON CONFLICT(wallet) DO UPDATE SET n_coins=COALESCE(excluded.n_coins, wallets.n_coins), n_runs=COALESCE(excluded.n_runs, wallets.n_runs), note=COALESCE(wallets.note, excluded.note), src=CASE WHEN wallets.listed_ts<=excluded.listed_ts THEN wallets.src ELSE excluded.src END, listed_ts=MIN(wallets.listed_ts, excluded.listed_ts)`);
+const botLike = (w) => (Number(w.buy_tx_count_cur) || 0) > 30 || [...(w.tags || []), ...(w.maker_token_tags || [])].includes("sandwich_bot");
+function buildWallets() {
+  const t = now(), RUN_X = Number(process.env.RADAR_RUN_X || 3);
+  // 1. coins whose 6-hour outcome is in: who held or traded before the trigger, and did the coin reach RUN_X times its market cap at the first snapshot within 6 h
+  const ready = rdb.prepare("SELECT mint, flag_ts, base_mc FROM coins WHERE wc_done=0 AND flag_ts<=? AND base_mc>0").all(t - 6 * 3600 - 300);
+  const tx = rdb.transaction(() => { for (const c of ready) {
+    let peak = 0; for (const r of rdb.prepare("SELECT json FROM snaps WHERE mint=? AND src='out'").all(c.mint)) { const d = JSON.parse(r.json); if ((d.min ?? 1e9) <= 360 && d.mc > peak) peak = d.mc; }
+    const runX = peak / c.base_mc, known = c.flag_ts + 6 * 3600;
+    for (const r of rdb.prepare("SELECT json FROM snaps WHERE mint=? AND src='gmgn'").all(c.mint)) { const d = JSON.parse(r.json);
+      for (const w of [...(Array.isArray(d.holders) ? d.holders : []), ...(Array.isArray(d.traders) ? d.traders : [])]) { const s0 = N(w.start_holding_at);
+        if (!w.address || Number(w.addr_type) === 2 || botLike(w) || s0 == null || s0 > c.flag_ts) continue; qWC.run(w.address, c.mint, s0, c.flag_ts, known, +runX.toFixed(3)); } }
+    rdb.prepare("UPDATE coins SET wc_done=1 WHERE mint=?").run(c.mint); } });
+  tx();
+  // 2. "radar" wallets: 2+ recorded coins bought before the trigger, 2+ (and half or more) of them ran; listed from the moment that was known
+  const cur = new Map(); const tx2 = rdb.transaction(() => { for (const r of rdb.prepare("SELECT wallet, known_ts, run_x FROM wallet_coin ORDER BY wallet, known_ts").all()) { // .all(): writes are not allowed while a read is still open
+    let a = cur.get(r.wallet); if (!a) { if (cur.size > 2000) cur.clear(); a = { n: 0, runs: 0, listed: null }; cur.set(r.wallet, a); }
+    a.n++; if (r.run_x >= RUN_X) a.runs++; if (a.listed == null && a.n >= 2 && a.runs >= 2 && a.runs / a.n >= 0.5) { a.listed = r.known_ts; qW.run(r.wallet, "radar", r.known_ts, a.n, a.runs, `${a.runs} of ${a.n} early coins ran ${RUN_X}x`); }
+    else if (a.listed != null) rdb.prepare("UPDATE wallets SET n_coins=?, n_runs=? WHERE wallet=?").run(a.n, a.runs, r.wallet); } }); tx2();
+  // 3. GMGN smart money / KOL tags, from the snapshot in which GMGN first showed them
+  let lastS = Number(kvGet("lastTagSnap") || 0); const tx3 = rdb.transaction(() => { for (const r of rdb.prepare("SELECT id, ts, json FROM snaps WHERE id>? AND src='gmgn' ORDER BY id LIMIT 2000").all(lastS)) { lastS = r.id; const d = JSON.parse(r.json);
+      for (const w of [...(Array.isArray(d.holders) ? d.holders : []), ...(Array.isArray(d.traders) ? d.traders : [])]) { if (!w.address || botLike(w)) continue; const tg = [...(w.tags || []), ...(w.maker_token_tags || [])];
+        if (tg.includes("smart_degen")) qW.run(w.address, "gmgn_smart", r.ts, null, null, null); else if (tg.includes("renowned")) qW.run(w.address, "gmgn_kol", r.ts, null, null, null); } } }); tx3(); kvSet("lastTagSnap", lastS);
+  // 4. the traders followed in the fomo app
+  for (const r of fAll("SELECT wallet, handle, added_ts FROM wallets WHERE active=1 AND wallet IS NOT NULL")) qW.run(r.wallet, "fomo", r.added_ts || t, null, null, r.handle || null);
+  // the list the tracker reads: every wallet already listed
+  const list = {}; for (const r of rdb.prepare("SELECT wallet, src FROM wallets WHERE listed_ts<=?").iterate(t)) list[r.wallet] = r.src; st.listSize = Object.keys(list).length;
+  writeFileSync(`${DATA}/radar_wallets.json.tmp`, JSON.stringify({ updated: t, n: st.listSize, wallets: list })); renameSync(`${DATA}/radar_wallets.json.tmp`, `${DATA}/radar_wallets.json`);
+}
 function exportNow() {
   try {
     const out = `${DATA}/radar_out`; mkdirSync(out, { recursive: true });
@@ -170,6 +244,9 @@ function exportNow() {
     const z = []; for (const r of rdb.prepare("SELECT mint, ts, at_s, src, ok, json FROM snaps WHERE ts>=? ORDER BY id").iterate(now() - 86400)) z.push(`{"mint":"${r.mint}","ts":${r.ts},"at_s":${r.at_s},"src":"${r.src}","ok":${r.ok},"d":${r.json}}`);
     writeFileSync(`${out}/snaps_24h.jsonl.gz`, gzipSync(z.join("\n"))); z.length = 0;
     writeFileSync(`${out}/gmgn_flags.csv`, csv(tAll("SELECT id, chain, mint, ts, name, symbol, exchange, launchpad, created_ts, mc, price, liquidity, vol5m, vol1m, buys, sells, swaps, holders, rug_ratio, bundler_rate, top10, smart, renowned, wash, dev_status, ath_mc, our_v5, our_seen, our_trade, mc5, mc15, mc60, peak_mc FROM gmgn_flags ORDER BY id")));
+    writeFileSync(`${out}/wallets.csv`, csv(rdb.prepare("SELECT * FROM wallets ORDER BY listed_ts").all()));
+    writeFileSync(`${out}/wallet_coin.csv`, csv(rdb.prepare("SELECT * FROM wallet_coin ORDER BY known_ts").all()));
+    writeFileSync(`${out}/radar_hits.csv`, csv(tAll("SELECT * FROM radar_hits WHERE ts>=? ORDER BY id", now() - 3 * 86400)));
     writeFileSync(`${out}/status.json`, JSON.stringify(status(), null, 1));
     rdb.prepare("DELETE FROM snaps WHERE ts<?").run(now() - 14 * 86400); rdb.prepare("DELETE FROM jobs WHERE done=1 AND due<?").run(now() - 2 * 86400);
     st.exports++; st.lastExport = now();
@@ -180,9 +257,11 @@ function exportNow() {
 function status() { return { ...st, at: now(), gmgn: { on: gmgnOn(), ...gmStat }, birdeye: { on: birdOn(), ...bdStat }, trackerDb: !!tdb, fomoDb: !!fdb, confirmVol5m: CONFIRM,
   coinsTotal: rdb.prepare("SELECT COUNT(*) n FROM coins").get().n, coins24h: rdb.prepare("SELECT COUNT(*) n FROM coins WHERE flag_ts>?").get(now() - 86400).n, confirmed24h: rdb.prepare("SELECT COUNT(*) n FROM coins WHERE flag_ts>? AND confirmed=1").get(now() - 86400).n }; }
 
-if (process.env.RADAR_SMOKE) { pollFlags(); console.log("[radar] smoke ok", JSON.stringify({ trackerDb: !!tdb, fomoDb: !!fdb, gmgn: gmgnOn(), birdeye: birdOn() })); process.exit(0); }
+if (process.env.RADAR_SMOKE) { pollFlags(); pollHits(); console.log("[radar] smoke ok", JSON.stringify({ trackerDb: !!tdb, fomoDb: !!fdb, gmgn: gmgnOn(), birdeye: birdOn() })); process.exit(0); }
 console.log(`[radar] ${VER} up — GMGN ${gmgnOn() ? "on" : "OFF"}, Birdeye ${birdOn() ? "on" : "off (no BIRDEYE_API_KEY)"}`);
 pollFlags(); setInterval(() => { try { pollFlags(); } catch (e) { st.errors++; st.lastErr = "flags: " + e.message; } }, 10000);
+setInterval(() => { try { pollHits(); } catch (e) { st.errors++; st.lastErr = "hits: " + e.message; } }, 5000);
+const wl = () => { try { buildWallets(); } catch (e) { st.errors++; st.lastErr = "wallets: " + e.message; } }; setTimeout(wl, Number(process.env.RADAR_WALLETS_FIRST_MS || 60000)); setInterval(wl, 3600000);
 setInterval(() => { try { writeFileSync(`${DATA}/radar_status.json`, JSON.stringify(status())); } catch {} }, 60000);
 setTimeout(exportNow, Number(process.env.RADAR_EXPORT_FIRST_MS || 120000)); setInterval(exportNow, Number(process.env.RADAR_EXPORT_MS || 3600000));
 worker();
