@@ -1,12 +1,12 @@
-# 4-hour study — 28 Oct 2026 16:30 UK
+# 4-hour study — 28 Oct 2026 20:30 UK
 
-**Nothing new to score. The books are still off** (BOOKS_OFF since 19:46 UK 23 Oct, v0.18.185; executor stopped). The data push works (`pushed_at` 2026-10-28T16:09:48Z, 20 minutes before this run) but abcd.csv and others.csv still end at 19:45 UK 23 Oct (15,220 and 20,710 rows, the same as at 12:50 UK), executor.json's last leg is still MOOF (GR2 live, 10:09 UK 23 Oct), status.json still shows the wallet at 0.030 SOL, and `numbers.py --write` changed no book. No commit has touched the books or the reports since the 12:50 UK study. As that study said: same rows, so this run says so rather than re-scoring.
+**Nothing new to score. The books are still off, and this run had no new data at all.** The `data` branch is the same commit the 16:30 UK study read (`892c98f`, `pushed_at` 2026-10-28T16:09:48Z): the 20:09 UK push did not arrive, so the data is 4 h 17 min old at this run (under the 5-hour flag, but one push missed). abcd.csv and others.csv still end at 19:45 UK 23 Oct (BOOKS_OFF since 19:46 UK 23 Oct, v0.18.185; executor stopped), executor.json's last leg is still MOOF (GR2 live, 10:09 UK 23 Oct), status.json still shows the wallet at 0.030 SOL, launches.csv still ends 15:05 UK 28 Oct, and `numbers.py --write` changed no book. No commit has touched code on `tracker` since 24 Oct 17:40 UK (radar 0.4.0 / coin scope 0.8.0). As the 16:30 UK report's "Next" says: same rows, so this run says so in one line rather than re-scoring.
 
-**Since last study (28 Oct 12:50 UK):** no trades, no legs, no code change on `tracker`. The only live file is launches.csv; one count from it is under "Anything new".
+**Since last study (28 Oct 16:30 UK):** no trades, no legs, no code change, no data push.
 
 ## The kept books
 
-Unchanged from 12:50 UK (same rows; numbers.py's scoring: real costs, operator coins out, price-glitch rows out, lateFix). Forward = trades since the book's change, to 19:46 UK 23 Oct.
+Unchanged from 12:50 UK and 16:30 UK (same rows; numbers.py's scoring: real costs, operator coins out, price-glitch rows out, lateFix). Forward = trades since the book's change, to 19:46 UK 23 Oct.
 
 | Book | Change | Trades since the change | Result a trade (real costs) | Without best 3 | Won | Stopped | Shadow / live legs, real vs paper | Checkpoint |
 |---|---|---|---|---|---|---|---|---|
@@ -25,7 +25,7 @@ No checkpoint moved and none can move while BOOKS_OFF stands.
 
 ## Successes and failures this period
 
-No trades this period. The last period's grouping (07:09–19:46 UK 23 Oct, the kimchi wave) is in the 12:50 UK report (reports/history/2026-10-28-1249-utc.md) and in each book's file.
+No trades this period. The last period's grouping (07:09–19:46 UK 23 Oct, the kimchi wave) is in the 12:50 UK report (reports/history/2026-10-28-1250-utc.md) and in each book's file.
 
 ## Costs — does the model still match the legs?
 
@@ -33,14 +33,14 @@ No legs since 10:09 UK 23 Oct. The last readings stand: `asoc` 62 legs +3 points
 
 ## Anything new (luck-checked)
 
-Nothing proposed. One count, record only, from the live launches.csv (16:06 UK 27 Oct → 15:05 UK 28 Oct, 44,119 launches): **the bundle-launch coin type that GR2 and BL buy is still being made.** 112 launches in 23 h had a 70–80% bundle over 4–10 wallets (about 5 an hour); 88 of them graduated (79%, against 1.1% of all launches), 64 peaked at 2x+ and 34 at 5x+ by the recorder's peak multiple (xpeak — a price path, not a trade result). The 79.31% / 85 SOL signature (LESSONS, 21 Oct: 27 in 23 h then) is 48 of the 112 (37 over 7 wallets); og kimchi's 74.3% / 68 SOL signature 9. This is not a test of any book and passes no luck check; it only says the factory did not stop when the books did.
+Nothing proposed; nothing to test. launches.csv did not move either (same 44,127 launches to 15:05 UK 28 Oct), so the 16:30 UK bundle-launch count (112 launches of the GR2/BL coin type in 23 h, 88 graduated) is the latest and is not re-counted.
 
 ## What I would do now
 
-Nothing changes while the books are off; the 12:50 UK recommendations stand, in short: if the record is to continue, restart paper and shadow only with about 0.3 SOL in the executor wallet for simulation; settle the GR2 local-stop question (stop measured from the real entry) before any live restart; GR2 live at 0.1 if at all; keep K, S3 and AS2 retired; AS, AS3, AS4, S4 stay paper. The one thing this run adds: the coin type is still available at about 5 launches an hour, so a paper/shadow restart would refill GR2's and BL's records quickly (BL took 169 rows in 2½ days). The owner decides.
+Nothing changes while the books are off; the 12:50 UK recommendations stand, in short: if the record is to continue, restart paper and shadow only with about 0.3 SOL in the executor wallet for simulation; settle the GR2 local-stop question (stop measured from the real entry) before any live restart; GR2 live at 0.1 if at all; keep K, S3 and AS2 retired; AS, AS3, AS4, S4 stay paper. One thing to watch rather than do: the 20:09 UK data push was missed. One miss is not the 22–23 Oct outage (six in a row), and nothing is lost while the books are off because the trade files are frozen anyway — but if the 00:09 UK push also misses, scripts/push-data.sh is worth a look before any restart, otherwise the restart's first trades would be invisible to the study. The owner decides.
 
 ## Next
 
 - If BOOKS_OFF still stands at the next run, say so in one line again; do not re-score.
+- Check `pushed_at` first: if it is still 16:09 UK 28 Oct at 00:30 UK, that is two pushes missed — say so at the top.
 - If lifted: AS 120 forward (12 to go), AS3 60 (4), AS4 30 (20), GR2 20th live leg, BL/GR2 live sells vs paper leg by leg — and read the first block after the restart separately (a restart wipes in-memory state).
-- launches.csv only ever holds about 23 h, so the bundle-launch count above cannot be extended backwards; if the owner wants the daily rate kept, it has to be counted each run.
