@@ -1,4 +1,4 @@
-# 4-hour study — 28 Oct 2026 16:35 UK
+# 4-hour study — 28 Oct 2026 16:30 UK
 
 **Nothing new to score. The books are still off** (BOOKS_OFF since 19:46 UK 23 Oct, v0.18.185; executor stopped). The data push works (`pushed_at` 2026-10-28T16:09:48Z, 20 minutes before this run) but abcd.csv and others.csv still end at 19:45 UK 23 Oct (15,220 and 20,710 rows, the same as at 12:50 UK), executor.json's last leg is still MOOF (GR2 live, 10:09 UK 23 Oct), status.json still shows the wallet at 0.030 SOL, and `numbers.py --write` changed no book. No commit has touched the books or the reports since the 12:50 UK study. As that study said: same rows, so this run says so rather than re-scoring.
 
