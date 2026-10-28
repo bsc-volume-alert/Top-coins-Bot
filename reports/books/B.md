@@ -16,14 +16,14 @@ Not working, and worse than A on the same coins in every window: −4.8% a trade
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 23 Oct 07:09 UK; A's coins sold at 5 min. Built by reports/books/numbers.py._
+_Data to 23 Oct 19:45 UK; A's coins sold at 5 min. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 20:25 UK) | 631 | -4.9% | -6.1% | 49% | 34% | -3.73 |
-| last 24 h | 125 | +1.8% | -4.5% | 49% | 32% | +0.10 |
-| last 12 h | 58 | -5.7% | -10.3% | 45% | 40% | -0.39 |
-| last 6 h | 28 | -16.1% | -20.0% | 39% | 50% | -0.48 |
+| all (from 18 Oct 20:25 UK) | 703 | -5.4% | -6.5% | 48% | 34% | -4.48 |
+| last 24 h | 122 | -7.5% | -9.7% | 43% | 36% | -1.04 |
+| last 12 h | 70 | -8.2% | -11.7% | 43% | 30% | -0.65 |
+| last 6 h | 42 | -2.2% | -7.8% | 50% | 24% | -0.13 |
 
 Executor book `hold5` (shadow, real quotes): 65 legs, -0.711 SOL, average -7.4% a leg, without best -9.6%, won 43%, 18 Oct 20:25 UK to 19 Oct 15:59 UK.
 Executor book `hold5` (live, real quotes and real money): 50 legs, -0.301 SOL, average -8.6% a leg, without best -11.7%, won 42%, 19 Oct 00:34 UK to 19 Oct 09:08 UK.

@@ -8,6 +8,8 @@ _Notes last rebuilt: 21 Oct 2026 01:35 UK._
 - Started 21 Oct 01:30 UK (`CHG_AS2`). Everything before is a back-test of a rule chosen by looking at those trades.
 
 ## Verdict now
+**28 Oct 13:05 UK (4-hour study; data to 19:45 UK 23 Oct — the books have been OFF since 19:46 UK 23 Oct):** PAPER ONLY, record closed at 56 of its 60 (books OFF since 19:46 UK 23 Oct). Forward since 01:30 UK 21 Oct: 56 at +4.1% (no-best +2.2%, no-top3 −1.4%, median +15.3%, won 59%, stopped 36%; thirds +3 / 0 / +10); the 11 new on 23 Oct +1.4% (no-top3 −20.3%: The Skinwalker +106% carried them; 6 won, 4 stopped). Still 5 points over the AS trades it leaves out and still negative without its best 3 — a watch, not a result, as at 22 Oct 13:50 UK. The 60-trade read cannot happen while the books are off.
+
 **23 Oct 09:35 UK (4-hour study; data to 07:09 UK — the first push after the 18-hour gap):** PAPER TO 60 (unchanged). Forward since 01:30 UK 21 Oct: 45 at +4.8% (no-best +2.4%, no-top3 −1.4%, median +16.5%, won 60%, stopped 36%; thirds +14 / −1 / +2) vs back-test 35 at +29.7%. The 14 gap trades +5.8% (no-best −2.2%). The 2x-or-−40% exit (x_t2s40) on the same 45: +11.3% (no-best +9.6%, no-top3 +5.9%, won 47%, stopped 49%; thirds +34 / +3 / −3; the 14 new +0.6%) — its lead over the runner is the first third only, so the 22 Oct 'watch to 60' stands with less behind it. 45 of 60.
 
 **22 Oct 13:50 UK (4-hour study; data to 13:03 UK):** 30-FORWARD CHECKPOINT REACHED (31): +4.4% on the runner (no-best +1.4%, no-top3 −3.0%, median +16.5%, won 65%, stopped 32%; thirds +9 / −4 / +8) vs the 35-trade back-test at +29.7% — the back-test edge has NOT shown up forward; it is 5 points better than the AS trades it leaves out (19 at −9.4% since 01:30 UK), which is inside noise on 31 vs 19. The pre-registered exit question: 17 of 31 reached 2x (break-even for the fixed 2x sale 37%); x_t2s40 on the same 31 +16.1% (no-top3 +8.5%, won 52%, stopped 45%) vs the runner +4.4%, paired +11.7 points, 2x better on 13 / worse on 6 / level 12, sign-flip p 0.10 — a lead that cannot be told from luck at 31, and the exit was first picked by looking at the early forward rows. Verdict: AS3 on the runner is not a book (no-top3 negative); AS3 with the 2x-or-−40% exit is the one AS-family line still positive without its best 3 forward (+8.5%), and that is a watch, not a result. Recommendation: keep AS3 on paper, record x_t2s40 beside it, re-read at 60; nothing goes live on it.
@@ -26,22 +28,23 @@ Not yet tested. Fits the owner's "fewer trades, bigger profit each" side: keeps 
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 23 Oct 07:09 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
+_Data to 23 Oct 19:45 UK; AS + launch bundle 5+ wallets. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 22:46 UK) | 80 | +15.7% | +12.4% | 65% | 29% | +1.18 |
+| all (from 18 Oct 22:46 UK) | 91 | +14.0% | +11.1% | 64% | 30% | +1.18 |
 | before the change (21 Oct 01:30 UK) — back-test | 35 | +29.7% | +22.5% | 71% | 20% | +1.01 |
-| since the change — the real test | 45 | +4.8% | +2.4% | 60% | 36% | +0.17 |
-| last 24 h | 18 | +7.5% | +1.4% | 56% | 39% | +0.12 |
-| last 12 h | 7 | +19.2% | +4.0% | 57% | 43% | +0.13 |
-| last 6 h | 4 | +6.5% | -15.1% | 50% | 50% | +0.02 |
+| since the change — the real test | 56 | +4.1% | +2.2% | 59% | 36% | +0.18 |
+| last 24 h | 18 | +8.3% | +2.3% | 56% | 39% | +0.13 |
+| last 12 h | 10 | +6.6% | -4.5% | 60% | 30% | +0.06 |
+| last 6 h | 7 | +0.3% | -17.3% | 57% | 43% | -0.00 |
 <!-- /NUMBERS -->
 
 ## Change history
 - 21 Oct 01:30 UK (v0.18.172): created on the owner's go (01:19 UK), as a separate book rather than revising AS, so AS's own real test (from 20 Oct 17:45 UK) keeps running untouched.
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): no change; 24 forward.
 - 23 Oct 09:35 UK (4-hour study; data to 07:09 UK — the first push after the 18-hour gap): no change; 14 trades in the data gap; 45 forward.
+- 28 Oct 13:05 UK (4-hour study; data to 19:45 UK 23 Oct — the books have been OFF since 19:46 UK 23 Oct): no change; books OFF since 19:46 UK 23 Oct. 56 forward.
 
 ## Ideas tested
 - The finding behind it (21 Oct 01:20 UK, AS's 79 trades, operator coins removed; see AS.md "Ideas tested"): bundle wallets ≥ 5 kept 34 at +31.5% (without best +24.1%) vs 45 at −3.7%; first half +27.9% vs +5.2%, second half +26.5% vs −17.5%; since 20 Oct 17:45 UK 5 at +56.6% vs 10 at +6.0%. At 0.1 SOL a trade about +1.04 SOL on 34 trades. Watch: very large bundles sit next to the operator fingerprint (10 wallets, 37–41%), which is already excluded.
@@ -60,6 +63,7 @@ _Data to 23 Oct 07:09 UK; AS + launch bundle 5+ wallets. Built by reports/books/
 - 21 Oct 17:35 UK (4-hour study; data to 17:06 UK): Forward 13 grouped: 10 winners (Banana Cat +60.9%, Clout +53.7%, Larry The Cat +33.1%, MEME +28.2%, Datacenter 16:42 +24.7%…), 2 stopped (buyoutSH 78 min old / 54 SOL sold; Datacenter 13:37, 11 wallets, 47 SOL sold — both had 2.6 SOL creator buys and 85 wallets in the minute), 1 small loser (Alpenglow −20.8%). The stopped pair repeat the 11:10 UK loser profile (older coin, heavy first-minute selling, big creator buy).
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): x_t2s40 vs runner on 24 forward: +18.6% vs +5.5% (paired on the same coins); the gap is the 2x sale catching peaks the runner's 50% trail gives back. Decide at 30 as agreed, not before.
 - 22 Oct 13:50 UK (4-hour study; data to 13:03 UK): 7 new forward trades: won 4 (Shamonda virus +65.2%, Gooncoin +53.2%, Capycoin +30.2%, Artex +12.0%), stopped 3 (fartless, Cream of Shrimp Soup Can, CARLIY0S). Winners' median peak 2.49x vs 1.19x — nothing at entry separates them (bundle 26.5% over 6.5 wallets vs 36.8% over 9). Paired exit test at 31 above (Verdict).
+- 28 Oct 13:05 UK (4-hour study; data to 19:45 UK 23 Oct — the books have been OFF since 19:46 UK 23 Oct): 11 new forward trades (23 Oct): won 6 (The Skinwalker +106%, The Alpha Wolf +43%, MINDLOT +29%, Cashback Cat +25%, The Skinwalker II +16%, ACT:IV +14%), stopped 4 (X Meme War, JEWCHAIN, Little Wanderer, Rizz Dance at −51 to −54%), faded 1. Same coins as AS's winners — AS3 adds nothing this period beyond dropping four of AS's stops and one of its winners.
 
 ## Notable coins
 - None yet in the real test.

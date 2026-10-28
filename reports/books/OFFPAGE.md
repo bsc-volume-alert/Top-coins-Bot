@@ -17,7 +17,7 @@ Names that clash:
 
 ## Latest numbers, all off-page books
 <!-- NUMBERS -->
-_Data to 23 Oct 07:09 UK._
+_Data to 23 Oct 19:45 UK._
 
 - **early** (x_flow4): all 7335 at -34.0%; last 12 h 0 at +0.0%
 - **wave2** (x_flow4): all 939 at -11.8%; last 12 h 0 at +0.0%
@@ -25,7 +25,7 @@ _Data to 23 Oct 07:09 UK._
 - **mom60** (x_flow4): all 767 at -12.0%; last 12 h 0 at +0.0%
 - **momfast** (x_flow4): all 568 at -12.4%; last 12 h 0 at +0.0%
 - **mom80** (x_flow4): all 561 at -11.9%; last 12 h 0 at +0.0%
-- **momentum** (x_flow4): all 520 at -7.5%; last 12 h 28 at -5.2%
+- **momentum** (x_flow4): all 563 at -7.4%; last 12 h 39 at -4.5%
 - **momconf** (x_flow4): all 80 at -5.7%; last 12 h 0 at +0.0%
 - **momdip** (x_flow4): all 102 at -8.4%; last 12 h 0 at +0.0%
 - **momre** (x_flow4): all 209 at -16.1%; last 12 h 0 at +0.0%

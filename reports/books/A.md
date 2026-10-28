@@ -17,14 +17,14 @@ Not working as a stand-alone book: about break-even to slightly negative at real
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 23 Oct 07:09 UK; A's passed rows, runner exit. Built by reports/books/numbers.py._
+_Data to 23 Oct 19:45 UK; A's passed rows, runner exit. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 18 Oct 20:25 UK) | 631 | -1.6% | -2.0% | 49% | 38% | -1.61 |
-| last 24 h | 125 | +0.6% | -1.6% | 47% | 36% | -0.05 |
-| last 12 h | 58 | +2.5% | -2.3% | 45% | 41% | +0.09 |
-| last 6 h | 28 | -8.8% | -11.7% | 43% | 50% | -0.27 |
+| all (from 18 Oct 20:25 UK) | 703 | -2.1% | -2.5% | 49% | 38% | -2.16 |
+| last 24 h | 122 | -3.5% | -5.8% | 45% | 40% | -0.55 |
+| last 12 h | 70 | -5.3% | -6.9% | 46% | 37% | -0.44 |
+| last 6 h | 42 | +1.6% | -0.9% | 52% | 31% | +0.03 |
 
 Executor book `runner` (live, real quotes and real money): 38 legs, -0.376 SOL, average -9.6% a leg, without best -12.8%, won 45%, 19 Oct 02:19 UK to 19 Oct 10:50 UK.
 Executor book `runner` (shadow, real quotes): 31 legs, -0.625 SOL, average -4.7% a leg, without best -9.0%, won 39%, 19 Oct 11:14 UK to 19 Oct 15:59 UK.

@@ -20,6 +20,8 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 - **Last rule change:** none.
 
 ## Verdict now
+**28 Oct 13:05 UK (4-hour study; data to 19:45 UK 23 Oct — the books have been OFF since 19:46 UK 23 Oct):** RETIRE stands; record closed (books OFF since 19:46 UK 23 Oct). Final forward since 14:50 UK 21 Oct: 64 at −19.7% (no-best −21.4%, no-top3 −24.9%, median −51.0%, won 23%, stopped 73%; thirds −38 / −3 / −18) vs the 18-trade back-test at +42.7%. The 16 new (23 Oct): 3 won at the 2x sale (+87%: The Playful Polar Bear, Simon Bunnett, BRAIN'T), 1 small win, 12 stopped at −51 to −65% (median peak 1.25x). Negative in every third.
+
 **23 Oct 09:35 UK (4-hour study; data to 07:09 UK — the first push after the 18-hour gap):** RETIRE — the 40-trade checkpoint is REACHED and negative. Forward since 14:50 UK 21 Oct: 48 trades −19.2% (no-best −21.5%, no-top3 −26.3%, median −51.0%, won 23%, stopped 75%; thirds −42 / −14 / −2) vs the 22-trade back-test at +31.8%. The 22 gap trades (13:03 UK 22 Oct → 07:09 UK 23 Oct): −6.6% (no-best −11.1%): 7 won at the 2x sale (+87% each: Nailong, tinfoilcat, if i play i play, Elon News Network, project kimchi, Boss Goblin, dog wif kimchi), 14 stopped (avg −54%; peaks 1.0–1.4x bar Solana Stability Protocol 2.4x after the stop), 1 small loser. 11 won of 48 against a 59% back-test rate; the best third is still negative. Nothing at entry separates the 7 from the 14 (entry MC $44K vs $50K, 344 vs 355 buyers, age 567 vs 429 s). The 18-trade pair (luck 2/20, 21 Oct 11:10 UK) was luck; the checkpoint says so with 48 trades.
 
 **22 Oct 13:50 UK (4-hour study; data to 13:03 UK):** RETIRE (recommendation repeated, third time). Forward since 14:50 UK: 26 trades −29.9% (no-best −34.6%, no-top3 −45.2%, median −51.0%, won 15%, stopped 85%; thirds −33 / −36 / −21) vs the 22-trade back-test at +31.8%. The 10 new trades: 3 won at the 2x sale (+87.0% each: Nagi and Pokke, Artex, Dodo The Blackswan — all three later peaked 2.4–5.5x), 7 stopped at −51% to −53% (The Gus $98K, fartless $69K, Poop Worker $87K, Trump In Box, Act III, PHP//NULL, Capycoin; peaks 1.00–1.59x). 4 won of 26 against a 59% back-test rate: under 1 in 10,000. 26 of 40; the answer will not change.
@@ -42,14 +44,14 @@ _Notes last rebuilt: 21 Oct 2026 00:45 UK._
 
 ## Latest numbers
 <!-- NUMBERS -->
-_Data to 23 Oct 07:09 UK; page headline is x_h2t40, not in the data export; 5-min shown. Built by reports/books/numbers.py._
+_Data to 23 Oct 19:45 UK; page headline is x_h2t40, not in the data export; 5-min shown. Built by reports/books/numbers.py._
 
 | window | trades | avg per trade | without best | won | stopped | SOL at 0.1 |
 |---|---|---|---|---|---|---|
-| all (from 20 Oct 18:00 UK) | 143 | -6.8% | -9.7% | 43% | 45% | -1.11 |
-| last 24 h | 48 | -4.6% | -13.4% | 40% | 48% | -0.27 |
-| last 12 h | 21 | -2.1% | -15.5% | 48% | 43% | -0.07 |
-| last 6 h | 11 | -35.4% | -40.6% | 27% | 73% | -0.40 |
+| all (from 20 Oct 18:00 UK) | 168 | -9.0% | -11.5% | 42% | 46% | -1.68 |
+| last 24 h | 43 | -13.0% | -19.6% | 40% | 47% | -0.60 |
+| last 12 h | 22 | -19.4% | -21.4% | 41% | 45% | -0.45 |
+| last 6 h | 15 | -15.9% | -18.7% | 47% | 47% | -0.25 |
 <!-- /NUMBERS -->
 
 ## Change history
@@ -66,6 +68,7 @@ _Data to 23 Oct 07:09 UK; page headline is x_h2t40, not in the data export; 5-mi
 - 21 Oct 14:50 UK — **K REVISED in place** (owner, 14:30 UK: "just where you revised it, say I revised it, and that new formula should be used for all the existing trades"): v0.18.177. K's box now = K's trigger only with under 912 buyers at entry and entry MC ≥ $36K, exit 2x or −40% (x_t2s40). The box shows the same formula on all earlier K trades as the back-test (18 at +42.7% on the 10:36 data, 12 of 18 won, luck 2/20) and the trades since 14:50 UK as the real test. The old K (every coin, half at 2x + trail) is kept as the hidden record `kold` and in these notes: −0.4% a trade on 60 at the 5-min sale. The tracker's K trigger is unchanged; the filter is applied on the page like S3's and S4's revisions.
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): no change; 16 forward.
 - 23 Oct 09:35 UK (4-hour study; data to 07:09 UK — the first push after the 18-hour gap): no change; 22 trades in the data gap; 48 forward — checkpoint reached.
+- 28 Oct 13:05 UK (4-hour study; data to 19:45 UK 23 Oct — the books have been OFF since 19:46 UK 23 Oct): no change; books OFF since 19:46 UK 23 Oct. 64 forward, −19.7%.
 
 ## Ideas tested
 - **K itself** (20 Oct 23:27 UK data, 26 closed trades, real PumpSwap costs; reported to the owner at 23:32 UK as "K 26, +15.4%, without best +7.1%, promising, only one day old"):
@@ -91,6 +94,7 @@ _Data to 23 Oct 07:09 UK; page headline is x_h2t40, not in the data export; 5-mi
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): all 15 failures are stops at −38% to −55%; peaks 1.00–2.13x. Two coins (Fusion Gold, Black October) touched 2x and still show as stops — the 2x sale did not trigger on the recorded x_t2s40; either the 2x was a one-tick spike the exit cannot catch or the column lags the peak. Record only; the book is negative either way.
 - 22 Oct 13:50 UK (4-hour study; data to 13:03 UK): 10 new trades grouped: winners' median peak 4.54x vs stopped 1.21x; entry MC $43K vs $49K (the three $69–98K entries all stopped); age 819 vs 638 s. In-sample observation, not a rule: K's wins are coins that double a second time, and nothing at the trigger says which will.
 - 23 Oct 09:35 UK (4-hour study; data to 07:09 UK — the first push after the 18-hour gap): Gap trades grouped — see Verdict (7 won at exactly +87%, the 2x sale; 14 stopped at −52% to −65%). The stops' median peak 1.28x: the coin had already doubled once (the trigger) and did not again. Not luck-checked; nothing new searched.
+- 28 Oct 13:05 UK (4-hour study; data to 19:45 UK 23 Oct — the books have been OFF since 19:46 UK 23 Oct): 16 new grouped — see Verdict. The 2x winners' entry MC $40–57K, the stops' $44–101K; buyers at entry overlap completely. Nothing at entry separates them; not luck-checked (16 rows).
 
 ## Notable coins
 - **WIPD (20 Oct 22:58 UK):**
