@@ -69,6 +69,7 @@ _Data to 23 Oct 19:45 UK; page headline is x_h2t40, not in the data export; 5-mi
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): no change; 16 forward.
 - 23 Oct 09:35 UK (4-hour study; data to 07:09 UK — the first push after the 18-hour gap): no change; 22 trades in the data gap; 48 forward — checkpoint reached.
 - 28 Oct 12:50 UK (4-hour study; data to 19:45 UK 23 Oct — the books have been OFF since 19:46 UK 23 Oct): no change; books OFF since 19:46 UK 23 Oct. 64 forward, −19.7%.
+- 28 Oct 16:35 UK (4-hour study; data pushed 16:09 UK 28 Oct, trade files still end 19:45 UK 23 Oct): books still OFF (BOOKS_OFF, v0.18.185); no new rows, no new legs, numbers unchanged; nothing re-scored.
 
 ## Ideas tested
 - **K itself** (20 Oct 23:27 UK data, 26 closed trades, real PumpSwap costs; reported to the owner at 23:32 UK as "K 26, +15.4%, without best +7.1%, promising, only one day old"):

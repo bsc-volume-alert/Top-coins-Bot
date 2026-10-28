@@ -45,6 +45,7 @@ _Data to 23 Oct 19:45 UK; AS + launch bundle 5+ wallets. Built by reports/books/
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): no change; 24 forward.
 - 23 Oct 09:35 UK (4-hour study; data to 07:09 UK — the first push after the 18-hour gap): no change; 14 trades in the data gap; 45 forward.
 - 28 Oct 12:50 UK (4-hour study; data to 19:45 UK 23 Oct — the books have been OFF since 19:46 UK 23 Oct): no change; books OFF since 19:46 UK 23 Oct. 56 forward.
+- 28 Oct 16:35 UK (4-hour study; data pushed 16:09 UK 28 Oct, trade files still end 19:45 UK 23 Oct): books still OFF (BOOKS_OFF, v0.18.185); no new rows, no new legs, numbers unchanged; nothing re-scored.
 
 ## Ideas tested
 - The finding behind it (21 Oct 01:20 UK, AS's 79 trades, operator coins removed; see AS.md "Ideas tested"): bundle wallets ≥ 5 kept 34 at +31.5% (without best +24.1%) vs 45 at −3.7%; first half +27.9% vs +5.2%, second half +26.5% vs −17.5%; since 20 Oct 17:45 UK 5 at +56.6% vs 10 at +6.0%. At 0.1 SOL a trade about +1.04 SOL on 34 trades. Watch: very large bundles sit next to the operator fingerprint (10 wallets, 37–41%), which is already excluded.
