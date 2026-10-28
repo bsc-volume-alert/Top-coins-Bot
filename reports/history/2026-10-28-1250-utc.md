@@ -1,4 +1,4 @@
-# 4-hour study — 28 Oct 2026 13:05 UK
+# 4-hour study — 28 Oct 2026 12:50 UK
 
 **The books have been off since 19:46 UK 23 Oct.** v0.18.185 (owner's go 19:44 UK 23 Oct, "stop the bots") set BOOKS_OFF — no paper book opens a position — and the same deploy stopped the executor (scripts/executor-off keeps it stopped). The data push itself is fine (`pushed_at` 2026-10-28T12:08:39Z, 30 minutes before this run; launches recorded to 11:05 UK 28 Oct, 46,341 in the file), so launches.csv is live and the trade files are frozen: the last paper trade of any kept book is Cashback Cat (AS) at 18:52 UK 23 Oct, the last executor leg MOOF (GR2 live) at 10:09 UK 23 Oct. Everything below is the close of the 23 Oct record, 07:09–19:46 UK — the 12½ hours after the last study's data — not a new period.
 

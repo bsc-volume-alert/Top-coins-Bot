@@ -8,7 +8,7 @@ _Notes last rebuilt: 21 Oct 2026 01:35 UK._
 - Started 21 Oct 01:30 UK (`CHG_AS2`). Everything before is a back-test of a rule chosen by looking at those trades.
 
 ## Verdict now
-**28 Oct 13:05 UK (4-hour study; data to 19:45 UK 23 Oct — the books have been OFF since 19:46 UK 23 Oct):** DROP stands. Final forward since 01:30 UK 21 Oct: 76 at −3.1% (no-best −4.7%, no-top3 −7.5%, won 51%, stopped 42%; thirds −1 / −6 / −3) — the 16 new (23 Oct) −8.9%. No third positive. Books off since 19:46 UK 23 Oct.
+**28 Oct 12:50 UK (4-hour study; data to 19:45 UK 23 Oct — the books have been OFF since 19:46 UK 23 Oct):** DROP stands. Final forward since 01:30 UK 21 Oct: 76 at −3.1% (no-best −4.7%, no-top3 −7.5%, won 51%, stopped 42%; thirds −1 / −6 / −3) — the 16 new (23 Oct) −8.9%. No third positive. Books off since 19:46 UK 23 Oct.
 
 **23 Oct 09:35 UK (4-hour study; data to 07:09 UK — the first push after the 18-hour gap):** DROP (repeated). Forward since 01:30 UK 21 Oct: 60 at −1.6% (no-best −3.5%, no-top3 −6.5%, won 53%, stopped 42%; thirds +7 / −10 / −2) vs back-test 63 at +18.6%. The 16 gap trades −1.3% (no-top3 −20.0%). No edge over AS (90 at +3.9%) on 60 trades; the 30-trade checkpoint said the same at 22 Oct 01:50 UK.
 
@@ -44,7 +44,7 @@ _Data to 23 Oct 19:45 UK; AS + launch bundle 2+ wallets. Built by reports/books/
 - 21 Oct 01:30 UK (v0.18.172): created on the owner's go (01:19 UK), as a separate book rather than revising AS, so AS's own real test (from 20 Oct 17:45 UK) keeps running untouched.
 - 22 Oct 05:50 UK (4-hour study; data to 05:04 UK): no change; 34 forward.
 - 23 Oct 09:35 UK (4-hour study; data to 07:09 UK — the first push after the 18-hour gap): no change; 16 trades in the data gap; 60 forward.
-- 28 Oct 13:05 UK (4-hour study; data to 19:45 UK 23 Oct — the books have been OFF since 19:46 UK 23 Oct): no change; books OFF since 19:46 UK 23 Oct (v0.18.185). Record closed at 76 forward.
+- 28 Oct 12:50 UK (4-hour study; data to 19:45 UK 23 Oct — the books have been OFF since 19:46 UK 23 Oct): no change; books OFF since 19:46 UK 23 Oct (v0.18.185). Record closed at 76 forward.
 
 ## Ideas tested
 - The finding behind it (21 Oct 01:20 UK, AS's 79 trades, operator coins removed; see AS.md "Ideas tested"): bundle wallets ≥ 2 kept 62 at +19.4% (without best +15.2%) vs 17 at −17.4%; first half of the earlier trades +23.2% vs −23.6%, second half +9.2% vs −17.4%; since 20 Oct 17:45 UK 12 at +30.4% vs 3 at −7.2%. At 0.1 SOL a trade about +1.14 SOL on 62 trades vs AS +0.83 on 79.
