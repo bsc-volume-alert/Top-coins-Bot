@@ -1,12 +1,14 @@
-# 4-hour study — 28 Oct 2026 20:30 UK
+# 4-hour study — 29 Oct 2026 00:30 UK
 
-**Nothing new to score. The books are still off, and this run had no new data at all.** The `data` branch is the same commit the 16:30 UK study read (`892c98f`, `pushed_at` 2026-10-28T16:09:48Z): the 20:09 UK push did not arrive, so the data is 4 h 17 min old at this run (under the 5-hour flag, but one push missed). abcd.csv and others.csv still end at 19:45 UK 23 Oct (BOOKS_OFF since 19:46 UK 23 Oct, v0.18.185; executor stopped), executor.json's last leg is still MOOF (GR2 live, 10:09 UK 23 Oct), status.json still shows the wallet at 0.030 SOL, launches.csv still ends 15:05 UK 28 Oct, and `numbers.py --write` changed no book. No commit has touched code on `tracker` since 24 Oct 17:40 UK (radar 0.4.0 / coin scope 0.8.0). As the 16:30 UK report's "Next" says: same rows, so this run says so in one line rather than re-scoring.
+**Data is 8 h 17 min old at this run — over the 5-hour flag. Two scheduled pushes in a row have now missed (20:05 UK 28 Oct and 00:05 UK 29 Oct).** The `data` branch is still commit `892c98f` (`pushed_at` 2026-10-28T16:09:48Z, 16:09 UK), the same files the 16:30 UK and 20:30 UK studies read: identical checksums on abcd.csv, others.csv, launches.csv, executor.json, status.json. So this run has nothing new to score, and it is the third study in a row on the same rows. The books themselves are still off (BOOKS_OFF since 19:46 UK 23 Oct, v0.18.185; executor stopped, status.json still v0.4.18 with the wallet at 0.030 SOL and no open positions), abcd.csv and others.csv still end at 19:45 UK 23 Oct, executor.json's last leg is still MOOF (GR2 live, 10:09 UK 23 Oct), launches.csv still ends 15:05 UK 28 Oct (44,127 launches). `numbers.py --write` changed no book. No commit has touched code on `tracker` since 24 Oct 17:40 UK (radar 0.4.0 / coin scope 0.8.0).
 
-**Since last study (28 Oct 16:30 UK):** no trades, no legs, no code change, no data push.
+**Since last study (28 Oct 20:30 UK):** no trades, no legs, no code change, no data push — the second miss.
+
+**What the two misses mean.** Nothing is lost for the books: the trade files have been frozen since 23 Oct, so the only thing the study is not seeing is launches.csv (the launch recorder, which keeps running for coin scope). But the pattern is the one from 22–23 Oct (LESSONS 23 Oct 01:35 / 05:30 UK: six :05 pushes missed in a row, server alive throughout, cause never visible from the data). Reading scripts/push-data.sh (not changed): it runs from cron every 4 hours, and its silent exit points are the abcd.csv fetch from the tracker's own web port (`exit 1`, no Telegram) and the final `git push -f` (auth); the launch, executor, fomo and scope dumps cannot abort it. A push that fails there leaves no trace on the `data` branch, so from here the three cases look the same: the cron job did not run (box or cron down), the tracker web port did not answer, or the push to GitHub was refused. The one thing that separates them is on the box: `pm2 status` and the cron log. If the owner means to restart any book, this needs fixing first, otherwise the restart's first trades would be invisible to the study, as the 20:30 UK report said.
 
 ## The kept books
 
-Unchanged from 12:50 UK and 16:30 UK (same rows; numbers.py's scoring: real costs, operator coins out, price-glitch rows out, lateFix). Forward = trades since the book's change, to 19:46 UK 23 Oct.
+Unchanged from 12:50, 16:30 and 20:30 UK (same rows; numbers.py's scoring: real costs, operator coins out, price-glitch rows out, lateFix). Forward = trades since the book's change, to 19:46 UK 23 Oct.
 
 | Book | Change | Trades since the change | Result a trade (real costs) | Without best 3 | Won | Stopped | Shadow / live legs, real vs paper | Checkpoint |
 |---|---|---|---|---|---|---|---|---|
@@ -33,14 +35,14 @@ No legs since 10:09 UK 23 Oct. The last readings stand: `asoc` 62 legs +3 points
 
 ## Anything new (luck-checked)
 
-Nothing proposed; nothing to test. launches.csv did not move either (same 44,127 launches to 15:05 UK 28 Oct), so the 16:30 UK bundle-launch count (112 launches of the GR2/BL coin type in 23 h, 88 graduated) is the latest and is not re-counted.
+Nothing proposed; nothing to test. Same rows as the last two studies, so no re-counting: the 16:30 UK bundle-launch count (112 launches of the GR2/BL coin type in 23 h, 88 graduated) is still the latest.
 
 ## What I would do now
 
-Nothing changes while the books are off; the 12:50 UK recommendations stand, in short: if the record is to continue, restart paper and shadow only with about 0.3 SOL in the executor wallet for simulation; settle the GR2 local-stop question (stop measured from the real entry) before any live restart; GR2 live at 0.1 if at all; keep K, S3 and AS2 retired; AS, AS3, AS4, S4 stay paper. One thing to watch rather than do: the 20:09 UK data push was missed. One miss is not the 22–23 Oct outage (six in a row), and nothing is lost while the books are off because the trade files are frozen anyway — but if the 00:09 UK push also misses, scripts/push-data.sh is worth a look before any restart, otherwise the restart's first trades would be invisible to the study. The owner decides.
+Nothing changes while the books are off; the 12:50 UK recommendations stand, in short: if the record is to continue, restart paper and shadow only with about 0.3 SOL in the executor wallet for simulation; settle the GR2 local-stop question (stop measured from the real entry) before any live restart; GR2 live at 0.1 if at all; keep K, S3 and AS2 retired; AS, AS3, AS4, S4 stay paper.
+
+The one thing to do now is on the box, not in the books: two pushes have missed in a row, which is how the 22–23 Oct outage started. Check `pm2 status`, the cron log and `bash scripts/push-data.sh` by hand (it prints `[push-data] pushed …` on success and names the step on failure). Until `pushed_at` moves, the study cannot see anything that happens on the server, so a restart of the books should wait for that. The owner decides.
 
 ## Next
 
-- If BOOKS_OFF still stands at the next run, say so in one line again; do not re-score.
-- Check `pushed_at` first: if it is still 16:09 UK 28 Oct at 00:30 UK, that is two pushes missed — say so at the top.
-- If lifted: AS 120 forward (12 to go), AS3 60 (4), AS4 30 (20), GR2 20th live leg, BL/GR2 live sells vs paper leg by leg — and read the first block after the restart separately (a restart wipes in-memory state).
+Same rows → one line, not a re-score. The next run (04:30 UK) checks whether the 04:05 UK push arrives; if `pushed_at` has not moved by then it will be the third miss in a row and the data 12 h old.
