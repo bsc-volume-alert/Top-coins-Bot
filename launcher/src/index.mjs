@@ -279,7 +279,7 @@ if (CFG.SMOKE) {
 }
 console.log(`[launcher] ${VER} up — mode ${CFG.MODE}, wallet ${ME.toBase58()}, stake ${CFG.STAKE_SOL} SOL, cap ${CFG.DAILY_CAP}/day, X stream ${CFG.TWITTER_KEY ? "on" : "OFF (no TWITTERAPI_KEY)"}, AI ${CFG.AI_KEY ? "on" : "off"}`);
 startStream(onPost);
-setTimeout(selfTest, 5000);
+setTimeout(selfTest, 5000); setInterval(() => { const t = st.selfTest; if (!t || t.error || !t.upload?.ok || !(t.classic?.ok || t.v3?.ok)) selfTest(); }, 1800000); // re-test every 30 min until it passes
 setInterval(() => watch(), 15000);
 setInterval(() => requests().catch(() => {}), 2000);
 setInterval(copyJob, 300000);
