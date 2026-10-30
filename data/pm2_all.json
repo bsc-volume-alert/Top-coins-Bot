@@ -1,0 +1,51 @@
+[
+ {
+  "name": "pm2-logrotate",
+  "status": "online",
+  "restarts": 0,
+  "up": 1792335067259,
+  "mem": 66531328
+ },
+ {
+  "name": "tracker",
+  "status": "online",
+  "restarts": 812,
+  "up": 1793397837862,
+  "mem": 454488064
+ },
+ {
+  "name": "deployer",
+  "status": "online",
+  "restarts": 0,
+  "up": 1792335122132,
+  "mem": 3014656
+ },
+ {
+  "name": "executor",
+  "status": "stopped",
+  "restarts": 55,
+  "up": 1792623975387,
+  "mem": 0
+ },
+ {
+  "name": "fomo",
+  "status": "online",
+  "restarts": 46,
+  "up": 1792743811996,
+  "mem": 206422016
+ },
+ {
+  "name": "scope",
+  "status": "online",
+  "restarts": 67,
+  "up": 1793397847981,
+  "mem": 85569536
+ },
+ {
+  "name": "radar",
+  "status": "online",
+  "restarts": 3476,
+  "up": 1793398297792,
+  "mem": 205443072
+ }
+]
