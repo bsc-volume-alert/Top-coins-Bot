@@ -13,7 +13,9 @@ TOKEN=$(grep -E '^TG_BOT_TOKEN=' .env | cut -d= -f2-); CHAT=$(grep -E '^TG_CHAT_
 notify() { [ -n "$TOKEN" ] && curl -s -m 10 -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" -d chat_id="$CHAT" -d parse_mode=HTML --data-urlencode text="$1" >/dev/null 2>&1; }
 # v0.18.93: a push that touches only executor/ (and docs) leaves the tracker alone — no smoke boot, no reload, no lost P5 restore
 TRACKER_CHANGED=1
-if ! git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -vqE '^(executor/|fomo/|scope/|radar/|launcher/|reports/|scripts/push-data\.sh$|scripts/dump-live\.cjs$|scripts/dump-launches\.cjs$|scripts/study\.mjs$|scripts/push-now\.txt$|scripts/job-now\.txt$|scripts/executor-off$|scripts/revival-pull\.mjs$|scripts/s10-check\.cjs$|.*\.md$)'; then TRACKER_CHANGED=0; echo "[deploy] tracker untouched — executor / reports / data-script push"; fi # v0.18.114: the 4-hourly study's reports and the data scripts never restart the bot
+if ! git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -vqE '^(executor/|fomo/|scope/|radar/|launcher/|reports/|scripts/push-data\.sh$|scripts/dump-live\.cjs$|scripts/dump-launches\.cjs$|scripts/study\.mjs$|scripts/push-now\.txt$|scripts/job-now\.txt$|scripts/executor-off$|scripts/apps-off$|scripts/deploy-step\.sh$|scripts/revival-pull\.mjs$|scripts/s10-check\.cjs$|.*\.md$)'; then TRACKER_CHANGED=0; echo "[deploy] tracker untouched — executor / reports / data-script push"; fi # v0.18.114: the 4-hourly study's reports and the data scripts never restart the bot
+# owner, 30 Oct 2026 22:36 UK ("stop everything … only this dev launch"): every app named in scripts/apps-off is kept stopped and never reloaded
+[ -f scripts/apps-off ] && grep -qx tracker scripts/apps-off && TRACKER_CHANGED=0
 FAIL=""
 if [ "$TRACKER_CHANGED" = "1" ]; then
 for f in src/*.js; do node --check "$f" 2>/tmp/deploy-check.err || { FAIL="syntax: $f $(head -c 300 /tmp/deploy-check.err)"; break; }; done
@@ -106,7 +108,7 @@ if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep '^launcher/' | gre
   else echo "[deploy] LAUNCHER START FAILED: $(tail -c 300 /tmp/deploy-launcher-pm2.log)"; notify "⛔ <b>launcher start failed</b> — <code>$(tail -c 300 /tmp/deploy-launcher-pm2.log)</code>"; fi
 fi
 # launcher: changing launcher/push-now.txt makes the box push the launcher's data now
-if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^launcher/push-now\.txt$'; then (nohup bash /root/tracker/launcher/push.sh >> /root/tracker/data/push-now.log 2>&1 &); fi
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^launcher/push-now\.txt$'; then (nohup bash -c 'sleep 90; bash /root/tracker/launcher/push.sh' >> /root/tracker/data/push-now.log 2>&1 &); fi
 # fomo 0.1.3: a change to fomo/finds.txt resolves those trades to wallets on the box (fomo/scripts/find-batch.mjs against the running fomo app), then pushes the data
 if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^fomo/finds\.txt$'; then echo "[deploy] fomo finds"; (cd /root/tracker/fomo && nohup nice -n 19 bash -c 'sleep 25; node scripts/find-batch.mjs > /root/tracker/data/fomo_finds.log 2>&1; bash /root/tracker/scripts/push-data.sh >> /root/tracker/data/push-now.log 2>&1' >/dev/null 2>&1 &); fi
 # fomo 0.1.9: a change to fomo/data/handles.txt adds those wallets to the watcher
@@ -117,3 +119,7 @@ if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^fomo/watch/im
 # v0.18.154: a one-off job — changing scripts/job-now.txt runs the revival price pull (GMGN 5-min candles for every graduated coin), then the data push
 if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^scripts/job-now\.txt$'; then JOB=$(head -c 40 scripts/job-now.txt | awk '{print $1}'); echo "[deploy] one-off job: $JOB"; case "$JOB" in s10) (cd /root/tracker && nohup nice -n 19 bash -c 'node scripts/s10-check.cjs > /root/tracker/data/job.log 2>&1; grep -h "\[sn10\]" /root/.pm2/logs/tracker-out*.log 2>/dev/null | tail -50 >> /root/tracker/data/job.log; bash /root/tracker/scripts/push-data.sh >> /root/tracker/data/push-now.log 2>&1' >/dev/null 2>&1 &);; *) (cd /root/tracker && nohup nice -n 19 bash -c 'node scripts/revival-pull.mjs > /root/tracker/data/job.log 2>&1; bash /root/tracker/scripts/push-data.sh >> /root/tracker/data/push-now.log 2>&1' >/dev/null 2>&1 &);; esac; fi
 if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^scripts/push-now\.txt$'; then echo "[deploy] on-demand data push"; (nohup nice -n 19 bash /root/tracker/scripts/push-data.sh >>/root/tracker/data/push-now.log 2>&1 &); fi
+# owner, 30 Oct 2026 22:36 UK: stop (and keep stopped) every app listed in scripts/apps-off — run last, so nothing reloaded above stays up
+if [ -f scripts/apps-off ]; then for A in $(grep -Eo '^[a-z0-9-]+' scripts/apps-off); do
+  if pm2 jlist 2>/dev/null | A="$A" node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.exit(JSON.parse(s).some(p=>p.name===process.env.A&&p.pm2_env.status!=="stopped")?0:1)}catch(e){process.exit(1)}})'; then
+    pm2 stop "$A" >/dev/null 2>&1 && pm2 save >/dev/null 2>&1 && echo "[deploy] $A stopped (scripts/apps-off)"; fi; done; fi
