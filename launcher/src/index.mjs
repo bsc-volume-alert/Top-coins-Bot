@@ -16,6 +16,7 @@ import { uploadMeta, metaStat } from "./meta.mjs";
 import { GLOBAL, TOKEN_2022, decodeGlobal, decodeCurve, freshCurve, quoteBuy, quoteSell, priceOf, curveOf, ata, creatorVaultOf, ixCreateV2, ixBuy, ixSell, ixBuyV3, ixSellV3, ixCollectCreatorFee, ixBudget, ixTransfer } from "./pump.mjs";
 import { conn, rpcStats, getAccounts, getBalance, buildTx, simulate, sendUntilConfirmed, readFill } from "./rpc.mjs";
 import { ensureKeypair, simPayer } from "./wallet.mjs";
+import { inboxPublic, inboxApply } from "./inbox.mjs";
 
 const VER = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 const now = () => Math.floor(Date.now() / 1000);
@@ -277,6 +278,8 @@ if (CFG.SMOKE) {
   console.log("[launcher] smoke ok", JSON.stringify({ ver: VER, ixs: ixs.length, tokens: Number(q.tokens) / 1e6, png: png.length, name: n, trackerDb: !!tdb, twitterKey: !!CFG.TWITTER_KEY }));
   process.exit(0);
 }
+// 0.1.5: keys sent to the box encrypted (launcher/secrets.enc.json) are opened into /root/launcher/.env; the process then restarts so they load
+try { st.inboxPublicKey = inboxPublic(); const got = inboxApply(); if (got.length) { console.log(`[launcher] keys received: ${got.join(", ")} — restarting to load them`); setTimeout(() => process.exit(0), 500); } } catch (e) { st.lastErr = "inbox: " + e.message; }
 console.log(`[launcher] ${VER} up — mode ${CFG.MODE}, wallet ${ME.toBase58()}, stake ${CFG.STAKE_SOL} SOL, cap ${CFG.DAILY_CAP}/day, X stream ${CFG.TWITTER_KEY ? "on" : "OFF (no TWITTERAPI_KEY)"}, AI ${CFG.AI_KEY ? "on" : "off"}`);
 startStream(onPost);
 setTimeout(selfTest, 5000); setInterval(() => { const t = st.selfTest; if (!t || t.error || !t.upload?.ok || !(t.classic?.ok || t.v3?.ok)) selfTest(); }, 1800000); // re-test every 30 min until it passes
