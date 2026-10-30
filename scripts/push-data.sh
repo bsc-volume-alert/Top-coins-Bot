@@ -13,6 +13,10 @@ cd "$D" || exit 1
 git checkout -q --orphan data-new 2>/dev/null || { git checkout -q --orphan data-new-$$ 2>/dev/null || true; }
 git rm -rfq --cached . 2>/dev/null || true
 mkdir -p data
+# launcher 0.1.0 (30 Oct 2026): health of every pm2 app, the deployer's recent log and the launcher's own log/status — public info only (no keys)
+(pm2 jlist 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.stringify(JSON.parse(s).map(p=>({name:p.name,status:p.pm2_env.status,restarts:p.pm2_env.restart_time,up:p.pm2_env.pm_uptime,mem:p.monit&&p.monit.memory})),null,1))}catch(e){console.log("[]")}})' > data/pm2_all.json) 2>/dev/null
+tail -c 6000 /root/.pm2/logs/deployer-out.log > data/deploy_log.txt 2>/dev/null; tail -c 4000 /root/.pm2/logs/launcher-out.log > data/launcher_out.txt 2>/dev/null; tail -c 4000 /root/.pm2/logs/launcher-error.log > data/launcher_err.txt 2>/dev/null
+cp -f /root/tracker/data/launcher_out/status.json data/launcher_status.json 2>/dev/null || true
 curl -s -m 120 "http://127.0.0.1:${PORT}/api/p5data?key=${KEY}" -o data/abcd.csv || { echo "[push-data] csv fetch failed"; exit 1; }
 [ "$(wc -c < data/abcd.csv)" -lt 200 ] && { echo "[push-data] csv too small: $(head -c 200 data/abcd.csv)"; exit 1; }
 (cd "$T" && nice -n 19 node scripts/dump-live.cjs) > data/executor.json 2>/tmp/dump-live.err || { echo "[push-data] executor dump failed: $(head -c 300 /tmp/dump-live.err)"; }
