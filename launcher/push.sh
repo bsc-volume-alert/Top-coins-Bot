@@ -10,6 +10,9 @@ git checkout -q --orphan ld-new 2>/dev/null || git checkout -q --orphan "ld-$$" 
 git rm -rfq --cached . 2>/dev/null || true; rm -rf launcher; mkdir -p launcher
 cp -f "$SRC"/* launcher/ 2>/dev/null || true
 date -u +%FT%TZ > launcher/pushed_at.txt
+# 30 Oct 2026: which pm2 apps are running, and the deployer's recent log (public info only — no keys)
+(pm2 jlist 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.stringify(JSON.parse(s).map(p=>({name:p.name,status:p.pm2_env.status,restarts:p.pm2_env.restart_time})),null,1))}catch(e){console.log("[]")}})' > launcher/pm2_all.json) 2>/dev/null
+tail -c 3000 /root/.pm2/logs/deployer-out.log > launcher/deploy_log.txt 2>/dev/null; tail -c 3000 /root/.pm2/logs/launcher-error.log > launcher/launcher_err.txt 2>/dev/null
 git add -A launcher
 git -c user.name=launcher -c user.email=launcher@tracker commit -q -m "launcher data $(date -u +%FT%TZ)" || exit 0
 git branch -q -M launcher-data
