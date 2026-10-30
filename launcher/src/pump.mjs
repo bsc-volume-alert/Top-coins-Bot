@@ -34,7 +34,7 @@ export const curveOf = (mint) => pda(["bonding-curve", mint], PUMP);
 export const creatorVaultOf = (creator) => pda(["creator-vault", creator], PUMP);
 export const userVolOf = (user) => pda(["user_volume_accumulator", user], PUMP);
 const mayhemStateOf = (mint) => pda(["mayhem-state", mint], MAYHEM);
-const curveV2Of = (mint) => pda(["bonding-curve-v2", mint], MAYHEM);
+const curveV2Of = (mint) => pda(["bonding-curve-v2", mint], PUMP); // 0.1.4: under the pump program, as pump.fun's own SDK (@pump-fun/pump-sdk 4.3.1, bondingCurveV2Pda) — the Mayhem-program PDA was refused (InvalidBondingCurveV2, self-test 30 Oct 22:54 UK)
 
 /** Global account (Anchor: 8-byte discriminator, then the IDL's field order). */
 export function decodeGlobal(d) {

@@ -14,7 +14,9 @@ export function ensureKeypair() {
   const kp = Keypair.generate(); writeFileSync(CFG.KEY_PATH, JSON.stringify(Array.from(kp.secretKey)), { mode: 0o600 }); chmodSync(CFG.KEY_PATH, 0o600); return kp;
 }
 /** shadow mode only: the PUBLIC key of a funded wallet (bytes 32–63 of a Solana key file are the public key), used as the simulated payer while ours is empty. No secret is kept. */
-export function simPayer() { try { const a = JSON.parse(readFileSync(CFG.SIM_PAYER_KEYFILE, "utf8")); return a.length === 64 ? new PublicKey(Uint8Array.from(a.slice(32))) : null; } catch { return null; } }
+// 0.1.4: the executor wallet holds only ~0.02 SOL — too little to simulate a 0.1 SOL launch — so the stand-in is a well-funded public address
+// (pump.fun's first fee recipient in its own SDK). Simulation only: nothing is signed, nothing is sent, nothing changes on chain.
+export function simPayer() { try { return new PublicKey(process.env.LAUNCH_SIM_PAYER || "62qc2CNXwrYqQScmEdiZFFAnJR262PxWEuNQtxfafNgV"); } catch { return null; } }
 
 if (process.argv[1] && process.argv[1].endsWith("wallet.mjs")) {
   const cmd = process.argv[2] || "address";
