@@ -246,6 +246,8 @@ async function selfTest() {
       if (sim.ok && !kvGet("buyIx")) kvSet("buyIx", v);
     }
   } catch (e) { out.error = e.message; }
+  // 0.1.6: is the TwitterAPI.io key itself valid? one REST lookup (15 credits) — tells "bad key" apart from "no Stream plan" when the websocket says 403
+  if (CFG.TWITTER_KEY) try { const r = await fetch(`${CFG.REST}/twitter/tweets?tweet_ids=20`, { headers: { "X-API-Key": CFG.TWITTER_KEY }, signal: AbortSignal.timeout(6000) }); const j = await r.json().catch(() => ({})); out.twitterRest = { http: r.status, ok: r.ok && j.status !== "error", tweets: (j.tweets || []).length, msg: String(j.msg || j.message || "").slice(0, 120) }; } catch (e) { out.twitterRest = { ok: false, err: e.message }; }
   try { const m = await uploadMeta({ name: "Launcher Test", symbol: "LTEST", description: "test upload — not launched", png: coinImage("Launcher Test", "LTEST"), tweetUrl: "" }); out.upload = { ok: true, ms: m.ms, uri: m.uri }; } catch (e) { out.upload = { ok: false, err: e.message }; }
   st.selfTest = out; kvSet("selfTest", JSON.stringify(out)); exportNow();
 }
