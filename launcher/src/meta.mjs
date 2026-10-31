@@ -14,15 +14,15 @@ async function pin(blob, filename) {
   const j = await r.json().catch(() => ({})); if (!r.ok || !j?.data?.cid) throw new Error(`Pinata HTTP ${r.status} ${JSON.stringify(j.error || j).slice(0, 120)}`);
   return j.data.cid;
 }
-async function viaPinata({ name, symbol, description, png, tweetUrl }) {
-  const img = await pin(new Blob([png], { type: "image/png" }), `${symbol}.png`);
+async function viaPinata({ name, symbol, description, img: pic, tweetUrl }) {
+  const img = await pin(new Blob([pic.bytes], { type: pic.type }), `${symbol}.${pic.ext}`);
   const meta = { name, symbol, description: description || "", image: GATEWAY + img, showName: true, createdOn: "https://pump.fun", twitter: tweetUrl || "", telegram: "", website: "" };
   const cid = await pin(new Blob([JSON.stringify(meta)], { type: "application/json" }), `${symbol}.json`);
   return { uri: GATEWAY + cid, image: meta.image };
 }
-async function viaPump({ name, symbol, description, png, tweetUrl }) {
+async function viaPump({ name, symbol, description, img: pic, tweetUrl }) {
   const fd = new FormData();
-  fd.append("file", new Blob([png], { type: "image/png" }), "coin.png");
+  fd.append("file", new Blob([pic.bytes], { type: pic.type }), `coin.${pic.ext}`);
   fd.append("name", name); fd.append("symbol", symbol); fd.append("description", description || "");
   if (tweetUrl) fd.append("twitter", tweetUrl);
   fd.append("telegram", ""); fd.append("website", ""); fd.append("showName", "true");

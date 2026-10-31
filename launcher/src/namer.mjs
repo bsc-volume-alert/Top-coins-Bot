@@ -45,16 +45,17 @@ export function ruleName({ ownText, subjectText }) {
 }
 
 /** AI pick (optional). Returns null on any failure so the rules stand. */
-export async function aiName({ user, kind, ownText, subjectText, subjectUser }) {
+export async function aiName({ user, kind, ownText, subjectText, subjectUser, images = [] }) {
   if (!CFG.AI_KEY) return null;
   const prompt = `A memecoin will be launched on pump.fun the moment this X post appears. Pick the coin name and ticker that traders would most likely search for.\n` +
     `Post by @${user} (${kind}): "${String(ownText).slice(0, 600)}"\n` + (subjectText ? `It ${kind === "reply" ? "replies to" : kind === "quote" ? "quotes" : "reposts"} @${subjectUser || "?"}: "${String(subjectText).slice(0, 900)}"\n` : "") +
-    `Rules: name ≤ 32 characters, ticker 2–10 letters/digits, no $ sign. Prefer a fresh, specific, catchy phrase from the posts over generic words (AI, Elon, Doge, Trump, Bitcoin).\n` +
+    (images.length ? `The post has ${images.length} picture(s), attached below. LOOK AT THEM: the narrative is often in the picture — a title, a brand, a character, words written on it (e.g. a post "Dems in charge? Nothing scarier." whose pictures are Goosebumps-style covers → name "Goosebumps").\n` : "") +
+    `Rules (owner's): the name must be the post's OWN words or the words/thing shown in its picture, like for like — never invent a different phrase. Pick the single most distinctive, recognisable word or short phrase a trader would search for; prefer a title, brand, character or catchphrase over generic words (Dems, AI, Elon, Trump, Bitcoin). Name ≤ 32 characters, ticker 2–10 letters/digits, no $ sign.\n` +
     `Reply with JSON only: {"name":"…","ticker":"…","score":0-10 (how likely traders pile into this narrative),"why":"≤ 12 words"}`;
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", signal: AbortSignal.timeout(5000),
+    const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", signal: AbortSignal.timeout(images.length ? 8000 : 5000),
       headers: { "x-api-key": CFG.AI_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: CFG.AI_MODEL, max_tokens: 150, messages: [{ role: "user", content: prompt }] }) });
+      body: JSON.stringify({ model: CFG.AI_MODEL, max_tokens: 200, messages: [{ role: "user", content: [{ type: "text", text: prompt }, ...images.slice(0, 4).map((url) => ({ type: "image", source: { type: "url", url } }))] }] }) });
     const j = await r.json(); const txt = (j.content || []).map((c) => c.text || "").join(""); const m = txt.match(/\{[\s\S]*\}/); if (!m) return null;
     const o = JSON.parse(m[0]); const name = String(o.name || "").trim().slice(0, 32); let ticker = String(o.ticker || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 10);
     if (!name) return null; if (ticker.length < 2) ticker = tickerOf(name);

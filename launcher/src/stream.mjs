@@ -17,7 +17,7 @@ export function norm(t) {
   const sub = (x) => (x && typeof x === "object" && x.id ? norm(x) : null);
   return { id: String(t.id), user, text: String(t.text || t.full_text || ""), kindRaw, createdMs,
     replyTo: t.inReplyToId || t.in_reply_to_status_id || t.in_reply_to_tweet_id || null, isReply: t.isReply ?? null,
-    quoted: sub(t.quoted_tweet), retweeted: sub(t.retweeted_tweet), media: (t.media || t.extendedEntities?.media || []).map((m) => m.media_url_https || m.url).filter(Boolean).slice(0, 4),
+    quoted: sub(t.quoted_tweet), retweeted: sub(t.retweeted_tweet), media: (t.media || t.extendedEntities?.media || []).map((m) => (typeof m === "string" ? m : m.media_url_https || m.url)).filter(Boolean).slice(0, 4),
     full: !!(t.author || "isReply" in t || "inReplyToId" in t) };
 }
 /** A tweet id carries its creation time (Twitter snowflake: ms since 2010-11-04 01:42:54.657 UTC in the bits above 22). */
@@ -38,7 +38,9 @@ export async function lookup(ids) {
 /** What a post is about: { kind: post|reply|quote|repost, subject: the tweet the narrative comes from (the original for replies / reposts, both for quotes) }. */
 export async function context(t) {
   let full = t;
-  const maybeLinked = !t.full && (t.kindRaw !== "tweet" || /^(@|RT @)/.test(t.text) || /https:\/\/t\.co\//.test(t.text));
+  // 0.1.8: the stream marks plain posts type "post" (seen 31 Oct 00:49 UK) — those need no lookup (saves ~0.5 s); replies, quotes and reposts do
+  const plain = ["post", "tweet"].includes(t.kindRaw) && !/^(@|RT @)/.test(t.text);
+  const maybeLinked = !t.full && !plain;
   if (maybeLinked) { const m = await lookup([t.id]); if (m.get(t.id)) full = { ...m.get(t.id), kindRaw: t.kindRaw }; }
   let kind = full.retweeted || /retweet|repost/.test(full.kindRaw) || /^RT @/.test(full.text) ? "repost" : full.quoted || /quote/.test(full.kindRaw) ? "quote" : full.replyTo || full.isReply || /reply/.test(full.kindRaw) ? "reply" : "post";
   let parent = full.retweeted || full.quoted || null;

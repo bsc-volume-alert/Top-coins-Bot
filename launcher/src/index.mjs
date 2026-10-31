@@ -35,11 +35,11 @@ CREATE TABLE IF NOT EXISTS launches (id INTEGER PRIMARY KEY AUTOINCREMENT, post_
   others INTEGER DEFAULT 0, first_other_s INTEGER, last_change_ts INTEGER, peak_x REAL, last_x REAL, sell_tries INTEGER DEFAULT 0,
   sell_sig TEXT, sell_sol REAL, sell_reason TEXT, sold_ts INTEGER, pnl_sol REAL,
   copies_30m INTEGER, copy_first_s INTEGER, copy_best_peak_usd REAL, copy_grads INTEGER, copies_checked_ts INTEGER, copies_final INTEGER DEFAULT 0,
-  relaunch_of INTEGER, created_ts INTEGER, buy_ix TEXT, tp_done INTEGER DEFAULT 0, tp_sol REAL);
+  relaunch_of INTEGER, created_ts INTEGER, buy_ix TEXT, tp_done INTEGER DEFAULT 0, tp_sol REAL, image_url TEXT);
 CREATE INDEX IF NOT EXISTS launches_status ON launches(status);
 CREATE INDEX IF NOT EXISTS launches_created ON launches(created_ts);
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT);`);
-for (const c of ["buy_ix TEXT", "tp_done INTEGER DEFAULT 0", "tp_sol REAL"]) try { db.exec(`ALTER TABLE launches ADD COLUMN ${c}`); } catch {}
+for (const c of ["buy_ix TEXT", "tp_done INTEGER DEFAULT 0", "tp_sol REAL", "image_url TEXT"]) try { db.exec(`ALTER TABLE launches ADD COLUMN ${c}`); } catch {}
 const upd = (id, o) => { const ks = Object.keys(o); if (ks.length) db.prepare(`UPDATE launches SET ${ks.map((k) => `${k}=?`).join(", ")} WHERE id=?`).run(...ks.map((k) => (typeof o[k] === "bigint" ? o[k].toString() : o[k])), id); };
 const kvGet = (k) => db.prepare("SELECT v FROM kv WHERE k=?").get(k)?.v ?? null, kvSet = (k, v) => db.prepare("INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)").run(k, String(v));
 let tdb = null; try { tdb = new Database(CFG.TRACKER_DB, { readonly: true, fileMustExist: true }); tdb.pragma("busy_timeout = 2000"); } catch {}
@@ -81,17 +81,30 @@ async function handle(t, recv) {
   db.prepare("UPDATE posts SET kind=?, parent_id=?, parent_user=?, parent_text=?, ctx_ms=? WHERE id=?").run(kind, p?.id || null, p?.user || null, p?.text || null, ctxMs - recv, t.id);
   if (kind === "repost" && CFG.SKIP_RETWEETS) return;
   const ownText = kind === "repost" ? "" : c.tweet.text, subjectText = p ? p.text : "";
-  const [rules, ai] = await Promise.all([ruleName({ ownText, subjectText }), aiName({ user: t.user, kind, ownText, subjectText, subjectUser: p?.user })]);
-  const pick = ai || rules;
+  // 0.1.8 (owner, 31 Oct 01:00 UK: "the picture has to be identical … you must look at the tweet and see the word"): the post's own pictures
+  // (or, for a reply / quote / repost, the original's) are the coin's picture and are shown to the AI, which picks the name from the words AND the pictures.
+  const images = [...(kind === "repost" ? [] : c.tweet.media || []), ...(p?.media || [])].filter((u) => /^https:\/\//.test(u));
+  const [rules, ai] = await Promise.all([ruleName({ ownText, subjectText }), aiName({ user: t.user, kind, ownText, subjectText, subjectUser: p?.user, images })]);
+  // a picture post is never launched on a guessed name: without the AI reading the picture it is recorded only
+  const pick = ai || (images.length ? null : rules);
   const base = { post_id: t.id, user: t.user, kind, t_post_ms: t.createdMs || snowMs(t.id), t_recv_ms: recv, t_named_ms: Date.now(), rule_name: rules?.name || null, rule_ticker: rules?.ticker || null,
     ai_name: ai?.name || null, ai_ticker: ai?.ticker || null, created_ts: now() };
-  if (!pick) return insert({ ...base, mode: CFG.MODE, status: "skipped", reason: "no words to name a coin from" });
+  if (!pick) return insert({ ...base, mode: CFG.MODE, status: "skipped", image_url: images[0] || null, name: rules?.name || null, ticker: rules?.ticker || null, name_by: rules ? "rules (not used)" : null,
+    reason: images.length ? (CFG.AI_KEY ? "the AI could not name it from the post and its picture" : "post has a picture — needs the AI to read it (no ANTHROPIC_API_KEY), not launched on a guessed name") : "no words to name a coin from" });
   // 0.1.7 (owner, 31 Oct 00:52 UK: "we don't want to launch it twice"): the first post of a narrative wins — a name or ticker we already launched
   // (or test-launched) in the last REPEAT_H hours is recorded as skipped. The Relaunch button still relaunches on purpose.
   const rep = db.prepare(`SELECT id, created_ts FROM launches WHERE (lower(name)=lower(?) OR upper(ticker)=upper(?)) AND created_ts>=? AND status IN ('building','sent','open','selling','stuck','sold','graduated','sim_ok','paper') ORDER BY id LIMIT 1`).get(pick.name, pick.ticker, now() - CFG.REPEAT_H * 3600);
   if (rep) return insert({ ...base, mode: CFG.MODE, status: "skipped", name: pick.name, ticker: pick.ticker, name_by: pick.by, reason: `already launched as #${rep.id} at ${new Date(rep.created_ts * 1000).toLocaleTimeString("en-GB", { timeZone: "Europe/London" })} UK (no repeats within ${CFG.REPEAT_H} h)` });
   const same = sameBefore(pick.name, pick.ticker, now());
-  await launch({ ...base, name: pick.name, ticker: pick.ticker, name_by: pick.by, why: pick.why, score: pick.score, same_name_7d: same.n, same_ticker_7d: same.t }, { tweetUrl: `https://x.com/${t.user}/status/${t.id}` });
+  await launch({ ...base, name: pick.name, ticker: pick.ticker, name_by: pick.by, why: pick.why, score: pick.score, same_name_7d: same.n, same_ticker_7d: same.t, image_url: images[0] || null }, { tweetUrl: `https://x.com/${t.user}/status/${t.id}` });
+}
+/** The coin's picture: the post's own first picture, byte for byte; only a post with no picture at all gets the drawn ticker picture. */
+async function pictureFor(L) {
+  if (!L.image_url) return { bytes: coinImage(L.name, L.ticker), type: "image/png", ext: "png", from: "drawn" };
+  const r = await fetch(L.image_url, { signal: AbortSignal.timeout(6000) }); if (!r.ok) throw new Error(`picture download HTTP ${r.status}`);
+  const type = (r.headers.get("content-type") || "image/jpeg").split(";")[0], bytes = Buffer.from(await r.arrayBuffer());
+  if (!/^image\//.test(type) || bytes.length < 500 || bytes.length > 15e6) throw new Error(`picture not usable (${type}, ${bytes.length} bytes)`);
+  return { bytes, type, ext: type.includes("png") ? "png" : type.includes("gif") ? "gif" : type.includes("webp") ? "webp" : "jpg", from: "post" };
 }
 const insert = (o) => { const ks = Object.keys(o); const r = db.prepare(`INSERT INTO launches (${ks.join(",")}) VALUES (${ks.map(() => "?").join(",")})`).run(...ks.map((k) => o[k])); st.launches++; return Number(r.lastInsertRowid); };
 
@@ -107,8 +120,8 @@ async function launch(L, { tweetUrl }) {
   try {
     const description = `${L.name} — narrative from @${L.user}'s post on X: ${tweetUrl} (not affiliated with @${L.user}).`;
     let uri;
-    try { const m = await uploadMeta({ name: L.name, symbol: L.ticker, description, png: coinImage(L.name, L.ticker), tweetUrl }); uri = m.uri; upd(id, { uri, upload_ms: m.ms }); }
-    catch (e) { st.uploadsFailed++; upd(id, { status: mode === "live" ? "failed" : "sim_fail", reason: "metadata upload: " + e.message.slice(0, 160) }); return id; }
+    try { const img = await pictureFor(L); const m = await uploadMeta({ name: L.name, symbol: L.ticker, description, img, tweetUrl }); uri = m.uri; upd(id, { uri, upload_ms: m.ms }); }
+    catch (e) { st.uploadsFailed++; upd(id, { status: mode === "live" ? "failed" : "sim_fail", reason: "picture / metadata upload: " + e.message.slice(0, 160) }); return id; }
     const g = await global(), mintKp = Keypair.generate(), mint = mintKp.publicKey;
     const funded = mode === "live" || (await bal().catch(() => 0)) >= lam(CFG.MIN_BALANCE_SOL);
     const payer = funded ? ME : simPayer() || ME;
@@ -207,7 +220,7 @@ async function requests() {
     if (rq.action === "relaunch" && L.name) {
       const same = sameBefore(L.name, L.ticker, now());
       chain = chain.then(() => launch({ post_id: L.post_id, user: L.user, kind: L.kind, name: L.name, ticker: L.ticker, name_by: L.name_by, why: "relaunch", score: L.score, rule_name: L.rule_name, rule_ticker: L.rule_ticker,
-        ai_name: L.ai_name, ai_ticker: L.ai_ticker, same_name_7d: same.n, same_ticker_7d: same.t, t_post_ms: Date.now(), t_recv_ms: Date.now(), t_named_ms: Date.now(), relaunch_of: L.id, created_ts: now() },
+        ai_name: L.ai_name, ai_ticker: L.ai_ticker, same_name_7d: same.n, same_ticker_7d: same.t, image_url: L.image_url, t_post_ms: Date.now(), t_recv_ms: Date.now(), t_named_ms: Date.now(), relaunch_of: L.id, created_ts: now() },
         { tweetUrl: L.user && L.post_id ? `https://x.com/${L.user}/status/${L.post_id}` : "" })).catch((e) => { st.errors++; st.lastErr = "relaunch: " + e.message; });
     }
   }
@@ -252,7 +265,7 @@ async function selfTest() {
   } catch (e) { out.error = e.message; }
   // 0.1.6: is the TwitterAPI.io key itself valid? one REST lookup (15 credits) — tells "bad key" apart from "no Stream plan" when the websocket says 403
   if (CFG.TWITTER_KEY) try { const r = await fetch(`${CFG.REST}/twitter/tweets?tweet_ids=20`, { headers: { "X-API-Key": CFG.TWITTER_KEY }, signal: AbortSignal.timeout(6000) }); const j = await r.json().catch(() => ({})); out.twitterRest = { http: r.status, ok: r.ok && j.status !== "error", tweets: (j.tweets || []).length, msg: String(j.msg || j.message || "").slice(0, 120) }; } catch (e) { out.twitterRest = { ok: false, err: e.message }; }
-  try { const m = await uploadMeta({ name: "Launcher Test", symbol: "LTEST", description: "test upload — not launched", png: coinImage("Launcher Test", "LTEST"), tweetUrl: "" }); out.upload = { ok: true, ms: m.ms, uri: m.uri }; } catch (e) { out.upload = { ok: false, err: e.message }; }
+  try { const m = await uploadMeta({ name: "Launcher Test", symbol: "LTEST", description: "test upload — not launched", img: { bytes: coinImage("Launcher Test", "LTEST"), type: "image/png", ext: "png" }, tweetUrl: "" }); out.upload = { ok: true, ms: m.ms, uri: m.uri }; } catch (e) { out.upload = { ok: false, err: e.message }; }
   st.selfTest = out; kvSet("selfTest", JSON.stringify(out)); exportNow();
 }
 
