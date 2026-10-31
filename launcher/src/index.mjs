@@ -20,7 +20,7 @@ import { inboxPublic, inboxApply } from "./inbox.mjs";
 import { ensureLut, luts, lutStat, wantedFor } from "./lut.mjs";
 import { initCopies, scheduleCopies, copyTick, copyStatus } from "./copies.mjs";
 import { initPeaks, runPeaks, peakStat } from "./copypeaks.mjs";
-import { initStudy, runStudy, studyStat } from "./study.mjs";
+import { initStudy, runStudy, studyStat, studyAddress, manualStat } from "./study.mjs";
 import { initVol, volPoll, volScore, volStat } from "./volpaper.mjs";
 import { initRF, rfFind, rfCheck, rfStat } from "./runnerfollow.mjs";
 
@@ -250,6 +250,7 @@ async function requests() {
     if (rq.action === "sellall") { const r = db.prepare("UPDATE launches SET status='selling', sell_reason='sell-all button', sell_tries=0 WHERE mode='live' AND status IN ('open','stuck')").run(); kvSet("lastSellAll", `${new Date().toISOString()} ${r.changes} coin(s)`); writeStatus(); setTimeout(() => watch(), 50); continue; }
     // 0.2.1 (owner, 31 Oct 09:58 UK): the Launch-now box — "suggest" names a pasted post (AI reads its text and picture); "manual" launches it
     if (rq.action === "suggest" && rq.reqId) { suggest(rq).then((out) => writeFileSync(`${CFG.REQ_DIR}/resp-${rq.reqId}.out`, JSON.stringify(out))).catch((e) => writeFileSync(`${CFG.REQ_DIR}/resp-${rq.reqId}.out`, JSON.stringify({ ok: false, error: e.message }))); continue; }
+    if (rq.action === "study" && rq.mint) { studyAddress(db, String(rq.mint).trim(), exportNow); continue; } // 0.6.0: study a coin by address
     if (rq.action === "manual" && rq.reqId) { chain = chain.then(() => manualLaunch(rq)).catch((e) => { st.errors++; st.lastErr = "manual: " + e.message; }); continue; }
     if (!Number.isInteger(rq.id)) continue;
     const L = db.prepare("SELECT * FROM launches WHERE id=?").get(rq.id); if (!L) continue;
@@ -339,7 +340,7 @@ async function selfTest() {
 const csv = (rows) => { if (!rows.length) return ""; const cols = Object.keys(rows[0]); const e = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v)); return [cols.join(","), ...rows.map((r) => cols.map((c) => e(r[c])).join(","))].join("\n"); };
 export function status() {
   return { ...st, at: now(), wallet: ME.toBase58(), balanceSol: balance != null ? +sol(balance).toFixed(4) : null, liveToday: liveToday(), cap: CFG.DAILY_CAP || "none", minBalanceSol: CFG.MIN_BALANCE_SOL, tpFraction: CFG.TP_FRACTION, stakeSol: CFG.STAKE_SOL, deadMin: CFG.DEAD_MIN, quietMin: CFG.QUIET_MIN, tpX: CFG.TP_X,
-    lut: lutStat, copies: copyStatus(), peaks: peakStat, study: studyStat, vol: volStat, rf: rfStat, paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
+    lut: lutStat, copies: copyStatus(), peaks: peakStat, study: studyStat, vol: volStat, rf: rfStat, manualStudy: manualStat, paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
     accounts: CFG.ACCOUNTS, twitter: { keySet: !!CFG.TWITTER_KEY, ...twStat }, ai: !!CFG.AI_KEY, aiStat, meta: metaStat, rpc: rpcStats, trackerDb: !!tdb, lastSweep: kvGet("lastSweep"), lastFeeCollect: kvGet("lastFeeCollect"), phantom: PHANTOM };
 }
 let pushing = false, soon = null;
@@ -379,6 +380,9 @@ setInterval(() => requests().catch(() => {}), 1000);
 setInterval(copyJob, 300000);
 setInterval(() => copyTick(db).catch(() => {}), 20000);
 if (!CFG.SMOKE) { setTimeout(() => volPoll(db), 15000); setInterval(() => volPoll(db), 30000); setInterval(() => volScore(db), 300000); setInterval(() => rfFind(db), 30000); setInterval(() => rfCheck(db), 20000); } // 0.4.0 / 0.5.0
+// 0.6.0: addresses listed in launcher/study-now.txt are studied once (newest method), 20 s after start
+if (!CFG.SMOKE) setTimeout(() => { try { const done = new Set(db.prepare("SELECT mint, data FROM study_coins WHERE role='manual' AND err IS NULL").all().filter((r) => { try { return JSON.parse(r.data).v != null; } catch { return false; } }).map((r) => r.mint));
+  for (const m of readFileSync(new URL("../study-now.txt", import.meta.url), "utf8").split(/\s+/).map((x) => x.trim()).filter(Boolean)) if (!done.has(m)) studyAddress(db, m, exportNow); } catch {} }, 20000);
 if (!CFG.SMOKE) { const peaksThenStudy = () => runPeaks(db, exportNow).then(() => runStudy(db, exportNow)); setTimeout(peaksThenStudy, 40000); setInterval(peaksThenStudy, 3600000); } // 0.2.2: copycat market caps, then export + push
 setInterval(() => feesAndSweep(), 3600000); setTimeout(() => feesAndSweep(), 120000);
 function writeStatus() { try { writeFileSync(`${CFG.OUT_DIR}/status.json`, JSON.stringify(status(), null, 1)); } catch {} }

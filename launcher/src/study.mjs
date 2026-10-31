@@ -174,7 +174,7 @@ export function initStudy(db) {
 }
 
 // ---------- one coin ----------
-async function studyCoin(db, c, solUsd) {
+export async function studyCoin(db, c, solUsd) {
   const curve = curveOf(new PublicKey(c.mint)).toBase58();
   let gmgn = null; try { const i = await gget("/v1/token/info", { chain: "sol", address: c.mint }), st = i?.stat || {}, w = i?.wallet_tags_stat || {}, dv = i?.dev || {}, P = (x) => (N(x) == null ? null : +(N(x) * 100).toFixed(1));
     gmgn = { launchpad: i?.launchpad ?? null, platform: i?.launchpad_platform ?? null, status: i?.launchpad_status ?? null, top10: P(st.top_10_holder_rate), bundler: P(st.top_bundler_trader_percentage), insider: P(st.top_rat_trader_percentage), fresh: P(st.fresh_wallet_rate),
@@ -300,4 +300,28 @@ export async function runStudy(db, done) {
     studyStat.lastRun = new Date().toISOString();
   } catch (e) { studyStat.errors++; studyStat.lastErr = e.message.slice(0, 200); }
   finally { studyStat.running = false; studyStat.current = ""; try { done?.(); } catch {} }
+}
+
+// 0.6.0 (owner, 31 Oct 23:33 UK: "Can I just give you a CA of new coins and you can tell me how they pump?"): study any coin by address.
+// Addresses come from launcher/study-now.txt (pushed by the chat) or a website request {action:"study", mint}. Prices first (GMGN), then the chain study.
+import { one as peakOne } from "./copypeaks.mjs";
+export const manualStat = { queued: 0, done: 0, lastErr: "", last: null };
+let mq = Promise.resolve();
+export function studyAddress(db, mint, done) {
+  if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(mint || ""))) return false;
+  manualStat.queued++;
+  mq = mq.then(async () => {
+    try {
+      const info = await gget("/v1/token/info", { chain: "sol", address: mint });
+      let created = N(info?.creation_timestamp ?? info?.open_timestamp); if (created > 1e12) created = Math.floor(created / 1000);
+      if (!created) throw new Error("GMGN gives no creation time for this coin");
+      await peakOne(db, { mint, launch_id: null, post_name: "manual", name: info?.name || "", symbol: info?.symbol || "", created_ts: created, ours: 0 });
+      const row = db.prepare("SELECT * FROM copy_peaks WHERE mint=?").get(mint) || { mint, created_ts: created };
+      let solUsd = null; try { const w = await gget("/v1/token/info", { chain: "sol", address: "So11111111111111111111111111111111111111112" }); solUsd = N(w?.price?.price ?? w?.price); } catch {}
+      await studyCoin(db, { ...row, launch_id: null, role: "manual", post_name: "manual", name: row.name || info?.name, symbol: row.symbol || info?.symbol, post_delay_s: null }, solUsd);
+      manualStat.done++; manualStat.last = mint;
+    } catch (e) { manualStat.lastErr = `${String(mint).slice(0, 6)}: ${e.message}`.slice(0, 200); db.prepare("INSERT OR REPLACE INTO study_coins VALUES (?,?,?,?,?,?)").run(mint, null, "manual", Math.floor(Date.now() / 1000), "{}", e.message.slice(0, 200)); }
+    try { done?.(); } catch {}
+  });
+  return true;
 }
