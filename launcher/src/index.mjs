@@ -17,6 +17,7 @@ import { GLOBAL, TOKEN_2022, decodeGlobal, decodeCurve, freshCurve, quoteBuy, qu
 import { conn, rpcStats, getAccounts, getBalance, buildTx, simulate, sendUntilConfirmed, readFill } from "./rpc.mjs";
 import { ensureKeypair, simPayer } from "./wallet.mjs";
 import { inboxPublic, inboxApply } from "./inbox.mjs";
+import { ensureLut, luts, lutStat, wantedFor } from "./lut.mjs";
 
 const VER = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 const now = () => Math.floor(Date.now() / 1000);
@@ -124,6 +125,7 @@ async function launch(L, { tweetUrl }) {
     try { const img = await pictureFor(L); const m = await uploadMeta({ name: L.name, symbol: L.ticker, description, img, tweetUrl }); uri = m.uri; upd(id, { uri, upload_ms: m.ms }); }
     catch (e) { st.uploadsFailed++; upd(id, { status: mode === "live" ? "failed" : "sim_fail", reason: "picture / metadata upload: " + e.message.slice(0, 160) }); return id; }
     const g = await global(), mintKp = Keypair.generate(), mint = mintKp.publicKey;
+    if (mode === "live" && !luts().length) await ensureLut({ wallet, kvGet, kvSet, wanted: wantedFor(ME, g, TIPS.map((t) => new PublicKey(t))) });
     const funded = mode === "live" || (await bal().catch(() => 0)) >= lam(CFG.MIN_BALANCE_SOL);
     const payer = funded ? ME : simPayer() || ME;
     const curve = freshCurve(g, payer), spend = lam(CFG.STAKE_SOL), q = quoteBuy(curve, g, spend), minTokens = (q.tokens * BigInt(Math.round((1 - CFG.SLIP) * 1e4))) / 10000n;
@@ -134,13 +136,13 @@ async function launch(L, { tweetUrl }) {
       ixs = [...ixBudget(CFG.CU_LIMIT, CFG.CU_PRICE), ixCreateV2({ mint, user: payer, creator: payer, name: L.name, symbol: L.ticker, uri }),
         ...(v === "v3" ? ixBuyV3({ user: payer, mint, g, spend, minTokens }) : ixBuy({ user: payer, mint, curve, g, spend, minTokens }))];
       if (mode === "live") ixs.push(ixTransfer(payer, tipAccount(), lam(CFG.TIP_SOL)));
-      sim = await simulate(await buildTx(payer, ixs)); if (sim.ok) { buyIx = v; kvSet("buyIx", v); break; }
+      sim = await simulate(await buildTx(payer, ixs, null, luts())); if (sim.ok) { buyIx = v; kvSet("buyIx", v); break; }
       errs.push(`${v}: ${sim.err} ${(sim.logs || []).filter((l) => /Error|error|failed|insufficient/i.test(l)).slice(-3).join(" | ")}`);
     }
     upd(id, { buy_ix: sim.ok ? buyIx : null, sim_err: sim.ok ? null : errs.join(" ‖ ").slice(0, 900), sim_units: sim.units });
     if (mode === "shadow") { upd(id, { status: sim.ok ? "sim_ok" : "sim_fail", reason: funded ? null : "simulated with a stand-in payer (launch wallet not funded)" }); sim.ok ? st.shadowOk++ : st.shadowFail++; return id; }
     if (!sim.ok) { upd(id, { status: "failed", reason: "simulation refused it — not sent" }); return id; }
-    const tx = await buildTx(payer, ixs, [wallet, mintKp]); upd(id, { t_sent_ms: Date.now(), status: "sent", sig: Buffer.from(tx.signatures[0]).length ? bs58(tx.signatures[0]) : null });
+    const tx = await buildTx(payer, ixs, [wallet, mintKp], luts()); upd(id, { t_sent_ms: Date.now(), status: "sent", sig: Buffer.from(tx.signatures[0]).length ? bs58(tx.signatures[0]) : null });
     confirmLater(id, tx, mint, q); // the next post doesn't wait for this one to confirm
   } catch (e) { st.errors++; st.lastErr = "launch: " + e.message; upd(id, { status: mode === "live" ? "failed" : "sim_fail", reason: e.message.slice(0, 200) }); }
   return id;
@@ -210,7 +212,7 @@ async function sellOne(L, curve, g, why, frac = 1) {
     if (amount <= 0n) { upd(L.id, { status: "sold", sell_reason: why + " (no tokens left)", sold_ts: now() }); return; }
     const out = quoteSell(curve, g, amount), minSol = (out * BigInt(Math.round((1 - CFG.SELL_SLIP) * 1e4))) / 10000n;
     const sellIxs = L.buy_ix === "v3" ? ixSellV3({ user: ME, mint, g, amount, minSol, close: !part }) : ixSell({ user: ME, mint, curve, g, amount, minSol, close: !part });
-    const tx = await buildTx(ME, [...ixBudget(200000, CFG.CU_PRICE), ...sellIxs, ixTransfer(ME, tipAccount(), lam(CFG.TIP_SOL))], [wallet]);
+    const tx = await buildTx(ME, [...ixBudget(200000, CFG.CU_PRICE), ...sellIxs, ixTransfer(ME, tipAccount(), lam(CFG.TIP_SOL))], [wallet], luts());
     const tries = (L.sell_tries || 0) + 1; if (!part) upd(L.id, { status: "selling", sell_reason: why, sell_tries: tries });
     const sim = await simulate(tx); // a sale the chain would refuse is not sent (a failed transaction still costs its fee)
     const r = sim.ok ? await sendUntilConfirmed(tx, 20000) : { status: "refused", err: sim.err };
@@ -277,7 +279,8 @@ async function selfTest() {
     for (const v of ["classic", "v3"]) {
       const ixs = [...ixBudget(CFG.CU_LIMIT, CFG.CU_PRICE), ixCreateV2({ mint, user: payer, creator: payer, name: "Launcher Test", symbol: "LTEST", uri: "https://ipfs.io/ipfs/QmTest" }),
         ...(v === "v3" ? ixBuyV3({ user: payer, mint, g, spend, minTokens: (q.tokens * 95n) / 100n }) : ixBuy({ user: payer, mint, curve, g, spend, minTokens: (q.tokens * 95n) / 100n }))];
-      const sim = await simulate(await buildTx(payer, ixs), [ata(payer, mint, TOKEN_2022), payer]);
+      const sim = await simulate(await buildTx(payer, ixs, null, luts()), [ata(payer, mint, TOKEN_2022), payer]);
+      out[v + "Bytes"] = (await buildTx(payer, [...ixs, ixTransfer(payer, tipAccount(), lam(CFG.TIP_SOL))], [Keypair.generate(), Keypair.generate()].slice(0, 0), luts())).serialize().length; // the size of a real launch with tip, signatures included (cap 1,232)
       const got = sim.post?.[0]?.length >= 72 ? sim.post[0].readBigUInt64LE(64) : null;
       out[v] = { ok: sim.ok, err: sim.err, units: sim.units, ms: sim.ms, simTokens: got != null ? Number(got) / 1e6 : null, logs: sim.ok ? sim.logs.filter((l) => /Instruction:/.test(l)).slice(0, 12) : sim.logs.slice(-14) };
       if (sim.ok && !kvGet("buyIx")) kvSet("buyIx", v);
@@ -295,7 +298,7 @@ async function selfTest() {
 const csv = (rows) => { if (!rows.length) return ""; const cols = Object.keys(rows[0]); const e = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v)); return [cols.join(","), ...rows.map((r) => cols.map((c) => e(r[c])).join(","))].join("\n"); };
 export function status() {
   return { ...st, at: now(), wallet: ME.toBase58(), balanceSol: balance != null ? +sol(balance).toFixed(4) : null, liveToday: liveToday(), cap: CFG.DAILY_CAP || "none", minBalanceSol: CFG.MIN_BALANCE_SOL, tpFraction: CFG.TP_FRACTION, stakeSol: CFG.STAKE_SOL, deadMin: CFG.DEAD_MIN, quietMin: CFG.QUIET_MIN, tpX: CFG.TP_X,
-    paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
+    lut: lutStat, paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
     accounts: CFG.ACCOUNTS, twitter: { keySet: !!CFG.TWITTER_KEY, ...twStat }, ai: !!CFG.AI_KEY, aiStat, meta: metaStat, rpc: rpcStats, trackerDb: !!tdb, lastSweep: kvGet("lastSweep"), lastFeeCollect: kvGet("lastFeeCollect"), phantom: PHANTOM };
 }
 let pushing = false, soon = null;
@@ -324,7 +327,8 @@ if (CFG.SMOKE) {
 try { st.inboxPublicKey = inboxPublic(); const got = inboxApply(); if (got.length) { console.log(`[launcher] keys received: ${got.join(", ")} — restarting to load them`); setTimeout(() => process.exit(0), 500); } } catch (e) { st.lastErr = "inbox: " + e.message; }
 console.log(`[launcher] ${VER} up — mode ${CFG.MODE}, wallet ${ME.toBase58()}, stake ${CFG.STAKE_SOL} SOL, cap ${CFG.DAILY_CAP}/day, X stream ${CFG.TWITTER_KEY ? "on" : "OFF (no TWITTERAPI_KEY)"}, AI ${CFG.AI_KEY ? "on" : "off"}`);
 startStream(onPost);
-setTimeout(selfTest, 5000); setInterval(() => { const t = st.selfTest; if (!t || t.error || !t.upload?.ok || !(t.classic?.ok || t.v3?.ok)) selfTest(); }, 1800000); // re-test every 30 min until it passes
+// 0.1.15: the lookup table is made (or completed) before the self-test, so the test measures the real launch size
+setTimeout(async () => { if (CFG.MODE === "live") { try { const g = await global(); await ensureLut({ wallet, kvGet, kvSet, wanted: wantedFor(ME, g, TIPS.map((t) => new PublicKey(t))) }); } catch (e) { lutStat.lastErr = e.message; } } selfTest(); }, 3000); setInterval(() => { const t = st.selfTest; if (!t || t.error || !t.upload?.ok || !(t.classic?.ok || t.v3?.ok)) selfTest(); }, 1800000); // re-test every 30 min until it passes
 setInterval(() => watch(), 15000);
 setInterval(() => requests().catch(() => {}), 2000);
 setInterval(copyJob, 300000);

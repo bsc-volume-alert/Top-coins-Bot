@@ -19,9 +19,9 @@ export async function getAccounts(pubkeys, commitment = "processed") {
 export function onAccount(pubkey, cb) { rpcStats.subs = (rpcStats.subs || 0) + 1; return conn.onAccountChange(pubkey instanceof PublicKey ? pubkey : new PublicKey(pubkey), (info, ctx) => { try { cb(info.data, ctx?.slot); } catch (e) { rpcStats.lastErr = "sub: " + e.message; } }, "processed"); }
 export async function offAccount(id) { try { await conn.removeAccountChangeListener(id); rpcStats.subs = Math.max(0, (rpcStats.subs || 1) - 1); } catch {} }
 export async function getBalance(pubkey) { rpcStats.calls++; return conn.getBalance(pubkey, "confirmed"); }
-export async function buildTx(payer, ixs, signer = null) {
+export async function buildTx(payer, ixs, signer = null, tables = []) {
   const { blockhash: b, lastValidBlockHeight } = await blockhash();
-  const msg = new TransactionMessage({ payerKey: payer, recentBlockhash: b, instructions: ixs }).compileToV0Message();
+  const msg = new TransactionMessage({ payerKey: payer, recentBlockhash: b, instructions: ixs }).compileToV0Message(tables); // launcher 0.1.15: lookup tables shrink the launch transaction
   const tx = new VersionedTransaction(msg); tx.lastValidBlockHeight = lastValidBlockHeight; if (signer) tx.sign(Array.isArray(signer) ? signer : [signer]); return tx;
 }
 /** Simulate (no signature needed). Returns { ok, err, logs, units, ms }. */
