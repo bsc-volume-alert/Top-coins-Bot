@@ -87,7 +87,8 @@ export async function rfCheck(db) {
             .run(rule.k, w.mint, w.name, w.symbol, t, px, px * supply, null, w.created_ts, +(age / 60).toFixed(1), N(info?.holder_count), m.venue, info?.launchpad ?? null, curve, JSON.stringify({ launch_id: w.launch_id, ...m }));
           entered.add(rule.k); rfStat.entries++;
         }
-        db.prepare("UPDATE rf_watch SET checks=?, entered=? WHERE mint=?").run(JSON.stringify(checks), [...entered].join(","), w.mint);
+        const dead = at >= 180 && m.buyers < 50 && m.net < 10; // 0.5.1: a copy with < 50 buyers and < 10 SOL net at 3 min is not followed further (saves Helius credits)
+        db.prepare("UPDATE rf_watch SET checks=?, entered=?, done=? WHERE mint=?").run(JSON.stringify(checks), [...entered].join(","), dead || entered.size === RULES.length ? 1 : 0, w.mint);
       } catch (e) { rfStat.errors++; rfStat.lastErr = `${w.mint.slice(0, 6)}: ${e.message}`.slice(0, 160); checks.push({ at, err: e.message.slice(0, 80) }); db.prepare("UPDATE rf_watch SET checks=? WHERE mint=?").run(JSON.stringify(checks), w.mint); }
     }
   } finally { checking = false; }

@@ -16,7 +16,7 @@ import { curveOf, PUMP } from "./pump.mjs";
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
 const MIN_PEAK = n("LAUNCH_STUDY_MIN_PEAK", 30000), WINDOW = n("LAUNCH_STUDY_WINDOW_MIN", 40) * 60, BUYERS = n("LAUNCH_STUDY_BUYERS", 100);
 const PER_RUN = n("LAUNCH_STUDY_PER_RUN", 12), DAY_CREDITS = n("LAUNCH_STUDY_DAY_CREDITS", 250000), MAX_TX = n("LAUNCH_STUDY_MAX_TX", 15000);
-const STUDY_V = 3; // bump to redo every coin with a newer method
+const STUDY_V = 4; // bump to redo every coin with a newer method
 export const studyStat = { runs: 0, studied: 0, errors: 0, lastErr: "", lastRun: null, running: false, credits: 0, creditsDay: "", creditsToday: 0, calls: 0, gtfa: null, probe: null, current: "" };
 
 const disc = (s) => createHash("sha256").update(s).digest().subarray(0, 8);
@@ -129,11 +129,19 @@ export async function earlyTrades(mint, tEnd) {
   for (const t of txs) {
     if (t.meta?.err) continue; if (t0 == null) t0 = t.blockTime;
     const ev = events(t); if (ev.some((e) => e.k === "complete")) complete = true;
-    let tr = ev.filter((e) => e.k === "trade" && e.mint === mint).map((e) => ({ ...e, mc: (e.vSol / e.vTok) * 1e6 }));
+    let tr = fillZero(t, mint, ev.filter((e) => e.k === "trade" && e.mint === mint).map((e) => ({ ...e, mc: (e.vSol / e.vTok) * 1e6 })));
     if (!tr.length) tr = balTrades(t, mint);
     tr.forEach((e) => trades.push({ t: t.blockTime, user: e.user, isBuy: e.isBuy, sol: e.sol, mc: e.mc }));
   }
   return { t0, trades, txs: txs.length, pumpCurve, complete };
+}
+
+/** 0.5.1: some pump.fun coins (serial launchers; curve quoted in another token) report sol_amount = 0 and empty SOL reserves in their TradeEvent.
+ *  For those trades the SOL the trader actually paid or received is taken from the transaction's balance changes (same wallet); flagged q0. */
+function fillZero(t, mint, tr) {
+  if (!tr.some((e) => !e.sol)) return tr;
+  const bt = balTrades(t, mint);
+  return tr.map((e) => { if (e.sol) return e; const b = bt.find((x) => x.user === e.user && x.isBuy === e.isBuy); return b ? { ...e, sol: b.sol, mc: b.mc, q0: 1 } : { ...e, q0: 1 }; });
 }
 
 // ---------- wallets ----------
@@ -185,7 +193,7 @@ async function studyCoin(db, c, solUsd) {
     const ev = events(t), keys = keysOf(t), sig = sigOf(t), jito = keys.some((k) => JITO.has(k));
     const cr = ev.find((e) => e.k === "create" && e.mint === c.mint); if (cr && !created) { created = cr; t0 = t.blockTime; slot0 = t.slot; }
     if (ev.some((e) => e.k === "complete") && !complete) complete = t.blockTime;
-    let tr = ev.filter((e) => e.k === "trade" && e.mint === c.mint).map((e) => ({ ...e, mc: (e.vSol / e.vTok) * 1e6 })); // pump.fun: market cap in SOL from the curve
+    let tr = fillZero(t, c.mint, ev.filter((e) => e.k === "trade" && e.mint === c.mint).map((e) => ({ ...e, mc: (e.vSol / e.vTok) * 1e6 }))); // pump.fun: market cap in SOL from the curve
     if (!tr.length) { tr = balTrades(t, c.mint); if (tr.length) generic++; }
     if (t0 == null && !created) { t0 = t.blockTime; slot0 = t.slot; creatorGuess = keys[0]; }
     tr.forEach((e) => trades.push({ ...e, t: t.blockTime, slot: t.slot, idx: t.transactionIndex, sig, payer: keys[0], jito, inTx: tr.length }));
