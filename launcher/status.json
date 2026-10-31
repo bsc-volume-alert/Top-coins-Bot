@@ -1,0 +1,219 @@
+{
+ "ver": "0.5.1",
+ "mode": "paper",
+ "started": "2026-10-31T19:37:10.506Z",
+ "posts": 0,
+ "ignored": 0,
+ "launches": 0,
+ "live": 0,
+ "shadowOk": 0,
+ "shadowFail": 0,
+ "uploadsFailed": 0,
+ "sells": 0,
+ "errors": 0,
+ "lastErr": "",
+ "selfTest": {
+  "at": "2026-10-31T19:37:13.667Z",
+  "global": {
+   "feeBps": 95,
+   "creatorFeeBps": 5,
+   "initVSol": 30,
+   "initVTok": 1073000000
+  },
+  "payer": "launch wallet",
+  "quotedTokens": 3529605.192446,
+  "pctSupply": 0.353,
+  "classicBytes": 1253,
+  "classic": {
+   "ok": true,
+   "err": null,
+   "units": 192636,
+   "ms": 69,
+   "simTokens": 3520918.711316,
+   "logs": [
+    "Program log: Instruction: CreateV2",
+    "Program log: MetadataPointerInstruction::Initialize",
+    "Program log: Instruction: InitializeMint2",
+    "Program log: Instruction: GetAccountDataSize",
+    "Program log: Instruction: InitializeImmutableOwner",
+    "Program log: Instruction: InitializeAccount3",
+    "Program log: TokenMetadataInstruction: Initialize",
+    "Program log: TokenMetadataInstruction: UpdateAuthority",
+    "Program log: Instruction: MintTo",
+    "Program log: Instruction: SetAuthority",
+    "Program log: Instruction: GetAccountDataSize",
+    "Program log: Instruction: InitializeImmutableOwner"
+   ]
+  },
+  "v3Bytes": 1258,
+  "v3": {
+   "ok": true,
+   "err": null,
+   "units": 187934,
+   "ms": 38,
+   "simTokens": 3520918.711316,
+   "logs": [
+    "Program log: Instruction: CreateV2",
+    "Program log: MetadataPointerInstruction::Initialize",
+    "Program log: Instruction: InitializeMint2",
+    "Program log: Instruction: GetAccountDataSize",
+    "Program log: Instruction: InitializeImmutableOwner",
+    "Program log: Instruction: InitializeAccount3",
+    "Program log: TokenMetadataInstruction: Initialize",
+    "Program log: TokenMetadataInstruction: UpdateAuthority",
+    "Program log: Instruction: MintTo",
+    "Program log: Instruction: SetAuthority",
+    "Program log: Instruction: GetAccountDataSize",
+    "Program log: Instruction: InitializeImmutableOwner"
+   ]
+  },
+  "ai": {
+   "name": "Goosebumps",
+   "ticker": "GOOSEBUMPS",
+   "why": "Iconic Goosebumps branding on both covers; recognizable, but political framing limits pile-in",
+   "score": 5,
+   "by": "ai",
+   "ms": 2043
+  },
+  "twitterRest": {
+   "http": 200,
+   "ok": true,
+   "tweets": 1,
+   "msg": "success"
+  },
+  "upload": {
+   "ok": true,
+   "ms": 814,
+   "uri": "https://ipfs.io/ipfs/bafkreic7pdfcfcelv3p4kvlrkgxat3qmarvql7adozdf4mw6nawok4dgw4"
+  }
+ },
+ "exports": 5,
+ "lastPush": "ok 2026-10-31T19:44:58.893Z",
+ "inboxPublicKey": "MCowBQYDK2VuAyEAITMoqjDL063IDsN1URqLLED0kKKyIHnNO0XpumYL8xY=",
+ "at": 1793475918,
+ "wallet": "AGEniepzBFf2Jesgv7XzqibjndgTRRTE9QDdSojrpYMj",
+ "balanceSol": 0.5145,
+ "liveToday": 49,
+ "cap": "none",
+ "minBalanceSol": 0.15,
+ "tpFraction": 0.5,
+ "stakeSol": 0.1,
+ "deadMin": 10,
+ "quietMin": 30,
+ "tpX": 3,
+ "lut": {
+  "address": null,
+  "addresses": 0,
+  "created": null,
+  "extended": 0,
+  "lastErr": ""
+ },
+ "copies": {
+  "scans": 10,
+  "found": 47,
+  "picks": 0,
+  "scored": 2,
+  "errors": 0,
+  "lastErr": "",
+  "lastRaw": "{\"coins\":[{\"chain\":\"sol\",\"address\":\"udPEzBjbGMzYZbuLtByqLYhc4TEs6EebG8R7fwdpump\",\"name\":\"TEXTIT\",\"symbol\":\"TEXTIT\",\"trans_name\":\"\",\"trans_symbol\":\"\",\"trans_name_zhcn\":\"文本\",\"trans_symbol_zhcn\":\"文本\",\"remark_name\":\"\",\"logo\":\"https://gmgn.ai/external-res/b9babc05bb96a6de4c362d68c21758d3_v2.webp\",\"created_at\":1787238437,\"price\":\"0.0000035510999\",\"price_24h\":\"\",\"volume_1h\":2,\"volume_24h\":0,\"mcp\":\"3515.898911918749745887\",\"liquidity\":\"3532.848403\",\"follow_state\":false,\"quote_address\":\"So11111111111111111111111111111111111111112\",\"launch_quote_address\":\"So11111111111111111111111111111111111111112\",\"standard\":\"2022\",\"hot_level\":0,\"swaps_5m\":0,\"swaps_1h\":6,\"swaps_6h\":0,\"swaps_24h\":0,\"is_show_alert\":true,\"is_honeypot\":false,\"renounced_freeze_account\":true,\"buy_tax\":\"0\",\"sell_tax\":\"0\",\"total_buy_tax\":0.0125,\"total_sell_tax\":0.0125,\"token_link\":{\"address\":\"udPEzBjbGMzYZbuLtByqLYhc4TEs6EebG8R7fwdpump\",\"gmgn\":\"https://gmgn.ai/sol/token/udPEzBjbGMzYZbuLtByqLYhc4TEs6EebG8R7fwdpump\",\"geckoterminal\":\"https://www.geckoterminal.com/solana/tokens/udPEzBjbGMzYZbuLtByqLYhc4TEs6EebG8R7fwdpump\",\"twitter_username\":\"https://x.com/LazyTextIt\",\"website\":\"https://textit.lol/\",\"telegram\":\"\",\"bitbucket\":\"\",\"discord\":\"\",\"description\":\"\",\"facebook\":\"\",\"github\":\"\",\"instagram\":\"\",\"linkedin\":\"\",\"medium\":\"\",\"reddit\":\"\",\"tiktok\":\"\",\"youtube\":\"\",\"verify_status\":0,\"fracaster\":null},\"dexscr_ad\":0,\"dexscr_update_link\":1,\"dexscr_boost_fee\":399,\"dexscr_trending_bar_ts\":0,\"cto_flag\":1,\"launchpad\":\"pump\",\"launchpad_platfor",
+  "gmgn": {
+   "calls": 836,
+   "errors": 0,
+   "limited": 0,
+   "lastErr": ""
+  }
+ },
+ "peaks": {
+  "runs": 1,
+  "coins": 290,
+  "ok": 290,
+  "errors": 0,
+  "lastErr": "",
+  "lastRun": "2026-10-31T19:44:49.653Z",
+  "running": false,
+  "infoKeys": "address,symbol,name,decimals,logo,banner,biggest_pool_address,open_timestamp,migrated_timestamp,holder_count,circulating_supply,total_supply,max_supply,liquidity,creation_timestamp,standard,trade_fee,total_fee,og,image_dup_count,visiting_count,launchpad,launchpad_status,launchpad_progress,launchpad_platform,migrated_pool,migration_market_cap,migration_market_cap_quote,ath_price,locked_ratio,price,pool,dev,link,stat,wallet_tags_stat,fee_distribution"
+ },
+ "study": {
+  "runs": 1,
+  "studied": 12,
+  "errors": 0,
+  "lastErr": "",
+  "lastRun": "2026-10-31T19:45:18.178Z",
+  "running": false,
+  "credits": 7592,
+  "creditsDay": "2026-10-31",
+  "creditsToday": 7592,
+  "calls": 1076,
+  "gtfa": true,
+  "probe": "{\"keys\":[\"transaction\",\"meta\",\"version\",\"slot\",\"transactionIndex\",\"blockTime\"],\"ix\":359,\"ev\":[\"create+trade\",\"trade+trade+trade\",\"trade+trade+trade\",\"trade+trade+trade\",\"trade+trade+trade\"],\"inner\":3,\"logs\":111}",
+  "current": "",
+  "probeDone": true
+ },
+ "vol": {
+  "polls": 17,
+  "rows": 100,
+  "entries": 0,
+  "scored": 0,
+  "errors": 0,
+  "lastErr": "",
+  "lastPoll": "2026-10-31T19:45:11.230Z",
+  "maxVolSeen": 282644
+ },
+ "rf": {
+  "searches": 64,
+  "found": 0,
+  "checks": 10,
+  "entries": 0,
+  "errors": 0,
+  "lastErr": "",
+  "credits": 4300,
+  "creditsDay": "2026-10-31",
+  "lastCheck": "2026-10-31T19:43:53.958Z"
+ },
+ "paused": false,
+ "pausedAt": null,
+ "lastSellAll": null,
+ "openCoins": 0,
+ "accounts": [],
+ "twitter": {
+  "keySet": true,
+  "connected": true,
+  "since": "2026-10-31T19:38:40.901Z",
+  "events": 20,
+  "pings": 19,
+  "tweets": 0,
+  "reconnects": 1,
+  "lastClose": "1006  at 2026-10-31T19:37:10.833Z",
+  "lastErr": "ws: Unexpected server response: 403",
+  "lookups": 0,
+  "lookupErr": 0,
+  "lastLookupErr": "",
+  "lastEventAt": "2026-10-31T19:45:10.583Z"
+ },
+ "ai": true,
+ "aiStat": {
+  "calls": 1,
+  "ok": 1,
+  "errors": 0,
+  "lastErr": "",
+  "lastMs": 2042
+ },
+ "meta": {
+  "uploads": 1,
+  "errors": 0,
+  "lastErr": "",
+  "lastMs": 814,
+  "via": "pinata"
+ },
+ "rpc": {
+  "calls": 5,
+  "errors": 0,
+  "sends": 0,
+  "senderErrors": 0,
+  "lastErr": ""
+ },
+ "trackerDb": true,
+ "lastSweep": null,
+ "lastFeeCollect": "2026-10-31T18:10:29.885Z confirmed 0.0360 SOL",
+ "phantom": "ARNZSdpFx5PAZBNWK7UJ1pR8P9cK7jNmgX9YwY3rAZXz"
+}

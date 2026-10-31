@@ -1,0 +1,42 @@
+[
+ {
+  "name": "pm2-logrotate",
+  "status": "online",
+  "restarts": 0
+ },
+ {
+  "name": "tracker",
+  "status": "stopped",
+  "restarts": 813
+ },
+ {
+  "name": "deployer",
+  "status": "online",
+  "restarts": 0
+ },
+ {
+  "name": "executor",
+  "status": "stopped",
+  "restarts": 55
+ },
+ {
+  "name": "fomo",
+  "status": "stopped",
+  "restarts": 46
+ },
+ {
+  "name": "scope",
+  "status": "online",
+  "restarts": 74
+ },
+ {
+  "name": "radar",
+  "status": "stopped",
+  "restarts": 3486
+ },
+ {
+  "name": "launcher",
+  "status": "online",
+  "restarts": 40
+ }
+]
