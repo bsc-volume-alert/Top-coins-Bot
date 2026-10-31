@@ -19,6 +19,7 @@ export function initVol(db) {
     created_ts INTEGER, age_min REAL, holders INTEGER, exchange TEXT, launchpad TEXT, curve INTEGER, row TEXT, done INTEGER DEFAULT 0, err TEXT,
     x5 REAL, x15 REAL, x30 REAL, x60 REAL, x120 REAL, peak120 REAL, peak_min REAL, low_before_peak REAL, x_tp2sl50 REAL, x_tp15sl30 REAL, x_trail40 REAL,
     r_tp2sl50 REAL, r_tp15sl30 REAL, r_trail40 REAL, r_hold60 REAL, r_hold120 REAL, UNIQUE (strat, mint))`);
+  try { db.exec("ALTER TABLE vol_paper ADD COLUMN x_half2 REAL"); } catch {} try { db.exec("ALTER TABLE vol_paper ADD COLUMN r_half2 REAL"); } catch {} // 0.5.0
 }
 
 export async function volPoll(db) {
@@ -59,9 +60,12 @@ export async function volScore(db) {
         const lowBefore = Math.min(...after.filter((c) => c.t <= peakT).map((c) => X(c.l)));
         const tpsl = (tp, sl) => { for (const c of after.slice(1)) { if (X(c.l) <= sl) return sl; if (X(c.h) >= tp) return tp; } return X(after[after.length - 1].c); }; // the stop is checked first in a candle: the worse case
         let hi = 1, trail = null; for (const c of after.slice(1)) { if (X(c.l) <= hi * 0.6) { trail = hi * 0.6; break; } hi = Math.max(hi, X(c.h)); } if (trail == null) trail = X(after[after.length - 1].c);
+        // 0.5.0: half at 2x, the rest on a 40% trail from the peak; −30% stop before 2x
+        let half = null; { let hit = false, hi2 = 2; for (const c of after.slice(1)) { if (!hit) { if (X(c.l) <= 0.7) { half = 0.7; break; } if (X(c.h) >= 2) { hit = true; hi2 = Math.max(2, X(c.h)); } } else { if (X(c.l) <= hi2 * 0.6) { half = 1 + 0.5 * hi2 * 0.6; break; } hi2 = Math.max(hi2, X(c.h)); } }
+          if (half == null) half = hit ? 1 + 0.5 * X(after[after.length - 1].c) : X(after[after.length - 1].c); }
         const cv = p.curve === 1, t2 = tpsl(2, 0.5), t15 = tpsl(1.5, 0.7), h60 = at(60), h120 = at(120);
-        db.prepare(`UPDATE vol_paper SET done=1, x5=?, x15=?, x30=?, x60=?, x120=?, peak120=?, peak_min=?, low_before_peak=?, x_tp2sl50=?, x_tp15sl30=?, x_trail40=?, r_tp2sl50=?, r_tp15sl30=?, r_trail40=?, r_hold60=?, r_hold120=? WHERE id=?`)
-          .run(at(5), at(15), at(30), h60, h120, +peak.toFixed(4), +((peakT - e) / 60).toFixed(1), +lowBefore.toFixed(4), t2, t15, +trail.toFixed(4), realX(t2, cv), realX(t15, cv), realX(trail, cv), realX(h60, cv), realX(h120, cv), p.id);
+        db.prepare(`UPDATE vol_paper SET done=1, x5=?, x15=?, x30=?, x60=?, x120=?, peak120=?, peak_min=?, low_before_peak=?, x_tp2sl50=?, x_tp15sl30=?, x_trail40=?, r_tp2sl50=?, r_tp15sl30=?, r_trail40=?, r_hold60=?, r_hold120=?, x_half2=?, r_half2=? WHERE id=?`)
+          .run(at(5), at(15), at(30), h60, h120, +peak.toFixed(4), +((peakT - e) / 60).toFixed(1), +lowBefore.toFixed(4), t2, t15, +trail.toFixed(4), realX(t2, cv), realX(t15, cv), realX(trail, cv), realX(h60, cv), realX(h120, cv), +half.toFixed(4), realX(half, cv), p.id);
         volStat.scored++;
       } catch (er) { if (/rate limited/i.test(er.message)) throw er; db.prepare("UPDATE vol_paper SET done=1, err=? WHERE id=?").run(er.message.slice(0, 120), p.id); }
     }

@@ -120,6 +120,22 @@ function balTrades(t, mint) {
   return out;
 }
 
+/** 0.5.0: a coin's trades from its first transaction up to tEnd (any launchpad), cheap form for the runner-follow test. */
+export async function earlyTrades(mint, tEnd) {
+  let txs = await history(curveOf(new PublicKey(mint)).toBase58(), tEnd), pumpCurve = txs.length > 0;
+  if (!txs.length) txs = await history(mint, tEnd);
+  txs.sort((a, b) => a.slot - b.slot || (a.transactionIndex ?? 0) - (b.transactionIndex ?? 0));
+  const trades = []; let t0 = null, complete = false;
+  for (const t of txs) {
+    if (t.meta?.err) continue; if (t0 == null) t0 = t.blockTime;
+    const ev = events(t); if (ev.some((e) => e.k === "complete")) complete = true;
+    let tr = ev.filter((e) => e.k === "trade" && e.mint === mint).map((e) => ({ ...e, mc: (e.vSol / e.vTok) * 1e6 }));
+    if (!tr.length) tr = balTrades(t, mint);
+    tr.forEach((e) => trades.push({ t: t.blockTime, user: e.user, isBuy: e.isBuy, sol: e.sol, mc: e.mc }));
+  }
+  return { t0, trades, txs: txs.length, pumpCurve, complete };
+}
+
 // ---------- wallets ----------
 const walletCache = new Map();
 async function walletProfile(db, w) {
