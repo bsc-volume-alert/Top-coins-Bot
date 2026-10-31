@@ -10,7 +10,7 @@ import Database from "better-sqlite3";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import { CFG, PHANTOM, HOME, lam, sol } from "./config.mjs";
 import { startStream, context, twStat, snowMs } from "./stream.mjs";
-import { ruleName, aiName } from "./namer.mjs";
+import { ruleName, aiName, aiStat } from "./namer.mjs";
 import { coinImage } from "./image.mjs";
 import { uploadMeta, metaStat } from "./meta.mjs";
 import { GLOBAL, TOKEN_2022, decodeGlobal, decodeCurve, freshCurve, quoteBuy, quoteSell, priceOf, curveOf, ata, creatorVaultOf, ixCreateV2, ixBuy, ixSell, ixBuyV3, ixSellV3, ixCollectCreatorFee, ixBudget, ixTransfer } from "./pump.mjs";
@@ -263,6 +263,8 @@ async function selfTest() {
       if (sim.ok && !kvGet("buyIx")) kvSet("buyIx", v);
     }
   } catch (e) { out.error = e.message; }
+  // 0.1.9: the AI naming check on the owner's own example (31 Oct 00:51 UK): WhiteHouse "Dems in charge? Nothing scarier. 🎃" with its Goosebumps-style pictures
+  if (CFG.AI_KEY) { const t0 = Date.now(); const r = await aiName({ user: "WhiteHouse", kind: "post", ownText: "Dems in charge? Nothing scarier. 🎃", subjectText: "", images: ["https://pbs.twimg.com/media/HV6yhmrWQAASiYk.jpg", "https://pbs.twimg.com/media/HV6yjnzW4AANlvW.jpg"] }); out.ai = r ? { ...r, ms: Date.now() - t0 } : { ok: false, ms: Date.now() - t0, err: aiStat.lastErr }; }
   // 0.1.6: is the TwitterAPI.io key itself valid? one REST lookup (15 credits) — tells "bad key" apart from "no Stream plan" when the websocket says 403
   if (CFG.TWITTER_KEY) try { const r = await fetch(`${CFG.REST}/twitter/tweets?tweet_ids=20`, { headers: { "X-API-Key": CFG.TWITTER_KEY }, signal: AbortSignal.timeout(6000) }); const j = await r.json().catch(() => ({})); out.twitterRest = { http: r.status, ok: r.ok && j.status !== "error", tweets: (j.tweets || []).length, msg: String(j.msg || j.message || "").slice(0, 120) }; } catch (e) { out.twitterRest = { ok: false, err: e.message }; }
   try { const m = await uploadMeta({ name: "Launcher Test", symbol: "LTEST", description: "test upload — not launched", img: { bytes: coinImage("Launcher Test", "LTEST"), type: "image/png", ext: "png" }, tweetUrl: "" }); out.upload = { ok: true, ms: m.ms, uri: m.uri }; } catch (e) { out.upload = { ok: false, err: e.message }; }
@@ -273,7 +275,7 @@ async function selfTest() {
 const csv = (rows) => { if (!rows.length) return ""; const cols = Object.keys(rows[0]); const e = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v)); return [cols.join(","), ...rows.map((r) => cols.map((c) => e(r[c])).join(","))].join("\n"); };
 export function status() {
   return { ...st, at: now(), wallet: ME.toBase58(), balanceSol: balance != null ? +sol(balance).toFixed(4) : null, liveToday: liveToday(), cap: CFG.DAILY_CAP || "none", minBalanceSol: CFG.MIN_BALANCE_SOL, tpFraction: CFG.TP_FRACTION, stakeSol: CFG.STAKE_SOL, deadMin: CFG.DEAD_MIN, quietMin: CFG.QUIET_MIN, tpX: CFG.TP_X,
-    accounts: CFG.ACCOUNTS, twitter: { keySet: !!CFG.TWITTER_KEY, ...twStat }, ai: !!CFG.AI_KEY, meta: metaStat, rpc: rpcStats, trackerDb: !!tdb, lastSweep: kvGet("lastSweep"), lastFeeCollect: kvGet("lastFeeCollect"), phantom: PHANTOM };
+    accounts: CFG.ACCOUNTS, twitter: { keySet: !!CFG.TWITTER_KEY, ...twStat }, ai: !!CFG.AI_KEY, aiStat, meta: metaStat, rpc: rpcStats, trackerDb: !!tdb, lastSweep: kvGet("lastSweep"), lastFeeCollect: kvGet("lastFeeCollect"), phantom: PHANTOM };
 }
 let pushing = false, soon = null;
 function exportNow() {
