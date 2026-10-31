@@ -86,6 +86,10 @@ async function handle(t, recv) {
   const base = { post_id: t.id, user: t.user, kind, t_post_ms: t.createdMs || snowMs(t.id), t_recv_ms: recv, t_named_ms: Date.now(), rule_name: rules?.name || null, rule_ticker: rules?.ticker || null,
     ai_name: ai?.name || null, ai_ticker: ai?.ticker || null, created_ts: now() };
   if (!pick) return insert({ ...base, mode: CFG.MODE, status: "skipped", reason: "no words to name a coin from" });
+  // 0.1.7 (owner, 31 Oct 00:52 UK: "we don't want to launch it twice"): the first post of a narrative wins — a name or ticker we already launched
+  // (or test-launched) in the last REPEAT_H hours is recorded as skipped. The Relaunch button still relaunches on purpose.
+  const rep = db.prepare(`SELECT id, created_ts FROM launches WHERE (lower(name)=lower(?) OR upper(ticker)=upper(?)) AND created_ts>=? AND status IN ('building','sent','open','selling','stuck','sold','graduated','sim_ok','paper') ORDER BY id LIMIT 1`).get(pick.name, pick.ticker, now() - CFG.REPEAT_H * 3600);
+  if (rep) return insert({ ...base, mode: CFG.MODE, status: "skipped", name: pick.name, ticker: pick.ticker, name_by: pick.by, reason: `already launched as #${rep.id} at ${new Date(rep.created_ts * 1000).toLocaleTimeString("en-GB", { timeZone: "Europe/London" })} UK (no repeats within ${CFG.REPEAT_H} h)` });
   const same = sameBefore(pick.name, pick.ticker, now());
   await launch({ ...base, name: pick.name, ticker: pick.ticker, name_by: pick.by, why: pick.why, score: pick.score, same_name_7d: same.n, same_ticker_7d: same.t }, { tweetUrl: `https://x.com/${t.user}/status/${t.id}` });
 }

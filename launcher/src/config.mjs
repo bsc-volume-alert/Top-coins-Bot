@@ -20,6 +20,7 @@ export const CFG = {
   STAKE_SOL: n("LAUNCH_STAKE_SOL", 0.1),           // owner, 30 Oct 21:47 UK: 0.1 SOL a launch
   DAILY_CAP: n("LAUNCH_DAILY_CAP", 0),             // live launches per UK day (0 = no cap — owner, 30 Oct 21:59 UK: "keep going until you run out"; MIN_BALANCE_SOL is the stop)
   DEAD_MIN: n("LAUNCH_DEAD_MIN", 15),              // owner, 30 Oct 21:57 UK: nobody else bought in 15 min → sell back
+  REPEAT_H: n("LAUNCH_REPEAT_H", 6),                 // owner, 31 Oct 00:52 UK: never launch the same name or ticker twice within 6 h
   QUIET_MIN: n("LAUNCH_QUIET_MIN", 30),            // others bought, then no trade at all for 30 min → sell (the coin has stopped)
   TP_X: n("LAUNCH_TP_X", 3),                       // take-profit: at 3x the stake sell TP_FRACTION of the tokens once, keep the rest (0 = off)
   TP_FRACTION: n("LAUNCH_TP_FRACTION", 0.5),
