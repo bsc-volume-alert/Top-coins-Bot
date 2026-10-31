@@ -72,6 +72,14 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
     - 1 run, 6 runners, 2 posts with genuine runners.
     - On four pump.fun coins made by serial launchers (93eW4L and 5QBwQ7: GMGN creator launches 1,935; 3hvD7n: 241), the trade events decode the SOL amount as ~0. Buy counts there are right, but SOL figures are not.
     - Balance-change market caps for 0.005-SOL micro-buys are unreliable (fees and rent swamp the price).
+- **31 Oct 19:50 UK — study re-run (v4: zero-SOL pump.fun trades now take the SOL from the wallet's balance change), 16 coins incl. 3 new runners on a "Spam" post.** Net buying in the first 5 min (buy SOL − sell SOL), round-trip share, organic share:
+  - genuine pump.fun runners 3c7T9i +79.6 SOL (514 buyers, rt 41%, organic 63%) and 3mBnUo +80.3 (442, 26%, 57%);
+  - Spam 5h66ry ($52K, pump.fun, 12-wallet bundle 14.4 SOL) +43.0 (548 buyers, rt 74%, organic 40%) — mixed;
+  - wash/micro-buy runners: Spam 8KNRh8 ($43K) +96.2 with 1,189 "buyers", median buy 0.006 SOL, rt 98%; FkSuZg +60.8 (rt 92%); Hsdhmq +22.7 (rt 95%); 3UYjKk +7.4; 7fBMgS ($67K) +8.5 (rt 80%); GMLmSo +3.8;
+  - pump.fun non-runners of the same posts: +2.8 to +16.0 SOL.
+  - **GMGN KOL wallets: 0 on all 9 runners; smart-money wallets: 0 on 8, 5 on Spam 5h66ry.** (Owner, 19:29 UK: wash volume is "part of the game" and draws big callers — to be tested by counting KOL/smart wallets on every runner; RF50W keeps wash-traded copies in so the paper results decide.)
+  - Helius credits used today: study 7,592; runner-follow 4,300.
+- **31 Oct 19:25 UK — runner-follow paper test started (0.5.0/0.5.1):** RF50 (net ≥ 50 SOL, ≥ 300 buyers, rt < 60%, median buy ≥ 0.02), RF30 (≥ 30, ≥ 200, same filters), RF50W (≥ 50, ≥ 100, no wash filter), checked at 2/3/4/5/7/10 min after each copy is made; scored 2 h later with five exits incl. half at 2x + 40% trail. On tonight's numbers at 5 min, RF50 would take both genuine runners and skip the wash ones; RF50W would also take 8KNRh8 and FkSuZg.
 - **31 Oct 18:50 UK — V300 / V500 started.** In the first 11 polls (18:45–18:57 UK) the highest 5-min volume on all of Solana was $161K. $300K+ is rare at these hours.
 
 ## What the owner said
@@ -80,8 +88,10 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - 31 Oct 18:20 UK: "identify why were they different to us … bundled wallets? wash trading? sniping? fresh wallets? genuinely traders buying?"
 - 31 Oct 18:21 UK: paper trade for now, research first; "it looks like we have to copy trade the actual runner"; look at 5-min volume; touch base in 1–2 days.
 - 31 Oct 18:41 UK: paper trade any coin with 5-min volume of $300K and of $500K, under $1M, any age.
+- 31 Oct 19:22 UK: go for the runner-follow paper test ("find the coins that ran and buy in early").
+- 31 Oct 19:29 UK: "I haven't got nothing against washbots … part of the game … don't look at that in a negative way for your analysis."
 
 ## Open items
-- Fix the ~0-SOL decoding on serial-launcher pump.fun coins (new trade path?).
+- ~~Fix the ~0-SOL decoding~~ done 0.5.1 (19:28 UK): SOL taken from the wallet's balance change; those coins' market cap from the curve stays 0.
 - Keep the hourly study running and re-read with more posts (need ≥ 20 genuine runners before any rule).
 - Full check-in scheduled for 1 Nov 19:00 UK.
