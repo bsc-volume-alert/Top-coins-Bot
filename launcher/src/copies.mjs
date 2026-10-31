@@ -26,7 +26,7 @@ export function scheduleCopies(db, L) {
 
 async function search(q) {
   const d = await gget("/v1/market/search", { q, chain: "sol" });
-  if (!copyStat.lastRaw) copyStat.lastRaw = JSON.stringify(d).slice(0, 1500); // the first answer is kept, to check GMGN's fields
+  if (!copyStat.lastRaw || (/"coins":\[\]/.test(copyStat.lastRaw) && (d?.coins || []).length)) copyStat.lastRaw = JSON.stringify(d).slice(0, 1500); // the first answer is kept, to check GMGN's fields
   return Array.isArray(d?.coins) ? d.coins : Array.isArray(d?.tokens) ? d.tokens : Array.isArray(d) ? d : [];
 }
 const tsOf = (c) => { const v = N(c.created_at) || N(c.creation_timestamp) || N(c.open_timestamp) || 0; return v > 1e12 ? Math.floor(v / 1000) : v; };
