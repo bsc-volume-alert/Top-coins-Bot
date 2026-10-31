@@ -3,7 +3,7 @@ import "./env.mjs";
 import { randomUUID } from "node:crypto";
 const HOST = process.env.LAUNCH_GMGN_HOST || "https://openapi.gmgn.ai", KEY = () => process.env.GMGN_API_KEY || "";
 const WPS = Number(process.env.LAUNCH_GMGN_WPS || 2);
-const WEIGHT = { "/v1/token/info": 1, "/v1/token/security": 1, "/v1/user/created_tokens": 2, "/v1/market/token_top_traders": 5, "/v1/market/token_top_holders": 5, "/v1/user/wallet_stats": 3, "/v1/market/search": 1, "/v1/market/token_kline": 1 };
+const WEIGHT = { "/v1/token/info": 1, "/v1/token/security": 1, "/v1/user/created_tokens": 2, "/v1/market/token_top_traders": 5, "/v1/market/token_top_holders": 5, "/v1/user/wallet_stats": 3, "/v1/market/search": 1, "/v1/market/token_kline": 1, "/v1/market/rank": 3 };
 export const gmStat = { calls: 0, errors: 0, limited: 0, lastErr: "" };
 let next = 0, chain = Promise.resolve(), pausedUntil = 0;
 const nap = (ms) => new Promise((r) => setTimeout(r, ms));

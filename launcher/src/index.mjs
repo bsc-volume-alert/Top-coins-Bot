@@ -21,6 +21,7 @@ import { ensureLut, luts, lutStat, wantedFor } from "./lut.mjs";
 import { initCopies, scheduleCopies, copyTick, copyStatus } from "./copies.mjs";
 import { initPeaks, runPeaks, peakStat } from "./copypeaks.mjs";
 import { initStudy, runStudy, studyStat } from "./study.mjs";
+import { initVol, volPoll, volScore, volStat } from "./volpaper.mjs";
 
 const VER = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 const now = () => Math.floor(Date.now() / 1000);
@@ -45,6 +46,7 @@ CREATE INDEX IF NOT EXISTS launches_created ON launches(created_ts);
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT);`);
 for (const c of ["buy_ix TEXT", "tp_done INTEGER DEFAULT 0", "tp_sol REAL", "image_url TEXT", "buys_10m INTEGER", "src_link TEXT"]) try { db.exec(`ALTER TABLE launches ADD COLUMN ${c}`); } catch {}
 initCopies(db); // 0.2.0: the copy-coin paper test
+initVol(db); // 0.4.0: V300 / V500 volume paper trades (owner, 31 Oct 18:41 UK)
 initStudy(db); // 0.3.0: why copycats ran (owner, 31 Oct 18:21 UK)
 initPeaks(db); // 0.2.2: market caps of every copycat (owner, 31 Oct 18:06 UK)
 const upd = (id, o) => { const ks = Object.keys(o); if (ks.length) db.prepare(`UPDATE launches SET ${ks.map((k) => `${k}=?`).join(", ")} WHERE id=?`).run(...ks.map((k) => (typeof o[k] === "bigint" ? o[k].toString() : o[k])), id); };
@@ -335,7 +337,7 @@ async function selfTest() {
 const csv = (rows) => { if (!rows.length) return ""; const cols = Object.keys(rows[0]); const e = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v)); return [cols.join(","), ...rows.map((r) => cols.map((c) => e(r[c])).join(","))].join("\n"); };
 export function status() {
   return { ...st, at: now(), wallet: ME.toBase58(), balanceSol: balance != null ? +sol(balance).toFixed(4) : null, liveToday: liveToday(), cap: CFG.DAILY_CAP || "none", minBalanceSol: CFG.MIN_BALANCE_SOL, tpFraction: CFG.TP_FRACTION, stakeSol: CFG.STAKE_SOL, deadMin: CFG.DEAD_MIN, quietMin: CFG.QUIET_MIN, tpX: CFG.TP_X,
-    lut: lutStat, copies: copyStatus(), peaks: peakStat, study: studyStat, paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
+    lut: lutStat, copies: copyStatus(), peaks: peakStat, study: studyStat, vol: volStat, paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
     accounts: CFG.ACCOUNTS, twitter: { keySet: !!CFG.TWITTER_KEY, ...twStat }, ai: !!CFG.AI_KEY, aiStat, meta: metaStat, rpc: rpcStats, trackerDb: !!tdb, lastSweep: kvGet("lastSweep"), lastFeeCollect: kvGet("lastFeeCollect"), phantom: PHANTOM };
 }
 let pushing = false, soon = null;
@@ -344,6 +346,7 @@ function exportNow() {
     writeFileSync(`${CFG.OUT_DIR}/launches.csv`, csv(db.prepare("SELECT * FROM launches ORDER BY id").all()));
     writeFileSync(`${CFG.OUT_DIR}/posts.csv`, csv(db.prepare("SELECT id, user, kind, text, parent_id, parent_user, parent_text, created_ms, recv_ms, ctx_ms FROM posts WHERE recv_ms>=? ORDER BY recv_ms").all((now() - 7 * 86400) * 1000)));
     try { writeFileSync(`${CFG.OUT_DIR}/copies.csv`, csv(db.prepare("SELECT * FROM copies ORDER BY launch_id, created_ts").all())); writeFileSync(`${CFG.OUT_DIR}/copy_picks.csv`, csv(db.prepare("SELECT * FROM copy_picks ORDER BY launch_id").all())); writeFileSync(`${CFG.OUT_DIR}/copy_peaks.csv`, csv(db.prepare("SELECT * FROM copy_peaks ORDER BY peak_mc DESC").all())); } catch {}
+    try { writeFileSync(`${CFG.OUT_DIR}/vol_paper.csv`, csv(db.prepare("SELECT * FROM vol_paper ORDER BY id").all())); } catch {}
     try { writeFileSync(`${CFG.OUT_DIR}/study_coins.jsonl`, db.prepare("SELECT * FROM study_coins ORDER BY studied_ts").all().map((r) => JSON.stringify({ ...r, data: JSON.parse(r.data || "{}") })).join("\n")); writeFileSync(`${CFG.OUT_DIR}/study_buyers.jsonl`, db.prepare("SELECT * FROM study_buyers ORDER BY mint, rank").all().map((r) => JSON.stringify({ mint: r.mint, wallet: r.wallet, rank: r.rank, ...JSON.parse(r.data || "{}") })).join("\n")); } catch {}
     writeFileSync(`${CFG.OUT_DIR}/raw_events.jsonl`, db.prepare("SELECT raw FROM posts WHERE raw IS NOT NULL ORDER BY recv_ms").all().map((r) => r.raw).join("\n"));
     writeFileSync(`${CFG.OUT_DIR}/status.json`, JSON.stringify(status(), null, 1)); st.exports++;
@@ -372,6 +375,7 @@ setInterval(() => watch(), 15000);
 setInterval(() => requests().catch(() => {}), 1000);
 setInterval(copyJob, 300000);
 setInterval(() => copyTick(db).catch(() => {}), 20000);
+if (!CFG.SMOKE) { setTimeout(() => volPoll(db), 15000); setInterval(() => volPoll(db), 30000); setInterval(() => volScore(db), 300000); } // 0.4.0
 if (!CFG.SMOKE) { const peaksThenStudy = () => runPeaks(db, exportNow).then(() => runStudy(db, exportNow)); setTimeout(peaksThenStudy, 40000); setInterval(peaksThenStudy, 3600000); } // 0.2.2: copycat market caps, then export + push
 setInterval(() => feesAndSweep(), 3600000); setTimeout(() => feesAndSweep(), 120000);
 function writeStatus() { try { writeFileSync(`${CFG.OUT_DIR}/status.json`, JSON.stringify(status(), null, 1)); } catch {} }
