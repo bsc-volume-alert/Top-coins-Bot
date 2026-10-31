@@ -16,7 +16,8 @@ export const CFG = {
   // paper  = record what it would launch, no transactions built
   // shadow = also build every create+buy transaction and simulate it on mainnet (nothing signed, nothing spent) — the default
   // live   = sign and send. Set by the owner only (LAUNCH_MODE=live in /root/launcher/.env), never by a code push on its own.
-  MODE: s("LAUNCH_MODE", "shadow"),
+  // 0.1.13 (owner, 31 Oct 01:22 UK: "ok sent, let's go!"): launcher/live.txt saying "live" switches real launches on; delete it (or LAUNCH_MODE in .env) to go back to test mode
+  MODE: s("LAUNCH_MODE", (() => { try { return readFileSync(new URL("../live.txt", import.meta.url), "utf8").trim() === "live" ? "live" : "shadow"; } catch { return "shadow"; } })()),
   STAKE_SOL: n("LAUNCH_STAKE_SOL", 0.1),           // owner, 31 Oct 01:19 UK: back to 0.1 SOL a launch (0.05 saves ~0.001 a dead coin and halves the position)
   DAILY_CAP: n("LAUNCH_DAILY_CAP", 0),             // live launches per UK day (0 = no cap — owner, 30 Oct 21:59 UK: "keep going until you run out"; MIN_BALANCE_SOL is the stop)
   DEAD_MIN: n("LAUNCH_DEAD_MIN", 10),              // owner, 31 Oct 01:15 UK: at 10 min, fewer than MIN_BUYS buys by others → sell back
