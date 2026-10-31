@@ -1,6 +1,6 @@
 {
   "name": "launcher",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "private": true,
   "type": "module",
   "description": "Launcher \u2014 watches chosen X accounts through TwitterAPI.io, names a coin from each post and launches it on pump.fun (create + 0.05 SOL buy in one transaction) from its own wallet; sells back coins nobody else buys. Modes: paper | shadow (build + simulate, sign nothing) | live.",

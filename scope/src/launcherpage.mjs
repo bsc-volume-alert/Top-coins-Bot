@@ -20,7 +20,9 @@ export function launcherApi(days = 3) {
 }
 /** Relaunch / Sell button → a request file for the launcher. */
 export function launcherAct(action, id) {
-  if (!["relaunch", "sell"].includes(action) || !Number.isInteger(id) || id <= 0) return { ok: false, error: "bad request" };
+  const global = ["pause", "resume", "sellall"].includes(action); // 0.9.1: whole-launcher buttons carry no coin id
+  if (!global && (!["relaunch", "sell"].includes(action) || !Number.isInteger(id) || id <= 0)) return { ok: false, error: "bad request" };
+  if (global) id = 0;
   mkdirSync(REQ, { recursive: true }); writeFileSync(`${REQ}/${Date.now()}-${id}-${action}.json`, JSON.stringify({ action, id, at: Math.floor(Date.now() / 1000) }));
   return { ok: true, queued: action, id };
 }
@@ -37,6 +39,7 @@ td.l,th.l{text-align:left}td.txt{white-space:normal;min-width:260px;max-width:42
 a{color:var(--blu);text-decoration:none}button{background:#21262d;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:12px}button.go{border-color:#1f6feb}
 .tag{display:inline-block;border-radius:4px;padding:0 5px;font-size:11px;background:#21262d;color:var(--mut)}.live{background:#5f2f2f;color:#ffb4b4}.shadow{background:#1f3a5f;color:#9cc6ff}.paper{background:#2d2d2d;color:#bbb}
 </style></head><body><div class="wrap"><h1>Launcher <a class="sub" id="back" href="/">← Radar</a></h1><div class="sub" id="hd">loading…</div>
+<div id="ctl" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0"></div>
 <div class="kpis" id="k"></div><div class="card sub" id="st"></div>
 <div class="card tw"><table><thead><tr><th class="l">UK time</th><th class="l">Post</th><th class="l">Coin</th><th>Same name 7d</th><th class="l">Mode / status</th><th>Tweet→sent</th><th>Cost</th><th>Peak</th><th>Now</th><th>Sold for</th><th>P&amp;L</th><th>Copycats 30m</th><th>1st copy</th><th>Best copy</th><th class="l"></th></tr></thead><tbody id="tb"></tbody></table></div>
 <div class="sub">Cost = what the launch transaction took from the wallet (our buy + deployment + fees). Peak / Now = what our tokens would sell for ÷ the stake. Copycats = other pump.fun coins with the same name or ticker from 1 min before the post to 30 min after (from the tracker). Buttons work only with the key in this link.</div>
@@ -49,6 +52,7 @@ function uki(iso){return iso?uk(Math.floor(Date.parse(iso)/1000)):'–'}function
 function act(a,id,label){if(!confirm(label))return;fetch('/api/launcher/act?key='+encodeURIComponent(key)+'&action='+a+'&id='+id,{method:'POST'}).then(function(r){return r.json()}).then(function(j){alert(j.ok?'Sent to the launcher — it acts within a few seconds.':'Not sent: '+j.error);setTimeout(load,4000)})}
 function load(){fetch('/api/launcher?key='+encodeURIComponent(key)).then(function(r){return r.json()}).then(draw).catch(function(e){document.getElementById('hd').textContent='error: '+e})}
 function draw(D){var S=D.status||{},R=D.rows||[],T=S.twitter||{},st=S.selfTest||{};
+ document.getElementById('ctl').innerHTML=(S.paused?'<span style="background:#5f2f2f;color:#ffb4b4;padding:6px 12px;border-radius:6px;font-weight:600">⏸ PAUSED — no new launches</span> <button class="go" style="padding:8px 16px;font-size:14px" onclick="act(\\'resume\\',0,\\'Resume launching?\\')">▶ Resume launches</button>':'<button style="padding:8px 16px;font-size:14px;background:#5f2f2f;border-color:#f85149;color:#fff" onclick="act(\\'pause\\',0,\\'Pause ALL new launches now? Coins already bought keep their sell rules.\\')">⏸ Pause everything</button>')+' <button style="padding:8px 16px;font-size:14px;background:#3d2a00;border-color:#e3b341;color:#fff" onclick="act(\\'sellall\\',0,\\'Sell ALL coins we hold right now ('+(S.openCoins||0)+' open)?\\')">Sell all ('+(S.openCoins||0)+' open)</button>'+(S.lastSellAll?' <span class="sub">last sell-all: '+esc(S.lastSellAll)+'</span>':'');
  document.getElementById('hd').innerHTML='Mode <span class="tag '+esc(S.mode)+'">'+esc(S.mode||'?')+'</span> · v'+esc(S.ver||'?')+' · stake '+(S.stakeSol||'?')+' SOL · cap '+(S.liveToday||0)+'/'+(S.cap||'?')+' live today · sell back if nobody else buys in '+(S.deadMin||'?')+' min, or after '+(S.quietMin||'?')+' min with no trades'+(S.tpX?' · take-profit '+S.tpX+'x':'')+' · updated '+uk(S.at);
  var live=R.filter(function(r){return r.mode==='live'&&r.cost_sol!=null}),spent=live.reduce(function(a,r){return a+r.cost_sol},0),back=live.reduce(function(a,r){return a+(r.sell_sol||0)},0),open=live.filter(function(r){return r.status==='open'||r.status==='selling'}).length;
  document.getElementById('k').innerHTML=[['Posts seen ('+3+' days)',D.posts],['Coins named',R.length],['Live launches',live.length],['Open now',open],['SOL spent',s4(spent)],['SOL back',s4(back)],['Net (sold ones)',s4(live.filter(function(r){return r.pnl_sol!=null}).reduce(function(a,r){return a+r.pnl_sol},0))],['Wallet',S.balanceSol==null?'–':S.balanceSol+' SOL']].map(function(k){return '<div class="kpi"><span class="sub">'+k[0]+'</span><b>'+k[1]+'</b></div>'}).join('');

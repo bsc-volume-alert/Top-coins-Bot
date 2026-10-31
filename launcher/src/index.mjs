@@ -111,6 +111,7 @@ const insert = (o) => { const ks = Object.keys(o); const r = db.prepare(`INSERT 
 async function launch(L, { tweetUrl }) {
   // mode for this one: live only when the owner set live, the day's cap isn't reached and the wallet can pay
   let mode = CFG.MODE, reason = null;
+  if (mode === "live" && kvGet("paused") === "1") { mode = "paper"; reason = "paused (pause button)"; }
   if (mode === "live") {
     if (CFG.DAILY_CAP > 0 && liveToday() >= CFG.DAILY_CAP) { mode = "paper"; reason = `daily cap ${CFG.DAILY_CAP} reached`; }
     else { const b = await bal(true).catch(() => null); if (b == null || b < lam(CFG.MIN_BALANCE_SOL)) { mode = "paper"; reason = `wallet ${b == null ? "unreadable" : sol(b).toFixed(3) + " SOL"} below ${CFG.MIN_BALANCE_SOL}`; } }
@@ -229,9 +230,13 @@ async function requests() {
   let files = []; try { files = readdirSync(CFG.REQ_DIR).filter((f) => f.endsWith(".json")); } catch { return; }
   for (const f of files) {
     let rq = null; try { rq = JSON.parse(readFileSync(`${CFG.REQ_DIR}/${f}`, "utf8")); } catch {} try { unlinkSync(`${CFG.REQ_DIR}/${f}`); } catch {}
-    if (!rq || !Number.isInteger(rq.id) || now() - (rq.at || 0) > 300) continue;
+    if (!rq || now() - (rq.at || 0) > 300) continue;
+    // 0.1.14 (owner, 31 Oct 01:26 UK): one button pauses every new launch at once; one button sells every coin we hold
+    if (rq.action === "pause" || rq.action === "resume") { kvSet("paused", rq.action === "pause" ? "1" : "0"); kvSet("pausedAt", new Date().toISOString()); writeStatus(); continue; }
+    if (rq.action === "sellall") { const r = db.prepare("UPDATE launches SET status='selling', sell_reason='sell-all button', sell_tries=0 WHERE mode='live' AND status IN ('open','stuck')").run(); kvSet("lastSellAll", `${new Date().toISOString()} ${r.changes} coin(s)`); writeStatus(); setTimeout(() => watch(), 50); continue; }
+    if (!Number.isInteger(rq.id)) continue;
     const L = db.prepare("SELECT * FROM launches WHERE id=?").get(rq.id); if (!L) continue;
-    if (rq.action === "sell" && L.mode === "live" && ["open", "stuck"].includes(L.status)) upd(L.id, { status: "selling", sell_reason: "sell button", sell_tries: 0 });
+    if (rq.action === "sell" && L.mode === "live" && ["open", "stuck"].includes(L.status)) { upd(L.id, { status: "selling", sell_reason: "sell button", sell_tries: 0 }); setTimeout(() => watch(), 50); }
     if (rq.action === "relaunch" && L.name) {
       const same = sameBefore(L.name, L.ticker, now());
       chain = chain.then(() => launch({ post_id: L.post_id, user: L.user, kind: L.kind, name: L.name, ticker: L.ticker, name_by: L.name_by, why: "relaunch", score: L.score, rule_name: L.rule_name, rule_ticker: L.rule_ticker,
@@ -290,6 +295,7 @@ async function selfTest() {
 const csv = (rows) => { if (!rows.length) return ""; const cols = Object.keys(rows[0]); const e = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v)); return [cols.join(","), ...rows.map((r) => cols.map((c) => e(r[c])).join(","))].join("\n"); };
 export function status() {
   return { ...st, at: now(), wallet: ME.toBase58(), balanceSol: balance != null ? +sol(balance).toFixed(4) : null, liveToday: liveToday(), cap: CFG.DAILY_CAP || "none", minBalanceSol: CFG.MIN_BALANCE_SOL, tpFraction: CFG.TP_FRACTION, stakeSol: CFG.STAKE_SOL, deadMin: CFG.DEAD_MIN, quietMin: CFG.QUIET_MIN, tpX: CFG.TP_X,
+    paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
     accounts: CFG.ACCOUNTS, twitter: { keySet: !!CFG.TWITTER_KEY, ...twStat }, ai: !!CFG.AI_KEY, aiStat, meta: metaStat, rpc: rpcStats, trackerDb: !!tdb, lastSweep: kvGet("lastSweep"), lastFeeCollect: kvGet("lastFeeCollect"), phantom: PHANTOM };
 }
 let pushing = false, soon = null;
@@ -323,6 +329,7 @@ setInterval(() => watch(), 15000);
 setInterval(() => requests().catch(() => {}), 2000);
 setInterval(copyJob, 300000);
 setInterval(() => feesAndSweep(), 3600000); setTimeout(() => feesAndSweep(), 120000);
-setInterval(() => { try { writeFileSync(`${CFG.OUT_DIR}/status.json`, JSON.stringify(status(), null, 1)); } catch {} }, 30000);
+function writeStatus() { try { writeFileSync(`${CFG.OUT_DIR}/status.json`, JSON.stringify(status(), null, 1)); } catch {} }
+setInterval(writeStatus, 10000);
 setTimeout(exportNow, 60000); setInterval(exportNow, 1800000);
 bal().catch(() => {});
