@@ -15,7 +15,8 @@ import { curveOf, PUMP } from "./pump.mjs";
 
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
 const MIN_PEAK = n("LAUNCH_STUDY_MIN_PEAK", 30000), WINDOW = n("LAUNCH_STUDY_WINDOW_MIN", 40) * 60, BUYERS = n("LAUNCH_STUDY_BUYERS", 100);
-const PER_RUN = n("LAUNCH_STUDY_PER_RUN", 12), DAY_CREDITS = n("LAUNCH_STUDY_DAY_CREDITS", 250000), MAX_TX = n("LAUNCH_STUDY_MAX_TX", 6000);
+const PER_RUN = n("LAUNCH_STUDY_PER_RUN", 12), DAY_CREDITS = n("LAUNCH_STUDY_DAY_CREDITS", 250000), MAX_TX = n("LAUNCH_STUDY_MAX_TX", 15000);
+const STUDY_V = 3; // bump to redo every coin with a newer method
 export const studyStat = { runs: 0, studied: 0, errors: 0, lastErr: "", lastRun: null, running: false, credits: 0, creditsDay: "", creditsToday: 0, calls: 0, gtfa: null, probe: null, current: "" };
 
 const disc = (s) => createHash("sha256").update(s).digest().subarray(0, 8);
@@ -100,6 +101,24 @@ function events(t) {
   return out;
 }
 const sigOf = (t) => t._sig || t.transaction?.signatures?.[0];
+const WSOL_S = "So11111111111111111111111111111111111111112";
+/** 0.4.1: trades read from balance changes — works on any launchpad or pool (Meteora DBC / DAMM, PumpSwap, Raydium…), used where no pump.fun event is found.
+ *  A trade = a signer whose balance of the coin changed, with SOL (native + wrapped) moving the other way by more than 0.0005 SOL. Market cap assumes 1B supply. */
+function balTrades(t, mint) {
+  const keys = keysOf(t), nSig = t.transaction?.message?.header?.numRequiredSignatures || 1, signers = new Set(keys.slice(0, nSig)), m = t.meta || {};
+  const tok = new Map(), ws = new Map(); let dec = 6;
+  const add = (map, owner, v) => map.set(owner, (map.get(owner) || 0) + v);
+  const pre = new Map((m.preTokenBalances || []).map((b) => [b.accountIndex, b])), post = new Map((m.postTokenBalances || []).map((b) => [b.accountIndex, b]));
+  for (const i of new Set([...pre.keys(), ...post.keys()])) { const a = pre.get(i), b = post.get(i), x = b || a; if (!x?.owner) continue;
+    const d = Number(b?.uiTokenAmount?.amount || 0) - Number(a?.uiTokenAmount?.amount || 0); if (!d) continue;
+    if (x.mint === mint) { add(tok, x.owner, d); dec = x.uiTokenAmount?.decimals ?? dec; } else if (x.mint === WSOL_S) add(ws, x.owner, d); }
+  const out = [];
+  for (const [owner, d] of tok) { if (!signers.has(owner)) continue; const i = keys.indexOf(owner); if (i < 0 || i >= (m.preBalances || []).length) continue;
+    let lam = m.postBalances[i] - m.preBalances[i] + (ws.get(owner) || 0); if (i === 0) lam += m.fee || 0;
+    const isBuy = d > 0, sol = isBuy ? -lam : lam; if (!(sol > 500000)) continue;
+    const ui = Math.abs(d) / 10 ** dec; out.push({ k: "trade", mint, sol, tok: Math.abs(d), isBuy, user: owner, mc: (sol / 1e9 / ui) * 1e9 }); }
+  return out;
+}
 
 // ---------- wallets ----------
 const walletCache = new Map();
@@ -133,27 +152,34 @@ export function initStudy(db) {
 // ---------- one coin ----------
 async function studyCoin(db, c, solUsd) {
   const curve = curveOf(new PublicKey(c.mint)).toBase58();
+  let gmgn = null; try { const i = await gget("/v1/token/info", { chain: "sol", address: c.mint }), st = i?.stat || {}, w = i?.wallet_tags_stat || {}, dv = i?.dev || {}, P = (x) => (N(x) == null ? null : +(N(x) * 100).toFixed(1));
+    gmgn = { launchpad: i?.launchpad ?? null, platform: i?.launchpad_platform ?? null, status: i?.launchpad_status ?? null, top10: P(st.top_10_holder_rate), bundler: P(st.top_bundler_trader_percentage), insider: P(st.top_rat_trader_percentage), fresh: P(st.fresh_wallet_rate),
+      bots: P(st.bot_degen_rate), sniperHold: P(st.top70_sniper_hold_rate), smart: N(w.smart_wallets), kol: N(w.renowned_wallets), snipers: N(w.sniper_wallets), bundlers: N(w.bundler_wallets), freshW: N(w.fresh_wallets), ratW: N(w.rat_trader_wallets),
+      devLaunches: N(dv.creator_open_count ?? st.creator_created_count), devStatus: dv.creator_token_status ?? null, twitter: i?.link?.twitter_username ?? i?.link?.twitter ?? null, website: i?.link?.website ?? null, telegram: i?.link?.telegram ?? null, dexPaid: dv.dexscr_ad ?? null }; } catch (e) { gmgn = { err: e.message.slice(0, 80) }; }
   dbg.on = true; dbg.samples = []; dbg.programs = {}; dbg.seen = new Set();
   let txs = await history(curve, c.created_ts + WINDOW);
   if (!txs.length) txs = await history(c.mint, c.created_ts + WINDOW);
   if (!txs.length) throw new Error("no transactions found");
   if (!studyStat.probeDone) { studyStat.probeDone = true; studyStat.probe = (studyStat.probe ? studyStat.probe + " | " : "") + JSON.stringify({ keys: Object.keys(txs[0]), ix: txs[0].transactionIndex, ev: txs.slice(0, 5).map((t) => events(t).map((e) => e.k).join("+")), inner: (txs[0].meta?.innerInstructions || []).length, logs: (txs[0].meta?.logMessages || []).length }).slice(0, 500); }
   // trades in chain order
-  const trades = []; let created = null, t0 = null, slot0 = null, complete = null, multi = new Map(), jitoTx = new Map();
+  const trades = []; let created = null, t0 = null, slot0 = null, complete = null, generic = 0, creatorGuess = null;
   txs.sort((a, b) => a.slot - b.slot || (a.transactionIndex ?? 0) - (b.transactionIndex ?? 0));
   for (const t of txs) {
     if (t.meta?.err) continue;
     const ev = events(t), keys = keysOf(t), sig = sigOf(t), jito = keys.some((k) => JITO.has(k));
     const cr = ev.find((e) => e.k === "create" && e.mint === c.mint); if (cr && !created) { created = cr; t0 = t.blockTime; slot0 = t.slot; }
     if (ev.some((e) => e.k === "complete") && !complete) complete = t.blockTime;
-    const tr = ev.filter((e) => e.k === "trade" && e.mint === c.mint);
+    let tr = ev.filter((e) => e.k === "trade" && e.mint === c.mint).map((e) => ({ ...e, mc: (e.vSol / e.vTok) * 1e6 })); // pump.fun: market cap in SOL from the curve
+    if (!tr.length) { tr = balTrades(t, c.mint); if (tr.length) generic++; }
+    if (t0 == null && !created) { t0 = t.blockTime; slot0 = t.slot; creatorGuess = keys[0]; }
     tr.forEach((e) => trades.push({ ...e, t: t.blockTime, slot: t.slot, idx: t.transactionIndex, sig, payer: keys[0], jito, inTx: tr.length }));
   }
   if (t0 == null) { t0 = txs[0].blockTime; slot0 = txs[0].slot; }
-  const creator = created?.creator || created?.user || trades[0]?.user || null;
+  const venue = created ? "pump.fun" : generic ? "other (balance changes)" : "none";
+  const creator = created?.creator || created?.user || creatorGuess || trades[0]?.user || null;
   const rel = (x) => x.t - t0, W = (s) => trades.filter((x) => rel(x) <= s);
   const sum = (a, f) => a.reduce((s, x) => s + f(x), 0), uniq = (a) => new Set(a).size, sol = (l) => l / 1e9;
-  const mcSol = (x) => (x.vSol / x.vTok) * 1e6; // market cap in SOL: price (lamports per raw unit) × 1e15 raw units / 1e9
+  const mcSol = (x) => x.mc; // market cap in SOL (pump.fun: from the curve; others: the trade's own price × 1B supply)
   // per-wallet tallies within the window
   const per = new Map();
   for (const x of trades) { const p = per.get(x.user) || { w: x.user, buys: 0, sells: 0, bsol: 0, ssol: 0, btok: 0, stok: 0, first: null, firstSell: null, slot: null, idx: null, jito: false, multi: false };
@@ -210,6 +236,7 @@ async function studyCoin(db, c, solUsd) {
     wash_wallets_15m: washW.length, wash_vol_share_15m: vol15 ? +(sum(washW, (p) => p.bs + p.ss) / vol15 * 100).toFixed(1) : null, roundtrip_share_15m: vol15 ? +(roundTrip / vol15 * 100).toFixed(1) : null,
     profiled: first.length, fresh1h_pct: share((f) => f.fresh1h), fresh24h_pct: share((f) => f.fresh24h), lowact_pct: share((f) => f.lowAct), cluster_pct: share((f) => f.cluster), creator_linked: first.filter((x) => x.f.creatorLinked).length,
     fresh24h_sol_pct: solShare((f) => f.fresh24h), cluster_sol_pct: solShare((f) => f.cluster), creator_linked_sol_pct: solShare((f) => f.creatorLinked), biggest_funder_group: Math.max(0, ...fGroups.values()),
+    v: STUDY_V, venue, generic_txs: generic, gmgn,
     debug: { samples: dbg.samples, programs: Object.entries(dbg.programs).sort((a, b) => b[1] - a[1]).slice(0, 8), zeroSolBuys: trades.filter((x) => x.isBuy && !x.sol).length },
     organic_buyers: org.length, organic_pct: share((f) => f.organic), organic_sol_pct: solShare((f) => f.organic), first_organic_s: org[0]?.p.first ?? null,
   };
@@ -221,7 +248,7 @@ async function studyCoin(db, c, solUsd) {
 
 // ---------- which coins ----------
 function pickCoins(db) {
-  const now = Math.floor(Date.now() / 1000), done = new Set(db.prepare("SELECT mint FROM study_coins WHERE (err IS NULL AND studied_ts > 1793472000) OR studied_ts > ?").all(now - 600).map((r) => r.mint)); // a failed coin is tried again after 50 min
+  const now = Math.floor(Date.now() / 1000), done = new Set(db.prepare("SELECT mint, data, err, studied_ts FROM study_coins").all().filter((r) => (!r.err && (() => { try { return JSON.parse(r.data).v === STUDY_V; } catch { return false; } })()) || (r.err && r.studied_ts > now - 600)).map((r) => r.mint)); // a failed coin is tried again after 50 min
   const peaks = db.prepare("SELECT p.*, l.t_post_ms FROM copy_peaks p LEFT JOIN launches l ON l.id=p.launch_id WHERE p.created_ts <= ? AND p.created_ts >= ?").all(now - WINDOW - 300, now - 3 * 86400);
   const runners = peaks.filter((p) => !p.ours && p.peak_mc >= MIN_PEAK).sort((a, b) => b.peak_mc - a.peak_mc);
   const out = [];

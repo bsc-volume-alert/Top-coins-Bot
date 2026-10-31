@@ -12,6 +12,7 @@ export function initPeaks(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS copy_peaks (mint TEXT PRIMARY KEY, launch_id INTEGER, post_name TEXT, name TEXT, symbol TEXT, created_ts INTEGER, ours INTEGER,
     peak_mc REAL, peak_ts INTEGER, peak_min REAL, peak_close_mc REAL, ath_mc REAL, mc5 REAL, mc15 REAL, mc30 REAL, mc60 REAL, mc_now REAL, holders INTEGER, progress REAL,
     status TEXT, liquidity REAL, vol_1h REAL, candles INTEGER, err TEXT, checked_ts INTEGER)`);
+  try { db.exec("ALTER TABLE copy_peaks ADD COLUMN launchpad TEXT"); } catch {} // 0.4.1: which launchpad made the coin (GMGN)
 }
 
 async function candles(mint, res, from, to) {
@@ -34,7 +35,7 @@ async function one(db, c) {
   const at = (min) => { const x = k.filter((y) => y.t <= t0 + min * 60).pop(); return x && t0 + min * 60 <= now ? x.c * supply : null; };
   const priceNow = N(info?.price?.price ?? info?.price), ath = N(info?.ath_price);
   const progress = N(info?.launchpad_progress), status = String(info?.launchpad_status ?? info?.status ?? (progress != null && progress >= 1 ? "graduated?" : "")).slice(0, 30);
-  db.prepare(`INSERT INTO copy_peaks VALUES (@mint,@launch_id,@post_name,@name,@symbol,@created_ts,@ours,@peak_mc,@peak_ts,@peak_min,@peak_close_mc,@ath_mc,@mc5,@mc15,@mc30,@mc60,@mc_now,@holders,@progress,@status,@liquidity,@vol_1h,@candles,@err,@checked_ts)
+  db.prepare(`INSERT INTO copy_peaks (mint, launch_id, post_name, name, symbol, created_ts, ours, peak_mc, peak_ts, peak_min, peak_close_mc, ath_mc, mc5, mc15, mc30, mc60, mc_now, holders, progress, status, liquidity, vol_1h, candles, err, checked_ts) VALUES (@mint,@launch_id,@post_name,@name,@symbol,@created_ts,@ours,@peak_mc,@peak_ts,@peak_min,@peak_close_mc,@ath_mc,@mc5,@mc15,@mc30,@mc60,@mc_now,@holders,@progress,@status,@liquidity,@vol_1h,@candles,@err,@checked_ts)
     ON CONFLICT(mint) DO UPDATE SET peak_mc=excluded.peak_mc, peak_ts=excluded.peak_ts, peak_min=excluded.peak_min, peak_close_mc=excluded.peak_close_mc, ath_mc=excluded.ath_mc,
     mc5=excluded.mc5, mc15=excluded.mc15, mc30=excluded.mc30, mc60=excluded.mc60, mc_now=excluded.mc_now, holders=excluded.holders, progress=excluded.progress, status=excluded.status,
     liquidity=excluded.liquidity, vol_1h=excluded.vol_1h, candles=excluded.candles, err=excluded.err, checked_ts=excluded.checked_ts`).run({
@@ -42,6 +43,7 @@ async function one(db, c) {
     peak_mc: peak ? peak.h * supply : null, peak_ts: peak?.t ?? null, peak_min: peak ? +((peak.t - t0) / 60).toFixed(1) : null, peak_close_mc: peakClose ? peakClose * supply : null,
     ath_mc: ath != null ? ath * supply : null, mc5: at(5), mc15: at(15), mc30: at(30), mc60: at(60), mc_now: priceNow != null ? priceNow * supply : null,
     holders: N(info?.holder_count), progress, status, liquidity: N(info?.liquidity), vol_1h: N(info?.price?.volume_1h), candles: k.length, err: err || null, checked_ts: now });
+  try { db.prepare("UPDATE copy_peaks SET launchpad=? WHERE mint=?").run([info?.launchpad, info?.launchpad_platform].filter(Boolean).join(" / ") || null, c.mint); } catch {}
   if (err) { peakStat.errors++; peakStat.lastErr = `${c.mint.slice(0, 6)} ${err}`.slice(0, 160); } else peakStat.ok++;
 }
 
