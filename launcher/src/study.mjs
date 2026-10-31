@@ -78,8 +78,10 @@ async function history(addr, tEnd) {
 const keysOf = (t) => [...(t.transaction?.message?.accountKeys || []).map((k) => (typeof k === "string" ? k : k.pubkey)), ...(t.meta?.loadedAddresses?.writable || []), ...(t.meta?.loadedAddresses?.readonly || [])];
 const pk = (b, o) => bs58.encode(b.subarray(o, o + 32));
 function str(b, o) { const l = b.readUInt32LE(o); return [b.subarray(o + 4, o + 4 + l).toString("utf8"), o + 4 + l]; }
+export const dbg = { samples: [], programs: {} };
 function events(t) {
   const keys = keysOf(t), out = [], raws = [];
+  if (dbg.on) for (const ix of t.transaction?.message?.instructions || []) { const p = keys[ix.programIdIndex]; if (p) dbg.programs[p] = (dbg.programs[p] || 0) + 1; }
   for (const g of t.meta?.innerInstructions || []) for (const ix of g.instructions || []) {
     if (keys[ix.programIdIndex] !== PUMP_S || !ix.data) continue;
     let b; try { b = Buffer.from(bs58.decode(ix.data)); } catch { continue; }
@@ -87,6 +89,7 @@ function events(t) {
   }
   for (const l of t.meta?.logMessages || []) if (l.startsWith("Program data: ")) { try { raws.push(Buffer.from(l.slice(14), "base64")); } catch {} }
   for (const b of raws) {
+    if (dbg.on && dbg.samples.length < 4 && !dbg.seen.has(b.subarray(0, 8).toString("hex") + b.length)) { dbg.seen.add(b.subarray(0, 8).toString("hex") + b.length); dbg.samples.push({ len: b.length, hex: b.subarray(0, 260).toString("hex") }); }
     try {
       const d = b.subarray(0, 8), p = b.subarray(8);
       if (d.equals(D_TRADE) && p.length >= 121) out.push({ k: "trade", mint: pk(p, 0), sol: Number(p.readBigUInt64LE(32)), tok: Number(p.readBigUInt64LE(40)), isBuy: p[48] === 1, user: pk(p, 49), ts: Number(p.readBigInt64LE(81)), vSol: Number(p.readBigUInt64LE(89)), vTok: Number(p.readBigUInt64LE(97)), rTok: Number(p.readBigUInt64LE(113)) });
@@ -130,6 +133,7 @@ export function initStudy(db) {
 // ---------- one coin ----------
 async function studyCoin(db, c, solUsd) {
   const curve = curveOf(new PublicKey(c.mint)).toBase58();
+  dbg.on = true; dbg.samples = []; dbg.programs = {}; dbg.seen = new Set();
   let txs = await history(curve, c.created_ts + WINDOW);
   if (!txs.length) txs = await history(c.mint, c.created_ts + WINDOW);
   if (!txs.length) throw new Error("no transactions found");
@@ -206,6 +210,7 @@ async function studyCoin(db, c, solUsd) {
     wash_wallets_15m: washW.length, wash_vol_share_15m: vol15 ? +(sum(washW, (p) => p.bs + p.ss) / vol15 * 100).toFixed(1) : null, roundtrip_share_15m: vol15 ? +(roundTrip / vol15 * 100).toFixed(1) : null,
     profiled: first.length, fresh1h_pct: share((f) => f.fresh1h), fresh24h_pct: share((f) => f.fresh24h), lowact_pct: share((f) => f.lowAct), cluster_pct: share((f) => f.cluster), creator_linked: first.filter((x) => x.f.creatorLinked).length,
     fresh24h_sol_pct: solShare((f) => f.fresh24h), cluster_sol_pct: solShare((f) => f.cluster), creator_linked_sol_pct: solShare((f) => f.creatorLinked), biggest_funder_group: Math.max(0, ...fGroups.values()),
+    debug: { samples: dbg.samples, programs: Object.entries(dbg.programs).sort((a, b) => b[1] - a[1]).slice(0, 8), zeroSolBuys: trades.filter((x) => x.isBuy && !x.sol).length },
     organic_buyers: org.length, organic_pct: share((f) => f.organic), organic_sol_pct: solShare((f) => f.organic), first_organic_s: org[0]?.p.first ?? null,
   };
   db.prepare("INSERT OR REPLACE INTO study_coins VALUES (?,?,?,?,?,?)").run(c.mint, c.launch_id, c.role, Math.floor(Date.now() / 1000), JSON.stringify(d), null);
@@ -216,7 +221,7 @@ async function studyCoin(db, c, solUsd) {
 
 // ---------- which coins ----------
 function pickCoins(db) {
-  const now = Math.floor(Date.now() / 1000), done = new Set(db.prepare("SELECT mint FROM study_coins WHERE err IS NULL OR studied_ts > ?").all(now - 3000).map((r) => r.mint)); // a failed coin is tried again after 50 min
+  const now = Math.floor(Date.now() / 1000), done = new Set(db.prepare("SELECT mint FROM study_coins WHERE (err IS NULL AND studied_ts > 1793472000) OR studied_ts > ?").all(now - 600).map((r) => r.mint)); // a failed coin is tried again after 50 min
   const peaks = db.prepare("SELECT p.*, l.t_post_ms FROM copy_peaks p LEFT JOIN launches l ON l.id=p.launch_id WHERE p.created_ts <= ? AND p.created_ts >= ?").all(now - WINDOW - 300, now - 3 * 86400);
   const runners = peaks.filter((p) => !p.ours && p.peak_mc >= MIN_PEAK).sort((a, b) => b.peak_mc - a.peak_mc);
   const out = [];
