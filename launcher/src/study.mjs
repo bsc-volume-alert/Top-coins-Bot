@@ -51,7 +51,7 @@ async function history(addr, tEnd) {
     try {
       let token = null;
       for (let page = 0; page < MAX_TX / 100; page++) {
-        const res = await rpc("getTransactionsForAddress", [addr, { transactionDetails: "full", sortOrder: "asc", limit: 100, maxSupportedTransactionVersion: 0, encoding: "json", commitment: "confirmed", ...(token ? { paginationToken: token } : {}) }], fullCost);
+        const res = await rpc("getTransactionsForAddress", [addr, { transactionDetails: "full", sortOrder: "asc", limit: 100, maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed", ...(token ? { paginationToken: token } : {}) }], fullCost);
         studyStat.gtfa = true;
         const rows = res?.data || []; let past = false;
         for (const t of rows) { if (t.blockTime && t.blockTime > tEnd) { past = true; break; } out.push(t); }
@@ -68,7 +68,7 @@ async function history(addr, tEnd) {
   }
   sigs = sigs.reverse(); const t0 = sigs[0]?.blockTime || 0; sigs = sigs.filter((s) => !s.blockTime || s.blockTime <= Math.max(tEnd, t0)).slice(0, MAX_TX);
   for (let i = 0; i < sigs.length; i += 8) {
-    const got = await Promise.all(sigs.slice(i, i + 8).map((s) => rpc("getTransaction", [s.signature, { maxSupportedTransactionVersion: 0, encoding: "json", commitment: "confirmed" }]).catch(() => null)));
+    const got = await Promise.all(sigs.slice(i, i + 8).map((s) => rpc("getTransaction", [s.signature, { maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed" }]).catch(() => null)));
     got.forEach((t, k) => t && out.push({ ...t, transactionIndex: null, _sig: sigs[i + k].signature }));
   }
   return out;
@@ -110,7 +110,7 @@ async function walletProfile(db, w) {
     if (txs < 1000 && txs > 0) first = recent[recent.length - 1];
     else if (studyStat.gtfa) { const r = await rpc("getTransactionsForAddress", [w, { transactionDetails: "signatures", sortOrder: "asc", limit: 1 }], 10); first = r?.data?.[0] || null; }
     if (first) {
-      const t = await rpc("getTransaction", [first.signature, { maxSupportedTransactionVersion: 0, encoding: "json", commitment: "confirmed" }]);
+      const t = await rpc("getTransaction", [first.signature, { maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed" }]);
       if (t?.meta) { const keys = keysOf(t), pre = t.meta.preBalances, post = t.meta.postBalances, me = keys.indexOf(w);
         let best = -1, drop = 0; keys.forEach((k, i) => { if (i !== me && i < pre.length && pre[i] - post[i] > drop) { drop = pre[i] - post[i]; best = i; } });
         funder = best >= 0 ? keys[best] : null; funded_sol = me >= 0 && me < pre.length ? (post[me] - pre[me]) / 1e9 : null; }
@@ -216,7 +216,7 @@ async function studyCoin(db, c, solUsd) {
 
 // ---------- which coins ----------
 function pickCoins(db) {
-  const now = Math.floor(Date.now() / 1000), done = new Set(db.prepare("SELECT mint FROM study_coins").all().map((r) => r.mint));
+  const now = Math.floor(Date.now() / 1000), done = new Set(db.prepare("SELECT mint FROM study_coins WHERE err IS NULL OR studied_ts > ?").all(now - 3000).map((r) => r.mint)); // a failed coin is tried again after 50 min
   const peaks = db.prepare("SELECT p.*, l.t_post_ms FROM copy_peaks p LEFT JOIN launches l ON l.id=p.launch_id WHERE p.created_ts <= ? AND p.created_ts >= ?").all(now - WINDOW - 300, now - 3 * 86400);
   const runners = peaks.filter((p) => !p.ours && p.peak_mc >= MIN_PEAK).sort((a, b) => b.peak_mc - a.peak_mc);
   const out = [];
