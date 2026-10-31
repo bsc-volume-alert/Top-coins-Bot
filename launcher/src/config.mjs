@@ -17,14 +17,15 @@ export const CFG = {
   // shadow = also build every create+buy transaction and simulate it on mainnet (nothing signed, nothing spent) — the default
   // live   = sign and send. Set by the owner only (LAUNCH_MODE=live in /root/launcher/.env), never by a code push on its own.
   MODE: s("LAUNCH_MODE", "shadow"),
-  STAKE_SOL: n("LAUNCH_STAKE_SOL", 0.1),           // owner, 30 Oct 21:47 UK: 0.1 SOL a launch
+  STAKE_SOL: n("LAUNCH_STAKE_SOL", 0.05),          // owner, 31 Oct 01:15 UK: 0.05 SOL a launch "for now" (was 0.1)
   DAILY_CAP: n("LAUNCH_DAILY_CAP", 0),             // live launches per UK day (0 = no cap — owner, 30 Oct 21:59 UK: "keep going until you run out"; MIN_BALANCE_SOL is the stop)
-  DEAD_MIN: n("LAUNCH_DEAD_MIN", 15),              // owner, 30 Oct 21:57 UK: nobody else bought in 15 min → sell back
+  DEAD_MIN: n("LAUNCH_DEAD_MIN", 10),              // owner, 31 Oct 01:15 UK: at 10 min, fewer than MIN_BUYS buys by others → sell back
+  MIN_BUYS: n("LAUNCH_MIN_BUYS", 5),
   REPEAT_H: n("LAUNCH_REPEAT_H", 6),                 // owner, 31 Oct 00:52 UK: never launch the same name or ticker twice within 6 h
   QUIET_MIN: n("LAUNCH_QUIET_MIN", 30),            // others bought, then no trade at all for 30 min → sell (the coin has stopped)
   TP_X: n("LAUNCH_TP_X", 3),                       // take-profit: at 3x the stake sell TP_FRACTION of the tokens once, keep the rest (0 = off)
   TP_FRACTION: n("LAUNCH_TP_FRACTION", 0.5),
-  MIN_BALANCE_SOL: n("LAUNCH_MIN_BALANCE_SOL", 0.15), // below this the wallet can't pay stake + deployment + fees → record only (the stop when the money runs out)
+  MIN_BALANCE_SOL: n("LAUNCH_MIN_BALANCE_SOL", 0.1), // below this the wallet can't pay stake + deployment + fees → record only (the stop when the money runs out)
   SWEEP_KEEP_SOL: n("LAUNCH_SWEEP_KEEP_SOL", 1),   // owner, 20:14 UK: anything above 1 SOL goes to his Phantom
   FEE_COLLECT_MIN_SOL: n("LAUNCH_FEE_COLLECT_MIN_SOL", 0.005),
   SLIP: n("LAUNCH_SLIP", 0.05),                    // our buy is in the create transaction, so nobody can move the price first; 5% covers rounding

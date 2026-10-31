@@ -35,11 +35,11 @@ CREATE TABLE IF NOT EXISTS launches (id INTEGER PRIMARY KEY AUTOINCREMENT, post_
   others INTEGER DEFAULT 0, first_other_s INTEGER, last_change_ts INTEGER, peak_x REAL, last_x REAL, sell_tries INTEGER DEFAULT 0,
   sell_sig TEXT, sell_sol REAL, sell_reason TEXT, sold_ts INTEGER, pnl_sol REAL,
   copies_30m INTEGER, copy_first_s INTEGER, copy_best_peak_usd REAL, copy_grads INTEGER, copies_checked_ts INTEGER, copies_final INTEGER DEFAULT 0,
-  relaunch_of INTEGER, created_ts INTEGER, buy_ix TEXT, tp_done INTEGER DEFAULT 0, tp_sol REAL, image_url TEXT);
+  relaunch_of INTEGER, created_ts INTEGER, buy_ix TEXT, tp_done INTEGER DEFAULT 0, tp_sol REAL, image_url TEXT, buys_10m INTEGER);
 CREATE INDEX IF NOT EXISTS launches_status ON launches(status);
 CREATE INDEX IF NOT EXISTS launches_created ON launches(created_ts);
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT);`);
-for (const c of ["buy_ix TEXT", "tp_done INTEGER DEFAULT 0", "tp_sol REAL", "image_url TEXT"]) try { db.exec(`ALTER TABLE launches ADD COLUMN ${c}`); } catch {}
+for (const c of ["buy_ix TEXT", "tp_done INTEGER DEFAULT 0", "tp_sol REAL", "image_url TEXT", "buys_10m INTEGER"]) try { db.exec(`ALTER TABLE launches ADD COLUMN ${c}`); } catch {}
 const upd = (id, o) => { const ks = Object.keys(o); if (ks.length) db.prepare(`UPDATE launches SET ${ks.map((k) => `${k}=?`).join(", ")} WHERE id=?`).run(...ks.map((k) => (typeof o[k] === "bigint" ? o[k].toString() : o[k])), id); };
 const kvGet = (k) => db.prepare("SELECT v FROM kv WHERE k=?").get(k)?.v ?? null, kvSet = (k, v) => db.prepare("INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)").run(k, String(v));
 let tdb = null; try { tdb = new Database(CFG.TRACKER_DB, { readonly: true, fileMustExist: true }); tdb.pragma("busy_timeout = 2000"); } catch {}
@@ -178,13 +178,28 @@ async function watch() {
       upd(L.id, o);
       if (c.complete) { upd(L.id, { status: "graduated", reason: "graduated — sell on PumpSwap by hand for now" }); continue; }
       const manual = L.status === "selling";
-      const why = manual ? (L.sell_reason || "sell button") : !others && !L.others && age >= CFG.DEAD_MIN * 60 ? `nobody else bought in ${CFG.DEAD_MIN} min`
+      // 0.1.11 (owner, 31 Oct 01:15 UK): at DEAD_MIN, count the buys by other wallets; fewer than MIN_BUYS → sell back (checked once)
+      let buys = L.buys_10m; if (!manual && buys == null && age >= CFG.DEAD_MIN * 60) { buys = await countBuys(L).catch(() => null); if (buys != null) upd(L.id, { buys_10m: buys }); }
+      const why = manual ? (L.sell_reason || "sell button") : buys != null && L.buys_10m == null && buys < CFG.MIN_BUYS ? `only ${buys} buy${buys === 1 ? "" : "s"} by others in ${CFG.DEAD_MIN} min (needs ${CFG.MIN_BUYS})`
+        : buys == null && !others && !L.others && age >= CFG.DEAD_MIN * 60 ? `nobody else bought in ${CFG.DEAD_MIN} min`
         : (others || L.others) && now() - (changed ? now() : L.last_change_ts || now()) >= CFG.QUIET_MIN * 60 ? `no trades for ${CFG.QUIET_MIN} min`
         : null;
       if (why) await sellOne(L, c, g, why);
       else if (CFG.TP_X > 0 && !L.tp_done && x >= CFG.TP_X) await sellOne(L, c, g, `take-profit: ${Math.round(CFG.TP_FRACTION * 100)}% sold at ${CFG.TP_X}x`, CFG.TP_FRACTION);
     }
   } catch (e) { st.errors++; st.lastErr = "watch: " + e.message; } finally { watching = false; }
+}
+/** Buys by other wallets on our coin's curve so far: its transactions, those that ran a pump.fun buy and were not paid for by our wallet. */
+async function countBuys(L) {
+  const curve = curveOf(new PublicKey(L.mint)); rpcStats.calls++;
+  const sigs = (await conn.getSignaturesForAddress(curve, { limit: 200 }, "confirmed")).filter((s) => !s.err && s.signature !== L.sig).map((s) => s.signature);
+  let n = 0;
+  for (let i = 0; i < sigs.length; i += 25) {
+    rpcStats.calls++; const txs = await conn.getTransactions(sigs.slice(i, i + 25), { maxSupportedTransactionVersion: 1, commitment: "confirmed" });
+    for (const t of txs) { if (!t?.meta) continue; const payer = t.transaction.message.staticAccountKeys[0].toBase58();
+      if (payer !== ME.toBase58() && (t.meta.logMessages || []).some((l) => /Instruction: (Buy|BuyExactSolIn|BuyV2|BuyV3|BuyExactQuoteIn)/.test(l))) n++; }
+  }
+  return n;
 }
 async function sellOne(L, curve, g, why, frac = 1) {
   const mint = new PublicKey(L.mint), ua = ata(ME, mint, TOKEN_2022);
