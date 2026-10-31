@@ -1,6 +1,6 @@
 {
   "name": "coin-scope",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "private": true,
   "type": "module",
   "description": "Coin scope \u2014 paste a Solana token contract, get the launch (bundle, dev, snipers), what those wallets did since, who is buying now, fresh wallets, wallets that trace back to the launch, top holders and a diagnosis. Own pm2 app and port; reads the tracker database read-only.",

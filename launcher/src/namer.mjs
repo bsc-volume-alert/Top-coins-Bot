@@ -57,7 +57,7 @@ export async function aiName({ user, kind, ownText, subjectText, subjectUser, im
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", signal: AbortSignal.timeout(images.length ? 8000 : 5000),
       headers: { "x-api-key": CFG.AI_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: CFG.AI_MODEL, max_tokens: 800, messages: [{ role: "user", content: [{ type: "text", text: prompt }, ...images.slice(0, 4).map((url) => ({ type: "image", source: { type: "url", url } }))] }] }) });
+      body: JSON.stringify({ model: CFG.AI_MODEL, max_tokens: 800, messages: [{ role: "user", content: [{ type: "text", text: prompt }, ...images.slice(0, 4).map((im) => (typeof im === "string" ? { type: "image", source: { type: "url", url: im } } : { type: "image", source: { type: "base64", media_type: im.type, data: im.b64 } }))] }] }) });
     const j = await r.json(); if (!r.ok) { aiStat.errors++; aiStat.lastErr = `HTTP ${r.status} ${(j.error?.message || "").slice(0, 140)}`; return null; }
     const txt = (j.content || []).map((c) => c.text || "").join(""); let m = txt.match(/\{[\s\S]*\}/);
     if (!m) { const cut = txt.match(/\{[\s\S]*/); if (cut) { const fixed = cut[0].replace(/,?\s*"why"\s*:\s*"[^"]*$/, "") + "}"; try { JSON.parse(fixed); m = [fixed]; } catch {} } } // a cut-off answer still gives name, ticker and score

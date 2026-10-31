@@ -37,11 +37,11 @@ CREATE TABLE IF NOT EXISTS launches (id INTEGER PRIMARY KEY AUTOINCREMENT, post_
   others INTEGER DEFAULT 0, first_other_s INTEGER, last_change_ts INTEGER, peak_x REAL, last_x REAL, sell_tries INTEGER DEFAULT 0,
   sell_sig TEXT, sell_sol REAL, sell_reason TEXT, sold_ts INTEGER, pnl_sol REAL,
   copies_30m INTEGER, copy_first_s INTEGER, copy_best_peak_usd REAL, copy_grads INTEGER, copies_checked_ts INTEGER, copies_final INTEGER DEFAULT 0,
-  relaunch_of INTEGER, created_ts INTEGER, buy_ix TEXT, tp_done INTEGER DEFAULT 0, tp_sol REAL, image_url TEXT, buys_10m INTEGER);
+  relaunch_of INTEGER, created_ts INTEGER, buy_ix TEXT, tp_done INTEGER DEFAULT 0, tp_sol REAL, image_url TEXT, buys_10m INTEGER, src_link TEXT);
 CREATE INDEX IF NOT EXISTS launches_status ON launches(status);
 CREATE INDEX IF NOT EXISTS launches_created ON launches(created_ts);
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT);`);
-for (const c of ["buy_ix TEXT", "tp_done INTEGER DEFAULT 0", "tp_sol REAL", "image_url TEXT", "buys_10m INTEGER"]) try { db.exec(`ALTER TABLE launches ADD COLUMN ${c}`); } catch {}
+for (const c of ["buy_ix TEXT", "tp_done INTEGER DEFAULT 0", "tp_sol REAL", "image_url TEXT", "buys_10m INTEGER", "src_link TEXT"]) try { db.exec(`ALTER TABLE launches ADD COLUMN ${c}`); } catch {}
 initCopies(db); // 0.2.0: the copy-coin paper test
 const upd = (id, o) => { const ks = Object.keys(o); if (ks.length) db.prepare(`UPDATE launches SET ${ks.map((k) => `${k}=?`).join(", ")} WHERE id=?`).run(...ks.map((k) => (typeof o[k] === "bigint" ? o[k].toString() : o[k])), id); };
 const kvGet = (k) => db.prepare("SELECT v FROM kv WHERE k=?").get(k)?.v ?? null, kvSet = (k, v) => db.prepare("INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)").run(k, String(v));
@@ -104,6 +104,7 @@ async function handle(t, recv) {
 /** The coin's picture: the post's own first picture, byte for byte; only a post with no picture at all gets the drawn ticker picture. */
 async function pictureFor(L) {
   if (!L.image_url) return { bytes: coinImage(L.name, L.ticker), type: "image/png", ext: "png", from: "drawn" };
+  if (L.image_url.startsWith("file:")) { const f = L.image_url.slice(5), ext = (f.split(".").pop() || "jpg").toLowerCase(); return { bytes: readFileSync(f), type: ext === "png" ? "image/png" : ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/jpeg", ext, from: "upload" }; } // 0.2.1: a picture uploaded on the Launch-now box
   const r = await fetch(L.image_url, { signal: AbortSignal.timeout(6000) }); if (!r.ok) throw new Error(`picture download HTTP ${r.status}`);
   const type = (r.headers.get("content-type") || "image/jpeg").split(";")[0], bytes = Buffer.from(await r.arrayBuffer());
   if (!/^image\//.test(type) || bytes.length < 500 || bytes.length > 15e6) throw new Error(`picture not usable (${type}, ${bytes.length} bytes)`);
@@ -112,7 +113,7 @@ async function pictureFor(L) {
 const insert = (o) => { const ks = Object.keys(o); const r = db.prepare(`INSERT INTO launches (${ks.join(",")}) VALUES (${ks.map(() => "?").join(",")})`).run(...ks.map((k) => o[k])); st.launches++;
   const id = Number(r.lastInsertRowid); if (o.name && !o.relaunch_of) try { scheduleCopies(db, { ...o, id }); } catch {} return id; };
 
-async function launch(L, { tweetUrl }) {
+async function launch(L, { tweetUrl, source = "X" }) {
   // mode for this one: live only when the owner set live, the day's cap isn't reached and the wallet can pay
   let mode = CFG.MODE, reason = null;
   if (mode === "live" && kvGet("paused") === "1") { mode = "paper"; reason = "paused (pause button)"; }
@@ -123,9 +124,9 @@ async function launch(L, { tweetUrl }) {
   const id = insert({ ...L, mode, status: mode === "paper" ? "paper" : "building", reason, stake_sol: CFG.STAKE_SOL });
   if (mode === "paper") return id;
   try {
-    const description = `${L.name} — narrative from @${L.user}'s post on X: ${tweetUrl} (not affiliated with @${L.user}).`;
+    const description = L.user && L.user !== "manual" ? `${L.name} — narrative from @${L.user}'s post on ${source}${tweetUrl ? ": " + tweetUrl : ""} (not affiliated with @${L.user}).` : tweetUrl ? `${L.name} — ${tweetUrl}` : L.name;
     let uri;
-    try { const img = await pictureFor(L); const m = await uploadMeta({ name: L.name, symbol: L.ticker, description, img, tweetUrl }); uri = m.uri; upd(id, { uri, upload_ms: m.ms }); }
+    try { const img = await pictureFor(L); const m = await uploadMeta({ name: L.name, symbol: L.ticker, description, img, tweetUrl }); uri = m.uri; upd(id, { uri, upload_ms: m.ms, ...(m.image && (!L.image_url || L.image_url.startsWith("file:")) ? { image_url: m.image } : {}) }); }
     catch (e) { st.uploadsFailed++; upd(id, { status: mode === "live" ? "failed" : "sim_fail", reason: "picture / metadata upload: " + e.message.slice(0, 160) }); return id; }
     const g = await global(), mintKp = Keypair.generate(), mint = mintKp.publicKey;
     if (mode === "live" && !luts().length) await ensureLut({ wallet, kvGet, kvSet, wanted: wantedFor(ME, g, TIPS.map((t) => new PublicKey(t))) });
@@ -239,6 +240,9 @@ async function requests() {
     // 0.1.14 (owner, 31 Oct 01:26 UK): one button pauses every new launch at once; one button sells every coin we hold
     if (rq.action === "pause" || rq.action === "resume") { kvSet("paused", rq.action === "pause" ? "1" : "0"); kvSet("pausedAt", new Date().toISOString()); writeStatus(); continue; }
     if (rq.action === "sellall") { const r = db.prepare("UPDATE launches SET status='selling', sell_reason='sell-all button', sell_tries=0 WHERE mode='live' AND status IN ('open','stuck')").run(); kvSet("lastSellAll", `${new Date().toISOString()} ${r.changes} coin(s)`); writeStatus(); setTimeout(() => watch(), 50); continue; }
+    // 0.2.1 (owner, 31 Oct 09:58 UK): the Launch-now box — "suggest" names a pasted post (AI reads its text and picture); "manual" launches it
+    if (rq.action === "suggest" && rq.reqId) { suggest(rq).then((out) => writeFileSync(`${CFG.REQ_DIR}/resp-${rq.reqId}.out`, JSON.stringify(out))).catch((e) => writeFileSync(`${CFG.REQ_DIR}/resp-${rq.reqId}.out`, JSON.stringify({ ok: false, error: e.message }))); continue; }
+    if (rq.action === "manual" && rq.reqId) { chain = chain.then(() => manualLaunch(rq)).catch((e) => { st.errors++; st.lastErr = "manual: " + e.message; }); continue; }
     if (!Number.isInteger(rq.id)) continue;
     const L = db.prepare("SELECT * FROM launches WHERE id=?").get(rq.id); if (!L) continue;
     if (rq.action === "sell" && L.mode === "live" && ["open", "stuck"].includes(L.status)) { upd(L.id, { status: "selling", sell_reason: "sell button", sell_tries: 0 }); setTimeout(() => watch(), 50); }
@@ -249,6 +253,32 @@ async function requests() {
         { tweetUrl: L.user && L.post_id ? `https://x.com/${L.user}/status/${L.post_id}` : "" })).catch((e) => { st.errors++; st.lastErr = "relaunch: " + e.message; });
     }
   }
+}
+
+// ---------- the Launch-now box (0.2.1) ----------
+const srcOf = (link) => { const x = String(link || "").match(/(?:x|twitter)\.com\/([A-Za-z0-9_]{1,30})\/status\/(\d+)/), t = String(link || "").match(/truthsocial\.com\/@([A-Za-z0-9_]{1,40})\/(?:posts\/)?(\d+)/);
+  return x ? { user: x[1], id: x[2], source: "X" } : t ? { user: t[1], id: t[2], source: "Truth Social" } : { user: "manual", id: null, source: "manual" }; };
+function imagesOf(rq) {
+  if (rq.imageFile && existsSync(rq.imageFile) && rq.imageFile.startsWith(`${HOME}/uploads/`)) { const ext = rq.imageFile.split(".").pop().toLowerCase(); return [{ b64: readFileSync(rq.imageFile).toString("base64"), type: ext === "png" ? "image/png" : ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/jpeg" }]; }
+  return /^https:\/\//.test(rq.imageUrl || "") ? [rq.imageUrl] : [];
+}
+async function suggest(rq) {
+  const text = String(rq.text || "").slice(0, 2000), s = srcOf(rq.link), images = imagesOf(rq);
+  const ai = await aiName({ user: s.user, kind: "post", ownText: text, subjectText: "", images });
+  const pick = ai || (images.length ? null : ruleName({ ownText: text, subjectText: "" }));
+  if (!pick) return { ok: false, error: images.length ? "the AI could not name it (or is off) — type a name and ticker yourself" : "no words to name a coin from" };
+  const rep = db.prepare(`SELECT id, created_ts FROM launches WHERE (lower(name)=lower(?) OR upper(ticker)=upper(?)) AND created_ts>=? AND status IN ('building','sent','open','selling','stuck','sold','graduated','sim_ok') ORDER BY id LIMIT 1`).get(pick.name, pick.ticker, now() - CFG.REPEAT_H * 3600);
+  return { ok: true, name: pick.name, ticker: pick.ticker, score: pick.score ?? null, why: pick.why || "", by: pick.by, source: s.source, user: s.user, repeatOf: rep ? rep.id : null };
+}
+async function manualLaunch(rq) {
+  const s = srcOf(rq.link), name = String(rq.name || "").trim().slice(0, 32), ticker = String(rq.ticker || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 10);
+  if (!name || ticker.length < 2) return;
+  const pid = s.id ? `${s.source === "X" ? "" : "truth-"}${s.id}` : `manual-${rq.reqId}`;
+  db.prepare("INSERT OR IGNORE INTO posts (id, user, kind, text, created_ms, recv_ms) VALUES (?, ?, ?, ?, ?, ?)").run(pid, s.user, "manual", String(rq.text || "").slice(0, 2000), Date.now(), Date.now());
+  const image_url = rq.imageFile && rq.imageFile.startsWith(`${HOME}/uploads/`) ? "file:" + rq.imageFile : /^https:\/\//.test(rq.imageUrl || "") ? rq.imageUrl : null;
+  const same = sameBefore(name, ticker, now());
+  await launch({ post_id: pid, user: s.user, kind: "manual", name, ticker, name_by: rq.nameBy === "ai" ? "ai (manual)" : "manual", why: `launched by hand from ${s.source}`, score: rq.score ?? null,
+    t_post_ms: Date.now(), t_recv_ms: Date.now(), t_named_ms: Date.now(), image_url, src_link: String(rq.link || "").slice(0, 300) || null, same_name_7d: same.n, same_ticker_7d: same.t, created_ts: now() }, { tweetUrl: String(rq.link || "").slice(0, 300), source: s.source });
 }
 
 // ---------- housekeeping: copycats, creator fees, sweep to Phantom ----------
@@ -334,7 +364,7 @@ startStream(onPost);
 // 0.1.15: the lookup table is made (or completed) before the self-test, so the test measures the real launch size
 setTimeout(async () => { if (CFG.MODE === "live") { try { const g = await global(); await ensureLut({ wallet, kvGet, kvSet, wanted: wantedFor(ME, g, TIPS.map((t) => new PublicKey(t))) }); } catch (e) { lutStat.lastErr = e.message; } } selfTest(); }, 3000); setInterval(() => { const t = st.selfTest; if (!t || t.error || !t.upload?.ok || !(t.classic?.ok || t.v3?.ok)) selfTest(); }, 1800000); // re-test every 30 min until it passes
 setInterval(() => watch(), 15000);
-setInterval(() => requests().catch(() => {}), 2000);
+setInterval(() => requests().catch(() => {}), 1000);
 setInterval(copyJob, 300000);
 setInterval(() => copyTick(db).catch(() => {}), 20000);
 setInterval(() => feesAndSweep(), 3600000); setTimeout(() => feesAndSweep(), 120000);

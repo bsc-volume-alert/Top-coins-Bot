@@ -2,7 +2,8 @@
 // (/root/launcher/launcher.db). The two buttons (Relaunch, Sell) don't touch the chain from here: they drop a small request file into
 // /root/launcher/requests/, which the launcher app picks up within 2 s. Same key as the rest of the site.
 import Database from "better-sqlite3";
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 
 const LDB = process.env.LAUNCH_DB || "/root/launcher/launcher.db", REQ = process.env.LAUNCH_REQ_DIR || "/root/launcher/requests", STATUS = (process.env.LAUNCH_OUT || "/root/tracker/data/launcher_out") + "/status.json";
 let ldb = null;
@@ -24,6 +25,30 @@ export function launcherApi(days = 3) {
   return { ok: true, status, rows, posts, at: Math.floor(Date.now() / 1000) };
 }
 /** Relaunch / Sell button → a request file for the launcher. */
+// 0.9.3 (owner, 31 Oct 09:58 UK): the Launch-now box. "suggest" asks the launcher to name a pasted post (it waits up to 20 s for the answer);
+// "manual" queues the launch. An uploaded picture is saved under /root/launcher/uploads and only its path is passed on.
+const UPL = (process.env.LAUNCH_HOME || "/root/launcher") + "/uploads";
+function saveUpload(b) {
+  if (!b.imageB64) return null; const type = String(b.imageType || "image/jpeg"); if (!/^image\/(png|jpe?g|gif|webp)$/.test(type)) throw new Error("picture must be png, jpg, gif or webp");
+  const bytes = Buffer.from(String(b.imageB64), "base64"); if (bytes.length < 200 || bytes.length > 8e6) throw new Error("picture too small or over 8 MB");
+  mkdirSync(UPL, { recursive: true }); const f = `${UPL}/${randomUUID()}.${type.split("/")[1].replace("jpeg", "jpg")}`; writeFileSync(f, bytes); return f;
+}
+const clean = (b) => ({ text: String(b.text || "").slice(0, 2000), link: String(b.link || "").trim().slice(0, 300), imageUrl: /^https:\/\/\S+$/.test(String(b.imageUrl || "").trim()) ? String(b.imageUrl).trim().slice(0, 500) : "" });
+export async function launcherSuggest(b) {
+  const reqId = randomUUID(), imageFile = saveUpload(b) || (b.imageRef && String(b.imageRef).startsWith(UPL + "/") ? b.imageRef : null);
+  mkdirSync(REQ, { recursive: true }); writeFileSync(`${REQ}/${Date.now()}-suggest.json`, JSON.stringify({ action: "suggest", reqId, ...clean(b), imageFile, at: Math.floor(Date.now() / 1000) }));
+  const f = `${REQ}/resp-${reqId}.out`;
+  for (let i = 0; i < 80; i++) { await new Promise((r) => setTimeout(r, 250)); if (existsSync(f)) { const out = JSON.parse(readFileSync(f, "utf8")); try { unlinkSync(f); } catch {} return { ...out, imageRef: imageFile }; } }
+  return { ok: false, error: "no answer from the launcher in 20 s (is it running?)", imageRef: imageFile };
+}
+export function launcherManual(b) {
+  const name = String(b.name || "").trim(), ticker = String(b.ticker || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  if (!name || [...name].length > 32) return { ok: false, error: "name must be 1–32 characters" }; if (ticker.length < 2 || ticker.length > 10) return { ok: false, error: "ticker must be 2–10 letters or digits" };
+  const imageFile = b.imageRef && String(b.imageRef).startsWith(UPL + "/") ? b.imageRef : saveUpload(b);
+  const reqId = randomUUID(); mkdirSync(REQ, { recursive: true });
+  writeFileSync(`${REQ}/${Date.now()}-manual.json`, JSON.stringify({ action: "manual", reqId, name, ticker, ...clean(b), imageFile, nameBy: b.nameBy === "ai" ? "ai" : "manual", score: Number.isFinite(+b.score) ? +b.score : null, at: Math.floor(Date.now() / 1000) }));
+  return { ok: true, queued: name, ticker };
+}
 export function launcherAct(action, id) {
   const global = ["pause", "resume", "sellall"].includes(action); // 0.9.1: whole-launcher buttons carry no coin id
   if (!global && (!["relaunch", "sell"].includes(action) || !Number.isInteger(id) || id <= 0)) return { ok: false, error: "bad request" };
@@ -45,6 +70,13 @@ a{color:var(--blu);text-decoration:none}button{background:#21262d;color:var(--tx
 .tag{display:inline-block;border-radius:4px;padding:0 5px;font-size:11px;background:#21262d;color:var(--mut)}.live{background:#5f2f2f;color:#ffb4b4}.shadow{background:#1f3a5f;color:#9cc6ff}.paper{background:#2d2d2d;color:#bbb}
 </style></head><body><div class="wrap"><h1>Launcher <a class="sub" id="back" href="/">← Radar</a></h1><div class="sub" id="hd">loading…</div>
 <div id="ctl" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0"></div>
+<div class="card" id="ln"><b>Launch now</b> <span class="sub">— paste a post you saw (Axiom, Truth Social, X…): the AI names it from the words and the picture, you check it, then launch. Same 0.1 SOL buy and sell rules.</span>
+<div style="display:grid;gap:8px;margin-top:10px;max-width:760px">
+<textarea id="lnText" rows="3" placeholder="The post's text" style="width:100%;background:#0d1117;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit"></textarea>
+<input id="lnLink" placeholder="Link to the post (x.com/…/status/… or truthsocial.com/@…/…) — goes on the coin" style="background:#0d1117;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit">
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input id="lnImgUrl" placeholder="Picture link (https://…), or upload →" style="flex:1;min-width:220px;background:#0d1117;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit"><input id="lnFile" type="file" accept="image/*" style="color:var(--mut)"></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button id="lnSuggest" class="go" style="padding:7px 14px;font-size:13px">Suggest name</button><input id="lnName" placeholder="Name (≤ 32)" maxlength="32" style="width:220px;background:#0d1117;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:7px;font:inherit"><input id="lnTicker" placeholder="TICKER" maxlength="10" style="width:120px;background:#0d1117;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:7px;font:inherit;text-transform:uppercase"><button id="lnGo" style="padding:7px 14px;font-size:13px;background:#1f6feb;border-color:#1f6feb;color:#fff">Launch</button></div>
+<div id="lnMsg" class="sub"></div></div></div>
 <div class="kpis" id="k"></div><div class="card sub" id="st"></div>
 <div class="card tw"><table><thead><tr><th class="l">UK time</th><th class="l">Post</th><th class="l">Coin</th><th>Same name 7d</th><th class="l">Mode / status</th><th>Tweet→sent</th><th>Cost</th><th>Peak</th><th>Now</th><th>Sold for</th><th>P&amp;L</th><th class="l">Copies (other coins, same name)</th><th class="l">Paper: first copy</th><th class="l">Paper: strongest copy</th><th class="l"></th></tr></thead><tbody id="tb"></tbody></table></div>
 <div class="sub">Cost = what the launch transaction took from the wallet (our buy + deployment + fees). Peak / Now = what our tokens would sell for ÷ the stake. Copies = other pump.fun coins with the same name or ticker made from 1 min before the post to 30 min after (GMGN). Paper = what buying that copy 3 min after the post would have done (nothing is bought): first copy made, and the copy with the most early buying. Buttons work only with the key in this link.</div>
@@ -67,10 +99,18 @@ function draw(D){var S=D.status||{},R=D.rows||[],T=S.twitter||{},st=S.selfTest||
  document.getElementById('st').innerHTML='Launch wallet (public address — send SOL here to fund it): <b>'+esc(S.wallet||'–')+'</b> · profits above 1 SOL go only to '+esc(S.phantom||'')+'<br>X stream: '+(T.keySet?(T.connected?'<span class="pos">connected</span> since '+esc(T.since):'<span class="neg">not connected</span> '+esc(T.lastClose||T.lastErr||'')):'<span class="neg">no TWITTERAPI_KEY in the .env</span>')+' · posts '+(T.tweets||0)+' · last event '+uki(T.lastEventAt)+' · lookups '+(T.lookups||0)+(T.lookupErr?' (<span class="amb">'+T.lookupErr+' failed: '+esc(T.lastLookupErr)+'</span>)':'')+' · AI naming '+(S.ai?'on':'off (rules)')+
  '<br>Self-test '+uki(st.at)+': create+buy simulation — classic '+(cl.ok?'<span class="pos">ok</span>':'<span class="neg">'+esc(cl.err||'–')+'</span>')+', v3 '+(v3.ok?'<span class="pos">ok</span>':'<span class="neg">'+esc(v3.err||'–')+'</span>')+' · '+esc(st.payer||'')+(st.pctSupply?' · '+(S.stakeSol)+' SOL buys '+st.pctSupply+'% of supply':'')+' · metadata upload '+(st.upload?(st.upload.ok?'<span class="pos">ok</span> '+st.upload.ms+' ms':'<span class="neg">'+esc(st.upload.err)+'</span>'):'–')+(st.error?' · <span class="neg">'+esc(st.error)+'</span>':'')+(S.lastSweep?'<br>Last sweep: '+esc(S.lastSweep):'')+(S.lastFeeCollect?' · last creator-fee collect: '+esc(S.lastFeeCollect):'')+(D.note?'<br>'+esc(D.note):'');
  document.getElementById('tb').innerHTML=R.map(function(r){var url=r.user&&r.post_id?'https://x.com/'+r.user+'/status/'+r.post_id:'';
+  if(r.kind==='manual')url=r.src_link||'';
   var post='<a target="_blank" href="'+url+'">@'+esc(r.user)+'</a> <span class="tag">'+esc(r.kind||'')+'</span> '+esc((r.post_text||'').slice(0,180))+(r.parent_text?'<br><span class="sub">↳ @'+esc(r.parent_user||'?')+': '+esc(r.parent_text.slice(0,160))+'</span>':'');
-  var coin=(r.image_url?'<a target="_blank" href="'+esc(r.image_url)+'"><img src="'+esc(r.image_url)+'" style="width:56px;height:56px;object-fit:cover;border-radius:6px;float:left;margin-right:8px" alt=""></a>':'')+(r.name?'<b>'+esc(r.name)+'</b> $'+esc(r.ticker)+' <span class="sub">'+esc(r.name_by||'')+(r.ai_name&&r.rule_name&&r.ai_name!==r.rule_name?' (rules: '+esc(r.rule_name)+')':'')+'</span>'+(r.mint&&r.mode==='live'&&r.status!=='failed'?'<br><a target="_blank" href="https://pump.fun/coin/'+r.mint+'">pump.fun</a> · <a target="_blank" href="https://dexscreener.com/solana/'+r.mint+'">DexScreener</a> · <a target="_blank" href="https://gmgn.ai/sol/token/'+r.mint+'">gmgn</a>':''):'–');
+  var coin=(r.image_url&&/^https?:/.test(r.image_url)?'<a target="_blank" href="'+esc(r.image_url)+'"><img src="'+esc(r.image_url)+'" style="width:56px;height:56px;object-fit:cover;border-radius:6px;float:left;margin-right:8px" alt=""></a>':'')+(r.name?'<b>'+esc(r.name)+'</b> $'+esc(r.ticker)+' <span class="sub">'+esc(r.name_by||'')+(r.ai_name&&r.rule_name&&r.ai_name!==r.rule_name?' (rules: '+esc(r.rule_name)+')':'')+'</span>'+(r.mint&&r.mode==='live'&&r.status!=='failed'?'<br><a target="_blank" href="https://pump.fun/coin/'+r.mint+'">pump.fun</a> · <a target="_blank" href="https://dexscreener.com/solana/'+r.mint+'">DexScreener</a> · <a target="_blank" href="https://gmgn.ai/sol/token/'+r.mint+'">gmgn</a>':''):'–');
   var stt='<span class="tag '+esc(r.mode)+'">'+esc(r.mode)+'</span> '+esc(r.status)+(r.reason?'<br><span class="sub">'+esc(r.reason.slice(0,120))+'</span>':'')+(r.sim_err?'<br><span class="neg sub">'+esc(r.sim_err.slice(0,140))+'</span>':'')+(r.sell_reason?'<br><span class="sub">sold: '+esc(r.sell_reason)+'</span>':'');
   var btn=(r.name?'<button class="go" onclick="act(\\'relaunch\\','+r.id+',\\'Relaunch '+esc(r.name).replace(/'/g,'')+' for '+(D.status&&D.status.stakeSol||'?')+' SOL?\\')">Relaunch</button> ':'')+(r.mode==='live'&&(r.status==='open'||r.status==='stuck')?'<button onclick="act(\\'sell\\','+r.id+',\\'Sell all of '+esc(r.ticker)+' now?\\')">Sell</button>':'');
   return '<tr><td class="l">'+uk(r.created_ts)+'</td><td class="txt">'+post+'</td><td class="l">'+coin+'</td><td>'+(r.same_name_7d==null?'–':r.same_name_7d+(r.same_ticker_7d?' <span class="sub">/ '+r.same_ticker_7d+' tkr</span>':''))+'</td><td class="l">'+stt+'</td><td>'+secs(r.t_sent_ms&&r.t_post_ms?r.t_sent_ms-r.t_post_ms:null)+'</td><td>'+s4(r.cost_sol)+'</td><td>'+xx(r.peak_x)+'</td><td>'+xx(r.last_x)+'</td><td>'+s4(r.sell_sol)+'</td><td class="'+(r.pnl_sol>0?'pos':r.pnl_sol<0?'neg':'')+'">'+s4(r.pnl_sol)+'</td><td class="l">'+copiesCell(r)+'</td><td class="l">'+pickCell(r.pick_first)+'</td><td class="l">'+pickCell(r.pick_strongest)+'</td><td class="l">'+btn+'</td></tr>'}).join('')||'<tr><td class="l" colspan="15">No posts yet.</td></tr>'}
+var lnRef=null,lnBy='manual',lnScore=null;
+function lnBody(){return{text:document.getElementById('lnText').value,link:document.getElementById('lnLink').value,imageUrl:document.getElementById('lnImgUrl').value,imageRef:lnRef}}
+function withFile(body){var f=document.getElementById('lnFile').files[0];if(!f||lnRef)return Promise.resolve(body);return new Promise(function(ok,no){var rd=new FileReader();rd.onload=function(){var s=String(rd.result);body.imageB64=s.slice(s.indexOf(',')+1);body.imageType=f.type||'image/jpeg';ok(body)};rd.onerror=no;rd.readAsDataURL(f)})}
+function post(path,body){return fetch(path+'?key='+encodeURIComponent(key),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json()})}
+document.getElementById('lnFile').addEventListener('change',function(){lnRef=null});
+document.getElementById('lnSuggest').addEventListener('click',function(){var m=document.getElementById('lnMsg');m.textContent='Asking the AI…';withFile(lnBody()).then(function(b){return post('/api/launcher/suggest',b)}).then(function(j){lnRef=j.imageRef||lnRef;if(!j.ok){m.textContent='No name: '+(j.error||'?');return}document.getElementById('lnName').value=j.name;document.getElementById('lnTicker').value=j.ticker;lnBy=j.by==='ai'?'ai':'manual';lnScore=j.score;m.textContent=(j.by==='ai'?'AI':'Rules')+' suggests '+j.name+' / $'+j.ticker+(j.score!=null?' — score '+j.score+'/10':'')+(j.why?' — '+j.why:'')+(j.repeatOf?' ⚠ already launched as #'+j.repeatOf+' in the last 6 h':'')+'. Edit if you like, then Launch.'}).catch(function(e){m.textContent='Error: '+e})});
+document.getElementById('lnGo').addEventListener('click',function(){var m=document.getElementById('lnMsg'),n=document.getElementById('lnName').value.trim(),t=document.getElementById('lnTicker').value.trim().toUpperCase();if(!n||!t){m.textContent='Put a name and ticker first (or press Suggest name).';return}if(!confirm('Launch '+n+' / $'+t+' on pump.fun now with a 0.1 SOL buy?'))return;var b=lnBody();b.name=n;b.ticker=t;b.nameBy=lnBy;b.score=lnScore;withFile(b).then(function(b){return post('/api/launcher/manual',b)}).then(function(j){if(!j.ok){m.textContent='Not launched: '+j.error;return}m.textContent='Sent: '+j.queued+' / $'+j.ticker+' — it appears in the list below within a few seconds.';['lnText','lnLink','lnImgUrl','lnName','lnTicker'].forEach(function(i){document.getElementById(i).value=''});document.getElementById('lnFile').value='';lnRef=null;lnBy='manual';lnScore=null;setTimeout(load,4000)}).catch(function(e){m.textContent='Error: '+e})});
 load();setInterval(load,15000);
 </script></body></html>`;
