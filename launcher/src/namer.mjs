@@ -57,9 +57,11 @@ export async function aiName({ user, kind, ownText, subjectText, subjectUser, im
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", signal: AbortSignal.timeout(images.length ? 8000 : 5000),
       headers: { "x-api-key": CFG.AI_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: CFG.AI_MODEL, max_tokens: 200, messages: [{ role: "user", content: [{ type: "text", text: prompt }, ...images.slice(0, 4).map((url) => ({ type: "image", source: { type: "url", url } }))] }] }) });
+      body: JSON.stringify({ model: CFG.AI_MODEL, max_tokens: 800, messages: [{ role: "user", content: [{ type: "text", text: prompt }, ...images.slice(0, 4).map((url) => ({ type: "image", source: { type: "url", url } }))] }] }) });
     const j = await r.json(); if (!r.ok) { aiStat.errors++; aiStat.lastErr = `HTTP ${r.status} ${(j.error?.message || "").slice(0, 140)}`; return null; }
-    const txt = (j.content || []).map((c) => c.text || "").join(""); const m = txt.match(/\{[\s\S]*\}/); if (!m) { aiStat.errors++; aiStat.lastErr = "no JSON in answer: " + txt.slice(0, 100); return null; }
+    const txt = (j.content || []).map((c) => c.text || "").join(""); let m = txt.match(/\{[\s\S]*\}/);
+    if (!m) { const cut = txt.match(/\{[\s\S]*/); if (cut) { const fixed = cut[0].replace(/,?\s*"why"\s*:\s*"[^"]*$/, "") + "}"; try { JSON.parse(fixed); m = [fixed]; } catch {} } } // a cut-off answer still gives name, ticker and score
+    if (!m) { aiStat.errors++; aiStat.lastErr = `no JSON in answer (stop: ${j.stop_reason}): ` + txt.slice(0, 100); return null; }
     const o = JSON.parse(m[0]); const name = String(o.name || "").trim().slice(0, 32); let ticker = String(o.ticker || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 10);
     if (!name) return null; if (ticker.length < 2) ticker = tickerOf(name);
     aiStat.ok++; aiStat.lastMs = Date.now() - t0;
