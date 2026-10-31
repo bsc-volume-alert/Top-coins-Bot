@@ -18,6 +18,7 @@ import { conn, rpcStats, getAccounts, getBalance, buildTx, simulate, sendUntilCo
 import { ensureKeypair, simPayer } from "./wallet.mjs";
 import { inboxPublic, inboxApply } from "./inbox.mjs";
 import { ensureLut, luts, lutStat, wantedFor } from "./lut.mjs";
+import { initCopies, scheduleCopies, copyTick, copyStatus } from "./copies.mjs";
 
 const VER = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 const now = () => Math.floor(Date.now() / 1000);
@@ -41,6 +42,7 @@ CREATE INDEX IF NOT EXISTS launches_status ON launches(status);
 CREATE INDEX IF NOT EXISTS launches_created ON launches(created_ts);
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT);`);
 for (const c of ["buy_ix TEXT", "tp_done INTEGER DEFAULT 0", "tp_sol REAL", "image_url TEXT", "buys_10m INTEGER"]) try { db.exec(`ALTER TABLE launches ADD COLUMN ${c}`); } catch {}
+initCopies(db); // 0.2.0: the copy-coin paper test
 const upd = (id, o) => { const ks = Object.keys(o); if (ks.length) db.prepare(`UPDATE launches SET ${ks.map((k) => `${k}=?`).join(", ")} WHERE id=?`).run(...ks.map((k) => (typeof o[k] === "bigint" ? o[k].toString() : o[k])), id); };
 const kvGet = (k) => db.prepare("SELECT v FROM kv WHERE k=?").get(k)?.v ?? null, kvSet = (k, v) => db.prepare("INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)").run(k, String(v));
 let tdb = null; try { tdb = new Database(CFG.TRACKER_DB, { readonly: true, fileMustExist: true }); tdb.pragma("busy_timeout = 2000"); } catch {}
@@ -107,7 +109,8 @@ async function pictureFor(L) {
   if (!/^image\//.test(type) || bytes.length < 500 || bytes.length > 15e6) throw new Error(`picture not usable (${type}, ${bytes.length} bytes)`);
   return { bytes, type, ext: type.includes("png") ? "png" : type.includes("gif") ? "gif" : type.includes("webp") ? "webp" : "jpg", from: "post" };
 }
-const insert = (o) => { const ks = Object.keys(o); const r = db.prepare(`INSERT INTO launches (${ks.join(",")}) VALUES (${ks.map(() => "?").join(",")})`).run(...ks.map((k) => o[k])); st.launches++; return Number(r.lastInsertRowid); };
+const insert = (o) => { const ks = Object.keys(o); const r = db.prepare(`INSERT INTO launches (${ks.join(",")}) VALUES (${ks.map(() => "?").join(",")})`).run(...ks.map((k) => o[k])); st.launches++;
+  const id = Number(r.lastInsertRowid); if (o.name && !o.relaunch_of) try { scheduleCopies(db, { ...o, id }); } catch {} return id; };
 
 async function launch(L, { tweetUrl }) {
   // mode for this one: live only when the owner set live, the day's cap isn't reached and the wallet can pay
@@ -298,7 +301,7 @@ async function selfTest() {
 const csv = (rows) => { if (!rows.length) return ""; const cols = Object.keys(rows[0]); const e = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v)); return [cols.join(","), ...rows.map((r) => cols.map((c) => e(r[c])).join(","))].join("\n"); };
 export function status() {
   return { ...st, at: now(), wallet: ME.toBase58(), balanceSol: balance != null ? +sol(balance).toFixed(4) : null, liveToday: liveToday(), cap: CFG.DAILY_CAP || "none", minBalanceSol: CFG.MIN_BALANCE_SOL, tpFraction: CFG.TP_FRACTION, stakeSol: CFG.STAKE_SOL, deadMin: CFG.DEAD_MIN, quietMin: CFG.QUIET_MIN, tpX: CFG.TP_X,
-    lut: lutStat, paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
+    lut: lutStat, copies: copyStatus(), paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
     accounts: CFG.ACCOUNTS, twitter: { keySet: !!CFG.TWITTER_KEY, ...twStat }, ai: !!CFG.AI_KEY, aiStat, meta: metaStat, rpc: rpcStats, trackerDb: !!tdb, lastSweep: kvGet("lastSweep"), lastFeeCollect: kvGet("lastFeeCollect"), phantom: PHANTOM };
 }
 let pushing = false, soon = null;
@@ -306,6 +309,7 @@ function exportNow() {
   try {
     writeFileSync(`${CFG.OUT_DIR}/launches.csv`, csv(db.prepare("SELECT * FROM launches ORDER BY id").all()));
     writeFileSync(`${CFG.OUT_DIR}/posts.csv`, csv(db.prepare("SELECT id, user, kind, text, parent_id, parent_user, parent_text, created_ms, recv_ms, ctx_ms FROM posts WHERE recv_ms>=? ORDER BY recv_ms").all((now() - 7 * 86400) * 1000)));
+    try { writeFileSync(`${CFG.OUT_DIR}/copies.csv`, csv(db.prepare("SELECT * FROM copies ORDER BY launch_id, created_ts").all())); writeFileSync(`${CFG.OUT_DIR}/copy_picks.csv`, csv(db.prepare("SELECT * FROM copy_picks ORDER BY launch_id").all())); } catch {}
     writeFileSync(`${CFG.OUT_DIR}/raw_events.jsonl`, db.prepare("SELECT raw FROM posts WHERE raw IS NOT NULL ORDER BY recv_ms").all().map((r) => r.raw).join("\n"));
     writeFileSync(`${CFG.OUT_DIR}/status.json`, JSON.stringify(status(), null, 1)); st.exports++;
     if (process.env.LAUNCH_NO_PUSH || CFG.SMOKE || pushing) return; pushing = true;
@@ -332,6 +336,7 @@ setTimeout(async () => { if (CFG.MODE === "live") { try { const g = await global
 setInterval(() => watch(), 15000);
 setInterval(() => requests().catch(() => {}), 2000);
 setInterval(copyJob, 300000);
+setInterval(() => copyTick(db).catch(() => {}), 20000);
 setInterval(() => feesAndSweep(), 3600000); setTimeout(() => feesAndSweep(), 120000);
 function writeStatus() { try { writeFileSync(`${CFG.OUT_DIR}/status.json`, JSON.stringify(status(), null, 1)); } catch {} }
 setInterval(writeStatus, 10000);
