@@ -72,6 +72,14 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
     - 1 run, 6 runners, 2 posts with genuine runners.
     - On four pump.fun coins made by serial launchers (93eW4L and 5QBwQ7: GMGN creator launches 1,935; 3hvD7n: 241), the trade events decode the SOL amount as ~0. Buy counts there are right, but SOL figures are not.
     - Balance-change market caps for 0.005-SOL micro-buys are unreliable (fees and rent swamp the price).
+- **1 Nov 11:10 UK — what the creation-block ("bundle") wallets made** (study v4, 9 pump.fun coins with a bundle, gross SOL within the first 40 min, before fees):
+  - The bundle is always 12–13 wallets, 13.7–23.7 SOL, plus a creator buy of 0.55–1.32 SOL. On GMGN, every one of these creator wallets is new (0–1 launches).
+  - Bundle in → out, runners: No Kings 13.7 → 47.9; Saved By Starlink 15.0 → 41.4; Spam 14.4 → 33.3; Anubis ($96K) 23.7 → 46.5; Dopamine ($46K) 23.3 → 20.4 (the only loss).
+  - **Bundle in → out, the copies that "died": 13.7 → 47.0, 15.5 → 37.5, 14.7 → 22.8, 15.4 → 30.1, i.e. 1.5–3.4x.** The creator's own buy also came back at 2.5–4.6x on every one.
+  - Snipers (first 3 s, after the bundle) roughly broke even or lost on 8 of 9 coins (e.g. 7.8 → 3.1 and 7.0 → 3.8 on the two genuine runners).
+  - No Mames (a serial creator with 78 launches, no bundle): 6 creation-block bot wallets 8.7 → 18.3; 27 snipers 23.3 → 32.9.
+  - **Conclusion:** the bundle wallets profit from the first 30–90 s spike whether or not the coin runs, by selling into the first-minute buyers. A coin that keeps running is extra, not the requirement. For a buyer, the first minute is where the money is taken; only after the bundle has sold (minutes 3–5) does the coin's own demand show. That supports RF's 2–10 min entry, not an earlier one.
+  - Owner, 1 Nov 11:01 UK: "to launch a coin you need a professional setup … fresh wallets, wash trade … capital … they keep doing it until one narrative kicks off." The data agrees on capital and setup (~15 SOL a launch). On fresh wallets it doesn't: fresh wallets were 3–4% of buyers on the genuine runners. And the operators don't need one narrative to "kick off" to make money: the bundles came out ahead on 8 of 9 coins.
 - **31 Oct 19:50 UK — study re-run (v4: zero-SOL pump.fun trades now take the SOL from the wallet's balance change), 16 coins incl. 3 new runners on a "Spam" post.** Net buying in the first 5 min (buy SOL − sell SOL), round-trip share, organic share:
   - genuine pump.fun runners 3c7T9i +79.6 SOL (514 buyers, rt 41%, organic 63%) and 3mBnUo +80.3 (442, 26%, 57%);
   - Spam 5h66ry ($52K, pump.fun, 12-wallet bundle 14.4 SOL) +43.0 (548 buyers, rt 74%, organic 40%) — mixed;
