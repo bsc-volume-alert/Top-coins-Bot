@@ -16,7 +16,7 @@ import { curveOf, PUMP } from "./pump.mjs";
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
 const MIN_PEAK = n("LAUNCH_STUDY_MIN_PEAK", 30000), WINDOW = n("LAUNCH_STUDY_WINDOW_MIN", 40) * 60, BUYERS = n("LAUNCH_STUDY_BUYERS", 100);
 const PER_RUN = n("LAUNCH_STUDY_PER_RUN", 12), DAY_CREDITS = n("LAUNCH_STUDY_DAY_CREDITS", 250000), MAX_TX = n("LAUNCH_STUDY_MAX_TX", 60000); // 0.6.2: busy runners do 15,000+ transactions in their first minutes
-const STUDY_V = 6; // bump to redo every coin with a newer method
+const STUDY_V = 7; // bump to redo every coin with a newer method
 export const studyStat = { runs: 0, studied: 0, errors: 0, lastErr: "", lastRun: null, running: false, credits: 0, creditsDay: "", creditsToday: 0, calls: 0, gtfa: null, probe: null, current: "" };
 
 const disc = (s) => createHash("sha256").update(s).digest().subarray(0, 8);
@@ -62,7 +62,7 @@ async function history(addr, tEnd, mint, maxTx = MAX_TX) {
     try {
       let token = null;
       for (let page = 0; page < maxTx / 100; page++) {
-        const res = await rpc("getTransactionsForAddress", [addr, { transactionDetails: "full", sortOrder: "asc", limit: 100, maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed", ...(token ? { paginationToken: token } : {}) }], fullCost);
+        const res = await rpc("getTransactionsForAddress", [addr, { transactionDetails: "full", sortOrder: "asc", limit: 100, maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed", filters: { status: "succeeded", blockTime: { lte: tEnd } }, ...(token ? { paginationToken: token } : {}) }], fullCost); // 0.6.3: failed transactions (bot spam on hot coins) are not fetched
         studyStat.gtfa = true;
         const rows = res?.data || []; let past = false;
         for (const t of rows) { if (t.blockTime && t.blockTime > tEnd) { past = true; break; } out.push(compact(t, mint)); }
