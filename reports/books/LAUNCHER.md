@@ -72,6 +72,16 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
     - 1 run, 6 runners, 2 posts with genuine runners.
     - On four pump.fun coins made by serial launchers (93eW4L and 5QBwQ7: GMGN creator launches 1,935; 3hvD7n: 241), the trade events decode the SOL amount as ~0. Buy counts there are right, but SOL figures are not.
     - Balance-change market caps for 0.005-SOL micro-buys are unreliable (fees and rent swamp the price).
+- **1 Nov 19:46 UK — fixes 0.6.1–0.6.3 (owner's go 18:59 UK), checked on the server.**
+  - The study and runner-follow now read the coin's own address, so PumpSwap and other pools after graduation are included.
+  - Pages are turned into small trade records at once, so memory stays low.
+  - Only succeeded transactions are fetched, up to 60,000 per coin.
+  - No crash since 19:01 UK: pm2 restarts 150 → 154, all four from deploys. Three study runs of 12 coins each completed.
+  - Coverage of the first 40 min:
+    - full on every coin except Regretamine Dbyy9L (60,000 succeeded transactions in its first 11 min, so it is covered to 655 s);
+    - Regretamine 5ZxTxQ is now covered to 2,385 s.
+  - Regretamine Dbyy9L re-measured: at 5 min 975 buyers and +75.8 SOL net, organic 41%, round trips 68% (the old curve-only view had frozen at 79 buyers).
+  - Helius credits today ≈ 55K (study) + runner-follow.
 - **1 Nov 18:50 UK — 24-hour check-in (data to 18:38 UK).**
   - **Posts:** 92 posts named since 18:27 UK 31 Oct (76 paper, 16 skipped): elonmusk 64, WhiteHouse 20, a1lon9 5, Pumpfun 3. 544 copycats priced.
   - **Runners:** 32 credible runners (peak ≥ $30K and ≥ $25K at 5 or 15 min) on 10 posts. Copies whose "peak" is a one-candle wick at creation are excluded.
@@ -90,7 +100,7 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
     - **Holding loses 50–95% on every book; only quick exits come out near or above zero.**
   - **Problems found:**
     - (1) The launcher ran out of memory, with 150 restarts (pm2) and the last at 18:37 UK. The study and runner-follow load up to 15,000 full transactions at once against a 256 MB limit. Counters reset on each crash, and checks due during a restart were skipped.
-    - (2) The runner-follow reads only the bonding curve, so a copy that graduates within 2 min goes blind after graduation. Dbyy9L (the $312K genuine runner) showed the same 79 buyers / +85 SOL at every check, and RF never bought it; Ae6TX5 likewise. Fix proposed (read the coin's own address, so PumpSwap trades count too; turn each page into trades at once instead of holding raw transactions); awaiting owner's go.
+    - (2) The runner-follow reads only the bonding curve, so a copy that graduates within 2 min goes blind after graduation. Dbyy9L (the $312K genuine runner) showed the same 79 buyers / +85 SOL at every check, and RF never bought it; Ae6TX5 likewise. Fixed 0.6.1–0.6.3 (see 19:46 UK).
 - **1 Nov 11:10 UK — what the creation-block ("bundle") wallets made** (study v4, 9 pump.fun coins with a bundle, gross SOL within the first 40 min, before fees):
   - The bundle is always 12–13 wallets, 13.7–23.7 SOL, plus a creator buy of 0.55–1.32 SOL. On GMGN, every one of these creator wallets is new (0–1 launches).
   - Bundle in → out, runners: No Kings 13.7 → 47.9; Saved By Starlink 15.0 → 41.4; Spam 14.4 → 33.3; Anubis ($96K) 23.7 → 46.5; Dopamine ($46K) 23.3 → 20.4 (the only loss).
