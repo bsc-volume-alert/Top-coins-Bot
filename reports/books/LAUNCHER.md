@@ -72,6 +72,25 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
     - 1 run, 6 runners, 2 posts with genuine runners.
     - On four pump.fun coins made by serial launchers (93eW4L and 5QBwQ7: GMGN creator launches 1,935; 3hvD7n: 241), the trade events decode the SOL amount as ~0. Buy counts there are right, but SOL figures are not.
     - Balance-change market caps for 0.005-SOL micro-buys are unreliable (fees and rent swamp the price).
+- **1 Nov 18:50 UK — 24-hour check-in (data to 18:38 UK).**
+  - **Posts:** 92 posts named since 18:27 UK 31 Oct (76 paper, 16 skipped): elonmusk 64, WhiteHouse 20, a1lon9 5, Pumpfun 3. 544 copycats priced.
+  - **Runners:** 32 credible runners (peak ≥ $30K and ≥ $25K at 5 or 15 min) on 10 posts. Copies whose "peak" is a one-candle wick at creation are excluded.
+    - Biggest: Regretamine (elonmusk, 12:50 UK 1 Nov): 90 copies, 13 runners.
+      - The genuine one is pump.fun Dbyy9L: made 25 s after the post; $131K at 5 min, $160K at 15 min, peak $312K at 19.8 min, still $112K at 18:38 UK with 1,549 holders.
+      - The Meteora GAdoW8 (made 23.5 min after the post) peaked at $1.68M at 12.7 min and is now $0.
+  - **Study groups** (62 coins, v4; medians):
+    - pump.fun runners (9): net buying at 5 min +63.9 SOL; 442 buyers; bundle 14.4 SOL; round trips 50%; organic 57%; biggest funder group 3. KOL wallets on 3 of 9, smart money on 6 of 9.
+    - Meteora/other runners (45): net +15.5 SOL; round trips 90%; organic 6%; **biggest funder group 77** (one wallet funded ~77 of the first 100 buyers). KOL on 0 of 45, smart money on 1.
+    - pump.fun copies that died (5): net +6.5 SOL; organic 63%.
+  - **Paper results** (scored 2 h after entry, after costs; small samples):
+    - RF50, 5 trades: half at 2x + trail +12.3% (median −36%), 2x/−50% +2.1%, 1.5x/−30% −5.1%, hold 60 min −94%.
+    - RF30, 7 trades: **1.5x/−30% +8.0%, 4 of 7 won, without the best trade +2.4%**; the other exits are negative; hold −91%.
+    - RF50W (keeps wash-traded copies), 21 trades: every exit negative (−8.6% to −19.4%); hold −51%.
+    - V300, 9 trades: every exit negative (best 1.5x/−30% −2.5%); hold 2 h −47%. V500: 1 entry, not scored yet.
+    - **Holding loses 50–95% on every book; only quick exits come out near or above zero.**
+  - **Problems found:**
+    - (1) The launcher ran out of memory, with 150 restarts (pm2) and the last at 18:37 UK. The study and runner-follow load up to 15,000 full transactions at once against a 256 MB limit. Counters reset on each crash, and checks due during a restart were skipped.
+    - (2) The runner-follow reads only the bonding curve, so a copy that graduates within 2 min goes blind after graduation. Dbyy9L (the $312K genuine runner) showed the same 79 buyers / +85 SOL at every check, and RF never bought it; Ae6TX5 likewise. Fix proposed (read the coin's own address, so PumpSwap trades count too; turn each page into trades at once instead of holding raw transactions); awaiting owner's go.
 - **1 Nov 11:10 UK — what the creation-block ("bundle") wallets made** (study v4, 9 pump.fun coins with a bundle, gross SOL within the first 40 min, before fees):
   - The bundle is always 12–13 wallets, 13.7–23.7 SOL, plus a creator buy of 0.55–1.32 SOL. On GMGN, every one of these creator wallets is new (0–1 launches).
   - Bundle in → out, runners: No Kings 13.7 → 47.9; Saved By Starlink 15.0 → 41.4; Spam 14.4 → 33.3; Anubis ($96K) 23.7 → 46.5; Dopamine ($46K) 23.3 → 20.4 (the only loss).
