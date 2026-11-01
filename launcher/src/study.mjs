@@ -16,7 +16,7 @@ import { curveOf, PUMP } from "./pump.mjs";
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
 const MIN_PEAK = n("LAUNCH_STUDY_MIN_PEAK", 30000), WINDOW = n("LAUNCH_STUDY_WINDOW_MIN", 40) * 60, BUYERS = n("LAUNCH_STUDY_BUYERS", 100);
 const PER_RUN = n("LAUNCH_STUDY_PER_RUN", 12), DAY_CREDITS = n("LAUNCH_STUDY_DAY_CREDITS", 250000), MAX_TX = n("LAUNCH_STUDY_MAX_TX", 15000);
-const STUDY_V = 4; // bump to redo every coin with a newer method
+const STUDY_V = 5; // bump to redo every coin with a newer method
 export const studyStat = { runs: 0, studied: 0, errors: 0, lastErr: "", lastRun: null, running: false, credits: 0, creditsDay: "", creditsToday: 0, calls: 0, gtfa: null, probe: null, current: "" };
 
 const disc = (s) => createHash("sha256").update(s).digest().subarray(0, 8);
@@ -46,16 +46,26 @@ async function rpc(method, params, credits = 1) {
 const fullCost = (res) => Math.max(10, Math.ceil(((res?.data || []).length) / 100) * 10);
 
 /** Every transaction touching `addr` from its first one, oldest first, until blockTime > tEnd (or MAX_TX). Helius getTransactionsForAddress, else signatures + getTransaction. */
-async function history(addr, tEnd) {
+// 0.6.1: each transaction is turned into a small record (its trades for `mint`, create/complete, signer, Jito) the moment its page arrives,
+// so a busy coin no longer holds thousands of full transactions in memory (the launcher was running out of its 256 MB and restarting).
+function compact(t, mint) {
+  if (!studyStat.probeDone) { studyStat.probeDone = true; studyStat.probe = JSON.stringify({ keys: Object.keys(t), ix: t.transactionIndex, ev: events(t).map((e) => e.k).join("+"), inner: (t.meta?.innerInstructions || []).length, logs: (t.meta?.logMessages || []).length }).slice(0, 400); }
+  const err = !!t.meta?.err, keys = keysOf(t), ev = err ? [] : events(t);
+  let tr = [], generic = false;
+  if (!err) { tr = fillZero(t, mint, ev.filter((e) => e.k === "trade" && e.mint === mint).map((e) => ({ ...e, mc: (e.vSol / e.vTok) * 1e6 }))); if (!tr.length) { tr = balTrades(t, mint); generic = tr.length > 0; } }
+  return { slot: t.slot, transactionIndex: t.transactionIndex ?? null, blockTime: t.blockTime, err, sig: sigOf(t), keys0: keys[0], jito: keys.some((k) => JITO.has(k)),
+    cr: ev.find((e) => e.k === "create" && e.mint === mint) || null, complete: ev.some((e) => e.k === "complete"), pump: tr.some((e) => e.vSol != null), tr, generic };
+}
+async function history(addr, tEnd, mint, maxTx = MAX_TX) {
   const out = [];
   if (studyStat.gtfa !== false) {
     try {
       let token = null;
-      for (let page = 0; page < MAX_TX / 100; page++) {
+      for (let page = 0; page < maxTx / 100; page++) {
         const res = await rpc("getTransactionsForAddress", [addr, { transactionDetails: "full", sortOrder: "asc", limit: 100, maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed", ...(token ? { paginationToken: token } : {}) }], fullCost);
         studyStat.gtfa = true;
         const rows = res?.data || []; let past = false;
-        for (const t of rows) { if (t.blockTime && t.blockTime > tEnd) { past = true; break; } out.push(t); }
+        for (const t of rows) { if (t.blockTime && t.blockTime > tEnd) { past = true; break; } out.push(compact(t, mint)); }
         token = res?.paginationToken; if (past || !token || !rows.length) break;
       }
       return out;
@@ -67,10 +77,10 @@ async function history(addr, tEnd) {
     const s = await rpc("getSignaturesForAddress", [addr, { limit: 1000, commitment: "confirmed", ...(before ? { before } : {}) }]);
     if (!s?.length) break; sigs.push(...s); before = s[s.length - 1].signature; if (s.length < 1000) break;
   }
-  sigs = sigs.reverse(); const t0 = sigs[0]?.blockTime || 0; sigs = sigs.filter((s) => !s.blockTime || s.blockTime <= Math.max(tEnd, t0)).slice(0, MAX_TX);
+  sigs = sigs.reverse(); const t0 = sigs[0]?.blockTime || 0; sigs = sigs.filter((s) => !s.blockTime || s.blockTime <= Math.max(tEnd, t0)).slice(0, maxTx);
   for (let i = 0; i < sigs.length; i += 8) {
     const got = await Promise.all(sigs.slice(i, i + 8).map((s) => rpc("getTransaction", [s.signature, { maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed" }]).catch(() => null)));
-    got.forEach((t, k) => t && out.push({ ...t, transactionIndex: null, _sig: sigs[i + k].signature }));
+    got.forEach((t, k) => t && out.push(compact({ ...t, transactionIndex: null, _sig: sigs[i + k].signature }, mint)));
   }
   return out;
 }
@@ -122,18 +132,16 @@ function balTrades(t, mint) {
 
 /** 0.5.0: a coin's trades from its first transaction up to tEnd (any launchpad), cheap form for the runner-follow test. */
 export async function earlyTrades(mint, tEnd) {
-  let txs = await history(curveOf(new PublicKey(mint)).toBase58(), tEnd), pumpCurve = txs.length > 0;
-  if (!txs.length) txs = await history(mint, tEnd);
+  // 0.6.1: read the coin's own address, not the bonding curve — a coin that graduates in under 2 min keeps trading on PumpSwap, which the curve never sees
+  const txs = await history(mint, tEnd, mint, n("LAUNCH_RF_MAX_TX", 8000));
   txs.sort((a, b) => a.slot - b.slot || (a.transactionIndex ?? 0) - (b.transactionIndex ?? 0));
-  const trades = []; let t0 = null, complete = false;
+  const trades = []; let t0 = null, complete = false, pump = false;
   for (const t of txs) {
-    if (t.meta?.err) continue; if (t0 == null) t0 = t.blockTime;
-    const ev = events(t); if (ev.some((e) => e.k === "complete")) complete = true;
-    let tr = fillZero(t, mint, ev.filter((e) => e.k === "trade" && e.mint === mint).map((e) => ({ ...e, mc: (e.vSol / e.vTok) * 1e6 })));
-    if (!tr.length) tr = balTrades(t, mint);
-    tr.forEach((e) => trades.push({ t: t.blockTime, user: e.user, isBuy: e.isBuy, sol: e.sol, mc: e.mc }));
+    if (t.err) continue; if (t0 == null) t0 = t.blockTime;
+    if (t.complete) complete = true; if (t.pump || t.cr) pump = true;
+    t.tr.forEach((e) => trades.push({ t: t.blockTime, user: e.user, isBuy: e.isBuy, sol: e.sol, mc: e.mc }));
   }
-  return { t0, trades, txs: txs.length, pumpCurve, complete };
+  return { t0, trades, txs: txs.length, pumpCurve: pump, complete };
 }
 
 /** 0.5.1: some pump.fun coins (serial launchers; curve quoted in another token) report sol_amount = 0 and empty SOL reserves in their TradeEvent.
@@ -181,22 +189,18 @@ export async function studyCoin(db, c, solUsd) {
       bots: P(st.bot_degen_rate), sniperHold: P(st.top70_sniper_hold_rate), smart: N(w.smart_wallets), kol: N(w.renowned_wallets), snipers: N(w.sniper_wallets), bundlers: N(w.bundler_wallets), freshW: N(w.fresh_wallets), ratW: N(w.rat_trader_wallets),
       devLaunches: N(dv.creator_open_count ?? st.creator_created_count), devStatus: dv.creator_token_status ?? null, twitter: i?.link?.twitter_username ?? i?.link?.twitter ?? null, website: i?.link?.website ?? null, telegram: i?.link?.telegram ?? null, dexPaid: dv.dexscr_ad ?? null }; } catch (e) { gmgn = { err: e.message.slice(0, 80) }; }
   dbg.on = true; dbg.samples = []; dbg.programs = {}; dbg.seen = new Set();
-  let txs = await history(curve, c.created_ts + WINDOW);
-  if (!txs.length) txs = await history(c.mint, c.created_ts + WINDOW);
+  const txs = await history(c.mint, c.created_ts + WINDOW, c.mint); // 0.6.1: the coin's own address — curve, PumpSwap and any other pool
   if (!txs.length) throw new Error("no transactions found");
-  if (!studyStat.probeDone) { studyStat.probeDone = true; studyStat.probe = (studyStat.probe ? studyStat.probe + " | " : "") + JSON.stringify({ keys: Object.keys(txs[0]), ix: txs[0].transactionIndex, ev: txs.slice(0, 5).map((t) => events(t).map((e) => e.k).join("+")), inner: (txs[0].meta?.innerInstructions || []).length, logs: (txs[0].meta?.logMessages || []).length }).slice(0, 500); }
   // trades in chain order
   const trades = []; let created = null, t0 = null, slot0 = null, complete = null, generic = 0, creatorGuess = null;
   txs.sort((a, b) => a.slot - b.slot || (a.transactionIndex ?? 0) - (b.transactionIndex ?? 0));
   for (const t of txs) {
-    if (t.meta?.err) continue;
-    const ev = events(t), keys = keysOf(t), sig = sigOf(t), jito = keys.some((k) => JITO.has(k));
-    const cr = ev.find((e) => e.k === "create" && e.mint === c.mint); if (cr && !created) { created = cr; t0 = t.blockTime; slot0 = t.slot; }
-    if (ev.some((e) => e.k === "complete") && !complete) complete = t.blockTime;
-    let tr = fillZero(t, c.mint, ev.filter((e) => e.k === "trade" && e.mint === c.mint).map((e) => ({ ...e, mc: (e.vSol / e.vTok) * 1e6 }))); // pump.fun: market cap in SOL from the curve
-    if (!tr.length) { tr = balTrades(t, c.mint); if (tr.length) generic++; }
-    if (t0 == null && !created) { t0 = t.blockTime; slot0 = t.slot; creatorGuess = keys[0]; }
-    tr.forEach((e) => trades.push({ ...e, t: t.blockTime, slot: t.slot, idx: t.transactionIndex, sig, payer: keys[0], jito, inTx: tr.length }));
+    if (t.err) continue;
+    if (t.cr && !created) { created = t.cr; t0 = t.blockTime; slot0 = t.slot; }
+    if (t.complete && !complete) complete = t.blockTime;
+    const tr = t.tr; if (t.generic) generic++;
+    if (t0 == null && !created) { t0 = t.blockTime; slot0 = t.slot; creatorGuess = t.keys0; }
+    tr.forEach((e) => trades.push({ ...e, t: t.blockTime, slot: t.slot, idx: t.transactionIndex, sig: t.sig, payer: t.keys0, jito: t.jito, inTx: tr.length }));
   }
   if (t0 == null) { t0 = txs[0].blockTime; slot0 = txs[0].slot; }
   const venue = created ? "pump.fun" : generic ? "other (balance changes)" : "none";
@@ -260,7 +264,7 @@ export async function studyCoin(db, c, solUsd) {
     wash_wallets_15m: washW.length, wash_vol_share_15m: vol15 ? +(sum(washW, (p) => p.bs + p.ss) / vol15 * 100).toFixed(1) : null, roundtrip_share_15m: vol15 ? +(roundTrip / vol15 * 100).toFixed(1) : null,
     profiled: first.length, fresh1h_pct: share((f) => f.fresh1h), fresh24h_pct: share((f) => f.fresh24h), lowact_pct: share((f) => f.lowAct), cluster_pct: share((f) => f.cluster), creator_linked: first.filter((x) => x.f.creatorLinked).length,
     fresh24h_sol_pct: solShare((f) => f.fresh24h), cluster_sol_pct: solShare((f) => f.cluster), creator_linked_sol_pct: solShare((f) => f.creatorLinked), biggest_funder_group: Math.max(0, ...fGroups.values()),
-    v: STUDY_V, venue, generic_txs: generic, gmgn,
+    v: STUDY_V, venue, graduated_in_window: !!complete, generic_txs: generic, gmgn,
     debug: { samples: dbg.samples, programs: Object.entries(dbg.programs).sort((a, b) => b[1] - a[1]).slice(0, 8), zeroSolBuys: trades.filter((x) => x.isBuy && !x.sol).length },
     organic_buyers: org.length, organic_pct: share((f) => f.organic), organic_sol_pct: solShare((f) => f.organic), first_organic_s: org[0]?.p.first ?? null,
   };
