@@ -72,6 +72,16 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
     - 1 run, 6 runners, 2 posts with genuine runners.
     - On four pump.fun coins made by serial launchers (93eW4L and 5QBwQ7: GMGN creator launches 1,935; 3hvD7n: 241), the trade events decode the SOL amount as ~0. Buy counts there are right, but SOL figures are not.
     - Balance-change market caps for 0.005-SOL micro-buys are unreliable (fees and rent swamp the price).
+- **3 Nov 10:05 UK — Axiom KOL / FOMO / Pump App leaderboard pulled (owner's Chrome, logged in) and tested against the study.**
+  - Source: Axiom's Trackers → KOLs tab calls `api8.axiom.trade/smart-money-traders?source={kol|fomo|pump}&window={24h|7d|30d|all}`. 384 rows saved to reports/wallets/axiom_smart_money_2026-11-03.csv: KOL 188, FOMO 100, Pump App 96; 376 with a verified Solana address. The "Axiom" filter on the page is a tag on KOL rows, not a fourth list.
+  - **FOMO traders have verified Solana addresses here** (frankdegods 498g1r…, Rowdy CzU8Ma…), which answers the 22 Oct dead end in FOMO.md: fomo's own API gave custodial addresses; Axiom resolves the real ones.
+  - 86 of the 369 Axiom wallets were already in the GMGN harvest (18,455 wallets, 19–30 Oct). jacksneth 12 early wins / 18 coins; flipski77 (Cented) 10 / 19, GMGN-tagged wash_trader.
+  - **Test on the 62 pump.fun coins of study v7** (23 runners, 39 copies that died): did an Axiom-listed trader buy in the first 100?
+    - no Axiom trader: 28 coins, 14 ran (50%);
+    - ≥ 1 Axiom trader: 34 coins, 9 ran (26%); ≥ 2: 19 coins, 4 ran (21%); ≥ 3: 10 coins, 2 ran (20%).
+    - **Coins the KOLs bought ran LESS often.** 14 of the 23 runners had no listed trader in their first 100 buyers, including the genuine Regretamine $312K coin's first 100 (chestererer and fnmilito appear in the 101+).
+  - **How the KOLs trade these coins:** 68 buys, median entry +11 s after creation (45 of 68 within 15 s), median first sell +37 s. Where they sold inside 40 min (66 of 68): +46.7 SOL in total, 35 of 66 won. They are snipers who flip the bundle spike, not holders. Following them at their entry is impossible (we'd be 10–30 s behind, into their sell).
+  - **Conclusion:** the Axiom/FOMO/Pump leaderboard wallets are a sniper signal, not a runner signal, on this data. No paper book built on them. The list is kept and will be matched against every new study coin automatically so this re-tests itself.
 - **3 Nov 09:30 UK — full diagnosis (data to 09:10 UK; owner asked "full diagnosis of our website and what we're doing").**
   - **Health:**
     - launcher 0.6.3, paper mode, online. pm2 restarts 154 → 158 since the 19:34 UK 1 Nov deploy, the last at 23:40 UK 1 Nov, stable 33 h since.
