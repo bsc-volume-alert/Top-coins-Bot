@@ -36,6 +36,7 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - About 20 other copies show a one-candle $10–24K "peak" in their first minute, then sit at $2.7K with 1–4 holders. That is the creator's own buy, not traders.
 
 ## Ideas tested / findings
+- **3 Nov 12:58 UK — census study too slow; 0.7.3 proposed (waiting for "go").** 31 of 213 census coins ($100K+, migrated, last 60 days) studied. A runner does 50–100 transactions a second early on, so the full 40-minute read is ~600 Helius pages, ~6,000 credits and 20–40 min a coin (2 an hour, ~4 days, ~1.1M credits against the 250K/day cap). Fix: census coins stop at 5,000 transactions (LAUNCH_STUDY_CENSUS_MAX_TX) — the creation block, the snipers and the first 100 buyers (all the operator tracing uses) sit inside the first minute even on the busiest coin; vol5/wash become partial for those coins (covered_s records how much was read). Expected: remaining 182 coins in ~6 h, ~110K credits. VA backfill: 267/1,500 scanned, 0 entries (biggest peaks first, usually above $2M when they trade $100K/5 min); the October candle pull (2,022 graduated coins) had 25 coins with a ≥$100K 5-min candle at 12h+ and under $2M, so entries are expected from the mid-size coins. Live VA poll: 180 polls, max 5-min volume seen $259K, no entry.
 - **31 Oct 19:10 UK — copycat study, first run (11 coins: 6 runners, 7 controls/ours; method as above).**
   - **The two biggest runners were wash-traded (volume bots).** Measured on the chain, not inferred from labels:
     - No Kings Hsdhmq ($505K):

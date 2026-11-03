@@ -16,7 +16,7 @@ import { one as peakOne } from "./copypeaks.mjs";
 
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
 const MIN_PEAK = n("LAUNCH_STUDY_MIN_PEAK", 30000), WINDOW = n("LAUNCH_STUDY_WINDOW_MIN", 40) * 60, BUYERS = n("LAUNCH_STUDY_BUYERS", 100);
-const PER_RUN = n("LAUNCH_STUDY_PER_RUN", 30), DAY_CREDITS = n("LAUNCH_STUDY_DAY_CREDITS", 250000), MAX_TX = n("LAUNCH_STUDY_MAX_TX", 60000); // 0.6.2: busy runners do 15,000+ transactions in their first minutes
+const PER_RUN = n("LAUNCH_STUDY_PER_RUN", 30), DAY_CREDITS = n("LAUNCH_STUDY_DAY_CREDITS", 250000), MAX_TX = n("LAUNCH_STUDY_MAX_TX", 60000), CENSUS_MAX_TX = n("LAUNCH_STUDY_CENSUS_MAX_TX", 5000); // 0.6.2: busy runners do 15,000+ transactions in their first minutes; 0.7.3: census coins stop at 5,000
 const STUDY_V = 7; // bump to redo every coin with a newer method
 export const studyStat = { runs: 0, studied: 0, errors: 0, lastErr: "", lastRun: null, running: false, credits: 0, creditsDay: "", creditsToday: 0, calls: 0, gtfa: null, probe: null, current: "" };
 
@@ -190,7 +190,11 @@ export async function studyCoin(db, c, solUsd) {
       bots: P(st.bot_degen_rate), sniperHold: P(st.top70_sniper_hold_rate), smart: N(w.smart_wallets), kol: N(w.renowned_wallets), snipers: N(w.sniper_wallets), bundlers: N(w.bundler_wallets), freshW: N(w.fresh_wallets), ratW: N(w.rat_trader_wallets),
       devLaunches: N(dv.creator_open_count ?? st.creator_created_count), devStatus: dv.creator_token_status ?? null, twitter: i?.link?.twitter_username ?? i?.link?.twitter ?? null, website: i?.link?.website ?? null, telegram: i?.link?.telegram ?? null, dexPaid: dv.dexscr_ad ?? null }; } catch (e) { gmgn = { err: e.message.slice(0, 80) }; }
   dbg.on = true; dbg.samples = []; dbg.programs = {}; dbg.seen = new Set();
-  const txs = await history(c.mint, c.created_ts + WINDOW, c.mint); // 0.6.1: the coin's own address — curve, PumpSwap and any other pool
+  // 0.7.3: census coins (the operator database) need the creation block, the snipers and the first 100 buyers, all inside the first minute even on the
+  // busiest coin (~100 transactions a second). Reading their whole first 40 minutes cost 600 pages / 6,000 credits / 20-40 minutes a coin (2 coins an hour);
+  // CENSUS_MAX_TX pages are enough for the wallets and cost 1/12 of that. The 40-minute figures (vol5, wash) are then partial: covered_s says how much was read.
+  const cap = c.role === "census" ? CENSUS_MAX_TX : MAX_TX;
+  const txs = await history(c.mint, c.created_ts + WINDOW, c.mint, cap); // 0.6.1: the coin's own address — curve, PumpSwap and any other pool
   if (!txs.length) throw new Error("no transactions found");
   // trades in chain order
   const trades = []; let created = null, t0 = null, slot0 = null, complete = null, generic = 0, creatorGuess = null;
@@ -265,7 +269,7 @@ export async function studyCoin(db, c, solUsd) {
     wash_wallets_15m: washW.length, wash_vol_share_15m: vol15 ? +(sum(washW, (p) => p.bs + p.ss) / vol15 * 100).toFixed(1) : null, roundtrip_share_15m: vol15 ? +(roundTrip / vol15 * 100).toFixed(1) : null,
     profiled: first.length, fresh1h_pct: share((f) => f.fresh1h), fresh24h_pct: share((f) => f.fresh24h), lowact_pct: share((f) => f.lowAct), cluster_pct: share((f) => f.cluster), creator_linked: first.filter((x) => x.f.creatorLinked).length,
     fresh24h_sol_pct: solShare((f) => f.fresh24h), cluster_sol_pct: solShare((f) => f.cluster), creator_linked_sol_pct: solShare((f) => f.creatorLinked), biggest_funder_group: Math.max(0, ...fGroups.values()),
-    v: STUDY_V, venue, graduated_in_window: !!complete, tracker: c.tracker || null, covered_s: txs.length ? txs[txs.length - 1].blockTime - t0 : null, tx_cap_hit: txs.length >= MAX_TX, generic_txs: generic, gmgn,
+    v: STUDY_V, venue, graduated_in_window: !!complete, tracker: c.tracker || null, covered_s: txs.length ? txs[txs.length - 1].blockTime - t0 : null, tx_cap_hit: txs.length >= cap, generic_txs: generic, gmgn,
     debug: { samples: dbg.samples, programs: Object.entries(dbg.programs).sort((a, b) => b[1] - a[1]).slice(0, 8), zeroSolBuys: trades.filter((x) => x.isBuy && !x.sol).length },
     organic_buyers: org.length, organic_pct: share((f) => f.organic), organic_sol_pct: solShare((f) => f.organic), first_organic_s: org[0]?.p.first ?? null,
   };
