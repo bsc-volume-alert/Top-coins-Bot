@@ -12,10 +12,11 @@ import { PublicKey } from "@solana/web3.js";
 import { CFG } from "./config.mjs";
 import { gget, N } from "./gmgn.mjs";
 import { curveOf, PUMP } from "./pump.mjs";
+import { one as peakOne } from "./copypeaks.mjs";
 
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
 const MIN_PEAK = n("LAUNCH_STUDY_MIN_PEAK", 30000), WINDOW = n("LAUNCH_STUDY_WINDOW_MIN", 40) * 60, BUYERS = n("LAUNCH_STUDY_BUYERS", 100);
-const PER_RUN = n("LAUNCH_STUDY_PER_RUN", 12), DAY_CREDITS = n("LAUNCH_STUDY_DAY_CREDITS", 250000), MAX_TX = n("LAUNCH_STUDY_MAX_TX", 60000); // 0.6.2: busy runners do 15,000+ transactions in their first minutes
+const PER_RUN = n("LAUNCH_STUDY_PER_RUN", 30), DAY_CREDITS = n("LAUNCH_STUDY_DAY_CREDITS", 250000), MAX_TX = n("LAUNCH_STUDY_MAX_TX", 60000); // 0.6.2: busy runners do 15,000+ transactions in their first minutes
 const STUDY_V = 7; // bump to redo every coin with a newer method
 export const studyStat = { runs: 0, studied: 0, errors: 0, lastErr: "", lastRun: null, running: false, credits: 0, creditsDay: "", creditsToday: 0, calls: 0, gtfa: null, probe: null, current: "" };
 
@@ -264,7 +265,7 @@ export async function studyCoin(db, c, solUsd) {
     wash_wallets_15m: washW.length, wash_vol_share_15m: vol15 ? +(sum(washW, (p) => p.bs + p.ss) / vol15 * 100).toFixed(1) : null, roundtrip_share_15m: vol15 ? +(roundTrip / vol15 * 100).toFixed(1) : null,
     profiled: first.length, fresh1h_pct: share((f) => f.fresh1h), fresh24h_pct: share((f) => f.fresh24h), lowact_pct: share((f) => f.lowAct), cluster_pct: share((f) => f.cluster), creator_linked: first.filter((x) => x.f.creatorLinked).length,
     fresh24h_sol_pct: solShare((f) => f.fresh24h), cluster_sol_pct: solShare((f) => f.cluster), creator_linked_sol_pct: solShare((f) => f.creatorLinked), biggest_funder_group: Math.max(0, ...fGroups.values()),
-    v: STUDY_V, venue, graduated_in_window: !!complete, covered_s: txs.length ? txs[txs.length - 1].blockTime - t0 : null, tx_cap_hit: txs.length >= MAX_TX, generic_txs: generic, gmgn,
+    v: STUDY_V, venue, graduated_in_window: !!complete, tracker: c.tracker || null, covered_s: txs.length ? txs[txs.length - 1].blockTime - t0 : null, tx_cap_hit: txs.length >= MAX_TX, generic_txs: generic, gmgn,
     debug: { samples: dbg.samples, programs: Object.entries(dbg.programs).sort((a, b) => b[1] - a[1]).slice(0, 8), zeroSolBuys: trades.filter((x) => x.isBuy && !x.sol).length },
     organic_buyers: org.length, organic_pct: share((f) => f.organic), organic_sol_pct: solShare((f) => f.organic), first_organic_s: org[0]?.p.first ?? null,
   };
@@ -275,12 +276,24 @@ export async function studyCoin(db, c, solUsd) {
 }
 
 // ---------- which coins ----------
+let CENSUS = [];
+/** 0.7.1: refresh the census list from the tracker's database (graduated, peak ≥ CENSUS_MIN, last CENSUS_DAYS days). */
+export function loadCensus(tdb) {
+  if (!tdb) return 0;
+  try { CENSUS = tdb.prepare("SELECT mint, name, symbol, creator, create_ts, bundle_pct, bundle_sol, bundle_wallets, dev_buy_sol, peak_mc_usd FROM tokens WHERE graduated=1 AND peak_mc_usd>=? AND create_ts>=? ORDER BY create_ts DESC LIMIT 3000").all(n("LAUNCH_CENSUS_MIN", 100000), Math.floor(Date.now() / 1000) - n("LAUNCH_CENSUS_DAYS", 60) * 86400); } catch (e) { studyStat.lastErr = "census: " + e.message.slice(0, 100); }
+  return CENSUS.length;
+}
 function pickCoins(db) {
   const now = Math.floor(Date.now() / 1000), done = new Set(db.prepare("SELECT mint, data, err, studied_ts FROM study_coins").all().filter((r) => (!r.err && (() => { try { return JSON.parse(r.data).v === STUDY_V; } catch { return false; } })()) || (r.err && r.studied_ts > now - 600)).map((r) => r.mint)); // a failed coin is tried again after 50 min
   const peaks = db.prepare("SELECT p.*, l.t_post_ms FROM copy_peaks p LEFT JOIN launches l ON l.id=p.launch_id WHERE p.created_ts <= ? AND p.created_ts >= ?").all(now - WINDOW - 300, now - 3 * 86400);
   const runners = peaks.filter((p) => !p.ours && p.peak_mc >= MIN_PEAK).sort((a, b) => b.peak_mc - a.peak_mc);
   const out = [];
   const add = (p, role) => { if (!done.has(p.mint) && !out.some((o) => o.mint === p.mint)) out.push({ ...p, role, post_delay_s: p.t_post_ms ? p.created_ts - Math.floor(p.t_post_ms / 1000) : null }); };
+  // 0.7.1 (owner, 3 Nov 10:41 UK: "every coin over 100K, also migrated … work all the way back"): the census seed — every pump.fun launch the tracker
+  // recorded that graduated and peaked ≥ $100K (tracker.db tokens; read-only), newest first, 60 days back. Role "census". The tracker's bundle data rides along.
+  try {
+    if (CENSUS && CENSUS.length) for (const t of CENSUS) { if (!done.has(t.mint) && !out.some((o) => o.mint === t.mint)) out.push({ mint: t.mint, name: t.name, symbol: t.symbol, created_ts: t.create_ts, ours: 0, peak_mc: t.peak_mc_usd, role: "census", post_name: "census", launch_id: null, post_delay_s: null, tracker: { bundle_pct: t.bundle_pct, bundle_sol: t.bundle_sol, bundle_wallets: t.bundle_wallets, dev_buy_sol: t.dev_buy_sol, creator: t.creator } }); }
+  } catch {}
   for (const r of runners) add(r, "runner");
   for (const lid of [...new Set(runners.map((r) => r.launch_id))]) { // the same post's copies that did not run, and ours
     const same = peaks.filter((p) => p.launch_id === lid && p.peak_mc < MIN_PEAK);
@@ -297,6 +310,7 @@ export async function runStudy(db, done) {
     for (const c of pickCoins(db)) {
       if (studyStat.creditsDay === today() && studyStat.creditsToday >= DAY_CREDITS) { studyStat.lastErr = `daily Helius budget ${DAY_CREDITS} credits reached`; break; }
       studyStat.current = `${c.role} ${c.name} ${c.mint.slice(0, 6)}`;
+      if (c.role === "census" && !db.prepare("SELECT 1 FROM copy_peaks WHERE mint=?").get(c.mint)) { try { await peakOne(db, { mint: c.mint, launch_id: null, post_name: "census", name: c.name || "", symbol: c.symbol || "", created_ts: c.created_ts, ours: 0 }); const row = db.prepare("SELECT * FROM copy_peaks WHERE mint=?").get(c.mint); if (row) Object.assign(c, { peak_mc: row.peak_mc, peak_min: row.peak_min, mc_now: row.mc_now, holders: row.holders, progress: row.progress }); } catch {} }
       try { await studyCoin(db, c, solUsd); studyStat.studied++; }
       catch (e) { studyStat.errors++; studyStat.lastErr = `${c.mint.slice(0, 6)}: ${e.message}`.slice(0, 200); db.prepare("INSERT OR REPLACE INTO study_coins VALUES (?,?,?,?,?,?)").run(c.mint, c.launch_id, c.role, Math.floor(Date.now() / 1000), JSON.stringify({ name: c.name }), e.message.slice(0, 200)); }
       if (studyStat.studied <= 2) try { done?.(); } catch {} // the first coins go out at once, to check the decoding
@@ -308,7 +322,6 @@ export async function runStudy(db, done) {
 
 // 0.6.0 (owner, 31 Oct 23:33 UK: "Can I just give you a CA of new coins and you can tell me how they pump?"): study any coin by address.
 // Addresses come from launcher/study-now.txt (pushed by the chat) or a website request {action:"study", mint}. Prices first (GMGN), then the chain study.
-import { one as peakOne } from "./copypeaks.mjs";
 export const manualStat = { queued: 0, done: 0, lastErr: "", last: null };
 let mq = Promise.resolve();
 export function studyAddress(db, mint, done) {

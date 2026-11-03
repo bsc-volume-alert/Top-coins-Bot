@@ -129,24 +129,33 @@ export function recluster(db) {
     }
   }
   for (const o of outs) if (!o.dest_type) add(o.dest, "payout", o.mint);
+  // 0.7.1: the launch fingerprint — the same bundle % and SOL to two decimals on two coins is the same software and money (GR.md, 23 Oct: 79.31% / 85.0 SOL)
+  for (const c of coins) { const t = c.d.tracker; if (t && t.bundle_pct >= 20 && t.bundle_sol >= 5) add(`${(+t.bundle_pct).toFixed(2)}/${(+t.bundle_sol).toFixed(1)}`, "fingerprint", c.mint); }
   // a key shared by too many coins is a public hub (a bot service, a popular distributor), not one operator
   const MAX_SHARE = n("LAUNCH_OP_MAX_SHARE", 60);
-  for (const l of links.values()) { if (l.mints.size < 2 || l.mints.size > MAX_SHARE) continue; if (l.kind === "creator") continue; const ms = [...l.mints]; for (let i = 1; i < ms.length; i++) union(ms[0], ms[i]); }
+  const good = [...links.values()].filter((l) => l.mints.size >= 2 && l.mints.size <= MAX_SHARE && l.kind !== "creator");
+  const pairLinks = new Map(); // "a|b" -> count of distinct link kinds/keys joining a and b
+  for (const l of good) { const ms = [...l.mints]; for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) { const k = ms[i] < ms[j] ? ms[i] + "|" + ms[j] : ms[j] + "|" + ms[i]; pairLinks.set(k, (pairLinks.get(k) || 0) + 1); } }
+  const size = () => { const sz = new Map(); for (const c of coins) { const r = find(c.mint); sz.set(r, (sz.get(r) || 0) + 1); } return sz; };
+  // pass 1: pairs with 2+ independent links always merge; pass 2: single links merge only while both groups are small (< 8 coins) — one shared wallet must not glue two big operators together
+  for (const [k, cnt] of pairLinks) if (cnt >= 2) { const [a, b] = k.split("|"); union(a, b); }
+  const sz = size();
+  for (const [k, cnt] of pairLinks) if (cnt === 1) { const [a, b] = k.split("|"); const ra = find(a), rb = find(b); if (ra !== rb && (sz.get(ra) || 1) < 8 && (sz.get(rb) || 1) < 8) { union(a, b); const m = (sz.get(ra) || 1) + (sz.get(rb) || 1); sz.set(find(a), m); } }
   // build operators
   const groups = new Map(); for (const c of coins) { const r = find(c.mint); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(c); }
   db.exec("DELETE FROM operators; DELETE FROM operator_coins");
   const insO = db.prepare("INSERT INTO operators (anchor, kind, coins, runners, hit_rate, med_peak, best_peak, bundle_sol, wallets, cex_funded, first_ts, last_ts, updated) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
   const insC = db.prepare("INSERT OR IGNORE INTO operator_coins VALUES (?,?,?,?)");
   const now = Math.floor(Date.now() / 1000); let nOps = 0;
-  const peakRow = (m) => db.prepare("SELECT peak_mc, mc5, mc15, created_ts FROM copy_peaks WHERE mint=?").get(m);
+  const peakRow = (m) => db.prepare("SELECT peak_mc, peak_close_mc, mc5, mc15, created_ts FROM copy_peaks WHERE mint=?").get(m);
   for (const [root, cs] of groups) {
     if (cs.length < 2) continue; // a lone coin is not (yet) an operator
-    const myLinks = [...links.values()].filter((l) => l.mints.size >= 2 && l.mints.size <= MAX_SHARE && l.kind !== "creator" && [...l.mints].some((m) => find(m) === root));
+    const myLinks = good.filter((l) => [...l.mints].some((m) => find(m) === root));
     const funders = myLinks.filter((l) => l.kind === "funder").sort((a, b) => b.mints.size - a.mints.size);
     const anchor = (funders[0] || myLinks.sort((a, b) => b.mints.size - a.mints.size)[0])?.key || root, kind = funders[0] ? "funder" : (myLinks[0]?.kind || "coin");
     const peaks = [], run = []; let bsol = [], cex = 0, wallets = new Set(), ts = [];
     for (const c of cs) {
-      const p = peakRow(c.mint); const pk = p?.peak_mc ?? c.d.peak_mc_usd ?? 0; peaks.push(pk); const isRun = pk >= 30000 && Math.max(p?.mc5 || 0, p?.mc15 || 0) >= 25000; run.push(isRun ? 1 : 0);
+      const p = peakRow(c.mint); const pk = Math.min(p?.peak_mc ?? c.d.peak_mc_usd ?? 0, (p?.peak_close_mc || Infinity) * 1.5) || 0; peaks.push(pk); const isRun = pk >= 30000 && Math.max(p?.mc5 || 0, p?.mc15 || 0, c.d.tracker ? pk : 0) >= 25000; run.push(isRun ? 1 : 0);
       if (c.d.block0_sol) bsol.push(c.d.block0_sol); ts.push(p?.created_ts || 0);
       const kw = keyWallets(db, c.mint); if (kw) for (const [w, role] of kw.wallets) { if (role !== "sniper") wallets.add(w); const t = traceOf.get(w); if (t?.funder_type && /exchange/i.test(t.funder_type)) cex++; }
       for (const l of myLinks) if (l.mints.has(c.mint)) insC.run(anchor, c.mint, c.d.role || "", `${l.kind}:${l.key}`);

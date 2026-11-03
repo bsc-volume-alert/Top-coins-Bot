@@ -20,7 +20,7 @@ import { inboxPublic, inboxApply } from "./inbox.mjs";
 import { ensureLut, luts, lutStat, wantedFor } from "./lut.mjs";
 import { initCopies, scheduleCopies, copyTick, copyStatus } from "./copies.mjs";
 import { initPeaks, runPeaks, peakStat } from "./copypeaks.mjs";
-import { initStudy, runStudy, studyStat, studyAddress, manualStat } from "./study.mjs";
+import { initStudy, runStudy, studyStat, studyAddress, manualStat, loadCensus } from "./study.mjs";
 import { initVol, volPoll, volScore, volStat } from "./volpaper.mjs";
 import { initRF, rfFind, rfCheck, rfStat } from "./runnerfollow.mjs";
 import { initOperators, runOperators, opStat } from "./operators.mjs";
@@ -386,7 +386,7 @@ if (!CFG.SMOKE) { setTimeout(() => volPoll(db), 15000); setInterval(() => volPol
 // 0.6.0: addresses listed in launcher/study-now.txt are studied once (newest method), 20 s after start
 if (!CFG.SMOKE) setTimeout(() => { try { const done = new Set(db.prepare("SELECT mint, data FROM study_coins WHERE role='manual' AND err IS NULL").all().filter((r) => { try { return JSON.parse(r.data).v != null; } catch { return false; } }).map((r) => r.mint));
   for (const m of readFileSync(new URL("../study-now.txt", import.meta.url), "utf8").split(/\s+/).map((x) => x.trim()).filter(Boolean)) if (!done.has(m)) studyAddress(db, m, exportNow); } catch {} }, 20000);
-if (!CFG.SMOKE) { const peaksThenStudy = () => runPeaks(db, exportNow).then(() => runStudy(db, exportNow)).then(() => runOperators(db, exportNow)); setTimeout(peaksThenStudy, 40000); setInterval(peaksThenStudy, 3600000); } // 0.2.2: copycat market caps, then export + push
+if (!CFG.SMOKE) { const peaksThenStudy = () => { try { st.census = loadCensus(tdb); } catch {} return runPeaks(db, exportNow).then(() => runStudy(db, exportNow)).then(() => runOperators(db, exportNow)); }; setTimeout(peaksThenStudy, 40000); setInterval(peaksThenStudy, 3600000); } // 0.2.2: copycat market caps, then export + push
 setInterval(() => feesAndSweep(), 3600000); setTimeout(() => feesAndSweep(), 120000);
 function writeStatus() { try { writeFileSync(`${CFG.OUT_DIR}/status.json`, JSON.stringify(status(), null, 1)); } catch {} }
 setInterval(writeStatus, 10000);
