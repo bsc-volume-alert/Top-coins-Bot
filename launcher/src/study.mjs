@@ -17,7 +17,7 @@ import { trace as fundedBy } from "./operators.mjs"; // 0.7.4: the fast wallet-A
 
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
 const MIN_PEAK = n("LAUNCH_STUDY_MIN_PEAK", 30000), WINDOW = n("LAUNCH_STUDY_WINDOW_MIN", 40) * 60, BUYERS = n("LAUNCH_STUDY_BUYERS", 100);
-const PER_RUN = n("LAUNCH_STUDY_PER_RUN", 30), DAY_CREDITS = n("LAUNCH_STUDY_DAY_CREDITS", 250000), MAX_TX = n("LAUNCH_STUDY_MAX_TX", 60000), CENSUS_MAX_TX = n("LAUNCH_STUDY_CENSUS_MAX_TX", 5000), PARALLEL = n("LAUNCH_STUDY_PARALLEL", 3); // 0.6.2: busy runners do 15,000+ transactions in their first minutes; 0.7.3: census coins stop at 5,000
+const PER_RUN = n("LAUNCH_STUDY_PER_RUN", 400) /* 0.7.7: was 30 an hour — with coins at ~80 s each the hourly cap was the bottleneck */, DAY_CREDITS = n("LAUNCH_STUDY_DAY_CREDITS", 250000), MAX_TX = n("LAUNCH_STUDY_MAX_TX", 60000), CENSUS_MAX_TX = n("LAUNCH_STUDY_CENSUS_MAX_TX", 5000), PARALLEL = n("LAUNCH_STUDY_PARALLEL", 3); // 0.6.2: busy runners do 15,000+ transactions in their first minutes; 0.7.3: census coins stop at 5,000
 const STUDY_V = 7; // bump to redo every coin with a newer method
 export const studyStat = { runs: 0, studied: 0, errors: 0, lastErr: "", lastRun: null, running: false, credits: 0, creditsDay: "", creditsToday: 0, calls: 0, gtfa: null, probe: null, current: "" };
 
