@@ -13,10 +13,11 @@ import { CFG } from "./config.mjs";
 import { gget, N } from "./gmgn.mjs";
 import { curveOf, PUMP } from "./pump.mjs";
 import { one as peakOne } from "./copypeaks.mjs";
+import { trace as fundedBy } from "./operators.mjs"; // 0.7.4: the fast wallet-API funder for busy wallets
 
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
 const MIN_PEAK = n("LAUNCH_STUDY_MIN_PEAK", 30000), WINDOW = n("LAUNCH_STUDY_WINDOW_MIN", 40) * 60, BUYERS = n("LAUNCH_STUDY_BUYERS", 100);
-const PER_RUN = n("LAUNCH_STUDY_PER_RUN", 30), DAY_CREDITS = n("LAUNCH_STUDY_DAY_CREDITS", 250000), MAX_TX = n("LAUNCH_STUDY_MAX_TX", 60000), CENSUS_MAX_TX = n("LAUNCH_STUDY_CENSUS_MAX_TX", 5000); // 0.6.2: busy runners do 15,000+ transactions in their first minutes; 0.7.3: census coins stop at 5,000
+const PER_RUN = n("LAUNCH_STUDY_PER_RUN", 30), DAY_CREDITS = n("LAUNCH_STUDY_DAY_CREDITS", 250000), MAX_TX = n("LAUNCH_STUDY_MAX_TX", 60000), CENSUS_MAX_TX = n("LAUNCH_STUDY_CENSUS_MAX_TX", 5000), PARALLEL = n("LAUNCH_STUDY_PARALLEL", 3); // 0.6.2: busy runners do 15,000+ transactions in their first minutes; 0.7.3: census coins stop at 5,000
 const STUDY_V = 7; // bump to redo every coin with a newer method
 export const studyStat = { runs: 0, studied: 0, errors: 0, lastErr: "", lastRun: null, running: false, credits: 0, creditsDay: "", creditsToday: 0, calls: 0, gtfa: null, probe: null, current: "" };
 
@@ -163,8 +164,9 @@ async function walletProfile(db, w) {
   try {
     const recent = await rpc("getSignaturesForAddress", [w, { limit: 1000, commitment: "confirmed" }]); txs = recent?.length ?? 0;
     if (txs < 1000 && txs > 0) first = recent[recent.length - 1];
-    else if (studyStat.gtfa) { const r = await rpc("getTransactionsForAddress", [w, { transactionDetails: "signatures", sortOrder: "asc", limit: 1 }], 10); first = r?.data?.[0] || null; }
-    if (first) {
+    else if (txs >= 1000) { // 0.7.4: a wallet with 1,000+ transactions (trading bot) — the "first transaction" scan on it was the slow call (timeouts + retries, ~20 min a coin); Helius's funded-by index answers at once with the first SOL transfer in
+      const fb = await fundedBy(db, w); if (fb && !fb.err) { funder = fb.funder; funded_sol = fb.amount_sol; first = fb.funded_ts ? { blockTime: fb.funded_ts } : null; } else if (fb?.err === "404") first = null; }
+    if (first && !funder) {
       const t = await rpc("getTransaction", [first.signature, { maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed" }]);
       if (t?.meta) { const keys = keysOf(t), pre = t.meta.preBalances, post = t.meta.postBalances, me = keys.indexOf(w);
         let best = -1, drop = 0; keys.forEach((k, i) => { if (i !== me && i < pre.length && pre[i] - post[i] > drop) { drop = pre[i] - post[i]; best = i; } });
@@ -185,6 +187,7 @@ export function initStudy(db) {
 // ---------- one coin ----------
 export async function studyCoin(db, c, solUsd) {
   const curve = curveOf(new PublicKey(c.mint)).toBase58();
+  const tStart = Date.now(); // 0.7.4: phase timing (ms) → studyStat.timing and the row
   let gmgn = null; try { const i = await gget("/v1/token/info", { chain: "sol", address: c.mint }), st = i?.stat || {}, w = i?.wallet_tags_stat || {}, dv = i?.dev || {}, P = (x) => (N(x) == null ? null : +(N(x) * 100).toFixed(1));
     gmgn = { launchpad: i?.launchpad ?? null, platform: i?.launchpad_platform ?? null, status: i?.launchpad_status ?? null, top10: P(st.top_10_holder_rate), bundler: P(st.top_bundler_trader_percentage), insider: P(st.top_rat_trader_percentage), fresh: P(st.fresh_wallet_rate),
       bots: P(st.bot_degen_rate), sniperHold: P(st.top70_sniper_hold_rate), smart: N(w.smart_wallets), kol: N(w.renowned_wallets), snipers: N(w.sniper_wallets), bundlers: N(w.bundler_wallets), freshW: N(w.fresh_wallets), ratW: N(w.rat_trader_wallets),
@@ -193,8 +196,8 @@ export async function studyCoin(db, c, solUsd) {
   // 0.7.3: census coins (the operator database) need the creation block, the snipers and the first 100 buyers, all inside the first minute even on the
   // busiest coin (~100 transactions a second). Reading their whole first 40 minutes cost 600 pages / 6,000 credits / 20-40 minutes a coin (2 coins an hour);
   // CENSUS_MAX_TX pages are enough for the wallets and cost 1/12 of that. The 40-minute figures (vol5, wash) are then partial: covered_s says how much was read.
-  const cap = c.role === "census" ? CENSUS_MAX_TX : MAX_TX;
-  const txs = await history(c.mint, c.created_ts + WINDOW, c.mint, cap); // 0.6.1: the coin's own address — curve, PumpSwap and any other pool
+  const cap = c.role === "census" ? CENSUS_MAX_TX : MAX_TX, tm = { gmgn: Date.now() - tStart, pages: 0, wallets: 0 }; let tP = Date.now();
+  const txs = await history(c.mint, c.created_ts + WINDOW, c.mint, cap); tm.pages = Date.now() - tP; tP = Date.now(); // 0.6.1: the coin's own address — curve, PumpSwap and any other pool
   if (!txs.length) throw new Error("no transactions found");
   // trades in chain order
   const trades = []; let created = null, t0 = null, slot0 = null, complete = null, generic = 0, creatorGuess = null;
@@ -227,6 +230,7 @@ export async function studyCoin(db, c, solUsd) {
   // profiles of the first BUYERS buyers (+ the creator)
   const prof = new Map(); const look = [creator, ...buyers.slice(0, BUYERS).map((p) => p.w)].filter(Boolean);
   for (let i = 0; i < look.length; i += 6) { const got = await Promise.all(look.slice(i, i + 6).map((w) => walletProfile(db, w))); got.forEach((g) => prof.set(g.wallet, g)); }
+  tm.wallets = Date.now() - tP; tm.total = Date.now() - tStart; tm.heavy = look.filter((w) => (prof.get(w)?.txs ?? 0) >= 1000).length; studyStat.timing = { coin: c.mint.slice(0, 6), ...tm };
   const cp = prof.get(creator) || {};
   const fGroups = new Map(); for (const p of buyers.slice(0, BUYERS)) { const f = prof.get(p.w)?.funder; if (f) fGroups.set(f, (fGroups.get(f) || 0) + 1); }
   const linked = (w) => { const f = prof.get(w)?.funder; return !!f && (f === creator || (cp.funder && f === cp.funder) || f === cp.funder); };
@@ -269,7 +273,7 @@ export async function studyCoin(db, c, solUsd) {
     wash_wallets_15m: washW.length, wash_vol_share_15m: vol15 ? +(sum(washW, (p) => p.bs + p.ss) / vol15 * 100).toFixed(1) : null, roundtrip_share_15m: vol15 ? +(roundTrip / vol15 * 100).toFixed(1) : null,
     profiled: first.length, fresh1h_pct: share((f) => f.fresh1h), fresh24h_pct: share((f) => f.fresh24h), lowact_pct: share((f) => f.lowAct), cluster_pct: share((f) => f.cluster), creator_linked: first.filter((x) => x.f.creatorLinked).length,
     fresh24h_sol_pct: solShare((f) => f.fresh24h), cluster_sol_pct: solShare((f) => f.cluster), creator_linked_sol_pct: solShare((f) => f.creatorLinked), biggest_funder_group: Math.max(0, ...fGroups.values()),
-    v: STUDY_V, venue, graduated_in_window: !!complete, tracker: c.tracker || null, covered_s: txs.length ? txs[txs.length - 1].blockTime - t0 : null, tx_cap_hit: txs.length >= cap, generic_txs: generic, gmgn,
+    v: STUDY_V, venue, graduated_in_window: !!complete, tracker: c.tracker || null, covered_s: txs.length ? txs[txs.length - 1].blockTime - t0 : null, tx_cap_hit: txs.length >= cap, generic_txs: generic, gmgn, timing: tm,
     debug: { samples: dbg.samples, programs: Object.entries(dbg.programs).sort((a, b) => b[1] - a[1]).slice(0, 8), zeroSolBuys: trades.filter((x) => x.isBuy && !x.sol).length },
     organic_buyers: org.length, organic_pct: share((f) => f.organic), organic_sol_pct: solShare((f) => f.organic), first_organic_s: org[0]?.p.first ?? null,
   };
@@ -311,14 +315,17 @@ export async function runStudy(db, done) {
   if (studyStat.running) return; studyStat.running = true; studyStat.runs++;
   try {
     let solUsd = null; try { const w = await gget("/v1/token/info", { chain: "sol", address: "So11111111111111111111111111111111111111112" }); solUsd = N(w?.price?.price ?? w?.price); } catch {}
-    for (const c of pickCoins(db)) {
-      if (studyStat.creditsDay === today() && studyStat.creditsToday >= DAY_CREDITS) { studyStat.lastErr = `daily Helius budget ${DAY_CREDITS} credits reached`; break; }
-      studyStat.current = `${c.role} ${c.name} ${c.mint.slice(0, 6)}`;
+    const queue = pickCoins(db), busy = new Set(); // 0.7.4: PARALLEL coins at once (each one is mostly waiting on Helius)
+    const worker = async () => { for (let c; (c = queue.shift()); ) {
+      if (studyStat.creditsDay === today() && studyStat.creditsToday >= DAY_CREDITS) { studyStat.lastErr = `daily Helius budget ${DAY_CREDITS} credits reached`; queue.length = 0; break; }
+      busy.add(`${c.role} ${c.name} ${c.mint.slice(0, 6)}`); studyStat.current = [...busy].join(" | ");
       if (c.role === "census" && !db.prepare("SELECT 1 FROM copy_peaks WHERE mint=?").get(c.mint)) { try { await peakOne(db, { mint: c.mint, launch_id: null, post_name: "census", name: c.name || "", symbol: c.symbol || "", created_ts: c.created_ts, ours: 0 }); const row = db.prepare("SELECT * FROM copy_peaks WHERE mint=?").get(c.mint); if (row) Object.assign(c, { peak_mc: row.peak_mc, peak_min: row.peak_min, mc_now: row.mc_now, holders: row.holders, progress: row.progress }); } catch {} }
       try { await studyCoin(db, c, solUsd); studyStat.studied++; }
       catch (e) { studyStat.errors++; studyStat.lastErr = `${c.mint.slice(0, 6)}: ${e.message}`.slice(0, 200); db.prepare("INSERT OR REPLACE INTO study_coins VALUES (?,?,?,?,?,?)").run(c.mint, c.launch_id, c.role, Math.floor(Date.now() / 1000), JSON.stringify({ name: c.name }), e.message.slice(0, 200)); }
+      busy.delete(`${c.role} ${c.name} ${c.mint.slice(0, 6)}`); studyStat.current = [...busy].join(" | ");
       if (studyStat.studied <= 2) try { done?.(); } catch {} // the first coins go out at once, to check the decoding
-    }
+    } };
+    await Promise.all(Array.from({ length: PARALLEL }, worker));
     studyStat.lastRun = new Date().toISOString();
   } catch (e) { studyStat.errors++; studyStat.lastErr = e.message.slice(0, 200); }
   finally { studyStat.running = false; studyStat.current = ""; try { done?.(); } catch {} }

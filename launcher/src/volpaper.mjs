@@ -19,6 +19,7 @@ export function initVol(db) {
     created_ts INTEGER, age_min REAL, holders INTEGER, exchange TEXT, launchpad TEXT, curve INTEGER, row TEXT, done INTEGER DEFAULT 0, err TEXT,
     x5 REAL, x15 REAL, x30 REAL, x60 REAL, x120 REAL, peak120 REAL, peak_min REAL, low_before_peak REAL, x_tp2sl50 REAL, x_tp15sl30 REAL, x_trail40 REAL,
     r_tp2sl50 REAL, r_tp15sl30 REAL, r_trail40 REAL, r_hold60 REAL, r_hold120 REAL, UNIQUE (strat, mint))`);
+  db.exec("CREATE TABLE IF NOT EXISTS vol_bf_done (mint TEXT PRIMARY KEY)"); // 0.7.4
   try { db.exec("ALTER TABLE vol_paper ADD COLUMN x_half2 REAL"); } catch {} try { db.exec("ALTER TABLE vol_paper ADD COLUMN r_half2 REAL"); } catch {} // 0.5.0
 }
 
@@ -85,7 +86,8 @@ let bfList = null;
 export async function volBackfill(db, tdb) {
   if (!tdb || bfStat.finished) return;
   try {
-    if (!bfList) { const since = now() - 15 * 86400; bfList = tdb.prepare("SELECT mint, name, symbol, create_ts, peak_mc_usd FROM tokens WHERE peak_mc_usd>=50000 AND create_ts>=? ORDER BY peak_mc_usd DESC LIMIT 1500").all(since); bfStat.coins = bfList.length; }
+    if (!bfList) { const since = now() - 15 * 86400; bfList = tdb.prepare("SELECT mint, name, symbol, create_ts, peak_mc_usd FROM tokens WHERE peak_mc_usd>=50000 AND create_ts>=? ORDER BY peak_mc_usd DESC LIMIT 1500").all(since); bfStat.coins = bfList.length;
+      const seen = new Set(db.prepare("SELECT mint FROM vol_bf_done").all().map((r) => r.mint)); bfList = bfList.filter((c) => !seen.has(c.mint)); bfStat.done = seen.size; } // 0.7.4: coins scanned before a restart are not scanned again
     const ins = db.prepare(`INSERT OR IGNORE INTO vol_paper (strat, mint, name, symbol, entry_ts, entry_price, entry_mc, vol5, created_ts, age_min, holders, exchange, launchpad, curve, row) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
     let k = 0;
     while (bfList.length && k < 40) {
@@ -99,7 +101,7 @@ export async function volBackfill(db, tdb) {
         for (const x of rows) { const ageH = (x.t - c.create_ts) / 3600, mc = x.c * 1e9; if (ageH < 12 || ageH > 14 * 24 || !(mc < 2e6)) continue;
           const bucket = ageH < 24 ? "12h" : ageH < 36 ? "24h" : ageH < 48 ? "36h" : "48h";
           for (const lvl of [100000, 200000, 300000]) { const key = `BF-VA${lvl / 1000}_${bucket}`; if (x.v >= lvl && !hit[key]) { hit[key] = 1; if (ins.run(key, c.mint, c.name, c.symbol, x.t, x.c, mc, x.v, c.create_ts, +((x.t - c.create_ts) / 60).toFixed(1), null, "backfill", null, 0, JSON.stringify({ backfill: true, peak_mc_usd: c.peak_mc_usd })).changes) bfStat.entries++; } } }
-        bfStat.done++;
+        bfStat.done++; db.prepare("INSERT OR IGNORE INTO vol_bf_done VALUES (?)").run(c.mint);
       } catch (e) { bfStat.errors++; bfStat.lastErr = `${c.mint.slice(0, 6)} ${e.message}`.slice(0, 140); if (/rate limited/i.test(e.message)) { bfList.unshift(c); break; } bfStat.done++; }
     }
     if (!bfList.length) bfStat.finished = true;
