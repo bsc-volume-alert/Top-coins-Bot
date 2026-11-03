@@ -10,6 +10,7 @@
 // payout destination. Operators are scored: launches, runners (peak ≥ $30K and ≥ $25K at 5 or 15 min), hit rate, median peak, CEX habit.
 // Read-only. Nothing is bought. Tables: wallet_trace, wallet_out, operators, operator_coins. Exported as operators.csv, operator_coins.csv, wallet_trace.csv.
 import { CFG } from "./config.mjs";
+import { rpc, keysOf } from "./study.mjs"; // 0.7.6: cheap RPC reads for throwaway creator wallets
 
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
 const HOPS = n("LAUNCH_OP_HOPS", 2), PER_RUN = n("LAUNCH_OP_PER_RUN", 400), OUT_HOP = n("LAUNCH_OP_OUT", 1);
@@ -38,13 +39,16 @@ export function initOperators(db) {
   CREATE TABLE IF NOT EXISTS wallet_out (wallet TEXT, mint TEXT, dest TEXT, dest_name TEXT, dest_type TEXT, amount_sol REAL, ts INTEGER, sig TEXT, PRIMARY KEY (wallet, sig));
   CREATE TABLE IF NOT EXISTS operators (op_id INTEGER PRIMARY KEY AUTOINCREMENT, anchor TEXT UNIQUE, kind TEXT, coins INTEGER, runners INTEGER, hit_rate REAL, med_peak REAL, best_peak REAL, bundle_sol REAL, wallets INTEGER, cex_funded INTEGER, first_ts INTEGER, last_ts INTEGER, updated INTEGER);
   CREATE TABLE IF NOT EXISTS operator_coins (anchor TEXT, mint TEXT, role TEXT, link TEXT, PRIMARY KEY (anchor, mint, link));
+  CREATE TABLE IF NOT EXISTS creator_trace (mint TEXT PRIMARY KEY, creator TEXT, create_ts INTEGER, peak_mc_usd REAL, graduated INTEGER, bundle_pct REAL, bundle_sol REAL, funder TEXT, funder_sol REAL, funded_ts INTEGER, creator_txs INTEGER, err TEXT, checked_ts INTEGER);
+  CREATE INDEX IF NOT EXISTS ct_funder ON creator_trace(funder); CREATE INDEX IF NOT EXISTS ct_creator ON creator_trace(creator);
   CREATE TABLE IF NOT EXISTS snipers (wallet TEXT PRIMARY KEY, coins INTEGER, census INTEGER, runners INTEGER, hit_rate REAL, buy_sol REAL, sell_sol REAL, block0 INTEGER, creator_linked INTEGER, funder TEXT, funder_name TEXT, txs INTEGER, first_ts INTEGER, last_ts INTEGER, updated INTEGER);
   CREATE INDEX IF NOT EXISTS wt_funder ON wallet_trace(funder);`);
+  for (const c of ["launches INTEGER", "graduated_all INTEGER", "hits_all INTEGER", "hit_rate_all REAL"]) try { db.exec(`ALTER TABLE operators ADD COLUMN ${c}`); } catch {} // 0.7.6
 }
 
 /** funded-by for one wallet, cached forever. Returns the row. */
 export async function trace(db, wallet, hop = 0) {
-  const have = db.prepare("SELECT * FROM wallet_trace WHERE wallet=?").get(wallet);
+  const have = db ? db.prepare("SELECT * FROM wallet_trace WHERE wallet=?").get(wallet) : null;
   if (have && (!have.err || have.err === "404")) return have;
   let row = { wallet, funder: null, funder_name: null, funder_type: null, amount_sol: null, funded_ts: null, sig: null, hop, err: null, checked_ts: Math.floor(Date.now() / 1000) };
   try {
@@ -54,7 +58,7 @@ export async function trace(db, wallet, hop = 0) {
       if (!opStat.sample) opStat.sample = JSON.stringify(j).slice(0, 400); if (row.funder_type) opStat.cex += /exchange/i.test(row.funder_type) ? 1 : 0; }
     opStat.traced++;
   } catch (e) { row.err = e.message.slice(0, 120); opStat.errors++; opStat.lastErr = `${wallet.slice(0, 6)} ${row.err}`; if (e.http === 403 || e.http === 401) throw e; }
-  db.prepare("INSERT OR REPLACE INTO wallet_trace VALUES (@wallet,@funder,@funder_name,@funder_type,@amount_sol,@funded_ts,@sig,@hop,@err,@checked_ts)").run(row);
+  if (db) db.prepare("INSERT OR REPLACE INTO wallet_trace VALUES (@wallet,@funder,@funder_name,@funder_type,@amount_sol,@funded_ts,@sig,@hop,@err,@checked_ts)").run(row);
   return row;
 }
 const isPublic = (r) => !!(r?.funder_type) || !r?.funder; // labelled entity (CEX, DeFi, market maker…) or none: not a private link
@@ -112,6 +116,52 @@ export function rebuildSnipers(db) {
   db.exec("DELETE FROM snipers");
   const ins = db.prepare("INSERT INTO snipers VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"); const now = Math.floor(Date.now() / 1000);
   for (const [w, a] of acc) if (a.coins >= 2) { const t = traceOf.get(w); ins.run(w, a.coins, a.census, a.runners, +(a.runners / a.coins).toFixed(2), +a.buy.toFixed(2), +a.sell.toFixed(2), a.block0, a.linked, t?.funder || null, t?.funder_name || null, a.txs, Math.min(...a.ts), Math.max(...a.ts), now); }
+}
+
+// ---------- 0.7.6: the denominator — every launch's creator, traced to its funder (owner, 3 Nov 21:03 UK: "how many coins they launch and how many are successful") ----------
+// Creator wallets are throwaway (median age 0 s), so two 1-credit RPC calls find the funder: the wallet's first transaction and who paid SOL into it.
+// The 100-credit wallet-API lookup is spent only on funders that stand behind 2+ creators (the second hop), cached forever in wallet_trace.
+const CT_DAYS = n("LAUNCH_CT_DAYS", 14), CT_PER_RUN = n("LAUNCH_CT_PER_RUN", 800), CT_PARALLEL = n("LAUNCH_CT_PARALLEL", 4), CT_FUNDER_PER_RUN = n("LAUNCH_CT_FUNDERS", 60);
+export const ctStat = { runs: 0, creators: 0, traced: 0, errors: 0, lastErr: "", funders: 0, queued: 0, running: false, lastRun: null };
+async function creatorFunder(w) {
+  const recent = await rpc("getSignaturesForAddress", [w, { limit: 1000, commitment: "confirmed" }]); const txs = recent?.length ?? 0;
+  if (!txs) return { txs, err: "no transactions" };
+  if (txs >= 1000) { const fb = await trace(null, w); return { txs, funder: fb?.funder || null, funder_sol: fb?.amount_sol ?? null, funded_ts: fb?.funded_ts ?? null, err: fb?.err || null }; } // busy creator (rare): wallet API
+  const first = recent[recent.length - 1];
+  const t = await rpc("getTransaction", [first.signature, { maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed" }]);
+  if (!t?.meta) return { txs, err: "first tx unreadable" };
+  const keys = keysOf(t), pre = t.meta.preBalances, post = t.meta.postBalances, me = keys.indexOf(w); let best = -1, drop = 0;
+  keys.forEach((k, i) => { if (i !== me && i < pre.length && pre[i] - post[i] > drop) { drop = pre[i] - post[i]; best = i; } });
+  return { txs, funder: best >= 0 ? keys[best] : null, funder_sol: me >= 0 && me < pre.length ? (post[me] - pre[me]) / 1e9 : null, funded_ts: first.blockTime || null, err: null };
+}
+export async function creatorCensus(db, tdb, done) {
+  if (ctStat.running || !tdb) return; ctStat.running = true; ctStat.runs++;
+  try {
+    const since = Math.floor(Date.now() / 1000) - CT_DAYS * 86400;
+    const todo = tdb.prepare("SELECT mint, creator, create_ts, peak_mc_usd, graduated, bundle_pct, bundle_sol FROM tokens WHERE create_ts>=? AND creator IS NOT NULL AND creator<>'' ORDER BY create_ts DESC LIMIT 20000").all(since)
+      .filter((t) => !db.prepare("SELECT 1 FROM creator_trace WHERE mint=?").get(t.mint));
+    ctStat.queued = todo.length; const queue = todo.slice(0, CT_PER_RUN);
+    const ins = db.prepare("INSERT OR REPLACE INTO creator_trace VALUES (@mint,@creator,@create_ts,@peak_mc_usd,@graduated,@bundle_pct,@bundle_sol,@funder,@funder_sol,@funded_ts,@creator_txs,@err,@checked_ts)");
+    const worker = async () => { for (let t; (t = queue.shift()); ) {
+      const known = db.prepare("SELECT funder, funder_sol, funded_ts, creator_txs FROM creator_trace WHERE creator=? AND funder IS NOT NULL LIMIT 1").get(t.creator); // the same creator wallet used twice: no new calls
+      let r; try { r = known ? { txs: known.creator_txs, funder: known.funder, funder_sol: known.funder_sol, funded_ts: known.funded_ts, err: null } : await creatorFunder(t.creator); ctStat.traced++; } catch (e) { r = { err: e.message.slice(0, 100) }; ctStat.errors++; ctStat.lastErr = `${t.creator.slice(0, 6)} ${r.err}`; }
+      ins.run({ mint: t.mint, creator: t.creator, create_ts: t.create_ts, peak_mc_usd: t.peak_mc_usd ?? null, graduated: t.graduated ? 1 : 0, bundle_pct: t.bundle_pct ?? null, bundle_sol: t.bundle_sol ?? null, funder: r.funder || null, funder_sol: r.funder_sol ?? null, funded_ts: r.funded_ts ?? null, creator_txs: r.txs ?? null, err: r.err || null, checked_ts: Math.floor(Date.now() / 1000) });
+      ctStat.creators++;
+    } };
+    await Promise.all(Array.from({ length: CT_PARALLEL }, worker));
+    // second hop, wallet API, only for funders behind 2+ creators and not yet traced
+    const multi = db.prepare("SELECT funder, COUNT(*) c FROM creator_trace WHERE funder IS NOT NULL GROUP BY funder HAVING c>=2 ORDER BY c DESC").all().filter((f) => !db.prepare("SELECT 1 FROM wallet_trace WHERE wallet=? AND (err IS NULL OR err='404')").get(f.funder)).slice(0, CT_FUNDER_PER_RUN);
+    for (const f of multi) { if (!key()) break; await trace(db, f.funder, 1); ctStat.funders++; }
+    ctStat.lastRun = new Date().toISOString();
+  } catch (e) { ctStat.errors++; ctStat.lastErr = e.message.slice(0, 160); }
+  finally { ctStat.running = false; try { done?.(); } catch {} }
+}
+/** Launch counts behind an anchor wallet, from creator_trace: creators it funded directly, or through one private hop. */
+export function launchesBehind(db, anchor) {
+  const direct = db.prepare("SELECT mint, peak_mc_usd, graduated FROM creator_trace WHERE funder=?").all(anchor);
+  const hop = db.prepare("SELECT c.mint, c.peak_mc_usd, c.graduated FROM creator_trace c JOIN wallet_trace w ON w.wallet=c.funder WHERE w.funder=? AND w.funder_type IS NULL").all(anchor);
+  const seen = new Map(); for (const r of [...direct, ...hop]) seen.set(r.mint, r);
+  const all = [...seen.values()]; return { launches: all.length, graduated: all.filter((r) => r.graduated).length, hits: all.filter((r) => (r.peak_mc_usd || 0) >= 100000).length };
 }
 
 /** One run: trace every key wallet of every studied coin not yet traced (HOPS deep), outflows for bundle wallets of runners, then recluster. */
@@ -193,6 +243,7 @@ export function recluster(db) {
     }
     const sorted = [...peaks].sort((a, b) => a - b), med = sorted[Math.floor(sorted.length / 2)] || 0;
     insO.run(anchor, kind, cs.length, run.reduce((a, b) => a + b, 0), +(run.reduce((a, b) => a + b, 0) / cs.length).toFixed(2), Math.round(med), Math.round(Math.max(...peaks)), bsol.length ? +(bsol.reduce((a, b) => a + b, 0) / bsol.length).toFixed(1) : null, wallets.size, cex, Math.min(...ts.filter(Boolean)) || null, Math.max(...ts) || null, now);
+    if (kind === "funder") { const lb = launchesBehind(db, anchor); if (lb.launches) db.prepare("UPDATE operators SET launches=?, graduated_all=?, hits_all=?, hit_rate_all=? WHERE anchor=?").run(lb.launches, lb.graduated, lb.hits, +(lb.hits / lb.launches).toFixed(2), anchor); } // 0.7.6: the true denominator, duds included
     nOps++;
   }
   opStat.operators = nOps;

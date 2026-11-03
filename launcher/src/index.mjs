@@ -23,7 +23,7 @@ import { initPeaks, runPeaks, peakStat } from "./copypeaks.mjs";
 import { initStudy, runStudy, studyStat, studyAddress, manualStat, loadCensus } from "./study.mjs";
 import { initVol, volPoll, volScore, volStat, volBackfill, bfStat } from "./volpaper.mjs";
 import { initRF, rfFind, rfCheck, rfStat } from "./runnerfollow.mjs";
-import { initOperators, runOperators, opStat } from "./operators.mjs";
+import { initOperators, runOperators, opStat, creatorCensus, ctStat } from "./operators.mjs";
 
 const VER = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 const now = () => Math.floor(Date.now() / 1000);
@@ -342,7 +342,7 @@ async function selfTest() {
 const csv = (rows) => { if (!rows.length) return ""; const cols = Object.keys(rows[0]); const e = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v)); return [cols.join(","), ...rows.map((r) => cols.map((c) => e(r[c])).join(","))].join("\n"); };
 export function status() {
   return { ...st, at: now(), wallet: ME.toBase58(), balanceSol: balance != null ? +sol(balance).toFixed(4) : null, liveToday: liveToday(), cap: CFG.DAILY_CAP || "none", minBalanceSol: CFG.MIN_BALANCE_SOL, tpFraction: CFG.TP_FRACTION, stakeSol: CFG.STAKE_SOL, deadMin: CFG.DEAD_MIN, quietMin: CFG.QUIET_MIN, tpX: CFG.TP_X,
-    lut: lutStat, copies: copyStatus(), peaks: peakStat, study: studyStat, vol: volStat, volBackfill: bfStat, rf: rfStat, manualStudy: manualStat, operators: opStat, paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
+    lut: lutStat, copies: copyStatus(), peaks: peakStat, study: studyStat, vol: volStat, volBackfill: bfStat, rf: rfStat, manualStudy: manualStat, operators: opStat, creators: ctStat, paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
     accounts: CFG.ACCOUNTS, twitter: { keySet: !!CFG.TWITTER_KEY, ...twStat }, ai: !!CFG.AI_KEY, aiStat, meta: metaStat, rpc: rpcStats, trackerDb: !!tdb, lastSweep: kvGet("lastSweep"), lastFeeCollect: kvGet("lastFeeCollect"), phantom: PHANTOM };
 }
 let pushing = false, soon = null;
@@ -351,7 +351,7 @@ function exportNow() {
     writeFileSync(`${CFG.OUT_DIR}/launches.csv`, csv(db.prepare("SELECT * FROM launches ORDER BY id").all()));
     writeFileSync(`${CFG.OUT_DIR}/posts.csv`, csv(db.prepare("SELECT id, user, kind, text, parent_id, parent_user, parent_text, created_ms, recv_ms, ctx_ms FROM posts WHERE recv_ms>=? ORDER BY recv_ms").all((now() - 7 * 86400) * 1000)));
     try { writeFileSync(`${CFG.OUT_DIR}/copies.csv`, csv(db.prepare("SELECT * FROM copies ORDER BY launch_id, created_ts").all())); writeFileSync(`${CFG.OUT_DIR}/copy_picks.csv`, csv(db.prepare("SELECT * FROM copy_picks ORDER BY launch_id").all())); writeFileSync(`${CFG.OUT_DIR}/copy_peaks.csv`, csv(db.prepare("SELECT * FROM copy_peaks ORDER BY peak_mc DESC").all())); } catch {}
-    try { writeFileSync(`${CFG.OUT_DIR}/operators.csv`, csv(db.prepare("SELECT * FROM operators ORDER BY coins DESC, runners DESC").all())); writeFileSync(`${CFG.OUT_DIR}/operator_coins.csv`, csv(db.prepare("SELECT * FROM operator_coins ORDER BY anchor, mint").all())); writeFileSync(`${CFG.OUT_DIR}/wallet_trace.csv`, csv(db.prepare("SELECT * FROM wallet_trace ORDER BY checked_ts").all())); writeFileSync(`${CFG.OUT_DIR}/wallet_out.csv`, csv(db.prepare("SELECT * FROM wallet_out WHERE dest<>'' ORDER BY ts").all())); writeFileSync(`${CFG.OUT_DIR}/snipers.csv`, csv(db.prepare("SELECT * FROM snipers ORDER BY coins DESC, runners DESC").all())); } catch {}
+    try { writeFileSync(`${CFG.OUT_DIR}/operators.csv`, csv(db.prepare("SELECT * FROM operators ORDER BY coins DESC, runners DESC").all())); writeFileSync(`${CFG.OUT_DIR}/operator_coins.csv`, csv(db.prepare("SELECT * FROM operator_coins ORDER BY anchor, mint").all())); writeFileSync(`${CFG.OUT_DIR}/wallet_trace.csv`, csv(db.prepare("SELECT * FROM wallet_trace ORDER BY checked_ts").all())); writeFileSync(`${CFG.OUT_DIR}/wallet_out.csv`, csv(db.prepare("SELECT * FROM wallet_out WHERE dest<>'' ORDER BY ts").all())); writeFileSync(`${CFG.OUT_DIR}/snipers.csv`, csv(db.prepare("SELECT * FROM snipers ORDER BY coins DESC, runners DESC").all())); writeFileSync(`${CFG.OUT_DIR}/creator_trace.csv`, csv(db.prepare("SELECT * FROM creator_trace ORDER BY create_ts DESC").all())); } catch {}
     try { writeFileSync(`${CFG.OUT_DIR}/rf_watch.csv`, csv(db.prepare("SELECT * FROM rf_watch ORDER BY created_ts").all())); } catch {}
     try { writeFileSync(`${CFG.OUT_DIR}/vol_paper.csv`, csv(db.prepare("SELECT * FROM vol_paper ORDER BY id").all())); } catch {}
     try { writeFileSync(`${CFG.OUT_DIR}/study_coins.jsonl`, db.prepare("SELECT * FROM study_coins ORDER BY studied_ts").all().map((r) => JSON.stringify({ ...r, data: JSON.parse(r.data || "{}") })).join("\n")); writeFileSync(`${CFG.OUT_DIR}/study_buyers.jsonl`, db.prepare("SELECT * FROM study_buyers ORDER BY mint, rank").all().map((r) => JSON.stringify({ mint: r.mint, wallet: r.wallet, rank: r.rank, ...JSON.parse(r.data || "{}") })).join("\n")); } catch {}
@@ -386,7 +386,7 @@ if (!CFG.SMOKE) { setTimeout(() => volPoll(db), 15000); setInterval(() => volPol
 // 0.6.0: addresses listed in launcher/study-now.txt are studied once (newest method), 20 s after start
 if (!CFG.SMOKE) setTimeout(() => { try { const done = new Set(db.prepare("SELECT mint, data FROM study_coins WHERE role='manual' AND err IS NULL").all().filter((r) => { try { return JSON.parse(r.data).v != null; } catch { return false; } }).map((r) => r.mint));
   for (const m of readFileSync(new URL("../study-now.txt", import.meta.url), "utf8").split(/\s+/).map((x) => x.trim()).filter(Boolean)) if (!done.has(m)) studyAddress(db, m, exportNow); } catch {} }, 20000);
-if (!CFG.SMOKE) { const peaksThenStudy = () => { try { st.census = loadCensus(tdb); } catch {} return runPeaks(db, exportNow).then(() => runStudy(db, exportNow)).then(() => runOperators(db, exportNow)); }; setTimeout(peaksThenStudy, 40000); setInterval(peaksThenStudy, 3600000); } // 0.2.2: copycat market caps, then export + push
+if (!CFG.SMOKE) { const peaksThenStudy = () => { try { st.census = loadCensus(tdb); } catch {} return runStudy(db, exportNow).then(() => runOperators(db, exportNow)).then(() => creatorCensus(db, tdb, exportNow)).then(() => runPeaks(db, exportNow)); }; /* 0.7.6: the operator database first, the copycat price refresh (40 min of GMGN) last */ setTimeout(peaksThenStudy, 40000); setInterval(peaksThenStudy, 3600000); } // 0.2.2: copycat market caps, then export + push
 setInterval(() => feesAndSweep(), 3600000); setTimeout(() => feesAndSweep(), 120000);
 function writeStatus() { try { writeFileSync(`${CFG.OUT_DIR}/status.json`, JSON.stringify(status(), null, 1)); } catch {} }
 setInterval(writeStatus, 10000);

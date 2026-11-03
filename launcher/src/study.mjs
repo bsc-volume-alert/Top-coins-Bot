@@ -31,7 +31,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 // ---------- Helius ----------
 function spend(c) { if (studyStat.creditsDay !== today()) { studyStat.creditsDay = today(); studyStat.creditsToday = 0; } studyStat.credits += c; studyStat.creditsToday += c; }
-async function rpc(method, params, credits = 1) {
+export async function rpc(method, params, credits = 1) {
   for (let i = 0; i < 5; i++) {
     studyStat.calls++;
     try {
@@ -88,7 +88,7 @@ async function history(addr, tEnd, mint, maxTx = MAX_TX) {
 }
 
 // ---------- decoding ----------
-const keysOf = (t) => [...(t.transaction?.message?.accountKeys || []).map((k) => (typeof k === "string" ? k : k.pubkey)), ...(t.meta?.loadedAddresses?.writable || []), ...(t.meta?.loadedAddresses?.readonly || [])];
+export const keysOf = (t) => [...(t.transaction?.message?.accountKeys || []).map((k) => (typeof k === "string" ? k : k.pubkey)), ...(t.meta?.loadedAddresses?.writable || []), ...(t.meta?.loadedAddresses?.readonly || [])];
 const pk = (b, o) => bs58.encode(b.subarray(o, o + 32));
 function str(b, o) { const l = b.readUInt32LE(o); return [b.subarray(o + 4, o + 4 + l).toString("utf8"), o + 4 + l]; }
 export const dbg = { samples: [], programs: {} };
