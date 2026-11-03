@@ -33,6 +33,10 @@ export async function volPoll(db) {
       if (v5 != null) volStat.maxVolSeen = Math.max(volStat.maxVolSeen || 0, v5);
       if (!mint || !(px > 0) || v5 == null || v5 >= MAX_VOL) continue;
       const ex = r.exchange ?? null, curve = ex ? (/^pump(fun|_fun)?$|bonding|curve/i.test(ex) ? 1 : 0) : null;
+      // 0.7.2 (owner, 3 Nov 11:23 UK): VA — older coins (12 h to 14 days), 5-min volume ≥ $100K / $200K / $300K, market cap under $2M (the $1M cut is a column);
+      // one strategy key per level × age bucket (VA100_12h, VA200_24h, …). Paper only; "the market when the bundles are out and new alpha may come in".
+      if (created && mc != null && mc < 2e6) { const ageH = (t - created) / 3600; const bucket = ageH >= 12 && ageH < 24 ? "12h" : ageH >= 24 && ageH < 36 ? "24h" : ageH >= 36 && ageH < 48 ? "36h" : ageH >= 48 && ageH <= 14 * 24 ? "48h" : null;
+        if (bucket) for (const lvl of [100000, 200000, 300000]) if (v5 >= lvl) { const ch = ins.run(`VA${lvl / 1000}_${bucket}`, mint, r.name ?? null, r.symbol ?? null, t, px, mc, v5, created, +((t - created) / 60).toFixed(1), N(r.holder_count), ex, r.launchpad_platform ?? r.launchpad ?? null, curve, JSON.stringify(r).slice(0, 1500)).changes; if (ch) volStat.entries++; } }
       for (const tier of TIERS) if (v5 >= tier.min) {
         const ch = ins.run(tier.k, mint, r.name ?? null, r.symbol ?? null, t, px, mc, v5, created, created ? +((t - created) / 60).toFixed(1) : null, N(r.holder_count), ex, r.launchpad_platform ?? r.launchpad ?? null, curve, JSON.stringify(r).slice(0, 1500)).changes;
         if (ch) volStat.entries++;
@@ -71,4 +75,33 @@ export async function volScore(db) {
     }
   } catch (e) { volStat.errors++; volStat.lastErr = "score: " + e.message.slice(0, 160); }
   finally { scoring = false; }
+}
+
+// 0.7.2: the VA backfill — a back-test, kept apart from the live book ("BF-VA…"). Every tracker coin that peaked ≥ $50K: 5-minute candles over the last
+// 14 days (GMGN), the first crossing of $100K / $200K / $300K 5-min volume while 12 h–14 d old and under $2M market cap becomes a paper entry at that
+// candle's close; scored by the same volScore from the same candles. ~1,000 coins × 3 pages. Runs once, 40 coins a tick, in the background.
+export const bfStat = { coins: 0, done: 0, entries: 0, errors: 0, lastErr: "", finished: false };
+let bfList = null;
+export async function volBackfill(db, tdb) {
+  if (!tdb || bfStat.finished) return;
+  try {
+    if (!bfList) { const since = now() - 15 * 86400; bfList = tdb.prepare("SELECT mint, name, symbol, create_ts, peak_mc_usd FROM tokens WHERE peak_mc_usd>=50000 AND create_ts>=? ORDER BY peak_mc_usd DESC LIMIT 1500").all(since); bfStat.coins = bfList.length; }
+    const ins = db.prepare(`INSERT OR IGNORE INTO vol_paper (strat, mint, name, symbol, entry_ts, entry_price, entry_mc, vol5, created_ts, age_min, holders, exchange, launchpad, curve, row) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    let k = 0;
+    while (bfList.length && k < 40) {
+      const c = bfList.shift(); k++;
+      try {
+        const from = Math.max(c.create_ts + 12 * 3600, now() - 14 * 86400), to = Math.min(now() - 125 * 60, c.create_ts + 14 * 86400); if (to <= from) { bfStat.done++; continue; }
+        const all = [];
+        for (let a = from; a < to; a += 100 * 300) { const d = await gget("/v1/market/token_kline", { chain: "sol", address: c.mint, resolution: "5m", from: String(a * 1000), to: String(Math.min(to, a + 100 * 300) * 1000) }); all.push(...(d?.list || (Array.isArray(d) ? d : []))); }
+        const rows = all.map((x) => ({ t: Math.floor(Number(x.time) / 1000), c: N(x.close), v: N(x.volume) })).filter((x) => x.c > 0 && x.v != null).sort((a, b) => a.t - b.t);
+        const hit = {};
+        for (const x of rows) { const ageH = (x.t - c.create_ts) / 3600, mc = x.c * 1e9; if (ageH < 12 || ageH > 14 * 24 || !(mc < 2e6)) continue;
+          const bucket = ageH < 24 ? "12h" : ageH < 36 ? "24h" : ageH < 48 ? "36h" : "48h";
+          for (const lvl of [100000, 200000, 300000]) { const key = `BF-VA${lvl / 1000}_${bucket}`; if (x.v >= lvl && !hit[key]) { hit[key] = 1; if (ins.run(key, c.mint, c.name, c.symbol, x.t, x.c, mc, x.v, c.create_ts, +((x.t - c.create_ts) / 60).toFixed(1), null, "backfill", null, 0, JSON.stringify({ backfill: true, peak_mc_usd: c.peak_mc_usd })).changes) bfStat.entries++; } } }
+        bfStat.done++;
+      } catch (e) { bfStat.errors++; bfStat.lastErr = `${c.mint.slice(0, 6)} ${e.message}`.slice(0, 140); if (/rate limited/i.test(e.message)) { bfList.unshift(c); break; } bfStat.done++; }
+    }
+    if (!bfList.length) bfStat.finished = true;
+  } catch (e) { bfStat.errors++; bfStat.lastErr = e.message.slice(0, 140); }
 }
