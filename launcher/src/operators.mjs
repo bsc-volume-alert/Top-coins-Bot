@@ -38,6 +38,7 @@ export function initOperators(db) {
   CREATE TABLE IF NOT EXISTS wallet_out (wallet TEXT, mint TEXT, dest TEXT, dest_name TEXT, dest_type TEXT, amount_sol REAL, ts INTEGER, sig TEXT, PRIMARY KEY (wallet, sig));
   CREATE TABLE IF NOT EXISTS operators (op_id INTEGER PRIMARY KEY AUTOINCREMENT, anchor TEXT UNIQUE, kind TEXT, coins INTEGER, runners INTEGER, hit_rate REAL, med_peak REAL, best_peak REAL, bundle_sol REAL, wallets INTEGER, cex_funded INTEGER, first_ts INTEGER, last_ts INTEGER, updated INTEGER);
   CREATE TABLE IF NOT EXISTS operator_coins (anchor TEXT, mint TEXT, role TEXT, link TEXT, PRIMARY KEY (anchor, mint, link));
+  CREATE TABLE IF NOT EXISTS snipers (wallet TEXT PRIMARY KEY, coins INTEGER, census INTEGER, runners INTEGER, hit_rate REAL, buy_sol REAL, sell_sol REAL, block0 INTEGER, creator_linked INTEGER, funder TEXT, funder_name TEXT, txs INTEGER, first_ts INTEGER, last_ts INTEGER, updated INTEGER);
   CREATE INDEX IF NOT EXISTS wt_funder ON wallet_trace(funder);`);
 }
 
@@ -76,14 +77,41 @@ export async function outflows(db, wallet, mint, sinceTs) {
   } catch (e) { opStat.errors++; opStat.lastErr = `out ${wallet.slice(0, 6)} ${e.message.slice(0, 100)}`; if (e.http === 403 || e.http === 401) throw e; }
 }
 
-/** The wallets that matter for a coin: creator, block-0 buyers, first-3-s snipers. */
+/** 0.7.5: wallets that were in the creation block or the first 3 s of REPEAT_SNIPER or more studied coins are sniper bots, not an operator's identity
+ *  (3 Nov 20:32 UK: 74 of 461 early wallets sat on 2+ of 43 census coins, the top ones on 14–15, buying 0.05–0.2 SOL each; they stitched 91 coins into one "operator"). */
+const REPEAT_SNIPER = n("LAUNCH_OP_REPEAT_SNIPER", 3);
+let repeatSet = new Set(), repeatAt = 0;
+function repeatSnipers(db) {
+  if (Date.now() - repeatAt < 60000) return repeatSet;
+  const cnt = new Map();
+  for (const r of db.prepare("SELECT wallet, data FROM study_buyers").all()) { let b; try { b = JSON.parse(r.data); } catch { continue; } if ((b.block0 || b.sniper) && !b.creatorLinked) cnt.set(r.wallet, (cnt.get(r.wallet) || 0) + 1); }
+  repeatSet = new Set([...cnt].filter(([, c]) => c >= REPEAT_SNIPER).map(([w]) => w)); repeatAt = Date.now(); return repeatSet;
+}
+
+/** The wallets that matter for a coin: creator, block-0 buyers (bundle), first-3-s snipers. 0.7.5: a block-0 wallet that is a repeat sniper and not creator-linked is "sniper", not "bundle". */
 function keyWallets(db, mint) {
   const c = db.prepare("SELECT data FROM study_coins WHERE mint=? AND err IS NULL").get(mint); if (!c) return null;
   let d; try { d = JSON.parse(c.data); } catch { return null; }
+  const rep = repeatSnipers(db);
   const out = new Map(); if (d.creator) out.set(d.creator, "creator");
   for (const r of db.prepare("SELECT wallet, data FROM study_buyers WHERE mint=? ORDER BY rank").all(mint)) { let b; try { b = JSON.parse(r.data); } catch { continue; }
-    if (b.block0) out.set(r.wallet, out.get(r.wallet) || "bundle"); else if (b.sniper) out.set(r.wallet, out.get(r.wallet) || "sniper"); }
+    if (b.block0 && (b.creatorLinked || !rep.has(r.wallet))) out.set(r.wallet, out.get(r.wallet) || "bundle"); else if (b.block0 || b.sniper) out.set(r.wallet, out.get(r.wallet) || "sniper"); }
   return { d, wallets: out };
+}
+
+/** 0.7.5: the sniper table — every wallet in the creation block / first 3 s of 2+ studied coins: coins, how many ran, SOL bought, SOL sold back inside the study window. (Studied coins are mostly winners, so this hit rate is an upper bound until the wallet's own history is read.) */
+export function rebuildSnipers(db) {
+  db.exec("CREATE TABLE IF NOT EXISTS snipers (wallet TEXT PRIMARY KEY, coins INTEGER, census INTEGER, runners INTEGER, hit_rate REAL, buy_sol REAL, sell_sol REAL, block0 INTEGER, creator_linked INTEGER, funder TEXT, funder_name TEXT, txs INTEGER, first_ts INTEGER, last_ts INTEGER, updated INTEGER)");
+  const peak = new Map(db.prepare("SELECT mint, peak_mc FROM copy_peaks").all().map((r) => [r.mint, r.peak_mc || 0]));
+  const role = new Map(db.prepare("SELECT mint, role, studied_ts FROM study_coins WHERE err IS NULL").all().map((r) => [r.mint, r]));
+  const traceOf = new Map(db.prepare("SELECT wallet, funder, funder_name FROM wallet_trace").all().map((r) => [r.wallet, r]));
+  const acc = new Map();
+  for (const r of db.prepare("SELECT mint, wallet, data FROM study_buyers").all()) { let b; try { b = JSON.parse(r.data); } catch { continue; } if (!(b.block0 || b.sniper) || !role.has(r.mint)) continue;
+    const a = acc.get(r.wallet) || { coins: 0, census: 0, runners: 0, buy: 0, sell: 0, block0: 0, linked: 0, txs: b.txs, ts: [] }; a.coins++; if (role.get(r.mint).role === "census") a.census++; if ((peak.get(r.mint) || 0) >= 100000) a.runners++;
+    a.buy += b.buy_sol || 0; a.sell += b.sell_sol || 0; a.block0 += b.block0 ? 1 : 0; a.linked += b.creatorLinked ? 1 : 0; a.ts.push(role.get(r.mint).studied_ts || 0); acc.set(r.wallet, a); }
+  db.exec("DELETE FROM snipers");
+  const ins = db.prepare("INSERT INTO snipers VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"); const now = Math.floor(Date.now() / 1000);
+  for (const [w, a] of acc) if (a.coins >= 2) { const t = traceOf.get(w); ins.run(w, a.coins, a.census, a.runners, +(a.runners / a.coins).toFixed(2), +a.buy.toFixed(2), +a.sell.toFixed(2), a.block0, a.linked, t?.funder || null, t?.funder_name || null, a.txs, Math.min(...a.ts), Math.max(...a.ts), now); }
 }
 
 /** One run: trace every key wallet of every studied coin not yet traced (HOPS deep), outflows for bundle wallets of runners, then recluster. */
@@ -106,7 +134,7 @@ export async function runOperators(db, done) {
         if (OUT_HOP && role === "bundle" && kw.d.peak_mc_usd >= 30000 && budget > 0) { budget--; await outflows(db, w, c.mint, (kw.d.t0 || c.created_ts || 0)); }
       }
     }
-    recluster(db);
+    recluster(db); rebuildSnipers(db);
     opStat.lastRun = new Date().toISOString();
   } catch (e) { opStat.errors++; opStat.lastErr = e.message.slice(0, 160); }
   finally { opStat.running = false; try { done?.(); } catch {} }
@@ -124,6 +152,7 @@ export function recluster(db) {
   for (const c of coins) {
     const kw = keyWallets(db, c.mint); if (!kw) continue;
     for (const [w, role] of kw.wallets) {
+      if (role === "sniper") continue; // 0.7.5: snipers are everyone's; only the creator and the bundle wallets say who made the coin
       if (role === "bundle" || role === "creator") add(w, role === "creator" ? "creator" : "bundle_wallet", c.mint); // the same bundle wallet in two coins = one operator
       let cur = w; for (let h = 0; h < HOPS; h++) { const t = traceOf.get(cur); if (!t || !t.funder || t.funder_type) break; add(t.funder, "funder", c.mint); cur = t.funder; }
     }
@@ -132,10 +161,12 @@ export function recluster(db) {
   // 0.7.1: the launch fingerprint — the same bundle % and SOL to two decimals on two coins is the same software and money (GR.md, 23 Oct: 79.31% / 85.0 SOL)
   for (const c of coins) { const t = c.d.tracker; if (t && t.bundle_pct >= 20 && t.bundle_sol >= 5) add(`${(+t.bundle_pct).toFixed(2)}/${(+t.bundle_sol).toFixed(1)}`, "fingerprint", c.mint); }
   // a key shared by too many coins is a public hub (a bot service, a popular distributor), not one operator
-  const MAX_SHARE = n("LAUNCH_OP_MAX_SHARE", 60);
-  const good = [...links.values()].filter((l) => l.mints.size >= 2 && l.mints.size <= MAX_SHARE && l.kind !== "creator");
-  const pairLinks = new Map(); // "a|b" -> count of distinct link kinds/keys joining a and b
-  for (const l of good) { const ms = [...l.mints]; for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) { const k = ms[i] < ms[j] ? ms[i] + "|" + ms[j] : ms[j] + "|" + ms[i]; pairLinks.set(k, (pairLinks.get(k) || 0) + 1); } }
+  const MAX_SHARE = n("LAUNCH_OP_MAX_SHARE", 60), MAX_PAYOUT_SHARE = n("LAUNCH_OP_MAX_PAYOUT_SHARE", 4);
+  // 0.7.5: a payout destination that receives from the bundle wallets of 5+ coins is shared plumbing (tip accounts, fee wallets, unlabelled exchanges), not a person
+  const good = [...links.values()].filter((l) => l.mints.size >= 2 && l.mints.size <= (l.kind === "payout" ? MAX_PAYOUT_SHARE : MAX_SHARE) && l.kind !== "creator");
+  const pairKinds = new Map(); // "a|b" -> set of distinct link KINDS joining a and b (0.7.5: two shared payouts count once; funder + bundle wallet count twice)
+  for (const l of good) { const ms = [...l.mints]; for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) { const k = ms[i] < ms[j] ? ms[i] + "|" + ms[j] : ms[j] + "|" + ms[i]; if (!pairKinds.has(k)) pairKinds.set(k, new Set()); pairKinds.get(k).add(l.kind); } }
+  const pairLinks = new Map([...pairKinds].map(([k, v]) => [k, v.size]));
   const size = () => { const sz = new Map(); for (const c of coins) { const r = find(c.mint); sz.set(r, (sz.get(r) || 0) + 1); } return sz; };
   // pass 1: pairs with 2+ independent links always merge; pass 2: single links merge only while both groups are small (< 8 coins) — one shared wallet must not glue two big operators together
   for (const [k, cnt] of pairLinks) if (cnt >= 2) { const [a, b] = k.split("|"); union(a, b); }
