@@ -72,6 +72,44 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
     - 1 run, 6 runners, 2 posts with genuine runners.
     - On four pump.fun coins made by serial launchers (93eW4L and 5QBwQ7: GMGN creator launches 1,935; 3hvD7n: 241), the trade events decode the SOL amount as ~0. Buy counts there are right, but SOL figures are not.
     - Balance-change market caps for 0.005-SOL micro-buys are unreliable (fees and rent swamp the price).
+- **3 Nov 09:30 UK — full diagnosis (data to 09:10 UK; owner asked "full diagnosis of our website and what we're doing").**
+  - **Health:**
+    - launcher 0.6.3, paper mode, online. pm2 restarts 154 → 158 since the 19:34 UK 1 Nov deploy, the last at 23:40 UK 1 Nov, stable 33 h since.
+    - X stream connected (7 reconnects; 231 posts since 06:01 UK today).
+    - GMGN 47,803 calls with 0 errors and 0 rate limits.
+    - Helius: study 115.6K credits since 1 Nov 19:01 UK (31.6K today by 09:10), runner-follow 19.1K today.
+    - **AI naming failed on 16 of 118 calls (14%)** with "URL disallowed by robots.txt": the image link can't be fetched by the Anthropic API, so those posts fall back to the word rules.
+    - Wallet 0.5145 SOL, nothing open. The tracker, executor, fomo and radar apps are stopped by choice.
+  - **Posts and runners:** 350 posts named in total.
+    - 1,011 copycats priced; 46 credible runners (peak ≥ $30K and ≥ $25K at 5 or 15 min) on 14 of 145 posts that had copies.
+    - Runner posts: elonmusk 10, Pumpfun 2, WhiteHouse 1, a1lon9 1.
+    - Launchpads: Meteora 17, pump.fun 15, unknown 14.
+  - **Data problem:** GMGN one-candle wicks and non-standard supplies still give impossible "peaks" ($23M Anakin, $13M Regretamine 9uH2Yq, $132M+ American Dividend). They show on the page's "Copycats that ran" table and need a close-based peak.
+  - **Study v7 (164 coins), medians:**
+
+    | Group | n | net 1 min | net 5 min | buyers at 5 min | bundle (block 0) | snipers | round trips | organic | biggest funder group | KOL | smart money |
+    |---|---|---|---|---|---|---|---|---|---|---|---|
+    | pump.fun runners | 23 | +43.6 SOL | +58.5 SOL | 598 | 12.1 SOL | 14.8 SOL | 74% | 33% | 3 | 10 of 23 | 19 of 23 |
+    | pump.fun copies that didn't run | 39 | +13.2 | +6.5 | 205 | 3.0 | 9.2 | 77% | 49% | 6 | 15 of 39 | 24 of 39 |
+    | Meteora/other runners | 76 | +9.7 | +12.5 | 230 | — | — | 87% | 5% | 78 | — | — |
+    | Meteora/other non-runners | 23 | +10.4 | +17.3 | 241 | — | — | 92% | 7% | 62 | — | — |
+
+    - **On pump.fun, net buying in the 1st and 5th minute and the number of buyers separate runners from the rest; KOL/smart-money presence does not.**
+    - **Meteora runners and non-runners are indistinguishable** (one-operator coins, ~6% organic). Nothing on chain predicts which of them goes up.
+  - **Paper results** (31 Oct 19:27 – 3 Nov 06:40 UK, after costs):
+    - RF30, 14 trades: 1.5x/−30% +3.8%, median +10.5%, 7 won; without the best trade +0.9%; halves +8.0 / −0.4.
+    - RF50, 11 trades: 2x/−50% +9.8%; without the best +1.8%, without the top 3 −20.2%.
+    - RF50W, 35 trades: every exit negative.
+    - V300, 26 trades: every exit negative (best −10.6%).
+    - V500, 5 trades: −3%.
+    - Holding: −55% to −95% on every book.
+  - **Verdict:** no book is proven. RF30/RF50 are near break-even on 11–14 trades (one or two coins decide the sign). The volume books lose, as E did. Keep paper; go live with nothing.
+  - **Proposals** (awaiting go):
+    - (a) fix the AI image fetch by downloading the picture and sending it as data;
+    - (b) close-based peaks on the page;
+    - (c) a new paper variant RF-E: net ≥ 30 SOL by 1–2 min and ≥ 400 buyers by 5 min, pump.fun only, 1.5x/−30%;
+    - (d) stop V300 / V500 / RF50W and the old first/strongest copy picks to save calls;
+    - (e) the subscription review on 7 Nov: Pinata is only needed for live launches.
 - **1 Nov 19:46 UK — fixes 0.6.1–0.6.3 (owner's go 18:59 UK), checked on the server.**
   - The study and runner-follow now read the coin's own address, so PumpSwap and other pools after graduation are included.
   - Pages are turned into small trade records at once, so memory stays low.
