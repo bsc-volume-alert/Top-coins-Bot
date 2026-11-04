@@ -16,4 +16,12 @@ tail -c 3000 /root/.pm2/logs/deployer-out.log > launcher/deploy_log.txt 2>/dev/n
 git add -A launcher
 git -c user.name=launcher -c user.email=launcher@tracker commit -q -m "launcher data $(date -u +%FT%TZ)" || exit 0
 git branch -q -M launcher-data
-timeout 120 git push -q -f origin launcher-data && echo "[launcher] pushed"
+# 0.7.8 (4 Nov 2026): GitHub's secret scanner flags ordinary wallet addresses in the chain data (GH013 "Push cannot contain secrets",
+# study_buyers.jsonl:35352 on 4 Nov) and silently stalls every publish. Drop each flagged line and push again, up to 4 times.
+for attempt in 1 2 3 4; do
+  OUT=$(timeout 120 git push -q -f origin launcher-data 2>&1) && { echo "[launcher] pushed"; exit 0; }
+  echo "$OUT" | grep -q "GH013" || { echo "[launcher] push failed: $(echo "$OUT" | grep -vE 'https?://[^ ]*@' | tail -3 | tr '\n' ' ' | head -c 300)"; exit 1; }
+  echo "$OUT" | grep -oE 'path: launcher/[^:]+:[0-9]+' | sed 's/path: //' | sort -t: -k1,1 -k2,2nr | uniq | while IFS=: read -r f ln; do [ -f "$f" ] && sed -i "${ln}d" "$f" && echo "[launcher] dropped flagged line $ln of $f"; done
+  git add -A launcher; git -c user.name=launcher -c user.email=launcher@tracker commit -q --amend --no-edit || true
+done
+echo "[launcher] push failed after 4 attempts (secret scanner)"; exit 1
