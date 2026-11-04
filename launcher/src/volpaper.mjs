@@ -54,7 +54,7 @@ let scoring = false;
 export async function volScore(db) {
   if (scoring) return; scoring = true;
   try {
-    for (const p of db.prepare("SELECT * FROM vol_paper WHERE done=0 AND entry_ts<=? ORDER BY entry_ts LIMIT 20").all(now() - SCORE_AFTER)) {
+    for (const p of db.prepare("SELECT * FROM vol_paper WHERE done=0 AND entry_ts<=? ORDER BY entry_ts LIMIT 40").all(now() - SCORE_AFTER)) {
       try {
         const e = p.entry_ts, path = [...await candles(p.mint, e - 60, e + 60 * 60), ...await candles(p.mint, e + 60 * 60, e + 121 * 60)].filter((c) => c.t >= e - 60).sort((a, b) => a.t - b.t);
         const uniq = path.filter((c, i) => i === 0 || c.t !== path[i - 1].t);
@@ -72,8 +72,12 @@ export async function volScore(db) {
         // 0.8.0: hard out at minute M (winners peak at ~16 min and are worthless by 30), −35% stop before it; the stop is checked first in a candle
         const out = (M) => { for (const c of after.slice(1)) { if (c.t > e + M * 60) break; if (X(c.l) <= 0.65) return 0.65; } const c = uniq.filter((x) => x.t <= e + M * 60).pop(); return c ? +X(c.c).toFixed(4) : null; };
         const o10 = out(10), o15 = out(15), o20 = out(20);
-        db.prepare(`UPDATE vol_paper SET done=1, x5=?, x15=?, x30=?, x60=?, x120=?, peak120=?, peak_min=?, low_before_peak=?, x_tp2sl50=?, x_tp15sl30=?, x_trail40=?, r_tp2sl50=?, r_tp15sl30=?, r_trail40=?, r_hold60=?, r_hold120=?, x_half2=?, r_half2=?, x_out10=?, x_out15=?, x_out20=?, r_out10=?, r_out15=?, r_out20=? WHERE id=?`)
-          .run(at(5), at(15), at(30), h60, h120, +peak.toFixed(4), +((peakT - e) / 60).toFixed(1), +lowBefore.toFixed(4), t2, t15, +trail.toFixed(4), realX(t2, cv), realX(t15, cv), realX(trail, cv), realX(h60, cv), realX(h120, cv), +half.toFixed(4), realX(half, cv), o10, o15, o20, realX(o10, cv), realX(o15, cv), realX(o20, cv), p.id);
+        // 0.8.7 (owner, 4 Nov 18:21 UK: "more potential exit points… find the maximum"): trails of 25% and 60%, and tight-then-wide — a −35% stop until the coin has doubled, then a 55% trail off the high
+        const trailN = (pct) => { let h = 1; for (const c of after.slice(1)) { if (X(c.l) <= h * (1 - pct)) return h * (1 - pct); h = Math.max(h, X(c.h)); } return X(after[after.length - 1].c); };
+        const tw = (() => { let h = 1, run = false; for (const c of after.slice(1)) { if (!run) { if (X(c.l) <= 0.65) return 0.65; if (X(c.h) >= 2) { run = true; h = X(c.h); } } else { if (X(c.l) <= h * 0.45) return h * 0.45; h = Math.max(h, X(c.h)); } } return X(after[after.length - 1].c); })();
+        const t25 = trailN(0.25), t60 = trailN(0.6);
+        db.prepare(`UPDATE vol_paper SET done=1, x5=?, x15=?, x30=?, x60=?, x120=?, peak120=?, peak_min=?, low_before_peak=?, x_tp2sl50=?, x_tp15sl30=?, x_trail40=?, r_tp2sl50=?, r_tp15sl30=?, r_trail40=?, r_hold60=?, r_hold120=?, x_half2=?, r_half2=?, x_out10=?, x_out15=?, x_out20=?, r_out10=?, r_out15=?, r_out20=?, x_trail25=?, x_trail60=?, x_tw=?, r_trail25=?, r_trail60=?, r_tw=? WHERE id=?`)
+          .run(at(5), at(15), at(30), h60, h120, +peak.toFixed(4), +((peakT - e) / 60).toFixed(1), +lowBefore.toFixed(4), t2, t15, +trail.toFixed(4), realX(t2, cv), realX(t15, cv), realX(trail, cv), realX(h60, cv), realX(h120, cv), +half.toFixed(4), realX(half, cv), o10, o15, o20, realX(o10, cv), realX(o15, cv), realX(o20, cv), +t25.toFixed(4), +t60.toFixed(4), +tw.toFixed(4), realX(t25, cv), realX(t60, cv), realX(tw, cv), p.id);
         volStat.scored++;
       } catch (er) { if (/rate limited/i.test(er.message)) throw er; db.prepare("UPDATE vol_paper SET done=1, err=? WHERE id=?").run(er.message.slice(0, 120), p.id); }
     }

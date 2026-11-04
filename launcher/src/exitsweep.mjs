@@ -29,10 +29,14 @@ export function fromEntry(ks, i0, supply, gradT) {
   const half2 = () => { let hit = false, hi = 2; for (const c of after) { if (!hit) { if (X(c.l) <= 0.65) return 0.65; if (X(c.h) >= 2) { hit = true; hi = Math.max(2, X(c.h)); } } else { if (X(c.l) <= hi * 0.6) return 1 + 0.5 * hi * 0.6; hi = Math.max(hi, X(c.h)); } } return hit ? 1 + 0.5 * X(after[after.length - 1].c) : X(after[after.length - 1]?.c ?? P); };
   const out = (M) => { for (const c of after) { if (c.t > t0 + M * 60) break; if (X(c.l) <= 0.65) return 0.65; } return at(M) ?? 1; };
   const curve = gradT ? t0 < gradT : true, mcAt = +(P * supply).toFixed(0);
-  const x = { tp15: tpsl(1.5, 0.65), tp2: tpsl(2, 0.65), tp3: tpsl(3, 0.65), half2: half2(), trail40: trail(0.4), trail50: trail(0.5), out10: out(10), out15: out(15), out20: out(20), out30: out(30) };
+  // 0.8.7 (owner, 18:21 UK: "look at the charts of the successful coins… where the top is, where the bottom is, what the correct trailing stop would be"):
+  // the deepest pullback from the running high BEFORE the coin doubled and AFTER it (until the peak) — the trail width a runner needs to survive
+  const pull = (() => { let h = 1, pre = 0, post = 0, run = false; for (const c of after) { if (c.t > peakT) break; const d = 1 - X(c.l) / h; if (run) post = Math.max(post, d); else pre = Math.max(pre, d); h = Math.max(h, X(c.h)); if (!run && X(c.h) >= 2) run = true; } return { pre: +pre.toFixed(3), post: +post.toFixed(3) }; })();
+  const tw = (() => { let h = 1, run = false; for (const c of after) { if (!run) { if (X(c.l) <= 0.65) return 0.65; if (X(c.h) >= 2) { run = true; h = X(c.h); } } else { if (X(c.l) <= h * 0.45) return h * 0.45; h = Math.max(h, X(c.h)); } } return X(after[after.length - 1]?.c ?? P); })();
+  const x = { tp15: tpsl(1.5, 0.65), tp2: tpsl(2, 0.65), tp3: tpsl(3, 0.65), half2: half2(), trail20: trail(0.2), trail30: trail(0.3), trail40: trail(0.4), trail50: trail(0.5), trail60: trail(0.6), trail70: trail(0.7), tw, out10: out(10), out15: out(15), out20: out(20), out30: out(30) };
   const r = {}; for (const k in x) r[k] = +realX(x[k], curve).toFixed(3);
   return { entry_min: +((t0 - ks[0].t) / 60).toFixed(1), entry_mc: mcAt, curve, x5: at(5), x10: at(10), x15: at(15), x20: at(20), x30: at(30), x60: at(60), x120: at(120), peak: +peak.toFixed(3), peak_min: +((peakT - t0) / 60).toFixed(1), low_before_peak: +low.toFixed(3),
-    hit15: peak >= 1.5, hit2: peak >= 2, hit3: peak >= 3, stop35_before_15x: (() => { for (const c of after) { if (X(c.h) >= 1.5) return false; if (X(c.l) <= 0.65) return true; } return false; })(),
+    hit15: peak >= 1.5, hit2: peak >= 2, hit3: peak >= 3, pullback_before_2x: pull.pre, pullback_after_2x: pull.post, stop35_before_15x: (() => { for (const c of after) { if (X(c.h) >= 1.5) return false; if (X(c.l) <= 0.65) return true; } return false; })(),
     x: Object.fromEntries(Object.entries(x).map(([k, v]) => [k, +v.toFixed(3)])), r };
 }
 
