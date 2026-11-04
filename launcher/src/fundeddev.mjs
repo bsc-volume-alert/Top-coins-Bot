@@ -11,7 +11,9 @@
 //      and 0.8.0's hard outs at 10 / 15 / 20 min with a −35% stop).
 //   Rules: FD  = pre-filter + net ≥ 27 SOL + mc ≥ 100 SOL + ≥ 3 buys of 2+ SOL;  FDL = pre-filter + net ≥ 15 + mc ≥ 60;  FDB = FD's confirmation
 //   with NO bundle condition (what the bundle filter is worth);  A1 = confirmation only, no pre-filter at all (book A of October, the control).
+//   0.8.9: FDH = FDB + on the curve + GMGN holders ≥ 0.97 × chain buyers + holders ≥ 100 (buyers still holding at 60 s);  FDHF = FDH + creator funded 19–100 SOL.
 // Nothing is bought. Every launch's pre-filter result and every checkpoint is kept (fd_watch) so the cut can be re-tuned from data.
+import { readFileSync } from "node:fs";
 import { gget, N } from "./gmgn.mjs";
 import { earlyTrades, studyStat } from "./study.mjs";
 import { creatorFunder, ctStat } from "./operators.mjs";
@@ -39,7 +41,16 @@ export const RULES = [
   // FDX (17:50 UK, the owner's "most revised version"): all three tells together — minute-1 bar of FD35 (net ≥ 35 SOL, mc ≥ 130 SOL), creator funded ≥ 20 SOL, and entry at the 120 s check only if buying is still rising (FD120's test).
   { k: "FDX", ok: (w, m, prev) => w.pre === 1 && (w.funder_sol ?? 0) >= 20 && m.at >= 120 && m.net >= 35 && (m.mcSol ?? 0) >= 130 && m.big >= 3 && (!prev.length || ((m.net ?? 0) >= 0.9 * Math.max(...prev.map((p) => p.net || 0)) && (m.mcSol ?? 0) >= 0.8 * Math.max(...prev.map((p) => p.mcSol || 0)))) },
   { k: "FD120", ok: (w, m, prev) => w.pre === 1 && m.at >= 120 && confirm(m) && (!prev.length || ((m.net ?? 0) >= 0.9 * Math.max(...prev.map((p) => p.net || 0)) && (m.mcSol ?? 0) >= 0.8 * Math.max(...prev.map((p) => p.mcSol || 0)))) },
+  // 0.8.9 (4 Nov 22:27 UK, owner: "go ship them both"): the failures-vs-successes study of 372 scored trades (LAUNCHER.md 4 Nov 22:40). The one thing most
+  // failures share that the successes don't is BUYERS ALREADY GONE AT 60 s — GMGN's holder count at entry below the chain buyers-so-far: hpb < 0.5 was 16 rugs
+  // of 16; ≥ 0.97 won 56% vs 28%. Entries after graduation (the 79%-bundle brand-name factory) won 11 of 37. So:
+  //   FDH  = FDB's test (funding, no bundle test, strong minute-1 buying) + still on the curve + holders ≥ 0.97 × buyers + holders ≥ 100;
+  //   FDHF = FDH + creator funded 19–100 SOL (the band where the runners sat; 23 back-tested trades only — a forward test).
+  // m.holders is GMGN's holder_count fetched once per check (below); m.holding is the chain-side count (buyers whose sells < 95% of their buys), kept beside it.
+  { k: "FDH", ok: (w, m) => w.pre_nb === 1 && confirm(m) && m.venue === "pump.fun curve" && m.holders >= 100 && m.holders >= 0.97 * m.buyers },
+  { k: "FDHF", ok: (w, m) => w.pre_nb === 1 && confirm(m) && m.venue === "pump.fun curve" && m.holders >= 100 && m.holders >= 0.97 * m.buyers && (w.funder_sol ?? 0) >= 19 && (w.funder_sol ?? 0) <= 100 },
 ];
+const BASE_BAR = (m) => m.net >= 15 && (m.mcSol ?? 0) >= 60; // the loosest bar any rule accepts (FDL's): GMGN's token info is fetched once per check only past it
 // 0.8.3 (13:05 UK): GMGN's price for a 60–120 s old coin can lag badly ("I voted": GMGN $2K while the chain said 115 SOL ≈ $10.6K), which would
 // flatter every paper entry. The entry price is the CHAIN price at the check (market cap in SOL × SOL/USD ÷ supply); GMGN's is kept in the row for comparison.
 let solUsd = null, solAt = 0;
@@ -60,6 +71,10 @@ export function initFD(db) {
     CREATE INDEX IF NOT EXISTS fdw_done ON fd_watch(done, created_ts);`);
   for (const c of ["x_out10 REAL", "x_out15 REAL", "x_out20 REAL", "r_out10 REAL", "r_out15 REAL", "r_out20 REAL", "x_trail25 REAL", "x_trail60 REAL", "x_tw REAL", "r_trail25 REAL", "r_trail60 REAL", "r_tw REAL", "m_trail40 REAL"]) try { db.exec(`ALTER TABLE vol_paper ADD COLUMN ${c}`); } catch {} // 0.8.0 hard outs; 0.8.7 trails 25/60 and tight-then-wide
   try { db.prepare("UPDATE vol_paper SET done=0 WHERE strat IN ('FDX','FD','FD35','FD120','FDL','FDB','A1') AND done=1 AND err IS NULL AND r_trail60 IS NULL").run(); } catch {} // 0.8.7: re-score today's trades for the new exits (one-off; ~2 GMGN calls a trade)
+  // 0.8.9: when each rule was loaded (owner: "add the time of their shipment"). Rules that already have entries get their first entry's time; new ones get now.
+  db.exec("CREATE TABLE IF NOT EXISTS fd_rules (k TEXT PRIMARY KEY, since_ts INTEGER, ver TEXT)");
+  let ver = null; try { ver = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version; } catch {}
+  for (const r of RULES) db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES (?, COALESCE((SELECT MIN(entry_ts) FROM vol_paper WHERE strat=?), ?), ?)").run(r.k, r.k, now(), ver);
 }
 
 /** every 15 s: every tracker launch of the last SCAN_S seconds not yet seen → funder lookup → pre-filter. */
@@ -106,11 +121,14 @@ export async function fdScan(db, tdb) {
   finally { scanning = false; }
 }
 
-function metrics(r, upto) {
+export function metrics(r, upto) {
   const xs = r.trades.filter((x) => x.t <= upto), buys = xs.filter((x) => x.isBuy), sells = xs.filter((x) => !x.isBuy);
   const bs = buys.reduce((s, x) => s + x.sol, 0) / 1e9, ss = sells.reduce((s, x) => s + x.sol, 0) / 1e9, last = xs[xs.length - 1];
-  return { net: +(bs - ss).toFixed(2), buySol: +bs.toFixed(2), sellSol: +ss.toFixed(2), buyers: new Set(buys.map((x) => x.user)).size, buys: buys.length, sells: sells.length,
-    big: buys.filter((x) => x.sol >= 2e9).length, mcSol: last?.mc ? +last.mc.toFixed(1) : null };
+  // 0.8.9: who is still holding — per wallet, tokens bought vs sold; "exited" = sold 95%+ of what it bought (sniper in-and-out). Chain-side twin of GMGN's holder count.
+  const per = new Map(); for (const x of xs) { const p = per.get(x.user) || { b: 0, s: 0 }; if (x.isBuy) p.b += x.tok || 0; else p.s += x.tok || 0; per.set(x.user, p); }
+  const exited = [...per.values()].filter((p) => p.b > 0 && p.s >= 0.95 * p.b).length, buyers = new Set(buys.map((x) => x.user)).size;
+  return { net: +(bs - ss).toFixed(2), buySol: +bs.toFixed(2), sellSol: +ss.toFixed(2), buyers, buys: buys.length, sells: sells.length,
+    big: buys.filter((x) => x.sol >= 2e9).length, mcSol: last?.mc ? +last.mc.toFixed(1) : null, exited, holding: buyers - exited, sellers: new Set(sells.map((x) => x.user)).size };
 }
 
 /** every 15 s: checkpoints at 60 / 90 / 120 s for launches that passed any pre-filter (and a sample of the rest for the A1 control). */
@@ -133,8 +151,9 @@ export async function fdCheck(db) {
         const m = { at, ...metrics(r, (r.t0 || w.created_ts) + at), txs: r.txs, venue: r.pumpCurve ? (r.complete ? "pump.fun graduated" : "pump.fun curve") : "other" };
         checks.push(m); const entered = new Set(String(w.entered || "").split(",").filter(Boolean));
         const prev = checks.slice(0, -1).filter((c) => c.at != null && !c.err);
+        // 0.8.9: GMGN's token info ONCE per check (it was fetched once per rule that passed), only past the loosest bar; its holder count goes into the check row and the FDH rules
+        let info = null; if (BASE_BAR(m) && entered.size < RULES.length) { try { info = await gget("/v1/token/info", { chain: "sol", address: w.mint }); } catch {} m.holders = N(info?.holder_count) || null; }
         for (const rule of RULES) if (!entered.has(rule.k) && rule.ok(w, m, prev)) {
-          let info = null; try { info = await gget("/v1/token/info", { chain: "sol", address: w.mint }); } catch {}
           const gpx = N(info?.price?.price ?? info?.price), supply = N(info?.total_supply) || N(info?.circulating_supply) || 1e9, su = await solPrice();
           const graduated = /graduated|other/.test(m.venue || ""), px = !graduated && m.mcSol > 0 && su > 0 ? m.mcSol * su / supply : gpx; // 0.8.3: chain price on the curve; 0.8.6: GMGN's after graduation (the pool market cap from the trade decoder came out 100× on 4 Nov — "$13,737K" entries)
           if (!(px > 0)) { m["skip_" + rule.k] = "no price"; continue; }
