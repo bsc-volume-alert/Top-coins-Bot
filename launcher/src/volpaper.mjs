@@ -21,6 +21,41 @@ export function initVol(db) {
     r_tp2sl50 REAL, r_tp15sl30 REAL, r_trail40 REAL, r_hold60 REAL, r_hold120 REAL, UNIQUE (strat, mint))`);
   db.exec("CREATE TABLE IF NOT EXISTS vol_bf_done (mint TEXT PRIMARY KEY)"); // 0.7.4
   try { db.exec("ALTER TABLE vol_paper ADD COLUMN x_half2 REAL"); } catch {} try { db.exec("ALTER TABLE vol_paper ADD COLUMN r_half2 REAL"); } catch {} // 0.5.0
+  for (const c of ["mk_ts INTEGER", "mk_x REAL", "mk_hi REAL", "mk_last INTEGER", "mk_sold_x REAL", "mk_sold_ts INTEGER", "mk_r REAL"]) try { db.exec(`ALTER TABLE vol_paper ADD COLUMN ${c}`); } catch {} // 0.8.10 live mark
+}
+
+/** 0.8.10 (owner, 4 Nov 22:59 UK: "show each open trade's result within minutes… go do that"): the LIVE MARK. Every minute, for every open trade whose 40% trail has not
+ *  sold yet (one GMGN candle call per coin, shared by the books that hold it): price now vs entry (mk_x), the high since entry (mk_hi) and, the minute the
+ *  trail would have sold, the sale (mk_sold_x, mk_sold_ts, mk_r after costs). Same replay as volScore's trail (candles after the entry minute, stop = 60% of
+ *  the high), so the live number and the 2-hour score agree; the 2-hour score stays the record. A sold trade is not fetched again. */
+export const markStat = { passes: 0, marked: 0, sold: 0, calls: 0, errors: 0, lastErr: "", lastPass: null };
+let marking = false;
+export async function volMark(db) {
+  if (marking) return; marking = true;
+  try {
+    const t = now();
+    const rows = db.prepare("SELECT id, mint, entry_ts, entry_price, curve, mk_hi, mk_last FROM vol_paper WHERE done=0 AND err IS NULL AND mk_sold_ts IS NULL AND entry_ts>=? AND entry_ts<=? ORDER BY entry_ts LIMIT 80").all(t - 125 * 60, t - 60);
+    const byMint = new Map(); for (const r of rows) { if (!byMint.has(r.mint)) byMint.set(r.mint, []); byMint.get(r.mint).push(r); }
+    markStat.passes++;
+    for (const [mint, rs] of byMint) {
+      try {
+        const from = Math.max(Math.min(...rs.map((r) => r.mk_last || r.entry_ts)) - 60, t - 98 * 60); // ≤ 100 candles a call; the high so far is carried in mk_hi
+        const ks = (await candles(mint, from, t)).sort((a, b) => a.t - b.t); markStat.calls++;
+        if (!ks.length) continue;
+        for (const r of rs) {
+          const X = (v) => v / r.entry_price; let hi = r.mk_hi || 1, last = r.mk_last || r.entry_ts, sold = null, soldT = null;
+          for (const c of ks) { if (c.t <= last) continue; if (c.t <= r.entry_ts) { last = c.t; continue; } // the entry minute's candle is skipped, as in volScore
+            if (X(c.l) <= hi * 0.6) { sold = hi * 0.6; soldT = c.t; last = c.t; break; } hi = Math.max(hi, X(c.h)); if (c.t + 60 <= t) last = c.t; } // the current minute's candle is still forming: re-read it next pass
+          const nowX = X(ks[ks.length - 1].c);
+          if (sold != null) { db.prepare("UPDATE vol_paper SET mk_ts=?, mk_x=?, mk_hi=?, mk_last=?, mk_sold_x=?, mk_sold_ts=?, mk_r=? WHERE id=?").run(t, +nowX.toFixed(4), +hi.toFixed(4), last, +sold.toFixed(4), soldT, realX(sold, r.curve === 1), r.id); markStat.sold++; }
+          else db.prepare("UPDATE vol_paper SET mk_ts=?, mk_x=?, mk_hi=?, mk_last=? WHERE id=?").run(t, +nowX.toFixed(4), +hi.toFixed(4), last, r.id);
+          markStat.marked++;
+        }
+      } catch (e) { markStat.errors++; markStat.lastErr = `${mint.slice(0, 6)} ${e.message}`.slice(0, 160); if (/rate limited/i.test(e.message)) break; }
+    }
+    markStat.lastPass = new Date().toISOString();
+  } catch (e) { markStat.errors++; markStat.lastErr = "mark: " + e.message.slice(0, 160); }
+  finally { marking = false; }
 }
 
 export async function volPoll(db) {
