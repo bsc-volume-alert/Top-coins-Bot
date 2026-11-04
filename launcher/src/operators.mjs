@@ -121,7 +121,7 @@ export function rebuildSnipers(db) {
 // ---------- 0.7.6: the denominator — every launch's creator, traced to its funder (owner, 3 Nov 21:03 UK: "how many coins they launch and how many are successful") ----------
 // Creator wallets are throwaway (median age 0 s), so two 1-credit RPC calls find the funder: the wallet's first transaction and who paid SOL into it.
 // The 100-credit wallet-API lookup is spent only on funders that stand behind 2+ creators (the second hop), cached forever in wallet_trace.
-const CT_DAYS = n("LAUNCH_CT_DAYS", 14), CT_PER_RUN = n("LAUNCH_CT_PER_RUN", 800), CT_PARALLEL = n("LAUNCH_CT_PARALLEL", 4), CT_FUNDER_PER_RUN = n("LAUNCH_CT_FUNDERS", 60);
+const CT_DAYS = n("LAUNCH_CT_DAYS", 14), CT_PER_RUN = n("LAUNCH_CT_PER_RUN", 3000) /* 0.7.7: 800 an hour meant a day for the 14-day pass; the RPC route is cheap */, CT_PARALLEL = n("LAUNCH_CT_PARALLEL", 4), CT_FUNDER_PER_RUN = n("LAUNCH_CT_FUNDERS", 60);
 export const ctStat = { runs: 0, creators: 0, traced: 0, errors: 0, lastErr: "", funders: 0, queued: 0, running: false, lastRun: null };
 async function creatorFunder(w) {
   const recent = await rpc("getSignaturesForAddress", [w, { limit: 1000, commitment: "confirmed" }]); const txs = recent?.length ?? 0;
