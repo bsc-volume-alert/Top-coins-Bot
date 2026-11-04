@@ -30,6 +30,10 @@ export const RULES = [
   { k: "FDB", ok: (w, m) => w.pre_nb === 1 && confirm(m) },
   { k: "A1", ok: (w, m) => confirm(m) },
 ];
+// 0.8.3 (13:05 UK): GMGN's price for a 60–120 s old coin can lag badly ("I voted": GMGN $2K while the chain said 115 SOL ≈ $10.6K), which would
+// flatter every paper entry. The entry price is the CHAIN price at the check (market cap in SOL × SOL/USD ÷ supply); GMGN's is kept in the row for comparison.
+let solUsd = null, solAt = 0;
+async function solPrice() { if (Date.now() - solAt < 120000 && solUsd) return solUsd; try { const w = await gget("/v1/token/info", { chain: "sol", address: "So11111111111111111111111111111111111111112" }); const v = N(w?.price?.price ?? w?.price); if (v > 0) { solUsd = v; solAt = Date.now(); } } catch {} return solUsd; }
 export const fdStat = { scanned: 0, traced: 0, pre: 0, checks: 0, entries: 0, errors: 0, lastErr: "", credits: 0, creditsDay: "", lastScan: null, lastCheck: null, open: 0 };
 const now = () => Math.floor(Date.now() / 1000), today = () => new Date().toISOString().slice(0, 10);
 
@@ -109,8 +113,10 @@ export async function fdCheck(db) {
         checks.push(m); const entered = new Set(String(w.entered || "").split(",").filter(Boolean));
         for (const rule of RULES) if (!entered.has(rule.k) && rule.ok(w, m)) {
           let info = null; try { info = await gget("/v1/token/info", { chain: "sol", address: w.mint }); } catch {}
-          const px = N(info?.price?.price ?? info?.price), supply = N(info?.total_supply) || N(info?.circulating_supply) || 1e9;
-          if (!(px > 0)) { m["skip_" + rule.k] = "no GMGN price"; continue; }
+          const gpx = N(info?.price?.price ?? info?.price), supply = N(info?.total_supply) || N(info?.circulating_supply) || 1e9, su = await solPrice();
+          const px = m.mcSol > 0 && su > 0 ? m.mcSol * su / supply : gpx; // 0.8.3: chain price first
+          if (!(px > 0)) { m["skip_" + rule.k] = "no price"; continue; }
+          m.gmgn_px = gpx, m.chain_px = px, m.sol_usd = su;
           const curve = r.pumpCurve && !r.complete && N(info?.launchpad_progress) != null && N(info.launchpad_progress) < 1 ? 1 : 0;
           db.prepare(`INSERT OR IGNORE INTO vol_paper (strat, mint, name, symbol, entry_ts, entry_price, entry_mc, vol5, created_ts, age_min, holders, exchange, launchpad, curve, row) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
             .run(rule.k, w.mint, w.name, w.symbol, t, px, px * supply, null, w.created_ts, +(age / 60).toFixed(1), N(info?.holder_count), m.venue, info?.launchpad ?? null, curve,
