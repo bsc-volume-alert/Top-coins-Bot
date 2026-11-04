@@ -38,6 +38,10 @@ export const fdStat = { scanned: 0, traced: 0, pre: 0, checks: 0, entries: 0, er
 const now = () => Math.floor(Date.now() / 1000), today = () => new Date().toISOString().slice(0, 10);
 
 export function initFD(db) {
+  // 0.8.4: the FD-family entries booked before 0.8.3 (4 Nov 10:45–13:05 UK) carry GMGN's lagging price; re-price them from the chain market cap stored in the row (SOL/USD ≈ the first chain-priced entry's rate, else 92)
+  try { const ref = db.prepare("SELECT row FROM vol_paper WHERE strat IN ('FD','FDL','FDB','A1') AND row LIKE '%\"sol_usd\"%' ORDER BY entry_ts LIMIT 1").get(); let su = 92; try { su = JSON.parse(ref?.row || "{}").sol_usd || su; } catch {}
+    for (const t of db.prepare("SELECT id, row, entry_price, entry_mc FROM vol_paper WHERE strat IN ('FD','FDL','FDB','A1') AND done=0 AND row NOT LIKE '%\"chain_px\"%'").all()) { let r = {}; try { r = JSON.parse(t.row || "{}"); } catch {} if (!(r.mcSol > 0)) continue;
+      const px = r.mcSol * su / 1e9; r.gmgn_px = t.entry_price; r.chain_px = px; r.sol_usd = su; r.repriced = true; db.prepare("UPDATE vol_paper SET entry_price=?, entry_mc=?, row=? WHERE id=?").run(px, px * 1e9, JSON.stringify(r), t.id); } } catch {}
   db.exec(`CREATE TABLE IF NOT EXISTS fd_watch (mint TEXT PRIMARY KEY, name TEXT, symbol TEXT, creator TEXT, created_ts INTEGER, bundle_pct REAL, bundle_sol REAL, funder TEXT, funder_sol REAL, funded_ts INTEGER, funder_launches INTEGER,
     pre INTEGER, pre_nb INTEGER, why TEXT, checks TEXT DEFAULT '[]', entered TEXT DEFAULT '', done INTEGER DEFAULT 0, scanned_ts INTEGER);
     CREATE INDEX IF NOT EXISTS fdw_done ON fd_watch(done, created_ts);`);
