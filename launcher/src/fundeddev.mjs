@@ -58,7 +58,7 @@ export function initFD(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS fd_watch (mint TEXT PRIMARY KEY, name TEXT, symbol TEXT, creator TEXT, created_ts INTEGER, bundle_pct REAL, bundle_sol REAL, funder TEXT, funder_sol REAL, funded_ts INTEGER, funder_launches INTEGER,
     pre INTEGER, pre_nb INTEGER, why TEXT, checks TEXT DEFAULT '[]', entered TEXT DEFAULT '', done INTEGER DEFAULT 0, scanned_ts INTEGER);
     CREATE INDEX IF NOT EXISTS fdw_done ON fd_watch(done, created_ts);`);
-  for (const c of ["x_out10 REAL", "x_out15 REAL", "x_out20 REAL", "r_out10 REAL", "r_out15 REAL", "r_out20 REAL", "x_trail25 REAL", "x_trail60 REAL", "x_tw REAL", "r_trail25 REAL", "r_trail60 REAL", "r_tw REAL"]) try { db.exec(`ALTER TABLE vol_paper ADD COLUMN ${c}`); } catch {} // 0.8.0 hard outs; 0.8.7 trails 25/60 and tight-then-wide
+  for (const c of ["x_out10 REAL", "x_out15 REAL", "x_out20 REAL", "r_out10 REAL", "r_out15 REAL", "r_out20 REAL", "x_trail25 REAL", "x_trail60 REAL", "x_tw REAL", "r_trail25 REAL", "r_trail60 REAL", "r_tw REAL", "m_trail40 REAL"]) try { db.exec(`ALTER TABLE vol_paper ADD COLUMN ${c}`); } catch {} // 0.8.0 hard outs; 0.8.7 trails 25/60 and tight-then-wide
   try { db.prepare("UPDATE vol_paper SET done=0 WHERE strat IN ('FDX','FD','FD35','FD120','FDL','FDB','A1') AND done=1 AND err IS NULL AND r_trail60 IS NULL").run(); } catch {} // 0.8.7: re-score today's trades for the new exits (one-off; ~2 GMGN calls a trade)
 }
 

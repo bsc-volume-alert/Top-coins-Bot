@@ -21,7 +21,7 @@ import { ensureLut, luts, lutStat, wantedFor } from "./lut.mjs";
 import { initCopies, scheduleCopies, copyTick, copyStatus } from "./copies.mjs";
 import { initPeaks, runPeaks, peakStat } from "./copypeaks.mjs";
 import { initStudy, runStudy, studyStat, studyAddress, manualStat, loadCensus } from "./study.mjs";
-import { initVol, volPoll, volScore, volStat, volBackfill, bfStat } from "./volpaper.mjs";
+import { initVol, volPoll, volScore, volStat, volBackfill, bfStat, volFillExitTime } from "./volpaper.mjs";
 import { initRF, rfFind, rfCheck, rfStat } from "./runnerfollow.mjs";
 import { initFD, fdScan, fdCheck, fdStat } from "./fundeddev.mjs";
 import { runSweep, sweepStat } from "./exitsweep.mjs"; // 0.8.1: exit sweep over the census winners (owner, 4 Nov 10:48 UK) // 0.8.0: the funded-dev paper book (owner, 4 Nov 10:04 UK)
@@ -386,7 +386,7 @@ setInterval(() => requests().catch(() => {}), 1000);
 setInterval(copyJob, 300000);
 setInterval(() => copyTick(db).catch(() => {}), 20000);
 if (!CFG.SMOKE && Number(process.env.LAUNCH_VOL_BOOKS || 0)) { setTimeout(() => volPoll(db), 15000); setInterval(() => volPoll(db), 30000); } // 0.8.0: V300/V500/VA off (owner 4 Nov: −10…−13% on 48 trades); set LAUNCH_VOL_BOOKS=1 to run them
-if (!CFG.SMOKE) { setInterval(() => volScore(db), 300000); setInterval(() => rfFind(db), 30000); setInterval(() => rfCheck(db), 20000); setTimeout(() => fdScan(db, tdb), 20000); setInterval(() => fdScan(db, tdb), 15000); setInterval(() => fdCheck(db), 15000); setTimeout(() => runSweep(db, exportNow), 60000); setInterval(exportNow, 600000); } // 0.8.2: publish every 10 min (owner 4 Nov 10:32 UK: 5–10 minute checks) // 0.4.0 / 0.5.0 / 0.8.0 (the VA backfill finished 4 Nov 05:00: 1 hit in 1,500 coins)
+if (!CFG.SMOKE) { setInterval(() => volScore(db), 300000); setInterval(() => volFillExitTime(db), 60000); setInterval(() => rfFind(db), 30000); setInterval(() => rfCheck(db), 20000); setTimeout(() => fdScan(db, tdb), 20000); setInterval(() => fdScan(db, tdb), 15000); setInterval(() => fdCheck(db), 15000); setTimeout(() => runSweep(db, exportNow), 60000); setInterval(exportNow, 600000); } // 0.8.2: publish every 10 min (owner 4 Nov 10:32 UK: 5–10 minute checks) // 0.4.0 / 0.5.0 / 0.8.0 (the VA backfill finished 4 Nov 05:00: 1 hit in 1,500 coins)
 // 0.6.0: addresses listed in launcher/study-now.txt are studied once (newest method), 20 s after start
 if (!CFG.SMOKE) setTimeout(() => { try { const done = new Set(db.prepare("SELECT mint, data FROM study_coins WHERE role='manual' AND err IS NULL").all().filter((r) => { try { return JSON.parse(r.data).v != null; } catch { return false; } }).map((r) => r.mint));
   for (const m of readFileSync(new URL("../study-now.txt", import.meta.url), "utf8").split(/\s+/).map((x) => x.trim()).filter(Boolean)) if (!done.has(m)) studyAddress(db, m, exportNow); } catch {} }, 20000);

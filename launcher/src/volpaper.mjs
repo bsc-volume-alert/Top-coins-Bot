@@ -51,6 +51,21 @@ async function candles(mint, from, to) {
   return (d?.list || (Array.isArray(d) ? d : [])).map((c) => ({ t: Math.floor(Number(c.time) / 1000), h: N(c.high), l: N(c.low), c: N(c.close) })).filter((c) => c.h > 0);
 }
 let scoring = false;
+/** 0.8.8 (owner, 4 Nov 18:53 UK: "a time for each position at what time it was actually live"): fill the 40%-trail exit minute on trades scored before this column existed, without blanking them. */
+let filling = false;
+export async function volFillExitTime(db) {
+  if (filling) return; filling = true;
+  try {
+    for (const p of db.prepare("SELECT id, mint, entry_ts, entry_price FROM vol_paper WHERE done=1 AND err IS NULL AND m_trail40 IS NULL AND x_trail40 IS NOT NULL AND entry_ts>=? ORDER BY entry_ts DESC LIMIT 15").all(now() - 3 * 86400)) {
+      try {
+        const e = p.entry_ts, path = [...await candles(p.mint, e - 60, e + 60 * 60), ...await candles(p.mint, e + 60 * 60, e + 121 * 60)].filter((c) => c.t >= e - 60).sort((a, b) => a.t - b.t).filter((c, i, a) => i === 0 || c.t !== a[i - 1].t);
+        const after = path.filter((c) => c.t >= e - 60), X = (v) => v / p.entry_price; let hi = 1, t = null;
+        for (const c of after.slice(1)) { if (X(c.l) <= hi * 0.6) { t = c.t; break; } hi = Math.max(hi, X(c.h)); }
+        db.prepare("UPDATE vol_paper SET m_trail40=? WHERE id=?").run(t ? +((t - e) / 60).toFixed(1) : -1, p.id); // −1 = still held at 2 h
+      } catch (er) { if (/rate limited/i.test(er.message)) break; db.prepare("UPDATE vol_paper SET m_trail40=-2 WHERE id=?").run(p.id); }
+    }
+  } catch {} finally { filling = false; }
+}
 export async function volScore(db) {
   if (scoring) return; scoring = true;
   try {
@@ -64,7 +79,7 @@ export async function volScore(db) {
         let peak = 0, peakT = e; for (const c of after) if (X(c.h) > peak) { peak = X(c.h); peakT = c.t; }
         const lowBefore = Math.min(...after.filter((c) => c.t <= peakT).map((c) => X(c.l)));
         const tpsl = (tp, sl) => { for (const c of after.slice(1)) { if (X(c.l) <= sl) return sl; if (X(c.h) >= tp) return tp; } return X(after[after.length - 1].c); }; // the stop is checked first in a candle: the worse case
-        let hi = 1, trail = null; for (const c of after.slice(1)) { if (X(c.l) <= hi * 0.6) { trail = hi * 0.6; break; } hi = Math.max(hi, X(c.h)); } if (trail == null) trail = X(after[after.length - 1].c);
+        let hi = 1, trail = null, trailT = null; for (const c of after.slice(1)) { if (X(c.l) <= hi * 0.6) { trail = hi * 0.6; trailT = c.t; break; } hi = Math.max(hi, X(c.h)); } if (trail == null) trail = X(after[after.length - 1].c); // 0.8.8: trailT = when the 40% trail sold (null = still held at 2 h)
         // 0.5.0: half at 2x, the rest on a 40% trail from the peak; −30% stop before 2x
         let half = null; { let hit = false, hi2 = 2; for (const c of after.slice(1)) { if (!hit) { if (X(c.l) <= 0.7) { half = 0.7; break; } if (X(c.h) >= 2) { hit = true; hi2 = Math.max(2, X(c.h)); } } else { if (X(c.l) <= hi2 * 0.6) { half = 1 + 0.5 * hi2 * 0.6; break; } hi2 = Math.max(hi2, X(c.h)); } }
           if (half == null) half = hit ? 1 + 0.5 * X(after[after.length - 1].c) : X(after[after.length - 1].c); }
@@ -76,8 +91,8 @@ export async function volScore(db) {
         const trailN = (pct) => { let h = 1; for (const c of after.slice(1)) { if (X(c.l) <= h * (1 - pct)) return h * (1 - pct); h = Math.max(h, X(c.h)); } return X(after[after.length - 1].c); };
         const tw = (() => { let h = 1, run = false; for (const c of after.slice(1)) { if (!run) { if (X(c.l) <= 0.65) return 0.65; if (X(c.h) >= 2) { run = true; h = X(c.h); } } else { if (X(c.l) <= h * 0.45) return h * 0.45; h = Math.max(h, X(c.h)); } } return X(after[after.length - 1].c); })();
         const t25 = trailN(0.25), t60 = trailN(0.6);
-        db.prepare(`UPDATE vol_paper SET done=1, x5=?, x15=?, x30=?, x60=?, x120=?, peak120=?, peak_min=?, low_before_peak=?, x_tp2sl50=?, x_tp15sl30=?, x_trail40=?, r_tp2sl50=?, r_tp15sl30=?, r_trail40=?, r_hold60=?, r_hold120=?, x_half2=?, r_half2=?, x_out10=?, x_out15=?, x_out20=?, r_out10=?, r_out15=?, r_out20=?, x_trail25=?, x_trail60=?, x_tw=?, r_trail25=?, r_trail60=?, r_tw=? WHERE id=?`)
-          .run(at(5), at(15), at(30), h60, h120, +peak.toFixed(4), +((peakT - e) / 60).toFixed(1), +lowBefore.toFixed(4), t2, t15, +trail.toFixed(4), realX(t2, cv), realX(t15, cv), realX(trail, cv), realX(h60, cv), realX(h120, cv), +half.toFixed(4), realX(half, cv), o10, o15, o20, realX(o10, cv), realX(o15, cv), realX(o20, cv), +t25.toFixed(4), +t60.toFixed(4), +tw.toFixed(4), realX(t25, cv), realX(t60, cv), realX(tw, cv), p.id);
+        db.prepare(`UPDATE vol_paper SET done=1, x5=?, x15=?, x30=?, x60=?, x120=?, peak120=?, peak_min=?, low_before_peak=?, x_tp2sl50=?, x_tp15sl30=?, x_trail40=?, r_tp2sl50=?, r_tp15sl30=?, r_trail40=?, r_hold60=?, r_hold120=?, x_half2=?, r_half2=?, x_out10=?, x_out15=?, x_out20=?, r_out10=?, r_out15=?, r_out20=?, x_trail25=?, x_trail60=?, x_tw=?, r_trail25=?, r_trail60=?, r_tw=?, m_trail40=? WHERE id=?`)
+          .run(at(5), at(15), at(30), h60, h120, +peak.toFixed(4), +((peakT - e) / 60).toFixed(1), +lowBefore.toFixed(4), t2, t15, +trail.toFixed(4), realX(t2, cv), realX(t15, cv), realX(trail, cv), realX(h60, cv), realX(h120, cv), +half.toFixed(4), realX(half, cv), o10, o15, o20, realX(o10, cv), realX(o15, cv), realX(o20, cv), +t25.toFixed(4), +t60.toFixed(4), +tw.toFixed(4), realX(t25, cv), realX(t60, cv), realX(tw, cv), trailT ? +((trailT - e) / 60).toFixed(1) : null, p.id);
         volStat.scored++;
       } catch (er) { if (/rate limited/i.test(er.message)) throw er; db.prepare("UPDATE vol_paper SET done=1, err=? WHERE id=?").run(er.message.slice(0, 120), p.id); }
     }
