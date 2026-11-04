@@ -1,0 +1,111 @@
+// launcher 0.8.0 (owner, 4 Nov 2026 10:04–10:15 UK: "what do we buy… 10–15 coins a day at 2x… come out at 2x… trailing stop"): FD — the FUNDED-DEV paper book.
+// What the 214 census winners ($100K+, migrated) and 10,128 traced launches said (LAUNCHER.md 4 Nov 09:50 / 10:45 UK):
+//   a winner is launched by a first-time creator wallet funded with a few SOL shortly before launch by a wallet that rarely launches (exchange or
+//   private), the bundle commits 10–60% (not the self-bought 60%+ factory), and in its FIRST MINUTE it has big buyers (net ≥ 27 SOL, 2-SOL+ buys)
+//   rather than a bot swarm; it graduates in ~3 min, peaks at ~minute 16 and is worthless by minute 30.
+// So, for EVERY pump.fun launch the tracker records (~1,100 an hour):
+//   1. at birth: the creator's funder by two 1-credit RPC calls (first transaction, who paid SOL in) — written to creator_trace so the hourly census
+//      pass does not repeat it; the pre-filter: funded ≥ FUND_SOL within FUND_S, funder with ≤ FUNDER_MAX launches on record, bundle 10–60% (tracker, T+4 s);
+//   2. at 60 / 90 / 120 s: the coin's trades from the chain (earlyTrades); the confirmation rules below; first pass → paper entry at GMGN's price,
+//      into vol_paper (scored 2 h later by volScore with every exit side by side: half at 2x + trail, 2x/−50, 1.5x/−30, 40% trail, hold 60/120,
+//      and 0.8.0's hard outs at 10 / 15 / 20 min with a −35% stop).
+//   Rules: FD  = pre-filter + net ≥ 27 SOL + mc ≥ 100 SOL + ≥ 3 buys of 2+ SOL;  FDL = pre-filter + net ≥ 15 + mc ≥ 60;  FDB = FD's confirmation
+//   with NO bundle condition (what the bundle filter is worth);  A1 = confirmation only, no pre-filter at all (book A of October, the control).
+// Nothing is bought. Every launch's pre-filter result and every checkpoint is kept (fd_watch) so the cut can be re-tuned from data.
+import { gget, N } from "./gmgn.mjs";
+import { earlyTrades, studyStat } from "./study.mjs";
+import { creatorFunder, ctStat } from "./operators.mjs";
+
+const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
+const FUND_SOL = n("LAUNCH_FD_FUND_SOL", 2), FUND_S = n("LAUNCH_FD_FUND_S", 7200), FUNDER_MAX = n("LAUNCH_FD_FUNDER_MAX", 2), B_LO = n("LAUNCH_FD_BUNDLE_LO", 10), B_HI = n("LAUNCH_FD_BUNDLE_HI", 60);
+const CHECKS = [60, 90, 120], DAY_CREDITS = n("LAUNCH_FD_DAY_CREDITS", 120000), SCAN_S = n("LAUNCH_FD_SCAN_S", 240);
+const confirm = (m) => m.net >= 27 && (m.mcSol ?? 0) >= 100 && m.big >= 3;
+export const RULES = [
+  { k: "FD", ok: (w, m) => w.pre === 1 && confirm(m) },
+  { k: "FDL", ok: (w, m) => w.pre === 1 && m.net >= 15 && (m.mcSol ?? 0) >= 60 },
+  { k: "FDB", ok: (w, m) => w.pre_nb === 1 && confirm(m) },
+  { k: "A1", ok: (w, m) => confirm(m) },
+];
+export const fdStat = { scanned: 0, traced: 0, pre: 0, checks: 0, entries: 0, errors: 0, lastErr: "", credits: 0, creditsDay: "", lastScan: null, lastCheck: null, open: 0 };
+const now = () => Math.floor(Date.now() / 1000), today = () => new Date().toISOString().slice(0, 10);
+
+export function initFD(db) {
+  db.exec(`CREATE TABLE IF NOT EXISTS fd_watch (mint TEXT PRIMARY KEY, name TEXT, symbol TEXT, creator TEXT, created_ts INTEGER, bundle_pct REAL, bundle_sol REAL, funder TEXT, funder_sol REAL, funded_ts INTEGER, funder_launches INTEGER,
+    pre INTEGER, pre_nb INTEGER, why TEXT, checks TEXT DEFAULT '[]', entered TEXT DEFAULT '', done INTEGER DEFAULT 0, scanned_ts INTEGER);
+    CREATE INDEX IF NOT EXISTS fdw_done ON fd_watch(done, created_ts);`);
+  for (const c of ["x_out10 REAL", "x_out15 REAL", "x_out20 REAL", "r_out10 REAL", "r_out15 REAL", "r_out20 REAL"]) try { db.exec(`ALTER TABLE vol_paper ADD COLUMN ${c}`); } catch {} // 0.8.0 hard outs
+}
+
+/** every 15 s: every tracker launch of the last SCAN_S seconds not yet seen → funder lookup → pre-filter. */
+let scanning = false;
+export async function fdScan(db, tdb) {
+  if (scanning || !tdb) return; scanning = true;
+  try {
+    if (fdStat.creditsDay !== today()) { fdStat.creditsDay = today(); fdStat.credits = 0; }
+    const rows = tdb.prepare("SELECT mint, name, symbol, creator, create_ts, bundle_pct, bundle_sol, peak_mc_usd, graduated FROM tokens WHERE create_ts>=? AND creator IS NOT NULL AND creator<>'' ORDER BY create_ts DESC LIMIT 400").all(now() - SCAN_S);
+    const ins = db.prepare(`INSERT OR IGNORE INTO fd_watch (mint, name, symbol, creator, created_ts, bundle_pct, bundle_sol, funder, funder_sol, funded_ts, funder_launches, pre, pre_nb, why, scanned_ts) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    const insCT = db.prepare("INSERT OR IGNORE INTO creator_trace VALUES (@mint,@creator,@create_ts,@peak_mc_usd,@graduated,@bundle_pct,@bundle_sol,@funder,@funder_sol,@funded_ts,@creator_txs,@err,@checked_ts)");
+    for (const t of rows) {
+      if (db.prepare("SELECT 1 FROM fd_watch WHERE mint=?").get(t.mint)) continue;
+      if (fdStat.credits >= DAY_CREDITS) { fdStat.lastErr = `daily Helius budget ${DAY_CREDITS} reached`; break; }
+      fdStat.scanned++;
+      let r = db.prepare("SELECT funder, funder_sol, funded_ts, creator_txs FROM creator_trace WHERE mint=?").get(t.mint) || db.prepare("SELECT funder, funder_sol, funded_ts, creator_txs FROM creator_trace WHERE creator=? AND funder IS NOT NULL LIMIT 1").get(t.creator);
+      if (!r) { const c0 = studyStat.credits; try { r = await creatorFunder(t.creator); fdStat.traced++; ctStat.traced++; } catch (e) { r = { err: e.message.slice(0, 100) }; fdStat.errors++; fdStat.lastErr = `${t.creator.slice(0, 6)} ${r.err}`; }
+        fdStat.credits += studyStat.credits - c0;
+        insCT.run({ mint: t.mint, creator: t.creator, create_ts: t.create_ts, peak_mc_usd: t.peak_mc_usd ?? null, graduated: t.graduated ? 1 : 0, bundle_pct: t.bundle_pct ?? null, bundle_sol: t.bundle_sol ?? null, funder: r.funder || null, funder_sol: r.funder_sol ?? null, funded_ts: r.funded_ts ?? null, creator_txs: r.txs ?? null, err: r.err || null, checked_ts: now() }); }
+      const fl = r.funder ? db.prepare("SELECT COUNT(DISTINCT mint) c FROM creator_trace WHERE funder=? AND mint<>?").get(r.funder, t.mint).c : null;
+      const amt = N(r.funder_sol) || 0, delay = r.funded_ts ? t.create_ts - r.funded_ts : null, bp = N(t.bundle_pct);
+      const why = [];
+      if (!r.funder) why.push("no funder"); else { if (amt < FUND_SOL) why.push(`funded ${amt.toFixed(2)} SOL`); if (delay == null || delay > FUND_S || delay < 0) why.push(`funded ${delay == null ? "?" : Math.round(delay / 60)} min before`); if (fl > FUNDER_MAX) why.push(`funder has ${fl} launches`); }
+      const preNb = r.funder && amt >= FUND_SOL && delay != null && delay >= 0 && delay <= FUND_S && fl <= FUNDER_MAX ? 1 : 0;
+      const bundleOk = bp != null && bp >= B_LO && bp < B_HI; if (!bundleOk) why.push(bp == null ? "bundle unknown" : `bundle ${bp.toFixed(0)}%`);
+      const pre = preNb && bundleOk ? 1 : 0; if (pre) fdStat.pre++;
+      ins.run(t.mint, String(t.name || "").slice(0, 60), String(t.symbol || "").slice(0, 20), t.creator, t.create_ts, bp, N(t.bundle_sol), r.funder || null, amt || null, r.funded_ts ?? null, fl, pre, preNb, why.join("; "), now());
+    }
+    fdStat.lastScan = new Date().toISOString();
+  } catch (e) { fdStat.errors++; fdStat.lastErr = "scan: " + e.message.slice(0, 160); }
+  finally { scanning = false; }
+}
+
+function metrics(r, upto) {
+  const xs = r.trades.filter((x) => x.t <= upto), buys = xs.filter((x) => x.isBuy), sells = xs.filter((x) => !x.isBuy);
+  const bs = buys.reduce((s, x) => s + x.sol, 0) / 1e9, ss = sells.reduce((s, x) => s + x.sol, 0) / 1e9, last = xs[xs.length - 1];
+  return { net: +(bs - ss).toFixed(2), buySol: +bs.toFixed(2), sellSol: +ss.toFixed(2), buyers: new Set(buys.map((x) => x.user)).size, buys: buys.length, sells: sells.length,
+    big: buys.filter((x) => x.sol >= 2e9).length, mcSol: last?.mc ? +last.mc.toFixed(1) : null };
+}
+
+/** every 15 s: checkpoints at 60 / 90 / 120 s for launches that passed any pre-filter (and a sample of the rest for the A1 control). */
+let checking = false;
+export async function fdCheck(db) {
+  if (checking) return; checking = true;
+  try {
+    const t = now();
+    // pre-filtered launches first; then the A1 control: every 7th other launch (so the control costs ~15% of the credits of "all launches")
+    const list = db.prepare("SELECT * FROM fd_watch WHERE done=0 AND created_ts>=? AND (pre_nb=1 OR (rowid % 7)=0) ORDER BY pre DESC, created_ts").all(t - 300);
+    fdStat.open = list.length;
+    for (const w of list) {
+      const age = t - w.created_ts, checks = JSON.parse(w.checks || "[]"), doneAt = new Set(checks.map((c) => c.at));
+      if (age > CHECKS[CHECKS.length - 1] + 60) { db.prepare("UPDATE fd_watch SET done=1 WHERE mint=?").run(w.mint); continue; }
+      const due = CHECKS.filter((c) => c <= age && !doneAt.has(c)); if (!due.length) continue;
+      if (fdStat.credits >= DAY_CREDITS) { fdStat.lastErr = `daily Helius budget ${DAY_CREDITS} reached`; break; }
+      const at = due[due.length - 1];
+      try {
+        const c0 = studyStat.credits, r = await earlyTrades(w.mint, w.created_ts + at); fdStat.credits += studyStat.credits - c0; fdStat.checks++; fdStat.lastCheck = new Date().toISOString();
+        const m = { at, ...metrics(r, (r.t0 || w.created_ts) + at), txs: r.txs, venue: r.pumpCurve ? (r.complete ? "pump.fun graduated" : "pump.fun curve") : "other" };
+        checks.push(m); const entered = new Set(String(w.entered || "").split(",").filter(Boolean));
+        for (const rule of RULES) if (!entered.has(rule.k) && rule.ok(w, m)) {
+          let info = null; try { info = await gget("/v1/token/info", { chain: "sol", address: w.mint }); } catch {}
+          const px = N(info?.price?.price ?? info?.price), supply = N(info?.total_supply) || N(info?.circulating_supply) || 1e9;
+          if (!(px > 0)) { m["skip_" + rule.k] = "no GMGN price"; continue; }
+          const curve = r.pumpCurve && !r.complete && N(info?.launchpad_progress) != null && N(info.launchpad_progress) < 1 ? 1 : 0;
+          db.prepare(`INSERT OR IGNORE INTO vol_paper (strat, mint, name, symbol, entry_ts, entry_price, entry_mc, vol5, created_ts, age_min, holders, exchange, launchpad, curve, row) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+            .run(rule.k, w.mint, w.name, w.symbol, t, px, px * supply, null, w.created_ts, +(age / 60).toFixed(1), N(info?.holder_count), m.venue, info?.launchpad ?? null, curve,
+              JSON.stringify({ fd: { funder: w.funder, funder_sol: w.funder_sol, funded_min_before: w.funded_ts ? +((w.created_ts - w.funded_ts) / 60).toFixed(1) : null, funder_launches: w.funder_launches, bundle_pct: w.bundle_pct, bundle_sol: w.bundle_sol }, ...m }));
+          entered.add(rule.k); fdStat.entries++;
+        }
+        const dead = at >= 90 && m.net < 5 && m.buyers < 20; // nothing happening: stop reading it (credits)
+        db.prepare("UPDATE fd_watch SET checks=?, entered=?, done=? WHERE mint=?").run(JSON.stringify(checks), [...entered].join(","), dead || entered.size === RULES.length ? 1 : 0, w.mint);
+      } catch (e) { fdStat.errors++; fdStat.lastErr = `${w.mint.slice(0, 6)}: ${e.message}`.slice(0, 160); checks.push({ at, err: e.message.slice(0, 80) }); db.prepare("UPDATE fd_watch SET checks=? WHERE mint=?").run(JSON.stringify(checks), w.mint); }
+    }
+  } finally { checking = false; }
+}

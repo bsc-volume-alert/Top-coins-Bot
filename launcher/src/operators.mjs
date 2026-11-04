@@ -123,7 +123,7 @@ export function rebuildSnipers(db) {
 // The 100-credit wallet-API lookup is spent only on funders that stand behind 2+ creators (the second hop), cached forever in wallet_trace.
 const CT_DAYS = n("LAUNCH_CT_DAYS", 14), CT_PER_RUN = n("LAUNCH_CT_PER_RUN", 3000) /* 0.7.7: 800 an hour meant a day for the 14-day pass; the RPC route is cheap */, CT_PARALLEL = n("LAUNCH_CT_PARALLEL", 4), CT_FUNDER_PER_RUN = n("LAUNCH_CT_FUNDERS", 60);
 export const ctStat = { runs: 0, creators: 0, traced: 0, errors: 0, lastErr: "", funders: 0, queued: 0, running: false, lastRun: null };
-async function creatorFunder(w) {
+export async function creatorFunder(w) {
   const recent = await rpc("getSignaturesForAddress", [w, { limit: 1000, commitment: "confirmed" }]); const txs = recent?.length ?? 0;
   if (!txs) return { txs, err: "no transactions" };
   if (txs >= 1000) { const fb = await trace(null, w); return { txs, funder: fb?.funder || null, funder_sol: fb?.amount_sol ?? null, funded_ts: fb?.funded_ts ?? null, err: fb?.err || null }; } // busy creator (rare): wallet API

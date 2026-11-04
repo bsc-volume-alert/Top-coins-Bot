@@ -69,8 +69,11 @@ export async function volScore(db) {
         let half = null; { let hit = false, hi2 = 2; for (const c of after.slice(1)) { if (!hit) { if (X(c.l) <= 0.7) { half = 0.7; break; } if (X(c.h) >= 2) { hit = true; hi2 = Math.max(2, X(c.h)); } } else { if (X(c.l) <= hi2 * 0.6) { half = 1 + 0.5 * hi2 * 0.6; break; } hi2 = Math.max(hi2, X(c.h)); } }
           if (half == null) half = hit ? 1 + 0.5 * X(after[after.length - 1].c) : X(after[after.length - 1].c); }
         const cv = p.curve === 1, t2 = tpsl(2, 0.5), t15 = tpsl(1.5, 0.7), h60 = at(60), h120 = at(120);
-        db.prepare(`UPDATE vol_paper SET done=1, x5=?, x15=?, x30=?, x60=?, x120=?, peak120=?, peak_min=?, low_before_peak=?, x_tp2sl50=?, x_tp15sl30=?, x_trail40=?, r_tp2sl50=?, r_tp15sl30=?, r_trail40=?, r_hold60=?, r_hold120=?, x_half2=?, r_half2=? WHERE id=?`)
-          .run(at(5), at(15), at(30), h60, h120, +peak.toFixed(4), +((peakT - e) / 60).toFixed(1), +lowBefore.toFixed(4), t2, t15, +trail.toFixed(4), realX(t2, cv), realX(t15, cv), realX(trail, cv), realX(h60, cv), realX(h120, cv), +half.toFixed(4), realX(half, cv), p.id);
+        // 0.8.0: hard out at minute M (winners peak at ~16 min and are worthless by 30), −35% stop before it; the stop is checked first in a candle
+        const out = (M) => { for (const c of after.slice(1)) { if (c.t > e + M * 60) break; if (X(c.l) <= 0.65) return 0.65; } const c = uniq.filter((x) => x.t <= e + M * 60).pop(); return c ? +X(c.c).toFixed(4) : null; };
+        const o10 = out(10), o15 = out(15), o20 = out(20);
+        db.prepare(`UPDATE vol_paper SET done=1, x5=?, x15=?, x30=?, x60=?, x120=?, peak120=?, peak_min=?, low_before_peak=?, x_tp2sl50=?, x_tp15sl30=?, x_trail40=?, r_tp2sl50=?, r_tp15sl30=?, r_trail40=?, r_hold60=?, r_hold120=?, x_half2=?, r_half2=?, x_out10=?, x_out15=?, x_out20=?, r_out10=?, r_out15=?, r_out20=? WHERE id=?`)
+          .run(at(5), at(15), at(30), h60, h120, +peak.toFixed(4), +((peakT - e) / 60).toFixed(1), +lowBefore.toFixed(4), t2, t15, +trail.toFixed(4), realX(t2, cv), realX(t15, cv), realX(trail, cv), realX(h60, cv), realX(h120, cv), +half.toFixed(4), realX(half, cv), o10, o15, o20, realX(o10, cv), realX(o15, cv), realX(o20, cv), p.id);
         volStat.scored++;
       } catch (er) { if (/rate limited/i.test(er.message)) throw er; db.prepare("UPDATE vol_paper SET done=1, err=? WHERE id=?").run(er.message.slice(0, 120), p.id); }
     }
