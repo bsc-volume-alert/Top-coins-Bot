@@ -23,7 +23,8 @@ import { initPeaks, runPeaks, peakStat } from "./copypeaks.mjs";
 import { initStudy, runStudy, studyStat, studyAddress, manualStat, loadCensus } from "./study.mjs";
 import { initVol, volPoll, volScore, volStat, volBackfill, bfStat } from "./volpaper.mjs";
 import { initRF, rfFind, rfCheck, rfStat } from "./runnerfollow.mjs";
-import { initFD, fdScan, fdCheck, fdStat } from "./fundeddev.mjs"; // 0.8.0: the funded-dev paper book (owner, 4 Nov 10:04 UK)
+import { initFD, fdScan, fdCheck, fdStat } from "./fundeddev.mjs";
+import { runSweep, sweepStat } from "./exitsweep.mjs"; // 0.8.1: exit sweep over the census winners (owner, 4 Nov 10:48 UK) // 0.8.0: the funded-dev paper book (owner, 4 Nov 10:04 UK)
 import { initOperators, runOperators, opStat, creatorCensus, ctStat } from "./operators.mjs";
 
 const VER = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
@@ -344,7 +345,7 @@ async function selfTest() {
 const csv = (rows) => { if (!rows.length) return ""; const cols = Object.keys(rows[0]); const e = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v)); return [cols.join(","), ...rows.map((r) => cols.map((c) => e(r[c])).join(","))].join("\n"); };
 export function status() {
   return { ...st, at: now(), wallet: ME.toBase58(), balanceSol: balance != null ? +sol(balance).toFixed(4) : null, liveToday: liveToday(), cap: CFG.DAILY_CAP || "none", minBalanceSol: CFG.MIN_BALANCE_SOL, tpFraction: CFG.TP_FRACTION, stakeSol: CFG.STAKE_SOL, deadMin: CFG.DEAD_MIN, quietMin: CFG.QUIET_MIN, tpX: CFG.TP_X,
-    lut: lutStat, copies: copyStatus(), peaks: peakStat, study: studyStat, vol: volStat, volBackfill: bfStat, rf: rfStat, manualStudy: manualStat, operators: opStat, creators: ctStat, fd: fdStat, paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
+    lut: lutStat, copies: copyStatus(), peaks: peakStat, study: studyStat, vol: volStat, volBackfill: bfStat, rf: rfStat, manualStudy: manualStat, operators: opStat, creators: ctStat, fd: fdStat, sweep: sweepStat, paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
     accounts: CFG.ACCOUNTS, twitter: { keySet: !!CFG.TWITTER_KEY, ...twStat }, ai: !!CFG.AI_KEY, aiStat, meta: metaStat, rpc: rpcStats, trackerDb: !!tdb, lastSweep: kvGet("lastSweep"), lastFeeCollect: kvGet("lastFeeCollect"), phantom: PHANTOM };
 }
 let pushing = false, soon = null;
@@ -385,7 +386,7 @@ setInterval(() => requests().catch(() => {}), 1000);
 setInterval(copyJob, 300000);
 setInterval(() => copyTick(db).catch(() => {}), 20000);
 if (!CFG.SMOKE && Number(process.env.LAUNCH_VOL_BOOKS || 0)) { setTimeout(() => volPoll(db), 15000); setInterval(() => volPoll(db), 30000); } // 0.8.0: V300/V500/VA off (owner 4 Nov: −10…−13% on 48 trades); set LAUNCH_VOL_BOOKS=1 to run them
-if (!CFG.SMOKE) { setInterval(() => volScore(db), 300000); setInterval(() => rfFind(db), 30000); setInterval(() => rfCheck(db), 20000); setTimeout(() => fdScan(db, tdb), 20000); setInterval(() => fdScan(db, tdb), 15000); setInterval(() => fdCheck(db), 15000); } // 0.4.0 / 0.5.0 / 0.8.0 (the VA backfill finished 4 Nov 05:00: 1 hit in 1,500 coins)
+if (!CFG.SMOKE) { setInterval(() => volScore(db), 300000); setInterval(() => rfFind(db), 30000); setInterval(() => rfCheck(db), 20000); setTimeout(() => fdScan(db, tdb), 20000); setInterval(() => fdScan(db, tdb), 15000); setInterval(() => fdCheck(db), 15000); setTimeout(() => runSweep(db, exportNow), 60000); } // 0.4.0 / 0.5.0 / 0.8.0 (the VA backfill finished 4 Nov 05:00: 1 hit in 1,500 coins)
 // 0.6.0: addresses listed in launcher/study-now.txt are studied once (newest method), 20 s after start
 if (!CFG.SMOKE) setTimeout(() => { try { const done = new Set(db.prepare("SELECT mint, data FROM study_coins WHERE role='manual' AND err IS NULL").all().filter((r) => { try { return JSON.parse(r.data).v != null; } catch { return false; } }).map((r) => r.mint));
   for (const m of readFileSync(new URL("../study-now.txt", import.meta.url), "utf8").split(/\s+/).map((x) => x.trim()).filter(Boolean)) if (!done.has(m)) studyAddress(db, m, exportNow); } catch {} }, 20000);
