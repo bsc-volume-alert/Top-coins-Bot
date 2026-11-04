@@ -74,7 +74,8 @@ export function initFD(db) {
   // 0.8.9: when each rule was loaded (owner: "add the time of their shipment"). Rules that already have entries get their first entry's time; new ones get now.
   db.exec("CREATE TABLE IF NOT EXISTS fd_rules (k TEXT PRIMARY KEY, since_ts INTEGER, ver TEXT)");
   let ver = null; try { ver = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version; } catch {}
-  for (const r of RULES) db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES (?, COALESCE((SELECT MIN(entry_ts) FROM vol_paper WHERE strat=?), ?), ?)").run(r.k, r.k, now(), ver);
+  const hasVP = !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='vol_paper'").get(); // the smoke boot runs on an empty database (vol_paper is created later, by initVol)
+  for (const r of RULES) { try { if (hasVP) db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES (?, COALESCE((SELECT MIN(entry_ts) FROM vol_paper WHERE strat=?), ?), ?)").run(r.k, r.k, now(), ver); else db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES (?,?,?)").run(r.k, now(), ver); } catch (e) { fdStat.lastErr = "fd_rules: " + e.message.slice(0, 120); } }
 }
 
 /** every 15 s: every tracker launch of the last SCAN_S seconds not yet seen → funder lookup → pre-filter. */
