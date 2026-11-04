@@ -29,6 +29,16 @@ export const RULES = [
   { k: "FDL", ok: (w, m) => w.pre === 1 && m.net >= 15 && (m.mcSol ?? 0) >= 60 },
   { k: "FDB", ok: (w, m) => w.pre_nb === 1 && confirm(m) },
   { k: "A1", ok: (w, m) => confirm(m) },
+  // 0.8.6 (17:05 UK): 9 of FD's first 15 were dumped at minute 1–2, right after the 60 s entry; the 5 runners were still rising at 120 s.
+  // FD120 = FD's pre-filter and buying test, but entered only at the 120 s check, and only if the coin is still holding: market cap at 120 s ≥ 0.8 × the best earlier check and net buying still ≥ 27 SOL.
+  // 0.8.6 (17:15 UK, 69 scored coins): entries at $12–20K with 35–50 SOL net at minute 1 ran 9 of 13 (2 rugs); $8–12K with ~30 SOL ran 8 of 23 (10 rugs); the
+  // $9–10K / exactly-4-big-buys / 30-SOL script is the rug signature. FD35 = FD with the bar where the winners sit: net ≥ 35 SOL and mc ≥ 130 SOL (~$12K). In-sample; a forward variant, not a replacement.
+  { k: "FD35", ok: (w, m) => w.pre === 1 && m.net >= 35 && (m.mcSol ?? 0) >= 130 && m.big >= 3 },
+  // 17:40 UK, coin by coin: on the rugs the net buying COLLAPSED between 60 and 120 s (Denald Tremp 23.8→9.6, Sol 40.2→8.9, put the fries 27.2→8.1, Transgender 33.8→11.6);
+  // on the runners it rose (FOMO 27→37, Sol 30→56, SI Compute 27→39, a hidden gem 46→51). So FD120 enters at 120 s only if net buying is still at least 90% of its best earlier check and the market cap at least 80%.
+  // FDX (17:50 UK, the owner's "most revised version"): all three tells together — minute-1 bar of FD35 (net ≥ 35 SOL, mc ≥ 130 SOL), creator funded ≥ 20 SOL, and entry at the 120 s check only if buying is still rising (FD120's test).
+  { k: "FDX", ok: (w, m, prev) => w.pre === 1 && (w.funder_sol ?? 0) >= 20 && m.at >= 120 && m.net >= 35 && (m.mcSol ?? 0) >= 130 && m.big >= 3 && (!prev.length || ((m.net ?? 0) >= 0.9 * Math.max(...prev.map((p) => p.net || 0)) && (m.mcSol ?? 0) >= 0.8 * Math.max(...prev.map((p) => p.mcSol || 0)))) },
+  { k: "FD120", ok: (w, m, prev) => w.pre === 1 && m.at >= 120 && confirm(m) && (!prev.length || ((m.net ?? 0) >= 0.9 * Math.max(...prev.map((p) => p.net || 0)) && (m.mcSol ?? 0) >= 0.8 * Math.max(...prev.map((p) => p.mcSol || 0)))) },
 ];
 // 0.8.3 (13:05 UK): GMGN's price for a 60–120 s old coin can lag badly ("I voted": GMGN $2K while the chain said 115 SOL ≈ $10.6K), which would
 // flatter every paper entry. The entry price is the CHAIN price at the check (market cap in SOL × SOL/USD ÷ supply); GMGN's is kept in the row for comparison.
@@ -38,6 +48,9 @@ export const fdStat = { scanned: 0, traced: 0, pre: 0, checks: 0, entries: 0, er
 const now = () => Math.floor(Date.now() / 1000), today = () => new Date().toISOString().slice(0, 10);
 
 export function initFD(db) {
+  // 0.8.6: entries booked after graduation with the decoder's pool market cap (100× too high) → back to GMGN's price, re-scored
+  try { for (const t of db.prepare("SELECT id, row, entry_price FROM vol_paper WHERE strat IN ('FD','FDL','FDB','A1') AND row LIKE '%\"chain_px\"%' AND (row LIKE '%graduated%' OR row LIKE '%\"venue\":\"other\"%')").all()) { let r = {}; try { r = JSON.parse(t.row || "{}"); } catch {} const g = r.gmgn_px; if (!(g > 0) || r.fixed_grad) continue;
+      if (t.entry_price > g * 3) { r.fixed_grad = true; r.bad_px = t.entry_price; db.prepare("UPDATE vol_paper SET entry_price=?, entry_mc=?, row=?, done=0, err=NULL WHERE id=?").run(g, g * 1e9, JSON.stringify(r), t.id); } } } catch {}
   // 0.8.4: the FD-family entries booked before 0.8.3 (4 Nov 10:45–13:05 UK) carry GMGN's lagging price; re-price them from the chain market cap stored in the row (SOL/USD ≈ the first chain-priced entry's rate, else 92)
   try { const ref = db.prepare("SELECT row FROM vol_paper WHERE strat IN ('FD','FDL','FDB','A1') AND row LIKE '%\"sol_usd\"%' ORDER BY entry_ts LIMIT 1").get(); let su = 92; try { su = JSON.parse(ref?.row || "{}").sol_usd || su; } catch {}
     for (const t of db.prepare("SELECT id, row, entry_price, entry_mc FROM vol_paper WHERE strat IN ('FD','FDL','FDB','A1') AND done=0 AND row NOT LIKE '%\"chain_px\"%'").all()) { let r = {}; try { r = JSON.parse(t.row || "{}"); } catch {} if (!(r.mcSol > 0)) continue;
@@ -118,10 +131,11 @@ export async function fdCheck(db) {
         const c0 = studyStat.credits, r = await earlyTrades(w.mint, w.created_ts + at); fdStat.credits += studyStat.credits - c0; fdStat.checks++; fdStat.lastCheck = new Date().toISOString();
         const m = { at, ...metrics(r, (r.t0 || w.created_ts) + at), txs: r.txs, venue: r.pumpCurve ? (r.complete ? "pump.fun graduated" : "pump.fun curve") : "other" };
         checks.push(m); const entered = new Set(String(w.entered || "").split(",").filter(Boolean));
-        for (const rule of RULES) if (!entered.has(rule.k) && rule.ok(w, m)) {
+        const prev = checks.slice(0, -1).filter((c) => c.at != null && !c.err);
+        for (const rule of RULES) if (!entered.has(rule.k) && rule.ok(w, m, prev)) {
           let info = null; try { info = await gget("/v1/token/info", { chain: "sol", address: w.mint }); } catch {}
           const gpx = N(info?.price?.price ?? info?.price), supply = N(info?.total_supply) || N(info?.circulating_supply) || 1e9, su = await solPrice();
-          const px = m.mcSol > 0 && su > 0 ? m.mcSol * su / supply : gpx; // 0.8.3: chain price first
+          const graduated = /graduated|other/.test(m.venue || ""), px = !graduated && m.mcSol > 0 && su > 0 ? m.mcSol * su / supply : gpx; // 0.8.3: chain price on the curve; 0.8.6: GMGN's after graduation (the pool market cap from the trade decoder came out 100× on 4 Nov — "$13,737K" entries)
           if (!(px > 0)) { m["skip_" + rule.k] = "no price"; continue; }
           m.gmgn_px = gpx, m.chain_px = px, m.sol_usd = su;
           const curve = r.pumpCurve && !r.complete && N(info?.launchpad_progress) != null && N(info.launchpad_progress) < 1 ? 1 : 0;
@@ -130,7 +144,7 @@ export async function fdCheck(db) {
               JSON.stringify({ fd: { funder: w.funder, funder_sol: w.funder_sol, funded_min_before: w.funded_ts ? +((w.created_ts - w.funded_ts) / 60).toFixed(1) : null, funder_launches: w.funder_launches, bundle_pct: w.bundle_pct, bundle_sol: w.bundle_sol }, ...m }));
           entered.add(rule.k); fdStat.entries++;
         }
-        const dead = at >= 90 && m.net < 5 && m.buyers < 20; // nothing happening: stop reading it (credits)
+        const dead = at >= 90 && m.net < 5 && m.buyers < 20 && w.pre !== 1; // nothing happening: stop reading it (credits); pre-filtered coins always get their 120 s check (FD120)
         db.prepare("UPDATE fd_watch SET checks=?, entered=?, done=? WHERE mint=?").run(JSON.stringify(checks), [...entered].join(","), dead || entered.size === RULES.length ? 1 : 0, w.mint);
       } catch (e) { fdStat.errors++; fdStat.lastErr = `${w.mint.slice(0, 6)}: ${e.message}`.slice(0, 160); checks.push({ at, err: e.message.slice(0, 80) }); db.prepare("UPDATE fd_watch SET checks=? WHERE mint=?").run(JSON.stringify(checks), w.mint); }
     }
