@@ -7,6 +7,7 @@ import { coinReport, coinLive, coinStat } from "./coin.mjs";
 import { PAGE } from "./page.mjs";
 import { RADAR_PAGE, radarApi } from "./radarpage.mjs";
 import { LAUNCHER_PAGE, launcherApi, launcherAct, launcherSuggest, launcherManual } from "./launcherpage.mjs";
+import { FD_PAGE, fdApi } from "./fdpage.mjs"; // 0.10.0: the FD paper-book page (owner, 4 Nov 12:53 UK)
 const PORT = Number(process.env.SCOPE_PORT || 8791), KEY = process.env.SCOPE_KEY || process.env.WEB_KEY || "";
 if (!KEY) { console.log("[scope] no SCOPE_KEY / WEB_KEY in .env — not starting"); process.exit(process.env.SCOPE_SMOKE ? 0 : 1); }
 const srv = createServer(async (req, res) => {
@@ -18,6 +19,8 @@ const srv = createServer(async (req, res) => {
     if (u.pathname === "/api/live") { const r = await coinLive(u.searchParams.get("mint")).catch((e) => ({ ok: false, error: e.message })); res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(r)); }
     if (u.pathname === "/" || u.pathname === "/radar") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(RADAR_PAGE); } // 0.7.0
     if (u.pathname === "/api/radar") { let r; try { r = radarApi(Math.min(14, Number(u.searchParams.get("days") || 3))); } catch (e) { r = { ok: false, error: e.message }; } res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(r)); }
+    if (u.pathname === "/fd") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(FD_PAGE); } // 0.10.0
+    if (u.pathname === "/api/fd") { let r; try { r = fdApi(Math.min(30, Number(u.searchParams.get("days") || 7))); } catch (e) { r = { ok: false, error: e.message }; } res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(r)); }
     if (u.pathname === "/launcher") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(LAUNCHER_PAGE); } // 0.9.0
     if (u.pathname === "/api/launcher") { let r; try { r = launcherApi(Math.min(14, Number(u.searchParams.get("days") || 3))); } catch (e) { r = { ok: false, error: e.message }; } res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(r)); }
     if (u.pathname === "/api/launcher/suggest" || u.pathname === "/api/launcher/manual") { // 0.9.3: the Launch-now box (JSON body, picture up to 8 MB)

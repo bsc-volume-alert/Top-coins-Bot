@@ -1,0 +1,72 @@
+// scope 0.10.0 (owner, 4 Nov 2026 12:53 UK: "a quick website just showing… the coins we're buying, the paper trade entry, the paper trade exits,
+// and the profit and loss… so I don't need to contact you"): the FD page — the funded-dev paper book and its control books, read-only from the
+// launcher's database. Nothing on this page buys or sells. Refreshes itself every 60 s. Same key as the rest of the site: /fd?key=…
+import Database from "better-sqlite3";
+import { readFileSync } from "node:fs";
+
+const LDB = process.env.LAUNCH_DB || "/root/launcher/launcher.db", STATUS = (process.env.LAUNCH_OUT || "/root/tracker/data/launcher_out") + "/status.json";
+let ldb = null;
+const open = () => { if (!ldb) { ldb = new Database(LDB, { readonly: true, fileMustExist: true }); ldb.pragma("busy_timeout = 2000"); } return ldb; };
+const BOOKS = ["FD", "FDL", "FDB", "A1"];
+const EXITS = ["r_tp2sl50", "r_tp15sl30", "r_half2", "r_trail40", "r_out10", "r_out15", "r_out20", "r_hold60"];
+
+export function fdApi(days = 7) {
+  let status = null; try { status = JSON.parse(readFileSync(STATUS, "utf8")); } catch {}
+  const d = open(), since = Math.floor(Date.now() / 1000) - days * 86400;
+  const trades = d.prepare(`SELECT id, strat, mint, name, symbol, entry_ts, entry_price, entry_mc, age_min, holders, exchange, curve, done, err, x5, x15, x30, x60, x120, peak120, peak_min, low_before_peak,
+      x_tp2sl50, x_tp15sl30, x_trail40, x_half2, x_out10, x_out15, x_out20, r_tp2sl50, r_tp15sl30, r_trail40, r_half2, r_out10, r_out15, r_out20, r_hold60, r_hold120, row
+    FROM vol_paper WHERE strat IN ('FD','FDL','FDB','A1') AND entry_ts>=? ORDER BY entry_ts DESC LIMIT 2000`).all(since);
+  for (const t of trades) { try { const r = JSON.parse(t.row || "{}"); t.net = r.net; t.big = r.big; t.buyers = r.buyers; t.at = r.at; t.fd = r.fd || null; } catch {} delete t.row; }
+  const stats = {};
+  for (const b of BOOKS) {
+    const all = trades.filter((t) => t.strat === b), sc = all.filter((t) => t.done === 1 && !t.err && t.r_tp2sl50 != null);
+    const s = { entries: all.length, scored: sc.length, open: all.filter((t) => t.done !== 1).length, failed: all.filter((t) => t.done === 1 && t.err).length, exits: {} };
+    for (const k of EXITS) { const xs = sc.map((t) => t[k]).filter((v) => v != null); s.exits[k] = xs.length ? { n: xs.length, avg: +(xs.reduce((a, c) => a + c, 0) / xs.length).toFixed(3), won: +(xs.filter((v) => v > 0).length / xs.length).toFixed(2), sum: +xs.reduce((a, c) => a + c, 0).toFixed(2), median: +[...xs].sort((a, c) => a - c)[Math.floor(xs.length / 2)].toFixed(3), noBest: xs.length > 1 ? +((xs.reduce((a, c) => a + c, 0) - Math.max(...xs)) / (xs.length - 1)).toFixed(3) : null } : null; }
+    s.hit2 = sc.length ? +(sc.filter((t) => (t.peak120 || 0) >= 2).length / sc.length).toFixed(2) : null; s.hit15 = sc.length ? +(sc.filter((t) => (t.peak120 || 0) >= 1.5).length / sc.length).toFixed(2) : null;
+    stats[b] = s;
+  }
+  let watch = { scanned: 0, pre: 0, pre_nb: 0, recent: [] };
+  try {
+    watch.scanned = d.prepare("SELECT COUNT(*) n FROM fd_watch WHERE created_ts>=?").get(since).n; watch.pre = d.prepare("SELECT COUNT(*) n FROM fd_watch WHERE pre=1 AND created_ts>=?").get(since).n; watch.pre_nb = d.prepare("SELECT COUNT(*) n FROM fd_watch WHERE pre_nb=1 AND created_ts>=?").get(since).n;
+    watch.recent = d.prepare("SELECT mint, name, symbol, created_ts, bundle_pct, funder, funder_sol, funded_ts, funder_launches, pre, pre_nb, why, checks, entered FROM fd_watch WHERE pre_nb=1 AND created_ts>=? ORDER BY created_ts DESC LIMIT 60").all(since)
+      .map((w) => { let ch = []; try { ch = JSON.parse(w.checks || "[]"); } catch {} const last = ch[ch.length - 1] || null; return { ...w, checks: undefined, last, nChecks: ch.length }; });
+  } catch {}
+  return { ok: true, at: Math.floor(Date.now() / 1000), fd: status?.fd || null, ver: status?.ver || null, mode: status?.mode || null, trades, stats, watch };
+}
+
+export const FD_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FD — funded-dev paper book</title>
+<style>
+:root{color-scheme:dark}body{margin:0;background:#0b0d12;color:#e6e8ef;font:14px/1.45 -apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1500px;margin:0 auto;padding:14px}h1{font-size:19px;margin:0 0 4px}.sub{color:#9aa3b5;font-size:12.5px}
+.card{background:#141825;border:1px solid #232a3b;border-radius:10px;padding:12px;margin:12px 0}
+.kpis{display:flex;flex-wrap:wrap;gap:8px}.k{background:#0f1320;border:1px solid #232a3b;border-radius:8px;padding:8px 10px;min-width:130px}.k b{display:block;font-size:17px}.k span{color:#9aa3b5;font-size:11.5px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}th,td{padding:5px 7px;border-bottom:1px solid #1f2535;text-align:right;white-space:nowrap}th{color:#9aa3b5;font-weight:600;position:sticky;top:0;background:#141825}
+th.l,td.l{text-align:left}.tw{overflow:auto;max-height:70vh}.pos{color:#4ade80}.neg{color:#f87171}.mut{color:#6b7280}.open{color:#fbbf24}
+a{color:#8ab4ff;text-decoration:none}.tag{display:inline-block;padding:1px 6px;border-radius:5px;font-size:11px;background:#1f2535}
+.FD{background:#1e3a2a}.FDL{background:#1e2f3a}.FDB{background:#3a2e1e}.A1{background:#2a2a2a}
+</style></head><body><div class="wrap">
+<h1>FD — the funded-dev paper book <span class="sub" id="hd">loading…</span></h1>
+<div class="sub">Nothing is bought. Every pump.fun launch is checked at birth (who funded the creator, how much, when, how many coins that funder has made, the bundle) and at 60/90/120 s (net SOL bought, buys of 2+ SOL, market cap). First rule that passes = a paper entry at GMGN's price. Scored 2 h later from 1-minute candles, <b>after real costs</b>.
+<b>FD</b> = funding test + 10–60% bundle + minute-1 buying (net ≥ 27 SOL, mc ≥ 100 SOL, 3 buys of 2+ SOL). <b>FDL</b> = same funding test, looser buying (net ≥ 15, mc ≥ 60). <b>FDB</b> = FD's buying test, no bundle test. <b>A1</b> = buying test only, no funding test (the October "book A", the control, on a 1-in-7 sample of launches). Refreshes every 60 s. UK times.</div>
+<div class="card"><b>Books</b> <span class="sub">— results per exit, after costs, from the scored trades. "no best" = average with the best trade removed (a book that only works because of one coin is luck). Judged at 40 trades: won ≥ 45%, average ≥ +15%, positive in all thirds and without the best coin.</span><div class="tw"><table><thead><tr><th class="l">Book</th><th>Entries</th><th>Open</th><th>Scored</th><th>Reached 1.5x</th><th>Reached 2x</th><th>2x / −50%</th><th>1.5x / −30%</th><th>½ at 2x + trail</th><th>40% trail</th><th>Out 10 min</th><th>Out 15 min</th><th>Out 20 min</th><th>Hold 60</th></tr></thead><tbody id="bk"></tbody></table></div></div>
+<div class="card"><b>Paper trades</b> <span class="sub">— newest first. Entry MC in USD at GMGN's price. 15m / 60m / peak = price vs entry. P&amp;L columns are after real costs (1 SOL stake = that many SOL). Open = not yet 2 h old.</span><div class="tw"><table><thead><tr><th class="l">Entry (UK)</th><th class="l">Book</th><th class="l">Coin</th><th>Entry MC</th><th>Age</th><th>Net SOL</th><th>2+ SOL buys</th><th>Buyers</th><th>Funded</th><th>Bundle</th><th>15m</th><th>60m</th><th>Peak</th><th>@min</th><th>2x/−50</th><th>1.5x/−30</th><th>½2x+trail</th><th>Trail 40</th><th>Out 15</th><th>Out 20</th></tr></thead><tbody id="tr"></tbody></table></div></div>
+<div class="card"><b>Launches that passed the funding test</b> <span class="sub">— the ones FD was watching at 60/90/120 s, whether or not it entered. "Why not" = which test failed for the strict FD rule.</span><div class="tw" style="max-height:50vh"><table><thead><tr><th class="l">Launched (UK)</th><th class="l">Coin</th><th>Funded</th><th>Min before</th><th>Funder's coins</th><th>Bundle</th><th>Last check</th><th>Net SOL</th><th>MC (SOL)</th><th>2+ SOL buys</th><th>Buyers</th><th class="l">Entered</th><th class="l">Why not FD</th></tr></thead><tbody id="wt"></tbody></table></div></div>
+</div><script>
+var key=new URLSearchParams(location.search).get('key')||'';
+function uk(ts){return new Date(ts*1000).toLocaleString('en-GB',{timeZone:'Europe/London',hour12:false,day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}
+function pct(v){if(v==null)return '<span class="mut">–</span>';return '<span class="'+(v>0?'pos':v<0?'neg':'')+'">'+(v>0?'+':'')+(v*100).toFixed(0)+'%</span>'}
+function x(v){if(v==null)return '<span class="mut">–</span>';return '<span class="'+(v>=1.5?'pos':v<0.7?'neg':'')+'">'+Number(v).toFixed(2)+'x</span>'}
+function k(v,d){return v==null?'–':Number(v).toLocaleString('en-GB',{maximumFractionDigits:d||0})}
+function ex(e){if(!e)return '<td class="mut">–</td>';return '<td>'+pct(e.avg)+' <span class="mut">·won '+(e.won*100).toFixed(0)+'% ·n'+e.n+(e.noBest!=null?' ·nb '+(e.noBest*100).toFixed(0)+'%':'')+'</span></td>'}
+function draw(j){
+ var f=j.fd||{};document.getElementById('hd').textContent=(j.ver?'launcher '+j.ver+' · ':'')+'launches scanned '+k(j.watch.scanned)+' · passed funding '+k(j.watch.pre_nb)+' · passed funding + bundle '+k(j.watch.pre)+' · Helius credits today '+k(f.credits)+' · '+uk(j.at)+(f.lastErr?' · last error: '+f.lastErr:'');
+ var h='';['FD','FDL','FDB','A1'].forEach(function(b){var s=j.stats[b]||{exits:{}};h+='<tr><td class="l"><span class="tag '+b+'">'+b+'</span></td><td>'+s.entries+'</td><td class="open">'+s.open+'</td><td>'+s.scored+'</td><td>'+(s.hit15==null?'–':(s.hit15*100).toFixed(0)+'%')+'</td><td>'+(s.hit2==null?'–':(s.hit2*100).toFixed(0)+'%')+'</td>'+ex(s.exits.r_tp2sl50)+ex(s.exits.r_tp15sl30)+ex(s.exits.r_half2)+ex(s.exits.r_trail40)+ex(s.exits.r_out10)+ex(s.exits.r_out15)+ex(s.exits.r_out20)+ex(s.exits.r_hold60)+'</tr>'});document.getElementById('bk').innerHTML=h;
+ h='';j.trades.forEach(function(t){var fd=t.fd||{};var st=t.done!==1?'<span class="open">open</span>':t.err?'<span class="mut">'+t.err+'</span>':'';
+  h+='<tr><td class="l">'+uk(t.entry_ts)+' '+st+'</td><td class="l"><span class="tag '+t.strat+'">'+t.strat+'</span></td><td class="l"><a href="https://gmgn.ai/sol/token/'+t.mint+'" target="_blank">'+(t.name||t.mint.slice(0,8))+'</a> <span class="mut">'+(t.symbol||'')+'</span></td><td>$'+k(t.entry_mc/1000,0)+'K</td><td>'+k(t.age_min,1)+'m</td><td>'+k(t.net,1)+'</td><td>'+k(t.big)+'</td><td>'+k(t.buyers)+'</td><td>'+(fd.funder_sol!=null?k(fd.funder_sol,2)+' SOL / '+k(fd.funded_min_before,0)+'m':'–')+'</td><td>'+(fd.bundle_pct!=null?k(fd.bundle_pct,0)+'%':'–')+'</td><td>'+x(t.x15)+'</td><td>'+x(t.x60)+'</td><td>'+x(t.peak120)+'</td><td>'+k(t.peak_min,0)+'</td><td>'+pct(t.r_tp2sl50)+'</td><td>'+pct(t.r_tp15sl30)+'</td><td>'+pct(t.r_half2)+'</td><td>'+pct(t.r_trail40)+'</td><td>'+pct(t.r_out15)+'</td><td>'+pct(t.r_out20)+'</td></tr>'});
+ document.getElementById('tr').innerHTML=h||'<tr><td class="l mut" colspan="20">no paper entries yet</td></tr>';
+ h='';j.watch.recent.forEach(function(w){var l=w.last||{};h+='<tr><td class="l">'+uk(w.created_ts)+'</td><td class="l"><a href="https://gmgn.ai/sol/token/'+w.mint+'" target="_blank">'+(w.name||w.mint.slice(0,8))+'</a></td><td>'+k(w.funder_sol,2)+' SOL</td><td>'+(w.funded_ts?k((w.created_ts-w.funded_ts)/60,0):'–')+'</td><td>'+k(w.funder_launches)+'</td><td>'+(w.bundle_pct!=null?k(w.bundle_pct,0)+'%':'–')+'</td><td>'+(l.at?l.at+' s':'–')+'</td><td>'+k(l.net,1)+'</td><td>'+k(l.mcSol,0)+'</td><td>'+k(l.big)+'</td><td>'+k(l.buyers)+'</td><td class="l">'+(w.entered||'<span class="mut">no</span>')+'</td><td class="l mut">'+(w.pre===1?(w.entered&&w.entered.indexOf('FD,')===0||w.entered==='FD'?'':'buying too weak'):(w.why||''))+'</td></tr>'});
+ document.getElementById('wt').innerHTML=h||'<tr><td class="l mut" colspan="13">none yet</td></tr>';
+}
+function load(){fetch('/api/fd?key='+encodeURIComponent(key)).then(function(r){return r.json()}).then(draw).catch(function(e){document.getElementById('hd').textContent='error: '+e})}
+load();setInterval(load,60000);
+</script></body></html>`;
