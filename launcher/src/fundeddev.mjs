@@ -62,17 +62,20 @@ export async function fdScan(db, tdb) {
       if (fdStat.credits >= DAY_CREDITS) { fdStat.lastErr = `daily Helius budget ${DAY_CREDITS} reached`; break; }
       fdStat.scanned++;
       let r = db.prepare("SELECT funder, funder_sol, funded_ts, creator_txs FROM creator_trace WHERE mint=?").get(t.mint) || db.prepare("SELECT funder, funder_sol, funded_ts, creator_txs FROM creator_trace WHERE creator=? AND funder IS NOT NULL LIMIT 1").get(t.creator);
+      const known = !!r;
       if (!r) { const c0 = studyStat.credits; try { r = await creatorFunder(t.creator); fdStat.traced++; ctStat.traced++; } catch (e) { r = { err: e.message.slice(0, 100) }; fdStat.errors++; fdStat.lastErr = `${t.creator.slice(0, 6)} ${r.err}`; }
-        fdStat.credits += studyStat.credits - c0;
+        fdStat.credits += studyStat.credits - c0; }
+      { // 0.8.5: ALWAYS record this launch in creator_trace — a factory re-using one creator wallet (3GzDw7…, 2.133 SOL, 5 launches in 50 min) was counted as "0 launches" because the known-creator path skipped the insert
         insCT.run({ mint: t.mint, creator: t.creator, create_ts: t.create_ts, peak_mc_usd: t.peak_mc_usd ?? null, graduated: t.graduated ? 1 : 0, bundle_pct: t.bundle_pct ?? null, bundle_sol: t.bundle_sol ?? null, funder: r.funder || null, funder_sol: r.funder_sol ?? null, funded_ts: r.funded_ts ?? null, creator_txs: r.txs ?? null, err: r.err || null, checked_ts: now() }); }
       const fl = r.funder ? db.prepare("SELECT COUNT(DISTINCT mint) c FROM creator_trace WHERE funder=? AND mint<>?").get(r.funder, t.mint).c : null;
+      const cl = db.prepare("SELECT COUNT(DISTINCT mint) c FROM creator_trace WHERE creator=? AND mint<>?").get(t.creator, t.mint).c; // 0.8.5: the creator wallet's own other launches
       const amt = N(r.funder_sol) || 0, delay = r.funded_ts ? t.create_ts - r.funded_ts : null, bp = N(t.bundle_pct);
       const why = [];
-      if (!r.funder) why.push("no funder"); else { if (amt < FUND_SOL) why.push(`funded ${amt.toFixed(2)} SOL`); if (delay == null || delay > FUND_S || delay < 0) why.push(`funded ${delay == null ? "?" : Math.round(delay / 60)} min before`); if (fl > FUNDER_MAX) why.push(`funder has ${fl} launches`); }
-      let preNb = r.funder && amt >= FUND_SOL && delay != null && delay >= 0 && delay <= FUND_S && fl <= FUNDER_MAX ? 1 : 0;
+      if (!r.funder) why.push("no funder"); else { if (amt < FUND_SOL) why.push(`funded ${amt.toFixed(2)} SOL`); if (delay == null || delay > FUND_S || delay < 0) why.push(`funded ${delay == null ? "?" : Math.round(delay / 60)} min before`); if (fl > FUNDER_MAX) why.push(`funder has ${fl} launches`); if (cl >= 1) why.push(`creator wallet has ${cl} other launch${cl > 1 ? "es" : ""}`); }
+      let preNb = r.funder && amt >= FUND_SOL && delay != null && delay >= 0 && delay <= FUND_S && fl <= FUNDER_MAX && cl < 1 ? 1 : 0; // 0.8.5: first coin of this creator wallet (winners: median 1 prior launch on GMGN = none)
       if (preNb) { // 0.8.2: the two factory tests, only on the ~1% that get this far
-        const same = db.prepare("SELECT COUNT(DISTINCT creator) c FROM creator_trace WHERE creator<>? AND create_ts>=? AND ABS(funder_sol-?)<0.00005").get(t.creator, t.create_ts - AMOUNT_DAYS * 86400, amt).c;
-        if (same >= 1) { preNb = 0; why.push(`same amount on ${same} other creator${same > 1 ? "s" : ""}`); }
+        const same = db.prepare("SELECT COUNT(DISTINCT mint) c FROM creator_trace WHERE mint<>? AND create_ts>=? AND ABS(funder_sol-?)<0.00005").get(t.mint, t.create_ts - AMOUNT_DAYS * 86400, amt).c; // 0.8.5: any other launch, same creator or not
+        if (same >= 1) { preNb = 0; why.push(`same amount on ${same} other launch${same > 1 ? "es" : ""}`); }
         else {
           let g = db.prepare("SELECT funder FROM wallet_trace WHERE wallet=?").get(r.funder)?.funder;
           if (g === undefined) { const c0 = studyStat.credits; try { const gf = await creatorFunder(r.funder); g = gf.funder || null; db.prepare("INSERT OR IGNORE INTO wallet_trace VALUES (?,?,?,?,?,?,?,?,?,?)").run(r.funder, g, null, null, gf.funder_sol ?? null, gf.funded_ts ?? null, null, 1, gf.err || null, now()); } catch (e) { g = null; } fdStat.credits += studyStat.credits - c0; }
