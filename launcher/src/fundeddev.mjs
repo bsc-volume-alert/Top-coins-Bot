@@ -19,6 +19,10 @@ import { creatorFunder, ctStat } from "./operators.mjs";
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
 const FUND_SOL = n("LAUNCH_FD_FUND_SOL", 2), FUND_S = n("LAUNCH_FD_FUND_S", 7200), FUNDER_MAX = n("LAUNCH_FD_FUNDER_MAX", 2), B_LO = n("LAUNCH_FD_BUNDLE_LO", 10), B_HI = n("LAUNCH_FD_BUNDLE_HI", 60);
 const CHECKS = [60, 90, 120], DAY_CREDITS = n("LAUNCH_FD_DAY_CREDITS", 120000), SCAN_S = n("LAUNCH_FD_SCAN_S", 240);
+const GRAND_MAX = n("LAUNCH_FD_GRAND_MAX", 2), AMOUNT_DAYS = n("LAUNCH_FD_AMOUNT_DAYS", 7);
+// 0.8.2 (12:50 UK): the factories fund a NEW funder wallet for every launch (7 pre-filter passes in 2 h: 5.201089 SOL twice, 2.99010312 SOL twice —
+// identical amounts to six decimals). Two more tests on anything that passes: the funder's own funder (grand-funder) with ≤ GRAND_MAX creators behind it,
+// and no other creator funded with the same amount (to 4 decimals) in the last AMOUNT_DAYS days.
 const confirm = (m) => m.net >= 27 && (m.mcSol ?? 0) >= 100 && m.big >= 3;
 export const RULES = [
   { k: "FD", ok: (w, m) => w.pre === 1 && confirm(m) },
@@ -57,7 +61,17 @@ export async function fdScan(db, tdb) {
       const amt = N(r.funder_sol) || 0, delay = r.funded_ts ? t.create_ts - r.funded_ts : null, bp = N(t.bundle_pct);
       const why = [];
       if (!r.funder) why.push("no funder"); else { if (amt < FUND_SOL) why.push(`funded ${amt.toFixed(2)} SOL`); if (delay == null || delay > FUND_S || delay < 0) why.push(`funded ${delay == null ? "?" : Math.round(delay / 60)} min before`); if (fl > FUNDER_MAX) why.push(`funder has ${fl} launches`); }
-      const preNb = r.funder && amt >= FUND_SOL && delay != null && delay >= 0 && delay <= FUND_S && fl <= FUNDER_MAX ? 1 : 0;
+      let preNb = r.funder && amt >= FUND_SOL && delay != null && delay >= 0 && delay <= FUND_S && fl <= FUNDER_MAX ? 1 : 0;
+      if (preNb) { // 0.8.2: the two factory tests, only on the ~1% that get this far
+        const same = db.prepare("SELECT COUNT(DISTINCT creator) c FROM creator_trace WHERE creator<>? AND create_ts>=? AND ABS(funder_sol-?)<0.00005").get(t.creator, t.create_ts - AMOUNT_DAYS * 86400, amt).c;
+        if (same >= 1) { preNb = 0; why.push(`same amount on ${same} other creator${same > 1 ? "s" : ""}`); }
+        else {
+          let g = db.prepare("SELECT funder FROM wallet_trace WHERE wallet=?").get(r.funder)?.funder;
+          if (g === undefined) { const c0 = studyStat.credits; try { const gf = await creatorFunder(r.funder); g = gf.funder || null; db.prepare("INSERT OR IGNORE INTO wallet_trace VALUES (?,?,?,?,?,?,?,?,?,?)").run(r.funder, g, null, null, gf.funder_sol ?? null, gf.funded_ts ?? null, null, 1, gf.err || null, now()); } catch (e) { g = null; } fdStat.credits += studyStat.credits - c0; }
+          const gPublic = g && db.prepare("SELECT 1 FROM wallet_trace WHERE funder=? AND funder_type IS NOT NULL LIMIT 1").get(g); // an exchange / bridge behind the funder is normal (that is how people fund a dev wallet), not a factory
+          if (g && !gPublic) { const gl = db.prepare("SELECT COUNT(DISTINCT c.mint) c FROM creator_trace c JOIN wallet_trace w ON w.wallet=c.funder WHERE w.funder=? AND c.mint<>?").get(g, t.mint).c; if (gl > GRAND_MAX) { preNb = 0; why.push(`grand-funder has ${gl} launches`); } }
+        }
+      }
       const bundleOk = bp != null && bp >= B_LO && bp < B_HI; if (!bundleOk) why.push(bp == null ? "bundle unknown" : `bundle ${bp.toFixed(0)}%`);
       const pre = preNb && bundleOk ? 1 : 0; if (pre) fdStat.pre++;
       ins.run(t.mint, String(t.name || "").slice(0, 60), String(t.symbol || "").slice(0, 20), t.creator, t.create_ts, bp, N(t.bundle_sol), r.funder || null, amt || null, r.funded_ts ?? null, fl, pre, preNb, why.join("; "), now());
