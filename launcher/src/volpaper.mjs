@@ -90,7 +90,7 @@ export async function volBackfill(db, tdb) {
       const seen = new Set(db.prepare("SELECT mint FROM vol_bf_done").all().map((r) => r.mint)); bfList = bfList.filter((c) => !seen.has(c.mint)); bfStat.done = seen.size; } // 0.7.4: coins scanned before a restart are not scanned again
     const ins = db.prepare(`INSERT OR IGNORE INTO vol_paper (strat, mint, name, symbol, entry_ts, entry_price, entry_mc, vol5, created_ts, age_min, holders, exchange, launchpad, curve, row) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
     let k = 0;
-    while (bfList.length && k < 40) {
+    while (bfList.length && k < n("LAUNCH_BF_PER_TICK", 8)) { // 0.7.7: was 40 a tick (~1,700 GMGN calls every 2 min) — it was starving the study
       const c = bfList.shift(); k++;
       try {
         const from = Math.max(c.create_ts + 12 * 3600, now() - 14 * 86400), to = Math.min(now() - 125 * 60, c.create_ts + 14 * 86400); if (to <= from) { bfStat.done++; continue; }

@@ -20,13 +20,13 @@ async function candles(mint, res, from, to) {
   return (d?.list || (Array.isArray(d) ? d : [])).map((c) => ({ t: Math.floor(Number(c.time) / 1000), h: N(c.high), c: N(c.close) })).filter((c) => c.h > 0);
 }
 
-export async function one(db, c) {
+export async function one(db, c, opts = {}) { // 0.7.7: opts.klines=false → token info only (no candle walk)
   const now = Math.floor(Date.now() / 1000), t0 = c.created_ts;
   let info = null, err = "";
   try { info = await gget("/v1/token/info", { chain: "sol", address: c.mint }); if (!peakStat.infoKeys && info) peakStat.infoKeys = Object.keys(info).join(",").slice(0, 600); } catch (e) { err = "info: " + e.message; if (/rate limited/i.test(e.message)) throw e; }
   const supply = N(info?.total_supply) || N(info?.circulating_supply) || 1e9;
   const k = [];
-  try {
+  if (opts.klines !== false) try {
     k.push(...await candles(c.mint, "1m", t0 - 60, Math.min(now, t0 + 98 * 60)));
     for (let to = now; to > t0 + 98 * 60; to -= 100 * 300) k.push(...await candles(c.mint, "5m", Math.max(t0 + 98 * 60, to - 100 * 300), to)); // GMGN gives ≤ 100 candles a call
   } catch (e) { err = (err ? err + " · " : "") + "kline: " + e.message; if (/rate limited/i.test(e.message)) throw e; }
