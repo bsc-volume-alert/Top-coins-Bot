@@ -43,7 +43,8 @@ Object.assign(CFG, {
   INFLOW_SOL: n("INFLOW_SOL", 10),              // buys (SOL) in the last 60s, excluding create slot
   INFLOW_WALLETS: n("INFLOW_WALLETS", 8),       // distinct buyers in that window
   INFLOW_WINDOW_S: n("INFLOW_WINDOW_S", 60),
-  TRACK_MIN_T0: n("TRACK_MIN_T0", 5),           // unbundled tokens: keep in memory this long unless a position opens
+  TRACK_MIN_T0: n("TRACK_MIN_T0", 5),
+  VOL_TRACK_SOL: n("VOL_TRACK_SOL", 15),        // v0.19: an unbundled launch whose buys reach this many SOL gets its trades stored for TRACK_MIN (the funded-dev books' pond)           // unbundled tokens: keep in memory this long unless a position opens
   FACTORY_WINDOW_MIN: n("FACTORY_WINDOW_MIN", 10), // same creator, >=2 launches within this = factory flag
   TP_MULT: n("TP_MULT", 2),                     // take-profit variant
   GRAD_VTOK: n("GRAD_VTOK", 285_000_000),       // virtual token reserves at/below this = curve complete (graduated)

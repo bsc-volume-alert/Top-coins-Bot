@@ -43,8 +43,12 @@ export function handleTx({ sig, slot, logs, err }) {
       const tr = { sig, slot, ts: e.ts || ts, wallet: e.user, isBuy: e.isBuy, sol: lamports(e.sol), tokens: rawTok(e.tokens), price: priceSol(e.vsol, e.vtok), route: routeOf(logs), creatorFee: lamports(e.creatorFee || 0n) };
       t.lastVsol = e.vsol; t.lastVtok = e.vtok;
       const mc = mcUsd(e.vsol, e.vtok); t.lastMc = mc; if (mc > t.peakMc) t.peakMc = mc;
+      // v0.19 (5 Nov 2026, owner: "preserve future data first"): launches that are not bundle tier-1 but reach VOL_TRACK_SOL of buys also get every trade stored for TRACK_MIN —
+      // the funded-dev books' coins are mostly bundle 0–50% launches with 15–30 SOL of buying in the first minute, and their dumps were lost when the launch expired at 5 min.
+      if (t.finalized && t.tier < 1 && !t.vol) { t.buySol = (t.buySol || 0) + (tr.isBuy ? tr.sol : 0); if (t.buySol >= CFG.VOL_TRACK_SOL) { t.vol = true; t.volUntil = (tr.ts || ts) + CFG.TRACK_MIN * 60; counters.vol = (counters.vol || 0) + 1;
+        try { db.transaction(() => { for (const x of t.trades) q.insTrade.run(t.mint, x.sig, x.slot, x.ts, x.wallet, x.isBuy ? 1 : 0, x.sol, x.tokens, x.price); })(); } catch (e) { console.error("[vol-track]", e.message); } } }
       t.trades.push(tr);
-      if (t.finalized && t.tier >= 1) q.insTrade.run(t.mint, sig, slot, tr.ts, tr.wallet, tr.isBuy ? 1 : 0, tr.sol, tr.tokens, tr.price);
+      if (t.finalized && (t.tier >= 1 || t.vol)) q.insTrade.run(t.mint, sig, slot, tr.ts, tr.wallet, tr.isBuy ? 1 : 0, tr.sol, tr.tokens, tr.price);
       if (!t.graduated && e.vtok <= BigInt(CFG.GRAD_VTOK) * 1_000_000n) { t.graduated = true; q.setGrad.run(t.mint); emit("graduated", t, tr); }
       emit("trade", t, tr);
     }
@@ -93,6 +97,7 @@ function finalize(t) {
 export const holds = new Set(); // v0.18.119: mints other modules (Project S) want kept in memory past the usual 5 / 30 min
 function expire(t) {
   if (t.hold || holds.has(t.mint)) return setTimeout(() => expire(t), 60_000); // open paper position keeps it alive
+  if (t.volUntil && Math.floor(Date.now() / 1000) < t.volUntil) return setTimeout(() => expire(t), 60_000); // v0.19: a volume launch stays until its trades have been kept TRACK_MIN
   emit("expire", t); live.delete(t.mint);
 }
 
