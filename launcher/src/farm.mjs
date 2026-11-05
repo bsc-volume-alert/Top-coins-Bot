@@ -6,9 +6,12 @@
 //   funder history — launches this funder was seen behind (fd_watch), how many the books entered, how many resolved, severe losses (< 0.35x), runners (≥ 1.2x), unresolved.
 //   fd_wallet_state — per check, per first-minute buyer: bought, sold, held, share of supply, first buy, SOL in/out, launch-group and farm flags.
 //   fd_decisions   — per check, per rule: passed / failed / already entered / no price, with the rule version.
+import { creatorFunder } from "./operators.mjs";
 let db = null, tdb = null;
-const now = () => Math.floor(Date.now() / 1000);
-export const farmStat = { builds: 0, wallets: 0, dumps: 0, lastBuild: null, lastErr: "" };
+const now = () => Math.floor(Date.now() / 1000), today = () => new Date().toISOString().slice(0, 10);
+const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
+const BF_TOP = n("LAUNCH_BF_TOP", 10), BF_DAY = n("LAUNCH_BF_DAY", 1500); // 0.9.11: funding trace of the top-10 first-minute buyers of every entered coin, ≤ 1,500 wallets a day
+export const farmStat = { builds: 0, wallets: 0, dumps: 0, lastBuild: null, lastErr: "", bfWallets: 0, bfDay: "", bfErr: "", bfQueue: 0 };
 
 export function initFarm(_db, _tdb) {
   db = _db; tdb = _tdb;
@@ -17,7 +20,50 @@ export function initFarm(_db, _tdb) {
     CREATE TABLE IF NOT EXISTS farm_dumps (mint TEXT PRIMARY KEY, name TEXT, entry_ts INTEGER, dump_ts INTEGER, slot0 INTEGER, slot1 INTEGER, drop_pct REAL, sellers INTEGER, sold_sol REAL, built_ts INTEGER);
     CREATE TABLE IF NOT EXISTS fd_wallet_state (mint TEXT, at INTEGER, wallet TEXT, bought_tok REAL, sold_tok REAL, held_tok REAL, held_pct REAL, first_ts INTEGER, sol_in REAL, sol_out REAL, early INTEGER, farm INTEGER, farm_4h INTEGER, PRIMARY KEY (mint, at, wallet));
     CREATE INDEX IF NOT EXISTS fws_mint ON fd_wallet_state(mint, at);
-    CREATE TABLE IF NOT EXISTS fd_decisions (mint TEXT, at INTEGER, ts INTEGER, ver TEXT, rule TEXT, passed INTEGER, reason TEXT, PRIMARY KEY (mint, at, rule));`);
+    CREATE TABLE IF NOT EXISTS fd_decisions (mint TEXT, at INTEGER, ts INTEGER, ver TEXT, rule TEXT, passed INTEGER, reason TEXT, PRIMARY KEY (mint, at, rule));
+    CREATE TABLE IF NOT EXISTS buyer_funding (mint TEXT, wallet TEXT, sol_in REAL, first_ts INTEGER, funder TEXT, funder_sol REAL, funded_ts INTEGER, age_s INTEGER, txs INTEGER, err TEXT, ts INTEGER, PRIMARY KEY (mint, wallet));
+    CREATE TABLE IF NOT EXISTS buyer_funding_sum (mint TEXT PRIMARY KEY, n INTEGER, traced INTEGER, funders INTEGER, same_funder_max INTEGER, same_funder_wallet TEXT, fresh_n INTEGER, fresh_10m_n INTEGER, ts INTEGER);
+    CREATE INDEX IF NOT EXISTS bf_funder ON buyer_funding(funder);`);
+}
+
+/** 0.9.11 (owner, 5 Nov 23:34 UK: "add 2 and 4 on"): where the first-minute money came from — the top BF_TOP buyers by SOL of a coin a book entered: who funded each wallet, how much, when
+ *  (age_s = seconds between that funding and the launch; "fresh" = funded within 1 h of launch, "fresh_10m" within 10 min). Not awaited by the check loop. A measurement; shared funders are a suspected link, never ownership. */
+const bfBusy = new Set();
+export async function traceBuyers(mint, trades, createdTs, creator) {
+  if (!db || bfBusy.has(mint)) return; if (farmStat.bfDay !== today()) { farmStat.bfDay = today(); farmStat.bfWallets = 0; }
+  if (farmStat.bfWallets >= BF_DAY) { farmStat.bfErr = `daily buyer-trace cap ${BF_DAY}`; return; }
+  if (db.prepare("SELECT 1 FROM buyer_funding_sum WHERE mint=?").get(mint)) return;
+  bfBusy.add(mint); farmStat.bfQueue = bfBusy.size;
+  try {
+    const per = new Map();
+    for (const x of trades) if (x.isBuy && x.user !== creator) { const p = per.get(x.user) || { sol: 0, first: x.t }; p.sol += (x.sol || 0) / 1e9; per.set(x.user, p); }
+    const top = [...per.entries()].sort((a, b) => b[1].sol - a[1].sol).slice(0, BF_TOP);
+    const ins = db.prepare("INSERT OR IGNORE INTO buyer_funding (mint, wallet, sol_in, first_ts, funder, funder_sol, funded_ts, age_s, txs, err, ts) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
+    for (const [w, p] of top) {
+      const known = db.prepare("SELECT funder, funder_sol, funded_ts, txs FROM buyer_funding WHERE wallet=? AND funder IS NOT NULL LIMIT 1").get(w); // a wallet traced on an earlier coin is not traced again
+      let f = known; if (!f) { try { f = await creatorFunder(w); farmStat.bfWallets++; } catch (e) { f = { err: e.message.slice(0, 80) }; } }
+      ins.run(mint, w, +p.sol.toFixed(4), p.first, f?.funder || null, f?.funder_sol ?? null, f?.funded_ts ?? null, f?.funded_ts ? createdTs - f.funded_ts : null, f?.txs ?? null, f?.err || null, now());
+    }
+    const rows = db.prepare("SELECT funder, funded_ts FROM buyer_funding WHERE mint=?").all(mint), byF = new Map();
+    for (const r of rows) if (r.funder) byF.set(r.funder, (byF.get(r.funder) || 0) + 1);
+    const best = [...byF.entries()].sort((a, b) => b[1] - a[1])[0];
+    db.prepare("INSERT OR REPLACE INTO buyer_funding_sum (mint, n, traced, funders, same_funder_max, same_funder_wallet, fresh_n, fresh_10m_n, ts) VALUES (?,?,?,?,?,?,?,?,?)")
+      .run(mint, top.length, rows.filter((r) => r.funder).length, byF.size, best ? best[1] : 0, best ? best[0] : null, rows.filter((r) => r.funded_ts && createdTs - r.funded_ts <= 3600 && createdTs - r.funded_ts >= 0).length, rows.filter((r) => r.funded_ts && createdTs - r.funded_ts <= 600 && createdTs - r.funded_ts >= 0).length, now());
+  } catch (e) { farmStat.bfErr = e.message.slice(0, 120); } finally { bfBusy.delete(mint); farmStat.bfQueue = bfBusy.size; }
+}
+
+/** 0.9.11: metadata reuse at creation time — other launches in the last 24 h with the same Twitter / website / Telegram handle or the same metadata URI (the tracker records socials at launch). Counts, as known at the check. */
+export function metaReuse(mint, createdTs) {
+  if (!tdb) return null;
+  try {
+    const t = tdb.prepare("SELECT uri, socials FROM tokens WHERE mint=?").get(mint); if (!t) return null;
+    let soc = {}; try { soc = JSON.parse(t.socials || "{}"); } catch {}
+    const out = { uri_dup_24h: 0, tw_24h: 0, web_24h: 0, tg_24h: 0 }, since = createdTs - 86400;
+    if (t.uri) out.uri_dup_24h = tdb.prepare("SELECT COUNT(*) c FROM tokens WHERE create_ts>=? AND create_ts<? AND uri=? AND mint<>?").get(since, createdTs + 1, t.uri, mint).c;
+    const cnt = (k) => { const v = soc[k]; if (!v || typeof v !== "string" || v.length < 4) return 0; return tdb.prepare("SELECT COUNT(*) c FROM tokens WHERE create_ts>=? AND create_ts<? AND mint<>? AND socials LIKE ?").get(since, createdTs + 1, mint, `%${JSON.stringify(v).slice(1, -1)}%`).c; };
+    out.tw_24h = cnt("t"); out.web_24h = cnt("w"); out.tg_24h = cnt("g");
+    return out;
+  } catch { return null; }
 }
 
 /** Rebuild the farm list from the tracker's trades for coins the books entered in the last `hours`. A dump = the worst price fall within ≤ 4 consecutive slots after the entry, if ≥ 60%. */

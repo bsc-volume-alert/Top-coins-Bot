@@ -24,7 +24,7 @@ import { creatorFunder, ctStat } from "./operators.mjs";
 import { buyQuote, qStat } from "./quote.mjs";
 import { isLiveBook, liveBuy } from "./live.mjs"; // 0.8.17: the live book's entries are bought for real (tiny size)
 import { chainEntry } from "./chainfill.mjs"; // 0.9.0
-import { farmScores, funderHistory, recordWalletState, recordDecision } from "./farm.mjs"; // 0.9.9: recording only
+import { farmScores, funderHistory, recordWalletState, recordDecision, traceBuyers, metaReuse } from "./farm.mjs"; // 0.9.9 / 0.9.11: recording only
 
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
 const FUND_SOL = n("LAUNCH_FD_FUND_SOL", 2), FUND_S = n("LAUNCH_FD_FUND_S", 7200), FUNDER_MAX = n("LAUNCH_FD_FUNDER_MAX", 2), B_LO = n("LAUNCH_FD_BUNDLE_LO", 10), B_HI = n("LAUNCH_FD_BUNDLE_HI", 60);
@@ -208,7 +208,7 @@ export async function fdCheck(db, tdb = null) {
         const mm = metrics(r, (r.t0 || w.created_ts) + at, w.creator, bundle), early = mm.early; delete mm.early; // the wallets go to fd_early, not into the check row
         const m = { at, ...mm, txs: r.txs, venue: r.pumpCurve ? (r.complete ? "pump.fun graduated" : "pump.fun curve") : "other" };
         // 0.9.9: recording only — farm scores (previous-dump participants among this check's buyers, as known NOW), funder history, per-wallet state
-        try { const upto = (r.t0 || w.created_ts) + at, tl = r.trades.filter((x) => x.t <= upto); Object.assign(m, farmScores(tl, t)); if (BASE_BAR(m)) { m.funder_hist = funderHistory(w.funder, w.created_ts); recordWalletState(w.mint, at, tl, r.t0 || w.created_ts, new Set((early || []).map((e) => e.w)), t); } } catch (e) { fdStat.lastErr = ("farm: " + e.message).slice(0, 160); }
+        try { const upto = (r.t0 || w.created_ts) + at, tl = r.trades.filter((x) => x.t <= upto); Object.assign(m, farmScores(tl, t)); if (BASE_BAR(m)) { m.funder_hist = funderHistory(w.funder, w.created_ts); recordWalletState(w.mint, at, tl, r.t0 || w.created_ts, new Set((early || []).map((e) => e.w)), t); if (at === 60) m.meta_reuse = metaReuse(w.mint, w.created_ts); } } catch (e) { fdStat.lastErr = ("farm: " + e.message).slice(0, 160); }
         try { recordEarly(db, w, early, r, (r.t0 || w.created_ts) + at); } catch (e) { fdStat.lastErr = ("early: " + e.message).slice(0, 160); }
         if (REC_META && !w.meta_ts && !checks.length) { db.prepare("UPDATE fd_watch SET meta_ts=? WHERE mint=?").run(now(), w.mint); fetchMeta(db, w.mint).catch(() => {}); } // 0.8.11: once per launch, not awaited; 0.8.12: behind LAUNCH_FD_REC_META (off: pump.fun answers 403 to the droplet anyway)
         checks.push(m); const entered = new Set(String(w.entered || "").split(",").filter(Boolean));
@@ -238,6 +238,7 @@ export async function fdCheck(db, tdb = null) {
         }
         // 0.8.15: quote shadowing — one buy quote per coin per check for the rows just booked (all rules share it), and a 1-in-N sample of checked launches that entered nothing
         if (m.chain_px > 0 && m.sol_usd > 0) { const rowsNow = db.prepare("SELECT id, strat FROM vol_paper WHERE mint=? AND entry_ts=? AND q_ts IS NULL").all(w.mint, t); const ids = rowsNow.map((x) => x.id); if (ids.length) {
+          traceBuyers(w.mint, r.trades.filter((x) => x.t <= (r.t0 || w.created_ts) + 60), w.created_ts, w.creator).catch(() => {}); // 0.9.11: where the first-minute money came from, for every coin a book entered (not awaited)
           // 0.9.6: the U books fill through the guard (and the *120 variants 60 s later); every other book exactly as before, so the comparison stays like for like
           const opt = (x) => RULES.find((r) => r.k === x.strat) || {}, plain = rowsNow.filter((x) => !opt(x).u).map((x) => x.id), u = rowsNow.filter((x) => opt(x).u && !opt(x).delayMs).map((x) => x.id), u120 = rowsNow.filter((x) => opt(x).u && opt(x).delayMs).map((x) => x.id);
           if (plain.length) chainEntry(w.mint, plain, m.chain_px, m.sol_usd, [...entered].join(",")).catch(() => {});
