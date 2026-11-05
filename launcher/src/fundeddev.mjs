@@ -36,6 +36,7 @@ const SHADOW_SOL = n("LAUNCH_SHADOW_SOL", 0.2), SHADOW_SAMPLE = n("LAUNCH_SHADOW
 const confirm = (m) => m.net >= 27 && (m.mcSol ?? 0) >= 100 && m.big >= 3;
 export const RULES = [
   { k: "FD", ok: (w, m) => w.pre === 1 && confirm(m) },
+  { k: "FDF", ok: (w, m) => w.pre === 1 && confirm(m) && (w.funder_sol ?? 0) >= 15 }, // 0.8.21 (owner, 5 Nov 08:55 UK: "just add it"): FD + creator funded ≥ 15 SOL — the back-test on 62 FD trades: 42 kept, won 48%, +65%, no-best +47%; < 15 SOL: 20 trades, won 20%, −3%. Same direction in FDB/FDL/A1. Forward test.
   { k: "FDL", ok: (w, m) => w.pre === 1 && m.net >= 15 && (m.mcSol ?? 0) >= 60 },
   { k: "FDB", ok: (w, m) => w.pre_nb === 1 && confirm(m) },
   { k: "A1", ok: (w, m) => confirm(m) },
