@@ -19,7 +19,7 @@ export const CFG = {
   BUNDLE_SOL_MIN: n("BUNDLE_SOL_MIN", 20),
   BUNDLE_SLOTS: n("BUNDLE_SLOTS", 0),          // buys within create_slot + N count as bundle (0 = same slot only)
   FINALIZE_MS: n("FINALIZE_MS", 4000),         // wait before computing bundle stats
-  TRACK_MIN: n("TRACK_MIN", 30),               // keep tier-1 token trades for this many minutes
+  TRACK_MIN: n("TRACK_MIN", 125),              // keep tier-1 token trades for this many minutes (v0.19.1: 30 → 125, the books' 2-hour horizon; in-memory trades are capped per launch)
   TOTAL_SUPPLY: 1_000_000_000,
   TG_TIER1_ALERTS: n("TG_TIER1_ALERTS", 1),
   TG_TIER1_SOL_MIN: n("TG_TIER1_SOL_MIN", 60),   // only ping Telegram for prepared launches with at least this much bundle SOL
@@ -44,7 +44,8 @@ Object.assign(CFG, {
   INFLOW_WALLETS: n("INFLOW_WALLETS", 8),       // distinct buyers in that window
   INFLOW_WINDOW_S: n("INFLOW_WINDOW_S", 60),
   TRACK_MIN_T0: n("TRACK_MIN_T0", 5),
-  VOL_TRACK_SOL: n("VOL_TRACK_SOL", 15),        // v0.19: an unbundled launch whose buys reach this many SOL gets its trades stored for TRACK_MIN (the funded-dev books' pond)           // unbundled tokens: keep in memory this long unless a position opens
+  VOL_TRACK_SOL: n("VOL_TRACK_SOL", 15),        // v0.19: an unbundled launch whose buys reach this many SOL gets its trades stored (the funded-dev books' pond)
+  VOL_TRACK_MIN: n("VOL_TRACK_MIN", 125),       // v0.19.1: … for this long — the books' 2-hour horizon plus a margin (review, 5 Nov: "retention must cover the evaluation horizon")           // unbundled tokens: keep in memory this long unless a position opens
   FACTORY_WINDOW_MIN: n("FACTORY_WINDOW_MIN", 10), // same creator, >=2 launches within this = factory flag
   TP_MULT: n("TP_MULT", 2),                     // take-profit variant
   GRAD_VTOK: n("GRAD_VTOK", 285_000_000),       // virtual token reserves at/below this = curve complete (graduated)

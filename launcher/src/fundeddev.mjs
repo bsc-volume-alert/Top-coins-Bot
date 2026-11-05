@@ -59,16 +59,24 @@ export const RULES = [
   // m.holders is GMGN's holder_count fetched once per check (below); m.holding is the chain-side count (buyers whose sells < 95% of their buys), kept beside it.
   { k: "FDH", ok: (w, m) => w.pre_nb === 1 && confirm(m) && m.holders != null && m.buyers > 0 && m.holders >= 0.5 * m.buyers }, // 0.8.22 REVISED (owner go 5 Nov 09:11 UK): FDB minus the coins whose GMGN holder count is under half the chain buyers — the one part of the holder finding that held in all three analyses (0 wins under 0.5; removes 24 losers, no winners). The 0.8.9 three-part test (curve + ≥0.97 + 100 holders) scored 2 of 5 once the curve flag was fixed.
   { k: "FDHF", ok: (w, m) => w.pre_nb === 1 && confirm(m) && m.venue === "pump.fun curve" && m.holders >= 100 && m.holders >= 0.97 * m.buyers && (w.funder_sol ?? 0) >= 19 && (w.funder_sol ?? 0) <= 100 },
-  // 0.9.6 (owner go 5 Nov 19:00 UK, after the Codex + Gemini reviews of the first simulated-fill day): the "U" books — uncrowded and not dusted, decided at the 60-s check only:
-  //   GMGN holders < 200, market cap < $15K, and holders < chain buy transactions so far (on a curve every holder needed a buy; more holders than buys means tokens moved off-curve).
-  //   FDLU = FDL's bar + U;  FDU = FD's bar + U.  On 5 Nov's 84 first entries: FDL + U 17 entries, 5 winners, 10 rugs, +0.10 SOL at 0.02 (no-best −0.003); FD + U 9, 3, 6, +0.07. Thresholds drawn after looking — a forward test.
-  //   *120 = the same decision at 60 s, the fill 60 s later (the filter cannot be read at 120 s: runners have 250–500 holders by then). All four: no fill if the price has already dropped 30% since the check (chainfill guard).
+  // 0.9.8 (owner go 5 Nov 21:10 UK, after the Codex + Gemini reviews of the final document): the "U" books, frozen for a 3-day simulation run.
+  //   U = uncrowded at the 60-s check: GMGN holders < 200 and market cap < $15K. (holders < chain buys and the same-name copy are measured by FDLUX, not assumed.)
+  //   FDLU  = FDL's bar + U, entered at 60 s.        FDLUX = FDLU + holders < chain buy transactions + no other mint of the same name entered by any book in the last 2 h.
+  //   FDLU90 = FDLU's decision at 60 s, confirmed at the real 90-s check: net buying at 90 s minus at 60 s > +2 SOL, entered then.   FDU / FDU90 = the same on FD's bar.
+  //   FDLU120 / FDU120 = the 60-s decision, filled 60 s later (kept from 0.9.6). All U books: no fill if the reserve price read before submission is ≤ 0.7× the check price (chainfill guard).
+  //   On 5 Nov's 65 reconstructed coins (trade-stream re-simulation, fills landing 2 slots after the decision): 60-s entry −0.27 SOL; 90-s entry with the +2 gate −0.04 (12 winners kept of 15, rugs 36 → 16). A forward test; thresholds drawn after looking.
   { k: "FDLU", ok: (w, m) => w.pre === 1 && m.at === 60 && m.net >= 15 && (m.mcSol ?? 0) >= 60 && uncrowded(m), u: 1 },
+  { k: "FDLUX", ok: (w, m) => w.pre === 1 && m.at === 60 && m.net >= 15 && (m.mcSol ?? 0) >= 60 && uncrowded(m) && m.holders < m.buys && !m.same_name_mint, u: 1 },
   { k: "FDU", ok: (w, m) => w.pre === 1 && m.at === 60 && confirm(m) && uncrowded(m), u: 1 },
+  { k: "FDLU90", ok: (w, m, prev) => w.pre === 1 && m.at === 90 && gate90(m, prev, (c) => c.net >= 15 && (c.mcSol ?? 0) >= 60), u: 1 },
+  { k: "FDU90", ok: (w, m, prev) => w.pre === 1 && m.at === 90 && gate90(m, prev, confirm), u: 1 },
   { k: "FDLU120", ok: (w, m) => w.pre === 1 && m.at === 60 && m.net >= 15 && (m.mcSol ?? 0) >= 60 && uncrowded(m), u: 1, delayMs: 60000 },
   { k: "FDU120", ok: (w, m) => w.pre === 1 && m.at === 60 && confirm(m) && uncrowded(m), u: 1, delayMs: 60000 },
 ];
-const uncrowded = (m) => m.holders != null && m.holders < 200 && m.mcUsd != null && m.mcUsd < 15000 && m.holders < m.buys;
+const uncrowded = (m) => m.holders != null && m.holders < 200 && m.mcUsd != null && m.mcUsd < 15000;
+const GATE_SOL = n("LAUNCH_U_GATE_SOL", 2);
+/** the 90-s confirmation: the coin passed the bar and U at its 60-s check, and net buying has grown by more than GATE_SOL since */
+const gate90 = (m, prev, bar) => { const c60 = (prev || []).find((c) => c.at === 60); return !!c60 && bar(c60) && uncrowded(c60) && (m.net ?? 0) - (c60.net ?? 0) > GATE_SOL; };
 const U_GUARD = n("LAUNCH_U_GUARD", 0.3);
 const BASE_BAR = (m) => m.net >= 15 && (m.mcSol ?? 0) >= 60; // the loosest bar any rule accepts (FDL's): GMGN's token info is fetched once per check only past it
 // 0.8.3 (13:05 UK): GMGN's price for a 60–120 s old coin can lag badly ("I voted": GMGN $2K while the chain said 115 SOL ≈ $10.6K), which would

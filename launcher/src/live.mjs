@@ -17,10 +17,11 @@ import { trailPct } from "./volpaper.mjs";
 import { ixBudget } from "./pump.mjs";
 
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
-const PRIO_MAX = n("LAUNCH_LIVE_PRIO_LAMPORTS", 1_000_000), MAX_OPEN = n("LAUNCH_LIVE_MAX_OPEN", 6), SLIP_BUY = n("LAUNCH_LIVE_SLIP_BUY", 1500), SLIP_SELL = n("LAUNCH_LIVE_SLIP_SELL", 2500);
+const PRIO_MAX = n("LAUNCH_LIVE_PRIO_LAMPORTS", 1_000_000), MAX_OPEN = n("LAUNCH_LIVE_MAX_OPEN", 2), LOSS_ROLL = n("LAUNCH_LIVE_LOSS_ROLL_SOL", 0.15), LOSS_ROLL_N = n("LAUNCH_LIVE_LOSS_ROLL_N", 20), LOSS_TOTAL = n("LAUNCH_LIVE_LOSS_TOTAL_SOL", 0.2), SLIP_BUY = n("LAUNCH_LIVE_SLIP_BUY", 1500), SLIP_SELL = n("LAUNCH_LIVE_SLIP_SELL", 2500); // 0.9.8 (reviews, 5 Nov): 2 open at most; stop new buys when the last ≤ 20 fills have lost 0.15 SOL (from the first trade) or the experiment has lost 0.2 SOL in all; selling is never blocked
 const HORIZON = 120 * 60, GIVE_UP = 180 * 60; // sell at 2 h like the paper score; a coin with no route for 3 h is written off
 const now = () => Math.floor(Date.now() / 1000);
 export const liveStat = { enabled: false, book: null, stake: 0, buys: 0, buyFails: 0, sells: 0, sellFails: 0, skipped: 0, open: 0, writtenOff: 0, balanceSol: null, lastErr: "", lastSig: "", polls: 0 };
+liveStat.expStart = n("LAUNCH_LIVE_EXP_START", 0) || Math.floor(Date.now() / 1000); // 0.9.8: the cumulative loss limit counts fills from here (env to pin it across restarts)
 let db = null, wallet = null, ME = null, cfgAt = 0, cfg = { book: null, stake: 0 };
 
 /** livebook.txt in the launcher folder: "<BOOK> <SOL>" (e.g. "FD 0.02"); "off" or missing = no live trades. Env LAUNCH_LIVE_BOOK / LAUNCH_LIVE_SOL override. Re-read every 5 s. */
@@ -67,6 +68,10 @@ export async function liveBuy(row) {
     .run(row.id, row.strat, row.mint, row.name, row.curve, t, row.entry_price, row.su, c.stake, t, status, err, status === "skipped" ? 1 : 0).changes;
   const upd = (status, extra = {}) => { const ks = Object.keys(extra); db.prepare(`UPDATE live_trades SET buy_status=?${ks.map((k) => `, ${k}=?`).join("")} WHERE vol_id=?`).run(status, ...ks.map((k) => extra[k]), row.id); };
   if (openCount() >= MAX_OPEN) { if (ins("skipped", `${MAX_OPEN} open`)) liveStat.skipped++; return; }
+  { const roll = db.prepare("SELECT COALESCE(SUM(sol_out - sol_in), 0) v, COUNT(*) n FROM (SELECT sol_out, sol_in FROM live_trades WHERE done=1 AND buy_status='confirmed' AND sol_out IS NOT NULL ORDER BY sell_ts DESC LIMIT ?)").get(LOSS_ROLL_N);
+    const total = db.prepare("SELECT COALESCE(SUM(sol_out - sol_in), 0) v FROM live_trades WHERE done=1 AND buy_status='confirmed' AND sol_out IS NOT NULL AND buy_ts >= ?").get(liveStat.expStart || 0);
+    if (roll.v <= -LOSS_ROLL) { if (ins("skipped", `loss limit: ${roll.v.toFixed(3)} SOL over the last ${roll.n} fills`)) liveStat.skipped++; liveStat.lastErr = `stopped: ${roll.v.toFixed(3)} SOL over the last ${roll.n} fills`; return; }
+    if (total.v <= -LOSS_TOTAL) { if (ins("skipped", `experiment loss limit: ${total.v.toFixed(3)} SOL`)) liveStat.skipped++; liveStat.lastErr = `stopped: experiment at ${total.v.toFixed(3)} SOL`; return; } }
   let bal = null; try { bal = await getBalance(ME); liveStat.balanceSol = +(bal / 1e9).toFixed(4); } catch (e) { liveStat.lastErr = "balance: " + e.message.slice(0, 80); }
   if (bal == null || bal < (CFG.MIN_BALANCE_SOL + c.stake) * 1e9) { if (ins("skipped", bal == null ? "balance unknown" : `balance ${(bal / 1e9).toFixed(3)} < ${(CFG.MIN_BALANCE_SOL + c.stake).toFixed(3)}`)) liveStat.skipped++; return; }
   if (!ins("quoting")) return;
