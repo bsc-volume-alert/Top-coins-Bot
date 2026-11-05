@@ -59,7 +59,17 @@ export const RULES = [
   // m.holders is GMGN's holder_count fetched once per check (below); m.holding is the chain-side count (buyers whose sells < 95% of their buys), kept beside it.
   { k: "FDH", ok: (w, m) => w.pre_nb === 1 && confirm(m) && m.holders != null && m.buyers > 0 && m.holders >= 0.5 * m.buyers }, // 0.8.22 REVISED (owner go 5 Nov 09:11 UK): FDB minus the coins whose GMGN holder count is under half the chain buyers — the one part of the holder finding that held in all three analyses (0 wins under 0.5; removes 24 losers, no winners). The 0.8.9 three-part test (curve + ≥0.97 + 100 holders) scored 2 of 5 once the curve flag was fixed.
   { k: "FDHF", ok: (w, m) => w.pre_nb === 1 && confirm(m) && m.venue === "pump.fun curve" && m.holders >= 100 && m.holders >= 0.97 * m.buyers && (w.funder_sol ?? 0) >= 19 && (w.funder_sol ?? 0) <= 100 },
+  // 0.9.6 (owner go 5 Nov 19:00 UK, after the Codex + Gemini reviews of the first simulated-fill day): the "U" books — uncrowded and not dusted, decided at the 60-s check only:
+  //   GMGN holders < 200, market cap < $15K, and holders < chain buy transactions so far (on a curve every holder needed a buy; more holders than buys means tokens moved off-curve).
+  //   FDLU = FDL's bar + U;  FDU = FD's bar + U.  On 5 Nov's 84 first entries: FDL + U 17 entries, 5 winners, 10 rugs, +0.10 SOL at 0.02 (no-best −0.003); FD + U 9, 3, 6, +0.07. Thresholds drawn after looking — a forward test.
+  //   *120 = the same decision at 60 s, the fill 60 s later (the filter cannot be read at 120 s: runners have 250–500 holders by then). All four: no fill if the price has already dropped 30% since the check (chainfill guard).
+  { k: "FDLU", ok: (w, m) => w.pre === 1 && m.at === 60 && m.net >= 15 && (m.mcSol ?? 0) >= 60 && uncrowded(m), u: 1 },
+  { k: "FDU", ok: (w, m) => w.pre === 1 && m.at === 60 && confirm(m) && uncrowded(m), u: 1 },
+  { k: "FDLU120", ok: (w, m) => w.pre === 1 && m.at === 60 && m.net >= 15 && (m.mcSol ?? 0) >= 60 && uncrowded(m), u: 1, delayMs: 60000 },
+  { k: "FDU120", ok: (w, m) => w.pre === 1 && m.at === 60 && confirm(m) && uncrowded(m), u: 1, delayMs: 60000 },
 ];
+const uncrowded = (m) => m.holders != null && m.holders < 200 && m.mcUsd != null && m.mcUsd < 15000 && m.holders < m.buys;
+const U_GUARD = n("LAUNCH_U_GUARD", 0.3);
 const BASE_BAR = (m) => m.net >= 15 && (m.mcSol ?? 0) >= 60; // the loosest bar any rule accepts (FDL's): GMGN's token info is fetched once per check only past it
 // 0.8.3 (13:05 UK): GMGN's price for a 60–120 s old coin can lag badly ("I voted": GMGN $2K while the chain said 115 SOL ≈ $10.6K), which would
 // flatter every paper entry. The entry price is the CHAIN price at the check (market cap in SOL × SOL/USD ÷ supply); GMGN's is kept in the row for comparison.
@@ -95,6 +105,7 @@ export function initFD(db) {
   // 0.8.11: recording columns (see the header) and the first-buyer tables
   for (const c of ["dev_buy_sol REAL", "name_1h INTEGER", "name_24h INTEGER", "socials TEXT", "image INTEGER", "replies INTEGER", "koth_ts INTEGER", "meta_ts INTEGER", "meta_err TEXT"]) try { db.exec(`ALTER TABLE fd_watch ADD COLUMN ${c}`); } catch {}
   for (const c of ["q_ts INTEGER", "q_px REAL", "q_gap REAL", "q_tokens REAL", "q_impact REAL", "q_ms INTEGER", "q_err TEXT", "q_exit_ts INTEGER", "q_exit_sol REAL", "q_exit_x REAL", "q_exit_gap REAL", "q_exit_delay INTEGER", "q_exit_impact REAL", "q_exit_err TEXT"]) try { db.exec(`ALTER TABLE vol_paper ADD COLUMN ${c}`); } catch {} // 0.8.15 quote shadowing
+  db.exec("CREATE TABLE IF NOT EXISTS fd_hgrowth (mint TEXT PRIMARY KEY, name TEXT, h60 INTEGER, h120 INTEGER, ratio REAL, mc60 REAL, mc120 REAL, ts INTEGER)"); // 0.9.6
   db.exec("CREATE TABLE IF NOT EXISTS fd_quotes (mint TEXT, ts INTEGER, at INTEGER, entered TEXT, chain_px REAL, q_px REAL, q_gap REAL, q_impact REAL, q_ms INTEGER, venue TEXT, mcSol REAL, net REAL, err TEXT)");
   db.exec(`CREATE TABLE IF NOT EXISTS fd_early (mint TEXT, wallet TEXT, slot0 INTEGER, sec REAL, sol REAL, tok REAL, exited INTEGER DEFAULT 0, created_ts INTEGER, PRIMARY KEY (mint, wallet));
     CREATE INDEX IF NOT EXISTS fde_wallet ON fd_early(wallet); CREATE INDEX IF NOT EXISTS fde_ts ON fd_early(created_ts);
@@ -190,7 +201,10 @@ export async function fdCheck(db, tdb = null) {
         checks.push(m); const entered = new Set(String(w.entered || "").split(",").filter(Boolean));
         const prev = checks.slice(0, -1).filter((c) => c.at != null && !c.err);
         // 0.8.9: GMGN's token info ONCE per check (it was fetched once per rule that passed), only past the loosest bar; its holder count goes into the check row and the FDH rules
-        let info = null; if (BASE_BAR(m) && entered.size < RULES.length) { try { info = await gget("/v1/token/info", { chain: "sol", address: w.mint }); } catch {} m.holders = N(info?.holder_count) || null; }
+        let info = null; if (BASE_BAR(m) && entered.size < RULES.length) { try { info = await gget("/v1/token/info", { chain: "sol", address: w.mint }); } catch {} m.holders = N(info?.holder_count) || null;
+          const su0 = await solPrice(); m.mcUsd = m.mcSol > 0 && su0 > 0 ? +(m.mcSol * su0).toFixed(0) : null; } // 0.9.6: market cap in USD at the check, for the U books
+        // 0.9.6: holder growth 60 → 120 s on every mint the U books took at 60 s (logged, not a rule)
+        if (at === 120 && m.holders != null && [...entered].some((k) => /U/.test(k))) { const c60 = checks.find((c) => c.at === 60 && c.holders != null); if (c60) db.prepare("INSERT OR IGNORE INTO fd_hgrowth (mint, name, h60, h120, ratio, mc60, mc120, ts) VALUES (?,?,?,?,?,?,?,?)").run(w.mint, w.name, c60.holders, m.holders, +(m.holders / c60.holders).toFixed(2), c60.mcUsd ?? null, m.mcUsd ?? null, t); }
         for (const rule of RULES) if (!entered.has(rule.k) && rule.ok(w, m, prev)) {
           const gpx = N(info?.price?.price ?? info?.price), supply = N(info?.total_supply) || N(info?.circulating_supply) || 1e9, su = await solPrice();
           const graduated = /graduated|other/.test(m.venue || ""), px = !graduated && m.mcSol > 0 && su > 0 ? m.mcSol * su / supply : gpx; // 0.8.3: chain price on the curve; 0.8.6: GMGN's after graduation (the pool market cap from the trade decoder came out 100× on 4 Nov — "$13,737K" entries)
@@ -204,7 +218,13 @@ export async function fdCheck(db, tdb = null) {
           if (isLiveBook(rule.k)) { const vid = db.prepare("SELECT id FROM vol_paper WHERE strat=? AND mint=?").get(rule.k, w.mint)?.id; if (vid) liveBuy({ id: vid, strat: rule.k, mint: w.mint, name: w.name, curve, entry_price: px, su, t }).catch(() => {}); } // 0.8.17: real buy, not awaited
         }
         // 0.8.15: quote shadowing — one buy quote per coin per check for the rows just booked (all rules share it), and a 1-in-N sample of checked launches that entered nothing
-        if (m.chain_px > 0 && m.sol_usd > 0) { const ids = db.prepare("SELECT id FROM vol_paper WHERE mint=? AND entry_ts=? AND q_ts IS NULL").all(w.mint, t).map((x) => x.id); if (ids.length) { chainEntry(w.mint, ids, m.chain_px, m.sol_usd, [...entered].join(",")).catch(() => {}); shadowBuy(db, w.mint, m.chain_px, m.sol_usd, ids, m).catch(() => {}); } } // 0.9.0: the simulated executable fill from the chain's reserves (chainfill.mjs) first — it is the entry price that matters
+        if (m.chain_px > 0 && m.sol_usd > 0) { const rowsNow = db.prepare("SELECT id, strat FROM vol_paper WHERE mint=? AND entry_ts=? AND q_ts IS NULL").all(w.mint, t); const ids = rowsNow.map((x) => x.id); if (ids.length) {
+          // 0.9.6: the U books fill through the guard (and the *120 variants 60 s later); every other book exactly as before, so the comparison stays like for like
+          const opt = (x) => RULES.find((r) => r.k === x.strat) || {}, plain = rowsNow.filter((x) => !opt(x).u).map((x) => x.id), u = rowsNow.filter((x) => opt(x).u && !opt(x).delayMs).map((x) => x.id), u120 = rowsNow.filter((x) => opt(x).u && opt(x).delayMs).map((x) => x.id);
+          if (plain.length) chainEntry(w.mint, plain, m.chain_px, m.sol_usd, [...entered].join(",")).catch(() => {});
+          if (u.length) chainEntry(w.mint, u, m.chain_px, m.sol_usd, "U", { guard: U_GUARD }).catch(() => {});
+          if (u120.length) chainEntry(w.mint, u120, m.chain_px, m.sol_usd, "U120", { guard: U_GUARD, delayMs: 60000 }).catch(() => {});
+          shadowBuy(db, w.mint, m.chain_px, m.sol_usd, ids, m).catch(() => {}); } } // 0.9.0: the simulated executable fill from the chain's reserves (chainfill.mjs) first — it is the entry price that matters
         else if (at === 60 && entered.size === 0 && BASE_BAR(m) && SHADOW_SAMPLE > 0 && (fdStat.checks % SHADOW_SAMPLE) === 0) { const su = await solPrice(); if (su > 0 && m.mcSol > 0) shadowSample(db, w, m, m.mcSol * su / 1e9, su).catch(() => {}); }
         const dead = at >= 90 && m.net < 5 && m.buyers < 20 && w.pre !== 1; // nothing happening: stop reading it (credits); pre-filtered coins always get their 120 s check (FD120)
         db.prepare("UPDATE fd_watch SET checks=?, entered=?, done=? WHERE mint=?").run(JSON.stringify(checks), [...entered].join(","), dead || entered.size === RULES.length ? 1 : 0, w.mint);

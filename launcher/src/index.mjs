@@ -369,6 +369,7 @@ function exportNow() {
     try { writeFileSync(`${CFG.OUT_DIR}/vol_paper.csv`, csv(db.prepare("SELECT * FROM vol_paper ORDER BY id").all())); } catch {}
     try { writeFileSync(`${CFG.OUT_DIR}/live_trades.csv`, csv(db.prepare("SELECT * FROM live_trades ORDER BY id").all())); } catch {} // 0.8.17
     try { writeFileSync(`${CFG.OUT_DIR}/chain_fill.csv`, csv(db.prepare("SELECT * FROM chain_fill ORDER BY vol_id").all())); } catch {} // 0.9.0
+    try { writeFileSync(`${CFG.OUT_DIR}/fd_hgrowth.csv`, csv(db.prepare("SELECT * FROM fd_hgrowth ORDER BY ts").all())); } catch {} // 0.9.6: holder growth 60 → 120 s on the U books' coins
     // 0.8.14: the study files (2 MB + 20 MB, ~150 MB of heap to build) only when the study has changed or once an hour — building them every 10 min on a 300 MB pm2 limit is what restarted the launcher every 90 s on 5 Nov 00:05–01:00 UK
     if (studyStat.studied !== lastStudyExport.n || Date.now() - lastStudyExport.t > 3600000) { lastStudyExport = { n: studyStat.studied, t: Date.now() };
     try { writeFileSync(`${CFG.OUT_DIR}/study_coins.jsonl`, db.prepare("SELECT * FROM study_coins ORDER BY studied_ts").all().map((r) => JSON.stringify({ ...r, data: JSON.parse(r.data || "{}") })).join("\n")); writeFileSync(`${CFG.OUT_DIR}/study_buyers.jsonl`, db.prepare("SELECT * FROM study_buyers ORDER BY mint, rank").all().map((r) => JSON.stringify({ mint: r.mint, wallet: r.wallet, rank: r.rank, ...JSON.parse(r.data || "{}") })).join("\n")); } catch {} }
