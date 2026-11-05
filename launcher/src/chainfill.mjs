@@ -69,7 +69,7 @@ async function readValue(mint, tokens, st) {
     st.complete = true;
   }
   // graduated: the pool (may not exist for a moment after the curve completes)
-  if (!st.pool) { const pk = migratedPoolOf(pk(mint)); const [p] = await getAccounts([pk], "processed"); const pool = decodePool(p?.data); if (!pool) return { lamports: null, venue: "migrating", complete: true }; st.pool = pool; st.poolPk = pk; }
+  if (!st.pool) { const pkp = migratedPoolOf(pk(mint)); const [p] = await getAccounts([pkp], "processed"); const pool = decodePool(p?.data); if (!pool) return { lamports: null, venue: "migrating", complete: true }; st.pool = pool; st.poolPk = pkp; } // 0.9.5: the local was shadowing the pk() helper ("Cannot access pk before initialization" in every backstop read since 0.9.1)
   const cfg = await ammCfg(); const [b, q] = await getAccounts([st.pool.baseAcc, st.pool.quoteAcc], "processed"); const br = tokenAmount(b?.data), qr = tokenAmount(q?.data);
   if (br == null || qr == null) return { lamports: null, venue: "pool", complete: true };
   st.baseRes = br; st.quoteRes = qr;
