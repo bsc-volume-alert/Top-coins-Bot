@@ -9,6 +9,8 @@ import { PAGE } from "./page.mjs";
 import { RADAR_PAGE, radarApi } from "./radarpage.mjs";
 import { LAUNCHER_PAGE, launcherApi, launcherAct, launcherSuggest, launcherManual } from "./launcherpage.mjs";
 import { FD_PAGE, fdApi } from "./fdpage.mjs"; // 0.10.0: the FD paper-book page (owner, 4 Nov 12:53 UK)
+import { FD2_PAGE } from "./fd2page.mjs"; // 0.12.0: the FD page in the old site's design (owner, 5 Nov 12:48 UK)
+const LIVE_STOP = (process.env.LAUNCH_HOME || "/root/launcher") + "/live_stop"; // the launcher's kill file for real buys (launcher live.mjs)
 const PORT = Number(process.env.SCOPE_PORT || 8791), KEY = process.env.SCOPE_KEY || process.env.WEB_KEY || "";
 if (!KEY) { console.log("[scope] no SCOPE_KEY / WEB_KEY in .env — not starting"); process.exit(process.env.SCOPE_SMOKE ? 0 : 1); }
 const srv = createServer(async (req, res) => {
@@ -24,6 +26,11 @@ const srv = createServer(async (req, res) => {
       const name = u.pathname.slice(7); if (!/^[A-Za-z0-9._-]+\.(zip|md|csv|json|txt)$/.test(name)) { res.writeHead(404); return res.end("no such file"); }
       const fp = new URL("../files/" + name, import.meta.url); let st; try { st = fs.statSync(fp); } catch { res.writeHead(404); return res.end("no such file"); }
       res.writeHead(200, { "content-type": name.endsWith(".zip") ? "application/zip" : "text/plain; charset=utf-8", "content-length": st.size, "content-disposition": `attachment; filename="${name}"`, "cache-control": "no-store" }); return fs.createReadStream(fp).pipe(res); }
+    if (u.pathname === "/fd2") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(FD2_PAGE); } // 0.12.0
+    if (u.pathname === "/api/fd/live") { // 0.12.0: STOP / RESUME real buys — the launcher re-reads its switch every 5 s; open positions still sell on their trail
+      if (req.method !== "POST") { res.writeHead(405); return res.end(); } const act = u.searchParams.get("act"); let r;
+      try { if (act === "stop") { fs.writeFileSync(LIVE_STOP, new Date().toISOString() + " stopped from /fd2\n"); r = { ok: true, stopped: true }; } else if (act === "resume") { try { fs.unlinkSync(LIVE_STOP); } catch {} r = { ok: true, stopped: false }; } else r = { ok: false, error: "act=stop|resume" }; } catch (e) { r = { ok: false, error: e.message }; }
+      res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(r)); }
     if (u.pathname === "/fd") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(FD_PAGE); } // 0.10.0
     if (u.pathname === "/api/fd") { let r; try { r = fdApi(Math.min(30, Number(u.searchParams.get("days") || 7))); } catch (e) { r = { ok: false, error: e.message }; } res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(r)); }
     if (u.pathname === "/launcher") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(LAUNCHER_PAGE); } // 0.9.0
