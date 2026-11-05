@@ -1,0 +1,45 @@
+Same method for 60-s and 90-s entries on the trade stream: entry and exit fills land 2 slots (~0.8 s) after the decision; 40% trail; tier-1 trade history ends at 30 min (positions still open then are valued at the last price)
+as traded (chain_fill sim, 60-s entry)                       n=65 win=8 rugs=39 net=-0.414 no-best=-0.494
+trade-stream sim, 60-s entry (method check vs the line above) n=65 win=15 rugs=36 net=-0.272 no-best=-0.326  open-at-data-end 25
+trade-stream sim, 90-s entry, no gate                        n=64 win=14 rugs=20 net=-0.177 no-best=-0.223  open-at-data-end 39
+gate > +0 SOL net growth 60→90, 90-s entry                   n=34 win=12 rugs=18 net=-0.089 no-best=-0.135  open-at-data-end 14
+gate > +2 SOL net growth 60→90, 90-s entry                   n=31 win=12 rugs=16 net=-0.042 no-best=-0.088  open-at-data-end 14
+gate > +5 SOL net growth 60→90, 90-s entry                   n=24 win=9 rugs=13 net=-0.087 no-best=-0.128  open-at-data-end 10
+U at 60 s (trade-stream sim)                                 n=21 win=4 rugs=9 net=-0.026 no-best=-0.075  open-at-data-end 10
+U + gate +2, 90-s entry                                      n= 8 win=4 rugs=1 net=+0.076 no-best=+0.029  open-at-data-end 6
+FDL 60-s (trade-stream sim)                                  n=50 win=12 rugs=26 net=-0.189 no-best=-0.244  open-at-data-end 21
+FDL + gate +2, 90-s entry                                    n=21 win=9 rugs=10 net=+0.002 no-best=-0.039  open-at-data-end 11
+FDL + U + gate +2, 90-s entry                                n= 3 win=1 rugs=0 net=+0.026 no-best=-0.004  open-at-data-end 3
+
+per coin, gate +2: orig class | 60-s trade-sim exit | 90-s trade-sim exit
+  Sam Apeman         MID orig 0.71 | 60s 0.24 trail | 90s hi 1.02 exit 0.99 open-at-data-end
+  fomo.gay           RUG orig 0.10 | 60s 0.10 trail | 90s hi 1.16 exit 0.09 trail
+  memory coin        WIN orig 3.31 | 60s 3.92 open- | 90s hi 3.20 exit 3.20 open-at-data-end
+  Elon Mosque        RUG orig 0.10 | 60s 0.15 trail | 90s hi 1.01 exit 0.13 trail
+  Elon Musk          MID orig 0.75 | 60s 1.70 open- | 90s hi 1.37 exit 1.37 open-at-data-end
+  Socialcoin         RUG orig 0.17 | 60s 2.26 open- | 90s hi 1.79 exit 1.79 open-at-data-end
+  The Ansem Collecti RUG orig 0.26 | 60s 0.26 trail | 90s hi 1.38 exit 0.21 trail
+  This coin is from  WIN orig 3.73 | 60s 2.83 open- | 90s hi 2.25 exit 2.25 open-at-data-end
+  Chrome-Chan        RUG orig 0.16 | 60s 1.63 open- | 90s hi 2.20 exit 2.20 open-at-data-end
+  MarsCoin           MID orig 0.45 | 60s 3.82 open- | 90s hi 3.23 exit 3.23 open-at-data-end
+  MooToon            RUG orig 0.13 | 60s 0.13 trail | 90s hi 1.09 exit 0.11 trail
+  titcoin            WIN orig 5.07 | 60s 3.65 open- | 90s hi 2.65 exit 2.65 open-at-data-end
+  Doge-02            RUG orig 0.18 | 60s 0.20 trail | 90s hi 1.00 exit 0.16 trail
+  Elon Mosque        RUG orig 0.12 | 60s 0.13 trail | 90s hi 1.08 exit 0.11 trail
+  MICHI              RUG orig 0.20 | 60s 0.21 trail | 90s hi 2.47 exit 0.20 trail
+  the lame duck      RUG orig 0.10 | 60s 0.14 trail | 90s hi 1.29 exit 0.14 trail
+  MexicanAIPikachuCo RUG orig 0.14 | 60s 0.15 trail | 90s hi 1.18 exit 0.13 trail
+  The Eagle          WIN orig 4.53 | 60s 3.47 open- | 90s hi 3.49 exit 3.49 open-at-data-end
+  Squeeze            RUG orig 0.14 | 60s 0.15 trail | 90s hi 1.58 exit 0.13 trail
+  Pawket             RUG orig 0.14 | 60s 0.16 trail | 90s hi 1.02 exit 0.15 trail
+  Elon Mosque        WIN orig 1.68 | 60s 2.11 open- | 90s hi 1.52 exit 1.52 open-at-data-end
+  Dodo the Black Swa RUG orig 0.19 | 60s 2.58 open- | 90s hi 1.67 exit 1.67 open-at-data-end
+  Jackass Coin       MID orig 0.56 | 60s 0.66 trail | 90s hi 1.25 exit 0.73 trail
+  The Red Wave       RUG orig 0.15 | 60s 0.17 trail | 90s hi 1.02 exit 0.14 trail
+  Gay And Poor       RUG orig 0.28 | 60s 0.30 trail | 90s hi 1.25 exit 0.28 trail
+  Lock Inu           RUG orig 0.17 | 60s 0.19 trail | 90s hi 1.69 exit 0.18 trail
+  Elon Musk          RUG orig 0.19 | 60s 0.19 trail | 90s hi 1.65 exit 0.13 trail
+  Novembear          RUG orig 0.20 | 60s 0.20 trail | 90s hi 1.82 exit 0.20 trail
+  TOYODA             WIN orig 2.20 | 60s 1.98 open- | 90s hi 1.40 exit 1.40 open-at-data-end
+  BULLTRAP           RUG orig 0.31 | 60s 0.32 trail | 90s hi 1.00 exit 0.99 open-at-data-end
+  Believe            WIN orig 3.06 | 60s 2.89 open- | 90s hi 1.99 exit 1.99 open-at-data-end
