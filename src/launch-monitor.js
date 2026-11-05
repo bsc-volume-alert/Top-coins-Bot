@@ -40,16 +40,16 @@ export function handleTx({ sig, slot, logs, err }) {
       if (e.type === "claim") { emit("claim", null, { ...e, sig, venue: "pump" }); continue; }
       counters.trades++;
       const t = live.get(e.mint); if (!t) continue; // not a token we saw created (older launches) — ignore
-      const tr = { sig, slot, ts: e.ts || ts, wallet: e.user, isBuy: e.isBuy, sol: lamports(e.sol), tokens: rawTok(e.tokens), price: priceSol(e.vsol, e.vtok), route: routeOf(logs), creatorFee: lamports(e.creatorFee || 0n) };
+      const tr = { sig, slot, ts: e.ts || ts, wallet: e.user, isBuy: e.isBuy, sol: lamports(e.sol), tokens: rawTok(e.tokens), price: priceSol(e.vsol, e.vtok), route: routeOf(logs), creatorFee: lamports(e.creatorFee || 0n), vsol: e.vsol != null ? String(e.vsol) : null, vtok: e.vtok != null ? String(e.vtok) : null };
       t.lastVsol = e.vsol; t.lastVtok = e.vtok;
       const mc = mcUsd(e.vsol, e.vtok); t.lastMc = mc; if (mc > t.peakMc) t.peakMc = mc;
       // v0.19 (5 Nov 2026, owner: "preserve future data first"): launches that are not bundle tier-1 but reach VOL_TRACK_SOL of buys also get every trade stored for TRACK_MIN —
       // the funded-dev books' coins are mostly bundle 0–50% launches with 15–30 SOL of buying in the first minute, and their dumps were lost when the launch expired at 5 min.
       if (t.finalized && t.tier < 1 && !t.vol) { t.buySol = (t.buySol || 0) + (tr.isBuy ? tr.sol : 0); if (t.buySol >= CFG.VOL_TRACK_SOL) { t.vol = true; t.volUntil = (tr.ts || ts) + CFG.VOL_TRACK_MIN * 60; counters.vol = (counters.vol || 0) + 1;
-        try { db.transaction(() => { for (const x of t.trades) q.insTrade.run(t.mint, x.sig, x.slot, x.ts, x.wallet, x.isBuy ? 1 : 0, x.sol, x.tokens, x.price, x.recvMs || null); })(); } catch (e) { console.error("[vol-track]", e.message); } } }
+        try { db.transaction(() => { for (const x of t.trades) q.insTrade.run(t.mint, x.sig, x.slot, x.ts, x.wallet, x.isBuy ? 1 : 0, x.sol, x.tokens, x.price, x.recvMs || null, x.vsol || null, x.vtok || null); })(); } catch (e) { console.error("[vol-track]", e.message); } } }
       tr.recvMs = Date.now(); // v0.19.1
       t.trades.push(tr); if (t.finalized && t.trades.length > 4000) t.trades = t.trades.slice(0, 500).concat(t.trades.slice(-1500)); // v0.19.1: the table keeps everything; in memory keep the launch block (bundle/sniper tests) and the latest trades (last price) so a 2-hour watch stays small
-      if (t.finalized && (t.tier >= 1 || t.vol)) q.insTrade.run(t.mint, sig, slot, tr.ts, tr.wallet, tr.isBuy ? 1 : 0, tr.sol, tr.tokens, tr.price, tr.recvMs);
+      if (t.finalized && (t.tier >= 1 || t.vol)) q.insTrade.run(t.mint, sig, slot, tr.ts, tr.wallet, tr.isBuy ? 1 : 0, tr.sol, tr.tokens, tr.price, tr.recvMs, tr.vsol, tr.vtok);
       if (!t.graduated && e.vtok <= BigInt(CFG.GRAD_VTOK) * 1_000_000n) { t.graduated = true; q.setGrad.run(t.mint); emit("graduated", t, tr); }
       emit("trade", t, tr);
     }
@@ -79,7 +79,7 @@ function finalize(t) {
     counters.tier1++;
     const ins = db.transaction(() => {
       for (const [w, v] of wallets) q.insCluster.run(t.mint, w, w === t.creator ? "dev" : "bundle", v.tokens, v.sol, v.first);
-      for (const tr of t.trades) q.insTrade.run(t.mint, tr.sig, tr.slot, tr.ts, tr.wallet, tr.isBuy ? 1 : 0, tr.sol, tr.tokens, tr.price, tr.recvMs || null);
+      for (const tr of t.trades) q.insTrade.run(t.mint, tr.sig, tr.slot, tr.ts, tr.wallet, tr.isBuy ? 1 : 0, tr.sol, tr.tokens, tr.price, tr.recvMs || null, tr.vsol || null, tr.vtok || null);
     });
     ins();
     if (CFG.TG_TIER1_ALERTS && bundleSol >= CFG.TG_TIER1_SOL_MIN) getSocials(t.mint, t.uri).then((soc) => {

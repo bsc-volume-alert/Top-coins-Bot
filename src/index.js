@@ -45,7 +45,7 @@ const v = JSON.parse(readFileSync(new URL("../package.json", import.meta.url))).
 console.log(`bundler-tracker v${v} starting (node ${process.version}) helius=${CFG.HELIUS_KEY ? "yes" : "no"}`);
 startPriceLoop();
 let wsStatus = "init";
-const sub = subscribeLogs(handleTx, (s) => { wsStatus = s; console.log("[ws]", s); });
+const sub = subscribeLogs(handleTx, (s) => { wsStatus = s; console.log("[ws]", s); try { q.insGap.run(Math.floor(Date.now() / 1000), s.split(/[ (]/)[0], s.slice(0, 160)); } catch {} }); // v0.19.2: feed status to the feed_gaps table
 if (CFG.PUMPSWAP_ENABLED) startPumpSwap((s) => console.log("[pumpswap]", s));
 if (CFG.DEX_ENABLED) setTimeout(() => startDex((s) => console.log("[dex]", s)), 5000); // v0.18.1: stagger the third socket so Helius doesn't 429 it
 

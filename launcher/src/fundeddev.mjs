@@ -24,12 +24,14 @@ import { creatorFunder, ctStat } from "./operators.mjs";
 import { buyQuote, qStat } from "./quote.mjs";
 import { isLiveBook, liveBuy } from "./live.mjs"; // 0.8.17: the live book's entries are bought for real (tiny size)
 import { chainEntry } from "./chainfill.mjs"; // 0.9.0
+import { farmScores, funderHistory, recordWalletState, recordDecision } from "./farm.mjs"; // 0.9.9: recording only
 
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
 const FUND_SOL = n("LAUNCH_FD_FUND_SOL", 2), FUND_S = n("LAUNCH_FD_FUND_S", 7200), FUNDER_MAX = n("LAUNCH_FD_FUNDER_MAX", 2), B_LO = n("LAUNCH_FD_BUNDLE_LO", 10), B_HI = n("LAUNCH_FD_BUNDLE_HI", 60);
 const CHECKS = [60, 90, 120], DAY_CREDITS = n("LAUNCH_FD_DAY_CREDITS", 120000), SCAN_S = n("LAUNCH_FD_SCAN_S", 240);
 const GRAND_MAX = n("LAUNCH_FD_GRAND_MAX", 2), AMOUNT_DAYS = n("LAUNCH_FD_AMOUNT_DAYS", 7);
-const REC_BUNDLE = n("LAUNCH_FD_REC_BUNDLE", 0) === 1, REC_META = n("LAUNCH_FD_REC_META", 0) === 1;
+const REC_BUNDLE = n("LAUNCH_FD_REC_BUNDLE", 1) === 1, // 0.9.9: back ON (owner go 5 Nov ~20:40 UK) — the launch group's own selling at each check; watch the restart count
+   REC_META = n("LAUNCH_FD_REC_META", 0) === 1;
 const SHADOW_SOL = n("LAUNCH_SHADOW_SOL", 0.2), SHADOW_SAMPLE = n("LAUNCH_SHADOW_SAMPLE", 10); // 0.8.15: quote size; every Nth checked launch that enters nothing is quoted too // 0.8.12 switches for the two 0.8.11 recorders under suspicion
 // 0.8.2 (12:50 UK): the factories fund a NEW funder wallet for every launch (7 pre-filter passes in 2 h: 5.201089 SOL twice, 2.99010312 SOL twice —
 // identical amounts to six decimals). Two more tests on anything that passes: the funder's own funder (grand-funder) with ≤ GRAND_MAX creators behind it,
@@ -85,6 +87,7 @@ let solUsd = null, solAt = 0;
 async function solPrice() { if (Date.now() - solAt < 120000 && solUsd) return solUsd; try { const w = await gget("/v1/token/info", { chain: "sol", address: "So11111111111111111111111111111111111111112" }); const v = N(w?.price?.price ?? w?.price); if (v > 0) { solUsd = v; solAt = Date.now(); } } catch {} return solUsd; }
 export const fdStat = { scanned: 0, traced: 0, pre: 0, checks: 0, entries: 0, errors: 0, lastErr: "", credits: 0, creditsDay: "", lastScan: null, lastCheck: null, open: 0 };
 const now = () => Math.floor(Date.now() / 1000), today = () => new Date().toISOString().slice(0, 10);
+const VER = (() => { try { return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version; } catch { return null; } })(); // 0.9.9: the rule version stamped on every decision row
 
 export function initFD(db) {
   // 0.8.6: entries booked after graduation with the decoder's pool market cap (100× too high) → back to GMGN's price, re-scored
@@ -204,6 +207,8 @@ export async function fdCheck(db, tdb = null) {
         let bundle = null; if (tdb && REC_BUNDLE) try { bundle = tdb.prepare("SELECT wallet FROM cluster_wallets WHERE mint=? AND role IN ('bundle','dev')").all(w.mint).map((x) => x.wallet); } catch {} // 0.8.12: behind LAUNCH_FD_REC_BUNDLE (off) — the launcher restarted every 2–6 min after 0.8.11 with nothing in the error log (pm2 memory limit?); the tracker-table lookup and the pump.fun page fetch are the two suspects, switched off until proven
         const mm = metrics(r, (r.t0 || w.created_ts) + at, w.creator, bundle), early = mm.early; delete mm.early; // the wallets go to fd_early, not into the check row
         const m = { at, ...mm, txs: r.txs, venue: r.pumpCurve ? (r.complete ? "pump.fun graduated" : "pump.fun curve") : "other" };
+        // 0.9.9: recording only — farm scores (previous-dump participants among this check's buyers, as known NOW), funder history, per-wallet state
+        try { const upto = (r.t0 || w.created_ts) + at, tl = r.trades.filter((x) => x.t <= upto); Object.assign(m, farmScores(tl, t)); if (BASE_BAR(m)) { m.funder_hist = funderHistory(w.funder, w.created_ts); recordWalletState(w.mint, at, tl, r.t0 || w.created_ts, new Set((early || []).map((e) => e.w)), t); } } catch (e) { fdStat.lastErr = ("farm: " + e.message).slice(0, 160); }
         try { recordEarly(db, w, early, r, (r.t0 || w.created_ts) + at); } catch (e) { fdStat.lastErr = ("early: " + e.message).slice(0, 160); }
         if (REC_META && !w.meta_ts && !checks.length) { db.prepare("UPDATE fd_watch SET meta_ts=? WHERE mint=?").run(now(), w.mint); fetchMeta(db, w.mint).catch(() => {}); } // 0.8.11: once per launch, not awaited; 0.8.12: behind LAUNCH_FD_REC_META (off: pump.fun answers 403 to the droplet anyway)
         checks.push(m); const entered = new Set(String(w.entered || "").split(",").filter(Boolean));
@@ -215,10 +220,14 @@ export async function fdCheck(db, tdb = null) {
         try { const sn = db.prepare("SELECT mint, entry_ts, strat FROM vol_paper WHERE lower(name)=lower(?) AND mint<>? AND entry_ts>=? AND entry_ts<? ORDER BY entry_ts LIMIT 1").get(w.name, w.mint, t - 7200, t); if (sn) { m.same_name_mint = sn.mint; m.same_name_min = +((t - sn.entry_ts) / 60).toFixed(1); } } catch {}
         // 0.9.6: holder growth 60 → 120 s on every mint the U books took at 60 s (logged, not a rule)
         if (at === 120 && m.holders != null && [...entered].some((k) => /U/.test(k))) { const c60 = checks.find((c) => c.at === 60 && c.holders != null); if (c60) db.prepare("INSERT OR IGNORE INTO fd_hgrowth (mint, name, h60, h120, ratio, mc60, mc120, ts) VALUES (?,?,?,?,?,?,?,?)").run(w.mint, w.name, c60.holders, m.holders, +(m.holders / c60.holders).toFixed(2), c60.mcUsd ?? null, m.mcUsd ?? null, t); }
-        for (const rule of RULES) if (!entered.has(rule.k) && rule.ok(w, m, prev)) {
+        for (const rule of RULES) { // 0.9.9: every rule's decision is recorded at every check (passed / failed / already entered / no price), so rejected candidates are rows, not silence
+          if (entered.has(rule.k)) { recordDecision(w.mint, at, t, VER, rule.k, 0, "already entered"); continue; }
+          let ok = false; try { ok = !!rule.ok(w, m, prev); } catch {}
+          if (!ok) { recordDecision(w.mint, at, t, VER, rule.k, 0, BASE_BAR(m) ? "failed" : "below base bar"); continue; }
           const gpx = N(info?.price?.price ?? info?.price), supply = N(info?.total_supply) || N(info?.circulating_supply) || 1e9, su = await solPrice();
           const graduated = /graduated|other/.test(m.venue || ""), px = !graduated && m.mcSol > 0 && su > 0 ? m.mcSol * su / supply : gpx; // 0.8.3: chain price on the curve; 0.8.6: GMGN's after graduation (the pool market cap from the trade decoder came out 100× on 4 Nov — "$13,737K" entries)
-          if (!(px > 0)) { m["skip_" + rule.k] = "no price"; continue; }
+          if (!(px > 0)) { m["skip_" + rule.k] = "no price"; recordDecision(w.mint, at, t, VER, rule.k, 0, "no price"); continue; }
+          recordDecision(w.mint, at, t, VER, rule.k, 1, "entered");
           m.gmgn_px = gpx, m.chain_px = px, m.sol_usd = su;
           const curve = m.venue === "pump.fun curve" ? 1 : m.venue ? 0 : (r.pumpCurve && !r.complete && N(info?.launchpad_progress) != null && N(info.launchpad_progress) < 1 ? 1 : 0); // 0.8.22: our own check decides (Codex, 5 Nov 09:08 UK: GMGN's progress field was missing on 29 coins → flagged graduated → the 25% trail scored them; all five FDH trades among them)
           db.prepare(`INSERT OR IGNORE INTO vol_paper (strat, mint, name, symbol, entry_ts, entry_price, entry_mc, vol5, created_ts, age_min, holders, exchange, launchpad, curve, row) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
