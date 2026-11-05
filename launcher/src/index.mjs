@@ -28,6 +28,10 @@ import { runSweep, sweepStat } from "./exitsweep.mjs"; // 0.8.1: exit sweep over
 import { initOperators, runOperators, opStat, creatorCensus, ctStat } from "./operators.mjs";
 
 const VER = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
+// 0.8.12: say WHY the process dies — the 0.8.11 restarts left nothing in the error log
+process.on("uncaughtException", (e) => { console.error("[launcher] uncaughtException", e?.stack || e); process.exit(1); });
+process.on("unhandledRejection", (e) => { console.error("[launcher] unhandledRejection", e?.stack || e); });
+setInterval(() => { const m = process.memoryUsage(); if (m.rss > 230 * 1024 * 1024) console.error(`[launcher] memory rss=${(m.rss / 1048576).toFixed(0)}M heap=${(m.heapUsed / 1048576).toFixed(0)}M ext=${(m.external / 1048576).toFixed(0)}M`); }, 30000);
 const now = () => Math.floor(Date.now() / 1000);
 mkdirSync(HOME, { recursive: true }); mkdirSync(CFG.REQ_DIR, { recursive: true }); mkdirSync(CFG.OUT_DIR, { recursive: true });
 const st = { ver: VER, mode: CFG.MODE, started: new Date().toISOString(), posts: 0, ignored: 0, launches: 0, live: 0, shadowOk: 0, shadowFail: 0, uploadsFailed: 0, sells: 0, errors: 0, lastErr: "", selfTest: null, exports: 0, lastPush: "" };

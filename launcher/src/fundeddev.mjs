@@ -26,6 +26,7 @@ const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.i
 const FUND_SOL = n("LAUNCH_FD_FUND_SOL", 2), FUND_S = n("LAUNCH_FD_FUND_S", 7200), FUNDER_MAX = n("LAUNCH_FD_FUNDER_MAX", 2), B_LO = n("LAUNCH_FD_BUNDLE_LO", 10), B_HI = n("LAUNCH_FD_BUNDLE_HI", 60);
 const CHECKS = [60, 90, 120], DAY_CREDITS = n("LAUNCH_FD_DAY_CREDITS", 120000), SCAN_S = n("LAUNCH_FD_SCAN_S", 240);
 const GRAND_MAX = n("LAUNCH_FD_GRAND_MAX", 2), AMOUNT_DAYS = n("LAUNCH_FD_AMOUNT_DAYS", 7);
+const REC_BUNDLE = n("LAUNCH_FD_REC_BUNDLE", 0) === 1, REC_META = n("LAUNCH_FD_REC_META", 0) === 1; // 0.8.12 switches for the two 0.8.11 recorders under suspicion
 // 0.8.2 (12:50 UK): the factories fund a NEW funder wallet for every launch (7 pre-filter passes in 2 h: 5.201089 SOL twice, 2.99010312 SOL twice —
 // identical amounts to six decimals). Two more tests on anything that passes: the funder's own funder (grand-funder) with ≤ GRAND_MAX creators behind it,
 // and no other creator funded with the same amount (to 4 decimals) in the last AMOUNT_DAYS days.
@@ -168,11 +169,11 @@ export async function fdCheck(db, tdb = null) {
       const at = due[due.length - 1];
       try {
         const c0 = studyStat.credits, r = await earlyTrades(w.mint, w.created_ts + at); fdStat.credits += studyStat.credits - c0; fdStat.checks++; fdStat.lastCheck = new Date().toISOString();
-        let bundle = null; if (tdb) try { bundle = tdb.prepare("SELECT wallet FROM cluster_wallets WHERE mint=? AND role IN ('bundle','dev')").all(w.mint).map((x) => x.wallet); } catch {}
+        let bundle = null; if (tdb && REC_BUNDLE) try { bundle = tdb.prepare("SELECT wallet FROM cluster_wallets WHERE mint=? AND role IN ('bundle','dev')").all(w.mint).map((x) => x.wallet); } catch {} // 0.8.12: behind LAUNCH_FD_REC_BUNDLE (off) — the launcher restarted every 2–6 min after 0.8.11 with nothing in the error log (pm2 memory limit?); the tracker-table lookup and the pump.fun page fetch are the two suspects, switched off until proven
         const mm = metrics(r, (r.t0 || w.created_ts) + at, w.creator, bundle), early = mm.early; delete mm.early; // the wallets go to fd_early, not into the check row
         const m = { at, ...mm, txs: r.txs, venue: r.pumpCurve ? (r.complete ? "pump.fun graduated" : "pump.fun curve") : "other" };
         try { recordEarly(db, w, early, r, (r.t0 || w.created_ts) + at); } catch (e) { fdStat.lastErr = ("early: " + e.message).slice(0, 160); }
-        if (!w.meta_ts && !checks.length) { db.prepare("UPDATE fd_watch SET meta_ts=? WHERE mint=?").run(now(), w.mint); fetchMeta(db, w.mint); } // 0.8.11: once per launch, not awaited
+        if (REC_META && !w.meta_ts && !checks.length) { db.prepare("UPDATE fd_watch SET meta_ts=? WHERE mint=?").run(now(), w.mint); fetchMeta(db, w.mint).catch(() => {}); } // 0.8.11: once per launch, not awaited; 0.8.12: behind LAUNCH_FD_REC_META (off: pump.fun answers 403 to the droplet anyway)
         checks.push(m); const entered = new Set(String(w.entered || "").split(",").filter(Boolean));
         const prev = checks.slice(0, -1).filter((c) => c.at != null && !c.err);
         // 0.8.9: GMGN's token info ONCE per check (it was fetched once per rule that passed), only past the loosest bar; its holder count goes into the check row and the FDH rules
