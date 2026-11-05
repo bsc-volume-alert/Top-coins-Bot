@@ -23,9 +23,17 @@ export function initVol(db) {
   db.exec("CREATE TABLE IF NOT EXISTS vol_bf_done (mint TEXT PRIMARY KEY)"); // 0.7.4
   try { db.exec("ALTER TABLE vol_paper ADD COLUMN x_half2 REAL"); } catch {} try { db.exec("ALTER TABLE vol_paper ADD COLUMN r_half2 REAL"); } catch {} // 0.5.0
   for (const c of ["mk_ts INTEGER", "mk_x REAL", "mk_hi REAL", "mk_last INTEGER", "mk_sold_x REAL", "mk_sold_ts INTEGER", "mk_r REAL"]) try { db.exec(`ALTER TABLE vol_paper ADD COLUMN ${c}`); } catch {} // 0.8.10 live mark
+  // 0.8.16 (owner, 5 Nov 04:22 UK, after the best-exit study in LAUNCHER.md): the VENUE exit — a 25% trail on graduated coins, the 40% trail on curve coins —
+  // scored on every trade (x_venue / r_venue / m_venue), followed by the live mark (mk_pct = the trail it used) and by the shadow sells; plus the open-position
+  // quote poll (q_live_*: the latest sell quote, its high since entry and how many quotes) whose own trail fires the quoted exit (q_exit_src = 'poll'; 'mark' = quoted when the candle mark sold).
+  for (const c of ["x_venue REAL", "r_venue REAL", "m_venue REAL", "mk_pct REAL", "q_live_ts INTEGER", "q_live_x REAL", "q_live_hi REAL", "q_live_n INTEGER", "q_exit_src TEXT"]) try { db.exec(`ALTER TABLE vol_paper ADD COLUMN ${c}`); } catch {}
+  try { db.prepare("UPDATE vol_paper SET x_venue=CASE WHEN curve=1 THEN x_trail40 ELSE x_trail25 END, r_venue=CASE WHEN curve=1 THEN r_trail40 ELSE r_trail25 END, m_venue=CASE WHEN curve=1 THEN m_trail40 ELSE NULL END WHERE done=1 AND err IS NULL AND x_venue IS NULL AND x_trail25 IS NOT NULL").run(); } catch {} // scored trades: the venue exit is one of two columns they already have (no candle calls)
+  try { db.prepare("UPDATE vol_paper SET q_exit_src='mark' WHERE q_exit_x IS NOT NULL AND q_exit_src IS NULL").run(); } catch {}
 }
+/** the venue exit's trail: 40% off the high on the curve, 25% once graduated (LAUNCHER.md 5 Nov 04:15 UK: curve runners wobble, graduated moves fade) */
+export const trailPct = (curve) => (curve === 1 ? 0.4 : 0.25);
 
-/** 0.8.10 (owner, 4 Nov 22:59 UK: "show each open trade's result within minutes… go do that"): the LIVE MARK. Every minute, for every open trade whose 40% trail has not
+/** 0.8.10 (owner, 4 Nov 22:59 UK: "show each open trade's result within minutes… go do that"): the LIVE MARK. Every 15 s (0.8.16; was every minute), for every open trade whose venue trail (0.8.16; was the 40% trail) has not
  *  sold yet (one GMGN candle call per coin, shared by the books that hold it): price now vs entry (mk_x), the high since entry (mk_hi) and, the minute the
  *  trail would have sold, the sale (mk_sold_x, mk_sold_ts, mk_r after costs). Same replay as volScore's trail (candles after the entry minute, stop = 60% of
  *  the high), so the live number and the 2-hour score agree; the 2-hour score stays the record. A sold trade is not fetched again. */
@@ -35,7 +43,7 @@ export async function volMark(db) {
   if (marking) return; marking = true;
   try {
     const t = now();
-    const rows = db.prepare("SELECT id, mint, entry_ts, entry_price, curve, mk_hi, mk_last, q_tokens, strat FROM vol_paper WHERE done=0 AND err IS NULL AND mk_sold_ts IS NULL AND entry_ts>=? AND entry_ts<=? ORDER BY entry_ts LIMIT 80").all(t - 125 * 60, t - 60);
+    const rows = db.prepare("SELECT id, mint, entry_ts, entry_price, curve, mk_hi, mk_last, q_tokens, q_exit_ts, strat FROM vol_paper WHERE done=0 AND err IS NULL AND mk_sold_ts IS NULL AND entry_ts>=? AND entry_ts<=? ORDER BY entry_ts LIMIT 80").all(t - 125 * 60, t - 60);
     const byMint = new Map(); for (const r of rows) { if (!byMint.has(r.mint)) byMint.set(r.mint, []); byMint.get(r.mint).push(r); }
     markStat.passes++;
     for (const [mint, rs] of byMint) {
@@ -44,13 +52,14 @@ export async function volMark(db) {
         const ks = (await candles(mint, from, t)).sort((a, b) => a.t - b.t); markStat.calls++;
         if (!ks.length) continue;
         for (const r of rs) {
-          const X = (v) => v / r.entry_price; let hi = r.mk_hi || 1, last = r.mk_last || r.entry_ts, sold = null, soldT = null;
+          const X = (v) => v / r.entry_price, keep = 1 - trailPct(r.curve); let hi = r.mk_hi || 1, last = r.mk_last || r.entry_ts, sold = null, soldT = null; // 0.8.16: the venue trail
           for (const c of ks) { if (c.t <= last) continue; if (c.t <= r.entry_ts) { last = c.t; continue; } // the entry minute's candle is skipped, as in volScore
-            if (X(c.l) <= hi * 0.6) { sold = hi * 0.6; soldT = c.t; last = c.t; break; } hi = Math.max(hi, X(c.h)); if (c.t + 60 <= t) last = c.t; } // the current minute's candle is still forming: re-read it next pass
+            if (X(c.l) <= hi * keep) { sold = hi * keep; soldT = c.t; last = c.t; break; } hi = Math.max(hi, X(c.h)); if (c.t + 60 <= t) last = c.t; } // the current minute's candle is still forming: re-read it next pass
           const nowX = X(ks[ks.length - 1].c);
-          if (sold != null) { db.prepare("UPDATE vol_paper SET mk_ts=?, mk_x=?, mk_hi=?, mk_last=?, mk_sold_x=?, mk_sold_ts=?, mk_r=? WHERE id=?").run(t, +nowX.toFixed(4), +hi.toFixed(4), last, +sold.toFixed(4), soldT, realX(sold, r.curve === 1), r.id); markStat.sold++;
-            if (r.q_tokens > 0) shadowSell(db, r, sold, soldT).catch(() => {}); } // 0.8.15: the real sell quote the moment the live mark says the trail sold (≤ 60 s after the candle; q_exit_delay keeps the lag)
-          else db.prepare("UPDATE vol_paper SET mk_ts=?, mk_x=?, mk_hi=?, mk_last=? WHERE id=?").run(t, +nowX.toFixed(4), +hi.toFixed(4), last, r.id);
+          if (sold != null) { db.prepare("UPDATE vol_paper SET mk_ts=?, mk_x=?, mk_hi=?, mk_last=?, mk_sold_x=?, mk_sold_ts=?, mk_r=?, mk_pct=? WHERE id=?").run(t, +nowX.toFixed(4), +hi.toFixed(4), last, +sold.toFixed(4), soldT, realX(sold, r.curve === 1), 1 - keep, r.id); markStat.sold++;
+            if (r.q_tokens > 0 && r.q_exit_ts == null) shadowSell(db, r, sold, soldT, "mark").catch(() => {}); // 0.8.15: the real sell quote the moment the candle mark says the trail sold (0.8.16: the mark runs every 15 s; skipped when the quote poll already sold)
+            else db.prepare("UPDATE vol_paper SET q_exit_gap=q_exit_x/?-1 WHERE id=? AND q_exit_src='poll' AND q_exit_gap IS NULL AND q_exit_x IS NOT NULL").run(sold, r.id); } // the poll's exit against the paper sale it now has
+          else db.prepare("UPDATE vol_paper SET mk_ts=?, mk_x=?, mk_hi=?, mk_last=?, mk_pct=? WHERE id=?").run(t, +nowX.toFixed(4), +hi.toFixed(4), last, 1 - keep, r.id);
           markStat.marked++;
         }
       } catch (e) { markStat.errors++; markStat.lastErr = `${mint.slice(0, 6)} ${e.message}`.slice(0, 160); if (/rate limited/i.test(e.message)) break; }
@@ -128,8 +137,11 @@ export async function volScore(db) {
         const trailN = (pct) => { let h = 1; for (const c of after.slice(1)) { if (X(c.l) <= h * (1 - pct)) return h * (1 - pct); h = Math.max(h, X(c.h)); } return X(after[after.length - 1].c); };
         const tw = (() => { let h = 1, run = false; for (const c of after.slice(1)) { if (!run) { if (X(c.l) <= 0.65) return 0.65; if (X(c.h) >= 2) { run = true; h = X(c.h); } } else { if (X(c.l) <= h * 0.45) return h * 0.45; h = Math.max(h, X(c.h)); } } return X(after[after.length - 1].c); })();
         const t25 = trailN(0.25), t60 = trailN(0.6);
-        db.prepare(`UPDATE vol_paper SET done=1, x5=?, x15=?, x30=?, x60=?, x120=?, peak120=?, peak_min=?, low_before_peak=?, x_tp2sl50=?, x_tp15sl30=?, x_trail40=?, r_tp2sl50=?, r_tp15sl30=?, r_trail40=?, r_hold60=?, r_hold120=?, x_half2=?, r_half2=?, x_out10=?, x_out15=?, x_out20=?, r_out10=?, r_out15=?, r_out20=?, x_trail25=?, x_trail60=?, x_tw=?, r_trail25=?, r_trail60=?, r_tw=?, m_trail40=? WHERE id=?`)
-          .run(at(5), at(15), at(30), h60, h120, +peak.toFixed(4), +((peakT - e) / 60).toFixed(1), +lowBefore.toFixed(4), t2, t15, +trail.toFixed(4), realX(t2, cv), realX(t15, cv), realX(trail, cv), realX(h60, cv), realX(h120, cv), +half.toFixed(4), realX(half, cv), o10, o15, o20, realX(o10, cv), realX(o15, cv), realX(o20, cv), +t25.toFixed(4), +t60.toFixed(4), +tw.toFixed(4), realX(t25, cv), realX(t60, cv), realX(tw, cv), trailT ? +((trailT - e) / 60).toFixed(1) : null, p.id);
+        // 0.8.16: the venue exit — the 40% trail on the curve, the 25% trail once graduated — with its sale minute (m_venue; −1 = still held at 2 h)
+        const vn = (() => { if (cv) return { x: trail, t: trailT }; let h = 1; for (const c of after.slice(1)) { if (X(c.l) <= h * 0.75) return { x: h * 0.75, t: c.t }; h = Math.max(h, X(c.h)); } return { x: X(after[after.length - 1].c), t: null }; })();
+        db.prepare(`UPDATE vol_paper SET done=1, x5=?, x15=?, x30=?, x60=?, x120=?, peak120=?, peak_min=?, low_before_peak=?, x_tp2sl50=?, x_tp15sl30=?, x_trail40=?, r_tp2sl50=?, r_tp15sl30=?, r_trail40=?, r_hold60=?, r_hold120=?, x_half2=?, r_half2=?, x_out10=?, x_out15=?, x_out20=?, r_out10=?, r_out15=?, r_out20=?, x_trail25=?, x_trail60=?, x_tw=?, r_trail25=?, r_trail60=?, r_tw=?, m_trail40=?, x_venue=?, r_venue=?, m_venue=? WHERE id=?`)
+          .run(at(5), at(15), at(30), h60, h120, +peak.toFixed(4), +((peakT - e) / 60).toFixed(1), +lowBefore.toFixed(4), t2, t15, +trail.toFixed(4), realX(t2, cv), realX(t15, cv), realX(trail, cv), realX(h60, cv), realX(h120, cv), +half.toFixed(4), realX(half, cv), o10, o15, o20, realX(o10, cv), realX(o15, cv), realX(o20, cv), +t25.toFixed(4), +t60.toFixed(4), +tw.toFixed(4), realX(t25, cv), realX(t60, cv), realX(tw, cv), trailT ? +((trailT - e) / 60).toFixed(1) : -1, +vn.x.toFixed(4), realX(vn.x, cv), vn.t ? +((vn.t - e) / 60).toFixed(1) : -1, p.id);
+        try { db.prepare("UPDATE vol_paper SET q_exit_gap=q_exit_x/x_venue-1 WHERE id=? AND q_exit_x IS NOT NULL AND q_exit_gap IS NULL AND x_venue>0").run(p.id); } catch {} // 0.8.16: a poll exit on a trade the mark never sold, against the scored venue exit
         volStat.scored++;
       } catch (er) { if (/rate limited/i.test(er.message)) throw er; db.prepare("UPDATE vol_paper SET done=1, err=? WHERE id=?").run(er.message.slice(0, 120), p.id); }
     }
@@ -169,8 +181,38 @@ export async function volBackfill(db, tdb) {
 
 /** 0.8.15: sell quote for the tokens the buy quote said we would hold; q_exit_x = SOL back ÷ SOL staked, q_exit_gap = q_exit_x ÷ paper exit multiple − 1 */
 const SHADOW_SOL = Number(process.env.LAUNCH_SHADOW_SOL || 0.2);
-async function shadowSell(db, r, paperX, soldT) {
+async function shadowSell(db, r, paperX, soldT, src = "mark") {
   try { const q = await sellQuote(r.mint, r.q_tokens); const x = q.lamports / 1e9 / SHADOW_SOL; qStat.sells++;
-    db.prepare("UPDATE vol_paper SET q_exit_ts=?, q_exit_sol=?, q_exit_x=?, q_exit_gap=?, q_exit_delay=?, q_exit_impact=? WHERE id=?").run(now(), +(q.lamports / 1e9).toFixed(4), +x.toFixed(4), +(x / paperX - 1).toFixed(4), now() - soldT, q.impact, r.id);
-  } catch (e) { qStat.errors++; qStat.lastErr = `sell ${r.mint.slice(0, 6)}: ${e.message}`.slice(0, 120); db.prepare("UPDATE vol_paper SET q_exit_ts=?, q_exit_err=? WHERE id=?").run(now(), e.message.slice(0, 80), r.id); }
+    db.prepare("UPDATE vol_paper SET q_exit_ts=?, q_exit_sol=?, q_exit_x=?, q_exit_gap=?, q_exit_delay=?, q_exit_impact=?, q_exit_src=? WHERE id=? AND q_exit_x IS NULL").run(now(), +(q.lamports / 1e9).toFixed(4), +x.toFixed(4), +(x / paperX - 1).toFixed(4), now() - soldT, q.impact, src, r.id);
+  } catch (e) { qStat.errors++; qStat.lastErr = `sell ${r.mint.slice(0, 6)}: ${e.message}`.slice(0, 120); if (!/paused/.test(e.message)) db.prepare("UPDATE vol_paper SET q_exit_ts=?, q_exit_err=? WHERE id=? AND q_exit_x IS NULL").run(now(), e.message.slice(0, 80), r.id); }
+}
+
+/** 0.8.16 (owner, 5 Nov 04:22 UK): the OPEN-POSITION QUOTE POLL — what a live bot running the venue trail off its own sell quotes would have got.
+ *  Every 3 s one Jupiter sell quote for the open shadow position that was quoted longest ago (all the books' rows of that coin share it): the quoted
+ *  x (SOL back ÷ SOL staked), its high since entry (from 1 = the entry, like the paper trail) and, the first quote at or under high × (1 − trail), the
+ *  quoted exit (q_exit_* with q_exit_src = 'poll', delay 0). The candle mark's quote ('mark') is only taken when the poll has not sold first.
+ *  With N open coins each is quoted every 3N seconds; 30 keyless requests a minute leave room for the entry quotes. */
+let polling = false;
+export async function volQuotePoll(db) {
+  if (polling || Date.now() < qStat.pauseUntil) return; polling = true;
+  try {
+    const t = now();
+    const first = db.prepare("SELECT mint FROM vol_paper WHERE done=0 AND err IS NULL AND q_tokens>0 AND q_exit_ts IS NULL AND entry_ts>=? AND entry_ts<=? ORDER BY (q_live_ts IS NOT NULL), q_live_ts, entry_ts LIMIT 1").get(t - 125 * 60, t - 20);
+    if (!first) return;
+    const rs = db.prepare("SELECT id, mint, curve, q_tokens, q_live_hi FROM vol_paper WHERE mint=? AND done=0 AND err IS NULL AND q_tokens>0 AND q_exit_ts IS NULL").all(first.mint);
+    if (!rs.length) return;
+    const base = rs[0]; qStat.polls++;
+    let q; try { q = await sellQuote(base.mint, base.q_tokens); }
+    catch (e) { qStat.errors++; qStat.lastErr = `poll ${base.mint.slice(0, 6)}: ${e.message}`.slice(0, 120);
+      if (!/paused|429/.test(e.message)) for (const r of rs) db.prepare("UPDATE vol_paper SET q_live_ts=?, q_live_n=COALESCE(q_live_n,0)+1 WHERE id=?").run(t, r.id); // a coin with no route (rugged curve) is not retried before the others
+      return; }
+    for (const r of rs) {
+      const x = q.lamports / 1e9 / SHADOW_SOL * (r.q_tokens / base.q_tokens), hi = Math.max(r.q_live_hi || 1, x), keep = 1 - trailPct(r.curve);
+      if (x <= (r.q_live_hi || 1) * keep) { // the trail off the quoted high fires on this quote: this is the quoted exit (compared with the paper exit by the page, once the mark or the score has it)
+        db.prepare("UPDATE vol_paper SET q_live_ts=?, q_live_x=?, q_live_hi=?, q_live_n=COALESCE(q_live_n,0)+1, q_exit_ts=?, q_exit_sol=?, q_exit_x=?, q_exit_delay=0, q_exit_impact=?, q_exit_src='poll' WHERE id=? AND q_exit_x IS NULL")
+          .run(t, +x.toFixed(4), +hi.toFixed(4), t, +(q.lamports / 1e9 * (r.q_tokens / base.q_tokens)).toFixed(4), +x.toFixed(4), q.impact, r.id); qStat.pollExits++; qStat.sells++;
+      } else db.prepare("UPDATE vol_paper SET q_live_ts=?, q_live_x=?, q_live_hi=?, q_live_n=COALESCE(q_live_n,0)+1 WHERE id=?").run(t, +x.toFixed(4), +hi.toFixed(4), r.id);
+    }
+  } catch (e) { qStat.errors++; qStat.lastErr = "poll: " + e.message.slice(0, 120); }
+  finally { polling = false; }
 }

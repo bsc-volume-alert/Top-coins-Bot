@@ -4,12 +4,16 @@
 // sell quote (those tokens → SOL) and keep it next to the paper exit. A sample of launches that passed a check but entered no book is quoted too,
 // so the fill cost of the coins we avoid is known as well. The gap between paper and quote is the thing every paper number depends on.
 // Jupiter's public quote API (no key) routes pump.fun curve coins and PumpSwap pools; the quote includes price impact for the size asked.
-export const qStat = { buys: 0, sells: 0, samples: 0, errors: 0, lastErr: "", lastMs: 0 };
+// 0.8.16: the keyless tier is 30 requests a minute (60-s sliding window); a 429 pauses every quote until x-ratelimit-reset (or 15 s), and the
+// open-position poller (volpaper volQuotePoll) spends at most one request every 3 s so entries and exits keep their share.
+export const qStat = { buys: 0, sells: 0, samples: 0, polls: 0, pollExits: 0, paused: 0, errors: 0, lastErr: "", lastMs: 0, pauseUntil: 0 };
 const SOL = "So11111111111111111111111111111111111111112", HOST = process.env.LAUNCH_JUP_HOST || "https://lite-api.jup.ag";
 async function jq(inputMint, outputMint, amount) {
+  if (Date.now() < qStat.pauseUntil) { qStat.paused++; throw new Error("jup paused (429)"); }
   const t0 = Date.now();
   const u = `${HOST}/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=1000&onlyDirectRoutes=false`;
   const r = await fetch(u, { signal: AbortSignal.timeout(6000), headers: { accept: "application/json" } });
+  if (r.status === 429) { const rs = Number(r.headers.get("x-ratelimit-reset")) || 0; qStat.pauseUntil = rs > 1e9 ? rs * 1000 : Date.now() + 15000; throw new Error("jup 429 rate limit"); }
   const text = await r.text(); let j; try { j = JSON.parse(text); } catch { throw new Error(`jup HTTP ${r.status}`); }
   if (!r.ok || j.error) throw new Error(`jup ${r.status} ${(j.error || j.errorCode || "").toString().slice(0, 60)}`);
   qStat.lastMs = Date.now() - t0;
