@@ -90,20 +90,36 @@ export async function liveBuy(row) {
 /** Every 4 s: the open live position quoted longest ago gets a sell quote for its actual tokens; the venue trail off the quoted high (from 1 = what went in) or the 2-hour horizon sells it for real. */
 let polling = false;
 export async function livePoll() {
-  if (!db || polling || Date.now() < qStat.pauseUntil) return; polling = true;
+  if (!db || polling) return; polling = true;
   try {
     const t = now(); liveStat.open = openCount();
-    const r = db.prepare("SELECT * FROM live_trades WHERE done=0 AND buy_status='confirmed' AND tokens>0 ORDER BY (last_ts IS NOT NULL), last_ts, buy_ts LIMIT 1").get();
-    if (!r) return; liveStat.polls++;
-    let q; try { q = await jqRaw(r.mint, SOL, Math.floor(r.tokens), SLIP_SELL, true); }
-    catch (e) { qStat.errors++; liveStat.lastErr = `poll ${r.mint.slice(0, 6)}: ${e.message}`.slice(0, 120);
-      if (!/paused|429/.test(e.message)) { db.prepare("UPDATE live_trades SET last_ts=?, n_quotes=n_quotes+1, sell_err=? WHERE id=?").run(t, e.message.slice(0, 80), r.id);
-        if (t - r.buy_ts > GIVE_UP) { db.prepare("UPDATE live_trades SET done=1, sell_status='written_off', sell_reason='no route 3 h', sol_out=0, x=0, r=-1, sell_ts=? WHERE id=?").run(t, r.id); liveStat.writtenOff++; } }
-      return; }
-    const x = Number(q.outAmount) / 1e9 / r.stake_sol, hi = Math.max(r.hi || 1, x), keep = 1 - trailPct(r.curve); // quoted SOL back ÷ SOL staked, from 1 at entry — the same measure as the shadow poll's q_live_x (r = the money result is computed at the sell from the chain's figures)
-    const reason = x <= (r.hi || 1) * keep ? "trail" : t - r.buy_ts >= HORIZON ? "2h" : null;
-    db.prepare("UPDATE live_trades SET last_ts=?, last_x=?, hi=?, n_quotes=n_quotes+1 WHERE id=?").run(t, +x.toFixed(4), +hi.toFixed(4), r.id);
-    if (reason) await liveSell(r, q, reason);
+    const open = db.prepare("SELECT * FROM live_trades WHERE done=0 AND buy_status='confirmed' AND tokens>0 ORDER BY buy_ts").all();
+    if (!open.length) return;
+    // 0.9.4: the trail runs on the chain-side price stream the simulated fill keeps for the same coin (chain_fill: every transaction that moves the pool),
+    // not on a Jupiter poll — Jupiter is for execution only (one quote + one swap per leg). Same decision as the simulation, so simulated vs real is like for like.
+    let polled = false;
+    for (const r of open) {
+      const c = db.prepare("SELECT s_last_x, s_hi, s_last_ts, s_trig_ts, s_exit_reason, done FROM chain_fill WHERE mint=? AND s_tokens IS NOT NULL ORDER BY s_last_ts DESC LIMIT 1").get(r.mint);
+      if (c && c.s_last_x != null && t - (c.s_last_ts || 0) < 120) {
+        const x = c.s_last_x, hi = Math.max(r.hi || 1, c.s_hi || 1, x), keep = 1 - trailPct(r.curve);
+        const trig = c.s_trig_ts != null || (c.done === 1 && /trail|2h/.test(c.s_exit_reason || "")) || x <= (r.hi || 1) * keep;
+        const reason = trig ? "trail" : t - r.buy_ts >= HORIZON ? "2h" : null;
+        db.prepare("UPDATE live_trades SET last_ts=?, last_x=?, hi=?, n_quotes=n_quotes+1 WHERE id=?").run(t, +x.toFixed(4), +hi.toFixed(4), r.id);
+        if (reason && !(r.sell_status === "sending")) { let q; try { q = await jqRaw(r.mint, SOL, Math.floor(r.tokens), SLIP_SELL, true); } catch (e) { qStat.errors++; liveStat.lastErr = `sell quote ${r.mint.slice(0, 6)}: ${e.message}`.slice(0, 120); continue; } await liveSell(r, q, reason); }
+        continue;
+      }
+      // no chain-side price for this coin (unpriced entry, or the stream is stale): the old Jupiter poll, one coin per pass, no more than every 8 s
+      if (polled || Date.now() < qStat.pauseUntil || (r.last_ts && t - r.last_ts < 8)) continue; polled = true; liveStat.polls++;
+      let q; try { q = await jqRaw(r.mint, SOL, Math.floor(r.tokens), SLIP_SELL, true); }
+      catch (e) { qStat.errors++; liveStat.lastErr = `poll ${r.mint.slice(0, 6)}: ${e.message}`.slice(0, 120);
+        if (!/paused|429/.test(e.message)) { db.prepare("UPDATE live_trades SET last_ts=?, n_quotes=n_quotes+1, sell_err=? WHERE id=?").run(t, e.message.slice(0, 80), r.id);
+          if (t - r.buy_ts > GIVE_UP) { db.prepare("UPDATE live_trades SET done=1, sell_status='written_off', sell_reason='no route 3 h', sol_out=0, x=0, r=-1, sell_ts=? WHERE id=?").run(t, r.id); liveStat.writtenOff++; } }
+        continue; }
+      const x = Number(q.outAmount) / 1e9 / r.stake_sol, hi = Math.max(r.hi || 1, x), keep = 1 - trailPct(r.curve);
+      const reason = x <= (r.hi || 1) * keep ? "trail" : t - r.buy_ts >= HORIZON ? "2h" : null;
+      db.prepare("UPDATE live_trades SET last_ts=?, last_x=?, hi=?, n_quotes=n_quotes+1 WHERE id=?").run(t, +x.toFixed(4), +hi.toFixed(4), r.id);
+      if (reason) await liveSell(r, q, reason);
+    }
   } catch (e) { liveStat.lastErr = "poll: " + e.message.slice(0, 120); }
   finally { polling = false; }
 }
