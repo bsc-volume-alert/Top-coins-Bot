@@ -23,6 +23,7 @@ import { earlyTrades, studyStat } from "./study.mjs";
 import { creatorFunder, ctStat } from "./operators.mjs";
 import { buyQuote, qStat } from "./quote.mjs";
 import { isLiveBook, liveBuy } from "./live.mjs"; // 0.8.17: the live book's entries are bought for real (tiny size)
+import { chainEntry } from "./chainfill.mjs"; // 0.9.0
 
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
 const FUND_SOL = n("LAUNCH_FD_FUND_SOL", 2), FUND_S = n("LAUNCH_FD_FUND_S", 7200), FUNDER_MAX = n("LAUNCH_FD_FUNDER_MAX", 2), B_LO = n("LAUNCH_FD_BUNDLE_LO", 10), B_HI = n("LAUNCH_FD_BUNDLE_HI", 60);
@@ -203,7 +204,7 @@ export async function fdCheck(db, tdb = null) {
           if (isLiveBook(rule.k)) { const vid = db.prepare("SELECT id FROM vol_paper WHERE strat=? AND mint=?").get(rule.k, w.mint)?.id; if (vid) liveBuy({ id: vid, strat: rule.k, mint: w.mint, name: w.name, curve, entry_price: px, su, t }).catch(() => {}); } // 0.8.17: real buy, not awaited
         }
         // 0.8.15: quote shadowing — one buy quote per coin per check for the rows just booked (all rules share it), and a 1-in-N sample of checked launches that entered nothing
-        if (m.chain_px > 0 && m.sol_usd > 0) { const ids = db.prepare("SELECT id FROM vol_paper WHERE mint=? AND entry_ts=? AND q_ts IS NULL").all(w.mint, t).map((x) => x.id); if (ids.length) shadowBuy(db, w.mint, m.chain_px, m.sol_usd, ids, m).catch(() => {}); }
+        if (m.chain_px > 0 && m.sol_usd > 0) { const ids = db.prepare("SELECT id FROM vol_paper WHERE mint=? AND entry_ts=? AND q_ts IS NULL").all(w.mint, t).map((x) => x.id); if (ids.length) { chainEntry(w.mint, ids, m.chain_px, m.sol_usd, [...entered].join(",")).catch(() => {}); shadowBuy(db, w.mint, m.chain_px, m.sol_usd, ids, m).catch(() => {}); } } // 0.9.0: the simulated executable fill from the chain's reserves (chainfill.mjs) first — it is the entry price that matters
         else if (at === 60 && entered.size === 0 && BASE_BAR(m) && SHADOW_SAMPLE > 0 && (fdStat.checks % SHADOW_SAMPLE) === 0) { const su = await solPrice(); if (su > 0 && m.mcSol > 0) shadowSample(db, w, m, m.mcSol * su / 1e9, su).catch(() => {}); }
         const dead = at >= 90 && m.net < 5 && m.buyers < 20 && w.pre !== 1; // nothing happening: stop reading it (credits); pre-filtered coins always get their 120 s check (FD120)
         db.prepare("UPDATE fd_watch SET checks=?, entered=?, done=? WHERE mint=?").run(JSON.stringify(checks), [...entered].join(","), dead || entered.size === RULES.length ? 1 : 0, w.mint);
