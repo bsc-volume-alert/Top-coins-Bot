@@ -12,6 +12,10 @@
 //   Rules: FD  = pre-filter + net ≥ 27 SOL + mc ≥ 100 SOL + ≥ 3 buys of 2+ SOL;  FDL = pre-filter + net ≥ 15 + mc ≥ 60;  FDB = FD's confirmation
 //   with NO bundle condition (what the bundle filter is worth);  A1 = confirmation only, no pre-filter at all (book A of October, the control).
 //   0.8.9: FDH = FDB + on the curve + GMGN holders ≥ 0.97 × chain buyers + holders ≥ 100 (buyers still holding at 60 s);  FDHF = FDH + creator funded 19–100 SOL.
+//   0.8.11 (owner, 5 Nov 00:01 UK: "add 1 and 2, definitely"): RECORDING ONLY, no rule changed — (1) the first buyers of every checked launch (create-block and
+//   first-3-s wallets → fd_early; hourly per-wallet hit rates against the tracker's outcomes → fd_sniper_stats: the "follow the sniper" test needs dud counts);
+//   (2) the entry-time columns the failure study lacked: dev buy, dev and bundle selling in the window, top-holder share, socials / replies from pump.fun's
+//   coin page, same-name launches in the last hour / 24 h. All on fd_watch / the check rows; nothing buys differently.
 // Nothing is bought. Every launch's pre-filter result and every checkpoint is kept (fd_watch) so the cut can be re-tuned from data.
 import { readFileSync } from "node:fs";
 import { gget, N } from "./gmgn.mjs";
@@ -76,6 +80,11 @@ export function initFD(db) {
   let ver = null; try { ver = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version; } catch {}
   const hasVP = !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='vol_paper'").get(); // the smoke boot runs on an empty database (vol_paper is created later, by initVol)
   for (const r of RULES) { try { if (hasVP) db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES (?, COALESCE((SELECT MIN(entry_ts) FROM vol_paper WHERE strat=?), ?), ?)").run(r.k, r.k, now(), ver); else db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES (?,?,?)").run(r.k, now(), ver); } catch (e) { fdStat.lastErr = "fd_rules: " + e.message.slice(0, 120); } }
+  // 0.8.11: recording columns (see the header) and the first-buyer tables
+  for (const c of ["dev_buy_sol REAL", "name_1h INTEGER", "name_24h INTEGER", "socials TEXT", "image INTEGER", "replies INTEGER", "koth_ts INTEGER", "meta_ts INTEGER", "meta_err TEXT"]) try { db.exec(`ALTER TABLE fd_watch ADD COLUMN ${c}`); } catch {}
+  db.exec(`CREATE TABLE IF NOT EXISTS fd_early (mint TEXT, wallet TEXT, slot0 INTEGER, sec REAL, sol REAL, tok REAL, exited INTEGER DEFAULT 0, created_ts INTEGER, PRIMARY KEY (mint, wallet));
+    CREATE INDEX IF NOT EXISTS fde_wallet ON fd_early(wallet); CREATE INDEX IF NOT EXISTS fde_ts ON fd_early(created_ts);
+    CREATE TABLE IF NOT EXISTS fd_sniper_stats (wallet TEXT PRIMARY KEY, launches INTEGER, slot0 INTEGER, graduated INTEGER, peak50k INTEGER, peak100k INTEGER, sol_avg REAL, exit_pct REAL, first_ts INTEGER, last_ts INTEGER, updated INTEGER)`);
 }
 
 /** every 15 s: every tracker launch of the last SCAN_S seconds not yet seen → funder lookup → pre-filter. */
@@ -84,8 +93,9 @@ export async function fdScan(db, tdb) {
   if (scanning || !tdb) return; scanning = true;
   try {
     if (fdStat.creditsDay !== today()) { fdStat.creditsDay = today(); fdStat.credits = 0; }
-    const rows = tdb.prepare("SELECT mint, name, symbol, creator, create_ts, bundle_pct, bundle_sol, peak_mc_usd, graduated FROM tokens WHERE create_ts>=? AND creator IS NOT NULL AND creator<>'' ORDER BY create_ts DESC LIMIT 400").all(now() - SCAN_S);
-    const ins = db.prepare(`INSERT OR IGNORE INTO fd_watch (mint, name, symbol, creator, created_ts, bundle_pct, bundle_sol, funder, funder_sol, funded_ts, funder_launches, pre, pre_nb, why, scanned_ts) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    const rows = tdb.prepare("SELECT mint, name, symbol, creator, create_ts, bundle_pct, bundle_sol, dev_buy_sol, peak_mc_usd, graduated FROM tokens WHERE create_ts>=? AND creator IS NOT NULL AND creator<>'' ORDER BY create_ts DESC LIMIT 400").all(now() - SCAN_S);
+    const ins = db.prepare(`INSERT OR IGNORE INTO fd_watch (mint, name, symbol, creator, created_ts, bundle_pct, bundle_sol, funder, funder_sol, funded_ts, funder_launches, pre, pre_nb, why, scanned_ts, dev_buy_sol, name_1h, name_24h) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    const sameName = db.prepare("SELECT COUNT(*) c FROM fd_watch WHERE name=? COLLATE NOCASE AND mint<>? AND created_ts>=? AND created_ts<?"); // 0.8.11: the trending-name count (this launch's name in the hour / day before it)
     const insCT = db.prepare("INSERT OR IGNORE INTO creator_trace VALUES (@mint,@creator,@create_ts,@peak_mc_usd,@graduated,@bundle_pct,@bundle_sol,@funder,@funder_sol,@funded_ts,@creator_txs,@err,@checked_ts)");
     for (const t of rows) {
       if (db.prepare("SELECT 1 FROM fd_watch WHERE mint=?").get(t.mint)) continue;
@@ -115,26 +125,35 @@ export async function fdScan(db, tdb) {
       }
       const bundleOk = bp != null && bp >= B_LO && bp < B_HI; if (!bundleOk) why.push(bp == null ? "bundle unknown" : `bundle ${bp.toFixed(0)}%`);
       const pre = preNb && bundleOk ? 1 : 0; if (pre) fdStat.pre++;
-      ins.run(t.mint, String(t.name || "").slice(0, 60), String(t.symbol || "").slice(0, 20), t.creator, t.create_ts, bp, N(t.bundle_sol), r.funder || null, amt || null, r.funded_ts ?? null, fl, pre, preNb, why.join("; "), now());
+      const nm = String(t.name || "").slice(0, 60).trim(); let n1 = null, n24 = null; if (nm) try { n1 = sameName.get(nm, t.mint, t.create_ts - 3600, t.create_ts).c; n24 = sameName.get(nm, t.mint, t.create_ts - 86400, t.create_ts).c; } catch {}
+      ins.run(t.mint, nm, String(t.symbol || "").slice(0, 20), t.creator, t.create_ts, bp, N(t.bundle_sol), r.funder || null, amt || null, r.funded_ts ?? null, fl, pre, preNb, why.join("; "), now(), N(t.dev_buy_sol), n1, n24);
     }
     fdStat.lastScan = new Date().toISOString();
   } catch (e) { fdStat.errors++; fdStat.lastErr = "scan: " + e.message.slice(0, 160); }
   finally { scanning = false; }
 }
 
-export function metrics(r, upto) {
+export function metrics(r, upto, creator = null, bundle = null) {
   const xs = r.trades.filter((x) => x.t <= upto), buys = xs.filter((x) => x.isBuy), sells = xs.filter((x) => !x.isBuy);
   const bs = buys.reduce((s, x) => s + x.sol, 0) / 1e9, ss = sells.reduce((s, x) => s + x.sol, 0) / 1e9, last = xs[xs.length - 1];
   // 0.8.9: who is still holding — per wallet, tokens bought vs sold; "exited" = sold 95%+ of what it bought (sniper in-and-out). Chain-side twin of GMGN's holder count.
   const per = new Map(); for (const x of xs) { const p = per.get(x.user) || { b: 0, s: 0 }; if (x.isBuy) p.b += x.tok || 0; else p.s += x.tok || 0; per.set(x.user, p); }
   const exited = [...per.values()].filter((p) => p.b > 0 && p.s >= 0.95 * p.b).length, buyers = new Set(buys.map((x) => x.user)).size;
-  return { net: +(bs - ss).toFixed(2), buySol: +bs.toFixed(2), sellSol: +ss.toFixed(2), buyers, buys: buys.length, sells: sells.length,
+  const m = { net: +(bs - ss).toFixed(2), buySol: +bs.toFixed(2), sellSol: +ss.toFixed(2), buyers, buys: buys.length, sells: sells.length,
     big: buys.filter((x) => x.sol >= 2e9).length, mcSol: last?.mc ? +last.mc.toFixed(1) : null, exited, holding: buyers - exited, sellers: new Set(sells.map((x) => x.user)).size };
+  // 0.8.11: the columns the failure study lacked. Supply is 1e9 tokens × 1e6 raw units; the share held is net tokens bought in the window ÷ supply.
+  const held = [...per.values()].map((p) => Math.max(0, p.b - p.s)).sort((a, b) => b - a), SUPPLY = 1e15;
+  m.top1_pct = +(100 * (held[0] || 0) / SUPPLY).toFixed(2); m.top5_pct = +(100 * held.slice(0, 5).reduce((a, c) => a + c, 0) / SUPPLY).toFixed(2); m.top10_pct = +(100 * held.slice(0, 10).reduce((a, c) => a + c, 0) / SUPPLY).toFixed(2);
+  if (creator) { const d = per.get(creator); m.dev_buy = +(buys.filter((x) => x.user === creator).reduce((s, x) => s + x.sol, 0) / 1e9).toFixed(3); m.dev_sell = +(sells.filter((x) => x.user === creator).reduce((s, x) => s + x.sol, 0) / 1e9).toFixed(3); m.dev_sold_pct = d && d.b > 0 ? +(100 * Math.min(1, d.s / d.b)).toFixed(0) : null; }
+  if (bundle && bundle.length) { let b = 0, s = 0, so = 0; for (const w of bundle) { const p = per.get(w); if (p) { b += p.b; s += p.s; } } for (const x of sells) if (bundle.includes(x.user)) so += x.sol; m.bundle_sold_pct = b > 0 ? +(100 * Math.min(1, s / b)).toFixed(0) : null; m.bundle_sell_sol = +(so / 1e9).toFixed(2); m.bundle_n = bundle.length; }
+  const t0 = r.t0 ?? xs[0]?.t, s0 = xs[0]?.slot; m.early = buys.filter((x) => (s0 != null && x.slot === s0) || (t0 != null && x.t <= t0 + 3)).map((x) => ({ w: x.user, b0: s0 != null && x.slot === s0 ? 1 : 0, sec: t0 != null ? x.t - t0 : null, sol: +(x.sol / 1e9).toFixed(3), tok: x.tok || 0 }));
+  m.early_n = new Set(m.early.map((e) => e.w)).size; m.early_sol = +m.early.reduce((a, e) => a + e.sol, 0).toFixed(2);
+  return m;
 }
 
 /** every 15 s: checkpoints at 60 / 90 / 120 s for launches that passed any pre-filter (and a sample of the rest for the A1 control). */
 let checking = false;
-export async function fdCheck(db) {
+export async function fdCheck(db, tdb = null) {
   if (checking) return; checking = true;
   try {
     const t = now();
@@ -149,7 +168,11 @@ export async function fdCheck(db) {
       const at = due[due.length - 1];
       try {
         const c0 = studyStat.credits, r = await earlyTrades(w.mint, w.created_ts + at); fdStat.credits += studyStat.credits - c0; fdStat.checks++; fdStat.lastCheck = new Date().toISOString();
-        const m = { at, ...metrics(r, (r.t0 || w.created_ts) + at), txs: r.txs, venue: r.pumpCurve ? (r.complete ? "pump.fun graduated" : "pump.fun curve") : "other" };
+        let bundle = null; if (tdb) try { bundle = tdb.prepare("SELECT wallet FROM cluster_wallets WHERE mint=? AND role IN ('bundle','dev')").all(w.mint).map((x) => x.wallet); } catch {}
+        const mm = metrics(r, (r.t0 || w.created_ts) + at, w.creator, bundle), early = mm.early; delete mm.early; // the wallets go to fd_early, not into the check row
+        const m = { at, ...mm, txs: r.txs, venue: r.pumpCurve ? (r.complete ? "pump.fun graduated" : "pump.fun curve") : "other" };
+        try { recordEarly(db, w, early, r, (r.t0 || w.created_ts) + at); } catch (e) { fdStat.lastErr = ("early: " + e.message).slice(0, 160); }
+        if (!w.meta_ts && !checks.length) { db.prepare("UPDATE fd_watch SET meta_ts=? WHERE mint=?").run(now(), w.mint); fetchMeta(db, w.mint); } // 0.8.11: once per launch, not awaited
         checks.push(m); const entered = new Set(String(w.entered || "").split(",").filter(Boolean));
         const prev = checks.slice(0, -1).filter((c) => c.at != null && !c.err);
         // 0.8.9: GMGN's token info ONCE per check (it was fetched once per rule that passed), only past the loosest bar; its holder count goes into the check row and the FDH rules
@@ -170,4 +193,47 @@ export async function fdCheck(db) {
       } catch (e) { fdStat.errors++; fdStat.lastErr = `${w.mint.slice(0, 6)}: ${e.message}`.slice(0, 160); checks.push({ at, err: e.message.slice(0, 80) }); db.prepare("UPDATE fd_watch SET checks=? WHERE mint=?").run(JSON.stringify(checks), w.mint); }
     }
   } finally { checking = false; }
+}
+
+/** 0.8.11: the first buyers of a launch — the create-block wallets (b0) and anyone in the first 3 s — kept per wallet so hit rates can be counted later.
+ *  Inserted at the first check that sees them (at most 40 wallets, biggest buys first); "exited" (sold 95%+ of what it bought) is refreshed at every check. */
+export function recordEarly(db, w, early, r, upto) {
+  if (!early || !early.length) return;
+  const have = db.prepare("SELECT COUNT(*) c FROM fd_early WHERE mint=?").get(w.mint).c;
+  if (!have) { const ins = db.prepare("INSERT OR IGNORE INTO fd_early (mint, wallet, slot0, sec, sol, tok, exited, created_ts) VALUES (?,?,?,?,?,?,0,?)"); const seen = new Set();
+    for (const e of [...early].sort((a, b) => b.sol - a.sol)) { if (seen.has(e.w)) continue; seen.add(e.w); if (seen.size > 40) break; ins.run(w.mint, e.w, e.b0, e.sec, e.sol, e.tok, w.created_ts); } }
+  const per = new Map(); for (const x of r.trades) { if (x.t > upto) continue; const p = per.get(x.user) || { b: 0, s: 0 }; if (x.isBuy) p.b += x.tok || 0; else p.s += x.tok || 0; per.set(x.user, p); }
+  const upd = db.prepare("UPDATE fd_early SET exited=? WHERE mint=? AND wallet=?");
+  for (const row of db.prepare("SELECT wallet FROM fd_early WHERE mint=?").all(w.mint)) { const p = per.get(row.wallet); upd.run(p && p.b > 0 && p.s >= 0.95 * p.b ? 1 : 0, w.mint, row.wallet); }
+}
+
+/** 0.8.11: socials / image / reply count from pump.fun's own coin page (the tracker's socials.js uses the same endpoint). Not awaited; one call a launch. */
+async function fetchMeta(db, mint) {
+  try {
+    const res = await fetch(`https://frontend-api-v3.pump.fun/coins/${mint}`, { signal: AbortSignal.timeout(5000), headers: { accept: "application/json", "user-agent": "Mozilla/5.0" } });
+    if (!res.ok) throw new Error("pump " + res.status);
+    const j = await res.json(); if (!j || !j.mint) throw new Error("pump empty");
+    const soc = []; if (j.twitter) soc.push("tw"); if (j.telegram) soc.push("tg"); if (j.website) soc.push("web");
+    db.prepare("UPDATE fd_watch SET socials=?, image=?, replies=?, koth_ts=?, meta_err=NULL WHERE mint=?").run(soc.join(",") || "none", j.image_uri ? 1 : 0, N(j.reply_count) ?? null, j.king_of_the_hill_timestamp ? Math.floor(Number(j.king_of_the_hill_timestamp) / 1000) : null, mint);
+    fdStat.meta = (fdStat.meta || 0) + 1;
+  } catch (e) { try { db.prepare("UPDATE fd_watch SET meta_err=? WHERE mint=?").run(e.message.slice(0, 60), mint); } catch {} fdStat.metaErr = (fdStat.metaErr || 0) + 1; }
+}
+
+/** 0.8.11, hourly: every early-buyer wallet's record over the last 7 days against the tracker's outcome for each launch (graduated; peak ≥ $50K / $100K on the curve
+ *  and as far as the tracker followed it). The "follow the sniper" question — a wallet in many winners AND few duds — is answered from fd_sniper_stats.csv. */
+export const snStat = { runs: 0, wallets: 0, lastRun: null, lastErr: "" };
+export function fdSniperStats(db, tdb) {
+  try {
+    const since = now() - 7 * 86400;
+    const rows = db.prepare("SELECT mint, wallet, slot0, sol, exited, created_ts FROM fd_early WHERE created_ts>=?").all(since);
+    if (!rows.length) return;
+    const out = new Map(); const mints = [...new Set(rows.map((r) => r.mint))];
+    for (let i = 0; i < mints.length; i += 500) { const chunk = mints.slice(i, i + 500); let q = []; try { q = tdb ? tdb.prepare(`SELECT mint, graduated, peak_mc_usd FROM tokens WHERE mint IN (${chunk.map(() => "?").join(",")})`).all(...chunk) : []; } catch {} for (const t of q) out.set(t.mint, t); }
+    const per = new Map();
+    for (const r of rows) { const t = out.get(r.mint) || {}; const p = per.get(r.wallet) || { launches: 0, slot0: 0, graduated: 0, peak50k: 0, peak100k: 0, sol: 0, exited: 0, first: r.created_ts, last: r.created_ts };
+      p.launches++; p.slot0 += r.slot0 ? 1 : 0; p.graduated += t.graduated ? 1 : 0; p.peak50k += (t.peak_mc_usd || 0) >= 50000 ? 1 : 0; p.peak100k += (t.peak_mc_usd || 0) >= 100000 ? 1 : 0; p.sol += r.sol || 0; p.exited += r.exited ? 1 : 0; p.first = Math.min(p.first, r.created_ts); p.last = Math.max(p.last, r.created_ts); per.set(r.wallet, p); }
+    const ins = db.prepare("INSERT OR REPLACE INTO fd_sniper_stats (wallet, launches, slot0, graduated, peak50k, peak100k, sol_avg, exit_pct, first_ts, last_ts, updated) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
+    const tx = db.transaction(() => { db.prepare("DELETE FROM fd_sniper_stats").run(); for (const [w, p] of per) ins.run(w, p.launches, p.slot0, p.graduated, p.peak50k, p.peak100k, +(p.sol / p.launches).toFixed(3), +(100 * p.exited / p.launches).toFixed(0), p.first, p.last, now()); }); tx();
+    snStat.runs++; snStat.wallets = per.size; snStat.lastRun = new Date().toISOString();
+  } catch (e) { snStat.lastErr = e.message.slice(0, 160); }
 }

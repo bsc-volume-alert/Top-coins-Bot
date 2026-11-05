@@ -141,7 +141,7 @@ export async function earlyTrades(mint, tEnd) {
   for (const t of txs) {
     if (t.err) continue; if (t0 == null) t0 = t.blockTime;
     if (t.complete) complete = true; if (t.pump || t.cr) pump = true;
-    t.tr.forEach((e) => trades.push({ t: t.blockTime, user: e.user, isBuy: e.isBuy, sol: e.sol, mc: e.mc, tok: e.tok })); // 0.8.9: token amount, for the "still holding" count
+    t.tr.forEach((e) => trades.push({ t: t.blockTime, user: e.user, isBuy: e.isBuy, sol: e.sol, mc: e.mc, tok: e.tok, slot: t.slot })); // 0.8.9: token amount, for the "still holding" count; 0.8.11: slot, for the create-block buyers
   }
   return { t0, trades, txs: txs.length, pumpCurve: pump, complete };
 }
