@@ -21,12 +21,14 @@ import { readFileSync } from "node:fs";
 import { gget, N } from "./gmgn.mjs";
 import { earlyTrades, studyStat } from "./study.mjs";
 import { creatorFunder, ctStat } from "./operators.mjs";
+import { buyQuote, qStat } from "./quote.mjs";
 
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
 const FUND_SOL = n("LAUNCH_FD_FUND_SOL", 2), FUND_S = n("LAUNCH_FD_FUND_S", 7200), FUNDER_MAX = n("LAUNCH_FD_FUNDER_MAX", 2), B_LO = n("LAUNCH_FD_BUNDLE_LO", 10), B_HI = n("LAUNCH_FD_BUNDLE_HI", 60);
 const CHECKS = [60, 90, 120], DAY_CREDITS = n("LAUNCH_FD_DAY_CREDITS", 120000), SCAN_S = n("LAUNCH_FD_SCAN_S", 240);
 const GRAND_MAX = n("LAUNCH_FD_GRAND_MAX", 2), AMOUNT_DAYS = n("LAUNCH_FD_AMOUNT_DAYS", 7);
-const REC_BUNDLE = n("LAUNCH_FD_REC_BUNDLE", 0) === 1, REC_META = n("LAUNCH_FD_REC_META", 0) === 1; // 0.8.12 switches for the two 0.8.11 recorders under suspicion
+const REC_BUNDLE = n("LAUNCH_FD_REC_BUNDLE", 0) === 1, REC_META = n("LAUNCH_FD_REC_META", 0) === 1;
+const SHADOW_SOL = n("LAUNCH_SHADOW_SOL", 0.2), SHADOW_SAMPLE = n("LAUNCH_SHADOW_SAMPLE", 10); // 0.8.15: quote size; every Nth checked launch that enters nothing is quoted too // 0.8.12 switches for the two 0.8.11 recorders under suspicion
 // 0.8.2 (12:50 UK): the factories fund a NEW funder wallet for every launch (7 pre-filter passes in 2 h: 5.201089 SOL twice, 2.99010312 SOL twice —
 // identical amounts to six decimals). Two more tests on anything that passes: the funder's own funder (grand-funder) with ≤ GRAND_MAX creators behind it,
 // and no other creator funded with the same amount (to 4 decimals) in the last AMOUNT_DAYS days.
@@ -83,6 +85,8 @@ export function initFD(db) {
   for (const r of RULES) { try { if (hasVP) db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES (?, COALESCE((SELECT MIN(entry_ts) FROM vol_paper WHERE strat=?), ?), ?)").run(r.k, r.k, now(), ver); else db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES (?,?,?)").run(r.k, now(), ver); } catch (e) { fdStat.lastErr = "fd_rules: " + e.message.slice(0, 120); } }
   // 0.8.11: recording columns (see the header) and the first-buyer tables
   for (const c of ["dev_buy_sol REAL", "name_1h INTEGER", "name_24h INTEGER", "socials TEXT", "image INTEGER", "replies INTEGER", "koth_ts INTEGER", "meta_ts INTEGER", "meta_err TEXT"]) try { db.exec(`ALTER TABLE fd_watch ADD COLUMN ${c}`); } catch {}
+  for (const c of ["q_ts INTEGER", "q_px REAL", "q_gap REAL", "q_tokens REAL", "q_impact REAL", "q_ms INTEGER", "q_err TEXT", "q_exit_ts INTEGER", "q_exit_sol REAL", "q_exit_x REAL", "q_exit_gap REAL", "q_exit_delay INTEGER", "q_exit_impact REAL", "q_exit_err TEXT"]) try { db.exec(`ALTER TABLE vol_paper ADD COLUMN ${c}`); } catch {} // 0.8.15 quote shadowing
+  db.exec("CREATE TABLE IF NOT EXISTS fd_quotes (mint TEXT, ts INTEGER, at INTEGER, entered TEXT, chain_px REAL, q_px REAL, q_gap REAL, q_impact REAL, q_ms INTEGER, venue TEXT, mcSol REAL, net REAL, err TEXT)");
   db.exec(`CREATE TABLE IF NOT EXISTS fd_early (mint TEXT, wallet TEXT, slot0 INTEGER, sec REAL, sol REAL, tok REAL, exited INTEGER DEFAULT 0, created_ts INTEGER, PRIMARY KEY (mint, wallet));
     CREATE INDEX IF NOT EXISTS fde_wallet ON fd_early(wallet); CREATE INDEX IF NOT EXISTS fde_ts ON fd_early(created_ts);
     CREATE TABLE IF NOT EXISTS fd_sniper_stats (wallet TEXT PRIMARY KEY, launches INTEGER, slot0 INTEGER, graduated INTEGER, peak50k INTEGER, peak100k INTEGER, sol_avg REAL, exit_pct REAL, first_ts INTEGER, last_ts INTEGER, updated INTEGER)`);
@@ -189,6 +193,9 @@ export async function fdCheck(db, tdb = null) {
               JSON.stringify({ fd: { funder: w.funder, funder_sol: w.funder_sol, funded_min_before: w.funded_ts ? +((w.created_ts - w.funded_ts) / 60).toFixed(1) : null, funder_launches: w.funder_launches, bundle_pct: w.bundle_pct, bundle_sol: w.bundle_sol }, ...m }));
           entered.add(rule.k); fdStat.entries++;
         }
+        // 0.8.15: quote shadowing — one buy quote per coin per check for the rows just booked (all rules share it), and a 1-in-N sample of checked launches that entered nothing
+        if (m.chain_px > 0 && m.sol_usd > 0) { const ids = db.prepare("SELECT id FROM vol_paper WHERE mint=? AND entry_ts=? AND q_ts IS NULL").all(w.mint, t).map((x) => x.id); if (ids.length) shadowBuy(db, w.mint, m.chain_px, m.sol_usd, ids, m).catch(() => {}); }
+        else if (at === 60 && entered.size === 0 && BASE_BAR(m) && SHADOW_SAMPLE > 0 && (fdStat.checks % SHADOW_SAMPLE) === 0) { const su = await solPrice(); if (su > 0 && m.mcSol > 0) shadowSample(db, w, m, m.mcSol * su / 1e9, su).catch(() => {}); }
         const dead = at >= 90 && m.net < 5 && m.buyers < 20 && w.pre !== 1; // nothing happening: stop reading it (credits); pre-filtered coins always get their 120 s check (FD120)
         db.prepare("UPDATE fd_watch SET checks=?, entered=?, done=? WHERE mint=?").run(JSON.stringify(checks), [...entered].join(","), dead || entered.size === RULES.length ? 1 : 0, w.mint);
       } catch (e) { fdStat.errors++; fdStat.lastErr = `${w.mint.slice(0, 6)}: ${e.message}`.slice(0, 160); checks.push({ at, err: e.message.slice(0, 80) }); db.prepare("UPDATE fd_watch SET checks=? WHERE mint=?").run(JSON.stringify(checks), w.mint); }
@@ -237,4 +244,20 @@ export function fdSniperStats(db, tdb) {
     const tx = db.transaction(() => { db.prepare("DELETE FROM fd_sniper_stats").run(); for (const [w, p] of per) ins.run(w, p.launches, p.slot0, p.graduated, p.peak50k, p.peak100k, +(p.sol / p.launches).toFixed(3), +(100 * p.exited / p.launches).toFixed(0), p.first, p.last, now()); }); tx();
     snStat.runs++; snStat.wallets = per.size; snStat.lastRun = new Date().toISOString();
   } catch (e) { snStat.lastErr = e.message.slice(0, 160); }
+}
+
+/** 0.8.15: the real buy quote for SHADOW_SOL at the moment of a paper entry, kept on every row booked for that coin at that check. q_gap = quote price / chain price − 1 (positive = we would have paid more than the paper book). */
+async function shadowBuy(db, mint, chainPx, su, ids, m) {
+  const lamports = Math.round(SHADOW_SOL * 1e9);
+  try { const q = await buyQuote(mint, lamports); const px = q.pxSol * su, gap = px / chainPx - 1; qStat.buys++;
+    db.prepare("UPDATE vol_paper SET q_ts=?, q_px=?, q_gap=?, q_tokens=?, q_impact=?, q_ms=? WHERE id IN (" + ids.map(() => "?").join(",") + ")").run(now(), px, +gap.toFixed(4), q.tokens, q.impact, q.ms, ...ids);
+    db.prepare("INSERT INTO fd_quotes (mint, ts, at, entered, chain_px, q_px, q_gap, q_impact, q_ms, venue, mcSol, net, err) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,NULL)").run(mint, now(), m.at, "entry", chainPx, px, +gap.toFixed(4), q.impact, q.ms, m.venue, m.mcSol, m.net);
+  } catch (e) { qStat.errors++; qStat.lastErr = `buy ${mint.slice(0, 6)}: ${e.message}`.slice(0, 120); db.prepare("UPDATE vol_paper SET q_ts=?, q_err=? WHERE id IN (" + ids.map(() => "?").join(",") + ")").run(now(), e.message.slice(0, 80), ...ids); }
+}
+/** 0.8.15: the same quote on a sample of launches that passed a check but entered no book — the fill cost of what we avoid */
+async function shadowSample(db, w, m, chainPx, su) {
+  const lamports = Math.round(SHADOW_SOL * 1e9);
+  try { const q = await buyQuote(w.mint, lamports); const px = q.pxSol * su; qStat.samples++;
+    db.prepare("INSERT INTO fd_quotes (mint, ts, at, entered, chain_px, q_px, q_gap, q_impact, q_ms, venue, mcSol, net, err) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,NULL)").run(w.mint, now(), m.at, "sample", chainPx, px, +(px / chainPx - 1).toFixed(4), q.impact, q.ms, m.venue, m.mcSol, m.net);
+  } catch (e) { qStat.errors++; qStat.lastErr = `sample ${w.mint.slice(0, 6)}: ${e.message}`.slice(0, 120); db.prepare("INSERT INTO fd_quotes (mint, ts, at, entered, chain_px, venue, mcSol, net, err) VALUES (?,?,?,?,?,?,?,?,?)").run(w.mint, now(), m.at, "sample", chainPx, m.venue, m.mcSol, m.net, e.message.slice(0, 80)); }
 }

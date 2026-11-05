@@ -5,6 +5,7 @@
 // (2x or −50%, 1.5x or −30%, 40% trail from the peak), after the real-cost models in LESSONS.md (bonding curve vs PumpSwap).
 // Market cap, age, holders and the GMGN row are kept with each entry so other cuts (e.g. market cap under $1M) can be read later.
 import { gget, N } from "./gmgn.mjs";
+import { sellQuote, qStat } from "./quote.mjs"; // 0.8.15
 
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
 export const TIERS = [{ k: "V300", min: n("LAUNCH_V300", 300000) }, { k: "V500", min: n("LAUNCH_V500", 500000) }];
@@ -34,7 +35,7 @@ export async function volMark(db) {
   if (marking) return; marking = true;
   try {
     const t = now();
-    const rows = db.prepare("SELECT id, mint, entry_ts, entry_price, curve, mk_hi, mk_last FROM vol_paper WHERE done=0 AND err IS NULL AND mk_sold_ts IS NULL AND entry_ts>=? AND entry_ts<=? ORDER BY entry_ts LIMIT 80").all(t - 125 * 60, t - 60);
+    const rows = db.prepare("SELECT id, mint, entry_ts, entry_price, curve, mk_hi, mk_last, q_tokens, strat FROM vol_paper WHERE done=0 AND err IS NULL AND mk_sold_ts IS NULL AND entry_ts>=? AND entry_ts<=? ORDER BY entry_ts LIMIT 80").all(t - 125 * 60, t - 60);
     const byMint = new Map(); for (const r of rows) { if (!byMint.has(r.mint)) byMint.set(r.mint, []); byMint.get(r.mint).push(r); }
     markStat.passes++;
     for (const [mint, rs] of byMint) {
@@ -47,7 +48,8 @@ export async function volMark(db) {
           for (const c of ks) { if (c.t <= last) continue; if (c.t <= r.entry_ts) { last = c.t; continue; } // the entry minute's candle is skipped, as in volScore
             if (X(c.l) <= hi * 0.6) { sold = hi * 0.6; soldT = c.t; last = c.t; break; } hi = Math.max(hi, X(c.h)); if (c.t + 60 <= t) last = c.t; } // the current minute's candle is still forming: re-read it next pass
           const nowX = X(ks[ks.length - 1].c);
-          if (sold != null) { db.prepare("UPDATE vol_paper SET mk_ts=?, mk_x=?, mk_hi=?, mk_last=?, mk_sold_x=?, mk_sold_ts=?, mk_r=? WHERE id=?").run(t, +nowX.toFixed(4), +hi.toFixed(4), last, +sold.toFixed(4), soldT, realX(sold, r.curve === 1), r.id); markStat.sold++; }
+          if (sold != null) { db.prepare("UPDATE vol_paper SET mk_ts=?, mk_x=?, mk_hi=?, mk_last=?, mk_sold_x=?, mk_sold_ts=?, mk_r=? WHERE id=?").run(t, +nowX.toFixed(4), +hi.toFixed(4), last, +sold.toFixed(4), soldT, realX(sold, r.curve === 1), r.id); markStat.sold++;
+            if (r.q_tokens > 0) shadowSell(db, r, sold, soldT).catch(() => {}); } // 0.8.15: the real sell quote the moment the live mark says the trail sold (≤ 60 s after the candle; q_exit_delay keeps the lag)
           else db.prepare("UPDATE vol_paper SET mk_ts=?, mk_x=?, mk_hi=?, mk_last=? WHERE id=?").run(t, +nowX.toFixed(4), +hi.toFixed(4), last, r.id);
           markStat.marked++;
         }
@@ -163,4 +165,12 @@ export async function volBackfill(db, tdb) {
     }
     if (!bfList.length) bfStat.finished = true;
   } catch (e) { bfStat.errors++; bfStat.lastErr = e.message.slice(0, 140); }
+}
+
+/** 0.8.15: sell quote for the tokens the buy quote said we would hold; q_exit_x = SOL back ÷ SOL staked, q_exit_gap = q_exit_x ÷ paper exit multiple − 1 */
+const SHADOW_SOL = Number(process.env.LAUNCH_SHADOW_SOL || 0.2);
+async function shadowSell(db, r, paperX, soldT) {
+  try { const q = await sellQuote(r.mint, r.q_tokens); const x = q.lamports / 1e9 / SHADOW_SOL; qStat.sells++;
+    db.prepare("UPDATE vol_paper SET q_exit_ts=?, q_exit_sol=?, q_exit_x=?, q_exit_gap=?, q_exit_delay=?, q_exit_impact=? WHERE id=?").run(now(), +(q.lamports / 1e9).toFixed(4), +x.toFixed(4), +(x / paperX - 1).toFixed(4), now() - soldT, q.impact, r.id);
+  } catch (e) { qStat.errors++; qStat.lastErr = `sell ${r.mint.slice(0, 6)}: ${e.message}`.slice(0, 120); db.prepare("UPDATE vol_paper SET q_exit_ts=?, q_exit_err=? WHERE id=?").run(now(), e.message.slice(0, 80), r.id); }
 }
