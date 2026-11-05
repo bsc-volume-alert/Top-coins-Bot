@@ -72,10 +72,10 @@ export async function liveBuy(row) {
   if (!ins("quoting")) return;
   const t0 = Date.now();
   try {
-    const q = await jqRaw(SOL, row.mint, lamports, SLIP_BUY); qStat.buys++;
+    const q = await jqRaw(SOL, row.mint, lamports, SLIP_BUY, true); qStat.buys++;
     const s = await swapTxFor(q, ME.toBase58(), PRIO_MAX); const tQ = Date.now() - t0;
     const tx = VersionedTransaction.deserialize(Buffer.from(s.tx64, "base64")); tx.sign([wallet]);
-    const t1 = Date.now(); const sim = await simulate(tx); const tS = Date.now() - t1; if (!sim.ok) throw new Error("sim: " + String(sim.err).slice(0, 60) + " " + (sim.logs || []).filter((l) => /Error|insufficient|slippage/i.test(l)).slice(-1).join("").slice(0, 60));
+    const t1 = Date.now(); const sim = await simulate(tx); const tS = Date.now() - t1; if (!sim.ok) throw new Error("sim: " + String(sim.err).slice(0, 110) + " " + (sim.logs || []).filter((l) => /Error|insufficient|slippage/i.test(l)).slice(-1).join("").slice(0, 60));
     upd("sent", { buy_impact: Number(q.priceImpactPct) || 0 });
     const L = await land(tx, s.lastValidBlockHeight); liveStat.lastSig = L.sig;
     if (L.status !== "confirmed") throw new Error(`${L.status}${L.err ? " " + L.err.slice(0, 60) : ""} sig ${L.sig.slice(0, 12)}`);
@@ -95,7 +95,7 @@ export async function livePoll() {
     const t = now(); liveStat.open = openCount();
     const r = db.prepare("SELECT * FROM live_trades WHERE done=0 AND buy_status='confirmed' AND tokens>0 ORDER BY (last_ts IS NOT NULL), last_ts, buy_ts LIMIT 1").get();
     if (!r) return; liveStat.polls++;
-    let q; try { q = await jqRaw(r.mint, SOL, Math.floor(r.tokens), SLIP_SELL); }
+    let q; try { q = await jqRaw(r.mint, SOL, Math.floor(r.tokens), SLIP_SELL, true); }
     catch (e) { qStat.errors++; liveStat.lastErr = `poll ${r.mint.slice(0, 6)}: ${e.message}`.slice(0, 120);
       if (!/paused|429/.test(e.message)) { db.prepare("UPDATE live_trades SET last_ts=?, n_quotes=n_quotes+1, sell_err=? WHERE id=?").run(t, e.message.slice(0, 80), r.id);
         if (t - r.buy_ts > GIVE_UP) { db.prepare("UPDATE live_trades SET done=1, sell_status='written_off', sell_reason='no route 3 h', sol_out=0, x=0, r=-1, sell_ts=? WHERE id=?").run(t, r.id); liveStat.writtenOff++; } }

@@ -11,10 +11,12 @@ export const qStat = { buys: 0, sells: 0, samples: 0, polls: 0, pollExits: 0, pa
 export const SOL = "So11111111111111111111111111111111111111112", HOST = process.env.LAUNCH_JUP_HOST || "https://lite-api.jup.ag";
 function limited(r) { if (r.status === 429) { const rs = Number(r.headers.get("x-ratelimit-reset")) || 0; qStat.pauseUntil = rs > 1e9 ? rs * 1000 : Date.now() + 15000; throw new Error("jup 429 rate limit"); } }
 /** Jupiter's quote as it comes (outAmount, priceImpactPct, routePlan…). slippageBps = what the swap built from it will tolerate. */
-export async function jqRaw(inputMint, outputMint, amount, slippageBps = 1000) {
+export async function jqRaw(inputMint, outputMint, amount, slippageBps = 1000, direct = false) {
   if (Date.now() < qStat.pauseUntil) { qStat.paused++; throw new Error("jup paused (429)"); }
   const t0 = Date.now();
-  const u = `${HOST}/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}&onlyDirectRoutes=false`;
+  // 0.8.20: direct = one hop only (SOL ↔ coin on pump.fun or PumpSwap) with the account count capped — the first live buy (StockPad, 08:15 UK) got a
+  // two-hop transaction of 1668 bytes, over Solana's 1232, and failed in simulation. The live trades never want a multi-hop route anyway.
+  const u = `${HOST}/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}&onlyDirectRoutes=${direct ? "true" : "false"}${direct ? "&maxAccounts=28&restrictIntermediateTokens=true" : ""}`;
   const r = await fetch(u, { signal: AbortSignal.timeout(6000), headers: { accept: "application/json" } });
   limited(r);
   const text = await r.text(); let j; try { j = JSON.parse(text); } catch { throw new Error(`jup HTTP ${r.status}`); }
