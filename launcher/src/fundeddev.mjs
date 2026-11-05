@@ -56,7 +56,7 @@ export const RULES = [
   //   FDH  = FDB's test (funding, no bundle test, strong minute-1 buying) + still on the curve + holders ≥ 0.97 × buyers + holders ≥ 100;
   //   FDHF = FDH + creator funded 19–100 SOL (the band where the runners sat; 23 back-tested trades only — a forward test).
   // m.holders is GMGN's holder_count fetched once per check (below); m.holding is the chain-side count (buyers whose sells < 95% of their buys), kept beside it.
-  { k: "FDH", ok: (w, m) => w.pre_nb === 1 && confirm(m) && m.venue === "pump.fun curve" && m.holders >= 100 && m.holders >= 0.97 * m.buyers },
+  { k: "FDH", ok: (w, m) => w.pre_nb === 1 && confirm(m) && m.holders != null && m.buyers > 0 && m.holders >= 0.5 * m.buyers }, // 0.8.22 REVISED (owner go 5 Nov 09:11 UK): FDB minus the coins whose GMGN holder count is under half the chain buyers — the one part of the holder finding that held in all three analyses (0 wins under 0.5; removes 24 losers, no winners). The 0.8.9 three-part test (curve + ≥0.97 + 100 holders) scored 2 of 5 once the curve flag was fixed.
   { k: "FDHF", ok: (w, m) => w.pre_nb === 1 && confirm(m) && m.venue === "pump.fun curve" && m.holders >= 100 && m.holders >= 0.97 * m.buyers && (w.funder_sol ?? 0) >= 19 && (w.funder_sol ?? 0) <= 100 },
 ];
 const BASE_BAR = (m) => m.net >= 15 && (m.mcSol ?? 0) >= 60; // the loosest bar any rule accepts (FDL's): GMGN's token info is fetched once per check only past it
@@ -85,7 +85,12 @@ export function initFD(db) {
   let ver = null; try { ver = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version; } catch {}
   const hasVP = !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='vol_paper'").get(); // the smoke boot runs on an empty database (vol_paper is created later, by initVol)
   for (const r of RULES) { try { if (hasVP) db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES (?, COALESCE((SELECT MIN(entry_ts) FROM vol_paper WHERE strat=?), ?), ?)").run(r.k, r.k, now(), ver); else db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES (?,?,?)").run(r.k, now(), ver); } catch (e) { fdStat.lastErr = "fd_rules: " + e.message.slice(0, 120); } }
-  try { db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('VENUE', ?, ?)").run(now(), ver); } catch {} // 0.8.16: when the venue exit (25% trail graduated / 40% curve) was loaded — the page judges it on the trades after this
+  try { db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('VENUE', ?, ?)").run(now(), ver); } catch {}
+  // 0.8.22: the curve flag from our own check, and the venue exit re-scored where it was wrong (curve coins had been scored with the 25% trail)
+  try { const fixed = db.prepare("UPDATE vol_paper SET curve=1 WHERE curve=0 AND json_valid(row) AND json_extract(row,'$.venue')='pump.fun curve'").run().changes;
+    const resc = db.prepare("UPDATE vol_paper SET x_venue=x_trail40, r_venue=r_trail40, m_venue=m_trail40 WHERE curve=1 AND done=1 AND err IS NULL AND x_trail40 IS NOT NULL AND (x_venue IS NULL OR x_venue<>x_trail40)").run().changes;
+    if (fixed || resc) fdStat.lastErr = `0.8.22 curve flag fixed on ${fixed} rows, venue re-scored on ${resc}`;
+    db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('FDH_REV', ?, ?)").run(now(), ver); } catch (e) { fdStat.lastErr = "0.8.22 fix: " + e.message.slice(0, 120); } // 0.8.16: when the venue exit (25% trail graduated / 40% curve) was loaded — the page judges it on the trades after this
   // 0.8.11: recording columns (see the header) and the first-buyer tables
   for (const c of ["dev_buy_sol REAL", "name_1h INTEGER", "name_24h INTEGER", "socials TEXT", "image INTEGER", "replies INTEGER", "koth_ts INTEGER", "meta_ts INTEGER", "meta_err TEXT"]) try { db.exec(`ALTER TABLE fd_watch ADD COLUMN ${c}`); } catch {}
   for (const c of ["q_ts INTEGER", "q_px REAL", "q_gap REAL", "q_tokens REAL", "q_impact REAL", "q_ms INTEGER", "q_err TEXT", "q_exit_ts INTEGER", "q_exit_sol REAL", "q_exit_x REAL", "q_exit_gap REAL", "q_exit_delay INTEGER", "q_exit_impact REAL", "q_exit_err TEXT"]) try { db.exec(`ALTER TABLE vol_paper ADD COLUMN ${c}`); } catch {} // 0.8.15 quote shadowing
@@ -190,7 +195,7 @@ export async function fdCheck(db, tdb = null) {
           const graduated = /graduated|other/.test(m.venue || ""), px = !graduated && m.mcSol > 0 && su > 0 ? m.mcSol * su / supply : gpx; // 0.8.3: chain price on the curve; 0.8.6: GMGN's after graduation (the pool market cap from the trade decoder came out 100× on 4 Nov — "$13,737K" entries)
           if (!(px > 0)) { m["skip_" + rule.k] = "no price"; continue; }
           m.gmgn_px = gpx, m.chain_px = px, m.sol_usd = su;
-          const curve = r.pumpCurve && !r.complete && N(info?.launchpad_progress) != null && N(info.launchpad_progress) < 1 ? 1 : 0;
+          const curve = m.venue === "pump.fun curve" ? 1 : m.venue ? 0 : (r.pumpCurve && !r.complete && N(info?.launchpad_progress) != null && N(info.launchpad_progress) < 1 ? 1 : 0); // 0.8.22: our own check decides (Codex, 5 Nov 09:08 UK: GMGN's progress field was missing on 29 coins → flagged graduated → the 25% trail scored them; all five FDH trades among them)
           db.prepare(`INSERT OR IGNORE INTO vol_paper (strat, mint, name, symbol, entry_ts, entry_price, entry_mc, vol5, created_ts, age_min, holders, exchange, launchpad, curve, row) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
             .run(rule.k, w.mint, w.name, w.symbol, t, px, px * supply, null, w.created_ts, +(age / 60).toFixed(1), N(info?.holder_count), m.venue, info?.launchpad ?? null, curve,
               JSON.stringify({ fd: { funder: w.funder, funder_sol: w.funder_sol, funded_min_before: w.funded_ts ? +((w.created_ts - w.funded_ts) / 60).toFixed(1) : null, funder_launches: w.funder_launches, bundle_pct: w.bundle_pct, bundle_sol: w.bundle_sol }, ...m }));
