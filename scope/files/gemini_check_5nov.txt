@@ -1,0 +1,48 @@
+all 84                                               n=84 win=10 rugs=54 reported=-0.5420 no-best=-0.6499 true@0.02=-0.6554
+84: holders<200 & mc<15k                             n=29 win=6 rugs=17 reported=+0.0651 no-best=-0.0428 true@0.02=+0.0259
+84: + holders < gmgn buys                            n=26 win=6 rugs=14 reported=+0.1101 no-best=+0.0022 true@0.02=+0.0750
+  removed by holders<g_buys: [('STEPSISTER', 182, 127, -0.67), ('Chrome-Chan', 198, 155, -0.85), ('Waste Manageme', 143, 80, -0.73)]
+FLAW 1 — per base book:
+  FD first entries                                   n=42 win=7 rugs=31 reported=-0.2080 no-best=-0.2894 true@0.02=-0.2647
+  FD + holders<200 & mc<15k                          n=14 win=3 rugs=10 reported=+0.0048 no-best=-0.0673 true@0.02=-0.0141
+  FD + ... + holders<g_buys                          n= 9 win=3 rugs=6 reported=+0.0789 no-best=+0.0067 true@0.02=+0.0667
+  FDL first entries                                  n=50 win=8 rugs=35 reported=-0.2436 no-best=-0.3515 true@0.02=-0.3111
+  FDL + holders<200 & mc<15k                         n=20 win=5 rugs=13 reported=+0.0814 no-best=-0.0265 true@0.02=+0.0544
+  FDL + ... + holders<g_buys                         n=17 win=5 rugs=10 reported=+0.1265 no-best=+0.0186 true@0.02=+0.1035
+  FDB first entries                                  n=62 win=9 rugs=47 reported=-0.4059 no-best=-0.4872 true@0.02=-0.4896
+  FDB + holders<200 & mc<15k                         n=18 win=4 rugs=13 reported=+0.0270 no-best=-0.0451 true@0.02=+0.0027
+  FDB + ... + holders<g_buys                         n=13 win=4 rugs=9 reported=+0.1011 no-best=+0.0290 true@0.02=+0.0836
+  FDH first entries                                  n=62 win=9 rugs=47 reported=-0.4059 no-best=-0.4872 true@0.02=-0.4896
+  FDH + holders<200 & mc<15k                         n=18 win=4 rugs=13 reported=+0.0270 no-best=-0.0451 true@0.02=+0.0027
+  FDH + ... + holders<g_buys                         n=13 win=4 rugs=9 reported=+0.1011 no-best=+0.0290 true@0.02=+0.0836
+  A1 first entries                                   n=76 win=9 rugs=50 reported=-0.5065 no-best=-0.5878 true@0.02=-0.6091
+  A1 + holders<200 & mc<15k                          n=23 win=4 rugs=14 reported=-0.0115 no-best=-0.0837 true@0.02=-0.0426
+  A1 + ... + holders<g_buys                          n=18 win=4 rugs=10 reported=+0.0625 no-best=-0.0096 true@0.02=+0.0382
+FLAW 3 — holders at the FD120 entry:
+  finance inu          holders   489 mc $34.2k exit 0.06
+  memory coin          holders   275 mc $10.9k exit 3.07
+  Pillheads            holders   186 mc $13.2k exit 0.23
+  Elon Musk            holders   567 mc $29.3k exit 0.60
+  Deadpool Pony        holders   267 mc $14.2k exit 4.41
+  Socialcoin           holders   427 mc $22.1k exit 0.12
+  The Ansem Collective holders   307 mc $14.3k exit 0.18
+  This coin is from 20 holders   325 mc $18.0k exit 2.78
+  Chrome-Chan          holders   250 mc $23.1k exit 0.10
+  MarsCoin             holders   244 mc $15.3k exit 0.25
+  titcoin              holders   178 mc $12.6k exit 4.24
+  fomo.gay             holders   486 mc $25.9k exit 0.08
+  MICHI                holders   423 mc $24.4k exit 0.10
+  Spill The Tea        holders     7 mc $11.3k exit 0.96
+  the lame duck        holders   511 mc $32.3k exit 0.08
+  MexicanAIPikachuCond holders   430 mc $19.1k exit 0.94
+  Magical Unicorn      holders   293 mc $15.8k exit 0.17
+  Squeeze              holders   403 mc $26.5k exit 0.09
+  Elon Mosque          holders   349 mc $26.4k exit 1.08
+  Elon                 holders   221 mc $11.0k exit 0.21
+  CATFISH              holders   501 mc $15.3k exit 0.27
+  United States of Par holders   210 mc $22.0k exit 0.11
+  regular inu          holders   503 mc $24.7k exit 1.46
+  Gay And Poor         holders   220 mc $11.8k exit 0.22
+  Lock Inu             holders   446 mc $19.3k exit 0.13
+  TOYODA               holders   545 mc $30.1k exit 1.04
+  relax                holders   502 mc $22.8k exit 0.09
