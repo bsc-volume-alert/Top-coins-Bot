@@ -21,6 +21,8 @@ const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.i
 const STAKE = n("LAUNCH_SHADOW_SOL", 0.2), LAMPORTS = BigInt(Math.round(STAKE * 1e9)), STAKE02 = n("LAUNCH_SIM_SMALL_SOL", 0.02), LAMPORTS02 = BigInt(Math.round(STAKE02 * 1e9)), HORIZON = 120 * 60, NET_FEE = n("LAUNCH_SIM_NET_FEE", 0.0015); // network + priority fee, both legs, in SOL
 const now = () => Math.floor(Date.now() / 1000);
 const BUY_LAND_MS = n("LAUNCH_SIM_BUY_LAND_MS", 1000), SELL_LAND_MS = n("LAUNCH_SIM_SELL_LAND_MS", 700); // 0.9.2: a transaction executes against the chain state this long after we decide (measured on the first live FD trades: buys landed 0.6–1.0 s after the check, sells 0.5 s after the trail)
+// 0.9.12: prepared statements are cached (the tick loop prepared each statement afresh on every price update — a million a day — and the native memory behind them is only freed by the garbage collector; rss climbed ~55 MB/h)
+const STMT = new Map(); const q = (sql) => { let st = STMT.get(sql); if (!st) { st = db.prepare(sql); STMT.set(sql, st); } return st; };
 export const cfStat = { entries: 0, skipped: 0, entryErrs: 0, updates: 0, exits: 0, subs: 0, resubs: 0, drops: 0, backstops: 0, errors: 0, lastErr: "" };
 
 // ---- PumpSwap (pump.fun's AMM) — pool lookup, decoding and the constant-product quotes, ported from executor/src/amm.mjs ----
@@ -50,13 +52,13 @@ let db = null, G = null, gAt = 0, CFG = null, cfgAt = 0;
 async function global() { if (G && Date.now() - gAt < 600000) return G; const [a] = await getAccounts([GLOBAL], "confirmed"); const g = decodeGlobal(a?.data); if (g) { G = g; gAt = Date.now(); } return G; }
 async function ammCfg() { if (CFG && Date.now() - cfgAt < 600000) return CFG; const [a] = await getAccounts([GLOBAL_CONFIG], "confirmed"); const c = decodeCfg(a?.data); if (c) { CFG = c; cfgAt = Date.now(); } return CFG; }
 
-export function initChainFill(d) {
+export function initChainFill(d) { STMT.clear();
   db = d;
   db.exec(`CREATE TABLE IF NOT EXISTS chain_fill (vol_id INTEGER PRIMARY KEY, mint TEXT, strat TEXT, entry_ts INTEGER, venue TEXT, curve INTEGER, s_sol_in REAL, s_tokens TEXT, s_px REAL, s_in_gap REAL, s_x0 REAL,
     s_hi REAL, s_last_x REAL, s_last_ts INTEGER, s_n INTEGER DEFAULT 0, s_exit_x REAL, s_exit_ts INTEGER, s_exit_reason TEXT, s_r REAL, s_drops INTEGER DEFAULT 0, s_backstops INTEGER DEFAULT 0, s_err TEXT, done INTEGER DEFAULT 0)`);
   db.exec("CREATE INDEX IF NOT EXISTS chain_fill_open ON chain_fill (done)");
   for (const c of ["s_exit_src TEXT", "s_max_gap_s INTEGER", "s_trig_ts REAL", "s_trig_x REAL", "s_fill_ms INTEGER", "s_entry_state INTEGER", "s_r02 REAL", "s_half_x REAL", "s_r_half REAL", "s_delay_ms INTEGER", "s_tokens02 TEXT", "s_x02 REAL", "s_hi02 REAL", "s_exit_x02 REAL", "s_x60 REAL", "s_x60_02 REAL", "s_gap_dec REAL", "s_t2x INTEGER", "s_t3x INTEGER", "s_t5x INTEGER"]) try { db.exec(`ALTER TABLE chain_fill ADD COLUMN ${c}`); } catch {} // 0.9.1: which source produced the exit (push / backstop) and the longest silence between price updates before it
-  try { db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('SIM', ?, ?)").run(now(), "0.9.0"); } catch {} // when the simulated fills started — the page counts every book from here on this measure
+  try { q("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('SIM', ?, ?)").run(now(), "0.9.0"); } catch {} // when the simulated fills started — the page counts every book from here on this measure
 }
 
 /** Read what a position is worth now from the chain: curve → quoteSell; pool → constant product on the two reserve token accounts. Returns { lamports, venue, complete, pool? } or null. */
@@ -110,7 +112,7 @@ export async function chainEntry(mint, ids, chainPx, su, strat, opts = {}) {
     // 0.9.8 (review, 5 Nov 21:00 UK): the guard is decided on the state a live bot would read BEFORE submitting — this one — and the fill lands BUY_LAND_MS later on whatever state is there then
     const pxDec = STAKE / (Number(tokens) / 1e6) * (su || 0), gapDec = chainPx > 0 && pxDec > 0 ? pxDec / chainPx - 1 : null;
     if (guard > 0 && gapDec != null && gapDec <= -guard) {
-      const skip = db.prepare("INSERT OR IGNORE INTO chain_fill (vol_id, mint, strat, entry_ts, venue, curve, s_sol_in, s_px, s_in_gap, s_gap_dec, s_exit_reason, s_r, s_r02, s_delay_ms, done) VALUES (?,?,?,?,?,?,0,?,?,?,'skipped-dump',0,0,?,1)");
+      const skip = q("INSERT OR IGNORE INTO chain_fill (vol_id, mint, strat, entry_ts, venue, curve, s_sol_in, s_px, s_in_gap, s_gap_dec, s_exit_reason, s_r, s_r02, s_delay_ms, done) VALUES (?,?,?,?,?,?,0,?,?,?,'skipped-dump',0,0,?,1)");
       for (const id of ids) skip.run(id, mint, strat, t, venue, curve, pxDec || null, +gapDec.toFixed(4), +gapDec.toFixed(4), delayMs); cfStat.skipped = (cfStat.skipped || 0) + ids.length; return; }
     // 0.9.2: the buy lands BUY_LAND_MS after the check — wait that long, re-read the reserves, and fill on that state (the check-time state is kept as the fallback if the re-read fails)
     await new Promise((r) => setTimeout(r, BUY_LAND_MS)); let entryState = 0;
@@ -118,46 +120,46 @@ export async function chainEntry(mint, ids, chainPx, su, strat, opts = {}) {
     const x0 = st.sellOf ? Number(st.sellOf(tokens)) / Number(LAMPORTS) : null; // the round trip on the SAME reserve state: what the buy costs in fees + impact
     const px = STAKE / (Number(tokens) / 1e6) * (su || 0), gap = chainPx > 0 && px > 0 ? px / chainPx - 1 : null; // USD per token, like the paper entry_price
     const x02 = st.sellOf && tokens02 > 0n ? Number(st.sellOf(tokens02)) / Number(LAMPORTS02) : null; // 0.9.8: the real 0.02 SOL position's round trip on the same state
-    const ins = db.prepare("INSERT OR IGNORE INTO chain_fill (vol_id, mint, strat, entry_ts, venue, curve, s_sol_in, s_tokens, s_px, s_in_gap, s_gap_dec, s_x0, s_hi, s_last_x, s_last_ts, s_n, s_entry_state, s_delay_ms, s_tokens02, s_x02, s_hi02) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,1)");
+    const ins = q("INSERT OR IGNORE INTO chain_fill (vol_id, mint, strat, entry_ts, venue, curve, s_sol_in, s_tokens, s_px, s_in_gap, s_gap_dec, s_x0, s_hi, s_last_x, s_last_ts, s_n, s_entry_state, s_delay_ms, s_tokens02, s_x02, s_hi02) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,1)");
     for (const id of ids) ins.run(id, mint, strat, t, venue, curve, STAKE, tokens.toString(), px || null, gap != null ? +gap.toFixed(4) : null, gapDec != null ? +gapDec.toFixed(4) : null, x0 != null ? +x0.toFixed(4) : null, 1, x0 != null ? +x0.toFixed(4) : null, now(), entryState, delayMs, tokens02 > 0n ? tokens02.toString() : null, x02 != null ? +x02.toFixed(4) : null);
     cfStat.entries += ids.length;
     watch(mint, st);
   } catch (e) { cfStat.entryErrs++; cfStat.lastErr = `entry ${mint.slice(0, 6)}: ${e.message}`.slice(0, 140);
-    const ins = db.prepare("INSERT OR IGNORE INTO chain_fill (vol_id, mint, strat, entry_ts, venue, s_err, done) VALUES (?,?,?,?,?,?,1)"); for (const id of ids) ins.run(id, mint, strat, t, "none", e.message.slice(0, 100)); }
+    const ins = q("INSERT OR IGNORE INTO chain_fill (vol_id, mint, strat, entry_ts, venue, s_err, done) VALUES (?,?,?,?,?,?,1)"); for (const id of ids) ins.run(id, mint, strat, t, "none", e.message.slice(0, 100)); }
 }
 
 // ---- open positions: one watcher per mint (all books' rows of that coin share it) ----
 const W = new Map(); // mint → { st, subs: [ids], lastPush }
 const pending = new Set(); // 0.9.2: mints with a triggered sell waiting for the landing state
 setInterval(() => { for (const mint of [...pending]) { pending.delete(mint); setTimeout(() => { const w = W.get(mint); if (!w) return; readValue(mint, 1n, w.st).then((v) => { if (!v || v.lamports == null) return; const st = w.st; if (v.venue === "curve") getAccounts([curveOf(pk(mint))], "processed").then(([a]) => { const c = decodeCurve(a?.data); if (c && G) apply(mint, (tok) => quoteSell(c, G, tok), "land"); }).catch(() => {}); else if (st.pool && CFG) apply(mint, (tok) => poolSell(st.pool, CFG, st.baseRes, st.quoteRes, tok), "land"); }).catch(() => {}); }, SELL_LAND_MS + 50); } }, 200);
-function rows(mint) { return db.prepare("SELECT vol_id, strat, curve, s_tokens, s_hi, entry_ts, s_last_ts, s_max_gap_s, s_trig_ts, s_trig_x, s_half_x, s_tokens02, s_hi02, s_x60, s_t2x, s_t3x, s_t5x FROM chain_fill WHERE mint=? AND done=0 AND s_tokens IS NOT NULL").all(mint); }
+function rows(mint) { return q("SELECT vol_id, strat, curve, s_tokens, s_hi, entry_ts, s_last_ts, s_max_gap_s, s_trig_ts, s_trig_x, s_half_x, s_tokens02, s_hi02, s_x60, s_t2x, s_t3x, s_t5x FROM chain_fill WHERE mint=? AND done=0 AND s_tokens IS NOT NULL").all(mint); }
 function apply(mint, lamportsOf, src) {
   const t = now(); let open = 0;
   for (const r of rows(mint)) {
     const lam = lamportsOf(BigInt(r.s_tokens)); if (lam == null) { open++; continue; }
     const x = Number(lam) / Number(LAMPORTS), hi = Math.max(r.s_hi || 1, x), keep = 1 - trailPct(r.curve);
     const lam02 = r.s_tokens02 ? lamportsOf(BigInt(r.s_tokens02)) : null, x02 = lam02 != null ? Number(lam02) / Number(LAMPORTS02) : null, hi02 = x02 != null ? Math.max(r.s_hi02 || 1, x02) : null; // 0.9.8: the real 0.02 position, valued on the same state
-    if (r.s_x60 == null && t - r.entry_ts >= 60) db.prepare("UPDATE chain_fill SET s_x60=?, s_x60_02=? WHERE vol_id=? AND s_x60 IS NULL").run(+x.toFixed(4), x02 != null ? +x02.toFixed(4) : null, r.vol_id); // 0.9.8: executable value of the still-open position 60 s after entry (the time-stop column)
-    if (x02 != null) db.prepare("UPDATE chain_fill SET s_x02=?, s_hi02=? WHERE vol_id=?").run(+x02.toFixed(4), +hi02.toFixed(4), r.vol_id);
+    if (r.s_x60 == null && t - r.entry_ts >= 60) q("UPDATE chain_fill SET s_x60=?, s_x60_02=? WHERE vol_id=? AND s_x60 IS NULL").run(+x.toFixed(4), x02 != null ? +x02.toFixed(4) : null, r.vol_id); // 0.9.8: executable value of the still-open position 60 s after entry (the time-stop column)
+    if (x02 != null) q("UPDATE chain_fill SET s_x02=?, s_hi02=? WHERE vol_id=?").run(+x02.toFixed(4), +hi02.toFixed(4), r.vol_id);
     const gap = Math.max(r.s_max_gap_s || 0, r.s_last_ts ? t - r.s_last_ts : 0); // the longest silence between price updates so far
     const tms = Date.now();
     if (r.s_trig_ts != null) { // 0.9.2: the sell was decided at s_trig_ts; it executes on the first state SELL_LAND_MS or more after that
       if (tms - r.s_trig_ts * 1000 >= SELL_LAND_MS) { const reason = t - r.entry_ts >= HORIZON && !(r.s_trig_x <= (r.s_hi || 1) * keep) ? "2h" : "trail";
         const rHalf = r.s_half_x != null ? 0.5 * r.s_half_x + 0.5 * x - 1 - NET_FEE / STAKE : x - 1 - NET_FEE / STAKE; // 0.9.6: half sold at the first 2x print, the rest on this exit
         const r02 = x02 != null ? x02 - 1 - NET_FEE / STAKE02 : x - 1 - NET_FEE / STAKE02; // 0.9.8: true 0.02 result from the real 0.02 position (falls back to the rescaled figure if the small quote was unavailable)
-        db.prepare("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_exit_x=?, s_exit_ts=?, s_exit_reason=?, s_r=?, s_r02=?, s_exit_x02=?, s_r_half=?, s_exit_src=?, s_max_gap_s=?, s_fill_ms=?, done=1 WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), +x.toFixed(4), t, reason, +(x - 1 - NET_FEE / STAKE).toFixed(4), +r02.toFixed(4), x02 != null ? +x02.toFixed(4) : null, +rHalf.toFixed(4), src, gap, Math.round(tms - r.s_trig_ts * 1000), r.vol_id); cfStat.exits++; }
-      else { db.prepare("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_max_gap_s=? WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), gap, r.vol_id); open++; }
+        q("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_exit_x=?, s_exit_ts=?, s_exit_reason=?, s_r=?, s_r02=?, s_exit_x02=?, s_r_half=?, s_exit_src=?, s_max_gap_s=?, s_fill_ms=?, done=1 WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), +x.toFixed(4), t, reason, +(x - 1 - NET_FEE / STAKE).toFixed(4), +r02.toFixed(4), x02 != null ? +x02.toFixed(4) : null, +rHalf.toFixed(4), src, gap, Math.round(tms - r.s_trig_ts * 1000), r.vol_id); cfStat.exits++; }
+      else { q("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_max_gap_s=? WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), gap, r.vol_id); open++; }
       cfStat.updates++; continue; }
     const trigger = x <= (r.s_hi || 1) * keep || t - r.entry_ts >= HORIZON;
-    if (trigger) { db.prepare("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_max_gap_s=?, s_trig_ts=?, s_trig_x=? WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), gap, tms / 1000, +x.toFixed(4), r.vol_id); open++; pending.add(mint); }
-    else { db.prepare("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_max_gap_s=? WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), gap, r.vol_id); open++; }
-    if (r.s_half_x == null && x >= 2) db.prepare("UPDATE chain_fill SET s_half_x=? WHERE vol_id=? AND s_half_x IS NULL").run(+x.toFixed(4), r.vol_id); // 0.9.6: the half-at-2x column — the first print at or above 2x is where half would have gone
-    if (r.s_t2x == null && x >= 2) db.prepare("UPDATE chain_fill SET s_t2x=? WHERE vol_id=? AND s_t2x IS NULL").run(t, r.vol_id); // 0.9.9: executable milestones, kept apart from the final result
-    if (r.s_t3x == null && x >= 3) db.prepare("UPDATE chain_fill SET s_t3x=? WHERE vol_id=? AND s_t3x IS NULL").run(t, r.vol_id);
-    if (r.s_t5x == null && x >= 5) db.prepare("UPDATE chain_fill SET s_t5x=? WHERE vol_id=? AND s_t5x IS NULL").run(t, r.vol_id);
+    if (trigger) { q("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_max_gap_s=?, s_trig_ts=?, s_trig_x=? WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), gap, tms / 1000, +x.toFixed(4), r.vol_id); open++; pending.add(mint); }
+    else { q("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_max_gap_s=? WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), gap, r.vol_id); open++; }
+    if (r.s_half_x == null && x >= 2) q("UPDATE chain_fill SET s_half_x=? WHERE vol_id=? AND s_half_x IS NULL").run(+x.toFixed(4), r.vol_id); // 0.9.6: the half-at-2x column — the first print at or above 2x is where half would have gone
+    if (r.s_t2x == null && x >= 2) q("UPDATE chain_fill SET s_t2x=? WHERE vol_id=? AND s_t2x IS NULL").run(t, r.vol_id); // 0.9.9: executable milestones, kept apart from the final result
+    if (r.s_t3x == null && x >= 3) q("UPDATE chain_fill SET s_t3x=? WHERE vol_id=? AND s_t3x IS NULL").run(t, r.vol_id);
+    if (r.s_t5x == null && x >= 5) q("UPDATE chain_fill SET s_t5x=? WHERE vol_id=? AND s_t5x IS NULL").run(t, r.vol_id);
     cfStat.updates++;
   }
-  if (src === "backstop") db.prepare("UPDATE chain_fill SET s_backstops=s_backstops+1 WHERE mint=? AND done=0").run(mint);
+  if (src === "backstop") q("UPDATE chain_fill SET s_backstops=s_backstops+1 WHERE mint=? AND done=0").run(mint);
   if (!open) unwatch(mint);
 }
 async function watch(mint, st) {
@@ -182,7 +184,7 @@ async function subPool(mint, w) {
 async function resub(mint) {
   const w = W.get(mint); if (!w) return; cfStat.resubs++;
   for (const id of w.subs.splice(0)) await offAccount(id);
-  for (let i = 0; i < 20 && W.has(mint); i++) { try { const v = await readValue(mint, 1n, w.st); if (w.st.pool) { await subPool(mint, w); db.prepare("UPDATE chain_fill SET venue='pool' WHERE mint=? AND done=0").run(mint); return; } } catch {} await new Promise((r) => setTimeout(r, 3000)); }
+  for (let i = 0; i < 20 && W.has(mint); i++) { try { const v = await readValue(mint, 1n, w.st); if (w.st.pool) { await subPool(mint, w); q("UPDATE chain_fill SET venue='pool' WHERE mint=? AND done=0").run(mint); return; } } catch {} await new Promise((r) => setTimeout(r, 3000)); }
 }
 async function unwatch(mint) { const w = W.get(mint); if (!w) return; W.delete(mint); for (const id of w.subs) await offAccount(id); }
 
@@ -191,15 +193,15 @@ let busy = false;
 export async function chainBackstop() {
   if (!db || busy) return; busy = true;
   try {
-    const open = db.prepare("SELECT DISTINCT mint FROM chain_fill WHERE done=0 AND s_tokens IS NOT NULL").all().map((r) => r.mint);
+    const open = q("SELECT DISTINCT mint FROM chain_fill WHERE done=0 AND s_tokens IS NOT NULL").all().map((r) => r.mint);
     for (const mint of open) {
       let w = W.get(mint);
-      if (!w) { w = { st: { pool: null }, subs: [], lastPush: 0 }; await watch(mint, w.st); w = W.get(mint) || w; cfStat.drops++; db.prepare("UPDATE chain_fill SET s_drops=s_drops+1 WHERE mint=? AND done=0").run(mint); } // no watcher (restart or lost): re-armed
+      if (!w) { w = { st: { pool: null }, subs: [], lastPush: 0 }; await watch(mint, w.st); w = W.get(mint) || w; cfStat.drops++; q("UPDATE chain_fill SET s_drops=s_drops+1 WHERE mint=? AND done=0").run(mint); } // no watcher (restart or lost): re-armed
       try { const v = await readValue(mint, 1n, w.st); cfStat.backstops++;
         if (v && v.lamports != null) { const st = w.st; if (v.venue === "curve") { const [a] = await getAccounts([curveOf(pk(mint))], "processed"); const c = decodeCurve(a?.data); if (c && G) apply(mint, (tok) => quoteSell(c, G, tok), "backstop"); }
           else if (st.pool && CFG && st.baseRes != null && st.quoteRes != null) { if (!w.subs.length) await subPool(mint, w); apply(mint, (tok) => poolSell(st.pool, CFG, st.baseRes, st.quoteRes, tok), "backstop"); } }
-        else if (v && v.venue === "migrating") { const t = now(); for (const r of rows(mint)) if (t - r.entry_ts >= HORIZON + 600) db.prepare("UPDATE chain_fill SET s_exit_reason='migrating-stuck', s_err='no pool 10 min past horizon', done=1 WHERE vol_id=?").run(r.vol_id); }
-        else { const t = now(); for (const r of rows(mint)) if (t - r.entry_ts >= HORIZON) { db.prepare("UPDATE chain_fill SET s_exit_x=s_last_x, s_exit_ts=?, s_exit_reason='2h-unreadable', s_r=?, s_r02=?, s_r_half=?, s_exit_src='stale', done=1 WHERE vol_id=?").run(t, r.s_last_x != null ? +(r.s_last_x - 1 - NET_FEE / STAKE).toFixed(4) : null, r.s_last_x != null ? +(r.s_last_x - 1 - NET_FEE / 0.02).toFixed(4) : null, r.s_last_x != null ? +(r.s_last_x - 1 - NET_FEE / STAKE).toFixed(4) : null, r.vol_id); } }
+        else if (v && v.venue === "migrating") { const t = now(); for (const r of rows(mint)) if (t - r.entry_ts >= HORIZON + 600) q("UPDATE chain_fill SET s_exit_reason='migrating-stuck', s_err='no pool 10 min past horizon', done=1 WHERE vol_id=?").run(r.vol_id); }
+        else { const t = now(); for (const r of rows(mint)) if (t - r.entry_ts >= HORIZON) { q("UPDATE chain_fill SET s_exit_x=s_last_x, s_exit_ts=?, s_exit_reason='2h-unreadable', s_r=?, s_r02=?, s_r_half=?, s_exit_src='stale', done=1 WHERE vol_id=?").run(t, r.s_last_x != null ? +(r.s_last_x - 1 - NET_FEE / STAKE).toFixed(4) : null, r.s_last_x != null ? +(r.s_last_x - 1 - NET_FEE / 0.02).toFixed(4) : null, r.s_last_x != null ? +(r.s_last_x - 1 - NET_FEE / STAKE).toFixed(4) : null, r.vol_id); } }
       } catch (e) { cfStat.errors++; cfStat.lastErr = `backstop ${mint.slice(0, 6)}: ${e.message}`.slice(0, 120); }
     }
     for (const mint of [...W.keys()]) if (!open.includes(mint)) await unwatch(mint); // nothing open any more
