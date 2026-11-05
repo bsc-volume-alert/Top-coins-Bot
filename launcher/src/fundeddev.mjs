@@ -22,6 +22,7 @@ import { gget, N } from "./gmgn.mjs";
 import { earlyTrades, studyStat } from "./study.mjs";
 import { creatorFunder, ctStat } from "./operators.mjs";
 import { buyQuote, qStat } from "./quote.mjs";
+import { isLiveBook, liveBuy } from "./live.mjs"; // 0.8.17: the live book's entries are bought for real (tiny size)
 
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
 const FUND_SOL = n("LAUNCH_FD_FUND_SOL", 2), FUND_S = n("LAUNCH_FD_FUND_S", 7200), FUNDER_MAX = n("LAUNCH_FD_FUNDER_MAX", 2), B_LO = n("LAUNCH_FD_BUNDLE_LO", 10), B_HI = n("LAUNCH_FD_BUNDLE_HI", 60);
@@ -193,6 +194,7 @@ export async function fdCheck(db, tdb = null) {
             .run(rule.k, w.mint, w.name, w.symbol, t, px, px * supply, null, w.created_ts, +(age / 60).toFixed(1), N(info?.holder_count), m.venue, info?.launchpad ?? null, curve,
               JSON.stringify({ fd: { funder: w.funder, funder_sol: w.funder_sol, funded_min_before: w.funded_ts ? +((w.created_ts - w.funded_ts) / 60).toFixed(1) : null, funder_launches: w.funder_launches, bundle_pct: w.bundle_pct, bundle_sol: w.bundle_sol }, ...m }));
           entered.add(rule.k); fdStat.entries++;
+          if (isLiveBook(rule.k)) { const vid = db.prepare("SELECT id FROM vol_paper WHERE strat=? AND mint=?").get(rule.k, w.mint)?.id; if (vid) liveBuy({ id: vid, strat: rule.k, mint: w.mint, name: w.name, curve, entry_price: px, su }).catch(() => {}); } // 0.8.17: real buy, not awaited
         }
         // 0.8.15: quote shadowing — one buy quote per coin per check for the rows just booked (all rules share it), and a 1-in-N sample of checked launches that entered nothing
         if (m.chain_px > 0 && m.sol_usd > 0) { const ids = db.prepare("SELECT id FROM vol_paper WHERE mint=? AND entry_ts=? AND q_ts IS NULL").all(w.mint, t).map((x) => x.id); if (ids.length) shadowBuy(db, w.mint, m.chain_px, m.sol_usd, ids, m).catch(() => {}); }
