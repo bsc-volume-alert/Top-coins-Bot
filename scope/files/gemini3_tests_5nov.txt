@@ -1,0 +1,58 @@
+== Time stops, on the 71 reconstructed entries (price path from the trade stream; sim exit kept where the rule does not fire; fee 7.5% of 0.02) ==
+as traded (sim):                         avg r -0.320  net -0.454 SOL
+sell at + 60s if price < 1.0x (else trail): avg r -0.250  net -0.355 SOL  fired 17 (winners ejected 0)
+sell at + 60s if price < 1.1x (else trail): avg r -0.272  net -0.386 SOL  fired 22 (winners ejected 1)
+sell at + 90s if price < 1.0x (else trail): avg r -0.278  net -0.395 SOL  fired 14 (winners ejected 0)
+sell at + 90s if price < 1.1x (else trail): avg r -0.278  net -0.394 SOL  fired 17 (winners ejected 0)
+sell at +120s if price < 1.0x (else trail): avg r -0.294  net -0.418 SOL  fired 13 (winners ejected 0)
+sell at +120s if price < 1.1x (else trail): avg r -0.281  net -0.399 SOL  fired 16 (winners ejected 0)
+sell at +180s if price < 1.0x (else trail): avg r -0.306  net -0.434 SOL  fired 13 (winners ejected 0)
+sell at +180s if price < 1.1x (else trail): avg r -0.305  net -0.434 SOL  fired 14 (winners ejected 0)
+
+== Gemini's burst detector: react on the FIRST dump slot, land one slot later (vs the sim's price-trail trigger) ==
+rug                 sells in 1st dump slot   price end of slot1   price end of slot2 (where an emergency sell would land)   sim exit
+fomo.gay              162                   0.12                 0.10                                                   0.10
+STEPSISTER            107                   0.36                 0.36                                                   0.34
+community coins        48                   0.26                 0.12                                                   0.11
+Elon Mosque            18                   0.43                 0.14                                                   0.10
+Doge-02               240                   0.26                 0.18                                                   0.18
+The Ansem Collecti    458                   0.31                 0.26                                                   0.26
+Digital Slop            4                   0.75                 0.75                                                   0.15
+Elon                  132                   0.25                 0.25                                                   0.25
+MooToon                90                   0.18                 0.13                                                   0.13
+Toly                  100                   0.30                 0.30                                                   0.30
+Asdf                  103                   0.13                 0.13                                                   0.13
+titcoin                 1                   0.97                 0.94                                                   0.21
+Doge-02               510                   0.20                 0.19                                                   0.18
+sanctuum              216                   0.40                 0.34                                                   0.33
+Elon Mosque             6                   1.17                 0.14                                                   0.12
+MICHI                 202                   0.20                 0.20                                                   0.20
+MICHI                   4                   1.95                 0.32                                                   0.22
+Spill The Tea          72                   0.29                 0.24                                                   0.23
+the lame duck          75                   0.23                 0.23                                                   0.22
+the lame duck           2                   1.06                 0.39                                                   0.13
+the lame duck          73                   0.22                 0.14                                                   0.10
+MexicanAIPikachuCo    123                   0.17                 0.15                                                   0.14
+Squeeze                30                   0.39                 0.15                                                   0.14
+Pawket                102                   0.20                 0.15                                                   0.14
+Velum Agent             1                   0.85                 0.85                                                   0.22
+Elon                  108                   0.26                 0.26                                                   0.25
+The Red Wave          628                   0.17                 0.17                                                   0.15
+Gay And Poor           13                   0.74                 0.35                                                   0.28
+Lock Inu               30                   0.53                 0.19                                                   0.17
+Elon Musk              85                   0.30                 0.20                                                   0.19
+Novembear             121                   0.24                 0.22                                                   0.20
+BULLTRAP               62                   0.32                 0.32                                                   0.31
+Waste Management       30                   0.50                 0.28                                                   0.28
+I'm On                 93                   0.32                 0.23                                                   0.25
+I'm On                 62                   0.34                 0.31                                                   0.30
+alibi                  85                   0.21                 0.21                                                   0.20
+Artificial Investo     67                   0.36                 0.26                                                   0.25
+median: sells in first slot 85 | price after slot 1 0.3 | after slot 2 0.23 | sim exit 0.2
+if every rug had been sold at the end-of-slot-2 price instead of the sim exit: +0.054 SOL over 37 rugs (ceiling; assumes the burst is recognised inside slot 1 and the sell lands in slot 2)
+
+== 90-s confirmation gate (check rows): enter at 90 s only if net buying grew > +2 SOL from 60 s; price at 90 s from the trade stream ==
+kept 32 winners 8 rugs 20 avg r -0.123 net -0.079
+rejected 33 winners 0 rugs 19
+rejected winners: []
+kept winners: [('WIN', 'memory coin', 3.9, 1.2, 1.6), ('WIN', 'This coin is from ', 7.2, 1.27, 1.78), ('WIN', 'titcoin', 6.6, 1.19, 3.05), ('WIN', 'The Eagle', 2.8, 1.1, 2.94), ('WIN', 'Elon Mosque', 8.9, 1.48, 0.03), ('WIN', 'regular inu', 14.7, 1.26, 1.26), ('WIN', 'TOYODA', 21.4, 1.38, 0.48), ('WIN', 'Believe', 7.6, 1.26, 1.29)]

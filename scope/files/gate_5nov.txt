@@ -1,0 +1,12 @@
+same 65 coins, as traded (enter at 60 s)                   n=65 win=8 rugs=39 net=-0.414 no-best=-0.494
+gate: net 60→90 grew > +0 SOL, enter at the 90-s price     n=35 win=8 rugs=23 net=-0.126 no-best=-0.187
+gate: net 60→90 grew > +2 SOL, enter at the 90-s price     n=32 win=8 rugs=20 net=-0.078 no-best=-0.139
+gate: net 60→90 grew > +5 SOL, enter at the 90-s price     n=25 win=6 rugs=15 net=-0.094 no-best=-0.155
+gate +2 SOL and buyers grew more than sellers, at 90 s     n=32 win=8 rugs=20 net=-0.078 no-best=-0.139
+U filter, at 60 s                                          n=19 win=3 rugs=8 net=+0.025 no-best=-0.055
+U filter + gate +2, at 90 s                                n= 8 win=3 rugs=3 net=+0.139 no-best=+0.078
+FDL as traded                                              n=50 win=6 rugs=28 net=-0.311 no-best=-0.392
+FDL + gate +2 at 90 s                                      n=22 win=6 rugs=13 net=-0.031 no-best=-0.092
+FDL + U + gate +2 at 90 s                                  n= 3 win=1 rugs=1 net=+0.094 no-best=+0.033
+rugs that pass the +2 gate: [('fomo.gay', 10.7), ('Elon Mosque', 8.2), ('Socialcoin', 2.8), ('The Ansem Collecti', 2.6), ('Chrome-Chan', 10.9), ('MooToon', 7.6), ('Doge-02', 6.6), ('Elon Mosque', 5.4), ('MICHI', 2.9), ('the lame duck', 9.3), ('MexicanAIPikachuCo', 8.0), ('Squeeze', 11.8), ('Pawket', 9.1), ('Dodo the Black Swa', 11.6), ('The Red Wave', 3.8), ('Gay And Poor', 7.2), ('Lock Inu', 5.5), ('Elon Musk', 20.3), ('Novembear', 5.4), ('BULLTRAP', 3.7)]
+winners dn: [('memory coin', 3.9), ('This coin is from ', 7.2), ('titcoin', 6.6), ('The Eagle', 2.8), ('Elon Mosque', 8.9), ('regular inu', 14.7), ('TOYODA', 21.4), ('Believe', 7.6)]
