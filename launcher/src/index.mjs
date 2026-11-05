@@ -42,7 +42,8 @@ mkdirSync(HOME, { recursive: true }); mkdirSync(CFG.REQ_DIR, { recursive: true }
 const st = { ver: VER, mode: CFG.MODE, started: new Date().toISOString(), posts: 0, ignored: 0, launches: 0, live: 0, shadowOk: 0, shadowFail: 0, uploadsFailed: 0, sells: 0, errors: 0, lastErr: "", selfTest: null, exports: 0, lastPush: "" };
 
 // ---------- database ----------
-const db = new Database(CFG.DB_PATH); db.pragma("journal_mode = WAL"); db.pragma("busy_timeout = 3000");
+const db = new Database(CFG.DB_PATH); db.pragma("journal_mode = WAL"); db.pragma("busy_timeout = 3000"); db.pragma("cache_size = -32000"); // 0.9.10: page cache capped at 32 MB (rss reached 471 MB with a 30–95 MB heap on 5 Nov)
+setInterval(() => { try { db.pragma("wal_checkpoint(TRUNCATE)"); } catch {} }, 600000); // 0.9.10: fold the write-ahead log back every 10 min
 db.exec(`
 CREATE TABLE IF NOT EXISTS posts (id TEXT PRIMARY KEY, user TEXT, kind TEXT, text TEXT, parent_id TEXT, parent_user TEXT, parent_text TEXT, created_ms INTEGER, recv_ms INTEGER, ctx_ms INTEGER, raw TEXT);
 CREATE TABLE IF NOT EXISTS launches (id INTEGER PRIMARY KEY AUTOINCREMENT, post_id TEXT, user TEXT, kind TEXT, mode TEXT, status TEXT, reason TEXT,
@@ -67,7 +68,7 @@ initStudy(db); // 0.3.0: why copycats ran (owner, 31 Oct 18:21 UK)
 initPeaks(db); // 0.2.2: market caps of every copycat (owner, 31 Oct 18:06 UK)
 const upd = (id, o) => { const ks = Object.keys(o); if (ks.length) db.prepare(`UPDATE launches SET ${ks.map((k) => `${k}=?`).join(", ")} WHERE id=?`).run(...ks.map((k) => (typeof o[k] === "bigint" ? o[k].toString() : o[k])), id); };
 const kvGet = (k) => db.prepare("SELECT v FROM kv WHERE k=?").get(k)?.v ?? null, kvSet = (k, v) => db.prepare("INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)").run(k, String(v));
-let tdb = null; try { tdb = new Database(CFG.TRACKER_DB, { readonly: true, fileMustExist: true }); tdb.pragma("busy_timeout = 2000"); } catch {}
+let tdb = null; try { tdb = new Database(CFG.TRACKER_DB, { readonly: true, fileMustExist: true }); tdb.pragma("busy_timeout = 2000"); tdb.pragma("cache_size = -16000"); } catch {} // 0.9.10: 16 MB cache on the read-only tracker handle
 
 // ---------- wallet / chain state ----------
 const wallet = CFG.SMOKE ? Keypair.generate() : ensureKeypair(); // the key file is created on first start; only the public address is ever shown
