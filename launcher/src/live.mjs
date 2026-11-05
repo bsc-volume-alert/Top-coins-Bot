@@ -40,6 +40,7 @@ export function initLive(d, kp) {
     buy_ts INTEGER, buy_sig TEXT, buy_status TEXT, buy_ms INTEGER, buy_err TEXT, buy_impact REAL, sol_in REAL, tokens REAL, buy_px REAL, in_gap REAL,
     hi REAL, last_x REAL, last_ts INTEGER, n_quotes INTEGER DEFAULT 0, sell_ts INTEGER, sell_sig TEXT, sell_status TEXT, sell_reason TEXT, sell_tries INTEGER DEFAULT 0, sell_err TEXT, sell_impact REAL,
     sol_out REAL, x REAL, r REAL, closed INTEGER DEFAULT 0, done INTEGER DEFAULT 0)`);
+  for (const c of ["buy_quote_ms INTEGER", "buy_sim_ms INTEGER", "buy_land_ms INTEGER", "buy_slot INTEGER", "buy_lag_s INTEGER", "sell_ms INTEGER", "sell_land_ms INTEGER", "sell_slot INTEGER"]) try { db.exec(`ALTER TABLE live_trades ADD COLUMN ${c}`); } catch {} // 0.8.19 (owner, 07:45 UK: "transaction speed … both ways … is the key")
   db.exec("CREATE INDEX IF NOT EXISTS live_open ON live_trades (done, buy_status)");
   liveCfg(); try { if (cfg.book) db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('LIVE', ?, ?)").run(now(), (() => { try { return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version; } catch { return null; } })()); } catch {} // when live trading was first switched on (the page's "Loaded" time)
 }
@@ -72,16 +73,16 @@ export async function liveBuy(row) {
   const t0 = Date.now();
   try {
     const q = await jqRaw(SOL, row.mint, lamports, SLIP_BUY); qStat.buys++;
-    const s = await swapTxFor(q, ME.toBase58(), PRIO_MAX);
+    const s = await swapTxFor(q, ME.toBase58(), PRIO_MAX); const tQ = Date.now() - t0;
     const tx = VersionedTransaction.deserialize(Buffer.from(s.tx64, "base64")); tx.sign([wallet]);
-    const sim = await simulate(tx); if (!sim.ok) throw new Error("sim: " + String(sim.err).slice(0, 60) + " " + (sim.logs || []).filter((l) => /Error|insufficient|slippage/i.test(l)).slice(-1).join("").slice(0, 60));
+    const t1 = Date.now(); const sim = await simulate(tx); const tS = Date.now() - t1; if (!sim.ok) throw new Error("sim: " + String(sim.err).slice(0, 60) + " " + (sim.logs || []).filter((l) => /Error|insufficient|slippage/i.test(l)).slice(-1).join("").slice(0, 60));
     upd("sent", { buy_impact: Number(q.priceImpactPct) || 0 });
     const L = await land(tx, s.lastValidBlockHeight); liveStat.lastSig = L.sig;
     if (L.status !== "confirmed") throw new Error(`${L.status}${L.err ? " " + L.err.slice(0, 60) : ""} sig ${L.sig.slice(0, 12)}`);
     const f = await fill(L.sig, row.mint);
     if (!f || !(f.tokenDelta > 0)) throw new Error(`no fill read (sig ${L.sig.slice(0, 12)})`);
     const solIn = -f.solDelta / 1e9, rent = 0.00203928, px = (solIn - rent - f.fee / 1e9) / (f.tokenDelta / 1e6) * (row.su || 0), gap = row.entry_price > 0 && px > 0 ? px / row.entry_price - 1 : null;
-    upd("confirmed", { buy_sig: L.sig, buy_ms: Date.now() - t0, sol_in: +solIn.toFixed(6), tokens: f.tokenDelta, buy_px: px || null, in_gap: gap != null ? +gap.toFixed(4) : null, hi: 1, buy_ts: f.blockTime || t });
+    upd("confirmed", { buy_sig: L.sig, buy_ms: Date.now() - t0, buy_quote_ms: tQ, buy_sim_ms: tS, buy_land_ms: L.ms, buy_slot: L.slot || null, buy_lag_s: (f.blockTime || t) - row.t, sol_in: +solIn.toFixed(6), tokens: f.tokenDelta, buy_px: px || null, in_gap: gap != null ? +gap.toFixed(4) : null, hi: 1, buy_ts: f.blockTime || t }); // buy_lag_s = paper entry → fill, in seconds
     liveStat.buys++;
   } catch (e) { liveStat.buyFails++; liveStat.lastErr = `buy ${row.mint.slice(0, 6)}: ${e.message}`.slice(0, 140); upd("failed", { buy_err: e.message.slice(0, 120), buy_ms: Date.now() - t0, done: 1 }); }
 }
@@ -113,7 +114,7 @@ async function liveSell(r, q, reason) {
   try {
     const s = await swapTxFor(q, ME.toBase58(), PRIO_MAX);
     const tx = VersionedTransaction.deserialize(Buffer.from(s.tx64, "base64")); tx.sign([wallet]);
-    const L = await land(tx, s.lastValidBlockHeight); liveStat.lastSig = L.sig;
+    const L = await land(tx, s.lastValidBlockHeight); liveStat.lastSig = L.sig; const tSell = Date.now() - t0; // trail trigger (the quote) → landed or failed
     if (L.status !== "confirmed") throw new Error(`${L.status}${L.err ? " " + L.err.slice(0, 60) : ""}`);
     const f = await fill(L.sig, r.mint); if (!f) throw new Error("no fill read");
     const left = r.tokens + f.tokenDelta; let solOut = f.solDelta / 1e9;
@@ -121,7 +122,7 @@ async function liveSell(r, q, reason) {
       db.prepare("UPDATE live_trades SET sell_status='partial', sell_sig=?, sell_err=?, sol_out=COALESCE(sol_out,0)+?, tokens=? WHERE id=?").run(L.sig, `partial: ${left} left`, +solOut.toFixed(6), left, r.id); liveStat.lastErr = `sell ${r.mint.slice(0, 6)}: partial`; return; }
     let closed = 0; try { solOut += await closeTokenAccounts(r.mint); closed = 1; } catch (e) { liveStat.lastErr = `close ${r.mint.slice(0, 6)}: ${e.message}`.slice(0, 120); }
     const total = (r.sol_out || 0) + solOut, x = total / r.sol_in;
-    db.prepare("UPDATE live_trades SET sell_status='confirmed', sell_sig=?, sell_ts=?, sell_impact=?, sol_out=?, x=?, r=?, closed=?, done=1, sell_err=NULL WHERE id=?").run(L.sig, f.blockTime || t, Number(q.priceImpactPct) || 0, +total.toFixed(6), +x.toFixed(4), +(x - 1).toFixed(4), closed, r.id);
+    db.prepare("UPDATE live_trades SET sell_status='confirmed', sell_sig=?, sell_ts=?, sell_impact=?, sol_out=?, x=?, r=?, closed=?, done=1, sell_err=NULL, sell_ms=?, sell_land_ms=?, sell_slot=? WHERE id=?").run(L.sig, f.blockTime || t, Number(q.priceImpactPct) || 0, +total.toFixed(6), +x.toFixed(4), +(x - 1).toFixed(4), closed, tSell, L.ms, L.slot || null, r.id);
     liveStat.sells++;
   } catch (e) { liveStat.sellFails++; liveStat.lastErr = `sell ${r.mint.slice(0, 6)}: ${e.message}`.slice(0, 140); db.prepare("UPDATE live_trades SET sell_status='failed', sell_err=? WHERE id=?").run(e.message.slice(0, 120), r.id); } // stays open: the next poll quotes and tries again
 }
