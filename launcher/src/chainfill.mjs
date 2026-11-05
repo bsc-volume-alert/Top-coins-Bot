@@ -30,6 +30,7 @@ const POOL_DISC = Buffer.from([241, 154, 109, 4, 17, 177, 109, 188]);
 const GLOBAL_CONFIG = pda(["global_config"], PUMP_AMM);
 const poolAuthorityOf = (mint) => pda(["pool-authority", mint], PUMP);
 export const migratedPoolOf = (mint) => pda(["pool", u16(0), poolAuthorityOf(mint), mint, WSOL], PUMP_AMM);
+const pk = (m) => (m instanceof PublicKey ? m : new PublicKey(m)); // 0.9.1: mints arrive as strings; a seed must be the 32-byte key ("Max seed length exceeded" on the first 0.9.0 entries)
 function decodePool(d) {
   if (!d || d.length < 243 || !d.subarray(0, 8).equals(POOL_DISC)) return null;
   const p = { baseMint: rPk(d, 43), quoteMint: rPk(d, 75), baseAcc: rPk(d, 139), quoteAcc: rPk(d, 171), virtualQuote: 0n, creatorFeeBps: null };
@@ -53,6 +54,7 @@ export function initChainFill(d) {
   db.exec(`CREATE TABLE IF NOT EXISTS chain_fill (vol_id INTEGER PRIMARY KEY, mint TEXT, strat TEXT, entry_ts INTEGER, venue TEXT, curve INTEGER, s_sol_in REAL, s_tokens TEXT, s_px REAL, s_in_gap REAL, s_x0 REAL,
     s_hi REAL, s_last_x REAL, s_last_ts INTEGER, s_n INTEGER DEFAULT 0, s_exit_x REAL, s_exit_ts INTEGER, s_exit_reason TEXT, s_r REAL, s_drops INTEGER DEFAULT 0, s_backstops INTEGER DEFAULT 0, s_err TEXT, done INTEGER DEFAULT 0)`);
   db.exec("CREATE INDEX IF NOT EXISTS chain_fill_open ON chain_fill (done)");
+  for (const c of ["s_exit_src TEXT", "s_max_gap_s INTEGER"]) try { db.exec(`ALTER TABLE chain_fill ADD COLUMN ${c}`); } catch {} // 0.9.1: which source produced the exit (push / backstop) and the longest silence between price updates before it
   try { db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('SIM', ?, ?)").run(now(), "0.9.0"); } catch {} // when the simulated fills started — the page counts every book from here on this measure
 }
 
@@ -60,13 +62,13 @@ export function initChainFill(d) {
 async function readValue(mint, tokens, st) {
   const g = await global();
   if (!st.pool) {
-    const [a] = await getAccounts([curveOf(mint)], "processed"); const c = decodeCurve(a?.data);
+    const [a] = await getAccounts([curveOf(pk(mint))], "processed"); const c = decodeCurve(a?.data);
     if (!c) return null;
     if (!c.complete) return { lamports: quoteSell(c, g, tokens), venue: "curve", complete: false };
     st.complete = true;
   }
   // graduated: the pool (may not exist for a moment after the curve completes)
-  if (!st.pool) { const pk = migratedPoolOf(mint); const [p] = await getAccounts([pk], "processed"); const pool = decodePool(p?.data); if (!pool) return { lamports: null, venue: "migrating", complete: true }; st.pool = pool; st.poolPk = pk; }
+  if (!st.pool) { const pk = migratedPoolOf(pk(mint)); const [p] = await getAccounts([pk], "processed"); const pool = decodePool(p?.data); if (!pool) return { lamports: null, venue: "migrating", complete: true }; st.pool = pool; st.poolPk = pk; }
   const cfg = await ammCfg(); const [b, q] = await getAccounts([st.pool.baseAcc, st.pool.quoteAcc], "processed"); const br = tokenAmount(b?.data), qr = tokenAmount(q?.data);
   if (br == null || qr == null) return { lamports: null, venue: "pool", complete: true };
   st.baseRes = br; st.quoteRes = qr;
@@ -79,11 +81,11 @@ export async function chainEntry(mint, ids, chainPx, su, strat) {
   const t = now(); const st = { pool: null };
   try {
     const g = await global(); if (!g) throw new Error("no Global");
-    const [a] = await getAccounts([curveOf(mint)], "processed"); const c = decodeCurve(a?.data);
+    const [a] = await getAccounts([curveOf(pk(mint))], "processed"); const c = decodeCurve(a?.data);
     let tokens = 0n, venue = "curve", curve = 1;
     if (c && !c.complete) { tokens = quoteBuy(c, g, LAMPORTS).tokens; }
     else { // graduated (or not a pump.fun curve): the pool
-      const pk = migratedPoolOf(mint); const [p] = await getAccounts([pk], "processed"); const pool = decodePool(p?.data);
+      const pk = migratedPoolOf(pk(mint)); const [p] = await getAccounts([pk], "processed"); const pool = decodePool(p?.data);
       if (!pool) throw new Error(c ? "migrating: no pool yet" : "no curve, no pool");
       const cfg = await ammCfg(); const [b, q] = await getAccounts([pool.baseAcc, pool.quoteAcc], "processed"); const br = tokenAmount(b?.data), qr = tokenAmount(q?.data);
       if (br == null || qr == null) throw new Error("pool reserves unreadable");
@@ -102,15 +104,16 @@ export async function chainEntry(mint, ids, chainPx, su, strat) {
 
 // ---- open positions: one watcher per mint (all books' rows of that coin share it) ----
 const W = new Map(); // mint → { st, subs: [ids], lastPush }
-function rows(mint) { return db.prepare("SELECT vol_id, strat, curve, s_tokens, s_hi, entry_ts FROM chain_fill WHERE mint=? AND done=0 AND s_tokens IS NOT NULL").all(mint); }
+function rows(mint) { return db.prepare("SELECT vol_id, strat, curve, s_tokens, s_hi, entry_ts, s_last_ts, s_max_gap_s FROM chain_fill WHERE mint=? AND done=0 AND s_tokens IS NOT NULL").all(mint); }
 function apply(mint, lamportsOf, src) {
   const t = now(); let open = 0;
   for (const r of rows(mint)) {
     const lam = lamportsOf(BigInt(r.s_tokens)); if (lam == null) { open++; continue; }
     const x = Number(lam) / Number(LAMPORTS), hi = Math.max(r.s_hi || 1, x), keep = 1 - trailPct(r.curve);
     const reason = x <= (r.s_hi || 1) * keep ? "trail" : t - r.entry_ts >= HORIZON ? "2h" : null;
-    if (reason) { db.prepare("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_exit_x=?, s_exit_ts=?, s_exit_reason=?, s_r=?, done=1 WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), +x.toFixed(4), t, reason, +(x - 1 - NET_FEE / STAKE).toFixed(4), r.vol_id); cfStat.exits++; }
-    else { db.prepare("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1 WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), r.vol_id); open++; }
+    const gap = Math.max(r.s_max_gap_s || 0, r.s_last_ts ? t - r.s_last_ts : 0); // the longest silence between price updates so far
+    if (reason) { db.prepare("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_exit_x=?, s_exit_ts=?, s_exit_reason=?, s_r=?, s_exit_src=?, s_max_gap_s=?, done=1 WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), +x.toFixed(4), t, reason, +(x - 1 - NET_FEE / STAKE).toFixed(4), src, gap, r.vol_id); cfStat.exits++; }
+    else { db.prepare("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_max_gap_s=? WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), gap, r.vol_id); open++; }
     cfStat.updates++;
   }
   if (src === "backstop") db.prepare("UPDATE chain_fill SET s_backstops=s_backstops+1 WHERE mint=? AND done=0").run(mint);
@@ -120,7 +123,7 @@ async function watch(mint, st) {
   if (W.has(mint)) return; const w = { st, subs: [], lastPush: Date.now() }; W.set(mint, w);
   try {
     if (!st.pool) {
-      const id = await onAccount(curveOf(mint), (data) => { try { const c = decodeCurve(data); if (!c) return; w.lastPush = Date.now();
+      const id = await onAccount(curveOf(pk(mint)), (data) => { try { const c = decodeCurve(data); if (!c) return; w.lastPush = Date.now();
         if (c.complete) { if (!w.st.complete) { w.st.complete = true; resub(mint).catch(() => {}); } return; }
         const g = G; if (!g) return; apply(mint, (tok) => quoteSell(c, g, tok), "sub"); } catch (e) { cfStat.errors++; cfStat.lastErr = "sub: " + e.message.slice(0, 100); } });
       w.subs.push(id); cfStat.subs++;
@@ -152,10 +155,10 @@ export async function chainBackstop() {
       let w = W.get(mint);
       if (!w) { w = { st: { pool: null }, subs: [], lastPush: 0 }; await watch(mint, w.st); w = W.get(mint) || w; cfStat.drops++; db.prepare("UPDATE chain_fill SET s_drops=s_drops+1 WHERE mint=? AND done=0").run(mint); } // no watcher (restart or lost): re-armed
       try { const v = await readValue(mint, 1n, w.st); cfStat.backstops++;
-        if (v && v.lamports != null) { const st = w.st; if (v.venue === "curve") { const [a] = await getAccounts([curveOf(mint)], "processed"); const c = decodeCurve(a?.data); if (c && G) apply(mint, (tok) => quoteSell(c, G, tok), "backstop"); }
+        if (v && v.lamports != null) { const st = w.st; if (v.venue === "curve") { const [a] = await getAccounts([curveOf(pk(mint))], "processed"); const c = decodeCurve(a?.data); if (c && G) apply(mint, (tok) => quoteSell(c, G, tok), "backstop"); }
           else if (st.pool && CFG && st.baseRes != null && st.quoteRes != null) { if (!w.subs.length) await subPool(mint, w); apply(mint, (tok) => poolSell(st.pool, CFG, st.baseRes, st.quoteRes, tok), "backstop"); } }
         else if (v && v.venue === "migrating") { const t = now(); for (const r of rows(mint)) if (t - r.entry_ts >= HORIZON + 600) db.prepare("UPDATE chain_fill SET s_exit_reason='migrating-stuck', s_err='no pool 10 min past horizon', done=1 WHERE vol_id=?").run(r.vol_id); }
-        else { const t = now(); for (const r of rows(mint)) if (t - r.entry_ts >= HORIZON) { db.prepare("UPDATE chain_fill SET s_exit_x=s_last_x, s_exit_ts=?, s_exit_reason='2h-unreadable', s_r=?, done=1 WHERE vol_id=?").run(t, r.s_last_x != null ? +(r.s_last_x - 1 - NET_FEE / STAKE).toFixed(4) : null, r.vol_id); } }
+        else { const t = now(); for (const r of rows(mint)) if (t - r.entry_ts >= HORIZON) { db.prepare("UPDATE chain_fill SET s_exit_x=s_last_x, s_exit_ts=?, s_exit_reason='2h-unreadable', s_r=?, s_exit_src='stale', done=1 WHERE vol_id=?").run(t, r.s_last_x != null ? +(r.s_last_x - 1 - NET_FEE / STAKE).toFixed(4) : null, r.vol_id); } }
       } catch (e) { cfStat.errors++; cfStat.lastErr = `backstop ${mint.slice(0, 6)}: ${e.message}`.slice(0, 120); }
     }
     for (const mint of [...W.keys()]) if (!open.includes(mint)) await unwatch(mint); // nothing open any more
