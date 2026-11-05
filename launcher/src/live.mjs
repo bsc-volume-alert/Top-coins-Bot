@@ -41,7 +41,7 @@ export function initLive(d, kp) {
     hi REAL, last_x REAL, last_ts INTEGER, n_quotes INTEGER DEFAULT 0, sell_ts INTEGER, sell_sig TEXT, sell_status TEXT, sell_reason TEXT, sell_tries INTEGER DEFAULT 0, sell_err TEXT, sell_impact REAL,
     sol_out REAL, x REAL, r REAL, closed INTEGER DEFAULT 0, done INTEGER DEFAULT 0)`);
   db.exec("CREATE INDEX IF NOT EXISTS live_open ON live_trades (done, buy_status)");
-  liveCfg();
+  liveCfg(); try { if (cfg.book) db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('LIVE', ?, ?)").run(now(), (() => { try { return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version; } catch { return null; } })()); } catch {} // when live trading was first switched on (the page's "Loaded" time)
 }
 const openCount = () => db.prepare("SELECT COUNT(*) n FROM live_trades WHERE done=0").get().n;
 
