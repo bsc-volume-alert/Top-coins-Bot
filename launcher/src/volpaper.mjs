@@ -57,7 +57,7 @@ export async function volMark(db) {
             if (X(c.l) <= hi * keep) { sold = hi * keep; soldT = c.t; last = c.t; break; } hi = Math.max(hi, X(c.h)); if (c.t + 60 <= t) last = c.t; } // the current minute's candle is still forming: re-read it next pass
           const nowX = X(ks[ks.length - 1].c);
           if (sold != null) { db.prepare("UPDATE vol_paper SET mk_ts=?, mk_x=?, mk_hi=?, mk_last=?, mk_sold_x=?, mk_sold_ts=?, mk_r=?, mk_pct=? WHERE id=?").run(t, +nowX.toFixed(4), +hi.toFixed(4), last, +sold.toFixed(4), soldT, realX(sold, r.curve === 1), 1 - keep, r.id); markStat.sold++;
-            if (r.q_tokens > 0 && r.q_exit_ts == null) shadowSell(db, r, sold, soldT, "mark").catch(() => {}); // 0.8.15: the real sell quote the moment the candle mark says the trail sold (0.8.16: the mark runs every 15 s; skipped when the quote poll already sold)
+            if (r.q_tokens > 0 && r.q_exit_ts == null && process.env.LAUNCH_SHADOW_POLL === "1") shadowSell(db, r, sold, soldT, "mark").catch(() => {}); // 0.9.3: off with the poll — Jupiter budget to the live book // 0.8.15: the real sell quote the moment the candle mark says the trail sold (0.8.16: the mark runs every 15 s; skipped when the quote poll already sold)
             else db.prepare("UPDATE vol_paper SET q_exit_gap=q_exit_x/?-1 WHERE id=? AND q_exit_src='poll' AND q_exit_gap IS NULL AND q_exit_x IS NOT NULL").run(sold, r.id); } // the poll's exit against the paper sale it now has
           else db.prepare("UPDATE vol_paper SET mk_ts=?, mk_x=?, mk_hi=?, mk_last=?, mk_pct=? WHERE id=?").run(t, +nowX.toFixed(4), +hi.toFixed(4), last, 1 - keep, r.id);
           markStat.marked++;
