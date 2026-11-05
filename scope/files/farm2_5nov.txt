@@ -1,0 +1,80 @@
+time-ordered; 'farm known' = first-60-s buyers already seen dumping an EARLIER coin today (no look-ahead); 'pax' = wallets with exactly one buy of 0.04–0.5 SOL and nothing else by 60 s
+cls name               buyers   pax  pax% farmKnown  farm% exit
+MID Sam Apeman            230   171   74%         0     0%  0.71
+MID United States of E    223   182   82%         0     0%  0.57
+RUG Privacy Dog           250   203   81%         0     0%  0.30
+MID Chiplon Musk          235   164   70%         0     0%  0.57
+MID fomo.gay              247   205   83%         0     0%  0.95
+RUG fomo.gay              331   276   83%         0     0%  0.10
+RUG STEPSISTER            123    68   55%         0     0%  0.34
+MID Chrome-Chan           208   171   82%        74    36%  0.95
+RUG community coins       306   270   88%         3     1%  0.11
+WIN memory coin            87    52   60%         1     1%  3.31
+RUG Elon Mosque           301   267   89%       117    39%  0.10
+MID Elon Musk             277   222   80%       166    60%  0.75
+RUG Doge-02               207     2    1%         2     1%  0.18
+MID Community Coin        325     7    2%       149    46%  0.94
+RUG Socialcoin            244    15    6%       118    48%  0.17
+RUG The Ansem Collecti    197     9    5%         0     0%  0.26
+WIN This coin is from     204   141   69%       107    52%  3.73
+RUG Chrome-Chan           154   105   68%         2     1%  0.16
+RUG Digital Slop          360   186   52%         4     1%  0.15
+MID MarsCoin              134    42   31%         7     5%  0.45
+MID donuld tremp          316   261   83%       109    34%  0.96
+RUG Elon                  261   224   86%         2     1%  0.25
+MID Elon                  260   195   75%        61    23%  0.93
+RUG MooToon               306   231   75%        67    22%  0.13
+RUG Toly                  162    46   28%         6     4%  0.30
+RUG Asdf                  254   191   75%       118    46%  0.13
+WIN titcoin               172    61   35%         9     5%  5.07
+RUG titcoin               201   163   81%       112    56%  0.21
+RUG Doge-02               216     2    1%         5     2%  0.18
+RUG sanctuum              196     3    2%         1     1%  0.33
+MID Elon Mosque           229     4    2%       115    50%  0.96
+RUG Elon Mosque           134     2    1%        71    53%  0.12
+RUG fomo.gay              167     2    1%       121    72%  0.09
+RUG MICHI                 225     7    3%         7     3%  0.20
+RUG MICHI                 150   119   79%        27    18%  0.22
+MID Spill The Tea         217   143   66%        94    43%  0.95
+RUG Spill The Tea         196   134   68%        82    42%  0.23
+RUG the lame duck         174   113   65%        94    54%  0.22
+RUG the lame duck         193   147   76%        10     5%  0.13
+RUG the lame duck         396   348   88%        94    24%  0.10
+RUG MexicanAIPikachuCo    194   132   68%       103    53%  0.14
+MID Magical Unicorn       201   140   70%       121    60%  0.96
+WIN The Eagle             126    31   25%        12    10%  4.53
+RUG Squeeze               220   164   75%       153    70%  0.14
+RUG Pawket                378   180   48%         9     2%  0.14
+RUG Velum Agent           306    98   32%       151    49%  0.22
+WIN Elon Mosque           155    80   52%        14     9%  1.68
+RUG Elon                  199   127   64%       131    66%  0.25
+MID CATFISH               301   117   39%       172    57%  0.59
+MID Unstoppable Intern    158    69   44%       102    65%  0.95
+RUG Dodo the Black Swa    131    59   45%        86    66%  0.19
+WIN regular inu           198    85   43%         5     3%  3.03
+MID Jackass Coin          260    39   15%         5     2%  0.56
+RUG The Red Wave          259     2    1%        10     4%  0.15
+RUG Gay And Poor          115     0    0%         5     4%  0.28
+MID Gay And Poor 500      247   195   79%       133    54%  0.96
+RUG Lock Inu              215   168   78%         9     4%  0.17
+RUG Elon Musk             231   167   72%       128    55%  0.19
+RUG Novembear             153    79   52%        31    20%  0.20
+WIN TOYODA                281   180   64%        13     5%  2.20
+RUG BULLTRAP              155    72   46%        67    43%  0.31
+RUG relax                 384   330   86%       147    38%  0.09
+MID Believe               153    53   35%        66    43%  0.92
+WIN Believe               171    68   40%        74    43%  3.06
+RUG Waste Management       75    28   37%         5     7%  0.28
+WIN Claudecoin            149   111   74%         3     2%  3.26
+RUG I'm On                160    59   37%         5     3%  0.25
+RUG I'm On                121    29   24%        10     8%  0.30
+RUG alibi                 298   139   47%         7     2%  0.20
+RUG Artificial Investo    246   160   65%        11     4%  0.25
+RUG Frontier Inu          145    30   21%        41    28%  0.13
+WIN n 9 pax% quartiles [38, 52, 67] pax count quartiles [56, 80, 126] farm% quartiles [2, 5, 26]
+MID n 18 pax% quartiles [34, 70, 81] pax count quartiles [50, 154, 195] farm% quartiles [1, 39, 55]
+RUG n 44 pax% quartiles [22, 53, 76] pax count quartiles [28, 116, 177] farm% quartiles [2, 7, 48]
+REJECT if farm-known share >= 10%   : rejects 35 (rugs 21, winners 2) | keeps 36 (rugs 23, winners 7)
+REJECT if farm-known share >= 5%    : rejects 42 (rugs 24, winners 5) | keeps 29 (rugs 20, winners 4)
+REJECT if pax >= 120                : rejects 34 (rugs 21, winners 2) | keeps 37 (rugs 23, winners 7)
+REJECT if pax share >= 60%          : rejects 35 (rugs 21, winners 3) | keeps 36 (rugs 23, winners 6)

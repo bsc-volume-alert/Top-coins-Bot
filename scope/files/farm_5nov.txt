@@ -1,0 +1,115 @@
+big-dump rugs 37 winners 9
+distinct dump-seller wallets 5540 | wallets seen dumping in 1/2/3/4+ coins: 4357 1023 131 29
+
+per rug: dumpers, of which seen in another rug dump, and their buy profile (when they bought, size, buys per wallet)
+  Elon Mosque        dumpers 386 reused 229 (59%) | their buys: n=637 buy time after launch s: [23.0, 73.0, 94.0] size SOL: [0.099, 0.201, 0.305] buys/wallet median 2
+  The Ansem Collecti dumpers 358 reused   1 (0%) | their buys: n=729 buy time after launch s: [35.0, 75.0, 122.0] size SOL: [0.098, 0.198, 0.283] buys/wallet median 2.0
+  Doge-02            dumpers 334 reused 224 (67%) | their buys: n=620 buy time after launch s: [27.0, 46.0, 72.0] size SOL: [0.101, 0.208, 0.296] buys/wallet median 2
+  The Red Wave       dumpers 334 reused 155 (46%) | their buys: n=668 buy time after launch s: [23.0, 51.0, 73.75] size SOL: [0.098, 0.196, 0.296] buys/wallet median 2.0
+  Doge-02            dumpers 318 reused   2 (1%) | their buys: n=554 buy time after launch s: [41.0, 56.0, 68.0] size SOL: [0.099, 0.196, 0.347] buys/wallet median 2
+  Pawket             dumpers 278 reused  82 (29%) | their buys: n=348 buy time after launch s: [25.0, 49.0, 75.75] size SOL: [0.047, 0.083, 0.099] buys/wallet median 1.0
+  Elon Mosque        dumpers 253 reused 111 (44%) | their buys: n=284 buy time after launch s: [34.0, 60.0, 79.0] size SOL: [0.109, 0.2, 0.299] buys/wallet median 1
+  Elon Musk          dumpers 246 reused 155 (63%) | their buys: n=269 buy time after launch s: [38.5, 77.0, 117.0] size SOL: [0.098, 0.198, 0.293] buys/wallet median 1.0
+  community coins    dumpers 244 reused 110 (45%) | their buys: n=226 buy time after launch s: [32.0, 53.0, 68.0] size SOL: [0.118, 0.202, 0.312] buys/wallet median 1.0
+  fomo.gay           dumpers 243 reused   2 (1%) | their buys: n=352 buy time after launch s: [39.25, 69.0, 108.0] size SOL: [0.134, 0.222, 0.347] buys/wallet median 1
+  the lame duck      dumpers 238 reused 153 (64%) | their buys: n=358 buy time after launch s: [30.0, 60.0, 91.0] size SOL: [0.112, 0.198, 0.298] buys/wallet median 1.0
+  sanctuum           dumpers 229 reused   0 (0%) | their buys: n=348 buy time after launch s: [29.0, 39.0, 58.0] size SOL: [0.049, 0.098, 0.147] buys/wallet median 2
+  Lock Inu           dumpers 218 reused   4 (2%) | their buys: n=223 buy time after launch s: [36.0, 68.0, 98.0] size SOL: [0.124, 0.215, 0.321] buys/wallet median 1
+  MICHI              dumpers 216 reused 124 (57%) | their buys: n=203 buy time after launch s: [48.0, 95.0, 144.0] size SOL: [0.098, 0.188, 0.275] buys/wallet median 1
+  Digital Slop       dumpers 214 reused   4 (2%) | their buys: n=253 buy time after launch s: [19.5, 43.0, 66.5] size SOL: [0.061, 0.098, 0.159] buys/wallet median 1.0
+  MexicanAIPikachuCo dumpers 207 reused 143 (69%) | their buys: n=203 buy time after launch s: [36.0, 66.0, 94.0] size SOL: [0.099, 0.2, 0.358] buys/wallet median 1
+  MooToon            dumpers 204 reused 108 (53%) | their buys: n=211 buy time after launch s: [23.0, 45.0, 73.0] size SOL: [0.107, 0.198, 0.315] buys/wallet median 1.0
+  Squeeze            dumpers 202 reused 144 (71%) | their buys: n=202 buy time after launch s: [46.0, 63.0, 87.0] size SOL: [0.13, 0.245, 0.407] buys/wallet median 1.0
+  Velum Agent        dumpers 158 reused  75 (47%) | their buys: n=161 buy time after launch s: [24.0, 43.0, 68.5] size SOL: [0.049, 0.099, 0.172] buys/wallet median 1.0
+  Novembear          dumpers 158 reused  57 (36%) | their buys: n=178 buy time after launch s: [48.5, 98.5, 159.0] size SOL: [0.081, 0.139, 0.253] buys/wallet median 1.0
+  the lame duck      dumpers 156 reused 113 (72%) | their buys: n=121 buy time after launch s: [23.5, 40.0, 69.0] size SOL: [0.111, 0.219, 0.376] buys/wallet median 1
+  I'm On             dumpers 139 reused   5 (4%) | their buys: n=163 buy time after launch s: [53.0, 110.0, 169.0] size SOL: [0.084, 0.171, 0.252] buys/wallet median 1
+  Artificial Investo dumpers 137 reused   2 (1%) | their buys: n=143 buy time after launch s: [37.0, 66.0, 90.0] size SOL: [0.098, 0.196, 0.296] buys/wallet median 1
+  titcoin            dumpers 134 reused  82 (61%) | their buys: n=134 buy time after launch s: [14.0, 32.5, 56.0] size SOL: [0.099, 0.205, 0.297] buys/wallet median 1.0
+  Elon               dumpers 132 reused  78 (59%) | their buys: n=134 buy time after launch s: [17.0, 35.0, 59.0] size SOL: [0.108, 0.196, 0.257] buys/wallet median 1.0
+  Spill The Tea      dumpers 121 reused  77 (64%) | their buys: n=145 buy time after launch s: [20.0, 44.0, 75.5] size SOL: [0.098, 0.196, 0.293] buys/wallet median 1
+  Elon               dumpers 119 reused  79 (66%) | their buys: n=187 buy time after launch s: [34.0, 68.0, 120.0] size SOL: [0.098, 0.198, 0.294] buys/wallet median 1
+  Asdf               dumpers 114 reused  65 (57%) | their buys: n=123 buy time after launch s: [17.0, 38.0, 61.0] size SOL: [0.079, 0.166, 0.285] buys/wallet median 1.0
+  Gay And Poor       dumpers 111 reused  39 (35%) | their buys: n=146 buy time after launch s: [24.5, 43.0, 92.0] size SOL: [0.098, 0.155, 0.257] buys/wallet median 1
+  MICHI              dumpers 109 reused  65 (60%) | their buys: n=277 buy time after launch s: [50.5, 80.0, 120.0] size SOL: [0.085, 0.13, 0.213] buys/wallet median 2
+  STEPSISTER         dumpers 108 reused   2 (2%) | their buys: n=95 buy time after launch s: [40.0, 66.0, 98.0] size SOL: [0.097, 0.154, 0.245] buys/wallet median 1.0
+  I'm On             dumpers 107 reused   7 (7%) | their buys: n=163 buy time after launch s: [61.0, 162.0, 235.0] size SOL: [0.097, 0.148, 0.474] buys/wallet median 1
+  Toly               dumpers 100 reused   0 (0%) | their buys: n=130 buy time after launch s: [55.0, 114.0, 146.25] size SOL: [0.098, 0.196, 0.284] buys/wallet median 1.0
+  Waste Management   dumpers  86 reused   2 (2%) | their buys: n=45 buy time after launch s: [27.5, 162.0, 173.5] size SOL: [0.202, 0.475, 0.777] buys/wallet median 1
+  alibi              dumpers  85 reused   1 (1%) | their buys: n=112 buy time after launch s: [35.25, 62.5, 87.0] size SOL: [0.044, 0.068, 0.098] buys/wallet median 1
+  the lame duck      dumpers  78 reused  49 (63%) | their buys: n=81 buy time after launch s: [29.0, 51.0, 65.0] size SOL: [0.098, 0.148, 0.243] buys/wallet median 1.0
+  BULLTRAP           dumpers  72 reused  40 (56%) | their buys: n=80 buy time after launch s: [18.25, 39.5, 67.0] size SOL: [0.067, 0.148, 0.314] buys/wallet median 1.0
+
+farm = wallets that dumped 2+ rugs: 1183
+coin                 class  buyers<=60s  farm among them  farm share of SOL<=60s
+  Sam Apeman         MID     230        5 (2%)    2.3%   exit 0.71
+  United States of E MID     223        3 (1%)    1.0%   exit 0.57
+  Chiplon Musk       MID     235        1 (0%)    0.1%   exit 0.57
+  fomo.gay           MID     247        3 (1%)    0.8%   exit 0.95
+  Chrome-Chan        MID     208        4 (2%)    0.6%   exit 0.95
+  Elon Musk          MID     277       46 (17%)   15.1%   exit 0.75
+  Community Coin     MID     325        2 (1%)    0.2%   exit 0.94
+  MarsCoin           MID     134        6 (4%)    1.3%   exit 0.45
+  donuld tremp       MID     316        5 (2%)    0.9%   exit 0.96
+  Elon               MID     260       67 (26%)   38.7%   exit 0.93
+  Elon Mosque        MID     229       80 (35%)   38.1%   exit 0.96
+  Spill The Tea      MID     217       64 (29%)   42.8%   exit 0.95
+  Magical Unicorn    MID     201       68 (34%)   35.2%   exit 0.96
+  CATFISH            MID     301       44 (15%)    7.2%   exit 0.59
+  Unstoppable Intern MID     158       50 (32%)   43.6%   exit 0.95
+  Jackass Coin       MID     260        3 (1%)    2.3%   exit 0.56
+  Gay And Poor 500   MID     247       62 (25%)   30.8%   exit 0.96
+  Believe            MID     153       21 (14%)   15.1%   exit 0.92
+  Privacy Dog        RUG     250        2 (1%)    0.2%   exit 0.30
+  fomo.gay           RUG     331        5 (2%)    1.2%   exit 0.10
+  STEPSISTER         RUG     123        2 (2%)    0.5%   exit 0.34
+  community coins    RUG     306       64 (21%)   15.8%   exit 0.11
+  Elon Mosque        RUG     301       62 (21%)   16.8%   exit 0.10
+  Doge-02            RUG     207        4 (2%)    0.2%   exit 0.18
+  Socialcoin         RUG     244        8 (3%)    3.1%   exit 0.17
+  The Ansem Collecti RUG     197        0 (0%)    0.0%   exit 0.26
+  Chrome-Chan        RUG     154        7 (5%)    1.7%   exit 0.16
+  Digital Slop       RUG     360        5 (1%)    0.8%   exit 0.15
+  Elon               RUG     261       81 (31%)   30.6%   exit 0.25
+  MooToon            RUG     306       94 (31%)   25.9%   exit 0.13
+  Toly               RUG     162        5 (3%)    5.4%   exit 0.30
+  Asdf               RUG     254       90 (35%)   35.5%   exit 0.13
+  titcoin            RUG     201       76 (38%)   47.6%   exit 0.21
+  Doge-02            RUG     216      130 (60%)   47.8%   exit 0.18
+  sanctuum           RUG     196        1 (1%)    0.1%   exit 0.33
+  Elon Mosque        RUG     134       72 (54%)   49.4%   exit 0.12
+  fomo.gay           RUG     167       58 (35%)   45.1%   exit 0.09
+  MICHI              RUG     225       59 (26%)   29.0%   exit 0.20
+  MICHI              RUG     150       50 (33%)   30.6%   exit 0.22
+  Spill The Tea      RUG     196       74 (38%)   46.3%   exit 0.23
+  the lame duck      RUG     174       65 (37%)   45.7%   exit 0.22
+  the lame duck      RUG     193       78 (40%)   43.6%   exit 0.13
+  the lame duck      RUG     396      160 (40%)   44.7%   exit 0.10
+  MexicanAIPikachuCo RUG     194       85 (44%)   50.2%   exit 0.14
+  Squeeze            RUG     220       98 (45%)   49.8%   exit 0.14
+  Pawket             RUG     378       53 (14%)    9.1%   exit 0.14
+  Velum Agent        RUG     306       54 (18%)   10.6%   exit 0.22
+  Elon               RUG     199       77 (39%)   44.1%   exit 0.25
+  Dodo the Black Swa RUG     131       46 (35%)   44.5%   exit 0.19
+  The Red Wave       RUG     259      104 (40%)   33.1%   exit 0.15
+  Gay And Poor       RUG     115       20 (17%)   17.6%   exit 0.28
+  Lock Inu           RUG     215        3 (1%)    0.5%   exit 0.17
+  Elon Musk          RUG     231       63 (27%)   23.3%   exit 0.19
+  Novembear          RUG     153       28 (18%)   21.3%   exit 0.20
+  BULLTRAP           RUG     155       32 (21%)   24.3%   exit 0.31
+  relax              RUG     384        7 (2%)    0.7%   exit 0.09
+  Waste Management   RUG      75        3 (4%)    0.6%   exit 0.28
+  I'm On             RUG     160        2 (1%)    0.3%   exit 0.25
+  I'm On             RUG     121        5 (4%)    3.2%   exit 0.30
+  alibi              RUG     298        3 (1%)    0.6%   exit 0.20
+  Artificial Investo RUG     246        6 (2%)    0.9%   exit 0.25
+  Frontier Inu       RUG     145        5 (3%)    0.5%   exit 0.13
+  memory coin        WIN      87        2 (2%)    1.3%   exit 3.31
+  This coin is from  WIN     204        4 (2%)    1.2%   exit 3.73
+  titcoin            WIN     172        8 (5%)    4.5%   exit 5.07
+  The Eagle          WIN     126       12 (10%)    2.3%   exit 4.53
+  Elon Mosque        WIN     155       11 (7%)    1.7%   exit 1.68
+  regular inu        WIN     198        5 (3%)    0.4%   exit 3.03
+  TOYODA             WIN     281        8 (3%)    1.0%   exit 2.20
+  Believe            WIN     171       21 (12%)   11.6%   exit 3.06
+  Claudecoin         WIN     149        1 (1%)    0.3%   exit 3.26
