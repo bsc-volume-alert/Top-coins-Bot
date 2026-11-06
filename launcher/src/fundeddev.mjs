@@ -30,7 +30,7 @@ const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.i
 const FUND_SOL = n("LAUNCH_FD_FUND_SOL", 2), FUND_S = n("LAUNCH_FD_FUND_S", 7200), FUNDER_MAX = n("LAUNCH_FD_FUNDER_MAX", 2), B_LO = n("LAUNCH_FD_BUNDLE_LO", 10), B_HI = n("LAUNCH_FD_BUNDLE_HI", 60);
 const CHECKS = [60, 90, 120], DAY_CREDITS = n("LAUNCH_FD_DAY_CREDITS", 200000) /* 0.9.13: 120k → 200k (owner 6 Nov 07:33: "just add more credits") */, SCAN_S = n("LAUNCH_FD_SCAN_S", 240);
 const GRAND_MAX = n("LAUNCH_FD_GRAND_MAX", 2), AMOUNT_DAYS = n("LAUNCH_FD_AMOUNT_DAYS", 7);
-const SCREEN_SOL = n("LAUNCH_SCREEN_SOL", 15), FD_CONCURRENCY = n("LAUNCH_FD_CONCURRENCY", 3); // 0.9.13: observation screen — net buying that puts a launch under the common baseline's checks, funded or not
+const SCREEN_SOL = n("LAUNCH_SCREEN_SOL", 15), FD_CONCURRENCY = n("LAUNCH_FD_CONCURRENCY", 3), FD_TRACE_WORKERS = n("LAUNCH_FD_TRACE_WORKERS", 3), TRACE_CAP_MS = n("LAUNCH_FD_TRACE_CAP_MS", 30000), tracingNow = new Set(); // 0.9.13: observation screen — net buying that puts a launch under the common baseline's checks, funded or not
 const REC_BUNDLE = n("LAUNCH_FD_REC_BUNDLE", 1) === 1, // 0.9.9: back ON (owner go 5 Nov ~20:40 UK) — the launch group's own selling at each check; watch the restart count
    REC_META = n("LAUNCH_FD_REC_META", 0) === 1;
 const SHADOW_SOL = n("LAUNCH_SHADOW_SOL", 0.2), SHADOW_SAMPLE = n("LAUNCH_SHADOW_SAMPLE", 10); // 0.8.15: quote size; every Nth checked launch that enters nothing is quoted too // 0.8.12 switches for the two 0.8.11 recorders under suspicion
@@ -121,6 +121,7 @@ export function initFD(db) {
   try { db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('VENUE', ?, ?)").run(now(), ver); } catch {}
   try { db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('H4_EPOCH2', ?, ?)").run(now(), ver); } catch {} // 0.9.30
   try { db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('COLLECT_EPOCH3', ?, ?)").run(now(), ver); } catch {} // 0.9.36: collection epoch 3 = concurrent checks (Codex 20:34 UK: stamp it)
+  try { db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('FUND_EPOCH2', ?, ?)").run(now(), ver); } catch {} // 0.9.38: funding eligibility epoch 2 = launches recorded before the trace; funding books may see 'pending' at a decision
   // 0.8.22: the curve flag from our own check, and the venue exit re-scored where it was wrong (curve coins had been scored with the 25% trail)
   try { const fixed = db.prepare("UPDATE vol_paper SET curve=1 WHERE curve=0 AND json_valid(row) AND json_extract(row,'$.venue')='pump.fun curve'").run().changes;
     const resc = db.prepare("UPDATE vol_paper SET x_venue=x_trail40, r_venue=r_trail40, m_venue=m_trail40 WHERE curve=1 AND done=1 AND err IS NULL AND x_trail40 IS NOT NULL AND (x_venue IS NULL OR x_venue<>x_trail40)").run().changes;
@@ -149,42 +150,53 @@ export async function fdScan(db, tdb) {
     const ins = db.prepare(`INSERT OR IGNORE INTO fd_watch (mint, name, symbol, creator, created_ts, bundle_pct, bundle_sol, funder, funder_sol, funded_ts, funder_launches, pre, pre_nb, why, scanned_ts, dev_buy_sol, name_1h, name_24h) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
     const sameName = db.prepare("SELECT COUNT(*) c FROM fd_watch WHERE name=? COLLATE NOCASE AND mint<>? AND created_ts>=? AND created_ts<?"); // 0.8.11: the trending-name count (this launch's name in the hour / day before it)
     const insCT = db.prepare("INSERT OR IGNORE INTO creator_trace VALUES (@mint,@creator,@create_ts,@peak_mc_usd,@graduated,@bundle_pct,@bundle_sol,@funder,@funder_sol,@funded_ts,@creator_txs,@err,@checked_ts)");
+    // 0.9.38 (Codex 20:54 UK, owner's go): record the launch IMMEDIATELY with funding pending; the creator trace runs afterwards in a bounded pool (FD_TRACE_WORKERS, 30-s deadline each,
+    // per-mint lock, abandoned past the deadline → lookup_status failed:deadline). Checks never wait for the trace. The funding state AS KNOWN at each decision is what the decision records.
+    const insNow = db.prepare("INSERT OR IGNORE INTO fd_watch (mint, name, symbol, creator, created_ts, bundle_pct, bundle_sol, pre, pre_nb, why, scanned_ts, dev_buy_sol, lookup_status, grp) VALUES (?,?,?,?,?,?,?,0,0,'funding pending',?,?,'pending','pending')");
+    const upd = db.prepare("UPDATE fd_watch SET funder=?, funder_sol=?, funded_ts=?, funder_launches=?, pre=?, pre_nb=?, why=?, trace_ts=?, name_1h=?, name_24h=? WHERE mint=?");
+    const pending = [];
     for (const t of rows) {
       if (db.prepare("SELECT 1 FROM fd_watch WHERE mint=?").get(t.mint)) continue;
       if (fdStat.credits >= DAY_CREDITS) { fdStat.lastErr = `daily Helius budget ${DAY_CREDITS} reached`; break; }
       fdStat.scanned++;
-      let r = db.prepare("SELECT funder, funder_sol, funded_ts, creator_txs FROM creator_trace WHERE mint=?").get(t.mint) || db.prepare("SELECT funder, funder_sol, funded_ts, creator_txs FROM creator_trace WHERE creator=? AND funder IS NOT NULL LIMIT 1").get(t.creator);
-      const known = !!r;
-      if (!r) { const c0 = studyStat.credits; try { r = await creatorFunder(t.creator); fdStat.traced++; ctStat.traced++; } catch (e) { r = { err: e.message.slice(0, 100) }; fdStat.errors++; fdStat.lastErr = `${t.creator.slice(0, 6)} ${r.err}`; }
-        fdStat.credits += studyStat.credits - c0; }
-      { // 0.8.5: ALWAYS record this launch in creator_trace — a factory re-using one creator wallet (3GzDw7…, 2.133 SOL, 5 launches in 50 min) was counted as "0 launches" because the known-creator path skipped the insert
-        insCT.run({ mint: t.mint, creator: t.creator, create_ts: t.create_ts, peak_mc_usd: t.peak_mc_usd ?? null, graduated: t.graduated ? 1 : 0, bundle_pct: t.bundle_pct ?? null, bundle_sol: t.bundle_sol ?? null, funder: r.funder || null, funder_sol: r.funder_sol ?? null, funded_ts: r.funded_ts ?? null, creator_txs: r.txs ?? null, err: r.err || null, checked_ts: now() }); }
-      const fl = r.funder ? db.prepare("SELECT COUNT(DISTINCT mint) c FROM creator_trace WHERE funder=? AND mint<>?").get(r.funder, t.mint).c : null;
-      const cl = db.prepare("SELECT COUNT(DISTINCT mint) c FROM creator_trace WHERE creator=? AND mint<>?").get(t.creator, t.mint).c; // 0.8.5: the creator wallet's own other launches
-      const amt = N(r.funder_sol) || 0, delay = r.funded_ts ? t.create_ts - r.funded_ts : null, bp = N(t.bundle_pct);
-      const why = [];
-      if (!r.funder) why.push("no funder"); else { if (amt < FUND_SOL) why.push(`funded ${amt.toFixed(2)} SOL`); if (delay == null || delay > FUND_S || delay < 0) why.push(`funded ${delay == null ? "?" : Math.round(delay / 60)} min before`); if (fl > FUNDER_MAX) why.push(`funder has ${fl} launches`); if (cl >= 1) why.push(`creator wallet has ${cl} other launch${cl > 1 ? "es" : ""}`); }
-      let preNb = r.funder && amt >= FUND_SOL && delay != null && delay >= 0 && delay <= FUND_S && fl <= FUNDER_MAX && cl < 1 ? 1 : 0; // 0.8.5: first coin of this creator wallet (winners: median 1 prior launch on GMGN = none)
-      if (preNb) { // 0.8.2: the two factory tests, only on the ~1% that get this far
-        const same = db.prepare("SELECT COUNT(DISTINCT mint) c FROM creator_trace WHERE mint<>? AND create_ts>=? AND ABS(funder_sol-?)<0.00005").get(t.mint, t.create_ts - AMOUNT_DAYS * 86400, amt).c; // 0.8.5: any other launch, same creator or not
-        if (same >= 1) { preNb = 0; why.push(`same amount on ${same} other launch${same > 1 ? "es" : ""}`); }
-        else {
-          let g = db.prepare("SELECT funder FROM wallet_trace WHERE wallet=?").get(r.funder)?.funder;
-          if (g === undefined) { const c0 = studyStat.credits; try { const gf = await creatorFunder(r.funder); g = gf.funder || null; db.prepare("INSERT OR IGNORE INTO wallet_trace VALUES (?,?,?,?,?,?,?,?,?,?)").run(r.funder, g, null, null, gf.funder_sol ?? null, gf.funded_ts ?? null, null, 1, gf.err || null, now()); } catch (e) { g = null; } fdStat.credits += studyStat.credits - c0; }
-          const gPublic = g && db.prepare("SELECT 1 FROM wallet_trace WHERE funder=? AND funder_type IS NOT NULL LIMIT 1").get(g); // an exchange / bridge behind the funder is normal (that is how people fund a dev wallet), not a factory
-          if (g && !gPublic) { const gl = db.prepare("SELECT COUNT(DISTINCT c.mint) c FROM creator_trace c JOIN wallet_trace w ON w.wallet=c.funder WHERE w.funder=? AND c.mint<>?").get(g, t.mint).c; if (gl > GRAND_MAX) { preNb = 0; why.push(`grand-funder has ${gl} launches`); } }
-        }
-      }
-      const bundleOk = bp != null && bp >= B_LO && bp < B_HI; if (!bundleOk) why.push(bp == null ? "bundle unknown" : `bundle ${bp.toFixed(0)}%`);
-      const pre = preNb && bundleOk ? 1 : 0; if (pre) fdStat.pre++;
-      const nm = String(t.name || "").slice(0, 60).trim(); let n1 = null, n24 = null; if (nm) try { n1 = sameName.get(nm, t.mint, t.create_ts - 3600, t.create_ts).c; n24 = sameName.get(nm, t.mint, t.create_ts - 86400, t.create_ts).c; } catch {}
-      ins.run(t.mint, nm, String(t.symbol || "").slice(0, 20), t.creator, t.create_ts, bp, N(t.bundle_sol), r.funder || null, amt || null, r.funded_ts ?? null, fl, pre, preNb, why.join("; "), now(), N(t.dev_buy_sol), n1, n24);
-      { // 0.9.13: funding as separate attributes (Codex 6 Nov: lookup failed ≠ completed with no qualifying transfer; tool / high-count / service are their own flags) + one documented precedence for the dashboard group
-        const lookup = r.err ? "failed" : "ran", found = r.funder ? 1 : 0, tool = bp != null && bp >= 65 ? 1 : 0, high = fl != null && fl > FUNDER_MAX ? 1 : 0;
-        const svc = r.funder ? (db.prepare("SELECT funder_type FROM wallet_trace WHERE wallet=? AND funder_type IS NOT NULL LIMIT 1").get(r.funder) ? 1 : 0) : 0;
-        const grp = pre ? "funded-dev" : tool ? "tool" : high ? "high-count" : svc ? "service" : found ? "below-threshold" : lookup === "failed" ? "lookup-failed" : "no-funder";
-        db.prepare("UPDATE fd_watch SET lookup_status=?, funder_found=?, tool_sig=?, high_count=?, service_funded=?, grp=?, trace_ts=? WHERE mint=?").run(lookup, found, tool, high, svc, grp, now(), t.mint); }
+      insNow.run(t.mint, String(t.name || "").slice(0, 60).trim(), String(t.symbol || "").slice(0, 20), t.creator, t.create_ts, N(t.bundle_pct), N(t.bundle_sol), now(), N(t.dev_buy_sol));
+      if (!tracingNow.has(t.mint)) { tracingNow.add(t.mint); pending.push(t); }
     }
+    const traceOne = async (t) => { const deadline = Date.now() + TRACE_CAP_MS; try {
+        let r = db.prepare("SELECT funder, funder_sol, funded_ts, creator_txs FROM creator_trace WHERE mint=?").get(t.mint) || db.prepare("SELECT funder, funder_sol, funded_ts, creator_txs FROM creator_trace WHERE creator=? AND funder IS NOT NULL LIMIT 1").get(t.creator);
+        const known = !!r;
+        if (!r) { const c0 = studyStat.credits; try { r = await creatorFunder(t.creator, deadline); fdStat.traced++; ctStat.traced++; } catch (e) { r = { err: e.message.slice(0, 100) }; fdStat.errors++; fdStat.lastErr = `${t.creator.slice(0, 6)} ${r.err}`; }
+          fdStat.credits += studyStat.credits - c0; }
+        { // 0.8.5: ALWAYS record this launch in creator_trace — a factory re-using one creator wallet (3GzDw7…, 2.133 SOL, 5 launches in 50 min) was counted as "0 launches" because the known-creator path skipped the insert
+          insCT.run({ mint: t.mint, creator: t.creator, create_ts: t.create_ts, peak_mc_usd: t.peak_mc_usd ?? null, graduated: t.graduated ? 1 : 0, bundle_pct: t.bundle_pct ?? null, bundle_sol: t.bundle_sol ?? null, funder: r.funder || null, funder_sol: r.funder_sol ?? null, funded_ts: r.funded_ts ?? null, creator_txs: r.txs ?? null, err: r.err || null, checked_ts: now() }); }
+        const fl = r.funder ? db.prepare("SELECT COUNT(DISTINCT mint) c FROM creator_trace WHERE funder=? AND mint<>?").get(r.funder, t.mint).c : null;
+        const cl = db.prepare("SELECT COUNT(DISTINCT mint) c FROM creator_trace WHERE creator=? AND mint<>?").get(t.creator, t.mint).c; // 0.8.5: the creator wallet's own other launches
+        const amt = N(r.funder_sol) || 0, delay = r.funded_ts ? t.create_ts - r.funded_ts : null, bp = N(t.bundle_pct);
+        const why = [];
+        if (!r.funder) why.push("no funder"); else { if (amt < FUND_SOL) why.push(`funded ${amt.toFixed(2)} SOL`); if (delay == null || delay > FUND_S || delay < 0) why.push(`funded ${delay == null ? "?" : Math.round(delay / 60)} min before`); if (fl > FUNDER_MAX) why.push(`funder has ${fl} launches`); if (cl >= 1) why.push(`creator wallet has ${cl} other launch${cl > 1 ? "es" : ""}`); }
+        let preNb = r.funder && amt >= FUND_SOL && delay != null && delay >= 0 && delay <= FUND_S && fl <= FUNDER_MAX && cl < 1 ? 1 : 0; // 0.8.5: first coin of this creator wallet (winners: median 1 prior launch on GMGN = none)
+        if (preNb) { // 0.8.2: the two factory tests, only on the ~1% that get this far
+          const same = db.prepare("SELECT COUNT(DISTINCT mint) c FROM creator_trace WHERE mint<>? AND create_ts>=? AND ABS(funder_sol-?)<0.00005").get(t.mint, t.create_ts - AMOUNT_DAYS * 86400, amt).c; // 0.8.5: any other launch, same creator or not
+          if (same >= 1) { preNb = 0; why.push(`same amount on ${same} other launch${same > 1 ? "es" : ""}`); }
+          else {
+            let g = db.prepare("SELECT funder FROM wallet_trace WHERE wallet=?").get(r.funder)?.funder;
+            if (g === undefined) { const c0 = studyStat.credits; try { const gf = await creatorFunder(r.funder, deadline); g = gf.funder || null; db.prepare("INSERT OR IGNORE INTO wallet_trace VALUES (?,?,?,?,?,?,?,?,?,?)").run(r.funder, g, null, null, gf.funder_sol ?? null, gf.funded_ts ?? null, null, 1, gf.err || null, now()); } catch (e) { g = null; } fdStat.credits += studyStat.credits - c0; }
+            const gPublic = g && db.prepare("SELECT 1 FROM wallet_trace WHERE funder=? AND funder_type IS NOT NULL LIMIT 1").get(g); // an exchange / bridge behind the funder is normal (that is how people fund a dev wallet), not a factory
+            if (g && !gPublic) { const gl = db.prepare("SELECT COUNT(DISTINCT c.mint) c FROM creator_trace c JOIN wallet_trace w ON w.wallet=c.funder WHERE w.funder=? AND c.mint<>?").get(g, t.mint).c; if (gl > GRAND_MAX) { preNb = 0; why.push(`grand-funder has ${gl} launches`); } }
+          }
+        }
+        const bundleOk = bp != null && bp >= B_LO && bp < B_HI; if (!bundleOk) why.push(bp == null ? "bundle unknown" : `bundle ${bp.toFixed(0)}%`);
+        const pre = preNb && bundleOk ? 1 : 0; if (pre) fdStat.pre++;
+        const nm = String(t.name || "").slice(0, 60).trim(); let n1 = null, n24 = null; if (nm) try { n1 = sameName.get(nm, t.mint, t.create_ts - 3600, t.create_ts).c; n24 = sameName.get(nm, t.mint, t.create_ts - 86400, t.create_ts).c; } catch {}
+        upd.run(r.funder || null, amt || null, r.funded_ts ?? null, fl, pre, preNb, why.join("; "), now(), n1, n24, t.mint); // 0.9.38: the row already exists (recorded at scan); the trace fills the funding fields
+        { // 0.9.13: funding as separate attributes (Codex 6 Nov: lookup failed ≠ completed with no qualifying transfer; tool / high-count / service are their own flags) + one documented precedence for the dashboard group
+          const lookup = r.err ? "failed" : "ran", found = r.funder ? 1 : 0, tool = bp != null && bp >= 65 ? 1 : 0, high = fl != null && fl > FUNDER_MAX ? 1 : 0;
+          const svc = r.funder ? (db.prepare("SELECT funder_type FROM wallet_trace WHERE wallet=? AND funder_type IS NOT NULL LIMIT 1").get(r.funder) ? 1 : 0) : 0;
+          const grp = pre ? "funded-dev" : tool ? "tool" : high ? "high-count" : svc ? "service" : found ? "below-threshold" : lookup === "failed" ? "lookup-failed" : "no-funder";
+          db.prepare("UPDATE fd_watch SET lookup_status=?, funder_found=?, tool_sig=?, high_count=?, service_funded=?, grp=?, trace_ts=? WHERE mint=?").run(lookup, found, tool, high, svc, grp, now(), t.mint); }
+    } catch (e) { fdStat.errors++; fdStat.lastErr = ("trace " + t.mint.slice(0, 6) + ": " + e.message).slice(0, 160); try { db.prepare("UPDATE fd_watch SET lookup_status=?, grp=?, why=?, trace_ts=? WHERE mint=?").run(e.incomplete ? "failed:deadline" : "failed", "lookup-failed", ("trace failed: " + e.message).slice(0, 100), now(), t.mint); } catch {} }
+      finally { tracingNow.delete(t.mint); } };
+    { const queue = [...pending]; const worker = async () => { while (queue.length) { const t = queue.shift(); await traceOne(t); } }; await Promise.all(Array.from({ length: Math.max(1, FD_TRACE_WORKERS) }, worker)); }
     fdStat.lastScan = new Date().toISOString();
   } catch (e) { fdStat.errors++; fdStat.lastErr = "scan: " + e.message.slice(0, 160); }
   finally { if (scanSeq === mySeq) scanning = false; } // an abandoned pass ending later must not clear a newer pass
@@ -252,6 +264,7 @@ export async function fdCheck(db, tdb = null) {
         if (at === 120 && m.holders != null && [...entered].some((k) => /U/.test(k))) { const c60 = checks.find((c) => c.at === 60 && c.holders != null); if (c60) db.prepare("INSERT OR IGNORE INTO fd_hgrowth (mint, name, h60, h120, ratio, mc60, mc120, ts) VALUES (?,?,?,?,?,?,?,?)").run(w.mint, w.name, c60.holders, m.holders, +(m.holders / c60.holders).toFixed(2), c60.mcUsd ?? null, m.mcUsd ?? null, t); }
         for (const rule of RULES) { // 0.9.9: every rule's decision is recorded at every check (passed / failed / already entered / no price), so rejected candidates are rows, not silence
           if (entered.has(rule.k)) { recordDecision(w.mint, at, t, VER, rule.k, 0, "already entered"); continue; }
+          if (!rule.bl && w.lookup_status === "pending") { recordDecision(w.mint, at, t, VER, rule.k, 0, "funding pending (data unavailable)"); continue; } // 0.9.38: the trace has not come back yet — recorded as unavailable, never upgraded later
           if (!rule.bl && !w.ctl) { recordDecision(w.mint, at, t, VER, rule.k, 0, "not in this book's population"); continue; } // 0.9.13: the old books keep their population (funded-dev passes + the 1-in-7 control)
           if (rule.bl && !w.screened) { recordDecision(w.mint, at, t, VER, rule.k, 0, "below the 15 SOL screen"); continue; }
           if (rule.bl && m.hist) { recordDecision(w.mint, at, t, VER, rule.k, 0, "historical observation (before the screen saw it)"); continue; }
