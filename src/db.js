@@ -182,6 +182,7 @@ export const q = {
   finToken: db.prepare(`UPDATE tokens SET bundle_sol=?, bundle_tokens=?, bundle_pct=?, bundle_wallets=?, dev_buy_sol=?, tier=?, finalized=1, entry_mc_usd=?, peak_mc_usd=?, last_mc_usd=? WHERE mint=?`),
   insCluster: db.prepare(`INSERT OR IGNORE INTO cluster_wallets (mint,wallet,role,tokens,sol_in,first_slot) VALUES (?,?,?,?,?,?)`),
   insTrade: db.prepare(`INSERT INTO trades (mint,sig,slot,ts,wallet,is_buy,sol,tokens,price_sol,recv_ms,vsol,vtok,venue) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'curve')`),
+  insTradeVenue: db.prepare(`INSERT INTO trades (mint,sig,slot,ts,wallet,is_buy,sol,tokens,price_sol,recv_ms,vsol,vtok,venue) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`), // v0.19.6: pool (pumpswap) trades for kept launches, venue column set
   insTradeIfNew: db.prepare(`INSERT INTO trades (mint,sig,slot,ts,wallet,is_buy,sol,tokens,price_sol,recv_ms,vsol,vtok,venue) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,'curve' WHERE NOT EXISTS (SELECT 1 FROM trades WHERE mint=? AND sig=?)`), // v0.19.3: duplicate-safe, for the promotion flush retry // v0.19.1: recv_ms = when this process received the log; v0.19.2: vsol/vtok = the curve's virtual reserves AFTER this trade, as the event reports them (raw lamports / raw token units)
   insGap: db.prepare(`INSERT INTO feed_gaps (ts, event, detail) VALUES (?,?,?)`), // v0.19.2: every socket status change (open / closed / idle / error) with its time — a gap is the span between a close and the next open; nothing is backfilled
   bump: db.prepare(`INSERT INTO stats (k,v) VALUES (?,1) ON CONFLICT(k) DO UPDATE SET v=v+1`),

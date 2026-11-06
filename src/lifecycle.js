@@ -94,6 +94,11 @@ async function bigBuy(mint, tr, age, mc, venue) {
 
 on("trade", (t, tr) => trade(t.mint, t.ts, tr, t.lastMc, t.graduated ? 1 : 0, "curve"));
 onSwap((tr) => { const s = L.get(tr.mint); const ct = s?.createTs ?? q.tokenMeta.get(tr.mint)?.create_ts; if (!ct) return; trade(tr.mint, ct, tr, tr.mc, 1, "pumpswap"); });
+// v0.19.6 (obs-5; owner's go 6 Nov 19:28 UK, after the Codex + Claude reviews: "every exported trade stream is curve-only"): for a launch whose trades are being kept (bundle tier-1 or the
+// 15-SOL volume promotion), the pool trades after migration go into the same trades table, venue 'pumpswap…', for the same retention window — so a migrated runner's exit can be replayed.
+// vsol = the pool's quote reserve in lamports after the swap (SOL-quoted pools), vtok = the pool's base reserve in raw units when known.
+onSwap((tr) => { const t = live.get(tr.mint); if (!t || !t.finalized || !(t.tier >= 1 || t.vol)) return;
+  try { q.insTradeVenue.run(tr.mint, tr.sig, tr.slot, tr.ts, tr.wallet || null, tr.isBuy ? 1 : 0, tr.sol, tr.tokens, tr.price, Date.now(), tr.poolSol != null ? String(Math.round(tr.poolSol * 1e9)) : null, tr.poolBase != null ? String(tr.poolBase) : null, tr.venue || "pumpswap"); lc.poolTrades = (lc.poolTrades || 0) + 1; } catch (e) { lc.poolErr = (lc.poolErr || 0) + 1; } });
 
 // time-based checkpoints for tokens that went quiet (so "dead" rows get written too), and cleanup
 setInterval(() => {

@@ -165,7 +165,7 @@ function handle({ sig, slot, logs, err }) {
     // under-priced pool-stage coins by 25–80% and put a fake drop into every coin at migration. Verified against the chain's own fills (executor selftest).
     const price = e.baseAmt > 0n && e.quoteAmt > 0n ? ((Number(e.quoteAmt) / qDiv) * qi.sol) / (Number(e.baseAmt) / 1e6) : poolQuoteSol / (Number(e.poolBase) / 1e6);
     const mc = price * CFG.TOTAL_SUPPLY * solUsdCached();
-    const tr = { mint: pm.mint, pool: e.pool, sig, slot, ts: e.ts, wallet: e.user, isBuy: e.isBuy, sol: solQ, tokens, price, mc, route, venue: pm.quote === WSOL ? "pumpswap" : `pumpswap/${qi.sym}`, quote: qi.sym, creatorFee: (Number(e.creatorFee || 0n) / qDiv) * qi.sol, poolSol: +poolQuoteSol.toFixed(2) }; // v0.18.118 poolSol = the pool's SOL side after this swap (depth)
+    const tr = { mint: pm.mint, pool: e.pool, sig, slot, ts: e.ts, wallet: e.user, isBuy: e.isBuy, sol: solQ, tokens, price, mc, route, venue: pm.quote === WSOL ? "pumpswap" : `pumpswap/${qi.sym}`, quote: qi.sym, creatorFee: (Number(e.creatorFee || 0n) / qDiv) * qi.sol, poolSol: +poolQuoteSol.toFixed(2), poolBase: e.poolBase != null ? e.poolBase : null }; // v0.18.118 poolSol = the pool's SOL side after this swap (depth)
     if (samples < 5) { samples++; console.log("[ps sample]", JSON.stringify({ mint: tr.mint.slice(0, 8), buy: tr.isBuy, sol: +sol.toFixed(4), mc: Math.round(mc), wallet: tr.wallet.slice(0, 6) })); }
     emitSwap(tr); // v0.18.43: through the bad-price guard
   }
