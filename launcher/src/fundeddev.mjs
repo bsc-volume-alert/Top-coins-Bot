@@ -28,8 +28,9 @@ import { farmScores, funderHistory, recordWalletState, recordDecision, traceBuye
 
 const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
 const FUND_SOL = n("LAUNCH_FD_FUND_SOL", 2), FUND_S = n("LAUNCH_FD_FUND_S", 7200), FUNDER_MAX = n("LAUNCH_FD_FUNDER_MAX", 2), B_LO = n("LAUNCH_FD_BUNDLE_LO", 10), B_HI = n("LAUNCH_FD_BUNDLE_HI", 60);
-const CHECKS = [60, 90, 120], DAY_CREDITS = n("LAUNCH_FD_DAY_CREDITS", 120000), SCAN_S = n("LAUNCH_FD_SCAN_S", 240);
+const CHECKS = [60, 90, 120], DAY_CREDITS = n("LAUNCH_FD_DAY_CREDITS", 200000) /* 0.9.13: 120k → 200k (owner 6 Nov 07:33: "just add more credits") */, SCAN_S = n("LAUNCH_FD_SCAN_S", 240);
 const GRAND_MAX = n("LAUNCH_FD_GRAND_MAX", 2), AMOUNT_DAYS = n("LAUNCH_FD_AMOUNT_DAYS", 7);
+const SCREEN_SOL = n("LAUNCH_SCREEN_SOL", 15); // 0.9.13: observation screen — net buying that puts a launch under the common baseline's checks, funded or not
 const REC_BUNDLE = n("LAUNCH_FD_REC_BUNDLE", 1) === 1, // 0.9.9: back ON (owner go 5 Nov ~20:40 UK) — the launch group's own selling at each check; watch the restart count
    REC_META = n("LAUNCH_FD_REC_META", 0) === 1;
 const SHADOW_SOL = n("LAUNCH_SHADOW_SOL", 0.2), SHADOW_SAMPLE = n("LAUNCH_SHADOW_SAMPLE", 10); // 0.8.15: quote size; every Nth checked launch that enters nothing is quoted too // 0.8.12 switches for the two 0.8.11 recorders under suspicion
@@ -76,6 +77,8 @@ export const RULES = [
   { k: "FDU120", ok: (w, m) => w.pre === 1 && m.at === 60 && confirm(m) && uncrowded(m), u: 1, delayMs: 60000 },
 ];
 const uncrowded = (m) => m.holders != null && m.holders < 200 && m.mcUsd != null && m.mcUsd < 15000;
+// 0.9.13 (owner go 6 Nov 07:33, spec agreed with Codex + Gemini): the common baseline — no funding test at all — on every launch the 15-SOL screen observes. Funding is a label on the row (grp), read in groups.
+RULES.push({ k: "BL", ok: (w, m) => m.net >= 15 && (m.mcSol ?? 0) >= 60, bl: 1 }, { k: "BL27", ok: (w, m) => confirm(m), bl: 1 });
 const GATE_SOL = n("LAUNCH_U_GATE_SOL", 2);
 /** the 90-s confirmation: the coin passed the bar and U at its 60-s check, and net buying has grown by more than GATE_SOL since */
 const gate90 = (m, prev, bar) => { const c60 = (prev || []).find((c) => c.at === 60); return !!c60 && bar(c60) && uncrowded(c60) && (m.net ?? 0) - (c60.net ?? 0) > GATE_SOL; };
@@ -115,6 +118,7 @@ export function initFD(db) {
     db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('FDH_REV', ?, ?)").run(now(), ver); } catch (e) { fdStat.lastErr = "0.8.22 fix: " + e.message.slice(0, 120); } // 0.8.16: when the venue exit (25% trail graduated / 40% curve) was loaded — the page judges it on the trades after this
   // 0.8.11: recording columns (see the header) and the first-buyer tables
   for (const c of ["dev_buy_sol REAL", "name_1h INTEGER", "name_24h INTEGER", "socials TEXT", "image INTEGER", "replies INTEGER", "koth_ts INTEGER", "meta_ts INTEGER", "meta_err TEXT"]) try { db.exec(`ALTER TABLE fd_watch ADD COLUMN ${c}`); } catch {}
+  for (const c of ["screened INTEGER", "screened_ts INTEGER", "lookup_status TEXT", "funder_found INTEGER", "tool_sig INTEGER", "high_count INTEGER", "service_funded INTEGER", "grp TEXT", "trace_ts INTEGER"]) try { db.exec(`ALTER TABLE fd_watch ADD COLUMN ${c}`); } catch {} // 0.9.13: observation screen + funding as separate attributes
   for (const c of ["q_ts INTEGER", "q_px REAL", "q_gap REAL", "q_tokens REAL", "q_impact REAL", "q_ms INTEGER", "q_err TEXT", "q_exit_ts INTEGER", "q_exit_sol REAL", "q_exit_x REAL", "q_exit_gap REAL", "q_exit_delay INTEGER", "q_exit_impact REAL", "q_exit_err TEXT"]) try { db.exec(`ALTER TABLE vol_paper ADD COLUMN ${c}`); } catch {} // 0.8.15 quote shadowing
   db.exec("CREATE TABLE IF NOT EXISTS fd_hgrowth (mint TEXT PRIMARY KEY, name TEXT, h60 INTEGER, h120 INTEGER, ratio REAL, mc60 REAL, mc120 REAL, ts INTEGER)"); // 0.9.6
   db.exec("CREATE TABLE IF NOT EXISTS fd_quotes (mint TEXT, ts INTEGER, at INTEGER, entered TEXT, chain_px REAL, q_px REAL, q_gap REAL, q_impact REAL, q_ms INTEGER, venue TEXT, mcSol REAL, net REAL, err TEXT)");
@@ -163,6 +167,11 @@ export async function fdScan(db, tdb) {
       const pre = preNb && bundleOk ? 1 : 0; if (pre) fdStat.pre++;
       const nm = String(t.name || "").slice(0, 60).trim(); let n1 = null, n24 = null; if (nm) try { n1 = sameName.get(nm, t.mint, t.create_ts - 3600, t.create_ts).c; n24 = sameName.get(nm, t.mint, t.create_ts - 86400, t.create_ts).c; } catch {}
       ins.run(t.mint, nm, String(t.symbol || "").slice(0, 20), t.creator, t.create_ts, bp, N(t.bundle_sol), r.funder || null, amt || null, r.funded_ts ?? null, fl, pre, preNb, why.join("; "), now(), N(t.dev_buy_sol), n1, n24);
+      { // 0.9.13: funding as separate attributes (Codex 6 Nov: lookup failed ≠ completed with no qualifying transfer; tool / high-count / service are their own flags) + one documented precedence for the dashboard group
+        const lookup = r.err ? "failed" : "ran", found = r.funder ? 1 : 0, tool = bp != null && bp >= 65 ? 1 : 0, high = fl != null && fl > FUNDER_MAX ? 1 : 0;
+        const svc = r.funder ? (db.prepare("SELECT funder_type FROM wallet_trace WHERE wallet=? AND funder_type IS NOT NULL LIMIT 1").get(r.funder) ? 1 : 0) : 0;
+        const grp = pre ? "funded-dev" : tool ? "tool" : high ? "high-count" : svc ? "service" : found ? "below-threshold" : lookup === "failed" ? "lookup-failed" : "no-funder";
+        db.prepare("UPDATE fd_watch SET lookup_status=?, funder_found=?, tool_sig=?, high_count=?, service_funded=?, grp=?, trace_ts=? WHERE mint=?").run(lookup, found, tool, high, svc, grp, now(), t.mint); }
     }
     fdStat.lastScan = new Date().toISOString();
   } catch (e) { fdStat.errors++; fdStat.lastErr = "scan: " + e.message.slice(0, 160); }
@@ -194,7 +203,10 @@ export async function fdCheck(db, tdb = null) {
   try {
     const t = now();
     // pre-filtered launches first; then the A1 control: every 7th other launch (so the control costs ~15% of the credits of "all launches")
-    const list = db.prepare("SELECT * FROM fd_watch WHERE done=0 AND created_ts>=? AND (pre_nb=1 OR (rowid % 7)=0) ORDER BY pre DESC, created_ts").all(t - 300);
+    // 0.9.13: the observation screen — any open launch whose NET buying (buys − sells, from the tracker's trades) has reached SCREEN_SOL is observed from now on; first-seen time recorded
+    if (tdb) { try { const q = tdb.prepare("SELECT COALESCE(SUM(CASE WHEN is_buy=1 THEN sol ELSE -sol END),0) net FROM trades WHERE mint=?");
+      for (const w of db.prepare("SELECT mint FROM fd_watch WHERE done=0 AND screened IS NULL AND created_ts>=?").all(t - 300)) { const net = q.get(w.mint)?.net || 0; if (net >= SCREEN_SOL) db.prepare("UPDATE fd_watch SET screened=1, screened_ts=? WHERE mint=?").run(t, w.mint); } } catch (e) { fdStat.lastErr = ("screen: " + e.message).slice(0, 120); } }
+    const list = db.prepare("SELECT *, rowid AS rid, (CASE WHEN pre_nb=1 OR (rowid % 7)=0 THEN 1 ELSE 0 END) AS ctl FROM fd_watch WHERE done=0 AND created_ts>=? AND (pre_nb=1 OR (rowid % 7)=0 OR screened=1) ORDER BY pre DESC, created_ts").all(t - 300);
     fdStat.open = list.length;
     for (const w of list) {
       const age = t - w.created_ts, checks = JSON.parse(w.checks || "[]"), doneAt = new Set(checks.map((c) => c.at));
@@ -207,6 +219,8 @@ export async function fdCheck(db, tdb = null) {
         let bundle = null; if (tdb && REC_BUNDLE) try { bundle = tdb.prepare("SELECT wallet FROM cluster_wallets WHERE mint=? AND role IN ('bundle','dev')").all(w.mint).map((x) => x.wallet); } catch {} // 0.8.12: behind LAUNCH_FD_REC_BUNDLE (off) — the launcher restarted every 2–6 min after 0.8.11 with nothing in the error log (pm2 memory limit?); the tracker-table lookup and the pump.fun page fetch are the two suspects, switched off until proven
         const mm = metrics(r, (r.t0 || w.created_ts) + at, w.creator, bundle), early = mm.early; delete mm.early; // the wallets go to fd_early, not into the check row
         const m = { at, ...mm, txs: r.txs, venue: r.pumpCurve ? (r.complete ? "pump.fun graduated" : "pump.fun curve") : "other" };
+        m.hist = w.ctl ? 0 : (w.screened_ts && (r.t0 || w.created_ts) + at < w.screened_ts ? 1 : 0); // 0.9.13: a check dated before the screen first saw the launch is a historical observation, never an entry (baseline rows only)
+        m.grp = w.grp || null;
         // 0.9.9: recording only — farm scores (previous-dump participants among this check's buyers, as known NOW), funder history, per-wallet state
         try { const upto = (r.t0 || w.created_ts) + at, tl = r.trades.filter((x) => x.t <= upto); Object.assign(m, farmScores(tl, t)); if (BASE_BAR(m)) { m.funder_hist = funderHistory(w.funder, w.created_ts); recordWalletState(w.mint, at, tl, r.t0 || w.created_ts, new Set((early || []).map((e) => e.w)), t); if (at === 60) m.meta_reuse = metaReuse(w.mint, w.created_ts); } } catch (e) { fdStat.lastErr = ("farm: " + e.message).slice(0, 160); }
         try { recordEarly(db, w, early, r, (r.t0 || w.created_ts) + at); } catch (e) { fdStat.lastErr = ("early: " + e.message).slice(0, 160); }
@@ -222,6 +236,9 @@ export async function fdCheck(db, tdb = null) {
         if (at === 120 && m.holders != null && [...entered].some((k) => /U/.test(k))) { const c60 = checks.find((c) => c.at === 60 && c.holders != null); if (c60) db.prepare("INSERT OR IGNORE INTO fd_hgrowth (mint, name, h60, h120, ratio, mc60, mc120, ts) VALUES (?,?,?,?,?,?,?,?)").run(w.mint, w.name, c60.holders, m.holders, +(m.holders / c60.holders).toFixed(2), c60.mcUsd ?? null, m.mcUsd ?? null, t); }
         for (const rule of RULES) { // 0.9.9: every rule's decision is recorded at every check (passed / failed / already entered / no price), so rejected candidates are rows, not silence
           if (entered.has(rule.k)) { recordDecision(w.mint, at, t, VER, rule.k, 0, "already entered"); continue; }
+          if (!rule.bl && !w.ctl) { recordDecision(w.mint, at, t, VER, rule.k, 0, "not in this book's population"); continue; } // 0.9.13: the old books keep their population (funded-dev passes + the 1-in-7 control)
+          if (rule.bl && !w.screened) { recordDecision(w.mint, at, t, VER, rule.k, 0, "below the 15 SOL screen"); continue; }
+          if (rule.bl && m.hist) { recordDecision(w.mint, at, t, VER, rule.k, 0, "historical observation (before the screen saw it)"); continue; }
           let ok = false; try { ok = !!rule.ok(w, m, prev); } catch {}
           if (!ok) { recordDecision(w.mint, at, t, VER, rule.k, 0, BASE_BAR(m) ? "failed" : "below base bar"); continue; }
           const gpx = N(info?.price?.price ?? info?.price), supply = N(info?.total_supply) || N(info?.circulating_supply) || 1e9, su = await solPrice();
