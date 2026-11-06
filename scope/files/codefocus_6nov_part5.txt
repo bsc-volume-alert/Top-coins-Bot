@@ -1,0 +1,784 @@
+# PART 5 of 5 — focused code review pack (paste all parts in order)
+
+
+====================================================================================================
+=== FILE: src/launch-monitor.js (8,630 chars)
+====================================================================================================
+import { CFG } from "./config.js";
+import { db, q } from "./db.js";
+import { eventsFromLogs, lamports, rawTok, priceSol } from "./pump-decoder.js";
+import { getSolUsd, solUsdCached } from "./price.js";
+import { routeOf } from "./routes.js";
+import { tg } from "./telegram.js";
+import { getSocials, socialsLine, socialsAtLaunch } from "./socials.js";
+
+/** In-memory token state. mint -> {create, slot, trades:[], finalized, tier, bundle:{...}} */
+export const live = new Map();
+export const memStats = () => { let trades = 0; for (const t of live.values()) trades += t.trades?.length || 0; return { live: live.size, trades }; }; // v0.18.18
+export const counters = { txs: 0, creates: 0, trades: 0, tier1: 0, decodeErr: 0 };
+const launchRing = []; // v0.18.118 market heat: pump.fun launches in the last hour / 10 min (in memory)
+export function launchHeat(now = Math.floor(Date.now() / 1000)) { let i = 0; while (i < launchRing.length && now - launchRing[i] > 3600) i++; if (i) launchRing.splice(0, i); let m10 = 0; for (let j = launchRing.length - 1; j >= 0 && now - launchRing[j] <= 600; j--) m10++; return { launch1h: launchRing.length, launch10m: m10 }; }
+const listeners = new Map(); // event -> [fn(token, extra)]   events: create|finalized|trade|graduated|expire
+export const on = (ev, fn) => { if (!listeners.has(ev)) listeners.set(ev, []); listeners.get(ev).push(fn); };
+export const emit = (ev, t, extra) => { for (const fn of listeners.get(ev) || []) { try { fn(t, extra); } catch (e) { console.error(`[listener:${ev}]`, e.stack || e.message); } } };
+
+const mcUsd = (vsol, vtok) => priceSol(vsol, vtok) * CFG.TOTAL_SUPPLY * solUsdCached();
+
+export function handleTx({ sig, slot, logs, err }) {
+  counters.txs++;
+  if (err) return;
+  const evs = eventsFromLogs(logs);
+  if (!evs.length) return;
+  const ts = Math.floor(Date.now() / 1000);
+  for (const e of evs) {
+    if (e.type === "create") {
+      counters.creates++;
+      const t = { mint: e.mint, name: e.name, symbol: e.symbol, uri: e.uri, creator: e.creator, bc: e.bondingCurve,
+        slot, ts: e.ts || ts, sig, trades: [], finalized: false, tier: 0, bundle: null, lastVsol: e.vsol, lastVtok: e.vtok,
+        peakMc: 0, lastMc: 0, hold: false, factory: false, graduated: false };
+      live.set(e.mint, t); launchRing.push(t.ts);
+      q.insToken.run(t.mint, t.name, t.symbol, t.uri, t.creator, t.bc, slot, t.ts, sig);
+      if (q.creatorRecent.get(t.creator, t.ts - CFG.FACTORY_WINDOW_MIN * 60, t.mint) >= 1) { t.factory = true; q.setFactory.run(t.mint); }
+      setTimeout(() => finalize(t), CFG.FINALIZE_MS);
+      socialsAtLaunch(t.mint, t.uri, (soc) => { t.socOk = soc.fetched ? (soc.ok ? 1 : 0) : null; try { q.setTokenSocials.run(t.socOk, JSON.stringify({ t: soc.twitter, w: soc.website, k: soc.tiktok, g: soc.telegram }), t.mint); } catch {} }); // v0.18.156: every launch
+      emit("create", t);
+    } else if (e.type === "trade") {
+      if (e.type === "claim") { emit("claim", null, { ...e, sig, venue: "pump" }); continue; }
+      counters.trades++;
+      const t = live.get(e.mint); if (!t) continue; // not a token we saw created (older launches) — ignore
+      const tr = { sig, slot, ts: e.ts || ts, wallet: e.user, isBuy: e.isBuy, sol: lamports(e.sol), tokens: rawTok(e.tokens), price: priceSol(e.vsol, e.vtok), route: routeOf(logs), creatorFee: lamports(e.creatorFee || 0n), vsol: e.vsol != null ? String(e.vsol) : null, vtok: e.vtok != null ? String(e.vtok) : null };
+      t.lastVsol = e.vsol; t.lastVtok = e.vtok;
+      const mc = mcUsd(e.vsol, e.vtok); t.lastMc = mc; if (mc > t.peakMc) t.peakMc = mc;
+      // v0.19 (5 Nov 2026, owner: "preserve future data first"): launches that are not bundle tier-1 but reach VOL_TRACK_SOL of buys also get every trade stored for TRACK_MIN —
+      // the funded-dev books' coins are mostly bundle 0–50% launches with 15–30 SOL of buying in the first minute, and their dumps were lost when the launch expired at 5 min.
+      if (t.finalized && t.tier < 1 && !t.vol) { t.buySol = (t.buySol || 0) + (tr.isBuy ? tr.sol : 0); if (t.buySol >= CFG.VOL_TRACK_SOL) { t.vol = true; t.volUntil = (tr.ts || ts) + CFG.VOL_TRACK_MIN * 60; counters.vol = (counters.vol || 0) + 1;
+        try { db.transaction(() => { for (const x of t.trades) q.insTrade.run(t.mint, x.sig, x.slot, x.ts, x.wallet, x.isBuy ? 1 : 0, x.sol, x.tokens, x.price, x.recvMs || null, x.vsol || null, x.vtok || null); })(); } catch (e) { console.error("[vol-track]", e.message); } } }
+      tr.recvMs = Date.now(); // v0.19.1
+      t.trades.push(tr); if (t.finalized && t.trades.length > 4000) t.trades = t.trades.slice(0, 500).concat(t.trades.slice(-1500)); // v0.19.1: the table keeps everything; in memory keep the launch block (bundle/sniper tests) and the latest trades (last price) so a 2-hour watch stays small
+      if (t.finalized && (t.tier >= 1 || t.vol)) q.insTrade.run(t.mint, sig, slot, tr.ts, tr.wallet, tr.isBuy ? 1 : 0, tr.sol, tr.tokens, tr.price, tr.recvMs, tr.vsol, tr.vtok);
+      if (!t.graduated && e.vtok <= BigInt(CFG.GRAD_VTOK) * 1_000_000n) { t.graduated = true; q.setGrad.run(t.mint); emit("graduated", t, tr); }
+      emit("trade", t, tr);
+    }
+  }
+}
+
+function finalize(t) {
+  if (t.finalized) return;
+  t.finalized = true;
+  const maxSlot = t.slot + CFG.BUNDLE_SLOTS;
+  const buys = t.trades.filter((x) => x.isBuy && x.slot <= maxSlot);
+  const wallets = new Map();
+  let devBuy = 0;
+  for (const b of buys) {
+    const w = wallets.get(b.wallet) || { tokens: 0, sol: 0, first: b.slot };
+    w.tokens += b.tokens; w.sol += b.sol; wallets.set(b.wallet, w);
+    if (b.wallet === t.creator) devBuy += b.sol;
+  }
+  const bundleTokens = [...wallets.values()].reduce((a, w) => a + w.tokens, 0);
+  const bundleSol = [...wallets.values()].reduce((a, w) => a + w.sol, 0);
+  const pct = (bundleTokens / CFG.TOTAL_SUPPLY) * 100;
+  t.bundle = { sol: bundleSol, tokens: bundleTokens, pct, wallets: wallets.size, devBuy };
+  t.tier = pct >= CFG.BUNDLE_PCT_MIN && bundleSol >= CFG.BUNDLE_SOL_MIN ? 1 : 0;
+  const mc = mcUsd(t.lastVsol, t.lastVtok);
+  q.finToken.run(bundleSol, bundleTokens, pct, wallets.size, devBuy, t.tier, mc, t.peakMc || mc, mc, t.mint);
+  if (t.tier >= 1) {
+    counters.tier1++;
+    const ins = db.transaction(() => {
+      for (const [w, v] of wallets) q.insCluster.run(t.mint, w, w === t.creator ? "dev" : "bundle", v.tokens, v.sol, v.first);
+      for (const tr of t.trades) q.insTrade.run(t.mint, tr.sig, tr.slot, tr.ts, tr.wallet, tr.isBuy ? 1 : 0, tr.sol, tr.tokens, tr.price, tr.recvMs || null, tr.vsol || null, tr.vtok || null);
+    });
+    ins();
+    if (CFG.TG_TIER1_ALERTS && bundleSol >= CFG.TG_TIER1_SOL_MIN) getSocials(t.mint, t.uri).then((soc) => {
+      q.setTokenSocials.run(soc.fetched ? (soc.ok ? 1 : 0) : null, JSON.stringify({ t: soc.twitter, w: soc.website, k: soc.tiktok, g: soc.telegram }), t.mint);
+      if (CFG.ALERT_REQUIRE_SOCIALS && soc.fetched && !soc.ok) return; // no socials = rug candidate, logged only
+      tg(`🧱 <b>Prepared launch</b> — ${esc(t.name)} ($${esc(t.symbol)})\n` +
+        `Bundle: <b>${pct.toFixed(1)}%</b> of supply · <b>${bundleSol.toFixed(1)} SOL</b> · ${wallets.size} wallets (dev ${devBuy.toFixed(1)} SOL)\n` +
+        `${socialsLine(soc)}\nMC now: $${fmt(mc)} · SOL $${solUsdCached().toFixed(0)}\n` +
+        links(t.mint) + (t.factory ? "\n⚠️ factory: same creator launched another token in the last 10 min" : ""));
+    }).catch(() => {});
+  }
+  setTimeout(() => expire(t), (t.tier >= 1 ? CFG.TRACK_MIN : CFG.TRACK_MIN_T0) * 60_000);
+  emit("finalized", t);
+}
+
+export const holds = new Set(); // v0.18.119: mints other modules (Project S) want kept in memory past the usual 5 / 30 min
+function expire(t) {
+  if (t.hold || holds.has(t.mint)) return setTimeout(() => expire(t), 60_000); // open paper position keeps it alive
+  if (t.volUntil && Math.floor(Date.now() / 1000) < t.volUntil) return setTimeout(() => expire(t), 60_000); // v0.19: a volume launch stays until its trades have been kept TRACK_MIN
+  emit("expire", t); live.delete(t.mint);
+}
+
+export const links = (m) => `<a href="https://fomo.family/tokens/solana/${m}">FOMO</a> · <a href="https://axiom.trade/t/${m}">Axiom</a> · <a href="https://dexscreener.com/solana/${m}">DexScreener</a> · <a href="https://solscan.io/token/${m}">Solscan</a>\n<code>${m}</code>`;
+export const esc = (s) => String(s ?? "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+export const fmt = (n) => (n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : n.toFixed(0));
+export function startPriceLoop() { getSolUsd(); setInterval(getSolUsd, 60_000); }
+
+
+====================================================================================================
+=== FILE: src/lifecycle.js (14,831 chars)
+====================================================================================================
+// v0.12: lifecycle sampler (survival funnel), top-10 holder snapshots for survivors, big-buy logging with wallet balance.
+import { CFG } from "./config.js";
+import { q } from "./db.js";
+import { on, live } from "./launch-monitor.js";
+import { onSwap } from "./pumpswap.js";
+import { rpc } from "./rpc.js";
+import { solUsdCached } from "./price.js";
+const climbListeners = []; export const onClimb = (fn) => climbListeners.push(fn);
+const w2Listeners = []; export const onWave2 = (fn) => w2Listeners.push(fn);
+const revListeners = []; export const onRevival = (fn) => revListeners.push(fn);
+const grListeners = []; export const onGradRunner = (fn) => grListeners.push(fn);
+const grecListeners = []; export const onGradRecovery = (fn) => grecListeners.push(fn);
+const slowListeners = []; export const onSlowBuild = (fn) => slowListeners.push(fn);
+
+export const lc = { samples: 0, holderSnaps: 0, bigBuys: 0, tracked: 0 };
+const L = new Map(); // mint -> { createTs, w5:[{ts,sol,b,w}], buyers:Set, lastMc, lastTs, graduated, next: idx }
+let holderBudget = 0, balBudget = 0, day = new Date().getUTCDate();
+const balCache = new Map();
+const START_TS = Math.floor(Date.now() / 1000);
+const resetDay = () => { const d = new Date().getUTCDate(); if (d !== day) { day = d; holderBudget = 0; balBudget = 0; } };
+
+function st(mint, createTs) {
+  let s = L.get(mint);
+  if (!s && createTs && createTs >= START_TS) { s = { createTs, w5: [], buyers: new Set(), lastMc: 0, lastTs: 0, graduated: 0, next: 0, cp: {}, maxBurst: 0, lastPx: 0, climbed: false, bts: [], ring: [], peakMc: 0, peakTs: 0, w2: new Set(), revDone: false, lastRev: 0, gradTs: 0, gradPx: 0, gradPeak: 0, grDone: false, grecDone: false, lastGr: 0, dumped: false, lowMc: Infinity, lowTs: 0, slowDone: false, lastSlow: 0 }; L.set(mint, s); }
+  return s;
+}
+function trade(mint, createTs, tr, mc, graduated, venue) {
+  const s = st(mint, createTs); if (!s) return;
+  const now = tr.ts || Math.floor(Date.now() / 1000);
+  s.w5.push({ ts: now, sol: tr.sol, b: tr.isBuy, w: tr.wallet }); while (s.w5.length && now - s.w5[0].ts > 300) s.w5.shift();
+  if (tr.isBuy && s.buyers.size < 20000 && !s.buyers.has(tr.wallet)) { s.buyers.add(tr.wallet); s.bts.push({ ts: now, w: tr.wallet }); } // v0.18.18: buyer set capped at 20K wallets (count saturates)
+  while (s.bts.length && now - s.bts[0].ts > 1260) s.bts.shift();
+  s.ring.push({ ts: now, px: tr.price, mc, usd: tr.sol * solUsdCached(), b: tr.isBuy }); while (s.ring.length && now - s.ring[0].ts > 1260) s.ring.shift();
+  s.lastMc = mc; s.lastTs = now; s.lastPx = tr.price; if (mc > s.peakMc) { s.peakMc = mc; s.peakTs = now; }
+  if (graduated && !s.graduated) { s.graduated = 1; s.gradTs = now; s.gradPx = tr.price; s.gradPeak = mc; }
+  if (s.graduated && mc > s.gradPeak) s.gradPeak = mc;
+  if (!s.dumped && s.peakMc > 0 && mc <= s.peakMc * (1 - CFG.SLOW_DRAWDOWN)) { s.dumped = true; s.lowMc = mc; s.lowTs = now; }
+  if (s.dumped && mc < s.lowMc) { s.lowMc = mc; s.lowTs = now; }
+  wave2Check(mint, s, now, venue); revivalCheck(mint, s, now, venue); gradRunnerCheck(mint, s, now); gradRecoveryCheck(mint, s, now); slowBuildCheck(mint, s, now);
+  const v1 = s.w5.filter((x) => now - x.ts <= 60).reduce((a, x) => a + x.sol, 0) * solUsdCached(); if (v1 > s.maxBurst) s.maxBurst = v1;
+  if (tr.isBuy && tr.sol >= CFG.BIGBUY_SOL) bigBuy(mint, tr, now - s.createTs, mc, venue);
+  sample(mint, s, now);
+}
+function sample(mint, s, now) {
+  const cps = CFG.LIFE_CHECKPOINTS;
+  while (s.next < cps.length && now - s.createTs >= cps[s.next]) {
+    const cp = cps[s.next++];
+    const w = s.w5.filter((x) => now - x.ts <= 300);
+    const vol = w.reduce((a, x) => a + x.sol, 0) * solUsdCached(), b = w.filter((x) => x.b).length, sl = w.length - b, by = new Set(w.filter((x) => x.b).map((x) => x.w)).size;
+    const alive = now - s.lastTs <= 300 && w.length > 0 ? 1 : 0;
+    q.insLife.run(mint, cp, now, s.lastMc, vol, b, sl, by, s.buyers.size, s.graduated, null, null, alive); lc.samples++;
+    s.cp[cp] = { mc: s.lastMc, buyers: s.buyers.size, b, sl, alive };
+    climbCheck(mint, s, cp, now);
+    if (cp >= CFG.LIFE_HOLDERS_FROM_S && s.lastMc >= CFG.LIFE_HOLDERS_MIN_MC && alive) holders(mint, cp);
+  }
+}
+async function holders(mint, cp) {
+  resetDay(); if (holderBudget >= CFG.LIFE_HOLDER_DAILY_BUDGET) return; holderBudget++;
+  try {
+    const r = await rpc("getTokenLargestAccounts", [mint, { commitment: "confirmed" }]);
+    const amts = (r?.value || []).map((x) => Number(x.uiAmount || 0));
+    // exclude the largest if it is plausibly the pool (>= 15% and PumpSwap pool holds a big chunk) — keep simple: report top10 of all and top10 excluding largest
+    const top10 = amts.slice(0, 10).reduce((a, x) => a + x, 0) / CFG.TOTAL_SUPPLY * 100;
+    const exclLargest = amts.slice(1, 11).reduce((a, x) => a + x, 0) / CFG.TOTAL_SUPPLY * 100;
+    q.setLifeHolders.run(exclLargest, amts.length, mint, cp); lc.holderSnaps++;
+  } catch {}
+}
+async function bigBuy(mint, tr, age, mc, venue) {
+  let bal = balCache.get(tr.wallet);
+  if (bal === undefined) {
+    resetDay();
+    if (balBudget < CFG.BIGBUY_BAL_DAILY_BUDGET) { balBudget++; try { const r = await rpc("getBalance", [tr.wallet]); bal = (r?.value ?? r ?? 0) / 1e9; } catch { bal = null; } }
+    else bal = null;
+    balCache.set(tr.wallet, bal); if (balCache.size > 20000) balCache.delete(balCache.keys().next().value);
+  }
+  q.insBigBuy.run(mint, tr.wallet, tr.ts, age, tr.sol, mc, bal, venue); lc.bigBuys++;
+}
+
+on("trade", (t, tr) => trade(t.mint, t.ts, tr, t.lastMc, t.graduated ? 1 : 0, "curve"));
+onSwap((tr) => { const s = L.get(tr.mint); const ct = s?.createTs ?? q.tokenMeta.get(tr.mint)?.create_ts; if (!ct) return; trade(tr.mint, ct, tr, tr.mc, 1, "pumpswap"); });
+
+// time-based checkpoints for tokens that went quiet (so "dead" rows get written too), and cleanup
+setInterval(() => {
+  const now = Math.floor(Date.now() / 1000);
+  for (const [mint, s] of L) {
+    while (s.w5.length && now - s.w5[0].ts > 300) s.w5.shift(); while (s.ring.length && now - s.ring[0].ts > 1260) s.ring.shift(); while (s.bts.length && now - s.bts[0].ts > 1260) s.bts.shift(); // v0.18.20: windows only trimmed on new trades before — dead coins kept their last 20 min forever
+    sample(mint, s, now);
+    if (s.next >= CFG.LIFE_CHECKPOINTS.length || (now - s.createTs > 7200 && now - s.lastTs > 7200)) L.delete(mint); // v0.18.18: any token quiet for 2h is released (was held up to 25h waiting for late checkpoints)
+    else if (now - s.createTs > 90000) L.delete(mint);
+  }
+  lc.tracked = L.size;
+}, 30_000);
+export const lcStats = () => ({ ...lc, holderBudget, balBudget });
+export const memStats = () => { let buyers = 0, bts = 0, ring = 0, w5 = 0; for (const s of L.values()) { buyers += s.buyers.size; bts += s.bts.length; ring += s.ring.length; w5 += s.w5.length; } return { mints: L.size, buyers, bts, ring, w5, balCache: balCache.size }; }; // v0.18.18
+/** v0.15: snapshot for the graduation strategy — 5m checkpoint (if reached), distinct buyers so far, biggest 1m burst */
+export function lifeSnap(mint) { const s = L.get(mint); if (!s) return null; return { cp5: s.cp[300] || null, buyers: s.buyers.size, maxBurst: s.maxBurst, createTs: s.createTs }; }
+
+// v0.17 second-wave-early: at 2/3/4 minutes, the first wave is still being bought by new people
+function wave2Check(mint, s, now, venue) {
+  const age = now - s.createTs;
+  if (s.w2.has("done")) return;
+  const cp = CFG.W2_CHECKS_S.find((c) => age >= c && age < c + 20 && !s.w2.has(c)); if (!cp) return;
+  s.w2.add(cp);
+  if (s.lastMc < CFG.W2_MC_MIN || s.lastMc > CFG.W2_MC_MAX || s.buyers.size < CFG.W2_BUYERS_MIN) return;
+  const new60 = s.bts.filter((x) => now - x.ts <= 60).length; if (new60 < CFG.W2_NEW60_MIN) return;
+  const r60 = s.ring.filter((x) => now - x.ts <= 60); const buyUsd = r60.filter((x) => x.b).reduce((a, x) => a + x.usd, 0), sellUsd = r60.filter((x) => !x.b).reduce((a, x) => a + x.usd, 0);
+  if (buyUsd / Math.max(sellUsd, 1) < CFG.W2_BS_MIN) return;
+  const ago = s.ring.find((x) => now - x.ts <= 75 && now - x.ts >= 45) || s.ring[0]; if (!ago || !(s.lastPx > ago.px)) return;
+  const m = q.tokenMeta.get(mint); if (m?.bundle_pct != null && m.bundle_pct > CFG.W2_BUNDLE_MAX) return;
+  s.w2.add("done");
+  const bsv = buyUsd / Math.max(sellUsd, 1), tight = cp <= CFG.W2T_CP_MAX && s.lastMc >= CFG.W2T_MC_MIN && s.lastMc <= CFG.W2T_MC_MAX && bsv >= CFG.W2T_BS_MIN && (m?.dev_buy_sol ?? 0) >= CFG.W2T_DEV_MIN; // v0.17.4
+  for (const fn of w2Listeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: s.lastMc, ts: now, cp, buyers: s.buyers.size, new60, bs: buyUsd / Math.max(sellUsd, 1), pxChg: s.lastPx / ago.px - 1, bundle: m?.bundle_pct ?? null, venue, tight, alert: s.buyers.size >= CFG.W2_ALERT_BUYERS && new60 >= CFG.W2_ALERT_NEW60 }); } catch (e) { console.error("[wave2]", e.message); } }
+}
+// v0.17 revival (user's hypothesis): a coin that fell 40%+ from its peak, then new buyers and volume come back
+function revivalCheck(mint, s, now, venue) {
+  const age = now - s.createTs;
+  if (s.revDone || s.graduated || age < CFG.REV_AGE_MIN_S || age > CFG.REV_AGE_MAX_S || now - s.lastRev < 30) return;
+  s.lastRev = now;
+  if (s.lastMc < CFG.REV_MC_MIN || !(s.peakMc > 0) || s.lastMc > s.peakMc * (1 - CFG.REV_DRAWDOWN) || now - s.peakTs < CFG.REV_PEAK_MIN_AGE_S) return;
+  const new5 = s.bts.filter((x) => now - x.ts <= 300).length; if (new5 < CFG.REV_NEW5M_MIN) return;
+  const vNow = s.ring.filter((x) => now - x.ts <= 300).reduce((a, x) => a + x.usd, 0), vPrev = s.ring.filter((x) => now - x.ts > 300 && now - x.ts <= 600).reduce((a, x) => a + x.usd, 0);
+  if (!(vPrev > 0) || vNow / vPrev < CFG.REV_VOL_RATIO) return;
+  s.revDone = true;
+  const m = q.tokenMeta.get(mint);
+  for (const fn of revListeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: s.lastMc, ts: now, age, peakMc: s.peakMc, new5, volRatio: vNow / vPrev, venue }); } catch (e) { console.error("[revival]", e.message); } }
+}
+// v0.17.1 graduation runner: just graduated and still being bought hard
+function gradRunnerCheck(mint, s, now) {
+  if (!s.graduated || s.grDone || !s.gradTs || now - s.gradTs > CFG.GR_WINDOW_S || now - s.lastGr < 10) return;
+  s.lastGr = now;
+  const r5 = s.ring.filter((x) => now - x.ts <= 300); const vol = r5.reduce((a, x) => a + x.usd, 0); if (vol < CFG.GR_VOL5M_USD) return;
+  if (!(s.lastPx >= s.gradPx)) return;
+  const new2 = s.bts.filter((x) => now - x.ts <= 120).length; if (new2 < CFG.GR_NEW2M_MIN) return;
+  const buyUsd = r5.filter((x) => x.b).reduce((a, x) => a + x.usd, 0), sellUsd = vol - buyUsd; if (buyUsd / Math.max(sellUsd, 1) < CFG.GR_BS_MIN) return;
+  s.grDone = true;
+  const m = q.tokenMeta.get(mint);
+  for (const fn of grListeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: s.lastMc, ts: now, sinceGrad: now - s.gradTs, vol5: vol, new2, bs: buyUsd / Math.max(sellUsd, 1), buyers: s.buyers.size, age: now - s.createTs }); } catch (e) { console.error("[gradrun]", e.message); } }
+}
+// v0.17.1 graduation recovery: graduated, dumped 60%+ from its post-graduation peak, then buyers and volume return
+function gradRecoveryCheck(mint, s, now) {
+  if (!s.graduated || s.grecDone || !s.gradTs || now - s.lastRev < 30) return;
+  if (!(s.gradPeak > 0) || s.lastMc > s.gradPeak * (1 - CFG.GREC_DRAWDOWN) || s.lastMc < CFG.REV_MC_MIN) return;
+  const new5 = s.bts.filter((x) => now - x.ts <= 300).length; if (new5 < CFG.GREC_NEW5M_MIN) return;
+  const vNow = s.ring.filter((x) => now - x.ts <= 300).reduce((a, x) => a + x.usd, 0), vPrev = s.ring.filter((x) => now - x.ts > 300 && now - x.ts <= 600).reduce((a, x) => a + x.usd, 0);
+  if (!(vPrev > 0) || vNow / vPrev < CFG.REV_VOL_RATIO) return;
+  s.grecDone = true;
+  const m = q.tokenMeta.get(mint);
+  for (const fn of grecListeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: s.lastMc, ts: now, peakMc: s.gradPeak, new5, volRatio: vNow / vPrev, age: now - s.createTs, buyers: s.buyers.size }); } catch (e) { console.error("[gradrec]", e.message); } }
+}
+// v0.17.2 slow build / base breakout: pumped, dumped 50%+, went sideways, now buyers and volume rising window over window and price turning up
+function slowBuildCheck(mint, s, now) {
+  if (s.slowDone || !s.dumped || now - s.createTs < CFG.SLOW_MIN_AGE_S || now - s.lowTs < CFG.SLOW_SINCE_DUMP_S || now - s.lastSlow < 30) return;
+  s.lastSlow = now;
+  if (s.lastMc < CFG.SLOW_MC_MIN || !(s.lastMc >= s.lowMc * (1 + CFG.SLOW_OFF_LOW))) return;
+  const W = CFG.SLOW_WINDOWS, win = [];
+  for (let i = 0; i < W; i++) { const a = now - (i + 1) * 300, b = now - i * 300; const r = s.ring.filter((x) => x.ts > a && x.ts <= b); win.push({ vol: r.reduce((q, x) => q + x.usd, 0), nb: s.bts.filter((x) => x.ts > a && x.ts <= b).length }); }
+  for (let i = 0; i < W - 1; i++) if (!(win[i].vol > win[i + 1].vol && win[i].nb > win[i + 1].nb)) return; // newest window must beat the one before, W-1 times
+  if (!(win[W - 1].vol > 0)) return;
+  const new10 = s.bts.filter((x) => now - x.ts <= 600).length; if (new10 < CFG.SLOW_NEW10M_MIN) return;
+  const r10 = s.ring.filter((x) => now - x.ts <= 600); const avg10 = r10.reduce((q, x) => q + x.px, 0) / Math.max(r10.length, 1); if (!(s.lastPx > avg10)) return;
+  s.slowDone = true;
+  const m = q.tokenMeta.get(mint);
+  for (const fn of slowListeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: s.lastMc, ts: now, age: now - s.createTs, peakMc: s.peakMc, lowMc: s.lowMc, sinceLow: now - s.lowTs, new10, vols: win.map((w) => Math.round(w.vol)).reverse(), nbs: win.map((w) => w.nb).reverse(), buyers: s.buyers.size, graduated: s.graduated }); } catch (e) { console.error("[slow]", e.message); } }
+}
+function stairs(s, cps) {
+  for (let i = 1; i < cps.length; i++) {
+    const a = s.cp[cps[i - 1]], b = s.cp[cps[i]];
+    if (!a || !b || !(b.mc >= CFG.CLIMB_STEP * a.mc) || !(b.buyers > a.buyers)) return false;
+  }
+  return true;
+}
+function climbCheck(mint, s, cp, now) {
+  if (s.climbed) return;
+  const last = s.cp[cp]; if (!last?.alive || last.mc < CFG.CLIMB_MIN_MC || s.maxBurst >= CFG.CLIMB_MAX_BURST_USD || !(last.b > last.sl)) return;
+  const set = cp === CFG.CLIMB_CPS.at(-1) ? CFG.CLIMB_CPS : cp === CFG.CLIMB_CPS2.at(-1) ? CFG.CLIMB_CPS2 : null;
+  if (!set || !stairs(s, set)) return;
+  s.climbed = true;
+  const m = q.tokenMeta.get(mint);
+  const steps = set.map((c) => `$${Math.round(s.cp[c].mc / 1000)}K`).join(" → ");
+  for (const fn of climbListeners) { try { fn({ mint, name: m?.name || mint.slice(0, 8), symbol: m?.symbol || "", price: s.lastPx, mc: last.mc, ts: now, steps, buyers: last.buyers, cp }); } catch (e) { console.error("[climb]", e.message); } }
+}
+
+
+====================================================================================================
+=== FILE: src/signals.js (22,692 chars)
+====================================================================================================
+// v0.3: cluster tracking, hand-off detection, early-inflow paper entries, parallel paper exits.
+import { CFG, OFF_KINDS, BOOKS_OFF } from "./config.js"; // v0.18.176 OFF_KINDS: early / secondwave / confirm switched off
+import { db, q } from "./db.js";
+import { on, esc, fmt, links, live } from "./launch-monitor.js";
+const liveToken = (m) => live.get(m);
+import { walletInfo, rpcUsed } from "./rpc.js";
+import { solUsdCached } from "./price.js";
+import { tg } from "./telegram.js";
+import { getSocials, socialsLine } from "./socials.js";
+import { nextLevel, wallWarning, levelsStep, levelsFinal, newLevels, volStopExit } from "./levels.js";
+import { provenCount } from "./wallets.js";
+import { stopStep, stopFinal, pathStep } from "./exits.js";
+import { feeInfo } from "./fees.js";
+import { recordHolders } from "./holders.js";
+import { watch as afterWatch, tick as afterTick } from "./aftercare.js";
+import { retrySocials } from "./socials.js";
+
+export const sig = { handoffs: 0, entries: 0, closes: 0, graduations: 0 };
+const S = new Map(); // mint -> state
+
+function state(t) {
+  let s = S.get(t.mint);
+  if (!s) {
+    s = { cluster: new Set([t.creator]), cIn: 0, cOut: 0, oIn: 0, oOut: 0, oBuyers: new Set(), recentSells: [],
+      handoffs: 0, handoffAlerted: false, leaveAlerted: false, win: [], pos: null, lastFlush: 0, buys: 0, sells: 0, buyersAt: {}, wavePeakIn: 0, fadeSince: 0, outflowAt: 0, outflowTs: 0, wave1PeakMc: 0, sw: null, swDone: false, seenBuyers: new Set(), v5: [], psVol5: 0 };
+    S.set(t.mint, s);
+  }
+  return s;
+}
+
+on("finalized", (t) => {
+  const s = state(t);
+  if (t.tier >= 1) walletInfo(t.creator).then((w) => { if (w.age_s != null || w.funder) q.setCreatorFunder.run(w.funder || null, w.age_s ?? null, w.funded_sol ?? null, t.mint); }).catch(() => {});
+  for (const tr of t.trades) if (tr.isBuy && tr.slot <= t.slot + CFG.BUNDLE_SLOTS) s.cluster.add(tr.wallet);
+  s.cTok = t.trades.filter((x) => s.cluster.has(x.wallet)).reduce((a, x) => a + (x.isBuy ? x.tokens : -x.tokens), 0);
+});
+const heldPct = (s) => Math.max(0, (s.cTok || 0) / CFG.TOTAL_SUPPLY) * 100;
+
+on("trade", (t, tr) => {
+  const s = state(t);
+  const inCreateSlot = tr.slot <= t.slot + CFG.BUNDLE_SLOTS;
+  const isCluster = s.cluster.has(tr.wallet);
+
+  // --- hand-off detection: cluster sell followed by non-cluster buy of ~same tokens within N slots ---
+  if (isCluster && !tr.isBuy) {
+    s.recentSells.push(tr);
+    if (s.recentSells.length > 50) s.recentSells.shift();
+  } else if (!isCluster && tr.isBuy && !inCreateSlot && s.recentSells.length) {
+    const i = s.recentSells.findIndex((x) => tr.slot - x.slot <= CFG.HANDOFF_SLOTS && Math.abs(tr.tokens - x.tokens) <= CFG.HANDOFF_TOL * x.tokens);
+    if (i >= 0) {
+      const sell = s.recentSells.splice(i, 1)[0];
+      s.handoffs++; sig.handoffs++;
+      s.cluster.add(tr.wallet); s.cIn += tr.sol; s.cTok = (s.cTok || 0) + tr.tokens; // rebuy = operator money coming back in
+      q.insHandoff.run(t.mint, tr.slot, tr.ts, sell.wallet, tr.wallet, tr.sol, tr.tokens, sell.sig === tr.sig ? 1 : 0);
+      q.insCluster.run(t.mint, tr.wallet, "fresh", tr.tokens, tr.sol, tr.slot);
+      walletInfo(tr.wallet).then((w) => { if (w.age_s != null) q.updWallet.run(w.funder || null, w.age_s, t.mint, tr.wallet); }).catch(() => {});
+      if (s.handoffs >= CFG.HANDOFF_MIN && !s.handoffAlerted) {
+        s.handoffAlerted = true;
+        if (s.pos?.msgId) tg(`🔁 <b>Hand-off</b> — ${esc(t.name)}: bundle wallets selling, fresh wallets rebuying — <b>${s.handoffs}</b> so far · MC $${fmt(t.lastMc)} · ${age(t)}`, { replyTo: s.pos.msgId });
+      }
+      return afterTrade(t, s, tr, true);
+    }
+  }
+
+  // --- cluster token holdings (bundle buys incl. create slot) ---
+  if (isCluster) s.cTok = (s.cTok || 0) + (tr.isBuy ? tr.tokens : -tr.tokens);
+  // --- flows ---
+  if (!inCreateSlot) {
+    if (tr.isBuy) s.buys++; else s.sells++;
+    if (isCluster) { if (tr.isBuy) s.cIn += tr.sol; else s.cOut += tr.sol; }
+    else { if (tr.isBuy) { s.oIn += tr.sol; s.oBuyers.add(tr.wallet); } else s.oOut += tr.sol; }
+  }
+  afterTrade(t, s, tr, isCluster);
+});
+
+function afterTrade(t, s, tr, isCluster) {
+  const now = tr.ts;
+  s.v5.push({ ts: now, sol: tr.sol, b: tr.isBuy }); while (s.v5.length && now - s.v5[0].ts > 300) s.v5.shift();
+  afterTick(t.mint, tr.price, t.lastMc);
+  // rolling inflow window (all buys after the create slot)
+  if (tr.isBuy && tr.slot > t.slot + CFG.BUNDLE_SLOTS) {
+    s.win.push({ ts: now, sol: tr.sol, w: tr.wallet, c: isCluster });
+    while (s.win.length && now - s.win[0].ts > CFG.INFLOW_WINDOW_S) s.win.shift();
+  }
+  const sol60 = s.win.reduce((a, x) => a + x.sol, 0);
+  if (sol60 > s.wavePeakIn) s.wavePeakIn = sol60;
+  if (t.lastMc > s.wave1PeakMc && now - t.ts <= CFG.ENTRY_WINDOW_MIN * 60) s.wave1PeakMc = t.lastMc;
+  // entry trigger (early)
+  if (!s.pos && t.finalized && !t.graduated && now - t.ts <= CFG.ENTRY_WINDOW_MIN * 60) {
+    const wallets = new Set(s.win.map((x) => x.w)).size;
+    if (sol60 >= CFG.INFLOW_SOL && wallets >= CFG.INFLOW_WALLETS && !OFF_KINDS.has("early")) openPaper(t, s, tr, sol60, wallets, "early"); // v0.18.176 (owner go 21 Oct 13:50 UK): early book off
+  }
+  if (s.pos) updatePaper(t, s, tr);
+  if (s.confPos && !s.confPos.closed && s.confPos !== s.pos) { const keep = s.pos; s.pos = s.confPos; updatePaper(t, s, tr); s.pos = keep; }
+  // second wave: first wave faded, cluster finished selling, buyers return
+  if (!s.swDone && t.finalized && !t.graduated && now - t.ts > CFG.ENTRY_WINDOW_MIN * 60 && now - t.ts <= CFG.SW_WINDOW_MIN * 60 && s.wavePeakIn >= CFG.INFLOW_SOL) {
+    const faded = sol60 < CFG.SW_FADE_FRAC * s.wavePeakIn;
+    if (faded) { if (!s.fadeSince) s.fadeSince = now; }
+    const outflow = s.cOut - s.cIn;
+    if (Math.abs(outflow - s.outflowAt) > 0.5) { s.outflowAt = outflow; s.outflowTs = now; }
+    const quietLong = s.fadeSince && now - s.fadeSince >= CFG.SW_QUIET_MIN * 60;
+    const clusterFlat = now - (s.outflowTs || t.ts) >= CFG.SW_CLUSTER_FLAT_MIN * 60;
+    if (s.fadeSince && quietLong && clusterFlat && !faded) {
+      const fresh = s.win.filter((x) => x.isBuy !== false && !s.seenBuyers.has(x.w)).map((x) => x.w);
+      const wallets = new Set(fresh).size;
+      if (sol60 >= CFG.SW_INFLOW_SOL && wallets >= CFG.SW_INFLOW_WALLETS && (!s.pos || s.pos.closed)) {
+        s.swDone = true; if (!OFF_KINDS.has("secondwave")) openPaper(t, s, tr, sol60, wallets, "secondwave"); // v0.18.176 (owner go 21 Oct 13:50 UK): secondwave book off (the decision is still made once)
+      }
+    }
+    if (!faded && s.fadeSince && !quietLong) s.fadeSince = 0; // bounce too soon, reset
+  }
+  if (tr.isBuy && now - t.ts <= CFG.ENTRY_WINDOW_MIN * 60) s.seenBuyers.add(tr.wallet);
+  // confirmation: 4–10 min after the raw trigger, MC up ≥1.5× raw entry, buys/sells ≥1.3 (5m), buyers growing
+  if (s.rawPosId && !s.confDone && !t.graduated) {
+    const dt = now - s.rawEntryTs;
+    if (dt > CFG.CONF_MAX_S) s.confDone = true;
+    else if (dt >= CFG.CONF_MIN_S) {
+      const b5 = s.v5.filter((x) => x.b).length, s5 = s.v5.length - b5, ratio = s5 > 0 ? b5 / s5 : b5;
+      const buyersNow = s.oBuyers.size + s.cluster.size;
+      if (t.lastMc >= CFG.CONF_MC_MULT * s.rawEntryMc && ratio >= CFG.CONF_BS_RATIO && buyersNow - s.buyersAtRaw >= CFG.CONF_BUYERS_GROW) {
+        s.confDone = true;
+        if (!OFF_KINDS.has("confirm")) { // v0.18.176 (owner go 21 Oct 13:50 UK): the old curve confirmation book off (not executor A5 / p5c5)
+        const prev = s.pos; // raw position keeps running; confirmation is a separate trade
+        const sol60 = s.win.reduce((a, x) => a + x.sol, 0), wallets = new Set(s.win.map((x) => x.w)).size;
+        openPaper(t, s, tr, sol60, wallets, "confirm");
+        s.confPos = s.pos; s.pos = prev && !prev.closed ? prev : s.pos; } // keep raw as primary for updates; confirm tracked via confPos
+      }
+    }
+  }
+  // cluster leaving alert (tier-1 only)
+  if (t.tier >= 1 && t.bundle && !s.leaveAlerted && s.cOut - s.cIn > (CFG.EXIT_OUTFLOW_PCT / 100) * t.bundle.sol) {
+    s.leaveAlerted = true; // logged via exit variants; no alert (operators selling into the pump is expected)
+  }
+  if (now - s.lastFlush >= 15) { s.lastFlush = now; flush(t, s); }
+}
+
+const net = (s) => s.cIn - s.cOut;
+const vol5Usd = (s) => (s.psVol5 || s.v5.reduce((a, x) => a + x.sol, 0) * solUsdCached());
+const buySellUsd = (s) => s.psBS || [s.v5.filter((x) => x.b).reduce((a, x) => a + x.sol, 0) * solUsdCached(), s.v5.filter((x) => !x.b).reduce((a, x) => a + x.sol, 0) * solUsdCached()];
+const age = (t) => { const a = Math.floor(Date.now() / 1000) - t.ts; return a < 90 ? `${a}s` : `${Math.floor(a / 60)}m`; };
+function flush(t, s) {
+  q.updFlows.run(s.cIn, s.cOut, s.oIn, s.oOut, s.oBuyers.size, s.handoffs, net(s), t.peakMc, t.lastMc, t.mint);
+}
+
+function openPaper(t, s, tr, inflowSol, wallets, strategy = "early") {
+  if (BOOKS_OFF) return; // v0.18.185 all books off
+  const outsideShare = inflowSol > 0 ? s.win.filter((x) => !x.c).reduce((a, x) => a + x.sol, 0) / inflowSol : 0;
+  const entryAge = tr.ts - t.ts;
+  s.buyersAt.entry = s.oBuyers.size + s.cluster.size;
+  const r = q.insPaper.run(t.mint, t.name, tr.ts, t.lastMc, tr.price, t.bundle?.pct ?? 0, t.bundle?.sol ?? 0, s.handoffs, t.tier, t.factory ? 1 : 0, inflowSol, wallets, outsideShare, entryAge, t.lastMc, strategy, nextLevel(t.lastMc), s.wave1PeakMc || null);
+  s.pos = { id: r.lastInsertRowid, entry: tr.price, entryMc: t.lastMc, entryTs: tr.ts, peak: tr.price, x: {}, closed: false, msgId: null, alerted: false, half: false, s3: false, lv: newLevels(), strategy, m1: { hit: false } };
+  q.setPaperExtra.run(heldPct(s), strategy, r.lastInsertRowid);
+  s.pos.volAtEntry = vol5Usd(s); q.setVolEntry.run(s.pos.volAtEntry, r.lastInsertRowid);
+  try { s.provenAtEntry = provenCount(t.mint); q.setEntryCounts.run(s.buys, s.sells, s.provenAtEntry, r.lastInsertRowid); } catch {}
+  try { const fi = feeInfo(t.mint, t.creator, t.ts); q.setFees.run(fi.accrued, fi.claims, fi.claimedSol, r.lastInsertRowid); } catch {} // v0.18.4
+  try { recordHolders(r.lastInsertRowid, t.mint, t.creator); } catch {} // v0.18.5
+  try {
+    const ch = q.creatorHist.get(t.creator, t.mint, t.ts); s.creatorHist = ch;
+    const snipers = t.trades.filter((x) => x.isBuy && x.slot <= t.slot + CFG.BUNDLE_SLOTS && x.wallet !== t.creator).length;
+    const bsr = s.sells > 0 ? s.buys / s.sells : s.buys;
+    q.setFeatures.run(ch?.n ?? 0, ch?.best ?? null, t.bundle?.devBuy ?? 0, snipers, new Date(tr.ts * 1000).getUTCHours(), s.rawPosId ?? null, bsr, s.oBuyers.size + s.cluster.size, r.lastInsertRowid);
+  } catch (e) { console.error("[features]", e.message); }
+  if (strategy === "early") { s.rawPosId = r.lastInsertRowid; s.rawEntryMc = t.lastMc; s.rawEntryTs = tr.ts; s.buyersAtRaw = s.oBuyers.size + s.cluster.size; s.confDone = false; }
+  afterWatch(t.mint, r.lastInsertRowid, tr.price, t.lastMc);
+  t.hold = true; sig.entries++;
+  const pRef = s.pos;
+  setTimeout(() => closePaper(t, s, "time", pRef), CFG.MAX_HOLD_MIN * 60_000);
+  const strong = strategy === "secondwave" || (strategy === "confirm" && s.oBuyers.size + s.cluster.size >= CFG.CONF_ALERT_BUYERS) || (strategy !== "confirm" && (t.tier >= 1 || (inflowSol >= CFG.ALERT_INFLOW_SOL && wallets >= CFG.ALERT_INFLOW_WALLETS))); // v0.15: confirm alerts only with >=250 buyers
+  const p = s.pos;
+  getSocials(t.mint, t.uri).then(async (soc) => {
+    const socStr = JSON.stringify({ t: soc.twitter, w: soc.website, k: soc.tiktok, g: soc.telegram });
+    q.setTokenSocials.run(soc.fetched ? (soc.ok ? 1 : 0) : null, socStr, t.mint);
+    const alert = strong && (!CFG.ALERT_REQUIRE_SOCIALS || soc.ok || !soc.fetched);
+    q.setPaperMeta.run(alert ? 1 : 0, socStr, soc.fetched ? (soc.ok ? 1 : 0) : null, p.id);
+    if (!soc.fetched) retrySocials(t.mint, t.uri, (s2) => { const str = JSON.stringify({ t: s2.twitter, w: s2.website, k: s2.tiktok, g: s2.telegram }); q.setTokenSocials.run(s2.ok ? 1 : 0, str, t.mint); q.setPaperSocials.run(str, s2.ok ? 1 : 0, p.id); if (p.msgId) tg(`socials (late): ${socialsLine(s2)}`, { replyTo: p.msgId }); });
+    if (!alert) return;
+    p.alerted = true;
+    const nowMc = t.lastMc, chg = p.entryMc > 0 ? ((nowMc / p.entryMc - 1) * 100).toFixed(0) : "0";
+    const wall = wallWarning(p.entryMc);
+    const head = strategy === "secondwave" ? "🌊 <b>SECOND WAVE</b>" : strategy === "confirm" ? "✅ <b>CONFIRMED</b>" : "🟢 <b>PAPER ENTRY</b>";
+    const waveStr = strategy === "secondwave" && s.wave1PeakMc ? ` · wave-1 peak $${fmt(s.wave1PeakMc)} (${((p.entryMc / s.wave1PeakMc - 1) * 100).toFixed(0)}% from it)` : strategy === "confirm" ? ` · raw entry $${fmt(s.rawEntryMc)} (${((p.entryMc / s.rawEntryMc - 1) * 100).toFixed(0)}% up)` : "";
+    p.msgId = await tg(`${head} — ${esc(t.name)} ($${esc(t.symbol)})${t.factory ? " ⚠️factory" : ""}\n` +
+      `MC <b>$${fmt(p.entryMc)}</b> · ${entryAge}s after launch · now $${fmt(nowMc)} (${chg >= 0 ? "+" : ""}${chg}%)${waveStr}${wall ? "\n" + wall : ""}\n` +
+      `${socialsLine(soc)}\n` +
+      `Inflow: <b>${inflowSol.toFixed(1)} SOL</b> / ${wallets} wallets in ${CFG.INFLOW_WINDOW_S}s · buys ${s.buys} / sells ${s.sells}\n` +
+      `Bundle ${t.bundle?.pct.toFixed(0) ?? 0}% · ${t.bundle?.sol.toFixed(1) ?? 0} SOL · hand-offs ${s.handoffs} · cluster holds <b>${heldPct(s).toFixed(0)}%</b>` +
+      (s.provenAtEntry ? `\n👛 <b>${s.provenAtEntry} proven wallet${s.provenAtEntry > 1 ? "s" : ""}</b> in the first ${CFG.PROVEN_WINDOW_S}s` : "") + (s.creatorHist?.n ? `\n🧑‍💻 creator: ${s.creatorHist.n} prior launches · ${s.creatorHist.grads || 0} graduated · ${s.creatorHist.over100k || 0} over $100K${(s.creatorHist.grads || 0) >= CFG.CREATOR_GRADS_FLAG ? " ⭐ proven" : ""}` : "") + `\n${links(t.mint)}`);
+    for (const m of CFG.SCORECARD_MIN) setTimeout(() => scorecard(t, s, m, p), m * 60_000);
+  }).catch((e) => console.error("[socials]", e.message));
+}
+
+function scorecard(t, s, m, p = s.pos) {
+  if (!p) return;
+  const px = t.trades.at(-1)?.price ?? p.entry, mult = px / p.entry, peakMult = p.peak / p.entry;
+  const buyers = s.oBuyers.size + s.cluster.size;
+  const prevBuyers = s.buyersAt[m === CFG.SCORECARD_MIN[0] ? "entry" : CFG.SCORECARD_MIN[0]] ?? s.buyersAt.entry ?? 0;
+  s.buyersAt[m] = buyers;
+  const flags = [];
+  const mcChg = (mult - 1) * 100;
+  if (m === CFG.SCORECARD_MIN[0] && mcChg < CFG.FLAT_MC_PCT && peakMult < 1 + CFG.FLAT_MC_PCT / 100) flags.push("💤 MC flat — likely dead");
+  const inflow = s.oIn + s.cIn;
+  if (buyers - prevBuyers < 5 && inflow > 5) flags.push("⚠️ volume but no new wallets");
+  if (s.sells > s.buys) flags.push("⚠️ sells outnumber buys");
+  if (t.graduated) flags.push("🎓 graduated to PumpSwap");
+  if (p.closed) flags.push(`closed (${p.closeReason})`);
+  q.setPaperCard.run(m === 5 ? t.lastMc : null, m === 15 ? t.lastMc : null, m === 5 ? buyers : null, s.buys, s.sells, p.id);
+  tg(`⏱ <b>+${m}m</b> ${esc(t.name)} · MC <b>$${fmt(t.lastMc)}</b> (${mcChg >= 0 ? "+" : ""}${mcChg.toFixed(0)}% from entry, peak ${peakMult.toFixed(2)}x)\n` +
+     `Buyers ${buyers} (+${buyers - prevBuyers}) · buys ${s.buys} / sells ${s.sells} · outside in ${s.oIn.toFixed(1)} SOL · hand-offs ${s.handoffs} · cluster holds ${heldPct(s).toFixed(0)}%` +
+     (flags.length ? `\n${flags.join(" · ")}` : ""), { replyTo: p.msgId });
+}
+
+function updatePaper(t, s, tr) {
+  const p = s.pos; if (p.closed) return;
+  const px = tr.price; if (px > p.peak) p.peak = px;
+  const mult = px / p.entry, fromPeak = px / p.peak - 1;
+  const x = p.x;
+  if (x.tsl40 == null && fromPeak <= -0.40) x.tsl40 = mult;
+  if (x.tsl60 == null && fromPeak <= -0.60) x.tsl60 = mult;
+  if (x.tsl80 == null && fromPeak <= -0.80) x.tsl80 = mult;
+  if (x.tp == null && mult >= CFG.TP_MULT) x.tp = mult;
+  if (x.tp15 == null && mult >= 1.5) x.tp15 = 1.5; if (x.tsl25 == null && fromPeak <= -0.25) x.tsl25 = mult; stopStep(x, mult); // v0.18.3
+  if (pathStep(p, p.entryTs, tr.ts, mult)) { try { q.setPath.run(JSON.stringify(p.path), p.id); } catch {} } // v0.18.14
+  if (x.tp15 != null && !p.hit15Saved) { p.hit15Saved = true; try { q.setHit15.run(tr.ts - p.entryTs, p.id); } catch {} }
+  { const key = `${x.tp15}|${x.tsl25}|${x.t15s25}|${x.t15s60}|${x.t2s25}|${x.t2s60}`; if (p.stopsSaved !== key) { p.stopsSaved = key; try { q.setStops.run(x.tp15 ?? null, x.tsl25 ?? null, x.t15s25 ?? null, x.t15s60 ?? null, x.t2s25 ?? null, x.t2s60 ?? null, p.id); } catch {} } }
+  if (!p.half && mult >= 2) p.half = true;
+  if (!p.s3 && mult >= 3) p.s3 = true;
+  if (x.half60 == null && fromPeak <= -0.60) x.half60 = p.half ? 1 + 0.5 * mult : mult;
+  if (x.twophase == null) { if (!p.half && fromPeak <= -0.40) x.twophase = mult; else if (p.half && fromPeak <= -0.60) x.twophase = 1 + 0.5 * mult; }
+  if (x.ladder == null && fromPeak <= -0.60) x.ladder = (p.half ? 0.5 : 0) + (p.s3 ? 0.75 : 0) + (1 - (p.half ? 0.25 : 0) - (p.s3 ? 0.25 : 0)) * mult;
+  if (x.cluster == null && t.bundle && s.cOut - s.cIn > (CFG.EXIT_OUTFLOW_PCT / 100) * Math.max(t.bundle.sol, 1)) x.cluster = mult;
+  if (t.graduated && x.grad == null) x.grad = mult;
+  x.levels = levelsStep(p.lv, p.entryMc, t.lastMc, mult, fromPeak);
+  if (x.m1 == null) { if (t.lastMc >= CFG.M1_EXIT_USD) x.m1 = mult; else if (fromPeak <= -0.60) x.m1 = mult; }
+  const v5u = vol5Usd(s);
+  if (x.m1vol == null) { if (t.lastMc >= CFG.M1_EXIT_USD && v5u < CFG.M1_HOLD_VOL5M) x.m1vol = mult; else if (fromPeak <= -0.60) x.m1vol = mult; }
+  if (x.volstop == null && fromPeak <= -0.60) { const [bu, su] = buySellUsd(s); if (volStopExit(fromPeak, v5u, bu, su, p.volAtEntry)) x.volstop = mult; }
+  const peakMult = p.peak / p.entry;
+  q.updPaper.run(t.peakMc, peakMult, x.cluster ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tp ?? null, x.time ?? null, x.grad ?? null, null, null, null, null, null, 0, x.tsl80 ?? null, x.half60 ?? null, x.twophase ?? null, x.ladder ?? null, x.levels ?? null, x.m1 ?? null, x.m1vol ?? null, x.volstop ?? null, p.id);
+  if (t.graduated && !p.handover) { if (CFG.GRAD_HANDOVER) { p.handover = true; q.setHandover.run(p.id); } else closePaper(t, s, "graduated", p); }
+  else if (!t.graduated && x.tsl60 != null && x.cluster != null && x.volstop != null) closePaper(t, s, "all-exits-hit", p);
+  else if (t.graduated && x.tsl80 != null) closePaper(t, s, "tsl80", p);
+}
+
+function closePaper(t, s, reason, p = s.pos) {
+  if (!p || p.closed) return;
+  p.closed = true; p.closeReason = reason; sig.closes++;
+  const other = p === s.pos ? s.confPos : s.pos; t.hold = !!(other && !other.closed);
+  const px = t.trades.at(-1)?.price ?? p.entry; const mult = px / p.entry; const x = p.x;
+  if (x.time == null) x.time = mult;
+  if (x.half60 == null) x.half60 = p.half ? 1 + 0.5 * mult : mult;
+  if (x.twophase == null) x.twophase = p.half ? 1 + 0.5 * mult : mult;
+  if (x.ladder == null) x.ladder = (p.half ? 0.5 : 0) + (p.s3 ? 0.75 : 0) + (1 - (p.half ? 0.25 : 0) - (p.s3 ? 0.25 : 0)) * mult;
+  x.levels = levelsFinal(p.lv, mult);
+  if (x.m1 == null) x.m1 = mult; if (x.m1vol == null) x.m1vol = mult; if (x.volstop == null) x.volstop = mult;
+  { const f = stopFinal(x, mult, p.peak / p.entry); try { q.setStops.run(x.tp15 ?? mult, x.tsl25 ?? mult, f.t15s25, f.t15s60, f.t2s25, f.t2s60, p.id); } catch {} }
+  const peakMult = p.peak / p.entry;
+  const pnl = (v) => (v == null ? "—" : `${((v - 1) * 100).toFixed(0)}%`);
+  q.updPaper.run(t.peakMc, peakMult, x.cluster ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tp ?? null, x.time, x.grad ?? null, Math.floor(Date.now() / 1000), t.lastMc, px, reason, (x.time - 1) * 100, 1, x.tsl80 ?? null, x.half60, x.twophase, x.ladder, x.levels, x.m1, x.m1vol, x.volstop, p.id);
+  if (p.alerted) tg(`${mult >= 1 ? "✅" : "🔴"} <b>${p.strategy === "secondwave" ? "SECOND WAVE CLOSE" : p.strategy === "confirm" ? "CONFIRMED CLOSE" : "PAPER CLOSE"}</b> — ${esc(t.name)} (${reason})\n` +
+     `Entry $${fmt(p.entryMc)} → now $${fmt(t.lastMc)} · peak <b>${peakMult.toFixed(2)}x</b>\n` +
+     `½@2x+60% <b>${pnl(x.half60)}</b> · 2-phase ${pnl(x.twophase)} · ladder ${pnl(x.ladder)} · levels ${pnl(x.levels)} · vol-stop ${pnl(x.volstop)}\n2x-out ${pnl(x.tp)} · trail40 ${pnl(x.tsl40)} · trail60 ${pnl(x.tsl60)} · trail80 ${pnl(x.tsl80)} · cluster ${pnl(x.cluster)} · grad ${pnl(x.grad)} · hold ${pnl(x.time)}\n` +
+     `Hand-offs ${s.handoffs} · outside in ${s.oIn.toFixed(1)} SOL / ${s.oBuyers.size} buyers · buys ${s.buys} / sells ${s.sells} · cluster net ${net(s).toFixed(1)} SOL · cluster holds ${heldPct(s).toFixed(0)}%`, { replyTo: p.msgId });
+}
+
+on("graduated", (t, tr) => {
+  sig.graduations++;
+  const p = S.get(t.mint)?.pos;
+  if (p?.alerted) tg(`🎓 <b>Graduated</b> — ${esc(t.name)} at ${age(t)} · MC $${fmt(t.lastMc)} · now on PumpSwap, position continues`, { replyTo: p.msgId });
+});
+
+on("expire", (t) => { const s = S.get(t.mint); if (s) { flush(t, s); S.delete(t.mint); } });
+
+/** Called by the PumpSwap feed: continue curve positions after graduation. */
+export function pumpSwapTick(mint, tr, vol5Usd, bs) {
+  const s = S.get(mint); if (!s) return;
+  afterTick(mint, tr.price, tr.mc);
+  const p = s.pos; const c2 = s.confPos; if ((!p || p.closed || !p.handover) && (!c2 || c2.closed || !c2.handover)) return;
+  const t = liveToken(mint); if (!t) return;
+  t.lastMc = tr.mc; if (tr.mc > t.peakMc) t.peakMc = tr.mc; s.psVol5 = vol5Usd; s.psBS = bs;
+  t.trades.push({ sig: tr.sig, slot: tr.slot, ts: tr.ts, wallet: tr.wallet, isBuy: tr.isBuy, sol: tr.sol, tokens: tr.tokens, price: tr.price });
+  if (t.trades.length > 2000) t.trades.splice(0, 1000);
+  if (p && !p.closed && p.handover) updatePaper(t, s, { price: tr.price, ts: tr.ts });
+  if (s.confPos && !s.confPos.closed && s.confPos !== s.pos && s.confPos.handover) { const keep = s.pos; s.pos = s.confPos; updatePaper(t, s, { price: tr.price, ts: tr.ts }); s.pos = keep; }
+}
+/** v0.17.5: cluster flow snapshot for a tracked token — SOL the bundle/cluster wallets have put in and taken out so far, churn = out / bundle SOL */
+export function clusterSnap(mint) {
+  const s = S.get(mint); const t = liveToken(mint); if (!s) return null;
+  const bundleSol = t?.bundle?.sol ?? 0;
+  return { cIn: s.cIn, cOut: s.cOut, bundleSol, churn: bundleSol > 0 ? s.cOut / bundleSol : null, held: heldPct(s), handoffs: s.handoffs };
+}
+export const memStats = () => { let ob = 0, sb = 0, win = 0, v5 = 0, cl = 0; for (const s of S.values()) { ob += s.oBuyers.size; sb += s.seenBuyers.size; win += s.win.length; v5 += s.v5.length; cl += s.cluster.size; } return { mints: S.size, oBuyers: ob, seenBuyers: sb, win, v5, cluster: cl }; }; // v0.18.18
+export const sigStats = () => ({ ...sig, tracked: S.size, open: [...S.values()].reduce((a, s) => a + (s.pos && !s.pos.closed ? 1 : 0) + (s.confPos && !s.confPos.closed && s.confPos !== s.pos ? 1 : 0), 0), rpc: rpcUsed() });
+
+
+====================================================================================================
+=== FILE: src/ws.js (1,814 chars)
+====================================================================================================
+import WebSocket from "ws";
+import { CFG } from "./config.js";
+/** Resilient logsSubscribe to the pump.fun program. onTx({sig, slot, logs, err}) */
+export function subscribeLogs(onTx, onStatus = () => {}) {
+  let i = 0, ws, pingT, idleT, backoff = 1000, reconnects = 0, lastMsg = Date.now();
+  const connect = () => {
+    const url = CFG.WS_URLS[i % CFG.WS_URLS.length];
+    onStatus(`connecting ${url.replace(/api-key=.*/, "api-key=***")}`);
+    ws = new WebSocket(url, { handshakeTimeout: 10000 });
+    ws.on("open", () => {
+      backoff = 1000; lastMsg = Date.now();
+      ws.send(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "logsSubscribe",
+        params: [{ mentions: [CFG.PUMP_PROGRAM] }, { commitment: "processed" }] }));
+      pingT = setInterval(() => { try { ws.ping(); } catch {} }, 20000);
+      idleT = setInterval(() => { if (Date.now() - lastMsg > 60000) { onStatus("idle 60s, reconnecting"); try { ws.terminate(); } catch {} } }, 10000);
+      onStatus("open");
+    });
+    ws.on("message", (raw) => {
+      lastMsg = Date.now();
+      let m; try { m = JSON.parse(raw); } catch { return; }
+      if (m.id === 1) return onStatus(`subscribed id=${m.result}`);
+      const v = m?.params?.result?.value; if (!v) return;
+      onTx({ sig: v.signature, slot: m.params.result.context?.slot, logs: v.logs, err: v.err });
+    });
+    const down = (why) => {
+      clearInterval(pingT); clearInterval(idleT);
+      reconnects++; i++;
+      onStatus(`closed (${why}); reconnect #${reconnects} in ${backoff}ms`);
+      setTimeout(connect, backoff); backoff = Math.min(backoff * 2, 30000);
+    };
+    ws.on("close", (c) => down(`close ${c}`));
+    ws.on("error", (e) => { onStatus(`error ${e.message}`); try { ws.terminate(); } catch {} });
+  };
+  connect();
+  return { stats: () => ({ reconnects }) };
+}
+
+
+====================================================================================================
+=== FILE: ecosystem.config.cjs (361 chars)
+====================================================================================================
+module.exports = {
+  apps: [
+    { name: "tracker", script: "src/index.js", cwd: "/root/tracker", max_memory_restart: "900M", node_args: "--max-old-space-size=450",
+      env: { NODE_ENV: "production" }, restart_delay: 5000, autorestart: true },
+    { name: "deployer", script: "deploy.sh", interpreter: "bash", cwd: "/root/tracker", autorestart: true }
+  ]
+};
+
+
+====================================================================================================
+=== FILE: scripts/deploy-step.sh (16,780 chars)
+====================================================================================================
+#!/usr/bin/env bash
+# v0.18.85: one deploy step — called by deploy.sh every 30 s. New code is syntax-checked and booted against a throwaway database
+# for 45 s (SMOKE=1: no Telegram, no command polling, own web port) BEFORE the live bot is reloaded. If it fails, the previous
+# version stays live and Telegram gets a message. Lives in its own file so changes apply without restarting the deployer.
+cd /root/tracker || exit 1
+git fetch -q origin tracker 2>/dev/null
+LOCAL=$(git rev-parse HEAD 2>/dev/null); REMOTE=$(git rev-parse origin/tracker 2>/dev/null)
+[ -z "$REMOTE" ] && exit 0; [ "$LOCAL" = "$REMOTE" ] && exit 0
+echo "[deploy] $(date -u +%FT%TZ) updating $LOCAL -> $REMOTE"
+git reset -q --hard origin/tracker
+npm install --omit=dev --no-audit --no-fund 2>&1 | tail -1
+TOKEN=$(grep -E '^TG_BOT_TOKEN: "<redacted>"^TG_CHAT_ID=' .env | cut -d= -f2-)
+notify() { [ -n "$TOKEN" ] && curl -s -m 10 -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" -d chat_id="$CHAT" -d parse_mode=HTML --data-urlencode text="$1" >/dev/null 2>&1; }
+# v0.18.93: a push that touches only executor/ (and docs) leaves the tracker alone — no smoke boot, no reload, no lost P5 restore
+TRACKER_CHANGED=1
+if ! git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -vqE '^(executor/|fomo/|scope/|radar/|launcher/|reports/|scripts/push-data\.sh$|scripts/dump-live\.cjs$|scripts/dump-launches\.cjs$|scripts/study\.mjs$|scripts/push-now\.txt$|scripts/job-now\.txt$|scripts/executor-off$|scripts/apps-off$|scripts/deploy-step\.sh$|scripts/revival-pull\.mjs$|scripts/s10-check\.cjs$|.*\.md$)'; then TRACKER_CHANGED=0; echo "[deploy] tracker untouched — executor / reports / data-script push"; fi # v0.18.114: the 4-hourly study's reports and the data scripts never restart the bot
+# owner, 30 Oct 2026 22:36 UK ("stop everything … only this dev launch"): every app named in scripts/apps-off is kept stopped and never reloaded
+[ -f scripts/apps-off ] && grep -qx tracker scripts/apps-off && TRACKER_CHANGED=0
+FAIL=""
+if [ "$TRACKER_CHANGED" = "1" ]; then
+for f in src/*.js; do node --check "$f" 2>/tmp/deploy-check.err || { FAIL="syntax: $f $(head -c 300 /tmp/deploy-check.err)"; break; }; done
+if [ -z "$FAIL" ]; then
+  rm -f /root/tracker/data/smoke.db /root/tracker/data/smoke.db-wal /root/tracker/data/smoke.db-shm
+  SMOKE=1 SMOKE_MS=45000 DB_PATH=/root/tracker/data/smoke.db WEB_PORT=18787 timeout 90 node src/index.js >/tmp/deploy-smoke.log 2>&1
+  RC=$?
+  [ "$RC" != "0" ] && FAIL="smoke boot exited with code $RC: $(grep -E 'Error|error|at ' /tmp/deploy-smoke.log | head -5 | tr '\n' ' ' | head -c 400)"
+fi
+if [ -n "$FAIL" ]; then
+  echo "[deploy] REJECTED $(git log -1 --pretty=%s): $FAIL"
+  git reset -q --hard "$LOCAL"; npm install --omit=dev --no-audit --no-fund >/dev/null 2>&1
+  notify "⛔ <b>Deploy rejected</b> — the live bot stays on $(git log -1 --pretty=%s | head -c 80). Reason: <code>$(echo "$FAIL" | head -c 500)</code>"
+  exit 0
+fi
+pm2 startOrReload ecosystem.config.cjs --only tracker --update-env >/dev/null 2>&1
+echo "[deploy] done: $(git log -1 --pretty=%s)"
+fi
+# v0.18.185 (owner, 23 Oct 19:44 UK: stop the bots): while scripts/executor-off exists the executor is kept stopped and is never reloaded; delete the file to bring it back on the next deploy
+if [ -f scripts/executor-off ]; then if pm2 jlist 2>/dev/null | grep -q '"name":"executor"' && pm2 jlist 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.exit(JSON.parse(s).some(p=>p.name==="executor"&&p.pm2_env.status==="online")?0:1)}catch(e){process.exit(1)}})'; then pm2 stop executor >/dev/null 2>&1 && pm2 save >/dev/null 2>&1 && echo "[deploy] executor stopped (scripts/executor-off)" && notify "⏹ <b>Executor stopped</b> — the trading bot is off (owner, 23 Oct). Delete scripts/executor-off to bring it back."; fi; fi
+# v0.18.90: the executor (live buy/sell bot) deploys only when its own folder changed, with its own libraries and its own smoke boot
+if [ ! -f scripts/executor-off ] && git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^executor/'; then
+  echo "[deploy] executor changed — installing and checking"
+  (cd executor && npm install --omit=dev --no-audit --no-fund 2>&1 | tail -1)
+  EFAIL=""
+  for f in executor/src/*.mjs; do node --check "$f" 2>/tmp/deploy-exec.err || { EFAIL="syntax: $f $(head -c 300 /tmp/deploy-exec.err)"; break; }; done
+  if [ -z "$EFAIL" ]; then
+    mkdir -p /root/executor
+    (cd executor && EXEC_SMOKE=1 EXEC_SMOKE_MS=15000 timeout 60 node src/index.mjs >/tmp/deploy-exec-smoke.log 2>&1); ERC=$?
+    [ "$ERC" != "0" ] && EFAIL="executor smoke boot exited with code $ERC: $(grep -E 'Error|error|at ' /tmp/deploy-exec-smoke.log | head -5 | tr '\n' ' ' | head -c 400)"
+  fi
+  if [ -n "$EFAIL" ]; then echo "[deploy] EXECUTOR REJECTED: $EFAIL"; notify "⛔ <b>Executor deploy rejected</b> — the running executor stays as it was. Reason: <code>$(echo "$EFAIL" | head -c 500)</code>"
+  elif pm2 startOrReload executor/ecosystem.config.cjs --only executor --update-env >/tmp/deploy-exec-pm2.log 2>&1; then pm2 save >/dev/null 2>&1; echo "[deploy] executor reloaded"
+  else echo "[deploy] EXECUTOR START FAILED: $(tail -c 300 /tmp/deploy-exec-pm2.log)"; notify "⛔ <b>Executor start failed</b> — <code>$(tail -c 300 /tmp/deploy-exec-pm2.log)</code>"; fi
+fi
+# v0.18.179: the fomo watcher (fomo/, pm2 app `fomo`, own database and port) deploys only when its own folder changed — own npm install, syntax check, 20-s smoke boot, own reload; the tracker and the executor are never touched by it
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep '^fomo/' | grep -vqE '^fomo/(finds\.txt|watch/)'; then
+  echo "[deploy] fomo changed — installing and checking"
+  (cd fomo && npm install --omit=dev --no-audit --no-fund 2>&1 | tail -1)
+  FFAIL=""
+  for f in fomo/src/*.mjs; do node --check "$f" 2>/tmp/deploy-fomo.err || { FFAIL="syntax: $f $(head -c 300 /tmp/deploy-fomo.err)"; break; }; done
+  if [ -z "$FFAIL" ]; then
+    rm -f /root/tracker/data/fomo-smoke.db /root/tracker/data/fomo-smoke.db-wal /root/tracker/data/fomo-smoke.db-shm
+    (cd fomo && FOMO_SMOKE=1 FOMO_SMOKE_MS=20000 FOMO_DB_PATH=/root/tracker/data/fomo-smoke.db FOMO_PORT=18789 timeout 60 node src/index.mjs >/tmp/deploy-fomo-smoke.log 2>&1); FRC=$?
+    [ "$FRC" != "0" ] && FFAIL="fomo smoke boot exited with code $FRC: $(grep -E 'Error|error|at ' /tmp/deploy-fomo-smoke.log | head -5 | tr '\n' ' ' | head -c 400)"
+  fi
+  if [ -n "$FFAIL" ]; then echo "[deploy] FOMO REJECTED: $FFAIL"; notify "⛔ <b>fomo deploy rejected</b> — the running fomo watcher stays as it was. Reason: <code>$(echo "$FFAIL" | head -c 500)</code>"
+  elif pm2 startOrReload fomo/ecosystem.config.cjs --only fomo --update-env >/tmp/deploy-fomo-pm2.log 2>&1; then pm2 save >/dev/null 2>&1; echo "[deploy] fomo reloaded"
+  else echo "[deploy] FOMO START FAILED: $(tail -c 300 /tmp/deploy-fomo-pm2.log)"; notify "⛔ <b>fomo start failed</b> — <code>$(tail -c 300 /tmp/deploy-fomo-pm2.log)</code>"; fi
+fi
+# scope 0.1.0 (owner, 23 Oct 2026: a separate website for coin analysis): coin scope (scope/, pm2 app `scope`, port SCOPE_PORT 8791 (8790 is fomo's public page), same key as the tracker page) deploys only when its own folder changed — own npm install, syntax check, smoke boot, own reload; the tracker, the executor and fomo are never touched by it
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^scope/'; then
+  echo "[deploy] scope changed — installing and checking"
+  (cd scope && npm install --omit=dev --no-audit --no-fund 2>&1 | tail -1)
+  SFAIL=""
+  for f in scope/src/*.mjs; do node --check "$f" 2>/tmp/deploy-scope.err || { SFAIL="syntax: $f $(head -c 300 /tmp/deploy-scope.err)"; break; }; done
+  if [ -z "$SFAIL" ]; then (cd scope && SCOPE_SMOKE=1 SCOPE_SMOKE_MS=5000 SCOPE_PORT=18791 timeout 40 node src/index.mjs >/tmp/deploy-scope-smoke.log 2>&1); SRC=$?; [ "$SRC" != "0" ] && SFAIL="scope smoke boot exited with code $SRC: $(grep -E 'Error|error|at ' /tmp/deploy-scope-smoke.log | head -5 | tr '\n' ' ' | head -c 400)"; fi
+  if [ -n "$SFAIL" ]; then echo "[deploy] SCOPE REJECTED: $SFAIL"; notify "⛔ <b>coin scope deploy rejected</b> — Reason: <code>$(echo "$SFAIL" | head -c 500)</code>"
+  else
+    # scope 0.6.0: a reload does not pick up new node arguments (heap size), so when the ecosystem file changed the app is restarted from it
+    if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^scope/ecosystem.config.cjs$'; then pm2 delete scope >/dev/null 2>&1; echo "[deploy] scope: ecosystem changed — fresh start"; fi
+    if pm2 startOrReload scope/ecosystem.config.cjs --only scope --update-env >/tmp/deploy-scope-pm2.log 2>&1; then pm2 save >/dev/null 2>&1; echo "[deploy] scope reloaded"
+    SP=$(grep -E '^SCOPE_PORT=' .env | cut -d= -f2- | tr -d '"'); SP=${SP:-8791}
+    if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active" && ! ufw status | grep -q "^$SP/tcp"; then ufw allow "$SP/tcp" >/dev/null 2>&1 && echo "[deploy] firewall: opened $SP/tcp for coin scope"; fi
+    else echo "[deploy] SCOPE START FAILED: $(tail -c 300 /tmp/deploy-scope-pm2.log)"; notify "⛔ <b>coin scope start failed</b> — <code>$(tail -c 300 /tmp/deploy-scope-pm2.log)</code>"; fi
+  fi
+fi
+# radar 0.1.0 (owner, 24 Oct 2026 16:22 UK): records GMGN / Birdeye / FOMO on every coin the tracker's GMGN scanner flags ($100K in 5 min) — own pm2 app
+# `radar`, deploys only when radar/ changed (own npm install, syntax check, smoke run, own reload); never touches the tracker, executor, fomo or coin scope
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^radar/'; then
+  echo "[deploy] radar changed — installing and checking"
+  (cd radar && npm install --omit=dev --no-audit --no-fund 2>&1 | tail -1)
+  RFAIL=""
+  for f in radar/src/*.mjs; do node --check "$f" 2>/tmp/deploy-radar.err || { RFAIL="syntax: $f $(head -c 300 /tmp/deploy-radar.err)"; break; }; done
+  if [ -z "$RFAIL" ]; then (cd radar && RADAR_SMOKE=1 RADAR_DB=/tmp/radar-smoke.db timeout 40 node src/index.mjs >/tmp/deploy-radar-smoke.log 2>&1); RRC=$?; rm -f /tmp/radar-smoke.db*; [ "$RRC" != "0" ] && RFAIL="radar smoke run exited with code $RRC: $(grep -E 'Error|error|at ' /tmp/deploy-radar-smoke.log | head -5 | tr '\n' ' ' | head -c 400)"; fi
+  if [ -n "$RFAIL" ]; then echo "[deploy] RADAR REJECTED: $RFAIL"; notify "⛔ <b>radar deploy rejected</b> — Reason: <code>$(echo "$RFAIL" | head -c 500)</code>"
+  elif pm2 startOrReload radar/ecosystem.config.cjs --only radar --update-env >/tmp/deploy-radar-pm2.log 2>&1; then pm2 save >/dev/null 2>&1; echo "[deploy] radar reloaded"
+  else echo "[deploy] RADAR START FAILED: $(tail -c 300 /tmp/deploy-radar-pm2.log)"; notify "⛔ <b>radar start failed</b> — <code>$(tail -c 300 /tmp/deploy-radar-pm2.log)</code>"; fi
+fi
+# launcher 0.1.0 (owner, 24 Oct 2026 20:08–20:15 UK): X posts → pump.fun coins from its own wallet — own pm2 app `launcher`, deploys only when launcher/
+# changed (own npm install, syntax check, smoke run, own reload). Its mode (paper / shadow / live) is set only in /root/launcher/.env, never by a push.
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep '^launcher/' | grep -vq '^launcher/push-now\.txt$'; then
+  echo "[deploy] launcher changed — installing and checking"
+  (cd launcher && npm install --omit=dev --no-audit --no-fund 2>&1 | tail -1)
+  LFAIL=""
+  for f in launcher/src/*.mjs; do node --check "$f" 2>/tmp/deploy-launcher.err || { LFAIL="syntax: $f $(head -c 300 /tmp/deploy-launcher.err)"; break; }; done
+  if [ -z "$LFAIL" ]; then (cd launcher && LAUNCH_SMOKE=1 LAUNCH_HOME=/tmp/launcher-smoke LAUNCH_DB=/tmp/launcher-smoke.db LAUNCH_OUT=/tmp/launcher-smoke-out timeout 40 node src/index.mjs >/tmp/deploy-launcher-smoke.log 2>&1); LRC=$?; rm -rf /tmp/launcher-smoke.db* /tmp/launcher-smoke /tmp/launcher-smoke-out; [ "$LRC" != "0" ] && LFAIL="launcher smoke run exited with code $LRC: $(grep -E 'Error|error|at ' /tmp/deploy-launcher-smoke.log | head -5 | tr '\n' ' ' | head -c 400)"; fi
+  if [ -n "$LFAIL" ]; then echo "[deploy] LAUNCHER REJECTED: $LFAIL"; notify "⛔ <b>launcher deploy rejected</b> — Reason: <code>$(echo "$LFAIL" | head -c 500)</code>"
+  elif pm2 startOrReload launcher/ecosystem.config.cjs --only launcher --update-env >/tmp/deploy-launcher-pm2.log 2>&1; then pm2 save >/dev/null 2>&1; echo "[deploy] launcher reloaded"
+  else echo "[deploy] LAUNCHER START FAILED: $(tail -c 300 /tmp/deploy-launcher-pm2.log)"; notify "⛔ <b>launcher start failed</b> — <code>$(tail -c 300 /tmp/deploy-launcher-pm2.log)</code>"; fi
+fi
+# launcher: changing launcher/push-now.txt makes the box push the launcher's data now
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^launcher/push-now\.txt$'; then (nohup bash -c 'sleep 90; bash /root/tracker/launcher/push.sh' >> /root/tracker/data/push-now.log 2>&1 &); fi
+# fomo 0.1.3: a change to fomo/finds.txt resolves those trades to wallets on the box (fomo/scripts/find-batch.mjs against the running fomo app), then pushes the data
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^fomo/finds\.txt$'; then echo "[deploy] fomo finds"; (cd /root/tracker/fomo && nohup nice -n 19 bash -c 'sleep 25; node scripts/find-batch.mjs > /root/tracker/data/fomo_finds.log 2>&1; bash /root/tracker/scripts/push-data.sh >> /root/tracker/data/push-now.log 2>&1' >/dev/null 2>&1 &); fi
+# fomo 0.1.9: a change to fomo/data/handles.txt adds those wallets to the watcher
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^fomo/watch/handles\.txt$'; then echo "[deploy] fomo handles"; (cd /root/tracker/fomo && nohup bash -c 'sleep 5; node scripts/watch-handles.mjs >> /root/tracker/data/fomo_handles.log 2>&1' >/dev/null 2>&1 &); fi
+# fomo 0.2.1: changing fomo/data/import-now.txt imports the owner's fomo following list as watched wallets, then pushes the data
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^fomo/watch/import-now\.txt$'; then echo "[deploy] fomo import following"; (cd /root/tracker/fomo && nohup bash -c 'sleep 20; node scripts/import-following.mjs > /root/tracker/data/fomo_import.log 2>&1; bash /root/tracker/scripts/push-data.sh >> /root/tracker/data/push-now.log 2>&1' >/dev/null 2>&1 &); fi
+# v0.18.143: an on-demand data push — changing scripts/push-now.txt makes the box run the 4-hourly push (abcd / executor / launches …) now, in the background, at low priority
+# v0.18.154: a one-off job — changing scripts/job-now.txt runs the revival price pull (GMGN 5-min candles for every graduated coin), then the data push
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^scripts/job-now\.txt$'; then JOB=$(head -c 40 scripts/job-now.txt | awk '{print $1}'); echo "[deploy] one-off job: $JOB"; case "$JOB" in s10) (cd /root/tracker && nohup nice -n 19 bash -c 'node scripts/s10-check.cjs > /root/tracker/data/job.log 2>&1; grep -h "\[sn10\]" /root/.pm2/logs/tracker-out*.log 2>/dev/null | tail -50 >> /root/tracker/data/job.log; bash /root/tracker/scripts/push-data.sh >> /root/tracker/data/push-now.log 2>&1' >/dev/null 2>&1 &);; *) (cd /root/tracker && nohup nice -n 19 bash -c 'node scripts/revival-pull.mjs > /root/tracker/data/job.log 2>&1; bash /root/tracker/scripts/push-data.sh >> /root/tracker/data/push-now.log 2>&1' >/dev/null 2>&1 &);; esac; fi
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^scripts/push-now\.txt$'; then echo "[deploy] on-demand data push"; (nohup nice -n 19 bash /root/tracker/scripts/push-data.sh >>/root/tracker/data/push-now.log 2>&1 &); fi
+# 3 Nov 2026 10:45 UK (owner: the operator census needs the launch recorder): an app NOT in scripts/apps-off that is stopped is started again (tracker is record-only, BOOKS_OFF)
+for A in tracker; do if ! grep -qx "$A" scripts/apps-off 2>/dev/null; then
+  if pm2 jlist 2>/dev/null | A="$A" node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.exit(JSON.parse(s).some(p=>p.name===process.env.A&&p.pm2_env.status==="stopped")?0:1)}catch(e){process.exit(1)}})'; then
+    pm2 start "$A" >/dev/null 2>&1 && pm2 save >/dev/null 2>&1 && echo "[deploy] $A started (no longer in scripts/apps-off)"; fi; fi; done
+# owner, 30 Oct 2026 22:36 UK: stop (and keep stopped) every app listed in scripts/apps-off — run last, so nothing reloaded above stays up
+if [ -f scripts/apps-off ]; then for A in $(grep -Eo '^[a-z0-9-]+' scripts/apps-off); do
+  if pm2 jlist 2>/dev/null | A="$A" node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.exit(JSON.parse(s).some(p=>p.name===process.env.A&&p.pm2_env.status!=="stopped")?0:1)}catch(e){process.exit(1)}})'; then
+    pm2 stop "$A" >/dev/null 2>&1 && pm2 save >/dev/null 2>&1 && echo "[deploy] $A stopped (scripts/apps-off)"; fi; done; fi

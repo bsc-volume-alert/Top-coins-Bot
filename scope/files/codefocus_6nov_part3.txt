@@ -1,0 +1,1049 @@
+# PART 3 of 5 — focused code review pack (paste all parts in order)
+
+
+====================================================================================================
+=== FILE: launcher/src/quote.mjs (5,319 chars)
+====================================================================================================
+// launcher 0.8.15 (owner, 5 Nov 2026 01:04 UK, after Codex's second opinion: "measure executable quotes now, not after a book passes 40 trades"):
+// QUOTE SHADOWING. Nothing is sent. At the moment a rule books a paper entry we ask Jupiter for a real swap quote (0.2 SOL → the coin) and keep
+// the price it would have filled at next to the chain price the paper book used; when the live mark says the 40% trail would have sold we ask for the
+// sell quote (those tokens → SOL) and keep it next to the paper exit. A sample of launches that passed a check but entered no book is quoted too,
+// so the fill cost of the coins we avoid is known as well. The gap between paper and quote is the thing every paper number depends on.
+// Jupiter's public quote API (no key) routes pump.fun curve coins and PumpSwap pools; the quote includes price impact for the size asked.
+// 0.8.16: the keyless tier is 30 requests a minute (60-s sliding window); a 429 pauses every quote until x-ratelimit-reset (or 15 s), and the
+// open-position poller (volpaper volQuotePoll) spends at most one request every 3 s so entries and exits keep their share.
+// 0.8.17: the same quote endpoint feeds the LIVE trades (live.mjs) — jqRaw keeps Jupiter's whole quote, which its /swap endpoint takes back to build the transaction.
+export const qStat = { buys: 0, sells: 0, samples: 0, polls: 0, pollExits: 0, paused: 0, errors: 0, lastErr: "", lastMs: 0, pauseUntil: 0, swaps: 0 };
+export const SOL = "So11111111111111111111111111111111111111112", HOST = process.env.LAUNCH_JUP_HOST || "https://lite-api.jup.ag";
+function limited(r) { if (r.status === 429) { const rs = Number(r.headers.get("x-ratelimit-reset")) || 0; qStat.pauseUntil = rs > 1e9 ? rs * 1000 : Date.now() + 15000; throw new Error("jup 429 rate limit"); } }
+/** Jupiter's quote as it comes (outAmount, priceImpactPct, routePlan…). slippageBps = what the swap built from it will tolerate. */
+export async function jqRaw(inputMint, outputMint, amount, slippageBps = 1000, direct = false) {
+  if (Date.now() < qStat.pauseUntil) { qStat.paused++; throw new Error("jup paused (429)"); }
+  const t0 = Date.now();
+  // 0.8.20: direct = one hop only (SOL ↔ coin on pump.fun or PumpSwap) with the account count capped — the first live buy (StockPad, 08:15 UK) got a
+  // two-hop transaction of 1668 bytes, over Solana's 1232, and failed in simulation. The live trades never want a multi-hop route anyway.
+  const u = `${HOST}/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}&onlyDirectRoutes=${direct ? "true" : "false"}${direct ? "&maxAccounts=28&restrictIntermediateTokens=true" : ""}`;
+  const r = await fetch(u, { signal: AbortSignal.timeout(6000), headers: { accept: "application/json" } });
+  limited(r);
+  const text = await r.text(); let j; try { j = JSON.parse(text); } catch { throw new Error(`jup HTTP ${r.status}`); }
+  if (!r.ok || j.error) throw new Error(`jup ${r.status} ${(j.error || j.errorCode || "").toString().slice(0, 60)}`);
+  qStat.lastMs = Date.now() - t0; j._ms = Date.now() - t0;
+  return j;
+}
+async function jq(inputMint, outputMint, amount) {
+  const j = await jqRaw(inputMint, outputMint, amount, 1000);
+  return { out: Number(j.outAmount), impact: Number(j.priceImpactPct) || 0, route: (j.routePlan || []).map((p) => p?.swapInfo?.label).filter(Boolean).join(">").slice(0, 40), ms: j._ms };
+}
+/** 0.8.17: the swap transaction Jupiter builds for a quote (base64, unsigned; our wallet is the fee payer and signer). Counts against the same keyless limit. */
+export async function swapTxFor(quote, userPublicKey, maxPrioLamports = 1_000_000) {
+  if (Date.now() < qStat.pauseUntil) { qStat.paused++; throw new Error("jup paused (429)"); }
+  const r = await fetch(`${HOST}/swap/v1/swap`, { method: "POST", signal: AbortSignal.timeout(8000), headers: { accept: "application/json", "content-type": "application/json" },
+    body: JSON.stringify({ quoteResponse: quote, userPublicKey, wrapAndUnwrapSol: true, dynamicComputeUnitLimit: true, dynamicSlippage: false, prioritizationFeeLamports: { priorityLevelWithMaxLamports: { maxLamports: maxPrioLamports, global: false, priorityLevel: "high" } } }) });
+  limited(r);
+  const text = await r.text(); let j; try { j = JSON.parse(text); } catch { throw new Error(`jup swap HTTP ${r.status}`); }
+  if (!r.ok || !j.swapTransaction) throw new Error(`jup swap ${r.status} ${(j.error || j.errorCode || "").toString().slice(0, 80)}`);
+  qStat.swaps++;
+  return { tx64: j.swapTransaction, lastValidBlockHeight: Number(j.lastValidBlockHeight) || null, prio: Number(j.prioritizationFeeLamports) || null };
+}
+/** buy quote: lamports of SOL in → raw tokens out (6 decimals on pump.fun coins). Returns the SOL price per token implied by the fill. */
+export async function buyQuote(mint, lamports) {
+  const q = await jq(SOL, mint, lamports);
+  if (!(q.out > 0)) throw new Error("jup empty");
+  return { tokens: q.out, pxSol: (lamports / 1e9) / (q.out / 1e6), impact: q.impact, route: q.route, ms: q.ms };
+}
+/** sell quote: raw tokens in → lamports out */
+export async function sellQuote(mint, tokens) {
+  const q = await jq(mint, SOL, Math.floor(tokens));
+  if (!(q.out > 0)) throw new Error("jup empty");
+  return { lamports: q.out, impact: q.impact, route: q.route, ms: q.ms };
+}
+
+
+====================================================================================================
+=== FILE: launcher/src/rpc.mjs (7,942 chars)
+====================================================================================================
+// RPC plumbing (copied from executor/src/rpc.mjs, launcher 0.1.0): Helius connection, blockhash cache, build / simulate / send (Helius Sender first, plain RPC as fallback), confirmation, fill readback.
+import { Connection, VersionedTransaction, TransactionMessage, PublicKey } from "@solana/web3.js";
+import { CFG } from "./config.mjs";
+
+export const conn = new Connection(CFG.RPC_URL, { commitment: "confirmed", disableRetryOnRateLimit: true });
+export const rpcStats = { calls: 0, errors: 0, sends: 0, senderErrors: 0, lastErr: "" };
+
+let bh = { blockhash: null, lastValidBlockHeight: 0, t: 0 }, bhBusy = false;
+export async function blockhash(maxAgeMs = 1500) {
+  if (bh.blockhash && Date.now() - bh.t < maxAgeMs) return bh;
+  if (bhBusy) { await new Promise((r) => setTimeout(r, 50)); return bh.blockhash ? bh : blockhash(maxAgeMs); }
+  bhBusy = true; try { rpcStats.calls++; const r = await conn.getLatestBlockhash("confirmed"); bh = { ...r, t: Date.now() }; } catch (e) { rpcStats.errors++; rpcStats.lastErr = e.message; } finally { bhBusy = false; }
+  if (!bh.blockhash) throw new Error("no blockhash: " + rpcStats.lastErr); return bh;
+}
+export async function getAccounts(pubkeys, commitment = "processed") {
+  rpcStats.calls++; try { return await conn.getMultipleAccountsInfo(pubkeys.map((p) => (p instanceof PublicKey ? p : new PublicKey(p))), { commitment }); } catch (e) { rpcStats.errors++; rpcStats.lastErr = e.message; throw e; }
+}
+/** v0.4.12 local stops: push notifications for an account (the bonding curve, or a pool's reserve accounts) at 'processed' commitment - the executor sees the price move within a slot. */
+export function onAccount(pubkey, cb) { rpcStats.subs = (rpcStats.subs || 0) + 1; return conn.onAccountChange(pubkey instanceof PublicKey ? pubkey : new PublicKey(pubkey), (info, ctx) => { try { cb(info.data, ctx?.slot); } catch (e) { rpcStats.lastErr = "sub: " + e.message; } }, "processed"); }
+export async function offAccount(id) { try { await conn.removeAccountChangeListener(id); rpcStats.subs = Math.max(0, (rpcStats.subs || 1) - 1); } catch {} }
+export async function getBalance(pubkey) { rpcStats.calls++; return conn.getBalance(pubkey, "confirmed"); }
+export async function buildTx(payer, ixs, signer = null, tables = []) {
+  const { blockhash: b, lastValidBlockHeight } = await blockhash();
+  const msg = new TransactionMessage({ payerKey: payer, recentBlockhash: b, instructions: ixs }).compileToV0Message(tables); // launcher 0.1.15: lookup tables shrink the launch transaction
+  const tx = new VersionedTransaction(msg); tx.lastValidBlockHeight = lastValidBlockHeight; if (signer) tx.sign(Array.isArray(signer) ? signer : [signer]); return tx;
+}
+/** Simulate (no signature needed). Returns { ok, err, logs, units, ms }. */
+/** Simulate; `watch` = accounts whose post-simulation state we want back (e.g. our token account, to read the real fill the chain would give). */
+export async function simulate(tx, watch = []) {
+  const t0 = Date.now(); rpcStats.calls++;
+  try {
+    const cfg = { sigVerify: false, replaceRecentBlockhash: true, commitment: "processed" }; if (watch.length) cfg.accounts = { encoding: "base64", addresses: watch.map((k) => k.toBase58()) };
+    const r = await conn.simulateTransaction(tx, cfg);
+    const post = (r.value.accounts || []).map((a) => (a && a.data ? Buffer.from(a.data[0], "base64") : null));
+    return { ok: !r.value.err, err: r.value.err ? JSON.stringify(r.value.err) : null, logs: r.value.logs || [], units: r.value.unitsConsumed ?? null, ms: Date.now() - t0, post };
+  } catch (e) { rpcStats.errors++; rpcStats.lastErr = e.message; return { ok: false, err: "rpc: " + e.message, logs: [], units: null, ms: Date.now() - t0, post: [] }; }
+}
+/** Send a signed transaction through Helius Sender (every landing route at once); falls back to the normal RPC. Returns { sig, via, ms }. */
+export async function send(tx) {
+  const raw = Buffer.from(tx.serialize()).toString("base64"), t0 = Date.now(); rpcStats.sends++;
+  try {
+    const r = await fetch(CFG.SENDER_URL, { method: "POST", headers: { "content-type": "application/json" }, signal: AbortSignal.timeout(4000),
+      body: JSON.stringify({ id: String(Date.now()), jsonrpc: "2.0", method: "sendTransaction", params: [raw, { encoding: "base64", skipPreflight: true, maxRetries: 0 }] }) });
+    const j = await r.json(); if (j.result) return { sig: j.result, via: "sender", ms: Date.now() - t0 };
+    throw new Error(j.error?.message || `sender http ${r.status}`);
+  } catch (e) {
+    rpcStats.senderErrors++; rpcStats.lastErr = "sender: " + e.message;
+    const sig = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: true, maxRetries: 0 }); return { sig, via: "rpc", ms: Date.now() - t0, senderErr: e.message };
+  }
+}
+/** Send, then keep re-sending the SAME signed transaction every 2.5 s until it is confirmed / failed or `ms` passes. Re-sending the identical
+ *  transaction can never execute twice, so this is the only retry a BUY gets (a second, different buy could land as well → bought twice). */
+export async function sendUntilConfirmed(tx, ms = 18000) {
+  const first = await send(tx); const sig = first.sig, t0 = Date.now(); let resends = 0;
+  while (Date.now() - t0 < ms) {
+    const c = await waitConfirm(sig, 2500); if (c.status !== "timeout") return { ...c, sig, via: first.via, resends, ms: Date.now() - t0 };
+    try { await send(tx); resends++; } catch {}
+  }
+  return { status: "timeout", slot: null, err: null, sig, via: first.via, resends, ms: Date.now() - t0 };
+}
+/** Poll until the signature is confirmed or failed, or `ms` passes. Returns { status: 'confirmed'|'failed'|'timeout', slot, err }. */
+export async function waitConfirm(sig, ms = 20000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    rpcStats.calls++;
+    try { const r = await conn.getSignatureStatuses([sig]); const s = r.value[0];
+      if (s) { if (s.err) return { status: "failed", slot: s.slot, err: JSON.stringify(s.err) }; if (s.confirmationStatus === "confirmed" || s.confirmationStatus === "finalized") return { status: "confirmed", slot: s.slot, err: null }; } }
+    catch (e) { rpcStats.errors++; rpcStats.lastErr = e.message; }
+    await new Promise((r) => setTimeout(r, 200)); // v0.4.11: notice the landing sooner (was 400 ms)
+  }
+  return { status: "timeout", slot: null, err: null };
+}
+export async function blockHeight() { rpcStats.calls++; return conn.getBlockHeight("confirmed"); }
+export async function signatureStatus(sig) { rpcStats.calls++; const r = await conn.getSignatureStatuses([sig]); const s = r.value[0]; return s ? { status: s.err ? "failed" : (s.confirmationStatus === "confirmed" || s.confirmationStatus === "finalized") ? "confirmed" : "processed", slot: s.slot, err: s.err ? JSON.stringify(s.err) : null } : { status: "unknown" }; }
+/** What actually happened: SOL change for the payer (lamports, fee included) and token change for the mint. Retries a few times — the node can lag the confirmation by a moment. */
+export async function readFill(sig, payer, mint, tries = 4) {
+  let tx = null; for (let i = 0; i < tries && !tx?.meta; i++) { if (i) await new Promise((r) => setTimeout(r, 600)); rpcStats.calls++; tx = await conn.getTransaction(sig, { maxSupportedTransactionVersion: 1, commitment: "confirmed" }).catch(() => null); }
+  if (!tx?.meta) return null;
+  const keys = tx.transaction.message.staticAccountKeys.map((k) => k.toBase58()), i = keys.indexOf(payer.toBase58());
+  const solDelta = i >= 0 ? tx.meta.postBalances[i] - tx.meta.preBalances[i] : null;
+  const tok = (arr) => (arr || []).filter((b) => b.mint === mint.toBase58() && b.owner === payer.toBase58()).reduce((a, b) => a + Number(b.uiTokenAmount.amount), 0);
+  return { solDelta, tokenDelta: tok(tx.meta.postTokenBalances) - tok(tx.meta.preTokenBalances), fee: tx.meta.fee, slot: tx.slot, blockTime: tx.blockTime ?? null, err: tx.meta.err ? JSON.stringify(tx.meta.err) : null };
+}
+
+
+====================================================================================================
+=== FILE: launcher/src/runnerfollow.mjs (8,475 chars)
+====================================================================================================
+// launcher 0.5.0 (owner, 31 Oct 2026 19:22 UK, "go"): RUNNER-FOLLOW paper test. The copycat study (LAUNCHER.md, 19:10 UK) found that at birth the
+// runners and the copies that died look alike (12-wallet bundle, creator buy, snipers, 100–400 buyers); what separated them was net buying holding up
+// over minutes 1–5 (+80 SOL on both genuine runners vs +3…+16 SOL on the losers), and the biggest "runners" were wash-traded by one funder.
+// So, for every post the launcher names: search GMGN for same-name coins every 30 s for 12 min; for each copy, read its trades from the chain
+// (Helius) at 2, 3, 4, 5, 7 and 10 min after it was made; paper-buy (GMGN price) the first time a rule passes:
+//   RF50  net buying ≥ 50 SOL, ≥ 300 different buyers, round trips < 60% of volume, median buy ≥ 0.02 SOL (not micro-buy spam)
+//   RF30  net ≥ 30 SOL, ≥ 200 buyers, same wash filters
+//   RF50W net ≥ 50 SOL, ≥ 100 buyers, NO wash filter (to see what the filter costs or saves)
+// Entries go into vol_paper and are scored 2 h later like the volume books. Every checkpoint of every copy is kept (rf_watch.checks) so the levels
+// can be re-tuned from data. Nothing is bought.
+import { gget, N } from "./gmgn.mjs";
+import { earlyTrades, studyStat } from "./study.mjs";
+
+const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
+const WATCH_POST_S = n("LAUNCH_RF_POST_S", 720), CHECKS = [120, 180, 240, 300, 420, 600], DAY_CREDITS = n("LAUNCH_RF_DAY_CREDITS", 150000);
+export const RULES = [
+  { k: "RF50", ok: (m) => m.net >= 50 && m.buyers >= 300 && m.rt < 60 && m.median >= 0.02 },
+  { k: "RF30", ok: (m) => m.net >= 30 && m.buyers >= 200 && m.rt < 60 && m.median >= 0.02 },
+  { k: "RF50W", ok: (m) => m.net >= 50 && m.buyers >= 100 },
+];
+export const rfStat = { searches: 0, found: 0, checks: 0, entries: 0, errors: 0, lastErr: "", credits: 0, creditsDay: "", lastCheck: null };
+const now = () => Math.floor(Date.now() / 1000), norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const today = () => new Date().toISOString().slice(0, 10);
+
+export function initRF(db) {
+  db.exec(`CREATE TABLE IF NOT EXISTS rf_watch (mint TEXT PRIMARY KEY, launch_id INTEGER, name TEXT, symbol TEXT, created_ts INTEGER, found_ts INTEGER, checks TEXT DEFAULT '[]', entered TEXT DEFAULT '', done INTEGER DEFAULT 0)`);
+}
+
+const tsOf = (c) => { const v = N(c.created_at) || N(c.creation_timestamp) || N(c.open_timestamp) || 0; return v > 1e12 ? Math.floor(v / 1000) : v; };
+async function search(q) { const d = await gget("/v1/market/search", { q, chain: "sol" }); return Array.isArray(d?.coins) ? d.coins : Array.isArray(d?.tokens) ? d.tokens : Array.isArray(d) ? d : []; }
+
+/** every 30 s: find new same-name coins for posts named in the last 12 min */
+let finding = false;
+export async function rfFind(db) {
+  if (finding) return; finding = true;
+  try {
+    const posts = db.prepare("SELECT id, name, ticker, mint, t_post_ms FROM launches WHERE name IS NOT NULL AND name<>'' AND t_post_ms>=? ORDER BY id DESC LIMIT 15").all((now() - WATCH_POST_S) * 1000);
+    const ins = db.prepare("INSERT OR IGNORE INTO rf_watch (mint, launch_id, name, symbol, created_ts, found_ts) VALUES (?,?,?,?,?,?)");
+    for (const L of posts) {
+      const t0 = Math.floor(L.t_post_ms / 1000), want = [norm(L.name), norm(L.ticker)].filter(Boolean), seen = new Map();
+      for (const q of [...new Set([L.name, L.ticker].filter(Boolean))]) { try { for (const c of await search(q)) if (c?.address) seen.set(c.address, c); rfStat.searches++; } catch (e) { rfStat.errors++; rfStat.lastErr = "search: " + e.message.slice(0, 120); } }
+      for (const c of seen.values()) {
+        const nm = norm(c.name), sy = norm(c.symbol), created = tsOf(c);
+        if (c.address === L.mint || !created || created < t0 - 60 || created > t0 + 1800) continue;
+        if (!want.some((w) => w && (nm === w || sy === w || (w.length >= 5 && nm.includes(w))))) continue;
+        if (ins.run(c.address, L.id, String(c.name || "").slice(0, 60), String(c.symbol || "").slice(0, 20), created, now()).changes) rfStat.found++;
+      }
+    }
+  } catch (e) { rfStat.errors++; rfStat.lastErr = "find: " + e.message.slice(0, 160); }
+  finally { finding = false; }
+}
+
+function metrics(r, upto) {
+  const xs = r.trades.filter((x) => x.t <= upto), buys = xs.filter((x) => x.isBuy), sells = xs.filter((x) => !x.isBuy);
+  const bs = buys.reduce((s, x) => s + x.sol, 0) / 1e9, ss = sells.reduce((s, x) => s + x.sol, 0) / 1e9, per = new Map();
+  for (const x of xs) { const p = per.get(x.user) || { b: 0, s: 0 }; if (x.isBuy) p.b += x.sol; else p.s += x.sol; per.set(x.user, p); }
+  const vol = bs + ss, rt = vol ? [...per.values()].reduce((s, p) => s + 2 * Math.min(p.b, p.s), 0) / 1e9 / vol * 100 : 0;
+  const sizes = buys.map((x) => x.sol / 1e9).sort((a, b) => a - b), last = xs[xs.length - 1];
+  const top = [...per.values()].map((p) => p.b / 1e9).sort((a, b) => b - a)[0] || 0;
+  return { net: +(bs - ss).toFixed(2), buySol: +bs.toFixed(2), sellSol: +ss.toFixed(2), buyers: new Set(buys.map((x) => x.user)).size, buys: buys.length, sells: sells.length,
+    rt: +rt.toFixed(1), median: sizes.length ? +sizes[Math.floor(sizes.length / 2)].toFixed(4) : 0, topBuyerPct: bs ? +(top / bs * 100).toFixed(1) : 0, mcSol: last?.mc ? +last.mc.toFixed(1) : null };
+}
+
+/** every 20 s: run due checkpoints */
+let checking = false;
+export async function rfCheck(db) {
+  if (checking) return; checking = true;
+  try {
+    if (rfStat.creditsDay !== today()) { rfStat.creditsDay = today(); rfStat.credits = 0; }
+    const t = now();
+    for (const w of db.prepare("SELECT * FROM rf_watch WHERE done=0 ORDER BY created_ts").all()) {
+      const age = t - w.created_ts, checks = JSON.parse(w.checks || "[]"), doneAt = new Set(checks.map((c) => c.at));
+      if (age > CHECKS[CHECKS.length - 1] + 120) { db.prepare("UPDATE rf_watch SET done=1 WHERE mint=?").run(w.mint); continue; }
+      const due = CHECKS.filter((c) => c <= age && !doneAt.has(c)); if (!due.length) continue;
+      if (rfStat.credits >= DAY_CREDITS) { rfStat.lastErr = `daily Helius budget ${DAY_CREDITS} reached`; break; }
+      const at = due[due.length - 1]; // the latest due checkpoint (skip ones we were too busy to run)
+      try {
+        const c0 = studyStat.credits, r = await earlyTrades(w.mint, w.created_ts + at); rfStat.credits += studyStat.credits - c0; rfStat.checks++; rfStat.lastCheck = new Date().toISOString();
+        const m = { at, ...metrics(r, (r.t0 || w.created_ts) + at), txs: r.txs, venue: r.pumpCurve ? (r.complete ? "pump.fun graduated" : "pump.fun curve") : "other" };
+        checks.push(m); const entered = new Set(String(w.entered || "").split(",").filter(Boolean));
+        for (const rule of RULES) if (!entered.has(rule.k) && rule.ok(m)) {
+          let info = null; try { info = await gget("/v1/token/info", { chain: "sol", address: w.mint }); } catch {}
+          const px = N(info?.price?.price ?? info?.price), supply = N(info?.total_supply) || N(info?.circulating_supply) || 1e9;
+          if (!(px > 0)) { m["skip_" + rule.k] = "no GMGN price"; continue; }
+          const curve = r.pumpCurve && !r.complete && N(info?.launchpad_progress) != null && N(info.launchpad_progress) < 1 ? 1 : 0;
+          db.prepare(`INSERT OR IGNORE INTO vol_paper (strat, mint, name, symbol, entry_ts, entry_price, entry_mc, vol5, created_ts, age_min, holders, exchange, launchpad, curve, row) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+            .run(rule.k, w.mint, w.name, w.symbol, t, px, px * supply, null, w.created_ts, +(age / 60).toFixed(1), N(info?.holder_count), m.venue, info?.launchpad ?? null, curve, JSON.stringify({ launch_id: w.launch_id, ...m }));
+          entered.add(rule.k); rfStat.entries++;
+        }
+        const dead = at >= 180 && m.buyers < 50 && m.net < 10; // 0.5.1: a copy with < 50 buyers and < 10 SOL net at 3 min is not followed further (saves Helius credits)
+        db.prepare("UPDATE rf_watch SET checks=?, entered=?, done=? WHERE mint=?").run(JSON.stringify(checks), [...entered].join(","), dead || entered.size === RULES.length ? 1 : 0, w.mint);
+      } catch (e) { rfStat.errors++; rfStat.lastErr = `${w.mint.slice(0, 6)}: ${e.message}`.slice(0, 160); checks.push({ at, err: e.message.slice(0, 80) }); db.prepare("UPDATE rf_watch SET checks=? WHERE mint=?").run(JSON.stringify(checks), w.mint); }
+    }
+  } finally { checking = false; }
+}
+
+
+====================================================================================================
+=== FILE: launcher/src/stream.mjs (6,002 chars)
+====================================================================================================
+// TwitterAPI.io: the Stream websocket (posts of the accounts set in the owner's Stream dashboard — originals, replies, quotes, reposts) and the REST
+// tweet lookup used to find what a reply / quote / repost is about. Key from TWITTERAPI_KEY (never logged).
+// Docs read 24 Oct 2026: wss://ws.twitterapi.io/twitter/tweet/websocket, header x-api-key, one connection per key, events connected / ping / fast_tweet / tweet,
+// reconnect no sooner than 90 s after a drop (60 s+ after 1013). REST GET /twitter/tweets?tweet_ids=… costs 15 credits ($0.00015) a tweet.
+import WebSocket from "ws";
+import { CFG } from "./config.mjs";
+
+export const twStat = { connected: false, since: null, events: 0, pings: 0, tweets: 0, reconnects: 0, lastClose: "", lastErr: "", lookups: 0, lookupErr: 0, lastLookupErr: "", lastEventAt: null };
+
+/** Normalise one tweet object from either event shape into { id, user, text, kind?, createdMs, replyTo, quoted, retweeted, media, full }. */
+export function norm(t) {
+  if (!t || !t.id) return null;
+  const a = t.author || {};
+  const user = String(t.screen_name || a.userName || a.username || a.screen_name || t.userName || "").replace(/^@/, "");
+  const createdMs = Number(t.created_ms) || (t.createdAt ? Date.parse(t.createdAt) : NaN) || snowMs(t.id);
+  const kindRaw = String(t.type || "").toLowerCase();
+  const sub = (x) => (x && typeof x === "object" && x.id ? norm(x) : null);
+  return { id: String(t.id), user, text: String(t.text || t.full_text || ""), kindRaw, createdMs,
+    replyTo: t.inReplyToId || t.in_reply_to_status_id || t.in_reply_to_tweet_id || null, isReply: t.isReply ?? null,
+    quoted: sub(t.quoted_tweet), retweeted: sub(t.retweeted_tweet), media: (t.media || t.extendedEntities?.media || []).map((m) => (typeof m === "string" ? m : m.media_url_https || m.url)).filter(Boolean).slice(0, 4),
+    full: !!(t.author || "isReply" in t || "inReplyToId" in t) };
+}
+/** A tweet id carries its creation time (Twitter snowflake: ms since 2010-11-04 01:42:54.657 UTC in the bits above 22). */
+export const snowMs = (id) => { try { return Number((BigInt(id) >> 22n) + 1288834974657n); } catch { return NaN; } };
+
+/** REST lookup of up to 20 tweets by id → Map(id → normalised tweet). */
+export async function lookup(ids) {
+  ids = [...new Set(ids.filter(Boolean).map(String))]; if (!ids.length || !CFG.TWITTER_KEY) return new Map();
+  twStat.lookups++;
+  try {
+    const r = await fetch(`${CFG.REST}/twitter/tweets?tweet_ids=${ids.join(",")}`, { headers: { "X-API-Key": CFG.TWITTER_KEY }, signal: AbortSignal.timeout(4000) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.status === "error") throw new Error(`HTTP ${r.status} ${(j.msg || j.message || "").slice(0, 100)}`);
+    return new Map((j.tweets || []).map((t) => norm(t)).filter(Boolean).map((t) => [t.id, t]));
+  } catch (e) { twStat.lookupErr++; twStat.lastLookupErr = e.message; return new Map(); }
+}
+
+/** What a post is about: { kind: post|reply|quote|repost, subject: the tweet the narrative comes from (the original for replies / reposts, both for quotes) }. */
+export async function context(t) {
+  let full = t;
+  // 0.1.8: the stream marks plain posts type "post" (seen 31 Oct 00:49 UK) — those need no lookup (saves ~0.5 s); replies, quotes and reposts do
+  const plain = ["post", "tweet"].includes(t.kindRaw) && !/^(@|RT @)/.test(t.text);
+  const maybeLinked = !t.full && !plain;
+  if (maybeLinked) { const m = await lookup([t.id]); if (m.get(t.id)) full = { ...m.get(t.id), kindRaw: t.kindRaw }; }
+  let kind = full.retweeted || /retweet|repost/.test(full.kindRaw) || /^RT @/.test(full.text) ? "repost" : full.quoted || /quote/.test(full.kindRaw) ? "quote" : full.replyTo || full.isReply || /reply/.test(full.kindRaw) ? "reply" : "post";
+  let parent = full.retweeted || full.quoted || null;
+  if (!parent && full.replyTo) parent = (await lookup([full.replyTo])).get(String(full.replyTo)) || null;
+  return { kind, tweet: full, parent };
+}
+
+/** Keep one websocket open; call onTweet(normalisedTweet, rawEvent) for every post. Never two connections (the key allows one). */
+export function startStream(onTweet) {
+  if (!CFG.TWITTER_KEY) { twStat.lastErr = "no TWITTERAPI_KEY in /root/tracker/.env"; return { stop() {} }; }
+  let ws = null, stopped = false, timer = null, lastMsg = Date.now();
+  const connect = () => {
+    if (stopped) return;
+    ws = new WebSocket(CFG.WS_URL, { headers: { "x-api-key": CFG.TWITTER_KEY }, handshakeTimeout: 15000 });
+    ws.on("open", () => { twStat.connected = true; twStat.since = new Date().toISOString(); lastMsg = Date.now(); });
+    ws.on("message", (buf) => {
+      lastMsg = Date.now(); twStat.events++; twStat.lastEventAt = new Date().toISOString();
+      let ev; try { ev = JSON.parse(buf.toString()); } catch { return; }
+      if (ev.event_type === "ping") { twStat.pings++; return; }
+      if (ev.event_type === "connected") return;
+      const raw = ev.event_type === "fast_tweet" ? [ev.tweet] : Array.isArray(ev.tweets) ? ev.tweets : ev.tweet ? [ev.tweet] : [];
+      for (const r of raw) { const t = norm(r); if (t) { twStat.tweets++; try { onTweet(t, ev); } catch (e) { twStat.lastErr = "onTweet: " + e.message; } } }
+    });
+    ws.on("error", (e) => { twStat.lastErr = "ws: " + e.message; });
+    ws.on("close", (code, why) => {
+      twStat.connected = false; twStat.lastClose = `${code} ${String(why || "").slice(0, 80)} at ${new Date().toISOString()}`; if (stopped) return;
+      twStat.reconnects++; clearTimeout(timer); timer = setTimeout(connect, code === 1013 ? 120000 : 90000); // the docs: wait ≥ 90 s after a drop, ≥ 60 s after 1013
+    });
+  };
+  connect();
+  const watchdog = setInterval(() => { if (ws && twStat.connected && Date.now() - lastMsg > 150000) { twStat.lastErr = "no message for 150 s — reconnecting"; try { ws.terminate(); } catch {} } }, 30000); // server pings every ~40 s
+  return { stop() { stopped = true; clearTimeout(timer); clearInterval(watchdog); try { ws?.close(); } catch {} } };
+}
+
+
+====================================================================================================
+=== FILE: launcher/src/study.mjs (36,182 chars)
+====================================================================================================
+// launcher 0.3.0 (owner, 31 Oct 2026 18:21 UK: "study the copycats … what made them run up? bundled wallets, wash trading, sniping, fresh wallets, or genuine traders?").
+// For every copycat that ran (peak ≥ STUDY_MIN_PEAK, from copy_peaks) and, as a comparison, the copies of the same post that did not run and our own coin,
+// it reads the coin's whole first 40 minutes from the chain (Helius: every buy and sell on the pump.fun bonding curve, in order, with block and position)
+// and profiles the first 100 buyers (wallet age, activity, who funded them). It measures, for each coin:
+//   the creator (own first buy, when it sold), bundles (buyers in the creation block, Jito-tipped and multi-buy transactions), snipers (first 3 s),
+//   fresh wallets, wallets funded by the same source (clusters) and by the creator, wash trading (wallets buying and selling back and forth),
+//   whales, how concentrated the buying was, the 5-minute volume, and how much of the buying came from "organic" traders (none of the above).
+// Read-only: no transaction is signed or sent. Helius credits are counted (getTransactionsForAddress 10 per 100 transactions; getTransaction 1).
+import bs58 from "bs58";
+import { createHash } from "node:crypto";
+import { PublicKey } from "@solana/web3.js";
+import { CFG } from "./config.mjs";
+import { gget, N } from "./gmgn.mjs";
+import { curveOf, PUMP } from "./pump.mjs";
+import { one as peakOne } from "./copypeaks.mjs";
+import { trace as fundedBy } from "./operators.mjs"; // 0.7.4: the fast wallet-API funder for busy wallets
+
+const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
+const MIN_PEAK = n("LAUNCH_STUDY_MIN_PEAK", 30000), WINDOW = n("LAUNCH_STUDY_WINDOW_MIN", 40) * 60, BUYERS = n("LAUNCH_STUDY_BUYERS", 100);
+const PER_RUN = n("LAUNCH_STUDY_PER_RUN", 400) /* 0.7.7: was 30 an hour — with coins at ~80 s each the hourly cap was the bottleneck */, DAY_CREDITS = n("LAUNCH_STUDY_DAY_CREDITS", 250000), MAX_TX = n("LAUNCH_STUDY_MAX_TX", 60000), CENSUS_MAX_TX = n("LAUNCH_STUDY_CENSUS_MAX_TX", 5000), PARALLEL = n("LAUNCH_STUDY_PARALLEL", 3); // 0.6.2: busy runners do 15,000+ transactions in their first minutes; 0.7.3: census coins stop at 5,000
+const STUDY_V = 7; // bump to redo every coin with a newer method
+export const studyStat = { runs: 0, studied: 0, errors: 0, lastErr: "", lastRun: null, running: false, credits: 0, creditsDay: "", creditsToday: 0, calls: 0, gtfa: null, probe: null, current: "" };
+
+const disc = (s) => createHash("sha256").update(s).digest().subarray(0, 8);
+const D_TRADE = disc("event:TradeEvent"), D_CREATE = disc("event:CreateEvent"), D_COMPLETE = disc("event:CompleteEvent"), EVT_TAG = disc("anchor:event");
+const PUMP_S = PUMP.toBase58();
+const JITO = new Set(["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5", "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe", "Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY", "ADaUMid9yfUytqMBgopwjb2DTLSokTSzL1zt6iGPaS49",
+  "DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh", "ADuUkR4vqLUMWXxW9gh6D6L8pMSawimctcNZ5pGwDcEt", "DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL", "3AVi9Tg9Uo68tJfuvoKvqKNWKkC5wPdSSdeBnizKZ6jT"]);
+const nap = (ms) => new Promise((r) => setTimeout(r, ms));
+const today = () => new Date().toISOString().slice(0, 10);
+
+// ---------- Helius ----------
+function spend(c) { if (studyStat.creditsDay !== today()) { studyStat.creditsDay = today(); studyStat.creditsToday = 0; } studyStat.credits += c; studyStat.creditsToday += c; }
+export async function rpc(method, params, credits = 1) {
+  for (let i = 0; i < 5; i++) {
+    studyStat.calls++;
+    try {
+      const r = await fetch(CFG.RPC_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(30000) });
+      if (r.status === 429) { await nap(1500 * (i + 1)); continue; }
+      const j = await r.json();
+      if (j.error) { if (/rate|429|too many/i.test(j.error.message || "")) { await nap(1500 * (i + 1)); continue; } const e = new Error(`${method}: ${j.error.code} ${(j.error.message || "").slice(0, 120)}`); e.rpc = j.error; throw e; }
+      spend(typeof credits === "function" ? credits(j.result) : credits);
+      return j.result;
+    } catch (e) { if (e.rpc || i === 4) throw e; await nap(1000 * (i + 1)); }
+  }
+  throw new Error(`${method}: rate limited`);
+}
+const fullCost = (res) => Math.max(10, Math.ceil(((res?.data || []).length) / 100) * 10);
+
+/** Every transaction touching `addr` from its first one, oldest first, until blockTime > tEnd (or MAX_TX). Helius getTransactionsForAddress, else signatures + getTransaction. */
+// 0.6.1: each transaction is turned into a small record (its trades for `mint`, create/complete, signer, Jito) the moment its page arrives,
+// so a busy coin no longer holds thousands of full transactions in memory (the launcher was running out of its 256 MB and restarting).
+function compact(t, mint) {
+  if (!studyStat.probeDone) { studyStat.probeDone = true; studyStat.probe = JSON.stringify({ keys: Object.keys(t), ix: t.transactionIndex, ev: events(t).map((e) => e.k).join("+"), inner: (t.meta?.innerInstructions || []).length, logs: (t.meta?.logMessages || []).length }).slice(0, 400); }
+  const err = !!t.meta?.err, keys = keysOf(t), ev = err ? [] : events(t);
+  let tr = [], generic = false;
+  if (!err) { tr = fillZero(t, mint, ev.filter((e) => e.k === "trade" && e.mint === mint).map((e) => ({ ...e, mc: (e.vSol / e.vTok) * 1e6 }))); if (!tr.length) { tr = balTrades(t, mint); generic = tr.length > 0; } }
+  return { slot: t.slot, transactionIndex: t.transactionIndex ?? null, blockTime: t.blockTime, err, sig: sigOf(t), keys0: keys[0], jito: keys.some((k) => JITO.has(k)),
+    cr: ev.find((e) => e.k === "create" && e.mint === mint) || null, complete: ev.some((e) => e.k === "complete"), pump: tr.some((e) => e.vSol != null), tr, generic };
+}
+async function history(addr, tEnd, mint, maxTx = MAX_TX) {
+  const out = [];
+  if (studyStat.gtfa !== false) {
+    try {
+      let token = null;
+      for (let page = 0; page < maxTx / 100; page++) {
+        const res = await rpc("getTransactionsForAddress", [addr, { transactionDetails: "full", sortOrder: "asc", limit: 100, maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed", filters: { status: "succeeded", blockTime: { lte: tEnd } }, ...(token ? { paginationToken: token } : {}) }], fullCost); // 0.6.3: failed transactions (bot spam on hot coins) are not fetched
+        studyStat.gtfa = true;
+        const rows = res?.data || []; let past = false;
+        for (const t of rows) { if (t.blockTime && t.blockTime > tEnd) { past = true; break; } out.push(compact(t, mint)); }
+        token = res?.paginationToken; if (past || !token || !rows.length) break;
+      }
+      return out;
+    } catch (e) { if (studyStat.gtfa === true || !e.rpc) throw e; studyStat.gtfa = false; studyStat.probe = "getTransactionsForAddress unavailable: " + e.message.slice(0, 140); out.length = 0; }
+  }
+  // fallback: newest → oldest signatures, keep those inside the window, then fetch each transaction
+  let before = null, sigs = [];
+  for (let page = 0; page < 40; page++) {
+    const s = await rpc("getSignaturesForAddress", [addr, { limit: 1000, commitment: "confirmed", ...(before ? { before } : {}) }]);
+    if (!s?.length) break; sigs.push(...s); before = s[s.length - 1].signature; if (s.length < 1000) break;
+  }
+  sigs = sigs.reverse(); const t0 = sigs[0]?.blockTime || 0; sigs = sigs.filter((s) => !s.blockTime || s.blockTime <= Math.max(tEnd, t0)).slice(0, maxTx);
+  for (let i = 0; i < sigs.length; i += 8) {
+    const got = await Promise.all(sigs.slice(i, i + 8).map((s) => rpc("getTransaction", [s.signature, { maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed" }]).catch(() => null)));
+    got.forEach((t, k) => t && out.push(compact({ ...t, transactionIndex: null, _sig: sigs[i + k].signature }, mint)));
+  }
+  return out;
+}
+
+// ---------- decoding ----------
+export const keysOf = (t) => [...(t.transaction?.message?.accountKeys || []).map((k) => (typeof k === "string" ? k : k.pubkey)), ...(t.meta?.loadedAddresses?.writable || []), ...(t.meta?.loadedAddresses?.readonly || [])];
+const pk = (b, o) => bs58.encode(b.subarray(o, o + 32));
+function str(b, o) { const l = b.readUInt32LE(o); return [b.subarray(o + 4, o + 4 + l).toString("utf8"), o + 4 + l]; }
+export const dbg = { samples: [], programs: {} };
+function events(t) {
+  const keys = keysOf(t), out = [], raws = [];
+  if (dbg.on) for (const ix of t.transaction?.message?.instructions || []) { const p = keys[ix.programIdIndex]; if (p) dbg.programs[p] = (dbg.programs[p] || 0) + 1; }
+  for (const g of t.meta?.innerInstructions || []) for (const ix of g.instructions || []) {
+    if (keys[ix.programIdIndex] !== PUMP_S || !ix.data) continue;
+    let b; try { b = Buffer.from(bs58.decode(ix.data)); } catch { continue; }
+    if (b.length > 16 && b.subarray(0, 8).equals(EVT_TAG)) raws.push(b.subarray(8));
+  }
+  for (const l of t.meta?.logMessages || []) if (l.startsWith("Program data: ")) { try { raws.push(Buffer.from(l.slice(14), "base64")); } catch {} }
+  for (const b of raws) {
+    if (dbg.on && dbg.samples.length < 4 && !dbg.seen.has(b.subarray(0, 8).toString("hex") + b.length)) { dbg.seen.add(b.subarray(0, 8).toString("hex") + b.length); dbg.samples.push({ len: b.length, hex: b.subarray(0, 260).toString("hex") }); }
+    try {
+      const d = b.subarray(0, 8), p = b.subarray(8);
+      if (d.equals(D_TRADE) && p.length >= 121) out.push({ k: "trade", mint: pk(p, 0), sol: Number(p.readBigUInt64LE(32)), tok: Number(p.readBigUInt64LE(40)), isBuy: p[48] === 1, user: pk(p, 49), ts: Number(p.readBigInt64LE(81)), vSol: Number(p.readBigUInt64LE(89)), vTok: Number(p.readBigUInt64LE(97)), rTok: Number(p.readBigUInt64LE(113)) });
+      else if (d.equals(D_CREATE)) { let o = 0, name, symbol, uri; [name, o] = str(p, o); [symbol, o] = str(p, o); [uri, o] = str(p, o); out.push({ k: "create", name, symbol, mint: pk(p, o), curve: pk(p, o + 32), user: pk(p, o + 64), creator: p.length >= o + 128 ? pk(p, o + 96) : null }); }
+      else if (d.equals(D_COMPLETE)) out.push({ k: "complete" });
+    } catch {}
+  }
+  return out;
+}
+const sigOf = (t) => t._sig || t.transaction?.signatures?.[0];
+const WSOL_S = "So11111111111111111111111111111111111111112";
+/** 0.4.1: trades read from balance changes — works on any launchpad or pool (Meteora DBC / DAMM, PumpSwap, Raydium…), used where no pump.fun event is found.
+ *  A trade = a signer whose balance of the coin changed, with SOL (native + wrapped) moving the other way by more than 0.0005 SOL. Market cap assumes 1B supply. */
+function balTrades(t, mint) {
+  const keys = keysOf(t), nSig = t.transaction?.message?.header?.numRequiredSignatures || 1, signers = new Set(keys.slice(0, nSig)), m = t.meta || {};
+  const tok = new Map(), ws = new Map(); let dec = 6;
+  const add = (map, owner, v) => map.set(owner, (map.get(owner) || 0) + v);
+  const pre = new Map((m.preTokenBalances || []).map((b) => [b.accountIndex, b])), post = new Map((m.postTokenBalances || []).map((b) => [b.accountIndex, b]));
+  for (const i of new Set([...pre.keys(), ...post.keys()])) { const a = pre.get(i), b = post.get(i), x = b || a; if (!x?.owner) continue;
+    const d = Number(b?.uiTokenAmount?.amount || 0) - Number(a?.uiTokenAmount?.amount || 0); if (!d) continue;
+    if (x.mint === mint) { add(tok, x.owner, d); dec = x.uiTokenAmount?.decimals ?? dec; } else if (x.mint === WSOL_S) add(ws, x.owner, d); }
+  const out = [];
+  for (const [owner, d] of tok) { if (!signers.has(owner)) continue; const i = keys.indexOf(owner); if (i < 0 || i >= (m.preBalances || []).length) continue;
+    let lam = m.postBalances[i] - m.preBalances[i] + (ws.get(owner) || 0); if (i === 0) lam += m.fee || 0;
+    const isBuy = d > 0, sol = isBuy ? -lam : lam; if (!(sol > 500000)) continue;
+    const ui = Math.abs(d) / 10 ** dec; out.push({ k: "trade", mint, sol, tok: Math.abs(d), isBuy, user: owner, mc: (sol / 1e9 / ui) * 1e9 }); }
+  return out;
+}
+
+/** 0.5.0: a coin's trades from its first transaction up to tEnd (any launchpad), cheap form for the runner-follow test. */
+export async function earlyTrades(mint, tEnd) {
+  // 0.6.1: read the coin's own address, not the bonding curve — a coin that graduates in under 2 min keeps trading on PumpSwap, which the curve never sees
+  const txs = await history(mint, tEnd, mint, n("LAUNCH_RF_MAX_TX", 8000));
+  txs.sort((a, b) => a.slot - b.slot || (a.transactionIndex ?? 0) - (b.transactionIndex ?? 0));
+  const trades = []; let t0 = null, complete = false, pump = false;
+  for (const t of txs) {
+    if (t.err) continue; if (t0 == null) t0 = t.blockTime;
+    if (t.complete) complete = true; if (t.pump || t.cr) pump = true;
+    t.tr.forEach((e) => trades.push({ t: t.blockTime, user: e.user, isBuy: e.isBuy, sol: e.sol, mc: e.mc, tok: e.tok, slot: t.slot })); // 0.8.9: token amount, for the "still holding" count; 0.8.11: slot, for the create-block buyers
+  }
+  return { t0, trades, txs: txs.length, pumpCurve: pump, complete };
+}
+
+/** 0.5.1: some pump.fun coins (serial launchers; curve quoted in another token) report sol_amount = 0 and empty SOL reserves in their TradeEvent.
+ *  For those trades the SOL the trader actually paid or received is taken from the transaction's balance changes (same wallet); flagged q0. */
+function fillZero(t, mint, tr) {
+  if (!tr.some((e) => !e.sol)) return tr;
+  const bt = balTrades(t, mint);
+  return tr.map((e) => { if (e.sol) return e; const b = bt.find((x) => x.user === e.user && x.isBuy === e.isBuy); return b ? { ...e, sol: b.sol, mc: b.mc, q0: 1 } : { ...e, q0: 1 }; });
+}
+
+// ---------- wallets ----------
+const walletCache = new Map();
+async function walletProfile(db, w) {
+  if (walletCache.has(w)) return walletCache.get(w);
+  const row = db.prepare("SELECT * FROM study_wallets WHERE wallet=?").get(w);
+  if (row && row.checked_ts > Date.now() / 1000 - 3 * 86400) { walletCache.set(w, row); return row; }
+  let first = null, txs = null, funder = null, funded_sol = null, err = null;
+  try {
+    const recent = await rpc("getSignaturesForAddress", [w, { limit: 1000, commitment: "confirmed" }]); txs = recent?.length ?? 0;
+    if (txs < 1000 && txs > 0) first = recent[recent.length - 1];
+    else if (txs >= 1000) { // 0.7.4: a wallet with 1,000+ transactions (trading bot) — the "first transaction" scan on it was the slow call (timeouts + retries, ~20 min a coin); Helius's funded-by index answers at once with the first SOL transfer in
+      const fb = await fundedBy(db, w); if (fb && !fb.err) { funder = fb.funder; funded_sol = fb.amount_sol; first = fb.funded_ts ? { blockTime: fb.funded_ts } : null; } else if (fb?.err === "404") first = null; }
+    if (first && !funder) {
+      const t = await rpc("getTransaction", [first.signature, { maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed" }]);
+      if (t?.meta) { const keys = keysOf(t), pre = t.meta.preBalances, post = t.meta.postBalances, me = keys.indexOf(w);
+        let best = -1, drop = 0; keys.forEach((k, i) => { if (i !== me && i < pre.length && pre[i] - post[i] > drop) { drop = pre[i] - post[i]; best = i; } });
+        funder = best >= 0 ? keys[best] : null; funded_sol = me >= 0 && me < pre.length ? (post[me] - pre[me]) / 1e9 : null; }
+    }
+  } catch (e) { err = e.message.slice(0, 120); }
+  const p = { wallet: w, first_ts: first?.blockTime ?? null, txs, funder, funded_sol, err, checked_ts: Math.floor(Date.now() / 1000) };
+  db.prepare("INSERT OR REPLACE INTO study_wallets VALUES (@wallet,@first_ts,@txs,@funder,@funded_sol,@err,@checked_ts)").run(p);
+  walletCache.set(w, p); return p;
+}
+
+export function initStudy(db) {
+  db.exec(`CREATE TABLE IF NOT EXISTS study_wallets (wallet TEXT PRIMARY KEY, first_ts INTEGER, txs INTEGER, funder TEXT, funded_sol REAL, err TEXT, checked_ts INTEGER);
+  CREATE TABLE IF NOT EXISTS study_coins (mint TEXT PRIMARY KEY, launch_id INTEGER, role TEXT, studied_ts INTEGER, data TEXT, err TEXT);
+  CREATE TABLE IF NOT EXISTS study_buyers (mint TEXT, wallet TEXT, rank INTEGER, data TEXT, PRIMARY KEY (mint, wallet));`);
+}
+
+// ---------- one coin ----------
+export async function studyCoin(db, c, solUsd) {
+  const curve = curveOf(new PublicKey(c.mint)).toBase58();
+  const tStart = Date.now(); // 0.7.4: phase timing (ms) → studyStat.timing and the row
+  let gmgn = null; try { const i = await gget("/v1/token/info", { chain: "sol", address: c.mint }), st = i?.stat || {}, w = i?.wallet_tags_stat || {}, dv = i?.dev || {}, P = (x) => (N(x) == null ? null : +(N(x) * 100).toFixed(1));
+    gmgn = { launchpad: i?.launchpad ?? null, platform: i?.launchpad_platform ?? null, status: i?.launchpad_status ?? null, top10: P(st.top_10_holder_rate), bundler: P(st.top_bundler_trader_percentage), insider: P(st.top_rat_trader_percentage), fresh: P(st.fresh_wallet_rate),
+      bots: P(st.bot_degen_rate), sniperHold: P(st.top70_sniper_hold_rate), smart: N(w.smart_wallets), kol: N(w.renowned_wallets), snipers: N(w.sniper_wallets), bundlers: N(w.bundler_wallets), freshW: N(w.fresh_wallets), ratW: N(w.rat_trader_wallets),
+      devLaunches: N(dv.creator_open_count ?? st.creator_created_count), devStatus: dv.creator_token_status ?? null, twitter: i?.link?.twitter_username ?? i?.link?.twitter ?? null, website: i?.link?.website ?? null, telegram: i?.link?.telegram ?? null, dexPaid: dv.dexscr_ad ?? null }; } catch (e) { gmgn = { err: e.message.slice(0, 80) }; }
+  dbg.on = true; dbg.samples = []; dbg.programs = {}; dbg.seen = new Set();
+  // 0.7.3: census coins (the operator database) need the creation block, the snipers and the first 100 buyers, all inside the first minute even on the
+  // busiest coin (~100 transactions a second). Reading their whole first 40 minutes cost 600 pages / 6,000 credits / 20-40 minutes a coin (2 coins an hour);
+  // CENSUS_MAX_TX pages are enough for the wallets and cost 1/12 of that. The 40-minute figures (vol5, wash) are then partial: covered_s says how much was read.
+  const cap = c.role === "census" ? CENSUS_MAX_TX : MAX_TX, tm = { gmgn: Date.now() - tStart, pages: 0, wallets: 0 }; let tP = Date.now();
+  const txs = await history(c.mint, c.created_ts + WINDOW, c.mint, cap); tm.pages = Date.now() - tP; tP = Date.now(); // 0.6.1: the coin's own address — curve, PumpSwap and any other pool
+  if (!txs.length) throw new Error("no transactions found");
+  // trades in chain order
+  const trades = []; let created = null, t0 = null, slot0 = null, complete = null, generic = 0, creatorGuess = null;
+  txs.sort((a, b) => a.slot - b.slot || (a.transactionIndex ?? 0) - (b.transactionIndex ?? 0));
+  for (const t of txs) {
+    if (t.err) continue;
+    if (t.cr && !created) { created = t.cr; t0 = t.blockTime; slot0 = t.slot; }
+    if (t.complete && !complete) complete = t.blockTime;
+    const tr = t.tr; if (t.generic) generic++;
+    if (t0 == null && !created) { t0 = t.blockTime; slot0 = t.slot; creatorGuess = t.keys0; }
+    tr.forEach((e) => trades.push({ ...e, t: t.blockTime, slot: t.slot, idx: t.transactionIndex, sig: t.sig, payer: t.keys0, jito: t.jito, inTx: tr.length }));
+  }
+  if (t0 == null) { t0 = txs[0].blockTime; slot0 = txs[0].slot; }
+  const venue = created ? "pump.fun" : generic ? "other (balance changes)" : "none";
+  const creator = created?.creator || created?.user || creatorGuess || trades[0]?.user || null;
+  const rel = (x) => x.t - t0, W = (s) => trades.filter((x) => rel(x) <= s);
+  const sum = (a, f) => a.reduce((s, x) => s + f(x), 0), uniq = (a) => new Set(a).size, sol = (l) => l / 1e9;
+  const mcSol = (x) => x.mc; // market cap in SOL (pump.fun: from the curve; others: the trade's own price × 1B supply)
+  // per-wallet tallies within the window
+  const per = new Map();
+  for (const x of trades) { const p = per.get(x.user) || { w: x.user, buys: 0, sells: 0, bsol: 0, ssol: 0, btok: 0, stok: 0, first: null, firstSell: null, slot: null, idx: null, jito: false, multi: false };
+    if (x.isBuy) { p.buys++; p.bsol += x.sol; p.btok += x.tok; if (p.first == null) { p.first = rel(x); p.slot = x.slot - slot0; p.idx = x.idx; p.jito = x.jito; p.multi = x.inTx > 1; } } else { p.sells++; p.ssol += x.sol; p.stok += x.tok; if (p.firstSell == null) p.firstSell = rel(x); }
+    per.set(x.user, p); }
+  const dev = per.get(creator) || { buys: 0, sells: 0, bsol: 0, ssol: 0 };
+  const buyers = [...per.values()].filter((p) => p.buys > 0 && p.w !== creator).sort((a, b) => a.first - b.first || (a.slot - b.slot) || ((a.idx ?? 0) - (b.idx ?? 0)));
+  const block0 = buyers.filter((p) => p.slot === 0), snipe = buyers.filter((p) => p.slot > 0 && p.first <= 3);
+  // early insiders' selling: tokens bought by creation-block buyers and snipers that were sold within 15 min
+  const early = new Set([...block0, ...snipe].map((p) => p.w)), eBought = sum(trades.filter((x) => x.isBuy && early.has(x.user)), (x) => x.tok), eSold15 = sum(trades.filter((x) => !x.isBuy && early.has(x.user) && rel(x) <= 900), (x) => x.tok);
+  const devBought = sum(trades.filter((x) => x.isBuy && x.user === creator), (x) => x.tok), devSold = sum(trades.filter((x) => !x.isBuy && x.user === creator), (x) => x.tok);
+  // profiles of the first BUYERS buyers (+ the creator)
+  const prof = new Map(); const look = [creator, ...buyers.slice(0, BUYERS).map((p) => p.w)].filter(Boolean);
+  for (let i = 0; i < look.length; i += 6) { const got = await Promise.all(look.slice(i, i + 6).map((w) => walletProfile(db, w))); got.forEach((g) => prof.set(g.wallet, g)); }
+  tm.wallets = Date.now() - tP; tm.total = Date.now() - tStart; tm.heavy = look.filter((w) => (prof.get(w)?.txs ?? 0) >= 1000).length; studyStat.timing = { coin: c.mint.slice(0, 6), ...tm };
+  const cp = prof.get(creator) || {};
+  const fGroups = new Map(); for (const p of buyers.slice(0, BUYERS)) { const f = prof.get(p.w)?.funder; if (f) fGroups.set(f, (fGroups.get(f) || 0) + 1); }
+  const linked = (w) => { const f = prof.get(w)?.funder; return !!f && (f === creator || (cp.funder && f === cp.funder) || f === cp.funder); };
+  const ageH = (p) => { const f = prof.get(p.w)?.first_ts; return f ? (t0 + p.first - f) / 3600 : null; };
+  const tag = (p, rank) => {
+    const pr = prof.get(p.w) || {}, a = ageH(p), grp = pr.funder ? fGroups.get(pr.funder) || 1 : 1;
+    const f = { block0: p.slot === 0, sniper: p.slot > 0 && p.first <= 3, jito: p.jito, multi: p.multi, fresh1h: a != null && a < 1, fresh24h: a != null && a < 24, lowAct: pr.txs != null && pr.txs <= 20, cluster: grp >= 3, creatorLinked: linked(p.w), wash: p.buys >= 2 && p.sells >= 2 };
+    f.organic = rank < BUYERS && !f.block0 && !f.sniper && !f.fresh24h && !f.cluster && !f.creatorLinked && !f.multi && !f.wash && pr.txs != null;
+    return { ...f, ageH: a == null ? null : +a.toFixed(2), txs: pr.txs, funder: pr.funder, funderGroup: grp, fundedSol: pr.funded_sol };
+  };
+  const tagged = buyers.map((p, i) => ({ p, f: i < BUYERS ? tag(p, i) : null }));
+  const first = tagged.filter((x) => x.f), share = (pred) => (first.length ? +(first.filter((x) => pred(x.f)).length / first.length * 100).toFixed(1) : null);
+  const solShare = (pred) => { const tot = sum(first, (x) => x.p.bsol); return tot ? +(sum(first.filter((x) => pred(x.f)), (x) => x.p.bsol) / tot * 100).toFixed(1) : null; };
+  // wash: wallets buying and selling back and forth (≥ 2 of each in 15 min), their share of the volume, and the round-trip share of all volume
+  const w15 = new Map(); for (const x of W(900)) { const p = w15.get(x.user) || { b: 0, s: 0, bs: 0, ss: 0 }; if (x.isBuy) { p.b++; p.bs += x.sol; } else { p.s++; p.ss += x.sol; } w15.set(x.user, p); }
+  const vol15 = sum(W(900), (x) => x.sol), washW = [...w15.values()].filter((p) => p.b >= 2 && p.s >= 2);
+  const roundTrip = sum([...w15.values()], (p) => 2 * Math.min(p.bs, p.ss));
+  // 5-minute buckets (SOL volume, buys, sells, new buyers) for the first 40 min
+  const buckets = []; const seenB = new Set();
+  for (let b = 0; b < WINDOW / 300; b++) { const xs = trades.filter((x) => rel(x) >= b * 300 && rel(x) < (b + 1) * 300); const nb = xs.filter((x) => x.isBuy && !seenB.has(x.user) && (seenB.add(x.user) || true)).length;
+    buckets.push({ v: +sol(sum(xs, (x) => x.sol)).toFixed(2), b: xs.filter((x) => x.isBuy).length, s: xs.filter((x) => !x.isBuy).length, nb, mc: xs.length ? +mcSol(xs[xs.length - 1]).toFixed(1) : null }); }
+  const mcAt = (s) => { const xs = W(s); return xs.length ? +mcSol(xs[xs.length - 1]).toFixed(1) : null; };
+  const peakT = trades.reduce((m, x) => (!m || mcSol(x) > mcSol(m) ? x : m), null);
+  const buys15 = W(900).filter((x) => x.isBuy && x.user !== creator), sizes = buys15.map((x) => sol(x.sol)).sort((a, b) => a - b);
+  const byW = new Map(); buys15.forEach((x) => byW.set(x.user, (byW.get(x.user) || 0) + x.sol)); const top10 = [...byW.values()].sort((a, b) => b - a).slice(0, 10);
+  const org = tagged.filter((x) => x.f?.organic);
+  const multiTx15 = uniq(W(900).filter((x) => x.inTx > 1).map((x) => x.sig)), jitoTx30 = uniq(trades.filter((x) => rel(x) <= 30 && x.jito).map((x) => x.sig));
+  const win = (s, f) => ({ buys: W(s).filter((x) => x.isBuy).length, sells: W(s).filter((x) => !x.isBuy).length, buyers: uniq(W(s).filter((x) => x.isBuy).map((x) => x.user)), bsol: +sol(sum(W(s).filter((x) => x.isBuy), (x) => x.sol)).toFixed(2), ssol: +sol(sum(W(s).filter((x) => !x.isBuy), (x) => x.sol)).toFixed(2) });
+  const d = {
+    mint: c.mint, launch_id: c.launch_id, role: c.role, post: c.post_name, name: created?.name || c.name, symbol: created?.symbol || c.symbol, post_delay_s: c.post_delay_s, peak_mc_usd: c.peak_mc, peak_min: c.peak_min, mc_now_usd: c.mc_now, holders_now: c.holders, graduated_now: c.progress >= 1,
+    sol_usd: solUsd, txs: txs.length, trades: trades.length, window_min: WINDOW / 60, complete_s: complete ? complete - t0 : null,
+    creator, creator_age_h: cp.first_ts ? +((t0 - cp.first_ts) / 3600).toFixed(1) : null, creator_txs: cp.txs ?? null, creator_funder: cp.funder ?? null,
+    dev_buy_sol: +sol(dev.bsol).toFixed(3), dev_sell_sol: +sol(dev.ssol).toFixed(3), dev_first_sell_s: per.get(creator)?.firstSell ?? null, dev_sold_pct: devBought ? +(devSold / devBought * 100).toFixed(0) : null,
+    block0_buyers: block0.length, block0_sol: +sol(sum(block0, (p) => p.bsol)).toFixed(2), sniper_buyers_3s: snipe.length, sniper_sol_3s: +sol(sum(snipe, (p) => p.bsol)).toFixed(2), early_sold_15m_pct: eBought ? +(eSold15 / eBought * 100).toFixed(0) : null,
+    jito_txs_30s: jitoTx30, multi_buy_txs_15m: multiTx15,
+    w1m: win(60), w5m: win(300), w15m: win(900), w40m: win(WINDOW),
+    mc_sol: { m1: mcAt(60), m5: mcAt(300), m15: mcAt(900), m30: mcAt(1800), peak: peakT ? +mcSol(peakT).toFixed(1) : null, peak_s: peakT ? rel(peakT) : null },
+    vol5: buckets,
+    whale_buys_2sol_15m: sizes.filter((s) => s >= 2).length, median_buy_sol_15m: sizes.length ? +sizes[Math.floor(sizes.length / 2)].toFixed(3) : null, top10_buy_share_15m: sum(buys15, (x) => x.sol) ? +(sum(top10, (v) => v) / sum(buys15, (x) => x.sol) * 100).toFixed(1) : null,
+    wash_wallets_15m: washW.length, wash_vol_share_15m: vol15 ? +(sum(washW, (p) => p.bs + p.ss) / vol15 * 100).toFixed(1) : null, roundtrip_share_15m: vol15 ? +(roundTrip / vol15 * 100).toFixed(1) : null,
+    profiled: first.length, fresh1h_pct: share((f) => f.fresh1h), fresh24h_pct: share((f) => f.fresh24h), lowact_pct: share((f) => f.lowAct), cluster_pct: share((f) => f.cluster), creator_linked: first.filter((x) => x.f.creatorLinked).length,
+    fresh24h_sol_pct: solShare((f) => f.fresh24h), cluster_sol_pct: solShare((f) => f.cluster), creator_linked_sol_pct: solShare((f) => f.creatorLinked), biggest_funder_group: Math.max(0, ...fGroups.values()),
+    v: STUDY_V, venue, graduated_in_window: !!complete, tracker: c.tracker || null, covered_s: txs.length ? txs[txs.length - 1].blockTime - t0 : null, tx_cap_hit: txs.length >= cap, generic_txs: generic, gmgn, timing: tm,
+    debug: { samples: dbg.samples, programs: Object.entries(dbg.programs).sort((a, b) => b[1] - a[1]).slice(0, 8), zeroSolBuys: trades.filter((x) => x.isBuy && !x.sol).length },
+    organic_buyers: org.length, organic_pct: share((f) => f.organic), organic_sol_pct: solShare((f) => f.organic), first_organic_s: org[0]?.p.first ?? null,
+  };
+  db.prepare("INSERT OR REPLACE INTO study_coins VALUES (?,?,?,?,?,?)").run(c.mint, c.launch_id, c.role, Math.floor(Date.now() / 1000), JSON.stringify(d), null);
+  const ins = db.prepare("INSERT OR REPLACE INTO study_buyers VALUES (?,?,?,?)");
+  tagged.slice(0, BUYERS).forEach((x, i) => ins.run(c.mint, x.p.w, i + 1, JSON.stringify({ first_s: x.p.first, slot: x.p.slot, idx: x.p.idx, buys: x.p.buys, sells: x.p.sells, buy_sol: +sol(x.p.bsol).toFixed(3), sell_sol: +sol(x.p.ssol).toFixed(3), first_sell_s: x.p.firstSell, ...x.f })));
+  return d;
+}
+
+// ---------- which coins ----------
+let CENSUS = [];
+/** 0.7.1: refresh the census list from the tracker's database (graduated, peak ≥ CENSUS_MIN, last CENSUS_DAYS days). */
+export function loadCensus(tdb) {
+  if (!tdb) return 0;
+  try { CENSUS = tdb.prepare("SELECT mint, name, symbol, creator, create_ts, bundle_pct, bundle_sol, bundle_wallets, dev_buy_sol, peak_mc_usd FROM tokens WHERE graduated=1 AND peak_mc_usd>=? AND create_ts>=? ORDER BY create_ts DESC LIMIT 3000").all(n("LAUNCH_CENSUS_MIN", 100000), Math.floor(Date.now() / 1000) - n("LAUNCH_CENSUS_DAYS", 60) * 86400); } catch (e) { studyStat.lastErr = "census: " + e.message.slice(0, 100); }
+  return CENSUS.length;
+}
+function pickCoins(db) {
+  const now = Math.floor(Date.now() / 1000), done = new Set(db.prepare("SELECT mint, data, err, studied_ts FROM study_coins").all().filter((r) => (!r.err && (() => { try { return JSON.parse(r.data).v === STUDY_V; } catch { return false; } })()) || (r.err && r.studied_ts > now - 600)).map((r) => r.mint)); // a failed coin is tried again after 50 min
+  const peaks = db.prepare("SELECT p.*, l.t_post_ms FROM copy_peaks p LEFT JOIN launches l ON l.id=p.launch_id WHERE p.created_ts <= ? AND p.created_ts >= ?").all(now - WINDOW - 300, now - 3 * 86400);
+  const runners = peaks.filter((p) => !p.ours && p.peak_mc >= MIN_PEAK).sort((a, b) => b.peak_mc - a.peak_mc);
+  const out = [];
+  const add = (p, role) => { if (!done.has(p.mint) && !out.some((o) => o.mint === p.mint)) out.push({ ...p, role, post_delay_s: p.t_post_ms ? p.created_ts - Math.floor(p.t_post_ms / 1000) : null }); };
+  // 0.7.1 (owner, 3 Nov 10:41 UK: "every coin over 100K, also migrated … work all the way back"): the census seed — every pump.fun launch the tracker
+  // recorded that graduated and peaked ≥ $100K (tracker.db tokens; read-only), newest first, 60 days back. Role "census". The tracker's bundle data rides along.
+  try {
+    if (CENSUS && CENSUS.length) for (const t of CENSUS) { if (!done.has(t.mint) && !out.some((o) => o.mint === t.mint)) out.push({ mint: t.mint, name: t.name, symbol: t.symbol, created_ts: t.create_ts, ours: 0, peak_mc: t.peak_mc_usd, role: "census", post_name: "census", launch_id: null, post_delay_s: null, tracker: { bundle_pct: t.bundle_pct, bundle_sol: t.bundle_sol, bundle_wallets: t.bundle_wallets, dev_buy_sol: t.dev_buy_sol, creator: t.creator } }); }
+  } catch {}
+  for (const r of runners) add(r, "runner");
+  for (const lid of [...new Set(runners.map((r) => r.launch_id))]) { // the same post's copies that did not run, and ours
+    const same = peaks.filter((p) => p.launch_id === lid && p.peak_mc < MIN_PEAK);
+    same.filter((p) => p.ours).forEach((p) => add(p, "ours"));
+    same.filter((p) => !p.ours).sort((a, b) => (b.holders || 0) - (a.holders || 0) || b.peak_mc - a.peak_mc).slice(0, 3).forEach((p) => add(p, "control"));
+  }
+  return out.slice(0, PER_RUN);
+}
+
+export async function runStudy(db, done) {
+  if (studyStat.running) return; studyStat.running = true; studyStat.runs++;
+  try {
+    let solUsd = null; try { const w = await gget("/v1/token/info", { chain: "sol", address: "So11111111111111111111111111111111111111112" }); solUsd = N(w?.price?.price ?? w?.price); } catch {}
+    const queue = pickCoins(db), busy = new Set(); // 0.7.4: PARALLEL coins at once (each one is mostly waiting on Helius)
+    const worker = async () => { for (let c; (c = queue.shift()); ) {
+      if (studyStat.creditsDay === today() && studyStat.creditsToday >= DAY_CREDITS) { studyStat.lastErr = `daily Helius budget ${DAY_CREDITS} credits reached`; queue.length = 0; break; }
+      busy.add(`${c.role} ${c.name} ${c.mint.slice(0, 6)}`); studyStat.current = [...busy].join(" | ");
+      if (c.role === "census" && !db.prepare("SELECT 1 FROM copy_peaks WHERE mint=?").get(c.mint)) { try { await peakOne(db, { mint: c.mint, launch_id: null, post_name: "census", name: c.name || "", symbol: c.symbol || "", created_ts: c.created_ts, ours: 0 }, { klines: false }); // 0.7.7: a 60-day coin's candle walk is ~175 GMGN calls; the tracker already holds its peak
+        if (c.peak_mc) db.prepare("UPDATE copy_peaks SET peak_mc=COALESCE(peak_mc, ?), peak_close_mc=COALESCE(peak_close_mc, ?) WHERE mint=?").run(c.peak_mc, c.peak_mc, c.mint); const row = db.prepare("SELECT * FROM copy_peaks WHERE mint=?").get(c.mint); if (row) Object.assign(c, { peak_mc: row.peak_mc, peak_min: row.peak_min, mc_now: row.mc_now, holders: row.holders, progress: row.progress }); } catch {} }
+      try { await studyCoin(db, c, solUsd); studyStat.studied++; }
+      catch (e) { studyStat.errors++; studyStat.lastErr = `${c.mint.slice(0, 6)}: ${e.message}`.slice(0, 200); db.prepare("INSERT OR REPLACE INTO study_coins VALUES (?,?,?,?,?,?)").run(c.mint, c.launch_id, c.role, Math.floor(Date.now() / 1000), JSON.stringify({ name: c.name }), e.message.slice(0, 200)); }
+      busy.delete(`${c.role} ${c.name} ${c.mint.slice(0, 6)}`); studyStat.current = [...busy].join(" | ");
+      if (studyStat.studied <= 2) try { done?.(); } catch {} // the first coins go out at once, to check the decoding
+    } };
+    await Promise.all(Array.from({ length: PARALLEL }, worker));
+    studyStat.lastRun = new Date().toISOString();
+  } catch (e) { studyStat.errors++; studyStat.lastErr = e.message.slice(0, 200); }
+  finally { studyStat.running = false; studyStat.current = ""; try { done?.(); } catch {} }
+}
+
+// 0.6.0 (owner, 31 Oct 23:33 UK: "Can I just give you a CA of new coins and you can tell me how they pump?"): study any coin by address.
+// Addresses come from launcher/study-now.txt (pushed by the chat) or a website request {action:"study", mint}. Prices first (GMGN), then the chain study.
+export const manualStat = { queued: 0, done: 0, lastErr: "", last: null };
+let mq = Promise.resolve();
+export function studyAddress(db, mint, done) {
+  if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(mint || ""))) return false;
+  manualStat.queued++;
+  mq = mq.then(async () => {
+    try {
+      const info = await gget("/v1/token/info", { chain: "sol", address: mint });
+      let created = N(info?.creation_timestamp ?? info?.open_timestamp); if (created > 1e12) created = Math.floor(created / 1000);
+      if (!created) throw new Error("GMGN gives no creation time for this coin");
+      await peakOne(db, { mint, launch_id: null, post_name: "manual", name: info?.name || "", symbol: info?.symbol || "", created_ts: created, ours: 0 });
+      const row = db.prepare("SELECT * FROM copy_peaks WHERE mint=?").get(mint) || { mint, created_ts: created };
+      let solUsd = null; try { const w = await gget("/v1/token/info", { chain: "sol", address: "So11111111111111111111111111111111111111112" }); solUsd = N(w?.price?.price ?? w?.price); } catch {}
+      await studyCoin(db, { ...row, launch_id: null, role: "manual", post_name: "manual", name: row.name || info?.name, symbol: row.symbol || info?.symbol, post_delay_s: null }, solUsd);
+      manualStat.done++; manualStat.last = mint;
+    } catch (e) { manualStat.lastErr = `${String(mint).slice(0, 6)}: ${e.message}`.slice(0, 200); db.prepare("INSERT OR REPLACE INTO study_coins VALUES (?,?,?,?,?,?)").run(mint, null, "manual", Math.floor(Date.now() / 1000), "{}", e.message.slice(0, 200)); }
+    try { done?.(); } catch {}
+  });
+  return true;
+}
+
+
+====================================================================================================
+=== FILE: launcher/src/volpaper.mjs (24,863 chars)
+====================================================================================================
+// launcher 0.4.0 (owner, 31 Oct 2026 18:41 UK: "paper trade any coin with a 5-minute volume of 300k, and one with 500k … under 1 million … the age can be anything"):
+// two PAPER strategies on every Solana coin GMGN lists. Every 30 s it reads GMGN's top 100 coins by 5-minute volume; the first time a coin's
+// 5-min volume is ≥ $300K (V300) or ≥ $500K (V500) and under $1M, it records a paper buy at GMGN's price. Nothing is bought or sold.
+// 2 h 5 min after entry it scores the trade from GMGN's 1-minute candles: price at 5/15/30/60/120 min, peak, and the exits we tested before
+// (2x or −50%, 1.5x or −30%, 40% trail from the peak), after the real-cost models in LESSONS.md (bonding curve vs PumpSwap).
+// Market cap, age, holders and the GMGN row are kept with each entry so other cuts (e.g. market cap under $1M) can be read later.
+import { gget, N } from "./gmgn.mjs";
+import { sellQuote, qStat } from "./quote.mjs"; // 0.8.15
+
+const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
+export const TIERS = [{ k: "V300", min: n("LAUNCH_V300", 300000) }, { k: "V500", min: n("LAUNCH_V500", 500000) }];
+const MAX_VOL = n("LAUNCH_VOL_MAX", 1000000), SCORE_AFTER = 125 * 60;
+export const volStat = { polls: 0, rows: 0, entries: 0, scored: 0, errors: 0, lastErr: "", lastPoll: null, maxVolSeen: null };
+const now = () => Math.floor(Date.now() / 1000);
+// LESSONS.md cost models: bonding curve x×0.97−0.02−1−0.02 (stops −0.01 more); PumpSwap x/1.02×0.967−1−0.006−0.02 (stops x≤0.62 −0.05 more)
+const realX = (x, curve) => (x == null ? null : curve ? x * 0.97 - 0.02 - 1 - 0.02 - (x <= 0.62 ? 0.01 : 0) : x / 1.02 * 0.967 - 1 - 0.006 - 0.02 - (x <= 0.62 ? 0.05 : 0));
+
+export function initVol(db) {
+  db.exec(`CREATE TABLE IF NOT EXISTS vol_paper (id INTEGER PRIMARY KEY AUTOINCREMENT, strat TEXT, mint TEXT, name TEXT, symbol TEXT, entry_ts INTEGER, entry_price REAL, entry_mc REAL, vol5 REAL,
+    created_ts INTEGER, age_min REAL, holders INTEGER, exchange TEXT, launchpad TEXT, curve INTEGER, row TEXT, done INTEGER DEFAULT 0, err TEXT,
+    x5 REAL, x15 REAL, x30 REAL, x60 REAL, x120 REAL, peak120 REAL, peak_min REAL, low_before_peak REAL, x_tp2sl50 REAL, x_tp15sl30 REAL, x_trail40 REAL,
+    r_tp2sl50 REAL, r_tp15sl30 REAL, r_trail40 REAL, r_hold60 REAL, r_hold120 REAL, UNIQUE (strat, mint))`);
+  db.exec("CREATE TABLE IF NOT EXISTS vol_bf_done (mint TEXT PRIMARY KEY)"); // 0.7.4
+  try { db.exec("ALTER TABLE vol_paper ADD COLUMN x_half2 REAL"); } catch {} try { db.exec("ALTER TABLE vol_paper ADD COLUMN r_half2 REAL"); } catch {} // 0.5.0
+  for (const c of ["mk_ts INTEGER", "mk_x REAL", "mk_hi REAL", "mk_last INTEGER", "mk_sold_x REAL", "mk_sold_ts INTEGER", "mk_r REAL"]) try { db.exec(`ALTER TABLE vol_paper ADD COLUMN ${c}`); } catch {} // 0.8.10 live mark
+  // 0.8.16 (owner, 5 Nov 04:22 UK, after the best-exit study in LAUNCHER.md): the VENUE exit — a 25% trail on graduated coins, the 40% trail on curve coins —
+  // scored on every trade (x_venue / r_venue / m_venue), followed by the live mark (mk_pct = the trail it used) and by the shadow sells; plus the open-position
+  // quote poll (q_live_*: the latest sell quote, its high since entry and how many quotes) whose own trail fires the quoted exit (q_exit_src = 'poll'; 'mark' = quoted when the candle mark sold).
+  for (const c of ["x_venue REAL", "r_venue REAL", "m_venue REAL", "mk_pct REAL", "q_live_ts INTEGER", "q_live_x REAL", "q_live_hi REAL", "q_live_n INTEGER", "q_exit_src TEXT"]) try { db.exec(`ALTER TABLE vol_paper ADD COLUMN ${c}`); } catch {}
+  try { db.prepare("UPDATE vol_paper SET x_venue=CASE WHEN curve=1 THEN x_trail40 ELSE x_trail25 END, r_venue=CASE WHEN curve=1 THEN r_trail40 ELSE r_trail25 END, m_venue=CASE WHEN curve=1 THEN m_trail40 ELSE NULL END WHERE done=1 AND err IS NULL AND x_venue IS NULL AND x_trail25 IS NOT NULL").run(); } catch {} // scored trades: the venue exit is one of two columns they already have (no candle calls)
+  try { db.prepare("UPDATE vol_paper SET q_exit_src='mark' WHERE q_exit_x IS NOT NULL AND q_exit_src IS NULL").run(); } catch {}
+}
+/** the venue exit's trail: 40% off the high on the curve, 25% once graduated (LAUNCHER.md 5 Nov 04:15 UK: curve runners wobble, graduated moves fade) */
+export const trailPct = (curve) => (curve === 1 ? 0.4 : 0.25);
+
+/** 0.8.10 (owner, 4 Nov 22:59 UK: "show each open trade's result within minutes… go do that"): the LIVE MARK. Every 15 s (0.8.16; was every minute), for every open trade whose venue trail (0.8.16; was the 40% trail) has not
+ *  sold yet (one GMGN candle call per coin, shared by the books that hold it): price now vs entry (mk_x), the high since entry (mk_hi) and, the minute the
+ *  trail would have sold, the sale (mk_sold_x, mk_sold_ts, mk_r after costs). Same replay as volScore's trail (candles after the entry minute, stop = 60% of
+ *  the high), so the live number and the 2-hour score agree; the 2-hour score stays the record. A sold trade is not fetched again. */
+export const markStat = { passes: 0, marked: 0, sold: 0, calls: 0, errors: 0, lastErr: "", lastPass: null };
+let marking = false;
+export async function volMark(db) {
+  if (marking) return; marking = true;
+  try {
+    const t = now();
+    const rows = db.prepare("SELECT id, mint, entry_ts, entry_price, curve, mk_hi, mk_last, q_tokens, q_exit_ts, strat FROM vol_paper WHERE done=0 AND err IS NULL AND mk_sold_ts IS NULL AND entry_ts>=? AND entry_ts<=? ORDER BY entry_ts LIMIT 80").all(t - 125 * 60, t - 60);
+    const byMint = new Map(); for (const r of rows) { if (!byMint.has(r.mint)) byMint.set(r.mint, []); byMint.get(r.mint).push(r); }
+    markStat.passes++;
+    for (const [mint, rs] of byMint) {
+      try {
+        const from = Math.max(Math.min(...rs.map((r) => r.mk_last || r.entry_ts)) - 60, t - 98 * 60); // ≤ 100 candles a call; the high so far is carried in mk_hi
+        const ks = (await candles(mint, from, t)).sort((a, b) => a.t - b.t); markStat.calls++;
+        if (!ks.length) continue;
+        for (const r of rs) {
+          const X = (v) => v / r.entry_price, keep = 1 - trailPct(r.curve); let hi = r.mk_hi || 1, last = r.mk_last || r.entry_ts, sold = null, soldT = null; // 0.8.16: the venue trail
+          for (const c of ks) { if (c.t <= last) continue; if (c.t <= r.entry_ts) { last = c.t; continue; } // the entry minute's candle is skipped, as in volScore
+            if (X(c.l) <= hi * keep) { sold = hi * keep; soldT = c.t; last = c.t; break; } hi = Math.max(hi, X(c.h)); if (c.t + 60 <= t) last = c.t; } // the current minute's candle is still forming: re-read it next pass
+          const nowX = X(ks[ks.length - 1].c);
+          if (sold != null) { db.prepare("UPDATE vol_paper SET mk_ts=?, mk_x=?, mk_hi=?, mk_last=?, mk_sold_x=?, mk_sold_ts=?, mk_r=?, mk_pct=? WHERE id=?").run(t, +nowX.toFixed(4), +hi.toFixed(4), last, +sold.toFixed(4), soldT, realX(sold, r.curve === 1), 1 - keep, r.id); markStat.sold++;
+            if (r.q_tokens > 0 && r.q_exit_ts == null && process.env.LAUNCH_SHADOW_POLL === "1") shadowSell(db, r, sold, soldT, "mark").catch(() => {}); // 0.9.3: off with the poll — Jupiter budget to the live book // 0.8.15: the real sell quote the moment the candle mark says the trail sold (0.8.16: the mark runs every 15 s; skipped when the quote poll already sold)
+            else db.prepare("UPDATE vol_paper SET q_exit_gap=q_exit_x/?-1 WHERE id=? AND q_exit_src='poll' AND q_exit_gap IS NULL AND q_exit_x IS NOT NULL").run(sold, r.id); } // the poll's exit against the paper sale it now has
+          else db.prepare("UPDATE vol_paper SET mk_ts=?, mk_x=?, mk_hi=?, mk_last=?, mk_pct=? WHERE id=?").run(t, +nowX.toFixed(4), +hi.toFixed(4), last, 1 - keep, r.id);
+          markStat.marked++;
+        }
+      } catch (e) { markStat.errors++; markStat.lastErr = `${mint.slice(0, 6)} ${e.message}`.slice(0, 160); if (/rate limited/i.test(e.message)) break; }
+    }
+    markStat.lastPass = new Date().toISOString();
+  } catch (e) { markStat.errors++; markStat.lastErr = "mark: " + e.message.slice(0, 160); }
+  finally { marking = false; }
+}
+
+export async function volPoll(db) {
+  try {
+    const d = await gget("/v1/market/rank", { chain: "sol", interval: "5m", order_by: "volume", limit: "100" });
+    const rows = Array.isArray(d?.rank) ? d.rank : Array.isArray(d) ? d : []; volStat.polls++; volStat.rows = rows.length; volStat.lastPoll = new Date().toISOString();
+    const t = now(), ins = db.prepare(`INSERT OR IGNORE INTO vol_paper (strat, mint, name, symbol, entry_ts, entry_price, entry_mc, vol5, created_ts, age_min, holders, exchange, launchpad, curve, row)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    for (const r of rows) {
+      const mint = r.address, v5 = N(r.volume), mc = N(r.market_cap), px = N(r.price), created = N(r.creation_timestamp ?? r.open_timestamp);
+      if (v5 != null) volStat.maxVolSeen = Math.max(volStat.maxVolSeen || 0, v5);
+      if (!mint || !(px > 0) || v5 == null || v5 >= MAX_VOL) continue;
+      const ex = r.exchange ?? null, curve = ex ? (/^pump(fun|_fun)?$|bonding|curve/i.test(ex) ? 1 : 0) : null;
+      // 0.7.2 (owner, 3 Nov 11:23 UK): VA — older coins (12 h to 14 days), 5-min volume ≥ $100K / $200K / $300K, market cap under $2M (the $1M cut is a column);
+      // one strategy key per level × age bucket (VA100_12h, VA200_24h, …). Paper only; "the market when the bundles are out and new alpha may come in".
+      if (created && mc != null && mc < 2e6) { const ageH = (t - created) / 3600; const bucket = ageH >= 12 && ageH < 24 ? "12h" : ageH >= 24 && ageH < 36 ? "24h" : ageH >= 36 && ageH < 48 ? "36h" : ageH >= 48 && ageH <= 14 * 24 ? "48h" : null;
+        if (bucket) for (const lvl of [100000, 200000, 300000]) if (v5 >= lvl) { const ch = ins.run(`VA${lvl / 1000}_${bucket}`, mint, r.name ?? null, r.symbol ?? null, t, px, mc, v5, created, +((t - created) / 60).toFixed(1), N(r.holder_count), ex, r.launchpad_platform ?? r.launchpad ?? null, curve, JSON.stringify(r).slice(0, 1500)).changes; if (ch) volStat.entries++; } }
+      for (const tier of TIERS) if (v5 >= tier.min) {
+        const ch = ins.run(tier.k, mint, r.name ?? null, r.symbol ?? null, t, px, mc, v5, created, created ? +((t - created) / 60).toFixed(1) : null, N(r.holder_count), ex, r.launchpad_platform ?? r.launchpad ?? null, curve, JSON.stringify(r).slice(0, 1500)).changes;
+        if (ch) volStat.entries++;
+      }
+    }
+  } catch (e) { volStat.errors++; volStat.lastErr = "poll: " + e.message.slice(0, 160); }
+}
+
+async function candles(mint, from, to) {
+  const d = await gget("/v1/market/token_kline", { chain: "sol", address: mint, resolution: "1m", from: String(from * 1000), to: String(to * 1000) });
+  return (d?.list || (Array.isArray(d) ? d : [])).map((c) => ({ t: Math.floor(Number(c.time) / 1000), h: N(c.high), l: N(c.low), c: N(c.close) })).filter((c) => c.h > 0);
+}
+let scoring = false;
+/** 0.8.8 (owner, 4 Nov 18:53 UK: "a time for each position at what time it was actually live"): fill the 40%-trail exit minute on trades scored before this column existed, without blanking them. */
+let filling = false;
+export async function volFillExitTime(db) {
+  if (filling) return; filling = true;
+  try {
+    for (const p of db.prepare("SELECT id, mint, entry_ts, entry_price FROM vol_paper WHERE done=1 AND err IS NULL AND m_trail40 IS NULL AND x_trail40 IS NOT NULL AND entry_ts>=? ORDER BY entry_ts DESC LIMIT 15").all(now() - 3 * 86400)) {
+      try {
+        const e = p.entry_ts, path = [...await candles(p.mint, e - 60, e + 60 * 60), ...await candles(p.mint, e + 60 * 60, e + 121 * 60)].filter((c) => c.t >= e - 60).sort((a, b) => a.t - b.t).filter((c, i, a) => i === 0 || c.t !== a[i - 1].t);
+        const after = path.filter((c) => c.t >= e - 60), X = (v) => v / p.entry_price; let hi = 1, t = null;
+        for (const c of after.slice(1)) { if (X(c.l) <= hi * 0.6) { t = c.t; break; } hi = Math.max(hi, X(c.h)); }
+        db.prepare("UPDATE vol_paper SET m_trail40=? WHERE id=?").run(t ? +((t - e) / 60).toFixed(1) : -1, p.id); // −1 = still held at 2 h
+      } catch (er) { if (/rate limited/i.test(er.message)) break; db.prepare("UPDATE vol_paper SET m_trail40=-2 WHERE id=?").run(p.id); }
+    }
+  } catch {} finally { filling = false; }
+}
+export async function volScore(db) {
+  if (scoring) return; scoring = true;
+  try {
+    for (const p of db.prepare("SELECT * FROM vol_paper WHERE done=0 AND entry_ts<=? ORDER BY entry_ts LIMIT 40").all(now() - SCORE_AFTER)) {
+      try {
+        const e = p.entry_ts, path = [...await candles(p.mint, e - 60, e + 60 * 60), ...await candles(p.mint, e + 60 * 60, e + 121 * 60)].filter((c) => c.t >= e - 60).sort((a, b) => a.t - b.t);
+        const uniq = path.filter((c, i) => i === 0 || c.t !== path[i - 1].t);
+        if (!uniq.length) { db.prepare("UPDATE vol_paper SET done=1, err=? WHERE id=?").run("no candles", p.id); continue; }
+        const X = (v) => v / p.entry_price, at = (m) => { const c = uniq.filter((x) => x.t <= e + m * 60).pop(); return c ? +X(c.c).toFixed(4) : null; };
+        const after = uniq.filter((c) => c.t >= e - 60);
+        let peak = 0, peakT = e; for (const c of after) if (X(c.h) > peak) { peak = X(c.h); peakT = c.t; }
+        const lowBefore = Math.min(...after.filter((c) => c.t <= peakT).map((c) => X(c.l)));
+        const tpsl = (tp, sl) => { for (const c of after.slice(1)) { if (X(c.l) <= sl) return sl; if (X(c.h) >= tp) return tp; } return X(after[after.length - 1].c); }; // the stop is checked first in a candle: the worse case
+        let hi = 1, trail = null, trailT = null; for (const c of after.slice(1)) { if (X(c.l) <= hi * 0.6) { trail = hi * 0.6; trailT = c.t; break; } hi = Math.max(hi, X(c.h)); } if (trail == null) trail = X(after[after.length - 1].c); // 0.8.8: trailT = when the 40% trail sold (null = still held at 2 h)
+        // 0.5.0: half at 2x, the rest on a 40% trail from the peak; −30% stop before 2x
+        let half = null; { let hit = false, hi2 = 2; for (const c of after.slice(1)) { if (!hit) { if (X(c.l) <= 0.7) { half = 0.7; break; } if (X(c.h) >= 2) { hit = true; hi2 = Math.max(2, X(c.h)); } } else { if (X(c.l) <= hi2 * 0.6) { half = 1 + 0.5 * hi2 * 0.6; break; } hi2 = Math.max(hi2, X(c.h)); } }
+          if (half == null) half = hit ? 1 + 0.5 * X(after[after.length - 1].c) : X(after[after.length - 1].c); }
+        const cv = p.curve === 1, t2 = tpsl(2, 0.5), t15 = tpsl(1.5, 0.7), h60 = at(60), h120 = at(120);
+        // 0.8.0: hard out at minute M (winners peak at ~16 min and are worthless by 30), −35% stop before it; the stop is checked first in a candle
+        const out = (M) => { for (const c of after.slice(1)) { if (c.t > e + M * 60) break; if (X(c.l) <= 0.65) return 0.65; } const c = uniq.filter((x) => x.t <= e + M * 60).pop(); return c ? +X(c.c).toFixed(4) : null; };
+        const o10 = out(10), o15 = out(15), o20 = out(20);
+        // 0.8.7 (owner, 4 Nov 18:21 UK: "more potential exit points… find the maximum"): trails of 25% and 60%, and tight-then-wide — a −35% stop until the coin has doubled, then a 55% trail off the high
+        const trailN = (pct) => { let h = 1; for (const c of after.slice(1)) { if (X(c.l) <= h * (1 - pct)) return h * (1 - pct); h = Math.max(h, X(c.h)); } return X(after[after.length - 1].c); };
+        const tw = (() => { let h = 1, run = false; for (const c of after.slice(1)) { if (!run) { if (X(c.l) <= 0.65) return 0.65; if (X(c.h) >= 2) { run = true; h = X(c.h); } } else { if (X(c.l) <= h * 0.45) return h * 0.45; h = Math.max(h, X(c.h)); } } return X(after[after.length - 1].c); })();
+        const t25 = trailN(0.25), t60 = trailN(0.6);
+        // 0.8.16: the venue exit — the 40% trail on the curve, the 25% trail once graduated — with its sale minute (m_venue; −1 = still held at 2 h)
+        const vn = (() => { if (cv) return { x: trail, t: trailT }; let h = 1; for (const c of after.slice(1)) { if (X(c.l) <= h * 0.75) return { x: h * 0.75, t: c.t }; h = Math.max(h, X(c.h)); } return { x: X(after[after.length - 1].c), t: null }; })();
+        db.prepare(`UPDATE vol_paper SET done=1, x5=?, x15=?, x30=?, x60=?, x120=?, peak120=?, peak_min=?, low_before_peak=?, x_tp2sl50=?, x_tp15sl30=?, x_trail40=?, r_tp2sl50=?, r_tp15sl30=?, r_trail40=?, r_hold60=?, r_hold120=?, x_half2=?, r_half2=?, x_out10=?, x_out15=?, x_out20=?, r_out10=?, r_out15=?, r_out20=?, x_trail25=?, x_trail60=?, x_tw=?, r_trail25=?, r_trail60=?, r_tw=?, m_trail40=?, x_venue=?, r_venue=?, m_venue=? WHERE id=?`)
+          .run(at(5), at(15), at(30), h60, h120, +peak.toFixed(4), +((peakT - e) / 60).toFixed(1), +lowBefore.toFixed(4), t2, t15, +trail.toFixed(4), realX(t2, cv), realX(t15, cv), realX(trail, cv), realX(h60, cv), realX(h120, cv), +half.toFixed(4), realX(half, cv), o10, o15, o20, realX(o10, cv), realX(o15, cv), realX(o20, cv), +t25.toFixed(4), +t60.toFixed(4), +tw.toFixed(4), realX(t25, cv), realX(t60, cv), realX(tw, cv), trailT ? +((trailT - e) / 60).toFixed(1) : -1, +vn.x.toFixed(4), realX(vn.x, cv), vn.t ? +((vn.t - e) / 60).toFixed(1) : -1, p.id);
+        try { db.prepare("UPDATE vol_paper SET q_exit_gap=q_exit_x/x_venue-1 WHERE id=? AND q_exit_x IS NOT NULL AND q_exit_gap IS NULL AND x_venue>0").run(p.id); } catch {} // 0.8.16: a poll exit on a trade the mark never sold, against the scored venue exit
+        volStat.scored++;
+      } catch (er) { if (/rate limited/i.test(er.message)) throw er; db.prepare("UPDATE vol_paper SET done=1, err=? WHERE id=?").run(er.message.slice(0, 120), p.id); }
+    }
+  } catch (e) { volStat.errors++; volStat.lastErr = "score: " + e.message.slice(0, 160); }
+  finally { scoring = false; }
+}
+
+// 0.7.2: the VA backfill — a back-test, kept apart from the live book ("BF-VA…"). Every tracker coin that peaked ≥ $50K: 5-minute candles over the last
+// 14 days (GMGN), the first crossing of $100K / $200K / $300K 5-min volume while 12 h–14 d old and under $2M market cap becomes a paper entry at that
+// candle's close; scored by the same volScore from the same candles. ~1,000 coins × 3 pages. Runs once, 40 coins a tick, in the background.
+export const bfStat = { coins: 0, done: 0, entries: 0, errors: 0, lastErr: "", finished: false };
+let bfList = null;
+export async function volBackfill(db, tdb) {
+  if (!tdb || bfStat.finished) return;
+  try {
+    if (!bfList) { const since = now() - 15 * 86400; bfList = tdb.prepare("SELECT mint, name, symbol, create_ts, peak_mc_usd FROM tokens WHERE peak_mc_usd>=50000 AND create_ts>=? ORDER BY peak_mc_usd DESC LIMIT 1500").all(since); bfStat.coins = bfList.length;
+      const seen = new Set(db.prepare("SELECT mint FROM vol_bf_done").all().map((r) => r.mint)); bfList = bfList.filter((c) => !seen.has(c.mint)); bfStat.done = seen.size; } // 0.7.4: coins scanned before a restart are not scanned again
+    const ins = db.prepare(`INSERT OR IGNORE INTO vol_paper (strat, mint, name, symbol, entry_ts, entry_price, entry_mc, vol5, created_ts, age_min, holders, exchange, launchpad, curve, row) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    let k = 0;
+    while (bfList.length && k < n("LAUNCH_BF_PER_TICK", 8)) { // 0.7.7: was 40 a tick (~1,700 GMGN calls every 2 min) — it was starving the study
+      const c = bfList.shift(); k++;
+      try {
+        const from = Math.max(c.create_ts + 12 * 3600, now() - 14 * 86400), to = Math.min(now() - 125 * 60, c.create_ts + 14 * 86400); if (to <= from) { bfStat.done++; continue; }
+        const all = [];
+        for (let a = from; a < to; a += 100 * 300) { const d = await gget("/v1/market/token_kline", { chain: "sol", address: c.mint, resolution: "5m", from: String(a * 1000), to: String(Math.min(to, a + 100 * 300) * 1000) }); all.push(...(d?.list || (Array.isArray(d) ? d : []))); }
+        const rows = all.map((x) => ({ t: Math.floor(Number(x.time) / 1000), c: N(x.close), v: N(x.volume) })).filter((x) => x.c > 0 && x.v != null).sort((a, b) => a.t - b.t);
+        const hit = {};
+        for (const x of rows) { const ageH = (x.t - c.create_ts) / 3600, mc = x.c * 1e9; if (ageH < 12 || ageH > 14 * 24 || !(mc < 2e6)) continue;
+          const bucket = ageH < 24 ? "12h" : ageH < 36 ? "24h" : ageH < 48 ? "36h" : "48h";
+          for (const lvl of [100000, 200000, 300000]) { const key = `BF-VA${lvl / 1000}_${bucket}`; if (x.v >= lvl && !hit[key]) { hit[key] = 1; if (ins.run(key, c.mint, c.name, c.symbol, x.t, x.c, mc, x.v, c.create_ts, +((x.t - c.create_ts) / 60).toFixed(1), null, "backfill", null, 0, JSON.stringify({ backfill: true, peak_mc_usd: c.peak_mc_usd })).changes) bfStat.entries++; } } }
+        bfStat.done++; db.prepare("INSERT OR IGNORE INTO vol_bf_done VALUES (?)").run(c.mint);
+      } catch (e) { bfStat.errors++; bfStat.lastErr = `${c.mint.slice(0, 6)} ${e.message}`.slice(0, 140); if (/rate limited/i.test(e.message)) { bfList.unshift(c); break; } bfStat.done++; }
+    }
+    if (!bfList.length) bfStat.finished = true;
+  } catch (e) { bfStat.errors++; bfStat.lastErr = e.message.slice(0, 140); }
+}
+
+/** 0.8.15: sell quote for the tokens the buy quote said we would hold; q_exit_x = SOL back ÷ SOL staked, q_exit_gap = q_exit_x ÷ paper exit multiple − 1 */
+const SHADOW_SOL = Number(process.env.LAUNCH_SHADOW_SOL || 0.2);
+async function shadowSell(db, r, paperX, soldT, src = "mark") {
+  try { const q = await sellQuote(r.mint, r.q_tokens); const x = q.lamports / 1e9 / SHADOW_SOL; qStat.sells++;
+    db.prepare("UPDATE vol_paper SET q_exit_ts=?, q_exit_sol=?, q_exit_x=?, q_exit_gap=?, q_exit_delay=?, q_exit_impact=?, q_exit_src=? WHERE id=? AND q_exit_x IS NULL").run(now(), +(q.lamports / 1e9).toFixed(4), +x.toFixed(4), +(x / paperX - 1).toFixed(4), now() - soldT, q.impact, src, r.id);
+  } catch (e) { qStat.errors++; qStat.lastErr = `sell ${r.mint.slice(0, 6)}: ${e.message}`.slice(0, 120); if (!/paused/.test(e.message)) db.prepare("UPDATE vol_paper SET q_exit_ts=?, q_exit_err=? WHERE id=? AND q_exit_x IS NULL").run(now(), e.message.slice(0, 80), r.id); }
+}
+
+/** 0.8.16 (owner, 5 Nov 04:22 UK): the OPEN-POSITION QUOTE POLL — what a live bot running the venue trail off its own sell quotes would have got.
+ *  Every 3 s one Jupiter sell quote for the open shadow position that was quoted longest ago (all the books' rows of that coin share it): the quoted
+ *  x (SOL back ÷ SOL staked), its high since entry (from 1 = the entry, like the paper trail) and, the first quote at or under high × (1 − trail), the
+ *  quoted exit (q_exit_* with q_exit_src = 'poll', delay 0). The candle mark's quote ('mark') is only taken when the poll has not sold first.
+ *  With N open coins each is quoted every 3N seconds; 30 keyless requests a minute leave room for the entry quotes. */
+let polling = false;
+export async function volQuotePoll(db) {
+  if (polling || Date.now() < qStat.pauseUntil) return; polling = true;
+  try {
+    const t = now();
+    const first = db.prepare("SELECT mint FROM vol_paper WHERE done=0 AND err IS NULL AND q_tokens>0 AND q_exit_ts IS NULL AND entry_ts>=? AND entry_ts<=? ORDER BY (q_live_ts IS NOT NULL), q_live_ts, entry_ts LIMIT 1").get(t - 125 * 60, t - 20);
+    if (!first) return;
+    const rs = db.prepare("SELECT id, mint, curve, q_tokens, q_live_hi FROM vol_paper WHERE mint=? AND done=0 AND err IS NULL AND q_tokens>0 AND q_exit_ts IS NULL").all(first.mint);
+    if (!rs.length) return;
+    const base = rs[0]; qStat.polls++;
+    let q; try { q = await sellQuote(base.mint, base.q_tokens); }
+    catch (e) { qStat.errors++; qStat.lastErr = `poll ${base.mint.slice(0, 6)}: ${e.message}`.slice(0, 120);
+      if (!/paused|429/.test(e.message)) for (const r of rs) db.prepare("UPDATE vol_paper SET q_live_ts=?, q_live_n=COALESCE(q_live_n,0)+1 WHERE id=?").run(t, r.id); // a coin with no route (rugged curve) is not retried before the others
+      return; }
+    for (const r of rs) {
+      const x = q.lamports / 1e9 / SHADOW_SOL * (r.q_tokens / base.q_tokens), hi = Math.max(r.q_live_hi || 1, x), keep = 1 - trailPct(r.curve);
+      if (x <= (r.q_live_hi || 1) * keep) { // the trail off the quoted high fires on this quote: this is the quoted exit (compared with the paper exit by the page, once the mark or the score has it)
+        db.prepare("UPDATE vol_paper SET q_live_ts=?, q_live_x=?, q_live_hi=?, q_live_n=COALESCE(q_live_n,0)+1, q_exit_ts=?, q_exit_sol=?, q_exit_x=?, q_exit_delay=0, q_exit_impact=?, q_exit_src='poll' WHERE id=? AND q_exit_x IS NULL")
+          .run(t, +x.toFixed(4), +hi.toFixed(4), t, +(q.lamports / 1e9 * (r.q_tokens / base.q_tokens)).toFixed(4), +x.toFixed(4), q.impact, r.id); qStat.pollExits++; qStat.sells++;
+      } else db.prepare("UPDATE vol_paper SET q_live_ts=?, q_live_x=?, q_live_hi=?, q_live_n=COALESCE(q_live_n,0)+1 WHERE id=?").run(t, +x.toFixed(4), +hi.toFixed(4), r.id);
+    }
+  } catch (e) { qStat.errors++; qStat.lastErr = "poll: " + e.message.slice(0, 120); }
+  finally { polling = false; }
+}
+
+
+====================================================================================================
+=== FILE: launcher/src/wallet.mjs (2,669 chars)
+====================================================================================================
+// The launch wallet. Created on the box; the key stays in KEY_PATH (0600, outside the repo). It is never printed, logged or sent — only the PUBLIC address is shown.
+//   node src/wallet.mjs init      → creates the key file if missing and prints the public address
+//   node src/wallet.mjs address   → prints the public address
+//   node src/wallet.mjs balance   → public address + SOL balance
+import { Keypair, Connection, PublicKey } from "@solana/web3.js";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from "node:fs";
+import { dirname } from "node:path";
+import { CFG } from "./config.mjs";
+
+export function loadKeypair() { if (!existsSync(CFG.KEY_PATH)) return null; return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync(CFG.KEY_PATH, "utf8")))); }
+export function ensureKeypair() {
+  if (existsSync(CFG.KEY_PATH)) return loadKeypair();
+  mkdirSync(dirname(CFG.KEY_PATH), { recursive: true, mode: 0o700 }); try { chmodSync(dirname(CFG.KEY_PATH), 0o700); } catch {}
+  const kp = Keypair.generate(); writeFileSync(CFG.KEY_PATH, JSON.stringify(Array.from(kp.secretKey)), { mode: 0o600 }); chmodSync(CFG.KEY_PATH, 0o600); return kp;
+}
+/** shadow mode only: the PUBLIC key of a funded wallet (bytes 32–63 of a Solana key file are the public key), used as the simulated payer while ours is empty. No secret is kept. */
+// 0.1.4: the executor wallet holds only ~0.02 SOL — too little to simulate a 0.1 SOL launch — so the stand-in is a well-funded public address
+// (pump.fun's first fee recipient in its own SDK). Simulation only: nothing is signed, nothing is sent, nothing changes on chain.
+export function simPayer() { try { return new PublicKey(process.env.LAUNCH_SIM_PAYER || "62qc2CNXwrYqQScmEdiZFFAnJR262PxWEuNQtxfafNgV"); } catch { return null; } }
+
+if (process.argv[1] && process.argv[1].endsWith("wallet.mjs")) {
+  const cmd = process.argv[2] || "address";
+  if (cmd === "init") { const had = existsSync(CFG.KEY_PATH); const kp = ensureKeypair(); console.log(`launch wallet ${had ? "ready" : "created"} — public address: ${kp.publicKey.toBase58()}`); }
+  else if (cmd === "address") { const kp = loadKeypair(); console.log(kp ? `public address: ${kp.publicKey.toBase58()}` : "no launch wallet yet — run: node src/wallet.mjs init"); }
+  else if (cmd === "balance") { const kp = loadKeypair(); if (!kp) { console.log("no launch wallet yet"); process.exit(1); } const b = await new Connection(CFG.RPC_URL, "confirmed").getBalance(kp.publicKey); console.log(`public address: ${kp.publicKey.toBase58()}\nbalance: ${(b / 1e9).toFixed(4)} SOL`); }
+  else console.log("usage: node src/wallet.mjs init | address | balance");
+}
+
+
+====================================================================================================
+=== FILE: launcher/ecosystem.config.cjs (504 chars)
+====================================================================================================
+// pm2 app for the launcher — separate from the tracker, executor, fomo, scope and radar; a launcher deploy or crash touches none of them.
+module.exports = { apps: [{ name: "launcher", script: "src/index.mjs", cwd: "/root/tracker/launcher", max_memory_restart: "600M", node_args: "--max-old-space-size=400",
+  env: { NODE_ENV: "production" }, restart_delay: 5000, autorestart: true, kill_timeout: 8000, out_file: "/root/.pm2/logs/launcher-out.log", error_file: "/root/.pm2/logs/launcher-error.log" }] };
+
+
+====================================================================================================
+=== FILE: launcher/livebook.txt (4 chars)
+====================================================================================================
+off
+
+
+====================================================================================================
+=== FILE: scope/src/fd2page.mjs (23,167 chars)
+====================================================================================================
+// scope 0.12.0 (owner, 5 Nov 2026 12:48 UK: "copy the format of this website, the color, the design, everything … the coin at the top is the one most
+// profitable … the trade, the coin, the results, the fill buy and the sell, the timing … today, last 6 hours, last 24 hours, and the total since").
+// The FD page in the old tracker site's design (src/web.js): one card per book, ranked best first on the SIMULATED EXECUTABLE FILL (the measure every
+// book is judged on since launcher 0.9.0), with today / last 6 h / last 24 h / total since the simulation started, mode badge (LIVE for the one real
+// book, SIM for the rest), the stake buttons, open positions, and the last trades with the fill in / out and the timing. Same data as /fd (fdApi).
+export const FD2_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FD — funded-dev books</title>
+<style>
+:root{--card:rgba(14,10,40,.72);--line:#3a2a6a;--tx:#e9e6ff;--mut:#9a8fd0;--up:#39ff9c;--dn:#ff4d7a;--acc:#4ad8ff;--mag:#ff3ea5;--amb:#ffb84d}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(180deg,#1b0b3a 0%,#2a0f5a 30%,#0e1f5a 70%,#071a3f 100%) fixed;color:var(--tx);font:14px/1.45 ui-monospace,'SF Mono',Menlo,Consolas,'Cascadia Mono','JetBrains Mono',monospace}
+header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;position:sticky;top:0;background:rgba(18,10,42,.85);backdrop-filter:blur(8px);z-index:2}
+h1{font-size:24px;margin:0;color:var(--mag);letter-spacing:.02em;font-weight:800;text-shadow:0 0 18px rgba(255,62,165,.35)}h1 a{font-size:12px;color:var(--acc);margin-left:10px;font-weight:500;text-decoration:none}#sub{font-size:12px;margin-top:2px;color:var(--mut)}
+main{padding:12px 16px;max-width:1280px;margin:0 auto}.mut{color:var(--mut)}.up{color:var(--up)}.dn{color:var(--dn)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:0 0 0 1px rgba(255,62,165,.08),0 10px 30px rgba(0,0,0,.35);margin-bottom:12px}
+.card h2{margin:0 0 2px;font-size:15px;color:var(--acc)}.rule{font-size:12px;color:var(--mut);min-height:16px;margin:2px 0 6px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;vertical-align:middle}.seg button{background:transparent;color:var(--mut);border:0;padding:6px 10px;font:inherit;font-size:13px;cursor:pointer}.seg button.on{background:rgba(255,62,165,.18);color:#fff}
+.mode{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:800;letter-spacing:.08em;margin-left:8px;vertical-align:middle}.mode.live{background:#ff4d4d;color:#fff}.mode.sim{background:#ffb84d;color:#1a0f00}.mode.paper{background:rgba(255,255,255,.12);color:var(--mut)}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:8px 0 4px}.lab{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}.big{font-size:26px;font-weight:800;line-height:1.15;margin:2px 0 0}.big.ok{color:var(--up)}.big.bad{color:var(--dn)}.small{font-size:12px;opacity:.8}
+.bookhead{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}.bookrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.rk{color:var(--mut);font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--mag);font-weight:500}
+.tbl{overflow-x:auto;background:rgba(0,0,0,.18);border:1px solid var(--line);border-radius:10px;margin-top:4px}.tbl.scroll{max-height:46vh;overflow:auto}.tbl.scroll thead th{position:sticky;top:0;background:#1a1040;z-index:1}
+.pill{display:inline-block;padding:2px 8px;border-radius:4px;font-weight:700;font-size:12px}.pill.win{background:#5fff87;color:#04140a}.pill.loss{background:#ff5f6f;color:#1a0008}.pill.hold{border:1px solid #5fd7ff;color:#5fd7ff}.pill.na{color:#6c6ca0;border:1px solid #3a3a6a}
+a.coin{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--acc)}a.coin:hover{color:var(--acc)}
+.wallet{border:2px solid #fff;background:rgba(255,255,255,.06)}.wallet h2{color:#fff;font-size:18px}.ctl{background:transparent;border:1px solid var(--line);color:var(--tx);padding:7px 12px;border-radius:8px;font:inherit;font-size:12px;letter-spacing:.06em;cursor:pointer}.ctl.danger{border-color:#ff4d7a;color:#ff4d7a}.ctl.go{border-color:var(--up);color:var(--up)}
+.rank{display:flex;gap:6px 18px;flex-wrap:wrap;align-items:baseline;font-size:13px}.rank b{font-size:13px}.rank .mut{font-size:12px}
+.lv td{background:rgba(255,77,77,.10)}@keyframes fl{from{background:rgba(74,216,255,.35)}to{background:transparent}}.chg{animation:fl 1.2s ease-out}.lv .b{color:#ffb3b3}
+footer{padding:16px;color:var(--mut);font-size:12px;text-align:center}
+</style></head><body>
+<header><div><h1>FD — funded-dev books <a id="oldlink" href="#">old layout →</a></h1><div id="sub">loading…</div></div>
+<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="mut small" id="tick"></span><span class="mut">per trade</span><span class="seg" id="size"><button data-v="0.1">0.1</button><button data-v="0.2" class="on">0.2</button><button data-v="0.5">0.5</button><button data-v="1">1 SOL</button></span></div></header>
+<main>
+<div class="card" id="rank" style="padding:10px 14px"></div>
+<div class="card wallet" id="wallet"></div>
+<div id="books"></div>
+<div class="card mut" style="font-size:12px">Every figure is the <b>simulated executable fill</b> (launcher 0.9.x): entry = the tokens 0.2 SOL gets from the bonding curve or PumpSwap pool reserves 1 s after the rule passes (fees and impact in); exit = the SOL those tokens fetch from the reserves 0.7 s after the venue trail fires (40% off the high on the curve, 25% graduated) or at 2 h, re-priced on every transaction that moves the pool. It cannot guarantee a fill — the LIVE book measures that with real SOL. "paper" (grey) = the older chain-price / 1-minute-candle result, kept as the record of which coins went up. UK times. Refreshes every 10 s. <b>The U books</b> (FDLU, FDU and their 120-s fills) are the 5 Nov experiment: uncrowded (under 200 holders, under $15K, holders below buys) — judged on the "at 0.02 SOL" line, by day and without the best trade.</div>
+</main><footer id="foot"></footer>
+<script>
+var key=new URLSearchParams(location.search).get('key')||'';document.getElementById('oldlink').href='/fd?key='+encodeURIComponent(key);
+var STAKE=0.2;try{STAKE=Number(localStorage.getItem('fd2Stake')||0.2)||0.2}catch(e){}
+function UKT(ts){return new Date(ts*1000).toLocaleString('en-GB',{timeZone:'Europe/London',hour12:false,day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}
+function HM(ts){return new Date(ts*1000).toLocaleTimeString('en-GB',{timeZone:'Europe/London',hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+function DT(ts){return new Date(ts*1000).toLocaleString('en-GB',{timeZone:'Europe/London',hour12:false,day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+function ago(ts){var s=Math.floor(Date.now()/1000)-ts;return s<60?s+' s':s<3600?Math.floor(s/60)+' min':(s/3600).toFixed(1)+' h'}
+function sl(v){return (v>=0?'+':'')+v.toFixed(3)+' SOL'}function pc(v){return (v>=0?'+':'')+(v*100).toFixed(0)+'%'}
+var ORDER=['FDLU','FDLUX','FDLU90','FDU','FDU90','FDLU120','FDU120','FDH','FDHF','FDX','FD','FDF','FD35','FD120','FDL','FDB','A1'];
+var DESC={FDLU:'FDL bar + uncrowded at 60 s (GMGN holders < 200, mc < $15K); no fill if the price read before submission is 30% under the check price — frozen 5 Nov 21:30 for a 3-day run',FDLUX:'FDLU + holders < chain buys + no same-name copy entered in the last 2 h (measures those two against FDLU)',FDLU90:'FDLU decided at 60 s, confirmed at the 90-s check (net buying grew > +2 SOL), entered then',FDU:'FD bar + uncrowded',FDU90:'FDU with the 90-s confirmation',FDLU120:'FDLU decided at 60 s, filled 60 s later',FDU120:'FDU decided at 60 s, filled 60 s later',FDH:'FDB minus any coin whose GMGN holder count at 60 s is under half the chain buyers (revised 5 Nov 09:14)',FDHF:'old FDH + creator funded 19–100 SOL',FDX:'FD35 bar + creator funded ≥ 20 SOL + entered at 120 s only if buying still rising',FD:'funding test + bundle 10–60% + minute-1 buying (net ≥ 27 SOL, mc ≥ 100 SOL, 3 buys of 2+ SOL)',FDF:'FD + creator funded ≥ 15 SOL (loaded 5 Nov 08:56)',FD35:'FD with net ≥ 35 SOL and mc ≥ 130 SOL',FD120:'FD entered at the 120 s check only, if still holding',FDL:'funding test + looser buying (net ≥ 15, mc ≥ 60)',FDB:'funding test + minute-1 buying, no bundle test',A1:'minute-1 buying only, no funding test — the control, 1-in-7 sample'};
+function ukDayStart(){var d=new Date();var p=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).formatToParts(d);var o={};p.forEach(function(x){o[x.type]=x.value});var secs=(+o.hour)*3600+(+o.minute)*60+(+o.second);return Math.floor(d.getTime()/1000)-secs}
+function win(ts,from){return ts>=from}
+function sumR(rows){var n=0,s=0,w=0;rows.forEach(function(t){n++;s+=t.sim.s_r;if(t.sim.s_r>0)w++});return {n:n,net:s*STAKE,won:w}}
+var PREV={};function draw(j){
+ var simT=(j.rules&&j.rules.SIM)?j.rules.SIM.since_ts:0,now=Math.floor(Date.now()/1000),day0=ukDayStart();
+ document.getElementById('sub').textContent=(j.ver?'launcher '+j.ver+' · ':'')+'simulated fills since '+(simT?UKT(simT):'–')+' · launches scanned '+(j.watch.scanned||0).toLocaleString('en-GB')+' · passed funding '+(j.watch.pre_nb||0)+' · updated '+HM(j.at)+(j.fd&&j.fd.lastErr?' · '+j.fd.lastErr:'');
+ var books={};ORDER.forEach(function(b){var all=j.trades.filter(function(t){return t.strat===b});var sim=all.filter(function(t){return t.entry_ts>=simT&&t.sim&&t.sim.s_tokens});var done=sim.filter(function(t){return t.sim.done===1&&t.sim.s_r!=null}),open=sim.filter(function(t){return t.sim.done!==1});
+  var h12=sumR(done.filter(function(t){return t.entry_ts>=now-43200})),h6=sumR(done.filter(function(t){return t.entry_ts>=now-21600})),h24=sumR(done.filter(function(t){return t.entry_ts>=now-86400})),day=sumR(done.filter(function(t){return t.entry_ts>=day0})),tot=sumR(done);
+  var paper=all.filter(function(t){return t.done===1&&!t.err&&t.r_venue!=null});var pnet=paper.reduce(function(a,t){return a+t.r_venue},0)*STAKE;
+  var live=all.filter(function(t){return t.live&&t.live.buy_status==='confirmed'});
+  var r02=done.map(function(t){return t.sim.s_r02!=null?t.sim.s_r02:t.sim.s_r-0.0675}),rh=done.map(function(t){return t.sim.s_r_half!=null?t.sim.s_r_half-0.0675:(t.sim.s_r-0.0675)}),rts=done.map(function(t){var c=t.sim;var x60=c.s_x60_02!=null?c.s_x60_02:c.s_x60;var r=c.s_r02!=null?c.s_r02:c.s_r-0.0675;return (x60!=null&&x60<1&&c.s_exit_ts&&c.s_exit_ts>=t.entry_ts+60)?(x60-1-0.075):r});var sum=function(a){return a.reduce(function(x,y){return x+y},0)};var nb=function(a){return a.length>1?sum(a)-Math.max.apply(null,a):null};
+  var skipped=all.filter(function(t){return t.sim&&t.sim.s_exit_reason==='skipped-dump'}).length;
+  var realRows=done.filter(function(t){return t.sim.s_exit_x02!=null}),rr=realRows.map(function(t){return t.sim.s_r02});var realSince=realRows.length?Math.min.apply(null,realRows.map(function(t){return t.entry_ts})):null;
+  var true02={n:done.length,net:sum(r02)*0.02,noBest:nb(r02)!=null?nb(r02)*0.02:null,half:sum(rh)*0.02,halfNoBest:nb(rh)!=null?nb(rh)*0.02:null,ts60:sum(rts)*0.02,skipped:skipped,real02:realRows.length,realNet:sum(rr)*0.02,realNoBest:nb(rr)!=null?nb(rr)*0.02:null,realWon:rr.filter(function(v){return v>0}).length,realSince:realSince};
+  books[b]={all:all,sim:sim,done:done,open:open,h12:h12,h6:h6,h24:h24,day:day,tot:tot,paper:paper,pnet:pnet,live:live,true02:true02,perTrade:h12.n?h12.net/h12.n/STAKE:(tot.n?tot.net/tot.n/STAKE:null)}});
+ var keys=ORDER.slice().sort(function(a,b){var A=books[a],B=books[b];var pa=A.perTrade,pb=B.perTrade;if(pa==null&&pb==null)return B.tot.n-A.tot.n;if(pa==null)return 1;if(pb==null)return -1;return pb-pa});
+ document.getElementById('rank').innerHTML='<div class="rank"><b>Last 12 h · every book · simulated fills at '+STAKE+' SOL · best first</b>'+keys.map(function(k,i){var B=books[k];return '<span>'+(i+1)+'. <b>'+k+'</b> <span class="'+(B.h12.net>0?'up':B.h12.net<0?'dn':'mut')+'">'+(B.h12.n?sl(B.h12.net):'—')+'</span> <span class="mut">('+B.h12.n+')</span>'+(B.h6.n?' <span class="mut">6h</span> <span class="'+(B.h6.net>0?'up':'dn')+'">'+sl(B.h6.net)+'</span>':'')+'</span>'}).join('')+'</div><div class="mut" style="font-size:12px;margin-top:4px">ranked by return per trade over the last 12 h (then total); only trades scored on the simulated fill count · hover a book name for its rule</div>';
+ var L=j.live||{};var lb=L.book||null;var lt=j.trades.filter(function(t){return t.live});var ls=lt.filter(function(t){return t.live.done===1&&t.live.r!=null}),lo=lt.filter(function(t){return t.live.buy_status==='confirmed'&&t.live.done!==1});var lnet=ls.reduce(function(a,t){return a+(t.live.sol_out-t.live.sol_in)},0);
+ document.getElementById('wallet').innerHTML='<h2>Wallet — live trading <span class="mode '+(L.enabled?'live':'paper')+'">'+(L.enabled?'LIVE · '+lb+' at '+L.stake+' SOL':'OFF')+'</span></h2><div class="small mut" style="margin-bottom:8px">AGEniepzBFf2Jesgv7XzqibjndgTRRTE9QDdSojrpYMj · withdrawals only ever go to ARNZ…AZXz</div>'+
+  '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><button class="ctl danger" id="stopBtn">'+(L.enabled?'STOP LIVE':'LIVE STOPPED')+'</button>'+(L.enabled?'':'<button class="ctl go" id="goBtn">RESUME LIVE</button>')+'<span class="mut small" id="ctlMsg"></span></div>'+
+  '<div class="grid4"><div><div class="lab">balance</div><div class="big">'+(L.balanceSol!=null?L.balanceSol.toFixed(3)+' SOL':'—')+'</div></div><div><div class="lab">real net, all live trades</div><div class="big '+(lnet>=0?'ok':'bad')+'">'+sl(lnet)+'</div><div class="small">'+ls.length+' sold · '+ls.filter(function(t){return t.live.r>0}).length+' won · '+lo.length+' open'+(L.buyFails?' · <span class="dn">'+L.buyFails+' buy failed</span>':'')+'</div></div><div><div class="lab">simulated on the same coins</div><div class="big">'+(function(){var p=ls.filter(function(t){return t.sim&&t.sim.s_r!=null});return p.length?sl(p.reduce(function(a,t){return a+t.sim.s_r*t.live.stake_sol},0))+' <span class="small mut">('+p.length+')</span>':'—'})()+'</div></div><div><div class="lab">last</div><div class="small">'+(L.lastErr?L.lastErr.replace(/</g,'&lt;'):'no errors')+'</div></div></div>';
+ var h='';keys.forEach(function(k,i){var B=books[k];var mode=k===lb&&L.enabled?'live':'sim';
+  var head='<div class="bookhead"><div class="bookrow"><span class="rk">#'+(i+1)+'</span><b style="font-size:16px" title="'+(DESC[k]||'').replace(/"/g,'')+'">'+k+'</b><span class="mode '+mode+'">'+mode.toUpperCase()+'</span><span class="mut small">'+(mode==='live'?' real SOL at '+L.stake+' a trade, simulated beside it':' simulated executable fill')+'</span></div><span class="mut small">'+(j.rules[k+'_REV']?'rule revised '+UKT(j.rules[k+'_REV'].since_ts):j.rules[k]?'rule loaded '+UKT(j.rules[k].since_ts):'')+(simT?' · counted on simulated fills since '+UKT(simT):'')+' UK</span></div><div class="rule">'+(DESC[k]||'')+'</div>';
+  var cell=function(lab,o,extra){return '<div><div class="lab">'+lab+'</div><div class="big '+(o.n?(o.net>=0?'ok':'bad'):'')+'">'+(o.n?sl(o.net):'—')+'</div><div class="small">'+o.n+' trades'+(o.n?' · '+Math.round(100*o.won/o.n)+'% won':'')+(extra||'')+'</div></div>'};
+  var stats='<div class="grid4">'+cell('today (UK)',B.day)+cell('last 6 hours',B.h6)+cell('last 24 hours',B.h24)+cell('total since '+(simT?UKT(simT):'start'),B.tot,' · <span class="mut">paper record: '+B.paper.length+' trades, '+sl(B.pnet)+'</span>')+'</div>'+(B.true02.real02?'<div style="margin-top:8px;padding:8px 10px;border:1px solid rgba(255,255,255,.14);border-radius:8px"><div class="lab">REAL 0.02 SOL POSITION ONLY — since '+UKT(B.true02.realSince)+' UK (the honest measure: own tokens, impact, proceeds, 0.0015 SOL fee)</div><div class="big '+(B.true02.realNet>=0?'ok':'bad')+'">'+sl(B.true02.realNet)+'</div><div class="small">'+B.true02.real02+' trades · '+B.true02.realWon+' won'+(B.true02.realNoBest!=null?' · without best trade <b class="'+(B.true02.realNoBest>0?'up':'dn')+'">'+sl(B.true02.realNoBest)+'</b>':'')+'</div></div>':'')+(B.true02.n?'<div class="small" style="margin-top:4px"><span class="lab">real 0.02 SOL position (own tokens, impact, proceeds; 0.0015 SOL fee)</span> net <b class="'+(B.true02.net>0?'up':'dn')+'">'+sl(B.true02.net)+'</b>'+(B.true02.noBest!=null?' · without best trade <b class="'+(B.true02.noBest>0?'up':'dn')+'">'+sl(B.true02.noBest)+'</b>':'')+' · half sold at 2x, rest trailed <b class="'+(B.true02.half>0?'up':'dn')+'">'+sl(B.true02.half)+'</b>'+(B.true02.halfNoBest!=null?' <span class="mut">(no-best '+sl(B.true02.halfNoBest)+')</span>':'')+' · time stop at +60 s if below entry <b class="'+(B.true02.ts60>0?'up':'dn')+'">'+sl(B.true02.ts60)+'</b>'+(B.true02.skipped?' · <span class="mut">'+B.true02.skipped+' entries skipped: price already down 30%</span>':'')+(B.true02.real02<B.true02.n?' · <span class="mut">'+(B.true02.n-B.true02.real02)+' older trades use the rescaled fee, not a real 0.02 position</span>':'')+'</div>':'');
+  var open=B.open.length?'<div class="lab" style="margin-top:6px">open now</div><div class="tbl"><table><tr><th>coin</th><th>bought</th><th>in</th><th>now</th><th>high</th><th>ticks</th></tr>'+B.open.map(function(t){var c=t.sim;return '<tr><td><a class="coin" href="https://gmgn.ai/sol/token/'+t.mint+'" target="_blank">'+(t.name||t.mint.slice(0,8))+'</a></td><td>'+DT(t.entry_ts)+' <span class="mut">('+ago(t.entry_ts)+' ago)</span></td><td class="mut">'+(c.s_x0!=null?Number(c.s_x0).toFixed(3)+'x':'—')+'</td><td class="'+(c.s_last_x>=1?'up':'dn')+(PREV[t.id]!=null&&PREV[t.id]!==c.s_last_x?' chg':'')+'"><b>'+(c.s_last_x!=null?Number(c.s_last_x).toFixed(2)+'x':'—')+'</b></td>'+(function(){PREV[t.id]=c.s_last_x;return ''})()+'<td>'+Number(c.s_hi||1).toFixed(2)+'x</td><td class="mut">'+(c.s_n||0)+'</td></tr>'}).join('')+'</table></div>':'<div class="small mut" style="margin:6px 0 2px">nothing held right now</div>';
+  var rows=B.done.slice().sort(function(a,b){return b.entry_ts-a.entry_ts}).slice(0,60);
+  var recent=rows.length?'<div class="lab" style="margin-top:8px">last '+rows.length+' trades</div><div class="tbl scroll"><table><thead><tr><th>coin</th><th>result</th><th>high</th><th>fill buy / sell</th><th>timing</th><th>when</th><th class="mut">paper</th></tr></thead><tbody>'+rows.map(function(t){var c=t.sim,l=t.live;var r=c.s_r;var row='<tr><td><a class="coin" href="https://gmgn.ai/sol/token/'+t.mint+'" target="_blank">'+(t.name||t.mint.slice(0,8))+'</a> <span class="mut">'+(t.curve===1?'curve':'grad')+'</span>'+(t.same_name_min!=null?' <span class="dn" title="a different mint with this name was entered '+t.same_name_min+' min earlier">copy +'+Math.round(t.same_name_min)+'m</span>':'')+'</td><td><span class="pill '+(r>0?'win':'loss')+'">'+pc(r)+'</span> <span class="mut">'+sl(r*STAKE)+'</span></td><td class="'+((c.s_hi||1)>=1.5?'up':'')+'"><b>'+Number(c.s_hi||1).toFixed(2)+'x</b></td><td>'+(c.s_x0!=null?Number(c.s_x0).toFixed(3)+'x':'—')+' <span class="mut">→</span> '+(c.s_exit_x!=null?Number(c.s_exit_x).toFixed(3)+'x':'—')+' <span class="mut">'+(c.s_exit_reason||'')+(c.s_in_gap!=null?' · entry '+pc(c.s_in_gap)+' vs paper':'')+'</span></td><td class="mut">'+(c.s_fill_ms!=null?'sold '+(c.s_fill_ms/1000).toFixed(1)+' s after trigger':'')+((c.s_max_gap_s||0)>20?' <span class="dn">coarse '+c.s_max_gap_s+' s</span>':'')+' · '+(c.s_n||0)+' ticks</td><td>'+DT(t.entry_ts)+(c.s_exit_ts?' → '+HM(c.s_exit_ts):'')+'</td><td class="mut">'+(t.r_venue!=null?pc(t.r_venue):'open')+'</td></tr>';
+   if(l&&l.buy_status==='confirmed'){row+='<tr class="lv"><td class="b">↳ LIVE '+l.stake_sol+' SOL</td><td>'+(l.done===1&&l.r!=null?'<span class="pill '+(l.r>0?'win':'loss')+'">'+pc(l.r)+'</span> <span class="b">'+sl(l.sol_out-l.sol_in)+'</span>':'<span class="pill hold">'+(l.last_x!=null?Number(l.last_x).toFixed(2)+'x in':'in')+'</span>')+'</td><td>'+(l.hi!=null?Number(l.hi).toFixed(2)+'x':'—')+'</td><td>'+Number(l.sol_in).toFixed(4)+' out <span class="mut">(entry '+(l.in_gap!=null?pc(l.in_gap):'—')+' vs paper)</span> → '+(l.sol_out!=null?Number(l.sol_out).toFixed(4)+' back':'—')+'</td><td class="mut">buy '+(l.buy_lag_s!=null?l.buy_lag_s+' s after entry, landed '+((l.buy_land_ms||0)/1000).toFixed(1)+' s':'')+(l.sell_ms?' · sell '+(l.sell_ms/1000).toFixed(1)+' s (landed '+((l.sell_land_ms||0)/1000).toFixed(1)+' s)':'')+'</td><td>'+DT(l.buy_ts)+(l.sell_ts&&l.done===1?' → '+HM(l.sell_ts):'')+'</td><td class="mut">'+(l.sell_reason||'')+'</td></tr>'}
+   if(l&&l.buy_status==='failed'){row+='<tr class="lv"><td class="b">↳ LIVE</td><td colspan="6" class="dn">buy failed: '+(l.buy_err||'').replace(/</g,'&lt;').slice(0,80)+'</td></tr>'}
+   return row}).join('')+'</tbody></table></div>':'<div class="small mut" style="margin-top:6px">no trades scored on the simulated fill yet</div>';
+  h+='<div class="card">'+head+stats+open+recent+'</div>'});
+ document.getElementById('books').innerHTML=h;
+ document.getElementById('foot').textContent='FD page, old layout at /fd · scope 0.12.3';
+ var sb=document.getElementById('stopBtn');if(sb)sb.onclick=function(){if(!L.enabled)return;if(!confirm('STOP LIVE: no new real buys (open positions still sell on their trail). Continue?'))return;ctl('stop')};var gb=document.getElementById('goBtn');if(gb)gb.onclick=function(){if(!confirm('RESUME LIVE buying on '+(lb||'the live book')+'?'))return;ctl('resume')};
+}
+function ctl(a){fetch('/api/fd/live?key='+encodeURIComponent(key)+'&act='+a,{method:'POST'}).then(function(r){return r.json()}).then(function(r){document.getElementById('ctlMsg').textContent=r.ok?(a==='stop'?'stopped — takes effect within 5 s':'resumed'):'error: '+r.error;setTimeout(load,1500)}).catch(function(e){document.getElementById('ctlMsg').textContent='error: '+e})}
+document.querySelectorAll('#size button').forEach(function(b){if(Number(b.dataset.v)===STAKE)document.querySelectorAll('#size button').forEach(function(x){x.classList.toggle('on',x===b)});b.onclick=function(){STAKE=Number(b.dataset.v);try{localStorage.setItem('fd2Stake',String(STAKE))}catch(e){}document.querySelectorAll('#size button').forEach(function(x){x.classList.toggle('on',x===b)});if(LAST)draw(LAST)}});
+var LAST=null;function load(){fetch('/api/fd?key='+encodeURIComponent(key)).then(function(r){return r.json()}).then(function(j){LAST=j;draw(j)}).catch(function(e){document.getElementById('sub').textContent='error: '+e})}
+var NEXT=10;load();setInterval(function(){load();NEXT=10},10000);setInterval(function(){NEXT=Math.max(0,NEXT-1);var e=document.getElementById('tick');if(e)e.textContent='live prices · refreshes in '+NEXT+' s'},1000);
+</script></body></html>`;

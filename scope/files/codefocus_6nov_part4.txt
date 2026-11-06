@@ -1,0 +1,957 @@
+# PART 4 of 5 — focused code review pack (paste all parts in order)
+
+
+====================================================================================================
+=== FILE: scope/src/fdpage.mjs (42,315 chars)
+====================================================================================================
+// scope 0.10.0 (owner, 4 Nov 2026 12:53 UK: "a quick website just showing… the coins we're buying, the paper trade entry, the paper trade exits,
+// and the profit and loss… so I don't need to contact you"): the FD page — the funded-dev paper book and its control books, read-only from the
+// launcher's database. Nothing on this page buys or sells. Refreshes itself every 10 s. 0.10.8: FDH / FDHF books and the "Loaded" time per rule (fd_rules). 0.10.9: the live mark on open trades (launcher 0.8.10 volMark) — price now, high, and the trail sale the minute it happens. 0.10.10 (launcher 0.8.16): the venue exit (25% trail graduated / 40% curve) as a column and as the live mark's trail; the Jupiter quotes next to the paper numbers (entry gap, quoted exit, book-level quoted vs paper). 0.11.1 (launcher 0.9.1): exit source and longest update gap on each simulated fill ("coarse" over 20 s, STALE if unreadable); quoted-entry rebase labelled entry-only, approximate. 0.11.0 (launcher 0.9.0): the simulated executable fill (chain_fill) as the primary measure — plain-words and Books tables lead with it from rules.SIM, paper greyed; per-trade Sim fill column; paper-at-quoted-entry rebase. 0.10.16 (launcher 0.8.22): FDH revised to the holders/buyers ≥ 0.5 veto, earlier FDH trades shown as "FDH v1"; curve flag fix noted. 0.10.13 (launcher 0.8.19): transaction speed both ways on the live rows and per book — paper entry → fill, quote/build, simulate, send → landed; trail trigger → sold, landed. 0.10.12: each live trade as its own tinted row under its paper row (owner, 07:18 UK: "a different colour underneath the paper trade, so you can get a direct comparison"), and the live book's real SOL beside its paper SOL on the same trades in the plain-words table. 0.10.11 (launcher 0.8.17): the LIVE trades — the live book's entries bought and sold for real at a tiny stake (live_trades), shown per trade (live in / live out) and per book (live vs paper), with the wallet balance and the switch state in the header. Same key as the rest of the site: /fd?key=…
+import Database from "better-sqlite3";
+import { readFileSync } from "node:fs";
+
+const LDB = process.env.LAUNCH_DB || "/root/launcher/launcher.db", STATUS = (process.env.LAUNCH_OUT || "/root/tracker/data/launcher_out") + "/status.json";
+let ldb = null;
+const open = () => { if (!ldb) { ldb = new Database(LDB, { readonly: true, fileMustExist: true }); ldb.pragma("busy_timeout = 2000"); } return ldb; };
+const BOOKS = ["FDLU", "FDLUX", "FDLU90", "FDU", "FDU90", "FDLU120", "FDU120", "FDH", "FDHF", "FDX", "FD", "FDF", "FD35", "FD120", "FDL", "FDB", "A1"]; // 0.12.4: the U books (launcher 0.9.6) // 0.10.8: FDH / FDHF (launcher 0.8.9)
+const EXITS = ["r_tp2sl50", "r_tp15sl30", "r_half2", "r_trail25", "r_trail40", "r_venue", "r_trail60", "r_tw", "r_out10", "r_out15", "r_out20", "r_hold60"]; // 0.10.10: r_venue
+
+export function fdApi(days = 7) {
+  let status = null; try { status = JSON.parse(readFileSync(STATUS, "utf8")); } catch {}
+  const d = open(), since = Math.floor(Date.now() / 1000) - days * 86400;
+  const trades = d.prepare(`SELECT id, strat, mint, name, symbol, entry_ts, entry_price, entry_mc, age_min, holders, exchange, curve, done, err, x5, x15, x30, x60, x120, peak120, peak_min, low_before_peak,
+      x_tp2sl50, x_tp15sl30, x_trail40, x_half2, x_out10, x_out15, x_out20, r_tp2sl50, r_tp15sl30, r_trail40, r_half2, r_out10, r_out15, r_out20, r_hold60, r_hold120, r_trail25, r_trail60, r_tw, m_trail40, x_venue, r_venue, m_venue, mk_ts, mk_x, mk_hi, mk_sold_x, mk_sold_ts, mk_r, mk_pct, q_gap, q_exit_x, q_exit_gap, q_exit_src, q_exit_delay, q_exit_err, q_live_x, q_live_hi, q_live_n, row
+    FROM vol_paper WHERE strat IN ('FDLU','FDLUX','FDLU90','FDU','FDU90','FDLU120','FDU120','FDH','FDHF','FDX','FD','FDF','FD35','FD120','FDL','FDB','A1') AND entry_ts>=? ORDER BY entry_ts DESC LIMIT 2000`).all(since);
+  let liveBy = new Map(); try { for (const l of d.prepare("SELECT * FROM live_trades WHERE entry_ts>=?").all(since)) liveBy.set(l.vol_id, l); } catch {} // 0.10.11
+  let simBy = new Map(); try { for (const c of d.prepare("SELECT * FROM chain_fill WHERE entry_ts>=?").all(since)) simBy.set(c.vol_id, c); } catch {} // 0.11.0: simulated executable fills (launcher 0.9.0)
+  let rules = {}; try { for (const r of d.prepare("SELECT k, since_ts, ver FROM fd_rules").all()) rules[r.k] = r; } catch {} // 0.10.8: when each rule was loaded (launcher 0.8.9)
+  for (const t of trades) { t.live = liveBy.get(t.id) || null; t.sim = simBy.get(t.id) || null; t.r_qentry = t.q_gap != null && t.r_venue != null ? +((1 + t.r_venue) / (1 + t.q_gap) - 1).toFixed(4) : null; /* entry-only rebase on the Jupiter quote: approximate, exits unchanged */ const rev = rules[t.strat + "_REV"]; if (rev && t.entry_ts < rev.since_ts) t.strat = t.strat + " v1"; /* 0.10.16: a revised rule's earlier trades keep their rows but leave the book's figures (owner's convention, 21 Oct) */ try { const r = JSON.parse(t.row || "{}"); t.net = r.net; t.big = r.big; t.buyers = r.buyers; t.at = r.at; t.fd = r.fd || null; t.holding = r.holding ?? null; t.venue = r.venue || null; t.same_name_min = r.same_name_min ?? null; t.same_name_mint = r.same_name_mint || null; } catch {} delete t.row; }
+  const stats = {};
+  for (const b of BOOKS) {
+    const all = trades.filter((t) => t.strat === b), sc = all.filter((t) => t.done === 1 && !t.err && t.r_tp2sl50 != null);
+    const s = { entries: all.length, scored: sc.length, open: all.filter((t) => t.done !== 1).length, failed: all.filter((t) => t.done === 1 && t.err).length, exits: {} };
+    for (const k of EXITS) { const xs = sc.map((t) => t[k]).filter((v) => v != null); s.exits[k] = xs.length ? { n: xs.length, avg: +(xs.reduce((a, c) => a + c, 0) / xs.length).toFixed(3), won: +(xs.filter((v) => v > 0).length / xs.length).toFixed(2), sum: +xs.reduce((a, c) => a + c, 0).toFixed(2), median: +[...xs].sort((a, c) => a - c)[Math.floor(xs.length / 2)].toFixed(3), noBest: xs.length > 1 ? +((xs.reduce((a, c) => a + c, 0) - Math.max(...xs)) / (xs.length - 1)).toFixed(3) : null } : null; }
+    // 0.10.10: the quotes. Entry: average gap of the Jupiter buy quote to the paper price. Exit: trades with a quoted exit AND a paper exit to set it against
+    // (scored → the venue exit; open and sold by the mark → the mark's sale): quoted r = SOL back ÷ SOL staked − 1 (the quote carries the DEX fees and the impact; ~1% of network fees at 0.2 SOL is not in it), paper r on the same trades.
+    { const qi = all.map((t) => t.q_gap).filter((v) => v != null); s.qEntry = qi.length ? { n: qi.length, avg: +(qi.reduce((a, c) => a + c, 0) / qi.length).toFixed(4) } : null;
+      const qe = all.filter((t) => t.q_exit_delay == null || t.q_exit_delay <= 30).map((t) => ({ q: t.q_exit_x, p: t.done === 1 && !t.err ? t.r_venue : t.mk_sold_ts ? t.mk_r : null })).filter((v) => v.q != null && v.p != null); // quotes taken > 30 s after the paper sale (launcher 0.8.15's minute-late mark) are left out
+      s.qExit = qe.length ? { n: qe.length, quoted: +(qe.reduce((a, c) => a + c.q - 1, 0) / qe.length).toFixed(3), paper: +(qe.reduce((a, c) => a + c.p, 0) / qe.length).toFixed(3), won: +(qe.filter((v) => v.q - 1 > 0).length / qe.length).toFixed(2) } : null; }
+    // 0.10.11: the live trades of this book. in = average gap of the real fill to the paper entry price; r = real net return (SOL back ÷ SOL out − 1, every fee in) on the sold trades; paper = the venue exit on the same trades
+    { const lv = all.map((t) => t.live).filter((l) => l && l.buy_status === "confirmed"); const sold = all.filter((t) => t.live && t.live.done === 1 && t.live.r != null); // sold for real, or written off (r = −1)
+      const pair = sold.map((t) => ({ r: t.live.r, p: t.done === 1 && !t.err ? t.r_venue : t.mk_sold_ts ? t.mk_r : null })); const both = pair.filter((v) => v.p != null);
+      const gi = lv.map((l) => l.in_gap).filter((v) => v != null);
+      const avg = (k) => { const v = lv.map((l) => l[k]).filter((x) => x != null); return v.length ? +(v.reduce((a, c) => a + c, 0) / v.length).toFixed(0) : null; };
+      s.live = lv.length || sold.length ? { n: lv.length, buyLagS: avg("buy_lag_s"), buyLandMs: avg("buy_land_ms"), sellMs: avg("sell_ms"), sellLandMs: avg("sell_land_ms"), open: lv.filter((l) => l.done !== 1).length, sold: sold.length, inGap: gi.length ? +(gi.reduce((a, c) => a + c, 0) / gi.length).toFixed(4) : null, r: sold.length ? +(pair.reduce((a, c) => a + c.r, 0) / pair.length).toFixed(3) : null,
+        won: sold.length ? +(pair.filter((v) => v.r > 0).length / pair.length).toFixed(2) : null, paper: both.length ? +(both.reduce((a, c) => a + c.p, 0) / both.length).toFixed(3) : null, nBoth: both.length, failed: all.filter((t) => t.live && t.live.buy_status === "failed").length, skipped: all.filter((t) => t.live && t.live.buy_status === "skipped").length } : null; }
+    // 0.11.0: the simulated executable fill — the measure every book is judged on from rules.SIM.since_ts. r = SOL back ÷ 0.2 − 1 from the chain's reserves at entry and at the exit (fees, impact, network fee), paper = the venue exit on the same trades
+    { const simT = rules.SIM ? rules.SIM.since_ts : 0; const sa = all.filter((t) => t.entry_ts >= simT && t.sim && t.sim.s_tokens), sd = sa.filter((t) => t.sim.done === 1 && t.sim.s_r != null);
+      const pr = sd.map((t) => (t.done === 1 && !t.err ? t.r_venue : t.mk_sold_ts ? t.mk_r : null)).filter((v) => v != null);
+      const gi = sa.map((t) => t.sim.s_in_gap).filter((v) => v != null), x0 = sa.map((t) => t.sim.s_x0).filter((v) => v != null);
+      s.sim = { n: sa.length, open: sa.length - sd.length, scored: sd.length, won: sd.filter((t) => t.sim.s_r > 0).length, lost: sd.filter((t) => t.sim.s_r <= 0).length, sum: +sd.reduce((a, t) => a + t.sim.s_r, 0).toFixed(3), avg: sd.length ? +(sd.reduce((a, t) => a + t.sim.s_r, 0) / sd.length).toFixed(3) : null,
+        noBest: sd.length > 1 ? +((sd.reduce((a, t) => a + t.sim.s_r, 0) - Math.max(...sd.map((t) => t.sim.s_r))) / (sd.length - 1)).toFixed(3) : null, paper: pr.length ? +(pr.reduce((a, c) => a + c, 0) / pr.length).toFixed(3) : null,
+        inGap: gi.length ? +(gi.reduce((a, c) => a + c, 0) / gi.length).toFixed(4) : null, x0: x0.length ? +(x0.reduce((a, c) => a + c, 0) / x0.length).toFixed(4) : null, failed: all.filter((t) => t.entry_ts >= simT && t.sim && !t.sim.s_tokens).length };
+      const qe = all.filter((t) => t.r_qentry != null); s.qEntryR = qe.length ? { n: qe.length, avg: +(qe.reduce((a, t) => a + t.r_qentry, 0) / qe.length).toFixed(3), paper: +(qe.reduce((a, t) => a + t.r_venue, 0) / qe.length).toFixed(3), won: +(qe.filter((t) => t.r_qentry > 0).length / qe.length).toFixed(2) } : null; }
+    s.hit2 = sc.length ? +(sc.filter((t) => (t.peak120 || 0) >= 2).length / sc.length).toFixed(2) : null; s.hit15 = sc.length ? +(sc.filter((t) => (t.peak120 || 0) >= 1.5).length / sc.length).toFixed(2) : null;
+    stats[b] = s;
+  }
+  let watch = { scanned: 0, pre: 0, pre_nb: 0, recent: [] };
+  try {
+    watch.scanned = d.prepare("SELECT COUNT(*) n FROM fd_watch WHERE created_ts>=?").get(since).n; watch.pre = d.prepare("SELECT COUNT(*) n FROM fd_watch WHERE pre=1 AND created_ts>=?").get(since).n; watch.pre_nb = d.prepare("SELECT COUNT(*) n FROM fd_watch WHERE pre_nb=1 AND created_ts>=?").get(since).n;
+    watch.recent = d.prepare("SELECT mint, name, symbol, created_ts, bundle_pct, funder, funder_sol, funded_ts, funder_launches, pre, pre_nb, why, checks, entered FROM fd_watch WHERE pre_nb=1 AND created_ts>=? ORDER BY created_ts DESC LIMIT 60").all(since)
+      .map((w) => { let ch = []; try { ch = JSON.parse(w.checks || "[]"); } catch {} const last = ch[ch.length - 1] || null; return { ...w, checks: undefined, last, nChecks: ch.length }; });
+  } catch {}
+  return { ok: true, at: Math.floor(Date.now() / 1000), fd: status?.fd || null, ver: status?.ver || null, mode: status?.mode || null, live: status?.live || null, trades, stats, watch, rules };
+}
+
+export const FD_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FD — funded-dev paper book</title>
+<style>
+:root{color-scheme:dark}body{margin:0;background:#0b0d12;color:#e6e8ef;font:14px/1.45 -apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1500px;margin:0 auto;padding:14px}h1{font-size:19px;margin:0 0 4px}.sub{color:#9aa3b5;font-size:12.5px}
+.card{background:#141825;border:1px solid #232a3b;border-radius:10px;padding:12px;margin:12px 0}
+.kpis{display:flex;flex-wrap:wrap;gap:8px}.k{background:#0f1320;border:1px solid #232a3b;border-radius:8px;padding:8px 10px;min-width:130px}.k b{display:block;font-size:17px}.k span{color:#9aa3b5;font-size:11.5px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}th,td{padding:5px 7px;border-bottom:1px solid #1f2535;text-align:right;white-space:nowrap}th{color:#9aa3b5;font-weight:600;position:sticky;top:0;background:#141825}
+th.l,td.l{text-align:left}.tw{overflow:auto;max-height:70vh}.pos{color:#4ade80}.neg{color:#f87171}.mut{color:#6b7280}.open{color:#fbbf24}
+a{color:#8ab4ff;text-decoration:none}.tag{display:inline-block;padding:1px 6px;border-radius:5px;font-size:11px;background:#1f2535}
+.lv td{background:#1b2440;color:#c7d2fe}.lv .tag{background:#3b82f6;color:#fff;font-weight:700}
+.FD{background:#1e3a2a}.FDF{background:#1e3a2a;font-weight:700;outline:1px solid #4ade80}.FD120{background:#1e3a3a}.FD35{background:#2a3a1e}.FDX{background:#3a2a1e;font-weight:700}.FDL{background:#1e2f3a}.FDB{background:#3a2e1e}.A1{background:#2a2a2a}.FDH{background:#3a1e3a;font-weight:700}.FDHF{background:#2e1e3a;font-weight:700}.FDLU,.FDLUX,.FDLU90,.FDU,.FDU90,.FDLU120,.FDU120{background:#1e3a1e;font-weight:700;outline:1px solid #86efac}
+</style></head><body><div class="wrap">
+<h1>FD — the funded-dev paper book <span class="sub" id="hd">loading…</span></h1>
+<div class="sub"><span id="liveHd"></span><b>Simulated executable fills</b> (launcher 0.9.0, since <span id="simLd">…</span>; owner, 5 Nov 12:14 UK: "correct both buy and sell pricing across every book"): every paper entry is also priced from the chain's own reserves at that second — the tokens 0.2 SOL would actually get on the bonding curve or the PumpSwap pool, fees and impact included — and the position is re-priced on every transaction that moves the pool (account subscriptions, 30 s backstop re-reads) as the SOL those tokens would fetch; the venue trail runs on those proceeds, so a one-transaction dump sells at the post-dump price. <b>Every book is judged on this column from that time; the older paper figures stay, greyed, as the record of which coins went up.</b> It still cannot guarantee a fill (latency, ordering, failed transactions) — the live book measures that. Nothing is bought, except by the one live book (below). Every pump.fun launch is checked at birth (who funded the creator, how much, when, how many coins that funder has made, the bundle) and at 60/90/120 s (net SOL bought, buys of 2+ SOL, market cap). First rule that passes = a paper entry at the chain price at that moment. Scored 2 h later from 1-minute candles, <b>after real costs</b>.
+<b>FDH</b> (revised <span id="fdhRev">…</span>) = the FDB test minus any coin whose GMGN holder count at 60 s is under half the chain buyers so far (the buyers have already left: 0 wins in every analysis, 24 losers removed, no winners). The earlier FDH (curve + holders ≥ 97% + 100 holders, 4 Nov 22:37) is kept as "FDH v1" in the trades: 2 of 5 once the curve flag was corrected (launcher 0.8.22: the venue flag now comes from our own 60 s check; 29 coins GMGN had left unflagged were re-scored with the curve trail). <b>FDHF</b> = FDH + creator funded 19–100 SOL. <b>FD</b> = funding test + 10–60% bundle + minute-1 buying (net ≥ 27 SOL, mc ≥ 100 SOL, 3 buys of 2+ SOL). <b>FDF</b> (loaded 5 Nov 09:00 UK) = FD + creator funded ≥ 15 SOL (the one filter that held in every book on the first 600 trades; FD's 42 such trades won 48% at +65%, its 20 others won 20% at −3%). <b>FDX</b> = the revised rule: FD35's bar + creator funded ≥ 20 SOL + entered at 120 s only if buying is still rising. <b>FD35</b> = FD with the bar raised to net ≥ 35 SOL and mc ≥ 130 SOL. <b>FD120</b> = FD entered at the 120 s check only, if still holding (skips the minute-1–2 dump). <b>FDL</b> = same funding test, looser buying (net ≥ 15, mc ≥ 60). <b>FDB</b> = FD's buying test, no bundle test. <b>A1</b> = buying test only, no funding test (the October "book A", the control, on a 1-in-7 sample of launches). <b>Venue exit</b> (loaded <span id="venueLd">…</span>) = the 25% trail on a graduated coin, the 40% trail on a curve coin (LAUNCHER.md, 5 Nov 04:15 UK: on the coins that did not rug fast, curve runners wobble and want the wide trail, graduated moves fade and want the tight one); the live mark and the quotes follow it. <b>Quotes</b>: nothing is sent, but at every paper entry Jupiter is asked for a real buy quote (0.2 SOL) and open positions are re-quoted for the sell every few seconds; "quote in" = quoted fill vs the paper entry price, "quote out" = SOL back ÷ SOL staked when the trail fired on the quotes (or when the candle mark sold, if that came first). <b>Live</b> (launcher 0.8.17, 5 Nov 06:15 UK: "trade really minimalistically, but in real time"): one book's entries are bought for real at a tiny stake through Jupiter, re-quoted every 4 s and sold for real when the venue trail fires on those quotes (or at 2 h); "live in" = what the fill actually cost vs the paper entry price, "live out" = SOL back ÷ SOL out with every fee, rent and the exit included — the real result, beside the paper and the 0.2 SOL quote on the same trade. Stops by itself under 0.15 SOL in the wallet. Refreshes every 10 s. UK times. "Trail sold" = when the venue trail would have sold. <b>Open</b> = entered less than 2 h ago, not yet scored; open trades are marked <b>live</b> every minute (price now vs entry, high so far, and the trail sale the minute it would happen) — the 2-hour score is the record.</div>
+<div class="card"><b>In plain words — <span id="stakeLbl">0.2</span> SOL on every paper trade</b> <span class="sub">(stake: <select id="stake"><option>0.1</option><option selected>0.2</option><option>0.5</option><option>1</option></select> SOL; the percentages are the same whatever the stake). Exits shown: <b>sell at 2x</b> (stop −50%), <b>half at 2x + 40% trail</b>, <b>40% trail</b> (the whole position rides; −40% stop until it has run), <b>venue trail</b> (25% graduated / 40% curve; won/lost and the live columns use this one) and <b>out at 20 min</b> (−35% stop). "Open" trades are not counted until scored, 2 h after entry.</span>
+<div class="tw"><table><thead><tr><th class="l">Rule</th><th><b>Sim trades</b></th><th><b>Sim won / lost</b></th><th><b>Net SOL (simulated fill)</b></th><th>Sim round trip at entry</th><th class="l mut">Loaded (UK)</th><th class="l mut">First trade (UK)</th><th class="mut">Hours live</th><th class="mut">paper: scored</th><th>Won (trail)</th><th>Lost (trail)</th><th>SOL won (trail)</th><th>SOL lost (trail)</th><th>Net SOL (2x exit)</th><th>Net SOL (½ at 2x + trail)</th><th>Net SOL (40% trail)</th><th><b>Net SOL (venue trail)</b></th><th>Net SOL (out 20 min)</th><th>Not yet scored (&lt;2 h)</th><th>Live: trail sold / still in</th><th>Live net SOL (trail)</th></tr></thead><tbody id="pw"></tbody></table></div></div>
+<div class="card"><b>Books</b> <span class="sub">— results per exit, after costs, from the scored trades. Tight→wide = −35% stop until the coin has doubled, then a 55% trail off the high. "no best" = average with the best trade removed (a book that only works because of one coin is luck). Judged at 40 trades: won ≥ 45%, average ≥ +15%, positive in all thirds and without the best coin. <b>Quote in</b> = average gap of the Jupiter buy quote to the paper entry price. <b>Quoted exit vs paper</b> = on the trades that have both, the quoted result (SOL back ÷ SOL staked − 1) against the paper venue exit on the same trades — shown in bold from 20 quoted exits; exit quotes taken more than 30 s after the paper sale (the first night's minute-late ones) are left out.</span><div class="tw"><table><thead><tr><th class="l">Book</th><th>Entries</th><th>Open</th><th>Scored</th><th>Reached 1.5x</th><th>Reached 2x</th><th>2x / −50%</th><th>1.5x / −30%</th><th>½ at 2x + trail</th><th>25% trail</th><th>40% trail</th><th><b>Venue</b></th><th>60% trail</th><th>Tight→wide</th><th>Out 10 min</th><th>Out 15 min</th><th>Out 20 min</th><th>Hold 60</th><th><b>Simulated fill vs paper</b></th><th>Paper at quoted entry <span class="mut">(entry-only, approximate)</span></th><th>Quote in</th><th>Quoted exit vs paper (venue)</th><th><b>Live vs paper</b></th></tr></thead><tbody id="bk"></tbody></table></div></div>
+<div class="card"><b>Paper trades</b> <span class="sub">— newest first. Entry MC in USD from the chain price at entry. 15m / 60m / peak = price vs entry. P&amp;L columns are after real costs (1 SOL stake = that many SOL). Open = not yet 2 h old.</span><div class="tw"><table><thead><tr><th class="l">Entry (UK)</th><th class="l">Book</th><th class="l">Coin</th><th>Entry MC</th><th>Age</th><th>Net SOL</th><th>2+ SOL buys</th><th>Buyers</th><th>Funded</th><th>Bundle</th><th>Now (live)</th><th>High (live)</th><th>15m</th><th>60m</th><th>Peak</th><th>@min</th><th>Trail sold (UK)</th><th>Held</th><th>2x/−50</th><th>1.5x/−30</th><th>½2x+trail</th><th>Trail 40</th><th><b>Venue</b></th><th>Out 15</th><th>Out 20</th><th>Quote in</th><th>Quote out</th><th><b>Sim fill</b></th><th><b>Live in</b></th><th><b>Live out</b></th></tr></thead><tbody id="tr"></tbody></table></div></div>
+<div class="card"><b>Launches that passed the funding test</b> <span class="sub">— the ones FD was watching at 60/90/120 s, whether or not it entered. "Why not" = which test failed for the strict FD rule.</span><div class="tw" style="max-height:50vh"><table><thead><tr><th class="l">Launched (UK)</th><th class="l">Coin</th><th>Funded</th><th>Min before</th><th>Funder's coins</th><th>Bundle</th><th>Last check</th><th>Net SOL</th><th>MC (SOL)</th><th>2+ SOL buys</th><th>Buyers</th><th class="l">Entered</th><th class="l">Why not FD</th></tr></thead><tbody id="wt"></tbody></table></div></div>
+</div><script>
+var key=new URLSearchParams(location.search).get('key')||'';
+function uk(ts){return new Date(ts*1000).toLocaleString('en-GB',{timeZone:'Europe/London',hour12:false,day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}
+function pct(v){if(v==null)return '<span class="mut">–</span>';return '<span class="'+(v>0?'pos':v<0?'neg':'')+'">'+(v>0?'+':'')+(v*100).toFixed(0)+'%</span>'}
+function x(v){if(v==null)return '<span class="mut">–</span>';return '<span class="'+(v>=1.5?'pos':v<0.7?'neg':'')+'">'+Number(v).toFixed(2)+'x</span>'}
+function k(v,d){return v==null?'–':Number(v).toLocaleString('en-GB',{maximumFractionDigits:d||0})}
+function ex(e){if(!e)return '<td class="mut">–</td>';return '<td>'+pct(e.avg)+' <span class="mut">·won '+(e.won*100).toFixed(0)+'% ·n'+e.n+(e.noBest!=null?' ·nb '+(e.noBest*100).toFixed(0)+'%':'')+'</span></td>'}
+var DESC={FDLU:'(frozen 5 Nov 21:30 UK, 3-day run) FDL bar + uncrowded at 60 s: GMGN holders < 200 and mc < $15K; no fill if the price read before submission is 30% under the check price',FDLUX:'FDLU + holders < chain buys + no other mint of the same name entered in the last 2 h — measures those two restrictions against FDLU',FDLU90:'FDLU decided at 60 s, confirmed at the 90-s check (net buying grew > +2 SOL), entered then',FDU:'FD bar + uncrowded',FDU90:'FDU with the 90-s confirmation',FDLU120:'FDLU decided at 60 s, filled 60 s later',FDU120:'FDU decided at 60 s, filled 60 s later',FDH:'REVISED 5 Nov 09:15 UK: FDB minus any coin whose GMGN holder count is under half the chain buyers (the one holder test that held in every analysis). Before: on the curve + holders ≥ 97% of buyers + 100 holders (2 of 5 once the curve flag was fixed — shown as FDH v1 in the trades)',FDHF:'(loaded 4 Nov 22:37 UK) FDH + creator funded 19–100 SOL',FDX:'the revised rule (started 4 Nov 17:52 UK): FD35 bar (net ≥ 35 SOL, mc ≥ 130 SOL) + creator funded ≥ 20 SOL + entered at 120 s only if buying is still rising',FD:'funding test + 10–60% bundle + strong minute-1 buying (the winner profile)',FDF:'(loaded 5 Nov 09:00 UK) FD + creator funded ≥ 15 SOL — back-test 42 of FD’s 62: won 48%, +65%; the forward test',FD35:'(started 17:52) FD with a higher bar: net ≥ 35 SOL and mc ≥ 130 SOL (~$12K) at minute 1 — where the runners sat on 4 Nov',FD120:'(started 17:52) FD, but entered at 120 s only, and only if buying is still rising (skips the minute-1–2 dump)',FDL:'funding test + weaker minute-1 buying',FDB:'strong minute-1 buying, funding test, NO bundle test',A1:'strong minute-1 buying only, no funding test — the control (October book A)'};
+function stake(){try{return Number(localStorage.getItem('fdStake')||document.getElementById('stake').value||0.2)}catch(e){return 0.2}}
+function sol(v){return (v>=0?'+':'')+v.toFixed(2)+' SOL'}
+function lrow(t){var l=t.live;if(!l)return '';var ok=l.buy_status==='confirmed';var sold=l.done===1&&l.sell_status==='confirmed';var st=ok?(sold?'':'<span class="open">open</span>'):'<span class="mut">'+l.buy_status+'</span>';
+ return '<tr class="lv"><td class="l">'+uk(l.buy_ts||l.entry_ts)+' '+st+'</td><td class="l"><span class="tag">LIVE</span></td><td class="l">'+(t.name||t.mint.slice(0,8))+' <span class="mut">real, '+l.stake_sol+' SOL</span></td><td>'+(ok&&l.in_gap!=null?'$'+k(t.entry_mc*(1+l.in_gap)/1000,0)+'K '+pct(l.in_gap):'<span class="mut">–</span>')+'</td><td colspan="6" class="l mut">'+(ok?'bought '+(l.buy_lag_s!=null?l.buy_lag_s+' s after the paper entry':'')+(l.buy_ms?' (quote+build '+((l.buy_quote_ms||0)/1000).toFixed(1)+' s, sim '+((l.buy_sim_ms||0)/1000).toFixed(1)+' s, landed in '+((l.buy_land_ms||0)/1000).toFixed(1)+' s'+(l.buy_slot?', slot '+l.buy_slot:'')+')':'')+' · '+Number(l.sol_in).toFixed(4)+' SOL out of the wallet (fees + rent in)':(l.buy_err||''))+'</td><td>'+(ok&&!sold&&l.last_x!=null?x(l.last_x):'<span class="mut">–</span>')+'</td><td>'+(ok&&!sold?x(l.hi||1):'<span class="mut">–</span>')+'</td><td colspan="4" class="mut">'+(ok?(l.n_quotes||0)+' sell quotes':'')+'</td><td>'+(sold?uk(l.sell_ts)+' <span class="mut">'+(l.sell_reason||'')+(l.sell_ms?' · sold in '+(l.sell_ms/1000).toFixed(1)+' s (landed '+((l.sell_land_ms||0)/1000).toFixed(1)+' s)':'')+'</span>':ok?(l.sell_status==='failed'||l.sell_status==='partial'?'<span class="neg">sell '+l.sell_status+'</span>':l.sell_status==='written_off'?'<span class="neg">written off</span>':'<span class="open">still in</span>'):'<span class="mut">–</span>')+'</td><td>'+(sold&&l.buy_ts?k((l.sell_ts-l.buy_ts)/60,0)+'m':'–')+'</td><td colspan="4" class="mut"></td><td>'+(sold||l.sell_status==='written_off'?'<b>'+pct(l.r)+'</b>':'<span class="mut">–</span>')+'</td><td colspan="2" class="mut">'+(sold?Number(l.sol_out).toFixed(4)+' SOL back':'')+'</td><td colspan="5" class="l mut">'+(sold&&t.r_venue!=null?'paper venue on this trade: '+(t.r_venue>0?'+':'')+(t.r_venue*100).toFixed(0)+'%'+(t.q_exit_x!=null?' · 0.2 SOL quote: '+(t.q_exit_x>1?'+':'')+((t.q_exit_x-1)*100).toFixed(0)+'%':''):sold&&t.mk_r!=null?'paper (live mark): '+(t.mk_r>0?'+':'')+(t.mk_r*100).toFixed(0)+'%':'')+'</td></tr>'}
+function simc(c){if(!c)return '<td class="mut">–</td>';if(!c.s_tokens)return '<td><span class="mut">unpriced: '+(c.s_err||'').slice(0,28)+'</span></td>';var a='<span class="mut">in '+(c.s_x0!=null?Number(c.s_x0).toFixed(3)+'x':'')+(c.s_in_gap!=null?' '+pct(c.s_in_gap):'')+'</span> ';if(c.done===1&&c.s_r!=null)return '<td><b>'+pct(c.s_r)+'</b> '+a+'<span class="mut">'+(c.s_exit_reason||'')+(c.s_exit_src==='backstop'?' ·30 s read':c.s_exit_src==='stale'?' ·STALE':'')+((c.s_max_gap_s||0)>20?' ·<span class="neg">coarse: '+c.s_max_gap_s+' s gap</span>':'')+' ·'+(c.s_n||0)+' ticks'+(c.s_drops?' ·resub '+c.s_drops:'')+'</span></td>';if(c.done===1)return '<td>'+a+'<span class="mut">'+(c.s_exit_reason||c.s_err||'')+'</span></td>';return '<td><span class="open">'+(c.s_last_x!=null?Number(c.s_last_x).toFixed(2)+'x now':'in')+'</span> '+a+'<span class="mut">hi '+Number(c.s_hi||1).toFixed(2)+' ·'+(c.s_n||0)+'</span></td>'}
+function lv(l){if(!l)return '<td class="mut">–</td><td class="mut">–</td>';var a,b;if(l.buy_status==='confirmed'){a=Number(l.sol_in).toFixed(4)+' SOL '+(l.in_gap!=null?pct(l.in_gap):'')+' <span class="mut">'+(l.buy_ms?Math.round(l.buy_ms/1000)+'s':'')+'</span>'}else if(l.buy_status==='skipped'){a='<span class="mut">skipped: '+(l.buy_err||'')+'</span>'}else if(l.buy_status==='failed'){a='<span class="neg">failed</span> <span class="mut">'+(l.buy_err||'').slice(0,40)+'</span>'}else{a='<span class="open">'+l.buy_status+'</span>'}
+ if(l.done===1&&l.sell_status==='confirmed'){b='<b>'+pct(l.r)+'</b> '+Number(l.sol_out).toFixed(4)+' SOL <span class="mut">'+(l.sell_reason||'')+(l.sell_ts&&l.buy_ts?' @'+Math.round((l.sell_ts-l.buy_ts)/60)+'m':'')+' ·'+(l.n_quotes||0)+'q</span>'}else if(l.sell_status==='written_off'){b='<span class="neg">written off</span> <span class="mut">'+(l.sell_reason||'')+'</span>'}else if(l.buy_status==='confirmed'){b='<span class="open">'+(l.last_x!=null?Number(l.last_x).toFixed(2)+'x now':'in')+'</span> <span class="mut">hi '+Number(l.hi||1).toFixed(2)+' ·'+(l.n_quotes||0)+'</span>'+(l.sell_status==='failed'||l.sell_status==='partial'?' <span class="neg">'+l.sell_status+'</span> <span class="mut">'+(l.sell_err||'').slice(0,30)+'</span>':l.sell_status==='sending'?' <span class="open">selling…</span>':'')}else{b='<span class="mut">–</span>'}
+ return '<td>'+a+'</td><td>'+b+'</td>'}
+function plain(j){var st=stake();document.getElementById('stakeLbl').textContent=st;var h='';['FDLU','FDLUX','FDLU90','FDU','FDU90','FDLU120','FDU120','FDH','FDHF','FDX','FD','FDF','FD35','FD120','FDL','FDB','A1'].forEach(function(b){var ts=j.trades.filter(function(t){return t.strat===b&&t.done===1&&!t.err&&t.r_tp2sl50!=null});var won=0,lost=0,sw=0,sl=0,net2=0,neth=0,nett=0,netv=0,neto=0;ts.forEach(function(t){var v=(t.r_venue!=null?t.r_venue:(t.r_trail40||0))*st;netv+=v;if(v>0){won++;sw+=v}else{lost++;sl+=v}nett+=(t.r_trail40||0)*st;net2+=(t.r_tp2sl50||0)*st;neth+=(t.r_half2||0)*st;neto+=(t.r_out20||0)*st});var ops=j.trades.filter(function(t){return t.strat===b&&t.done!==1});var open=ops.length;var lsold=ops.filter(function(t){return t.mk_sold_ts});var lin=ops.filter(function(t){return !t.mk_sold_ts&&t.mk_x!=null});var lnet=0;lsold.forEach(function(t){lnet+=(t.mk_r||0)*st});var lup=lin.filter(function(t){return t.mk_x>1}).length;
+ var all=j.trades.filter(function(t){return t.strat===b});var since=all.length?Math.min.apply(null,all.map(function(t){return t.entry_ts})):null;var ld=(j.rules&&j.rules[b+'_REV'])?j.rules[b+'_REV'].since_ts:(j.rules&&j.rules[b])?j.rules[b].since_ts:null;var hrs=(ld||since)?(j.at-(ld||since))/3600:null;var sm=(j.stats[b]||{}).sim;h+='<tr><td class="l"><span class="tag '+b+'" title="'+DESC[b].replace(/"/g,'')+'">'+b+'</span></td><td>'+(sm?sm.scored+(sm.open?' <span class="open">+'+sm.open+' open</span>':''):'<span class="mut">–</span>')+'</td><td>'+(sm&&sm.scored?'<span class="pos">'+sm.won+'</span> / <span class="neg">'+sm.lost+'</span>':'<span class="mut">–</span>')+'</td><td>'+(sm&&sm.scored?'<b class="'+(sm.sum>0?'pos':sm.sum<0?'neg':'')+'">'+sol(sm.sum*st)+'</b> <span class="mut">(paper on the same: '+(sm.paper!=null?sol(sm.paper*sm.scored*st):'–')+')</span>':'<span class="mut">–</span>')+'</td><td class="mut">'+(sm&&sm.x0!=null?Number(sm.x0).toFixed(3)+'x'+(sm.inGap!=null?' · entry '+pct(sm.inGap)+' vs paper':''):'–')+'</td><td class="l mut">'+(ld?uk(ld):'–')+'</td><td class="l">'+(since?uk(since):'<span class="mut">no entries yet</span>')+'</td><td>'+(hrs!=null?hrs.toFixed(1)+' h':'–')+'</td><td>'+ts.length+'</td><td class="pos">'+won+'</td><td class="neg">'+lost+'</td><td class="pos">'+sol(sw)+'</td><td class="neg">'+sol(sl)+'</td><td class="'+(net2>0?'pos':net2<0?'neg':'')+'">'+sol(net2)+'</td><td class="'+(neth>0?'pos':neth<0?'neg':'')+'">'+sol(neth)+'</td><td class="'+(nett>0?'pos':nett<0?'neg':'')+'">'+sol(nett)+'</td><td><b class="'+(netv>0?'pos':netv<0?'neg':'')+'">'+sol(netv)+'</b></td><td class="'+(neto>0?'pos':neto<0?'neg':'')+'">'+sol(neto)+'</td><td class="open">'+open+'</td><td>'+(open?('<span class="mut">'+lsold.length+' sold</span> / <span class="open">'+lin.length+' in</span>'+(lin.length?' <span class="mut">('+lup+' above entry)</span>':'')):'<span class="mut">–</span>')+'</td><td class="'+(lnet>0?'pos':lnet<0?'neg':'mut')+'">'+(lsold.length?sol(lnet):'–')+'</td></tr>'});if(j.live&&j.live.book){var lb=j.live.book,lts=j.trades.filter(function(t){return t.strat===lb&&t.live&&t.live.buy_status==='confirmed'}),ls=lts.filter(function(t){return t.live.done===1&&t.live.r!=null}),lo=lts.filter(function(t){return t.live.done!==1});var rw=0,rl=0,rsw=0,rsl=0,pn=0,pb=0;ls.forEach(function(t){var v=t.live.sol_out-t.live.sol_in;if(v>0){rw++;rsw+=v}else{rl++;rsl+=v}var p=t.done===1&&!t.err?t.r_venue:t.mk_sold_ts?t.mk_r:null;if(p!=null){pn++;pb+=p*t.live.stake_sol}});var first=lts.length?Math.min.apply(null,lts.map(function(t){return t.live.buy_ts})):null;var lup=lo.filter(function(t){return t.live.last_x>1}).length;
+ h+='<tr class="lv"><td class="l"><span class="tag">'+lb+' LIVE</span> <span class="mut">real SOL at '+j.live.stake+' a trade</span></td><td colspan="4" class="l mut">real fills — see the right-hand columns</td><td class="l">'+uk(j.rules&&j.rules.LIVE?j.rules.LIVE.since_ts:1793859825)+'</td><td class="l">'+(first?uk(first):'<span class="mut">no live trade yet</span>')+'</td><td>'+((j.at-1793859825)/3600).toFixed(1)+' h</td><td>'+ls.length+'</td><td class="pos">'+rw+'</td><td class="neg">'+rl+'</td><td class="pos">'+(ls.length?'+'+rsw.toFixed(3):'–')+'</td><td class="neg">'+(ls.length?rsl.toFixed(3):'–')+'</td><td colspan="3" class="l mut">paper venue on the same '+pn+' trades at '+j.live.stake+': <b class="'+(pb>0?'pos':pb<0?'neg':'')+'">'+(pn?(pb>0?'+':'')+pb.toFixed(3)+' SOL':'–')+'</b></td><td><b class="'+(rsw+rsl>0?'pos':rsw+rsl<0?'neg':'')+'">'+(ls.length?(rsw+rsl>0?'+':'')+(rsw+rsl).toFixed(3)+' SOL':'–')+'</b></td><td class="mut">wallet '+(j.live.balanceSol!=null?j.live.balanceSol+' SOL':'–')+'</td><td class="open">'+lo.length+'</td><td>'+(lo.length?'<span class="open">'+lo.length+' in</span> <span class="mut">('+lup+' above entry)</span>':'<span class="mut">–</span>')+'</td><td class="mut">'+(j.live.buyFails?'<span class="neg">'+j.live.buyFails+' buy failures</span>':'')+(j.live.skipped?' '+j.live.skipped+' skipped':'')+'</td></tr>'}
+ document.getElementById('pw').innerHTML=h}
+var LAST=null;document.addEventListener('change',function(e){if(e.target&&e.target.id==='stake'){try{localStorage.setItem('fdStake',e.target.value)}catch(x){}if(LAST)plain(LAST)}});
+function draw(j){LAST=j;try{var sv=localStorage.getItem('fdStake');if(sv)document.getElementById('stake').value=sv}catch(e){}plain(j);try{document.getElementById('simLd').textContent=(j.rules&&j.rules.SIM)?uk(j.rules.SIM.since_ts)+' UK':'not yet'}catch(e){}try{document.getElementById('fdhRev').textContent=(j.rules&&j.rules.FDH_REV)?uk(j.rules.FDH_REV.since_ts)+' UK':'–'}catch(e){}try{var L=j.live;document.getElementById('liveHd').innerHTML=L?('<b>Live: '+(L.enabled?L.book+' at '+L.stake+' SOL a trade':'off')+'</b> · wallet '+(L.balanceSol!=null?L.balanceSol+' SOL':'–')+' · buys '+L.buys+' · sells '+L.sells+' · open '+L.open+(L.buyFails?' · <span class="neg">buy failures '+L.buyFails+'</span>':'')+(L.sellFails?' · <span class="neg">sell failures '+L.sellFails+'</span>':'')+(L.skipped?' · skipped '+L.skipped:'')+(L.lastErr?' · <span class="mut">last: '+L.lastErr.replace(/</g,'&lt;')+'</span>':'')+'<br>'):''}catch(e){}try{document.getElementById('venueLd').textContent=(j.rules&&j.rules.VENUE)?uk(j.rules.VENUE.since_ts)+' UK':'–'}catch(e){}
+ var f=j.fd||{};document.getElementById('hd').textContent=(j.ver?'launcher '+j.ver+' · ':'')+'launches scanned '+k(j.watch.scanned)+' · passed funding '+k(j.watch.pre_nb)+' · passed funding + bundle '+k(j.watch.pre)+' · Helius credits today '+k(f.credits)+' · '+uk(j.at)+(f.lastErr?' · last error: '+f.lastErr:'');
+ var h='';['FDLU','FDLUX','FDLU90','FDU','FDU90','FDLU120','FDU120','FDH','FDHF','FDX','FD','FDF','FD35','FD120','FDL','FDB','A1'].forEach(function(b){var s=j.stats[b]||{exits:{}};h+='<tr><td class="l"><span class="tag '+b+'">'+b+'</span></td><td>'+s.entries+'</td><td class="open">'+s.open+'</td><td>'+s.scored+'</td><td>'+(s.hit15==null?'–':(s.hit15*100).toFixed(0)+'%')+'</td><td>'+(s.hit2==null?'–':(s.hit2*100).toFixed(0)+'%')+'</td>'+ex(s.exits.r_tp2sl50)+ex(s.exits.r_tp15sl30)+ex(s.exits.r_half2)+ex(s.exits.r_trail25)+ex(s.exits.r_trail40)+ex(s.exits.r_venue)+ex(s.exits.r_trail60)+ex(s.exits.r_tw)+ex(s.exits.r_out10)+ex(s.exits.r_out15)+ex(s.exits.r_out20)+ex(s.exits.r_hold60)+'<td>'+(s.sim&&s.sim.scored?'<b>'+pct(s.sim.avg)+'</b> vs paper '+pct(s.sim.paper)+' <span class="mut">·won '+(100*s.sim.won/s.sim.scored).toFixed(0)+'% ·n'+s.sim.scored+(s.sim.noBest!=null?' ·nb '+(s.sim.noBest*100).toFixed(0)+'%':'')+(s.sim.failed?' ·unpriced '+s.sim.failed:'')+'</span>':'<span class="mut">'+(s.sim?s.sim.open+' open':'–')+'</span>')+'</td><td>'+(s.qEntryR?pct(s.qEntryR.avg)+' <span class="mut">vs '+pct(s.qEntryR.paper)+' ·won '+(s.qEntryR.won*100).toFixed(0)+'% ·n'+s.qEntryR.n+'</span>':'<span class="mut">–</span>')+'</td><td>'+(s.qEntry?pct(s.qEntry.avg)+' <span class="mut">·n'+s.qEntry.n+'</span>':'<span class="mut">–</span>')+'</td><td>'+(s.qExit?(s.qExit.n>=20?'<b>'+pct(s.qExit.quoted)+'</b> vs paper '+pct(s.qExit.paper)+' <span class="mut">·won '+(s.qExit.won*100).toFixed(0)+'% ·n'+s.qExit.n+'</span>':'<span class="mut">'+pct(s.qExit.quoted)+' vs '+pct(s.qExit.paper)+' · n'+s.qExit.n+' of 20</span>'):'<span class="mut">–</span>')+'</td><td>'+(s.live?('<b>'+(s.live.r!=null?pct(s.live.r):'–')+'</b>'+(s.live.paper!=null?' vs paper '+pct(s.live.paper):'')+' <span class="mut">·in '+(s.live.inGap!=null?pct(s.live.inGap):'–')+' ·sold '+s.live.sold+(s.live.won!=null?' ·won '+(s.live.won*100).toFixed(0)+'%':'')+' ·open '+s.live.open+(s.live.buyLagS!=null?' ·buy '+s.live.buyLagS+' s after entry (lands '+((s.live.buyLandMs||0)/1000).toFixed(1)+' s)':'')+(s.live.sellMs!=null?' ·sell '+(s.live.sellMs/1000).toFixed(1)+' s (lands '+((s.live.sellLandMs||0)/1000).toFixed(1)+' s)':'')+(s.live.failed?' ·failed '+s.live.failed:'')+(s.live.skipped?' ·skipped '+s.live.skipped:'')+'</span>'):'<span class="mut">–</span>')+'</td></tr>'});document.getElementById('bk').innerHTML=h;
+ h='';j.trades.forEach(function(t){var fd=t.fd||{};var st=t.done!==1?'<span class="open">open</span>':t.err?'<span class="mut">'+t.err+'</span>':'';
+  h+='<tr><td class="l">'+uk(t.entry_ts)+' '+st+'</td><td class="l"><span class="tag '+t.strat+'">'+t.strat+'</span></td><td class="l"><a href="https://gmgn.ai/sol/token/'+t.mint+'" target="_blank">'+(t.name||t.mint.slice(0,8))+'</a> <span class="mut">'+(t.symbol||'')+'</span></td><td>$'+k(t.entry_mc/1000,0)+'K</td><td>'+k(t.age_min,1)+'m</td><td>'+k(t.net,1)+'</td><td>'+k(t.big)+'</td><td>'+k(t.buyers)+'</td><td>'+(fd.funder_sol!=null?k(fd.funder_sol,2)+' SOL / '+k(fd.funded_min_before,0)+'m':'–')+'</td><td>'+(fd.bundle_pct!=null?k(fd.bundle_pct,0)+'%':'–')+'</td><td>'+(t.done!==1&&t.mk_x!=null?x(t.mk_x)+' <span class="mut">'+uk(t.mk_ts).slice(-5)+'</span>':'<span class="mut">–</span>')+'</td><td>'+(t.done!==1&&t.mk_hi!=null?x(t.mk_hi):'<span class="mut">–</span>')+'</td><td>'+x(t.x15)+'</td><td>'+x(t.x60)+'</td><td>'+x(t.peak120)+'</td><td>'+k(t.peak_min,0)+'</td><td>'+(t.done!==1?(t.mk_sold_ts?uk(t.mk_sold_ts)+' <span class="open">live</span>':(t.mk_x!=null?'<span class="open">still in</span>':'<span class="mut">–</span>')):(function(){var m=t.m_venue!=null?t.m_venue:t.m_trail40;return m==null?'<span class="mut">–</span>':m<0?'<span class="mut">held at 2 h</span>':uk(t.entry_ts+m*60)})())+'</td><td>'+(t.done!==1?(t.mk_sold_ts?k((t.mk_sold_ts-t.entry_ts)/60,0)+'m':'–'):(function(){var m=t.m_venue!=null?t.m_venue:t.m_trail40;return m==null?'–':m<0?'2 h+':k(m,0)+'m'})())+'</td><td>'+pct(t.r_tp2sl50)+'</td><td>'+pct(t.r_tp15sl30)+'</td><td>'+pct(t.r_half2)+'</td><td>'+pct(t.r_trail40)+'</td><td>'+(t.done!==1&&t.mk_sold_ts?pct(t.mk_r)+' <span class="open">live</span>':pct(t.r_venue))+'</td><td>'+pct(t.r_out15)+'</td><td>'+pct(t.r_out20)+'</td><td>'+(t.q_gap!=null?pct(t.q_gap):'<span class="mut">–</span>')+'</td><td>'+(t.q_exit_x!=null?x(t.q_exit_x)+' <span class="mut">'+(t.q_exit_gap!=null?'('+(t.q_exit_gap>0?'+':'')+(t.q_exit_gap*100).toFixed(0)+'% vs paper) ':'')+(t.q_exit_src||'')+(t.q_exit_delay?' +'+t.q_exit_delay+'s':'')+'</span>':t.q_exit_err?'<span class="mut">'+t.q_exit_err.slice(0,22)+'</span>':t.q_live_x!=null?'<span class="open">'+Number(t.q_live_x).toFixed(2)+'x now</span> <span class="mut">hi '+Number(t.q_live_hi).toFixed(2)+' ·'+(t.q_live_n||0)+'</span>':'<span class="mut">–</span>')+'</td>'+simc(t.sim)+lv(t.live)+'</tr>'+lrow(t)});
+ document.getElementById('tr').innerHTML=h||'<tr><td class="l mut" colspan="30">no paper entries yet</td></tr>';
+ h='';j.watch.recent.forEach(function(w){var l=w.last||{};h+='<tr><td class="l">'+uk(w.created_ts)+'</td><td class="l"><a href="https://gmgn.ai/sol/token/'+w.mint+'" target="_blank">'+(w.name||w.mint.slice(0,8))+'</a></td><td>'+k(w.funder_sol,2)+' SOL</td><td>'+(w.funded_ts?k((w.created_ts-w.funded_ts)/60,0):'–')+'</td><td>'+k(w.funder_launches)+'</td><td>'+(w.bundle_pct!=null?k(w.bundle_pct,0)+'%':'–')+'</td><td>'+(l.at?l.at+' s':'–')+'</td><td>'+k(l.net,1)+'</td><td>'+k(l.mcSol,0)+'</td><td>'+k(l.big)+'</td><td>'+k(l.buyers)+'</td><td class="l">'+(w.entered||'<span class="mut">no</span>')+'</td><td class="l mut">'+(w.pre===1?(w.entered&&w.entered.indexOf('FD,')===0||w.entered==='FD'?'':'buying too weak'):(w.why||''))+'</td></tr>'});
+ document.getElementById('wt').innerHTML=h||'<tr><td class="l mut" colspan="13">none yet</td></tr>';
+}
+function load(){fetch('/api/fd?key='+encodeURIComponent(key)).then(function(r){return r.json()}).then(draw).catch(function(e){document.getElementById('hd').textContent='error: '+e})}
+load();setInterval(load,10000);
+</script></body></html>`;
+
+
+====================================================================================================
+=== FILE: scope/src/index.mjs (8,427 chars)
+====================================================================================================
+// Coin scope — a separate website (own pm2 app `scope`, own port) for one job: paste a token contract, get the full diagnosis.
+// It reads the chain through Helius with its own daily call budget, and the tracker's database read-only. It never writes anything, and it
+// shares nothing with the trading bots except the Helius key and that read-only database file.
+import "./env.mjs";
+import { createServer } from "node:http";
+import fs from "node:fs";
+import { coinReport, coinLive, coinStat } from "./coin.mjs";
+import { PAGE } from "./page.mjs";
+import { RADAR_PAGE, radarApi } from "./radarpage.mjs";
+import { LAUNCHER_PAGE, launcherApi, launcherAct, launcherSuggest, launcherManual } from "./launcherpage.mjs";
+import { FD_PAGE, fdApi } from "./fdpage.mjs"; // 0.10.0: the FD paper-book page (owner, 4 Nov 12:53 UK)
+import { FD2_PAGE } from "./fd2page.mjs"; // 0.12.0: the FD page in the old site's design (owner, 5 Nov 12:48 UK)
+const LIVE_STOP = (process.env.LAUNCH_HOME || "/root/launcher") + "/live_stop"; // the launcher's kill file for real buys (launcher live.mjs)
+const PORT = Number(process.env.SCOPE_PORT || 8791), KEY = process.env.SCOPE_KEY || process.env.WEB_KEY || "";
+if (!KEY) { console.log("[scope] no SCOPE_KEY / WEB_KEY in .env — not starting"); process.exit(process.env.SCOPE_SMOKE ? 0 : 1); }
+const srv = createServer(async (req, res) => {
+  try {
+    const u = new URL(req.url, "http://x");
+    if (u.searchParams.get("key") !== KEY) { res.writeHead(403, { "content-type": "text/plain" }); return res.end("forbidden — open the link with ?key=…"); }
+    if (u.pathname === "/coin") { /* 0.8.0: the deep one-coin check lives at /coin; the radar is the home page */ res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(PAGE); }
+    if (u.pathname === "/api/coin") { const r = await coinReport(u.searchParams.get("mint"), u.searchParams.get("force") === "1").catch((e) => ({ ok: false, error: e.message })); res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(r, (k, v) => (typeof v === "bigint" ? v.toString() : v))); }
+    if (u.pathname === "/api/live") { const r = await coinLive(u.searchParams.get("mint")).catch((e) => ({ ok: false, error: e.message })); res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(r)); }
+    if (u.pathname === "/" || u.pathname === "/radar") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(RADAR_PAGE); } // 0.7.0
+    if (u.pathname === "/api/radar") { let r; try { r = radarApi(Math.min(14, Number(u.searchParams.get("days") || 3))); } catch (e) { r = { ok: false, error: e.message }; } res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(r)); }
+    if (u.pathname.startsWith("/files/")) { // 0.10.14 (owner, 5 Nov 08:05 UK: the Codex data pack as a link, not a download through the app): files in scope/files/, same key, names only
+      const name = u.pathname.slice(7); if (!/^[A-Za-z0-9._-]+\.(zip|md|csv|json|txt)$/.test(name)) { res.writeHead(404); return res.end("no such file"); }
+      const fp = new URL("../files/" + name, import.meta.url); let st; try { st = fs.statSync(fp); } catch { res.writeHead(404); return res.end("no such file"); }
+      res.writeHead(200, { "content-type": name.endsWith(".zip") ? "application/zip" : "text/plain; charset=utf-8", "content-length": st.size, "content-disposition": `attachment; filename="${name}"`, "cache-control": "no-store" }); return fs.createReadStream(fp).pipe(res); }
+    if (u.pathname === "/fd2") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(FD2_PAGE); } // 0.12.0
+    if (u.pathname === "/api/fd/live") { // 0.12.0: STOP / RESUME real buys — the launcher re-reads its switch every 5 s; open positions still sell on their trail
+      if (req.method !== "POST") { res.writeHead(405); return res.end(); } const act = u.searchParams.get("act"); let r;
+      try { if (act === "stop") { fs.writeFileSync(LIVE_STOP, new Date().toISOString() + " stopped from /fd2\n"); r = { ok: true, stopped: true }; } else if (act === "resume") { try { fs.unlinkSync(LIVE_STOP); } catch {} r = { ok: true, stopped: false }; } else r = { ok: false, error: "act=stop|resume" }; } catch (e) { r = { ok: false, error: e.message }; }
+      res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(r)); }
+    if (u.pathname === "/fd") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(FD_PAGE); } // 0.10.0
+    if (u.pathname === "/api/fd") { let r; try { r = fdApi(Math.min(30, Number(u.searchParams.get("days") || 7))); } catch (e) { r = { ok: false, error: e.message }; } res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(r)); }
+    if (u.pathname === "/launcher") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(LAUNCHER_PAGE); } // 0.9.0
+    if (u.pathname === "/api/launcher") { let r; try { r = launcherApi(Math.min(14, Number(u.searchParams.get("days") || 3))); } catch (e) { r = { ok: false, error: e.message }; } res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(r)); }
+    if (u.pathname === "/api/launcher/suggest" || u.pathname === "/api/launcher/manual") { // 0.9.3: the Launch-now box (JSON body, picture up to 8 MB)
+      if (req.method !== "POST") { res.writeHead(405); return res.end(); }
+      const chunks = []; let size = 0; for await (const c of req) { size += c.length; if (size > 12e6) { res.writeHead(413); return res.end(); } chunks.push(c); }
+      let b = {}; try { b = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}"); } catch {}
+      let r; try { r = u.pathname.endsWith("suggest") ? await launcherSuggest(b) : launcherManual(b); } catch (e) { r = { ok: false, error: e.message }; }
+      res.writeHead(200, { "content-type": "application/json" }); return res.end(JSON.stringify(r));
+    }
+    if (u.pathname === "/api/launcher/act") { if (req.method !== "POST") { res.writeHead(405); return res.end(); } let r; try { r = launcherAct(u.searchParams.get("action"), Number(u.searchParams.get("id"))); } catch (e) { r = { ok: false, error: e.message }; } res.writeHead(200, { "content-type": "application/json" }); return res.end(JSON.stringify(r)); }
+    if (u.pathname === "/api/status") { res.writeHead(200, { "content-type": "application/json" }); return res.end(JSON.stringify({ ...coinStat, port: PORT })); }
+    res.writeHead(404, { "content-type": "text/plain" }); res.end("not found");
+  } catch (e) { try { res.writeHead(500, { "content-type": "text/plain" }); res.end(e.message); } catch {} }
+});
+srv.listen(PORT, "0.0.0.0", () => console.log(`[scope] coin scope on :${PORT}`));
+// 0.6.0: coins listed in scope/relookup.txt are looked up once after a new version starts, so each fix is checked on real coins at once
+// (the saved lookups go to the scope-data branch as usual). A done-file stops it repeating on restarts.
+if (!process.env.SCOPE_SMOKE) setTimeout(async () => { try { const fs = await import("node:fs"); const ver = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
+  const mints = fs.readFileSync(new URL("../relookup.txt", import.meta.url), "utf8").split(/\s+/).filter((x) => /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(x)); const done = "/root/tracker/data/scope_relookup_done";
+  const key = ver + ":" + mints.join(","); let prev = ""; try { prev = fs.readFileSync(done, "utf8"); } catch {} if (!mints.length || prev === key) return; fs.writeFileSync(done, key);
+  for (const m of mints) { console.log("[scope] re-lookup", m); await coinReport(m, true); for (let i = 0; i < 600; i++) { await new Promise((r) => setTimeout(r, 2000)); const r = await coinReport(m); if (!r.pending) break; } } } catch (e) { console.log("[scope] re-lookup:", e.message); } }, 20000);
+if (process.env.SCOPE_SMOKE) setTimeout(() => { console.log("[scope] smoke ok"); process.exit(0); }, Number(process.env.SCOPE_SMOKE_MS || 8000));
+
+
+====================================================================================================
+=== FILE: src/config.js (20,042 chars)
+====================================================================================================
+import "./env.js";
+const n = (k, d) => (process.env[k] !== undefined && process.env[k] !== "" ? Number(process.env[k]) : d);
+const s = (k, d) => (process.env[k] !== undefined && process.env[k] !== "" ? process.env[k] : d);
+export const CFG = {
+  PUMP_PROGRAM: "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
+  HELIUS_KEY: s("HELIUS_API_KEY", ""),
+  WS_URLS: [
+    ...(s("HELIUS_API_KEY", "") ? [`wss://mainnet.helius-rpc.com/?api-key=${s("HELIUS_API_KEY")}`] : []),
+    "wss://api.mainnet-beta.solana.com",
+  ],
+  RPC_URLS: [
+    ...(s("HELIUS_API_KEY", "") ? [`https://mainnet.helius-rpc.com/?api-key=${s("HELIUS_API_KEY")}`] : []),
+    ...s("RPC_EXTRA", "").split(",").map((x) => x.trim()).filter(Boolean), // v0.18.59: extra RPC providers (comma-separated URLs) tried after Helius
+    "https://api.mainnet-beta.solana.com",
+  ],
+  DB_PATH: s("DB_PATH", "/root/tracker/data/tracker.db"),
+  // Layer-1 gate: a launch is "prepared" if bundle >= pct AND bundle SOL >= sol
+  BUNDLE_PCT_MIN: n("BUNDLE_PCT_MIN", 40),
+  BUNDLE_SOL_MIN: n("BUNDLE_SOL_MIN", 20),
+  BUNDLE_SLOTS: n("BUNDLE_SLOTS", 0),          // buys within create_slot + N count as bundle (0 = same slot only)
+  FINALIZE_MS: n("FINALIZE_MS", 4000),         // wait before computing bundle stats
+  TRACK_MIN: n("TRACK_MIN", 125),              // keep tier-1 token trades for this many minutes (v0.19.1: 30 → 125, the books' 2-hour horizon; in-memory trades are capped per launch)
+  TOTAL_SUPPLY: 1_000_000_000,
+  TG_TIER1_ALERTS: n("TG_TIER1_ALERTS", 1),
+  TG_TIER1_SOL_MIN: n("TG_TIER1_SOL_MIN", 60),   // only ping Telegram for prepared launches with at least this much bundle SOL
+  HEARTBEAT_MIN: n("HEARTBEAT_MIN", 30),
+};
+// --- hand-off / paper trading ---
+Object.assign(CFG, {
+  HANDOFF_MIN: n("HANDOFF_MIN", 3),            // hand-offs needed to trigger paper entry
+  HANDOFF_WINDOW_MIN: n("HANDOFF_WINDOW_MIN", 10), // ...within this many minutes of launch
+  HANDOFF_SLOTS: n("HANDOFF_SLOTS", 2),        // cross-tx match: buy within N slots after sell
+  HANDOFF_TOL: n("HANDOFF_TOL", 0.15),         // token amount tolerance for cross-tx match
+  FRESH_MAX_AGE_S: n("FRESH_MAX_AGE_S", 86400),// wallet first tx younger than this = fresh
+  EXIT_OUTFLOW_PCT: n("EXIT_OUTFLOW_PCT", 20), // cluster net SOL outflow > this % of bundle SOL = exit
+  TSL_PCT: n("TSL_PCT", 40),                   // paper exit: drop from peak
+  MAX_HOLD_MIN: n("MAX_HOLD_MIN", 360),
+  RPC_DAILY_BUDGET: n("RPC_DAILY_BUDGET", 20000), // max credits/day for wallet lookups
+});
+// --- v0.3: early-inflow entry, parallel paper exits ---
+Object.assign(CFG, {
+  ENTRY_WINDOW_MIN: n("ENTRY_WINDOW_MIN", 3),   // inflow trigger only within first N minutes after launch
+  INFLOW_SOL: n("INFLOW_SOL", 10),              // buys (SOL) in the last 60s, excluding create slot
+  INFLOW_WALLETS: n("INFLOW_WALLETS", 8),       // distinct buyers in that window
+  INFLOW_WINDOW_S: n("INFLOW_WINDOW_S", 60),
+  TRACK_MIN_T0: n("TRACK_MIN_T0", 5),
+  VOL_TRACK_SOL: n("VOL_TRACK_SOL", 15),        // v0.19: an unbundled launch whose buys reach this many SOL gets its trades stored (the funded-dev books' pond)
+  VOL_TRACK_MIN: n("VOL_TRACK_MIN", 125),       // v0.19.1: … for this long — the books' 2-hour horizon plus a margin (review, 5 Nov: "retention must cover the evaluation horizon")           // unbundled tokens: keep in memory this long unless a position opens
+  FACTORY_WINDOW_MIN: n("FACTORY_WINDOW_MIN", 10), // same creator, >=2 launches within this = factory flag
+  TP_MULT: n("TP_MULT", 2),                     // take-profit variant
+  GRAD_VTOK: n("GRAD_VTOK", 285_000_000),       // virtual token reserves at/below this = curve complete (graduated)
+});
+// --- v0.3.2: alert gating, scorecards, digest ---
+Object.assign(CFG, {
+  ALERT_INFLOW_SOL: n("ALERT_INFLOW_SOL", 20),     // Telegram only if inflow >= this (or tier-1)
+  ALERT_INFLOW_WALLETS: n("ALERT_INFLOW_WALLETS", 15),
+  ALERT_REQUIRE_SOCIALS: n("ALERT_REQUIRE_SOCIALS", 1),
+  SCORECARD_MIN: s("SCORECARD_MIN", "5,15").split(",").map(Number),
+  FLAT_MC_PCT: n("FLAT_MC_PCT", 20),               // MC up less than this at +5m = flat/dead
+  NO_NEW_WALLETS_SOL_PER_BUYER: n("NO_NEW_WALLETS_SOL_PER_BUYER", 1.5), // inflow/buyers above this with few buyers = churn
+  NO_NEW_WALLETS_MAX_BUYERS: n("NO_NEW_WALLETS_MAX_BUYERS", 15),
+  DIGEST_HOUR_LOCAL: n("DIGEST_HOUR_LOCAL", 9),    // Europe/London
+});
+Object.assign(CFG, { PUMPSWAP_ENABLED: n("PUMPSWAP_ENABLED", 1) });
+Object.assign(CFG, {
+  PS_RESOLVE_SOL: n("PS_RESOLVE_SOL", 30),         // look up a pool's token only once it has traded >= this SOL in 5 min
+  PS_POOL_DAILY_BUDGET: n("PS_POOL_DAILY_BUDGET", 5000),
+  PS_RESOLVE_CONCURRENCY: n("PS_RESOLVE_CONCURRENCY", 2),
+});
+// --- v0.5: momentum (volume) strategy ---
+Object.assign(CFG, {
+  VOL5M_USD: n("VOL5M_USD", 100_000),
+  VOL5M_HOT_USD: n("VOL5M_HOT_USD", 200_000),
+  VOL1M_BURST_USD: n("VOL1M_BURST_USD", 30_000),
+  MOM_MC_CAP: n("MOM_MC_CAP", 2_000_000),
+  MOM_PAPER_MC_CAP: n("MOM_PAPER_MC_CAP", 2_000_000), // v0.15: paper-trade only below this; above → alert only (0/24 hit 2x above $500K)
+  MOM_BS_MIN: n("MOM_BS_MIN", 1.0),           // v0.15: 5m buy$/sell$ must be >= this (3% hit 2x below 1.0 vs 28% above)
+  MOM_MIN_TRADES5: n("MOM_MIN_TRADES5", 10),  // v0.15: sanity — at least this many swaps in the 5m window
+  MOM_MIN_WALLETS5: n("MOM_MIN_WALLETS5", 5), // ...from this many distinct wallets
+  MOM_MIN_AGE_S: n("MOM_MIN_AGE_S", 60),      // ...and token at least this old (when age is known)
+  PS_MAX_SWAP_SOL: n("PS_MAX_SWAP_SOL", 1000), // v0.15: drop PumpSwap swaps above this (decode artefacts on instant graduations)
+  GRAD_ALERT_BUYERS: n("GRAD_ALERT_BUYERS", 250), // v0.15: graduation strategy alerts only when distinct buyers >= this (paper-enters all)
+  CONF_ALERT_BUYERS: n("CONF_ALERT_BUYERS", 250), // v0.15: confirm alerts only with this many buyers (paper trade always)
+  CLIMB_ALERT_BUYERS: n("CLIMB_ALERT_BUYERS", 250), // v0.15: climber alerts only with this many buyers
+  MOM_MAX_AGE_D: n("MOM_MAX_AGE_D", 3650), // v0.18.11: any age — Groklet (486d old) did $100K/5m at $304K and 2.58x; the 30-day cap kept momentum out
+  MOM_COOLDOWN_MIN: n("MOM_COOLDOWN_MIN", 30),
+  MOM_MAX_HOLD_MIN: n("MOM_MAX_HOLD_MIN", 360),
+  MOM_REENTRY_MAX: n("MOM_REENTRY_MAX", 2),
+  MOM_REENTRY_QUIET_MIN: n("MOM_REENTRY_QUIET_MIN", 15),
+  MOM_SCORECARD_MIN: s("MOM_SCORECARD_MIN", "15,60").split(",").map(Number),
+  SUMMARY_HOURS: n("SUMMARY_HOURS", 4),
+  PS_RESOLVE_SOL: n("PS_RESOLVE_SOL", 100),
+});
+// --- v0.6: second wave, levels ---
+Object.assign(CFG, {
+  LEVELS_USD: s("LEVELS_USD", "69000,100000,250000,500000,1000000,2000000").split(",").map(Number),
+  LEVEL_SELL_PCT: n("LEVEL_SELL_PCT", 0.97),     // sell slice at 97% of each level
+  LEVEL_SLICE: n("LEVEL_SLICE", 0.25),           // 25% of position per level crossed (rest trails 60%)
+  WALL_WARN_PCT: n("WALL_WARN_PCT", 15),         // warn if next level within this % above entry MC
+  SW_FADE_FRAC: n("SW_FADE_FRAC", 0.25),         // first wave faded: 60s inflow < this × wave peak
+  SW_QUIET_MIN: n("SW_QUIET_MIN", 5),            // ...for at least this long
+  SW_CLUSTER_FLAT_MIN: n("SW_CLUSTER_FLAT_MIN", 5), // cluster net outflow unchanged for this long
+  SW_INFLOW_SOL: n("SW_INFLOW_SOL", 8),          // second wave: 60s inflow back over this
+  SW_INFLOW_WALLETS: n("SW_INFLOW_WALLETS", 6),  // ...from this many distinct new wallets
+  SW_WINDOW_MIN: n("SW_WINDOW_MIN", 30),         // second wave must happen within tracking window
+  MOM_REENTRY_RECLAIM: n("MOM_REENTRY_RECLAIM", 1), // re-entry must reclaim the last rejected level
+});
+// --- v0.7: burst trigger, $1M exits, cluster holdings ---
+Object.assign(CFG, {
+  BURST_TRIGGER: n("BURST_TRIGGER", 1),           // 1-min burst is an entry trigger in its own right
+  M1_EXIT_USD: n("M1_EXIT_USD", 970_000),         // "$1M all-out" sells at this MC
+  M1_HOLD_VOL5M: n("M1_HOLD_VOL5M", 200_000),     // volume-aware: hold through $1M if 5m vol >= this
+});
+// --- v0.8 ---
+Object.assign(CFG, {
+  VOLSTOP_FRAC: n("VOLSTOP_FRAC", 0.5),       // grey zone: stay in if 5m vol >= this × vol at entry
+  VOLSTOP_EXIT_USD: n("VOLSTOP_EXIT_USD", 20_000),  // 5m vol below this = out
+  VOLSTOP_STAY_USD: n("VOLSTOP_STAY_USD", 50_000),  // 5m vol above this (and ratio ok) = stay
+  VOLSTOP_SELL_RATIO: n("VOLSTOP_SELL_RATIO", 1.6), // sells/buys (USD) above this = out
+  VOLSTOP_HARD: n("VOLSTOP_HARD", 0.80),      // ...but always out at -80%
+  AFTER_CLOSE_H: n("AFTER_CLOSE_H", 24),
+  GRAD_HANDOVER: n("GRAD_HANDOVER", 1),
+});
+// --- v0.9: wallet database ---
+Object.assign(CFG, {
+  WB_EARLY_S: n("WB_EARLY_S", 180),        // record buys within first N seconds of launch
+  WB_MIN_SOL: n("WB_MIN_SOL", 0.3),
+  WB_MAX_PER_TOKEN: n("WB_MAX_PER_TOKEN", 40),
+  WB_TOKEN_MIN_MC: n("WB_TOKEN_MIN_MC", 15_000), // only score tokens that reach this MC
+  WB_MIN_BUYS: n("WB_MIN_BUYS", 5),
+  WB_MIN_AGE_S: n("WB_MIN_AGE_S", 1),        // v0.15.1: leaderboard ignores create-block (0s) buys — bundlers/snipers always "win"
+  WATCH_SEED_WALLETS: s("WATCH_SEED_WALLETS", "CZdG7s8FVWVM6Ats8XSJ2R2qRkTKsd7qAtuvHGb1YLXN,BfUE1UcptE2noHrnBYxyqcDbPrboXsA1NZTurr5jd35b,4nHZjd64nCskpL852vcpMkHbYU3ppQ42E4SyZTbBp427").split(",").map((x) => x.trim()).filter(Boolean),
+  WATCH_SEED_CREATORS: s("WATCH_SEED_CREATORS", "D8pP1hegfQrND1tpMv1pQJZYyzwnHsiFa9AVLc2Lzoxy,DR8351MpWktoeJPJnZiwTFnRoXkX7qofvKMvWM8FGuWT,9rdgxk4nTtQY6B8GXtjNsuwGQmz5RtMByFFvVpub8gSY,ACowwSv1QQzPbAD2EhjHTYm9FNgpqeUAfex6Zi9NgJNn,H9h9BCMurt5jTxCB9JhsJerVhqtuaHUVgvAFBGUQbMCs").split(",").map((x) => x.trim()).filter(Boolean),
+  PROVEN_MIN_BUYS: n("PROVEN_MIN_BUYS", 8),        // v0.17.3: raised from 4 — the volume snipers qualified at 4       // v0.15.3: "proven" wallet = this many resolved non-bundle early buys...
+  PROVEN_MIN_5X: n("PROVEN_MIN_5X", 0.5),         // ...with this share reaching 5x within 24h
+  PROVEN_WINDOW_S: n("PROVEN_WINDOW_S", 60),
+  PROVEN_MIN_SOL: n("PROVEN_MIN_SOL", 0.3),         // v0.17.3: a scored buy must be at least this; alert needs 0.2 SOL
+  PROVEN_ALERT_MIN_SOL: n("PROVEN_ALERT_MIN_SOL", 0.2),      // count proven wallets buying within this many seconds of launch
+  SWEEP_EVERY_MIN: n("SWEEP_EVERY_MIN", 5),     // v0.15.3: close over-hold paper trades at the real current price
+  SWEEP_BATCH: n("SWEEP_BATCH", 60),             // per run (1 RPC read each for curve tokens; DexScreener for graduated)
+  SWEEP_MAX_FAILS: n("SWEEP_MAX_FAILS", 3),
+  HOLDER_COUNT_DAILY_BUDGET: n("HOLDER_COUNT_DAILY_BUDGET", 600), // v0.18.113: Helius getTokenAccounts pages for the P5 data set's holder counts (coins without a ledger)
+  HOLDERS_RPC_DAILY_BUDGET: n("HOLDERS_RPC_DAILY_BUDGET", 1500), // v0.18.5: getTokenLargestAccounts at entry for coins without a ledger
+  MOM_FAST_USD: n("MOM_FAST_USD", 50_000), MOM_FAST_WIN_S: n("MOM_FAST_WIN_S", 120), // v0.18.12 "fast" tier: $50K in 2 min (same pace as $125K/5m), fires before the 5m rule on fast movers
+  MOM_TIERS: s("MOM_TIERS", "60000,80000").split(",").map(Number), // v0.18.6: silent paper variants of the momentum rule at lower 5m volume
+  FLOW_CAP: n("FLOW_CAP", 4), // v0.18.10: flow4 = flow exit with a voluntary sell at this multiple
+  FLOW_MIN_VOL: n("FLOW_MIN_VOL", 100_000), FLOW_BS_MIN: n("FLOW_BS_MIN", 1.0), // v0.18.9 flow exit: hold after 1.5x while 5m vol >= this and buy$/sell$ >= this
+  MOM_DIP_PCT: n("MOM_DIP_PCT", 0.20), MOM_DIP_WINDOW_S: n("MOM_DIP_WINDOW_S", 600), // dip-entry variant
+  MOM_RE_MAX: n("MOM_RE_MAX", 5), MOM_RE_GAP_S: n("MOM_RE_GAP_S", 60), // re-entry variant
+  MOM_CT_MC: n("MOM_CT_MC", 60_000), MOM_CT_AGE_S: n("MOM_CT_AGE_S", 360), MOM_CT_SIZE_CV: n("MOM_CT_SIZE_CV", 1.6), // v0.18.7 core-tight tag
+  FRESH_WALLET_D: n("FRESH_WALLET_D", 3), FRESH_SAMPLE: n("FRESH_SAMPLE", 25), FRESH_DAILY_BUDGET: n("FRESH_DAILY_BUDGET", 2000), // v0.18.19 fresh-wallet share at entry
+  LOWVOL_EXIT_USD: n("LOWVOL_EXIT_USD", 25000), LOWVOL_WARMUP_S: n("LOWVOL_WARMUP_S", 300), // v0.18.36: every open paper position is sold when its 5m volume < $25K (needs 5 min of complete trade data)
+  P5_MAX_MC: n("P5_MAX_MC", 2000000), P5E_MAX_MC: n("P5E_MAX_MC", 100000), P5W_MAX_MC: n("P5W_MAX_MC", 250000), P5E_MIN_WALLETS: n("P5E_MIN_WALLETS", 10), // v0.18.50 Project 5 early // v0.18.36 Project 5 market-cap cap
+  P5_VOL2M_USD: n("P5_VOL2M_USD", 100000), P5_MIN_AGE_S: n("P5_MIN_AGE_S", 60), // v0.18.35 Project 5: $100K traded inside 2 minutes, coin ≥60 s old, buys ≥ sells, no MC cap
+  MOM_CONF_S: n("MOM_CONF_S", 60), MOM_CONF_MIN: n("MOM_CONF_MIN", 1.0), MOM_CONF_LATE_S: n("MOM_CONF_LATE_S", 120), // v0.18.32 Project 4: buy MOM_CONF_S after a core trigger only if price > MOM_CONF_MIN x trigger (first tick up to MOM_CONF_LATE_S)
+  MOM_V40_USD: n("MOM_V40_USD", 40_000), MOM_V40_AGE_S: n("MOM_V40_AGE_S", 600), // v0.18.17 core_v40 tag: 1m volume >= $40K and under 10 min old at entry
+  MOM_CORE_MC: n("MOM_CORE_MC", 100_000),          // v0.18.4: "core" momentum = $100K/5m trigger, entry below this, first entry
+  PREPUMP_WINDOW_S: n("PREPUMP_WINDOW_S", 1800),  // v0.18.2: record wallets that bought in this window before a volume trigger
+  DEX_ENABLED: n("DEX_ENABLED", 0),                 // v0.18.126: OFF by default — the Raydium / Meteora / Orca stream was most of the Helius credit burn (19 Oct: 1.6–3.3M a day on the WebSocket) and no book trades those venues; DEX_ENABLED=1 restores it // v0.18: Raydium CPMM/CLMM/LaunchLab + Meteora DLMM + Orca swap feed into momentum
+  DEX_RESOLVE_SWAPS: n("DEX_RESOLVE_SWAPS", 30),    // look a pool up (1–2 credits) once it has this many swaps in 5 min
+  DEX_POOL_DAILY_BUDGET: n("DEX_POOL_DAILY_BUDGET", 6000),
+  DEX_IGNORE_MC: n("DEX_IGNORE_MC", 20_000_000),     // don't feed swaps on tokens above this MC (majors/stables; momentum caps at $2M anyway)
+  PS_MIN_POOL_SOL: n("PS_MIN_POOL_SOL", 10),        // v0.17: ignore PumpSwap swaps from pools holding less SOL than this
+  W2_CHECKS_S: s("W2_CHECKS_S", "120,180,240").split(",").map(Number), // v0.17 second-wave: ages checked
+  W2_MC_MIN: n("W2_MC_MIN", 10_000), W2_MC_MAX: n("W2_MC_MAX", 40_000),
+  W2_BUYERS_MIN: n("W2_BUYERS_MIN", 80),           // distinct buyers so far
+  W2_NEW60_MIN: n("W2_NEW60_MIN", 30),             // new distinct buyers in the last 60s
+  W2_BS_MIN: n("W2_BS_MIN", 1.0),                  // buy$/sell$ over last 60s
+  W2_BUNDLE_MAX: n("W2_BUNDLE_MAX", 60),
+  W2T_CP_MAX: n("W2T_CP_MAX", 180), W2T_MC_MIN: n("W2T_MC_MIN", 12_000), W2T_MC_MAX: n("W2T_MC_MAX", 25_000), W2T_BS_MIN: n("W2T_BS_MIN", 1.3), W2T_DEV_MIN: n("W2T_DEV_MIN", 0.001), // v0.17.4 "tight" tag on second-wave entries
+  W2_ALERT_BUYERS: n("W2_ALERT_BUYERS", 150), W2_ALERT_NEW60: n("W2_ALERT_NEW60", 50), // v0.17.1: alert only the strong ones; paper-trade all
+  REV_PEAK_MIN_AGE_S: n("REV_PEAK_MIN_AGE_S", 180),  // v0.17.1: the peak being recovered from must be at least this old
+  GR_WINDOW_S: n("GR_WINDOW_S", 900),                 // v0.17.1 graduation runner: within this many seconds of graduation
+  GR_VOL5M_USD: n("GR_VOL5M_USD", 80_000), GR_NEW2M_MIN: n("GR_NEW2M_MIN", 30), GR_BS_MIN: n("GR_BS_MIN", 1.0),
+  GREC_DRAWDOWN: n("GREC_DRAWDOWN", 0.6),             // v0.17.1 graduation recovery: >= this far below post-graduation peak
+  GREC_NEW5M_MIN: n("GREC_NEW5M_MIN", 20),
+  SLOW_MIN_AGE_S: n("SLOW_MIN_AGE_S", 600),            // v0.17.2 slow build (base breakout)
+  SLOW_DRAWDOWN: n("SLOW_DRAWDOWN", 0.5),               // fell at least this far from peak at some point
+  SLOW_SINCE_DUMP_S: n("SLOW_SINCE_DUMP_S", 600),       // the low was at least this long ago (went sideways)
+  SLOW_WINDOWS: n("SLOW_WINDOWS", 3),                   // consecutive 5-min windows with rising buyers and volume
+  SLOW_OFF_LOW: n("SLOW_OFF_LOW", 0.3),                 // price at least this far above the post-dump low
+  SLOW_NEW10M_MIN: n("SLOW_NEW10M_MIN", 30), SLOW_MC_MIN: n("SLOW_MC_MIN", 8_000),
+  COMBO_FLOOR_ARM: n("COMBO_FLOOR_ARM", 1.5),         // v0.17.1: floor stop only armed once the position has been up this much
+  REV_AGE_MIN_S: n("REV_AGE_MIN_S", 480), REV_AGE_MAX_S: n("REV_AGE_MAX_S", 3600), // v0.17 revival
+  REV_DRAWDOWN: n("REV_DRAWDOWN", 0.4),            // price at least this far below peak
+  REV_NEW5M_MIN: n("REV_NEW5M_MIN", 20),           // new buyers in last 5m
+  REV_VOL_RATIO: n("REV_VOL_RATIO", 1.0),          // vol last 5m / previous 5m
+  REV_MC_MIN: n("REV_MC_MIN", 5_000),
+  COMBO_FLOOR_MC: n("COMBO_FLOOR_MC", 20_000),     // combined exit: out if MC falls back under this after being above
+  CREATOR_GRADS_FLAG: n("CREATOR_GRADS_FLAG", 2), // v0.15.1: flag creators with this many prior graduations on alerts
+  WB_MAX_BUYS_PER_DAY: n("WB_MAX_BUYS_PER_DAY", 50),
+  WB_RETAIN_D: n("WB_RETAIN_D", 30),
+  WB_COPY_MIN_SOL: n("WB_COPY_MIN_SOL", 0.2),  // watched wallet must buy at least this to trigger a copy
+});
+// --- v0.10: confirmation strategy, burst filter, analysis features ---
+Object.assign(CFG, {
+  ALERT_REQUIRE_SOCIALS: n("ALERT_REQUIRE_SOCIALS", 0),  // log socials, don't gate alerts (data didn't support the gate)
+  CONF_MIN_S: n("CONF_MIN_S", 240),       // confirmation window after raw trigger: from
+  CONF_MAX_S: n("CONF_MAX_S", 600),       // ...to
+  CONF_MC_MULT: n("CONF_MC_MULT", 1.5),   // MC must be >= this × raw-entry MC
+  CONF_BS_RATIO: n("CONF_BS_RATIO", 1.3), // buys/sells over last 5m
+  CONF_BUYERS_GROW: n("CONF_BUYERS_GROW", 10), // new distinct buyers in last 5m
+  BURST_MIN_AGE_S: n("BURST_MIN_AGE_S", 600),
+  BURST_MIN_MC: n("BURST_MIN_MC", 60_000),
+});
+// --- v0.12: lifecycle sampler, holders, big buys ---
+Object.assign(CFG, {
+  LIFE_CHECKPOINTS: s("LIFE_CHECKPOINTS", "60,300,900,1800,3600,7200,14400,86400").split(",").map(Number),
+  LIFE_HOLDERS_FROM_S: n("LIFE_HOLDERS_FROM_S", 1800),  // snapshot top-10 holders at checkpoints >= this
+  LIFE_HOLDERS_MIN_MC: n("LIFE_HOLDERS_MIN_MC", 20_000),
+  LIFE_HOLDER_DAILY_BUDGET: n("LIFE_HOLDER_DAILY_BUDGET", 2000),
+  BIGBUY_SOL: n("BIGBUY_SOL", 5),
+  BIGBUY_BAL_DAILY_BUDGET: n("BIGBUY_BAL_DAILY_BUDGET", 2000),
+});
+// --- v0.13: climber (slow riser) ---
+Object.assign(CFG, {
+  CLIMB_STEP: n("CLIMB_STEP", 1.3),          // each checkpoint MC >= this × previous
+  CLIMB_CPS: s("CLIMB_CPS", "300,900,1800").split(",").map(Number), // stairs that must rise; entry at the last one
+  CLIMB_CPS2: s("CLIMB_CPS2", "900,1800,3600").split(",").map(Number), // second chance at 1h
+  CLIMB_MIN_MC: n("CLIMB_MIN_MC", 15_000),
+  CLIMB_MAX_BURST_USD: n("CLIMB_MAX_BURST_USD", 30_000), // must never have had a 1m burst above this (else momentum's job)
+});
+// --- v0.14: runner autopsy ---
+Object.assign(CFG, { RUNNER_MIN_MC: n("RUNNER_MIN_MC", 1_000_000) });
+// v0.18.176 (owner go 21 Oct 13:50 UK): the old off-page books are switched off — none of these kinds opens a NEW paper position (open ones still close normally; every table and
+// code path stays). "momentum" here = the non-core volume trigger (burst / re-entry / MC ≥ MOM_CORE_MC); the core trigger (book E / E2, strategy momentum + core=1) keeps running.
+// OFFPAGE_BOOKS=1 re-enables them all.
+// v0.18.185 (owner, 23 Oct 19:34 UK: "these bots are definitely not working… stop using them for now, stop wasting APIs"): every paper book stops opening positions; the launch recorder (tokens, bundles, creators) keeps running for coin scope. BOOKS_OFF=0 in .env turns the books back on.
+export const BOOKS_OFF = s("BOOKS_OFF", "1") === "1";
+export const OFF_KINDS = new Set(s("OFFPAGE_BOOKS", "0") === "1" ? [] : ["early", "wave2", "secondwave", "copy", "confirm", "climber", "revival", "gradrec", "gradrun", "slow", "momentum", "momfast", "momdip", "momre", "momconf",
+  "sn1", "sn2", "sn3", "sn5", "sn6", "sn6b", "sn7", "sn7b", "sn9", "sn10", "sn11", "sn4b", "p5e50", "p5e80", "p5w30", "p5c5", "p5c10", "mom60", "mom80", "pg", "rev"]); // v0.18.179 (owner, 21 Oct 16:16 UK): the retired books stop opening paper positions too - kept: A (p5e30, AS source), S8 (BL source), S3b/S4 (forward tests), every-graduation + GR, K. Set OFFPAGE_BOOKS=1 to turn everything back on.
+
+
+====================================================================================================
+=== FILE: src/db.js (37,858 chars)
+====================================================================================================
+import Database from "better-sqlite3";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { CFG } from "./config.js";
+mkdirSync(dirname(CFG.DB_PATH), { recursive: true });
+export const db = new Database(CFG.DB_PATH);
+db.pragma("journal_mode = WAL"); db.pragma("synchronous = NORMAL");
+db.exec(`
+CREATE TABLE IF NOT EXISTS tokens (
+  mint TEXT PRIMARY KEY, name TEXT, symbol TEXT, uri TEXT, creator TEXT, bonding_curve TEXT,
+  create_slot INTEGER, create_ts INTEGER, create_sig TEXT,
+  bundle_sol REAL DEFAULT 0, bundle_tokens REAL DEFAULT 0, bundle_pct REAL DEFAULT 0, bundle_wallets INTEGER DEFAULT 0,
+  dev_buy_sol REAL DEFAULT 0, tier INTEGER DEFAULT 0, finalized INTEGER DEFAULT 0,
+  entry_mc_usd REAL, peak_mc_usd REAL, last_mc_usd REAL, handoffs INTEGER DEFAULT 0, cluster_net_sol REAL DEFAULT 0,
+  first_seen INTEGER DEFAULT (strftime('%s','now'))
+);
+CREATE INDEX IF NOT EXISTS tokens_tier ON tokens(tier, create_ts);
+CREATE INDEX IF NOT EXISTS tokens_creator ON tokens(creator);
+CREATE TABLE IF NOT EXISTS cluster_wallets (
+  mint TEXT, wallet TEXT, role TEXT, tokens REAL DEFAULT 0, sol_in REAL DEFAULT 0, sol_out REAL DEFAULT 0,
+  first_slot INTEGER, funder TEXT, wallet_age_s INTEGER, PRIMARY KEY (mint, wallet)
+);
+CREATE TABLE IF NOT EXISTS trades (
+  mint TEXT, sig TEXT, slot INTEGER, ts INTEGER, wallet TEXT, is_buy INTEGER, sol REAL, tokens REAL, price_sol REAL
+);
+CREATE INDEX IF NOT EXISTS trades_mint ON trades(mint, slot);
+CREATE TABLE IF NOT EXISTS handoffs (
+  mint TEXT, slot INTEGER, ts INTEGER, seller TEXT, buyer TEXT, sol REAL, tokens REAL, same_tx INTEGER
+);
+CREATE TABLE IF NOT EXISTS mc_samples (mint TEXT, ts INTEGER, mc_usd REAL, price_sol REAL);
+CREATE TABLE IF NOT EXISTS creator_claims (creator TEXT, ts INTEGER, sol REAL, venue TEXT, sig TEXT, mint TEXT, ambiguous INTEGER);
+CREATE INDEX IF NOT EXISTS cc_creator ON creator_claims(creator, ts);
+CREATE TABLE IF NOT EXISTS pump_buyers (trade_id INTEGER, mint TEXT, wallet TEXT, ts INTEGER, sol REAL, mc REAL, lead_s INTEGER, venue TEXT);
+CREATE INDEX IF NOT EXISTS pb_wallet ON pump_buyers(wallet);
+CREATE TABLE IF NOT EXISTS dex_pools (pool TEXT PRIMARY KEY, venue TEXT, mint TEXT, sol_side INTEGER, m0 TEXT, m1 TEXT, dec INTEGER, supply REAL, bin_step INTEGER, ignore INTEGER DEFAULT 0, ts INTEGER);
+CREATE INDEX IF NOT EXISTS mc_mint ON mc_samples(mint, ts);
+CREATE TABLE IF NOT EXISTS paper_trades (
+  id INTEGER PRIMARY KEY, mint TEXT, name TEXT, entry_ts INTEGER, entry_mc REAL, entry_price REAL,
+  exit_ts INTEGER, exit_mc REAL, exit_price REAL, exit_reason TEXT, pnl_pct REAL, peak_mc REAL,
+  bundle_pct REAL, bundle_sol REAL, handoffs INTEGER
+);
+CREATE TABLE IF NOT EXISTS stats (k TEXT PRIMARY KEY, v REAL);
+`);
+db.exec(`
+CREATE TABLE IF NOT EXISTS wallet_buys (
+  wallet TEXT, mint TEXT, ts INTEGER, age_s INTEGER, sol REAL, entry_mc REAL, is_cluster INTEGER DEFAULT 0,
+  peak_30m REAL, peak_24h REAL, resolved INTEGER DEFAULT 0, PRIMARY KEY (wallet, mint)
+);
+CREATE INDEX IF NOT EXISTS wb_mint ON wallet_buys(mint);
+CREATE INDEX IF NOT EXISTS wb_ts ON wallet_buys(ts);
+CREATE TABLE IF NOT EXISTS token_peaks (mint TEXT PRIMARY KEY, create_ts INTEGER, peak_30m REAL DEFAULT 0, peak_24h REAL DEFAULT 0, until INTEGER);
+CREATE TABLE IF NOT EXISTS watch_wallets (wallet TEXT PRIMARY KEY, label TEXT, added_ts INTEGER, source TEXT);
+CREATE TABLE IF NOT EXISTS watch_creators (creator TEXT PRIMARY KEY, label TEXT, added_ts INTEGER);
+CREATE TABLE IF NOT EXISTS token_life (
+  mint TEXT, cp INTEGER, ts INTEGER, mc REAL, vol5m_usd REAL, buys5m INTEGER, sells5m INTEGER, buyers5m INTEGER, buyers_total INTEGER,
+  graduated INTEGER, top10_pct REAL, holders INTEGER, alive INTEGER, PRIMARY KEY (mint, cp)
+);
+CREATE INDEX IF NOT EXISTS life_cp ON token_life(cp, mc);
+CREATE TABLE IF NOT EXISTS big_buys (mint TEXT, wallet TEXT, ts INTEGER, age_s INTEGER, sol REAL, mc REAL, balance_sol REAL, venue TEXT);
+CREATE INDEX IF NOT EXISTS bb_mint ON big_buys(mint);
+`);
+// migrations (idempotent)
+for (const sql of [
+  "ALTER TABLE paper_trades ADD COLUMN x_h5 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h5f12 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h5f14 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h3l REAL", "ALTER TABLE paper_trades ADD COLUMN x_t2n30 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h3 REAL", "ALTER TABLE paper_trades ADD COLUMN h5_retro INTEGER", "ALTER TABLE paper_trades ADD COLUMN after_path TEXT", // v0.18.81
+  "ALTER TABLE paper_trades ADD COLUMN restart_span INTEGER", "ALTER TABLE paper_trades ADD COLUMN crashloop INTEGER", // v0.18.84 restart quarantine
+  "ALTER TABLE paper_trades ADD COLUMN x_h15 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h5fast REAL", // v0.18.87 sell-rule variants
+  "ALTER TABLE paper_trades ADD COLUMN first_secs TEXT", // v0.18.89 P5: feed lag at the trigger + price 1/2/5/10 s after we saw it (what a live buy would get)
+  "ALTER TABLE tokens ADD COLUMN factory INTEGER DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN graduated INTEGER DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN cluster_sol_in REAL DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN cluster_sol_out REAL DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN outside_sol_in REAL DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN outside_sol_out REAL DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN outside_buyers INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN tier INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN factory INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN inflow_sol REAL",
+  "ALTER TABLE paper_trades ADD COLUMN inflow_wallets INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN outside_share REAL",
+  "ALTER TABLE paper_trades ADD COLUMN entry_age_s INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN peak_mult REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_cluster REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tsl40 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tsl60 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tp REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_time REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_grad REAL",
+  "ALTER TABLE paper_trades ADD COLUMN closed INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN alerted INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN socials TEXT",
+  "ALTER TABLE paper_trades ADD COLUMN has_socials INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN buys INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN sells INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN mc_5m REAL",
+  "ALTER TABLE paper_trades ADD COLUMN mc_15m REAL",
+  "ALTER TABLE paper_trades ADD COLUMN buyers_5m INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN strategy TEXT DEFAULT 'early'",
+  "ALTER TABLE paper_trades ADD COLUMN vol5m_usd REAL",
+  "ALTER TABLE paper_trades ADD COLUMN vol1m_usd REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tsl80 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_half60 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_twophase REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_ladder REAL",
+  "ALTER TABLE paper_trades ADD COLUMN reentry_n INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN age_s INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN symbol TEXT",
+  "ALTER TABLE paper_trades ADD COLUMN x_levels REAL",
+  "ALTER TABLE paper_trades ADD COLUMN next_level REAL",
+  "ALTER TABLE paper_trades ADD COLUMN wave1_peak_mc REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_m1 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_m1vol REAL",
+  "ALTER TABLE paper_trades ADD COLUMN cluster_held_pct REAL",
+  "ALTER TABLE paper_trades ADD COLUMN trigger_kind TEXT",
+  "ALTER TABLE paper_trades ADD COLUMN x_volstop REAL",
+  "ALTER TABLE paper_trades ADD COLUMN vol_at_entry REAL",
+  "ALTER TABLE paper_trades ADD COLUMN after_peak_mult REAL",
+  "ALTER TABLE paper_trades ADD COLUMN after_peak_mc REAL",
+  "ALTER TABLE paper_trades ADD COLUMN handover INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN creator_prior INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN creator_best_peak REAL",
+  "ALTER TABLE paper_trades ADD COLUMN dev_buy_sol REAL",
+  "ALTER TABLE paper_trades ADD COLUMN snipers INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN hour_utc INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN parent_id INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN bs_ratio_entry REAL",
+  "ALTER TABLE paper_trades ADD COLUMN buyers_entry INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN invalid INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN buys_entry INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN q_score INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN x_combo REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tp15 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tsl25 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN tight INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN churn_entry REAL",
+  "ALTER TABLE paper_trades ADD COLUMN cluster_out_entry REAL",
+  "ALTER TABLE paper_trades ADD COLUMN venue TEXT",
+  "ALTER TABLE paper_trades ADD COLUMN path TEXT",
+  "ALTER TABLE paper_trades ADD COLUMN x_flow REAL", "ALTER TABLE paper_trades ADD COLUMN x_flow4 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t15s40 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t2s40 REAL", "ALTER TABLE paper_trades ADD COLUMN dd_pre15 REAL",
+  "ALTER TABLE creator_claims ADD COLUMN mint TEXT", "ALTER TABLE creator_claims ADD COLUMN ambiguous INTEGER", "CREATE INDEX IF NOT EXISTS cc_mint ON creator_claims(mint)",
+  "UPDATE tokens SET fee_claims=NULL, fee_claimed_sol=NULL, first_claim_ts=NULL WHERE fee_claims IS NOT NULL AND NOT EXISTS (SELECT 1 FROM creator_claims c WHERE c.mint=tokens.mint)",
+  "ALTER TABLE paper_trades ADD COLUMN core_tight INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN trace TEXT", "ALTER TABLE paper_trades ADD COLUMN gmgn_json TEXT", "ALTER TABLE paper_trades ADD COLUMN early_json TEXT", "ALTER TABLE paper_trades ADD COLUMN x_s15be REAL", "ALTER TABLE paper_trades ADD COLUMN px_suspect INTEGER", "ALTER TABLE paper_trades ADD COLUMN px_verified_mult REAL", "ALTER TABLE paper_trades ADD COLUMN px_checked INTEGER", "ALTER TABLE paper_trades ADD COLUMN after_last_mult REAL", "ALTER TABLE paper_trades ADD COLUMN after_last_mc REAL", "ALTER TABLE paper_trades ADD COLUMN after_last_ts INTEGER", "ALTER TABLE paper_trades ADD COLUMN x_h2t40 REAL", "ALTER TABLE paper_trades ADD COLUMN v2m_usd REAL", "ALTER TABLE paper_trades ADD COLUMN core_v40 INTEGER", "ALTER TABLE paper_trades ADD COLUMN x_split REAL", "ALTER TABLE paper_trades ADD COLUMN x_dead REAL", "ALTER TABLE paper_trades ADD COLUMN x_manual REAL", "ALTER TABLE paper_trades ADD COLUMN conf_ok INTEGER", "ALTER TABLE paper_trades ADD COLUMN conf_ratio REAL", "ALTER TABLE paper_trades ADD COLUMN manual_pct REAL", "ALTER TABLE paper_trades ADD COLUMN manual_ts INTEGER", "ALTER TABLE paper_trades ADD COLUMN x_p3d REAL", "ALTER TABLE paper_trades ADD COLUMN split_branch TEXT", "ALTER TABLE paper_trades ADD COLUMN dex_paid INTEGER", "ALTER TABLE paper_trades ADD COLUMN dex_paid_types TEXT", "ALTER TABLE paper_trades ADD COLUMN dex_paid_lead_s INTEGER", "ALTER TABLE paper_trades ADD COLUMN snipers_n INTEGER", "ALTER TABLE paper_trades ADD COLUMN snipers_held_pct REAL", "ALTER TABLE paper_trades ADD COLUMN fresh_share REAL", "ALTER TABLE paper_trades ADD COLUMN fresh_n INTEGER", "ALTER TABLE paper_trades ADD COLUMN proven_vol_share REAL", "ALTER TABLE paper_trades ADD COLUMN proven_wallets_5m INTEGER", "ALTER TABLE paper_trades ADD COLUMN x_flow4ff REAL", "ALTER TABLE paper_trades ADD COLUMN bs_clean_entry REAL", "ALTER TABLE paper_trades ADD COLUMN bot_share_entry REAL", // v0.18.17
+  "ALTER TABLE paper_trades ADD COLUMN top10_entry REAL", "ALTER TABLE paper_trades ADD COLUMN largest_entry REAL", "ALTER TABLE paper_trades ADD COLUMN holders_entry INTEGER", "ALTER TABLE paper_trades ADD COLUMN dev_hold_entry REAL",
+  "ALTER TABLE paper_trades ADD COLUMN fee_accrued_entry REAL", "ALTER TABLE paper_trades ADD COLUMN fee_claims_entry INTEGER", "ALTER TABLE paper_trades ADD COLUMN fee_claimed_entry REAL", "ALTER TABLE paper_trades ADD COLUMN core INTEGER", "ALTER TABLE paper_trades ADD COLUMN t_hit15_s INTEGER",
+  "ALTER TABLE tokens ADD COLUMN creator_fee_sol REAL", "ALTER TABLE tokens ADD COLUMN fee_claims INTEGER", "ALTER TABLE tokens ADD COLUMN fee_claimed_sol REAL", "ALTER TABLE tokens ADD COLUMN first_claim_ts INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN x_t15s25 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t15s60 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t2s25 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t2s60 REAL",
+  "UPDATE paper_trades SET invalid=1 WHERE COALESCE(invalid,0)=0 AND mint IN (SELECT mint FROM tokens WHERE bundle_pct BETWEEN 79.2 AND 79.4 AND bundle_sol BETWEEN 84.5 AND 85.5)",
+  "ALTER TABLE paper_trades ADD COLUMN q_wallets INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN q_per10k REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_top3 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_roundtrip INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN q_retail REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_custom REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_size_cv REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_new_pct REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_px_per10k REAL",
+  "ALTER TABLE paper_trades ADD COLUMN sells_entry INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN proven_entry INTEGER",
+  "CREATE INDEX IF NOT EXISTS pt_open ON paper_trades(closed, entry_ts)",
+  "UPDATE paper_trades SET invalid=1 WHERE strategy='momentum' AND COALESCE(invalid,0)=0 AND (peak_mult>50 OR (vol5m_usd=bs_ratio_entry AND trigger_kind LIKE 'vol5m%'))",
+  "ALTER TABLE tokens ADD COLUMN creator_funder TEXT",
+  "ALTER TABLE tokens ADD COLUMN creator_age_s INTEGER",
+  "ALTER TABLE tokens ADD COLUMN creator_funded_sol REAL",
+  "ALTER TABLE tokens ADD COLUMN has_socials INTEGER",
+  "ALTER TABLE tokens ADD COLUMN socials TEXT",
+  // v0.18.98: the website's queries filter paper_trades by strategy (and mint) — without these every page build scanned the whole table, 18 s a time, freezing the feed
+  "CREATE INDEX IF NOT EXISTS pt_strat ON paper_trades(strategy, entry_ts)",
+  "CREATE INDEX IF NOT EXISTS pt_mint ON paper_trades(mint)",
+  // v0.18.118: copycat lookups (same name / symbol launched in the last 24 h) at every trigger
+  "CREATE INDEX IF NOT EXISTS tokens_name ON tokens(name, create_ts)",
+  "CREATE INDEX IF NOT EXISTS tokens_symbol ON tokens(symbol, create_ts)",
+  "CREATE INDEX IF NOT EXISTS wb_wallet ON wallet_buys(wallet)", // v0.18.119: a wallet's record at the moment it buys (Project S)
+  "CREATE INDEX IF NOT EXISTS tokens_cts ON tokens(create_ts)", // v0.18.121: launches by time (smart-wallet harvest, heat)
+  "ALTER TABLE paper_trades ADD COLUMN x_devout REAL", // v0.18.176 creator-sold-out exit (record only): the multiple when the creator's ledger balance first hit 0 after entry (S8 / GR)
+  "ALTER TABLE trades ADD COLUMN recv_ms INTEGER", // v0.19.1: when this process received the trade's log (observation latency, for the launcher's studies)
+  "ALTER TABLE trades ADD COLUMN vsol TEXT", "ALTER TABLE trades ADD COLUMN vtok TEXT", "ALTER TABLE trades ADD COLUMN venue TEXT", // v0.19.2
+  "CREATE TABLE IF NOT EXISTS feed_gaps (ts INTEGER, event TEXT, detail TEXT)", // v0.19.2
+]) { try { db.exec(sql); } catch {} }
+export const q = {
+  insToken: db.prepare(`INSERT OR IGNORE INTO tokens (mint,name,symbol,uri,creator,bonding_curve,create_slot,create_ts,create_sig) VALUES (?,?,?,?,?,?,?,?,?)`),
+  finToken: db.prepare(`UPDATE tokens SET bundle_sol=?, bundle_tokens=?, bundle_pct=?, bundle_wallets=?, dev_buy_sol=?, tier=?, finalized=1, entry_mc_usd=?, peak_mc_usd=?, last_mc_usd=? WHERE mint=?`),
+  insCluster: db.prepare(`INSERT OR IGNORE INTO cluster_wallets (mint,wallet,role,tokens,sol_in,first_slot) VALUES (?,?,?,?,?,?)`),
+  insTrade: db.prepare(`INSERT INTO trades (mint,sig,slot,ts,wallet,is_buy,sol,tokens,price_sol,recv_ms,vsol,vtok,venue) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'curve')`), // v0.19.1: recv_ms = when this process received the log; v0.19.2: vsol/vtok = the curve's virtual reserves AFTER this trade, as the event reports them (raw lamports / raw token units)
+  insGap: db.prepare(`INSERT INTO feed_gaps (ts, event, detail) VALUES (?,?,?)`), // v0.19.2: every socket status change (open / closed / idle / error) with its time — a gap is the span between a close and the next open; nothing is backfilled
+  bump: db.prepare(`INSERT INTO stats (k,v) VALUES (?,1) ON CONFLICT(k) DO UPDATE SET v=v+1`),
+  stat: db.prepare(`SELECT v FROM stats WHERE k=?`).pluck(),
+  countSince: db.prepare(`SELECT COUNT(*) FROM tokens WHERE create_ts>=?`).pluck(),
+  countTierSince: db.prepare(`SELECT COUNT(*) FROM tokens WHERE tier>=? AND create_ts>=?`).pluck(),
+  creatorRecent: db.prepare(`SELECT COUNT(*) FROM tokens WHERE creator=? AND create_ts>=? AND mint<>?`).pluck(),
+  // v0.18.118 trigger context: the creator's earlier launches, copycats, market heat
+  walletRecord: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END) x5, SUM(CASE WHEN peak_24h>=10*entry_mc THEN 1 ELSE 0 END) x10 FROM wallet_buys WHERE wallet=? AND resolved=1 AND is_cluster=0 AND age_s>=3 AND sol>=? AND entry_mc>0`),
+  creatorLast: db.prepare(`SELECT MAX(create_ts) FROM tokens WHERE creator=? AND mint<>? AND create_ts<?`).pluck(),
+  copycats: db.prepare(`SELECT COUNT(*) n, MAX(peak_mc_usd) best, MAX(create_ts) last, SUM(graduated) grads FROM tokens WHERE name=? AND mint<>? AND create_ts>=?`),
+  copySym: db.prepare(`SELECT COUNT(*) n FROM tokens WHERE symbol=? AND mint<>? AND create_ts>=?`).pluck(),
+  heatTrig: db.prepare(`SELECT COUNT(*) FROM paper_trades WHERE strategy IN ('p5e30','p5w30','p5e50') AND entry_ts>=? AND COALESCE(invalid,0)=0`).pluck(),
+  heatWin: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN MAX(COALESCE(json_extract(trace,'$.m.60.x'),0), COALESCE(json_extract(trace,'$.m.120.x'),0), COALESCE(json_extract(trace,'$.m.180.x'),0), COALESCE(json_extract(trace,'$.m.300.x'),0), COALESCE(json_extract(trace,'$.m.600.x'),0))>=1.5 THEN 1 ELSE 0 END) hit,
+    SUM(CASE WHEN COALESCE(json_extract(trace,'$.m.600.x'),1)<=0.5 THEN 1 ELSE 0 END) dead FROM paper_trades WHERE strategy='p5e30' AND entry_ts>=? AND entry_ts<=? AND COALESCE(invalid,0)=0`),
+  setFactory: db.prepare(`UPDATE tokens SET factory=1 WHERE mint=?`),
+  setGrad: db.prepare(`UPDATE tokens SET graduated=1 WHERE mint=?`),
+  updFlows: db.prepare(`UPDATE tokens SET cluster_sol_in=?, cluster_sol_out=?, outside_sol_in=?, outside_sol_out=?, outside_buyers=?, handoffs=?, cluster_net_sol=?, peak_mc_usd=?, last_mc_usd=? WHERE mint=?`),
+  insHandoff: db.prepare(`INSERT INTO handoffs (mint,slot,ts,seller,buyer,sol,tokens,same_tx) VALUES (?,?,?,?,?,?,?,?)`),
+  updWallet: db.prepare(`UPDATE cluster_wallets SET funder=?, wallet_age_s=? WHERE mint=? AND wallet=?`),
+  insPaper: db.prepare(`INSERT INTO paper_trades (mint,name,entry_ts,entry_mc,entry_price,bundle_pct,bundle_sol,handoffs,tier,factory,inflow_sol,inflow_wallets,outside_share,entry_age_s,peak_mc,strategy,next_level,wave1_peak_mc) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`),
+  setPaperExtra: db.prepare(`UPDATE paper_trades SET cluster_held_pct=?, trigger_kind=? WHERE id=?`),
+  setFeatures: db.prepare(`UPDATE paper_trades SET creator_prior=?, creator_best_peak=?, dev_buy_sol=?, snipers=?, hour_utc=?, parent_id=?, bs_ratio_entry=?, buyers_entry=? WHERE id=?`),
+  creatorHist: db.prepare(`SELECT COUNT(*) n, MAX(peak_mc_usd) best, SUM(graduated) grads, SUM(CASE WHEN peak_mc_usd>=100000 THEN 1 ELSE 0 END) over100k FROM tokens WHERE creator=? AND mint<>? AND create_ts<?`),
+  setVolEntry: db.prepare(`UPDATE paper_trades SET vol_at_entry=? WHERE id=?`),
+  setAfterLast: db.prepare(`UPDATE paper_trades SET after_last_mult=?, after_last_mc=?, after_last_ts=? WHERE id=?`), // v0.18.39
+  setAfter: db.prepare(`UPDATE paper_trades SET after_peak_mult=?, after_peak_mc=? WHERE id=?`),
+  setHandover: db.prepare(`UPDATE paper_trades SET handover=1 WHERE id=?`),
+  setPaperSocials: db.prepare(`UPDATE paper_trades SET socials=?, has_socials=? WHERE id=?`),
+  updPaper: db.prepare(`UPDATE paper_trades SET peak_mc=?, peak_mult=?, x_cluster=?, x_tsl40=?, x_tsl60=?, x_tp=?, x_time=?, x_grad=?, exit_ts=?, exit_mc=?, exit_price=?, exit_reason=?, pnl_pct=?, closed=?, x_tsl80=?, x_half60=?, x_twophase=?, x_ladder=?, x_levels=?, x_m1=?, x_m1vol=?, x_volstop=? WHERE id=?`),
+  setPaperMeta: db.prepare(`UPDATE paper_trades SET alerted=?, socials=?, has_socials=? WHERE id=?`),
+  setPaperCard: db.prepare(`UPDATE paper_trades SET mc_5m=COALESCE(?,mc_5m), mc_15m=COALESCE(?,mc_15m), buyers_5m=COALESCE(?,buyers_5m), buys=?, sells=? WHERE id=?`),
+  setTokenSocials: db.prepare(`UPDATE tokens SET has_socials=?, socials=? WHERE mint=?`),
+  digestTop: db.prepare(`SELECT p.name, p.entry_mc, p.peak_mult, p.x_time, p.tier, p.factory, p.has_socials, p.handoffs, p.inflow_sol, p.inflow_wallets, p.entry_age_s, p.buys, p.sells, t.outside_buyers, p.mint FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint WHERE p.entry_ts>=? AND p.entry_ts<? AND COALESCE(p.invalid,0)=0 ORDER BY p.peak_mult DESC LIMIT 10`),
+  digestAgg: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, SUM(CASE WHEN has_socials=0 THEN 1 ELSE 0 END) nosoc, SUM(CASE WHEN has_socials=0 AND peak_mult>=2 THEN 1 ELSE 0 END) nosoc2x, SUM(CASE WHEN factory=1 THEN 1 ELSE 0 END) fac, SUM(CASE WHEN factory=1 AND peak_mult>=2 THEN 1 ELSE 0 END) fac2x, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_time) xt FROM paper_trades WHERE entry_ts>=? AND entry_ts<?`),
+  insMom: db.prepare(`INSERT INTO paper_trades (strategy,mint,name,symbol,entry_ts,entry_mc,entry_price,bundle_pct,bundle_sol,handoffs,tier,factory,has_socials,socials,vol5m_usd,vol1m_usd,buys,sells,age_s,reentry_n,alerted,peak_mc) VALUES ('momentum',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`),
+  setStrategy: db.prepare(`UPDATE paper_trades SET strategy=? WHERE id=?`),
+  setQuality: db.prepare(`UPDATE paper_trades SET q_score=?, q_wallets=?, q_per10k=?, q_top3=?, q_roundtrip=?, q_retail=?, q_custom=?, q_size_cv=?, q_new_pct=?, q_px_per10k=? WHERE id=?`),
+  setCombo: db.prepare(`UPDATE paper_trades SET x_combo=?, x_tp15=?, x_tsl25=?, x_t15s25=?, x_t15s60=?, x_t2s25=?, x_t2s60=? WHERE id=?`),
+  setHolders: db.prepare(`UPDATE paper_trades SET top10_entry=?, largest_entry=?, holders_entry=?, dev_hold_entry=? WHERE id=?`),
+  setFees: db.prepare(`UPDATE paper_trades SET fee_accrued_entry=?, fee_claims_entry=?, fee_claimed_entry=? WHERE id=?`),
+  setCore: db.prepare(`UPDATE paper_trades SET core=?, core_tight=? WHERE id=?`),
+  setEnrich1: db.prepare(`UPDATE paper_trades SET snipers_n=?, snipers_held_pct=?, proven_vol_share=?, proven_wallets_5m=? WHERE id=?`), // v0.18.19
+  setDexPaid: db.prepare(`UPDATE paper_trades SET dex_paid=?, dex_paid_types=?, dex_paid_lead_s=? WHERE id=?`),
+  setFresh: db.prepare(`UPDATE paper_trades SET fresh_share=?, fresh_n=? WHERE id=?`),
+  setCoreV40: db.prepare(`UPDATE paper_trades SET core_v40=? WHERE id=?`), // v0.18.17
+  setS15: db.prepare(`UPDATE paper_trades SET x_s15be=? WHERE id=?`), // v0.18.49 split exit beside P1
+  setH2: db.prepare(`UPDATE paper_trades SET x_h2t40=? WHERE id=?`), // v0.18.35 Project 5 exit
+  setV2m: db.prepare(`UPDATE paper_trades SET v2m_usd=? WHERE id=?`),
+  hasStrat: db.prepare(`SELECT 1 FROM paper_trades WHERE strategy=? AND mint=? LIMIT 1`), setGmgn: db.prepare(`UPDATE paper_trades SET gmgn_json=? WHERE id=?`), setEarly: db.prepare(`UPDATE paper_trades SET early_json=? WHERE id=?`), // v0.18.50
+  hasP5: db.prepare(`SELECT 1 FROM paper_trades WHERE strategy='mom2m' AND mint=? LIMIT 1`),
+  setConf: db.prepare(`UPDATE paper_trades SET conf_ok=?, conf_ratio=? WHERE id=?`), // v0.18.32 Project 4 decision on the core row
+  setManual: db.prepare(`UPDATE paper_trades SET x_manual=?, manual_pct=?, manual_ts=? WHERE id=?`), // v0.18.30 dashboard sell button (paper)
+  setDead: db.prepare(`UPDATE paper_trades SET x_dead=?, x_p3d=? WHERE id=?`), // v0.18.30
+  setSplit: db.prepare(`UPDATE paper_trades SET x_split=?, split_branch=? WHERE id=?`), // v0.18.22
+  setFlow4ff: db.prepare(`UPDATE paper_trades SET x_flow4ff=? WHERE id=?`),
+  setCleanFlow: db.prepare(`UPDATE paper_trades SET bs_clean_entry=?, bot_share_entry=? WHERE id=?`),
+  setHit15: db.prepare(`UPDATE paper_trades SET t_hit15_s=? WHERE id=? AND t_hit15_s IS NULL`),
+  insClaim: db.prepare(`INSERT INTO creator_claims (creator, ts, sol, venue, sig, mint, ambiguous) VALUES (?,?,?,?,?,?,?)`),
+  claimsFor: db.prepare(`SELECT COUNT(*) n, COALESCE(SUM(sol),0) sol, MIN(ts) first, MAX(ts) last, SUM(COALESCE(ambiguous,0)) amb FROM creator_claims WHERE mint=?`),
+  latestMintOf: db.prepare(`SELECT mint, create_ts, (SELECT COUNT(*) FROM tokens t2 WHERE t2.creator=t.creator AND t2.create_ts>=?) n FROM tokens t WHERE creator=? AND create_ts<=? ORDER BY create_ts DESC LIMIT 1`),
+  upTokenFees: db.prepare(`UPDATE tokens SET creator_fee_sol=?, fee_claims=?, fee_claimed_sol=?, first_claim_ts=? WHERE mint=?`),
+  mintsByCreator: db.prepare(`SELECT mint, create_ts FROM tokens WHERE creator=? AND create_ts>=?`),
+  setStops: db.prepare(`UPDATE paper_trades SET x_tp15=?, x_tsl25=?, x_t15s25=?, x_t15s60=?, x_t2s25=?, x_t2s60=? WHERE id=?`),
+  setPath: db.prepare(`UPDATE paper_trades SET path=? WHERE id=?`),
+  setFirstSecs: db.prepare(`UPDATE paper_trades SET first_secs=? WHERE id=?`), // v0.18.89
+  setH5: db.prepare(`UPDATE paper_trades SET x_h5=?, x_h5f12=?, x_h5f14=?, x_h3=?, x_h15=?, x_h5fast=? WHERE id=?`), // v0.18.163: back to 7 values - v0.18.155 added x_h3l here and two callers kept passing 7, so the update threw (silently) from 16:25 to 19:00 UK 20 Oct
+  setH3L: db.prepare(`UPDATE paper_trades SET x_h3l=?, x_t2n30=? WHERE id=?`), // v0.18.163 GR-lock and PG-hold // v0.18.81 hold-5 exits · v0.18.87 + hold-15, fast-starters-run
+  setH5Retro: db.prepare(`UPDATE paper_trades SET x_h5=?, x_h5f12=?, x_h5f14=?, x_h3=?, h5_retro=1 WHERE id=?`),
+  setAfterPath: db.prepare(`UPDATE paper_trades SET after_path=? WHERE id=?`), // v0.18.81 7–30 min marks after entry
+  setTrace: db.prepare(`UPDATE paper_trades SET trace=? WHERE id=?`), // v0.18.113 P5 data set: marks after entry
+  setExits2: db.prepare(`UPDATE paper_trades SET x_flow=?, x_t15s40=?, x_t2s40=?, dd_pre15=?, x_flow4=? WHERE id=?`),
+  setTight: db.prepare(`UPDATE paper_trades SET tight=? WHERE id=?`),
+  setVenue: db.prepare(`UPDATE paper_trades SET venue=? WHERE id=?`),
+  insPumpBuyer: db.prepare(`INSERT INTO pump_buyers (trade_id, mint, wallet, ts, sol, mc, lead_s, venue) VALUES (?,?,?,?,?,?,?,?)`),
+  prepumpTop: db.prepare(`SELECT b.wallet, COUNT(DISTINCT b.mint) n, SUM(CASE WHEN p.peak_mult>=2 THEN 1 ELSE 0 END) hit2, SUM(CASE WHEN p.peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(b.lead_s) lead, SUM(b.sol) sol
+    FROM (SELECT trade_id, mint, wallet, MIN(ts) ts, MAX(lead_s) lead_s, SUM(sol) sol FROM pump_buyers WHERE ts>=? GROUP BY trade_id, wallet) b JOIN paper_trades p ON p.id=b.trade_id AND COALESCE(p.invalid,0)=0
+    GROUP BY b.wallet HAVING n>=? ORDER BY hit2 DESC, n DESC LIMIT ?`),
+  insDexPool: db.prepare(`INSERT OR REPLACE INTO dex_pools (pool, venue, mint, sol_side, m0, m1, dec, supply, bin_step, ignore, ts) VALUES (?,?,?,?,?,?,?,?,?,?,?)`),
+  allDexPools: db.prepare(`SELECT * FROM dex_pools`),
+  setChurn: db.prepare(`UPDATE paper_trades SET churn_entry=?, cluster_out_entry=?, cluster_held_pct=COALESCE(cluster_held_pct,?), handoffs=COALESCE(handoffs,?) WHERE id=?`),
+  setEntryCounts: db.prepare(`UPDATE paper_trades SET buys_entry=?, sells_entry=?, proven_entry=? WHERE id=?`),
+  provenWallets: db.prepare(`SELECT wallet FROM wallet_buys WHERE resolved=1 AND is_cluster=0 AND age_s>=3 AND sol>=? AND entry_mc>0 AND wallet NOT IN (SELECT wallet FROM wallet_buys WHERE ts>=? GROUP BY wallet HAVING COUNT(*)>?) GROUP BY wallet HAVING COUNT(*)>=? AND SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*)>=?`),
+  setNextLevel: db.prepare(`UPDATE paper_trades SET next_level=? WHERE id=?`),
+  updMom: db.prepare(`UPDATE paper_trades SET peak_mc=?, peak_mult=?, x_tp=?, x_tsl40=?, x_tsl60=?, x_tsl80=?, x_half60=?, x_twophase=?, x_ladder=?, x_time=?, exit_ts=?, exit_mc=?, exit_price=?, exit_reason=?, pnl_pct=?, closed=?, x_levels=?, x_m1=?, x_m1vol=?, x_volstop=? WHERE id=?`),
+  tokenMeta: db.prepare(`SELECT name, symbol, creator, create_ts, bundle_pct, bundle_sol, bundle_wallets, dev_buy_sol, handoffs, tier, factory, has_socials, socials, cluster_sol_in, cluster_sol_out FROM tokens WHERE mint=?`), // v0.18.141: + bundle_wallets (book F's rule read it and always got null — F never opened a trade)
+  stratSummary: db.prepare(`SELECT strategy, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, AVG(peak_mult) peak, AVG(x_tp) xtp, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_tsl80) x80, AVG(x_half60) xh, AVG(x_twophase) x2p, AVG(x_ladder) xl, AVG(x_levels) xlv, AVG(x_m1) xm1, AVG(x_m1vol) xm1v, AVG(x_volstop) xvs, AVG(x_time) xt, AVG(x_combo) xc, AVG(x_tp15) xtp15, AVG(x_tsl25) x25, AVG(x_t15s25) s1525, AVG(x_t15s60) s1560, AVG(x_t2s25) s225, AVG(x_t2s60) s260, AVG(x_flow) xflow, AVG(x_flow4) xflow4, AVG(x_flow4ff) xflow4ff, AVG(x_split) xsplit, AVG(x_p3d) xp3d, SUM(core_v40) nv40, AVG(CASE WHEN core_v40=1 THEN x_flow4 END) xv40, AVG(x_t15s40) s1540, AVG(x_t2s40) s240, SUM(CASE WHEN peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(after_peak_mult) ap, SUM(CASE WHEN after_peak_mult>=3 THEN 1 ELSE 0 END) ap3 FROM paper_trades WHERE entry_ts>=? AND entry_ts<? AND COALESCE(invalid,0)=0 GROUP BY strategy`),
+  stratSummaryCore: db.prepare(`SELECT 'momentum-core' strategy, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, AVG(peak_mult) peak, AVG(x_tp) xtp, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_tsl80) x80, AVG(x_half60) xh, AVG(x_twophase) x2p, AVG(x_ladder) xl, AVG(x_levels) xlv, AVG(x_m1) xm1, AVG(x_m1vol) xm1v, AVG(x_volstop) xvs, AVG(x_time) xt, AVG(x_combo) xc, AVG(x_tp15) xtp15, AVG(x_tsl25) x25, AVG(x_t15s25) s1525, AVG(x_t15s60) s1560, AVG(x_t2s25) s225, AVG(x_t2s60) s260, AVG(x_flow) xflow, AVG(x_flow4) xflow4, AVG(x_flow4ff) xflow4ff, AVG(x_split) xsplit, AVG(x_p3d) xp3d, SUM(core_v40) nv40, AVG(CASE WHEN core_v40=1 THEN x_flow4 END) xv40, AVG(x_t15s40) s1540, AVG(x_t2s40) s240, SUM(CASE WHEN peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(after_peak_mult) ap, SUM(CASE WHEN after_peak_mult>=3 THEN 1 ELSE 0 END) ap3 FROM paper_trades WHERE strategy='momentum' AND core=1 AND entry_ts>=? AND entry_ts<? AND COALESCE(invalid,0)=0`),
+  stratSummaryCoreTight: db.prepare(`SELECT 'momentum-core-tight' strategy, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, AVG(peak_mult) peak, AVG(x_tp) xtp, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_tsl80) x80, AVG(x_half60) xh, AVG(x_twophase) x2p, AVG(x_ladder) xl, AVG(x_levels) xlv, AVG(x_m1) xm1, AVG(x_m1vol) xm1v, AVG(x_volstop) xvs, AVG(x_time) xt, AVG(x_combo) xc, AVG(x_tp15) xtp15, AVG(x_tsl25) x25, AVG(x_t15s25) s1525, AVG(x_t15s60) s1560, AVG(x_t2s25) s225, AVG(x_t2s60) s260, AVG(x_flow) xflow, AVG(x_flow4) xflow4, AVG(x_flow4ff) xflow4ff, AVG(x_split) xsplit, AVG(x_p3d) xp3d, SUM(core_v40) nv40, AVG(CASE WHEN core_v40=1 THEN x_flow4 END) xv40, AVG(x_t15s40) s1540, AVG(x_t2s40) s240, SUM(CASE WHEN peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(after_peak_mult) ap, SUM(CASE WHEN after_peak_mult>=3 THEN 1 ELSE 0 END) ap3 FROM paper_trades WHERE strategy='momentum' AND core_tight=1 AND entry_ts>=? AND entry_ts<? AND COALESCE(invalid,0)=0`),
+  stratSummaryTight: db.prepare(`SELECT 'wave2-tight' strategy, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, AVG(peak_mult) peak, AVG(x_tp) xtp, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_tsl80) x80, AVG(x_half60) xh, AVG(x_twophase) x2p, AVG(x_ladder) xl, AVG(x_levels) xlv, AVG(x_m1) xm1, AVG(x_m1vol) xm1v, AVG(x_volstop) xvs, AVG(x_time) xt, AVG(x_combo) xc, AVG(x_tp15) xtp15, AVG(x_tsl25) x25, AVG(x_t15s25) s1525, AVG(x_t15s60) s1560, AVG(x_t2s25) s225, AVG(x_t2s60) s260, AVG(x_flow) xflow, AVG(x_flow4) xflow4, AVG(x_flow4ff) xflow4ff, AVG(x_split) xsplit, AVG(x_p3d) xp3d, SUM(core_v40) nv40, AVG(CASE WHEN core_v40=1 THEN x_flow4 END) xv40, AVG(x_t15s40) s1540, AVG(x_t2s40) s240, SUM(CASE WHEN peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(after_peak_mult) ap, SUM(CASE WHEN after_peak_mult>=3 THEN 1 ELSE 0 END) ap3 FROM paper_trades WHERE strategy='wave2' AND tight=1 AND entry_ts>=? AND entry_ts<? AND COALESCE(invalid,0)=0`),
+  insWB: db.prepare(`INSERT OR IGNORE INTO wallet_buys (wallet,mint,ts,age_s,sol,entry_mc,is_cluster) VALUES (?,?,?,?,?,?,?)`),
+  wbCount: db.prepare(`SELECT COUNT(*) FROM wallet_buys WHERE mint=?`).pluck(),
+  upPeak: db.prepare(`INSERT INTO token_peaks (mint,create_ts,peak_30m,peak_24h,until) VALUES (?,?,?,?,?) ON CONFLICT(mint) DO UPDATE SET peak_30m=MAX(peak_30m,excluded.peak_30m), peak_24h=MAX(peak_24h,excluded.peak_24h)`),
+  resolveWB: db.prepare(`UPDATE wallet_buys SET peak_30m=(SELECT peak_30m FROM token_peaks WHERE token_peaks.mint=wallet_buys.mint), peak_24h=(SELECT peak_24h FROM token_peaks WHERE token_peaks.mint=wallet_buys.mint), resolved=1 WHERE resolved=0 AND mint IN (SELECT mint FROM token_peaks WHERE until<=?)`),
+  pruneWB: db.prepare(`DELETE FROM wallet_buys WHERE ts<?`),
+  prunePeaks: db.prepare(`DELETE FROM token_peaks WHERE until<?`),
+  leaderboard: db.prepare(`SELECT wallet, COUNT(*) n,
+      SUM(CASE WHEN peak_24h>=2*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*) r2,
+      SUM(CASE WHEN peak_24h>=3*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*) r3,
+      SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*) r5,
+      SUM(CASE WHEN peak_24h>=10*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*) r10,
+      AVG(peak_24h/entry_mc) avgpeak, AVG(entry_mc) avgmc, AVG(sol) avgsol, MAX(ts) last_ts, AVG(age_s) avgage
+    FROM wallet_buys WHERE resolved=1 AND is_cluster=0 AND age_s>=? AND entry_mc>0 AND ts>=?
+    GROUP BY wallet HAVING n>=? ORDER BY r5 DESC, r10 DESC, n DESC LIMIT ?`),
+  walletStats: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN peak_24h>=2*entry_mc THEN 1 ELSE 0 END) h2, SUM(CASE WHEN peak_24h>=3*entry_mc THEN 1 ELSE 0 END) h3, SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END) h4, SUM(CASE WHEN peak_24h>=10*entry_mc THEN 1 ELSE 0 END) h10, AVG(peak_24h/entry_mc) avgpeak, AVG(entry_mc) avgmc, MAX(ts) last_ts, SUM(resolved=0) pending FROM wallet_buys WHERE wallet=? AND is_cluster=0 AND entry_mc>0`),
+  walletRecent: db.prepare(`SELECT w.mint, t.name, w.ts, w.age_s, w.sol, w.entry_mc, w.peak_24h, w.resolved FROM wallet_buys w LEFT JOIN tokens t ON t.mint=w.mint WHERE w.wallet=? ORDER BY w.ts DESC LIMIT 8`),
+  spamWallets: db.prepare(`SELECT wallet FROM wallet_buys WHERE ts>=? GROUP BY wallet HAVING COUNT(*)>?`),
+  creatorsTop: db.prepare(`SELECT creator, COUNT(*) n, MAX(peak_mc_usd) best, AVG(peak_mc_usd) avgpeak, SUM(CASE WHEN peak_mc_usd>=100000 THEN 1 ELSE 0 END) over100k, SUM(CASE WHEN graduated=1 THEN 1 ELSE 0 END) grads, MAX(create_ts) last_ts, SUM(factory) fac, AVG(bundle_pct) avgbundle FROM tokens WHERE create_ts>=? GROUP BY creator HAVING n>=? ORDER BY grads DESC, over100k DESC, best DESC LIMIT ?`),
+  creatorTokens: db.prepare(`SELECT name, symbol, create_ts, bundle_pct, bundle_sol, peak_mc_usd, graduated, has_socials, mint FROM tokens WHERE creator=? ORDER BY create_ts DESC LIMIT 10`),
+  creatorAgg: db.prepare(`SELECT COUNT(*) n, MAX(peak_mc_usd) best, AVG(peak_mc_usd) avgpeak, SUM(CASE WHEN peak_mc_usd>=100000 THEN 1 ELSE 0 END) over100k, SUM(graduated) grads, MIN(create_ts) first_ts, MAX(create_ts) last_ts FROM tokens WHERE creator=?`),
+  addWatchCreator: db.prepare(`INSERT OR REPLACE INTO watch_creators (creator,label,added_ts) VALUES (?,?,?)`),
+  delWatchCreator: db.prepare(`DELETE FROM watch_creators WHERE creator=?`),
+  listWatchCreators: db.prepare(`SELECT creator,label FROM watch_creators ORDER BY added_ts`),
+  setCreatorFunder: db.prepare(`UPDATE tokens SET creator_funder=?, creator_age_s=?, creator_funded_sol=? WHERE mint=?`),
+  runners: db.prepare(`SELECT p.mint, p.peak_24h, p.peak_30m, p.create_ts, t.name, t.symbol, t.bundle_pct, t.bundle_sol, t.bundle_wallets, t.dev_buy_sol, t.has_socials, t.factory, t.creator, t.handoffs, t.graduated, t.cluster_sol_in, t.cluster_sol_out, t.outside_buyers FROM token_peaks p LEFT JOIN tokens t ON t.mint=p.mint WHERE p.peak_24h>=? AND p.create_ts>=? ORDER BY p.peak_24h DESC LIMIT ?`),
+  lifeFor: db.prepare(`SELECT cp, mc, vol5m_usd, buys5m, sells5m, buyers_total, alive, top10_pct FROM token_life WHERE mint=? ORDER BY cp`),
+  papersFor: db.prepare(`SELECT strategy, trigger_kind, entry_ts, entry_mc, peak_mult, x_half60, x_tsl40, x_levels, after_peak_mult FROM paper_trades WHERE mint=? ORDER BY entry_ts`),
+  insLife: db.prepare(`INSERT OR REPLACE INTO token_life (mint,cp,ts,mc,vol5m_usd,buys5m,sells5m,buyers5m,buyers_total,graduated,top10_pct,holders,alive) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`),
+  setLifeHolders: db.prepare(`UPDATE token_life SET top10_pct=?, holders=? WHERE mint=? AND cp=?`),
+  insBigBuy: db.prepare(`INSERT INTO big_buys (mint,wallet,ts,age_s,sol,mc,balance_sol,venue) VALUES (?,?,?,?,?,?,?,?)`),
+  addWatch: db.prepare(`INSERT OR REPLACE INTO watch_wallets (wallet,label,added_ts,source) VALUES (?,?,?,?)`),
+  delWatch: db.prepare(`DELETE FROM watch_wallets WHERE wallet=?`),
+  listWatch: db.prepare(`SELECT wallet,label,source FROM watch_wallets ORDER BY added_ts`),
+  openPapers: db.prepare(`SELECT COUNT(*) FROM paper_trades WHERE closed=0`).pluck(),
+  closedSince: db.prepare(`SELECT COUNT(*) c, AVG(pnl_pct) p FROM paper_trades WHERE closed=1 AND exit_ts>=?`),
+  setDevOut: db.prepare(`UPDATE paper_trades SET x_devout=? WHERE id=?`), getDevOut: db.prepare(`SELECT x_devout FROM paper_trades WHERE id=?`).pluck(), // v0.18.176 creator-sold-out exit (record only)
+};
+
+
+====================================================================================================
+=== FILE: src/dex-decoder.js (5,841 chars)
+====================================================================================================
+// v0.18: swap-event decoders for the other Solana DEXes (Raydium CPMM / CLMM / LaunchLab, Meteora DLMM, Orca Whirlpool).
+// Layouts come from the official IDLs (raydium-io/raydium-idl, MeteoraAg/dlmm-sdk, orca-so/whirlpools). All five emit Anchor
+// events as "Program data:" log lines, so one logsSubscribe per program is enough — no getTransaction credits.
+import { createHash } from "node:crypto";
+import { bs58 } from "./bs58.js";
+
+export const WSOL = "So11111111111111111111111111111111111111112";
+export const PROGRAMS = {
+  CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C: "raydium-cpmm",
+  CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK: "raydium-clmm",
+  LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj: "raydium-launchlab",
+  LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo: "meteora-dlmm",
+  whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc: "orca",
+};
+const disc = (name) => createHash("sha256").update(`event:${name}`).digest().subarray(0, 8);
+const D_SWAP = disc("SwapEvent");      // Raydium CPMM + CLMM (same name, different lengths)
+const D_TRADE = disc("TradeEvent");    // Raydium LaunchLab
+const D_DLMM = disc("Swap");           // Meteora DLMM
+const D_TRADED = disc("Traded");       // Orca Whirlpool
+
+class R {
+  constructor(b, o = 0) { this.b = b; this.o = o; }
+  u8() { return this.b[this.o++]; }
+  bool() { return this.b[this.o++] === 1; }
+  u16() { const v = this.b.readUInt16LE(this.o); this.o += 2; return v; }
+  i32() { const v = this.b.readInt32LE(this.o); this.o += 4; return v; }
+  u64() { const v = this.b.readBigUInt64LE(this.o); this.o += 8; return v; }
+  u128() { const lo = this.b.readBigUInt64LE(this.o), hi = this.b.readBigUInt64LE(this.o + 8); this.o += 16; return (hi << 64n) + lo; }
+  pk() { const v = bs58(this.b.subarray(this.o, this.o + 32)); this.o += 32; return v; }
+  left() { return this.b.length - this.o; }
+}
+
+/** Decode one "Program data:" payload emitted by `program`. Returns a venue-tagged event or null. */
+export function decodeDexEvent(program, b64) {
+  const venue = PROGRAMS[program]; if (!venue) return null;
+  let b; try { b = Buffer.from(b64, "base64"); } catch { return null; }
+  if (b.length < 8) return null;
+  const d = b.subarray(0, 8), r = new R(b, 8);
+  try {
+    if (venue === "raydium-cpmm" && d.equals(D_SWAP)) {
+      const pool = r.pk(), inBefore = r.u64(), outBefore = r.u64(), amountIn = r.u64(), amountOut = r.u64(); r.u64(); r.u64(); const baseInput = r.bool();
+      let inMint = null, outMint = null; if (r.left() >= 64) { inMint = r.pk(); outMint = r.pk(); }
+      return { venue, pool, inBefore, outBefore, amountIn, amountOut, baseInput, inMint, outMint, wallet: null };
+    }
+    if (venue === "raydium-clmm" && d.equals(D_SWAP)) {
+      const pool = r.pk(), wallet = r.pk(); r.pk(); r.pk();
+      const amount0 = r.u64(); r.u64(); const amount1 = r.u64(); r.u64(); const zeroForOne = r.bool(); const sqrtPriceX64 = r.u128();
+      return { venue, pool, wallet, amount0, amount1, zeroForOne, sqrtPriceX64 };
+    }
+    if (venue === "raydium-launchlab" && d.equals(D_TRADE)) {
+      const pool = r.pk(); r.u64(); const vBase = r.u64(), vQuote = r.u64(); r.u64(); r.u64(); const rBaseAfter = r.u64(), rQuoteAfter = r.u64();
+      const amountIn = r.u64(), amountOut = r.u64(); r.u64(); r.u64(); r.u64(); r.u64(); const dir = r.u8();
+      return { venue, pool, vBase, vQuote, rBaseAfter, rQuoteAfter, amountIn, amountOut, isBuy: dir === 0, wallet: null };
+    }
+    if (venue === "meteora-dlmm" && d.equals(D_DLMM)) {
+      const pool = r.pk(), wallet = r.pk(); r.i32(); const endBin = r.i32(); const amountIn = r.u64(), amountOut = r.u64(); const swapForY = r.bool();
+      return { venue, pool, wallet, endBin, amountIn, amountOut, swapForY };
+    }
+    if (venue === "orca" && d.equals(D_TRADED)) {
+      const pool = r.pk(), aToB = r.bool(); r.u128(); const postSqrt = r.u128(); const amountIn = r.u64(), amountOut = r.u64();
+      return { venue, pool, aToB, postSqrt, amountIn, amountOut, wallet: null };
+    }
+  } catch { return null; }
+  return null;
+}
+
+/** Walk a transaction's logs with a program stack so each "Program data:" line is attributed to the program that emitted it. */
+export function dexEventsFromLogs(logs) {
+  const out = [], stack = [];
+  for (const l of logs || []) {
+    if (l.startsWith("Program data: ")) { const p = stack[stack.length - 1]; if (p && PROGRAMS[p]) { const e = decodeDexEvent(p, l.slice(14)); if (e) out.push(e); } continue; }
+    if (!l.startsWith("Program ")) continue;
+    if (l.endsWith("]") && l.includes(" invoke [")) { stack.push(l.slice(8, l.indexOf(" invoke ["))); continue; }
+    if (l.endsWith(" success") || l.includes(" failed: ") || l.endsWith(" failed")) { stack.pop(); }
+  }
+  return out;
+}
+
+// --- pool account parsers → {mint0, mint1, dec0, dec1, extra} (null when the layout doesn't match) ---
+const pk = (b, o) => bs58(b.subarray(o, o + 32));
+export function parsePoolAccount(venue, dataB64) {
+  const b = Buffer.from(dataB64, "base64");
+  try {
+    if (venue === "raydium-cpmm") { if (b.length < 333) return null; return { mint0: pk(b, 168), mint1: pk(b, 200), dec0: b[331], dec1: b[332] }; }
+    if (venue === "raydium-clmm") { if (b.length < 235) return null; return { mint0: pk(b, 73), mint1: pk(b, 105), dec0: b[233], dec1: b[234] }; }
+    if (venue === "raydium-launchlab") { if (b.length < 269) return null; return { mint0: pk(b, 205), mint1: pk(b, 237), dec0: b[18], dec1: b[19], supply: Number(b.readBigUInt64LE(21)) }; } // base, quote
+    if (venue === "meteora-dlmm") { if (b.length < 152) return null; return { mint0: pk(b, 88), mint1: pk(b, 120), binStep: b.readUInt16LE(80) }; } // x, y — decimals not stored
+    if (venue === "orca") { if (b.length < 213) return null; return { mint0: pk(b, 101), mint1: pk(b, 181) }; } // a, b — decimals not stored
+  } catch { return null; }
+  return null;
+}
+
+
+====================================================================================================
+=== FILE: src/index.js (12,086 chars)
+====================================================================================================
+import "./env.js";
+import { rpcStat } from "./rpc.js"; // v0.18.59 (after env.js so .env is loaded first)
+import { readFileSync } from "node:fs";
+import { CFG } from "./config.js";
+import { q } from "./db.js";
+import { tg, tgAlarm } from "./telegram.js";
+import { execStats } from "./execlink.js"; // v0.18.91 watchdog: feed / executor status
+import { subscribeLogs } from "./ws.js";
+import { handleTx, counters, live, startPriceLoop, fmt } from "./launch-monitor.js";
+import { solUsdCached } from "./price.js";
+import { sigStats } from "./signals.js";
+import { startSweeper, sw } from "./sweeper.js";
+import { startCommands, reportText, memMb } from "./commands.js";
+import { en } from "./enrich.js";
+import { startWeb } from "./web.js"; // v0.18.23
+import { retroScoreP5 } from "./p5retro.js"; // v0.18.81
+import { recordBoot, flagTrades, loopAlarm, restarts24 } from "./restarts.js"; // v0.18.84 restart quarantine · v0.18.85 loop alarm
+recordBoot();
+if (process.env.SMOKE) { setTimeout(() => { console.log("[smoke] alive after", process.env.SMOKE_MS || 45000, "ms — ok"); process.exit(0); }, Number(process.env.SMOKE_MS || 45000)); } // v0.18.85 pre-deploy check: boot, run the timers, exit 0 if still alive
+else setTimeout(() => { try { loopAlarm(); } catch {} }, 15000);
+import "./backup.js";
+import { pxg, ppx } from "./pumpswap.js"; // v0.18.43
+import "./pxcheck.js"; // v0.18.43 peak cross-check
+import { gmgnStatus } from "./gmgn.js";
+import { volLogStatus } from "./vollog.js"; // v0.18.62 // v0.18.52 GMGN scanner // v0.18.40 daily database backup
+import { startPumpSwap, ps, quoteStats } from "./pumpswap.js";
+import { startDex, dx } from "./dex.js";
+import { fe } from "./fees.js";
+import { ho } from "./holders.js";
+import "./momtiers.js";
+import "./momre.js";
+import { momStats, strategySummary } from "./momentum.js";
+import { wbStats, leaderboardText, creatorsText } from "./wallets.js";
+import { cpStats } from "./copytrade.js";
+import { snStats } from "./snipe.js";
+import "./revive.js"; // v0.18.155 book R (revival, paper)
+import "./keep.js"; // v0.18.157 book K (keeps going, paper)
+import "./pregrad.js"; // v0.18.163 book PG (pre-graduation, paper) // v0.18.119 Project S paper snipers
+import { timed, slowJobs } from "./slow.js"; // v0.18.120: which synchronous job stalled the loop
+import { smartStats } from "./smartwallets.js"; // v0.18.121 GMGN smart wallets (Project S book S6)
+import { lcStats } from "./lifecycle.js";
+import { runnersText } from "./runners.js";
+
+const v = JSON.parse(readFileSync(new URL("../package.json", import.meta.url))).version;
+console.log(`bundler-tracker v${v} starting (node ${process.version}) helius=${CFG.HELIUS_KEY ? "yes" : "no"}`);
+startPriceLoop();
+let wsStatus = "init";
+const sub = subscribeLogs(handleTx, (s) => { wsStatus = s; console.log("[ws]", s); try { q.insGap.run(Math.floor(Date.now() / 1000), s.split(/[ (]/)[0], s.slice(0, 160)); } catch {} }); // v0.19.2: feed status to the feed_gaps table
+if (CFG.PUMPSWAP_ENABLED) startPumpSwap((s) => console.log("[pumpswap]", s));
+if (CFG.DEX_ENABLED) setTimeout(() => startDex((s) => console.log("[dex]", s)), 5000); // v0.18.1: stagger the third socket so Helius doesn't 429 it
+
+await tg(`🟢 <b>Tracker online</b> v${v}\nFirehose: ${CFG.HELIUS_KEY ? "Helius" : "public RPC"} · prepared gate ≥${CFG.BUNDLE_PCT_MIN}% &amp; ≥${CFG.BUNDLE_SOL_MIN} SOL\nPaper entry: ≥${CFG.INFLOW_SOL} SOL / ≥${CFG.INFLOW_WALLETS} wallets in ${CFG.INFLOW_WINDOW_S}s, first ${CFG.ENTRY_WINDOW_MIN} min`);
+
+startSweeper();
+startWeb();
+setTimeout(() => { try { retroScoreP5(); } catch (e) { console.error("[p5 retro]", e.message); } }, 3000); // v0.18.81: one-off scoring of earlier P5 trades
+startCommands({ status: () => { const g = sigStats(), mo = momStats(); return `${gmgnStatus()}\n${volLogStatus()}\nprices: ${ppx.swapped} from other pools re-priced to the main pool · PumpSwap pools from db ${ps.fromDb} / via DexScreener ${ps.dsResolved} · RPC errors ${rpcStat.errors}${rpcStat.lastErr ? ` (last: ${rpcStat.lastErr})` : ""} · bad held ${pxg.held} / confirmed ${pxg.confirmed} of ${pxg.checked}\n` + `v${v} · ws ${wsStatus} · live ${live.size} · early open ${g.open} · volume alerts ${mo.alerts} open ${mo.open} · ps txs ${ps.txs} · dex txs ${dx.txs}/${dx.emitted} fed · fee claims ${fe.claims} · holder ledgers ${ho.ledgers} rpc ${ho.rpc} · hand-offs ${g.handoffs} · swept ${sw.closed}/${sw.noprice}np · rpc ${g.rpc} · dexpaid ${en.dexPaid}/${en.dexCalls} fresh ${en.freshCalls} · mem ${memMb()} MB · SOL $${solUsdCached().toFixed(0)}`; }, summary: () => strategySummary(24) });
+// strategy summary every SUMMARY_HOURS
+setInterval(() => tg(strategySummary(CFG.SUMMARY_HOURS)), CFG.SUMMARY_HOURS * 3600_000);
+let lastC = { ...counters };
+setInterval(() => {
+  const d = Object.fromEntries(Object.keys(counters).map((k) => [k, counters[k] - lastC[k]]));
+  lastC = { ...counters };
+  const g = sigStats();
+  console.log(`[1m] txs=${d.txs} creates=${d.creates} trades=${d.trades} tier1=${d.tier1} live=${live.size} open=${g.open} handoffs=${g.handoffs} rpc=${g.rpc} sol=$${solUsdCached().toFixed(2)} ws=${wsStatus}`);
+  if (CFG.DEX_ENABLED) console.log(`[dex 1m] txs=${dx.txs} dupes=${dx.dupes} events=${dx.events} fed=${dx.emitted} pools=${dx.resolved} unknown=${dx.unknownPool} ignored=${dx.ignored} big=${dx.big} fail=${dx.lookupFail} credits=${dx.poolBudget} ws↻=${dx.reconnects} ${JSON.stringify(dx.byVenue)}`);
+  if (CFG.PUMPSWAP_ENABLED) console.log(`[ps 1m] txs=${ps.txs} data=${ps.data} buys=${ps.buys} sells=${ps.sells} pools=${ps.pools} resolved=${ps.resolved} unknown=${ps.unknownPool} fail=${ps.lookupFail} fromDb=${ps.fromDb} viaDexScreener=${ps.dsResolved} rpcErr=${ps.rpcErr}${ps.lastErr ? ` (${ps.lastErr})` : ""} poolcredits=${ps.poolBudget} oversize=${ps.oversize} quotes=${quoteStats.lookups}/${quoteStats.fails}f/${quoteStats.skipped}skip ws↻=${ps.reconnects}`);
+}, 60_000);
+
+const hb = async () => {
+  const since = Math.floor(Date.now() / 1000) - CFG.HEARTBEAT_MIN * 60;
+  const n = q.countSince.get(since), n1 = q.countTierSince.get(1, since);
+  const g = sigStats(), c = q.closedSince.get(since);
+  const mo = momStats();
+  const upS = Math.floor(process.uptime()), upTxt = upS >= 3600 ? `${Math.floor(upS / 3600)}h${Math.floor((upS % 3600) / 60)}m` : `${Math.floor(upS / 60)}m`;
+  await tg(`💓 <b>${CFG.HEARTBEAT_MIN}m</b> · up ${upTxt} · ${restarts24()} restarts/24h · launches ${n} · prepared ${n1} · hand-offs ${g.handoffs} · early open ${g.open} · volume alerts ${mo.alerts} / open ${mo.open} · copy open ${cpStats().open} · snipers ${(() => { const z = snStats(); return `${Object.values(z.taken).reduce((a, b) => a + b, 0)} taken / ${z.open} open`; })()} · smart wallets ${smartStats().smart} · wallets scored ${wbStats().recorded} · life samples ${lcStats().samples} · rpc ${g.rpc} · ws↻ ${sub.stats().reconnects} · SOL $${solUsdCached().toFixed(0)}`);
+};
+setInterval(hb, CFG.HEARTBEAT_MIN * 60_000);
+// v0.18.91 watchdog (quiet mode means nobody reads the heartbeat): alarms — at most once per 30 min each — when the website stops answering,
+// when the price feed has delivered nothing for 3 minutes, or when the executor has been unreachable for 5 minutes while the tracker runs.
+{ const last = {}, fails = { web: 0 }; const once = (k, text) => { const n = Date.now(); if (n - (last[k] || 0) < 1800_000) return; last[k] = n; tgAlarm(text).catch(() => {}); };
+  setInterval(async () => {
+    if (process.env.SMOKE) return;
+    try { const key = process.env.WEB_KEY; if (key) { const r = await fetch(`http://127.0.0.1:${process.env.WEB_PORT || 8787}/api/snapshot?key=${encodeURIComponent(key)}`, { signal: AbortSignal.timeout(15000) }); fails.web = r.ok ? 0 : fails.web + 1; } } catch { fails.web++; }
+    if (fails.web >= 2) once("web", `🚨 <b>Website not answering</b> — ${fails.web} checks in a row failed on port ${process.env.WEB_PORT || 8787}. The bot itself is running; <code>pm2 restart tracker</code> usually fixes it.`);
+    const feedAge = execStats.lastFeed ? Date.now() - execStats.lastFeed : null; if (feedAge != null && feedAge > 180_000 && process.uptime() > 300) once("feed", `🚨 <b>Price feed silent</b> for ${Math.round(feedAge / 60000)} min — no trades arriving from Helius. Live positions (if any) are being closed by the executor; check <code>pm2 logs tracker</code>.`);
+    if (!execStats.connected && process.uptime() > 300) { fails.exec = (fails.exec || 0) + 1; if (fails.exec >= 3) once("exec", `⚠️ <b>Executor unreachable</b> for 5+ min — the tracker is running but the buy/sell bot is not connected. <code>pm2 ls</code> / <code>pm2 logs executor</code>.`); } else fails.exec = 0;
+  }, 120_000); }
+setTimeout(() => { try { const n = flagTrades(0); if (n) console.log(`[restarts] flagged ${n} trades`); } catch (e) { console.error("[restarts]", e.message); } }, 8000); // v0.18.84
+setInterval(() => { try { timed("flagTrades", () => flagTrades(Math.floor(Date.now() / 1000) - 7200)); } catch {} }, 5 * 60_000);
+// v0.18.97 stall monitor: the executor saw triggers whose trade was 18–80 s old an hour after boot (18 Oct). Log every event-loop stall over 2 s with
+// the heap size, and the heap every 10 min, so tomorrow's log says whether it is GC on a growing heap, a slow synchronous job, or the feed itself.
+{ let last = Date.now(); const mb = () => Math.round(process.memoryUsage().heapUsed / 1048576);
+  setInterval(() => { const now = Date.now(), late = now - last - 1000; last = now; if (late > 2000) console.error(`[stall] ${new Date().toISOString().slice(11, 19)}Z event loop blocked ${(late / 1000).toFixed(1)} s · heap ${mb()} MB · rss ${Math.round(process.memoryUsage().rss / 1048576)} MB · slow jobs: ${slowJobs()}`); }, 1000).unref();
+  setInterval(() => console.log(`[heap] ${mb()} MB used · rss ${Math.round(process.memoryUsage().rss / 1048576)} MB · up ${Math.round(process.uptime() / 60)} min`), 600_000).unref(); }
+process.on("unhandledRejection", (e) => console.error("[unhandled]", e));
+// v0.18.83: a throw inside a timer must not take the whole bot down (v0.18.81 crash-looped every 30 s on one). Logged loudly; state lives in SQLite anyway.
+process.on("uncaughtException", (e) => { console.error("[uncaught]", e); try { tgAlarm(`⚠️ uncaught error (bot kept running): <code>${String(e?.message || e).slice(0, 200)}</code>`); } catch {} });
+
+// --- daily digest at DIGEST_HOUR_LOCAL (Europe/London) ---
+import { fmt as _fmt, esc as _esc } from "./launch-monitor.js";
+let lastDigestDay = null;
+async function digest() {
+  const now = new Date();
+  const lon = new Date(now.toLocaleString("en-US", { timeZone: "Europe/London" }));
+  if (lon.getHours() !== CFG.DIGEST_HOUR_LOCAL || lastDigestDay === lon.toDateString()) return;
+  lastDigestDay = lon.toDateString();
+  const to = Math.floor(Date.now() / 1000), from = to - 86400;
+  const a = q.digestAgg.get(from, to), rows = q.digestTop.all(from, to);
+  if (!a.n) return tg("📊 <b>Daily digest</b> — no paper trades in the last 24h");
+  const pc = (x, n) => (n ? `${((x / n) * 100).toFixed(0)}%` : "—");
+  const m = (v) => (v == null ? "—" : `${((v - 1) * 100).toFixed(0)}%`);
+  let txt = `📊 <b>Daily digest</b> — last 24h\n` +
+    `Paper trades ${a.n} · reached 2x: ${a.hit2x} (${pc(a.hit2x, a.n)})\n` +
+    `No socials: ${a.nosoc} trades, ${a.nosoc2x} hit 2x (${pc(a.nosoc2x, a.nosoc)}) · factory: ${a.fac} trades, ${a.fac2x} hit 2x (${pc(a.fac2x, a.fac)})\n` +
+    `Avg by exit: TSL40 ${m(a.x40)} · TSL60 ${m(a.x60)} · hold ${m(a.xt)}\n\n<b>Top 10 by peak</b>\n`;
+  for (const r of rows) {
+    const soc = r.has_socials === 1 ? "🐦" : r.has_socials === 0 ? "❌" : "?";
+    txt += `${(r.peak_mult || 1).toFixed(1)}x <b>${_esc((r.name || "").slice(0, 16))}</b> $${_fmt(r.entry_mc || 0)} @${r.entry_age_s}s · ${soc} t${r.tier}${r.factory ? "F" : ""} · ${(r.inflow_sol || 0).toFixed(0)} SOL/${r.inflow_wallets}w · b/s ${r.buys ?? "?"}/${r.sells ?? "?"} · buyers ${r.outside_buyers ?? "?"} · ho ${r.handoffs}\n`;
+  }
+  await tg(txt);
+  await tg(leaderboardText(7, 5));
+  await tg(creatorsText(7, 5));
+  await tg(runnersText(24, 8));
+}
+setInterval(digest, 60_000);
