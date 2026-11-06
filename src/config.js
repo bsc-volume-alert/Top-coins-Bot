@@ -205,7 +205,7 @@ Object.assign(CFG, {
 });
 // --- v0.12: lifecycle sampler, holders, big buys ---
 Object.assign(CFG, {
-  LIFE_CHECKPOINTS: s("LIFE_CHECKPOINTS", "60,300,900,1800,3600,7200,14400,86400").split(",").map(Number),
+  LIFE_CHECKPOINTS: s("LIFE_CHECKPOINTS", "15,30,60,90,120,300,900,1800,3600,7200,14400,86400").split(",").map(Number), // v0.19.4 (obs-3, Codex 6 Nov): compact early metrics for EVERY launch at 15/30/90/120 s too, independent of the trade-retention threshold
   LIFE_HOLDERS_FROM_S: n("LIFE_HOLDERS_FROM_S", 1800),  // snapshot top-10 holders at checkpoints >= this
   LIFE_HOLDERS_MIN_MC: n("LIFE_HOLDERS_MIN_MC", 20_000),
   LIFE_HOLDER_DAILY_BUDGET: n("LIFE_HOLDER_DAILY_BUDGET", 2000),
