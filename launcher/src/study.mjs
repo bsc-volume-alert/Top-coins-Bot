@@ -31,17 +31,18 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 // ---------- Helius ----------
 function spend(c) { if (studyStat.creditsDay !== today()) { studyStat.creditsDay = today(); studyStat.creditsToday = 0; } studyStat.credits += c; studyStat.creditsToday += c; }
-export async function rpc(method, params, credits = 1) {
+export async function rpc(method, params, credits = 1, deadline = 0) { // 0.9.32: deadline (ms epoch) makes the per-launch cap a hard wall — each attempt gets min(30 s, what is left), and no retry starts past it
   for (let i = 0; i < 5; i++) {
     studyStat.calls++;
     try {
-      const r = await fetch(CFG.RPC_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(30000) });
+      const left = deadline ? deadline - Date.now() : 30000; if (deadline && left <= 0) { const e = new Error("deadline"); e.incomplete = true; throw e; }
+      const r = await fetch(CFG.RPC_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(Math.max(1000, Math.min(30000, left))) });
       if (r.status === 429) { await nap(1500 * (i + 1)); continue; }
       const j = await r.json();
       if (j.error) { if (/rate|429|too many/i.test(j.error.message || "")) { await nap(1500 * (i + 1)); continue; } const e = new Error(`${method}: ${j.error.code} ${(j.error.message || "").slice(0, 120)}`); e.rpc = j.error; throw e; }
       spend(typeof credits === "function" ? credits(j.result) : credits);
       return j.result;
-    } catch (e) { if (e.rpc || i === 4) throw e; await nap(1000 * (i + 1)); }
+    } catch (e) { if (e.rpc || e.incomplete || i === 4) throw e; if (deadline && Date.now() + 1000 * (i + 1) > deadline) { const d = new Error("deadline"); d.incomplete = true; throw d; } await nap(1000 * (i + 1)); }
   }
   throw new Error(`${method}: rate limited`);
 }
@@ -64,7 +65,7 @@ async function history(addr, tEnd, mint, maxTx = MAX_TX, deadline = 0) {
     try {
       let token = null;
       for (let page = 0; page < maxTx / 100; page++) { over();
-        const res = await rpc("getTransactionsForAddress", [addr, { transactionDetails: "full", sortOrder: "asc", limit: 100, maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed", filters: { status: "succeeded", blockTime: { lte: tEnd } }, ...(token ? { paginationToken: token } : {}) }], fullCost); // 0.6.3: failed transactions (bot spam on hot coins) are not fetched
+        const res = await rpc("getTransactionsForAddress", [addr, { transactionDetails: "full", sortOrder: "asc", limit: 100, maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed", filters: { status: "succeeded", blockTime: { lte: tEnd } }, ...(token ? { paginationToken: token } : {}) }], fullCost, deadline); // 0.6.3: failed transactions (bot spam on hot coins) are not fetched
         studyStat.gtfa = true;
         const rows = res?.data || []; let past = false;
         for (const t of rows) { if (t.blockTime && t.blockTime > tEnd) { past = true; break; } out.push(compact(t, mint)); }
@@ -76,12 +77,12 @@ async function history(addr, tEnd, mint, maxTx = MAX_TX, deadline = 0) {
   // fallback: newest → oldest signatures, keep those inside the window, then fetch each transaction
   let before = null, sigs = [];
   for (let page = 0; page < 40; page++) { over();
-    const s = await rpc("getSignaturesForAddress", [addr, { limit: 1000, commitment: "confirmed", ...(before ? { before } : {}) }]);
+    const s = await rpc("getSignaturesForAddress", [addr, { limit: 1000, commitment: "confirmed", ...(before ? { before } : {}) }], 1, deadline);
     if (!s?.length) break; sigs.push(...s); before = s[s.length - 1].signature; if (s.length < 1000) break;
   }
   sigs = sigs.reverse(); const t0 = sigs[0]?.blockTime || 0; sigs = sigs.filter((s) => !s.blockTime || s.blockTime <= Math.max(tEnd, t0)).slice(0, maxTx);
   for (let i = 0; i < sigs.length; i += 8) { over();
-    const got = await Promise.all(sigs.slice(i, i + 8).map((s) => rpc("getTransaction", [s.signature, { maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed" }]).catch(() => null)));
+    const got = await Promise.all(sigs.slice(i, i + 8).map((s) => rpc("getTransaction", [s.signature, { maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed" }], 1, deadline).catch(() => null)));
     got.forEach((t, k) => t && out.push(compact({ ...t, transactionIndex: null, _sig: sigs[i + k].signature }, mint)));
   }
   return out;
