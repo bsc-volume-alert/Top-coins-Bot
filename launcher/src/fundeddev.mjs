@@ -140,6 +140,8 @@ export function initFD(db) {
 
 /** every 15 s: every tracker launch of the last SCAN_S seconds not yet seen → funder lookup → pre-filter. */
 let scanning = false, scanSince = 0, scanSeq = 0;
+const traceQueue = []; let traceActive = 0; // 0.9.39: persistent bounded trace pool, independent of the scan passes
+function pumpTraces() { while (traceActive < Math.max(1, FD_TRACE_WORKERS) && traceQueue.length) { const { t, traceOne } = traceQueue.shift(); traceActive++; traceOne(t).catch(() => {}).finally(() => { traceActive--; fdStat.traceQueue = traceQueue.length; pumpTraces(); }); } fdStat.traceQueue = traceQueue.length; fdStat.traceActive = traceActive; }
 const STALL_MS = n("LAUNCH_FD_STALL_MS", 300000); // 0.9.22: a scan or check pass that has not finished in 5 min is abandoned (its flag reset, the stall counted) — 11:06 UK: both passes hung on awaits that never settled, no error, 20+ min
 export async function fdScan(db, tdb) {
   if (scanning && Date.now() - scanSince > STALL_MS) { fdStat.stalls = (fdStat.stalls || 0) + 1; fdStat.lastErr = `scan stalled ${Math.round((Date.now() - scanSince) / 60000)} min — pass abandoned`; scanning = false; }
@@ -196,7 +198,7 @@ export async function fdScan(db, tdb) {
           db.prepare("UPDATE fd_watch SET lookup_status=?, funder_found=?, tool_sig=?, high_count=?, service_funded=?, grp=?, trace_ts=? WHERE mint=?").run(lookup, found, tool, high, svc, grp, now(), t.mint); }
     } catch (e) { fdStat.errors++; fdStat.lastErr = ("trace " + t.mint.slice(0, 6) + ": " + e.message).slice(0, 160); try { db.prepare("UPDATE fd_watch SET lookup_status=?, grp=?, why=?, trace_ts=? WHERE mint=?").run(e.incomplete ? "failed:deadline" : "failed", "lookup-failed", ("trace failed: " + e.message).slice(0, 100), now(), t.mint); } catch {} }
       finally { tracingNow.delete(t.mint); } };
-    { const queue = [...pending]; const worker = async () => { while (queue.length) { const t = queue.shift(); await traceOne(t); } }; await Promise.all(Array.from({ length: Math.max(1, FD_TRACE_WORKERS) }, worker)); }
+    for (const t of pending) traceQueue.push({ t, traceOne }); pumpTraces(); // 0.9.39: the scan pass does NOT wait for the traces — a persistent pool drains the queue across passes (0.9.38 awaited them inside the pass, so new launches were not recorded while traces ran: scanned stuck at 359 for 5 min at 21:07–21:12 UK)
     fdStat.lastScan = new Date().toISOString();
   } catch (e) { fdStat.errors++; fdStat.lastErr = "scan: " + e.message.slice(0, 160); }
   finally { if (scanSeq === mySeq) scanning = false; } // an abandoned pass ending later must not clear a newer pass
