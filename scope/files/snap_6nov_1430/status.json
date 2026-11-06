@@ -1,0 +1,388 @@
+{
+ "ver": "0.9.26",
+ "mode": "paper",
+ "started": "2026-11-06T14:15:10.781Z",
+ "posts": 0,
+ "ignored": 0,
+ "launches": 0,
+ "live": {
+  "enabled": false,
+  "book": null,
+  "stake": 0,
+  "buys": 0,
+  "buyFails": 0,
+  "sells": 0,
+  "sellFails": 0,
+  "skipped": 0,
+  "open": 0,
+  "writtenOff": 0,
+  "balanceSol": null,
+  "lastErr": "",
+  "lastSig": "",
+  "polls": 0,
+  "expStart": 1793974510
+ },
+ "shadowOk": 0,
+ "shadowFail": 0,
+ "uploadsFailed": 0,
+ "sells": 0,
+ "errors": 0,
+ "lastErr": "",
+ "selfTest": {
+  "at": "2026-11-06T14:15:14.301Z",
+  "global": {
+   "feeBps": 95,
+   "creatorFeeBps": 5,
+   "initVSol": 30,
+   "initVTok": 1073000000
+  },
+  "payer": "launch wallet",
+  "quotedTokens": 3529605.192446,
+  "pctSupply": 0.353,
+  "classicBytes": 1253,
+  "classic": {
+   "ok": true,
+   "err": null,
+   "units": 201662,
+   "ms": 30,
+   "simTokens": 3520918.711316,
+   "logs": [
+    "Program log: Instruction: CreateV2",
+    "Program log: MetadataPointerInstruction::Initialize",
+    "Program log: Instruction: InitializeMint2",
+    "Program log: Instruction: GetAccountDataSize",
+    "Program log: Instruction: InitializeImmutableOwner",
+    "Program log: Instruction: InitializeAccount3",
+    "Program log: TokenMetadataInstruction: Initialize",
+    "Program log: TokenMetadataInstruction: UpdateAuthority",
+    "Program log: Instruction: MintTo",
+    "Program log: Instruction: SetAuthority",
+    "Program log: Instruction: GetAccountDataSize",
+    "Program log: Instruction: InitializeImmutableOwner"
+   ]
+  },
+  "v3Bytes": 1258,
+  "v3": {
+   "ok": true,
+   "err": null,
+   "units": 195330,
+   "ms": 27,
+   "simTokens": 3520918.711316,
+   "logs": [
+    "Program log: Instruction: CreateV2",
+    "Program log: MetadataPointerInstruction::Initialize",
+    "Program log: Instruction: InitializeMint2",
+    "Program log: Instruction: GetAccountDataSize",
+    "Program log: Instruction: InitializeImmutableOwner",
+    "Program log: Instruction: InitializeAccount3",
+    "Program log: TokenMetadataInstruction: Initialize",
+    "Program log: TokenMetadataInstruction: UpdateAuthority",
+    "Program log: Instruction: MintTo",
+    "Program log: Instruction: SetAuthority",
+    "Program log: Instruction: GetAccountDataSize",
+    "Program log: Instruction: InitializeImmutableOwner"
+   ]
+  },
+  "ai": {
+   "name": "Goosebumps",
+   "ticker": "GOOSEBUMPS",
+   "why": "Recognisable Goosebumps brand from both cover pictures; the post's joke rides on it.",
+   "score": 5,
+   "by": "ai",
+   "ms": 2218
+  },
+  "twitterRest": {
+   "http": 200,
+   "ok": true,
+   "tweets": 1,
+   "msg": "success"
+  },
+  "upload": {
+   "ok": true,
+   "ms": 743,
+   "uri": "https://ipfs.io/ipfs/bafkreic7pdfcfcelv3p4kvlrkgxat3qmarvql7adozdf4mw6nawok4dgw4"
+  }
+ },
+ "exports": 8,
+ "lastPush": "ok 2026-11-06T14:21:31.391Z",
+ "inboxPublicKey": "MCowBQYDK2VuAyEAITMoqjDL063IDsN1URqLLED0kKKyIHnNO0XpumYL8xY=",
+ "census": 216,
+ "at": 1793974940,
+ "wallet": "AGEniepzBFf2Jesgv7XzqibjndgTRRTE9QDdSojrpYMj",
+ "balanceSol": 0.2769,
+ "liveToday": 0,
+ "cap": "none",
+ "minBalanceSol": 0.15,
+ "tpFraction": 0.5,
+ "stakeSol": 0.1,
+ "deadMin": 10,
+ "quietMin": 30,
+ "tpX": 3,
+ "lut": {
+  "address": null,
+  "addresses": 0,
+  "created": null,
+  "extended": 0,
+  "lastErr": ""
+ },
+ "copies": {
+  "scans": 0,
+  "found": 0,
+  "picks": 0,
+  "scored": 0,
+  "errors": 0,
+  "lastErr": "",
+  "lastRaw": null,
+  "gmgn": {
+   "calls": 329,
+   "errors": 1,
+   "limited": 0,
+   "lastErr": "/v1/market/rank: BAD_REQUEST invalid order_by: get history_high but must be one of default, swaps, marketcap, history_highest_market_cap, liquidity, volume, hol",
+   "hi": 2
+  }
+ },
+ "peaks": {
+  "runs": 1,
+  "coins": 30,
+  "ok": 29,
+  "errors": 0,
+  "lastErr": "",
+  "lastRun": null,
+  "running": true,
+  "infoKeys": "address,symbol,name,decimals,logo,banner,biggest_pool_address,open_timestamp,migrated_timestamp,holder_count,circulating_supply,total_supply,max_supply,liquidity,creation_timestamp,standard,trade_fee,total_fee,og,image_dup_count,visiting_count,launchpad,launchpad_status,launchpad_progress,launchpad_platform,migrated_pool,migration_market_cap,migration_market_cap_quote,ath_price,locked_ratio,price,pool,dev,link,stat,wallet_tags_stat,fee_distribution"
+ },
+ "study": {
+  "runs": 1,
+  "studied": 0,
+  "errors": 0,
+  "lastErr": "",
+  "lastRun": "2026-11-06T14:15:56.312Z",
+  "running": false,
+  "credits": 856,
+  "creditsDay": "2026-11-06",
+  "creditsToday": 856,
+  "calls": 158,
+  "gtfa": true,
+  "probe": "{\"keys\":[\"transaction\",\"meta\",\"version\",\"slot\",\"transactionIndex\",\"blockTime\"],\"ix\":94,\"ev\":\"create+trade\",\"inner\":3,\"logs\":111}",
+  "current": "",
+  "probeDone": true
+ },
+ "vol": {
+  "polls": 0,
+  "rows": 0,
+  "entries": 0,
+  "scored": 7,
+  "errors": 0,
+  "lastErr": "",
+  "lastPoll": null,
+  "maxVolSeen": null
+ },
+ "mark": {
+  "passes": 8,
+  "marked": 256,
+  "sold": 9,
+  "calls": 82,
+  "errors": 1,
+  "lastErr": "pDmJ9f The operation was aborted due to timeout",
+  "lastPass": "2026-11-06T14:21:48.671Z"
+ },
+ "volBackfill": {
+  "coins": 0,
+  "done": 0,
+  "entries": 0,
+  "errors": 0,
+  "lastErr": "",
+  "finished": false
+ },
+ "rf": {
+  "searches": 0,
+  "found": 0,
+  "checks": 0,
+  "entries": 0,
+  "errors": 0,
+  "lastErr": "",
+  "credits": 0,
+  "creditsDay": "2026-11-06",
+  "lastCheck": null
+ },
+ "manualStudy": {
+  "queued": 0,
+  "done": 0,
+  "lastErr": "",
+  "last": null
+ },
+ "operators": {
+  "runs": 1,
+  "traced": 6,
+  "outs": 13,
+  "errors": 2,
+  "lastErr": "UNIQUE constraint failed: operators.anchor",
+  "lastRun": null,
+  "running": false,
+  "calls": 20,
+  "cex": 1,
+  "unknown404": 0,
+  "operators": 0,
+  "sample": "{\"funder\":\"3jCCSUpDS5Zj71jdvRDhZEXVVTphDVALhtnRbap9bXYf\",\"funderName\":null,\"funderType\":null,\"mint\":\"So11111111111111111111111111111111111111111\",\"symbol\":\"SOL\",\"amount\":0.100701,\"amountRaw\":\"100701000\",\"decimals\":9,\"signature\":\"5UCqCcSVNRe1M9mLy68gw6BPnpX9Zj3HzueK2j8eezGGd4QHUUsezhGMmVybN3aW5AJXJSic13agCxoHLv7eTpRc\",\"timestamp\":1793973750,\"date\":\"2026-11-06T14:02:30.000Z\",\"slot\":466135882,\"explor"
+ },
+ "creators": {
+  "runs": 1,
+  "creators": 17,
+  "traced": 59,
+  "errors": 0,
+  "lastErr": "",
+  "funders": 6,
+  "queued": 17,
+  "running": false,
+  "lastRun": "2026-11-06T14:18:20.935Z"
+ },
+ "fd": {
+  "scanned": 154,
+  "traced": 42,
+  "pre": 4,
+  "checks": 20,
+  "entries": 0,
+  "errors": 0,
+  "lastErr": "check stalled 5 min — pass abandoned",
+  "credits": 984,
+  "creditsDay": "2026-11-06",
+  "lastScan": "2026-11-06T14:21:48.916Z",
+  "lastCheck": "2026-11-06T14:21:50.410Z",
+  "open": 7,
+  "stalls": 1
+ },
+ "snipers2": {
+  "runs": 0,
+  "wallets": 0,
+  "lastRun": null,
+  "lastErr": ""
+ },
+ "quotes": {
+  "buys": 0,
+  "sells": 0,
+  "samples": 0,
+  "polls": 0,
+  "pollExits": 0,
+  "paused": 0,
+  "errors": 0,
+  "lastErr": "",
+  "lastMs": 0,
+  "pauseUntil": 0,
+  "swaps": 0
+ },
+ "chain": {
+  "entries": 0,
+  "skipped": 0,
+  "entryErrs": 0,
+  "landFails": 0,
+  "unresolved": 0,
+  "updates": 997,
+  "exits": 9,
+  "subs": 28,
+  "resubs": 0,
+  "drops": 28,
+  "backstops": 229,
+  "errors": 0,
+  "lastErr": "",
+  "mv": "fill-2"
+ },
+ "farm": {
+  "builds": 1,
+  "wallets": 11255,
+  "dumps": 111,
+  "lastBuild": "2026-11-06T14:16:45.049Z",
+  "lastErr": "",
+  "bfWallets": 0,
+  "bfDay": "",
+  "bfErr": "",
+  "bfQueue": 0
+ },
+ "scope": {
+  "probes": 2,
+  "fails": 0,
+  "consecutive": 0,
+  "reloads": 0,
+  "lastReload": null,
+  "lastErr": ""
+ },
+ "registry": {
+  "runs": 1,
+  "lastRun": "2026-11-06T14:18:50.528Z",
+  "lastErr": "",
+  "pumpfun": {
+   "ok": 0,
+   "fail": 2,
+   "rows": 0,
+   "pages": 0,
+   "lastErr": "pump.fun 403"
+  },
+  "gmgn": {
+   "ok": 2,
+   "fail": 1,
+   "rows": 200,
+   "lastErr": "/v1/market/rank: BAD_REQUEST invalid order_by: get history_high but must be one of default, swaps, marketcap, history_hi"
+  },
+  "registered": 1424,
+  "lastNew": 6
+ },
+ "meas": {
+  "ledger": "ledger-2",
+  "fill": "fill-2",
+  "tracker_obs": "obs-3 (tracker 0.19.4: early checkpoints 15/30/90/120 s for every launch)"
+ },
+ "sweep": {
+  "coins": 216,
+  "done": 58,
+  "errors": 2,
+  "lastErr": "EkNTep The operation was aborted due to timeout",
+  "running": true,
+  "finished": false
+ },
+ "paused": false,
+ "pausedAt": null,
+ "lastSellAll": null,
+ "openCoins": 0,
+ "accounts": [],
+ "twitter": {
+  "keySet": true,
+  "connected": false,
+  "since": "2026-11-06T14:18:18.631Z",
+  "events": 13,
+  "pings": 11,
+  "tweets": 0,
+  "reconnects": 2,
+  "lastClose": "1011 keepalive ping timeout at 2026-11-06T14:21:04.283Z",
+  "lastErr": "",
+  "lookups": 0,
+  "lookupErr": 0,
+  "lastLookupErr": "",
+  "lastEventAt": "2026-11-06T14:21:04.282Z"
+ },
+ "ai": true,
+ "aiStat": {
+  "calls": 1,
+  "ok": 1,
+  "errors": 0,
+  "lastErr": "",
+  "lastMs": 2217
+ },
+ "meta": {
+  "uploads": 1,
+  "errors": 0,
+  "lastErr": "",
+  "lastMs": 743,
+  "via": "pinata"
+ },
+ "rpc": {
+  "calls": 407,
+  "errors": 0,
+  "sends": 0,
+  "senderErrors": 0,
+  "lastErr": "",
+  "subs": 24
+ },
+ "trackerDb": true,
+ "lastSweep": null,
+ "lastFeeCollect": "2026-10-31T18:10:29.885Z confirmed 0.0360 SOL",
+ "phantom": "ARNZSdpFx5PAZBNWK7UJ1pR8P9cK7jNmgX9YwY3rAZXz"
+}

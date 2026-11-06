@@ -1,0 +1,57 @@
+0:44:32Z updating 52a0ad4c34238d04b3aecd900d820b40d14b3b52 -> 33077d3a01f10ed5edfca21a1c268c3edf0bce1a
+up to date in 914ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] scope changed — installing and checking
+up to date in 783ms
+[deploy] scope reloaded
+[deploy] 2026-11-06T11:02:55Z updating 33077d3a01f10ed5edfca21a1c268c3edf0bce1a -> 4a411b29040a23fb4ddb5cb510b675839e06fd07
+up to date in 916ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] scope changed — installing and checking
+up to date in 848ms
+[deploy] scope reloaded
+[deploy] launcher changed — installing and checking
+up to date in 1s
+[deploy] launcher reloaded
+[deploy] 2026-11-06T11:26:59Z updating 4a411b29040a23fb4ddb5cb510b675839e06fd07 -> 466eda3294965aa529a50d8db6fc4099615ddb45
+up to date in 745ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] launcher changed — installing and checking
+up to date in 933ms
+[deploy] launcher reloaded
+[deploy] 2026-11-06T13:41:19Z updating 466eda3294965aa529a50d8db6fc4099615ddb45 -> 0f42ebad1cb5920172a8b3811b3092101622223c
+up to date in 2s
+[deploy] done: launcher 0.9.23 / tracker 0.19.4: independent runner registry with measured coverage; early checkpoints for every launch
+[deploy] launcher changed — installing and checking
+up to date in 785ms
+[deploy] launcher reloaded
+[deploy] 2026-11-06T13:46:25Z updating 0f42ebad1cb5920172a8b3811b3092101622223c -> f22c71acbeab6a9fe675ed09005832b40a0dd5e2
+up to date in 922ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] launcher changed — installing and checking
+up to date in 886ms
+[deploy] launcher reloaded
+[deploy] 2026-11-06T13:51:37Z updating f22c71acbeab6a9fe675ed09005832b40a0dd5e2 -> 9491afae5c303b23d6b789a77c35347ee724858a
+up to date in 567ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] scope changed — installing and checking
+up to date in 623ms
+[deploy] scope reloaded
+[deploy] 2026-11-06T14:07:25Z updating 9491afae5c303b23d6b789a77c35347ee724858a -> a8ff69079e8d464b76fe0b9713fa779c01232637
+up to date in 971ms
+[deploy] done: tracker 0.19.5 / launcher 0.9.25: exact early checkpoints; registry audit fixes; GMGN as a second external source
+[deploy] launcher changed — installing and checking
+up to date in 665ms
+[deploy] launcher reloaded
+[deploy] 2026-11-06T14:15:00Z updating a8ff69079e8d464b76fe0b9713fa779c01232637 -> 401154d44076684a4c4317b978a2609933d5c685
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] launcher changed — installing and checking
+up to date in 890ms
+[deploy] launcher reloaded
+[deploy] 2026-11-06T14:21:46Z updating 401154d44076684a4c4317b978a2609933d5c685 -> ffb316433811927a0a46244620608555e1aaa905
+up to date in 603ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] scope changed — installing and checking
+up to date in 548ms
+[deploy] scope reloaded
