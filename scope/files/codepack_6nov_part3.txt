@@ -1,0 +1,1182 @@
+# PART 3 of 3 of the code review pack (paste all three, in order, then ask the question)
+
+
+====================================================================================================
+=== FILE: launcher/src/rpc.mjs (7,942 chars)
+====================================================================================================
+// RPC plumbing (copied from executor/src/rpc.mjs, launcher 0.1.0): Helius connection, blockhash cache, build / simulate / send (Helius Sender first, plain RPC as fallback), confirmation, fill readback.
+import { Connection, VersionedTransaction, TransactionMessage, PublicKey } from "@solana/web3.js";
+import { CFG } from "./config.mjs";
+
+export const conn = new Connection(CFG.RPC_URL, { commitment: "confirmed", disableRetryOnRateLimit: true });
+export const rpcStats = { calls: 0, errors: 0, sends: 0, senderErrors: 0, lastErr: "" };
+
+let bh = { blockhash: null, lastValidBlockHeight: 0, t: 0 }, bhBusy = false;
+export async function blockhash(maxAgeMs = 1500) {
+  if (bh.blockhash && Date.now() - bh.t < maxAgeMs) return bh;
+  if (bhBusy) { await new Promise((r) => setTimeout(r, 50)); return bh.blockhash ? bh : blockhash(maxAgeMs); }
+  bhBusy = true; try { rpcStats.calls++; const r = await conn.getLatestBlockhash("confirmed"); bh = { ...r, t: Date.now() }; } catch (e) { rpcStats.errors++; rpcStats.lastErr = e.message; } finally { bhBusy = false; }
+  if (!bh.blockhash) throw new Error("no blockhash: " + rpcStats.lastErr); return bh;
+}
+export async function getAccounts(pubkeys, commitment = "processed") {
+  rpcStats.calls++; try { return await conn.getMultipleAccountsInfo(pubkeys.map((p) => (p instanceof PublicKey ? p : new PublicKey(p))), { commitment }); } catch (e) { rpcStats.errors++; rpcStats.lastErr = e.message; throw e; }
+}
+/** v0.4.12 local stops: push notifications for an account (the bonding curve, or a pool's reserve accounts) at 'processed' commitment - the executor sees the price move within a slot. */
+export function onAccount(pubkey, cb) { rpcStats.subs = (rpcStats.subs || 0) + 1; return conn.onAccountChange(pubkey instanceof PublicKey ? pubkey : new PublicKey(pubkey), (info, ctx) => { try { cb(info.data, ctx?.slot); } catch (e) { rpcStats.lastErr = "sub: " + e.message; } }, "processed"); }
+export async function offAccount(id) { try { await conn.removeAccountChangeListener(id); rpcStats.subs = Math.max(0, (rpcStats.subs || 1) - 1); } catch {} }
+export async function getBalance(pubkey) { rpcStats.calls++; return conn.getBalance(pubkey, "confirmed"); }
+export async function buildTx(payer, ixs, signer = null, tables = []) {
+  const { blockhash: b, lastValidBlockHeight } = await blockhash();
+  const msg = new TransactionMessage({ payerKey: payer, recentBlockhash: b, instructions: ixs }).compileToV0Message(tables); // launcher 0.1.15: lookup tables shrink the launch transaction
+  const tx = new VersionedTransaction(msg); tx.lastValidBlockHeight = lastValidBlockHeight; if (signer) tx.sign(Array.isArray(signer) ? signer : [signer]); return tx;
+}
+/** Simulate (no signature needed). Returns { ok, err, logs, units, ms }. */
+/** Simulate; `watch` = accounts whose post-simulation state we want back (e.g. our token account, to read the real fill the chain would give). */
+export async function simulate(tx, watch = []) {
+  const t0 = Date.now(); rpcStats.calls++;
+  try {
+    const cfg = { sigVerify: false, replaceRecentBlockhash: true, commitment: "processed" }; if (watch.length) cfg.accounts = { encoding: "base64", addresses: watch.map((k) => k.toBase58()) };
+    const r = await conn.simulateTransaction(tx, cfg);
+    const post = (r.value.accounts || []).map((a) => (a && a.data ? Buffer.from(a.data[0], "base64") : null));
+    return { ok: !r.value.err, err: r.value.err ? JSON.stringify(r.value.err) : null, logs: r.value.logs || [], units: r.value.unitsConsumed ?? null, ms: Date.now() - t0, post };
+  } catch (e) { rpcStats.errors++; rpcStats.lastErr = e.message; return { ok: false, err: "rpc: " + e.message, logs: [], units: null, ms: Date.now() - t0, post: [] }; }
+}
+/** Send a signed transaction through Helius Sender (every landing route at once); falls back to the normal RPC. Returns { sig, via, ms }. */
+export async function send(tx) {
+  const raw = Buffer.from(tx.serialize()).toString("base64"), t0 = Date.now(); rpcStats.sends++;
+  try {
+    const r = await fetch(CFG.SENDER_URL, { method: "POST", headers: { "content-type": "application/json" }, signal: AbortSignal.timeout(4000),
+      body: JSON.stringify({ id: String(Date.now()), jsonrpc: "2.0", method: "sendTransaction", params: [raw, { encoding: "base64", skipPreflight: true, maxRetries: 0 }] }) });
+    const j = await r.json(); if (j.result) return { sig: j.result, via: "sender", ms: Date.now() - t0 };
+    throw new Error(j.error?.message || `sender http ${r.status}`);
+  } catch (e) {
+    rpcStats.senderErrors++; rpcStats.lastErr = "sender: " + e.message;
+    const sig = await conn.sendRawTransaction(tx.serialize(), { skipPreflight: true, maxRetries: 0 }); return { sig, via: "rpc", ms: Date.now() - t0, senderErr: e.message };
+  }
+}
+/** Send, then keep re-sending the SAME signed transaction every 2.5 s until it is confirmed / failed or `ms` passes. Re-sending the identical
+ *  transaction can never execute twice, so this is the only retry a BUY gets (a second, different buy could land as well → bought twice). */
+export async function sendUntilConfirmed(tx, ms = 18000) {
+  const first = await send(tx); const sig = first.sig, t0 = Date.now(); let resends = 0;
+  while (Date.now() - t0 < ms) {
+    const c = await waitConfirm(sig, 2500); if (c.status !== "timeout") return { ...c, sig, via: first.via, resends, ms: Date.now() - t0 };
+    try { await send(tx); resends++; } catch {}
+  }
+  return { status: "timeout", slot: null, err: null, sig, via: first.via, resends, ms: Date.now() - t0 };
+}
+/** Poll until the signature is confirmed or failed, or `ms` passes. Returns { status: 'confirmed'|'failed'|'timeout', slot, err }. */
+export async function waitConfirm(sig, ms = 20000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    rpcStats.calls++;
+    try { const r = await conn.getSignatureStatuses([sig]); const s = r.value[0];
+      if (s) { if (s.err) return { status: "failed", slot: s.slot, err: JSON.stringify(s.err) }; if (s.confirmationStatus === "confirmed" || s.confirmationStatus === "finalized") return { status: "confirmed", slot: s.slot, err: null }; } }
+    catch (e) { rpcStats.errors++; rpcStats.lastErr = e.message; }
+    await new Promise((r) => setTimeout(r, 200)); // v0.4.11: notice the landing sooner (was 400 ms)
+  }
+  return { status: "timeout", slot: null, err: null };
+}
+export async function blockHeight() { rpcStats.calls++; return conn.getBlockHeight("confirmed"); }
+export async function signatureStatus(sig) { rpcStats.calls++; const r = await conn.getSignatureStatuses([sig]); const s = r.value[0]; return s ? { status: s.err ? "failed" : (s.confirmationStatus === "confirmed" || s.confirmationStatus === "finalized") ? "confirmed" : "processed", slot: s.slot, err: s.err ? JSON.stringify(s.err) : null } : { status: "unknown" }; }
+/** What actually happened: SOL change for the payer (lamports, fee included) and token change for the mint. Retries a few times — the node can lag the confirmation by a moment. */
+export async function readFill(sig, payer, mint, tries = 4) {
+  let tx = null; for (let i = 0; i < tries && !tx?.meta; i++) { if (i) await new Promise((r) => setTimeout(r, 600)); rpcStats.calls++; tx = await conn.getTransaction(sig, { maxSupportedTransactionVersion: 1, commitment: "confirmed" }).catch(() => null); }
+  if (!tx?.meta) return null;
+  const keys = tx.transaction.message.staticAccountKeys.map((k) => k.toBase58()), i = keys.indexOf(payer.toBase58());
+  const solDelta = i >= 0 ? tx.meta.postBalances[i] - tx.meta.preBalances[i] : null;
+  const tok = (arr) => (arr || []).filter((b) => b.mint === mint.toBase58() && b.owner === payer.toBase58()).reduce((a, b) => a + Number(b.uiTokenAmount.amount), 0);
+  return { solDelta, tokenDelta: tok(tx.meta.postTokenBalances) - tok(tx.meta.preTokenBalances), fee: tx.meta.fee, slot: tx.slot, blockTime: tx.blockTime ?? null, err: tx.meta.err ? JSON.stringify(tx.meta.err) : null };
+}
+
+
+====================================================================================================
+=== FILE: launcher/src/index.mjs (52,167 chars)
+====================================================================================================
+// launcher 0.1.0 (owner, 24 Oct 2026 20:08–20:15 UK): "get the tweet, make the coin, put 0.05 SOL in … if no one buys within 10 minutes, sell it".
+// Every post of the accounts in the owner's TwitterAPI.io Stream (originals, replies, quotes, reposts) → a name and ticker (rules, or AI when a key is set)
+// → picture + metadata on IPFS → ONE transaction that creates the coin on pump.fun and makes our buy (nobody can buy before us) → watched; sold back when
+// nobody else buys within 10 minutes, or when the coin goes quiet. Every post and every launch is recorded, with the copycat coins the tracker saw.
+// Modes: paper (record only) | shadow (default: build + simulate every launch, sign nothing) | live (owner sets LAUNCH_MODE=live in /root/launcher/.env).
+// Own pm2 app, own wallet, own database; reads the tracker's database read-only. SOL only ever leaves to the owner's Phantom (config.mjs PHANTOM).
+import { mkdirSync, writeFileSync, readFileSync, readdirSync, unlinkSync, existsSync } from "node:fs";
+import { execFile } from "node:child_process";
+import Database from "better-sqlite3";
+import { Keypair, PublicKey } from "@solana/web3.js";
+import { CFG, PHANTOM, HOME, lam, sol } from "./config.mjs";
+import { startStream, context, twStat, snowMs } from "./stream.mjs";
+import { ruleName, aiName, aiStat } from "./namer.mjs";
+import { coinImage } from "./image.mjs";
+import { uploadMeta, metaStat } from "./meta.mjs";
+import { GLOBAL, TOKEN_2022, decodeGlobal, decodeCurve, freshCurve, quoteBuy, quoteSell, priceOf, curveOf, ata, creatorVaultOf, ixCreateV2, ixBuy, ixSell, ixBuyV3, ixSellV3, ixCollectCreatorFee, ixBudget, ixTransfer } from "./pump.mjs";
+import { conn, rpcStats, getAccounts, getBalance, buildTx, simulate, sendUntilConfirmed, readFill } from "./rpc.mjs";
+import { ensureKeypair, simPayer } from "./wallet.mjs";
+import { inboxPublic, inboxApply } from "./inbox.mjs";
+import { ensureLut, luts, lutStat, wantedFor } from "./lut.mjs";
+import { initCopies, scheduleCopies, copyTick, copyStatus } from "./copies.mjs";
+import { initPeaks, runPeaks, peakStat } from "./copypeaks.mjs";
+import { initStudy, runStudy, studyStat, studyAddress, manualStat, loadCensus } from "./study.mjs";
+import { initVol, volPoll, volScore, volStat, volBackfill, bfStat, volFillExitTime, volMark, markStat, volQuotePoll } from "./volpaper.mjs";
+import { initRF, rfFind, rfCheck, rfStat } from "./runnerfollow.mjs";
+import { initFD, fdScan, fdCheck, fdStat, fdSniperStats, snStat } from "./fundeddev.mjs";
+import { initLive, livePoll, liveStat } from "./live.mjs"; // 0.8.17
+import { initFarm, buildFarm, farmStat } from "./farm.mjs"; // 0.9.9
+import { initChainFill, chainBackstop, cfStat } from "./chainfill.mjs"; // 0.9.0
+import { qStat } from "./quote.mjs";
+import { runSweep, sweepStat } from "./exitsweep.mjs"; // 0.8.1: exit sweep over the census winners (owner, 4 Nov 10:48 UK) // 0.8.0: the funded-dev paper book (owner, 4 Nov 10:04 UK)
+import { initOperators, runOperators, opStat, creatorCensus, ctStat } from "./operators.mjs";
+
+const VER = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
+let lastStudyExport = { n: -1, t: 0 };
+// 0.8.12: say WHY the process dies — the 0.8.11 restarts left nothing in the error log
+process.on("uncaughtException", (e) => { console.error("[launcher] uncaughtException", e?.stack || e); process.exit(1); });
+process.on("unhandledRejection", (e) => { console.error("[launcher] unhandledRejection", e?.stack || e); });
+setInterval(() => { const m = process.memoryUsage(); if (m.rss > 230 * 1024 * 1024) console.error(`[launcher] memory rss=${(m.rss / 1048576).toFixed(0)}M heap=${(m.heapUsed / 1048576).toFixed(0)}M ext=${(m.external / 1048576).toFixed(0)}M`); }, 30000);
+const now = () => Math.floor(Date.now() / 1000);
+mkdirSync(HOME, { recursive: true }); mkdirSync(CFG.REQ_DIR, { recursive: true }); mkdirSync(CFG.OUT_DIR, { recursive: true });
+const st = { ver: VER, mode: CFG.MODE, started: new Date().toISOString(), posts: 0, ignored: 0, launches: 0, live: 0, shadowOk: 0, shadowFail: 0, uploadsFailed: 0, sells: 0, errors: 0, lastErr: "", selfTest: null, exports: 0, lastPush: "" };
+
+// ---------- database ----------
+const db = new Database(CFG.DB_PATH); db.pragma("journal_mode = WAL"); db.pragma("busy_timeout = 3000"); db.pragma("cache_size = -32000"); // 0.9.10: page cache capped at 32 MB (rss reached 471 MB with a 30–95 MB heap on 5 Nov)
+setInterval(() => { try { db.pragma("wal_checkpoint(TRUNCATE)"); } catch {} }, 600000); // 0.9.10: fold the write-ahead log back every 10 min
+db.exec(`
+CREATE TABLE IF NOT EXISTS posts (id TEXT PRIMARY KEY, user TEXT, kind TEXT, text TEXT, parent_id TEXT, parent_user TEXT, parent_text TEXT, created_ms INTEGER, recv_ms INTEGER, ctx_ms INTEGER, raw TEXT);
+CREATE TABLE IF NOT EXISTS launches (id INTEGER PRIMARY KEY AUTOINCREMENT, post_id TEXT, user TEXT, kind TEXT, mode TEXT, status TEXT, reason TEXT,
+  name TEXT, ticker TEXT, name_by TEXT, why TEXT, score REAL, rule_name TEXT, rule_ticker TEXT, ai_name TEXT, ai_ticker TEXT, same_name_7d INTEGER, same_ticker_7d INTEGER,
+  mint TEXT, uri TEXT, sig TEXT, sim_err TEXT, sim_units INTEGER, upload_ms INTEGER,
+  t_post_ms INTEGER, t_recv_ms INTEGER, t_named_ms INTEGER, t_sent_ms INTEGER, t_landed_ms INTEGER,
+  stake_sol REAL, cost_sol REAL, tokens TEXT, entry_price REAL, net_lamports TEXT,
+  others INTEGER DEFAULT 0, first_other_s INTEGER, last_change_ts INTEGER, peak_x REAL, last_x REAL, sell_tries INTEGER DEFAULT 0,
+  sell_sig TEXT, sell_sol REAL, sell_reason TEXT, sold_ts INTEGER, pnl_sol REAL,
+  copies_30m INTEGER, copy_first_s INTEGER, copy_best_peak_usd REAL, copy_grads INTEGER, copies_checked_ts INTEGER, copies_final INTEGER DEFAULT 0,
+  relaunch_of INTEGER, created_ts INTEGER, buy_ix TEXT, tp_done INTEGER DEFAULT 0, tp_sol REAL, image_url TEXT, buys_10m INTEGER, src_link TEXT);
+CREATE INDEX IF NOT EXISTS launches_status ON launches(status);
+CREATE INDEX IF NOT EXISTS launches_created ON launches(created_ts);
+CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT);`);
+for (const c of ["buy_ix TEXT", "tp_done INTEGER DEFAULT 0", "tp_sol REAL", "image_url TEXT", "buys_10m INTEGER", "src_link TEXT"]) try { db.exec(`ALTER TABLE launches ADD COLUMN ${c}`); } catch {}
+initCopies(db); // 0.2.0: the copy-coin paper test
+initOperators(db); // 0.7.0: the operator (funder-wallet) database (owner, 3 Nov 10:22 UK)
+initRF(db); // 0.5.0: runner-follow paper test (owner, 31 Oct 19:22 UK)
+initFD(db); // 0.8.0
+initVol(db); // 0.4.0: V300 / V500 volume paper trades (owner, 31 Oct 18:41 UK)
+initStudy(db); // 0.3.0: why copycats ran (owner, 31 Oct 18:21 UK)
+initPeaks(db); // 0.2.2: market caps of every copycat (owner, 31 Oct 18:06 UK)
+const upd = (id, o) => { const ks = Object.keys(o); if (ks.length) db.prepare(`UPDATE launches SET ${ks.map((k) => `${k}=?`).join(", ")} WHERE id=?`).run(...ks.map((k) => (typeof o[k] === "bigint" ? o[k].toString() : o[k])), id); };
+const kvGet = (k) => db.prepare("SELECT v FROM kv WHERE k=?").get(k)?.v ?? null, kvSet = (k, v) => db.prepare("INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)").run(k, String(v));
+let tdb = null; try { tdb = new Database(CFG.TRACKER_DB, { readonly: true, fileMustExist: true }); tdb.pragma("busy_timeout = 2000"); tdb.pragma("cache_size = -16000"); } catch {} // 0.9.10: 16 MB cache on the read-only tracker handle
+
+// ---------- wallet / chain state ----------
+const wallet = CFG.SMOKE ? Keypair.generate() : ensureKeypair(); // the key file is created on first start; only the public address is ever shown
+initChainFill(db); initFarm(db, tdb); // 0.9.9 // 0.9.0: simulated executable fills from the chain's reserves, every book
+initLive(db, wallet); // 0.8.17: live shadow trades (livebook.txt), signed with this wallet; off under SMOKE
+const ME = wallet.publicKey;
+let G = null, gAt = 0, balance = null, balAt = 0;
+async function global() { if (G && Date.now() - gAt < 600000) return G; const [a] = await getAccounts([GLOBAL], "confirmed"); const g = decodeGlobal(a?.data); if (!g) throw new Error("pump.fun Global account unreadable"); G = g; gAt = Date.now(); return G; }
+async function bal(force = false) { if (!force && balance != null && Date.now() - balAt < 20000) return balance; balance = await getBalance(ME); balAt = Date.now(); return balance; }
+const ukDay = (ms = Date.now()) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(ms);
+const liveToday = () => db.prepare("SELECT created_ts FROM launches WHERE mode='live' AND status NOT IN ('failed','sim_fail','skipped') AND created_ts>=?").all(now() - 30 * 3600).filter((r) => ukDay(r.created_ts * 1000) === ukDay()).length;
+
+// ---------- newness and copycats (tracker database, read-only) ----------
+function sameBefore(name, ticker, beforeS) {
+  if (!tdb) return { n: null, t: null };
+  try { return { n: tdb.prepare("SELECT COUNT(*) n FROM tokens WHERE create_ts BETWEEN ? AND ? AND lower(name)=lower(?)").get(beforeS - 7 * 86400, beforeS, name).n,
+    t: tdb.prepare("SELECT COUNT(*) n FROM tokens WHERE create_ts BETWEEN ? AND ? AND upper(symbol)=upper(?)").get(beforeS - 7 * 86400, beforeS, ticker).n }; } catch { return { n: null, t: null }; }
+}
+function copycats(L) {
+  if (!tdb) return null; const t0 = Math.floor(L.t_post_ms / 1000);
+  const rows = tdb.prepare("SELECT mint, create_ts, peak_mc_usd, graduated FROM tokens WHERE create_ts BETWEEN ? AND ? AND (lower(name)=lower(?) OR upper(symbol)=upper(?)) AND mint<>?").all(t0 - 60, t0 + 1800, L.name, L.ticker, L.mint || "");
+  return { n: rows.length, first: rows.length ? Math.min(...rows.map((r) => r.create_ts)) - t0 : null, best: rows.length ? Math.max(...rows.map((r) => r.peak_mc_usd || 0)) : null, grads: rows.reduce((a, r) => a + (r.graduated ? 1 : 0), 0) };
+}
+
+// ---------- one post → one launch ----------
+const seen = new Set(); let chain = Promise.resolve();
+function onPost(t, ev) {
+  if (seen.has(t.id)) return; seen.add(t.id); if (seen.size > 5000) seen.clear();
+  const recv = Date.now(); st.posts++;
+  const rawKeep = db.prepare("SELECT COUNT(*) n FROM posts").get().n < 200 ? JSON.stringify(ev).slice(0, 6000) : null; // the first 200 raw events are kept, to check the stream's fields
+  db.prepare("INSERT OR IGNORE INTO posts (id, user, text, created_ms, recv_ms, raw) VALUES (?, ?, ?, ?, ?, ?)").run(t.id, t.user, t.text, t.createdMs, recv, rawKeep);
+  if (CFG.ACCOUNTS.length && !CFG.ACCOUNTS.includes(t.user.toLowerCase())) { st.ignored++; return; }
+  chain = chain.then(() => handle(t, recv)).catch((e) => { st.errors++; st.lastErr = "post: " + e.message; });
+}
+async function handle(t, recv) {
+  const c = await context(t); const ctxMs = Date.now();
+  const p = c.parent, kind = c.kind;
+  db.prepare("UPDATE posts SET kind=?, parent_id=?, parent_user=?, parent_text=?, ctx_ms=? WHERE id=?").run(kind, p?.id || null, p?.user || null, p?.text || null, ctxMs - recv, t.id);
+  if (kind === "repost" && CFG.SKIP_RETWEETS) return;
+  const ownText = kind === "repost" ? "" : c.tweet.text, subjectText = p ? p.text : "";
+  // 0.1.8 (owner, 31 Oct 01:00 UK: "the picture has to be identical … you must look at the tweet and see the word"): the post's own pictures
+  // (or, for a reply / quote / repost, the original's) are the coin's picture and are shown to the AI, which picks the name from the words AND the pictures.
+  const images = [...(kind === "repost" ? [] : c.tweet.media || []), ...(p?.media || [])].filter((u) => /^https:\/\//.test(u));
+  const [rules, ai] = await Promise.all([ruleName({ ownText, subjectText }), aiName({ user: t.user, kind, ownText, subjectText, subjectUser: p?.user, images })]);
+  // a picture post is never launched on a guessed name: without the AI reading the picture it is recorded only
+  const pick = ai || (images.length ? null : rules);
+  const base = { post_id: t.id, user: t.user, kind, t_post_ms: t.createdMs || snowMs(t.id), t_recv_ms: recv, t_named_ms: Date.now(), rule_name: rules?.name || null, rule_ticker: rules?.ticker || null,
+    ai_name: ai?.name || null, ai_ticker: ai?.ticker || null, created_ts: now() };
+  if (!pick) return insert({ ...base, mode: CFG.MODE, status: "skipped", image_url: images[0] || null, name: rules?.name || null, ticker: rules?.ticker || null, name_by: rules ? "rules (not used)" : null,
+    reason: images.length ? (CFG.AI_KEY ? "the AI could not name it from the post and its picture" : "post has a picture — needs the AI to read it (no ANTHROPIC_API_KEY), not launched on a guessed name") : "no words to name a coin from" });
+  // 0.1.7 (owner, 31 Oct 00:52 UK: "we don't want to launch it twice"): the first post of a narrative wins — a name or ticker we already launched
+  // (or test-launched) in the last REPEAT_H hours is recorded as skipped. The Relaunch button still relaunches on purpose.
+  const rep = db.prepare(`SELECT id, created_ts FROM launches WHERE (lower(name)=lower(?) OR upper(ticker)=upper(?)) AND created_ts>=? AND status IN ('building','sent','open','selling','stuck','sold','graduated','sim_ok','paper') ORDER BY id LIMIT 1`).get(pick.name, pick.ticker, now() - CFG.REPEAT_H * 3600);
+  if (rep) return insert({ ...base, mode: CFG.MODE, status: "skipped", name: pick.name, ticker: pick.ticker, name_by: pick.by, reason: `already launched as #${rep.id} at ${new Date(rep.created_ts * 1000).toLocaleTimeString("en-GB", { timeZone: "Europe/London" })} UK (no repeats within ${CFG.REPEAT_H} h)` });
+  const same = sameBefore(pick.name, pick.ticker, now());
+  await launch({ ...base, name: pick.name, ticker: pick.ticker, name_by: pick.by, why: pick.why, score: pick.score, same_name_7d: same.n, same_ticker_7d: same.t, image_url: images[0] || null }, { tweetUrl: `https://x.com/${t.user}/status/${t.id}` });
+}
+/** The coin's picture: the post's own first picture, byte for byte; only a post with no picture at all gets the drawn ticker picture. */
+async function pictureFor(L) {
+  if (!L.image_url) return { bytes: coinImage(L.name, L.ticker), type: "image/png", ext: "png", from: "drawn" };
+  if (L.image_url.startsWith("file:")) { const f = L.image_url.slice(5), ext = (f.split(".").pop() || "jpg").toLowerCase(); return { bytes: readFileSync(f), type: ext === "png" ? "image/png" : ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/jpeg", ext, from: "upload" }; } // 0.2.1: a picture uploaded on the Launch-now box
+  const r = await fetch(L.image_url, { signal: AbortSignal.timeout(6000) }); if (!r.ok) throw new Error(`picture download HTTP ${r.status}`);
+  const type = (r.headers.get("content-type") || "image/jpeg").split(";")[0], bytes = Buffer.from(await r.arrayBuffer());
+  if (!/^image\//.test(type) || bytes.length < 500 || bytes.length > 15e6) throw new Error(`picture not usable (${type}, ${bytes.length} bytes)`);
+  return { bytes, type, ext: type.includes("png") ? "png" : type.includes("gif") ? "gif" : type.includes("webp") ? "webp" : "jpg", from: "post" };
+}
+const insert = (o) => { const ks = Object.keys(o); const r = db.prepare(`INSERT INTO launches (${ks.join(",")}) VALUES (${ks.map(() => "?").join(",")})`).run(...ks.map((k) => o[k])); st.launches++;
+  const id = Number(r.lastInsertRowid); if (o.name && !o.relaunch_of) try { scheduleCopies(db, { ...o, id }); } catch {} return id; };
+
+async function launch(L, { tweetUrl, source = "X" }) {
+  // mode for this one: live only when the owner set live, the day's cap isn't reached and the wallet can pay
+  let mode = CFG.MODE, reason = null;
+  if (mode === "live" && kvGet("paused") === "1") { mode = "paper"; reason = "paused (pause button)"; }
+  if (mode === "live") {
+    if (CFG.DAILY_CAP > 0 && liveToday() >= CFG.DAILY_CAP) { mode = "paper"; reason = `daily cap ${CFG.DAILY_CAP} reached`; }
+    else { const b = await bal(true).catch(() => null); if (b == null || b < lam(CFG.MIN_BALANCE_SOL)) { mode = "paper"; reason = `wallet ${b == null ? "unreadable" : sol(b).toFixed(3) + " SOL"} below ${CFG.MIN_BALANCE_SOL}`; } }
+  }
+  const id = insert({ ...L, mode, status: mode === "paper" ? "paper" : "building", reason, stake_sol: CFG.STAKE_SOL });
+  if (mode === "paper") return id;
+  try {
+    const description = L.user && L.user !== "manual" ? `${L.name} — narrative from @${L.user}'s post on ${source}${tweetUrl ? ": " + tweetUrl : ""} (not affiliated with @${L.user}).` : tweetUrl ? `${L.name} — ${tweetUrl}` : L.name;
+    let uri;
+    try { const img = await pictureFor(L); const m = await uploadMeta({ name: L.name, symbol: L.ticker, description, img, tweetUrl }); uri = m.uri; upd(id, { uri, upload_ms: m.ms, ...(m.image && (!L.image_url || L.image_url.startsWith("file:")) ? { image_url: m.image } : {}) }); }
+    catch (e) { st.uploadsFailed++; upd(id, { status: mode === "live" ? "failed" : "sim_fail", reason: "picture / metadata upload: " + e.message.slice(0, 160) }); return id; }
+    const g = await global(), mintKp = Keypair.generate(), mint = mintKp.publicKey;
+    if (mode === "live" && !luts().length) await ensureLut({ wallet, kvGet, kvSet, wanted: wantedFor(ME, g, TIPS.map((t) => new PublicKey(t))) });
+    const funded = mode === "live" || (await bal().catch(() => 0)) >= lam(CFG.MIN_BALANCE_SOL);
+    const payer = funded ? ME : simPayer() || ME;
+    const curve = freshCurve(g, payer), spend = lam(CFG.STAKE_SOL), q = quoteBuy(curve, g, spend), minTokens = (q.tokens * BigInt(Math.round((1 - CFG.SLIP) * 1e4))) / 10000n;
+    upd(id, { mint: mint.toBase58(), tokens: q.tokens.toString(), net_lamports: q.net.toString(), entry_price: Number(curve.vSol + q.net) / Number(curve.vTok - q.tokens) });
+    // classic buy first; if the chain refuses it in simulation, the v3 buy (what pump.fun's own site uses after create_v2)
+    let ixs, sim, buyIx = kvGet("buyIx") || "classic", errs = [];
+    for (const v of buyIx === "v3" ? ["v3", "classic"] : ["classic", "v3"]) {
+      ixs = [...ixBudget(CFG.CU_LIMIT, CFG.CU_PRICE), ixCreateV2({ mint, user: payer, creator: payer, name: L.name, symbol: L.ticker, uri }),
+        ...(v === "v3" ? ixBuyV3({ user: payer, mint, g, spend, minTokens }) : ixBuy({ user: payer, mint, curve, g, spend, minTokens }))];
+      if (mode === "live") ixs.push(ixTransfer(payer, tipAccount(), lam(CFG.TIP_SOL)));
+      sim = await simulate(await buildTx(payer, ixs, null, luts())); if (sim.ok) { buyIx = v; kvSet("buyIx", v); break; }
+      errs.push(`${v}: ${sim.err} ${(sim.logs || []).filter((l) => /Error|error|failed|insufficient/i.test(l)).slice(-3).join(" | ")}`);
+    }
+    upd(id, { buy_ix: sim.ok ? buyIx : null, sim_err: sim.ok ? null : errs.join(" ‖ ").slice(0, 900), sim_units: sim.units });
+    if (mode === "shadow") { upd(id, { status: sim.ok ? "sim_ok" : "sim_fail", reason: funded ? null : "simulated with a stand-in payer (launch wallet not funded)" }); sim.ok ? st.shadowOk++ : st.shadowFail++; return id; }
+    if (!sim.ok) { upd(id, { status: "failed", reason: "simulation refused it — not sent" }); return id; }
+    const tx = await buildTx(payer, ixs, [wallet, mintKp], luts()); upd(id, { t_sent_ms: Date.now(), status: "sent", sig: Buffer.from(tx.signatures[0]).length ? bs58(tx.signatures[0]) : null });
+    confirmLater(id, tx, mint, q); // the next post doesn't wait for this one to confirm
+  } catch (e) { st.errors++; st.lastErr = "launch: " + e.message; upd(id, { status: mode === "live" ? "failed" : "sim_fail", reason: e.message.slice(0, 200) }); }
+  return id;
+}
+async function confirmLater(id, tx, mint, q) {
+  try {
+    const r = await sendUntilConfirmed(tx, 25000); upd(id, { sig: r.sig });
+    if (r.status !== "confirmed") { upd(id, { status: "failed", reason: `transaction ${r.status}${r.err ? ": " + r.err.slice(0, 160) : ""}` }); return; }
+    const fill = await readFill(r.sig, ME, mint);
+    st.live++; balance = null;
+    upd(id, { status: "open", t_landed_ms: Date.now(), cost_sol: fill ? sol(fill.solDelta) : null, tokens: fill ? String(fill.tokenDelta) : q.tokens.toString(), last_change_ts: now(), peak_x: 1, last_x: 1 });
+    exportSoon();
+  } catch (e) { st.errors++; st.lastErr = "confirm: " + e.message; upd(id, { status: "failed", reason: "confirm: " + e.message.slice(0, 160) }); }
+}
+const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+const bs58 = (bytes) => { let n = 0n; for (const b of bytes) n = n * 256n + BigInt(b); let o = ""; while (n > 0n) { o = B58[Number(n % 58n)] + o; n /= 58n; } for (const b of bytes) { if (b) break; o = "1" + o; } return o; };
+const TIPS = ["4ACfpUFoaSD9bfPdeu6DBt89gB6ENTeHBXCAi87NhDEE", "D2L6yPZ2FmmmTKPgzaMKdhu6EWZcTpLy1Vhx8uvZe7NZ", "9bnz4RShgq1hAnLnZbP8kbgBg1kEmcJBYQq3gQbmnSta", "5VY91ws6B2hMmBFRsXkoAAdsPHBJwRfBht4DXox3xkwn", "2nyhqdwKcJZR2vcqCyrYsaPVdAnFoJjiksCXJ7hfEYgD", "2q5pghRs6arqVjRvT5gfgWfWcHWmw1ZuCzphgd5KfWGJ", "wyvPkWjVZz1M8fHQnMMCDTQDbkManefNNhweYk5WkcF", "3KCKozbAaF75qEU33jtzozcJ29yJuaLJTy2jFdzUY8bT"];
+const tipAccount = () => new PublicKey(TIPS[Math.floor(Math.random() * TIPS.length)]); // Helius Sender tip accounts (as the executor)
+
+// ---------- watching our coins: sell back when nobody buys, or when it goes quiet ----------
+let watching = false;
+async function watch() {
+  if (watching) return; watching = true;
+  try {
+    const open = db.prepare("SELECT * FROM launches WHERE mode='live' AND status IN ('open','selling') ORDER BY id").all(); if (!open.length) return;
+    const g = await global(); const accs = await getAccounts(open.map((L) => curveOf(new PublicKey(L.mint))), "confirmed");
+    for (let i = 0; i < open.length; i++) {
+      const L = open[i], c = decodeCurve(accs[i]?.data); if (!c) continue;
+      const age = now() - Math.floor((L.t_landed_ms || L.created_ts * 1000) / 1000), spent = lam(L.stake_sol || CFG.STAKE_SOL);
+      const x = Number(quoteSell(c, g, BigInt(L.tokens || "0"))) / spent; // what our tokens would sell for now ÷ the stake (≈ 0.975 at the start: the 1.25% fees each way)
+      const ours = BigInt(L.net_lamports || "0"), others = c.rSol > ours + 100000n; // anything beyond our own buy (0.0001 SOL slack) is someone else
+      const changed = Number(c.rSol) !== Number(kvGet("rsol:" + L.id) ?? -1); if (changed) kvSet("rsol:" + L.id, Number(c.rSol));
+      const o = { last_x: +x.toFixed(4), peak_x: Math.max(L.peak_x || 0, +x.toFixed(4)) };
+      if (others && !L.others) { o.others = 1; o.first_other_s = age; }
+      if (changed) o.last_change_ts = now();
+      upd(L.id, o);
+      if (c.complete) { upd(L.id, { status: "graduated", reason: "graduated — sell on PumpSwap by hand for now" }); continue; }
+      const manual = L.status === "selling";
+      // 0.1.11 (owner, 31 Oct 01:15 UK): at DEAD_MIN, count the buys by other wallets; fewer than MIN_BUYS → sell back (checked once)
+      let buys = L.buys_10m; if (!manual && buys == null && age >= CFG.DEAD_MIN * 60) { buys = await countBuys(L).catch(() => null); if (buys != null) upd(L.id, { buys_10m: buys }); }
+      const why = manual ? (L.sell_reason || "sell button") : buys != null && L.buys_10m == null && buys < CFG.MIN_BUYS ? `only ${buys} buy${buys === 1 ? "" : "s"} by others in ${CFG.DEAD_MIN} min (needs ${CFG.MIN_BUYS})`
+        : buys == null && !others && !L.others && age >= CFG.DEAD_MIN * 60 ? `nobody else bought in ${CFG.DEAD_MIN} min`
+        : (others || L.others) && now() - (changed ? now() : L.last_change_ts || now()) >= CFG.QUIET_MIN * 60 ? `no trades for ${CFG.QUIET_MIN} min`
+        : null;
+      if (why) await sellOne(L, c, g, why);
+      else if (CFG.TP_X > 0 && !L.tp_done && x >= CFG.TP_X) await sellOne(L, c, g, `take-profit: ${Math.round(CFG.TP_FRACTION * 100)}% sold at ${CFG.TP_X}x`, CFG.TP_FRACTION);
+    }
+  } catch (e) { st.errors++; st.lastErr = "watch: " + e.message; } finally { watching = false; }
+}
+/** Buys by other wallets on our coin's curve so far: its transactions, those that ran a pump.fun buy and were not paid for by our wallet. */
+async function countBuys(L) {
+  const curve = curveOf(new PublicKey(L.mint)); rpcStats.calls++;
+  const sigs = (await conn.getSignaturesForAddress(curve, { limit: 200 }, "confirmed")).filter((s) => !s.err && s.signature !== L.sig).map((s) => s.signature);
+  let n = 0;
+  for (let i = 0; i < sigs.length; i += 25) {
+    rpcStats.calls++; const txs = await conn.getTransactions(sigs.slice(i, i + 25), { maxSupportedTransactionVersion: 1, commitment: "confirmed" });
+    for (const t of txs) { if (!t?.meta) continue; const payer = t.transaction.message.staticAccountKeys[0].toBase58();
+      if (payer !== ME.toBase58() && (t.meta.logMessages || []).some((l) => /Instruction: (Buy|BuyExactSolIn|BuyV2|BuyV3|BuyExactQuoteIn)/.test(l))) n++; }
+  }
+  return n;
+}
+async function sellOne(L, curve, g, why, frac = 1) {
+  const mint = new PublicKey(L.mint), ua = ata(ME, mint, TOKEN_2022);
+  try {
+    const [acc] = await getAccounts([ua], "confirmed"); const held = acc?.data?.length >= 72 ? acc.data.readBigUInt64LE(64) : 0n;
+    const part = frac < 1, amount = part ? (held * BigInt(Math.round(frac * 1e4))) / 10000n : held;
+    if (amount <= 0n) { upd(L.id, { status: "sold", sell_reason: why + " (no tokens left)", sold_ts: now() }); return; }
+    const out = quoteSell(curve, g, amount), minSol = (out * BigInt(Math.round((1 - CFG.SELL_SLIP) * 1e4))) / 10000n;
+    const sellIxs = L.buy_ix === "v3" ? ixSellV3({ user: ME, mint, g, amount, minSol, close: !part }) : ixSell({ user: ME, mint, curve, g, amount, minSol, close: !part });
+    const tx = await buildTx(ME, [...ixBudget(200000, CFG.CU_PRICE), ...sellIxs, ixTransfer(ME, tipAccount(), lam(CFG.TIP_SOL))], [wallet], luts());
+    const tries = (L.sell_tries || 0) + 1; if (!part) upd(L.id, { status: "selling", sell_reason: why, sell_tries: tries });
+    const sim = await simulate(tx); // a sale the chain would refuse is not sent (a failed transaction still costs its fee)
+    const r = sim.ok ? await sendUntilConfirmed(tx, 20000) : { status: "refused", err: sim.err };
+    if (part) { // take-profit on part of the position: record it once, keep holding the rest under the normal rules
+      if (r.status !== "confirmed") { st.lastErr = `take-profit ${L.ticker}: ${r.status} ${r.err || ""}`.slice(0, 200); return; }
+      const f = await readFill(r.sig, ME, mint); upd(L.id, { tp_done: 1, tp_sol: f ? sol(f.solDelta) : null, tokens: (held - amount).toString(), reason: why }); balance = null; exportSoon(); return;
+    }
+    if (r.status !== "confirmed") { st.lastErr = `sell ${L.ticker}: ${r.status} ${r.err || ""}`.slice(0, 200); if (tries >= 6) upd(L.id, { status: "stuck", reason: "sell failed 6 times (press Sell to try again): " + String(r.err || r.status).slice(0, 120) }); return; }
+    const fill = await readFill(r.sig, ME, mint); const got = fill ? sol(fill.solDelta) : null;
+    upd(L.id, { status: "sold", sell_sig: r.sig, sell_sol: got, sold_ts: now(), pnl_sol: got != null && L.cost_sol != null ? +(got + (L.tp_sol || 0) + L.cost_sol).toFixed(6) : null });
+    st.sells++; balance = null; exportSoon();
+  } catch (e) { st.errors++; st.lastErr = "sell: " + e.message; }
+}
+
+// ---------- the website's buttons (scope writes a small JSON file into REQ_DIR; nothing else can reach this app) ----------
+async function requests() {
+  let files = []; try { files = readdirSync(CFG.REQ_DIR).filter((f) => f.endsWith(".json")); } catch { return; }
+  for (const f of files) {
+    let rq = null; try { rq = JSON.parse(readFileSync(`${CFG.REQ_DIR}/${f}`, "utf8")); } catch {} try { unlinkSync(`${CFG.REQ_DIR}/${f}`); } catch {}
+    if (!rq || now() - (rq.at || 0) > 300) continue;
+    // 0.1.14 (owner, 31 Oct 01:26 UK): one button pauses every new launch at once; one button sells every coin we hold
+    if (rq.action === "pause" || rq.action === "resume") { kvSet("paused", rq.action === "pause" ? "1" : "0"); kvSet("pausedAt", new Date().toISOString()); writeStatus(); continue; }
+    if (rq.action === "sellall") { const r = db.prepare("UPDATE launches SET status='selling', sell_reason='sell-all button', sell_tries=0 WHERE mode='live' AND status IN ('open','stuck')").run(); kvSet("lastSellAll", `${new Date().toISOString()} ${r.changes} coin(s)`); writeStatus(); setTimeout(() => watch(), 50); continue; }
+    // 0.2.1 (owner, 31 Oct 09:58 UK): the Launch-now box — "suggest" names a pasted post (AI reads its text and picture); "manual" launches it
+    if (rq.action === "suggest" && rq.reqId) { suggest(rq).then((out) => writeFileSync(`${CFG.REQ_DIR}/resp-${rq.reqId}.out`, JSON.stringify(out))).catch((e) => writeFileSync(`${CFG.REQ_DIR}/resp-${rq.reqId}.out`, JSON.stringify({ ok: false, error: e.message }))); continue; }
+    if (rq.action === "study" && rq.mint) { studyAddress(db, String(rq.mint).trim(), exportNow); continue; } // 0.6.0: study a coin by address
+    if (rq.action === "manual" && rq.reqId) { chain = chain.then(() => manualLaunch(rq)).catch((e) => { st.errors++; st.lastErr = "manual: " + e.message; }); continue; }
+    if (!Number.isInteger(rq.id)) continue;
+    const L = db.prepare("SELECT * FROM launches WHERE id=?").get(rq.id); if (!L) continue;
+    if (rq.action === "sell" && L.mode === "live" && ["open", "stuck"].includes(L.status)) { upd(L.id, { status: "selling", sell_reason: "sell button", sell_tries: 0 }); setTimeout(() => watch(), 50); }
+    if (rq.action === "relaunch" && L.name) {
+      const same = sameBefore(L.name, L.ticker, now());
+      chain = chain.then(() => launch({ post_id: L.post_id, user: L.user, kind: L.kind, name: L.name, ticker: L.ticker, name_by: L.name_by, why: "relaunch", score: L.score, rule_name: L.rule_name, rule_ticker: L.rule_ticker,
+        ai_name: L.ai_name, ai_ticker: L.ai_ticker, same_name_7d: same.n, same_ticker_7d: same.t, image_url: L.image_url, t_post_ms: Date.now(), t_recv_ms: Date.now(), t_named_ms: Date.now(), relaunch_of: L.id, created_ts: now() },
+        { tweetUrl: L.user && L.post_id ? `https://x.com/${L.user}/status/${L.post_id}` : "" })).catch((e) => { st.errors++; st.lastErr = "relaunch: " + e.message; });
+    }
+  }
+}
+
+// ---------- the Launch-now box (0.2.1) ----------
+const srcOf = (link) => { const x = String(link || "").match(/(?:x|twitter)\.com\/([A-Za-z0-9_]{1,30})\/status\/(\d+)/), t = String(link || "").match(/truthsocial\.com\/@([A-Za-z0-9_]{1,40})\/(?:posts\/)?(\d+)/);
+  return x ? { user: x[1], id: x[2], source: "X" } : t ? { user: t[1], id: t[2], source: "Truth Social" } : { user: "manual", id: null, source: "manual" }; };
+function imagesOf(rq) {
+  if (rq.imageFile && existsSync(rq.imageFile) && rq.imageFile.startsWith(`${HOME}/uploads/`)) { const ext = rq.imageFile.split(".").pop().toLowerCase(); return [{ b64: readFileSync(rq.imageFile).toString("base64"), type: ext === "png" ? "image/png" : ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/jpeg" }]; }
+  return /^https:\/\//.test(rq.imageUrl || "") ? [rq.imageUrl] : [];
+}
+async function suggest(rq) {
+  const text = String(rq.text || "").slice(0, 2000), s = srcOf(rq.link), images = imagesOf(rq);
+  const ai = await aiName({ user: s.user, kind: "post", ownText: text, subjectText: "", images });
+  const pick = ai || (images.length ? null : ruleName({ ownText: text, subjectText: "" }));
+  if (!pick) return { ok: false, error: images.length ? "the AI could not name it (or is off) — type a name and ticker yourself" : "no words to name a coin from" };
+  const rep = db.prepare(`SELECT id, created_ts FROM launches WHERE (lower(name)=lower(?) OR upper(ticker)=upper(?)) AND created_ts>=? AND status IN ('building','sent','open','selling','stuck','sold','graduated','sim_ok') ORDER BY id LIMIT 1`).get(pick.name, pick.ticker, now() - CFG.REPEAT_H * 3600);
+  return { ok: true, name: pick.name, ticker: pick.ticker, score: pick.score ?? null, why: pick.why || "", by: pick.by, source: s.source, user: s.user, repeatOf: rep ? rep.id : null };
+}
+async function manualLaunch(rq) {
+  const s = srcOf(rq.link), name = String(rq.name || "").trim().slice(0, 32), ticker = String(rq.ticker || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 10);
+  if (!name || ticker.length < 2) return;
+  const pid = s.id ? `${s.source === "X" ? "" : "truth-"}${s.id}` : `manual-${rq.reqId}`;
+  db.prepare("INSERT OR IGNORE INTO posts (id, user, kind, text, created_ms, recv_ms) VALUES (?, ?, ?, ?, ?, ?)").run(pid, s.user, "manual", String(rq.text || "").slice(0, 2000), Date.now(), Date.now());
+  const image_url = rq.imageFile && rq.imageFile.startsWith(`${HOME}/uploads/`) ? "file:" + rq.imageFile : /^https:\/\//.test(rq.imageUrl || "") ? rq.imageUrl : null;
+  const same = sameBefore(name, ticker, now());
+  await launch({ post_id: pid, user: s.user, kind: "manual", name, ticker, name_by: rq.nameBy === "ai" ? "ai (manual)" : "manual", why: `launched by hand from ${s.source}`, score: rq.score ?? null,
+    t_post_ms: Date.now(), t_recv_ms: Date.now(), t_named_ms: Date.now(), image_url, src_link: String(rq.link || "").slice(0, 300) || null, same_name_7d: same.n, same_ticker_7d: same.t, created_ts: now() }, { tweetUrl: String(rq.link || "").slice(0, 300), source: s.source });
+}
+
+// ---------- housekeeping: copycats, creator fees, sweep to Phantom ----------
+function copyJob() {
+  try {
+    for (const L of db.prepare("SELECT * FROM launches WHERE name IS NOT NULL AND copies_final=0 AND created_ts<=? ORDER BY id LIMIT 200").all(now() - 1800)) {
+      const c = copycats(L); if (!c) return;
+      upd(L.id, { copies_30m: c.n, copy_first_s: c.first, copy_best_peak_usd: c.best, copy_grads: c.grads, copies_checked_ts: now(), copies_final: now() - L.created_ts >= 6 * 3600 ? 1 : 0 });
+    }
+  } catch (e) { st.errors++; st.lastErr = "copycats: " + e.message; }
+}
+async function feesAndSweep() {
+  if (CFG.MODE !== "live" || CFG.SMOKE) return;
+  try {
+    const vault = creatorVaultOf(ME), [v] = await getAccounts([vault], "confirmed"), rent = 890880; // a 0-byte account's rent-exempt minimum
+    if (v && v.lamports - rent >= lam(CFG.FEE_COLLECT_MIN_SOL)) { const tx = await buildTx(ME, [...ixBudget(100000, CFG.CU_PRICE), ixCollectCreatorFee(ME)], [wallet]); const r = await sendUntilConfirmed(tx, 20000); kvSet("lastFeeCollect", `${new Date().toISOString()} ${r.status} ${sol(v.lamports - rent).toFixed(4)} SOL`); }
+    if (db.prepare("SELECT COUNT(*) n FROM launches WHERE status IN ('building','sent','selling')").get().n) return; // never sweep in the middle of a launch or a sale
+    const b = await bal(true), keep = lam(CFG.SWEEP_KEEP_SOL), extra = b - keep - 10000;
+    if (extra >= lam(0.01)) { const tx = await buildTx(ME, [...ixBudget(5000, 1000), ixTransfer(ME, new PublicKey(PHANTOM), extra)], [wallet]); const r = await sendUntilConfirmed(tx, 20000); kvSet("lastSweep", `${new Date().toISOString()} ${r.status} ${sol(extra).toFixed(4)} SOL → ${PHANTOM}`); balance = null; }
+  } catch (e) { st.errors++; st.lastErr = "fees/sweep: " + e.message; }
+}
+
+// ---------- self-test: build a create+buy for a test coin and simulate it (nothing signed); then one metadata upload ----------
+async function selfTest() {
+  const out = { at: new Date().toISOString() };
+  try {
+    const g = await global(); out.global = { feeBps: g.feeBps, creatorFeeBps: g.creatorFeeBps, initVSol: sol(g.initVSol), initVTok: Number(g.initVTok) / 1e6 };
+    const payer = (await bal().catch(() => 0)) >= lam(CFG.MIN_BALANCE_SOL) ? ME : simPayer() || ME; out.payer = payer.equals(ME) ? "launch wallet" : "stand-in (launch wallet not funded)";
+    const mint = Keypair.generate().publicKey, curve = freshCurve(g, payer), spend = lam(CFG.STAKE_SOL), q = quoteBuy(curve, g, spend);
+    Object.assign(out, { quotedTokens: Number(q.tokens) / 1e6, pctSupply: +(Number(q.tokens) / Number(g.supply) * 100).toFixed(3) });
+    for (const v of ["classic", "v3"]) {
+      const ixs = [...ixBudget(CFG.CU_LIMIT, CFG.CU_PRICE), ixCreateV2({ mint, user: payer, creator: payer, name: "Launcher Test", symbol: "LTEST", uri: "https://ipfs.io/ipfs/QmTest" }),
+        ...(v === "v3" ? ixBuyV3({ user: payer, mint, g, spend, minTokens: (q.tokens * 95n) / 100n }) : ixBuy({ user: payer, mint, curve, g, spend, minTokens: (q.tokens * 95n) / 100n }))];
+      const sim = await simulate(await buildTx(payer, ixs, null, luts()), [ata(payer, mint, TOKEN_2022), payer]);
+      out[v + "Bytes"] = (await buildTx(payer, [...ixs, ixTransfer(payer, tipAccount(), lam(CFG.TIP_SOL))], [Keypair.generate(), Keypair.generate()].slice(0, 0), luts())).serialize().length; // the size of a real launch with tip, signatures included (cap 1,232)
+      const got = sim.post?.[0]?.length >= 72 ? sim.post[0].readBigUInt64LE(64) : null;
+      out[v] = { ok: sim.ok, err: sim.err, units: sim.units, ms: sim.ms, simTokens: got != null ? Number(got) / 1e6 : null, logs: sim.ok ? sim.logs.filter((l) => /Instruction:/.test(l)).slice(0, 12) : sim.logs.slice(-14) };
+      if (sim.ok && !kvGet("buyIx")) kvSet("buyIx", v);
+    }
+  } catch (e) { out.error = e.message; }
+  // 0.1.9: the AI naming check on the owner's own example (31 Oct 00:51 UK): WhiteHouse "Dems in charge? Nothing scarier. 🎃" with its Goosebumps-style pictures
+  if (CFG.AI_KEY) { const t0 = Date.now(); const r = await aiName({ user: "WhiteHouse", kind: "post", ownText: "Dems in charge? Nothing scarier. 🎃", subjectText: "", images: ["https://pbs.twimg.com/media/HV6yhmrWQAASiYk.jpg", "https://pbs.twimg.com/media/HV6yjnzW4AANlvW.jpg"] }); out.ai = r ? { ...r, ms: Date.now() - t0 } : { ok: false, ms: Date.now() - t0, err: aiStat.lastErr }; }
+  // 0.1.6: is the TwitterAPI.io key itself valid? one REST lookup (15 credits) — tells "bad key" apart from "no Stream plan" when the websocket says 403
+  if (CFG.TWITTER_KEY) try { const r = await fetch(`${CFG.REST}/twitter/tweets?tweet_ids=20`, { headers: { "X-API-Key": CFG.TWITTER_KEY }, signal: AbortSignal.timeout(6000) }); const j = await r.json().catch(() => ({})); out.twitterRest = { http: r.status, ok: r.ok && j.status !== "error", tweets: (j.tweets || []).length, msg: String(j.msg || j.message || "").slice(0, 120) }; } catch (e) { out.twitterRest = { ok: false, err: e.message }; }
+  try { const m = await uploadMeta({ name: "Launcher Test", symbol: "LTEST", description: "test upload — not launched", img: { bytes: coinImage("Launcher Test", "LTEST"), type: "image/png", ext: "png" }, tweetUrl: "" }); out.upload = { ok: true, ms: m.ms, uri: m.uri }; } catch (e) { out.upload = { ok: false, err: e.message }; }
+  st.selfTest = out; kvSet("selfTest", JSON.stringify(out)); exportNow();
+}
+
+// ---------- export to the launcher-data branch (for the chat) and status for the website ----------
+const csv = (rows) => { if (!rows.length) return ""; const cols = Object.keys(rows[0]); const e = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v)); return [cols.join(","), ...rows.map((r) => cols.map((c) => e(r[c])).join(","))].join("\n"); };
+export function status() {
+  return { ...st, at: now(), wallet: ME.toBase58(), balanceSol: balance != null ? +sol(balance).toFixed(4) : null, liveToday: liveToday(), cap: CFG.DAILY_CAP || "none", minBalanceSol: CFG.MIN_BALANCE_SOL, tpFraction: CFG.TP_FRACTION, stakeSol: CFG.STAKE_SOL, deadMin: CFG.DEAD_MIN, quietMin: CFG.QUIET_MIN, tpX: CFG.TP_X,
+    lut: lutStat, copies: copyStatus(), peaks: peakStat, study: studyStat, vol: volStat, mark: markStat, volBackfill: bfStat, rf: rfStat, manualStudy: manualStat, operators: opStat, creators: ctStat, fd: fdStat, snipers2: snStat, quotes: qStat, live: liveStat, chain: cfStat, farm: farmStat, sweep: sweepStat, paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
+    accounts: CFG.ACCOUNTS, twitter: { keySet: !!CFG.TWITTER_KEY, ...twStat }, ai: !!CFG.AI_KEY, aiStat, meta: metaStat, rpc: rpcStats, trackerDb: !!tdb, lastSweep: kvGet("lastSweep"), lastFeeCollect: kvGet("lastFeeCollect"), phantom: PHANTOM };
+}
+let pushing = false, soon = null;
+function exportNow() {
+  try {
+    writeFileSync(`${CFG.OUT_DIR}/launches.csv`, csv(db.prepare("SELECT * FROM launches ORDER BY id").all()));
+    writeFileSync(`${CFG.OUT_DIR}/posts.csv`, csv(db.prepare("SELECT id, user, kind, text, parent_id, parent_user, parent_text, created_ms, recv_ms, ctx_ms FROM posts WHERE recv_ms>=? ORDER BY recv_ms").all((now() - 7 * 86400) * 1000)));
+    try { writeFileSync(`${CFG.OUT_DIR}/copies.csv`, csv(db.prepare("SELECT * FROM copies ORDER BY launch_id, created_ts").all())); writeFileSync(`${CFG.OUT_DIR}/copy_picks.csv`, csv(db.prepare("SELECT * FROM copy_picks ORDER BY launch_id").all())); writeFileSync(`${CFG.OUT_DIR}/copy_peaks.csv`, csv(db.prepare("SELECT * FROM copy_peaks ORDER BY peak_mc DESC").all())); } catch {}
+    try { writeFileSync(`${CFG.OUT_DIR}/operators.csv`, csv(db.prepare("SELECT * FROM operators ORDER BY coins DESC, runners DESC").all())); writeFileSync(`${CFG.OUT_DIR}/operator_coins.csv`, csv(db.prepare("SELECT * FROM operator_coins ORDER BY anchor, mint").all())); writeFileSync(`${CFG.OUT_DIR}/wallet_trace.csv`, csv(db.prepare("SELECT * FROM wallet_trace ORDER BY checked_ts").all())); writeFileSync(`${CFG.OUT_DIR}/wallet_out.csv`, csv(db.prepare("SELECT * FROM wallet_out WHERE dest<>'' ORDER BY ts").all())); writeFileSync(`${CFG.OUT_DIR}/snipers.csv`, csv(db.prepare("SELECT * FROM snipers ORDER BY coins DESC, runners DESC").all())); writeFileSync(`${CFG.OUT_DIR}/creator_trace.csv`, csv(db.prepare("SELECT * FROM creator_trace WHERE create_ts>=? ORDER BY create_ts DESC").all(Math.floor(Date.now() / 1000) - 7 * 86400))); writeFileSync(`${CFG.OUT_DIR}/fd_watch.csv`, csv(db.prepare("SELECT * FROM fd_watch WHERE created_ts>=? ORDER BY created_ts DESC").all(Math.floor(Date.now() / 1000) - 36 * 3600))); writeFileSync(`${CFG.OUT_DIR}/fd_early.csv`, csv(db.prepare("SELECT * FROM fd_early WHERE created_ts>=? ORDER BY created_ts DESC").all(Math.floor(Date.now() / 1000) - 86400))); writeFileSync(`${CFG.OUT_DIR}/fd_sniper_stats.csv`, csv(db.prepare("SELECT * FROM fd_sniper_stats ORDER BY launches DESC").all())); writeFileSync(`${CFG.OUT_DIR}/fd_quotes.csv`, csv(db.prepare("SELECT * FROM fd_quotes ORDER BY ts DESC LIMIT 5000").all())); } catch {}
+    try { writeFileSync(`${CFG.OUT_DIR}/rf_watch.csv`, csv(db.prepare("SELECT * FROM rf_watch ORDER BY created_ts").all())); } catch {}
+    try { writeFileSync(`${CFG.OUT_DIR}/vol_paper.csv`, csv(db.prepare("SELECT * FROM vol_paper ORDER BY id").all())); } catch {}
+    try { writeFileSync(`${CFG.OUT_DIR}/live_trades.csv`, csv(db.prepare("SELECT * FROM live_trades ORDER BY id").all())); } catch {} // 0.8.17
+    try { writeFileSync(`${CFG.OUT_DIR}/chain_fill.csv`, csv(db.prepare("SELECT * FROM chain_fill ORDER BY vol_id").all())); } catch {} // 0.9.0
+    try { writeFileSync(`${CFG.OUT_DIR}/fd_hgrowth.csv`, csv(db.prepare("SELECT * FROM fd_hgrowth ORDER BY ts").all())); } catch {} // 0.9.6: holder growth 60 → 120 s on the U books' coins
+    try { writeFileSync(`${CFG.OUT_DIR}/buyer_funding.csv`, csv(db.prepare("SELECT * FROM buyer_funding WHERE ts>=? ORDER BY mint, sol_in DESC").all(now() - 48 * 3600))); writeFileSync(`${CFG.OUT_DIR}/buyer_funding_sum.csv`, csv(db.prepare("SELECT * FROM buyer_funding_sum ORDER BY ts").all())); } catch {} // 0.9.11
+    try { writeFileSync(`${CFG.OUT_DIR}/farm_dumps.csv`, csv(db.prepare("SELECT * FROM farm_dumps ORDER BY dump_ts").all())); writeFileSync(`${CFG.OUT_DIR}/farm_wallets.csv`, csv(db.prepare("SELECT * FROM farm_wallets ORDER BY dump_ts, mint").all())); } catch {} // 0.9.9
+    try { const since = now() - 24 * 3600; writeFileSync(`${CFG.OUT_DIR}/fd_decisions.csv`, csv(db.prepare("SELECT * FROM fd_decisions WHERE ts>=? ORDER BY ts, mint, rule").all(since))); writeFileSync(`${CFG.OUT_DIR}/fd_wallet_state.csv`, csv(db.prepare("SELECT s.* FROM fd_wallet_state s JOIN (SELECT mint FROM fd_watch WHERE created_ts>=?) w ON w.mint=s.mint ORDER BY s.mint, s.at, s.sol_in DESC").all(now() - 12 * 3600))); } catch {} // 0.9.9
+    // 0.9.7 (owner, 5 Nov 19:27 UK: "why not everything now"): the tracker already keeps every trade (wallet, slot, signature, SOL, tokens, price) of bundle tier-1 launches for 30 min,
+    // and from tracker v0.19 of every launch that reaches 15 SOL of buys — the dump transactions of the books' coins. Exported for the coins entered in the last LAUNCH_TRADES_HOURS hours.
+    try { if (tdb) { const hrs = Number(process.env.LAUNCH_TRADES_HOURS || 8), since = Math.floor(Date.now() / 1000) - hrs * 3600;
+      const mints = db.prepare("SELECT DISTINCT mint FROM chain_fill WHERE entry_ts>=?").all(since).map((x) => x.mint); const rows = [];
+      const q = tdb.prepare("SELECT mint, sig, slot, ts, wallet, is_buy, sol, tokens, price_sol FROM trades WHERE mint=? ORDER BY slot, rowid LIMIT 6000");
+      for (const m of mints) for (const r of q.all(m)) rows.push(r);
+      writeFileSync(`${CFG.OUT_DIR}/trades_books.csv`, csv(rows)); } } catch (e) { console.error("[export trades_books]", e.message); }
+    // 0.8.14: the study files (2 MB + 20 MB, ~150 MB of heap to build) only when the study has changed or once an hour — building them every 10 min on a 300 MB pm2 limit is what restarted the launcher every 90 s on 5 Nov 00:05–01:00 UK
+    if (studyStat.studied !== lastStudyExport.n || Date.now() - lastStudyExport.t > 3600000) { lastStudyExport = { n: studyStat.studied, t: Date.now() };
+    try { writeFileSync(`${CFG.OUT_DIR}/study_coins.jsonl`, db.prepare("SELECT * FROM study_coins ORDER BY studied_ts").all().map((r) => JSON.stringify({ ...r, data: JSON.parse(r.data || "{}") })).join("\n")); writeFileSync(`${CFG.OUT_DIR}/study_buyers.jsonl`, db.prepare("SELECT * FROM study_buyers ORDER BY mint, rank").all().map((r) => JSON.stringify({ mint: r.mint, wallet: r.wallet, rank: r.rank, ...JSON.parse(r.data || "{}") })).join("\n")); } catch {} }
+    writeFileSync(`${CFG.OUT_DIR}/raw_events.jsonl`, db.prepare("SELECT raw FROM posts WHERE raw IS NOT NULL ORDER BY recv_ms").all().map((r) => r.raw).join("\n"));
+    writeFileSync(`${CFG.OUT_DIR}/status.json`, JSON.stringify(status(), null, 1)); st.exports++;
+    if (process.env.LAUNCH_NO_PUSH || CFG.SMOKE || pushing) return; pushing = true;
+    execFile("bash", [new URL("../push.sh", import.meta.url).pathname], { timeout: 180000 }, (e, so, se) => { pushing = false; st.lastPush = e ? "failed: " + (se || e.message).slice(0, 160) : "ok " + new Date().toISOString(); });
+  } catch (e) { st.errors++; st.lastErr = "export: " + e.message; }
+}
+function exportSoon() { clearTimeout(soon); soon = setTimeout(exportNow, 90000); }
+
+// ---------- start ----------
+if (CFG.SMOKE) {
+  const g = { feeRecipient: Keypair.generate().publicKey, initVTok: 1073000000000000n, initVSol: 30000000000n, initRTok: 793100000000000n, supply: 1000000000000000n, feeBps: 95, creatorFeeBps: 30, buybackFeeRecipients: [] };
+  const mint = Keypair.generate().publicKey, curve = freshCurve(g, ME), q = quoteBuy(curve, g, lam(CFG.STAKE_SOL));
+  const ixs = [ixCreateV2({ mint, user: ME, creator: ME, name: "Smoke Test", symbol: "SMOKE", uri: "https://example.com/x.json" }), ...ixBuy({ user: ME, mint, curve, g, spend: lam(CFG.STAKE_SOL), minTokens: q.tokens })];
+  const png = coinImage("Smoke Test", "SMOKE"), n = ruleName({ ownText: "Starlink in Bolivia!", subjectText: "" });
+  console.log("[launcher] smoke ok", JSON.stringify({ ver: VER, ixs: ixs.length, tokens: Number(q.tokens) / 1e6, png: png.length, name: n, trackerDb: !!tdb, twitterKey: !!CFG.TWITTER_KEY }));
+  process.exit(0);
+}
+// 0.1.5: keys sent to the box encrypted (launcher/secrets.enc.json) are opened into /root/launcher/.env; the process then restarts so they load
+try { st.inboxPublicKey = inboxPublic(); const got = inboxApply(); if (got.length) { console.log(`[launcher] keys received: ${got.join(", ")} — restarting to load them`); setTimeout(() => process.exit(0), 500); } } catch (e) { st.lastErr = "inbox: " + e.message; }
+console.log(`[launcher] ${VER} up — mode ${CFG.MODE}, wallet ${ME.toBase58()}, stake ${CFG.STAKE_SOL} SOL, cap ${CFG.DAILY_CAP}/day, X stream ${CFG.TWITTER_KEY ? "on" : "OFF (no TWITTERAPI_KEY)"}, AI ${CFG.AI_KEY ? "on" : "off"}`);
+startStream(onPost);
+// 0.1.15: the lookup table is made (or completed) before the self-test, so the test measures the real launch size
+setTimeout(async () => { if (CFG.MODE === "live") { try { const g = await global(); await ensureLut({ wallet, kvGet, kvSet, wanted: wantedFor(ME, g, TIPS.map((t) => new PublicKey(t))) }); } catch (e) { lutStat.lastErr = e.message; } } selfTest(); }, 3000); setInterval(() => { const t = st.selfTest; if (!t || t.error || !t.upload?.ok || !(t.classic?.ok || t.v3?.ok)) selfTest(); }, 1800000); // re-test every 30 min until it passes
+setInterval(() => watch(), 15000);
+setInterval(() => requests().catch(() => {}), 1000);
+setInterval(copyJob, 300000);
+setInterval(() => copyTick(db).catch(() => {}), 20000);
+if (!CFG.SMOKE && Number(process.env.LAUNCH_VOL_BOOKS || 0)) { setTimeout(() => volPoll(db), 15000); setInterval(() => volPoll(db), 30000); } // 0.8.0: V300/V500/VA off (owner 4 Nov: −10…−13% on 48 trades); set LAUNCH_VOL_BOOKS=1 to run them
+if (!CFG.SMOKE) { setInterval(() => volScore(db), 300000); setInterval(() => volFillExitTime(db), 60000); setInterval(() => volMark(db), 15000); setTimeout(() => volMark(db), 20000); if (process.env.LAUNCH_SHADOW_POLL === "1") setInterval(() => volQuotePoll(db), 8000); /* 0.9.3: OFF by default — the chain-side simulated fill (chainfill.mjs) replaces the Jupiter shadow poll, and a live buy was lost to a 429 at 13:01 UK; LAUNCH_SHADOW_POLL=1 turns it back on */ setInterval(() => livePoll(), 1000); /* 0.9.4: reads the chain-side stream, no Jupiter call unless selling */ setInterval(() => chainBackstop(), 30000); setTimeout(() => chainBackstop(), 25000); /* 0.9.0 */ setInterval(() => buildFarm(6), 1800000); setTimeout(() => buildFarm(12), 90000); /* 0.9.9: the farm list from the tracker's trades, every 30 min; first pass covers the last 12 h */ /* 0.8.16: mark every 15 s; 0.8.17: shadow positions quoted every 6 s and live positions every 4 s — 25 of the 30 keyless Jupiter requests a minute, the rest for entries */ setInterval(() => rfFind(db), 30000); setInterval(() => rfCheck(db), 20000); setTimeout(() => fdScan(db, tdb), 20000); setInterval(() => fdScan(db, tdb), 15000); setInterval(() => fdCheck(db, tdb), 15000); if (process.env.LAUNCH_FD_SNIPER_STATS === "1") { setInterval(() => fdSniperStats(db, tdb), 3600000); setTimeout(() => fdSniperStats(db, tdb), 90000); } /* 0.8.13: OFF — 0.8.12 restarted every 90 s exactly, on this timer (rss 270–290M vs the 300M pm2 limit, heap 30–45M) */ setTimeout(() => runSweep(db, exportNow), 60000); setInterval(exportNow, 600000); } // 0.8.2: publish every 10 min (owner 4 Nov 10:32 UK: 5–10 minute checks) // 0.4.0 / 0.5.0 / 0.8.0 (the VA backfill finished 4 Nov 05:00: 1 hit in 1,500 coins)
+// 0.6.0: addresses listed in launcher/study-now.txt are studied once (newest method), 20 s after start
+if (!CFG.SMOKE) setTimeout(() => { try { const done = new Set(db.prepare("SELECT mint, data FROM study_coins WHERE role='manual' AND err IS NULL").all().filter((r) => { try { return JSON.parse(r.data).v != null; } catch { return false; } }).map((r) => r.mint));
+  for (const m of readFileSync(new URL("../study-now.txt", import.meta.url), "utf8").split(/\s+/).map((x) => x.trim()).filter(Boolean)) if (!done.has(m)) studyAddress(db, m, exportNow); } catch {} }, 20000);
+if (!CFG.SMOKE) { const peaksThenStudy = () => { try { st.census = loadCensus(tdb); } catch {} return runStudy(db, exportNow).then(() => runOperators(db, exportNow)).then(() => creatorCensus(db, tdb, exportNow)).then(() => runPeaks(db, exportNow)); }; /* 0.7.6: the operator database first, the copycat price refresh (40 min of GMGN) last */ setTimeout(peaksThenStudy, 40000); setInterval(peaksThenStudy, 3600000); } // 0.2.2: copycat market caps, then export + push
+setInterval(() => feesAndSweep(), 3600000); setTimeout(() => feesAndSweep(), 120000);
+function writeStatus() { try { writeFileSync(`${CFG.OUT_DIR}/status.json`, JSON.stringify(status(), null, 1)); } catch {} }
+setInterval(writeStatus, 10000);
+setTimeout(exportNow, 60000); setInterval(exportNow, 1800000);
+bal().catch(() => {});
+
+
+====================================================================================================
+=== FILE: src/launch-monitor.js (8,630 chars)
+====================================================================================================
+import { CFG } from "./config.js";
+import { db, q } from "./db.js";
+import { eventsFromLogs, lamports, rawTok, priceSol } from "./pump-decoder.js";
+import { getSolUsd, solUsdCached } from "./price.js";
+import { routeOf } from "./routes.js";
+import { tg } from "./telegram.js";
+import { getSocials, socialsLine, socialsAtLaunch } from "./socials.js";
+
+/** In-memory token state. mint -> {create, slot, trades:[], finalized, tier, bundle:{...}} */
+export const live = new Map();
+export const memStats = () => { let trades = 0; for (const t of live.values()) trades += t.trades?.length || 0; return { live: live.size, trades }; }; // v0.18.18
+export const counters = { txs: 0, creates: 0, trades: 0, tier1: 0, decodeErr: 0 };
+const launchRing = []; // v0.18.118 market heat: pump.fun launches in the last hour / 10 min (in memory)
+export function launchHeat(now = Math.floor(Date.now() / 1000)) { let i = 0; while (i < launchRing.length && now - launchRing[i] > 3600) i++; if (i) launchRing.splice(0, i); let m10 = 0; for (let j = launchRing.length - 1; j >= 0 && now - launchRing[j] <= 600; j--) m10++; return { launch1h: launchRing.length, launch10m: m10 }; }
+const listeners = new Map(); // event -> [fn(token, extra)]   events: create|finalized|trade|graduated|expire
+export const on = (ev, fn) => { if (!listeners.has(ev)) listeners.set(ev, []); listeners.get(ev).push(fn); };
+export const emit = (ev, t, extra) => { for (const fn of listeners.get(ev) || []) { try { fn(t, extra); } catch (e) { console.error(`[listener:${ev}]`, e.stack || e.message); } } };
+
+const mcUsd = (vsol, vtok) => priceSol(vsol, vtok) * CFG.TOTAL_SUPPLY * solUsdCached();
+
+export function handleTx({ sig, slot, logs, err }) {
+  counters.txs++;
+  if (err) return;
+  const evs = eventsFromLogs(logs);
+  if (!evs.length) return;
+  const ts = Math.floor(Date.now() / 1000);
+  for (const e of evs) {
+    if (e.type === "create") {
+      counters.creates++;
+      const t = { mint: e.mint, name: e.name, symbol: e.symbol, uri: e.uri, creator: e.creator, bc: e.bondingCurve,
+        slot, ts: e.ts || ts, sig, trades: [], finalized: false, tier: 0, bundle: null, lastVsol: e.vsol, lastVtok: e.vtok,
+        peakMc: 0, lastMc: 0, hold: false, factory: false, graduated: false };
+      live.set(e.mint, t); launchRing.push(t.ts);
+      q.insToken.run(t.mint, t.name, t.symbol, t.uri, t.creator, t.bc, slot, t.ts, sig);
+      if (q.creatorRecent.get(t.creator, t.ts - CFG.FACTORY_WINDOW_MIN * 60, t.mint) >= 1) { t.factory = true; q.setFactory.run(t.mint); }
+      setTimeout(() => finalize(t), CFG.FINALIZE_MS);
+      socialsAtLaunch(t.mint, t.uri, (soc) => { t.socOk = soc.fetched ? (soc.ok ? 1 : 0) : null; try { q.setTokenSocials.run(t.socOk, JSON.stringify({ t: soc.twitter, w: soc.website, k: soc.tiktok, g: soc.telegram }), t.mint); } catch {} }); // v0.18.156: every launch
+      emit("create", t);
+    } else if (e.type === "trade") {
+      if (e.type === "claim") { emit("claim", null, { ...e, sig, venue: "pump" }); continue; }
+      counters.trades++;
+      const t = live.get(e.mint); if (!t) continue; // not a token we saw created (older launches) — ignore
+      const tr = { sig, slot, ts: e.ts || ts, wallet: e.user, isBuy: e.isBuy, sol: lamports(e.sol), tokens: rawTok(e.tokens), price: priceSol(e.vsol, e.vtok), route: routeOf(logs), creatorFee: lamports(e.creatorFee || 0n), vsol: e.vsol != null ? String(e.vsol) : null, vtok: e.vtok != null ? String(e.vtok) : null };
+      t.lastVsol = e.vsol; t.lastVtok = e.vtok;
+      const mc = mcUsd(e.vsol, e.vtok); t.lastMc = mc; if (mc > t.peakMc) t.peakMc = mc;
+      // v0.19 (5 Nov 2026, owner: "preserve future data first"): launches that are not bundle tier-1 but reach VOL_TRACK_SOL of buys also get every trade stored for TRACK_MIN —
+      // the funded-dev books' coins are mostly bundle 0–50% launches with 15–30 SOL of buying in the first minute, and their dumps were lost when the launch expired at 5 min.
+      if (t.finalized && t.tier < 1 && !t.vol) { t.buySol = (t.buySol || 0) + (tr.isBuy ? tr.sol : 0); if (t.buySol >= CFG.VOL_TRACK_SOL) { t.vol = true; t.volUntil = (tr.ts || ts) + CFG.VOL_TRACK_MIN * 60; counters.vol = (counters.vol || 0) + 1;
+        try { db.transaction(() => { for (const x of t.trades) q.insTrade.run(t.mint, x.sig, x.slot, x.ts, x.wallet, x.isBuy ? 1 : 0, x.sol, x.tokens, x.price, x.recvMs || null, x.vsol || null, x.vtok || null); })(); } catch (e) { console.error("[vol-track]", e.message); } } }
+      tr.recvMs = Date.now(); // v0.19.1
+      t.trades.push(tr); if (t.finalized && t.trades.length > 4000) t.trades = t.trades.slice(0, 500).concat(t.trades.slice(-1500)); // v0.19.1: the table keeps everything; in memory keep the launch block (bundle/sniper tests) and the latest trades (last price) so a 2-hour watch stays small
+      if (t.finalized && (t.tier >= 1 || t.vol)) q.insTrade.run(t.mint, sig, slot, tr.ts, tr.wallet, tr.isBuy ? 1 : 0, tr.sol, tr.tokens, tr.price, tr.recvMs, tr.vsol, tr.vtok);
+      if (!t.graduated && e.vtok <= BigInt(CFG.GRAD_VTOK) * 1_000_000n) { t.graduated = true; q.setGrad.run(t.mint); emit("graduated", t, tr); }
+      emit("trade", t, tr);
+    }
+  }
+}
+
+function finalize(t) {
+  if (t.finalized) return;
+  t.finalized = true;
+  const maxSlot = t.slot + CFG.BUNDLE_SLOTS;
+  const buys = t.trades.filter((x) => x.isBuy && x.slot <= maxSlot);
+  const wallets = new Map();
+  let devBuy = 0;
+  for (const b of buys) {
+    const w = wallets.get(b.wallet) || { tokens: 0, sol: 0, first: b.slot };
+    w.tokens += b.tokens; w.sol += b.sol; wallets.set(b.wallet, w);
+    if (b.wallet === t.creator) devBuy += b.sol;
+  }
+  const bundleTokens = [...wallets.values()].reduce((a, w) => a + w.tokens, 0);
+  const bundleSol = [...wallets.values()].reduce((a, w) => a + w.sol, 0);
+  const pct = (bundleTokens / CFG.TOTAL_SUPPLY) * 100;
+  t.bundle = { sol: bundleSol, tokens: bundleTokens, pct, wallets: wallets.size, devBuy };
+  t.tier = pct >= CFG.BUNDLE_PCT_MIN && bundleSol >= CFG.BUNDLE_SOL_MIN ? 1 : 0;
+  const mc = mcUsd(t.lastVsol, t.lastVtok);
+  q.finToken.run(bundleSol, bundleTokens, pct, wallets.size, devBuy, t.tier, mc, t.peakMc || mc, mc, t.mint);
+  if (t.tier >= 1) {
+    counters.tier1++;
+    const ins = db.transaction(() => {
+      for (const [w, v] of wallets) q.insCluster.run(t.mint, w, w === t.creator ? "dev" : "bundle", v.tokens, v.sol, v.first);
+      for (const tr of t.trades) q.insTrade.run(t.mint, tr.sig, tr.slot, tr.ts, tr.wallet, tr.isBuy ? 1 : 0, tr.sol, tr.tokens, tr.price, tr.recvMs || null, tr.vsol || null, tr.vtok || null);
+    });
+    ins();
+    if (CFG.TG_TIER1_ALERTS && bundleSol >= CFG.TG_TIER1_SOL_MIN) getSocials(t.mint, t.uri).then((soc) => {
+      q.setTokenSocials.run(soc.fetched ? (soc.ok ? 1 : 0) : null, JSON.stringify({ t: soc.twitter, w: soc.website, k: soc.tiktok, g: soc.telegram }), t.mint);
+      if (CFG.ALERT_REQUIRE_SOCIALS && soc.fetched && !soc.ok) return; // no socials = rug candidate, logged only
+      tg(`🧱 <b>Prepared launch</b> — ${esc(t.name)} ($${esc(t.symbol)})\n` +
+        `Bundle: <b>${pct.toFixed(1)}%</b> of supply · <b>${bundleSol.toFixed(1)} SOL</b> · ${wallets.size} wallets (dev ${devBuy.toFixed(1)} SOL)\n` +
+        `${socialsLine(soc)}\nMC now: $${fmt(mc)} · SOL $${solUsdCached().toFixed(0)}\n` +
+        links(t.mint) + (t.factory ? "\n⚠️ factory: same creator launched another token in the last 10 min" : ""));
+    }).catch(() => {});
+  }
+  setTimeout(() => expire(t), (t.tier >= 1 ? CFG.TRACK_MIN : CFG.TRACK_MIN_T0) * 60_000);
+  emit("finalized", t);
+}
+
+export const holds = new Set(); // v0.18.119: mints other modules (Project S) want kept in memory past the usual 5 / 30 min
+function expire(t) {
+  if (t.hold || holds.has(t.mint)) return setTimeout(() => expire(t), 60_000); // open paper position keeps it alive
+  if (t.volUntil && Math.floor(Date.now() / 1000) < t.volUntil) return setTimeout(() => expire(t), 60_000); // v0.19: a volume launch stays until its trades have been kept TRACK_MIN
+  emit("expire", t); live.delete(t.mint);
+}
+
+export const links = (m) => `<a href="https://fomo.family/tokens/solana/${m}">FOMO</a> · <a href="https://axiom.trade/t/${m}">Axiom</a> · <a href="https://dexscreener.com/solana/${m}">DexScreener</a> · <a href="https://solscan.io/token/${m}">Solscan</a>\n<code>${m}</code>`;
+export const esc = (s) => String(s ?? "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
+export const fmt = (n) => (n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "K" : n.toFixed(0));
+export function startPriceLoop() { getSolUsd(); setInterval(getSolUsd, 60_000); }
+
+
+====================================================================================================
+=== FILE: src/db.js (37,858 chars)
+====================================================================================================
+import Database from "better-sqlite3";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { CFG } from "./config.js";
+mkdirSync(dirname(CFG.DB_PATH), { recursive: true });
+export const db = new Database(CFG.DB_PATH);
+db.pragma("journal_mode = WAL"); db.pragma("synchronous = NORMAL");
+db.exec(`
+CREATE TABLE IF NOT EXISTS tokens (
+  mint TEXT PRIMARY KEY, name TEXT, symbol TEXT, uri TEXT, creator TEXT, bonding_curve TEXT,
+  create_slot INTEGER, create_ts INTEGER, create_sig TEXT,
+  bundle_sol REAL DEFAULT 0, bundle_tokens REAL DEFAULT 0, bundle_pct REAL DEFAULT 0, bundle_wallets INTEGER DEFAULT 0,
+  dev_buy_sol REAL DEFAULT 0, tier INTEGER DEFAULT 0, finalized INTEGER DEFAULT 0,
+  entry_mc_usd REAL, peak_mc_usd REAL, last_mc_usd REAL, handoffs INTEGER DEFAULT 0, cluster_net_sol REAL DEFAULT 0,
+  first_seen INTEGER DEFAULT (strftime('%s','now'))
+);
+CREATE INDEX IF NOT EXISTS tokens_tier ON tokens(tier, create_ts);
+CREATE INDEX IF NOT EXISTS tokens_creator ON tokens(creator);
+CREATE TABLE IF NOT EXISTS cluster_wallets (
+  mint TEXT, wallet TEXT, role TEXT, tokens REAL DEFAULT 0, sol_in REAL DEFAULT 0, sol_out REAL DEFAULT 0,
+  first_slot INTEGER, funder TEXT, wallet_age_s INTEGER, PRIMARY KEY (mint, wallet)
+);
+CREATE TABLE IF NOT EXISTS trades (
+  mint TEXT, sig TEXT, slot INTEGER, ts INTEGER, wallet TEXT, is_buy INTEGER, sol REAL, tokens REAL, price_sol REAL
+);
+CREATE INDEX IF NOT EXISTS trades_mint ON trades(mint, slot);
+CREATE TABLE IF NOT EXISTS handoffs (
+  mint TEXT, slot INTEGER, ts INTEGER, seller TEXT, buyer TEXT, sol REAL, tokens REAL, same_tx INTEGER
+);
+CREATE TABLE IF NOT EXISTS mc_samples (mint TEXT, ts INTEGER, mc_usd REAL, price_sol REAL);
+CREATE TABLE IF NOT EXISTS creator_claims (creator TEXT, ts INTEGER, sol REAL, venue TEXT, sig TEXT, mint TEXT, ambiguous INTEGER);
+CREATE INDEX IF NOT EXISTS cc_creator ON creator_claims(creator, ts);
+CREATE TABLE IF NOT EXISTS pump_buyers (trade_id INTEGER, mint TEXT, wallet TEXT, ts INTEGER, sol REAL, mc REAL, lead_s INTEGER, venue TEXT);
+CREATE INDEX IF NOT EXISTS pb_wallet ON pump_buyers(wallet);
+CREATE TABLE IF NOT EXISTS dex_pools (pool TEXT PRIMARY KEY, venue TEXT, mint TEXT, sol_side INTEGER, m0 TEXT, m1 TEXT, dec INTEGER, supply REAL, bin_step INTEGER, ignore INTEGER DEFAULT 0, ts INTEGER);
+CREATE INDEX IF NOT EXISTS mc_mint ON mc_samples(mint, ts);
+CREATE TABLE IF NOT EXISTS paper_trades (
+  id INTEGER PRIMARY KEY, mint TEXT, name TEXT, entry_ts INTEGER, entry_mc REAL, entry_price REAL,
+  exit_ts INTEGER, exit_mc REAL, exit_price REAL, exit_reason TEXT, pnl_pct REAL, peak_mc REAL,
+  bundle_pct REAL, bundle_sol REAL, handoffs INTEGER
+);
+CREATE TABLE IF NOT EXISTS stats (k TEXT PRIMARY KEY, v REAL);
+`);
+db.exec(`
+CREATE TABLE IF NOT EXISTS wallet_buys (
+  wallet TEXT, mint TEXT, ts INTEGER, age_s INTEGER, sol REAL, entry_mc REAL, is_cluster INTEGER DEFAULT 0,
+  peak_30m REAL, peak_24h REAL, resolved INTEGER DEFAULT 0, PRIMARY KEY (wallet, mint)
+);
+CREATE INDEX IF NOT EXISTS wb_mint ON wallet_buys(mint);
+CREATE INDEX IF NOT EXISTS wb_ts ON wallet_buys(ts);
+CREATE TABLE IF NOT EXISTS token_peaks (mint TEXT PRIMARY KEY, create_ts INTEGER, peak_30m REAL DEFAULT 0, peak_24h REAL DEFAULT 0, until INTEGER);
+CREATE TABLE IF NOT EXISTS watch_wallets (wallet TEXT PRIMARY KEY, label TEXT, added_ts INTEGER, source TEXT);
+CREATE TABLE IF NOT EXISTS watch_creators (creator TEXT PRIMARY KEY, label TEXT, added_ts INTEGER);
+CREATE TABLE IF NOT EXISTS token_life (
+  mint TEXT, cp INTEGER, ts INTEGER, mc REAL, vol5m_usd REAL, buys5m INTEGER, sells5m INTEGER, buyers5m INTEGER, buyers_total INTEGER,
+  graduated INTEGER, top10_pct REAL, holders INTEGER, alive INTEGER, PRIMARY KEY (mint, cp)
+);
+CREATE INDEX IF NOT EXISTS life_cp ON token_life(cp, mc);
+CREATE TABLE IF NOT EXISTS big_buys (mint TEXT, wallet TEXT, ts INTEGER, age_s INTEGER, sol REAL, mc REAL, balance_sol REAL, venue TEXT);
+CREATE INDEX IF NOT EXISTS bb_mint ON big_buys(mint);
+`);
+// migrations (idempotent)
+for (const sql of [
+  "ALTER TABLE paper_trades ADD COLUMN x_h5 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h5f12 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h5f14 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h3l REAL", "ALTER TABLE paper_trades ADD COLUMN x_t2n30 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h3 REAL", "ALTER TABLE paper_trades ADD COLUMN h5_retro INTEGER", "ALTER TABLE paper_trades ADD COLUMN after_path TEXT", // v0.18.81
+  "ALTER TABLE paper_trades ADD COLUMN restart_span INTEGER", "ALTER TABLE paper_trades ADD COLUMN crashloop INTEGER", // v0.18.84 restart quarantine
+  "ALTER TABLE paper_trades ADD COLUMN x_h15 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h5fast REAL", // v0.18.87 sell-rule variants
+  "ALTER TABLE paper_trades ADD COLUMN first_secs TEXT", // v0.18.89 P5: feed lag at the trigger + price 1/2/5/10 s after we saw it (what a live buy would get)
+  "ALTER TABLE tokens ADD COLUMN factory INTEGER DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN graduated INTEGER DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN cluster_sol_in REAL DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN cluster_sol_out REAL DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN outside_sol_in REAL DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN outside_sol_out REAL DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN outside_buyers INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN tier INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN factory INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN inflow_sol REAL",
+  "ALTER TABLE paper_trades ADD COLUMN inflow_wallets INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN outside_share REAL",
+  "ALTER TABLE paper_trades ADD COLUMN entry_age_s INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN peak_mult REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_cluster REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tsl40 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tsl60 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tp REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_time REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_grad REAL",
+  "ALTER TABLE paper_trades ADD COLUMN closed INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN alerted INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN socials TEXT",
+  "ALTER TABLE paper_trades ADD COLUMN has_socials INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN buys INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN sells INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN mc_5m REAL",
+  "ALTER TABLE paper_trades ADD COLUMN mc_15m REAL",
+  "ALTER TABLE paper_trades ADD COLUMN buyers_5m INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN strategy TEXT DEFAULT 'early'",
+  "ALTER TABLE paper_trades ADD COLUMN vol5m_usd REAL",
+  "ALTER TABLE paper_trades ADD COLUMN vol1m_usd REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tsl80 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_half60 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_twophase REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_ladder REAL",
+  "ALTER TABLE paper_trades ADD COLUMN reentry_n INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN age_s INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN symbol TEXT",
+  "ALTER TABLE paper_trades ADD COLUMN x_levels REAL",
+  "ALTER TABLE paper_trades ADD COLUMN next_level REAL",
+  "ALTER TABLE paper_trades ADD COLUMN wave1_peak_mc REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_m1 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_m1vol REAL",
+  "ALTER TABLE paper_trades ADD COLUMN cluster_held_pct REAL",
+  "ALTER TABLE paper_trades ADD COLUMN trigger_kind TEXT",
+  "ALTER TABLE paper_trades ADD COLUMN x_volstop REAL",
+  "ALTER TABLE paper_trades ADD COLUMN vol_at_entry REAL",
+  "ALTER TABLE paper_trades ADD COLUMN after_peak_mult REAL",
+  "ALTER TABLE paper_trades ADD COLUMN after_peak_mc REAL",
+  "ALTER TABLE paper_trades ADD COLUMN handover INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN creator_prior INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN creator_best_peak REAL",
+  "ALTER TABLE paper_trades ADD COLUMN dev_buy_sol REAL",
+  "ALTER TABLE paper_trades ADD COLUMN snipers INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN hour_utc INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN parent_id INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN bs_ratio_entry REAL",
+  "ALTER TABLE paper_trades ADD COLUMN buyers_entry INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN invalid INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN buys_entry INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN q_score INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN x_combo REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tp15 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tsl25 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN tight INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN churn_entry REAL",
+  "ALTER TABLE paper_trades ADD COLUMN cluster_out_entry REAL",
+  "ALTER TABLE paper_trades ADD COLUMN venue TEXT",
+  "ALTER TABLE paper_trades ADD COLUMN path TEXT",
+  "ALTER TABLE paper_trades ADD COLUMN x_flow REAL", "ALTER TABLE paper_trades ADD COLUMN x_flow4 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t15s40 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t2s40 REAL", "ALTER TABLE paper_trades ADD COLUMN dd_pre15 REAL",
+  "ALTER TABLE creator_claims ADD COLUMN mint TEXT", "ALTER TABLE creator_claims ADD COLUMN ambiguous INTEGER", "CREATE INDEX IF NOT EXISTS cc_mint ON creator_claims(mint)",
+  "UPDATE tokens SET fee_claims=NULL, fee_claimed_sol=NULL, first_claim_ts=NULL WHERE fee_claims IS NOT NULL AND NOT EXISTS (SELECT 1 FROM creator_claims c WHERE c.mint=tokens.mint)",
+  "ALTER TABLE paper_trades ADD COLUMN core_tight INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN trace TEXT", "ALTER TABLE paper_trades ADD COLUMN gmgn_json TEXT", "ALTER TABLE paper_trades ADD COLUMN early_json TEXT", "ALTER TABLE paper_trades ADD COLUMN x_s15be REAL", "ALTER TABLE paper_trades ADD COLUMN px_suspect INTEGER", "ALTER TABLE paper_trades ADD COLUMN px_verified_mult REAL", "ALTER TABLE paper_trades ADD COLUMN px_checked INTEGER", "ALTER TABLE paper_trades ADD COLUMN after_last_mult REAL", "ALTER TABLE paper_trades ADD COLUMN after_last_mc REAL", "ALTER TABLE paper_trades ADD COLUMN after_last_ts INTEGER", "ALTER TABLE paper_trades ADD COLUMN x_h2t40 REAL", "ALTER TABLE paper_trades ADD COLUMN v2m_usd REAL", "ALTER TABLE paper_trades ADD COLUMN core_v40 INTEGER", "ALTER TABLE paper_trades ADD COLUMN x_split REAL", "ALTER TABLE paper_trades ADD COLUMN x_dead REAL", "ALTER TABLE paper_trades ADD COLUMN x_manual REAL", "ALTER TABLE paper_trades ADD COLUMN conf_ok INTEGER", "ALTER TABLE paper_trades ADD COLUMN conf_ratio REAL", "ALTER TABLE paper_trades ADD COLUMN manual_pct REAL", "ALTER TABLE paper_trades ADD COLUMN manual_ts INTEGER", "ALTER TABLE paper_trades ADD COLUMN x_p3d REAL", "ALTER TABLE paper_trades ADD COLUMN split_branch TEXT", "ALTER TABLE paper_trades ADD COLUMN dex_paid INTEGER", "ALTER TABLE paper_trades ADD COLUMN dex_paid_types TEXT", "ALTER TABLE paper_trades ADD COLUMN dex_paid_lead_s INTEGER", "ALTER TABLE paper_trades ADD COLUMN snipers_n INTEGER", "ALTER TABLE paper_trades ADD COLUMN snipers_held_pct REAL", "ALTER TABLE paper_trades ADD COLUMN fresh_share REAL", "ALTER TABLE paper_trades ADD COLUMN fresh_n INTEGER", "ALTER TABLE paper_trades ADD COLUMN proven_vol_share REAL", "ALTER TABLE paper_trades ADD COLUMN proven_wallets_5m INTEGER", "ALTER TABLE paper_trades ADD COLUMN x_flow4ff REAL", "ALTER TABLE paper_trades ADD COLUMN bs_clean_entry REAL", "ALTER TABLE paper_trades ADD COLUMN bot_share_entry REAL", // v0.18.17
+  "ALTER TABLE paper_trades ADD COLUMN top10_entry REAL", "ALTER TABLE paper_trades ADD COLUMN largest_entry REAL", "ALTER TABLE paper_trades ADD COLUMN holders_entry INTEGER", "ALTER TABLE paper_trades ADD COLUMN dev_hold_entry REAL",
+  "ALTER TABLE paper_trades ADD COLUMN fee_accrued_entry REAL", "ALTER TABLE paper_trades ADD COLUMN fee_claims_entry INTEGER", "ALTER TABLE paper_trades ADD COLUMN fee_claimed_entry REAL", "ALTER TABLE paper_trades ADD COLUMN core INTEGER", "ALTER TABLE paper_trades ADD COLUMN t_hit15_s INTEGER",
+  "ALTER TABLE tokens ADD COLUMN creator_fee_sol REAL", "ALTER TABLE tokens ADD COLUMN fee_claims INTEGER", "ALTER TABLE tokens ADD COLUMN fee_claimed_sol REAL", "ALTER TABLE tokens ADD COLUMN first_claim_ts INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN x_t15s25 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t15s60 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t2s25 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t2s60 REAL",
+  "UPDATE paper_trades SET invalid=1 WHERE COALESCE(invalid,0)=0 AND mint IN (SELECT mint FROM tokens WHERE bundle_pct BETWEEN 79.2 AND 79.4 AND bundle_sol BETWEEN 84.5 AND 85.5)",
+  "ALTER TABLE paper_trades ADD COLUMN q_wallets INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN q_per10k REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_top3 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_roundtrip INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN q_retail REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_custom REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_size_cv REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_new_pct REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_px_per10k REAL",
+  "ALTER TABLE paper_trades ADD COLUMN sells_entry INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN proven_entry INTEGER",
+  "CREATE INDEX IF NOT EXISTS pt_open ON paper_trades(closed, entry_ts)",
+  "UPDATE paper_trades SET invalid=1 WHERE strategy='momentum' AND COALESCE(invalid,0)=0 AND (peak_mult>50 OR (vol5m_usd=bs_ratio_entry AND trigger_kind LIKE 'vol5m%'))",
+  "ALTER TABLE tokens ADD COLUMN creator_funder TEXT",
+  "ALTER TABLE tokens ADD COLUMN creator_age_s INTEGER",
+  "ALTER TABLE tokens ADD COLUMN creator_funded_sol REAL",
+  "ALTER TABLE tokens ADD COLUMN has_socials INTEGER",
+  "ALTER TABLE tokens ADD COLUMN socials TEXT",
+  // v0.18.98: the website's queries filter paper_trades by strategy (and mint) — without these every page build scanned the whole table, 18 s a time, freezing the feed
+  "CREATE INDEX IF NOT EXISTS pt_strat ON paper_trades(strategy, entry_ts)",
+  "CREATE INDEX IF NOT EXISTS pt_mint ON paper_trades(mint)",
+  // v0.18.118: copycat lookups (same name / symbol launched in the last 24 h) at every trigger
+  "CREATE INDEX IF NOT EXISTS tokens_name ON tokens(name, create_ts)",
+  "CREATE INDEX IF NOT EXISTS tokens_symbol ON tokens(symbol, create_ts)",
+  "CREATE INDEX IF NOT EXISTS wb_wallet ON wallet_buys(wallet)", // v0.18.119: a wallet's record at the moment it buys (Project S)
+  "CREATE INDEX IF NOT EXISTS tokens_cts ON tokens(create_ts)", // v0.18.121: launches by time (smart-wallet harvest, heat)
+  "ALTER TABLE paper_trades ADD COLUMN x_devout REAL", // v0.18.176 creator-sold-out exit (record only): the multiple when the creator's ledger balance first hit 0 after entry (S8 / GR)
+  "ALTER TABLE trades ADD COLUMN recv_ms INTEGER", // v0.19.1: when this process received the trade's log (observation latency, for the launcher's studies)
+  "ALTER TABLE trades ADD COLUMN vsol TEXT", "ALTER TABLE trades ADD COLUMN vtok TEXT", "ALTER TABLE trades ADD COLUMN venue TEXT", // v0.19.2
+  "CREATE TABLE IF NOT EXISTS feed_gaps (ts INTEGER, event TEXT, detail TEXT)", // v0.19.2
+]) { try { db.exec(sql); } catch {} }
+export const q = {
+  insToken: db.prepare(`INSERT OR IGNORE INTO tokens (mint,name,symbol,uri,creator,bonding_curve,create_slot,create_ts,create_sig) VALUES (?,?,?,?,?,?,?,?,?)`),
+  finToken: db.prepare(`UPDATE tokens SET bundle_sol=?, bundle_tokens=?, bundle_pct=?, bundle_wallets=?, dev_buy_sol=?, tier=?, finalized=1, entry_mc_usd=?, peak_mc_usd=?, last_mc_usd=? WHERE mint=?`),
+  insCluster: db.prepare(`INSERT OR IGNORE INTO cluster_wallets (mint,wallet,role,tokens,sol_in,first_slot) VALUES (?,?,?,?,?,?)`),
+  insTrade: db.prepare(`INSERT INTO trades (mint,sig,slot,ts,wallet,is_buy,sol,tokens,price_sol,recv_ms,vsol,vtok,venue) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'curve')`), // v0.19.1: recv_ms = when this process received the log; v0.19.2: vsol/vtok = the curve's virtual reserves AFTER this trade, as the event reports them (raw lamports / raw token units)
+  insGap: db.prepare(`INSERT INTO feed_gaps (ts, event, detail) VALUES (?,?,?)`), // v0.19.2: every socket status change (open / closed / idle / error) with its time — a gap is the span between a close and the next open; nothing is backfilled
+  bump: db.prepare(`INSERT INTO stats (k,v) VALUES (?,1) ON CONFLICT(k) DO UPDATE SET v=v+1`),
+  stat: db.prepare(`SELECT v FROM stats WHERE k=?`).pluck(),
+  countSince: db.prepare(`SELECT COUNT(*) FROM tokens WHERE create_ts>=?`).pluck(),
+  countTierSince: db.prepare(`SELECT COUNT(*) FROM tokens WHERE tier>=? AND create_ts>=?`).pluck(),
+  creatorRecent: db.prepare(`SELECT COUNT(*) FROM tokens WHERE creator=? AND create_ts>=? AND mint<>?`).pluck(),
+  // v0.18.118 trigger context: the creator's earlier launches, copycats, market heat
+  walletRecord: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END) x5, SUM(CASE WHEN peak_24h>=10*entry_mc THEN 1 ELSE 0 END) x10 FROM wallet_buys WHERE wallet=? AND resolved=1 AND is_cluster=0 AND age_s>=3 AND sol>=? AND entry_mc>0`),
+  creatorLast: db.prepare(`SELECT MAX(create_ts) FROM tokens WHERE creator=? AND mint<>? AND create_ts<?`).pluck(),
+  copycats: db.prepare(`SELECT COUNT(*) n, MAX(peak_mc_usd) best, MAX(create_ts) last, SUM(graduated) grads FROM tokens WHERE name=? AND mint<>? AND create_ts>=?`),
+  copySym: db.prepare(`SELECT COUNT(*) n FROM tokens WHERE symbol=? AND mint<>? AND create_ts>=?`).pluck(),
+  heatTrig: db.prepare(`SELECT COUNT(*) FROM paper_trades WHERE strategy IN ('p5e30','p5w30','p5e50') AND entry_ts>=? AND COALESCE(invalid,0)=0`).pluck(),
+  heatWin: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN MAX(COALESCE(json_extract(trace,'$.m.60.x'),0), COALESCE(json_extract(trace,'$.m.120.x'),0), COALESCE(json_extract(trace,'$.m.180.x'),0), COALESCE(json_extract(trace,'$.m.300.x'),0), COALESCE(json_extract(trace,'$.m.600.x'),0))>=1.5 THEN 1 ELSE 0 END) hit,
+    SUM(CASE WHEN COALESCE(json_extract(trace,'$.m.600.x'),1)<=0.5 THEN 1 ELSE 0 END) dead FROM paper_trades WHERE strategy='p5e30' AND entry_ts>=? AND entry_ts<=? AND COALESCE(invalid,0)=0`),
+  setFactory: db.prepare(`UPDATE tokens SET factory=1 WHERE mint=?`),
+  setGrad: db.prepare(`UPDATE tokens SET graduated=1 WHERE mint=?`),
+  updFlows: db.prepare(`UPDATE tokens SET cluster_sol_in=?, cluster_sol_out=?, outside_sol_in=?, outside_sol_out=?, outside_buyers=?, handoffs=?, cluster_net_sol=?, peak_mc_usd=?, last_mc_usd=? WHERE mint=?`),
+  insHandoff: db.prepare(`INSERT INTO handoffs (mint,slot,ts,seller,buyer,sol,tokens,same_tx) VALUES (?,?,?,?,?,?,?,?)`),
+  updWallet: db.prepare(`UPDATE cluster_wallets SET funder=?, wallet_age_s=? WHERE mint=? AND wallet=?`),
+  insPaper: db.prepare(`INSERT INTO paper_trades (mint,name,entry_ts,entry_mc,entry_price,bundle_pct,bundle_sol,handoffs,tier,factory,inflow_sol,inflow_wallets,outside_share,entry_age_s,peak_mc,strategy,next_level,wave1_peak_mc) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`),
+  setPaperExtra: db.prepare(`UPDATE paper_trades SET cluster_held_pct=?, trigger_kind=? WHERE id=?`),
+  setFeatures: db.prepare(`UPDATE paper_trades SET creator_prior=?, creator_best_peak=?, dev_buy_sol=?, snipers=?, hour_utc=?, parent_id=?, bs_ratio_entry=?, buyers_entry=? WHERE id=?`),
+  creatorHist: db.prepare(`SELECT COUNT(*) n, MAX(peak_mc_usd) best, SUM(graduated) grads, SUM(CASE WHEN peak_mc_usd>=100000 THEN 1 ELSE 0 END) over100k FROM tokens WHERE creator=? AND mint<>? AND create_ts<?`),
+  setVolEntry: db.prepare(`UPDATE paper_trades SET vol_at_entry=? WHERE id=?`),
+  setAfterLast: db.prepare(`UPDATE paper_trades SET after_last_mult=?, after_last_mc=?, after_last_ts=? WHERE id=?`), // v0.18.39
+  setAfter: db.prepare(`UPDATE paper_trades SET after_peak_mult=?, after_peak_mc=? WHERE id=?`),
+  setHandover: db.prepare(`UPDATE paper_trades SET handover=1 WHERE id=?`),
+  setPaperSocials: db.prepare(`UPDATE paper_trades SET socials=?, has_socials=? WHERE id=?`),
+  updPaper: db.prepare(`UPDATE paper_trades SET peak_mc=?, peak_mult=?, x_cluster=?, x_tsl40=?, x_tsl60=?, x_tp=?, x_time=?, x_grad=?, exit_ts=?, exit_mc=?, exit_price=?, exit_reason=?, pnl_pct=?, closed=?, x_tsl80=?, x_half60=?, x_twophase=?, x_ladder=?, x_levels=?, x_m1=?, x_m1vol=?, x_volstop=? WHERE id=?`),
+  setPaperMeta: db.prepare(`UPDATE paper_trades SET alerted=?, socials=?, has_socials=? WHERE id=?`),
+  setPaperCard: db.prepare(`UPDATE paper_trades SET mc_5m=COALESCE(?,mc_5m), mc_15m=COALESCE(?,mc_15m), buyers_5m=COALESCE(?,buyers_5m), buys=?, sells=? WHERE id=?`),
+  setTokenSocials: db.prepare(`UPDATE tokens SET has_socials=?, socials=? WHERE mint=?`),
+  digestTop: db.prepare(`SELECT p.name, p.entry_mc, p.peak_mult, p.x_time, p.tier, p.factory, p.has_socials, p.handoffs, p.inflow_sol, p.inflow_wallets, p.entry_age_s, p.buys, p.sells, t.outside_buyers, p.mint FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint WHERE p.entry_ts>=? AND p.entry_ts<? AND COALESCE(p.invalid,0)=0 ORDER BY p.peak_mult DESC LIMIT 10`),
+  digestAgg: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, SUM(CASE WHEN has_socials=0 THEN 1 ELSE 0 END) nosoc, SUM(CASE WHEN has_socials=0 AND peak_mult>=2 THEN 1 ELSE 0 END) nosoc2x, SUM(CASE WHEN factory=1 THEN 1 ELSE 0 END) fac, SUM(CASE WHEN factory=1 AND peak_mult>=2 THEN 1 ELSE 0 END) fac2x, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_time) xt FROM paper_trades WHERE entry_ts>=? AND entry_ts<?`),
+  insMom: db.prepare(`INSERT INTO paper_trades (strategy,mint,name,symbol,entry_ts,entry_mc,entry_price,bundle_pct,bundle_sol,handoffs,tier,factory,has_socials,socials,vol5m_usd,vol1m_usd,buys,sells,age_s,reentry_n,alerted,peak_mc) VALUES ('momentum',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`),
+  setStrategy: db.prepare(`UPDATE paper_trades SET strategy=? WHERE id=?`),
+  setQuality: db.prepare(`UPDATE paper_trades SET q_score=?, q_wallets=?, q_per10k=?, q_top3=?, q_roundtrip=?, q_retail=?, q_custom=?, q_size_cv=?, q_new_pct=?, q_px_per10k=? WHERE id=?`),
+  setCombo: db.prepare(`UPDATE paper_trades SET x_combo=?, x_tp15=?, x_tsl25=?, x_t15s25=?, x_t15s60=?, x_t2s25=?, x_t2s60=? WHERE id=?`),
+  setHolders: db.prepare(`UPDATE paper_trades SET top10_entry=?, largest_entry=?, holders_entry=?, dev_hold_entry=? WHERE id=?`),
+  setFees: db.prepare(`UPDATE paper_trades SET fee_accrued_entry=?, fee_claims_entry=?, fee_claimed_entry=? WHERE id=?`),
+  setCore: db.prepare(`UPDATE paper_trades SET core=?, core_tight=? WHERE id=?`),
+  setEnrich1: db.prepare(`UPDATE paper_trades SET snipers_n=?, snipers_held_pct=?, proven_vol_share=?, proven_wallets_5m=? WHERE id=?`), // v0.18.19
+  setDexPaid: db.prepare(`UPDATE paper_trades SET dex_paid=?, dex_paid_types=?, dex_paid_lead_s=? WHERE id=?`),
+  setFresh: db.prepare(`UPDATE paper_trades SET fresh_share=?, fresh_n=? WHERE id=?`),
+  setCoreV40: db.prepare(`UPDATE paper_trades SET core_v40=? WHERE id=?`), // v0.18.17
+  setS15: db.prepare(`UPDATE paper_trades SET x_s15be=? WHERE id=?`), // v0.18.49 split exit beside P1
+  setH2: db.prepare(`UPDATE paper_trades SET x_h2t40=? WHERE id=?`), // v0.18.35 Project 5 exit
+  setV2m: db.prepare(`UPDATE paper_trades SET v2m_usd=? WHERE id=?`),
+  hasStrat: db.prepare(`SELECT 1 FROM paper_trades WHERE strategy=? AND mint=? LIMIT 1`), setGmgn: db.prepare(`UPDATE paper_trades SET gmgn_json=? WHERE id=?`), setEarly: db.prepare(`UPDATE paper_trades SET early_json=? WHERE id=?`), // v0.18.50
+  hasP5: db.prepare(`SELECT 1 FROM paper_trades WHERE strategy='mom2m' AND mint=? LIMIT 1`),
+  setConf: db.prepare(`UPDATE paper_trades SET conf_ok=?, conf_ratio=? WHERE id=?`), // v0.18.32 Project 4 decision on the core row
+  setManual: db.prepare(`UPDATE paper_trades SET x_manual=?, manual_pct=?, manual_ts=? WHERE id=?`), // v0.18.30 dashboard sell button (paper)
+  setDead: db.prepare(`UPDATE paper_trades SET x_dead=?, x_p3d=? WHERE id=?`), // v0.18.30
+  setSplit: db.prepare(`UPDATE paper_trades SET x_split=?, split_branch=? WHERE id=?`), // v0.18.22
+  setFlow4ff: db.prepare(`UPDATE paper_trades SET x_flow4ff=? WHERE id=?`),
+  setCleanFlow: db.prepare(`UPDATE paper_trades SET bs_clean_entry=?, bot_share_entry=? WHERE id=?`),
+  setHit15: db.prepare(`UPDATE paper_trades SET t_hit15_s=? WHERE id=? AND t_hit15_s IS NULL`),
+  insClaim: db.prepare(`INSERT INTO creator_claims (creator, ts, sol, venue, sig, mint, ambiguous) VALUES (?,?,?,?,?,?,?)`),
+  claimsFor: db.prepare(`SELECT COUNT(*) n, COALESCE(SUM(sol),0) sol, MIN(ts) first, MAX(ts) last, SUM(COALESCE(ambiguous,0)) amb FROM creator_claims WHERE mint=?`),
+  latestMintOf: db.prepare(`SELECT mint, create_ts, (SELECT COUNT(*) FROM tokens t2 WHERE t2.creator=t.creator AND t2.create_ts>=?) n FROM tokens t WHERE creator=? AND create_ts<=? ORDER BY create_ts DESC LIMIT 1`),
+  upTokenFees: db.prepare(`UPDATE tokens SET creator_fee_sol=?, fee_claims=?, fee_claimed_sol=?, first_claim_ts=? WHERE mint=?`),
+  mintsByCreator: db.prepare(`SELECT mint, create_ts FROM tokens WHERE creator=? AND create_ts>=?`),
+  setStops: db.prepare(`UPDATE paper_trades SET x_tp15=?, x_tsl25=?, x_t15s25=?, x_t15s60=?, x_t2s25=?, x_t2s60=? WHERE id=?`),
+  setPath: db.prepare(`UPDATE paper_trades SET path=? WHERE id=?`),
+  setFirstSecs: db.prepare(`UPDATE paper_trades SET first_secs=? WHERE id=?`), // v0.18.89
+  setH5: db.prepare(`UPDATE paper_trades SET x_h5=?, x_h5f12=?, x_h5f14=?, x_h3=?, x_h15=?, x_h5fast=? WHERE id=?`), // v0.18.163: back to 7 values - v0.18.155 added x_h3l here and two callers kept passing 7, so the update threw (silently) from 16:25 to 19:00 UK 20 Oct
+  setH3L: db.prepare(`UPDATE paper_trades SET x_h3l=?, x_t2n30=? WHERE id=?`), // v0.18.163 GR-lock and PG-hold // v0.18.81 hold-5 exits · v0.18.87 + hold-15, fast-starters-run
+  setH5Retro: db.prepare(`UPDATE paper_trades SET x_h5=?, x_h5f12=?, x_h5f14=?, x_h3=?, h5_retro=1 WHERE id=?`),
+  setAfterPath: db.prepare(`UPDATE paper_trades SET after_path=? WHERE id=?`), // v0.18.81 7–30 min marks after entry
+  setTrace: db.prepare(`UPDATE paper_trades SET trace=? WHERE id=?`), // v0.18.113 P5 data set: marks after entry
+  setExits2: db.prepare(`UPDATE paper_trades SET x_flow=?, x_t15s40=?, x_t2s40=?, dd_pre15=?, x_flow4=? WHERE id=?`),
+  setTight: db.prepare(`UPDATE paper_trades SET tight=? WHERE id=?`),
+  setVenue: db.prepare(`UPDATE paper_trades SET venue=? WHERE id=?`),
+  insPumpBuyer: db.prepare(`INSERT INTO pump_buyers (trade_id, mint, wallet, ts, sol, mc, lead_s, venue) VALUES (?,?,?,?,?,?,?,?)`),
+  prepumpTop: db.prepare(`SELECT b.wallet, COUNT(DISTINCT b.mint) n, SUM(CASE WHEN p.peak_mult>=2 THEN 1 ELSE 0 END) hit2, SUM(CASE WHEN p.peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(b.lead_s) lead, SUM(b.sol) sol
+    FROM (SELECT trade_id, mint, wallet, MIN(ts) ts, MAX(lead_s) lead_s, SUM(sol) sol FROM pump_buyers WHERE ts>=? GROUP BY trade_id, wallet) b JOIN paper_trades p ON p.id=b.trade_id AND COALESCE(p.invalid,0)=0
+    GROUP BY b.wallet HAVING n>=? ORDER BY hit2 DESC, n DESC LIMIT ?`),
+  insDexPool: db.prepare(`INSERT OR REPLACE INTO dex_pools (pool, venue, mint, sol_side, m0, m1, dec, supply, bin_step, ignore, ts) VALUES (?,?,?,?,?,?,?,?,?,?,?)`),
+  allDexPools: db.prepare(`SELECT * FROM dex_pools`),
+  setChurn: db.prepare(`UPDATE paper_trades SET churn_entry=?, cluster_out_entry=?, cluster_held_pct=COALESCE(cluster_held_pct,?), handoffs=COALESCE(handoffs,?) WHERE id=?`),
+  setEntryCounts: db.prepare(`UPDATE paper_trades SET buys_entry=?, sells_entry=?, proven_entry=? WHERE id=?`),
+  provenWallets: db.prepare(`SELECT wallet FROM wallet_buys WHERE resolved=1 AND is_cluster=0 AND age_s>=3 AND sol>=? AND entry_mc>0 AND wallet NOT IN (SELECT wallet FROM wallet_buys WHERE ts>=? GROUP BY wallet HAVING COUNT(*)>?) GROUP BY wallet HAVING COUNT(*)>=? AND SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*)>=?`),
+  setNextLevel: db.prepare(`UPDATE paper_trades SET next_level=? WHERE id=?`),
+  updMom: db.prepare(`UPDATE paper_trades SET peak_mc=?, peak_mult=?, x_tp=?, x_tsl40=?, x_tsl60=?, x_tsl80=?, x_half60=?, x_twophase=?, x_ladder=?, x_time=?, exit_ts=?, exit_mc=?, exit_price=?, exit_reason=?, pnl_pct=?, closed=?, x_levels=?, x_m1=?, x_m1vol=?, x_volstop=? WHERE id=?`),
+  tokenMeta: db.prepare(`SELECT name, symbol, creator, create_ts, bundle_pct, bundle_sol, bundle_wallets, dev_buy_sol, handoffs, tier, factory, has_socials, socials, cluster_sol_in, cluster_sol_out FROM tokens WHERE mint=?`), // v0.18.141: + bundle_wallets (book F's rule read it and always got null — F never opened a trade)
+  stratSummary: db.prepare(`SELECT strategy, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, AVG(peak_mult) peak, AVG(x_tp) xtp, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_tsl80) x80, AVG(x_half60) xh, AVG(x_twophase) x2p, AVG(x_ladder) xl, AVG(x_levels) xlv, AVG(x_m1) xm1, AVG(x_m1vol) xm1v, AVG(x_volstop) xvs, AVG(x_time) xt, AVG(x_combo) xc, AVG(x_tp15) xtp15, AVG(x_tsl25) x25, AVG(x_t15s25) s1525, AVG(x_t15s60) s1560, AVG(x_t2s25) s225, AVG(x_t2s60) s260, AVG(x_flow) xflow, AVG(x_flow4) xflow4, AVG(x_flow4ff) xflow4ff, AVG(x_split) xsplit, AVG(x_p3d) xp3d, SUM(core_v40) nv40, AVG(CASE WHEN core_v40=1 THEN x_flow4 END) xv40, AVG(x_t15s40) s1540, AVG(x_t2s40) s240, SUM(CASE WHEN peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(after_peak_mult) ap, SUM(CASE WHEN after_peak_mult>=3 THEN 1 ELSE 0 END) ap3 FROM paper_trades WHERE entry_ts>=? AND entry_ts<? AND COALESCE(invalid,0)=0 GROUP BY strategy`),
+  stratSummaryCore: db.prepare(`SELECT 'momentum-core' strategy, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, AVG(peak_mult) peak, AVG(x_tp) xtp, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_tsl80) x80, AVG(x_half60) xh, AVG(x_twophase) x2p, AVG(x_ladder) xl, AVG(x_levels) xlv, AVG(x_m1) xm1, AVG(x_m1vol) xm1v, AVG(x_volstop) xvs, AVG(x_time) xt, AVG(x_combo) xc, AVG(x_tp15) xtp15, AVG(x_tsl25) x25, AVG(x_t15s25) s1525, AVG(x_t15s60) s1560, AVG(x_t2s25) s225, AVG(x_t2s60) s260, AVG(x_flow) xflow, AVG(x_flow4) xflow4, AVG(x_flow4ff) xflow4ff, AVG(x_split) xsplit, AVG(x_p3d) xp3d, SUM(core_v40) nv40, AVG(CASE WHEN core_v40=1 THEN x_flow4 END) xv40, AVG(x_t15s40) s1540, AVG(x_t2s40) s240, SUM(CASE WHEN peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(after_peak_mult) ap, SUM(CASE WHEN after_peak_mult>=3 THEN 1 ELSE 0 END) ap3 FROM paper_trades WHERE strategy='momentum' AND core=1 AND entry_ts>=? AND entry_ts<? AND COALESCE(invalid,0)=0`),
+  stratSummaryCoreTight: db.prepare(`SELECT 'momentum-core-tight' strategy, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, AVG(peak_mult) peak, AVG(x_tp) xtp, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_tsl80) x80, AVG(x_half60) xh, AVG(x_twophase) x2p, AVG(x_ladder) xl, AVG(x_levels) xlv, AVG(x_m1) xm1, AVG(x_m1vol) xm1v, AVG(x_volstop) xvs, AVG(x_time) xt, AVG(x_combo) xc, AVG(x_tp15) xtp15, AVG(x_tsl25) x25, AVG(x_t15s25) s1525, AVG(x_t15s60) s1560, AVG(x_t2s25) s225, AVG(x_t2s60) s260, AVG(x_flow) xflow, AVG(x_flow4) xflow4, AVG(x_flow4ff) xflow4ff, AVG(x_split) xsplit, AVG(x_p3d) xp3d, SUM(core_v40) nv40, AVG(CASE WHEN core_v40=1 THEN x_flow4 END) xv40, AVG(x_t15s40) s1540, AVG(x_t2s40) s240, SUM(CASE WHEN peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(after_peak_mult) ap, SUM(CASE WHEN after_peak_mult>=3 THEN 1 ELSE 0 END) ap3 FROM paper_trades WHERE strategy='momentum' AND core_tight=1 AND entry_ts>=? AND entry_ts<? AND COALESCE(invalid,0)=0`),
+  stratSummaryTight: db.prepare(`SELECT 'wave2-tight' strategy, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, AVG(peak_mult) peak, AVG(x_tp) xtp, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_tsl80) x80, AVG(x_half60) xh, AVG(x_twophase) x2p, AVG(x_ladder) xl, AVG(x_levels) xlv, AVG(x_m1) xm1, AVG(x_m1vol) xm1v, AVG(x_volstop) xvs, AVG(x_time) xt, AVG(x_combo) xc, AVG(x_tp15) xtp15, AVG(x_tsl25) x25, AVG(x_t15s25) s1525, AVG(x_t15s60) s1560, AVG(x_t2s25) s225, AVG(x_t2s60) s260, AVG(x_flow) xflow, AVG(x_flow4) xflow4, AVG(x_flow4ff) xflow4ff, AVG(x_split) xsplit, AVG(x_p3d) xp3d, SUM(core_v40) nv40, AVG(CASE WHEN core_v40=1 THEN x_flow4 END) xv40, AVG(x_t15s40) s1540, AVG(x_t2s40) s240, SUM(CASE WHEN peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(after_peak_mult) ap, SUM(CASE WHEN after_peak_mult>=3 THEN 1 ELSE 0 END) ap3 FROM paper_trades WHERE strategy='wave2' AND tight=1 AND entry_ts>=? AND entry_ts<? AND COALESCE(invalid,0)=0`),
+  insWB: db.prepare(`INSERT OR IGNORE INTO wallet_buys (wallet,mint,ts,age_s,sol,entry_mc,is_cluster) VALUES (?,?,?,?,?,?,?)`),
+  wbCount: db.prepare(`SELECT COUNT(*) FROM wallet_buys WHERE mint=?`).pluck(),
+  upPeak: db.prepare(`INSERT INTO token_peaks (mint,create_ts,peak_30m,peak_24h,until) VALUES (?,?,?,?,?) ON CONFLICT(mint) DO UPDATE SET peak_30m=MAX(peak_30m,excluded.peak_30m), peak_24h=MAX(peak_24h,excluded.peak_24h)`),
+  resolveWB: db.prepare(`UPDATE wallet_buys SET peak_30m=(SELECT peak_30m FROM token_peaks WHERE token_peaks.mint=wallet_buys.mint), peak_24h=(SELECT peak_24h FROM token_peaks WHERE token_peaks.mint=wallet_buys.mint), resolved=1 WHERE resolved=0 AND mint IN (SELECT mint FROM token_peaks WHERE until<=?)`),
+  pruneWB: db.prepare(`DELETE FROM wallet_buys WHERE ts<?`),
+  prunePeaks: db.prepare(`DELETE FROM token_peaks WHERE until<?`),
+  leaderboard: db.prepare(`SELECT wallet, COUNT(*) n,
+      SUM(CASE WHEN peak_24h>=2*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*) r2,
+      SUM(CASE WHEN peak_24h>=3*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*) r3,
+      SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*) r5,
+      SUM(CASE WHEN peak_24h>=10*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*) r10,
+      AVG(peak_24h/entry_mc) avgpeak, AVG(entry_mc) avgmc, AVG(sol) avgsol, MAX(ts) last_ts, AVG(age_s) avgage
+    FROM wallet_buys WHERE resolved=1 AND is_cluster=0 AND age_s>=? AND entry_mc>0 AND ts>=?
+    GROUP BY wallet HAVING n>=? ORDER BY r5 DESC, r10 DESC, n DESC LIMIT ?`),
+  walletStats: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN peak_24h>=2*entry_mc THEN 1 ELSE 0 END) h2, SUM(CASE WHEN peak_24h>=3*entry_mc THEN 1 ELSE 0 END) h3, SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END) h4, SUM(CASE WHEN peak_24h>=10*entry_mc THEN 1 ELSE 0 END) h10, AVG(peak_24h/entry_mc) avgpeak, AVG(entry_mc) avgmc, MAX(ts) last_ts, SUM(resolved=0) pending FROM wallet_buys WHERE wallet=? AND is_cluster=0 AND entry_mc>0`),
+  walletRecent: db.prepare(`SELECT w.mint, t.name, w.ts, w.age_s, w.sol, w.entry_mc, w.peak_24h, w.resolved FROM wallet_buys w LEFT JOIN tokens t ON t.mint=w.mint WHERE w.wallet=? ORDER BY w.ts DESC LIMIT 8`),
+  spamWallets: db.prepare(`SELECT wallet FROM wallet_buys WHERE ts>=? GROUP BY wallet HAVING COUNT(*)>?`),
+  creatorsTop: db.prepare(`SELECT creator, COUNT(*) n, MAX(peak_mc_usd) best, AVG(peak_mc_usd) avgpeak, SUM(CASE WHEN peak_mc_usd>=100000 THEN 1 ELSE 0 END) over100k, SUM(CASE WHEN graduated=1 THEN 1 ELSE 0 END) grads, MAX(create_ts) last_ts, SUM(factory) fac, AVG(bundle_pct) avgbundle FROM tokens WHERE create_ts>=? GROUP BY creator HAVING n>=? ORDER BY grads DESC, over100k DESC, best DESC LIMIT ?`),
+  creatorTokens: db.prepare(`SELECT name, symbol, create_ts, bundle_pct, bundle_sol, peak_mc_usd, graduated, has_socials, mint FROM tokens WHERE creator=? ORDER BY create_ts DESC LIMIT 10`),
+  creatorAgg: db.prepare(`SELECT COUNT(*) n, MAX(peak_mc_usd) best, AVG(peak_mc_usd) avgpeak, SUM(CASE WHEN peak_mc_usd>=100000 THEN 1 ELSE 0 END) over100k, SUM(graduated) grads, MIN(create_ts) first_ts, MAX(create_ts) last_ts FROM tokens WHERE creator=?`),
+  addWatchCreator: db.prepare(`INSERT OR REPLACE INTO watch_creators (creator,label,added_ts) VALUES (?,?,?)`),
+  delWatchCreator: db.prepare(`DELETE FROM watch_creators WHERE creator=?`),
+  listWatchCreators: db.prepare(`SELECT creator,label FROM watch_creators ORDER BY added_ts`),
+  setCreatorFunder: db.prepare(`UPDATE tokens SET creator_funder=?, creator_age_s=?, creator_funded_sol=? WHERE mint=?`),
+  runners: db.prepare(`SELECT p.mint, p.peak_24h, p.peak_30m, p.create_ts, t.name, t.symbol, t.bundle_pct, t.bundle_sol, t.bundle_wallets, t.dev_buy_sol, t.has_socials, t.factory, t.creator, t.handoffs, t.graduated, t.cluster_sol_in, t.cluster_sol_out, t.outside_buyers FROM token_peaks p LEFT JOIN tokens t ON t.mint=p.mint WHERE p.peak_24h>=? AND p.create_ts>=? ORDER BY p.peak_24h DESC LIMIT ?`),
+  lifeFor: db.prepare(`SELECT cp, mc, vol5m_usd, buys5m, sells5m, buyers_total, alive, top10_pct FROM token_life WHERE mint=? ORDER BY cp`),
+  papersFor: db.prepare(`SELECT strategy, trigger_kind, entry_ts, entry_mc, peak_mult, x_half60, x_tsl40, x_levels, after_peak_mult FROM paper_trades WHERE mint=? ORDER BY entry_ts`),
+  insLife: db.prepare(`INSERT OR REPLACE INTO token_life (mint,cp,ts,mc,vol5m_usd,buys5m,sells5m,buyers5m,buyers_total,graduated,top10_pct,holders,alive) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`),
+  setLifeHolders: db.prepare(`UPDATE token_life SET top10_pct=?, holders=? WHERE mint=? AND cp=?`),
+  insBigBuy: db.prepare(`INSERT INTO big_buys (mint,wallet,ts,age_s,sol,mc,balance_sol,venue) VALUES (?,?,?,?,?,?,?,?)`),
+  addWatch: db.prepare(`INSERT OR REPLACE INTO watch_wallets (wallet,label,added_ts,source) VALUES (?,?,?,?)`),
+  delWatch: db.prepare(`DELETE FROM watch_wallets WHERE wallet=?`),
+  listWatch: db.prepare(`SELECT wallet,label,source FROM watch_wallets ORDER BY added_ts`),
+  openPapers: db.prepare(`SELECT COUNT(*) FROM paper_trades WHERE closed=0`).pluck(),
+  closedSince: db.prepare(`SELECT COUNT(*) c, AVG(pnl_pct) p FROM paper_trades WHERE closed=1 AND exit_ts>=?`),
+  setDevOut: db.prepare(`UPDATE paper_trades SET x_devout=? WHERE id=?`), getDevOut: db.prepare(`SELECT x_devout FROM paper_trades WHERE id=?`).pluck(), // v0.18.176 creator-sold-out exit (record only)
+};
+
+
+====================================================================================================
+=== FILE: src/config.js (20,042 chars)
+====================================================================================================
+import "./env.js";
+const n = (k, d) => (process.env[k] !== undefined && process.env[k] !== "" ? Number(process.env[k]) : d);
+const s = (k, d) => (process.env[k] !== undefined && process.env[k] !== "" ? process.env[k] : d);
+export const CFG = {
+  PUMP_PROGRAM: "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
+  HELIUS_KEY: s("HELIUS_API_KEY", ""),
+  WS_URLS: [
+    ...(s("HELIUS_API_KEY", "") ? [`wss://mainnet.helius-rpc.com/?api-key=${s("HELIUS_API_KEY")}`] : []),
+    "wss://api.mainnet-beta.solana.com",
+  ],
+  RPC_URLS: [
+    ...(s("HELIUS_API_KEY", "") ? [`https://mainnet.helius-rpc.com/?api-key=${s("HELIUS_API_KEY")}`] : []),
+    ...s("RPC_EXTRA", "").split(",").map((x) => x.trim()).filter(Boolean), // v0.18.59: extra RPC providers (comma-separated URLs) tried after Helius
+    "https://api.mainnet-beta.solana.com",
+  ],
+  DB_PATH: s("DB_PATH", "/root/tracker/data/tracker.db"),
+  // Layer-1 gate: a launch is "prepared" if bundle >= pct AND bundle SOL >= sol
+  BUNDLE_PCT_MIN: n("BUNDLE_PCT_MIN", 40),
+  BUNDLE_SOL_MIN: n("BUNDLE_SOL_MIN", 20),
+  BUNDLE_SLOTS: n("BUNDLE_SLOTS", 0),          // buys within create_slot + N count as bundle (0 = same slot only)
+  FINALIZE_MS: n("FINALIZE_MS", 4000),         // wait before computing bundle stats
+  TRACK_MIN: n("TRACK_MIN", 125),              // keep tier-1 token trades for this many minutes (v0.19.1: 30 → 125, the books' 2-hour horizon; in-memory trades are capped per launch)
+  TOTAL_SUPPLY: 1_000_000_000,
+  TG_TIER1_ALERTS: n("TG_TIER1_ALERTS", 1),
+  TG_TIER1_SOL_MIN: n("TG_TIER1_SOL_MIN", 60),   // only ping Telegram for prepared launches with at least this much bundle SOL
+  HEARTBEAT_MIN: n("HEARTBEAT_MIN", 30),
+};
+// --- hand-off / paper trading ---
+Object.assign(CFG, {
+  HANDOFF_MIN: n("HANDOFF_MIN", 3),            // hand-offs needed to trigger paper entry
+  HANDOFF_WINDOW_MIN: n("HANDOFF_WINDOW_MIN", 10), // ...within this many minutes of launch
+  HANDOFF_SLOTS: n("HANDOFF_SLOTS", 2),        // cross-tx match: buy within N slots after sell
+  HANDOFF_TOL: n("HANDOFF_TOL", 0.15),         // token amount tolerance for cross-tx match
+  FRESH_MAX_AGE_S: n("FRESH_MAX_AGE_S", 86400),// wallet first tx younger than this = fresh
+  EXIT_OUTFLOW_PCT: n("EXIT_OUTFLOW_PCT", 20), // cluster net SOL outflow > this % of bundle SOL = exit
+  TSL_PCT: n("TSL_PCT", 40),                   // paper exit: drop from peak
+  MAX_HOLD_MIN: n("MAX_HOLD_MIN", 360),
+  RPC_DAILY_BUDGET: n("RPC_DAILY_BUDGET", 20000), // max credits/day for wallet lookups
+});
+// --- v0.3: early-inflow entry, parallel paper exits ---
+Object.assign(CFG, {
+  ENTRY_WINDOW_MIN: n("ENTRY_WINDOW_MIN", 3),   // inflow trigger only within first N minutes after launch
+  INFLOW_SOL: n("INFLOW_SOL", 10),              // buys (SOL) in the last 60s, excluding create slot
+  INFLOW_WALLETS: n("INFLOW_WALLETS", 8),       // distinct buyers in that window
+  INFLOW_WINDOW_S: n("INFLOW_WINDOW_S", 60),
+  TRACK_MIN_T0: n("TRACK_MIN_T0", 5),
+  VOL_TRACK_SOL: n("VOL_TRACK_SOL", 15),        // v0.19: an unbundled launch whose buys reach this many SOL gets its trades stored (the funded-dev books' pond)
+  VOL_TRACK_MIN: n("VOL_TRACK_MIN", 125),       // v0.19.1: … for this long — the books' 2-hour horizon plus a margin (review, 5 Nov: "retention must cover the evaluation horizon")           // unbundled tokens: keep in memory this long unless a position opens
+  FACTORY_WINDOW_MIN: n("FACTORY_WINDOW_MIN", 10), // same creator, >=2 launches within this = factory flag
+  TP_MULT: n("TP_MULT", 2),                     // take-profit variant
+  GRAD_VTOK: n("GRAD_VTOK", 285_000_000),       // virtual token reserves at/below this = curve complete (graduated)
+});
+// --- v0.3.2: alert gating, scorecards, digest ---
+Object.assign(CFG, {
+  ALERT_INFLOW_SOL: n("ALERT_INFLOW_SOL", 20),     // Telegram only if inflow >= this (or tier-1)
+  ALERT_INFLOW_WALLETS: n("ALERT_INFLOW_WALLETS", 15),
+  ALERT_REQUIRE_SOCIALS: n("ALERT_REQUIRE_SOCIALS", 1),
+  SCORECARD_MIN: s("SCORECARD_MIN", "5,15").split(",").map(Number),
+  FLAT_MC_PCT: n("FLAT_MC_PCT", 20),               // MC up less than this at +5m = flat/dead
+  NO_NEW_WALLETS_SOL_PER_BUYER: n("NO_NEW_WALLETS_SOL_PER_BUYER", 1.5), // inflow/buyers above this with few buyers = churn
+  NO_NEW_WALLETS_MAX_BUYERS: n("NO_NEW_WALLETS_MAX_BUYERS", 15),
+  DIGEST_HOUR_LOCAL: n("DIGEST_HOUR_LOCAL", 9),    // Europe/London
+});
+Object.assign(CFG, { PUMPSWAP_ENABLED: n("PUMPSWAP_ENABLED", 1) });
+Object.assign(CFG, {
+  PS_RESOLVE_SOL: n("PS_RESOLVE_SOL", 30),         // look up a pool's token only once it has traded >= this SOL in 5 min
+  PS_POOL_DAILY_BUDGET: n("PS_POOL_DAILY_BUDGET", 5000),
+  PS_RESOLVE_CONCURRENCY: n("PS_RESOLVE_CONCURRENCY", 2),
+});
+// --- v0.5: momentum (volume) strategy ---
+Object.assign(CFG, {
+  VOL5M_USD: n("VOL5M_USD", 100_000),
+  VOL5M_HOT_USD: n("VOL5M_HOT_USD", 200_000),
+  VOL1M_BURST_USD: n("VOL1M_BURST_USD", 30_000),
+  MOM_MC_CAP: n("MOM_MC_CAP", 2_000_000),
+  MOM_PAPER_MC_CAP: n("MOM_PAPER_MC_CAP", 2_000_000), // v0.15: paper-trade only below this; above → alert only (0/24 hit 2x above $500K)
+  MOM_BS_MIN: n("MOM_BS_MIN", 1.0),           // v0.15: 5m buy$/sell$ must be >= this (3% hit 2x below 1.0 vs 28% above)
+  MOM_MIN_TRADES5: n("MOM_MIN_TRADES5", 10),  // v0.15: sanity — at least this many swaps in the 5m window
+  MOM_MIN_WALLETS5: n("MOM_MIN_WALLETS5", 5), // ...from this many distinct wallets
+  MOM_MIN_AGE_S: n("MOM_MIN_AGE_S", 60),      // ...and token at least this old (when age is known)
+  PS_MAX_SWAP_SOL: n("PS_MAX_SWAP_SOL", 1000), // v0.15: drop PumpSwap swaps above this (decode artefacts on instant graduations)
+  GRAD_ALERT_BUYERS: n("GRAD_ALERT_BUYERS", 250), // v0.15: graduation strategy alerts only when distinct buyers >= this (paper-enters all)
+  CONF_ALERT_BUYERS: n("CONF_ALERT_BUYERS", 250), // v0.15: confirm alerts only with this many buyers (paper trade always)
+  CLIMB_ALERT_BUYERS: n("CLIMB_ALERT_BUYERS", 250), // v0.15: climber alerts only with this many buyers
+  MOM_MAX_AGE_D: n("MOM_MAX_AGE_D", 3650), // v0.18.11: any age — Groklet (486d old) did $100K/5m at $304K and 2.58x; the 30-day cap kept momentum out
+  MOM_COOLDOWN_MIN: n("MOM_COOLDOWN_MIN", 30),
+  MOM_MAX_HOLD_MIN: n("MOM_MAX_HOLD_MIN", 360),
+  MOM_REENTRY_MAX: n("MOM_REENTRY_MAX", 2),
+  MOM_REENTRY_QUIET_MIN: n("MOM_REENTRY_QUIET_MIN", 15),
+  MOM_SCORECARD_MIN: s("MOM_SCORECARD_MIN", "15,60").split(",").map(Number),
+  SUMMARY_HOURS: n("SUMMARY_HOURS", 4),
+  PS_RESOLVE_SOL: n("PS_RESOLVE_SOL", 100),
+});
+// --- v0.6: second wave, levels ---
+Object.assign(CFG, {
+  LEVELS_USD: s("LEVELS_USD", "69000,100000,250000,500000,1000000,2000000").split(",").map(Number),
+  LEVEL_SELL_PCT: n("LEVEL_SELL_PCT", 0.97),     // sell slice at 97% of each level
+  LEVEL_SLICE: n("LEVEL_SLICE", 0.25),           // 25% of position per level crossed (rest trails 60%)
+  WALL_WARN_PCT: n("WALL_WARN_PCT", 15),         // warn if next level within this % above entry MC
+  SW_FADE_FRAC: n("SW_FADE_FRAC", 0.25),         // first wave faded: 60s inflow < this × wave peak
+  SW_QUIET_MIN: n("SW_QUIET_MIN", 5),            // ...for at least this long
+  SW_CLUSTER_FLAT_MIN: n("SW_CLUSTER_FLAT_MIN", 5), // cluster net outflow unchanged for this long
+  SW_INFLOW_SOL: n("SW_INFLOW_SOL", 8),          // second wave: 60s inflow back over this
+  SW_INFLOW_WALLETS: n("SW_INFLOW_WALLETS", 6),  // ...from this many distinct new wallets
+  SW_WINDOW_MIN: n("SW_WINDOW_MIN", 30),         // second wave must happen within tracking window
+  MOM_REENTRY_RECLAIM: n("MOM_REENTRY_RECLAIM", 1), // re-entry must reclaim the last rejected level
+});
+// --- v0.7: burst trigger, $1M exits, cluster holdings ---
+Object.assign(CFG, {
+  BURST_TRIGGER: n("BURST_TRIGGER", 1),           // 1-min burst is an entry trigger in its own right
+  M1_EXIT_USD: n("M1_EXIT_USD", 970_000),         // "$1M all-out" sells at this MC
+  M1_HOLD_VOL5M: n("M1_HOLD_VOL5M", 200_000),     // volume-aware: hold through $1M if 5m vol >= this
+});
+// --- v0.8 ---
+Object.assign(CFG, {
+  VOLSTOP_FRAC: n("VOLSTOP_FRAC", 0.5),       // grey zone: stay in if 5m vol >= this × vol at entry
+  VOLSTOP_EXIT_USD: n("VOLSTOP_EXIT_USD", 20_000),  // 5m vol below this = out
+  VOLSTOP_STAY_USD: n("VOLSTOP_STAY_USD", 50_000),  // 5m vol above this (and ratio ok) = stay
+  VOLSTOP_SELL_RATIO: n("VOLSTOP_SELL_RATIO", 1.6), // sells/buys (USD) above this = out
+  VOLSTOP_HARD: n("VOLSTOP_HARD", 0.80),      // ...but always out at -80%
+  AFTER_CLOSE_H: n("AFTER_CLOSE_H", 24),
+  GRAD_HANDOVER: n("GRAD_HANDOVER", 1),
+});
+// --- v0.9: wallet database ---
+Object.assign(CFG, {
+  WB_EARLY_S: n("WB_EARLY_S", 180),        // record buys within first N seconds of launch
+  WB_MIN_SOL: n("WB_MIN_SOL", 0.3),
+  WB_MAX_PER_TOKEN: n("WB_MAX_PER_TOKEN", 40),
+  WB_TOKEN_MIN_MC: n("WB_TOKEN_MIN_MC", 15_000), // only score tokens that reach this MC
+  WB_MIN_BUYS: n("WB_MIN_BUYS", 5),
+  WB_MIN_AGE_S: n("WB_MIN_AGE_S", 1),        // v0.15.1: leaderboard ignores create-block (0s) buys — bundlers/snipers always "win"
+  WATCH_SEED_WALLETS: s("WATCH_SEED_WALLETS", "CZdG7s8FVWVM6Ats8XSJ2R2qRkTKsd7qAtuvHGb1YLXN,BfUE1UcptE2noHrnBYxyqcDbPrboXsA1NZTurr5jd35b,4nHZjd64nCskpL852vcpMkHbYU3ppQ42E4SyZTbBp427").split(",").map((x) => x.trim()).filter(Boolean),
+  WATCH_SEED_CREATORS: s("WATCH_SEED_CREATORS", "D8pP1hegfQrND1tpMv1pQJZYyzwnHsiFa9AVLc2Lzoxy,DR8351MpWktoeJPJnZiwTFnRoXkX7qofvKMvWM8FGuWT,9rdgxk4nTtQY6B8GXtjNsuwGQmz5RtMByFFvVpub8gSY,ACowwSv1QQzPbAD2EhjHTYm9FNgpqeUAfex6Zi9NgJNn,H9h9BCMurt5jTxCB9JhsJerVhqtuaHUVgvAFBGUQbMCs").split(",").map((x) => x.trim()).filter(Boolean),
+  PROVEN_MIN_BUYS: n("PROVEN_MIN_BUYS", 8),        // v0.17.3: raised from 4 — the volume snipers qualified at 4       // v0.15.3: "proven" wallet = this many resolved non-bundle early buys...
+  PROVEN_MIN_5X: n("PROVEN_MIN_5X", 0.5),         // ...with this share reaching 5x within 24h
+  PROVEN_WINDOW_S: n("PROVEN_WINDOW_S", 60),
+  PROVEN_MIN_SOL: n("PROVEN_MIN_SOL", 0.3),         // v0.17.3: a scored buy must be at least this; alert needs 0.2 SOL
+  PROVEN_ALERT_MIN_SOL: n("PROVEN_ALERT_MIN_SOL", 0.2),      // count proven wallets buying within this many seconds of launch
+  SWEEP_EVERY_MIN: n("SWEEP_EVERY_MIN", 5),     // v0.15.3: close over-hold paper trades at the real current price
+  SWEEP_BATCH: n("SWEEP_BATCH", 60),             // per run (1 RPC read each for curve tokens; DexScreener for graduated)
+  SWEEP_MAX_FAILS: n("SWEEP_MAX_FAILS", 3),
+  HOLDER_COUNT_DAILY_BUDGET: n("HOLDER_COUNT_DAILY_BUDGET", 600), // v0.18.113: Helius getTokenAccounts pages for the P5 data set's holder counts (coins without a ledger)
+  HOLDERS_RPC_DAILY_BUDGET: n("HOLDERS_RPC_DAILY_BUDGET", 1500), // v0.18.5: getTokenLargestAccounts at entry for coins without a ledger
+  MOM_FAST_USD: n("MOM_FAST_USD", 50_000), MOM_FAST_WIN_S: n("MOM_FAST_WIN_S", 120), // v0.18.12 "fast" tier: $50K in 2 min (same pace as $125K/5m), fires before the 5m rule on fast movers
+  MOM_TIERS: s("MOM_TIERS", "60000,80000").split(",").map(Number), // v0.18.6: silent paper variants of the momentum rule at lower 5m volume
+  FLOW_CAP: n("FLOW_CAP", 4), // v0.18.10: flow4 = flow exit with a voluntary sell at this multiple
+  FLOW_MIN_VOL: n("FLOW_MIN_VOL", 100_000), FLOW_BS_MIN: n("FLOW_BS_MIN", 1.0), // v0.18.9 flow exit: hold after 1.5x while 5m vol >= this and buy$/sell$ >= this
+  MOM_DIP_PCT: n("MOM_DIP_PCT", 0.20), MOM_DIP_WINDOW_S: n("MOM_DIP_WINDOW_S", 600), // dip-entry variant
+  MOM_RE_MAX: n("MOM_RE_MAX", 5), MOM_RE_GAP_S: n("MOM_RE_GAP_S", 60), // re-entry variant
+  MOM_CT_MC: n("MOM_CT_MC", 60_000), MOM_CT_AGE_S: n("MOM_CT_AGE_S", 360), MOM_CT_SIZE_CV: n("MOM_CT_SIZE_CV", 1.6), // v0.18.7 core-tight tag
+  FRESH_WALLET_D: n("FRESH_WALLET_D", 3), FRESH_SAMPLE: n("FRESH_SAMPLE", 25), FRESH_DAILY_BUDGET: n("FRESH_DAILY_BUDGET", 2000), // v0.18.19 fresh-wallet share at entry
+  LOWVOL_EXIT_USD: n("LOWVOL_EXIT_USD", 25000), LOWVOL_WARMUP_S: n("LOWVOL_WARMUP_S", 300), // v0.18.36: every open paper position is sold when its 5m volume < $25K (needs 5 min of complete trade data)
+  P5_MAX_MC: n("P5_MAX_MC", 2000000), P5E_MAX_MC: n("P5E_MAX_MC", 100000), P5W_MAX_MC: n("P5W_MAX_MC", 250000), P5E_MIN_WALLETS: n("P5E_MIN_WALLETS", 10), // v0.18.50 Project 5 early // v0.18.36 Project 5 market-cap cap
+  P5_VOL2M_USD: n("P5_VOL2M_USD", 100000), P5_MIN_AGE_S: n("P5_MIN_AGE_S", 60), // v0.18.35 Project 5: $100K traded inside 2 minutes, coin ≥60 s old, buys ≥ sells, no MC cap
+  MOM_CONF_S: n("MOM_CONF_S", 60), MOM_CONF_MIN: n("MOM_CONF_MIN", 1.0), MOM_CONF_LATE_S: n("MOM_CONF_LATE_S", 120), // v0.18.32 Project 4: buy MOM_CONF_S after a core trigger only if price > MOM_CONF_MIN x trigger (first tick up to MOM_CONF_LATE_S)
+  MOM_V40_USD: n("MOM_V40_USD", 40_000), MOM_V40_AGE_S: n("MOM_V40_AGE_S", 600), // v0.18.17 core_v40 tag: 1m volume >= $40K and under 10 min old at entry
+  MOM_CORE_MC: n("MOM_CORE_MC", 100_000),          // v0.18.4: "core" momentum = $100K/5m trigger, entry below this, first entry
+  PREPUMP_WINDOW_S: n("PREPUMP_WINDOW_S", 1800),  // v0.18.2: record wallets that bought in this window before a volume trigger
+  DEX_ENABLED: n("DEX_ENABLED", 0),                 // v0.18.126: OFF by default — the Raydium / Meteora / Orca stream was most of the Helius credit burn (19 Oct: 1.6–3.3M a day on the WebSocket) and no book trades those venues; DEX_ENABLED=1 restores it // v0.18: Raydium CPMM/CLMM/LaunchLab + Meteora DLMM + Orca swap feed into momentum
+  DEX_RESOLVE_SWAPS: n("DEX_RESOLVE_SWAPS", 30),    // look a pool up (1–2 credits) once it has this many swaps in 5 min
+  DEX_POOL_DAILY_BUDGET: n("DEX_POOL_DAILY_BUDGET", 6000),
+  DEX_IGNORE_MC: n("DEX_IGNORE_MC", 20_000_000),     // don't feed swaps on tokens above this MC (majors/stables; momentum caps at $2M anyway)
+  PS_MIN_POOL_SOL: n("PS_MIN_POOL_SOL", 10),        // v0.17: ignore PumpSwap swaps from pools holding less SOL than this
+  W2_CHECKS_S: s("W2_CHECKS_S", "120,180,240").split(",").map(Number), // v0.17 second-wave: ages checked
+  W2_MC_MIN: n("W2_MC_MIN", 10_000), W2_MC_MAX: n("W2_MC_MAX", 40_000),
+  W2_BUYERS_MIN: n("W2_BUYERS_MIN", 80),           // distinct buyers so far
+  W2_NEW60_MIN: n("W2_NEW60_MIN", 30),             // new distinct buyers in the last 60s
+  W2_BS_MIN: n("W2_BS_MIN", 1.0),                  // buy$/sell$ over last 60s
+  W2_BUNDLE_MAX: n("W2_BUNDLE_MAX", 60),
+  W2T_CP_MAX: n("W2T_CP_MAX", 180), W2T_MC_MIN: n("W2T_MC_MIN", 12_000), W2T_MC_MAX: n("W2T_MC_MAX", 25_000), W2T_BS_MIN: n("W2T_BS_MIN", 1.3), W2T_DEV_MIN: n("W2T_DEV_MIN", 0.001), // v0.17.4 "tight" tag on second-wave entries
+  W2_ALERT_BUYERS: n("W2_ALERT_BUYERS", 150), W2_ALERT_NEW60: n("W2_ALERT_NEW60", 50), // v0.17.1: alert only the strong ones; paper-trade all
+  REV_PEAK_MIN_AGE_S: n("REV_PEAK_MIN_AGE_S", 180),  // v0.17.1: the peak being recovered from must be at least this old
+  GR_WINDOW_S: n("GR_WINDOW_S", 900),                 // v0.17.1 graduation runner: within this many seconds of graduation
+  GR_VOL5M_USD: n("GR_VOL5M_USD", 80_000), GR_NEW2M_MIN: n("GR_NEW2M_MIN", 30), GR_BS_MIN: n("GR_BS_MIN", 1.0),
+  GREC_DRAWDOWN: n("GREC_DRAWDOWN", 0.6),             // v0.17.1 graduation recovery: >= this far below post-graduation peak
+  GREC_NEW5M_MIN: n("GREC_NEW5M_MIN", 20),
+  SLOW_MIN_AGE_S: n("SLOW_MIN_AGE_S", 600),            // v0.17.2 slow build (base breakout)
+  SLOW_DRAWDOWN: n("SLOW_DRAWDOWN", 0.5),               // fell at least this far from peak at some point
+  SLOW_SINCE_DUMP_S: n("SLOW_SINCE_DUMP_S", 600),       // the low was at least this long ago (went sideways)
+  SLOW_WINDOWS: n("SLOW_WINDOWS", 3),                   // consecutive 5-min windows with rising buyers and volume
+  SLOW_OFF_LOW: n("SLOW_OFF_LOW", 0.3),                 // price at least this far above the post-dump low
+  SLOW_NEW10M_MIN: n("SLOW_NEW10M_MIN", 30), SLOW_MC_MIN: n("SLOW_MC_MIN", 8_000),
+  COMBO_FLOOR_ARM: n("COMBO_FLOOR_ARM", 1.5),         // v0.17.1: floor stop only armed once the position has been up this much
+  REV_AGE_MIN_S: n("REV_AGE_MIN_S", 480), REV_AGE_MAX_S: n("REV_AGE_MAX_S", 3600), // v0.17 revival
+  REV_DRAWDOWN: n("REV_DRAWDOWN", 0.4),            // price at least this far below peak
+  REV_NEW5M_MIN: n("REV_NEW5M_MIN", 20),           // new buyers in last 5m
+  REV_VOL_RATIO: n("REV_VOL_RATIO", 1.0),          // vol last 5m / previous 5m
+  REV_MC_MIN: n("REV_MC_MIN", 5_000),
+  COMBO_FLOOR_MC: n("COMBO_FLOOR_MC", 20_000),     // combined exit: out if MC falls back under this after being above
+  CREATOR_GRADS_FLAG: n("CREATOR_GRADS_FLAG", 2), // v0.15.1: flag creators with this many prior graduations on alerts
+  WB_MAX_BUYS_PER_DAY: n("WB_MAX_BUYS_PER_DAY", 50),
+  WB_RETAIN_D: n("WB_RETAIN_D", 30),
+  WB_COPY_MIN_SOL: n("WB_COPY_MIN_SOL", 0.2),  // watched wallet must buy at least this to trigger a copy
+});
+// --- v0.10: confirmation strategy, burst filter, analysis features ---
+Object.assign(CFG, {
+  ALERT_REQUIRE_SOCIALS: n("ALERT_REQUIRE_SOCIALS", 0),  // log socials, don't gate alerts (data didn't support the gate)
+  CONF_MIN_S: n("CONF_MIN_S", 240),       // confirmation window after raw trigger: from
+  CONF_MAX_S: n("CONF_MAX_S", 600),       // ...to
+  CONF_MC_MULT: n("CONF_MC_MULT", 1.5),   // MC must be >= this × raw-entry MC
+  CONF_BS_RATIO: n("CONF_BS_RATIO", 1.3), // buys/sells over last 5m
+  CONF_BUYERS_GROW: n("CONF_BUYERS_GROW", 10), // new distinct buyers in last 5m
+  BURST_MIN_AGE_S: n("BURST_MIN_AGE_S", 600),
+  BURST_MIN_MC: n("BURST_MIN_MC", 60_000),
+});
+// --- v0.12: lifecycle sampler, holders, big buys ---
+Object.assign(CFG, {
+  LIFE_CHECKPOINTS: s("LIFE_CHECKPOINTS", "60,300,900,1800,3600,7200,14400,86400").split(",").map(Number),
+  LIFE_HOLDERS_FROM_S: n("LIFE_HOLDERS_FROM_S", 1800),  // snapshot top-10 holders at checkpoints >= this
+  LIFE_HOLDERS_MIN_MC: n("LIFE_HOLDERS_MIN_MC", 20_000),
+  LIFE_HOLDER_DAILY_BUDGET: n("LIFE_HOLDER_DAILY_BUDGET", 2000),
+  BIGBUY_SOL: n("BIGBUY_SOL", 5),
+  BIGBUY_BAL_DAILY_BUDGET: n("BIGBUY_BAL_DAILY_BUDGET", 2000),
+});
+// --- v0.13: climber (slow riser) ---
+Object.assign(CFG, {
+  CLIMB_STEP: n("CLIMB_STEP", 1.3),          // each checkpoint MC >= this × previous
+  CLIMB_CPS: s("CLIMB_CPS", "300,900,1800").split(",").map(Number), // stairs that must rise; entry at the last one
+  CLIMB_CPS2: s("CLIMB_CPS2", "900,1800,3600").split(",").map(Number), // second chance at 1h
+  CLIMB_MIN_MC: n("CLIMB_MIN_MC", 15_000),
+  CLIMB_MAX_BURST_USD: n("CLIMB_MAX_BURST_USD", 30_000), // must never have had a 1m burst above this (else momentum's job)
+});
+// --- v0.14: runner autopsy ---
+Object.assign(CFG, { RUNNER_MIN_MC: n("RUNNER_MIN_MC", 1_000_000) });
+// v0.18.176 (owner go 21 Oct 13:50 UK): the old off-page books are switched off — none of these kinds opens a NEW paper position (open ones still close normally; every table and
+// code path stays). "momentum" here = the non-core volume trigger (burst / re-entry / MC ≥ MOM_CORE_MC); the core trigger (book E / E2, strategy momentum + core=1) keeps running.
+// OFFPAGE_BOOKS=1 re-enables them all.
+// v0.18.185 (owner, 23 Oct 19:34 UK: "these bots are definitely not working… stop using them for now, stop wasting APIs"): every paper book stops opening positions; the launch recorder (tokens, bundles, creators) keeps running for coin scope. BOOKS_OFF=0 in .env turns the books back on.
+export const BOOKS_OFF = s("BOOKS_OFF", "1") === "1";
+export const OFF_KINDS = new Set(s("OFFPAGE_BOOKS", "0") === "1" ? [] : ["early", "wave2", "secondwave", "copy", "confirm", "climber", "revival", "gradrec", "gradrun", "slow", "momentum", "momfast", "momdip", "momre", "momconf",
+  "sn1", "sn2", "sn3", "sn5", "sn6", "sn6b", "sn7", "sn7b", "sn9", "sn10", "sn11", "sn4b", "p5e50", "p5e80", "p5w30", "p5c5", "p5c10", "mom60", "mom80", "pg", "rev"]); // v0.18.179 (owner, 21 Oct 16:16 UK): the retired books stop opening paper positions too - kept: A (p5e30, AS source), S8 (BL source), S3b/S4 (forward tests), every-graduation + GR, K. Set OFFPAGE_BOOKS=1 to turn everything back on.
