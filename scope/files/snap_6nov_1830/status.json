@@ -1,0 +1,396 @@
+{
+ "ver": "0.9.28",
+ "mode": "paper",
+ "started": "2026-11-06T14:48:09.639Z",
+ "posts": 17,
+ "ignored": 0,
+ "launches": 17,
+ "live": {
+  "enabled": false,
+  "book": null,
+  "stake": 0,
+  "buys": 0,
+  "buyFails": 0,
+  "sells": 0,
+  "sellFails": 0,
+  "skipped": 0,
+  "open": 0,
+  "writtenOff": 0,
+  "balanceSol": null,
+  "lastErr": "",
+  "lastSig": "",
+  "polls": 0,
+  "expStart": 1793976489
+ },
+ "shadowOk": 0,
+ "shadowFail": 0,
+ "uploadsFailed": 0,
+ "sells": 0,
+ "errors": 0,
+ "lastErr": "",
+ "selfTest": {
+  "at": "2026-11-06T14:48:13.194Z",
+  "global": {
+   "feeBps": 95,
+   "creatorFeeBps": 5,
+   "initVSol": 30,
+   "initVTok": 1073000000
+  },
+  "payer": "launch wallet",
+  "quotedTokens": 3529605.192446,
+  "pctSupply": 0.353,
+  "classicBytes": 1253,
+  "classic": {
+   "ok": true,
+   "err": null,
+   "units": 200136,
+   "ms": 39,
+   "simTokens": 3520918.711316,
+   "logs": [
+    "Program log: Instruction: CreateV2",
+    "Program log: MetadataPointerInstruction::Initialize",
+    "Program log: Instruction: InitializeMint2",
+    "Program log: Instruction: GetAccountDataSize",
+    "Program log: Instruction: InitializeImmutableOwner",
+    "Program log: Instruction: InitializeAccount3",
+    "Program log: TokenMetadataInstruction: Initialize",
+    "Program log: TokenMetadataInstruction: UpdateAuthority",
+    "Program log: Instruction: MintTo",
+    "Program log: Instruction: SetAuthority",
+    "Program log: Instruction: GetAccountDataSize",
+    "Program log: Instruction: InitializeImmutableOwner"
+   ]
+  },
+  "v3Bytes": 1258,
+  "v3": {
+   "ok": true,
+   "err": null,
+   "units": 195486,
+   "ms": 55,
+   "simTokens": 3520918.711316,
+   "logs": [
+    "Program log: Instruction: CreateV2",
+    "Program log: MetadataPointerInstruction::Initialize",
+    "Program log: Instruction: InitializeMint2",
+    "Program log: Instruction: GetAccountDataSize",
+    "Program log: Instruction: InitializeImmutableOwner",
+    "Program log: Instruction: InitializeAccount3",
+    "Program log: TokenMetadataInstruction: Initialize",
+    "Program log: TokenMetadataInstruction: UpdateAuthority",
+    "Program log: Instruction: MintTo",
+    "Program log: Instruction: SetAuthority",
+    "Program log: Instruction: GetAccountDataSize",
+    "Program log: Instruction: InitializeImmutableOwner"
+   ]
+  },
+  "ai": {
+   "name": "Goosebumps",
+   "ticker": "GOOSEBUMPS",
+   "why": "Recognisable Goosebumps brand shown on both covers; political spin may limit traders",
+   "score": 5,
+   "by": "ai",
+   "ms": 2346
+  },
+  "twitterRest": {
+   "http": 200,
+   "ok": true,
+   "tweets": 1,
+   "msg": "success"
+  },
+  "upload": {
+   "ok": true,
+   "ms": 661,
+   "uri": "https://ipfs.io/ipfs/bafkreic7pdfcfcelv3p4kvlrkgxat3qmarvql7adozdf4mw6nawok4dgw4"
+  }
+ },
+ "exports": 54,
+ "lastPush": "ok 2026-11-06T18:22:14.450Z",
+ "inboxPublicKey": "MCowBQYDK2VuAyEAITMoqjDL063IDsN1URqLLED0kKKyIHnNO0XpumYL8xY=",
+ "census": 216,
+ "at": 1793989390,
+ "wallet": "AGEniepzBFf2Jesgv7XzqibjndgTRRTE9QDdSojrpYMj",
+ "balanceSol": 0.2769,
+ "liveToday": 0,
+ "cap": "none",
+ "minBalanceSol": 0.15,
+ "tpFraction": 0.5,
+ "stakeSol": 0.1,
+ "deadMin": 10,
+ "quietMin": 30,
+ "tpX": 3,
+ "lut": {
+  "address": null,
+  "addresses": 0,
+  "created": null,
+  "extended": 0,
+  "lastErr": ""
+ },
+ "copies": {
+  "scans": 77,
+  "found": 136,
+  "picks": 6,
+  "scored": 11,
+  "errors": 4,
+  "lastErr": "scan180: The operation was aborted due to timeout",
+  "lastRaw": "{\"coins\":[{\"chain\":\"sol\",\"address\":\"3puhSBXjLLE41guJgmK456S2brqK9VLMHKPFbB12pump\",\"name\":\"THIS GOES TO 165K MC\",\"symbol\":\"165K\",\"trans_name\":\"\",\"trans_symbol\":\"\",\"trans_name_zhcn\":\"这笔交易将达到 165K MC\",\"trans_symbol_zhcn\":\"\",\"remark_name\":\"\",\"logo\":\"https://gmgn.ai/external-res/ea6f3dbbd66a63b83311f50893e327ff_v2.webp\",\"created_at\":1776563949,\"price\":\"0.00000045560984\",\"price_24h\":\"\",\"volume_1h\":0,\"volume_24h\":0,\"mcp\":\"470.27906309066648\",\"liquidity\":\"5146.571875\",\"follow_state\":false,\"quote_address\":\"So11111111111111111111111111111111111111112\",\"launch_quote_address\":\"So11111111111111111111111111111111111111112\",\"standard\":\"2022\",\"hot_level\":0,\"swaps_5m\":0,\"swaps_1h\":0,\"swaps_6h\":0,\"swaps_24h\":0,\"is_show_alert\":false,\"is_honeypot\":false,\"renounced_freeze_account\":true,\"buy_tax\":\"0\",\"sell_tax\":\"0\",\"total_buy_tax\":0,\"total_sell_tax\":0,\"token_link\":{\"address\":\"3puhSBXjLLE41guJgmK456S2brqK9VLMHKPFbB12pump\",\"gmgn\":\"https://gmgn.ai/sol/token/3puhSBXjLLE41guJgmK456S2brqK9VLMHKPFbB12pump\",\"geckoterminal\":\"https://www.geckoterminal.com/solana/tokens/3puhSBXjLLE41guJgmK456S2brqK9VLMHKPFbB12pump\",\"twitter_username\":\"\",\"website\":\"\",\"telegram\":\"\",\"bitbucket\":\"\",\"discord\":\"\",\"description\":\"\",\"facebook\":\"\",\"github\":\"\",\"instagram\":\"\",\"linkedin\":\"\",\"medium\":\"\",\"reddit\":\"\",\"tiktok\":\"\",\"youtube\":\"\",\"verify_status\":0,\"fracaster\":null},\"dexscr_ad\":0,\"dexscr_update_link\":0,\"dexscr_boost_fee\":0,\"dexscr_trending_bar_ts\":0,\"cto_flag\":0,\"launchpad\":\"pump\",\"launchpad_platform\":\"pump_mayhem\",\"launchpad_sta",
+  "gmgn": {
+   "calls": 7435,
+   "errors": 6,
+   "limited": 0,
+   "lastErr": "/v1/market/rank: BAD_REQUEST invalid order_by: get history_high but must be one of default, swaps, marketcap, history_highest_market_cap, liquidity, volume, hol",
+   "hi": 575
+  }
+ },
+ "peaks": {
+  "runs": 3,
+  "coins": 306,
+  "ok": 872,
+  "errors": 1,
+  "lastErr": "8kKwcT info: The operation was aborted due to timeout",
+  "lastRun": "2026-11-06T17:07:04.898Z",
+  "running": false,
+  "infoKeys": "address,symbol,name,decimals,logo,banner,biggest_pool_address,open_timestamp,migrated_timestamp,holder_count,circulating_supply,total_supply,max_supply,liquidity,creation_timestamp,standard,trade_fee,total_fee,og,image_dup_count,visiting_count,launchpad,launchpad_status,launchpad_progress,launchpad_platform,migrated_pool,migration_market_cap,migration_market_cap_quote,ath_price,locked_ratio,price,pool,dev,link,stat,wallet_tags_stat,fee_distribution"
+ },
+ "study": {
+  "runs": 4,
+  "studied": 5,
+  "errors": 0,
+  "lastErr": "",
+  "lastRun": "2026-11-06T16:49:43.536Z",
+  "running": true,
+  "credits": 123631,
+  "creditsDay": "2026-11-06",
+  "creditsToday": 123631,
+  "calls": 18801,
+  "gtfa": true,
+  "probe": "{\"keys\":[\"transaction\",\"meta\",\"version\",\"slot\",\"transactionIndex\",\"blockTime\"],\"ix\":848,\"ev\":\"create+trade\",\"inner\":3,\"logs\":107}",
+  "current": "control The Godfathers of SI 51xSfU",
+  "probeDone": true,
+  "timing": {
+   "coin": "AnRb3H",
+   "gmgn": 1698,
+   "pages": 9593,
+   "wallets": 2372,
+   "total": 13663,
+   "heavy": 82
+  }
+ },
+ "vol": {
+  "polls": 0,
+  "rows": 0,
+  "entries": 0,
+  "scored": 1181,
+  "errors": 0,
+  "lastErr": "",
+  "lastPoll": null,
+  "maxVolSeen": null
+ },
+ "mark": {
+  "passes": 1,
+  "marked": 14,
+  "sold": 2,
+  "calls": 6,
+  "errors": 0,
+  "lastErr": "",
+  "lastPass": null
+ },
+ "volBackfill": {
+  "coins": 0,
+  "done": 0,
+  "entries": 0,
+  "errors": 0,
+  "lastErr": "",
+  "finished": false
+ },
+ "rf": {
+  "searches": 504,
+  "found": 36,
+  "checks": 84,
+  "entries": 4,
+  "errors": 1,
+  "lastErr": "search: The operation was aborted due to timeout",
+  "credits": 5304,
+  "creditsDay": "2026-11-06",
+  "lastCheck": "2026-11-06T16:36:11.954Z"
+ },
+ "manualStudy": {
+  "queued": 0,
+  "done": 0,
+  "lastErr": "",
+  "last": null
+ },
+ "operators": {
+  "runs": 3,
+  "traced": 763,
+  "outs": 38,
+  "errors": 7,
+  "lastErr": "UNIQUE constraint failed: operators.anchor",
+  "lastRun": null,
+  "running": false,
+  "calls": 809,
+  "cex": 175,
+  "unknown404": 4,
+  "operators": 0,
+  "sample": "{\"funder\":\"5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9\",\"funderName\":\"Binance Hot Wallet 2\",\"funderType\":\"Centralized Exchange\",\"mint\":\"So11111111111111111111111111111111111111111\",\"symbol\":\"SOL\",\"amount\":0.07123938,\"amountRaw\":\"71239380\",\"decimals\":9,\"signature\":\"2HvLnzy6n8E9sfwtwkVq5Y7uUVvvxJkV19bTgaT2Gzbws4pu3mEgYWzczuEn6sNGb4terEvsyWFbrq8vHH1WRF3J\",\"timestamp\":1782300448,\"date\":\"2026-06-24T11"
+ },
+ "creators": {
+  "runs": 3,
+  "creators": 406,
+  "traced": 3088,
+  "errors": 0,
+  "lastErr": "",
+  "funders": 86,
+  "queued": 197,
+  "running": false,
+  "lastRun": "2026-11-06T16:53:54.610Z"
+ },
+ "fd": {
+  "scanned": 8150,
+  "traced": 2682,
+  "pre": 119,
+  "checks": 2866,
+  "entries": 1153,
+  "errors": 0,
+  "lastErr": "check stalled 5 min — pass abandoned",
+  "credits": 129852,
+  "creditsDay": "2026-11-06",
+  "lastScan": "2026-11-06T18:19:10.174Z",
+  "lastCheck": "2026-11-06T18:19:10.246Z",
+  "open": 19,
+  "stalls": 6
+ },
+ "snipers2": {
+  "runs": 0,
+  "wallets": 0,
+  "lastRun": null,
+  "lastErr": ""
+ },
+ "quotes": {
+  "buys": 357,
+  "sells": 0,
+  "samples": 2,
+  "polls": 0,
+  "pollExits": 0,
+  "paused": 0,
+  "errors": 0,
+  "lastErr": "",
+  "lastMs": 44,
+  "pauseUntil": 0,
+  "swaps": 0
+ },
+ "chain": {
+  "entries": 1127,
+  "skipped": 26,
+  "entryErrs": 0,
+  "landFails": 0,
+  "unresolved": 0,
+  "updates": 4399184,
+  "exits": 1158,
+  "subs": 349,
+  "resubs": 18,
+  "drops": 70,
+  "backstops": 6588,
+  "errors": 2,
+  "lastErr": "backstop 3GPSRE: fetch failed",
+  "mv": "fill-2"
+ },
+ "farm": {
+  "builds": 8,
+  "wallets": 15568,
+  "dumps": 164,
+  "lastBuild": "2026-11-06T18:19:19.365Z",
+  "lastErr": "",
+  "bfWallets": 1272,
+  "bfDay": "2026-11-06",
+  "bfErr": "",
+  "bfQueue": 0
+ },
+ "scope": {
+  "probes": 101,
+  "fails": 1,
+  "consecutive": 0,
+  "reloads": 0,
+  "lastReload": null,
+  "lastErr": "16:52:18 AbortError"
+ },
+ "registry": {
+  "runs": 8,
+  "lastRun": "2026-11-06T17:19:50.304Z",
+  "lastErr": "",
+  "pumpfun": {
+   "ok": 0,
+   "fail": 16,
+   "rows": 0,
+   "pages": 0,
+   "lastErr": "pump.fun 403"
+  },
+  "gmgn": {
+   "ok": 11,
+   "fail": 8,
+   "rows": 1100,
+   "lastErr": "The operation was aborted due to timeout"
+  },
+  "registered": 1549,
+  "lastNew": 17
+ },
+ "meas": {
+  "ledger": "ledger-2",
+  "fill": "fill-2",
+  "tracker_obs": "obs-3 (tracker 0.19.4: early checkpoints 15/30/90/120 s for every launch)"
+ },
+ "sweep": {
+  "coins": 216,
+  "done": 214,
+  "errors": 2,
+  "lastErr": "CFSZoh The operation was aborted due to timeout",
+  "running": false,
+  "finished": true
+ },
+ "paused": false,
+ "pausedAt": null,
+ "lastSellAll": null,
+ "openCoins": 0,
+ "accounts": [],
+ "twitter": {
+  "keySet": true,
+  "connected": true,
+  "since": "2026-11-06T18:22:09.993Z",
+  "events": 480,
+  "pings": 416,
+  "tweets": 34,
+  "reconnects": 29,
+  "lastClose": "1011 keepalive ping timeout at 2026-11-06T18:20:39.901Z",
+  "lastErr": "no message for 150 s — reconnecting",
+  "lookups": 16,
+  "lookupErr": 1,
+  "lastLookupErr": "The operation was aborted due to timeout",
+  "lastEventAt": "2026-11-06T18:22:30.247Z"
+ },
+ "ai": true,
+ "aiStat": {
+  "calls": 18,
+  "ok": 16,
+  "errors": 1,
+  "lastErr": "HTTP 400 This URL is disallowed by the website's robots.txt file.",
+  "lastMs": 3355
+ },
+ "meta": {
+  "uploads": 1,
+  "errors": 0,
+  "lastErr": "",
+  "lastMs": 661,
+  "via": "pinata"
+ },
+ "rpc": {
+  "calls": 12520,
+  "errors": 2,
+  "sends": 0,
+  "senderErrors": 0,
+  "lastErr": "fetch failed",
+  "subs": 31
+ },
+ "trackerDb": true,
+ "lastSweep": null,
+ "lastFeeCollect": "2026-10-31T18:10:29.885Z confirmed 0.0360 SOL",
+ "phantom": "ARNZSdpFx5PAZBNWK7UJ1pR8P9cK7jNmgX9YwY3rAZXz"
+}

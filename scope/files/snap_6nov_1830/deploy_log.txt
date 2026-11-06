@@ -1,0 +1,60 @@
+nstalling and checking
+up to date in 623ms
+[deploy] scope reloaded
+[deploy] 2026-11-06T14:07:25Z updating 9491afae5c303b23d6b789a77c35347ee724858a -> a8ff69079e8d464b76fe0b9713fa779c01232637
+up to date in 971ms
+[deploy] done: tracker 0.19.5 / launcher 0.9.25: exact early checkpoints; registry audit fixes; GMGN as a second external source
+[deploy] launcher changed — installing and checking
+up to date in 665ms
+[deploy] launcher reloaded
+[deploy] 2026-11-06T14:15:00Z updating a8ff69079e8d464b76fe0b9713fa779c01232637 -> 401154d44076684a4c4317b978a2609933d5c685
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] launcher changed — installing and checking
+up to date in 890ms
+[deploy] launcher reloaded
+[deploy] 2026-11-06T14:21:46Z updating 401154d44076684a4c4317b978a2609933d5c685 -> ffb316433811927a0a46244620608555e1aaa905
+up to date in 603ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] scope changed — installing and checking
+up to date in 548ms
+[deploy] scope reloaded
+[deploy] 2026-11-06T14:25:02Z updating ffb316433811927a0a46244620608555e1aaa905 -> ab63a0405eb3a5da120f3119c5494ee02ddf665d
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] scope changed — installing and checking
+up to date in 866ms
+[deploy] scope reloaded
+[deploy] 2026-11-06T14:25:48Z updating ab63a0405eb3a5da120f3119c5494ee02ddf665d -> 847d4ed2de045f63d6b4446466282140f4e943a5
+up to date in 752ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] scope changed — installing and checking
+up to date in 670ms
+[deploy] scope reloaded
+[deploy] 2026-11-06T14:38:37Z updating 847d4ed2de045f63d6b4446466282140f4e943a5 -> 6f94ff5429bafb408c7ab9fde637ce09c9ee09ec
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] launcher changed — installing and checking
+up to date in 680ms
+[deploy] launcher reloaded
+[deploy] 2026-11-06T14:42:19Z updating 6f94ff5429bafb408c7ab9fde637ce09c9ee09ec -> a0e30bc86f8101c17583479ebb0d59a2bfda501a
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] scope changed — installing and checking
+up to date in 950ms
+[deploy] scope reloaded
+[deploy] 2026-11-06T14:45:05Z updating a0e30bc86f8101c17583479ebb0d59a2bfda501a -> 7f6cb4b7b0340bfcf39c1aebb7d0232b5d1cd0bd
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] scope changed — installing and checking
+up to date in 710ms
+[deploy] scope reloaded
+[deploy] 2026-11-06T14:47:49Z updating 7f6cb4b7b0340bfcf39c1aebb7d0232b5d1cd0bd -> ed4cf0f2835e8688da20b8a2ab480bb33a3f40a7
+up to date in 892ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] scope changed — installing and checking
+up to date in 681ms
+[deploy] scope reloaded
+[deploy] launcher changed — installing and checking
+up to date in 1s
+[deploy] launcher reloaded
