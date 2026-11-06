@@ -67,6 +67,7 @@ for (const sql of [
   "ALTER TABLE paper_trades ADD COLUMN first_secs TEXT", // v0.18.89 P5: feed lag at the trigger + price 1/2/5/10 s after we saw it (what a live buy would get)
   "ALTER TABLE tokens ADD COLUMN factory INTEGER DEFAULT 0",
   "ALTER TABLE tokens ADD COLUMN graduated INTEGER DEFAULT 0",
+  "ALTER TABLE token_life ADD COLUMN obs_ts INTEGER", "ALTER TABLE token_life ADD COLUMN src TEXT", // v0.19.5: exact early checkpoints — ts = the cutoff, obs_ts = when it was written, src = exact | tick
   "ALTER TABLE tokens ADD COLUMN cluster_sol_in REAL DEFAULT 0",
   "ALTER TABLE tokens ADD COLUMN cluster_sol_out REAL DEFAULT 0",
   "ALTER TABLE tokens ADD COLUMN outside_sol_in REAL DEFAULT 0",
@@ -299,6 +300,7 @@ export const q = {
   lifeFor: db.prepare(`SELECT cp, mc, vol5m_usd, buys5m, sells5m, buyers_total, alive, top10_pct FROM token_life WHERE mint=? ORDER BY cp`),
   papersFor: db.prepare(`SELECT strategy, trigger_kind, entry_ts, entry_mc, peak_mult, x_half60, x_tsl40, x_levels, after_peak_mult FROM paper_trades WHERE mint=? ORDER BY entry_ts`),
   insLife: db.prepare(`INSERT OR REPLACE INTO token_life (mint,cp,ts,mc,vol5m_usd,buys5m,sells5m,buyers5m,buyers_total,graduated,top10_pct,holders,alive) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`),
+  insLifeExact: db.prepare(`INSERT OR IGNORE INTO token_life (mint,cp,ts,mc,vol5m_usd,buys5m,sells5m,buyers5m,buyers_total,graduated,top10_pct,holders,alive,obs_ts,src) VALUES (?,?,?,?,?,?,?,?,?,?,NULL,NULL,?,?,'exact')`), // v0.19.5
   setLifeHolders: db.prepare(`UPDATE token_life SET top10_pct=?, holders=? WHERE mint=? AND cp=?`),
   insBigBuy: db.prepare(`INSERT INTO big_buys (mint,wallet,ts,age_s,sol,mc,balance_sol,venue) VALUES (?,?,?,?,?,?,?,?)`),
   addWatch: db.prepare(`INSERT OR REPLACE INTO watch_wallets (wallet,label,added_ts,source) VALUES (?,?,?,?)`),

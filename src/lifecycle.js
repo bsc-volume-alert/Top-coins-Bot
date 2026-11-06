@@ -41,10 +41,26 @@ function trade(mint, createTs, tr, mc, graduated, venue) {
   if (tr.isBuy && tr.sol >= CFG.BIGBUY_SOL) bigBuy(mint, tr, now - s.createTs, mc, venue);
   sample(mint, s, now);
 }
+// v0.19.5 (Codex 6 Nov: "a 60-second observation containing trades through 75 seconds is not information available at 60 seconds"): the early checkpoints (<= 120 s)
+// are cut EXACTLY at create+cp from the per-trade buffers — trades with ts <= cutoff, buyers through the cutoff, the last price print at or before it — written by a 1-s
+// tick as soon as the cutoff has passed (obs_ts = when written, normally cutoff + 0–1 s). Zero through the cutoff is a real zero only if the feed was connected; feed_gaps says.
+const EXACT = CFG.LIFE_CHECKPOINTS.filter((c) => c <= 120);
+function sampleExact(mint, s, now) {
+  for (const cp of EXACT) { if (s.ex?.[cp]) continue; const cut = s.createTs + cp; if (now < cut) break;
+    const w = s.w5.filter((x) => x.ts <= cut), b = w.filter((x) => x.b).length, sl = w.length - b, by = new Set(w.filter((x) => x.b).map((x) => x.w)).size;
+    const vol = w.reduce((a, x) => a + x.sol, 0) * solUsdCached(); let mc = null; for (let i = s.ring.length - 1; i >= 0; i--) if (s.ring[i].ts <= cut) { mc = s.ring[i].mc; break; }
+    const byTot = s.bts.filter((x) => x.ts <= cut).length;
+    try { q.insLifeExact.run(mint, cp, cut, mc, vol, b, sl, by, byTot, s.graduated && s.gradTs != null && s.gradTs <= cut ? 1 : 0, w.length ? 1 : 0, Math.floor(Date.now() / 1000)); lc.exact = (lc.exact || 0) + 1; } catch {}
+    (s.ex ||= {})[cp] = 1; s.cp[cp] = { mc, buyers: byTot, b, sl, alive: w.length ? 1 : 0 }; climbCheck(mint, s, cp, now);
+    const i = CFG.LIFE_CHECKPOINTS.indexOf(cp); if (i === s.next) s.next++; }
+}
+setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [mint, s] of L) if (now - s.createTs <= 130) sampleExact(mint, s, now); }, 1000);
 function sample(mint, s, now) {
   const cps = CFG.LIFE_CHECKPOINTS;
   while (s.next < cps.length && now - s.createTs >= cps[s.next]) {
-    const cp = cps[s.next++];
+    const cp = cps[s.next];
+    if (cp <= 120) { sampleExact(mint, s, now); if (s.ex?.[cp]) { if (cps[s.next] === cp) s.next++; continue; } } // the exact writer owns the early checkpoints
+    s.next++;
     const w = s.w5.filter((x) => now - x.ts <= 300);
     const vol = w.reduce((a, x) => a + x.sol, 0) * solUsdCached(), b = w.filter((x) => x.b).length, sl = w.length - b, by = new Set(w.filter((x) => x.b).map((x) => x.w)).size;
     const alive = now - s.lastTs <= 300 && w.length > 0 ? 1 : 0;
