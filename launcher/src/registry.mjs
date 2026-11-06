@@ -81,3 +81,17 @@ export function registryCoverage(db, days = 3) {
     o.launch_recorded += r.launch_recorded ? 1 : 0; o.trades_kept += r.trades_kept > 0 ? 1 : 0; o.fd_recorded += r.fd_recorded ? 1 : 0; o.fd_checked += r.fd_checked > 0 ? 1 : 0; o.fd_entered += r.fd_entered > 0 ? 1 : 0; }
   return [...out.values()].sort((a, b) => a.day.localeCompare(b.day));
 }
+
+/** 0.9.24: early checkpoints with ACTUAL observation times and completeness flags — one row per launch of the last `hours`, from the tracker's token_life.
+ *  Each cp column: "ontime" (taken within 15 s of schedule), "late:<s>" (taken later — the metrics are from that later moment), "missing" (no trade after the offset while the launch was in memory, or launch before tracker 0.19.4). Values stay missing, never zero. */
+export function earlyCheckpoints(tdb, hours = 24, cps = [15, 30, 60, 90, 120]) {
+  if (!tdb) return []; const since = now() - hours * 3600, out = [];
+  const life = tdb.prepare("SELECT cp, ts, mc, buys5m, sells5m, buyers5m, buyers_total, graduated FROM token_life WHERE mint=? AND cp<=120");
+  const obs3 = (() => { try { return tdb.prepare("SELECT MIN(ts) t FROM token_life WHERE cp=15").get()?.t ?? null; } catch { return null; } })(); // first 15-s row = when the new checkpoints went live
+  for (const k of tdb.prepare("SELECT mint, name, create_ts FROM tokens WHERE create_ts>=? ORDER BY create_ts").all(since)) {
+    const rows = new Map(life.all(k.mint).map((r) => [r.cp, r])), o = { mint: k.mint, name: k.name, create_ts: k.create_ts, tracker_epoch: obs3 && k.create_ts >= obs3 ? "obs-3" : "pre-obs-3", complete: 1 };
+    for (const cp of cps) { const r = rows.get(cp); if (!r) { o["cp" + cp] = "missing"; o["mc" + cp] = null; o["buys" + cp] = null; o["sells" + cp] = null; o["buyers" + cp] = null; if (o.tracker_epoch === "obs-3" || cp === 60) o.complete = 0; continue; }
+      const late = r.ts - (k.create_ts + cp); o["cp" + cp] = late <= 15 ? "ontime" : "late:" + late; o["mc" + cp] = r.mc; o["buys" + cp] = r.buys5m; o["sells" + cp] = r.sells5m; o["buyers" + cp] = r.buyers5m; if (late > 15) o.complete = 0; }
+    out.push(o); }
+  return out;
+}
