@@ -280,7 +280,7 @@ export function fdLedger(db, tdb, hours = 24, books = ["BL", "BL27", "FD", "FDL"
   const since = now() - hours * 3600, out = [], screenSince = db.prepare("SELECT MIN(screened_ts) t FROM fd_watch WHERE screened=1").get()?.t ?? null;
   // 0.9.18: two bulk reads into maps — the per-row queries of 0.9.17 (37k launches × 5 books × an unindexed chain_fill scan) blocked the event loop for minutes per export and stalled the scan/check timers (09:47–10:1x UK)
   const decMap = new Map(); for (const d of db.prepare("SELECT mint, rule, at, ts, passed, reason FROM fd_decisions WHERE ts>=? ORDER BY at").all(since)) { const k = d.mint + "|" + d.rule; (decMap.get(k) || decMap.set(k, []).get(k)).push(d); }
-  const fillMap = new Map(); for (const f of db.prepare("SELECT f.mint, f.strat, f.vol_id, f.s_mv, f.s_px, f.s_hi, f.s_exit_x, f.s_exit_reason, f.s_exit_src, f.s_r, f.s_r02, f.s_exit_x02, f.s_err, f.s_fail_kind, f.done, f.entry_ts, f.s_exit_ts, v.entry_price, v.entry_mc FROM chain_fill f LEFT JOIN vol_paper v ON v.id=f.vol_id WHERE f.entry_ts>=? ORDER BY f.vol_id").all(since)) { const k = f.mint + "|" + f.strat; (fillMap.get(k) || fillMap.set(k, []).get(k)).push(f); }
+  const fillMap = new Map(); for (const f of db.prepare("SELECT f.mint, COALESCE(v.strat, f.strat) AS strat, f.strat AS entered_group, f.vol_id, f.s_mv, f.s_px, f.s_hi, f.s_exit_x, f.s_exit_reason, f.s_exit_src, f.s_r, f.s_r02, f.s_exit_x02, f.s_err, f.s_fail_kind, f.done, f.entry_ts, f.s_exit_ts, v.entry_price, v.entry_mc FROM chain_fill f LEFT JOIN vol_paper v ON v.id=f.vol_id WHERE f.entry_ts>=? ORDER BY f.vol_id").all(since)) { const k = f.mint + "|" + f.strat; (fillMap.get(k) || fillMap.set(k, []).get(k)).push(f); }
   const dec = { all: (m, b) => decMap.get(m + "|" + b) || [] }, fills = { all: (m, b) => fillMap.get(m + "|" + b) || [] };
   const tok = tdb ? tdb.prepare("SELECT peak_mc_usd, graduated, tier, finalized FROM tokens WHERE mint=?") : null;
   for (const w of db.prepare("SELECT *, rowid AS rid FROM fd_watch WHERE created_ts>=? ORDER BY created_ts").all(since)) {
@@ -320,10 +320,10 @@ export function fdLedger(db, tdb, hours = 24, books = ["BL", "BL27", "FD", "FDL"
 /** 0.9.17: raw per-position evidence for every simulated fill row — identifiers, units, the six timestamps, the reserve state each value came from (verbatim), evidence quality per field. Nothing missing is filled from current data. */
 export function fdPositions(db, hours = 24) {
   const since = now() - hours * 3600, out = [];
-  for (const f of db.prepare("SELECT f.*, v.entry_price, v.entry_mc, v.holders AS v_holders, v.curve AS v_curve, v.row AS v_row FROM chain_fill f LEFT JOIN vol_paper v ON v.id=f.vol_id WHERE f.entry_ts>=? ORDER BY f.entry_ts, f.vol_id").all(since)) {
+  for (const f of db.prepare("SELECT f.*, v.strat AS v_strat, v.entry_price, v.entry_mc, v.holders AS v_holders, v.curve AS v_curve, v.row AS v_row FROM chain_fill f LEFT JOIN vol_paper v ON v.id=f.vol_id WHERE f.entry_ts>=? ORDER BY f.entry_ts, f.vol_id").all(since)) {
     let m = {}; try { m = JSON.parse(f.v_row || "{}"); } catch {}
     const ev = (x) => (x == null ? "unavailable" : "recorded");
-    out.push({ vol_id: f.vol_id, mint: f.mint, book: f.strat, rule_ver: VER, fill_mv: f.s_mv || "fill-1", tz: "UTC",
+    out.push({ vol_id: f.vol_id, mint: f.mint, book: f.v_strat || f.strat, entered_group: f.strat, rule_ver: VER, fill_mv: f.s_mv || "fill-1", tz: "UTC",
       units: "tokens raw (6 decimals, supply 1e9); stake SOL; fees 0.0015 SOL; prices USD/token; r = fraction of stake",
       stake_sol: f.s_sol_in, stake02_sol: f.s_tokens02 ? 0.02 : null, fee_sol: 0.0015, sol_usd: m.sol_usd ?? null,
       ts_metric_cutoff: m.at != null && f.entry_ts ? f.entry_ts : null, ts_decision: f.entry_ts, ms_decision: f.s_ms_decision ?? null, ms_reserve_read_check: f.s_ms_read_check ?? null, ms_landing: f.s_ms_land ?? null, ts_exit: f.s_exit_ts ?? null, ms_exit: f.s_ms_exit ?? null, delay_ms: f.s_delay_ms ?? null,
