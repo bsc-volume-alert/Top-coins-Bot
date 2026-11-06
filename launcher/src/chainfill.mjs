@@ -23,7 +23,9 @@ const now = () => Math.floor(Date.now() / 1000);
 const BUY_LAND_MS = n("LAUNCH_SIM_BUY_LAND_MS", 1000), SELL_LAND_MS = n("LAUNCH_SIM_SELL_LAND_MS", 700); // 0.9.2: a transaction executes against the chain state this long after we decide (measured on the first live FD trades: buys landed 0.6–1.0 s after the check, sells 0.5 s after the trail)
 // 0.9.12: prepared statements are cached (the tick loop prepared each statement afresh on every price update — a million a day — and the native memory behind them is only freed by the garbage collector; rss climbed ~55 MB/h)
 const STMT = new Map(); const q = (sql) => { let st = STMT.get(sql); if (!st) { st = db.prepare(sql); STMT.set(sql, st); } return st; };
-export const cfStat = { entries: 0, skipped: 0, entryErrs: 0, updates: 0, exits: 0, subs: 0, resubs: 0, drops: 0, backstops: 0, errors: 0, lastErr: "" };
+export const MV = "fill-2"; // measurement version of the simulated fill policy. fill-1 (0.9.2–0.9.16): a failed landing re-read fell back to the check-time reserves. fill-2 (0.9.17, Codex 6 Nov): no fallback — a failed re-read is a data-failure row with no fill and no return; a position unreadable at the horizon is unresolved, not valued at its last print.
+export const cfStat = { entries: 0, skipped: 0, entryErrs: 0, landFails: 0, unresolved: 0, updates: 0, exits: 0, subs: 0, resubs: 0, drops: 0, backstops: 0, errors: 0, lastErr: "", mv: MV };
+const resOf = (st, c, br, qr) => c ? JSON.stringify({ vSol: String(c.vSol), vTok: String(c.vTok), rSol: String(c.rSol), rTok: String(c.rTok), complete: c.complete ? 1 : 0 }) : br != null ? JSON.stringify({ base: String(br), quote: String(qr), pool: st?.poolPk ? String(st.poolPk) : null }) : null; // 0.9.17: the reserve state a value was computed from, verbatim
 
 // ---- PumpSwap (pump.fun's AMM) — pool lookup, decoding and the constant-product quotes, ported from executor/src/amm.mjs ----
 export const PUMP_AMM = new PublicKey("pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA");
@@ -57,7 +59,7 @@ export function initChainFill(d) { STMT.clear();
   db.exec(`CREATE TABLE IF NOT EXISTS chain_fill (vol_id INTEGER PRIMARY KEY, mint TEXT, strat TEXT, entry_ts INTEGER, venue TEXT, curve INTEGER, s_sol_in REAL, s_tokens TEXT, s_px REAL, s_in_gap REAL, s_x0 REAL,
     s_hi REAL, s_last_x REAL, s_last_ts INTEGER, s_n INTEGER DEFAULT 0, s_exit_x REAL, s_exit_ts INTEGER, s_exit_reason TEXT, s_r REAL, s_drops INTEGER DEFAULT 0, s_backstops INTEGER DEFAULT 0, s_err TEXT, done INTEGER DEFAULT 0)`);
   db.exec("CREATE INDEX IF NOT EXISTS chain_fill_open ON chain_fill (done)");
-  for (const c of ["s_exit_src TEXT", "s_max_gap_s INTEGER", "s_trig_ts REAL", "s_trig_x REAL", "s_fill_ms INTEGER", "s_entry_state INTEGER", "s_r02 REAL", "s_half_x REAL", "s_r_half REAL", "s_delay_ms INTEGER", "s_tokens02 TEXT", "s_x02 REAL", "s_hi02 REAL", "s_exit_x02 REAL", "s_x60 REAL", "s_x60_02 REAL", "s_gap_dec REAL", "s_t2x INTEGER", "s_t3x INTEGER", "s_t5x INTEGER"]) try { db.exec(`ALTER TABLE chain_fill ADD COLUMN ${c}`); } catch {} // 0.9.1: which source produced the exit (push / backstop) and the longest silence between price updates before it
+  for (const c of ["s_mv TEXT", "s_fail_kind TEXT", "s_res_check TEXT", "s_res_fill TEXT", "s_res_exit TEXT", "s_ms_decision INTEGER", "s_ms_read_check INTEGER", "s_ms_land INTEGER", "s_ms_exit INTEGER", "s_exit_src TEXT", "s_max_gap_s INTEGER", "s_trig_ts REAL", "s_trig_x REAL", "s_fill_ms INTEGER", "s_entry_state INTEGER", "s_r02 REAL", "s_half_x REAL", "s_r_half REAL", "s_delay_ms INTEGER", "s_tokens02 TEXT", "s_x02 REAL", "s_hi02 REAL", "s_exit_x02 REAL", "s_x60 REAL", "s_x60_02 REAL", "s_gap_dec REAL", "s_t2x INTEGER", "s_t3x INTEGER", "s_t5x INTEGER"]) try { db.exec(`ALTER TABLE chain_fill ADD COLUMN ${c}`); } catch {} // 0.9.1: which source produced the exit (push / backstop) and the longest silence between price updates before it
   try { q("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('SIM', ?, ?)").run(now(), "0.9.0"); } catch {} // when the simulated fills started — the page counts every book from here on this measure
 }
 
@@ -79,16 +81,23 @@ async function readValue(mint, tokens, st) {
 }
 
 /** one read of the reserves: tokens for STAKE on this state, plus a sell quote on the same state (for the round-trip figure). Sets st.pool when graduated. */
+/** fill-2: a failed landing re-read is a data-failure row — no fill, no return, counted. Exported so the test harness can prove no stale fill is written. */
+export function recordLandingFailure(ids, mint, strat, t, venue, curve, msg, resCheck, msDecision, msReadCheck, delayMs) {
+  cfStat.landFails++; cfStat.lastErr = `landing read ${mint.slice(0, 6)}: ${msg}`.slice(0, 120);
+  const fail = q("INSERT OR IGNORE INTO chain_fill (vol_id, mint, strat, entry_ts, venue, curve, s_err, s_fail_kind, s_mv, s_res_check, s_ms_decision, s_ms_read_check, s_ms_land, s_delay_ms, done) VALUES (?,?,?,?,?,?,?,'landing-read',?,?,?,?,?,?,1)");
+  for (const id of ids) fail.run(id, mint, strat, t, venue, curve, ("landing read failed: " + msg).slice(0, 100), MV, resCheck, msDecision, msReadCheck, Date.now(), delayMs);
+}
 async function fillState(mint, st) {
+  if (process.env.LAUNCH_SIM_TEST_LANDFAIL === "1") throw new Error("test: forced landing failure"); // harness only
   const g = await global(); if (!g) throw new Error("no Global");
   if (!st.pool) { const [a] = await getAccounts([curveOf(pk(mint))], "processed"); const c = decodeCurve(a?.data);
-    if (c && !c.complete) { st.sellOf = (tok) => quoteSell(c, g, tok); return { tokens: quoteBuy(c, g, LAMPORTS).tokens, tokens02: quoteBuy(c, g, LAMPORTS02).tokens, venue: "curve", curve: 1 }; }
+    if (c && !c.complete) { st.sellOf = (tok) => quoteSell(c, g, tok); st.lastRes = resOf(st, c); return { tokens: quoteBuy(c, g, LAMPORTS).tokens, tokens02: quoteBuy(c, g, LAMPORTS02).tokens, venue: "curve", curve: 1, res: st.lastRes }; }
     if (!c) return null; st.complete = true; }
   if (!st.pool) { const pkp = migratedPoolOf(pk(mint)); const [p] = await getAccounts([pkp], "processed"); const pool = decodePool(p?.data); if (!pool) throw new Error("migrating: no pool yet"); st.pool = pool; st.poolPk = pkp; }
   const cfg = await ammCfg(); const [b, q] = await getAccounts([st.pool.baseAcc, st.pool.quoteAcc], "processed"); const br = tokenAmount(b?.data), qr = tokenAmount(q?.data);
   if (br == null || qr == null) throw new Error("pool reserves unreadable"); st.baseRes = br; st.quoteRes = qr;
-  const pool = st.pool; st.sellOf = (tok) => poolSell(pool, cfg, br, qr, tok);
-  return { tokens: poolBuy(pool, cfg, br, qr, LAMPORTS), tokens02: poolBuy(pool, cfg, br, qr, LAMPORTS02), venue: "pool", curve: 0 };
+  const pool = st.pool; st.sellOf = (tok) => poolSell(pool, cfg, br, qr, tok); st.lastRes = resOf(st, null, br, qr);
+  return { tokens: poolBuy(pool, cfg, br, qr, LAMPORTS), tokens02: poolBuy(pool, cfg, br, qr, LAMPORTS02), venue: "pool", curve: 0, res: st.lastRes };
 }
 /** ENTRY: called once per coin per check when any rule books a paper entry (ids = the vol_paper rows just booked for that coin). */
 export async function chainEntry(mint, ids, chainPx, su, strat, opts = {}) {
@@ -98,30 +107,32 @@ export async function chainEntry(mint, ids, chainPx, su, strat, opts = {}) {
   const t = now(); const st = { pool: null };
   try {
     const g = await global(); if (!g) throw new Error("no Global");
-    const [a] = await getAccounts([curveOf(pk(mint))], "processed"); const c = decodeCurve(a?.data);
-    let tokens = 0n, tokens02 = 0n, venue = "curve", curve = 1;
+    const msDecision = Date.now(); const [a] = await getAccounts([curveOf(pk(mint))], "processed"); const c = decodeCurve(a?.data); const msReadCheck = Date.now();
+    let tokens = 0n, tokens02 = 0n, venue = "curve", curve = 1, resCheck = c && !c.complete ? resOf(st, c) : null;
     if (c && !c.complete) { tokens = quoteBuy(c, g, LAMPORTS).tokens; tokens02 = quoteBuy(c, g, LAMPORTS02).tokens; st.sellOf = (tok) => quoteSell(c, g, tok); }
     else { // graduated (or not a pump.fun curve): the pool
       const pkp = migratedPoolOf(pk(mint)); const [p] = await getAccounts([pkp], "processed"); const pool = decodePool(p?.data);
       if (!pool) throw new Error(c ? "migrating: no pool yet" : "no curve, no pool");
       const cfg = await ammCfg(); const [b, q] = await getAccounts([pool.baseAcc, pool.quoteAcc], "processed"); const br = tokenAmount(b?.data), qr = tokenAmount(q?.data);
       if (br == null || qr == null) throw new Error("pool reserves unreadable");
-      tokens = poolBuy(pool, cfg, br, qr, LAMPORTS); tokens02 = poolBuy(pool, cfg, br, qr, LAMPORTS02); venue = "pool"; curve = 0; st.pool = pool; st.poolPk = pkp; st.baseRes = br; st.quoteRes = qr; st.sellOf = (tok) => poolSell(pool, cfg, br, qr, tok);
+      tokens = poolBuy(pool, cfg, br, qr, LAMPORTS); tokens02 = poolBuy(pool, cfg, br, qr, LAMPORTS02); venue = "pool"; curve = 0; st.pool = pool; st.poolPk = pkp; st.baseRes = br; st.quoteRes = qr; st.sellOf = (tok) => poolSell(pool, cfg, br, qr, tok); resCheck = resOf(st, null, br, qr);
     }
     if (tokens <= 0n) throw new Error("zero tokens");
     // 0.9.8 (review, 5 Nov 21:00 UK): the guard is decided on the state a live bot would read BEFORE submitting — this one — and the fill lands BUY_LAND_MS later on whatever state is there then
     const pxDec = STAKE / (Number(tokens) / 1e6) * (su || 0), gapDec = chainPx > 0 && pxDec > 0 ? pxDec / chainPx - 1 : null;
     if (guard > 0 && gapDec != null && gapDec <= -guard) {
-      const skip = q("INSERT OR IGNORE INTO chain_fill (vol_id, mint, strat, entry_ts, venue, curve, s_sol_in, s_px, s_in_gap, s_gap_dec, s_exit_reason, s_r, s_r02, s_delay_ms, done) VALUES (?,?,?,?,?,?,0,?,?,?,'skipped-dump',0,0,?,1)");
-      for (const id of ids) skip.run(id, mint, strat, t, venue, curve, pxDec || null, +gapDec.toFixed(4), +gapDec.toFixed(4), delayMs); cfStat.skipped = (cfStat.skipped || 0) + ids.length; return; }
+      const skip = q("INSERT OR IGNORE INTO chain_fill (vol_id, mint, strat, entry_ts, venue, curve, s_sol_in, s_px, s_in_gap, s_gap_dec, s_exit_reason, s_r, s_r02, s_delay_ms, done, s_mv, s_res_check, s_ms_decision, s_ms_read_check) VALUES (?,?,?,?,?,?,0,?,?,?,'skipped-dump',0,0,?,1,?,?,?,?)");
+      for (const id of ids) skip.run(id, mint, strat, t, venue, curve, pxDec || null, +gapDec.toFixed(4), +gapDec.toFixed(4), delayMs, MV, resCheck, msDecision, msReadCheck); cfStat.skipped = (cfStat.skipped || 0) + ids.length; return; }
     // 0.9.2: the buy lands BUY_LAND_MS after the check — wait that long, re-read the reserves, and fill on that state (the check-time state is kept as the fallback if the re-read fails)
-    await new Promise((r) => setTimeout(r, BUY_LAND_MS)); let entryState = 0;
-    try { const r2 = await fillState(mint, st); if (r2) { tokens = r2.tokens; tokens02 = r2.tokens02; venue = r2.venue; curve = r2.curve; entryState = 1; } } catch (e) { cfStat.lastErr = `entry re-read ${mint.slice(0, 6)}: ${e.message}`.slice(0, 120); }
+    await new Promise((r) => setTimeout(r, BUY_LAND_MS)); let entryState = 0, resFill = null, msLand = null;
+    try { const r2 = await fillState(mint, st); msLand = Date.now(); if (r2) { tokens = r2.tokens; tokens02 = r2.tokens02; venue = r2.venue; curve = r2.curve; entryState = 1; resFill = r2.res || null; } else throw new Error("curve/pool state not decodable at landing"); }
+    catch (e) { // fill-2: no fill on stale reserves — a data-failure row, counted, no return
+      recordLandingFailure(ids, mint, strat, t, venue, curve, e.message, resCheck, msDecision, msReadCheck, delayMs); return; }
     const x0 = st.sellOf ? Number(st.sellOf(tokens)) / Number(LAMPORTS) : null; // the round trip on the SAME reserve state: what the buy costs in fees + impact
     const px = STAKE / (Number(tokens) / 1e6) * (su || 0), gap = chainPx > 0 && px > 0 ? px / chainPx - 1 : null; // USD per token, like the paper entry_price
     const x02 = st.sellOf && tokens02 > 0n ? Number(st.sellOf(tokens02)) / Number(LAMPORTS02) : null; // 0.9.8: the real 0.02 SOL position's round trip on the same state
-    const ins = q("INSERT OR IGNORE INTO chain_fill (vol_id, mint, strat, entry_ts, venue, curve, s_sol_in, s_tokens, s_px, s_in_gap, s_gap_dec, s_x0, s_hi, s_last_x, s_last_ts, s_n, s_entry_state, s_delay_ms, s_tokens02, s_x02, s_hi02) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,1)");
-    for (const id of ids) ins.run(id, mint, strat, t, venue, curve, STAKE, tokens.toString(), px || null, gap != null ? +gap.toFixed(4) : null, gapDec != null ? +gapDec.toFixed(4) : null, x0 != null ? +x0.toFixed(4) : null, 1, x0 != null ? +x0.toFixed(4) : null, now(), entryState, delayMs, tokens02 > 0n ? tokens02.toString() : null, x02 != null ? +x02.toFixed(4) : null);
+    const ins = q("INSERT OR IGNORE INTO chain_fill (vol_id, mint, strat, entry_ts, venue, curve, s_sol_in, s_tokens, s_px, s_in_gap, s_gap_dec, s_x0, s_hi, s_last_x, s_last_ts, s_n, s_entry_state, s_delay_ms, s_tokens02, s_x02, s_hi02, s_mv, s_res_check, s_res_fill, s_ms_decision, s_ms_read_check, s_ms_land) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,1,?,?,?,?,?,?)");
+    for (const id of ids) ins.run(id, mint, strat, t, venue, curve, STAKE, tokens.toString(), px || null, gap != null ? +gap.toFixed(4) : null, gapDec != null ? +gapDec.toFixed(4) : null, x0 != null ? +x0.toFixed(4) : null, 1, x0 != null ? +x0.toFixed(4) : null, now(), entryState, delayMs, tokens02 > 0n ? tokens02.toString() : null, x02 != null ? +x02.toFixed(4) : null, MV, resCheck, resFill, msDecision, msReadCheck, msLand);
     cfStat.entries += ids.length;
     watch(mint, st);
   } catch (e) { cfStat.entryErrs++; cfStat.lastErr = `entry ${mint.slice(0, 6)}: ${e.message}`.slice(0, 140);
@@ -131,9 +142,9 @@ export async function chainEntry(mint, ids, chainPx, su, strat, opts = {}) {
 // ---- open positions: one watcher per mint (all books' rows of that coin share it) ----
 const W = new Map(); // mint → { st, subs: [ids], lastPush }
 const pending = new Set(); // 0.9.2: mints with a triggered sell waiting for the landing state
-setInterval(() => { for (const mint of [...pending]) { pending.delete(mint); setTimeout(() => { const w = W.get(mint); if (!w) return; readValue(mint, 1n, w.st).then((v) => { if (!v || v.lamports == null) return; const st = w.st; if (v.venue === "curve") getAccounts([curveOf(pk(mint))], "processed").then(([a]) => { const c = decodeCurve(a?.data); if (c && G) apply(mint, (tok) => quoteSell(c, G, tok), "land"); }).catch(() => {}); else if (st.pool && CFG) apply(mint, (tok) => poolSell(st.pool, CFG, st.baseRes, st.quoteRes, tok), "land"); }).catch(() => {}); }, SELL_LAND_MS + 50); } }, 200);
+setInterval(() => { for (const mint of [...pending]) { pending.delete(mint); setTimeout(() => { const w = W.get(mint); if (!w) return; readValue(mint, 1n, w.st).then((v) => { if (!v || v.lamports == null) return; const st = w.st; if (v.venue === "curve") getAccounts([curveOf(pk(mint))], "processed").then(([a]) => { const c = decodeCurve(a?.data); if (c && G) apply(mint, (tok) => quoteSell(c, G, tok), "land", resOf(null, c)); }).catch(() => {}); else if (st.pool && CFG) apply(mint, (tok) => poolSell(st.pool, CFG, st.baseRes, st.quoteRes, tok), "land", resOf(st, null, st.baseRes, st.quoteRes)); }).catch(() => {}); }, SELL_LAND_MS + 50); } }, 200);
 function rows(mint) { return q("SELECT vol_id, strat, curve, s_tokens, s_hi, entry_ts, s_last_ts, s_max_gap_s, s_trig_ts, s_trig_x, s_half_x, s_tokens02, s_hi02, s_x60, s_t2x, s_t3x, s_t5x FROM chain_fill WHERE mint=? AND done=0 AND s_tokens IS NOT NULL").all(mint); }
-function apply(mint, lamportsOf, src) {
+function apply(mint, lamportsOf, src, res = null) {
   const t = now(); let open = 0;
   for (const r of rows(mint)) {
     const lam = lamportsOf(BigInt(r.s_tokens)); if (lam == null) { open++; continue; }
@@ -147,7 +158,7 @@ function apply(mint, lamportsOf, src) {
       if (tms - r.s_trig_ts * 1000 >= SELL_LAND_MS) { const reason = t - r.entry_ts >= HORIZON && !(r.s_trig_x <= (r.s_hi || 1) * keep) ? "2h" : "trail";
         const rHalf = r.s_half_x != null ? 0.5 * r.s_half_x + 0.5 * x - 1 - NET_FEE / STAKE : x - 1 - NET_FEE / STAKE; // 0.9.6: half sold at the first 2x print, the rest on this exit
         const r02 = x02 != null ? x02 - 1 - NET_FEE / STAKE02 : x - 1 - NET_FEE / STAKE02; // 0.9.8: true 0.02 result from the real 0.02 position (falls back to the rescaled figure if the small quote was unavailable)
-        q("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_exit_x=?, s_exit_ts=?, s_exit_reason=?, s_r=?, s_r02=?, s_exit_x02=?, s_r_half=?, s_exit_src=?, s_max_gap_s=?, s_fill_ms=?, done=1 WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), +x.toFixed(4), t, reason, +(x - 1 - NET_FEE / STAKE).toFixed(4), +r02.toFixed(4), x02 != null ? +x02.toFixed(4) : null, +rHalf.toFixed(4), src, gap, Math.round(tms - r.s_trig_ts * 1000), r.vol_id); cfStat.exits++; }
+        q("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_exit_x=?, s_exit_ts=?, s_exit_reason=?, s_r=?, s_r02=?, s_exit_x02=?, s_r_half=?, s_exit_src=?, s_max_gap_s=?, s_fill_ms=?, s_res_exit=?, s_ms_exit=?, done=1 WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), +x.toFixed(4), t, reason, +(x - 1 - NET_FEE / STAKE).toFixed(4), +r02.toFixed(4), x02 != null ? +x02.toFixed(4) : null, +rHalf.toFixed(4), src, gap, Math.round(tms - r.s_trig_ts * 1000), res, tms, r.vol_id); cfStat.exits++; }
       else { q("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_max_gap_s=? WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), gap, r.vol_id); open++; }
       cfStat.updates++; continue; }
     const trigger = x <= (r.s_hi || 1) * keep || t - r.entry_ts >= HORIZON;
@@ -168,7 +179,7 @@ async function watch(mint, st) {
     if (!st.pool) {
       const id = await onAccount(curveOf(pk(mint)), (data) => { try { const c = decodeCurve(data); if (!c) return; w.lastPush = Date.now();
         if (c.complete) { if (!w.st.complete) { w.st.complete = true; resub(mint).catch(() => {}); } return; }
-        const g = G; if (!g) return; apply(mint, (tok) => quoteSell(c, g, tok), "sub"); } catch (e) { cfStat.errors++; cfStat.lastErr = "sub: " + e.message.slice(0, 100); } });
+        const g = G; if (!g) return; apply(mint, (tok) => quoteSell(c, g, tok), "sub", resOf(null, c)); } catch (e) { cfStat.errors++; cfStat.lastErr = "sub: " + e.message.slice(0, 100); } });
       w.subs.push(id); cfStat.subs++;
     } else await subPool(mint, w);
   } catch (e) { cfStat.errors++; cfStat.lastErr = "watch: " + e.message.slice(0, 100); }
@@ -176,7 +187,7 @@ async function watch(mint, st) {
 async function subPool(mint, w) {
   const st = w.st; if (!st.pool) return;
   const onRes = (which) => (data) => { try { const amt = tokenAmount(data); if (amt == null) return; w.lastPush = Date.now(); if (which === "base") st.baseRes = amt; else st.quoteRes = amt;
-    if (st.baseRes == null || st.quoteRes == null || !CFG) return; apply(mint, (tok) => poolSell(st.pool, CFG, st.baseRes, st.quoteRes, tok), "sub"); } catch (e) { cfStat.errors++; cfStat.lastErr = "psub: " + e.message.slice(0, 100); } };
+    if (st.baseRes == null || st.quoteRes == null || !CFG) return; apply(mint, (tok) => poolSell(st.pool, CFG, st.baseRes, st.quoteRes, tok), "sub", resOf(st, null, st.baseRes, st.quoteRes)); } catch (e) { cfStat.errors++; cfStat.lastErr = "psub: " + e.message.slice(0, 100); } };
   await ammCfg();
   w.subs.push(await onAccount(st.pool.baseAcc, onRes("base")), await onAccount(st.pool.quoteAcc, onRes("quote"))); cfStat.subs += 2;
 }
@@ -198,10 +209,10 @@ export async function chainBackstop() {
       let w = W.get(mint);
       if (!w) { w = { st: { pool: null }, subs: [], lastPush: 0 }; await watch(mint, w.st); w = W.get(mint) || w; cfStat.drops++; q("UPDATE chain_fill SET s_drops=s_drops+1 WHERE mint=? AND done=0").run(mint); } // no watcher (restart or lost): re-armed
       try { const v = await readValue(mint, 1n, w.st); cfStat.backstops++;
-        if (v && v.lamports != null) { const st = w.st; if (v.venue === "curve") { const [a] = await getAccounts([curveOf(pk(mint))], "processed"); const c = decodeCurve(a?.data); if (c && G) apply(mint, (tok) => quoteSell(c, G, tok), "backstop"); }
-          else if (st.pool && CFG && st.baseRes != null && st.quoteRes != null) { if (!w.subs.length) await subPool(mint, w); apply(mint, (tok) => poolSell(st.pool, CFG, st.baseRes, st.quoteRes, tok), "backstop"); } }
+        if (v && v.lamports != null) { const st = w.st; if (v.venue === "curve") { const [a] = await getAccounts([curveOf(pk(mint))], "processed"); const c = decodeCurve(a?.data); if (c && G) apply(mint, (tok) => quoteSell(c, G, tok), "backstop", resOf(null, c)); }
+          else if (st.pool && CFG && st.baseRes != null && st.quoteRes != null) { if (!w.subs.length) await subPool(mint, w); apply(mint, (tok) => poolSell(st.pool, CFG, st.baseRes, st.quoteRes, tok), "backstop", resOf(st, null, st.baseRes, st.quoteRes)); } }
         else if (v && v.venue === "migrating") { const t = now(); for (const r of rows(mint)) if (t - r.entry_ts >= HORIZON + 600) q("UPDATE chain_fill SET s_exit_reason='migrating-stuck', s_err='no pool 10 min past horizon', done=1 WHERE vol_id=?").run(r.vol_id); }
-        else { const t = now(); for (const r of rows(mint)) if (t - r.entry_ts >= HORIZON) { q("UPDATE chain_fill SET s_exit_x=s_last_x, s_exit_ts=?, s_exit_reason='2h-unreadable', s_r=?, s_r02=?, s_r_half=?, s_exit_src='stale', done=1 WHERE vol_id=?").run(t, r.s_last_x != null ? +(r.s_last_x - 1 - NET_FEE / STAKE).toFixed(4) : null, r.s_last_x != null ? +(r.s_last_x - 1 - NET_FEE / 0.02).toFixed(4) : null, r.s_last_x != null ? +(r.s_last_x - 1 - NET_FEE / STAKE).toFixed(4) : null, r.vol_id); } }
+        else { const t = now(); for (const r of rows(mint)) if (t - r.entry_ts >= HORIZON) { cfStat.unresolved++; q("UPDATE chain_fill SET s_exit_ts=?, s_exit_reason='2h-unreadable', s_exit_src='unresolved', s_fail_kind='unreadable-at-horizon', s_err='unresolved: state unreadable at the horizon; last print kept in s_last_x, no return', s_ms_exit=?, done=1 WHERE vol_id=?").run(t, Date.now(), r.vol_id); } } // fill-2: unresolved, not valued at the last print}
       } catch (e) { cfStat.errors++; cfStat.lastErr = `backstop ${mint.slice(0, 6)}: ${e.message}`.slice(0, 120); }
     }
     for (const mint of [...W.keys()]) if (!open.includes(mint)) await unwatch(mint); // nothing open any more

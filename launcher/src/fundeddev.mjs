@@ -272,36 +272,62 @@ export async function fdCheck(db, tdb = null) {
 
 /** 0.8.11: the first buyers of a launch — the create-block wallets (b0) and anyone in the first 3 s — kept per wallet so hit rates can be counted later.
  *  Inserted at the first check that sees them (at most 40 wallets, biggest buys first); "exited" (sold 95%+ of what it bought) is refreshed at every check. */
-/** 0.9.14: the missed-runner ledger (Codex 6 Nov: one primary terminal reason per coin, auditable) and the inventory of recorded winners by day.
- *  Terminal reason (first that applies): not-recorded (tracker token with no fd_watch row), not-screened, no-check (screened but no check row yet / data late),
- *  price-unavailable (every check lacked a market cap), historical-only, below-bar (BL), qualified-no-fill, entered-stopped-out, entered-open; plus the funding books' own reason. */
-export function fdLedger(db, tdb, hours = 24) {
+/** 0.9.17 (Codex 6 Nov): the missed-runner ledger — one row per recorded launch AND book (BL / BL27 / FD / FDL / A1 by default), one terminal reason each, explicit units,
+ *  epoch timestamps (UTC seconds; the UK is on GMT = UTC until 29 Mar 2026). Terminal reason, first that applies: not-screened / not-in-population / no-check / data-unavailable /
+ *  price-unavailable / historical-only / below-bar / qualified-no-fill / fill-data-failure / entered-open / entered-unresolved / entered-closed (closed is not "lost": see r02 and sign). */
+export const LEDGER_VER = "ledger-2";
+export function fdLedger(db, tdb, hours = 24, books = ["BL", "BL27", "FD", "FDL", "A1"]) {
+  const since = now() - hours * 3600, out = [], screenSince = db.prepare("SELECT MIN(screened_ts) t FROM fd_watch WHERE screened=1").get()?.t ?? null;
+  const dec = db.prepare("SELECT at, ts, passed, reason FROM fd_decisions WHERE mint=? AND rule=? ORDER BY at");
+  const fills = db.prepare("SELECT f.vol_id, f.s_mv, f.s_px, f.s_hi, f.s_exit_x, f.s_exit_reason, f.s_exit_src, f.s_r, f.s_r02, f.s_exit_x02, f.s_err, f.s_fail_kind, f.done, f.entry_ts, f.s_exit_ts, v.entry_price, v.entry_mc FROM chain_fill f LEFT JOIN vol_paper v ON v.id=f.vol_id WHERE f.mint=? AND f.strat=? ORDER BY f.vol_id");
+  const tok = tdb ? tdb.prepare("SELECT peak_mc_usd, graduated, tier, finalized FROM tokens WHERE mint=?") : null;
+  for (const w of db.prepare("SELECT *, rowid AS rid FROM fd_watch WHERE created_ts>=? ORDER BY created_ts").all(since)) {
+    const ctl = w.pre_nb === 1 || w.rid % 7 === 0 ? 1 : 0; let checks = []; try { checks = JSON.parse(w.checks || "[]"); } catch {}
+    const c60 = checks.find((c) => c.at === 60) || checks[0] || null, tk = tok ? tok.get(w.mint) : null, allErr = checks.length > 0 && checks.every((c) => c.err), mcMissing = checks.length > 0 && checks.every((c) => c.mcSol == null);
+    for (const book of books) {
+      const bl = book === "BL" || book === "BL27", ds = dec.all(w.mint, book), fs = fills.all(w.mint, book), f = fs[0] || null;
+      let reason;
+      if (bl && !w.screened) reason = "not-screened";
+      else if (!bl && !ctl) reason = "not-in-population";
+      else if (!checks.length) reason = w.done ? "no-check: window passed" : "no-check: pending";
+      else if (allErr) reason = "data-unavailable: " + String(checks[0].err).slice(0, 50);
+      else if (bl && ds.length && ds.every((d) => /historical/.test(d.reason))) reason = "historical-only";
+      else if (f && f.s_fail_kind === "landing-read") reason = "fill-data-failure";
+      else if (f && f.s_err && !f.s_fail_kind) reason = "qualified-no-fill: " + f.s_err.slice(0, 50);
+      else if (f && f.s_fail_kind === "unreadable-at-horizon") reason = "entered-unresolved";
+      else if (f && !f.done) reason = "entered-open";
+      else if (f) reason = "entered-closed";
+      else if (ds.some((d) => d.passed)) reason = "qualified-no-fill: no fill row";
+      else if (mcMissing) reason = (c60?.net ?? 0) >= 15 ? "price-unavailable: buying passed" : "below-bar: no trades, no price";
+      else if (ds.length) reason = "below-bar";
+      else reason = "no-decision";
+      const sign = f && f.s_r02 != null ? (f.s_r02 > 0 ? "win" : f.s_r02 < 0 ? "loss" : "flat") : null;
+      out.push({ ledger_ver: LEDGER_VER, rule_ver: VER, fill_mv: f?.s_mv ?? null, tz: "UTC (=UK/GMT)", mint: w.mint, name: w.name, book, vol_id: f?.vol_id ?? null, created_ts: w.created_ts, grp: w.grp || null, funding_pass: w.pre, screened: w.screened || 0, screen_first_observed_ts: w.screened_ts ?? null, screen_live_since_ts: screenSince, crossing_ts: null,
+        checks: checks.map((c) => c.at).join("|"), net60_sol: c60?.net ?? null, mc60_sol: c60?.mcSol ?? null, holders60: c60?.holders ?? null, mc_missing_checks: checks.filter((c) => c.mcSol == null).length,
+        reason, decisions: ds.map((d) => d.at + ":" + (d.passed ? "entered" : d.reason)).join("|"), decision_ts: ds[0]?.ts ?? null,
+        entry_ts: f?.entry_ts ?? null, exit_ts: f?.s_exit_ts ?? null, exit_reason: f?.s_exit_reason ?? null, exit_src: f?.s_exit_src ?? null, closed: f ? f.done : null, sign,
+        check_px_usd: f?.entry_price ?? null, fill_px_usd: f?.s_px ?? null, fill_over_check: f?.entry_price && f?.s_px ? +(f.s_px / f.entry_price).toFixed(4) : null, best_x: f?.s_hi ?? null, exit_x: f?.s_exit_x ?? null,
+        r_frac_02: f?.s_r02 ?? null, r_frac_02_units: "fraction of 0.02 SOL stake, after 0.0015 SOL fees; floor -1.075; 0.02 proceeds valued at the 0.2 book's exit (simulated)", r_frac_020: f?.s_r ?? null,
+        peak_mc_usd_tracker: tk?.peak_mc_usd ?? null, migrated_tracker_flag: tk?.graduated ?? null, outcome_source: "tracker: peak only inside its tracking window; migrated inferred from the reserve level, not verified on the pool", tracked: tk ? 1 : 0 });
+    }
+  }
+  return out;
+}
+/** 0.9.17: raw per-position evidence for every simulated fill row — identifiers, units, the six timestamps, the reserve state each value came from (verbatim), evidence quality per field. Nothing missing is filled from current data. */
+export function fdPositions(db, hours = 24) {
   const since = now() - hours * 3600, out = [];
-  const dec = db.prepare("SELECT rule, at, passed, reason FROM fd_decisions WHERE mint=? ORDER BY at, rule"), fills = db.prepare("SELECT f.strat, f.s_px, f.s_hi, f.s_exit_x, f.s_exit_reason, f.s_r, f.s_r02, f.s_err, f.done, v.entry_price FROM chain_fill f LEFT JOIN vol_paper v ON v.id=f.vol_id WHERE f.mint=?");
-  const tok = tdb ? tdb.prepare("SELECT peak_mc_usd, graduated, tier FROM tokens WHERE mint=?") : null;
-  for (const w of db.prepare("SELECT *, rowid AS rid FROM fd_watch WHERE created_ts>=? ORDER BY created_ts").all(since)) { w.ctl = w.pre_nb === 1 || w.rid % 7 === 0 ? 1 : 0;
-    let checks = []; try { checks = JSON.parse(w.checks || "[]"); } catch {}
-    const c60 = checks.find((c) => c.at === 60) || checks[0] || null, ds = dec.all(w.mint), fs = fills.all(w.mint), tk = tok ? tok.get(w.mint) : null;
-    const bl = ds.filter((d) => d.rule === "BL"), fd = ds.filter((d) => d.rule === "FD"), fdl = ds.filter((d) => d.rule === "FDL");
-    const entered = fs.filter((f) => !f.s_err), mcMissing = checks.length && checks.every((c) => c.mcSol == null);
-    let reason;
-    if (!w.screened && !w.ctl && !w.pre_nb) reason = "not-screened";
-    else if (!checks.length) reason = w.done ? "no-check (window passed without a check)" : "no-check (yet)";
-    else if (checks.every((c) => c.err)) reason = "data-unavailable: " + String(checks[0].err).slice(0, 60);
-    else if (mcMissing) reason = (c60?.net ?? 0) >= 15 ? "price-unavailable (buying passed)" : "below-bar (no trades in the window, no price)";
-    else if (bl.length && bl.every((d) => /historical/.test(d.reason))) reason = "historical-only";
-    else if (entered.length) reason = entered.every((f) => f.done) ? "entered-stopped-out" : "entered-open";
-    else if (fs.length) reason = "qualified-no-fill: " + (fs[0].s_err || "").slice(0, 60);
-    else if (bl.some((d) => d.passed)) reason = "qualified-no-fill";
-    else if (bl.length) reason = "below-bar";
-    else reason = "not-in-baseline-population";
-    const best = entered.reduce((m, f) => Math.max(m, f.s_hi || 0), 0), net = entered.reduce((a, f) => a + (f.s_r02 ?? 0), 0);
-    const px60 = entered[0]?.entry_price ?? null, fpx = entered[0]?.s_px ?? null; // the check price the book entered on (USD per token, from the decoded market cap) vs the executable fill price from the reserves (USD per token) — the bracket audit; a ratio far from 1 means the check's market cap was wrong
-    out.push({ mint: w.mint, name: w.name, created: new Date(w.created_ts * 1000).toISOString().slice(0, 19), grp: w.grp || null, pre: w.pre, screened: w.screened || 0, screened_s: w.screened_ts ? w.screened_ts - w.created_ts : null,
-      checks: checks.map((c) => c.at).join("|"), net60: c60?.net ?? null, mc60_sol: c60?.mcSol ?? null, holders60: c60?.holders ?? null, mc_missing_checks: checks.filter((c) => c.mcSol == null).length,
-      reason, bl: bl.map((d) => d.at + ":" + (d.passed ? "entered" : d.reason)).join("|"), fd: fd.map((d) => d.at + ":" + (d.passed ? "entered" : d.reason)).join("|"), fdl: fdl.map((d) => d.at + ":" + (d.passed ? "entered" : d.reason)).join("|"),
-      books: entered.map((f) => f.strat).join("|"), best_x: best || null, net_r02: entered.length ? +net.toFixed(4) : null, exit: entered[0]?.s_exit_reason || null,
-      check_px: px60, fill_px: fpx, px_ratio: px60 && fpx ? +(fpx / px60).toFixed(2) : null, peak_mc_usd: tk?.peak_mc_usd ?? null, graduated: tk?.graduated ?? null, tracked: tk ? 1 : 0 });
+  for (const f of db.prepare("SELECT f.*, v.entry_price, v.entry_mc, v.holders AS v_holders, v.curve AS v_curve, v.row AS v_row FROM chain_fill f LEFT JOIN vol_paper v ON v.id=f.vol_id WHERE f.entry_ts>=? ORDER BY f.entry_ts, f.vol_id").all(since)) {
+    let m = {}; try { m = JSON.parse(f.v_row || "{}"); } catch {}
+    const ev = (x) => (x == null ? "unavailable" : "recorded");
+    out.push({ vol_id: f.vol_id, mint: f.mint, book: f.strat, rule_ver: VER, fill_mv: f.s_mv || "fill-1", tz: "UTC",
+      units: "tokens raw (6 decimals, supply 1e9); stake SOL; fees 0.0015 SOL; prices USD/token; r = fraction of stake",
+      stake_sol: f.s_sol_in, stake02_sol: f.s_tokens02 ? 0.02 : null, fee_sol: 0.0015, sol_usd: m.sol_usd ?? null,
+      ts_metric_cutoff: m.at != null && f.entry_ts ? f.entry_ts : null, ts_decision: f.entry_ts, ms_decision: f.s_ms_decision ?? null, ms_reserve_read_check: f.s_ms_read_check ?? null, ms_landing: f.s_ms_land ?? null, ts_exit: f.s_exit_ts ?? null, ms_exit: f.s_ms_exit ?? null, delay_ms: f.s_delay_ms ?? null,
+      check_mc_sol: m.mcSol ?? null, check_px_usd: f.entry_price ?? null, check_px_src: "decoded trades (Helius) market cap × SOL/USD ÷ 1e9", check_net_sol: m.net ?? null, check_holders: f.v_holders ?? null,
+      reserves_at_check: f.s_res_check ?? null, reserves_at_check_ev: ev(f.s_res_check), reserves_at_fill: f.s_res_fill ?? null, reserves_at_fill_ev: f.s_fail_kind === "landing-read" ? "unavailable (landing read failed)" : f.s_entry_state === 1 ? "recorded" : f.s_tokens ? "fallback: check-time state (fill-1)" : "unavailable",
+      tokens_raw: f.s_tokens ?? null, tokens02_raw: f.s_tokens02 ?? null, fill_px_usd: f.s_px ?? null, fill_over_check: f.entry_price && f.s_px ? +(f.s_px / f.entry_price).toFixed(4) : null, x0_roundtrip: f.s_x0 ?? null, gap_dec: f.s_gap_dec ?? null,
+      hi_x: f.s_hi ?? null, hi02_x: f.s_hi02 ?? null, x60: f.s_x60 ?? null, exit_trigger_ts: f.s_trig_ts ?? null, exit_trigger_x: f.s_trig_x ?? null, exit_x: f.s_exit_x ?? null, exit02_x: f.s_exit_x02 ?? null, exit_reason: f.s_exit_reason ?? null, exit_src: f.s_exit_src ?? null, reserves_at_exit: f.s_res_exit ?? null, reserves_at_exit_ev: ev(f.s_res_exit), fill_ms_sell: f.s_fill_ms ?? null,
+      r_frac_020: f.s_r ?? null, r_frac_02: f.s_r02 ?? null, r_half: f.s_r_half ?? null, status: f.s_fail_kind ? "data-failure: " + f.s_fail_kind : f.s_err ? "no-fill: " + f.s_err.slice(0, 60) : f.done ? "closed" : "open", err: f.s_err ?? null });
   }
   return out;
 }
