@@ -23,7 +23,7 @@ const now = () => Math.floor(Date.now() / 1000);
 const BUY_LAND_MS = n("LAUNCH_SIM_BUY_LAND_MS", 1000), SELL_LAND_MS = n("LAUNCH_SIM_SELL_LAND_MS", 700); // 0.9.2: a transaction executes against the chain state this long after we decide (measured on the first live FD trades: buys landed 0.6–1.0 s after the check, sells 0.5 s after the trail)
 // 0.9.12: prepared statements are cached (the tick loop prepared each statement afresh on every price update — a million a day — and the native memory behind them is only freed by the garbage collector; rss climbed ~55 MB/h)
 const STMT = new Map(); const q = (sql) => { let st = STMT.get(sql); if (!st) { st = db.prepare(sql); STMT.set(sql, st); } return st; };
-export const MV = "fill-2"; // measurement version of the simulated fill policy. fill-1 (0.9.2–0.9.16): a failed landing re-read fell back to the check-time reserves. fill-2 (0.9.17, Codex 6 Nov): no fallback — a failed re-read is a data-failure row with no fill and no return; a position unreadable at the horizon is unresolved, not valued at its last print.
+export const MV = "fill-2"; export const MV02 = "fill-3"; // fill-3 (0.9.34): the independent 0.02 position (i02_* columns) beside the shared-exit 0.02 figure // measurement version of the simulated fill policy. fill-1 (0.9.2–0.9.16): a failed landing re-read fell back to the check-time reserves. fill-2 (0.9.17, Codex 6 Nov): no fallback — a failed re-read is a data-failure row with no fill and no return; a position unreadable at the horizon is unresolved, not valued at its last print.
 export const cfStat = { entries: 0, skipped: 0, entryErrs: 0, landFails: 0, unresolved: 0, updates: 0, exits: 0, subs: 0, resubs: 0, drops: 0, backstops: 0, errors: 0, lastErr: "", mv: MV };
 const resOf = (st, c, br, qr) => c ? JSON.stringify({ vSol: String(c.vSol), vTok: String(c.vTok), rSol: String(c.rSol), rTok: String(c.rTok), complete: c.complete ? 1 : 0 }) : br != null ? JSON.stringify({ base: String(br), quote: String(qr), pool: st?.poolPk ? String(st.poolPk) : null }) : null; // 0.9.17: the reserve state a value was computed from, verbatim
 
@@ -61,7 +61,7 @@ export function initChainFill(d) { STMT.clear();
   db.exec("CREATE INDEX IF NOT EXISTS chain_fill_open ON chain_fill (done)");
   db.exec("CREATE INDEX IF NOT EXISTS cf_mint ON chain_fill(mint, strat); CREATE INDEX IF NOT EXISTS cf_entry ON chain_fill(entry_ts)"); // 0.9.18
   try { db.exec("CREATE TABLE IF NOT EXISTS fd_rules (k TEXT PRIMARY KEY, since_ts INTEGER, ver TEXT)"); const first = db.prepare("SELECT MIN(entry_ts) t FROM chain_fill WHERE s_mv='fill-2'").get()?.t; db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('FILL2', ?, 'fill-2')").run(first || Math.floor(Date.now() / 1000)); } catch {} // 0.9.21: the measurement-policy activation time = the first fill-2 row (0.9.17 up, 6 Nov 09:46 UK); the headline window on the pages starts here
-  for (const c of ["s_res_trig TEXT", "s_mv TEXT", "s_fail_kind TEXT", "s_res_check TEXT", "s_res_fill TEXT", "s_res_exit TEXT", "s_ms_decision INTEGER", "s_ms_read_check INTEGER", "s_ms_land INTEGER", "s_ms_exit INTEGER", "s_exit_src TEXT", "s_max_gap_s INTEGER", "s_trig_ts REAL", "s_trig_x REAL", "s_fill_ms INTEGER", "s_entry_state INTEGER", "s_r02 REAL", "s_half_x REAL", "s_r_half REAL", "s_delay_ms INTEGER", "s_tokens02 TEXT", "s_x02 REAL", "s_hi02 REAL", "s_exit_x02 REAL", "s_x60 REAL", "s_x60_02 REAL", "s_gap_dec REAL", "s_t2x INTEGER", "s_t3x INTEGER", "s_t5x INTEGER"]) try { db.exec(`ALTER TABLE chain_fill ADD COLUMN ${c}`); } catch {} // 0.9.1: which source produced the exit (push / backstop) and the longest silence between price updates before it
+  for (const c of ["i02_trig_ts REAL", "i02_trig_x REAL", "i02_exit_x REAL", "i02_exit_ts INTEGER", "i02_exit_reason TEXT", "i02_r REAL", "i02_done INTEGER DEFAULT 0", "i02_res_exit TEXT", "i02_mv TEXT", "s_res_trig TEXT", "s_mv TEXT", "s_fail_kind TEXT", "s_res_check TEXT", "s_res_fill TEXT", "s_res_exit TEXT", "s_ms_decision INTEGER", "s_ms_read_check INTEGER", "s_ms_land INTEGER", "s_ms_exit INTEGER", "s_exit_src TEXT", "s_max_gap_s INTEGER", "s_trig_ts REAL", "s_trig_x REAL", "s_fill_ms INTEGER", "s_entry_state INTEGER", "s_r02 REAL", "s_half_x REAL", "s_r_half REAL", "s_delay_ms INTEGER", "s_tokens02 TEXT", "s_x02 REAL", "s_hi02 REAL", "s_exit_x02 REAL", "s_x60 REAL", "s_x60_02 REAL", "s_gap_dec REAL", "s_t2x INTEGER", "s_t3x INTEGER", "s_t5x INTEGER"]) try { db.exec(`ALTER TABLE chain_fill ADD COLUMN ${c}`); } catch {} // 0.9.1: which source produced the exit (push / backstop) and the longest silence between price updates before it
   try { q("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('SIM', ?, ?)").run(now(), "0.9.0"); } catch {} // when the simulated fills started — the page counts every book from here on this measure
 }
 
@@ -145,13 +145,20 @@ export async function chainEntry(mint, ids, chainPx, su, strat, opts = {}) {
 const W = new Map(); // mint → { st, subs: [ids], lastPush }
 const pending = new Set(); // 0.9.2: mints with a triggered sell waiting for the landing state
 setInterval(() => { for (const mint of [...pending]) { pending.delete(mint); setTimeout(() => { const w = W.get(mint); if (!w) return; readValue(mint, 1n, w.st).then((v) => { if (!v || v.lamports == null) return; const st = w.st; if (v.venue === "curve") getAccounts([curveOf(pk(mint))], "processed").then(([a]) => { const c = decodeCurve(a?.data); if (c && G) apply(mint, (tok) => quoteSell(c, G, tok), "land", resOf(null, c)); }).catch(() => {}); else if (st.pool && CFG) apply(mint, (tok) => poolSell(st.pool, CFG, st.baseRes, st.quoteRes, tok), "land", resOf(st, null, st.baseRes, st.quoteRes)); }).catch(() => {}); }, SELL_LAND_MS + 50); } }, 200);
-function rows(mint) { return q("SELECT vol_id, strat, curve, s_tokens, s_hi, entry_ts, s_last_ts, s_max_gap_s, s_trig_ts, s_trig_x, s_half_x, s_tokens02, s_hi02, s_x60, s_t2x, s_t3x, s_t5x FROM chain_fill WHERE mint=? AND done=0 AND s_tokens IS NOT NULL").all(mint); }
+function rows(mint) { return q("SELECT vol_id, strat, curve, s_tokens, s_hi, entry_ts, s_last_ts, s_max_gap_s, s_trig_ts, s_trig_x, s_half_x, s_tokens02, s_hi02, s_x60, s_t2x, s_t3x, s_t5x, done, i02_trig_ts, i02_trig_x, i02_done FROM chain_fill WHERE mint=? AND (done=0 OR (i02_done=0 AND s_tokens02 IS NOT NULL)) AND s_tokens IS NOT NULL").all(mint); } // fill-3: a row stays watched while its independent 0.02 position is open
+export const _apply = (...a) => apply(...a); // tests
 function apply(mint, lamportsOf, src, res = null) {
   const t = now(); let open = 0;
   for (const r of rows(mint)) {
     const lam = lamportsOf(BigInt(r.s_tokens)); if (lam == null) { open++; continue; }
     const x = Number(lam) / Number(LAMPORTS), hi = Math.max(r.s_hi || 1, x), keep = 1 - trailPct(r.curve);
     const lam02 = r.s_tokens02 ? lamportsOf(BigInt(r.s_tokens02)) : null, x02 = lam02 != null ? Number(lam02) / Number(LAMPORTS02) : null, hi02 = x02 != null ? Math.max(r.s_hi02 || 1, x02) : null; // 0.9.8: the real 0.02 position, valued on the same state
+    // fill-3 (0.9.34, owner's go 19:57 UK): the INDEPENDENT 0.02 position — its own trail on its own high (hi02), its own trigger, its own landing (SELL_LAND_MS), its own exit and return. i02_* columns. The shared-exit column (s_r02) stays as it was.
+    if (x02 != null && hi02 != null && r.s_tokens02 && !r.i02_done) { const tms0 = Date.now();
+      if (r.i02_trig_ts != null) { if (tms0 - r.i02_trig_ts * 1000 >= SELL_LAND_MS) { const reason02 = t - r.entry_ts >= HORIZON && !(r.i02_trig_x <= (r.s_hi02 || 1) * keep) ? "2h" : "trail";
+          q("UPDATE chain_fill SET i02_exit_x=?, i02_exit_ts=?, i02_exit_reason=?, i02_r=?, i02_done=1, i02_res_exit=?, i02_mv='fill-3' WHERE vol_id=?").run(+x02.toFixed(4), t, reason02, +(x02 - 1 - NET_FEE / STAKE02).toFixed(4), res, r.vol_id); cfStat.exits02 = (cfStat.exits02 || 0) + 1; } }
+      else if (x02 <= hi02 * keep || t - r.entry_ts >= HORIZON) q("UPDATE chain_fill SET i02_trig_ts=?, i02_trig_x=? WHERE vol_id=? AND i02_trig_ts IS NULL").run(tms0 / 1000, +x02.toFixed(4), r.vol_id); }
+    if (r.done) { if (!r.i02_done) open++; if (x02 != null) q("UPDATE chain_fill SET s_x02=?, s_hi02=? WHERE vol_id=?").run(+x02.toFixed(4), +hi02.toFixed(4), r.vol_id); cfStat.updates++; continue; } // the 0.2 position is already closed: only the independent 0.02 is tracked
     if (r.s_x60 == null && t - r.entry_ts >= 60) q("UPDATE chain_fill SET s_x60=?, s_x60_02=? WHERE vol_id=? AND s_x60 IS NULL").run(+x.toFixed(4), x02 != null ? +x02.toFixed(4) : null, r.vol_id); // 0.9.8: executable value of the still-open position 60 s after entry (the time-stop column)
     if (x02 != null) q("UPDATE chain_fill SET s_x02=?, s_hi02=? WHERE vol_id=?").run(+x02.toFixed(4), +hi02.toFixed(4), r.vol_id);
     const gap = Math.max(r.s_max_gap_s || 0, r.s_last_ts ? t - r.s_last_ts : 0); // the longest silence between price updates so far
@@ -206,7 +213,7 @@ let busy = false;
 export async function chainBackstop() {
   if (!db || busy) return; busy = true;
   try {
-    const open = q("SELECT DISTINCT mint FROM chain_fill WHERE done=0 AND s_tokens IS NOT NULL").all().map((r) => r.mint);
+    const open = q("SELECT DISTINCT mint FROM chain_fill WHERE (done=0 OR (i02_done=0 AND s_tokens02 IS NOT NULL)) AND s_tokens IS NOT NULL").all().map((r) => r.mint);
     for (const mint of open) {
       let w = W.get(mint);
       if (!w) { w = { st: { pool: null }, subs: [], lastPush: 0 }; await watch(mint, w.st); w = W.get(mint) || w; cfStat.drops++; q("UPDATE chain_fill SET s_drops=s_drops+1 WHERE mint=? AND done=0").run(mint); } // no watcher (restart or lost): re-armed
