@@ -120,6 +120,7 @@ export function initFD(db) {
   for (const r of RULES) { try { if (hasVP) db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES (?, COALESCE((SELECT MIN(entry_ts) FROM vol_paper WHERE strat=?), ?), ?)").run(r.k, r.k, now(), ver); else db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES (?,?,?)").run(r.k, now(), ver); } catch (e) { fdStat.lastErr = "fd_rules: " + e.message.slice(0, 120); } }
   try { db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('VENUE', ?, ?)").run(now(), ver); } catch {}
   try { db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('H4_EPOCH2', ?, ?)").run(now(), ver); } catch {} // 0.9.30
+  try { db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('COLLECT_EPOCH3', ?, ?)").run(now(), ver); } catch {} // 0.9.36: collection epoch 3 = concurrent checks (Codex 20:34 UK: stamp it)
   // 0.8.22: the curve flag from our own check, and the venue exit re-scored where it was wrong (curve coins had been scored with the 25% trail)
   try { const fixed = db.prepare("UPDATE vol_paper SET curve=1 WHERE curve=0 AND json_valid(row) AND json_extract(row,'$.venue')='pump.fun curve'").run().changes;
     const resc = db.prepare("UPDATE vol_paper SET x_venue=x_trail40, r_venue=r_trail40, m_venue=m_trail40 WHERE curve=1 AND done=1 AND err IS NULL AND x_trail40 IS NOT NULL AND (x_venue IS NULL OR x_venue<>x_trail40)").run().changes;
