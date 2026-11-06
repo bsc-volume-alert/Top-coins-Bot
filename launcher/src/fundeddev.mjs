@@ -277,7 +277,7 @@ export async function fdCheck(db, tdb = null) {
  *  price-unavailable (every check lacked a market cap), historical-only, below-bar (BL), qualified-no-fill, entered-stopped-out, entered-open; plus the funding books' own reason. */
 export function fdLedger(db, tdb, hours = 24) {
   const since = now() - hours * 3600, out = [];
-  const dec = db.prepare("SELECT rule, at, passed, reason FROM fd_decisions WHERE mint=? ORDER BY at, rule"), fills = db.prepare("SELECT strat, s_px, s_hi, s_exit_x, s_exit_reason, s_r, s_r02, s_err, done FROM chain_fill WHERE mint=?");
+  const dec = db.prepare("SELECT rule, at, passed, reason FROM fd_decisions WHERE mint=? ORDER BY at, rule"), fills = db.prepare("SELECT f.strat, f.s_px, f.s_hi, f.s_exit_x, f.s_exit_reason, f.s_r, f.s_r02, f.s_err, f.done, v.entry_price FROM chain_fill f LEFT JOIN vol_paper v ON v.id=f.vol_id WHERE f.mint=?");
   const tok = tdb ? tdb.prepare("SELECT peak_mc_usd, graduated, tier FROM tokens WHERE mint=?") : null;
   for (const w of db.prepare("SELECT *, rowid AS rid FROM fd_watch WHERE created_ts>=? ORDER BY created_ts").all(since)) { w.ctl = w.pre_nb === 1 || w.rid % 7 === 0 ? 1 : 0;
     let checks = []; try { checks = JSON.parse(w.checks || "[]"); } catch {}
@@ -288,7 +288,7 @@ export function fdLedger(db, tdb, hours = 24) {
     if (!w.screened && !w.ctl && !w.pre_nb) reason = "not-screened";
     else if (!checks.length) reason = w.done ? "no-check (window passed without a check)" : "no-check (yet)";
     else if (checks.every((c) => c.err)) reason = "data-unavailable: " + String(checks[0].err).slice(0, 60);
-    else if (mcMissing) reason = "price-unavailable";
+    else if (mcMissing) reason = (c60?.net ?? 0) >= 15 ? "price-unavailable (buying passed)" : "below-bar (no trades in the window, no price)";
     else if (bl.length && bl.every((d) => /historical/.test(d.reason))) reason = "historical-only";
     else if (entered.length) reason = entered.every((f) => f.done) ? "entered-stopped-out" : "entered-open";
     else if (fs.length) reason = "qualified-no-fill: " + (fs[0].s_err || "").slice(0, 60);
@@ -296,7 +296,7 @@ export function fdLedger(db, tdb, hours = 24) {
     else if (bl.length) reason = "below-bar";
     else reason = "not-in-baseline-population";
     const best = entered.reduce((m, f) => Math.max(m, f.s_hi || 0), 0), net = entered.reduce((a, f) => a + (f.s_r02 ?? 0), 0);
-    const px60 = c60 && c60.mcSol ? c60.mcSol / 1e9 : null, fpx = entered[0]?.s_px ?? null; // check price (SOL per token, from the market cap) vs the executable fill price — the bracket audit
+    const px60 = entered[0]?.entry_price ?? null, fpx = entered[0]?.s_px ?? null; // the check price the book entered on (USD per token, from the decoded market cap) vs the executable fill price from the reserves (USD per token) — the bracket audit; a ratio far from 1 means the check's market cap was wrong
     out.push({ mint: w.mint, name: w.name, created: new Date(w.created_ts * 1000).toISOString().slice(0, 19), grp: w.grp || null, pre: w.pre, screened: w.screened || 0, screened_s: w.screened_ts ? w.screened_ts - w.created_ts : null,
       checks: checks.map((c) => c.at).join("|"), net60: c60?.net ?? null, mc60_sol: c60?.mcSol ?? null, holders60: c60?.holders ?? null, mc_missing_checks: checks.filter((c) => c.mcSol == null).length,
       reason, bl: bl.map((d) => d.at + ":" + (d.passed ? "entered" : d.reason)).join("|"), fd: fd.map((d) => d.at + ":" + (d.passed ? "entered" : d.reason)).join("|"), fdl: fdl.map((d) => d.at + ":" + (d.passed ? "entered" : d.reason)).join("|"),
