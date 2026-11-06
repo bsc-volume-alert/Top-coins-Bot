@@ -301,6 +301,7 @@ export function fdLedger(db, tdb, hours = 24, books = ["BL", "BL27", "FD", "FDL"
       else if (bl && ds.length && ds.every((d) => /historical/.test(d.reason))) reason = "historical-only";
       else if (f && f.s_fail_kind === "landing-read") reason = "fill-data-failure";
       else if (f && f.s_err && !f.s_fail_kind) reason = "qualified-no-fill: " + f.s_err.slice(0, 50);
+      else if (f && f.s_exit_reason === "skipped-dump") reason = "qualified-skipped-dump-guard";
       else if (f && f.s_fail_kind === "unreadable-at-horizon") reason = "entered-unresolved";
       else if (f && !f.done) reason = "entered-open";
       else if (f) reason = "entered-closed";
@@ -333,8 +334,11 @@ export function fdPositions(db, hours = 24) {
       check_mc_sol: m.mcSol ?? null, check_px_usd: f.entry_price ?? null, check_px_src: "decoded trades (Helius) market cap × SOL/USD ÷ 1e9", check_net_sol: m.net ?? null, check_holders: f.v_holders ?? null,
       reserves_at_check: f.s_res_check ?? null, reserves_at_check_ev: ev(f.s_res_check), reserves_at_fill: f.s_res_fill ?? null, reserves_at_fill_ev: f.s_fail_kind === "landing-read" ? "unavailable (landing read failed)" : f.s_entry_state === 1 ? "recorded" : f.s_tokens ? "fallback: check-time state (fill-1)" : "unavailable",
       tokens_raw: f.s_tokens ?? null, tokens02_raw: f.s_tokens02 ?? null, fill_px_usd: f.s_px ?? null, fill_over_check: f.entry_price && f.s_px ? +(f.s_px / f.entry_price).toFixed(4) : null, x0_roundtrip: f.s_x0 ?? null, gap_dec: f.s_gap_dec ?? null,
-      hi_x: f.s_hi ?? null, hi02_x: f.s_hi02 ?? null, x60: f.s_x60 ?? null, exit_trigger_ts: f.s_trig_ts ?? null, exit_trigger_x: f.s_trig_x ?? null, exit_x: f.s_exit_x ?? null, exit02_x: f.s_exit_x02 ?? null, exit_reason: f.s_exit_reason ?? null, exit_src: f.s_exit_src ?? null, reserves_at_exit: f.s_res_exit ?? null, reserves_at_exit_ev: ev(f.s_res_exit), fill_ms_sell: f.s_fill_ms ?? null,
-      r_frac_020: f.s_r ?? null, r_frac_02: f.s_r02 ?? null, r_half: f.s_r_half ?? null, status: f.s_fail_kind ? "data-failure: " + f.s_fail_kind : f.s_err ? "no-fill: " + f.s_err.slice(0, 60) : f.done ? "closed" : "open", err: f.s_err ?? null });
+      hi_x: f.s_hi ?? null, hi02_x: f.s_hi02 ?? null, x60: f.s_x60 ?? null, exit_trigger_ts: f.s_trig_ts ?? null, exit_trigger_x: f.s_trig_x ?? null, reserves_at_trigger: f.s_res_trig ?? null, reserves_at_trigger_ev: f.s_res_trig ? "recorded" : "unavailable", exit_x: f.s_exit_x ?? null, exit02_x: f.s_exit_x02 ?? null, exit_reason: f.s_exit_reason ?? null, exit_src: f.s_exit_src ?? null, reserves_at_exit: f.s_res_exit ?? null, reserves_at_exit_ev: ev(f.s_res_exit), fill_ms_sell: f.s_fill_ms ?? null,
+      r_frac_020: f.s_r ?? null, r_frac_02: f.s_r02 ?? null, r_half: f.s_r_half ?? null,
+      fee_frac_02: 0.0015 / 0.02, exit_mult_02_prefee: f.s_exit_x02 ?? null, cost_note: "r_frac_02 = exit_mult_02_prefee - 1 - 0.075 (the 0.0015 SOL network/priority fee on a 0.02 stake); the multiple itself already carries curve/pool fees and impact",
+      same_decision_key: f.mint + "@" + f.entry_ts, // 0.9.27: rows sharing it are the same decision booked for several books (not independent evidence)
+      status: f.s_fail_kind ? "data-failure: " + f.s_fail_kind : f.s_exit_reason === "skipped-dump" ? "skipped-dump" : f.s_err ? "no-fill: " + f.s_err.slice(0, 60) : f.done ? "closed" : "open", err: f.s_err ?? null });
   }
   return out;
 }
