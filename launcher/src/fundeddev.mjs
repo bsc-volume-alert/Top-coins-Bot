@@ -30,7 +30,7 @@ const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.i
 const FUND_SOL = n("LAUNCH_FD_FUND_SOL", 2), FUND_S = n("LAUNCH_FD_FUND_S", 7200), FUNDER_MAX = n("LAUNCH_FD_FUNDER_MAX", 2), B_LO = n("LAUNCH_FD_BUNDLE_LO", 10), B_HI = n("LAUNCH_FD_BUNDLE_HI", 60);
 const CHECKS = [60, 90, 120], DAY_CREDITS = n("LAUNCH_FD_DAY_CREDITS", 200000) /* 0.9.13: 120k → 200k (owner 6 Nov 07:33: "just add more credits") */, SCAN_S = n("LAUNCH_FD_SCAN_S", 240);
 const GRAND_MAX = n("LAUNCH_FD_GRAND_MAX", 2), AMOUNT_DAYS = n("LAUNCH_FD_AMOUNT_DAYS", 7);
-const SCREEN_SOL = n("LAUNCH_SCREEN_SOL", 15); // 0.9.13: observation screen — net buying that puts a launch under the common baseline's checks, funded or not
+const SCREEN_SOL = n("LAUNCH_SCREEN_SOL", 15), FD_CONCURRENCY = n("LAUNCH_FD_CONCURRENCY", 3); // 0.9.13: observation screen — net buying that puts a launch under the common baseline's checks, funded or not
 const REC_BUNDLE = n("LAUNCH_FD_REC_BUNDLE", 1) === 1, // 0.9.9: back ON (owner go 5 Nov ~20:40 UK) — the launch group's own selling at each check; watch the restart count
    REC_META = n("LAUNCH_FD_REC_META", 0) === 1;
 const SHADOW_SOL = n("LAUNCH_SHADOW_SOL", 0.2), SHADOW_SAMPLE = n("LAUNCH_SHADOW_SAMPLE", 10); // 0.8.15: quote size; every Nth checked launch that enters nothing is quoted too // 0.8.12 switches for the two 0.8.11 recorders under suspicion
@@ -220,11 +220,12 @@ export async function fdCheck(db, tdb = null) {
       for (const w of db.prepare("SELECT mint FROM fd_watch WHERE done=0 AND screened IS NULL AND created_ts>=?").all(t - 300)) { const net = q.get(w.mint)?.net || 0; if (net >= SCREEN_SOL) db.prepare("UPDATE fd_watch SET screened=1, screened_ts=? WHERE mint=?").run(t, w.mint); } } catch (e) { fdStat.lastErr = ("screen: " + e.message).slice(0, 120); } }
     const list = db.prepare("SELECT *, rowid AS rid, (CASE WHEN pre_nb=1 OR (rowid % 7)=0 THEN 1 ELSE 0 END) AS ctl FROM fd_watch WHERE done=0 AND created_ts>=? AND (pre_nb=1 OR (rowid % 7)=0 OR screened=1) ORDER BY pre DESC, created_ts").all(t - 300);
     fdStat.open = list.length;
-    for (const w of list) {
+    // 0.9.35 (owner 20:29 UK: "carry on, don't slow it down"): launches are checked CONCURRENTLY, FD_CONCURRENCY at a time (default 3), each still under the 60-s fetch cap, same order rules, same decision records — the sequential queue was starving the checks whenever Helius was slow (23 checks in 10 min at 20:12–20:22 UK)
+    let budgetHit = false; const one = async (w) => {
       const age = t - w.created_ts, checks = JSON.parse(w.checks || "[]"), doneAt = new Set(checks.map((c) => c.at));
-      if (age > CHECKS[CHECKS.length - 1] + 60) { db.prepare("UPDATE fd_watch SET done=1 WHERE mint=?").run(w.mint); continue; }
-      const due = CHECKS.filter((c) => c <= age && !doneAt.has(c)); if (!due.length) continue;
-      if (fdStat.credits >= DAY_CREDITS) { fdStat.lastErr = `daily Helius budget ${DAY_CREDITS} reached`; break; }
+      if (age > CHECKS[CHECKS.length - 1] + 60) { db.prepare("UPDATE fd_watch SET done=1 WHERE mint=?").run(w.mint); return; }
+      const due = CHECKS.filter((c) => c <= age && !doneAt.has(c)); if (!due.length) return;
+      if (fdStat.credits >= DAY_CREDITS) { fdStat.lastErr = `daily Helius budget ${DAY_CREDITS} reached`; budgetHit = true; return; }
       const at = due[0]; // 0.9.30 (Codex/Claude reviews 6 Nov): checkpoints in order — 60 before 90 before 120 — so a late-seen launch never gets a 90-s decision without its 60-s observation (was due[due.length-1], the latest first)
       try {
         const c0 = studyStat.credits, r = await earlyTrades(w.mint, w.created_ts + at); fdStat.credits += studyStat.credits - c0; fdStat.checks++; fdStat.lastCheck = new Date().toISOString();
@@ -280,7 +281,8 @@ export async function fdCheck(db, tdb = null) {
         db.prepare("UPDATE fd_watch SET checks=?, entered=?, done=? WHERE mint=?").run(JSON.stringify(checks), [...entered].join(","), dead || entered.size === RULES.length ? 1 : 0, w.mint);
       } catch (e) { fdStat.errors++; if (e.incomplete) fdStat.incomplete = (fdStat.incomplete || 0) + 1; fdStat.lastErr = `${w.mint.slice(0, 6)}: ${e.message}`.slice(0, 160); checks.push({ at, err: e.message.slice(0, 80), incomplete: e.incomplete ? 1 : 0 }); db.prepare("UPDATE fd_watch SET checks=? WHERE mint=?").run(JSON.stringify(checks), w.mint);
         for (const rule of RULES) try { recordDecision(w.mint, at, t, VER, rule.k, 0, "data unavailable: " + e.message.slice(0, 60)); } catch {} } // 0.9.30: every book gets a decision row, never silence
-    }
+    };
+    { const queue = [...list]; const worker = async () => { while (queue.length && !budgetHit) { const w = queue.shift(); try { await one(w); } catch (e) { fdStat.errors++; fdStat.lastErr = ("check worker: " + e.message).slice(0, 160); } } }; await Promise.all(Array.from({ length: Math.max(1, FD_CONCURRENCY) }, worker)); }
   } finally { if (checkSeq === mySeq) checking = false; }
 }
 
