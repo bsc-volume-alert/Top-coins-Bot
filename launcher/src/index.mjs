@@ -356,7 +356,9 @@ async function selfTest() {
 
 // ---------- export to the launcher-data branch (for the chat) and status for the website ----------
 const csv = (rows) => { if (!rows.length) return ""; const cols = Object.keys(rows[0]); const e = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v)); return [cols.join(","), ...rows.map((r) => cols.map((c) => e(r[c])).join(","))].join("\n"); };
-export function status() {
+export // 0.9.14: declared at module level — 0.9.13 had it inside the !SMOKE block, so status() threw ReferenceError on every export and nothing was published for 66 min
+const scopeStat = { probes: 0, fails: 0, consecutive: 0, reloads: 0, lastReload: null, lastErr: "" };
+function status() {
   return { ...st, at: now(), wallet: ME.toBase58(), balanceSol: balance != null ? +sol(balance).toFixed(4) : null, liveToday: liveToday(), cap: CFG.DAILY_CAP || "none", minBalanceSol: CFG.MIN_BALANCE_SOL, tpFraction: CFG.TP_FRACTION, stakeSol: CFG.STAKE_SOL, deadMin: CFG.DEAD_MIN, quietMin: CFG.QUIET_MIN, tpX: CFG.TP_X,
     lut: lutStat, copies: copyStatus(), peaks: peakStat, study: studyStat, vol: volStat, mark: markStat, volBackfill: bfStat, rf: rfStat, manualStudy: manualStat, operators: opStat, creators: ctStat, fd: fdStat, snipers2: snStat, quotes: qStat, live: liveStat, chain: cfStat, farm: farmStat, scope: scopeStat, sweep: sweepStat, paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
     accounts: CFG.ACCOUNTS, twitter: { keySet: !!CFG.TWITTER_KEY, ...twStat }, ai: !!CFG.AI_KEY, aiStat, meta: metaStat, rpc: rpcStats, trackerDb: !!tdb, lastSweep: kvGet("lastSweep"), lastFeeCollect: kvGet("lastFeeCollect"), phantom: PHANTOM };
@@ -416,7 +418,6 @@ setInterval(() => copyTick(db).catch(() => {}), 20000);
 if (!CFG.SMOKE && Number(process.env.LAUNCH_VOL_BOOKS || 0)) { setTimeout(() => volPoll(db), 15000); setInterval(() => volPoll(db), 30000); } // 0.8.0: V300/V500/VA off (owner 4 Nov: −10…−13% on 48 trades); set LAUNCH_VOL_BOOKS=1 to run them
 if (!CFG.SMOKE) { setInterval(() => volScore(db), 300000); setInterval(() => volFillExitTime(db), 60000); setInterval(() => volMark(db), 15000); setTimeout(() => volMark(db), 20000); if (process.env.LAUNCH_SHADOW_POLL === "1") setInterval(() => volQuotePoll(db), 8000); /* 0.9.3: OFF by default — the chain-side simulated fill (chainfill.mjs) replaces the Jupiter shadow poll, and a live buy was lost to a 429 at 13:01 UK; LAUNCH_SHADOW_POLL=1 turns it back on */ setInterval(() => livePoll(), 1000); /* 0.9.4: reads the chain-side stream, no Jupiter call unless selling */ setInterval(() => chainBackstop(), 30000); setTimeout(() => chainBackstop(), 25000); /* 0.9.0 */ setInterval(() => buildFarm(6), 1800000); setTimeout(() => buildFarm(12), 90000);
 // 0.9.13: website self-check — the scope process hung at ~05:00 UK 6 Nov with /api/fd never answering; probe it every 2 min, reload it after two consecutive timeouts (at most once per 10 min)
-const scopeStat = { probes: 0, fails: 0, consecutive: 0, reloads: 0, lastReload: null, lastErr: "" };
 setInterval(async () => { scopeStat.probes++; const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 10000);
   try { await fetch(`http://127.0.0.1:${process.env.SCOPE_PORT || 8791}/fd2`, { signal: ac.signal }); scopeStat.consecutive = 0; }
   catch (e) { scopeStat.fails++; scopeStat.consecutive++; scopeStat.lastErr = `${new Date().toISOString().slice(11, 19)} ${e.name || e.message}`.slice(0, 80);
