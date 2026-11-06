@@ -23,7 +23,7 @@ import { initPeaks, runPeaks, peakStat } from "./copypeaks.mjs";
 import { initStudy, runStudy, studyStat, studyAddress, manualStat, loadCensus } from "./study.mjs";
 import { initVol, volPoll, volScore, volStat, volBackfill, bfStat, volFillExitTime, volMark, markStat, volQuotePoll } from "./volpaper.mjs";
 import { initRF, rfFind, rfCheck, rfStat } from "./runnerfollow.mjs";
-import { initFD, fdScan, fdCheck, fdStat, fdSniperStats, snStat, fdLedger, fdInventory, fdPositions, LEDGER_VER } from "./fundeddev.mjs";
+import { initFD, fdScan, fdCheck, fdStat, fdSniperStats, snStat, fdLedger, fdInventory, fdPositions, fdCoverage, LEDGER_VER } from "./fundeddev.mjs";
 import { initLive, livePoll, liveStat } from "./live.mjs"; // 0.8.17
 import { execSync } from "node:child_process";
 import { initFarm, buildFarm, farmStat } from "./farm.mjs"; // 0.9.9
@@ -377,7 +377,7 @@ function exportNow() {
     try { writeFileSync(`${CFG.OUT_DIR}/fd_hgrowth.csv`, csv(db.prepare("SELECT * FROM fd_hgrowth ORDER BY ts").all())); } catch {} // 0.9.6: holder growth 60 → 120 s on the U books' coins
     try { writeFileSync(`${CFG.OUT_DIR}/buyer_funding.csv`, csv(db.prepare("SELECT * FROM buyer_funding WHERE ts>=? ORDER BY mint, sol_in DESC").all(now() - 48 * 3600))); writeFileSync(`${CFG.OUT_DIR}/buyer_funding_sum.csv`, csv(db.prepare("SELECT * FROM buyer_funding_sum ORDER BY ts").all())); } catch {} // 0.9.11
     try { writeFileSync(`${CFG.OUT_DIR}/farm_dumps.csv`, csv(db.prepare("SELECT * FROM farm_dumps ORDER BY dump_ts").all())); writeFileSync(`${CFG.OUT_DIR}/farm_wallets.csv`, csv(db.prepare("SELECT * FROM farm_wallets ORDER BY dump_ts, mint").all())); } catch {} // 0.9.9
-    try { writeFileSync(`${CFG.OUT_DIR}/fd_ledger.csv`, csv(fdLedger(db, tdb, 24))); writeFileSync(`${CFG.OUT_DIR}/fd_positions.csv`, csv(fdPositions(db, 24))); writeFileSync(`${CFG.OUT_DIR}/fd_inventory.csv`, csv(fdInventory(db, tdb, 3))); } catch (e) { console.error("[export ledger]", e.message); } // 0.9.14
+    try { writeFileSync(`${CFG.OUT_DIR}/fd_ledger.csv`, csv(fdLedger(db, tdb, 24))); writeFileSync(`${CFG.OUT_DIR}/fd_positions.csv`, csv(fdPositions(db, 24))); writeFileSync(`${CFG.OUT_DIR}/fd_inventory.csv`, csv(fdInventory(db, tdb, 3))); writeFileSync(`${CFG.OUT_DIR}/fd_coverage.csv`, csv(fdCoverage(db, tdb, 24))); } catch (e) { console.error("[export ledger]", e.message); } // 0.9.14
     try { const since = now() - 24 * 3600; writeFileSync(`${CFG.OUT_DIR}/fd_decisions.csv`, csv(db.prepare("SELECT * FROM fd_decisions WHERE ts>=? ORDER BY ts, mint, rule").all(since))); writeFileSync(`${CFG.OUT_DIR}/fd_wallet_state.csv`, csv(db.prepare("SELECT s.* FROM fd_wallet_state s JOIN (SELECT mint FROM fd_watch WHERE created_ts>=?) w ON w.mint=s.mint ORDER BY s.mint, s.at, s.sol_in DESC").all(now() - 12 * 3600))); } catch {} // 0.9.9
     // 0.9.7 (owner, 5 Nov 19:27 UK: "why not everything now"): the tracker already keeps every trade (wallet, slot, signature, SOL, tokens, price) of bundle tier-1 launches for 30 min,
     // and from tracker v0.19 of every launch that reaches 15 SOL of buys — the dump transactions of the books' coins. Exported for the coins entered in the last LAUNCH_TRADES_HOURS hours.

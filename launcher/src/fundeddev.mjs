@@ -335,6 +335,15 @@ export function fdPositions(db, hours = 24) {
   }
   return out;
 }
+/** 0.9.21: coverage by 10-min window (UTC) — the tracker's own launch count is the denominator; recorded = fd_watch rows; population = funding pass / control / screened; checked; entered (any book). Retrospective by construction. */
+export function fdCoverage(db, tdb, hours = 24) {
+  if (!tdb) return []; const since = now() - hours * 3600, W = 600, out = new Map();
+  const row = (k) => out.get(k) || out.set(k, { window_utc: new Date(k * 1000).toISOString().slice(0, 16), tracker_launches: 0, recorded: 0, in_population: 0, checked: 0, entered: 0, tracker_flagged_winners: 0 }).get(k);
+  for (const t of tdb.prepare("SELECT create_ts, graduated, peak_mc_usd FROM tokens WHERE create_ts>=?").all(since)) { const r = row(Math.floor(t.create_ts / W) * W); r.tracker_launches++; if (t.graduated === 1 || (t.peak_mc_usd || 0) >= 100000) r.tracker_flagged_winners++; }
+  const ent = new Set(db.prepare("SELECT DISTINCT mint FROM chain_fill WHERE entry_ts>=? AND s_err IS NULL").all(since).map((x) => x.mint));
+  for (const w of db.prepare("SELECT mint, created_ts, pre_nb, screened, checks, rowid AS rid FROM fd_watch WHERE created_ts>=?").all(since)) { const r = row(Math.floor(w.created_ts / W) * W); r.recorded++; if (w.pre_nb === 1 || w.rid % 7 === 0 || w.screened) r.in_population++; if (w.checks && w.checks !== "[]") r.checked++; if (ent.has(w.mint)) r.entered++; }
+  return [...out.keys()].sort().map((k) => out.get(k));
+}
 /** 0.9.14: provisional inventory — tracker tokens by UTC day that migrated or whose recorded peak reached $100K (peak only known for tracked coins), and how far each got through the pipeline. */
 export function fdInventory(db, tdb, days = 3) {
   if (!tdb) return []; const since = now() - days * 86400, rows = [];
