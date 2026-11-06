@@ -1,0 +1,182 @@
+LEDGER PACK — 6 Nov 2026 10:10 UK — launcher 0.9.16 (commit deb3683). Data: fd_ledger.csv (last 24 h) and fd_inventory.csv (3 days) from the launcher-data branch.
+
+Definitions: 'screened' = net buying (buys−sells, tracker trades) reached 15 SOL — live only since 09:38 UK, so before that 'not-screened' means 'outside the funding pass and the 1-in-7 control'. grp = funding label at scan. check_px = the USD/token price the book entered on (decoded market cap × SOL/USD ÷ supply); fill_px = the executable fill price from the curve/pool reserves at the same moment; px_ratio = fill_px / check_px. peak_mc_usd = the tracker's recorded peak (only tracked coins have one; the repeated ~$383K values look like an artefact — unverified).
+
+A. Terminal reasons, all 37429 recorded launches, last 24 h:
+   31624  not-screened
+    4514  not-in-baseline-population
+     753  below-bar (no trades in the window, no price)
+     264  entered-stopped-out
+     210  below-bar
+      35  no-check (window passed without a check)
+      15  no-check (yet)
+       6  entered-open
+       5  historical-only
+       3  qualified-no-fill
+
+B. Inventory by UTC day (tracker tokens that migrated or whose recorded peak reached $100K):
+  2026-11-03  {'total': 465, 'migrated': 445, 'peak>=100k': 21, 'recorded': 0, 'screened': 0, 'checked': 0, 'entered': 0}
+  2026-11-04  {'total': 827, 'migrated': 780, 'peak>=100k': 47, 'recorded': 481, 'screened': 0, 'checked': 161, 'entered': 0}
+  2026-11-05  {'total': 640, 'migrated': 603, 'peak>=100k': 38, 'recorded': 583, 'screened': 0, 'checked': 165, 'entered': 66}
+  2026-11-06  {'total': 210, 'migrated': 194, 'peak>=100k': 17, 'recorded': 209, 'screened': 13, 'checked': 56, 'entered': 34}
+
+C. The 44 recorded coins with peak >= $100K in the last 24 h and what happened to each:
+  name | created UTC | grp | net60 | mc60 SOL | holders60 | reason | books | best x | peak $
+  PISSCOIN | 11-05T09:23 | - | - | - | - | not-screened | - | - | 142271
+  Decel inu | 11-05T12:00 | - | - | - | - | not-screened | - | - | 386756
+  Ronaldo's Cat | 11-05T12:01 | - | - | - | - | not-screened | - | - | 596270
+  Ronaldo's Cat | 11-05T12:02 | - | - | - | - | not-screened | - | - | 1041415
+  Wormie coin | 11-05T13:47 | - | - | - | - | not-screened | - | - | 153382
+  PISSCOIN | 11-05T14:09 | - | - | - | - | not-screened | - | - | 184792
+  kfc | 11-05T14:48 | - | - | - | - | not-screened | - | - | 134274
+  Hooked coin | 11-05T14:52 | - | - | - | - | not-screened | - | - | 132229
+  Xtra Ripe Peaches | 11-05T14:54 | - | 0.46 | 120.1 | - | not-in-baseline-population | - | - | 176732
+  Wormie coin | 11-05T15:00 | - | - | - | - | not-screened | - | - | 182181
+  RBX.QUEST | 11-05T16:01 | - | - | - | - | not-screened | - | - | 135097
+  kfc | 11-05T16:32 | - | - | - | - | not-screened | - | - | 172851
+  HUMAN STEAK | 11-05T19:04 | - | - | - | - | not-screened | - | - | 138146
+  Beer Goat | 11-05T19:24 | - | - | - | - | not-screened | - | - | 106608
+  PRIVATE MASQUERADE | 11-05T19:27 | - | - | - | - | not-screened | - | - | 443692
+  SHADOW | 11-05T19:28 | - | - | - | - | not-screened | - | - | 169219
+  Frontier Inu | 11-05T19:30 | - | - | - | - | not-screened | - | - | 382800
+  Jason (friday the 13th) | 11-05T20:06 | - | - | - | - | not-screened | - | - | 102462
+  perro | 11-05T20:08 | - | - | - | - | not-screened | - | - | 385327
+  perro | 11-05T20:08 | - | - | - | - | not-screened | - | - | 385327
+  Senor Inu | 11-05T20:11 | - | - | - | - | not-screened | - | - | 384313
+  DOGCOIN | 11-05T20:15 | - | - | - | - | not-screened | - | - | 171007
+  Xtra Rare Pussy | 11-05T21:05 | - | - | - | - | not-screened | - | - | 105442
+  90cent for 1$ | 11-05T21:45 | - | - | - | - | not-screened | - | - | 151510
+  kfc | 11-05T22:11 | - | - | - | - | not-screened | - | - | 118800
+  Official Talarico | 11-05T22:38 | - | - | - | - | not-screened | - | - | 2120882
+  The Toad Cat | 11-05T23:40 | - | - | - | - | not-screened | - | - | 178691
+  Diamond | 11-06T00:32 | - | - | - | - | not-screened | - | - | 171283
+  🍌 BANANA WIZARD | 11-06T01:05 | - | - | - | - | not-screened | - | - | 127915
+  SS1 GOKU COIN | 11-06T02:02 | - | - | - | - | not-screened | - | - | 149887
+  Commodity Inu | 11-06T02:26 | - | - | - | - | not-screened | - | - | 383539
+  Department Of Greed | 11-06T02:27 | - | - | - | - | not-screened | - | - | 383539
+  Department Of Greed | 11-06T02:28 | - | 0 | - | - | below-bar (no trades in the window, no p | - | - | 382982
+  Lucky DOG | 11-06T02:41 | - | - | - | - | not-screened | - | - | 112309
+  CEO CUH | 11-06T02:55 | - | - | - | - | not-screened | - | - | 126226
+  boost | 11-06T03:06 | - | - | - | - | not-screened | - | - | 100347
+  OTTERPRENEUR | 11-06T03:35 | - | - | - | - | not-screened | - | - | 168886
+  FROSTPENGU | 11-06T04:33 | - | - | - | - | not-screened | - | - | 178755
+  dog | 11-06T06:08 | - | - | - | - | not-screened | - | - | 383907
+  inu | 11-06T06:09 | - | - | - | - | not-screened | - | - | 383724
+  OUT OF .7 SOL HELL PLSSS | 11-06T08:17 | high-count | - | - | - | not-screened | - | - | 105375
+  SNOW BULL | 11-06T08:20 | high-count | 3.04 | 1080.1 | - | below-bar | - | - | 174269
+  Laughing Monkey Coin | 11-06T08:25 | high-count | 0.65 | 435.1 | - | below-bar | - | - | 150749
+  IM STILL YOUR PRESIDENT | 11-06T08:27 | high-count | - | - | - | not-screened | - | - | 135827
+
+D. Price audit — entries where fill_px / check_px is outside 0.5–2 (44 of 270 entries with both prices):
+  name | created UTC | books | mc60 SOL | check_px USD | fill_px USD | ratio | best x | real-0.02 net SOL | mint
+  fomo.gay | 11-05T12:33 | FD,FDL,FDB,A1,FD35,FDH | 188 | 0.00001795 | 0.00000275 | 0.15 | 1 | 0 | ABgM8dBscXH7fQso4iq2ZW1SA75qDFjYUF3CR6DQpump
+  Chrome-Chan | 11-05T12:46 | FD,FDF,FDL,FDB,A1,FD35 | 134.2 | 0.00001278 | 0.00000275 | 0.22 | 1 | 0 | J4dUCfDnCXkRy85JSPA2ZFydCH7EeqiVGAxp7y7Cpump
+  Community Coin | 11-05T13:18 | FD,FDF,FDL,FDB,A1,FD35 | 230.7 | 0.00002201 | 0.00000278 | 0.13 | 1 | 0 | 55gHZBHbDVbJeQmuciiy12aP38a1neXRygaz69Aipump
+  rampad | 11-05T13:33 | A1 | 73.7 | 0.00000997 | 4.91769063 | 0 | 1 | 0 | EqUhCQiJ4KG56Q6UxXnPaPBsynyBJuwDntQuoUmVpump
+  galaxycat | 11-05T13:44 | A1 | - | 0.00001423 | 0.00000129 | 0.09 | 1.0683 | 0 | An3v5tzs8Kxf7tBNk3eEjDhV6vNd5fuVKMNLBdm4pump
+  donuld tremp | 11-05T13:58 | FD,FDF,FDL,FDB,A1,FD35 | 134.8 | 0.00001285 | 0.00000272 | 0.21 | 1 | 0 | Fwan9sMebgiPBJz7zH7XK9MGxQ6vPyFyE49mVQvSpump
+  donuld tremp | 11-05T13:59 | FD,FDF,FDL,FDB,A1,FDH | 113.3 | 0.00001080 | 0.00000274 | 0.25 | 1 | 0 | F832FK7y5q9w3DAYWKhYeBYDQ1RYvFEvKQ2sHqyipump
+  Elon | 11-05T14:03 | FDB,A1,FDH | 129.3 | 0.00001232 | 0.00000281 | 0.23 | 1 | 0 | Bn496zKW8UpHZ8QZ6LhXxsVzTBf62oYXk3PgGygnpump
+  Elon Mosque | 11-05T14:18 | FD,FDF,FDL,FDB,A1,FD35 | 189.5 | 0.00001803 | 0.00000272 | 0.15 | 1 | 0 | A4vgMRD4L9wBi4Wjct4uGvFihn8RKzbwX8z7j5Efpump
+  Spill The Tea | 11-05T14:34 | FD,FDL,FDB,A1,FD35 | 141.6 | 0.00001344 | 0.00000274 | 0.2 | 1 | 0 | 4uv9MfCn9wLireWr4jSsstZsP7UxpiWdP5XowNtTpump
+  Elarion_AI | 11-05T14:45 | FDL | 99.8 | 0.00000936 | 0.00000267 | 0.29 | 1 | 0 | JBPmX9pYQujyrXK2MiJMswWqehSbAatsqhJ3nv8wpump
+  Magical Unicorn | 11-05T14:45 | FD,FDF,FDL,FDB,A1 | 105.9 | 0.00000993 | 0.00000268 | 0.27 | 1 | 0 | 2hhxTAPtfT8dsjjZTRxTzBGJ3RiMRPxmb4YGvpQNpump
+  Unstoppable Internet Mon | 11-05T15:13 | FD,FDF,FDL,FDB,A1,FD35 | 148.9 | 0.00001347 | 0.00000260 | 0.19 | 1 | 0 | 5E6Fmsnw3ipsXfkuggVcXxHs9cq3mPQkdercY7eGpump
+  fiat | 11-05T16:15 | A1 | 135 | 0.00001225 | 0.00000103 | 0.08 | 1.1774 | 0 | ACiYG6QitgkPn7i8R6Q19bDc6JD6CNsUd1WFmt7fpump
+  Gay And Poor | 11-05T16:54 | FD,FDF,FDL,FDB,A1 | 105.1 | 0.00000947 | 0.00000256 | 0.27 | 1 | 0 | 7hBxaa9z5vmkEyUR57YmhdtcEo6qVD4qXtg3wAMtpump
+  Codex | 11-05T16:55 | FD,FDF,FDL,FDB,A1 | 105.6 | 0.00000951 | 0.00000256 | 0.27 | 1 | 0 | 8ccxhPaHChxwCtiqsDhYM35QZFQdp9bygkjqRhRCpump
+  Gay And Poor 500 | 11-05T16:58 | FD,FDF,FDL,FDB,A1,FDH | 107.3 | 0.00000968 | 0.00000259 | 0.27 | 1 | 0 | kucTP5C7ogNc2WdhJNGjUowXq11bUvjKiDAjByCpump
+  Believe | 11-05T17:06 | FD,FDF,FDL,FDB,A1,FDH | 102.2 | 0.00000918 | 0.00000268 | 0.29 | 1.5699 | 0 | 7dMWgd4oeWsm8bXgtBYXPVbQvmbv1WmqwCWWwBMupump
+  Hush Envelope | 11-05T19:07 | A1 | 243.9 | 0.00002176 | 2.22564967 | 0.01 | 1 | -0.4876 | FnN6ZLo2YB6bDF9AqyQ3juyAyLtsuJ62YcFTSbZGpump
+  token22 | 11-05T19:09 | A1 | 134.4 | 0.00001201 | 2.81886317 | 0 | 1 | -1.0611 | E6i86cp6PhEWAo6pwuggWw6xhqzgAw3xrn8AZws6pump
+  donut fade | 11-05T19:24 | A1 | - | 0.00001569 | 2.69365949 | 0.02 | 1 | -0.3994 | 8vMGeFfYgKvcNDmn7e3BdCprMe31sNT8GzKu2bL1pump
+  Deez Nuts | 11-05T19:47 | FDL,FDLU,FDLU120 | 90.7 | 0.00000816 | 0.00000258 | 0.32 | 1 | -0.1149 | 3akfmaKrmVJNNetaaT76aM4zeEM2CaudybaeYFwQpump
+  The Bart Pattern | 11-05T19:52 | FDL,FDLU,FDLU120 | 83.3 | 0.00000750 | 0.00000263 | 0.35 | 1 | -0.1337 | Cp259gcCy8paoaPKDrCxVG6nQf6MTfAnR43dpeCrpump
+  Kristin Knouse | 11-05T19:54 | FD,FDF,FDL,FDB,A1,FDLU,FDU,FDL | 109.4 | 0.00000985 | 0.00000263 | 0.27 | 1 | -0.6725 | BJETwttaBWfUu7N8Jxg14x82d4EnhuZf4JQwagScpump
+  FDX Money | 11-05T19:56 | A1 | 115 | 0.00001037 | 3.67752650 | 0 | 1 | -0.9647 | DgnrTkRoLTPB7UToj5Ncf5pMuaotPQQ8GAnkweREpump
+  The Needle | 11-05T19:57 | A1 | 116.6 | 0.00001051 | 0.00000499 | 0.48 | 1.3751 | -0.2914 | 7kcWPZcZj1Xib8DcSW8zSKobGbk9ZEmo1KfvBCeapump
+  elone | 11-05T20:01 | FD,FDF,FDL,FDB,A1 | 135.8 | 0.00001169 | 0.00000261 | 0.22 | 1 | -0.743 | 3WXSJ1jEtz1j152VAKU2ZQGZKKmVNryjD4eVTh1spump
+  funcoin | 11-05T20:23 | A1 | 98.5 | 0.00001199 | 0.00041833 | 34.86 | 1.5829 | 0.0171 | EywPB6BTJZGh6S1rkBiso5cjQtopxbfonULDmSkGpump
+  Toly running for preside | 11-05T20:52 | FDB,A1 | 156.8 | 0.00001414 | 0.00000260 | 0.18 | 1 | -0.2188 | FnEa9X82eFh6rjXnyDPbjDt88HrD1nXRR5Gsgmh7pump
+  elon not an american | 11-05T21:00 | FD,FDF,FDL,FDB,A1,FDLU,FDLUX,F | 130.8 | 0.00001175 | 0.00000260 | 0.22 | 1 | -0.5765 | 8iArUka7bPMh7zHjMYXBVQnRy1Y5gcW3iVF3z7LYpump
+  Flying high X-59 | 11-05T21:10 | FDL,FDLU,FDLUX,FDLU120 | 77 | 0.00000690 | 0.00000263 | 0.38 | 1 | -0.127 | 5EdYoxFnhWbewtrR8Syccpvz3cYhq4ekRf1CUcyDpump
+  callhouse | 11-05T21:15 | FDL,FDLU,FDLUX,FDLU120 | 72.1 | 0.00000647 | 0.00000264 | 0.41 | 1 | -0.1295 | 8SeFkF39sSj4EhLfTtfKezmmaRaiYdgnMKyHj6tGpump
+  AAAAPPPPEEEE | 11-05T21:19 | A1 | 106.7 | 0.00000956 | 0.00024592 | 25.72 | 1 | -0.5797 | 9oNFiVkqi6AZzQ38G88jLwtP38QUa7k4TqANGQ84pump
+  Murder Language Model | 11-05T21:42 | FD,FDF,FDL,FDB,A1,FDH,FDLU,FDU | 118.9 | 0.00001070 | 0.00000265 | 0.25 | 1 | -0.7848 | F41UYqM9ezSnyE8fe9TZQo837MJzGyfp9YkU219Hpump
+  VETO | 11-05T22:17 | FD,FDL,FDB,A1,FD35,FDH | 206.7 | 0.00001861 | 0.00000260 | 0.14 | 1 | -0.6528 | 8GHsY2eLqdk3uvYRpkYkPyy63txGi3r2JvmiJi8Hpump
+  shit | 11-06T00:05 | A1 | 94.4 | 0.00001240 | 0.00402007 | 324.01 | 1.0483 | -0.4476 | eAnwMFkycxexBGRK23Ky3sQCREetivJcVhCxxgKpump
+  Mootun | 11-06T00:58 | A1 | 51.3 | 0.00001243 | 0.00002579 | 2.07 | 2.2462 | 0.2906 | 96yBcd5eDhHve1uaMfTqBLADbhMhUQQTKsZ784npPt2b
+  GTA6 | 11-06T01:37 | A1 | 193.1 | 0.00001744 | 0.00009671 | 5.55 | 1.7083 | -0.9778 | 6jUEK6NeVB7apaMsU6r4C36pTQ9DdzAryX6gv25gpump
+  Bikini Bottom Cult | 11-06T01:55 | A1 | 156.9 | 0.00001413 | 0.00000269 | 0.19 | 1.0769 | -0.1451 | BnGy7MRGcbZot61cVHhEMDXJS3DwkuvXyZb2is1Ypump
+  Dacity Coin | 11-06T03:07 | FDB,A1,FDH | 75565.3 | 0.00683920 | 0.00011591 | 0.02 | 1.0888 | -1.0986 | xswHNygvd8a9jwGfztaQ5PytEPnurofDTmVGFhFpump
+  catcall | 11-06T03:48 | A1 | - | 0.00001725 | 0.00021700 | 12.58 | 1 | -0.4735 | 86ZY1Qnx2ZMcXdvPVRbt1kuiHf1HSsAwV7ncrSM4pump
+  bracket | 11-06T04:24 | A1 | - | 0.00002343 | 0.00065156 | 27.81 | 1 | -0.4685 | EFWotn2UtV2c5QXMMHbSzmyrkU7wnfj7VpkNQGr1wk1z
+  Gigafactory | 11-06T06:30 | A1 | 116.3 | 0.00001043 | 2.43413009 | 0.02 | 1 | -0.3955 | DQmimeyZQe9fRRiBBTsuEzPJgCnLSRdD1cKp563Tpump
+  Red Morning | 11-06T07:07 | A1 | 136.4 | 0.00001221 | 5.47245391 | 0 | 1 | -0.3298 | 9cEKQv8jUw7WtfAdwtoBakwQnCPb4kH65zrsVxXXpump
+  all entries: median ratio 1.01; <0.5: 37; >2: 7
+
+E. Screened launches since 09:38 UK (59):
+  by group: {'high-count': 32, 'tool': 7, 'lookup-failed': 13, 'below-threshold': 6, '-': 1}
+  by reason: {'no-check (window passed without a check)': 2, 'historical-only': 5, 'entered-stopped-out': 30, 'below-bar': 14, 'entered-open': 6, 'no-check (yet)': 2}
+  name | created | grp | screened after s | net60 | mc60 | h60 | reason | BL decisions | books | best | r02
+  Redcoin | 07:36 | high-count | 208 | - | - | - | no-check (window passed withou |  |  | - | -
+  XTO | 07:37 | tool | 152 | 383.42 | 254851.6 | 159 | historical-only | 90:historical observation (before the screen saw i |  | - | -
+  Everyday is Zeroday | 07:38 | tool | 81 | 47.51 | 1269.3 | 79 | entered-stopped-out | 60:historical observation (before the screen saw i | BL,BL27 | 1.2294 | -0.3058
+  November | 07:41 | high-count | 31 | 17.56 | 70.3 | 59 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL | 1.7911 | -0.4488
+  Capiboo | 07:43 | high-count | 9 | 85.94 | 441.1 | 22 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL | 1.2758 | -0.1158
+  The Fallen Hero | 07:43 | lookup-failed | 262 | - | - | - | no-check (window passed withou |  |  | - | -
+  躺枪 | 07:43 | lookup-failed | 23 | 9.12 | 47.5 | - | entered-stopped-out | 60:below base bar|90:entered|120:already entered | BL | 1.5711 | -0.6692
+  The Fallen Hero | 07:46 | lookup-failed | 53 | 22.25 | 84.8 | 42 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL | 1 | -0.6139
+  Red Inu | 07:48 | high-count | 15 | 14.29 | 60.9 | - | below-bar | 60:below base bar|90:below base bar|120:below base |  | - | -
+  MrBeast | 07:49 | tool | 33 | 142.37 | 1181.3 | 1915 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL,BL27 | 1.2009 | -0.3606
+  Impeach | 07:49 | lookup-failed | 26 | 11.33 | 53.1 | - | below-bar | 60:below base bar|90:below base bar|120:below base |  | - | -
+  Miami Sharks | 07:50 | lookup-failed | 78 | 1.92 | 31.6 | - | below-bar | 60:historical observation (before the screen saw i |  | - | -
+  The fear | 07:50 | high-count | 14 | 18.33 | 72.6 | 60 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL | 1.2257 | -0.3865
+  in a world full of red | 07:50 | high-count | 42 | 18.67 | 73.6 | 45 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL | 1.3297 | -0.4775
+  XTO | 07:50 | tool | 25 | 4085.81 | 933568.9 | 131 | entered-open | 60:entered|90:already entered|120:already entered | BL | 1.0587 | 0
+  AFTERLIFE | 07:51 | below-threshold | 13 | 0.29 | 28.5 | - | below-bar | 60:below base bar|90:below base bar|120:below base |  | - | -
+  RED | 07:52 | below-threshold | 25 | 13.06 | 57.6 | - | below-bar | 60:below base bar|90:below base bar|120:below base |  | - | -
+  red ape | 07:58 | lookup-failed | 21 | 45.7 | 178 | 134 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL,BL27 | 1.3372 | -0.4398
+  Bullshit Fantasy Coin | 08:01 | high-count | 21 | 26.68 | 99.8 | 99 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL | 1.9971 | -0.1311
+  Green Inu | 08:03 | lookup-failed | 37 | 2.42 | 32.7 | - | below-bar | 60:below base bar|90:below base bar|120:below base |  | - | -
+  The Doomer | 08:04 | lookup-failed | 20 | 11.84 | 54.4 | - | entered-stopped-out | 60:below base bar|90:entered|120:already entered | BL | 1.3715 | -0.0089
+  ROCCO | 08:05 | high-count | 41 | 53.05 | 1453.3 | 44 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL,BL27 | 1.5162 | 0.117
+  grAPE | 08:05 | lookup-failed | 94 | 9.99 | 49.7 | - | below-bar | 60:historical observation (before the screen saw i |  | - | -
+  one coin to rule them  | 08:08 | high-count | 11 | 35.38 | 132.8 | 149 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL,BL27 | 1 | -0.878
+  grAPE | 08:11 | high-count | 61 | 14.95 | 62.8 | - | entered-stopped-out | 60:below base bar|90:below base bar|120:entered | BL | 1.0451 | -0.4486
+  Green Morning | 08:12 | lookup-failed | 36 | 14.41 | 61.3 | - | below-bar | 60:below base bar|90:below base bar|120:below base |  | - | -
+  prayge | 08:13 | high-count | 163 | 9.36 | 48.1 | - | historical-only | 90:historical observation (before the screen saw i |  | - | -
+  Bearmarket | 08:13 | high-count | 22 | 34.13 | 127.7 | 147 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL,BL27 | 1.2551 | -0.6478
+  Buy The Dip | 08:15 | high-count | 21 | 19.81 | 77.1 | 77 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL | 1.0752 | -0.6819
+  mike dyson | 08:16 | lookup-failed | 17 | 22.84 | 86.7 | 56 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL | 1 | -0.4723
+  Loong | 08:16 | high-count | 10 | 16.42 | 66.9 | 77 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL | 1.0766 | -0.476
+  NATF | 08:18 | tool | 14 | 5086.36 | 1468995.3 | 17 | entered-open | 60:entered|90:already entered|120:already entered | BL | 1.0062 | 0
+  Impeach | 08:19 | high-count | 54 | 19.31 | 75.5 | 37 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL | 1 | -0.4704
+  Meowstein | 08:22 | high-count | 138 | 11.97 | 54.7 | - | historical-only | 60:historical observation (before the screen saw i |  | - | -
+  XTO | 08:23 | tool | 12 | 1556.01 | 135617.9 | 14 | entered-open | 60:entered|90:already entered|120:already entered | BL | 1.0196 | 0
+  Red Cat | 08:23 | below-threshold | 42 | 18.52 | 73.1 | 106 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL | 1 | -0.4917
+  Generational Bottom | 08:25 | high-count | 13 | 8.43 | 45.9 | - | below-bar | 60:below base bar|90:below base bar|120:below base |  | - | -
+  Meep | 08:25 | lookup-failed | 64 | 17.57 | 70.3 | 47 | entered-stopped-out | 60:historical observation (before the screen saw i | BL | 1.0952 | -0.4417
+  Meep | 08:26 | lookup-failed | 19 | 20.08 | 77.9 | 54 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL | 1 | -0.4301
+  prayge | 08:28 | tool | 15 | 90.21 | 577.9 | 47 | entered-stopped-out | 60:entered|90:already entered|120:already entered | FDB,A1,FDH,BL, | 1.4546 | -0.0735
+  USOE | 08:29 | below-threshold | 5 | 1586.63 | 142645.3 | 12 | entered-open | 60:entered|90:already entered|120:already entered | BL | 1.0215 | 0
+  Market is red, send th | 08:30 | high-count | 13 | 14.35 | 63.8 | - | below-bar | 60:below base bar|90:below base bar|120:below base |  | - | -
+  Red Inu | 08:30 | high-count | 36 | 16.76 | 67.9 | 57 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL | 1.2192 | -0.1468
+  The Red Bull | 08:31 | high-count | 10 | 21.38 | 82 | 80 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL | 3.1442 | 0.7566
+  USOE | 08:35 | below-threshold | 18 | 2286.33 | 292628.7 | 11 | entered-open | 60:entered|90:already entered|120:already entered | BL | 1.0074 | 0
+  No Clue Cats | 08:36 | high-count | 5 | 28.05 | 903.9 | 99 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL,BL27 | 1 | -0.741
+  ITS OVER | 08:38 | high-count | 33 | 20.19 | 78.3 | 85 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL | 1.3908 | -0.3912
+  DOPPELGANGER | 08:39 | below-threshold | 29 | 0.3 | 28.5 | - | below-bar | 60:below base bar|90:below base bar|120:below base |  | - | -
+  Fatcoin | 08:44 | high-count | 12 | 24.79 | 93.3 | 94 | entered-stopped-out | 60:entered | BL | 1.3301 | -0.2828
+  BLOOD COIN | 08:45 | high-count | 56 | 14.81 | 62.4 | - | below-bar | 60:below base bar |  | - | -
+  Bear The Bobo | 08:45 | high-count | 23 | - | - | - | no-check (yet) |  |  | - | -
+  Dog In Pain | 08:48 | - | 164 | 14.13 | 60.5 | - | historical-only | 90:historical observation (before the screen saw i |  | - | -
+  memeless | 08:50 | high-count | 38 | 5.55 | 39.3 | - | below-bar | 60:below base bar|90:below base bar|120:below base |  | - | -
+  Bull in Bear clothing | 08:51 | high-count | 49 | 13.62 | 59.1 | - | below-bar | 60:below base bar|90:below base bar|120:below base |  | - | -
+  Inuployed | 08:53 | high-count | 135 | 12.28 | 55.5 | - | historical-only | 60:historical observation (before the screen saw i |  | - | -
+  Baby Don’t Hurt Me | 08:55 | high-count | 21 | 30.36 | 113.2 | 191 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL,BL27 | 1 | -1.1272
+  Baby Don’t Hurt Me | 08:55 | high-count | 20 | 23.18 | 87.9 | 89 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL | 1.2421 | -1.4548
+  The Last Memecoin | 08:55 | high-count | 29 | 22.54 | 85.8 | 55 | entered-open | 60:entered|90:already entered|120:already entered | BL | 2.4561 | 0
+  Hell On Earth | 08:56 | high-count | 30 | - | - | - | no-check (yet) |  |  | - | -
+
+F. Questions for review: (1) which of the two price faults is which — the decoded market cap at the check (bracket/GTA6/Dacity/YouTube class) vs the fill price in dollars per token on some A1 rows (rampad/Hush Envelope/token22/FDX Money/Gigafactory/Red Morning class) vs the ~25 FD-family rows on 5 Nov 12:33–22:17 whose fill sits at the curve's starting price (2.5–2.8e-6 USD) while the check said 100–230 SOL cap; (2) whether the identical ~$383K peaks are one artefact; (3) whether any book result that includes rows from D can be used at all before the fix.
