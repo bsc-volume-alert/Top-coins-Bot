@@ -79,6 +79,14 @@ export const RULES = [
 const uncrowded = (m) => m.holders != null && m.holders < 200 && m.mcUsd != null && m.mcUsd < 15000;
 // 0.9.13 (owner go 6 Nov 07:33, spec agreed with Codex + Gemini): the common baseline — no funding test at all — on every launch the 15-SOL screen observes. Funding is a label on the row (grp), read in groups.
 RULES.push({ k: "BL", ok: (w, m) => m.net >= 15 && (m.mcSol ?? 0) >= 60, bl: 1 }, { k: "BL27", ok: (w, m) => confirm(m), bl: 1 });
+// 0.9.28 (H4, forward_plan_6nov.txt; owner "Lets go" 14:45 UK): the 90-s gate isolated. One denominator = the BL bar at the 60-s check on the screened population. Identical sizing, execution and exits (plain chainEntry, the venue trail).
+//   E60  = enter at the 60-s check on the bar (the BL policy, booked separately so the three arms share nothing but the cohort)
+//   E90  = enter at the 90-s check if the SAME bar still holds at 90 s AND the mint was eligible at 60 (a 90-s failure is a deliberate no-entry, kept in the denominator)
+//   E90C = E90 plus net90 − net60 > +2 SOL and nothing else
+const blBar = (c) => c && c.net >= 15 && (c.mcSol ?? 0) >= 60, elig60 = (m, prev) => (m.at === 60 && blBar(m)) || prev.some((c) => c.at === 60 && blBar(c));
+RULES.push({ k: "E60", ok: (w, m) => m.at === 60 && blBar(m), bl: 1 },
+  { k: "E90", ok: (w, m, prev) => m.at === 90 && blBar(m) && elig60(m, prev), bl: 1 },
+  { k: "E90C", ok: (w, m, prev) => { if (m.at !== 90 || !blBar(m) || !elig60(m, prev)) return false; const c60 = prev.find((c) => c.at === 60); return !!c60 && (m.net - (c60.net || 0)) > 2; }, bl: 1 });
 const GATE_SOL = n("LAUNCH_U_GATE_SOL", 2);
 /** the 90-s confirmation: the coin passed the bar and U at its 60-s check, and net buying has grown by more than GATE_SOL since */
 const gate90 = (m, prev, bar) => { const c60 = (prev || []).find((c) => c.at === 60); return !!c60 && bar(c60) && uncrowded(c60) && (m.net ?? 0) - (c60.net ?? 0) > GATE_SOL; };
