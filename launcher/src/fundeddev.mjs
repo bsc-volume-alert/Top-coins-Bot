@@ -84,7 +84,7 @@ RULES.push({ k: "BL", ok: (w, m) => m.net >= 15 && (m.mcSol ?? 0) >= 60, bl: 1 }
 //   E90  = enter at the 90-s check if the SAME bar still holds at 90 s AND the mint was eligible at 60 (a 90-s failure is a deliberate no-entry, kept in the denominator)
 //   E90C = E90 plus net90 − net60 > +2 SOL and nothing else
 const blBar = (c) => c && c.net >= 15 && (c.mcSol ?? 0) >= 60, elig60 = (m, prev) => (m.at === 60 && blBar(m)) || prev.some((c) => c.at === 60 && blBar(c));
-RULES.push({ k: "E60", ok: (w, m) => m.at === 60 && blBar(m), bl: 1 },
+RULES.push({ k: "E60", ok: (w, m) => m.at === 60 && blBar(m), bl: 1 }, // H4 epoch 2 from 0.9.30 (fd_rules H4_EPOCH2): checks in order + fetch cap; results before it are contaminated by late/inverted inputs
   { k: "E90", ok: (w, m, prev) => m.at === 90 && blBar(m) && elig60(m, prev), bl: 1 },
   { k: "E90C", ok: (w, m, prev) => { if (m.at !== 90 || !blBar(m) || !elig60(m, prev)) return false; const c60 = prev.find((c) => c.at === 60); return !!c60 && (m.net - (c60.net || 0)) > 2; }, bl: 1 });
 const GATE_SOL = n("LAUNCH_U_GATE_SOL", 2);
@@ -119,6 +119,7 @@ export function initFD(db) {
   const hasVP = !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='vol_paper'").get(); // the smoke boot runs on an empty database (vol_paper is created later, by initVol)
   for (const r of RULES) { try { if (hasVP) db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES (?, COALESCE((SELECT MIN(entry_ts) FROM vol_paper WHERE strat=?), ?), ?)").run(r.k, r.k, now(), ver); else db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES (?,?,?)").run(r.k, now(), ver); } catch (e) { fdStat.lastErr = "fd_rules: " + e.message.slice(0, 120); } }
   try { db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('VENUE', ?, ?)").run(now(), ver); } catch {}
+  try { db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('H4_EPOCH2', ?, ?)").run(now(), ver); } catch {} // 0.9.30
   // 0.8.22: the curve flag from our own check, and the venue exit re-scored where it was wrong (curve coins had been scored with the 25% trail)
   try { const fixed = db.prepare("UPDATE vol_paper SET curve=1 WHERE curve=0 AND json_valid(row) AND json_extract(row,'$.venue')='pump.fun curve'").run().changes;
     const resc = db.prepare("UPDATE vol_paper SET x_venue=x_trail40, r_venue=r_trail40, m_venue=m_trail40 WHERE curve=1 AND done=1 AND err IS NULL AND x_trail40 IS NOT NULL AND (x_venue IS NULL OR x_venue<>x_trail40)").run().changes;
@@ -224,7 +225,7 @@ export async function fdCheck(db, tdb = null) {
       if (age > CHECKS[CHECKS.length - 1] + 60) { db.prepare("UPDATE fd_watch SET done=1 WHERE mint=?").run(w.mint); continue; }
       const due = CHECKS.filter((c) => c <= age && !doneAt.has(c)); if (!due.length) continue;
       if (fdStat.credits >= DAY_CREDITS) { fdStat.lastErr = `daily Helius budget ${DAY_CREDITS} reached`; break; }
-      const at = due[due.length - 1];
+      const at = due[0]; // 0.9.30 (Codex/Claude reviews 6 Nov): checkpoints in order — 60 before 90 before 120 — so a late-seen launch never gets a 90-s decision without its 60-s observation (was due[due.length-1], the latest first)
       try {
         const c0 = studyStat.credits, r = await earlyTrades(w.mint, w.created_ts + at); fdStat.credits += studyStat.credits - c0; fdStat.checks++; fdStat.lastCheck = new Date().toISOString();
         let bundle = null; if (tdb && REC_BUNDLE) try { bundle = tdb.prepare("SELECT wallet FROM cluster_wallets WHERE mint=? AND role IN ('bundle','dev')").all(w.mint).map((x) => x.wallet); } catch {} // 0.8.12: behind LAUNCH_FD_REC_BUNDLE (off) — the launcher restarted every 2–6 min after 0.8.11 with nothing in the error log (pm2 memory limit?); the tracker-table lookup and the pump.fun page fetch are the two suspects, switched off until proven
@@ -250,6 +251,7 @@ export async function fdCheck(db, tdb = null) {
           if (!rule.bl && !w.ctl) { recordDecision(w.mint, at, t, VER, rule.k, 0, "not in this book's population"); continue; } // 0.9.13: the old books keep their population (funded-dev passes + the 1-in-7 control)
           if (rule.bl && !w.screened) { recordDecision(w.mint, at, t, VER, rule.k, 0, "below the 15 SOL screen"); continue; }
           if (rule.bl && m.hist) { recordDecision(w.mint, at, t, VER, rule.k, 0, "historical observation (before the screen saw it)"); continue; }
+          if (/^E90/.test(rule.k) && at === 90 && !prev.some((c) => c.at === 60 && !c.err)) { recordDecision(w.mint, at, t, VER, rule.k, 0, "no 60-s observation (data unavailable)"); continue; } // 0.9.30: the input the rule needs is missing — unavailable, not failed
           let ok = false; try { ok = !!rule.ok(w, m, prev); } catch {}
           if (!ok) { recordDecision(w.mint, at, t, VER, rule.k, 0, m.mcSol == null ? (m.net >= 15 ? "price unavailable (buying passed)" : "price unavailable") : BASE_BAR(m) ? "failed" : "below base bar"); continue; } // 0.9.14: a missing market cap is recorded as unavailable, never as a failed bar (Codex 6 Nov)
           const gpx = N(info?.price?.price ?? info?.price), supply = N(info?.total_supply) || N(info?.circulating_supply) || 1e9, su = await solPrice();
@@ -276,7 +278,8 @@ export async function fdCheck(db, tdb = null) {
         else if (at === 60 && entered.size === 0 && BASE_BAR(m) && SHADOW_SAMPLE > 0 && (fdStat.checks % SHADOW_SAMPLE) === 0) { const su = await solPrice(); if (su > 0 && m.mcSol > 0) shadowSample(db, w, m, m.mcSol * su / 1e9, su).catch(() => {}); }
         const dead = at >= 90 && m.net < 5 && m.buyers < 20 && w.pre !== 1; // nothing happening: stop reading it (credits); pre-filtered coins always get their 120 s check (FD120)
         db.prepare("UPDATE fd_watch SET checks=?, entered=?, done=? WHERE mint=?").run(JSON.stringify(checks), [...entered].join(","), dead || entered.size === RULES.length ? 1 : 0, w.mint);
-      } catch (e) { fdStat.errors++; fdStat.lastErr = `${w.mint.slice(0, 6)}: ${e.message}`.slice(0, 160); checks.push({ at, err: e.message.slice(0, 80) }); db.prepare("UPDATE fd_watch SET checks=? WHERE mint=?").run(JSON.stringify(checks), w.mint); }
+      } catch (e) { fdStat.errors++; if (e.incomplete) fdStat.incomplete = (fdStat.incomplete || 0) + 1; fdStat.lastErr = `${w.mint.slice(0, 6)}: ${e.message}`.slice(0, 160); checks.push({ at, err: e.message.slice(0, 80), incomplete: e.incomplete ? 1 : 0 }); db.prepare("UPDATE fd_watch SET checks=? WHERE mint=?").run(JSON.stringify(checks), w.mint);
+        for (const rule of RULES) try { recordDecision(w.mint, at, t, VER, rule.k, 0, "data unavailable: " + e.message.slice(0, 60)); } catch {} } // 0.9.30: every book gets a decision row, never silence
     }
   } finally { if (checkSeq === mySeq) checking = false; }
 }

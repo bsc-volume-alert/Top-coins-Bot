@@ -58,12 +58,12 @@ function compact(t, mint) {
   return { slot: t.slot, transactionIndex: t.transactionIndex ?? null, blockTime: t.blockTime, err, sig: sigOf(t), keys0: keys[0], jito: keys.some((k) => JITO.has(k)),
     cr: ev.find((e) => e.k === "create" && e.mint === mint) || null, complete: ev.some((e) => e.k === "complete"), pump: tr.some((e) => e.vSol != null), tr, generic };
 }
-async function history(addr, tEnd, mint, maxTx = MAX_TX) {
-  const out = [];
+async function history(addr, tEnd, mint, maxTx = MAX_TX, deadline = 0) {
+  const out = []; const over = () => { if (deadline && Date.now() > deadline) { const e = new Error(`incomplete fetch: ${out.length} tx within the ${Math.round(FETCH_CAP_MS / 1000)}-s cap`); e.incomplete = true; e.partial = out.length; throw e; } }; // 0.9.30: per-launch time budget (owner go 19:28 UK)
   if (studyStat.gtfa !== false) {
     try {
       let token = null;
-      for (let page = 0; page < maxTx / 100; page++) {
+      for (let page = 0; page < maxTx / 100; page++) { over();
         const res = await rpc("getTransactionsForAddress", [addr, { transactionDetails: "full", sortOrder: "asc", limit: 100, maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed", filters: { status: "succeeded", blockTime: { lte: tEnd } }, ...(token ? { paginationToken: token } : {}) }], fullCost); // 0.6.3: failed transactions (bot spam on hot coins) are not fetched
         studyStat.gtfa = true;
         const rows = res?.data || []; let past = false;
@@ -75,12 +75,12 @@ async function history(addr, tEnd, mint, maxTx = MAX_TX) {
   }
   // fallback: newest → oldest signatures, keep those inside the window, then fetch each transaction
   let before = null, sigs = [];
-  for (let page = 0; page < 40; page++) {
+  for (let page = 0; page < 40; page++) { over();
     const s = await rpc("getSignaturesForAddress", [addr, { limit: 1000, commitment: "confirmed", ...(before ? { before } : {}) }]);
     if (!s?.length) break; sigs.push(...s); before = s[s.length - 1].signature; if (s.length < 1000) break;
   }
   sigs = sigs.reverse(); const t0 = sigs[0]?.blockTime || 0; sigs = sigs.filter((s) => !s.blockTime || s.blockTime <= Math.max(tEnd, t0)).slice(0, maxTx);
-  for (let i = 0; i < sigs.length; i += 8) {
+  for (let i = 0; i < sigs.length; i += 8) { over();
     const got = await Promise.all(sigs.slice(i, i + 8).map((s) => rpc("getTransaction", [s.signature, { maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed" }]).catch(() => null)));
     got.forEach((t, k) => t && out.push(compact({ ...t, transactionIndex: null, _sig: sigs[i + k].signature }, mint)));
   }
@@ -133,9 +133,10 @@ function balTrades(t, mint) {
 }
 
 /** 0.5.0: a coin's trades from its first transaction up to tEnd (any launchpad), cheap form for the runner-follow test. */
-export async function earlyTrades(mint, tEnd) {
+const FETCH_CAP_MS = n("LAUNCH_FD_FETCH_CAP_MS", 60000);
+export async function earlyTrades(mint, tEnd, capMs = FETCH_CAP_MS) {
   // 0.6.1: read the coin's own address, not the bonding curve — a coin that graduates in under 2 min keeps trading on PumpSwap, which the curve never sees
-  const txs = await history(mint, tEnd, mint, n("LAUNCH_RF_MAX_TX", 8000));
+  const txs = await history(mint, tEnd, mint, n("LAUNCH_RF_MAX_TX", 8000), capMs ? Date.now() + capMs : 0); // 0.9.30: 60-s cap — an over-budget launch is recorded as data unavailable, the pass moves on
   txs.sort((a, b) => a.slot - b.slot || (a.transactionIndex ?? 0) - (b.transactionIndex ?? 0));
   const trades = []; let t0 = null, complete = false, pump = false;
   for (const t of txs) {
