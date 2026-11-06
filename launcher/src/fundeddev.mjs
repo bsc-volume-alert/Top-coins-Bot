@@ -278,16 +278,20 @@ export async function fdCheck(db, tdb = null) {
 export const LEDGER_VER = "ledger-2";
 export function fdLedger(db, tdb, hours = 24, books = ["BL", "BL27", "FD", "FDL", "A1"]) {
   const since = now() - hours * 3600, out = [], screenSince = db.prepare("SELECT MIN(screened_ts) t FROM fd_watch WHERE screened=1").get()?.t ?? null;
-  const dec = db.prepare("SELECT at, ts, passed, reason FROM fd_decisions WHERE mint=? AND rule=? ORDER BY at");
-  const fills = db.prepare("SELECT f.vol_id, f.s_mv, f.s_px, f.s_hi, f.s_exit_x, f.s_exit_reason, f.s_exit_src, f.s_r, f.s_r02, f.s_exit_x02, f.s_err, f.s_fail_kind, f.done, f.entry_ts, f.s_exit_ts, v.entry_price, v.entry_mc FROM chain_fill f LEFT JOIN vol_paper v ON v.id=f.vol_id WHERE f.mint=? AND f.strat=? ORDER BY f.vol_id");
+  // 0.9.18: two bulk reads into maps — the per-row queries of 0.9.17 (37k launches × 5 books × an unindexed chain_fill scan) blocked the event loop for minutes per export and stalled the scan/check timers (09:47–10:1x UK)
+  const decMap = new Map(); for (const d of db.prepare("SELECT mint, rule, at, ts, passed, reason FROM fd_decisions WHERE ts>=? ORDER BY at").all(since)) { const k = d.mint + "|" + d.rule; (decMap.get(k) || decMap.set(k, []).get(k)).push(d); }
+  const fillMap = new Map(); for (const f of db.prepare("SELECT f.mint, f.strat, f.vol_id, f.s_mv, f.s_px, f.s_hi, f.s_exit_x, f.s_exit_reason, f.s_exit_src, f.s_r, f.s_r02, f.s_exit_x02, f.s_err, f.s_fail_kind, f.done, f.entry_ts, f.s_exit_ts, v.entry_price, v.entry_mc FROM chain_fill f LEFT JOIN vol_paper v ON v.id=f.vol_id WHERE f.entry_ts>=? ORDER BY f.vol_id").all(since)) { const k = f.mint + "|" + f.strat; (fillMap.get(k) || fillMap.set(k, []).get(k)).push(f); }
+  const dec = { all: (m, b) => decMap.get(m + "|" + b) || [] }, fills = { all: (m, b) => fillMap.get(m + "|" + b) || [] };
   const tok = tdb ? tdb.prepare("SELECT peak_mc_usd, graduated, tier, finalized FROM tokens WHERE mint=?") : null;
   for (const w of db.prepare("SELECT *, rowid AS rid FROM fd_watch WHERE created_ts>=? ORDER BY created_ts").all(since)) {
     const ctl = w.pre_nb === 1 || w.rid % 7 === 0 ? 1 : 0; let checks = []; try { checks = JSON.parse(w.checks || "[]"); } catch {}
-    const c60 = checks.find((c) => c.at === 60) || checks[0] || null, tk = tok ? tok.get(w.mint) : null, allErr = checks.length > 0 && checks.every((c) => c.err), mcMissing = checks.length > 0 && checks.every((c) => c.mcSol == null);
-    for (const book of books) {
+    const c60 = checks.find((c) => c.at === 60) || checks[0] || null, tk = tok && (ctl || w.screened || checks.length) ? tok.get(w.mint) : null, allErr = checks.length > 0 && checks.every((c) => c.err), mcMissing = checks.length > 0 && checks.every((c) => c.mcSol == null);
+    const inPop = ctl || w.screened || checks.length > 0; // 0.9.18: a launch in no population gets ONE row (book "*") — the per-book rows are for launches some book could act on
+    for (const book of inPop ? books : ["*"]) {
       const bl = book === "BL" || book === "BL27", ds = dec.all(w.mint, book), fs = fills.all(w.mint, book), f = fs[0] || null;
       let reason;
-      if (bl && !w.screened) reason = "not-screened";
+      if (book === "*") reason = "not-screened";
+      else if (bl && !w.screened) reason = "not-screened";
       else if (!bl && !ctl) reason = "not-in-population";
       else if (!checks.length) reason = w.done ? "no-check: window passed" : "no-check: pending";
       else if (allErr) reason = "data-unavailable: " + String(checks[0].err).slice(0, 50);
