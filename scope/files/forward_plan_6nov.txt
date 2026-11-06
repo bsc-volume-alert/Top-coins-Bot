@@ -1,0 +1,29 @@
+FORWARD EVALUATION PLAN — written 2026-11-06 14:45 UTC (= UK/GMT), BEFORE any post-cutoff result is inspected. Commit = the record of when this was fixed.
+
+DATA BOUNDARIES
+  Discovery set: launcher-data commit b9f35595 (exported 14:22:20 UTC) = scope/files/snap_6nov_1430. Everything created at or before 14:22:20 UTC.
+  Forward set: launches created after 14:22:20 UTC. Not inspected as of this writing. Post-cutoff data has NOT influenced any choice below; the 0.9.27 export fixes came from Codex's audit of the discovery set.
+  Development vs confirmation: the forward period from 14:22:20 UTC to the time of the first forward read (planned: not before 7 Nov 09:00 UTC) is DEVELOPMENT data if any choice is changed after that read. A later untouched period (start to be stamped at that time) is reserved for CONFIRMATION.
+
+MEASUREMENT (fixed)
+  Simulated executable fills, fill-2 policy (no stale fallback; data failures are rows, not zero). Position size for the headline: 0.02 SOL; r = exit multiple (0.02 proceeds at the book's exit) − 1 − 0.075 (0.0015 SOL fee). Both the pre-fee multiple and the fee are exported.
+  The "0.02 proceeds at the 0.2 book's exit" column is what is measured; an independent 0.02 strategy does not exist yet and nothing here claims one.
+  Follow-up: a position counts as completed only when closed; the 2-h horizon applies; "equal follow-up" = only launches whose entry is ≥ 2 h before the read.
+  Uncertainty: bootstrap over MINTS (not rows); rows sharing same_decision_key are one observation; sensitivity by funder group where ≥ 10 groups exist.
+
+PRIMARY OUTCOMES (per book, forward set, equal follow-up)
+  O1 per eligible launch: sum of r over all decisions ÷ number of eligible launches (eligible = passed the book's bar at a check), with no-entry, failed-fill, skipped-dump and data-failure decisions counted as 0 return and reported separately.
+  O2 per filled trade: mean and median r over completed trades; win rate; severe-loss rate (r ≤ −0.5); result without the best mint.
+  O3 coverage: of the registry's runners (migrated / ≥ $100K kept separate, detected not verified) launched in the period, the share the book checked, qualified, filled; missed runners listed with their terminal reason.
+  O4 exposure: positions open concurrently (max, mean) and SOL at risk at 0.02 a position.
+
+HYPOTHESES (each with the threshold that would count as support; none is a trading rule until confirmed on the confirmation period)
+  H1 (funding gate): BL (no funding test, 15-SOL screen) vs FDL (same bar + funding pass) — the funding pass does NOT improve O1. Support for "gate hurts": BL's O1 ≥ FDL's O1 with the mint-bootstrap 95% interval excluding 0 for the difference. Support for "gate helps": the reverse.
+  H2 (high-count funders): among BL fills, grp = high-count has O2 mean > the rest. Threshold: difference > 0 with interval excluding 0 AND the result without the best mint still > 0. Label: source heuristic, not verified identity.
+  H3 (exit): the fraction of completed trades that reached 2× before exit and still closed ≤ 0 is reconciled from trigger/landing reserves (s_res_trig vs s_res_exit): if ≥ 50% of such cases show a landing valuation < 50% of the trigger valuation on the recorded reserves, the loss is a one-slot dump (exit policy cannot fix it); otherwise a landing/accounting defect is suspected and the exit measurement is re-examined before any exit conclusion.
+  H4 (90-s gate, PROPOSED experiment, not yet built): on the BL cohort, three arms with identical sizing/execution/exits — E60 (enter at the 60-s check), E90 (same policy, enter at 90 s), E90C (E90 + net at 90 − net at 60 > +2 SOL). Primary: O1. Requires owner's go.
+  H5 (sells share): adding sells ÷ trades at 60 s to the BL bar does not improve O1 (Codex's screen found it worsened chronological tests). Recorded so it is not re-fitted.
+
+COSTS: 0.0015 SOL per round trip at 0.02 (7.5%); curve/pool fees and impact inside the multiple; Helius/GMGN credit cost per decision reported from status.
+
+STOP RULE FOR CLAIMS: no feature or policy is promoted to a rule from the development period alone; a rule proposal needs the confirmation period, independent mints ≥ 100 per arm, and O1 and O2 both favourable.
