@@ -1,0 +1,1111 @@
+# PART 2 of 13 — full code review pack (paste all parts in order)
+
+
+====================================================================================================
+=== FILE: launcher/src/image.mjs (4,020 chars)
+====================================================================================================
+// The coin's picture: a 512×512 PNG drawn in plain JavaScript (pngjs, no fonts or system libraries needed) — a colour gradient picked from the name,
+// the ticker in big block letters and the name underneath. Takes a few milliseconds. AI pictures can replace it later.
+import { PNG } from "pngjs";
+
+// 5×7 block font: each glyph is 7 rows, 5 bits a row (bit 4 = left column).
+const F = {
+  A: [14, 17, 17, 31, 17, 17, 17], B: [30, 17, 17, 30, 17, 17, 30], C: [14, 17, 16, 16, 16, 17, 14], D: [30, 17, 17, 17, 17, 17, 30], E: [31, 16, 16, 30, 16, 16, 31], F: [31, 16, 16, 30, 16, 16, 16],
+  G: [14, 17, 16, 23, 17, 17, 15], H: [17, 17, 17, 31, 17, 17, 17], I: [14, 4, 4, 4, 4, 4, 14], J: [7, 2, 2, 2, 2, 18, 12], K: [17, 18, 20, 24, 20, 18, 17], L: [16, 16, 16, 16, 16, 16, 31],
+  M: [17, 27, 21, 21, 17, 17, 17], N: [17, 17, 25, 21, 19, 17, 17], O: [14, 17, 17, 17, 17, 17, 14], P: [30, 17, 17, 30, 16, 16, 16], Q: [14, 17, 17, 17, 21, 18, 13], R: [30, 17, 17, 30, 20, 18, 17],
+  S: [15, 16, 16, 14, 1, 1, 30], T: [31, 4, 4, 4, 4, 4, 4], U: [17, 17, 17, 17, 17, 17, 14], V: [17, 17, 17, 17, 17, 10, 4], W: [17, 17, 17, 21, 21, 21, 10], X: [17, 17, 10, 4, 10, 17, 17],
+  Y: [17, 17, 10, 4, 4, 4, 4], Z: [31, 1, 2, 4, 8, 16, 31], 0: [14, 17, 19, 21, 25, 17, 14], 1: [4, 12, 4, 4, 4, 4, 14], 2: [14, 17, 1, 2, 4, 8, 31], 3: [31, 2, 4, 2, 1, 17, 14],
+  4: [2, 6, 10, 18, 31, 2, 2], 5: [31, 16, 30, 1, 1, 17, 14], 6: [6, 8, 16, 30, 17, 17, 14], 7: [31, 1, 2, 4, 8, 8, 8], 8: [14, 17, 17, 14, 17, 17, 14], 9: [14, 17, 17, 15, 1, 2, 12],
+  "$": [4, 15, 20, 14, 5, 30, 4], "!": [4, 4, 4, 4, 4, 0, 4], "?": [14, 17, 1, 2, 4, 0, 4], "-": [0, 0, 0, 31, 0, 0, 0], ".": [0, 0, 0, 0, 0, 12, 12], "'": [4, 4, 8, 0, 0, 0, 0], "&": [12, 18, 20, 8, 21, 18, 13], " ": [0, 0, 0, 0, 0, 0, 0],
+};
+const hash = (s) => { let h = 2166136261; for (const c of s) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+const hsl = (h, s, l) => { const a = s * Math.min(l, 1 - l), f = (n) => { const k = (n + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); }; return [f(0), f(8), f(4)]; };
+
+function text(png, str, cx, cy, scale, rgb) {
+  const glyphs = [...str.toUpperCase()].map((c) => F[c] || F["?"]), w = glyphs.length * 6 * scale - scale, x0 = Math.round(cx - w / 2), y0 = Math.round(cy - 3.5 * scale);
+  glyphs.forEach((g, gi) => g.forEach((row, ry) => { for (let rx = 0; rx < 5; rx++) if (row & (16 >> rx)) for (let dy = 0; dy < scale; dy++) for (let dx = 0; dx < scale; dx++) {
+    const x = x0 + (gi * 6 + rx) * scale + dx, y = y0 + ry * scale + dy; if (x < 0 || y < 0 || x >= png.width || y >= png.height) continue;
+    const i = (y * png.width + x) * 4; png.data[i] = rgb[0]; png.data[i + 1] = rgb[1]; png.data[i + 2] = rgb[2]; png.data[i + 3] = 255; } }));
+}
+const wrap = (s, max) => { const out = []; let line = ""; for (const w of s.split(/\s+/)) { if ((line + " " + w).trim().length > max && line) { out.push(line); line = w; } else line = (line + " " + w).trim(); } if (line) out.push(line); return out.slice(0, 3); };
+
+/** PNG bytes for a coin. */
+export function coinImage(name, ticker) {
+  const S = 512, png = new PNG({ width: S, height: S }), h = hash(name + "|" + ticker), hue = h % 360;
+  const c1 = hsl(hue, 0.75, 0.45), c2 = hsl((hue + 40 + (h >> 9) % 80) % 360, 0.8, 0.22);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const t = (x + y) / (2 * S), i = (y * S + x) * 4; for (let k = 0; k < 3; k++) png.data[i + k] = Math.round(c1[k] * (1 - t) + c2[k] * t); png.data[i + 3] = 255; }
+  const tk = "$" + ticker.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 10), big = Math.max(6, Math.min(22, Math.floor(440 / (tk.length * 6))));
+  text(png, tk, S / 2 + 3, S * 0.40 + 3, big, [0, 0, 0]); text(png, tk, S / 2, S * 0.40, big, [255, 255, 255]);
+  const lines = wrap(name.replace(/[^A-Za-z0-9 $!?.\-'&]/g, ""), 16), sm = 5;
+  lines.forEach((l, i) => text(png, l, S / 2, S * 0.70 + i * 9 * sm, sm, [255, 255, 255]));
+  return PNG.sync.write(png);
+}
+
+
+====================================================================================================
+=== FILE: launcher/src/inbox.mjs (3,177 chars)
+====================================================================================================
+// launcher 0.1.5 (owner, 30 Oct 2026 23:09 UK: "just add it in for me"): a way to hand the box a key without the owner pasting it into the console
+// and without it ever being readable in the repo, which is PUBLIC. The box makes its own X25519 key pair (private half in /root/launcher/inbox.key,
+// 0600, never leaves the box) and shows only the public half in status.json. A key sent to the box is encrypted to that public half
+// (ephemeral X25519 + SHA-256 → AES-256-GCM) and committed as launcher/secrets.enc.json; only this box can open it. Opened values go into
+// /root/launcher/.env (0600); only the names in ALLOWED are accepted. The values are never logged.
+import { generateKeyPairSync, createPrivateKey, createPublicKey, diffieHellman, createHash, createDecipheriv } from "node:crypto";
+import { existsSync, readFileSync, writeFileSync, chmodSync, appendFileSync } from "node:fs";
+import { join } from "node:path";
+import { HOME } from "./config.mjs";
+
+const KEYFILE = join(HOME, "inbox.key"), ENVFILE = join(HOME, ".env"), DONE = join(HOME, "inbox.done");
+const SECRETS = new URL("../secrets.enc.json", import.meta.url).pathname;
+const ALLOWED = new Set(["PINATA_JWT", "TWITTERAPI_KEY", "ANTHROPIC_API_KEY", "LAUNCH_RPC_URL"]);
+
+export function inboxPublic() {
+  if (!existsSync(KEYFILE)) { const { privateKey } = generateKeyPairSync("x25519"); writeFileSync(KEYFILE, privateKey.export({ type: "pkcs8", format: "pem" }), { mode: 0o600 }); chmodSync(KEYFILE, 0o600); }
+  return createPublicKey(createPrivateKey(readFileSync(KEYFILE))).export({ type: "spki", format: "der" }).toString("base64");
+}
+/** Opens launcher/secrets.enc.json if it is new; returns the names applied (never the values). Exits the process after a change so pm2 restarts it with the new .env. */
+export function inboxApply() {
+  if (!existsSync(SECRETS)) return [];
+  const raw = readFileSync(SECRETS, "utf8"), h = createHash("sha256").update(raw).digest("hex");
+  if (existsSync(DONE) && readFileSync(DONE, "utf8").trim() === h) return [];
+  const priv = createPrivateKey(readFileSync(KEYFILE)), myPub = createPublicKey(priv).export({ type: "spki", format: "der" });
+  const applied = [];
+  for (const e of JSON.parse(raw).items || []) {
+    if (!ALLOWED.has(e.name)) continue;
+    const epk = createPublicKey({ key: Buffer.from(e.epk, "base64"), format: "der", type: "spki" });
+    const shared = diffieHellman({ privateKey: priv, publicKey: epk });
+    const k = createHash("sha256").update(Buffer.concat([shared, Buffer.from(e.epk, "base64"), myPub])).digest();
+    const d = createDecipheriv("aes-256-gcm", k, Buffer.from(e.iv, "base64")); d.setAuthTag(Buffer.from(e.tag, "base64"));
+    const val = Buffer.concat([d.update(Buffer.from(e.ct, "base64")), d.final()]).toString("utf8").trim();
+    if (!val || /[\r\n]/.test(val)) continue;
+    let env = existsSync(ENVFILE) ? readFileSync(ENVFILE, "utf8") : "";
+    env = env.split("\n").filter((l) => !l.startsWith(e.name + "=")).join("\n").replace(/\n*$/, "\n");
+    writeFileSync(ENVFILE, env + `${e.name}=${val}\n`, { mode: 0o600 }); chmodSync(ENVFILE, 0o600);
+    applied.push(e.name);
+  }
+  writeFileSync(DONE, h);
+  return applied;
+}
+
+
+====================================================================================================
+=== FILE: launcher/src/index.mjs (52,167 chars)
+====================================================================================================
+// launcher 0.1.0 (owner, 24 Oct 2026 20:08–20:15 UK): "get the tweet, make the coin, put 0.05 SOL in … if no one buys within 10 minutes, sell it".
+// Every post of the accounts in the owner's TwitterAPI.io Stream (originals, replies, quotes, reposts) → a name and ticker (rules, or AI when a key is set)
+// → picture + metadata on IPFS → ONE transaction that creates the coin on pump.fun and makes our buy (nobody can buy before us) → watched; sold back when
+// nobody else buys within 10 minutes, or when the coin goes quiet. Every post and every launch is recorded, with the copycat coins the tracker saw.
+// Modes: paper (record only) | shadow (default: build + simulate every launch, sign nothing) | live (owner sets LAUNCH_MODE=live in /root/launcher/.env).
+// Own pm2 app, own wallet, own database; reads the tracker's database read-only. SOL only ever leaves to the owner's Phantom (config.mjs PHANTOM).
+import { mkdirSync, writeFileSync, readFileSync, readdirSync, unlinkSync, existsSync } from "node:fs";
+import { execFile } from "node:child_process";
+import Database from "better-sqlite3";
+import { Keypair, PublicKey } from "@solana/web3.js";
+import { CFG, PHANTOM, HOME, lam, sol } from "./config.mjs";
+import { startStream, context, twStat, snowMs } from "./stream.mjs";
+import { ruleName, aiName, aiStat } from "./namer.mjs";
+import { coinImage } from "./image.mjs";
+import { uploadMeta, metaStat } from "./meta.mjs";
+import { GLOBAL, TOKEN_2022, decodeGlobal, decodeCurve, freshCurve, quoteBuy, quoteSell, priceOf, curveOf, ata, creatorVaultOf, ixCreateV2, ixBuy, ixSell, ixBuyV3, ixSellV3, ixCollectCreatorFee, ixBudget, ixTransfer } from "./pump.mjs";
+import { conn, rpcStats, getAccounts, getBalance, buildTx, simulate, sendUntilConfirmed, readFill } from "./rpc.mjs";
+import { ensureKeypair, simPayer } from "./wallet.mjs";
+import { inboxPublic, inboxApply } from "./inbox.mjs";
+import { ensureLut, luts, lutStat, wantedFor } from "./lut.mjs";
+import { initCopies, scheduleCopies, copyTick, copyStatus } from "./copies.mjs";
+import { initPeaks, runPeaks, peakStat } from "./copypeaks.mjs";
+import { initStudy, runStudy, studyStat, studyAddress, manualStat, loadCensus } from "./study.mjs";
+import { initVol, volPoll, volScore, volStat, volBackfill, bfStat, volFillExitTime, volMark, markStat, volQuotePoll } from "./volpaper.mjs";
+import { initRF, rfFind, rfCheck, rfStat } from "./runnerfollow.mjs";
+import { initFD, fdScan, fdCheck, fdStat, fdSniperStats, snStat } from "./fundeddev.mjs";
+import { initLive, livePoll, liveStat } from "./live.mjs"; // 0.8.17
+import { initFarm, buildFarm, farmStat } from "./farm.mjs"; // 0.9.9
+import { initChainFill, chainBackstop, cfStat } from "./chainfill.mjs"; // 0.9.0
+import { qStat } from "./quote.mjs";
+import { runSweep, sweepStat } from "./exitsweep.mjs"; // 0.8.1: exit sweep over the census winners (owner, 4 Nov 10:48 UK) // 0.8.0: the funded-dev paper book (owner, 4 Nov 10:04 UK)
+import { initOperators, runOperators, opStat, creatorCensus, ctStat } from "./operators.mjs";
+
+const VER = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
+let lastStudyExport = { n: -1, t: 0 };
+// 0.8.12: say WHY the process dies — the 0.8.11 restarts left nothing in the error log
+process.on("uncaughtException", (e) => { console.error("[launcher] uncaughtException", e?.stack || e); process.exit(1); });
+process.on("unhandledRejection", (e) => { console.error("[launcher] unhandledRejection", e?.stack || e); });
+setInterval(() => { const m = process.memoryUsage(); if (m.rss > 230 * 1024 * 1024) console.error(`[launcher] memory rss=${(m.rss / 1048576).toFixed(0)}M heap=${(m.heapUsed / 1048576).toFixed(0)}M ext=${(m.external / 1048576).toFixed(0)}M`); }, 30000);
+const now = () => Math.floor(Date.now() / 1000);
+mkdirSync(HOME, { recursive: true }); mkdirSync(CFG.REQ_DIR, { recursive: true }); mkdirSync(CFG.OUT_DIR, { recursive: true });
+const st = { ver: VER, mode: CFG.MODE, started: new Date().toISOString(), posts: 0, ignored: 0, launches: 0, live: 0, shadowOk: 0, shadowFail: 0, uploadsFailed: 0, sells: 0, errors: 0, lastErr: "", selfTest: null, exports: 0, lastPush: "" };
+
+// ---------- database ----------
+const db = new Database(CFG.DB_PATH); db.pragma("journal_mode = WAL"); db.pragma("busy_timeout = 3000"); db.pragma("cache_size = -32000"); // 0.9.10: page cache capped at 32 MB (rss reached 471 MB with a 30–95 MB heap on 5 Nov)
+setInterval(() => { try { db.pragma("wal_checkpoint(TRUNCATE)"); } catch {} }, 600000); // 0.9.10: fold the write-ahead log back every 10 min
+db.exec(`
+CREATE TABLE IF NOT EXISTS posts (id TEXT PRIMARY KEY, user TEXT, kind TEXT, text TEXT, parent_id TEXT, parent_user TEXT, parent_text TEXT, created_ms INTEGER, recv_ms INTEGER, ctx_ms INTEGER, raw TEXT);
+CREATE TABLE IF NOT EXISTS launches (id INTEGER PRIMARY KEY AUTOINCREMENT, post_id TEXT, user TEXT, kind TEXT, mode TEXT, status TEXT, reason TEXT,
+  name TEXT, ticker TEXT, name_by TEXT, why TEXT, score REAL, rule_name TEXT, rule_ticker TEXT, ai_name TEXT, ai_ticker TEXT, same_name_7d INTEGER, same_ticker_7d INTEGER,
+  mint TEXT, uri TEXT, sig TEXT, sim_err TEXT, sim_units INTEGER, upload_ms INTEGER,
+  t_post_ms INTEGER, t_recv_ms INTEGER, t_named_ms INTEGER, t_sent_ms INTEGER, t_landed_ms INTEGER,
+  stake_sol REAL, cost_sol REAL, tokens TEXT, entry_price REAL, net_lamports TEXT,
+  others INTEGER DEFAULT 0, first_other_s INTEGER, last_change_ts INTEGER, peak_x REAL, last_x REAL, sell_tries INTEGER DEFAULT 0,
+  sell_sig TEXT, sell_sol REAL, sell_reason TEXT, sold_ts INTEGER, pnl_sol REAL,
+  copies_30m INTEGER, copy_first_s INTEGER, copy_best_peak_usd REAL, copy_grads INTEGER, copies_checked_ts INTEGER, copies_final INTEGER DEFAULT 0,
+  relaunch_of INTEGER, created_ts INTEGER, buy_ix TEXT, tp_done INTEGER DEFAULT 0, tp_sol REAL, image_url TEXT, buys_10m INTEGER, src_link TEXT);
+CREATE INDEX IF NOT EXISTS launches_status ON launches(status);
+CREATE INDEX IF NOT EXISTS launches_created ON launches(created_ts);
+CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT);`);
+for (const c of ["buy_ix TEXT", "tp_done INTEGER DEFAULT 0", "tp_sol REAL", "image_url TEXT", "buys_10m INTEGER", "src_link TEXT"]) try { db.exec(`ALTER TABLE launches ADD COLUMN ${c}`); } catch {}
+initCopies(db); // 0.2.0: the copy-coin paper test
+initOperators(db); // 0.7.0: the operator (funder-wallet) database (owner, 3 Nov 10:22 UK)
+initRF(db); // 0.5.0: runner-follow paper test (owner, 31 Oct 19:22 UK)
+initFD(db); // 0.8.0
+initVol(db); // 0.4.0: V300 / V500 volume paper trades (owner, 31 Oct 18:41 UK)
+initStudy(db); // 0.3.0: why copycats ran (owner, 31 Oct 18:21 UK)
+initPeaks(db); // 0.2.2: market caps of every copycat (owner, 31 Oct 18:06 UK)
+const upd = (id, o) => { const ks = Object.keys(o); if (ks.length) db.prepare(`UPDATE launches SET ${ks.map((k) => `${k}=?`).join(", ")} WHERE id=?`).run(...ks.map((k) => (typeof o[k] === "bigint" ? o[k].toString() : o[k])), id); };
+const kvGet = (k) => db.prepare("SELECT v FROM kv WHERE k=?").get(k)?.v ?? null, kvSet = (k, v) => db.prepare("INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)").run(k, String(v));
+let tdb = null; try { tdb = new Database(CFG.TRACKER_DB, { readonly: true, fileMustExist: true }); tdb.pragma("busy_timeout = 2000"); tdb.pragma("cache_size = -16000"); } catch {} // 0.9.10: 16 MB cache on the read-only tracker handle
+
+// ---------- wallet / chain state ----------
+const wallet = CFG.SMOKE ? Keypair.generate() : ensureKeypair(); // the key file is created on first start; only the public address is ever shown
+initChainFill(db); initFarm(db, tdb); // 0.9.9 // 0.9.0: simulated executable fills from the chain's reserves, every book
+initLive(db, wallet); // 0.8.17: live shadow trades (livebook.txt), signed with this wallet; off under SMOKE
+const ME = wallet.publicKey;
+let G = null, gAt = 0, balance = null, balAt = 0;
+async function global() { if (G && Date.now() - gAt < 600000) return G; const [a] = await getAccounts([GLOBAL], "confirmed"); const g = decodeGlobal(a?.data); if (!g) throw new Error("pump.fun Global account unreadable"); G = g; gAt = Date.now(); return G; }
+async function bal(force = false) { if (!force && balance != null && Date.now() - balAt < 20000) return balance; balance = await getBalance(ME); balAt = Date.now(); return balance; }
+const ukDay = (ms = Date.now()) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(ms);
+const liveToday = () => db.prepare("SELECT created_ts FROM launches WHERE mode='live' AND status NOT IN ('failed','sim_fail','skipped') AND created_ts>=?").all(now() - 30 * 3600).filter((r) => ukDay(r.created_ts * 1000) === ukDay()).length;
+
+// ---------- newness and copycats (tracker database, read-only) ----------
+function sameBefore(name, ticker, beforeS) {
+  if (!tdb) return { n: null, t: null };
+  try { return { n: tdb.prepare("SELECT COUNT(*) n FROM tokens WHERE create_ts BETWEEN ? AND ? AND lower(name)=lower(?)").get(beforeS - 7 * 86400, beforeS, name).n,
+    t: tdb.prepare("SELECT COUNT(*) n FROM tokens WHERE create_ts BETWEEN ? AND ? AND upper(symbol)=upper(?)").get(beforeS - 7 * 86400, beforeS, ticker).n }; } catch { return { n: null, t: null }; }
+}
+function copycats(L) {
+  if (!tdb) return null; const t0 = Math.floor(L.t_post_ms / 1000);
+  const rows = tdb.prepare("SELECT mint, create_ts, peak_mc_usd, graduated FROM tokens WHERE create_ts BETWEEN ? AND ? AND (lower(name)=lower(?) OR upper(symbol)=upper(?)) AND mint<>?").all(t0 - 60, t0 + 1800, L.name, L.ticker, L.mint || "");
+  return { n: rows.length, first: rows.length ? Math.min(...rows.map((r) => r.create_ts)) - t0 : null, best: rows.length ? Math.max(...rows.map((r) => r.peak_mc_usd || 0)) : null, grads: rows.reduce((a, r) => a + (r.graduated ? 1 : 0), 0) };
+}
+
+// ---------- one post → one launch ----------
+const seen = new Set(); let chain = Promise.resolve();
+function onPost(t, ev) {
+  if (seen.has(t.id)) return; seen.add(t.id); if (seen.size > 5000) seen.clear();
+  const recv = Date.now(); st.posts++;
+  const rawKeep = db.prepare("SELECT COUNT(*) n FROM posts").get().n < 200 ? JSON.stringify(ev).slice(0, 6000) : null; // the first 200 raw events are kept, to check the stream's fields
+  db.prepare("INSERT OR IGNORE INTO posts (id, user, text, created_ms, recv_ms, raw) VALUES (?, ?, ?, ?, ?, ?)").run(t.id, t.user, t.text, t.createdMs, recv, rawKeep);
+  if (CFG.ACCOUNTS.length && !CFG.ACCOUNTS.includes(t.user.toLowerCase())) { st.ignored++; return; }
+  chain = chain.then(() => handle(t, recv)).catch((e) => { st.errors++; st.lastErr = "post: " + e.message; });
+}
+async function handle(t, recv) {
+  const c = await context(t); const ctxMs = Date.now();
+  const p = c.parent, kind = c.kind;
+  db.prepare("UPDATE posts SET kind=?, parent_id=?, parent_user=?, parent_text=?, ctx_ms=? WHERE id=?").run(kind, p?.id || null, p?.user || null, p?.text || null, ctxMs - recv, t.id);
+  if (kind === "repost" && CFG.SKIP_RETWEETS) return;
+  const ownText = kind === "repost" ? "" : c.tweet.text, subjectText = p ? p.text : "";
+  // 0.1.8 (owner, 31 Oct 01:00 UK: "the picture has to be identical … you must look at the tweet and see the word"): the post's own pictures
+  // (or, for a reply / quote / repost, the original's) are the coin's picture and are shown to the AI, which picks the name from the words AND the pictures.
+  const images = [...(kind === "repost" ? [] : c.tweet.media || []), ...(p?.media || [])].filter((u) => /^https:\/\//.test(u));
+  const [rules, ai] = await Promise.all([ruleName({ ownText, subjectText }), aiName({ user: t.user, kind, ownText, subjectText, subjectUser: p?.user, images })]);
+  // a picture post is never launched on a guessed name: without the AI reading the picture it is recorded only
+  const pick = ai || (images.length ? null : rules);
+  const base = { post_id: t.id, user: t.user, kind, t_post_ms: t.createdMs || snowMs(t.id), t_recv_ms: recv, t_named_ms: Date.now(), rule_name: rules?.name || null, rule_ticker: rules?.ticker || null,
+    ai_name: ai?.name || null, ai_ticker: ai?.ticker || null, created_ts: now() };
+  if (!pick) return insert({ ...base, mode: CFG.MODE, status: "skipped", image_url: images[0] || null, name: rules?.name || null, ticker: rules?.ticker || null, name_by: rules ? "rules (not used)" : null,
+    reason: images.length ? (CFG.AI_KEY ? "the AI could not name it from the post and its picture" : "post has a picture — needs the AI to read it (no ANTHROPIC_API_KEY), not launched on a guessed name") : "no words to name a coin from" });
+  // 0.1.7 (owner, 31 Oct 00:52 UK: "we don't want to launch it twice"): the first post of a narrative wins — a name or ticker we already launched
+  // (or test-launched) in the last REPEAT_H hours is recorded as skipped. The Relaunch button still relaunches on purpose.
+  const rep = db.prepare(`SELECT id, created_ts FROM launches WHERE (lower(name)=lower(?) OR upper(ticker)=upper(?)) AND created_ts>=? AND status IN ('building','sent','open','selling','stuck','sold','graduated','sim_ok','paper') ORDER BY id LIMIT 1`).get(pick.name, pick.ticker, now() - CFG.REPEAT_H * 3600);
+  if (rep) return insert({ ...base, mode: CFG.MODE, status: "skipped", name: pick.name, ticker: pick.ticker, name_by: pick.by, reason: `already launched as #${rep.id} at ${new Date(rep.created_ts * 1000).toLocaleTimeString("en-GB", { timeZone: "Europe/London" })} UK (no repeats within ${CFG.REPEAT_H} h)` });
+  const same = sameBefore(pick.name, pick.ticker, now());
+  await launch({ ...base, name: pick.name, ticker: pick.ticker, name_by: pick.by, why: pick.why, score: pick.score, same_name_7d: same.n, same_ticker_7d: same.t, image_url: images[0] || null }, { tweetUrl: `https://x.com/${t.user}/status/${t.id}` });
+}
+/** The coin's picture: the post's own first picture, byte for byte; only a post with no picture at all gets the drawn ticker picture. */
+async function pictureFor(L) {
+  if (!L.image_url) return { bytes: coinImage(L.name, L.ticker), type: "image/png", ext: "png", from: "drawn" };
+  if (L.image_url.startsWith("file:")) { const f = L.image_url.slice(5), ext = (f.split(".").pop() || "jpg").toLowerCase(); return { bytes: readFileSync(f), type: ext === "png" ? "image/png" : ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/jpeg", ext, from: "upload" }; } // 0.2.1: a picture uploaded on the Launch-now box
+  const r = await fetch(L.image_url, { signal: AbortSignal.timeout(6000) }); if (!r.ok) throw new Error(`picture download HTTP ${r.status}`);
+  const type = (r.headers.get("content-type") || "image/jpeg").split(";")[0], bytes = Buffer.from(await r.arrayBuffer());
+  if (!/^image\//.test(type) || bytes.length < 500 || bytes.length > 15e6) throw new Error(`picture not usable (${type}, ${bytes.length} bytes)`);
+  return { bytes, type, ext: type.includes("png") ? "png" : type.includes("gif") ? "gif" : type.includes("webp") ? "webp" : "jpg", from: "post" };
+}
+const insert = (o) => { const ks = Object.keys(o); const r = db.prepare(`INSERT INTO launches (${ks.join(",")}) VALUES (${ks.map(() => "?").join(",")})`).run(...ks.map((k) => o[k])); st.launches++;
+  const id = Number(r.lastInsertRowid); if (o.name && !o.relaunch_of) try { scheduleCopies(db, { ...o, id }); } catch {} return id; };
+
+async function launch(L, { tweetUrl, source = "X" }) {
+  // mode for this one: live only when the owner set live, the day's cap isn't reached and the wallet can pay
+  let mode = CFG.MODE, reason = null;
+  if (mode === "live" && kvGet("paused") === "1") { mode = "paper"; reason = "paused (pause button)"; }
+  if (mode === "live") {
+    if (CFG.DAILY_CAP > 0 && liveToday() >= CFG.DAILY_CAP) { mode = "paper"; reason = `daily cap ${CFG.DAILY_CAP} reached`; }
+    else { const b = await bal(true).catch(() => null); if (b == null || b < lam(CFG.MIN_BALANCE_SOL)) { mode = "paper"; reason = `wallet ${b == null ? "unreadable" : sol(b).toFixed(3) + " SOL"} below ${CFG.MIN_BALANCE_SOL}`; } }
+  }
+  const id = insert({ ...L, mode, status: mode === "paper" ? "paper" : "building", reason, stake_sol: CFG.STAKE_SOL });
+  if (mode === "paper") return id;
+  try {
+    const description = L.user && L.user !== "manual" ? `${L.name} — narrative from @${L.user}'s post on ${source}${tweetUrl ? ": " + tweetUrl : ""} (not affiliated with @${L.user}).` : tweetUrl ? `${L.name} — ${tweetUrl}` : L.name;
+    let uri;
+    try { const img = await pictureFor(L); const m = await uploadMeta({ name: L.name, symbol: L.ticker, description, img, tweetUrl }); uri = m.uri; upd(id, { uri, upload_ms: m.ms, ...(m.image && (!L.image_url || L.image_url.startsWith("file:")) ? { image_url: m.image } : {}) }); }
+    catch (e) { st.uploadsFailed++; upd(id, { status: mode === "live" ? "failed" : "sim_fail", reason: "picture / metadata upload: " + e.message.slice(0, 160) }); return id; }
+    const g = await global(), mintKp = Keypair.generate(), mint = mintKp.publicKey;
+    if (mode === "live" && !luts().length) await ensureLut({ wallet, kvGet, kvSet, wanted: wantedFor(ME, g, TIPS.map((t) => new PublicKey(t))) });
+    const funded = mode === "live" || (await bal().catch(() => 0)) >= lam(CFG.MIN_BALANCE_SOL);
+    const payer = funded ? ME : simPayer() || ME;
+    const curve = freshCurve(g, payer), spend = lam(CFG.STAKE_SOL), q = quoteBuy(curve, g, spend), minTokens = (q.tokens * BigInt(Math.round((1 - CFG.SLIP) * 1e4))) / 10000n;
+    upd(id, { mint: mint.toBase58(), tokens: q.tokens.toString(), net_lamports: q.net.toString(), entry_price: Number(curve.vSol + q.net) / Number(curve.vTok - q.tokens) });
+    // classic buy first; if the chain refuses it in simulation, the v3 buy (what pump.fun's own site uses after create_v2)
+    let ixs, sim, buyIx = kvGet("buyIx") || "classic", errs = [];
+    for (const v of buyIx === "v3" ? ["v3", "classic"] : ["classic", "v3"]) {
+      ixs = [...ixBudget(CFG.CU_LIMIT, CFG.CU_PRICE), ixCreateV2({ mint, user: payer, creator: payer, name: L.name, symbol: L.ticker, uri }),
+        ...(v === "v3" ? ixBuyV3({ user: payer, mint, g, spend, minTokens }) : ixBuy({ user: payer, mint, curve, g, spend, minTokens }))];
+      if (mode === "live") ixs.push(ixTransfer(payer, tipAccount(), lam(CFG.TIP_SOL)));
+      sim = await simulate(await buildTx(payer, ixs, null, luts())); if (sim.ok) { buyIx = v; kvSet("buyIx", v); break; }
+      errs.push(`${v}: ${sim.err} ${(sim.logs || []).filter((l) => /Error|error|failed|insufficient/i.test(l)).slice(-3).join(" | ")}`);
+    }
+    upd(id, { buy_ix: sim.ok ? buyIx : null, sim_err: sim.ok ? null : errs.join(" ‖ ").slice(0, 900), sim_units: sim.units });
+    if (mode === "shadow") { upd(id, { status: sim.ok ? "sim_ok" : "sim_fail", reason: funded ? null : "simulated with a stand-in payer (launch wallet not funded)" }); sim.ok ? st.shadowOk++ : st.shadowFail++; return id; }
+    if (!sim.ok) { upd(id, { status: "failed", reason: "simulation refused it — not sent" }); return id; }
+    const tx = await buildTx(payer, ixs, [wallet, mintKp], luts()); upd(id, { t_sent_ms: Date.now(), status: "sent", sig: Buffer.from(tx.signatures[0]).length ? bs58(tx.signatures[0]) : null });
+    confirmLater(id, tx, mint, q); // the next post doesn't wait for this one to confirm
+  } catch (e) { st.errors++; st.lastErr = "launch: " + e.message; upd(id, { status: mode === "live" ? "failed" : "sim_fail", reason: e.message.slice(0, 200) }); }
+  return id;
+}
+async function confirmLater(id, tx, mint, q) {
+  try {
+    const r = await sendUntilConfirmed(tx, 25000); upd(id, { sig: r.sig });
+    if (r.status !== "confirmed") { upd(id, { status: "failed", reason: `transaction ${r.status}${r.err ? ": " + r.err.slice(0, 160) : ""}` }); return; }
+    const fill = await readFill(r.sig, ME, mint);
+    st.live++; balance = null;
+    upd(id, { status: "open", t_landed_ms: Date.now(), cost_sol: fill ? sol(fill.solDelta) : null, tokens: fill ? String(fill.tokenDelta) : q.tokens.toString(), last_change_ts: now(), peak_x: 1, last_x: 1 });
+    exportSoon();
+  } catch (e) { st.errors++; st.lastErr = "confirm: " + e.message; upd(id, { status: "failed", reason: "confirm: " + e.message.slice(0, 160) }); }
+}
+const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+const bs58 = (bytes) => { let n = 0n; for (const b of bytes) n = n * 256n + BigInt(b); let o = ""; while (n > 0n) { o = B58[Number(n % 58n)] + o; n /= 58n; } for (const b of bytes) { if (b) break; o = "1" + o; } return o; };
+const TIPS = ["4ACfpUFoaSD9bfPdeu6DBt89gB6ENTeHBXCAi87NhDEE", "D2L6yPZ2FmmmTKPgzaMKdhu6EWZcTpLy1Vhx8uvZe7NZ", "9bnz4RShgq1hAnLnZbP8kbgBg1kEmcJBYQq3gQbmnSta", "5VY91ws6B2hMmBFRsXkoAAdsPHBJwRfBht4DXox3xkwn", "2nyhqdwKcJZR2vcqCyrYsaPVdAnFoJjiksCXJ7hfEYgD", "2q5pghRs6arqVjRvT5gfgWfWcHWmw1ZuCzphgd5KfWGJ", "wyvPkWjVZz1M8fHQnMMCDTQDbkManefNNhweYk5WkcF", "3KCKozbAaF75qEU33jtzozcJ29yJuaLJTy2jFdzUY8bT"];
+const tipAccount = () => new PublicKey(TIPS[Math.floor(Math.random() * TIPS.length)]); // Helius Sender tip accounts (as the executor)
+
+// ---------- watching our coins: sell back when nobody buys, or when it goes quiet ----------
+let watching = false;
+async function watch() {
+  if (watching) return; watching = true;
+  try {
+    const open = db.prepare("SELECT * FROM launches WHERE mode='live' AND status IN ('open','selling') ORDER BY id").all(); if (!open.length) return;
+    const g = await global(); const accs = await getAccounts(open.map((L) => curveOf(new PublicKey(L.mint))), "confirmed");
+    for (let i = 0; i < open.length; i++) {
+      const L = open[i], c = decodeCurve(accs[i]?.data); if (!c) continue;
+      const age = now() - Math.floor((L.t_landed_ms || L.created_ts * 1000) / 1000), spent = lam(L.stake_sol || CFG.STAKE_SOL);
+      const x = Number(quoteSell(c, g, BigInt(L.tokens || "0"))) / spent; // what our tokens would sell for now ÷ the stake (≈ 0.975 at the start: the 1.25% fees each way)
+      const ours = BigInt(L.net_lamports || "0"), others = c.rSol > ours + 100000n; // anything beyond our own buy (0.0001 SOL slack) is someone else
+      const changed = Number(c.rSol) !== Number(kvGet("rsol:" + L.id) ?? -1); if (changed) kvSet("rsol:" + L.id, Number(c.rSol));
+      const o = { last_x: +x.toFixed(4), peak_x: Math.max(L.peak_x || 0, +x.toFixed(4)) };
+      if (others && !L.others) { o.others = 1; o.first_other_s = age; }
+      if (changed) o.last_change_ts = now();
+      upd(L.id, o);
+      if (c.complete) { upd(L.id, { status: "graduated", reason: "graduated — sell on PumpSwap by hand for now" }); continue; }
+      const manual = L.status === "selling";
+      // 0.1.11 (owner, 31 Oct 01:15 UK): at DEAD_MIN, count the buys by other wallets; fewer than MIN_BUYS → sell back (checked once)
+      let buys = L.buys_10m; if (!manual && buys == null && age >= CFG.DEAD_MIN * 60) { buys = await countBuys(L).catch(() => null); if (buys != null) upd(L.id, { buys_10m: buys }); }
+      const why = manual ? (L.sell_reason || "sell button") : buys != null && L.buys_10m == null && buys < CFG.MIN_BUYS ? `only ${buys} buy${buys === 1 ? "" : "s"} by others in ${CFG.DEAD_MIN} min (needs ${CFG.MIN_BUYS})`
+        : buys == null && !others && !L.others && age >= CFG.DEAD_MIN * 60 ? `nobody else bought in ${CFG.DEAD_MIN} min`
+        : (others || L.others) && now() - (changed ? now() : L.last_change_ts || now()) >= CFG.QUIET_MIN * 60 ? `no trades for ${CFG.QUIET_MIN} min`
+        : null;
+      if (why) await sellOne(L, c, g, why);
+      else if (CFG.TP_X > 0 && !L.tp_done && x >= CFG.TP_X) await sellOne(L, c, g, `take-profit: ${Math.round(CFG.TP_FRACTION * 100)}% sold at ${CFG.TP_X}x`, CFG.TP_FRACTION);
+    }
+  } catch (e) { st.errors++; st.lastErr = "watch: " + e.message; } finally { watching = false; }
+}
+/** Buys by other wallets on our coin's curve so far: its transactions, those that ran a pump.fun buy and were not paid for by our wallet. */
+async function countBuys(L) {
+  const curve = curveOf(new PublicKey(L.mint)); rpcStats.calls++;
+  const sigs = (await conn.getSignaturesForAddress(curve, { limit: 200 }, "confirmed")).filter((s) => !s.err && s.signature !== L.sig).map((s) => s.signature);
+  let n = 0;
+  for (let i = 0; i < sigs.length; i += 25) {
+    rpcStats.calls++; const txs = await conn.getTransactions(sigs.slice(i, i + 25), { maxSupportedTransactionVersion: 1, commitment: "confirmed" });
+    for (const t of txs) { if (!t?.meta) continue; const payer = t.transaction.message.staticAccountKeys[0].toBase58();
+      if (payer !== ME.toBase58() && (t.meta.logMessages || []).some((l) => /Instruction: (Buy|BuyExactSolIn|BuyV2|BuyV3|BuyExactQuoteIn)/.test(l))) n++; }
+  }
+  return n;
+}
+async function sellOne(L, curve, g, why, frac = 1) {
+  const mint = new PublicKey(L.mint), ua = ata(ME, mint, TOKEN_2022);
+  try {
+    const [acc] = await getAccounts([ua], "confirmed"); const held = acc?.data?.length >= 72 ? acc.data.readBigUInt64LE(64) : 0n;
+    const part = frac < 1, amount = part ? (held * BigInt(Math.round(frac * 1e4))) / 10000n : held;
+    if (amount <= 0n) { upd(L.id, { status: "sold", sell_reason: why + " (no tokens left)", sold_ts: now() }); return; }
+    const out = quoteSell(curve, g, amount), minSol = (out * BigInt(Math.round((1 - CFG.SELL_SLIP) * 1e4))) / 10000n;
+    const sellIxs = L.buy_ix === "v3" ? ixSellV3({ user: ME, mint, g, amount, minSol, close: !part }) : ixSell({ user: ME, mint, curve, g, amount, minSol, close: !part });
+    const tx = await buildTx(ME, [...ixBudget(200000, CFG.CU_PRICE), ...sellIxs, ixTransfer(ME, tipAccount(), lam(CFG.TIP_SOL))], [wallet], luts());
+    const tries = (L.sell_tries || 0) + 1; if (!part) upd(L.id, { status: "selling", sell_reason: why, sell_tries: tries });
+    const sim = await simulate(tx); // a sale the chain would refuse is not sent (a failed transaction still costs its fee)
+    const r = sim.ok ? await sendUntilConfirmed(tx, 20000) : { status: "refused", err: sim.err };
+    if (part) { // take-profit on part of the position: record it once, keep holding the rest under the normal rules
+      if (r.status !== "confirmed") { st.lastErr = `take-profit ${L.ticker}: ${r.status} ${r.err || ""}`.slice(0, 200); return; }
+      const f = await readFill(r.sig, ME, mint); upd(L.id, { tp_done: 1, tp_sol: f ? sol(f.solDelta) : null, tokens: (held - amount).toString(), reason: why }); balance = null; exportSoon(); return;
+    }
+    if (r.status !== "confirmed") { st.lastErr = `sell ${L.ticker}: ${r.status} ${r.err || ""}`.slice(0, 200); if (tries >= 6) upd(L.id, { status: "stuck", reason: "sell failed 6 times (press Sell to try again): " + String(r.err || r.status).slice(0, 120) }); return; }
+    const fill = await readFill(r.sig, ME, mint); const got = fill ? sol(fill.solDelta) : null;
+    upd(L.id, { status: "sold", sell_sig: r.sig, sell_sol: got, sold_ts: now(), pnl_sol: got != null && L.cost_sol != null ? +(got + (L.tp_sol || 0) + L.cost_sol).toFixed(6) : null });
+    st.sells++; balance = null; exportSoon();
+  } catch (e) { st.errors++; st.lastErr = "sell: " + e.message; }
+}
+
+// ---------- the website's buttons (scope writes a small JSON file into REQ_DIR; nothing else can reach this app) ----------
+async function requests() {
+  let files = []; try { files = readdirSync(CFG.REQ_DIR).filter((f) => f.endsWith(".json")); } catch { return; }
+  for (const f of files) {
+    let rq = null; try { rq = JSON.parse(readFileSync(`${CFG.REQ_DIR}/${f}`, "utf8")); } catch {} try { unlinkSync(`${CFG.REQ_DIR}/${f}`); } catch {}
+    if (!rq || now() - (rq.at || 0) > 300) continue;
+    // 0.1.14 (owner, 31 Oct 01:26 UK): one button pauses every new launch at once; one button sells every coin we hold
+    if (rq.action === "pause" || rq.action === "resume") { kvSet("paused", rq.action === "pause" ? "1" : "0"); kvSet("pausedAt", new Date().toISOString()); writeStatus(); continue; }
+    if (rq.action === "sellall") { const r = db.prepare("UPDATE launches SET status='selling', sell_reason='sell-all button', sell_tries=0 WHERE mode='live' AND status IN ('open','stuck')").run(); kvSet("lastSellAll", `${new Date().toISOString()} ${r.changes} coin(s)`); writeStatus(); setTimeout(() => watch(), 50); continue; }
+    // 0.2.1 (owner, 31 Oct 09:58 UK): the Launch-now box — "suggest" names a pasted post (AI reads its text and picture); "manual" launches it
+    if (rq.action === "suggest" && rq.reqId) { suggest(rq).then((out) => writeFileSync(`${CFG.REQ_DIR}/resp-${rq.reqId}.out`, JSON.stringify(out))).catch((e) => writeFileSync(`${CFG.REQ_DIR}/resp-${rq.reqId}.out`, JSON.stringify({ ok: false, error: e.message }))); continue; }
+    if (rq.action === "study" && rq.mint) { studyAddress(db, String(rq.mint).trim(), exportNow); continue; } // 0.6.0: study a coin by address
+    if (rq.action === "manual" && rq.reqId) { chain = chain.then(() => manualLaunch(rq)).catch((e) => { st.errors++; st.lastErr = "manual: " + e.message; }); continue; }
+    if (!Number.isInteger(rq.id)) continue;
+    const L = db.prepare("SELECT * FROM launches WHERE id=?").get(rq.id); if (!L) continue;
+    if (rq.action === "sell" && L.mode === "live" && ["open", "stuck"].includes(L.status)) { upd(L.id, { status: "selling", sell_reason: "sell button", sell_tries: 0 }); setTimeout(() => watch(), 50); }
+    if (rq.action === "relaunch" && L.name) {
+      const same = sameBefore(L.name, L.ticker, now());
+      chain = chain.then(() => launch({ post_id: L.post_id, user: L.user, kind: L.kind, name: L.name, ticker: L.ticker, name_by: L.name_by, why: "relaunch", score: L.score, rule_name: L.rule_name, rule_ticker: L.rule_ticker,
+        ai_name: L.ai_name, ai_ticker: L.ai_ticker, same_name_7d: same.n, same_ticker_7d: same.t, image_url: L.image_url, t_post_ms: Date.now(), t_recv_ms: Date.now(), t_named_ms: Date.now(), relaunch_of: L.id, created_ts: now() },
+        { tweetUrl: L.user && L.post_id ? `https://x.com/${L.user}/status/${L.post_id}` : "" })).catch((e) => { st.errors++; st.lastErr = "relaunch: " + e.message; });
+    }
+  }
+}
+
+// ---------- the Launch-now box (0.2.1) ----------
+const srcOf = (link) => { const x = String(link || "").match(/(?:x|twitter)\.com\/([A-Za-z0-9_]{1,30})\/status\/(\d+)/), t = String(link || "").match(/truthsocial\.com\/@([A-Za-z0-9_]{1,40})\/(?:posts\/)?(\d+)/);
+  return x ? { user: x[1], id: x[2], source: "X" } : t ? { user: t[1], id: t[2], source: "Truth Social" } : { user: "manual", id: null, source: "manual" }; };
+function imagesOf(rq) {
+  if (rq.imageFile && existsSync(rq.imageFile) && rq.imageFile.startsWith(`${HOME}/uploads/`)) { const ext = rq.imageFile.split(".").pop().toLowerCase(); return [{ b64: readFileSync(rq.imageFile).toString("base64"), type: ext === "png" ? "image/png" : ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/jpeg" }]; }
+  return /^https:\/\//.test(rq.imageUrl || "") ? [rq.imageUrl] : [];
+}
+async function suggest(rq) {
+  const text = String(rq.text || "").slice(0, 2000), s = srcOf(rq.link), images = imagesOf(rq);
+  const ai = await aiName({ user: s.user, kind: "post", ownText: text, subjectText: "", images });
+  const pick = ai || (images.length ? null : ruleName({ ownText: text, subjectText: "" }));
+  if (!pick) return { ok: false, error: images.length ? "the AI could not name it (or is off) — type a name and ticker yourself" : "no words to name a coin from" };
+  const rep = db.prepare(`SELECT id, created_ts FROM launches WHERE (lower(name)=lower(?) OR upper(ticker)=upper(?)) AND created_ts>=? AND status IN ('building','sent','open','selling','stuck','sold','graduated','sim_ok') ORDER BY id LIMIT 1`).get(pick.name, pick.ticker, now() - CFG.REPEAT_H * 3600);
+  return { ok: true, name: pick.name, ticker: pick.ticker, score: pick.score ?? null, why: pick.why || "", by: pick.by, source: s.source, user: s.user, repeatOf: rep ? rep.id : null };
+}
+async function manualLaunch(rq) {
+  const s = srcOf(rq.link), name = String(rq.name || "").trim().slice(0, 32), ticker = String(rq.ticker || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 10);
+  if (!name || ticker.length < 2) return;
+  const pid = s.id ? `${s.source === "X" ? "" : "truth-"}${s.id}` : `manual-${rq.reqId}`;
+  db.prepare("INSERT OR IGNORE INTO posts (id, user, kind, text, created_ms, recv_ms) VALUES (?, ?, ?, ?, ?, ?)").run(pid, s.user, "manual", String(rq.text || "").slice(0, 2000), Date.now(), Date.now());
+  const image_url = rq.imageFile && rq.imageFile.startsWith(`${HOME}/uploads/`) ? "file:" + rq.imageFile : /^https:\/\//.test(rq.imageUrl || "") ? rq.imageUrl : null;
+  const same = sameBefore(name, ticker, now());
+  await launch({ post_id: pid, user: s.user, kind: "manual", name, ticker, name_by: rq.nameBy === "ai" ? "ai (manual)" : "manual", why: `launched by hand from ${s.source}`, score: rq.score ?? null,
+    t_post_ms: Date.now(), t_recv_ms: Date.now(), t_named_ms: Date.now(), image_url, src_link: String(rq.link || "").slice(0, 300) || null, same_name_7d: same.n, same_ticker_7d: same.t, created_ts: now() }, { tweetUrl: String(rq.link || "").slice(0, 300), source: s.source });
+}
+
+// ---------- housekeeping: copycats, creator fees, sweep to Phantom ----------
+function copyJob() {
+  try {
+    for (const L of db.prepare("SELECT * FROM launches WHERE name IS NOT NULL AND copies_final=0 AND created_ts<=? ORDER BY id LIMIT 200").all(now() - 1800)) {
+      const c = copycats(L); if (!c) return;
+      upd(L.id, { copies_30m: c.n, copy_first_s: c.first, copy_best_peak_usd: c.best, copy_grads: c.grads, copies_checked_ts: now(), copies_final: now() - L.created_ts >= 6 * 3600 ? 1 : 0 });
+    }
+  } catch (e) { st.errors++; st.lastErr = "copycats: " + e.message; }
+}
+async function feesAndSweep() {
+  if (CFG.MODE !== "live" || CFG.SMOKE) return;
+  try {
+    const vault = creatorVaultOf(ME), [v] = await getAccounts([vault], "confirmed"), rent = 890880; // a 0-byte account's rent-exempt minimum
+    if (v && v.lamports - rent >= lam(CFG.FEE_COLLECT_MIN_SOL)) { const tx = await buildTx(ME, [...ixBudget(100000, CFG.CU_PRICE), ixCollectCreatorFee(ME)], [wallet]); const r = await sendUntilConfirmed(tx, 20000); kvSet("lastFeeCollect", `${new Date().toISOString()} ${r.status} ${sol(v.lamports - rent).toFixed(4)} SOL`); }
+    if (db.prepare("SELECT COUNT(*) n FROM launches WHERE status IN ('building','sent','selling')").get().n) return; // never sweep in the middle of a launch or a sale
+    const b = await bal(true), keep = lam(CFG.SWEEP_KEEP_SOL), extra = b - keep - 10000;
+    if (extra >= lam(0.01)) { const tx = await buildTx(ME, [...ixBudget(5000, 1000), ixTransfer(ME, new PublicKey(PHANTOM), extra)], [wallet]); const r = await sendUntilConfirmed(tx, 20000); kvSet("lastSweep", `${new Date().toISOString()} ${r.status} ${sol(extra).toFixed(4)} SOL → ${PHANTOM}`); balance = null; }
+  } catch (e) { st.errors++; st.lastErr = "fees/sweep: " + e.message; }
+}
+
+// ---------- self-test: build a create+buy for a test coin and simulate it (nothing signed); then one metadata upload ----------
+async function selfTest() {
+  const out = { at: new Date().toISOString() };
+  try {
+    const g = await global(); out.global = { feeBps: g.feeBps, creatorFeeBps: g.creatorFeeBps, initVSol: sol(g.initVSol), initVTok: Number(g.initVTok) / 1e6 };
+    const payer = (await bal().catch(() => 0)) >= lam(CFG.MIN_BALANCE_SOL) ? ME : simPayer() || ME; out.payer = payer.equals(ME) ? "launch wallet" : "stand-in (launch wallet not funded)";
+    const mint = Keypair.generate().publicKey, curve = freshCurve(g, payer), spend = lam(CFG.STAKE_SOL), q = quoteBuy(curve, g, spend);
+    Object.assign(out, { quotedTokens: Number(q.tokens) / 1e6, pctSupply: +(Number(q.tokens) / Number(g.supply) * 100).toFixed(3) });
+    for (const v of ["classic", "v3"]) {
+      const ixs = [...ixBudget(CFG.CU_LIMIT, CFG.CU_PRICE), ixCreateV2({ mint, user: payer, creator: payer, name: "Launcher Test", symbol: "LTEST", uri: "https://ipfs.io/ipfs/QmTest" }),
+        ...(v === "v3" ? ixBuyV3({ user: payer, mint, g, spend, minTokens: (q.tokens * 95n) / 100n }) : ixBuy({ user: payer, mint, curve, g, spend, minTokens: (q.tokens * 95n) / 100n }))];
+      const sim = await simulate(await buildTx(payer, ixs, null, luts()), [ata(payer, mint, TOKEN_2022), payer]);
+      out[v + "Bytes"] = (await buildTx(payer, [...ixs, ixTransfer(payer, tipAccount(), lam(CFG.TIP_SOL))], [Keypair.generate(), Keypair.generate()].slice(0, 0), luts())).serialize().length; // the size of a real launch with tip, signatures included (cap 1,232)
+      const got = sim.post?.[0]?.length >= 72 ? sim.post[0].readBigUInt64LE(64) : null;
+      out[v] = { ok: sim.ok, err: sim.err, units: sim.units, ms: sim.ms, simTokens: got != null ? Number(got) / 1e6 : null, logs: sim.ok ? sim.logs.filter((l) => /Instruction:/.test(l)).slice(0, 12) : sim.logs.slice(-14) };
+      if (sim.ok && !kvGet("buyIx")) kvSet("buyIx", v);
+    }
+  } catch (e) { out.error = e.message; }
+  // 0.1.9: the AI naming check on the owner's own example (31 Oct 00:51 UK): WhiteHouse "Dems in charge? Nothing scarier. 🎃" with its Goosebumps-style pictures
+  if (CFG.AI_KEY) { const t0 = Date.now(); const r = await aiName({ user: "WhiteHouse", kind: "post", ownText: "Dems in charge? Nothing scarier. 🎃", subjectText: "", images: ["https://pbs.twimg.com/media/HV6yhmrWQAASiYk.jpg", "https://pbs.twimg.com/media/HV6yjnzW4AANlvW.jpg"] }); out.ai = r ? { ...r, ms: Date.now() - t0 } : { ok: false, ms: Date.now() - t0, err: aiStat.lastErr }; }
+  // 0.1.6: is the TwitterAPI.io key itself valid? one REST lookup (15 credits) — tells "bad key" apart from "no Stream plan" when the websocket says 403
+  if (CFG.TWITTER_KEY) try { const r = await fetch(`${CFG.REST}/twitter/tweets?tweet_ids=20`, { headers: { "X-API-Key": CFG.TWITTER_KEY }, signal: AbortSignal.timeout(6000) }); const j = await r.json().catch(() => ({})); out.twitterRest = { http: r.status, ok: r.ok && j.status !== "error", tweets: (j.tweets || []).length, msg: String(j.msg || j.message || "").slice(0, 120) }; } catch (e) { out.twitterRest = { ok: false, err: e.message }; }
+  try { const m = await uploadMeta({ name: "Launcher Test", symbol: "LTEST", description: "test upload — not launched", img: { bytes: coinImage("Launcher Test", "LTEST"), type: "image/png", ext: "png" }, tweetUrl: "" }); out.upload = { ok: true, ms: m.ms, uri: m.uri }; } catch (e) { out.upload = { ok: false, err: e.message }; }
+  st.selfTest = out; kvSet("selfTest", JSON.stringify(out)); exportNow();
+}
+
+// ---------- export to the launcher-data branch (for the chat) and status for the website ----------
+const csv = (rows) => { if (!rows.length) return ""; const cols = Object.keys(rows[0]); const e = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v)); return [cols.join(","), ...rows.map((r) => cols.map((c) => e(r[c])).join(","))].join("\n"); };
+export function status() {
+  return { ...st, at: now(), wallet: ME.toBase58(), balanceSol: balance != null ? +sol(balance).toFixed(4) : null, liveToday: liveToday(), cap: CFG.DAILY_CAP || "none", minBalanceSol: CFG.MIN_BALANCE_SOL, tpFraction: CFG.TP_FRACTION, stakeSol: CFG.STAKE_SOL, deadMin: CFG.DEAD_MIN, quietMin: CFG.QUIET_MIN, tpX: CFG.TP_X,
+    lut: lutStat, copies: copyStatus(), peaks: peakStat, study: studyStat, vol: volStat, mark: markStat, volBackfill: bfStat, rf: rfStat, manualStudy: manualStat, operators: opStat, creators: ctStat, fd: fdStat, snipers2: snStat, quotes: qStat, live: liveStat, chain: cfStat, farm: farmStat, sweep: sweepStat, paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
+    accounts: CFG.ACCOUNTS, twitter: { keySet: !!CFG.TWITTER_KEY, ...twStat }, ai: !!CFG.AI_KEY, aiStat, meta: metaStat, rpc: rpcStats, trackerDb: !!tdb, lastSweep: kvGet("lastSweep"), lastFeeCollect: kvGet("lastFeeCollect"), phantom: PHANTOM };
+}
+let pushing = false, soon = null;
+function exportNow() {
+  try {
+    writeFileSync(`${CFG.OUT_DIR}/launches.csv`, csv(db.prepare("SELECT * FROM launches ORDER BY id").all()));
+    writeFileSync(`${CFG.OUT_DIR}/posts.csv`, csv(db.prepare("SELECT id, user, kind, text, parent_id, parent_user, parent_text, created_ms, recv_ms, ctx_ms FROM posts WHERE recv_ms>=? ORDER BY recv_ms").all((now() - 7 * 86400) * 1000)));
+    try { writeFileSync(`${CFG.OUT_DIR}/copies.csv`, csv(db.prepare("SELECT * FROM copies ORDER BY launch_id, created_ts").all())); writeFileSync(`${CFG.OUT_DIR}/copy_picks.csv`, csv(db.prepare("SELECT * FROM copy_picks ORDER BY launch_id").all())); writeFileSync(`${CFG.OUT_DIR}/copy_peaks.csv`, csv(db.prepare("SELECT * FROM copy_peaks ORDER BY peak_mc DESC").all())); } catch {}
+    try { writeFileSync(`${CFG.OUT_DIR}/operators.csv`, csv(db.prepare("SELECT * FROM operators ORDER BY coins DESC, runners DESC").all())); writeFileSync(`${CFG.OUT_DIR}/operator_coins.csv`, csv(db.prepare("SELECT * FROM operator_coins ORDER BY anchor, mint").all())); writeFileSync(`${CFG.OUT_DIR}/wallet_trace.csv`, csv(db.prepare("SELECT * FROM wallet_trace ORDER BY checked_ts").all())); writeFileSync(`${CFG.OUT_DIR}/wallet_out.csv`, csv(db.prepare("SELECT * FROM wallet_out WHERE dest<>'' ORDER BY ts").all())); writeFileSync(`${CFG.OUT_DIR}/snipers.csv`, csv(db.prepare("SELECT * FROM snipers ORDER BY coins DESC, runners DESC").all())); writeFileSync(`${CFG.OUT_DIR}/creator_trace.csv`, csv(db.prepare("SELECT * FROM creator_trace WHERE create_ts>=? ORDER BY create_ts DESC").all(Math.floor(Date.now() / 1000) - 7 * 86400))); writeFileSync(`${CFG.OUT_DIR}/fd_watch.csv`, csv(db.prepare("SELECT * FROM fd_watch WHERE created_ts>=? ORDER BY created_ts DESC").all(Math.floor(Date.now() / 1000) - 36 * 3600))); writeFileSync(`${CFG.OUT_DIR}/fd_early.csv`, csv(db.prepare("SELECT * FROM fd_early WHERE created_ts>=? ORDER BY created_ts DESC").all(Math.floor(Date.now() / 1000) - 86400))); writeFileSync(`${CFG.OUT_DIR}/fd_sniper_stats.csv`, csv(db.prepare("SELECT * FROM fd_sniper_stats ORDER BY launches DESC").all())); writeFileSync(`${CFG.OUT_DIR}/fd_quotes.csv`, csv(db.prepare("SELECT * FROM fd_quotes ORDER BY ts DESC LIMIT 5000").all())); } catch {}
+    try { writeFileSync(`${CFG.OUT_DIR}/rf_watch.csv`, csv(db.prepare("SELECT * FROM rf_watch ORDER BY created_ts").all())); } catch {}
+    try { writeFileSync(`${CFG.OUT_DIR}/vol_paper.csv`, csv(db.prepare("SELECT * FROM vol_paper ORDER BY id").all())); } catch {}
+    try { writeFileSync(`${CFG.OUT_DIR}/live_trades.csv`, csv(db.prepare("SELECT * FROM live_trades ORDER BY id").all())); } catch {} // 0.8.17
+    try { writeFileSync(`${CFG.OUT_DIR}/chain_fill.csv`, csv(db.prepare("SELECT * FROM chain_fill ORDER BY vol_id").all())); } catch {} // 0.9.0
+    try { writeFileSync(`${CFG.OUT_DIR}/fd_hgrowth.csv`, csv(db.prepare("SELECT * FROM fd_hgrowth ORDER BY ts").all())); } catch {} // 0.9.6: holder growth 60 → 120 s on the U books' coins
+    try { writeFileSync(`${CFG.OUT_DIR}/buyer_funding.csv`, csv(db.prepare("SELECT * FROM buyer_funding WHERE ts>=? ORDER BY mint, sol_in DESC").all(now() - 48 * 3600))); writeFileSync(`${CFG.OUT_DIR}/buyer_funding_sum.csv`, csv(db.prepare("SELECT * FROM buyer_funding_sum ORDER BY ts").all())); } catch {} // 0.9.11
+    try { writeFileSync(`${CFG.OUT_DIR}/farm_dumps.csv`, csv(db.prepare("SELECT * FROM farm_dumps ORDER BY dump_ts").all())); writeFileSync(`${CFG.OUT_DIR}/farm_wallets.csv`, csv(db.prepare("SELECT * FROM farm_wallets ORDER BY dump_ts, mint").all())); } catch {} // 0.9.9
+    try { const since = now() - 24 * 3600; writeFileSync(`${CFG.OUT_DIR}/fd_decisions.csv`, csv(db.prepare("SELECT * FROM fd_decisions WHERE ts>=? ORDER BY ts, mint, rule").all(since))); writeFileSync(`${CFG.OUT_DIR}/fd_wallet_state.csv`, csv(db.prepare("SELECT s.* FROM fd_wallet_state s JOIN (SELECT mint FROM fd_watch WHERE created_ts>=?) w ON w.mint=s.mint ORDER BY s.mint, s.at, s.sol_in DESC").all(now() - 12 * 3600))); } catch {} // 0.9.9
+    // 0.9.7 (owner, 5 Nov 19:27 UK: "why not everything now"): the tracker already keeps every trade (wallet, slot, signature, SOL, tokens, price) of bundle tier-1 launches for 30 min,
+    // and from tracker v0.19 of every launch that reaches 15 SOL of buys — the dump transactions of the books' coins. Exported for the coins entered in the last LAUNCH_TRADES_HOURS hours.
+    try { if (tdb) { const hrs = Number(process.env.LAUNCH_TRADES_HOURS || 8), since = Math.floor(Date.now() / 1000) - hrs * 3600;
+      const mints = db.prepare("SELECT DISTINCT mint FROM chain_fill WHERE entry_ts>=?").all(since).map((x) => x.mint); const rows = [];
+      const q = tdb.prepare("SELECT mint, sig, slot, ts, wallet, is_buy, sol, tokens, price_sol FROM trades WHERE mint=? ORDER BY slot, rowid LIMIT 6000");
+      for (const m of mints) for (const r of q.all(m)) rows.push(r);
+      writeFileSync(`${CFG.OUT_DIR}/trades_books.csv`, csv(rows)); } } catch (e) { console.error("[export trades_books]", e.message); }
+    // 0.8.14: the study files (2 MB + 20 MB, ~150 MB of heap to build) only when the study has changed or once an hour — building them every 10 min on a 300 MB pm2 limit is what restarted the launcher every 90 s on 5 Nov 00:05–01:00 UK
+    if (studyStat.studied !== lastStudyExport.n || Date.now() - lastStudyExport.t > 3600000) { lastStudyExport = { n: studyStat.studied, t: Date.now() };
+    try { writeFileSync(`${CFG.OUT_DIR}/study_coins.jsonl`, db.prepare("SELECT * FROM study_coins ORDER BY studied_ts").all().map((r) => JSON.stringify({ ...r, data: JSON.parse(r.data || "{}") })).join("\n")); writeFileSync(`${CFG.OUT_DIR}/study_buyers.jsonl`, db.prepare("SELECT * FROM study_buyers ORDER BY mint, rank").all().map((r) => JSON.stringify({ mint: r.mint, wallet: r.wallet, rank: r.rank, ...JSON.parse(r.data || "{}") })).join("\n")); } catch {} }
+    writeFileSync(`${CFG.OUT_DIR}/raw_events.jsonl`, db.prepare("SELECT raw FROM posts WHERE raw IS NOT NULL ORDER BY recv_ms").all().map((r) => r.raw).join("\n"));
+    writeFileSync(`${CFG.OUT_DIR}/status.json`, JSON.stringify(status(), null, 1)); st.exports++;
+    if (process.env.LAUNCH_NO_PUSH || CFG.SMOKE || pushing) return; pushing = true;
+    execFile("bash", [new URL("../push.sh", import.meta.url).pathname], { timeout: 180000 }, (e, so, se) => { pushing = false; st.lastPush = e ? "failed: " + (se || e.message).slice(0, 160) : "ok " + new Date().toISOString(); });
+  } catch (e) { st.errors++; st.lastErr = "export: " + e.message; }
+}
+function exportSoon() { clearTimeout(soon); soon = setTimeout(exportNow, 90000); }
+
+// ---------- start ----------
+if (CFG.SMOKE) {
+  const g = { feeRecipient: Keypair.generate().publicKey, initVTok: 1073000000000000n, initVSol: 30000000000n, initRTok: 793100000000000n, supply: 1000000000000000n, feeBps: 95, creatorFeeBps: 30, buybackFeeRecipients: [] };
+  const mint = Keypair.generate().publicKey, curve = freshCurve(g, ME), q = quoteBuy(curve, g, lam(CFG.STAKE_SOL));
+  const ixs = [ixCreateV2({ mint, user: ME, creator: ME, name: "Smoke Test", symbol: "SMOKE", uri: "https://example.com/x.json" }), ...ixBuy({ user: ME, mint, curve, g, spend: lam(CFG.STAKE_SOL), minTokens: q.tokens })];
+  const png = coinImage("Smoke Test", "SMOKE"), n = ruleName({ ownText: "Starlink in Bolivia!", subjectText: "" });
+  console.log("[launcher] smoke ok", JSON.stringify({ ver: VER, ixs: ixs.length, tokens: Number(q.tokens) / 1e6, png: png.length, name: n, trackerDb: !!tdb, twitterKey: !!CFG.TWITTER_KEY }));
+  process.exit(0);
+}
+// 0.1.5: keys sent to the box encrypted (launcher/secrets.enc.json) are opened into /root/launcher/.env; the process then restarts so they load
+try { st.inboxPublicKey = inboxPublic(); const got = inboxApply(); if (got.length) { console.log(`[launcher] keys received: ${got.join(", ")} — restarting to load them`); setTimeout(() => process.exit(0), 500); } } catch (e) { st.lastErr = "inbox: " + e.message; }
+console.log(`[launcher] ${VER} up — mode ${CFG.MODE}, wallet ${ME.toBase58()}, stake ${CFG.STAKE_SOL} SOL, cap ${CFG.DAILY_CAP}/day, X stream ${CFG.TWITTER_KEY ? "on" : "OFF (no TWITTERAPI_KEY)"}, AI ${CFG.AI_KEY ? "on" : "off"}`);
+startStream(onPost);
+// 0.1.15: the lookup table is made (or completed) before the self-test, so the test measures the real launch size
+setTimeout(async () => { if (CFG.MODE === "live") { try { const g = await global(); await ensureLut({ wallet, kvGet, kvSet, wanted: wantedFor(ME, g, TIPS.map((t) => new PublicKey(t))) }); } catch (e) { lutStat.lastErr = e.message; } } selfTest(); }, 3000); setInterval(() => { const t = st.selfTest; if (!t || t.error || !t.upload?.ok || !(t.classic?.ok || t.v3?.ok)) selfTest(); }, 1800000); // re-test every 30 min until it passes
+setInterval(() => watch(), 15000);
+setInterval(() => requests().catch(() => {}), 1000);
+setInterval(copyJob, 300000);
+setInterval(() => copyTick(db).catch(() => {}), 20000);
+if (!CFG.SMOKE && Number(process.env.LAUNCH_VOL_BOOKS || 0)) { setTimeout(() => volPoll(db), 15000); setInterval(() => volPoll(db), 30000); } // 0.8.0: V300/V500/VA off (owner 4 Nov: −10…−13% on 48 trades); set LAUNCH_VOL_BOOKS=1 to run them
+if (!CFG.SMOKE) { setInterval(() => volScore(db), 300000); setInterval(() => volFillExitTime(db), 60000); setInterval(() => volMark(db), 15000); setTimeout(() => volMark(db), 20000); if (process.env.LAUNCH_SHADOW_POLL === "1") setInterval(() => volQuotePoll(db), 8000); /* 0.9.3: OFF by default — the chain-side simulated fill (chainfill.mjs) replaces the Jupiter shadow poll, and a live buy was lost to a 429 at 13:01 UK; LAUNCH_SHADOW_POLL=1 turns it back on */ setInterval(() => livePoll(), 1000); /* 0.9.4: reads the chain-side stream, no Jupiter call unless selling */ setInterval(() => chainBackstop(), 30000); setTimeout(() => chainBackstop(), 25000); /* 0.9.0 */ setInterval(() => buildFarm(6), 1800000); setTimeout(() => buildFarm(12), 90000); /* 0.9.9: the farm list from the tracker's trades, every 30 min; first pass covers the last 12 h */ /* 0.8.16: mark every 15 s; 0.8.17: shadow positions quoted every 6 s and live positions every 4 s — 25 of the 30 keyless Jupiter requests a minute, the rest for entries */ setInterval(() => rfFind(db), 30000); setInterval(() => rfCheck(db), 20000); setTimeout(() => fdScan(db, tdb), 20000); setInterval(() => fdScan(db, tdb), 15000); setInterval(() => fdCheck(db, tdb), 15000); if (process.env.LAUNCH_FD_SNIPER_STATS === "1") { setInterval(() => fdSniperStats(db, tdb), 3600000); setTimeout(() => fdSniperStats(db, tdb), 90000); } /* 0.8.13: OFF — 0.8.12 restarted every 90 s exactly, on this timer (rss 270–290M vs the 300M pm2 limit, heap 30–45M) */ setTimeout(() => runSweep(db, exportNow), 60000); setInterval(exportNow, 600000); } // 0.8.2: publish every 10 min (owner 4 Nov 10:32 UK: 5–10 minute checks) // 0.4.0 / 0.5.0 / 0.8.0 (the VA backfill finished 4 Nov 05:00: 1 hit in 1,500 coins)
+// 0.6.0: addresses listed in launcher/study-now.txt are studied once (newest method), 20 s after start
+if (!CFG.SMOKE) setTimeout(() => { try { const done = new Set(db.prepare("SELECT mint, data FROM study_coins WHERE role='manual' AND err IS NULL").all().filter((r) => { try { return JSON.parse(r.data).v != null; } catch { return false; } }).map((r) => r.mint));
+  for (const m of readFileSync(new URL("../study-now.txt", import.meta.url), "utf8").split(/\s+/).map((x) => x.trim()).filter(Boolean)) if (!done.has(m)) studyAddress(db, m, exportNow); } catch {} }, 20000);
+if (!CFG.SMOKE) { const peaksThenStudy = () => { try { st.census = loadCensus(tdb); } catch {} return runStudy(db, exportNow).then(() => runOperators(db, exportNow)).then(() => creatorCensus(db, tdb, exportNow)).then(() => runPeaks(db, exportNow)); }; /* 0.7.6: the operator database first, the copycat price refresh (40 min of GMGN) last */ setTimeout(peaksThenStudy, 40000); setInterval(peaksThenStudy, 3600000); } // 0.2.2: copycat market caps, then export + push
+setInterval(() => feesAndSweep(), 3600000); setTimeout(() => feesAndSweep(), 120000);
+function writeStatus() { try { writeFileSync(`${CFG.OUT_DIR}/status.json`, JSON.stringify(status(), null, 1)); } catch {} }
+setInterval(writeStatus, 10000);
+setTimeout(exportNow, 60000); setInterval(exportNow, 1800000);
+bal().catch(() => {});
+
+
+====================================================================================================
+=== FILE: launcher/src/live.mjs (17,374 chars)
+====================================================================================================
+// launcher 0.8.17 (owner, 5 Nov 2026 06:15 UK: "just build it … each trade at the minimum … choose one of the books … trade really minimalistically,
+// but in real time … what price are we actually buying into"): LIVE SHADOW TRADES — real money, tiny size, one book.
+// Every paper entry of the live book (livebook.txt: "FD 0.02" = the FD rule, 0.02 SOL a trade) is bought for real through Jupiter's swap
+// (pump.fun curve or PumpSwap, whichever the coin is on), the position is re-quoted for the sell every few seconds and sold for real the moment the
+// venue trail (25% off the high graduated / 40% on the curve, same as the paper columns) fires on those quotes — or at 2 h, the paper horizon.
+// What is kept per trade is the chain's own account of it: SOL that left the wallet for the buy (network fee, priority fee and token-account rent
+// included), tokens received, SOL that came back from the sell and from closing the token account. x = SOL back ÷ SOL out; r = x − 1 is the real
+// net return, set beside the paper venue exit (r_venue) and the 0.2 SOL quote on the same trade. Wallet = the launcher's (its key never leaves the box).
+// Stops: launcher/livebook.txt missing or "off", a file /root/launcher/live_stop, the wallet under MIN_BALANCE_SOL + stake, or 6 open positions.
+import { PublicKey, VersionedTransaction, TransactionInstruction } from "@solana/web3.js";
+import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { CFG, HOME } from "./config.mjs";
+import { conn, rpcStats, getBalance, simulate, waitConfirm, readFill, buildTx, blockHeight } from "./rpc.mjs";
+import { jqRaw, swapTxFor, SOL, qStat } from "./quote.mjs";
+import { trailPct } from "./volpaper.mjs";
+import { ixBudget } from "./pump.mjs";
+
+const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
+const PRIO_MAX = n("LAUNCH_LIVE_PRIO_LAMPORTS", 1_000_000), MAX_OPEN = n("LAUNCH_LIVE_MAX_OPEN", 2), LOSS_ROLL = n("LAUNCH_LIVE_LOSS_ROLL_SOL", 0.15), LOSS_ROLL_N = n("LAUNCH_LIVE_LOSS_ROLL_N", 20), LOSS_TOTAL = n("LAUNCH_LIVE_LOSS_TOTAL_SOL", 0.2), SLIP_BUY = n("LAUNCH_LIVE_SLIP_BUY", 1500), SLIP_SELL = n("LAUNCH_LIVE_SLIP_SELL", 2500); // 0.9.8 (reviews, 5 Nov): 2 open at most; stop new buys when the last ≤ 20 fills have lost 0.15 SOL (from the first trade) or the experiment has lost 0.2 SOL in all; selling is never blocked
+const HORIZON = 120 * 60, GIVE_UP = 180 * 60; // sell at 2 h like the paper score; a coin with no route for 3 h is written off
+const now = () => Math.floor(Date.now() / 1000);
+export const liveStat = { enabled: false, book: null, stake: 0, buys: 0, buyFails: 0, sells: 0, sellFails: 0, skipped: 0, open: 0, writtenOff: 0, balanceSol: null, lastErr: "", lastSig: "", polls: 0 };
+liveStat.expStart = n("LAUNCH_LIVE_EXP_START", 0) || Math.floor(Date.now() / 1000); // 0.9.8: the cumulative loss limit counts fills from here (env to pin it across restarts)
+let db = null, wallet = null, ME = null, cfgAt = 0, cfg = { book: null, stake: 0 };
+
+/** livebook.txt in the launcher folder: "<BOOK> <SOL>" (e.g. "FD 0.02"); "off" or missing = no live trades. Env LAUNCH_LIVE_BOOK / LAUNCH_LIVE_SOL override. Re-read every 5 s. */
+export function liveCfg() {
+  if (Date.now() - cfgAt < 5000) return cfg; cfgAt = Date.now();
+  let book = process.env.LAUNCH_LIVE_BOOK || null, stake = n("LAUNCH_LIVE_SOL", 0);
+  if (!book) { try { const [b, s] = readFileSync(new URL("../livebook.txt", import.meta.url), "utf8").trim().split(/\s+/); if (b && b.toLowerCase() !== "off") { book = b.toUpperCase(); stake = Number(s) || 0.02; } } catch {} }
+  if (existsSync(join(HOME, "live_stop"))) book = null;
+  if (CFG.SMOKE || !wallet) book = null;
+  cfg = { book, stake: book ? Math.max(0.005, stake) : 0 }; liveStat.enabled = !!book; liveStat.book = book; liveStat.stake = cfg.stake; return cfg;
+}
+export const isLiveBook = (k) => liveCfg().book === k;
+
+export function initLive(d, kp) {
+  db = d; wallet = kp; ME = kp.publicKey;
+  db.exec(`CREATE TABLE IF NOT EXISTS live_trades (id INTEGER PRIMARY KEY AUTOINCREMENT, vol_id INTEGER UNIQUE, strat TEXT, mint TEXT, name TEXT, curve INTEGER, entry_ts INTEGER, entry_price REAL, sol_usd REAL, stake_sol REAL,
+    buy_ts INTEGER, buy_sig TEXT, buy_status TEXT, buy_ms INTEGER, buy_err TEXT, buy_impact REAL, sol_in REAL, tokens REAL, buy_px REAL, in_gap REAL,
+    hi REAL, last_x REAL, last_ts INTEGER, n_quotes INTEGER DEFAULT 0, sell_ts INTEGER, sell_sig TEXT, sell_status TEXT, sell_reason TEXT, sell_tries INTEGER DEFAULT 0, sell_err TEXT, sell_impact REAL,
+    sol_out REAL, x REAL, r REAL, closed INTEGER DEFAULT 0, done INTEGER DEFAULT 0)`);
+  for (const c of ["buy_quote_ms INTEGER", "buy_sim_ms INTEGER", "buy_land_ms INTEGER", "buy_slot INTEGER", "buy_lag_s INTEGER", "sell_ms INTEGER", "sell_land_ms INTEGER", "sell_slot INTEGER"]) try { db.exec(`ALTER TABLE live_trades ADD COLUMN ${c}`); } catch {} // 0.8.19 (owner, 07:45 UK: "transaction speed … both ways … is the key")
+  db.exec("CREATE INDEX IF NOT EXISTS live_open ON live_trades (done, buy_status)");
+  liveCfg(); try { if (cfg.book) db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('LIVE', ?, ?)").run(now(), (() => { try { return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version; } catch { return null; } })()); } catch {} // when live trading was first switched on (the page's "Loaded" time)
+}
+const openCount = () => db.prepare("SELECT COUNT(*) n FROM live_trades WHERE done=0").get().n;
+
+/** Send a signed transaction (plain RPC; Jupiter's transaction carries no Sender tip) and keep re-sending the same bytes until it lands, fails, or its blockhash expires. */
+async function land(tx, lastValid, ms = 25000) {
+  const raw = tx.serialize(); const t0 = Date.now(); rpcStats.sends++;
+  const sig = await conn.sendRawTransaction(raw, { skipPreflight: true, maxRetries: 0 }); let resends = 0;
+  while (Date.now() - t0 < ms) {
+    const c = await waitConfirm(sig, 2500); if (c.status !== "timeout") return { ...c, sig, resends, ms: Date.now() - t0 };
+    if (lastValid) { try { if ((await blockHeight()) > lastValid) return { status: "expired", sig, resends, ms: Date.now() - t0, err: null }; } catch {} }
+    try { await conn.sendRawTransaction(raw, { skipPreflight: true, maxRetries: 0 }); resends++; } catch {}
+  }
+  const late = await waitConfirm(sig, 8000); return { ...late, sig, resends, ms: Date.now() - t0 };
+}
+async function fill(sig, mint) { for (let i = 0; i < 8; i++) { const f = await readFill(sig, ME, new PublicKey(mint), 1); if (f) return f; await new Promise((r) => setTimeout(r, 700)); } return null; }
+
+/** The real buy for a paper entry of the live book. Not awaited by the caller; everything it learns goes into live_trades. */
+export async function liveBuy(row) {
+  const c = liveCfg(); if (!c.book || row.strat !== c.book) return;
+  const t = now(), lamports = Math.round(c.stake * 1e9);
+  const ins = (status, err = null) => db.prepare("INSERT OR IGNORE INTO live_trades (vol_id, strat, mint, name, curve, entry_ts, entry_price, sol_usd, stake_sol, buy_ts, buy_status, buy_err, done) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)")
+    .run(row.id, row.strat, row.mint, row.name, row.curve, t, row.entry_price, row.su, c.stake, t, status, err, status === "skipped" ? 1 : 0).changes;
+  const upd = (status, extra = {}) => { const ks = Object.keys(extra); db.prepare(`UPDATE live_trades SET buy_status=?${ks.map((k) => `, ${k}=?`).join("")} WHERE vol_id=?`).run(status, ...ks.map((k) => extra[k]), row.id); };
+  if (openCount() >= MAX_OPEN) { if (ins("skipped", `${MAX_OPEN} open`)) liveStat.skipped++; return; }
+  { const roll = db.prepare("SELECT COALESCE(SUM(sol_out - sol_in), 0) v, COUNT(*) n FROM (SELECT sol_out, sol_in FROM live_trades WHERE done=1 AND buy_status='confirmed' AND sol_out IS NOT NULL ORDER BY sell_ts DESC LIMIT ?)").get(LOSS_ROLL_N);
+    const total = db.prepare("SELECT COALESCE(SUM(sol_out - sol_in), 0) v FROM live_trades WHERE done=1 AND buy_status='confirmed' AND sol_out IS NOT NULL AND buy_ts >= ?").get(liveStat.expStart || 0);
+    if (roll.v <= -LOSS_ROLL) { if (ins("skipped", `loss limit: ${roll.v.toFixed(3)} SOL over the last ${roll.n} fills`)) liveStat.skipped++; liveStat.lastErr = `stopped: ${roll.v.toFixed(3)} SOL over the last ${roll.n} fills`; return; }
+    if (total.v <= -LOSS_TOTAL) { if (ins("skipped", `experiment loss limit: ${total.v.toFixed(3)} SOL`)) liveStat.skipped++; liveStat.lastErr = `stopped: experiment at ${total.v.toFixed(3)} SOL`; return; } }
+  let bal = null; try { bal = await getBalance(ME); liveStat.balanceSol = +(bal / 1e9).toFixed(4); } catch (e) { liveStat.lastErr = "balance: " + e.message.slice(0, 80); }
+  if (bal == null || bal < (CFG.MIN_BALANCE_SOL + c.stake) * 1e9) { if (ins("skipped", bal == null ? "balance unknown" : `balance ${(bal / 1e9).toFixed(3)} < ${(CFG.MIN_BALANCE_SOL + c.stake).toFixed(3)}`)) liveStat.skipped++; return; }
+  if (!ins("quoting")) return;
+  const t0 = Date.now();
+  try {
+    const q = await jqRaw(SOL, row.mint, lamports, SLIP_BUY, true); qStat.buys++;
+    const s = await swapTxFor(q, ME.toBase58(), PRIO_MAX); const tQ = Date.now() - t0;
+    const tx = VersionedTransaction.deserialize(Buffer.from(s.tx64, "base64")); tx.sign([wallet]);
+    const t1 = Date.now(); const sim = await simulate(tx); const tS = Date.now() - t1; if (!sim.ok) throw new Error("sim: " + String(sim.err).slice(0, 110) + " " + (sim.logs || []).filter((l) => /Error|insufficient|slippage/i.test(l)).slice(-1).join("").slice(0, 60));
+    upd("sent", { buy_impact: Number(q.priceImpactPct) || 0 });
+    const L = await land(tx, s.lastValidBlockHeight); liveStat.lastSig = L.sig;
+    if (L.status !== "confirmed") throw new Error(`${L.status}${L.err ? " " + L.err.slice(0, 60) : ""} sig ${L.sig.slice(0, 12)}`);
+    const f = await fill(L.sig, row.mint);
+    if (!f || !(f.tokenDelta > 0)) throw new Error(`no fill read (sig ${L.sig.slice(0, 12)})`);
+    const solIn = -f.solDelta / 1e9, rent = 0.00203928, px = (solIn - rent - f.fee / 1e9) / (f.tokenDelta / 1e6) * (row.su || 0), gap = row.entry_price > 0 && px > 0 ? px / row.entry_price - 1 : null;
+    upd("confirmed", { buy_sig: L.sig, buy_ms: Date.now() - t0, buy_quote_ms: tQ, buy_sim_ms: tS, buy_land_ms: L.ms, buy_slot: L.slot || null, buy_lag_s: (f.blockTime || t) - row.t, sol_in: +solIn.toFixed(6), tokens: f.tokenDelta, buy_px: px || null, in_gap: gap != null ? +gap.toFixed(4) : null, hi: 1, buy_ts: f.blockTime || t }); // buy_lag_s = paper entry → fill, in seconds
+    liveStat.buys++;
+  } catch (e) { liveStat.buyFails++; liveStat.lastErr = `buy ${row.mint.slice(0, 6)}: ${e.message}`.slice(0, 140); upd("failed", { buy_err: e.message.slice(0, 120), buy_ms: Date.now() - t0, done: 1 }); }
+}
+
+/** Every 4 s: the open live position quoted longest ago gets a sell quote for its actual tokens; the venue trail off the quoted high (from 1 = what went in) or the 2-hour horizon sells it for real. */
+let polling = false;
+export async function livePoll() {
+  if (!db || polling) return; polling = true;
+  try {
+    const t = now(); liveStat.open = openCount();
+    const open = db.prepare("SELECT * FROM live_trades WHERE done=0 AND buy_status='confirmed' AND tokens>0 ORDER BY buy_ts").all();
+    if (!open.length) return;
+    // 0.9.4: the trail runs on the chain-side price stream the simulated fill keeps for the same coin (chain_fill: every transaction that moves the pool),
+    // not on a Jupiter poll — Jupiter is for execution only (one quote + one swap per leg). Same decision as the simulation, so simulated vs real is like for like.
+    let polled = false;
+    for (const r of open) {
+      const c = db.prepare("SELECT s_last_x, s_hi, s_last_ts, s_trig_ts, s_exit_reason, done FROM chain_fill WHERE mint=? AND s_tokens IS NOT NULL ORDER BY s_last_ts DESC LIMIT 1").get(r.mint);
+      if (c && c.s_last_x != null && t - (c.s_last_ts || 0) < 120) {
+        const x = c.s_last_x, hi = Math.max(r.hi || 1, c.s_hi || 1, x), keep = 1 - trailPct(r.curve);
+        const trig = c.s_trig_ts != null || (c.done === 1 && /trail|2h/.test(c.s_exit_reason || "")) || x <= (r.hi || 1) * keep;
+        const reason = trig ? "trail" : t - r.buy_ts >= HORIZON ? "2h" : null;
+        db.prepare("UPDATE live_trades SET last_ts=?, last_x=?, hi=?, n_quotes=n_quotes+1 WHERE id=?").run(t, +x.toFixed(4), +hi.toFixed(4), r.id);
+        if (reason && !(r.sell_status === "sending")) { let q; try { q = await jqRaw(r.mint, SOL, Math.floor(r.tokens), SLIP_SELL, true); } catch (e) { qStat.errors++; liveStat.lastErr = `sell quote ${r.mint.slice(0, 6)}: ${e.message}`.slice(0, 120); continue; } await liveSell(r, q, reason); }
+        continue;
+      }
+      // no chain-side price for this coin (unpriced entry, or the stream is stale): the old Jupiter poll, one coin per pass, no more than every 8 s
+      if (polled || Date.now() < qStat.pauseUntil || (r.last_ts && t - r.last_ts < 8)) continue; polled = true; liveStat.polls++;
+      let q; try { q = await jqRaw(r.mint, SOL, Math.floor(r.tokens), SLIP_SELL, true); }
+      catch (e) { qStat.errors++; liveStat.lastErr = `poll ${r.mint.slice(0, 6)}: ${e.message}`.slice(0, 120);
+        if (!/paused|429/.test(e.message)) { db.prepare("UPDATE live_trades SET last_ts=?, n_quotes=n_quotes+1, sell_err=? WHERE id=?").run(t, e.message.slice(0, 80), r.id);
+          if (t - r.buy_ts > GIVE_UP) { db.prepare("UPDATE live_trades SET done=1, sell_status='written_off', sell_reason='no route 3 h', sol_out=0, x=0, r=-1, sell_ts=? WHERE id=?").run(t, r.id); liveStat.writtenOff++; } }
+        continue; }
+      const x = Number(q.outAmount) / 1e9 / r.stake_sol, hi = Math.max(r.hi || 1, x), keep = 1 - trailPct(r.curve);
+      const reason = x <= (r.hi || 1) * keep ? "trail" : t - r.buy_ts >= HORIZON ? "2h" : null;
+      db.prepare("UPDATE live_trades SET last_ts=?, last_x=?, hi=?, n_quotes=n_quotes+1 WHERE id=?").run(t, +x.toFixed(4), +hi.toFixed(4), r.id);
+      if (reason) await liveSell(r, q, reason);
+    }
+  } catch (e) { liveStat.lastErr = "poll: " + e.message.slice(0, 120); }
+  finally { polling = false; }
+}
+
+async function liveSell(r, q, reason) {
+  const t = now(), t0 = Date.now();
+  db.prepare("UPDATE live_trades SET sell_status='sending', sell_reason=?, sell_tries=sell_tries+1, sell_ts=? WHERE id=?").run(reason, t, r.id);
+  try {
+    const s = await swapTxFor(q, ME.toBase58(), PRIO_MAX);
+    const tx = VersionedTransaction.deserialize(Buffer.from(s.tx64, "base64")); tx.sign([wallet]);
+    const L = await land(tx, s.lastValidBlockHeight); liveStat.lastSig = L.sig; const tSell = Date.now() - t0; // trail trigger (the quote) → landed or failed
+    if (L.status !== "confirmed") throw new Error(`${L.status}${L.err ? " " + L.err.slice(0, 60) : ""}`);
+    const f = await fill(L.sig, r.mint); if (!f) throw new Error("no fill read");
+    const left = r.tokens + f.tokenDelta; let solOut = f.solDelta / 1e9;
+    if (left > r.tokens * 0.001) { // exact-in sells everything; anything left is a partial fill — keep it open with what came back so far recorded
+      db.prepare("UPDATE live_trades SET sell_status='partial', sell_sig=?, sell_err=?, sol_out=COALESCE(sol_out,0)+?, tokens=? WHERE id=?").run(L.sig, `partial: ${left} left`, +solOut.toFixed(6), left, r.id); liveStat.lastErr = `sell ${r.mint.slice(0, 6)}: partial`; return; }
+    let closed = 0; try { solOut += await closeTokenAccounts(r.mint); closed = 1; } catch (e) { liveStat.lastErr = `close ${r.mint.slice(0, 6)}: ${e.message}`.slice(0, 120); }
+    const total = (r.sol_out || 0) + solOut, x = total / r.sol_in;
+    db.prepare("UPDATE live_trades SET sell_status='confirmed', sell_sig=?, sell_ts=?, sell_impact=?, sol_out=?, x=?, r=?, closed=?, done=1, sell_err=NULL, sell_ms=?, sell_land_ms=?, sell_slot=? WHERE id=?").run(L.sig, f.blockTime || t, Number(q.priceImpactPct) || 0, +total.toFixed(6), +x.toFixed(4), +(x - 1).toFixed(4), closed, tSell, L.ms, L.slot || null, r.id);
+    liveStat.sells++;
+  } catch (e) { liveStat.sellFails++; liveStat.lastErr = `sell ${r.mint.slice(0, 6)}: ${e.message}`.slice(0, 140); db.prepare("UPDATE live_trades SET sell_status='failed', sell_err=? WHERE id=?").run(e.message.slice(0, 120), r.id); } // stays open: the next poll quotes and tries again
+}
+
+/** After a full sell: close the (empty) token account(s) of that mint to get the rent back. Returns the SOL that came back (≈ 0.002). */
+async function closeTokenAccounts(mint) {
+  rpcStats.calls++; const res = await conn.getTokenAccountsByOwner(ME, { mint: new PublicKey(mint) }, "confirmed");
+  const ixs = []; for (const a of res.value) { const amt = a.account.data.readBigUInt64LE(64); if (amt !== 0n) continue; // bytes 64–71 of a token account = amount
+    ixs.push(new TransactionInstruction({ programId: a.account.owner, data: Buffer.from([9]), keys: [{ pubkey: a.pubkey, isSigner: false, isWritable: true }, { pubkey: ME, isSigner: false, isWritable: true }, { pubkey: ME, isSigner: true, isWritable: false }] })); }
+  if (!ixs.length) return 0;
+  const tx = await buildTx(ME, [...ixBudget(20000, 200000), ...ixs], wallet);
+  const L = await land(tx, tx.lastValidBlockHeight, 20000); if (L.status !== "confirmed") throw new Error(L.status);
+  const f = await fill(L.sig, mint); return f ? f.solDelta / 1e9 : 0;
+}
+
+
+====================================================================================================
+=== FILE: launcher/src/lut.mjs (3,867 chars)
+====================================================================================================
+// launcher 0.1.15: an address lookup table for the launch transaction. Live launches on 31 Oct (01:53–07:02 UK, 14 posts) were all refused before sending:
+// "VersionedTransaction too large: 1732–1764 bytes" (base64; Solana's cap is 1,232 raw bytes ≈ 1,644 base64). The self-test passed because its name and
+// URI were short. The fixed accounts of a launch (programs, pump.fun's global accounts, fee recipients, tip accounts, our creator vault…) go into a
+// lookup table owned by the launch wallet, so each one costs 1 byte in the transaction instead of 32. Created once (rent ≈ 0.01 SOL, recoverable).
+import { AddressLookupTableProgram, ComputeBudgetProgram, PublicKey } from "@solana/web3.js";
+import { conn, buildTx, sendUntilConfirmed } from "./rpc.mjs";
+import { PUMP, GLOBAL, MINT_AUTHORITY, SYSTEM, TOKEN, TOKEN_2022, ATA_PROGRAM, MAYHEM, MAYHEM_GLOBAL_PARAMS, MAYHEM_SOL_VAULT, EVENT_AUTHORITY, GLOBAL_VOL, FEE_CONFIG, FEE_PROGRAM, WSOL, creatorVaultOf, userVolOf } from "./pump.mjs";
+
+export const lutStat = { address: null, addresses: 0, created: null, extended: 0, lastErr: "" };
+let LUT = null, busy = null;
+export const luts = () => (LUT ? [LUT] : []);
+
+export function wantedFor(me, g, tips) {
+  const xs = [PUMP, GLOBAL, MINT_AUTHORITY, SYSTEM, TOKEN, TOKEN_2022, ATA_PROGRAM, MAYHEM, MAYHEM_GLOBAL_PARAMS, MAYHEM_SOL_VAULT, EVENT_AUTHORITY, GLOBAL_VOL, FEE_CONFIG, FEE_PROGRAM, WSOL,
+    ComputeBudgetProgram.programId, creatorVaultOf(me), userVolOf(me), g.feeRecipient, ...(g.buybackFeeRecipients || []).filter((k) => !k.equals(SYSTEM)), ...tips];
+  return [...new Set(xs.map((k) => k.toBase58()))].map((a) => new PublicKey(a));
+}
+
+/** Make sure the table exists and holds every wanted address. kv keeps its address. Safe to call often; does nothing when complete. */
+export function ensureLut({ wallet, kvGet, kvSet, wanted }) {
+  if (busy) return busy;
+  busy = (async () => {
+    try {
+      let addr = kvGet("lut");
+      if (addr) LUT = (await conn.getAddressLookupTable(new PublicKey(addr), { commitment: "confirmed" })).value;
+      if (!LUT) {
+        const slot = await conn.getSlot("finalized");
+        const [ix, address] = AddressLookupTableProgram.createLookupTable({ authority: wallet.publicKey, payer: wallet.publicKey, recentSlot: slot });
+        const r = await sendUntilConfirmed(await buildTx(wallet.publicKey, [ix], [wallet]), 30000);
+        if (r.status !== "confirmed") throw new Error(`create lookup table: ${r.status} ${r.err || ""}`);
+        addr = address.toBase58(); kvSet("lut", addr); lutStat.created = new Date().toISOString();
+        await new Promise((res) => setTimeout(res, 1500));
+        LUT = (await conn.getAddressLookupTable(address, { commitment: "confirmed" })).value;
+      }
+      const have = new Set((LUT?.state.addresses || []).map((a) => a.toBase58()));
+      const missing = wanted.filter((k) => !have.has(k.toBase58()));
+      for (let i = 0; i < missing.length; i += 20) {
+        const ix = AddressLookupTableProgram.extendLookupTable({ lookupTable: new PublicKey(addr), authority: wallet.publicKey, payer: wallet.publicKey, addresses: missing.slice(i, i + 20) });
+        const r = await sendUntilConfirmed(await buildTx(wallet.publicKey, [ix], [wallet]), 30000);
+        if (r.status !== "confirmed") throw new Error(`extend lookup table: ${r.status} ${r.err || ""}`);
+        lutStat.extended += Math.min(20, missing.length - i);
+      }
+      if (missing.length) { await new Promise((res) => setTimeout(res, 1500)); LUT = (await conn.getAddressLookupTable(new PublicKey(addr), { commitment: "confirmed" })).value; } // new entries are usable from the next slot
+      lutStat.address = addr; lutStat.addresses = LUT?.state.addresses.length || 0; lutStat.lastErr = "";
+    } catch (e) { lutStat.lastErr = e.message; }
+    finally { busy = null; }
+    return LUT;
+  })();
+  return busy;
+}
+
+
+====================================================================================================
+=== FILE: launcher/src/meta.mjs (3,167 chars)
+====================================================================================================
+// Coin metadata (name, ticker, description, picture, link to the post) on IPFS; returns the metadata URI that goes into create_v2.
+// launcher 0.1.2: pump.fun's own upload endpoint answers the server with a Cloudflare challenge (HTTP 403 "Just a moment…", first start 30 Oct 22:19 UK),
+// so the upload goes to Pinata (the IPFS service pump.fun itself uses) when PINATA_JWT is in the .env: picture first, then the metadata JSON in pump.fun's
+// format pointing at it. Without a Pinata key it still tries pump.fun's endpoint. Bot-detection challenges are not worked around.
+import { CFG } from "./config.mjs";
+
+export const metaStat = { uploads: 0, errors: 0, lastErr: "", lastMs: null, via: null };
+const PINATA = process.env.PINATA_JWT || "";
+const GATEWAY = process.env.LAUNCH_IPFS_GATEWAY || "https://ipfs.io/ipfs/";
+
+async function pin(blob, filename) {
+  const fd = new FormData(); fd.append("file", blob, filename); fd.append("network", "public"); fd.append("name", filename);
+  const r = await fetch("https://uploads.pinata.cloud/v3/files", { method: "POST", body: fd, headers: { Authorization: `Bearer ${PINATA}` }, signal: AbortSignal.timeout(8000) });
+  const j = await r.json().catch(() => ({})); if (!r.ok || !j?.data?.cid) throw new Error(`Pinata HTTP ${r.status} ${JSON.stringify(j.error || j).slice(0, 120)}`);
+  return j.data.cid;
+}
+async function viaPinata({ name, symbol, description, img: pic, tweetUrl }) {
+  const img = await pin(new Blob([pic.bytes], { type: pic.type }), `${symbol}.${pic.ext}`);
+  const meta = { name, symbol, description: description || "", image: GATEWAY + img, showName: true, createdOn: "https://pump.fun", twitter: tweetUrl || "", telegram: "", website: "" };
+  const cid = await pin(new Blob([JSON.stringify(meta)], { type: "application/json" }), `${symbol}.json`);
+  return { uri: GATEWAY + cid, image: meta.image };
+}
+async function viaPump({ name, symbol, description, img: pic, tweetUrl }) {
+  const fd = new FormData();
+  fd.append("file", new Blob([pic.bytes], { type: pic.type }), `coin.${pic.ext}`);
+  fd.append("name", name); fd.append("symbol", symbol); fd.append("description", description || "");
+  if (tweetUrl) fd.append("twitter", tweetUrl);
+  fd.append("telegram", ""); fd.append("website", ""); fd.append("showName", "true");
+  const r = await fetch(CFG.IPFS_URL, { method: "POST", body: fd, signal: AbortSignal.timeout(8000), headers: { accept: "application/json" } });
+  const txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch {}
+  if (!r.ok || !j?.metadataUri) throw new Error(`pump.fun upload HTTP ${r.status} ${/Just a moment/.test(txt) ? "(Cloudflare challenge — add PINATA_JWT)" : txt.slice(0, 100).replace(/\s+/g, " ")}`);
+  return { uri: j.metadataUri, image: j.metadata?.image || null };
+}
+export async function uploadMeta(m) {
+  const t0 = Date.now(); metaStat.uploads++; metaStat.via = PINATA ? "pinata" : "pump.fun";
+  try { const out = await (PINATA ? viaPinata(m) : viaPump(m)); metaStat.lastMs = Date.now() - t0; return { ...out, ms: metaStat.lastMs }; }
+  catch (e) { metaStat.errors++; metaStat.lastErr = e.message; metaStat.lastMs = Date.now() - t0; throw e; }
+}
+
+
+====================================================================================================
+=== FILE: launcher/src/namer.mjs (8,009 chars)
+====================================================================================================
+// Turns a post (and the post it replies to / quotes / reposts) into a coin name and ticker.
+// Rules first (no key needed); when ANTHROPIC_API_KEY is in the .env, an AI model picks instead and the rules are the fallback. Both are recorded.
+import { CFG } from "./config.mjs";
+
+const STOP = new Set("a an the and or but if of in on at to for from by with as is are was were be been being it its this that these those i you he she we they me my our your his her their them us not no yes so just very really can will would should could do does did done have has had what who why how when where which there here than then too also into over under about after before again more most less much many some any all only own same other such up down out off now new one two get got make made like".split(" "));
+const clean = (s) => String(s || "").replace(/https?:\/\/\S+/g, " ").replace(/(^|\s)@\w+/g, " ").replace(/^RT\s*:?/i, " ").replace(/&amp;/g, "&").replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}\u{1F1E6}-\u{1F1FF}]/gu, " ").replace(/\s+/g, " ").trim();
+const words = (s) => clean(s).split(/[^A-Za-z0-9'’-]+/).map((w) => w.replace(/^['’-]+|['’-]+$/g, "")).filter(Boolean);
+const title = (w, i = 1) => (i > 0 && STOP.has(w.toLowerCase()) ? w.toLowerCase() : w === w.toUpperCase() && w.length <= 5 ? w : w[0].toUpperCase() + w.slice(1));
+/** ≤ 32 characters: drop the small words first, then words from the end. */
+const fit = (ws) => { if (ws.join(" ").length <= 32) return ws; const big = ws.filter((w, i) => i === 0 || !STOP.has(w.toLowerCase())); while (big.join(" ").length > 32 && big.length > 1) big.pop(); return big; };
+
+/** Ticker from a name: the words run together if that is ≤ 10 letters, else the initials of the main words ("Super Intelligence" → SI). */
+export function tickerOf(name) {
+  const ws = name.split(/\s+/).map((w) => w.replace(/[^A-Za-z0-9]/g, "")).filter(Boolean);
+  const joined = ws.join("").toUpperCase(); if (joined.length && joined.length <= 10) return joined;
+  const main = ws.filter((w) => !STOP.has(w.toLowerCase()));
+  return main.length >= 2 ? main.map((w) => w[0]).join("").toUpperCase().slice(0, 10) : joined.slice(0, 10);
+}
+
+/** Candidate phrases in priority order: #hashtags, "quoted phrases", runs of Capitalised words (small words allowed inside), then the longest uncommon words. */
+export function candidates(text) {
+  const out = [], push = (p, why) => { p = fit(p.replace(/\s+/g, " ").trim().split(" ")).map(title).join(" "); if (p && [...p].length <= 32 && /[A-Za-z]/.test(p) && !out.some((o) => o.name.toLowerCase() === p.toLowerCase())) out.push({ name: p, why }); };
+  for (const m of String(text || "").matchAll(/#([A-Za-z][A-Za-z0-9_]{2,30})/g)) push(m[1].replace(/_/g, " "), "hashtag");
+  for (const m of clean(text).matchAll(/["“”']([^"“”']{3,32})["“”']/g)) if (words(m[1]).length <= 4) push(words(m[1]).join(" "), "quoted");
+  const ws = words(text); let run = [];
+  const flush = () => { while (run.length && STOP.has(run[run.length - 1].toLowerCase())) run.pop(); if (run.length && !(run.length === 1 && STOP.has(run[0].toLowerCase()))) push(run.slice(0, 5).join(" "), "capitalised"); run = []; };
+  ws.forEach((w, i) => { const cap = /^[A-Z0-9]/.test(w) && !(i === 0 && STOP.has(w.toLowerCase())); if (cap) run.push(w); else if (run.length && STOP.has(w.toLowerCase()) && /^[A-Z]/.test(ws[i + 1] || "")) run.push(w); else flush(); });
+  flush();
+  // the first two neighbouring uncommon words ("super intelligence"), then the longest uncommon word
+  for (let i = 0; i + 1 < ws.length; i++) { const a = ws[i], b = ws[i + 1]; if (a.length >= 3 && b.length >= 3 && !STOP.has(a.toLowerCase()) && !STOP.has(b.toLowerCase())) { push(a + " " + b, "pair"); break; } }
+  const rare = ws.filter((w) => w.length >= 4 && !STOP.has(w.toLowerCase())).sort((a, b) => b.length - a.length);
+  if (rare[0]) push(rare[0], "word");
+  return out;
+}
+
+/** The rules' pick for a post. subjectText = the text the narrative comes from (original post for a reply / repost; quoted + own text for a quote). */
+export function ruleName({ ownText, subjectText }) {
+  const own = candidates(ownText), sub = candidates(subjectText);
+  const ownWords = words(ownText).filter((w) => !STOP.has(w.toLowerCase()));
+  // a short reaction ("Wow", "True!!", "💯") carries no name of its own → the subject decides
+  const pool = ownWords.length >= 2 && own.length ? [...own, ...sub] : [...sub, ...own];
+  const best = pool[0]; if (!best) return null;
+  const name = best.name.slice(0, 32);
+  return { name, ticker: tickerOf(name), why: best.why, from: pool === own || own.includes(best) ? "own" : "subject", score: null, by: "rules" };
+}
+
+/** AI pick (optional). Returns null on any failure so the rules stand. */
+export const aiStat = { calls: 0, ok: 0, errors: 0, lastErr: "", lastMs: null };
+export async function aiName({ user, kind, ownText, subjectText, subjectUser, images = [] }) {
+  if (!CFG.AI_KEY) return null;
+  const prompt = `A memecoin will be launched on pump.fun the moment this X post appears. Pick the coin name and ticker that traders would most likely search for.\n` +
+    `Post by @${user} (${kind}): "${String(ownText).slice(0, 600)}"\n` + (subjectText ? `It ${kind === "reply" ? "replies to" : kind === "quote" ? "quotes" : "reposts"} @${subjectUser || "?"}: "${String(subjectText).slice(0, 900)}"\n` : "") +
+    (images.length ? `The post has ${images.length} picture(s), attached below. LOOK AT THEM: the narrative is often in the picture — a title, a brand, a character, words written on it (e.g. a post "Dems in charge? Nothing scarier." whose pictures are Goosebumps-style covers → name "Goosebumps").\n` : "") +
+    `Rules (owner's): the name must be the post's OWN words or the words/thing shown in its picture, like for like — never invent a different phrase. Pick the single most distinctive, recognisable word or short phrase a trader would search for; prefer a title, brand, character or catchphrase over generic words (Dems, AI, Elon, Trump, Bitcoin). Name ≤ 32 characters, ticker 2–10 letters/digits, no $ sign.\n` +
+    `Reply with JSON only: {"name":"…","ticker":"…","score":0-10 (how likely traders pile into this narrative),"why":"≤ 12 words"}`;
+  aiStat.calls++; const t0 = Date.now();
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", signal: AbortSignal.timeout(images.length ? 8000 : 5000),
+      headers: { "x-api-key": CFG.AI_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: CFG.AI_MODEL, max_tokens: 800, messages: [{ role: "user", content: [{ type: "text", text: prompt }, ...images.slice(0, 4).map((im) => (typeof im === "string" ? { type: "image", source: { type: "url", url: im } } : { type: "image", source: { type: "base64", media_type: im.type, data: im.b64 } }))] }] }) });
+    const j = await r.json(); if (!r.ok) { aiStat.errors++; aiStat.lastErr = `HTTP ${r.status} ${(j.error?.message || "").slice(0, 140)}`; return null; }
+    const txt = (j.content || []).map((c) => c.text || "").join(""); let m = txt.match(/\{[\s\S]*\}/);
+    if (!m) { const cut = txt.match(/\{[\s\S]*/); if (cut) { const fixed = cut[0].replace(/,?\s*"why"\s*:\s*"[^"]*$/, "") + "}"; try { JSON.parse(fixed); m = [fixed]; } catch {} } } // a cut-off answer still gives name, ticker and score
+    if (!m) { aiStat.errors++; aiStat.lastErr = `no JSON in answer (stop: ${j.stop_reason}): ` + txt.slice(0, 100); return null; }
+    const o = JSON.parse(m[0]); const name = String(o.name || "").trim().slice(0, 32); let ticker = String(o.ticker || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 10);
+    if (!name) return null; if (ticker.length < 2) ticker = tickerOf(name);
+    aiStat.ok++; aiStat.lastMs = Date.now() - t0;
+    return { name, ticker, why: String(o.why || "").slice(0, 120), score: Number.isFinite(+o.score) ? +o.score : null, by: "ai" };
+  } catch (e) { aiStat.errors++; aiStat.lastErr = e.message; return null; }
+}
+
+
+====================================================================================================
+=== FILE: launcher/src/operators.mjs (25,029 chars)
+====================================================================================================
+// launcher 0.7.0 (owner, 3 Nov 2026 10:16–10:22 UK: "find the early wallet buyers linked to the actual coin dev … trace it back to its source … the funder wallet …
+// build up an excellent database of funder wallets … use Helius as much as you need"). THE OPERATOR DATABASE.
+//
+// What it does. For every studied coin (study_buyers: creator + first-100 buyers, with block-0 / sniper flags) it traces the wallets that matter —
+// the creator, the creation-block (bundle) wallets and the first-3-second snipers — back through Helius's Wallet API:
+//   funded-by  : the wallet's FIRST incoming SOL transfer (who, how much, when) with Helius's entity label when the sender is known (Centralized Exchange…)
+//   transfers  : where a wallet's SOL went OUT after the coin (the profit trail, one hop)
+// Each hop is cached for good (a wallet's first funding never changes). Private funders are followed one more hop (funder of the funder).
+// Then it clusters: two coins share an operator when they share a funder (private, not a CEX / program / public wallet), a bundle wallet, or a
+// payout destination. Operators are scored: launches, runners (peak ≥ $30K and ≥ $25K at 5 or 15 min), hit rate, median peak, CEX habit.
+// Read-only. Nothing is bought. Tables: wallet_trace, wallet_out, operators, operator_coins. Exported as operators.csv, operator_coins.csv, wallet_trace.csv.
+import { CFG } from "./config.mjs";
+import { rpc, keysOf } from "./study.mjs"; // 0.7.6: cheap RPC reads for throwaway creator wallets
+
+const n = (k, d) => (process.env[k] != null && process.env[k] !== "" && Number.isFinite(Number(process.env[k])) ? Number(process.env[k]) : d);
+const HOPS = n("LAUNCH_OP_HOPS", 2), PER_RUN = n("LAUNCH_OP_PER_RUN", 400), OUT_HOP = n("LAUNCH_OP_OUT", 1);
+export const opStat = { runs: 0, traced: 0, outs: 0, errors: 0, lastErr: "", lastRun: null, running: false, calls: 0, cex: 0, unknown404: 0, operators: 0, sample: null };
+const nap = (ms) => new Promise((r) => setTimeout(r, ms));
+const API = process.env.LAUNCH_HELIUS_WALLET_API || "https://api.helius.xyz";
+const key = () => CFG.HELIUS_KEY;
+
+// Helius Wallet API (paid plan). 429 → back off; 404 → never funded by a SOL transfer (airdrop / program-created); 403 → plan.
+async function wget(path, params = {}) {
+  const q = new URLSearchParams({ ...params, "api-key": key() });
+  for (let i = 0; i < 5; i++) {
+    opStat.calls++;
+    const r = await fetch(`${API}${path}?${q}`, { signal: AbortSignal.timeout(20000) });
+    if (r.status === 429) { await nap(1500 * (i + 1)); continue; }
+    if (r.status === 404) return null;
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { const e = new Error(`${path.split("/").pop()}: HTTP ${r.status} ${(j.error || j.message || "").toString().slice(0, 100)}`); e.http = r.status; throw e; }
+    return j;
+  }
+  throw new Error("rate limited");
+}
+
+export function initOperators(db) {
+  db.exec(`CREATE TABLE IF NOT EXISTS wallet_trace (wallet TEXT PRIMARY KEY, funder TEXT, funder_name TEXT, funder_type TEXT, amount_sol REAL, funded_ts INTEGER, sig TEXT, hop INTEGER, err TEXT, checked_ts INTEGER);
+  CREATE TABLE IF NOT EXISTS wallet_out (wallet TEXT, mint TEXT, dest TEXT, dest_name TEXT, dest_type TEXT, amount_sol REAL, ts INTEGER, sig TEXT, PRIMARY KEY (wallet, sig));
+  CREATE TABLE IF NOT EXISTS operators (op_id INTEGER PRIMARY KEY AUTOINCREMENT, anchor TEXT UNIQUE, kind TEXT, coins INTEGER, runners INTEGER, hit_rate REAL, med_peak REAL, best_peak REAL, bundle_sol REAL, wallets INTEGER, cex_funded INTEGER, first_ts INTEGER, last_ts INTEGER, updated INTEGER);
+  CREATE TABLE IF NOT EXISTS operator_coins (anchor TEXT, mint TEXT, role TEXT, link TEXT, PRIMARY KEY (anchor, mint, link));
+  CREATE TABLE IF NOT EXISTS creator_trace (mint TEXT PRIMARY KEY, creator TEXT, create_ts INTEGER, peak_mc_usd REAL, graduated INTEGER, bundle_pct REAL, bundle_sol REAL, funder TEXT, funder_sol REAL, funded_ts INTEGER, creator_txs INTEGER, err TEXT, checked_ts INTEGER);
+  CREATE INDEX IF NOT EXISTS ct_funder ON creator_trace(funder); CREATE INDEX IF NOT EXISTS ct_creator ON creator_trace(creator);
+  CREATE TABLE IF NOT EXISTS snipers (wallet TEXT PRIMARY KEY, coins INTEGER, census INTEGER, runners INTEGER, hit_rate REAL, buy_sol REAL, sell_sol REAL, block0 INTEGER, creator_linked INTEGER, funder TEXT, funder_name TEXT, txs INTEGER, first_ts INTEGER, last_ts INTEGER, updated INTEGER);
+  CREATE INDEX IF NOT EXISTS wt_funder ON wallet_trace(funder);`);
+  for (const c of ["launches INTEGER", "graduated_all INTEGER", "hits_all INTEGER", "hit_rate_all REAL"]) try { db.exec(`ALTER TABLE operators ADD COLUMN ${c}`); } catch {} // 0.7.6
+}
+
+/** funded-by for one wallet, cached forever. Returns the row. */
+export async function trace(db, wallet, hop = 0) {
+  const have = db ? db.prepare("SELECT * FROM wallet_trace WHERE wallet=?").get(wallet) : null;
+  if (have && (!have.err || have.err === "404")) return have;
+  let row = { wallet, funder: null, funder_name: null, funder_type: null, amount_sol: null, funded_ts: null, sig: null, hop, err: null, checked_ts: Math.floor(Date.now() / 1000) };
+  try {
+    const j = await wget(`/v1/wallet/${wallet}/funded-by`);
+    if (!j) { row.err = "404"; opStat.unknown404++; }
+    else { row.funder = j.funder || null; row.funder_name = j.funderName || null; row.funder_type = j.funderType || null; row.amount_sol = j.amount != null ? Number(j.amount) : null; row.funded_ts = j.timestamp || null; row.sig = j.signature || null;
+      if (!opStat.sample) opStat.sample = JSON.stringify(j).slice(0, 400); if (row.funder_type) opStat.cex += /exchange/i.test(row.funder_type) ? 1 : 0; }
+    opStat.traced++;
+  } catch (e) { row.err = e.message.slice(0, 120); opStat.errors++; opStat.lastErr = `${wallet.slice(0, 6)} ${row.err}`; if (e.http === 403 || e.http === 401) throw e; }
+  if (db) db.prepare("INSERT OR REPLACE INTO wallet_trace VALUES (@wallet,@funder,@funder_name,@funder_type,@amount_sol,@funded_ts,@sig,@hop,@err,@checked_ts)").run(row);
+  return row;
+}
+const isPublic = (r) => !!(r?.funder_type) || !r?.funder; // labelled entity (CEX, DeFi, market maker…) or none: not a private link
+
+/** Outgoing SOL from a wallet after `sinceTs` (profit trail), one hop; cached per signature. */
+export async function outflows(db, wallet, mint, sinceTs) {
+  if (db.prepare("SELECT 1 FROM wallet_out WHERE wallet=? AND mint=? LIMIT 1").get(wallet, mint)) return;
+  try {
+    const j = await wget(`/v1/wallet/${wallet}/transfers`, { limit: "100", type: "native" });
+    const list = j?.transfers || j?.data || j?.items || (Array.isArray(j) ? j : []);
+    const ins = db.prepare("INSERT OR IGNORE INTO wallet_out VALUES (?,?,?,?,?,?,?,?)"); let k = 0;
+    for (const t of list) {
+      const ts = Number(t.timestamp || t.blockTime || 0), dir = String(t.direction || "").toLowerCase(), amt = Number(t.amount ?? t.uiAmount ?? 0);
+      const dest = t.counterparty || t.to || t.destination || null;
+      if (!dest || ts < sinceTs || !(dir === "out" || dir === "sent" || dir === "outgoing") || !(amt >= 0.05)) continue;
+      ins.run(wallet, mint, dest, t.counterpartyName || null, t.counterpartyType || null, amt, ts, t.signature || `${wallet}:${ts}:${dest}`); k++;
+    }
+    if (!k) ins.run(wallet, mint, "", null, null, 0, sinceTs, `${wallet}:${mint}:none`); // mark as checked
+    opStat.outs++;
+  } catch (e) { opStat.errors++; opStat.lastErr = `out ${wallet.slice(0, 6)} ${e.message.slice(0, 100)}`; if (e.http === 403 || e.http === 401) throw e; }
+}
+
+/** 0.7.5: wallets that were in the creation block or the first 3 s of REPEAT_SNIPER or more studied coins are sniper bots, not an operator's identity
+ *  (3 Nov 20:32 UK: 74 of 461 early wallets sat on 2+ of 43 census coins, the top ones on 14–15, buying 0.05–0.2 SOL each; they stitched 91 coins into one "operator"). */
+const REPEAT_SNIPER = n("LAUNCH_OP_REPEAT_SNIPER", 3);
+let repeatSet = new Set(), repeatAt = 0;
+function repeatSnipers(db) {
+  if (Date.now() - repeatAt < 60000) return repeatSet;
+  const cnt = new Map();
+  for (const r of db.prepare("SELECT wallet, data FROM study_buyers").all()) { let b; try { b = JSON.parse(r.data); } catch { continue; } if ((b.block0 || b.sniper) && !b.creatorLinked) cnt.set(r.wallet, (cnt.get(r.wallet) || 0) + 1); }
+  repeatSet = new Set([...cnt].filter(([, c]) => c >= REPEAT_SNIPER).map(([w]) => w)); repeatAt = Date.now(); return repeatSet;
+}
+
+/** The wallets that matter for a coin: creator, block-0 buyers (bundle), first-3-s snipers. 0.7.5: a block-0 wallet that is a repeat sniper and not creator-linked is "sniper", not "bundle". */
+function keyWallets(db, mint) {
+  const c = db.prepare("SELECT data FROM study_coins WHERE mint=? AND err IS NULL").get(mint); if (!c) return null;
+  let d; try { d = JSON.parse(c.data); } catch { return null; }
+  const rep = repeatSnipers(db);
+  const out = new Map(); if (d.creator) out.set(d.creator, "creator");
+  for (const r of db.prepare("SELECT wallet, data FROM study_buyers WHERE mint=? ORDER BY rank").all(mint)) { let b; try { b = JSON.parse(r.data); } catch { continue; }
+    if (b.block0 && (b.creatorLinked || !rep.has(r.wallet))) out.set(r.wallet, out.get(r.wallet) || "bundle"); else if (b.block0 || b.sniper) out.set(r.wallet, out.get(r.wallet) || "sniper"); }
+  return { d, wallets: out };
+}
+
+/** 0.7.5: the sniper table — every wallet in the creation block / first 3 s of 2+ studied coins: coins, how many ran, SOL bought, SOL sold back inside the study window. (Studied coins are mostly winners, so this hit rate is an upper bound until the wallet's own history is read.) */
+export function rebuildSnipers(db) {
+  db.exec("CREATE TABLE IF NOT EXISTS snipers (wallet TEXT PRIMARY KEY, coins INTEGER, census INTEGER, runners INTEGER, hit_rate REAL, buy_sol REAL, sell_sol REAL, block0 INTEGER, creator_linked INTEGER, funder TEXT, funder_name TEXT, txs INTEGER, first_ts INTEGER, last_ts INTEGER, updated INTEGER)");
+  const peak = new Map(db.prepare("SELECT mint, peak_mc FROM copy_peaks").all().map((r) => [r.mint, r.peak_mc || 0]));
+  const role = new Map(db.prepare("SELECT mint, role, studied_ts FROM study_coins WHERE err IS NULL").all().map((r) => [r.mint, r]));
+  const traceOf = new Map(db.prepare("SELECT wallet, funder, funder_name FROM wallet_trace").all().map((r) => [r.wallet, r]));
+  const acc = new Map();
+  for (const r of db.prepare("SELECT mint, wallet, data FROM study_buyers").all()) { let b; try { b = JSON.parse(r.data); } catch { continue; } if (!(b.block0 || b.sniper) || !role.has(r.mint)) continue;
+    const a = acc.get(r.wallet) || { coins: 0, census: 0, runners: 0, buy: 0, sell: 0, block0: 0, linked: 0, txs: b.txs, ts: [] }; a.coins++; if (role.get(r.mint).role === "census") a.census++; if ((peak.get(r.mint) || 0) >= 100000) a.runners++;
+    a.buy += b.buy_sol || 0; a.sell += b.sell_sol || 0; a.block0 += b.block0 ? 1 : 0; a.linked += b.creatorLinked ? 1 : 0; a.ts.push(role.get(r.mint).studied_ts || 0); acc.set(r.wallet, a); }
+  db.exec("DELETE FROM snipers");
+  const ins = db.prepare("INSERT INTO snipers VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"); const now = Math.floor(Date.now() / 1000);
+  for (const [w, a] of acc) if (a.coins >= 2) { const t = traceOf.get(w); ins.run(w, a.coins, a.census, a.runners, +(a.runners / a.coins).toFixed(2), +a.buy.toFixed(2), +a.sell.toFixed(2), a.block0, a.linked, t?.funder || null, t?.funder_name || null, a.txs, Math.min(...a.ts), Math.max(...a.ts), now); }
+}
+
+// ---------- 0.7.6: the denominator — every launch's creator, traced to its funder (owner, 3 Nov 21:03 UK: "how many coins they launch and how many are successful") ----------
+// Creator wallets are throwaway (median age 0 s), so two 1-credit RPC calls find the funder: the wallet's first transaction and who paid SOL into it.
+// The 100-credit wallet-API lookup is spent only on funders that stand behind 2+ creators (the second hop), cached forever in wallet_trace.
+const CT_DAYS = n("LAUNCH_CT_DAYS", 14), CT_PER_RUN = n("LAUNCH_CT_PER_RUN", 3000) /* 0.7.7: 800 an hour meant a day for the 14-day pass; the RPC route is cheap */, CT_PARALLEL = n("LAUNCH_CT_PARALLEL", 4), CT_FUNDER_PER_RUN = n("LAUNCH_CT_FUNDERS", 60);
+export const ctStat = { runs: 0, creators: 0, traced: 0, errors: 0, lastErr: "", funders: 0, queued: 0, running: false, lastRun: null };
+export async function creatorFunder(w) {
+  const recent = await rpc("getSignaturesForAddress", [w, { limit: 1000, commitment: "confirmed" }]); const txs = recent?.length ?? 0;
+  if (!txs) return { txs, err: "no transactions" };
+  if (txs >= 1000) { const fb = await trace(null, w); return { txs, funder: fb?.funder || null, funder_sol: fb?.amount_sol ?? null, funded_ts: fb?.funded_ts ?? null, err: fb?.err || null }; } // busy creator (rare): wallet API
+  const first = recent[recent.length - 1];
+  const t = await rpc("getTransaction", [first.signature, { maxSupportedTransactionVersion: 1, encoding: "json", commitment: "confirmed" }]);
+  if (!t?.meta) return { txs, err: "first tx unreadable" };
+  const keys = keysOf(t), pre = t.meta.preBalances, post = t.meta.postBalances, me = keys.indexOf(w); let best = -1, drop = 0;
+  keys.forEach((k, i) => { if (i !== me && i < pre.length && pre[i] - post[i] > drop) { drop = pre[i] - post[i]; best = i; } });
+  return { txs, funder: best >= 0 ? keys[best] : null, funder_sol: me >= 0 && me < pre.length ? (post[me] - pre[me]) / 1e9 : null, funded_ts: first.blockTime || null, err: null };
+}
+export async function creatorCensus(db, tdb, done) {
+  if (ctStat.running || !tdb) return; ctStat.running = true; ctStat.runs++;
+  try {
+    const since = Math.floor(Date.now() / 1000) - CT_DAYS * 86400;
+    const todo = tdb.prepare("SELECT mint, creator, create_ts, peak_mc_usd, graduated, bundle_pct, bundle_sol FROM tokens WHERE create_ts>=? AND creator IS NOT NULL AND creator<>'' ORDER BY create_ts DESC LIMIT 20000").all(since)
+      .filter((t) => !db.prepare("SELECT 1 FROM creator_trace WHERE mint=?").get(t.mint));
+    ctStat.queued = todo.length; const queue = todo.slice(0, CT_PER_RUN);
+    const ins = db.prepare("INSERT OR REPLACE INTO creator_trace VALUES (@mint,@creator,@create_ts,@peak_mc_usd,@graduated,@bundle_pct,@bundle_sol,@funder,@funder_sol,@funded_ts,@creator_txs,@err,@checked_ts)");
+    const worker = async () => { for (let t; (t = queue.shift()); ) {
+      const known = db.prepare("SELECT funder, funder_sol, funded_ts, creator_txs FROM creator_trace WHERE creator=? AND funder IS NOT NULL LIMIT 1").get(t.creator); // the same creator wallet used twice: no new calls
+      let r; try { r = known ? { txs: known.creator_txs, funder: known.funder, funder_sol: known.funder_sol, funded_ts: known.funded_ts, err: null } : await creatorFunder(t.creator); ctStat.traced++; } catch (e) { r = { err: e.message.slice(0, 100) }; ctStat.errors++; ctStat.lastErr = `${t.creator.slice(0, 6)} ${r.err}`; }
+      ins.run({ mint: t.mint, creator: t.creator, create_ts: t.create_ts, peak_mc_usd: t.peak_mc_usd ?? null, graduated: t.graduated ? 1 : 0, bundle_pct: t.bundle_pct ?? null, bundle_sol: t.bundle_sol ?? null, funder: r.funder || null, funder_sol: r.funder_sol ?? null, funded_ts: r.funded_ts ?? null, creator_txs: r.txs ?? null, err: r.err || null, checked_ts: Math.floor(Date.now() / 1000) });
+      ctStat.creators++;
+    } };
+    await Promise.all(Array.from({ length: CT_PARALLEL }, worker));
+    // second hop, wallet API, only for funders behind 2+ creators and not yet traced
+    const multi = db.prepare("SELECT funder, COUNT(*) c FROM creator_trace WHERE funder IS NOT NULL GROUP BY funder HAVING c>=2 ORDER BY c DESC").all().filter((f) => !db.prepare("SELECT 1 FROM wallet_trace WHERE wallet=? AND (err IS NULL OR err='404')").get(f.funder)).slice(0, CT_FUNDER_PER_RUN);
+    for (const f of multi) { if (!key()) break; await trace(db, f.funder, 1); ctStat.funders++; }
+    ctStat.lastRun = new Date().toISOString();
+  } catch (e) { ctStat.errors++; ctStat.lastErr = e.message.slice(0, 160); }
+  finally { ctStat.running = false; try { done?.(); } catch {} }
+}
+/** Launch counts behind an anchor wallet, from creator_trace: creators it funded directly, or through one private hop. */
+export function launchesBehind(db, anchor) {
+  const direct = db.prepare("SELECT mint, peak_mc_usd, graduated FROM creator_trace WHERE funder=?").all(anchor);
+  const hop = db.prepare("SELECT c.mint, c.peak_mc_usd, c.graduated FROM creator_trace c JOIN wallet_trace w ON w.wallet=c.funder WHERE w.funder=? AND w.funder_type IS NULL").all(anchor);
+  const seen = new Map(); for (const r of [...direct, ...hop]) seen.set(r.mint, r);
+  const all = [...seen.values()]; return { launches: all.length, graduated: all.filter((r) => r.graduated).length, hits: all.filter((r) => (r.peak_mc_usd || 0) >= 100000).length };
+}
+
+/** One run: trace every key wallet of every studied coin not yet traced (HOPS deep), outflows for bundle wallets of runners, then recluster. */
+export async function runOperators(db, done) {
+  if (opStat.running || !key()) return; opStat.running = true; opStat.runs++;
+  try {
+    const coins = db.prepare("SELECT s.mint, p.created_ts FROM study_coins s LEFT JOIN copy_peaks p ON p.mint=s.mint WHERE s.err IS NULL ORDER BY s.studied_ts DESC").all();
+    let budget = PER_RUN;
+    for (const c of coins) {
+      if (budget <= 0) break;
+      const kw = keyWallets(db, c.mint); if (!kw) continue;
+      for (const [w, role] of kw.wallets) {
+        if (budget <= 0) break;
+        let cur = w;
+        for (let h = 0; h < HOPS && cur; h++) {
+          const had = db.prepare("SELECT funder, funder_type, err FROM wallet_trace WHERE wallet=?").get(cur);
+          const r = had && (!had.err || had.err === "404") ? had : (budget--, await trace(db, cur, h));
+          if (!r || isPublic(r)) break; cur = r.funder;
+        }
+        if (OUT_HOP && role === "bundle" && kw.d.peak_mc_usd >= 30000 && budget > 0) { budget--; await outflows(db, w, c.mint, (kw.d.t0 || c.created_ts || 0)); }
+      }
+    }
+    recluster(db); rebuildSnipers(db);
+    opStat.lastRun = new Date().toISOString();
+  } catch (e) { opStat.errors++; opStat.lastErr = e.message.slice(0, 160); }
+  finally { opStat.running = false; try { done?.(); } catch {} }
+}
+
+/** Cluster coins into operators by shared private funder (any hop), shared bundle wallet, or shared payout destination. Union-find over coins. */
+export function recluster(db) {
+  const coins = db.prepare("SELECT mint, data FROM study_coins WHERE err IS NULL").all().map((r) => { let d = {}; try { d = JSON.parse(r.data); } catch {} return { mint: r.mint, d }; }).filter((c) => c.d.venue === "pump.fun");
+  const parent = new Map(); const find = (x) => { while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; }; const union = (a, b) => { a = find(a); b = find(b); if (a !== b) parent.set(a, b); };
+  for (const c of coins) parent.set(c.mint, c.mint);
+  const links = new Map(); // key -> {kind, mints:Set}
+  const add = (keyS, kind, mint) => { if (!keyS) return; const k = kind + ":" + keyS; if (!links.has(k)) links.set(k, { kind, key: keyS, mints: new Set() }); links.get(k).mints.add(mint); };
+  const traceOf = new Map(db.prepare("SELECT wallet, funder, funder_type, err FROM wallet_trace").all().map((r) => [r.wallet, r]));
+  const outs = db.prepare("SELECT wallet, mint, dest, dest_type FROM wallet_out WHERE dest<>''").all();
+  for (const c of coins) {
+    const kw = keyWallets(db, c.mint); if (!kw) continue;
+    for (const [w, role] of kw.wallets) {
+      if (role === "sniper") continue; // 0.7.5: snipers are everyone's; only the creator and the bundle wallets say who made the coin
+      if (role === "bundle" || role === "creator") add(w, role === "creator" ? "creator" : "bundle_wallet", c.mint); // the same bundle wallet in two coins = one operator
+      let cur = w; for (let h = 0; h < HOPS; h++) { const t = traceOf.get(cur); if (!t || !t.funder || t.funder_type) break; add(t.funder, "funder", c.mint); cur = t.funder; }
+    }
+  }
+  for (const o of outs) if (!o.dest_type) add(o.dest, "payout", o.mint);
+  // 0.7.1: the launch fingerprint — the same bundle % and SOL to two decimals on two coins is the same software and money (GR.md, 23 Oct: 79.31% / 85.0 SOL)
+  for (const c of coins) { const t = c.d.tracker; if (t && t.bundle_pct >= 20 && t.bundle_sol >= 5) add(`${(+t.bundle_pct).toFixed(2)}/${(+t.bundle_sol).toFixed(1)}`, "fingerprint", c.mint); }
+  // a key shared by too many coins is a public hub (a bot service, a popular distributor), not one operator
+  const MAX_SHARE = n("LAUNCH_OP_MAX_SHARE", 60), MAX_PAYOUT_SHARE = n("LAUNCH_OP_MAX_PAYOUT_SHARE", 4);
+  // 0.7.5: a payout destination that receives from the bundle wallets of 5+ coins is shared plumbing (tip accounts, fee wallets, unlabelled exchanges), not a person
+  const good = [...links.values()].filter((l) => l.mints.size >= 2 && l.mints.size <= (l.kind === "payout" ? MAX_PAYOUT_SHARE : MAX_SHARE) && l.kind !== "creator");
+  const pairKinds = new Map(); // "a|b" -> set of distinct link KINDS joining a and b (0.7.5: two shared payouts count once; funder + bundle wallet count twice)
+  for (const l of good) { const ms = [...l.mints]; for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) { const k = ms[i] < ms[j] ? ms[i] + "|" + ms[j] : ms[j] + "|" + ms[i]; if (!pairKinds.has(k)) pairKinds.set(k, new Set()); pairKinds.get(k).add(l.kind); } }
+  const pairLinks = new Map([...pairKinds].map(([k, v]) => [k, v.size]));
+  const size = () => { const sz = new Map(); for (const c of coins) { const r = find(c.mint); sz.set(r, (sz.get(r) || 0) + 1); } return sz; };
+  // pass 1: pairs with 2+ independent links always merge; pass 2: single links merge only while both groups are small (< 8 coins) — one shared wallet must not glue two big operators together
+  for (const [k, cnt] of pairLinks) if (cnt >= 2) { const [a, b] = k.split("|"); union(a, b); }
+  const sz = size();
+  for (const [k, cnt] of pairLinks) if (cnt === 1) { const [a, b] = k.split("|"); const ra = find(a), rb = find(b); if (ra !== rb && (sz.get(ra) || 1) < 8 && (sz.get(rb) || 1) < 8) { union(a, b); const m = (sz.get(ra) || 1) + (sz.get(rb) || 1); sz.set(find(a), m); } }
+  // build operators
+  const groups = new Map(); for (const c of coins) { const r = find(c.mint); if (!groups.has(r)) groups.set(r, []); groups.get(r).push(c); }
+  db.exec("DELETE FROM operators; DELETE FROM operator_coins");
+  const insO = db.prepare("INSERT INTO operators (anchor, kind, coins, runners, hit_rate, med_peak, best_peak, bundle_sol, wallets, cex_funded, first_ts, last_ts, updated) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+  const insC = db.prepare("INSERT OR IGNORE INTO operator_coins VALUES (?,?,?,?)");
+  const now = Math.floor(Date.now() / 1000); let nOps = 0;
+  const peakRow = (m) => db.prepare("SELECT peak_mc, peak_close_mc, mc5, mc15, created_ts FROM copy_peaks WHERE mint=?").get(m);
+  for (const [root, cs] of groups) {
+    if (cs.length < 2) continue; // a lone coin is not (yet) an operator
+    const myLinks = good.filter((l) => [...l.mints].some((m) => find(m) === root));
+    const funders = myLinks.filter((l) => l.kind === "funder").sort((a, b) => b.mints.size - a.mints.size);
+    const anchor = (funders[0] || myLinks.sort((a, b) => b.mints.size - a.mints.size)[0])?.key || root, kind = funders[0] ? "funder" : (myLinks[0]?.kind || "coin");
+    const peaks = [], run = []; let bsol = [], cex = 0, wallets = new Set(), ts = [];
+    for (const c of cs) {
+      const p = peakRow(c.mint); const pk = Math.min(p?.peak_mc ?? c.d.peak_mc_usd ?? 0, (p?.peak_close_mc || Infinity) * 1.5) || 0; peaks.push(pk); const isRun = pk >= 30000 && Math.max(p?.mc5 || 0, p?.mc15 || 0, c.d.tracker ? pk : 0) >= 25000; run.push(isRun ? 1 : 0);
+      if (c.d.block0_sol) bsol.push(c.d.block0_sol); ts.push(p?.created_ts || 0);
+      const kw = keyWallets(db, c.mint); if (kw) for (const [w, role] of kw.wallets) { if (role !== "sniper") wallets.add(w); const t = traceOf.get(w); if (t?.funder_type && /exchange/i.test(t.funder_type)) cex++; }
+      for (const l of myLinks) if (l.mints.has(c.mint)) insC.run(anchor, c.mint, c.d.role || "", `${l.kind}:${l.key}`);
+    }
+    const sorted = [...peaks].sort((a, b) => a - b), med = sorted[Math.floor(sorted.length / 2)] || 0;
+    insO.run(anchor, kind, cs.length, run.reduce((a, b) => a + b, 0), +(run.reduce((a, b) => a + b, 0) / cs.length).toFixed(2), Math.round(med), Math.round(Math.max(...peaks)), bsol.length ? +(bsol.reduce((a, b) => a + b, 0) / bsol.length).toFixed(1) : null, wallets.size, cex, Math.min(...ts.filter(Boolean)) || null, Math.max(...ts) || null, now);
+    if (kind === "funder") { const lb = launchesBehind(db, anchor); if (lb.launches) db.prepare("UPDATE operators SET launches=?, graduated_all=?, hits_all=?, hit_rate_all=? WHERE anchor=?").run(lb.launches, lb.graduated, lb.hits, +(lb.hits / lb.launches).toFixed(2), anchor); } // 0.7.6: the true denominator, duds included
+    nOps++;
+  }
+  opStat.operators = nOps;
+}

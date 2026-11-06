@@ -1,0 +1,869 @@
+# PART 6 of 13 — full code review pack (paste all parts in order)
+
+
+====================================================================================================
+=== FILE: scope/src/page.mjs (54,589 chars)
+====================================================================================================
+// Coin scope page (0.2.0). Paste a contract; /api/coin builds the report, /api/live refreshes balances, top holders, market cap and new trades every 15 s.
+// No template literals in the client code.
+export const PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coin scope</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--line:#30363d;--fg:#e6edf3;--mut:#8b949e;--acc:#58a6ff;--red:#f85149;--amb:#d29922;--grn:#3fb950}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 -apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1240px;margin:0 auto;padding:16px}a{color:var(--acc);text-decoration:none}h1{font-size:20px;margin:4px 0 2px}h2{font-size:14px;margin:0 0 10px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.sub{color:var(--mut);font-size:12px}.bar{display:flex;gap:8px;margin:14px 0}.bar input{flex:1;min-width:0;padding:11px 12px;border-radius:8px;border:1px solid var(--line);background:#0b0f14;color:var(--fg);font:14px ui-monospace,Menlo,monospace}
+.bar button{padding:0 18px;border-radius:8px;border:0;background:var(--acc);color:#04111f;font-weight:700;cursor:pointer}.bar button:disabled{opacity:.5}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin:12px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.k{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.04em}.v{font-size:17px;font-weight:600;margin-top:2px}.v small{font-size:12px;color:var(--mut);font-weight:400}
+.diag div{padding:7px 10px;border-left:3px solid var(--line);margin:5px 0;background:#0f141a;border-radius:0 6px 6px 0}.diag .red{border-color:var(--red)}.diag .amber{border-color:var(--amb)}.diag .good{border-color:var(--grn)}
+.tw{overflow-x:auto;max-height:640px;overflow-y:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th{color:var(--mut);font-weight:600;font-size:11px;text-transform:uppercase;position:sticky;top:0;background:var(--card)}td.l,th.l{text-align:left}
+.tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;background:#21262d;color:var(--mut);margin-right:3px}.tag.dev{background:#3d1d1d;color:#ffa198}.tag.bundle{background:#3a2a0b;color:#e3b341}.tag.sniper{background:#1c2b4a;color:#79c0ff}.tag.fresh{background:#12321f;color:#56d364}.tag.link{background:#3d1d1d;color:#ff7b72}.tag.grp{background:#2a1f3d;color:#d2a8ff}
+.pos{color:var(--grn)}.neg{color:var(--red)}.mono{font-family:ui-monospace,Menlo,monospace}.note{color:var(--amb);font-size:12px;margin:4px 0}.busy{color:var(--mut);padding:20px 0}
+.links a{margin-right:12px;font-size:13px}.chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}.chip{background:#0f141a;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px}.chip b{font-size:15px}
+.flt button{background:#21262d;border:1px solid var(--line);color:var(--fg);border-radius:6px;padding:4px 10px;margin:0 4px 8px 0;cursor:pointer;font-size:12px}.flt button.on{background:var(--acc);color:#04111f;border-color:var(--acc)}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--mut);cursor:pointer;user-select:none}.dot{width:9px;height:9px;border-radius:50%;background:#484f58}.live.on .dot{background:var(--grn);box-shadow:0 0 6px var(--grn)}
+.tag.gm{background:#0e2a3a;color:#7cc8ff;border:1px solid #1f4f6b}.cmp td.d{color:var(--amb)}.tag.side{background:#2a1f3d;color:#d2a8ff}.glance{display:grid;grid-template-columns:minmax(300px,420px) 1fr;gap:16px;align-items:start}@media(max-width:820px){.glance{grid-template-columns:1fr}}.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.tile{border-radius:10px;padding:12px 14px;background:#0f141a;border:1px solid var(--line);border-left:5px solid var(--line)}.tile.red{border-left-color:var(--red)}.tile.amber{border-left-color:var(--amb)}.tile.ok{border-left-color:var(--grn)}.tile .big{font-size:26px;font-weight:700;line-height:1.1}.tile .lab{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}.tile .why{font-size:12px;color:var(--mut);margin-top:4px}.legend div{display:flex;align-items:center;gap:8px;font-size:13px;margin:3px 0}.legend i{width:12px;height:12px;border-radius:3px;display:inline-block;flex:none}.legend b{margin-left:auto}
+.flash{animation:fl 1.2s}@keyframes fl{from{background:#1f3a2a}to{background:transparent}}details summary{cursor:pointer;color:var(--acc);font-size:13px}
+</style></head><body><div class="wrap">
+<h1>Coin scope</h1><div class="sub">Paste a token contract. The dev and his history; the bundle and the first 60 buyers — what each holds now, when and how much it sold, its side wallets, whether it is a whale and what else it holds; which wallets are the same owner; who controls the supply. Live updates every 15 s.</div>
+<form class="bar" id="f"><input id="m" placeholder="token contract (mint)" autocomplete="off" spellcheck="false"><button id="go">Look up</button></form>
+<div id="out"></div></div>
+<script>
+var Q=new URLSearchParams(location.search),key=Q.get('key')||'',$=function(s){return document.getElementById(s)},R=null,FILT='all',LIVE=true,LT=null,LIVEBUSY=false,FEED=[];
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function p1(x){return x==null||isNaN(x)?'–':(x>0&&x<0.1?x.toFixed(2):x.toFixed(1))+'%'}
+function usd(x){if(x==null||isNaN(x))return '–';if(x>=1e6)return '$'+(x/1e6).toFixed(2)+'M';if(x>=1e3)return '$'+(x/1e3).toFixed(1)+'K';return '$'+x.toFixed(0)}
+function ago(s){if(s==null)return '–';if(s<60)return s+' s';if(s<3600)return Math.round(s/60)+' min';if(s<86400)return (s/3600).toFixed(1)+' h';return (s/86400).toFixed(1)+' d'}
+function hrs(h){return h==null?'–':h<0?'after launch':h<1?'&lt;1 h':h>48?Math.round(h/24)+' d':h+' h'}
+function uk(ts){return ts?new Date(ts*1000).toLocaleString('en-GB',{timeZone:'Europe/London',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'})+' UK':'–'}
+function w(a){return a?'<a class="mono" target="_blank" href="https://solscan.io/account/'+a+'">'+a.slice(0,4)+'…'+a.slice(-4)+'</a>':'–'}
+function fw(a){var n=a&&(R.exchanges||{})[a];return w(a)+(n?' <span class="tag" title="exchange (GMGN)">'+esc(n)+'</span>':'')}
+function tag(r,c){return r?'<span class="tag '+(c||r)+'">'+esc(r)+'</span>':''}
+function kv(k,v,id){return '<div><div class="k">'+k+'</div><div class="v"'+(id?' id="'+id+'"':'')+'>'+v+'</div></div>'}
+function chg(x){return x==null?'–':'<span class="'+(x>=0?'pos':'neg')+'">'+(x>=0?'+':'')+Number(x).toFixed(1)+'%</span>'}
+function tags(p){return (p.role&&p.role!=='early'&&p.role!=='buyer'&&p.role!=='holder'?tag(p.role):'')+(p.fresh?tag('fresh'):'')+(p.launchLinked?tag('linked to dev/bundle','link'):'')+(p.group?tag('owner '+p.group,'grp'):'')}
+function rowsWindow(){var L=(R.window||[]).filter(function(p){return FILT==='all'||(FILT==='hold'&&p.nowPct>0.01)||(FILT==='fresh'&&p.fresh)||(FILT==='linked'&&(p.launchLinked||p.role==='dev'||p.role==='bundle'))||(FILT==='group'&&p.group)||(FILT==='selling'&&p.soldPct>0)||(FILT==='whale'&&p.whale)});
+  return L.map(function(p){return '<tr data-w="'+p.wallet+'"><td>'+(p.rank||'')+'</td><td class="l">'+w(p.wallet)+'</td><td class="l">'+tags(p)+(p.whale?tag('whale','bundle'):'')+(p.bundled?tag('bundled buy','bundle'):'')+(p.sellingNow?tag('selling now','link'):'')+moreTags(p)+gmTags(p)+'</td><td>'+(p.secAfter!=null?p.secAfter+' s':'–')+(p.blockAfter!=null?' <span class="sub">blk '+p.blockAfter+'</span>':'')+'</td><td>'+p1((p.role==='dev'||p.role==='bundle')&&p.launchPct!=null?p.launchPct:p.boughtPct)+'</td><td class="hn"><b>'+p1(p.nowPct)+'</b></td><td>'+(p.soldPct?p1(p.soldPct):'–')+'</td><td>'+(p.lastSell?ago(R.now-p.lastSell)+' ago':'–')+'</td><td>'+(p.sideN?p.sideN+' · '+p1(p.sideHoldPct):'–')+'</td><td>'+(p.sol!=null?p.sol:'–')+'</td><td>'+(p.portfolioUsd!=null?usd(p.portfolioUsd):'–')+'</td><td class="l sub">'+(p.otherCoins||[]).slice(0,3).map(function(c){return esc(c.symbol)+' '+usd(c.usd)}).join(', ')+'</td><td>'+hrs(p.ageAtLaunchH)+'</td><td class="l">'+fw(p.funder)+'</td><td class="l">'+esc(p.behaviour||'')+'</td></tr>'}).join('')||'<tr><td colspan="15" class="l sub">none</td></tr>'}
+
+var SL=[['dev','Dev + bundle','#f85149'],['linked','Linked to dev / bundle','#ff9248'],['side','Side wallets','#d2a8ff'],['probable','Probably the same owner','#39c5cf'],['first','First 60 buyers','#e3b341'],['groups','Other owner groups','#ff7eb6'],['top','Other big holders','#58a6ff'],['pool','Liquidity pool','#6e7681'],['rest','Everyone else','#3fb950']];
+function shade(h,f){var n=parseInt(h.slice(1),16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;r=Math.round(r*f);g=Math.round(g*f);b=Math.round(b*f);return 'rgb('+r+','+g+','+b+')'}
+function pie3d(P){var cx=200,cy=120,rx=170,ry=92,dep=30,tot=0,sl=[];SL.forEach(function(x){var v=Math.max(0,P[x[0]]||0);if(v>0.05){sl.push({k:x[0],n:x[1],c:x[2],v:v});tot+=v}});if(!tot)return '';
+  var a=0;sl.forEach(function(x){x.a1=a;a+=x.v/tot*Math.PI*2;x.a2=a});
+  function pt(t,dy){return (cx+rx*Math.cos(t)).toFixed(1)+','+(cy+(dy||0)+ry*Math.sin(t)).toFixed(1)}
+  var sides='',tops='';
+  sl.forEach(function(x){var b1=Math.max(x.a1,0),b2=Math.min(x.a2,Math.PI);if(b2>b1){sides+='<path d="M'+pt(b1)+' A'+rx+' '+ry+' 0 0 1 '+pt(b2)+' L'+pt(b2,dep)+' A'+rx+' '+ry+' 0 0 0 '+pt(b1,dep)+' Z" fill="'+shade(x.c,0.62)+'"/>'}
+    var large=(x.a2-x.a1)>Math.PI?1:0;tops+=(x.a2-x.a1>=Math.PI*2-1e-6)?'<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+rx+'" ry="'+ry+'" fill="'+x.c+'"><title>'+x.n+' '+x.v.toFixed(1)+'%</title></ellipse>':'<path d="M'+cx+','+cy+' L'+pt(x.a1)+' A'+rx+' '+ry+' 0 '+large+' 1 '+pt(x.a2)+' Z" fill="'+x.c+'" stroke="#0d1117" stroke-width="1.2"><title>'+x.n+' '+x.v.toFixed(1)+'%</title></path>';
+    var m=(x.a1+x.a2)/2;if(x.v/tot>0.06)tops+='<text x="'+(cx+rx*0.62*Math.cos(m)).toFixed(1)+'" y="'+(cy+ry*0.62*Math.sin(m)+4).toFixed(1)+'" text-anchor="middle" font-size="13" font-weight="700" fill="#0d1117">'+x.v.toFixed(0)+'%</text>'});
+  return '<svg viewBox="0 0 400 '+(cy+ry+dep+10)+'" width="100%" style="max-width:420px;display:block;margin:auto"><ellipse cx="'+cx+'" cy="'+(cy+dep+6)+'" rx="'+(rx+6)+'" ry="'+(ry*0.55)+'" fill="#000" opacity=".35"/>'+sides+tops+'</svg>'}
+function legend(P){var LK={dev:1,linked:1,side:1,probable:1,first:1};return SL.map(function(x){return '<div><i style="background:'+x[2]+'"></i>'+x[1]+'<b>'+(!R.launch&&LK[x[0]]?'<span style="color:var(--amb)">unknown</span>':p1(P[x[0]]||0))+'</b></div>'}).join('')+(!R.launch?'<div class="sub" style="margin-top:4px">the launch was not found, so wallets that belong to the dev and bundle sit in the other slices</div>':'')}
+function tile(cls,lab,big,why){return '<div class="tile '+cls+'"><div class="lab">'+lab+'</div><div class="big">'+big+'</div><div class="why">'+why+'</div></div>'}
+function tilesHtml(){var P=R.pie||{},S=R.windowSummary||{},L=R.launch,DV=R.dev||{},sm=DV.summary||{},H=R.holders||{},ins=(P.dev||0)+(P.linked||0)+(P.side||0),g1=(R.groups||[])[0],DB=R.db||{},U='<span style="color:var(--amb)">unknown</span>',noL='the launch was not found — see What was checked';
+  return (L?tile(ins>=20?'red':ins>=10?'amber':'ok','Insiders hold',p1(ins),(R.coverage?'funding traced for '+R.coverage.fundingFound+' of '+R.coverage.profileWanted+' wallets · ':'')+'dev + bundle '+p1(P.dev)+' · linked '+p1(P.linked)+' · side wallets '+p1(P.side)+((P.probable||0)>0.005?' · probably '+p1(P.probable)+' more':'')):tile('amber','Insiders hold',U,noL))+
+   (L?tile((S.soldPct1h||0)>=2?'red':S.sellingNow?'amber':'ok','Early wallets selling',p1(S.soldPct1h||0)+' <small style="font-size:13px;color:var(--mut)">last hour</small>',(S.sellingNow||0)+' sold in the last 30 min · '+p1(S.soldPct)+' sold since launch'):tile('amber','Early wallets selling',U,noL))+
+   tile(g1&&g1.nowPct>=25?'red':g1&&g1.nowPct>=10?'amber':'ok','Biggest single owner',g1?p1(g1.nowPct):'–',g1?g1.n+' linked wallets'+(g1.launch?' (the dev & bundle)':''):'no linked wallets found')+
+   (L?tile(S.checked&&S.fresh>=S.checked/2?'amber':'ok','Fresh wallets (early)',(S.fresh||0)+' / '+(S.checked||0),'holding '+p1(S.freshHoldPct)):tile('amber','Fresh wallets (early)',U,noL))+
+   tile(sm.n>=10&&(sm.graduated||0)<=1?'red':sm.n>=3?'amber':sm.n==null?'amber':'ok','Dev history',sm.n!=null?(sm.n?sm.n+' other coin'+(sm.n===1?'':'s'):'first coin'):'couldn&#39;t check',sm.n?(sm.graduated||0)+' graduated · best '+usd(sm.best)+(sm.last24h?' · '+sm.last24h+' today':'')+(DV.source?' · source: '+esc(DV.source):''):sm.n===0?'no earlier launches found · source: '+esc(DV.source||''):'every source failed: '+esc(DV.coinsErr||''))+
+   (L?tile(((L.bundle?L.bundle.pct:0)+(L.dev?L.dev.pct:0))>=30?'amber':'ok','Dev + bundle at launch',p1((L.bundle?L.bundle.pct:0)+(L.dev?L.dev.pct:0)),(L.bundle?L.bundle.n:0)+' bundle wallet'+((L.bundle&&L.bundle.n===1)?'':'s')+(L.dev&&L.dev.pct>0?' + dev':' (dev bought nothing)')+' · hold '+p1(S.devBundleHoldPct)+' now'):tile('amber','Dev + bundle at launch',DB.bundle_pct!=null&&DB.seen?p1(DB.bundle_pct):U,DB.bundle_pct!=null&&DB.seen?DB.bundle_wallets+' wallets, '+(DB.bundle_sol||0).toFixed(1)+' SOL — from our tracker&#39;s live record only':noL))+
+   tile(H.top10Pct>35?'amber':'ok','Top 10 hold',p1(H.top10Pct),'largest '+p1(H.largestPct)+' · '+(H.count!=null?H.count:'?')+' holders')}
+function sellChart(){var C=R.sellCurve;if(!C||!C.points||!C.points.length)return '<div class="sub">No sales by the early wallets yet.</div>';var W=760,Hh=200,pad=36,t0=C.start||C.points[0][0],t1=Math.max(R.now,C.points[C.points.length-1][0]),ymax=Math.max(1,C.heldAtLaunch||0,C.points[C.points.length-1][1]+C.points[C.points.length-1][2]);
+  function X(t){return pad+(t-t0)/Math.max(1,t1-t0)*(W-pad-10)}function Y(v){return Hh-24-(v/ymax)*(Hh-40)}
+  var a='M'+X(t0)+','+Y(0),b='M'+X(t0)+','+Y(0);C.points.forEach(function(q){a+=' L'+X(q[0]).toFixed(1)+','+Y(q[1]).toFixed(1);b+=' L'+X(q[0]).toFixed(1)+','+Y(q[1]+q[2]).toFixed(1)});var last=C.points[C.points.length-1];a+=' L'+X(t1)+','+Y(last[1]);b+=' L'+X(t1)+','+Y(last[1]+last[2]);
+  var ticks='';for(var i=0;i<=4;i++){var v=ymax*i/4;ticks+='<line x1="'+pad+'" x2="'+(W-10)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="#21262d"/><text x="'+(pad-6)+'" y="'+(Y(v)+4)+'" text-anchor="end" font-size="10" fill="#8b949e">'+v.toFixed(0)+'%</text>'}
+  ticks+='<text x="'+pad+'" y="'+(Hh-6)+'" font-size="10" fill="#8b949e">launch</text><text x="'+(W-10)+'" y="'+(Hh-6)+'" text-anchor="end" font-size="10" fill="#8b949e">now ('+ago(t1-t0)+' after launch)</text>';
+  if(C.heldAtLaunch)ticks+='<line x1="'+pad+'" x2="'+(W-10)+'" y1="'+Y(C.heldAtLaunch)+'" y2="'+Y(C.heldAtLaunch)+'" stroke="#e3b341" stroke-dasharray="4 4"/><text x="'+(W-12)+'" y="'+(Y(C.heldAtLaunch)-4)+'" text-anchor="end" font-size="10" fill="#e3b341">what they bought at launch '+C.heldAtLaunch.toFixed(0)+'%</text>';
+  return '<svg viewBox="0 0 '+W+' '+Hh+'" width="100%" style="display:block">'+ticks+'<path d="'+b+'" fill="none" stroke="#d2a8ff" stroke-width="2" stroke-dasharray="5 3"/><path d="'+a+'" fill="none" stroke="#f85149" stroke-width="2.5"/></svg><div class="legend" style="display:flex;gap:18px;flex-wrap:wrap"><div><i style="background:#f85149"></i>sold (running total, % of supply)</div><div><i style="background:#d2a8ff"></i>sold + moved to other wallets</div></div>'}
+function glance(){return '<div class="card"><h2>At a glance</h2><div class="glance"><div><div id="pie">'+pie3d(R.pie||{})+'</div><div class="legend" id="leg" style="margin-top:8px">'+legend(R.pie||{})+'</div></div><div><div class="tiles" id="tiles">'+tilesHtml()+'</div><div style="margin-top:14px"><div class="k" style="margin-bottom:4px">The early wallets selling over time</div>'+sellChart()+'</div></div></div></div>'}
+function sideRows(){return (R.side||[]).map(function(p){return '<tr data-w="'+p.wallet+'"><td class="l">'+w(p.wallet)+'</td><td class="hn"><b>'+p1(p.nowPct)+'</b></td><td class="l">'+(p.gotFrom||[]).map(w).join(' ')+'</td><td class="l">'+(p.group?tag('owner '+p.group,'grp'):'–')+'</td><td class="l sub">'+esc(p.lastMove||'')+'</td></tr>'}).join('')}
+function gmTags(p){var t=(p&&p.gm&&p.gm.tags)||[];return t.length?t.slice(0,4).map(function(x){return '<span class="tag gm" title="GMGN tag">'+esc(x)+'</span>'}).join(''):''}
+function fmtC(name,v){if(v==null)return '<span class="sub">–</span>';if(name==='Holders'||name==="Dev's other coins")return Math.round(v).toLocaleString('en-GB');return p1(v)}
+function cmpCard(){var C=R.compare||[],G=R.gmgn||{};if(!C.length)return '';
+  return '<div class="card"><h2>Us vs GMGN</h2>'+(G.ok?'':'<div class="note">GMGN not available: '+esc(G.err||'')+'</div>')+'<div class="tw"><table class="cmp"><tr><th class="l">measure</th><th>ours</th><th>GMGN</th><th class="l">note</th></tr>'+C.map(function(r){var d=(typeof r[1]==='number'&&typeof r[2]==='number'&&Math.abs(r[1]-r[2])>=10&&r[0]!=='Holders'&&r[0]!=="Dev's other coins"&&!/^Insiders|^Fresh/.test(r[0]));return '<tr><td class="l">'+esc(r[0])+'</td><td'+(d?' class="d"':'')+'><b>'+fmtC(r[0],r[1])+'</b></td><td'+(d?' class="d"':'')+'><b>'+fmtC(r[0],r[2])+'</b></td><td class="l sub">'+esc(r[3]||'')+'</td></tr>'}).join('')+'</table></div>'+
+  (G.ok&&G.n?'<div class="chips" style="margin-top:10px"><div class="chip">GMGN holders tagged: bundler <b>'+(G.n.bundler||0)+'</b> · '+p1(G.now.bundler)+'</div><div class="chip">sniper <b>'+(G.n.sniper||0)+'</b> · '+p1(G.now.sniper)+'</div><div class="chip">insider <b>'+(G.n.insider||0)+'</b> · '+p1(G.now.insider)+'</div><div class="chip">fresh <b>'+(G.n.fresh||0)+'</b> · '+p1(G.now.fresh)+'</div><div class="chip">smart money <b>'+(G.n.smart||0)+'</b> · '+p1(G.now.smart)+'</div><div class="chip">KOL <b>'+(G.n.kol||0)+'</b> · '+p1(G.now.kol)+'</div>'+(G.rug!=null?'<div class="chip">GMGN rug risk <b>'+p1(G.rug)+'</b></div>':'')+(G.wash!=null?'<div class="chip">wash trading <b>'+(G.wash?'yes':'no')+'</b></div>':'')+(G.agree?'<div class="chip">GMGN bundler/insider holders we also group: <b>'+G.agree.inOurs+' of '+G.agree.flagged+'</b></div>':'')+'</div>':'')+
+  ((R.gmgnOnly||[]).length?'<details style="margin-top:8px"><summary>Wallets GMGN flags that we did not ('+R.gmgnOnly.length+')</summary><div class="tw" style="margin-top:6px"><table><tr><th class="l">wallet</th><th class="l">GMGN tags</th><th>holds</th><th>sold</th><th class="l">funded by</th></tr>'+R.gmgnOnly.map(function(x){return '<tr><td class="l">'+w(x.wallet)+'</td><td class="l">'+x.tags.map(function(t){return '<span class="tag gm">'+esc(t)+'</span>'}).join('')+'</td><td>'+p1(x.pct)+'</td><td>'+p1(x.soldPct)+'</td><td class="l">'+(x.fund?(x.fund.name?esc(x.fund.name)+' ':'')+w(x.fund.wallet):'–')+'</td></tr>'}).join('')+'</table></div></details>':'')+
+  (G.ok?'<details style="margin-top:8px"><summary>Everything GMGN reports for this coin</summary><div class="tw" style="margin-top:6px;max-height:420px"><table>'+Object.entries(Object.assign({},G.tagCounts||{},G.facts||{})).map(function(kv){return '<tr><td class="l sub">'+esc(kv[0].replace(/_/g,' '))+'</td><td class="l">'+esc(String(kv[1]))+'</td></tr>'}).join('')+'</table></div></details>':'')+'</div>'}
+function liqCard(){var Q=R.liquidity,D=R.dex||{};if(!Q&&!D.liq)return '';var b=Q?Q.burnedPct:null;return '<div class="card"><h2>Liquidity</h2><div class="grid">'+kv('pool',Q?w(Q.pool):(D.pair?w(D.pair):'–'))+kv('in the pool',Q&&Q.poolSol?Q.poolSol.toFixed(1)+' SOL <small>'+usd(D.liq)+'</small>':usd(D.liq))+kv('LP tokens burned',b==null?'–':'<span class="'+(b>=99?'pos':b>=90?'':'neg')+'">'+p1(b)+'</span>')+kv('can it be pulled?',b==null?'unknown':b>=99?'<span class="pos">no — burned</span>':'<span class="neg">yes — LP is held</span>')+kv('pool created by',Q?w(Q.creator):'–')+kv('dex',esc(D.dex||'–'))+'</div>'+(Q&&Q.lpHolders&&Q.lpHolders.length&&!(b>=99)?'<div class="sub" style="margin-top:8px">LP holders: '+Q.lpHolders.map(function(x){return w(x.owner)+' '+p1(x.pctOfMinted)}).join(' · ')+'</div>':'')+'</div>'}
+function whaleCell(p){var g=p&&p.gmStats;if(!g)return '–';return (g.winrate!=null?'win '+Math.round(g.winrate*100)+'% · ':'')+(g.pnl!=null?'PnL '+(g.pnl>=0?'+':'')+Math.round(g.pnl*100)+'% · ':'')+(g.realized!=null?usd(g.realized)+' realised':'')+(g.followers?' · '+g.followers+' followers':'')+(g.tags&&g.tags.length?' · '+esc(g.tags.slice(0,2).join(', ')):'')}
+function firstCard(){var S=R.windowSummary;if(!S||!S.firstN)return '';var n=S.firstN,pc=function(x){return Math.round(x/n*100)+'%'};
+  var holdOnly=S.firstHold-S.firstSoldSome,parts=[['Holding, never sold',Math.max(0,holdOnly),'#3fb950'],['Sold some, still holding',S.firstSoldSome,'#e3b341'],['Sold everything',S.firstSoldAll,'#f85149'],['Holds none (moved it, or other)',Math.max(0,n-S.firstHold-S.firstSoldAll),'#8b949e']];
+  var bar='<div style="display:flex;height:34px;border-radius:8px;overflow:hidden;margin:6px 0 10px">'+parts.filter(function(x){return x[1]>0}).map(function(x){return '<div title="'+x[0]+' '+x[1]+'" style="flex:'+x[1]+';background:'+x[2]+';display:flex;align-items:center;justify-content:center;color:#0d1117;font-weight:700;font-size:13px">'+(x[1]/n>=0.07?pc(x[1]):'')+'</div>'}).join('')+'</div>';
+  return '<div class="card"><h2>The first '+n+' buyers today</h2>'+bar+'<div class="tiles">'+
+   tile(S.firstHold/n>=0.5?'ok':'amber','Still holding',S.firstHold+' / '+n+' <small style="font-size:14px;color:var(--mut)">'+pc(S.firstHold)+'</small>','they hold '+p1(S.firstHoldPct)+' of the supply between them')+
+   tile(S.firstSoldAll/n>=0.5?'red':'amber','Sold everything',S.firstSoldAll+' <small style="font-size:14px;color:var(--mut)">'+pc(S.firstSoldAll)+'</small>','plus '+S.firstSoldSome+' sold part and still hold')+
+   tile(S.firstMoved?'amber':'ok','Moved tokens to other wallets',S.firstMoved+' <small style="font-size:14px;color:var(--mut)">'+pc(S.firstMoved)+'</small>',S.sideN?'all early wallets (incl. dev & bundle) sent to '+S.sideN+' side wallet'+(S.sideN===1?'':'s')+', holding '+p1(S.sideHoldPct)+' now':'no side wallets found')+
+   tile('ok','Sold in the last hour',(S.sellers1h||0)+' wallets',p1(S.soldPct1h)+' of supply')+'</div><div class="legend" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px">'+parts.map(function(x){return '<div><i style="background:'+x[2]+'"></i>'+x[0]+' <b style="margin-left:6px">'+x[1]+'</b></div>'}).join('')+'</div><div class="sub" style="margin-top:6px">a wallet&#39;s history is its last 12 transactions on this coin; "moved" counts token transfers to another wallet</div></div>'}
+function txl(s){return s?'<a target="_blank" href="https://solscan.io/tx/'+s+'">tx</a>':''}
+function evidence(g){return (g.evidence||[]).length?'<details><summary>why these are one owner ('+g.evidence.length+' links)</summary><div class="sub" style="margin:6px 0 4px">'+g.evidence.map(function(e){return '<div style="margin:2px 0">'+w(e.a)+' ↔ '+w(e.b)+' — '+esc(e.why)+(e.strong?'':' <span class="tag">probable</span>')+' '+txl(e.sig)+'</div>'}).join('')+'</div></details>':''}
+function groupsCard(){var G=R.groups||[],PG=R.probableGroups||[];
+  return '<div class="card"><h2>Who holds the supply (wallets grouped by owner)</h2><div class="sub" style="margin-bottom:8px">Confirmed links only: bought in the create block with the dev · funded by one another · the same funder (exchanges left out) · paid in one disperser transaction · funding chains two steps back · tokens passed between them · SOL from a sale that bought back in. Click a group for the proof, transaction by transaction.</div>'+(G.length?'<div class="tw"><table><tr><th>owner</th><th>wallets</th><th>holds now</th><th>bought at launch</th><th class="l">who</th><th>fresh</th><th class="l">linked by</th><th class="l">wallets</th></tr>'+G.map(function(g){return '<tr><td>'+tag('owner '+g.id,'grp')+'</td><td>'+g.n+'</td><td class="gn" data-g="'+g.id+'"><b>'+p1(g.nowPct)+'</b></td><td>'+p1(g.boughtPct)+'</td><td class="l">'+g.roles.filter(function(r){return r!=='early'}).map(function(r){return tag(r,r==='side wallet'?'side':r)}).join('')+'</td><td>'+g.fresh+'</td><td class="l sub">'+esc(g.links.join(', '))+'</td><td class="l">'+g.wallets.slice(0,6).map(w).join(' ')+(g.n>6?' +'+(g.n-6):'')+'</td></tr><tr><td></td><td colspan="7" class="l">'+evidence(g)+'</td></tr>'}).join('')+'</table></div>':'<div class="sub">No linked wallets found: every holder looks like a separate owner.</div>')+
+  (PG.length?'<details style="margin-top:10px"><summary>Probably the same owner — not proven ('+PG.length+' groups)</summary><div class="sub" style="margin:6px 0">adds the weaker signs: the same exchange paying near-identical amounts within 15 minutes, or several wallets buying the identical SOL amount within 20 s</div><div class="tw"><table><tr><th>group</th><th>wallets</th><th>holds now</th><th class="l">who</th><th class="l">wallets</th></tr>'+PG.map(function(g){return '<tr><td>'+tag(g.id,'grp')+'</td><td>'+g.n+'</td><td><b>'+p1(g.nowPct)+'</b></td><td class="l">'+g.roles.filter(function(r){return r!=='early'}).map(function(r){return tag(r,r==='side wallet'?'side':r)}).join('')+'</td><td class="l">'+g.wallets.slice(0,6).map(w).join(' ')+(g.n>6?' +'+(g.n-6):'')+'</td></tr><tr><td></td><td colspan="4" class="l">'+evidence(g)+'</td></tr>'}).join('')+'</table></div></details>':'')+'</div>'}
+function replacedCard(){var X=R.replaced||[],T=R.saleTrail||{};if(!T.sellers&&!X.length)return '';
+  return '<div class="card"><h2>Sell and replace: did the sale money come back in?</h2><div class="sub" style="margin-bottom:8px">We followed the SOL out of '+(T.sellers||0)+' wallets — the dev and bundle from launch (they often pay fresh wallets before selling), the others from their first sale — two steps deep ('+(T.transfers||0)+' transfers'+(T.toExchanges?', '+T.toExchanges+' into exchanges, where the trail ends':'')+'). Any wallet that received it and bought or holds this coin is listed.</div>'+(X.length?'<div class="tw"><table><tr><th class="l">new wallet</th><th class="l">money came from</th><th class="l">through</th><th>SOL</th><th class="l">when</th><th>holds now</th><th class="l">proof</th></tr>'+X.map(function(x){return '<tr><td class="l">'+w(x.wallet)+(x.bought?' '+tag('bought','link'):'')+'</td><td class="l">'+tag(x.fromRole||'wallet',x.fromRole==='side wallet'?'side':x.fromRole)+' '+w(x.from)+'</td><td class="l">'+(x.via?w(x.via):'direct')+'</td><td>'+x.sol.toFixed(2)+'</td><td class="l">'+uk(x.ts)+'</td><td><b>'+p1(x.holds)+'</b></td><td class="l">'+txl(x.sig)+(x.isFirst?' <small>(itself one of the first buyers'+(x.toRank?', #'+x.toRank:'')+')</small>':'')+'</td></tr>'}).join('')+'</table></div>':'<div class="sub"><b>None found</b> — no wallet that received their sale money (within two steps) bought or holds this coin.</div>')+'</div>'}
+function trailCard(){var T=R.trail;if(!T||!T.n)return '';
+  var ctl=T.holds+T.sideHolds+T.backHolds,other=Math.max(0,T.start-T.holds-T.movedPct-T.soldPct);
+  var parts=[['Still in the same wallets',T.holds,'#3fb950'],['Moved to side wallets, still held',T.sideHolds,'#e3b341'],['Sold, came back through new wallets, still held',T.backHolds,'#bc8cff'],['Sold to the market',T.soldPct,'#f85149']],tot=parts.reduce(function(a,x){return a+x[1]},0)||1;
+  var bar='<div style="display:flex;height:34px;border-radius:8px;overflow:hidden;margin:6px 0 10px">'+parts.filter(function(x){return x[1]>0.005}).map(function(x){return '<div title="'+x[0]+' '+p1(x[1])+'" style="flex:'+x[1]+';background:'+x[2]+';display:flex;align-items:center;justify-content:center;color:#0d1117;font-weight:700;font-size:13px">'+(x[1]/tot>=0.08?p1(x[1]):'')+'</div>'}).join('')+'</div>';
+  function story(r){var s=[];s.push('started with <b>'+p1(r.start)+'</b>');s.push('holds <b>'+p1(r.holds)+'</b>');
+    if(r.side.length)s.push('moved '+p1(r.movedPct)+' to '+r.side.length+' side wallet'+(r.side.length===1?'':'s')+' ('+r.side.map(function(x){return w(x.wallet)+' '+p1(x.pct)+(x.step>1?' <small>step '+x.step+'</small>':'')}).join(', ')+')');
+    else if(r.movedPct>0.005)s.push('moved '+p1(r.movedPct)+' to other wallets');
+    if(r.soldPct>0.005)s.push('sold '+p1(r.soldPct));
+    if(r.back.length)s.push('its SOL reached '+r.back.length+' new wallet'+(r.back.length===1?'':'s')+' that bought this coin ('+r.back.map(function(x){return w(x.wallet)+' '+p1(x.pct)+(x.via?' <small>through '+w(x.via)+'</small>':'')+(x.beforeSale?' <small>sent before it sold</small>':'')+(x.soldAgain?' <small>then sold again</small>':'')+' '+txl(x.sig)}).join(', ')+')');
+    return s.join(' → ')}
+  function who(r){return (r.role==='dev'?tag('dev'):r.role==='bundle'?tag('bundle'):tag('#'+r.rank,'early'))+' '+w(r.wallet)+(r.group?' '+tag('owner '+r.group,'grp'):'')+((r.paidBy||[]).length?' <small>bought with SOL from '+r.paidBy.map(function(x){return (x.role==='dev'?'the dev':x.role==='bundle'?'bundle wallet':x.rank?'first buyer #'+x.rank:'wallet')+' '+w(x.wallet)+(x.via?' through '+w(x.via):'')+' '+txl(x.sig)}).join(', ')+'</small>':'')+(r.histPartial?' <small style="color:var(--amb)">history cut</small>':'')}
+  var isH=function(r){return r.side.length||r.back.length||(r.paidBy||[]).length},hid=T.rows.filter(isH),rest=T.rows.filter(function(r){return !isH(r)});
+  return '<div class="card"><h2>Where the launch supply went</h2><div class="sub" style="margin-bottom:6px">The dev, '+T.rows.filter(function(r){return r.role==='bundle'}).length+' bundle wallet'+(T.rows.filter(function(r){return r.role==='bundle'}).length===1?'':'s')+' and the first buyers took <b>'+p1(T.start)+'</b> of the supply at launch. Today:</div>'+bar+
+   '<div class="tiles">'+tile(T.holds>=10?'amber':'ok','Still in the same wallets',p1(T.holds),'')+tile(T.sideHolds>=3?'red':T.sideHolds>0.05?'amber':'ok','Hidden in side wallets',p1(T.sideHolds),'tokens moved out, still held')+tile(T.backHolds>=3?'red':T.backHolds>0.05?'amber':'ok','Came back through new wallets',p1(T.backHolds),'bought with their SOL, still held')+tile('ok','Sold to the market',p1(T.soldPct),other>0.5?p1(other)+' not traced':'')+'</div>'+
+   '<div class="sub" style="margin:8px 0">Still controlled by the launch wallets and their hidden wallets: <b style="font-size:15px;color:'+(ctl>=15?'#ff7b72':ctl>=5?'var(--amb)':'var(--grn)')+'">'+p1(ctl)+'</b> across '+(T.n+T.hiddenWallets)+' wallets ('+T.hiddenWallets+' of them hidden).</div>'+
+   (hid.length?'<div style="margin-top:8px"><b>Wallets that split or replaced their tokens ('+hid.length+')</b>'+hid.map(function(r){return '<div style="margin:6px 0;padding:6px 8px;border-left:3px solid var(--amb);background:var(--bg2,#161b22)">'+who(r)+'<div style="margin-top:3px;font-size:13px">'+story(r)+'</div></div>'}).join('')+'</div>':'<div class="sub"><b>No split or replacement found</b> among these wallets (side wallets two steps out, sale money two steps out, exchanges end the trail).</div>')+
+   '<details style="margin-top:8px"><summary>Every launch wallet ('+rest.length+' more, nothing hidden found)</summary><div style="font-size:13px;margin-top:6px">'+rest.map(function(r){return '<div style="margin:3px 0">'+who(r)+' — '+story(r)+'</div>'}).join('')+'</div></details>'+
+   (T.cut?'<div class="sub" style="margin-top:6px;color:var(--amb)">'+T.cut+' wallet'+(T.cut===1?' has':'s have')+' more history than was read — older moves may be missing for '+(T.cut===1?'it':'them')+'.</div>':'')+'</div>'}
+function moreTags(p){return (p.rebuyer?tag('bought with sale money','link'):'')+(p.delayedBundle?tag('delayed bundle','dev'):'')+(p.launchProbable?tag('probably linked','grp'):'')+(p.sideStep?tag('side wallet step '+p.sideStep,'side'):'')}
+function launchSrcTxt(S){if(!S)return 'the chain';var a=[];if(S.tracker)a.push('our tracker&#39;s live record ('+S.tracker+')');if(S.oldestFirst)a.push('the chain, oldest first ('+((S.curve||0)+(S.mint||0)+(S.pool||0))+')');else if(S.walk||S.oldestFirst===false)a.push('the chain, newest-first walk ('+((S.walk||0)+(S.mint||0)+(S.pool||0))+')');if(S.pool)a.push(S.pool+' from the pool after graduation');if(S.blocksRead)a.push('the create block read whole ('+(S.block||0)+' more transactions found there)');if(S.viaDev)a.push('the create transaction found in the dev&#39;s wallet');if(S.blockErr)a.push('block read failed: '+esc(S.blockErr));return a.join(' + ')||'the chain'}
+function trustHtml(){var h='',C=R.coverage||{},X=R.disagree||[];
+  if(!R.verified)h+='<div class="card" style="border:2px solid var(--red);background:#2a1215"><b style="color:#ff7b72;font-size:16px">The site&#39;s accuracy is still being proven on real coins — check against GMGN before trading.</b><div class="sub" style="color:#f0b4b0;margin-top:4px">Every coin you paste is read in full from the chain. What is still being proven is that our reading matches the truth on real coins, so compare the key numbers with GMGN until this note comes off.</div></div>';
+  if(X.length)h+='<div class="card" style="border:2px solid var(--amb)"><b style="color:var(--amb)">GMGN disagrees with us on '+X.length+' point'+(X.length===1?'':'s')+'</b><div style="margin-top:6px">'+X.map(function(x){return '<div>'+esc(x.what)+': we say <b>'+p1(x.ours)+'</b>, GMGN says <b>'+p1(x.gmgn)+'</b></div>'}).join('')+'</div><div class="sub" style="margin-top:4px">until we know which is right, treat both numbers as uncertain</div></div>';
+  function line(ok,txt){return '<div style="margin:3px 0"><span style="color:'+(ok?'var(--grn)':'var(--amb)')+'">'+(ok?'✔':'⚠')+'</span> '+txt+'</div>'}
+  h+='<div class="card"><details><summary><b>What was actually checked</b> — read this before trusting a zero</summary><div style="margin-top:8px;font-size:13px">'+
+   line(C.launchRebuilt,C.launchRebuilt?'Launch rebuilt: '+C.launchTxs+' transactions from the create block on, read from '+launchSrcTxt(C.launchSrc):'<b>Launch NOT found</b> — '+esc(C.launchMissing||'unknown reason')+'. Dev, bundle, sniper and first-buyer figures are <b>unknown, not zero</b>.')+
+   (C.curveComplete!=null?line(C.curveComplete,C.curveComplete?'Self-check passed: the launch buys read add up to the '+p1(C.curveSoldRead)+' the bonding curve sold before graduating':'<b>Self-check FAILED</b>: '+esc(C.launchIncomplete||'')):'')+
+   (C.launchCheck?line(C.launchCheck.pctAgree!=null?C.launchCheck.pctAgree:C.launchCheck.agree,'Checked against our tracker&#39;s live record: tracker saw <b>'+p1(C.launchCheck.trackerPct)+'</b> bought in the create block by '+C.launchCheck.trackerWallets+' wallets ('+(C.launchCheck.trackerSol||0).toFixed(1)+' SOL); this lookup found <b>'+p1(C.launchCheck.oursPct)+'</b> by '+C.launchCheck.oursWallets+(C.launchCheck.missing&&C.launchCheck.missing.length?' — <b>'+C.launchCheck.missing.length+' of its wallets missing</b>: '+C.launchCheck.missing.slice(0,6).map(w).join(' '):'')):line(true,C.trackerSaw?'Our tracker saw this launch (its bundle record is shown in the diagnosis)':'Our tracker did not record this launch (it only keeps launches since 18 Oct) — the chain read stands alone'))+
+   (C.launchRebuilt?line(C.firstFound>0,'First buyers found: '+C.firstFound+' of '+C.firstWanted+(C.firstFound<C.firstWanted?' (the coin had fewer buyers in the transactions read)':'')):line(false,'First buyers: not read (the launch was not found)'))+
+   line(C.histRead===C.histWallets&&!C.histCut,'Coin history read for '+C.histRead+' of '+C.histWallets+' wallets; '+C.histCut+' had more transactions than were read ('+esc(C.histDepth||'')+')')+
+   line(C.fundingFound>=0.8*C.profileWanted,'Funding traced for '+C.fundingFound+' of '+C.profileWanted+' wallets'+(C.busyFunders?' · '+C.busyFunders+' funders were busy (exchange-like) and not used to link wallets':''))+
+   line(C.sellers>=C.sellersWithSales,'Money followed out of '+C.sellers+' of '+C.sellersWithSales+' wallets (dev and bundle from launch, first buyers and side wallets from their first sale), two steps deep; '+(C.receiversChecked||0)+' receiving wallets checked for buys of this coin')+
+   line(!C.readFail,C.readFail?'<b>'+C.readFail+' reads failed</b> and were skipped (last: '+esc(C.readFailLast||'')+')':'Every transaction asked for was read (none failed)')+
+   line(C.holdersComplete,'Holdings: '+(C.holdersComplete?'every token account read ('+C.holdersRead+' wallets)':C.holdersRead+' wallets read in full; the rest one by one'))+
+   line(true,'Side wallets followed '+(C.sideSteps||0)+' step'+(C.sideSteps===1?'':'s')+' out')+
+   (C.callCapHit?line(false,'The lookup hit its call limit — some sections are partial (see the notes in the diagnosis)'):'')+
+   '<div class="sub" style="margin-top:6px">Not covered: money routed through an exchange (the trail stops there) or through more than two wallets; token transfers older than the transactions read; wallets created after this lookup (press full refresh).</div></div></details></div>';
+  return h}
+function render(){
+  var h='',M=R.mint,N=R.nowMarket||{},D=R.dex||{},H=R.holders||{},L=R.launch,S=R.windowSummary,DB=R.db||{};
+  h+='<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><h1>'+esc(R.name||'unknown')+(R.symbol?' <span class="sub">$'+esc(R.symbol)+'</span>':'')+'</h1><div class="sub mono">'+M+'</div></div><div><span class="live'+(LIVE?' on':'')+'" id="lv"><span class="dot"></span><span id="lvt">live '+(LIVE?'on':'off')+'</span></span></div></div><div class="links" style="margin-top:6px"><a target="_blank" href="https://solscan.io/token/'+M+'">Solscan</a><a target="_blank" href="https://dexscreener.com/solana/'+M+'">DexScreener</a><a target="_blank" href="https://pump.fun/coin/'+M+'">pump.fun</a><a target="_blank" href="https://gmgn.ai/sol/token/'+M+'">GMGN</a>'+(D.links||[]).slice(0,4).map(function(u){return '<a target="_blank" href="'+esc(u)+'">'+esc(u.replace(/^https?:\\/\\/(www\\.)?/,'').slice(0,28))+'</a>'}).join('')+'</div>';
+  h+='<div class="grid" style="margin-top:10px">'+kv('market cap',usd(N.mcUsd||D.mc)+(N.mcSuspect?' <small style="color:var(--amb)">DexScreener</small>':''),'mcv')+kv('trading on',esc(N.venue)+(R.curveProgress!=null&&N.venue==='bonding curve'?' <small>'+R.curveProgress.toFixed(0)+'%</small>':''),'vnv')+kv('holders',H.count!=null?String(H.count):'–')+kv('top 10 hold',p1(H.top10Pct),'t10v')+kv('liquidity',usd(D.liq))+kv('volume 24 h',usd(D.vol24))+kv('5m / 1h',chg(D.ch5m)+' / '+chg(D.ch1h))+(R.token.permanentDelegate?kv('permanent delegate','<span class="neg">'+w(R.token.permanentDelegate)+' can take tokens from any wallet</span>'):'')+(R.token.transferFeeBps?kv('transfer tax','<span class="neg">'+(R.token.transferFeeBps/100).toFixed(2)+'%</span>'):'')+kv('mint / freeze',(R.token.mintAuthority?'<span class="neg">mint on</span>':'<span class="pos">revoked</span>')+' / '+(R.token.freezeAuthority?'<span class="neg">freeze on</span>':'<span class="pos">none</span>'))+'</div></div>';
+  h+=trustHtml();h+=glance();h+=trailCard();h+=firstCard();h+=cmpCard();h+=liqCard();
+  h+='<div class="card diag"><h2>Diagnosis</h2>'+(R.diag||[]).map(function(d){return '<div class="'+d.lvl+'">'+esc(d.txt)+'</div>'}).join('')+(R.notes||[]).map(function(n){return '<div class="note">'+esc(n)+'</div>'}).join('')+'</div>';
+  var DV=R.dev;if(DV){var sm=DV.summary||{};h+='<div class="card"><h2>The dev</h2><div class="grid">'+kv('wallet',w(DV.wallet)+(DV.feeWallet?' <small>signed the launch</small>':''))+(DV.feeWallet?kv('creator-fee wallet',w(DV.feeWallet)+' <small>named as creator on the coin</small>'):'')+kv('wallet age at launch',hrs(R.creatorAgeH))+kv('funded by',fw(DV.funder)+(DV.fundedSol!=null?' <small>'+DV.fundedSol.toFixed(2)+' SOL</small>':'')+(DV.funderBusy?' <small>(exchange-like)</small>':''))+kv('…which was funded by',DV.funderBusy?'–':w(DV.funder2))+kv('SOL now',DV.sol!=null?DV.sol:'–')+kv('bought at launch',p1(DV.boughtPct))+kv('holds now',p1(DV.nowPct))+kv('sold',DV.soldPct?p1(DV.soldPct)+' <small>'+(DV.soldSol||0)+' SOL</small>':'–')+kv('other coins launched',sm.n!=null?sm.n+' <small>'+(sm.graduated||0)+' graduated · '+(sm.last24h||0)+' in 24 h · best '+usd(sm.best)+'</small>':'–')+'</div>'+(DV.coins&&DV.coins.length?'<details style="margin-top:10px"><summary>His other coins ('+DV.coins.length+(sm.n>DV.coins.length?' of '+sm.n:'')+', source: '+esc(DV.source)+')</summary><div class="tw" style="margin-top:6px"><table><tr><th class="l">coin</th><th class="l">launched</th><th>market cap now</th><th>best</th><th>graduated</th></tr>'+DV.coins.map(function(c){return '<tr><td class="l"><a href="/coin?key='+encodeURIComponent(key)+'&mint='+c.mint+'">'+esc(c.name||c.mint.slice(0,6))+'</a> <span class="sub">$'+esc(c.symbol||'')+'</span></td><td class="l">'+uk(c.created)+'</td><td>'+usd(c.mc)+'</td><td>'+usd(c.ath)+'</td><td>'+(c.graduated?'yes':'no')+'</td></tr>'}).join('')+'</table></div></details>':(DV.coinsErr?'<div class="note">pump.fun list not available: '+esc(DV.coinsErr)+'</div>':''))+'</div>'}
+  h+=replacedCard();h+=groupsCard();
+  if(S){h+='<div class="card"><h2>Supply control</h2><div class="chips"><div class="chip">dev + bundle hold <b>'+p1(S.devBundleHoldPct)+'</b></div><div class="chip">first '+S.firstN+' buyers + dev + bundle hold <b id="whn">'+p1(S.holdNowPct)+'</b></div><div class="chip" style="border-color:'+(S.sideHoldPct>=5?'var(--red)':'var(--line)')+'">their side wallets hold <b>'+p1(S.sideHoldPct)+'</b> ('+S.sideN+')</div>'+((R.groups||[])[0]?'<div class="chip">largest owner group <b>'+p1(R.groups[0].nowPct)+'</b> ('+R.groups[0].n+' wallets)</div>':'')+'<div class="chip">sold so far <b>'+p1(S.soldPct)+'</b></div><div class="chip" style="border-color:'+(S.soldPct1h>=2?'var(--red)':'var(--line)')+'">sold last hour <b>'+p1(S.soldPct1h)+'</b> ('+S.sellers1h+' wallets)</div><div class="chip">selling in the last 30 min <b>'+S.sellingNow+'</b></div><div class="chip">whales <b>'+S.whales+'</b> · hold <b>'+p1(S.whaleHoldPct)+'</b></div><div class="chip">fresh <b>'+S.fresh+'</b> of '+S.checked+' · hold <b>'+p1(S.freshHoldPct)+'</b></div><div class="chip">linked to dev/bundle <b>'+S.launchLinked+'</b> · hold <b>'+p1(S.launchLinkedHoldPct)+'</b></div></div></div>';
+    h+='<div class="card"><h2>The dev, the bundle and the first '+S.firstN+' buyers</h2><div class="sub" style="margin-bottom:8px">in buying order; the '+S.firstN+'th bought '+(S.lastBuyerSec!=null?S.lastBuyerSec+' s':'?')+' after launch · holds now updates live · "side wallets" = wallets this one sent tokens to, and what they hold</div><div class="flt">'+[['all','all'],['hold','still holding'],['selling','sold some'],['fresh','fresh'],['whale','whales'],['linked','dev / bundle and linked'],['group','in an owner group']].map(function(x){return '<button data-f="'+x[0]+'" class="'+(FILT===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div><div class="tw"><table><thead><tr><th>#</th><th class="l">wallet</th><th class="l">what it is</th><th>bought after</th><th>bought</th><th>holds now</th><th>sold</th><th>last sold</th><th>side wallets</th><th>SOL</th><th>portfolio</th><th class="l">other coins</th><th>wallet age at launch</th><th class="l">funded by</th><th class="l">what it did</th></tr></thead><tbody id="wb">'+rowsWindow()+'</tbody></table></div></div>';
+    if((R.side||[]).length)h+='<div class="card"><h2>Side wallets (live)</h2><div class="sub" style="margin-bottom:6px">wallets the dev, bundle and first buyers sent tokens to · holdings and their latest move update every 15 s</div><div class="tw"><table><tr><th class="l">wallet</th><th>holds now</th><th class="l">got tokens from</th><th class="l">owner group</th><th class="l">latest move</th></tr><tbody id="sideb">'+sideRows()+'</tbody></table></div></div>';}
+  if(L||DB.seen){h+='<div class="card"><h2>Launch</h2><div class="grid">'+kv('created',uk(L?L.createTs:DB.create_ts))+kv('creator',w(L?L.creator:DB.creator)+(R.creatorAgeH!=null?' <small>wallet '+hrs(R.creatorAgeH)+' old</small>':''))+kv('dev buy',L?p1(L.dev.pct)+' <small>'+L.dev.sol.toFixed(2)+' SOL</small>':(DB.dev_buy_sol!=null?DB.dev_buy_sol+' SOL':'–'))+kv('bundle (create block)',L?p1(L.bundle.pct)+' <small>'+L.bundle.n+' wallet'+(L.bundle.n===1?'':'s')+' · '+L.bundle.sol.toFixed(1)+' SOL</small>':p1(DB.bundle_pct)+' <small>'+(DB.bundle_wallets||0)+' wallets</small>')+kv('snipers (next 4 blocks)',L?p1(L.snipers.pct)+' <small>'+L.snipers.n+' wallet'+(L.snipers.n===1?'':'s')+'</small>':'–')+kv('rest of the first '+R.windowS+' s',L?p1(L.early.pct)+' <small>'+L.early.n+' wallets</small>':'–')+kv('graduated',N.graduated?(L&&L.gradAfterS!=null?'yes <small>~'+ago(L.gradAfterS)+' after launch</small>':'yes'):'no')+(DB.creatorHistory&&DB.creatorHistory.n?kv("creator's other coins",DB.creatorHistory.n+' <small>'+(DB.creatorHistory.grads||0)+' graduated · best '+usd(DB.creatorHistory.best)+'</small>'):'')+'</div></div>';}
+  h+='<div class="card"><h2>Top holders now</h2><div class="sub" style="margin-bottom:6px">top 10 <span id="t10b">'+p1(H.top10Pct)+'</span> · top 20 '+p1(H.top20Pct)+' (pool and curve left out)</div><div class="tw"><table><tr><th>#</th><th class="l">wallet</th><th>holds</th><th class="l">what it is</th><th>first bought</th><th>wallet age</th><th class="l">funded by</th><th class="l">what it did</th><th class="l">GMGN wallet stats (30 d)</th><th class="l">GMGN: funded by</th></tr><tbody id="th">'+topRows(H.top||[])+'</tbody></table></div></div>';
+  h+='<div class="card"><h2>Live trades</h2><div class="sub" id="feedsub">waiting for the first live read…</div><div class="tw" style="max-height:360px"><table><tr><th class="l">time</th><th class="l">wallet</th><th class="l">what it is</th><th class="l">side</th><th>SOL</th><th>tokens</th></tr><tbody id="feed"></tbody></table></div></div>';
+  var RB=R.recent;if(RB){h+='<div class="card"><h2>Who was buying when you looked it up</h2><div class="sub" style="margin-bottom:6px">last '+RB.trades+' trades ('+uk(RB.from)+' to '+uk(RB.to)+'): '+RB.buyers+' buying wallets, '+RB.sells+' sells · fresh '+RB.fresh+' of '+RB.checked+', '+RB.freshSol+' of '+RB.sol+' SOL'+(RB.linked?' · <b style="color:var(--red)">'+RB.linked+' are the dev, bundle or linked to them</b>':'')+'</div><div class="tw"><table><tr><th class="l">wallet</th><th class="l">what it is</th><th>SOL in</th><th>buys</th><th>bought</th><th>last buy</th><th>wallet age</th><th class="l">funded by</th></tr>'+(RB.list||[]).slice(0,40).map(function(b){return '<tr><td class="l">'+w(b.wallet)+'</td><td class="l">'+tags(b)+'</td><td>'+b.sol+'</td><td>'+b.buys+'</td><td>'+p1(b.pct)+'</td><td>'+ago(R.now-b.last)+' ago</td><td>'+hrs(b.ageH)+'</td><td class="l">'+fw(b.funder)+'</td></tr>'}).join('')+'</table></div></div>'}
+  var TL=(R.tracked||[]).filter(function(x){return (x.events||[]).length});if(TL.length){h+='<div class="card"><details><summary>Dev, bundle and sniper timelines ('+TL.length+' wallets)</summary>'+TL.map(function(x){return '<div style="margin:10px 0"><b>'+tag(x.role)+' '+w(x.wallet)+'</b> <span class="sub">'+esc(x.behaviour||'')+(x.histPartial?' · last 25 transactions':'')+'</span><div class="sub" style="margin-top:3px">'+x.events.map(function(e){var t=e.kind==='buy'?'bought':e.kind==='sell'?'sold':e.kind==='in'?'received':'sent';return '<span style="margin-right:10px">'+uk(e.ts).replace(' UK','')+' '+t+' '+p1(e.pct)+(e.kind==='sell'||e.kind==='buy'?' for '+Math.abs(e.sol)+' SOL'+(e.mc?' at '+usd(e.mc):''):'')+(e.other?' '+(e.kind==='out'?'to ':'from ')+w(e.other):'')+'</span>'}).join(' · ')+'</div></div>'}).join('')+'</details></div>'}
+  if((DB.life||[]).length)h+='<div class="card"><h2>Tracker checkpoints</h2><div class="tw"><table><tr><th class="l">after</th><th>market cap</th><th>holders</th><th>top 10</th><th>buyers so far</th></tr>'+DB.life.map(function(x){return '<tr><td class="l">'+ago(x.cp)+'</td><td>'+usd(x.mc)+'</td><td>'+(x.holders==null?'–':x.holders)+'</td><td>'+p1(x.top10_pct)+'</td><td>'+(x.buyers_total==null?'–':x.buyers_total)+'</td></tr>'}).join('')+'</table></div></div>';
+  if((R.books||[]).length)h+='<div class="card"><h2>Our books on this coin (paper)</h2><div class="tw"><table><tr><th class="l">book</th><th class="l">bought</th><th>at MC</th><th>peak</th><th>3-min</th><th>40% trail</th></tr>'+R.books.map(function(b){function m(x){return x==null?'–':Number(x).toFixed(2)+'x'}return '<tr><td class="l">'+esc(b.book)+'</td><td class="l">'+uk(b.entry_ts)+'</td><td>'+usd(b.entry_mc)+'</td><td>'+m(b.peak_mult)+'</td><td>'+m(b.x_h3)+'</td><td>'+m(b.x_tsl40)+'</td></tr>'}).join('')+'</table></div></div>';
+  h+='<div class="sub">looked up '+uk(R.now)+' · '+(R.calls||0)+' chain calls · '+((R.ms||0)/1000).toFixed(1)+' s · <a href="#" id="again">full refresh</a></div>';
+  $('out').innerHTML=h;
+  var a=$('again');if(a)a.onclick=function(e){e.preventDefault();look(R.mint,true)};
+  $('lv').onclick=function(){LIVE=!LIVE;this.className='live'+(LIVE?' on':'');$('lvt').textContent='live '+(LIVE?'on':'off');if(LIVE)live()};
+  document.querySelectorAll('.flt button').forEach(function(b){b.onclick=function(){FILT=b.dataset.f;document.querySelectorAll('.flt button').forEach(function(x){x.className=x.dataset.f===FILT?'on':''});$('wb').innerHTML=rowsWindow()}});
+}
+function topRows(top){var byW={};(R.window||[]).concat(R.tracked||[]).forEach(function(p){byW[p.wallet]=p});var old={};(R.holders.top||[]).forEach(function(x){old[x.owner]=x});
+  return top.map(function(x,i){var o=old[x.owner]||{},p=byW[x.owner]||{},lab=x.label||o.label||'';var meta=Object.assign({},o,p,{role:/pool|curve/.test(lab)?null:(p.role||o.label||null)});return '<tr><td>'+(i+1)+'</td><td class="l">'+w(x.owner)+'</td><td>'+p1(x.pct)+'</td><td class="l">'+(/pool|curve/.test(lab)?tag(lab,'x'):tags(meta))+gmTags(meta)+(meta.whale?tag('whale','bundle'):'')+'</td><td>'+(meta.firstBuySec!=null?meta.firstBuySec+' s after launch':meta.secAfter!=null?meta.secAfter+' s after launch':'–')+'</td><td>'+hrs(meta.ageH)+'</td><td class="l">'+fw(meta.funder)+'</td><td class="l">'+esc(meta.behaviour||'')+'</td><td class="l sub">'+whaleCell(meta)+'</td><td class="l sub">'+(meta.gm&&meta.gm.fund?(meta.gm.fund.name?esc(meta.gm.fund.name)+' ':'')+w(meta.gm.fund.wallet):'–')+'</td></tr>'}).join('')}
+function live(){if(!R||!LIVE||LIVEBUSY)return;LIVEBUSY=true;fetch('/api/live?key='+encodeURIComponent(key)+'&mint='+R.mint).then(function(r){return r.text()}).then(function(t){try{return JSON.parse(t)}catch(e){return{ok:false,error:'busy, retrying'}}}).then(function(j){LIVEBUSY=false;if(!j.ok){$('lvt').textContent='live: '+j.error;return}
+  $('lvt').textContent='live · '+uk(j.at).replace(' UK','').slice(-8);if(j.mcUsd)$('mcv').textContent=usd(j.mcUsd);
+  (R.window||[]).forEach(function(p){if(j.balances[p.wallet]!=null){var nv=j.balances[p.wallet];if(Math.abs(nv-(p.nowPct||0))>0.005){p.nowPct=nv;p.changed=true}}});
+  (R.groups||[]).forEach(function(g){var x=j.groups.find(function(y){return y.id===g.id});if(x){var c=document.querySelector('.gn[data-g="'+g.id+'"]');if(c&&Math.abs(x.nowPct-g.nowPct)>0.005){c.innerHTML='<b>'+p1(x.nowPct)+'</b>';c.className='gn flash'}g.nowPct=x.nowPct}});
+  if($('wb')){$('wb').innerHTML=rowsWindow();(R.window||[]).forEach(function(p){if(p.changed){var r=document.querySelector('#wb tr[data-w="'+p.wallet+'"] .hn');if(r)r.className='hn flash';p.changed=false}})}
+  (R.side||[]).forEach(function(p){if(j.balances[p.wallet]!=null)p.nowPct=j.balances[p.wallet]});(j.trades||[]).forEach(function(t){var sp=(R.side||[]).find(function(p){return p.wallet===t.wallet});if(sp)sp.lastMove=uk(t.ts).replace(' UK','').slice(-8)+' '+t.kind+' '+p1(t.pct)+' for '+t.sol+' SOL'});if($('sideb'))$('sideb').innerHTML=sideRows();
+  if(R.cat&&R.pie){var P={dev:0,linked:0,side:0,probable:0,first:0,groups:0,top:0};for(var k in R.cat){var v=j.balances[k];if(v==null){var x=(R.window||[]).concat(R.side||[]).find(function(q){return q.wallet===k});v=x?x.nowPct||0:0}P[R.cat[k]]+=v}P.pool=j.poolPct!=null?j.poolPct:R.pie.pool;var used=0;for(var z in P)used+=P[z];P.rest=Math.max(0,100-used);R.pie=P;if($('pie'))$('pie').innerHTML=pie3d(P);if($('leg'))$('leg').innerHTML=legend(P);if($('tiles'))$('tiles').innerHTML=tilesHtml()}
+  if(R.windowSummary&&$('whn'))$('whn').textContent=p1((R.window||[]).reduce(function(a,p){return a+(p.nowPct||0)},0));
+  if(j.top&&j.top.length){$('th').innerHTML=topRows(j.top)}
+  if(j.trades&&j.trades.length){FEED=j.trades.concat(FEED).slice(0,150);$('feed').innerHTML=FEED.map(function(t){return '<tr><td class="l">'+uk(t.ts).replace(' UK','').slice(-8)+'</td><td class="l">'+w(t.wallet)+'</td><td class="l">'+tags(t)+'</td><td class="l '+(t.kind==='buy'?'pos':'neg')+'">'+t.kind+'</td><td>'+t.sol+'</td><td>'+p1(t.pct)+'</td></tr>'}).join('')}
+  $('feedsub').textContent=FEED.length?FEED.length+' trades since the page opened · updates every 15 s · '+j.calls+' calls':'no new trades yet · updates every 15 s'}).catch(function(e){LIVEBUSY=false;$('lvt').textContent='live: '+e.message})}
+function look(m,force){m=(m||'').trim();var x=m.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/);if(!x){$('out').innerHTML='<div class="card note">That does not look like a Solana address.</div>';return}m=x[0];$('m').value=m;
+  history.replaceState(null,'','/coin?key='+encodeURIComponent(key)+'&mint='+m);$('go').disabled=true;FEED=[];$('out').innerHTML='<div class="busy">Reading the chain: the first two minutes of trades, every early wallet\\'s holding and age, who funded whom, the biggest holders\\' history, recent buyers… (1-3 min)</div>';
+  var first=true;(function poll(){fetch('/api/coin?key='+encodeURIComponent(key)+'&mint='+m+(force&&first?'&force=1':'')).then(function(r){return r.text()}).then(function(t){first=false;var j;try{j=JSON.parse(t)}catch(e){j={ok:false,error:'server said: '+t.slice(0,80)}}
+    if(j.pending){$('out').innerHTML='<div class="busy">Working ('+(j.elapsed||0)+' s): '+esc(j.stage||'')+'…<br><span class="sub">A full lookup reads a few thousand records from the chain at a polite pace so the trading bots are never slowed: usually 1-3 minutes.</span></div>';setTimeout(poll,3000);return}
+    $('go').disabled=false;if(!j.ok){$('out').innerHTML='<div class="card note">'+esc(j.error||'failed')+'</div>';return}R=j;try{render();live()}catch(e){$('out').innerHTML='<div class="card note">page error: '+esc(e.message)+'</div>'}}).catch(function(e){setTimeout(poll,5000)})})()}
+$('f').onsubmit=function(e){e.preventDefault();look($('m').value)};
+clearInterval(LT);LT=setInterval(live,15000);
+if(Q.get('mint'))look(Q.get('mint'));
+</script></body></html>`;
+
+
+====================================================================================================
+=== FILE: scope/src/radarpage.mjs (12,402 chars)
+====================================================================================================
+// coin scope 0.7.0 (owner, 24 Oct 17:06 UK: "we should have a website of the coins that are over 100K, with all the relevant data"):
+// /radar — every coin the radar app caught ($50K / $100K / $200K in 5 minutes under $2M market cap, or two listed wallets buying early), what GMGN
+// and FOMO showed at that moment, how far it ran, and the paper result of buying it at each level. Reads radar.db read-only; writes nothing.
+import Database from "better-sqlite3";
+import { existsSync } from "node:fs";
+let rdb = null;
+function open() { if (rdb) return rdb; const p = process.env.RADAR_DB || "/root/tracker/data/radar.db"; if (!existsSync(p)) return null; try { rdb = new Database(p, { readonly: true, fileMustExist: true }); } catch { rdb = null; } return rdb; }
+const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
+export function radarApi(days = 3) {
+  const db = open(); if (!db) return { ok: false, error: "the radar has no data yet" };
+  const since = Math.floor(Date.now() / 1000) - days * 86400;
+  const coins = db.prepare("SELECT mint, name, symbol, launchpad, exchange, trig, flag_ts, created_ts, flag_vol5m, flag_mc, t50, t100, t200, mc50, mc100, mc200, early_ts, early_n, early_mc, early_wallets, base_mc, peak_mc, last_mc, sum0, confirmed, bird FROM coins WHERE flag_ts>=? ORDER BY flag_ts DESC LIMIT 600").all(since);
+  const papers = db.prepare("SELECT * FROM paper WHERE entry_ts>=?").all(since - 86400), byMint = new Map();
+  for (const p of papers) { if (!byMint.has(p.mint)) byMint.set(p.mint, []); byMint.get(p.mint).push(p); }
+  const out = coins.map((c) => { let s = null, ew = []; try { s = JSON.parse(c.sum0 || "null"); } catch {} try { ew = JSON.parse(c.early_wallets || "[]"); } catch {}
+    return { ...c, sum0: undefined, early_wallets: undefined, s, early: ew.map((x) => ({ w: x.w, src: x.src, sol: x.sol })), paper: byMint.get(c.mint) || [] }; });
+  const groups = {};
+  for (const p of papers) { const g = groups[p.trig] || (groups[p.trig] = { n: 0, scored: 0, x2: 0, x3: 0, x5: 0, hold: [], trail: [], tp: [], won: 0 }); g.n++;
+    if (p.done && p.peak360 != null) { g.scored++; if (p.peak360 >= 2) g.x2++; if (p.peak360 >= 3) g.x3++; if (p.peak360 >= 5) g.x5++; g.hold.push(p.r_hold); g.trail.push(p.r_trail40); g.tp.push(p.r_tp2sl50); if (p.r_trail40 > 0) g.won++; } }
+  const summary = Object.fromEntries(Object.entries(groups).map(([k, g]) => [k, { n: g.n, scored: g.scored, x2: g.x2, x3: g.x3, x5: g.x5, won: g.won, hold: avg(g.hold), trail: avg(g.trail), tp: avg(g.tp) }]));
+  const st = db.prepare("SELECT v FROM kv WHERE k='lastFlag'").get();
+  return { ok: true, at: Math.floor(Date.now() / 1000), days, coins: out, summary, listed: db.prepare("SELECT src, COUNT(*) n FROM wallets GROUP BY src").all(), stamp: st?.v ?? null };
+}
+
+export const RADAR_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Radar</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--line:#30363d;--txt:#e6edf3;--mut:#8b949e;--grn:#3fb950;--red:#f85149;--amb:#e3b341;--blu:#58a6ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.45 -apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1500px;margin:0 auto;padding:16px}h1{font-size:20px;margin:0 0 4px}.sub{color:var(--mut);font-size:12.5px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:12.5px}th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th{color:var(--mut);font-weight:500;position:sticky;top:0;background:var(--card)}
+td.l,th.l{text-align:left}.tw{overflow:auto;max-height:75vh}.pos{color:var(--grn)}.neg{color:var(--red)}.amb{color:var(--amb)}
+a{color:var(--blu);text-decoration:none}.btns{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.btns button{background:#21262d;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer}
+.btns button.on{background:#1f6feb;border-color:#1f6feb}.tag{display:inline-block;border-radius:4px;padding:0 5px;margin-right:3px;font-size:11px;background:#21262d;color:var(--mut)}
+.t50{background:#1f3a5f;color:#9cc6ff}.t100{background:#3b2f5f;color:#cdb4ff}.t200{background:#5f2f2f;color:#ffb4b4}.early{background:#1f4f2f;color:#a6f4b5}
+</style></head><body><div class="wrap"><h1>Radar <a class="sub" id="lnk" href="/launcher">Launcher →</a></h1><div class="sub" id="hd">loading…</div>
+<div class="card"><b>Paper results by trigger</b> <span class="sub">— a paper buy at the moment of each trigger, scored 6 hours later from GMGN's candles, after real costs</span><div id="sum" style="margin-top:8px"></div></div>
+<div class="card"><div class="btns" id="btns"></div><div class="tw"><table id="tb"></table></div>
+<div class="sub" style="margin-top:8px">Labels are what GMGN and FOMO showed at the first snapshot — never looked up again later. "x" = price now or at that time ÷ price at the first trigger. Trail = 40% trailing stop, TP/SL = sell at 2x or at −50%, Hold = held 6 h. Paper only — nothing is bought.</div></div>
+</div><script>
+var key=new URLSearchParams(location.search).get('key')||'',D=null,F='all';
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function usd(x){if(x==null)return '–';return x>=1e6?'$'+(x/1e6).toFixed(2)+'M':x>=1e3?'$'+(x/1e3).toFixed(1)+'K':'$'+Math.round(x)}
+function pc(x){return x==null?'–':(x>=0?'+':'')+(x*100).toFixed(1)+'%'}
+function xx(x){return x==null?'–':'<span class="'+(x>=2?'pos':x<1?'neg':'')+'">'+x.toFixed(2)+'x</span>'}
+function uk(t){return t?new Date(t*1000).toLocaleString('en-GB',{timeZone:'Europe/London',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'–'}
+function age(s){if(s==null)return '–';return s<3600?Math.round(s/60)+'m':s<86400?(s/3600).toFixed(1)+'h':(s/86400).toFixed(1)+'d'}
+function n1(x){return x==null?'–':x}
+function trigs(c){var h='';if(c.t50)h+='<span class="tag t50">50K '+uk(c.t50).slice(-5)+'</span>';if(c.t100)h+='<span class="tag t100">100K '+uk(c.t100).slice(-5)+'</span>';if(c.t200)h+='<span class="tag t200">200K '+uk(c.t200).slice(-5)+'</span>';if(c.early_ts)h+='<span class="tag early" title="'+esc((c.early||[]).map(function(e){return e.src+' '+e.w.slice(0,4)}).join(', '))+'">early '+c.early_n+'w</span>';return h}
+function best(c){var p=(c.paper||[]).filter(function(x){return x.done&&x.peak360!=null});if(!p.length)return null;p.sort(function(a,b){return a.entry_ts-b.entry_ts});return p[0]}
+function first(c){var p=(c.paper||[]).slice().sort(function(a,b){return a.entry_ts-b.entry_ts});return p[0]||null}
+function sumHtml(S){var order=['v50','v100','v200','early'],nm={v50:'$50K / 5 min',v100:'$100K / 5 min',v200:'$200K / 5 min',early:'Early (listed wallets)'};
+ return '<table><tr><th class="l">trigger</th><th>paper buys</th><th>scored (6 h)</th><th>reached 2x</th><th>reached 3x</th><th>reached 5x</th><th>Hold 6 h</th><th>Trail 40%</th><th>TP 2x / SL 50%</th><th>won (trail)</th></tr>'+order.filter(function(k){return S[k]}).map(function(k){var g=S[k],r=function(a){return g.scored?Math.round(a/g.scored*100)+'%':'–'};return '<tr><td class="l">'+nm[k]+'</td><td>'+g.n+'</td><td>'+g.scored+'</td><td>'+r(g.x2)+'</td><td>'+r(g.x3)+'</td><td>'+r(g.x5)+'</td><td class="'+(g.hold>0?'pos':'neg')+'">'+pc(g.hold)+'</td><td class="'+(g.trail>0?'pos':'neg')+'">'+pc(g.trail)+'</td><td class="'+(g.tp>0?'pos':'neg')+'">'+pc(g.tp)+'</td><td>'+r(g.won)+'</td></tr>'}).join('')+'</table>'+(Object.keys(S).length?'':'<div class="sub">no paper buys yet</div>')}
+function chainCells(ch){if(!ch)return '<td>–</td><td>–</td><td>–</td><td class="l">–</td>';var r=[];if(ch.delegate)r.push('<span class="neg" title="this address can take tokens from any wallet">permanent delegate</span>');if(ch.taxBps)r.push('<span class="amb">tax '+(ch.taxBps/100).toFixed(2)+'%</span>');if(ch.hook)r.push('<span class="amb">transfer hook</span>');if(ch.mintAuth)r.push('<span class="neg">mint on</span>');if(ch.freezeAuth)r.push('<span class="neg">freeze on</span>');
+ return '<td>'+(ch.seen?(ch.bundlePct==null?'–':ch.bundlePct.toFixed(1)+'% <span class="sub">'+n1(ch.bundleWallets)+'w</span>'):'<span class="sub">not seen</span>')+'</td><td class="'+(ch.launchHoldNowPct>=20?'neg':ch.launchHoldNowPct>=5?'amb':'')+'">'+(ch.launchHoldNowPct==null?'–':ch.launchHoldNowPct.toFixed(1)+'%'+(ch.devHoldNowPct?' <span class="sub">dev '+ch.devHoldNowPct.toFixed(1)+'%</span>':''))+'</td><td>'+(ch.devIsNamed===0?'<span class="amb" title="launched by '+esc(ch.deployer||'')+' — a different wallet from the creator named on the coin">hidden'+(ch.deployerBuyPct?' · bought '+ch.deployerBuyPct.toFixed(1)+'%':'')+'</span>':ch.devIsNamed===1?'named':'–')+'</td><td class="l">'+(r.join(' ')||'<span class="sub">none</span>')+'</td>'}
+function show(c){if(F==='all')return true;if(F==='early')return !!c.early_ts;if(F==='ran')return (c.paper||[]).some(function(p){return p.peak360>=2});return !!c['t'+F]}
+function render(){if(!D)return;var C=D.coins.filter(show);
+ document.getElementById('hd').innerHTML=D.coins.length+' coins caught in the last '+D.days+' days · wallet list: '+(D.listed||[]).map(function(x){return x.src+' '+x.n}).join(' · ')+' · updated '+uk(D.at);
+ document.getElementById('sum').innerHTML=sumHtml(D.summary||{});
+ document.getElementById('btns').innerHTML=[['all','All'],['50','50K'],['100','100K'],['200','200K'],['early','Early'],['ran','Ran 2x+']].map(function(b){return '<button class="'+(F===b[0]?'on':'')+'" onclick="F=\\''+b[0]+'\\';render()">'+b[1]+'</button>'}).join('');
+ document.getElementById('tb').innerHTML='<tr><th class="l">caught (UK)</th><th class="l">coin</th><th class="l">triggers</th><th>age</th><th>MC then</th><th>peak 6 h</th><th>5 m</th><th>15 m</th><th>1 h</th><th>6 h</th><th>trail</th><th>TP/SL</th><th>smart</th><th>KOL</th><th>bundler</th><th>insider</th><th>fresh</th><th>bots</th><th>phishing</th><th>top 10</th><th>dev</th><th>dev coins</th><th>FOMO buyers</th><th title="bought in the create block (our tracker&#39;s live record)">launch bundle</th><th title="how much the dev and the launch wallets still held when the radar caught it (read from the chain)">launch still hold</th><th title="the wallet that signed the launch vs the creator named on the coin">real dev</th><th class="l">token risks</th></tr>'+
+ C.map(function(c){var s=c.s||{},p=first(c),b=best(c);return '<tr><td class="l">'+uk(c.flag_ts)+'</td><td class="l"><a target="_blank" href="https://gmgn.ai/sol/token/'+c.mint+'">'+esc(c.symbol||c.mint.slice(0,6))+'</a> <a class="sub" href="/coin?key='+encodeURIComponent(key)+'&mint='+c.mint+'" title="deep check: wallets, side wallets, owner groups (2–4 min)">deep</a></td><td class="l">'+trigs(c)+'</td><td>'+age(c.created_ts?c.flag_ts-c.created_ts:null)+'</td><td>'+usd(c.flag_mc||c.early_mc)+'</td><td>'+(b?xx(b.peak360):'–')+'</td><td>'+(p&&p.done?xx(p.x5):'–')+'</td><td>'+(p&&p.done?xx(p.x15):'–')+'</td><td>'+(p&&p.done?xx(p.x60):'–')+'</td><td>'+(p&&p.done?xx(p.x_hold):'<span class="sub">'+(p?'in '+age(p.entry_ts+21600-D.at):'–')+'</span>')+'</td><td>'+(p&&p.done?'<span class="'+(p.r_trail40>0?'pos':'neg')+'">'+pc(p.r_trail40)+'</span>':'–')+'</td><td>'+(p&&p.done?'<span class="'+(p.r_tp2sl50>0?'pos':'neg')+'">'+pc(p.r_tp2sl50)+'</span>':'–')+'</td><td>'+n1(s.smart)+'</td><td>'+n1(s.kol)+'</td><td>'+(s.bundler==null?'–':s.bundler+'%')+'</td><td>'+(s.insider==null?'–':s.insider+'%')+'</td><td>'+(s.fresh==null?'–':s.fresh+'%')+'</td><td>'+(s.bots==null?'–':s.bots+'%')+'</td><td class="'+(s.phishing>=20?'neg':'')+'">'+(s.phishing==null?'–':s.phishing+'%')+'</td><td>'+(s.top10==null?'–':s.top10+'%')+'</td><td>'+(s.dev==null?'–':s.dev+'%')+'</td><td>'+n1(s.devLaunches)+'</td><td>'+n1(s.fomoBuyers)+'</td>'+chainCells(s.chain)+'</tr>'}).join('')}
+function load(){fetch('/api/radar?key='+encodeURIComponent(key)).then(function(r){return r.json()}).then(function(j){if(!j.ok){document.getElementById('hd').textContent=j.error||'error';return}D=j;render()}).catch(function(e){document.getElementById('hd').textContent='could not load: '+e.message})}
+load();setInterval(load,60000);
+</script><script>document.getElementById('lnk').href='/launcher'+location.search</script></body></html>`;
+
+
+====================================================================================================
+=== FILE: src/aftercare.js (4,778 chars)
+====================================================================================================
+// Tracks peak price for AFTER_CLOSE_H hours after every paper entry (regardless of close). Free: feeds already see every trade.
+// v0.18.81/83: also records after_path — the multiple at 7/10/15/20/30 min after entry, the lowest since the first 1.5x and the seconds to 1.5x —
+// whatever closed the paper position, so longer holds can be scored later.
+import { CFG } from "./config.js";
+import { db, q } from "./db.js";
+import { solUsdCached } from "./price.js"; // v0.18.88: P6 rows store a USD entry price; the feed ticks here are SOL prices
+export const AFTER_MARKS = [420, 600, 900, 1200, 1800];
+const W = new Map(); // mint -> [{id, entry, until, peak, peakMc, entryTs, ap}]
+export function watch(mint, id, entryPrice, entryMc, until = null, peak = null, peakMc = null, entryTs = null, ap = null) {
+  const now = Math.floor(Date.now() / 1000);
+  const arr = W.get(mint) || []; if (arr.some((w) => w.id === id)) return;
+  arr.push({ id, entry: entryPrice, until: until ?? now + CFG.AFTER_CLOSE_H * 3600, peak: peak ?? entryPrice, peakMc: peakMc ?? entryMc, dirty: false, last: null, lastSaved: 0,
+    entryTs: entryTs ?? now, ap: (ap && typeof ap === "object") ? ap : {}, apDirty: false });
+  W.set(mint, arr);
+}
+/** Fill the after-entry marks that are due. mult = price / entry. Safe to call often; only writes when something changes. */
+export function apTick(w, mult, now) {
+  const ap = w.ap; if (!ap || ap.done || !(mult > 0)) return;
+  const since = now - w.entryTs; let changed = false;
+  if (ap.h15 == null && mult >= 1.5) { ap.h15 = since; ap.lo = mult; changed = true; }
+  if (ap.h15 != null && (ap.lo == null || mult < ap.lo)) { ap.lo = mult; changed = true; }
+  for (const m of AFTER_MARKS) { if (since >= m && ap[m] == null) { ap[m] = { m: Math.round(mult * 1e4) / 1e4, lo: ap.lo ?? null }; changed = true; } }
+  if (ap[AFTER_MARKS[AFTER_MARKS.length - 1]] != null) { ap.done = true; changed = true; }
+  if (changed) w.apDirty = true;
+}
+export function tick(mint, price, mc) {
+  const arr = W.get(mint); if (!arr || !(price > 0)) return;
+  const now = Math.floor(Date.now() / 1000);
+  for (const w of arr) {
+    if (price > w.peak) { w.peak = price; w.peakMc = mc; w.dirty = true; }
+    w.last = price; w.lastMc = mc; w.lastTs = now;
+    try { apTick(w, price / w.entry, now); } catch {}
+  }
+}
+// v0.18.39: the 24 h after-entry watch survives restarts — rebuilt from the database for every momentum / P5 entry still inside its window.
+// v0.18.88: P6 added (its entry_price is USD per token → converted to SOL with the current SOL price; the 24-h after-figures for P6 are therefore in SOL terms, ± SOL's own move)
+const qRe = db.prepare(`SELECT id, mint, strategy, entry_ts, entry_price, entry_mc, peak_mult, after_peak_mult, after_peak_mc, after_path FROM paper_trades WHERE strategy IN ('momentum','momconf','mom2m','p5e30','p5e50','p5e80','p5w30','p6') AND entry_price > 0 AND COALESCE(invalid,0)=0 AND entry_ts > ?`);
+try { const now = Math.floor(Date.now() / 1000); let n = 0;
+  for (const r of qRe.all(now - CFG.AFTER_CLOSE_H * 3600)) {
+    const pk = Math.max(r.after_peak_mult || 1, r.peak_mult || 1, 1); let ap = null; try { ap = r.after_path ? JSON.parse(r.after_path) : null; } catch {}
+    const ep = r.strategy === "p6" ? r.entry_price / Math.max(solUsdCached(), 1) : r.entry_price; if (!(ep > 0)) continue;
+    watch(r.mint, r.id, ep, r.entry_mc, r.entry_ts + CFG.AFTER_CLOSE_H * 3600, ep * pk, r.after_peak_mc ?? r.entry_mc * pk, r.entry_ts, ap); n++;
+  }
+  if (n) console.log(`[aftercare] re-armed ${n} after-entry watches`);
+} catch (e) { console.error("[aftercare restore]", e.message); }
+setInterval(() => {
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    for (const [mint, arr] of W) {
+      for (const w of arr) {
+        if (w.dirty) { w.dirty = false; try { q.setAfter.run(w.peak / w.entry, w.peakMc, w.id); } catch {} }
+        if (w.last && w.lastTs !== w.lastSaved) { w.lastSaved = w.lastTs; try { q.setAfterLast.run(w.last / w.entry, w.lastMc ?? null, w.lastTs, w.id); } catch {} } // v0.18.39 latest price seen
+        if (w.last && w.ap && !w.ap.done) { try { apTick(w, w.last / w.entry, now); } catch {} } // v0.18.81: quiet coin — fill due marks with the last price seen
+        if (w.apDirty) { w.apDirty = false; try { q.setAfterPath.run(JSON.stringify(w.ap), w.id); } catch {} }
+      }
+      const keep = arr.filter((w) => w.until > now); if (keep.length) W.set(mint, keep); else W.delete(mint);
+    }
+  } catch (e) { console.error("[aftercare]", e.message); } // never let this timer take the process down
+}, 30_000);
+export const afterStats = () => ({ watching: W.size });
+
+export const memStats = () => { let n = 0; for (const a of W.values()) n += a.length; return { mints: W.size, watches: n }; }; // v0.18.21
+
+
+====================================================================================================
+=== FILE: src/backup.js (2,676 chars)
+====================================================================================================
+// v0.18.40: daily online backup of the SQLite database (safe while the bot is writing). Keeps the newest BACKUP_KEEP copies in
+// data/backups/. Skips (and warns on Telegram) if the disk would drop below twice the database size.
+import { CFG } from "./config.js";
+import { db } from "./db.js";
+import { tg } from "./telegram.js";
+import { mkdirSync, readdirSync, statSync, statfsSync, unlinkSync, renameSync } from "node:fs";
+import { dirname, join } from "node:path";
+const DIR = join(dirname(CFG.DB_PATH), "backups"), KEEP = Number(process.env.BACKUP_KEEP || 3), AT_UTC_H = Number(process.env.BACKUP_HOUR_UTC || 4);
+export const bk = { last: null, lastFile: null, lastErr: null, running: false };
+const day = (t = Date.now()) => new Date(t).toISOString().slice(0, 10);
+function existing() { try { return readdirSync(DIR).filter((f) => /^tracker-\d{4}-\d{2}-\d{2}\.db$/.test(f)).sort(); } catch { return []; } }
+export async function runBackup(reason = "daily") {
+  if (bk.running) return; bk.running = true;
+  try {
+    mkdirSync(DIR, { recursive: true });
+    const size = statSync(CFG.DB_PATH).size, fs = statfsSync(DIR), free = fs.bavail * fs.bsize;
+    if (free < size * 2) { bk.lastErr = `not enough disk (${(free / 1e9).toFixed(1)} GB free, DB ${(size / 1e9).toFixed(2)} GB)`; await tg(`⚠️ <b>Backup skipped</b> — ${bk.lastErr}`); return; }
+    const file = join(DIR, `tracker-${day()}.db`), tmp = file + ".part";
+    const t0 = Date.now(); await db.backup(tmp); renameSync(tmp, file);
+    bk.last = Math.floor(Date.now() / 1000); bk.lastFile = file; bk.lastErr = null;
+    console.log(`[backup] ${reason}: ${file} (${(statSync(file).size / 1e6).toFixed(0)} MB, ${((Date.now() - t0) / 1000).toFixed(0)} s)`);
+    const all = existing(); for (const f of all.slice(0, Math.max(0, all.length - KEEP))) { try { unlinkSync(join(DIR, f)); } catch {} }
+  } catch (e) { bk.lastErr = e.message; console.error("[backup]", e.message); try { await tg(`⚠️ <b>Backup failed</b> — ${e.message}`); } catch {} }
+  finally { bk.running = false; }
+}
+// first backup 10 min after start if none exists for today; then every day at AT_UTC_H:00 UTC
+setTimeout(() => { if (!existing().includes(`tracker-${day()}.db`)) runBackup("startup"); }, 10 * 60_000);
+setInterval(() => { const d = new Date(); if (d.getUTCHours() === AT_UTC_H && !existing().includes(`tracker-${day()}.db`)) runBackup("daily"); }, 10 * 60_000);
+export const backupInfo = () => { const files = existing(); let last = bk.last; if (!last && files.length) { try { last = Math.floor(statSync(join(DIR, files.at(-1))).mtimeMs / 1000); } catch {} } return { ...bk, last, files }; }; // v0.18.51: last backup survives restarts
+
+
+====================================================================================================
+=== FILE: src/bs58.js (454 chars)
+====================================================================================================
+const A = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+export function bs58(buf) {
+  const d = [];
+  for (const b of buf) {
+    let c = b;
+    for (let j = 0; j < d.length; j++) { c += d[j] << 8; d[j] = c % 58; c = (c / 58) | 0; }
+    while (c > 0) { d.push(c % 58); c = (c / 58) | 0; }
+  }
+  let s = "";
+  for (const b of buf) { if (b === 0) s += "1"; else break; }
+  for (let i = d.length - 1; i >= 0; i--) s += A[d[i]];
+  return s;
+}
+
+
+====================================================================================================
+=== FILE: src/check.js (4,013 chars)
+====================================================================================================
+// v0.18: /check <mint> — everything the bot knows about one token right now, plus DexScreener's live view, so
+// "did the bot see this?" can be answered from Telegram instead of by reading logs.
+import { db, q } from "./db.js";
+import { esc, fmt, links } from "./launch-monitor.js";
+import { lifeSnap } from "./lifecycle.js";
+import { momSnap } from "./momentum.js";
+import { dexSnap } from "./dex.js";
+import { CFG } from "./config.js";
+
+const qTrades = db.prepare(`SELECT strategy, datetime(entry_ts,'unixepoch') t, entry_mc, peak_mult, closed, exit_reason, venue, trigger_kind FROM paper_trades WHERE mint=? ORDER BY id`);
+const qGrad = db.prepare(`SELECT graduated, peak_mc_usd, outside_buyers, creator FROM tokens WHERE mint=?`);
+const ago = (ts) => { const d = Math.floor(Date.now() / 1000) - ts; return d < 60 ? `${d}s ago` : d < 3600 ? `${Math.floor(d / 60)}m ago` : d < 86400 ? `${(d / 3600).toFixed(1)}h ago` : `${(d / 86400).toFixed(1)}d ago`; };
+
+export async function checkText(mint) {
+  const meta = q.tokenMeta.get(mint), g = qGrad.get(mint);
+  let t = `🔎 <b>CHECK</b> — ${esc(meta?.name || mint.slice(0, 8))}${meta?.symbol ? ` ($${esc(meta.symbol)})` : ""}\n`;
+  if (meta) t += `Launch seen ${ago(meta.create_ts)} · bundle ${meta.bundle_pct?.toFixed(0) ?? "?"}% / ${meta.bundle_sol?.toFixed(1) ?? "?"} SOL · tier ${meta.tier ?? "?"} · graduated ${g?.graduated ? "yes" : "no"} · peak $${fmt(g?.peak_mc_usd || 0)} · buyers ${g?.outside_buyers ?? "?"}\n`;
+  else t += `Not launched on pump.fun while the tracker was running (no launch record).\n`;
+  const l = lifeSnap(mint); if (l) t += `Lifecycle: ${l.buyers} buyers · cp5 ${l.cp5 ? "$" + fmt(l.cp5.mc || 0) : "—"}\n`;
+  const m = momSnap(mint);
+  if (m) t += `Volume feed: 5m <b>$${fmt(m.v5)}</b> · buys ${m.buys} / sells ${m.sells} · ${m.wallets} wallets · last MC $${fmt(m.lastMc)} (${ago(m.lastTs)}) · peak $${fmt(m.peakMc)}\nvenues: ${Object.entries(m.venues).map(([k, v]) => `${k} $${fmt(v)}`).join(" · ") || "—"} · position ${m.open ? "OPEN" : "none"} · momentum trades ${m.trades}\n`;
+  else t += `Volume feed: no swaps received in the last 15 min (not in memory).\n`;
+  const pools = dexSnap(mint); if (pools.length) t += `DEX pools mapped: ${pools.map((p) => `${p.pool.slice(0, 6)}… (${p.binStep != null ? "dlmm" : p.solSide == null ? "cpmm" : "pool"} · supply ${fmt(p.supply)})`).join(", ")}\n`;
+  const tr = qTrades.all(mint);
+  t += tr.length ? `Paper trades (${tr.length}):\n` + tr.map((r) => `• ${r.strategy}${r.trigger_kind ? "/" + r.trigger_kind : ""}${r.venue ? " @" + r.venue : ""} ${r.t} UTC · in $${fmt(r.entry_mc || 0)} · peak ${(r.peak_mult || 1).toFixed(2)}x · ${r.closed ? "closed " + (r.exit_reason || "") : "open"}`).join("\n") + "\n" : `Paper trades: none\n`;
+  try {
+    const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`, { signal: AbortSignal.timeout(6000) });
+    const j = await r.json(); const pairs = (j.pairs || []).filter((p) => p.chainId === "solana").sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0));
+    if (pairs.length) {
+      const p0 = pairs[0];
+      t += `\n<b>DexScreener now</b>: ${esc(p0.baseToken?.name || "?")} · MC $${fmt(p0.marketCap || p0.fdv || 0)} · created ${p0.pairCreatedAt ? ago(Math.floor(p0.pairCreatedAt / 1000)) : "?"}\n`;
+      for (const p of pairs.slice(0, 5)) t += `• ${p.dexId}${p.labels?.length ? " " + p.labels.join("/") : ""} ${p.quoteToken?.symbol || "?"} pair · liq $${fmt(p.liquidity?.usd || 0)} · vol 5m $${fmt(p.volume?.m5 || 0)} · 1h $${fmt(p.volume?.h1 || 0)} · 24h $${fmt(p.volume?.h24 || 0)} · 5m ${p.priceChange?.m5 ?? "?"}%\n`;
+      const total5 = pairs.reduce((a, p) => a + (p.volume?.m5 || 0), 0);
+      t += `Total 5m volume across pairs $${fmt(total5)} — trigger is $${fmt(CFG.VOL5M_USD)} in 5 min under $${fmt(CFG.MOM_MC_CAP)} MC.\n`;
+    } else t += `\nDexScreener: no Solana pairs found for this mint.\n`;
+  } catch (e) { t += `\nDexScreener lookup failed (${esc(e.message)}).\n`; }
+  return t + links(mint);
+}
+
+
+====================================================================================================
+=== FILE: src/commands.js (22,165 chars)
+====================================================================================================
+// Telegram command polling: /report, /csv, /status. Long-polls getUpdates; only answers the configured chat.
+import { CFG } from "./config.js";
+import { execSend } from "./execlink.js"; // v0.18.90
+import { db, q } from "./db.js";
+import { tgAlarm as tg } from "./telegram.js"; // v0.18.91: replies to commands always go through (quiet mode mutes the rest)
+import { runnersText } from "./runners.js";
+import { zipFiles } from "./zip.js";
+import { mkdtempSync, openSync, writeSync, closeSync, rmSync, readFileSync, openAsBlob, mkdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { checkText } from "./check.js";
+import { memStats as memMom } from "./momentum.js";
+import { memStats as memLife } from "./lifecycle.js";
+import { memStats as memHold } from "./holders.js";
+import { memStats as memSig } from "./signals.js";
+import { memStats as memLive } from "./launch-monitor.js";
+import { memStats as memPs } from "./pumpswap.js";
+import { memStats as memDex } from "./dex.js";
+import { memStats as memFees } from "./fees.js";
+import { memStats as memCopy } from "./copytrade.js";
+import { memStats as memWal } from "./wallets.js";
+import { memStats as memTiers } from "./momtiers.js";
+import { memStats as memRe } from "./momre.js";
+import { memStats as memAfter } from "./aftercare.js";
+import { memStats as memGmgn, gmgnSellers } from "./gmgn.js"; // v0.18.52 · v0.18.56 /gmgnsellers
+import { volMem } from "./vollog.js"; // v0.18.62
+import { runBackup, backupInfo } from "./backup.js"; // v0.18.40
+import { leaderboardText, walletText, addWatch, removeWatch, watchList, creatorsText, creatorText, addWatchCreator, removeWatchCreator, watchCreatorList } from "./wallets.js";
+const TOKEN = () => process.env.TG_BOT_TOKEN, CHAT = () => String(process.env.TG_CHAT_ID);
+let offset = 0, deps = {};
+export function startCommands(d) { deps = d; if (process.env.SMOKE) return; poll(); } // v0.18.85: the pre-deploy check must not steal Telegram updates from the live bot
+async function poll() {
+  for (;;) {
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${TOKEN()}/getUpdates?timeout=25&offset=${offset}&allowed_updates=["message"]`, { signal: AbortSignal.timeout(35000) });
+      const j = await r.json();
+      const batch = j.result || [];
+      if (batch.length) { // v0.18.16: confirm receipt BEFORE running anything, so a crash mid-command can never replay the same command in a loop
+        offset = batch[batch.length - 1].update_id + 1;
+        try { await fetch(`https://api.telegram.org/bot${TOKEN()}/getUpdates?timeout=0&limit=1&offset=${offset}`, { signal: AbortSignal.timeout(10000) }); } catch {}
+      }
+      for (const u of batch) {
+        const m = u.message; if (!m?.text || String(m.chat?.id) !== CHAT()) continue;
+        const cmd = m.text.trim().split(/\s+/)[0].toLowerCase().replace(/@.*$/, "");
+        if (cmd === "/live") { const ok = execSend({ type: "cmd", text: m.text.trim() }); if (!ok) await tg("executor not running (no socket) — nothing to pass the command to"); } // v0.18.90: forwarded to the executor, which answers itself
+        else if (cmd === "/report") await tg(reportText(24));
+        else if (cmd === "/report7") await tg(reportText(24 * 7));
+        else if (cmd === "/csv") await sendCsv(false);
+        else if (cmd === "/csvfull") await sendCsv(true);
+        else if (cmd === "/status") { const b = backupInfo(); await tg((deps.status ? deps.status() : "n/a") + `\nBackup: ${b.last ? "last " + new Date(b.last * 1000).toISOString().slice(0, 16).replace("T", " ") + " UTC" : "none yet"} · ${b.files.length} kept${b.lastErr ? " · ⚠️ " + b.lastErr : ""}`); }
+        else if (cmd === "/backup") { await tg("Backing up the database…"); await runBackup("manual"); const b = backupInfo(); await tg(b.lastErr ? `⚠️ Backup failed — ${b.lastErr}` : `✅ Backup done · ${b.files.length} kept`); }
+        else if (cmd === "/mem") { // v0.18.18: what is in memory, so growth can be seen instead of guessed
+          const mu = process.memoryUsage(), hs = (await import('node:v8')).getHeapStatistics(), f = (o) => Object.entries(o).map(([k, v]) => `${k} ${typeof v === "number" ? v.toLocaleString("en-GB") : v}`).join(" · ");
+          const parts = { momentum: memMom, lifecycle: memLife, holders: memHold, signals: memSig, live: memLive, pumpswap: memPs, dex: memDex, fees: memFees, copy: memCopy, wallets: memWal, tiers: memTiers, reentry: memRe, aftercare: memAfter, gmgn: memGmgn, vollog: volMem };
+          let t = `🧠 <b>Memory</b> rss ${Math.round(mu.rss / 1048576)} MB · heap ${Math.round(mu.heapUsed / 1048576)}/${Math.round(mu.heapTotal / 1048576)} MB · external ${Math.round(mu.external / 1048576)} MB · arrays ${Math.round(mu.arrayBuffers / 1048576)} MB · heap limit ${Math.round(hs.heap_size_limit / 1048576)} MB\n`;
+          for (const [k, fn] of Object.entries(parts)) { try { t += `<b>${k}</b>: ${f(fn())}\n`; } catch (e) { t += `<b>${k}</b>: error ${esc(e.message)}\n`; } }
+          await tg(t);
+        }
+        else if (cmd === "/summary") await tg(deps.summary ? deps.summary() : "n/a");
+        else if (cmd === "/wallets") await tg(leaderboardText(7, 10));
+        else if (cmd === "/wallets30") await tg(leaderboardText(30, 10));
+        else if (cmd === "/wallet") { const a = m.text.trim().split(/\s+/)[1]; await tg(a ? walletText(a) : "Usage: /wallet <address>"); }
+        else if (cmd === "/watch") { const [, a, ...rest] = m.text.trim().split(/\s+/); if (!a || a.length < 32) await tg("Usage: /watch <address> [label]"); else { addWatch(a, rest.join(" ") || null); await tg(`👁 watching <code>${a}</code>${rest.length ? " as " + rest.join(" ") : ""} — copy alerts + paper trades on its buys`); } }
+        else if (cmd === "/unwatch") { const a = m.text.trim().split(/\s+/)[1]; if (a) { removeWatch(a); await tg(`removed <code>${a}</code>`); } }
+        else if (cmd === "/gmgnsellers") sendGmgnSellers(); // v0.18.56 runs in the background (~2 s per coin), sends a zip when done
+        else if (cmd === "/coverage") { const h = Number(m.text.trim().split(/\s+/)[1]) || 24; await tg(coverageText(Math.min(168, Math.max(1, h)))); }
+        else if (cmd === "/check") { const a = m.text.trim().split(/\s+/)[1]; await tg(a && a.length >= 32 ? await checkText(a) : "Usage: /check <mint>"); }
+        else if (cmd === "/prepump" || cmd === "/prepump30") { const d = cmd === "/prepump30" ? 30 : 7; const rows = q.prepumpTop.all(Math.floor(Date.now() / 1000) - d * 86400, 2, 15); await tg(rows.length ? `🕵️ <b>Pre-pump wallets — ${d}d</b> (bought in the 30 min before a volume trigger, 2+ coins)\n` + rows.map((r) => `• <code>${r.wallet}</code> ${r.n} coins · 2x on ${r.hit2} · 1.5x on ${r.hit15} · avg lead ${Math.round(r.lead / 60)}m · ${r.sol.toFixed(1)} SOL`).join("\n") + "\n/wallet &lt;addr&gt; for detail · /watch to copy" : "No pre-pump wallet data yet (needs volume triggers since v0.18.2)."); }
+        else if (cmd === "/bigrunners") { // v0.18.9: momentum trades that went 3x+ with how the volume behaved afterwards
+          const rows = db.prepare(`SELECT p.name, p.mint, datetime(p.entry_ts,'unixepoch') t, p.entry_mc, p.peak_mult, p.after_peak_mult, p.core, p.strategy FROM paper_trades p WHERE p.strategy IN ('momentum','momre','momdip') AND COALESCE(p.invalid,0)=0 AND MAX(COALESCE(p.peak_mult,1),COALESCE(p.after_peak_mult,1))>=3 AND p.entry_ts>=? ORDER BY MAX(COALESCE(p.peak_mult,1),COALESCE(p.after_peak_mult,1)) DESC LIMIT 15`).all(Math.floor(Date.now() / 1000) - 7 * 86400);
+          const life = db.prepare(`SELECT cp, vol5m_usd, buys5m, sells5m, mc FROM token_life WHERE mint=? AND cp IN (300,900,1800,3600) ORDER BY cp`);
+          const fm = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? (n / 1e3).toFixed(0) + "K" : String(Math.round(n)));
+          await tg(rows.length ? `🚀 <b>Big runners (3x+) — 7d</b>\n` + rows.map((r) => `• <b>${r.name}</b> ${r.t.slice(5, 16)} in $${fm(r.entry_mc || 0)} · peak <b>${Math.max(r.peak_mult || 1, r.after_peak_mult || 1).toFixed(1)}x</b>${r.core ? " ⭐" : ""} ${r.strategy !== "momentum" ? r.strategy : ""}\n   ` + life.all(r.mint).map((l) => `+${l.cp / 60}m $${fm(l.vol5m_usd || 0)}/5m b:s ${l.sells5m ? (l.buys5m / l.sells5m).toFixed(1) : "—"} MC $${fm(l.mc || 0)}`).join(" · ")).join("\n") : "No 3x+ momentum runners in the last 7 days.");
+        }
+        else if (cmd === "/runners") await tg(runnersText(24, 10));
+        else if (cmd === "/runners7") await tg(runnersText(24 * 7, 15));
+        else if (cmd === "/creators") await tg(creatorsText(7, 10));
+        else if (cmd === "/creators30") await tg(creatorsText(30, 10));
+        else if (cmd === "/creator") { const a = m.text.trim().split(/\s+/)[1]; await tg(a ? creatorText(a) : "Usage: /creator <address>"); }
+        else if (cmd === "/watchcreator") { const [, a, ...rest] = m.text.trim().split(/\s+/); if (!a || a.length < 32) await tg("Usage: /watchcreator <address> [label]"); else { addWatchCreator(a, rest.join(" ") || null); await tg(`👁 watching creator <code>${a}</code>${rest.length ? " as " + rest.join(" ") : ""} — alert + paper entry on their next launch`); } }
+        else if (cmd === "/unwatchcreator") { const a = m.text.trim().split(/\s+/)[1]; if (a) { removeWatchCreator(a); await tg(`removed creator <code>${a}</code>`); } }
+        else if (cmd === "/watching") { const l = watchList(), lc = watchCreatorList(); await tg((l.length ? "👁 Wallets:\n" + l.map(([w, v]) => `• <code>${w}</code>${v.label ? " — " + v.label : ""}`).join("\n") : "👁 Wallets: none") + "\n" + (lc.length ? "🧑‍💻 Creators:\n" + lc.map(([w, v]) => `• <code>${w}</code>${v.label ? " — " + v.label : ""}`).join("\n") : "🧑‍💻 Creators: none") + "\n/watch · /watchcreator"); }
+        else if (cmd === "/help") await tg("Commands: /report · /report7 · /summary · /csv · /csvfull (adds token_life + wallet_buys) · /status · /mem · /backup · /coverage [hours] · /gmgnsellers · /check &lt;mint&gt; · /prepump · /prepump30 · /bigrunners (3x+ momentum, with volume after entry) · /wallets (top 10, 7d) · /wallets30 · /wallet <addr> · /watch <addr> [label] · /unwatch · /runners · /runners7 · /creators · /creators30 · /creator <addr> · /watchcreator <addr> [label] · /unwatchcreator · /watching");
+      }
+    } catch (e) { await new Promise((r) => setTimeout(r, 5000)); }
+  }
+}
+const m = (v) => (v == null ? "—" : `${((v - 1) * 100).toFixed(0)}%`);
+export function reportText(hours) {
+  const to = Math.floor(Date.now() / 1000), from = to - hours * 3600;
+  const a = q.digestAgg.get(from, to);
+  const byTier = db.prepare(`SELECT tier, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) h, AVG(x_time) xt, AVG(x_tsl40) x40 FROM paper_trades WHERE entry_ts>=? AND COALESCE(invalid,0)=0 GROUP BY tier`).all(from);
+  const tp = db.prepare(`SELECT AVG(x_tp) xtp, SUM(CASE WHEN x_tp IS NOT NULL THEN 1 ELSE 0 END) n FROM paper_trades WHERE entry_ts>=? AND COALESCE(invalid,0)=0`).get(from);
+  const launches = q.countSince.get(from), prepared = q.countTierSince.get(1, from);
+  if (!a.n) return `📊 <b>Report ${hours}h</b> · launches ${launches} · prepared ${prepared} · no paper trades yet`;
+  const pc = (x, n) => (n ? `${((x / n) * 100).toFixed(0)}%` : "—");
+  return `📊 <b>Report — last ${hours}h</b>\n` +
+    `Launches ${launches} · prepared ${prepared} · paper trades ${a.n}\n` +
+    `Hit 2x: <b>${a.hit2x}</b> (${pc(a.hit2x, a.n)}) · TP2x taken: ${tp.n}\n` +
+    `Avg by exit: TSL40 ${m(a.x40)} · TSL60 ${m(a.x60)} · hold2h ${m(a.xt)}\n` +
+    `No socials: ${a.nosoc} trades → ${a.nosoc2x} hit 2x (${pc(a.nosoc2x, a.nosoc)}) · factory: ${a.fac} → ${a.fac2x} (${pc(a.fac2x, a.fac)})\n` +
+    byTier.map((r) => `tier${r.tier}: ${r.n} trades, ${r.h} hit 2x (${pc(r.h, r.n)}), TSL40 ${m(r.x40)}, hold ${m(r.xt)}`).join("\n");
+}
+// v0.18.84: exports run in a detached low-priority process (src/export-worker.js) with its own read-only database connection.
+// The bot never blocks, a bot restart cannot kill a build, progress + result live in data/export/status.json.
+import { spawn } from "node:child_process";
+import { existsSync, statSync } from "node:fs";
+import { dirname } from "node:path";
+export const EXPORT_DIR = join(dirname(CFG.DB_PATH), "export");
+const dirFor = (mode) => join(EXPORT_DIR, mode === "recent" ? "recent" : "full"); // v0.18.85: full history and the 2-day quick export live side by side
+const WORKER = new URL("./export-worker.js", import.meta.url).pathname;
+const KEEP_S = { full: 1800, recent: 120 };
+const alive = (pid) => { if (!pid) return false; try { process.kill(pid, 0); return true; } catch { return false; } };
+function readStatus(mode = "full") {
+  let st = null; try { st = JSON.parse(readFileSync(join(dirFor(mode), "status.json"), "utf8")); } catch { return { state: "idle" }; }
+  if (st.state === "building" && !alive(st.pid)) return { ...st, state: "error", err: "The export process stopped before finishing — press 'build a fresh copy' to try again." };
+  if (st.file && !existsSync(st.file.path)) return { ...st, file: null, state: st.state === "ready" ? "idle" : st.state };
+  return st;
+}
+export const exportBusy = (mode = "full") => readStatus(mode).state === "building";
+export const exportFile = (mode = "full") => { const st = readStatus(mode); return st.file && existsSync(st.file.path) ? st.file : null; };
+export function exportStatus(mode = "full") {
+  const st = readStatus(mode), now = Math.floor(Date.now() / 1000), f = st.file;
+  return { mode, state: st.state, step: st.step || 0, steps: st.steps || 0, table: st.table || "", startedAt: st.startedAt || 0, err: st.err || null,
+    file: f ? { name: f.name, size: f.size, builtAt: f.builtAt, ageS: now - f.builtAt } : null, now };
+}
+/** Start a build unless one is running (or a fresh file exists and force is off). Returns the child (or null). */
+export function launchExport(mode = "full", force = false) {
+  mode = mode === "recent" ? "recent" : "full";
+  const st = readStatus(mode), now = Math.floor(Date.now() / 1000), dir = dirFor(mode);
+  if (st.state === "building") return null;
+  if (!force && st.file && now - st.file.builtAt < KEEP_S[mode] && existsSync(st.file.path)) return null;
+  try { mkdirSync(dir, { recursive: true }); writeFileSync(join(dir, "status.json"), JSON.stringify({ state: "building", step: 0, steps: 0, table: "starting", startedAt: now, pid: 0, mode })); } catch {}
+  const child = spawn(process.execPath, [WORKER, CFG.DB_PATH, dir, mode], { detached: true, stdio: "ignore" });
+  try { writeFileSync(join(dir, "status.json"), JSON.stringify({ state: "building", step: 0, steps: 0, table: "starting", startedAt: now, pid: child.pid, mode })); } catch {}
+  child.unref(); return child;
+}
+export const startWebExport = (force, mode = "full") => { launchExport(mode, force); };
+const TG_MAX = 48 * 1048576; // Telegram bots can send at most 50 MB
+async function sendCsv(full) { // v0.15.2: one zip. v0.18.16: built on disk. v0.18.79: over 48 MB → website. v0.18.84: built by the export process
+  if (exportBusy("full")) return tg("Export already running — one moment.");
+  try {
+    launchExport("full", true);
+    for (let i = 0; i < 600 && exportBusy("full"); i++) await new Promise((r) => setTimeout(r, 1000)); // up to 10 min
+    const st = readStatus("full");
+    if (st.state !== "ready" || !st.file) return tg(`Export failed: ${esc(st.err || "unknown")}`);
+    const ex = st.file;
+    if (ex.size > TG_MAX) return tg(`Export is ${(ex.size / 1048576).toFixed(0)} MB — over Telegram's 50 MB limit. Download it from your website instead: the <b>download data</b> link at the top of the page (always the full export, any size).`);
+    const blob = typeof openAsBlob === "function" ? await openAsBlob(ex.path, { type: "application/zip" }) : new Blob([readFileSync(ex.path)], { type: "application/zip" });
+    const fd = new FormData();
+    fd.append("chat_id", CHAT());
+    fd.append("document", blob, ex.name);
+    fd.append("caption", `${(ex.counts || []).join(" · ")} · ${(ex.size / 1048576).toFixed(1)} MB zipped${full ? "" : " · /csvfull for token_life + wallet_buys"}`);
+    const r = await fetch(`https://api.telegram.org/bot${TOKEN()}/sendDocument`, { method: "POST", body: fd, signal: AbortSignal.timeout(120000) });
+    if (!r.ok) { const t = await r.text(); console.error("[csv]", t); await tg(`Export failed to send: ${esc(t.slice(0, 200))}`); }
+  } catch (e) { console.error("[csv]", e.message); try { await tg(`Export failed: ${esc(e.message)}`); } catch {} }
+}
+// v0.18.56 /gmgnsellers: one-off GMGN pull (who sold, tags, funding wallets, dev launches, 1-min candles) for every coin a project traded
+let gsBusy = false;
+async function sendGmgnSellers() {
+  if (gsBusy) return tg("GMGN seller pull is already running — the file will arrive when it's done."); // v0.18.61: no misleading "started" first
+  gsBusy = true;
+  const dir = mkdtempSync(join(tmpdir(), "gmgn-sellers-"));
+  try {
+    await tg("GMGN seller pull started — about 8 s per coin (paced to stay under GMGN's rate limit). I'll send the file when it's done.");
+    const res = await gmgnSellers(dir, (i, n, ok, fail) => { if (i % 100 === 0) tg(`GMGN seller pull: ${i} / ${n} coins (${ok} ok, ${fail} failed)`); });
+    const day = new Date().toISOString().slice(0, 10), zipPath = join(dir, `gmgn_sellers_${day}.zip`);
+    const size = await zipFiles([{ name: `gmgn_sellers_${day}.jsonl`, path: res.path }], zipPath);
+    const blob = typeof openAsBlob === "function" ? await openAsBlob(zipPath, { type: "application/zip" }) : new Blob([readFileSync(zipPath)], { type: "application/zip" });
+    const fd = new FormData(); fd.append("chat_id", CHAT()); fd.append("document", blob, `gmgn_sellers_${day}.zip`);
+    fd.append("caption", `GMGN sellers: ${res.n} coins · ${res.ok} with trader data · ${res.fail} without · ${(size / 1048576).toFixed(1)} MB`);
+    const r = await fetch(`https://api.telegram.org/bot${TOKEN()}/sendDocument`, { method: "POST", body: fd, signal: AbortSignal.timeout(120000) });
+    if (!r.ok) { const t = await r.text(); console.error("[gmgnsellers]", t); await tg(`GMGN file failed to send: ${esc(t.slice(0, 200))}`); }
+  } catch (e) { console.error("[gmgnsellers]", e.message); try { await tg(`GMGN seller pull failed: ${esc(e.message)}`); } catch {} }
+  finally { gsBusy = false; try { rmSync(dir, { recursive: true, force: true }); } catch {} }
+}
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// v0.18.16: memory guard — pm2 restarts the bot at 600 MB; warn well before that so growth is seen before it bites
+export const memMb = () => Math.round(process.memoryUsage().rss / 1048576);
+let memWarnAt = 0;
+setInterval(() => { const mb = memMb(); if (mb > 700 && Date.now() - memWarnAt > 600_000) { memWarnAt = Date.now(); console.error(`[mem] rss ${mb} MB — pm2 restarts at 900`); tg(`⚠️ memory ${mb} MB (pm2 restarts at 900)`).catch(() => {}); } }, 20_000);
+
+
+// v0.18.54 /coverage: how much of the Solana market our own feed sees, measured against GMGN (which covers every DEX). For each token GMGN
+// flagged at >= $100K traded in 5 min, our_v5 is our own feed's 5-minute volume for the same token at that moment.
+const fmtK = (n) => (n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e3 ? (n / 1e3).toFixed(0) + "K" : String(Math.round(n)));
+export function coverageText(hours = 24) {
+  let rows; try { rows = db.prepare(`SELECT chain, name, mint, exchange, launchpad, created_ts, ts, mc, vol5m, our_v5, our_seen, our_trade, peak_mc FROM gmgn_flags WHERE ts > ?`).all(Math.floor(Date.now() / 1000) - hours * 3600); }
+  catch { return "No GMGN data yet (scanner not running?)"; }
+  const warm = rows.filter((r) => r.chain === "sol" && r.our_seen == null).length; // v0.18.55: flagged during the 5 min after a restart — not counted
+  const sol = rows.filter((r) => r.chain === "sol" && r.our_seen != null), other = rows.filter((r) => r.chain !== "sol");
+  if (!sol.length) return `GMGN coverage, last ${hours} h: no Solana tokens flagged yet ($100K / 5 min). Other chains: ${other.length}.`;
+  const ratio = (r) => (r.vol5m > 0 ? Math.min(1.5, (r.our_v5 || 0) / r.vol5m) : 0), pct = (a, b) => (b ? Math.round((100 * a) / b) + "%" : "—");
+  const med = (a) => { if (!a.length) return 0; const z = [...a].sort((x, y) => x - y); return z[Math.floor(z.length / 2)]; };
+  const now = Math.floor(Date.now() / 1000), old = (r) => r.created_ts && r.ts - r.created_ts > 7 * 86400;
+  const by = {}; for (const r of sol) { const k = (r.exchange || "unknown").toLowerCase(); (by[k] ||= []).push(r); }
+  const exLines = Object.entries(by).sort((a, b) => b[1].length - a[1].length).slice(0, 8).map(([k, a]) => `• ${esc(k)}: ${a.length} tokens · we saw ${pct(a.filter((r) => r.our_seen).length, a.length)} · we captured ${Math.round(100 * med(a.map(ratio)))}% of their volume`);
+  const missed = sol.filter((r) => !r.our_seen).sort((a, b) => (b.vol5m || 0) - (a.vol5m || 0)).slice(0, 8)
+    .map((r) => `• ${esc(r.name || r.mint.slice(0, 6))} · ${esc(r.exchange || "?")} · MC $${fmtK(r.mc || 0)} · $${fmtK(r.vol5m || 0)}/5m${r.created_ts ? ` · ${Math.round((r.ts - r.created_ts) / 86400)}d old` : ""}${r.peak_mc && r.mc ? ` · later peak ${(r.peak_mc / r.mc).toFixed(2)}x` : ""}`);
+  const o = sol.filter(old);
+  return `🛰 <b>Coverage vs GMGN — last ${hours} h</b>
+Solana tokens GMGN saw trading ≥ $100K in 5 min: <b>${sol.length}</b>
+Our own feed saw <b>${pct(sol.filter((r) => r.our_seen).length, sol.length)}</b> of them · median share of their 5-min volume we captured: <b>${Math.round(100 * med(sol.map(ratio)))}%</b>${warm ? `\n(${warm} flagged in the first 5 min after a restart — not counted)` : ""}
+We paper-traded ${sol.filter((r) => r.our_trade).length} of them
+Older coins (over 7 days old): ${o.length} · we saw ${pct(o.filter((r) => r.our_seen).length, o.length)}
+<b>By exchange</b>
+${exLines.join("\n")}
+<b>Biggest ones our feed missed</b>
+${missed.length ? missed.join("\n") : "none"}
+Other chains (record-only): ${other.length}${other.length ? " (" + Object.entries(other.reduce((a, r) => ((a[r.chain] = (a[r.chain] || 0) + 1), a), {})).map(([c, n]) => `${c} ${n}`).join(", ") + ")" : ""}`;
+}
+
+
+
+====================================================================================================
+=== FILE: src/config.js (20,042 chars)
+====================================================================================================
+import "./env.js";
+const n = (k, d) => (process.env[k] !== undefined && process.env[k] !== "" ? Number(process.env[k]) : d);
+const s = (k, d) => (process.env[k] !== undefined && process.env[k] !== "" ? process.env[k] : d);
+export const CFG = {
+  PUMP_PROGRAM: "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
+  HELIUS_KEY: s("HELIUS_API_KEY", ""),
+  WS_URLS: [
+    ...(s("HELIUS_API_KEY", "") ? [`wss://mainnet.helius-rpc.com/?api-key=${s("HELIUS_API_KEY")}`] : []),
+    "wss://api.mainnet-beta.solana.com",
+  ],
+  RPC_URLS: [
+    ...(s("HELIUS_API_KEY", "") ? [`https://mainnet.helius-rpc.com/?api-key=${s("HELIUS_API_KEY")}`] : []),
+    ...s("RPC_EXTRA", "").split(",").map((x) => x.trim()).filter(Boolean), // v0.18.59: extra RPC providers (comma-separated URLs) tried after Helius
+    "https://api.mainnet-beta.solana.com",
+  ],
+  DB_PATH: s("DB_PATH", "/root/tracker/data/tracker.db"),
+  // Layer-1 gate: a launch is "prepared" if bundle >= pct AND bundle SOL >= sol
+  BUNDLE_PCT_MIN: n("BUNDLE_PCT_MIN", 40),
+  BUNDLE_SOL_MIN: n("BUNDLE_SOL_MIN", 20),
+  BUNDLE_SLOTS: n("BUNDLE_SLOTS", 0),          // buys within create_slot + N count as bundle (0 = same slot only)
+  FINALIZE_MS: n("FINALIZE_MS", 4000),         // wait before computing bundle stats
+  TRACK_MIN: n("TRACK_MIN", 125),              // keep tier-1 token trades for this many minutes (v0.19.1: 30 → 125, the books' 2-hour horizon; in-memory trades are capped per launch)
+  TOTAL_SUPPLY: 1_000_000_000,
+  TG_TIER1_ALERTS: n("TG_TIER1_ALERTS", 1),
+  TG_TIER1_SOL_MIN: n("TG_TIER1_SOL_MIN", 60),   // only ping Telegram for prepared launches with at least this much bundle SOL
+  HEARTBEAT_MIN: n("HEARTBEAT_MIN", 30),
+};
+// --- hand-off / paper trading ---
+Object.assign(CFG, {
+  HANDOFF_MIN: n("HANDOFF_MIN", 3),            // hand-offs needed to trigger paper entry
+  HANDOFF_WINDOW_MIN: n("HANDOFF_WINDOW_MIN", 10), // ...within this many minutes of launch
+  HANDOFF_SLOTS: n("HANDOFF_SLOTS", 2),        // cross-tx match: buy within N slots after sell
+  HANDOFF_TOL: n("HANDOFF_TOL", 0.15),         // token amount tolerance for cross-tx match
+  FRESH_MAX_AGE_S: n("FRESH_MAX_AGE_S", 86400),// wallet first tx younger than this = fresh
+  EXIT_OUTFLOW_PCT: n("EXIT_OUTFLOW_PCT", 20), // cluster net SOL outflow > this % of bundle SOL = exit
+  TSL_PCT: n("TSL_PCT", 40),                   // paper exit: drop from peak
+  MAX_HOLD_MIN: n("MAX_HOLD_MIN", 360),
+  RPC_DAILY_BUDGET: n("RPC_DAILY_BUDGET", 20000), // max credits/day for wallet lookups
+});
+// --- v0.3: early-inflow entry, parallel paper exits ---
+Object.assign(CFG, {
+  ENTRY_WINDOW_MIN: n("ENTRY_WINDOW_MIN", 3),   // inflow trigger only within first N minutes after launch
+  INFLOW_SOL: n("INFLOW_SOL", 10),              // buys (SOL) in the last 60s, excluding create slot
+  INFLOW_WALLETS: n("INFLOW_WALLETS", 8),       // distinct buyers in that window
+  INFLOW_WINDOW_S: n("INFLOW_WINDOW_S", 60),
+  TRACK_MIN_T0: n("TRACK_MIN_T0", 5),
+  VOL_TRACK_SOL: n("VOL_TRACK_SOL", 15),        // v0.19: an unbundled launch whose buys reach this many SOL gets its trades stored (the funded-dev books' pond)
+  VOL_TRACK_MIN: n("VOL_TRACK_MIN", 125),       // v0.19.1: … for this long — the books' 2-hour horizon plus a margin (review, 5 Nov: "retention must cover the evaluation horizon")           // unbundled tokens: keep in memory this long unless a position opens
+  FACTORY_WINDOW_MIN: n("FACTORY_WINDOW_MIN", 10), // same creator, >=2 launches within this = factory flag
+  TP_MULT: n("TP_MULT", 2),                     // take-profit variant
+  GRAD_VTOK: n("GRAD_VTOK", 285_000_000),       // virtual token reserves at/below this = curve complete (graduated)
+});
+// --- v0.3.2: alert gating, scorecards, digest ---
+Object.assign(CFG, {
+  ALERT_INFLOW_SOL: n("ALERT_INFLOW_SOL", 20),     // Telegram only if inflow >= this (or tier-1)
+  ALERT_INFLOW_WALLETS: n("ALERT_INFLOW_WALLETS", 15),
+  ALERT_REQUIRE_SOCIALS: n("ALERT_REQUIRE_SOCIALS", 1),
+  SCORECARD_MIN: s("SCORECARD_MIN", "5,15").split(",").map(Number),
+  FLAT_MC_PCT: n("FLAT_MC_PCT", 20),               // MC up less than this at +5m = flat/dead
+  NO_NEW_WALLETS_SOL_PER_BUYER: n("NO_NEW_WALLETS_SOL_PER_BUYER", 1.5), // inflow/buyers above this with few buyers = churn
+  NO_NEW_WALLETS_MAX_BUYERS: n("NO_NEW_WALLETS_MAX_BUYERS", 15),
+  DIGEST_HOUR_LOCAL: n("DIGEST_HOUR_LOCAL", 9),    // Europe/London
+});
+Object.assign(CFG, { PUMPSWAP_ENABLED: n("PUMPSWAP_ENABLED", 1) });
+Object.assign(CFG, {
+  PS_RESOLVE_SOL: n("PS_RESOLVE_SOL", 30),         // look up a pool's token only once it has traded >= this SOL in 5 min
+  PS_POOL_DAILY_BUDGET: n("PS_POOL_DAILY_BUDGET", 5000),
+  PS_RESOLVE_CONCURRENCY: n("PS_RESOLVE_CONCURRENCY", 2),
+});
+// --- v0.5: momentum (volume) strategy ---
+Object.assign(CFG, {
+  VOL5M_USD: n("VOL5M_USD", 100_000),
+  VOL5M_HOT_USD: n("VOL5M_HOT_USD", 200_000),
+  VOL1M_BURST_USD: n("VOL1M_BURST_USD", 30_000),
+  MOM_MC_CAP: n("MOM_MC_CAP", 2_000_000),
+  MOM_PAPER_MC_CAP: n("MOM_PAPER_MC_CAP", 2_000_000), // v0.15: paper-trade only below this; above → alert only (0/24 hit 2x above $500K)
+  MOM_BS_MIN: n("MOM_BS_MIN", 1.0),           // v0.15: 5m buy$/sell$ must be >= this (3% hit 2x below 1.0 vs 28% above)
+  MOM_MIN_TRADES5: n("MOM_MIN_TRADES5", 10),  // v0.15: sanity — at least this many swaps in the 5m window
+  MOM_MIN_WALLETS5: n("MOM_MIN_WALLETS5", 5), // ...from this many distinct wallets
+  MOM_MIN_AGE_S: n("MOM_MIN_AGE_S", 60),      // ...and token at least this old (when age is known)
+  PS_MAX_SWAP_SOL: n("PS_MAX_SWAP_SOL", 1000), // v0.15: drop PumpSwap swaps above this (decode artefacts on instant graduations)
+  GRAD_ALERT_BUYERS: n("GRAD_ALERT_BUYERS", 250), // v0.15: graduation strategy alerts only when distinct buyers >= this (paper-enters all)
+  CONF_ALERT_BUYERS: n("CONF_ALERT_BUYERS", 250), // v0.15: confirm alerts only with this many buyers (paper trade always)
+  CLIMB_ALERT_BUYERS: n("CLIMB_ALERT_BUYERS", 250), // v0.15: climber alerts only with this many buyers
+  MOM_MAX_AGE_D: n("MOM_MAX_AGE_D", 3650), // v0.18.11: any age — Groklet (486d old) did $100K/5m at $304K and 2.58x; the 30-day cap kept momentum out
+  MOM_COOLDOWN_MIN: n("MOM_COOLDOWN_MIN", 30),
+  MOM_MAX_HOLD_MIN: n("MOM_MAX_HOLD_MIN", 360),
+  MOM_REENTRY_MAX: n("MOM_REENTRY_MAX", 2),
+  MOM_REENTRY_QUIET_MIN: n("MOM_REENTRY_QUIET_MIN", 15),
+  MOM_SCORECARD_MIN: s("MOM_SCORECARD_MIN", "15,60").split(",").map(Number),
+  SUMMARY_HOURS: n("SUMMARY_HOURS", 4),
+  PS_RESOLVE_SOL: n("PS_RESOLVE_SOL", 100),
+});
+// --- v0.6: second wave, levels ---
+Object.assign(CFG, {
+  LEVELS_USD: s("LEVELS_USD", "69000,100000,250000,500000,1000000,2000000").split(",").map(Number),
+  LEVEL_SELL_PCT: n("LEVEL_SELL_PCT", 0.97),     // sell slice at 97% of each level
+  LEVEL_SLICE: n("LEVEL_SLICE", 0.25),           // 25% of position per level crossed (rest trails 60%)
+  WALL_WARN_PCT: n("WALL_WARN_PCT", 15),         // warn if next level within this % above entry MC
+  SW_FADE_FRAC: n("SW_FADE_FRAC", 0.25),         // first wave faded: 60s inflow < this × wave peak
+  SW_QUIET_MIN: n("SW_QUIET_MIN", 5),            // ...for at least this long
+  SW_CLUSTER_FLAT_MIN: n("SW_CLUSTER_FLAT_MIN", 5), // cluster net outflow unchanged for this long
+  SW_INFLOW_SOL: n("SW_INFLOW_SOL", 8),          // second wave: 60s inflow back over this
+  SW_INFLOW_WALLETS: n("SW_INFLOW_WALLETS", 6),  // ...from this many distinct new wallets
+  SW_WINDOW_MIN: n("SW_WINDOW_MIN", 30),         // second wave must happen within tracking window
+  MOM_REENTRY_RECLAIM: n("MOM_REENTRY_RECLAIM", 1), // re-entry must reclaim the last rejected level
+});
+// --- v0.7: burst trigger, $1M exits, cluster holdings ---
+Object.assign(CFG, {
+  BURST_TRIGGER: n("BURST_TRIGGER", 1),           // 1-min burst is an entry trigger in its own right
+  M1_EXIT_USD: n("M1_EXIT_USD", 970_000),         // "$1M all-out" sells at this MC
+  M1_HOLD_VOL5M: n("M1_HOLD_VOL5M", 200_000),     // volume-aware: hold through $1M if 5m vol >= this
+});
+// --- v0.8 ---
+Object.assign(CFG, {
+  VOLSTOP_FRAC: n("VOLSTOP_FRAC", 0.5),       // grey zone: stay in if 5m vol >= this × vol at entry
+  VOLSTOP_EXIT_USD: n("VOLSTOP_EXIT_USD", 20_000),  // 5m vol below this = out
+  VOLSTOP_STAY_USD: n("VOLSTOP_STAY_USD", 50_000),  // 5m vol above this (and ratio ok) = stay
+  VOLSTOP_SELL_RATIO: n("VOLSTOP_SELL_RATIO", 1.6), // sells/buys (USD) above this = out
+  VOLSTOP_HARD: n("VOLSTOP_HARD", 0.80),      // ...but always out at -80%
+  AFTER_CLOSE_H: n("AFTER_CLOSE_H", 24),
+  GRAD_HANDOVER: n("GRAD_HANDOVER", 1),
+});
+// --- v0.9: wallet database ---
+Object.assign(CFG, {
+  WB_EARLY_S: n("WB_EARLY_S", 180),        // record buys within first N seconds of launch
+  WB_MIN_SOL: n("WB_MIN_SOL", 0.3),
+  WB_MAX_PER_TOKEN: n("WB_MAX_PER_TOKEN", 40),
+  WB_TOKEN_MIN_MC: n("WB_TOKEN_MIN_MC", 15_000), // only score tokens that reach this MC
+  WB_MIN_BUYS: n("WB_MIN_BUYS", 5),
+  WB_MIN_AGE_S: n("WB_MIN_AGE_S", 1),        // v0.15.1: leaderboard ignores create-block (0s) buys — bundlers/snipers always "win"
+  WATCH_SEED_WALLETS: s("WATCH_SEED_WALLETS", "CZdG7s8FVWVM6Ats8XSJ2R2qRkTKsd7qAtuvHGb1YLXN,BfUE1UcptE2noHrnBYxyqcDbPrboXsA1NZTurr5jd35b,4nHZjd64nCskpL852vcpMkHbYU3ppQ42E4SyZTbBp427").split(",").map((x) => x.trim()).filter(Boolean),
+  WATCH_SEED_CREATORS: s("WATCH_SEED_CREATORS", "D8pP1hegfQrND1tpMv1pQJZYyzwnHsiFa9AVLc2Lzoxy,DR8351MpWktoeJPJnZiwTFnRoXkX7qofvKMvWM8FGuWT,9rdgxk4nTtQY6B8GXtjNsuwGQmz5RtMByFFvVpub8gSY,ACowwSv1QQzPbAD2EhjHTYm9FNgpqeUAfex6Zi9NgJNn,H9h9BCMurt5jTxCB9JhsJerVhqtuaHUVgvAFBGUQbMCs").split(",").map((x) => x.trim()).filter(Boolean),
+  PROVEN_MIN_BUYS: n("PROVEN_MIN_BUYS", 8),        // v0.17.3: raised from 4 — the volume snipers qualified at 4       // v0.15.3: "proven" wallet = this many resolved non-bundle early buys...
+  PROVEN_MIN_5X: n("PROVEN_MIN_5X", 0.5),         // ...with this share reaching 5x within 24h
+  PROVEN_WINDOW_S: n("PROVEN_WINDOW_S", 60),
+  PROVEN_MIN_SOL: n("PROVEN_MIN_SOL", 0.3),         // v0.17.3: a scored buy must be at least this; alert needs 0.2 SOL
+  PROVEN_ALERT_MIN_SOL: n("PROVEN_ALERT_MIN_SOL", 0.2),      // count proven wallets buying within this many seconds of launch
+  SWEEP_EVERY_MIN: n("SWEEP_EVERY_MIN", 5),     // v0.15.3: close over-hold paper trades at the real current price
+  SWEEP_BATCH: n("SWEEP_BATCH", 60),             // per run (1 RPC read each for curve tokens; DexScreener for graduated)
+  SWEEP_MAX_FAILS: n("SWEEP_MAX_FAILS", 3),
+  HOLDER_COUNT_DAILY_BUDGET: n("HOLDER_COUNT_DAILY_BUDGET", 600), // v0.18.113: Helius getTokenAccounts pages for the P5 data set's holder counts (coins without a ledger)
+  HOLDERS_RPC_DAILY_BUDGET: n("HOLDERS_RPC_DAILY_BUDGET", 1500), // v0.18.5: getTokenLargestAccounts at entry for coins without a ledger
+  MOM_FAST_USD: n("MOM_FAST_USD", 50_000), MOM_FAST_WIN_S: n("MOM_FAST_WIN_S", 120), // v0.18.12 "fast" tier: $50K in 2 min (same pace as $125K/5m), fires before the 5m rule on fast movers
+  MOM_TIERS: s("MOM_TIERS", "60000,80000").split(",").map(Number), // v0.18.6: silent paper variants of the momentum rule at lower 5m volume
+  FLOW_CAP: n("FLOW_CAP", 4), // v0.18.10: flow4 = flow exit with a voluntary sell at this multiple
+  FLOW_MIN_VOL: n("FLOW_MIN_VOL", 100_000), FLOW_BS_MIN: n("FLOW_BS_MIN", 1.0), // v0.18.9 flow exit: hold after 1.5x while 5m vol >= this and buy$/sell$ >= this
+  MOM_DIP_PCT: n("MOM_DIP_PCT", 0.20), MOM_DIP_WINDOW_S: n("MOM_DIP_WINDOW_S", 600), // dip-entry variant
+  MOM_RE_MAX: n("MOM_RE_MAX", 5), MOM_RE_GAP_S: n("MOM_RE_GAP_S", 60), // re-entry variant
+  MOM_CT_MC: n("MOM_CT_MC", 60_000), MOM_CT_AGE_S: n("MOM_CT_AGE_S", 360), MOM_CT_SIZE_CV: n("MOM_CT_SIZE_CV", 1.6), // v0.18.7 core-tight tag
+  FRESH_WALLET_D: n("FRESH_WALLET_D", 3), FRESH_SAMPLE: n("FRESH_SAMPLE", 25), FRESH_DAILY_BUDGET: n("FRESH_DAILY_BUDGET", 2000), // v0.18.19 fresh-wallet share at entry
+  LOWVOL_EXIT_USD: n("LOWVOL_EXIT_USD", 25000), LOWVOL_WARMUP_S: n("LOWVOL_WARMUP_S", 300), // v0.18.36: every open paper position is sold when its 5m volume < $25K (needs 5 min of complete trade data)
+  P5_MAX_MC: n("P5_MAX_MC", 2000000), P5E_MAX_MC: n("P5E_MAX_MC", 100000), P5W_MAX_MC: n("P5W_MAX_MC", 250000), P5E_MIN_WALLETS: n("P5E_MIN_WALLETS", 10), // v0.18.50 Project 5 early // v0.18.36 Project 5 market-cap cap
+  P5_VOL2M_USD: n("P5_VOL2M_USD", 100000), P5_MIN_AGE_S: n("P5_MIN_AGE_S", 60), // v0.18.35 Project 5: $100K traded inside 2 minutes, coin ≥60 s old, buys ≥ sells, no MC cap
+  MOM_CONF_S: n("MOM_CONF_S", 60), MOM_CONF_MIN: n("MOM_CONF_MIN", 1.0), MOM_CONF_LATE_S: n("MOM_CONF_LATE_S", 120), // v0.18.32 Project 4: buy MOM_CONF_S after a core trigger only if price > MOM_CONF_MIN x trigger (first tick up to MOM_CONF_LATE_S)
+  MOM_V40_USD: n("MOM_V40_USD", 40_000), MOM_V40_AGE_S: n("MOM_V40_AGE_S", 600), // v0.18.17 core_v40 tag: 1m volume >= $40K and under 10 min old at entry
+  MOM_CORE_MC: n("MOM_CORE_MC", 100_000),          // v0.18.4: "core" momentum = $100K/5m trigger, entry below this, first entry
+  PREPUMP_WINDOW_S: n("PREPUMP_WINDOW_S", 1800),  // v0.18.2: record wallets that bought in this window before a volume trigger
+  DEX_ENABLED: n("DEX_ENABLED", 0),                 // v0.18.126: OFF by default — the Raydium / Meteora / Orca stream was most of the Helius credit burn (19 Oct: 1.6–3.3M a day on the WebSocket) and no book trades those venues; DEX_ENABLED=1 restores it // v0.18: Raydium CPMM/CLMM/LaunchLab + Meteora DLMM + Orca swap feed into momentum
+  DEX_RESOLVE_SWAPS: n("DEX_RESOLVE_SWAPS", 30),    // look a pool up (1–2 credits) once it has this many swaps in 5 min
+  DEX_POOL_DAILY_BUDGET: n("DEX_POOL_DAILY_BUDGET", 6000),
+  DEX_IGNORE_MC: n("DEX_IGNORE_MC", 20_000_000),     // don't feed swaps on tokens above this MC (majors/stables; momentum caps at $2M anyway)
+  PS_MIN_POOL_SOL: n("PS_MIN_POOL_SOL", 10),        // v0.17: ignore PumpSwap swaps from pools holding less SOL than this
+  W2_CHECKS_S: s("W2_CHECKS_S", "120,180,240").split(",").map(Number), // v0.17 second-wave: ages checked
+  W2_MC_MIN: n("W2_MC_MIN", 10_000), W2_MC_MAX: n("W2_MC_MAX", 40_000),
+  W2_BUYERS_MIN: n("W2_BUYERS_MIN", 80),           // distinct buyers so far
+  W2_NEW60_MIN: n("W2_NEW60_MIN", 30),             // new distinct buyers in the last 60s
+  W2_BS_MIN: n("W2_BS_MIN", 1.0),                  // buy$/sell$ over last 60s
+  W2_BUNDLE_MAX: n("W2_BUNDLE_MAX", 60),
+  W2T_CP_MAX: n("W2T_CP_MAX", 180), W2T_MC_MIN: n("W2T_MC_MIN", 12_000), W2T_MC_MAX: n("W2T_MC_MAX", 25_000), W2T_BS_MIN: n("W2T_BS_MIN", 1.3), W2T_DEV_MIN: n("W2T_DEV_MIN", 0.001), // v0.17.4 "tight" tag on second-wave entries
+  W2_ALERT_BUYERS: n("W2_ALERT_BUYERS", 150), W2_ALERT_NEW60: n("W2_ALERT_NEW60", 50), // v0.17.1: alert only the strong ones; paper-trade all
+  REV_PEAK_MIN_AGE_S: n("REV_PEAK_MIN_AGE_S", 180),  // v0.17.1: the peak being recovered from must be at least this old
+  GR_WINDOW_S: n("GR_WINDOW_S", 900),                 // v0.17.1 graduation runner: within this many seconds of graduation
+  GR_VOL5M_USD: n("GR_VOL5M_USD", 80_000), GR_NEW2M_MIN: n("GR_NEW2M_MIN", 30), GR_BS_MIN: n("GR_BS_MIN", 1.0),
+  GREC_DRAWDOWN: n("GREC_DRAWDOWN", 0.6),             // v0.17.1 graduation recovery: >= this far below post-graduation peak
+  GREC_NEW5M_MIN: n("GREC_NEW5M_MIN", 20),
+  SLOW_MIN_AGE_S: n("SLOW_MIN_AGE_S", 600),            // v0.17.2 slow build (base breakout)
+  SLOW_DRAWDOWN: n("SLOW_DRAWDOWN", 0.5),               // fell at least this far from peak at some point
+  SLOW_SINCE_DUMP_S: n("SLOW_SINCE_DUMP_S", 600),       // the low was at least this long ago (went sideways)
+  SLOW_WINDOWS: n("SLOW_WINDOWS", 3),                   // consecutive 5-min windows with rising buyers and volume
+  SLOW_OFF_LOW: n("SLOW_OFF_LOW", 0.3),                 // price at least this far above the post-dump low
+  SLOW_NEW10M_MIN: n("SLOW_NEW10M_MIN", 30), SLOW_MC_MIN: n("SLOW_MC_MIN", 8_000),
+  COMBO_FLOOR_ARM: n("COMBO_FLOOR_ARM", 1.5),         // v0.17.1: floor stop only armed once the position has been up this much
+  REV_AGE_MIN_S: n("REV_AGE_MIN_S", 480), REV_AGE_MAX_S: n("REV_AGE_MAX_S", 3600), // v0.17 revival
+  REV_DRAWDOWN: n("REV_DRAWDOWN", 0.4),            // price at least this far below peak
+  REV_NEW5M_MIN: n("REV_NEW5M_MIN", 20),           // new buyers in last 5m
+  REV_VOL_RATIO: n("REV_VOL_RATIO", 1.0),          // vol last 5m / previous 5m
+  REV_MC_MIN: n("REV_MC_MIN", 5_000),
+  COMBO_FLOOR_MC: n("COMBO_FLOOR_MC", 20_000),     // combined exit: out if MC falls back under this after being above
+  CREATOR_GRADS_FLAG: n("CREATOR_GRADS_FLAG", 2), // v0.15.1: flag creators with this many prior graduations on alerts
+  WB_MAX_BUYS_PER_DAY: n("WB_MAX_BUYS_PER_DAY", 50),
+  WB_RETAIN_D: n("WB_RETAIN_D", 30),
+  WB_COPY_MIN_SOL: n("WB_COPY_MIN_SOL", 0.2),  // watched wallet must buy at least this to trigger a copy
+});
+// --- v0.10: confirmation strategy, burst filter, analysis features ---
+Object.assign(CFG, {
+  ALERT_REQUIRE_SOCIALS: n("ALERT_REQUIRE_SOCIALS", 0),  // log socials, don't gate alerts (data didn't support the gate)
+  CONF_MIN_S: n("CONF_MIN_S", 240),       // confirmation window after raw trigger: from
+  CONF_MAX_S: n("CONF_MAX_S", 600),       // ...to
+  CONF_MC_MULT: n("CONF_MC_MULT", 1.5),   // MC must be >= this × raw-entry MC
+  CONF_BS_RATIO: n("CONF_BS_RATIO", 1.3), // buys/sells over last 5m
+  CONF_BUYERS_GROW: n("CONF_BUYERS_GROW", 10), // new distinct buyers in last 5m
+  BURST_MIN_AGE_S: n("BURST_MIN_AGE_S", 600),
+  BURST_MIN_MC: n("BURST_MIN_MC", 60_000),
+});
+// --- v0.12: lifecycle sampler, holders, big buys ---
+Object.assign(CFG, {
+  LIFE_CHECKPOINTS: s("LIFE_CHECKPOINTS", "60,300,900,1800,3600,7200,14400,86400").split(",").map(Number),
+  LIFE_HOLDERS_FROM_S: n("LIFE_HOLDERS_FROM_S", 1800),  // snapshot top-10 holders at checkpoints >= this
+  LIFE_HOLDERS_MIN_MC: n("LIFE_HOLDERS_MIN_MC", 20_000),
+  LIFE_HOLDER_DAILY_BUDGET: n("LIFE_HOLDER_DAILY_BUDGET", 2000),
+  BIGBUY_SOL: n("BIGBUY_SOL", 5),
+  BIGBUY_BAL_DAILY_BUDGET: n("BIGBUY_BAL_DAILY_BUDGET", 2000),
+});
+// --- v0.13: climber (slow riser) ---
+Object.assign(CFG, {
+  CLIMB_STEP: n("CLIMB_STEP", 1.3),          // each checkpoint MC >= this × previous
+  CLIMB_CPS: s("CLIMB_CPS", "300,900,1800").split(",").map(Number), // stairs that must rise; entry at the last one
+  CLIMB_CPS2: s("CLIMB_CPS2", "900,1800,3600").split(",").map(Number), // second chance at 1h
+  CLIMB_MIN_MC: n("CLIMB_MIN_MC", 15_000),
+  CLIMB_MAX_BURST_USD: n("CLIMB_MAX_BURST_USD", 30_000), // must never have had a 1m burst above this (else momentum's job)
+});
+// --- v0.14: runner autopsy ---
+Object.assign(CFG, { RUNNER_MIN_MC: n("RUNNER_MIN_MC", 1_000_000) });
+// v0.18.176 (owner go 21 Oct 13:50 UK): the old off-page books are switched off — none of these kinds opens a NEW paper position (open ones still close normally; every table and
+// code path stays). "momentum" here = the non-core volume trigger (burst / re-entry / MC ≥ MOM_CORE_MC); the core trigger (book E / E2, strategy momentum + core=1) keeps running.
+// OFFPAGE_BOOKS=1 re-enables them all.
+// v0.18.185 (owner, 23 Oct 19:34 UK: "these bots are definitely not working… stop using them for now, stop wasting APIs"): every paper book stops opening positions; the launch recorder (tokens, bundles, creators) keeps running for coin scope. BOOKS_OFF=0 in .env turns the books back on.
+export const BOOKS_OFF = s("BOOKS_OFF", "1") === "1";
+export const OFF_KINDS = new Set(s("OFFPAGE_BOOKS", "0") === "1" ? [] : ["early", "wave2", "secondwave", "copy", "confirm", "climber", "revival", "gradrec", "gradrun", "slow", "momentum", "momfast", "momdip", "momre", "momconf",
+  "sn1", "sn2", "sn3", "sn5", "sn6", "sn6b", "sn7", "sn7b", "sn9", "sn10", "sn11", "sn4b", "p5e50", "p5e80", "p5w30", "p5c5", "p5c10", "mom60", "mom80", "pg", "rev"]); // v0.18.179 (owner, 21 Oct 16:16 UK): the retired books stop opening paper positions too - kept: A (p5e30, AS source), S8 (BL source), S3b/S4 (forward tests), every-graduation + GR, K. Set OFFPAGE_BOOKS=1 to turn everything back on.

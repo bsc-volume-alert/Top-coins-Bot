@@ -1,0 +1,1159 @@
+# PART 7 of 13 — full code review pack (paste all parts in order)
+
+
+====================================================================================================
+=== FILE: src/copytrade.js (30,943 chars)
+====================================================================================================
+// Copy strategy: paper-enter when a watched wallet buys; track on both feeds; same parallel exits.
+import { CFG, OFF_KINDS, BOOKS_OFF } from "./config.js"; // v0.18.176 OFF_KINDS: the off-page books open nothing new
+import { db, q } from "./db.js";
+import { on } from "./launch-monitor.js";
+import { onSwap } from "./pumpswap.js";
+import { onCopy, onCreatorLaunch } from "./wallets.js";
+import { onClimb, lifeSnap, onWave2, onRevival, onGradRunner, onGradRecovery, onSlowBuild } from "./lifecycle.js";
+import { links } from "./launch-monitor.js";
+import { newExits, stepExits, finalExits, pc, pathStep, p3dFinal, h5Key } from "./exits.js";
+import { watch as afterWatch } from "./aftercare.js";
+import { tg } from "./telegram.js";
+import { esc, fmt } from "./launch-monitor.js";
+import { solUsdCached } from "./price.js";
+import { clusterSnap } from "./signals.js";
+import { dexPrice } from "./sweeper.js"; // v0.18.36
+import { gmgnFor, gmgnSummary, gmgnEntry } from "./gmgn.js"; // v0.18.52 · v0.18.56 gmgnEntry
+import { feeInfo, feeLine } from "./fees.js";
+import { recordHolders, holdersLine, ledgerBal, LEDGER_DUST } from "./holders.js"; // v0.18.176 ledgerBal: creator-sold-out exit (record only)
+import { execSend, noteFeed } from "./execlink.js"; // v0.18.90 → executor (live buy/sell bot)
+import { startTrace, traceTick, noteClose, sweepTraces, noteExits } from "./p5trace.js"; // v0.18.113 P5 data set
+
+const P = new Map(); // mint -> [{id, label, e, w5:[], closed, msgId}]
+export const cp = { entries: 0, closes: 0 };
+const closeListeners = []; export const onCopyClose = (fn) => closeListeners.push(fn); // v0.18.119: (mint, pos, reason) when a variant position closes
+export const positionsOf = (mint) => P.get(mint) || [];
+// v0.18.70 website "sell 100%" for copy-type positions (P5): closes the paper position at the current price (every exit not yet hit takes it)
+export function copyManualSell(id) {
+  for (const [mint, arr] of P) for (const p of arr) if (p.id === id && !p.closed) { const mult = p.lastPx / p.e.entry; close(mint, p, "manual"); return { ok: true, mult, sold: 1 }; }
+  return null;
+}
+export const openOfKind = (kind) => [...P.entries()].flatMap(([mint, arr]) => arr.filter((p) => !p.closed && p.kind === kind).map((p) => ({ mint, p }))); // v0.18.32
+
+export function openCopy(kind, who, mint, name, symbol, price, mc, ts, note) {
+  if (BOOKS_OFF) return null; // v0.18.185 all books off
+  const ageS = note?.ageS ?? null;
+  const r = q.insMom.run(mint, name, symbol, ts, mc, price, null, null, null, null, null, null, null, 0, 0, 0, 0, ageS, 0, 1, mc);
+  q.setPaperExtra.run(null, kind + ":" + who, r.lastInsertRowid);
+  q.setStrategy.run(kind, r.lastInsertRowid);
+  if (note?.v5 != null) { try { q.setVolEntry.run(note.v5, r.lastInsertRowid); q.setVenue.run(note.venue || "pumpswap", r.lastInsertRowid); } catch {} }
+  if (note?.buyers != null) { try { q.setFeatures.run(null, null, null, null, new Date(ts * 1000).getUTCHours(), null, note.bs ?? null, note.buyers, r.lastInsertRowid); } catch {} }
+  if (note?.mc5 != null || note?.buyers5 != null) { try { q.setPaperCard.run(note.mc5 ?? null, null, note.buyers5 ?? null, note.b5 ?? 0, note.s5 ?? 0, r.lastInsertRowid); } catch {} }
+  try { const g = gmgnFor(mint); if (g) q.setGmgn.run(JSON.stringify(gmgnSummary(g)), r.lastInsertRowid); } catch {} // v0.18.52
+  if (kind === "momconf" || kind === "mom2m" || String(kind).startsWith("p5")) gmgnEntry(mint, r.lastInsertRowid, { holders: String(kind).startsWith("p5") }); // v0.18.115: every P5 kind incl. p5w30 // v0.18.56: P4 / P5 entries only (other copy kinds are too many)
+  let hl = null; try { hl = holdersLine(recordHolders(r.lastInsertRowid, mint)); } catch {} // v0.18.5
+  let fi = null; try { fi = feeInfo(mint); q.setFees.run(fi.accrued, fi.claims, fi.claimedSol, r.lastInsertRowid); } catch {} // v0.18.4
+  let cs = null; try { cs = clusterSnap(mint); if (cs) q.setChurn.run(cs.churn, cs.cOut, cs.held, cs.handoffs, r.lastInsertRowid); } catch {} // v0.17.5: bundle churn at entry
+  const pos = { id: r.lastInsertRowid, label: who, e: newExits(price, mc, 0), w5: [], closed: false, entryTs: ts, lastMc: mc, lastPx: price, lastTs: ts, name, kind, alerted: !String(kind).startsWith("sn") && kind !== "rev" && kind !== "grf" && kind !== "k" && kind !== "pg", noExec: !!note?.noExec }; // v0.18.119: Project S books are quiet and never reach the executor
+  if (kind === "climber") { pos.alerted = (note.buyers || 0) >= CFG.CLIMB_ALERT_BUYERS; if (pos.alerted) tg(`🪜 <b>CLIMBER</b> — ${esc(name)} ($${esc(symbol)})\nStairs: ${note.steps} · ${note.buyers} buyers · no burst · entry at +${Math.round(note.cp / 60)}m\nMC <b>$${fmt(mc)}</b>\n${links(mint)}`).then((id) => { pos.msgId = id; }); }
+  if (kind === "wave2") { pos.alerted = !!note.alert; try { q.setTight.run(note.tight ? 1 : 0, r.lastInsertRowid); } catch {} if (pos.alerted) tg(`🌊 <b>SECOND WAVE</b> — ${esc(name)} ($${esc(symbol)}) · +${Math.round(note.cp / 60)}m\n${note.buyers} buyers (${note.new60} new in 60s) · buy$/sell$ ${note.bs.toFixed(1)} · price ${note.pxChg >= 0 ? "+" : ""}${(note.pxChg * 100).toFixed(0)}% vs 60s ago${note.bundle != null ? ` · bundle ${note.bundle.toFixed(0)}%` : ""}${cs && cs.churn != null ? ` · bundle churn ${(cs.churn * 100).toFixed(0)}%` : ""}\nMC <b>$${fmt(mc)}</b>${fi ? "\n" + feeLine(fi, ts) : ""}${hl ? "\n" + hl : ""}\n${links(mint)}`).then((id) => { pos.msgId = id; }); }
+  if (kind === "revival") tg(`🔁 <b>REVIVAL</b> — ${esc(name)} ($${esc(symbol)}) · ${Math.round(note.age / 60)}m old\nFell ${((1 - mc / note.peakMc) * 100).toFixed(0)}% from peak $${fmt(note.peakMc)} · ${note.new5} new buyers in 5m · volume ${note.volRatio.toFixed(1)}x previous 5m\nMC <b>$${fmt(mc)}</b>\n${links(mint)}`).then((id) => { pos.msgId = id; });
+  if (kind === "gradrun") tg(`🎓🚀 <b>GRADUATION RUNNER</b> — ${esc(name)} ($${esc(symbol)}) · ${Math.round(note.sinceGrad / 60)}m after graduation (${Math.round(note.age / 60)}m old)\n5m vol <b>$${fmt(note.vol5)}</b> · ${note.new2} new buyers in 2m · ${note.buyers} buyers · buy$/sell$ ${note.bs.toFixed(1)}\nMC <b>$${fmt(mc)}</b>\n${links(mint)}`).then((id) => { pos.msgId = id; });
+  if (kind === "gradrec") tg(`🔁🎓 <b>GRADUATION RECOVERY</b> — ${esc(name)} ($${esc(symbol)}) · ${Math.round(note.age / 60)}m old\nFell ${((1 - mc / note.peakMc) * 100).toFixed(0)}% from post-graduation peak $${fmt(note.peakMc)} · ${note.new5} new buyers in 5m · volume ${note.volRatio.toFixed(1)}x previous 5m\nMC <b>$${fmt(mc)}</b>\n${links(mint)}`).then((id) => { pos.msgId = id; });
+  if (kind === "slow") tg(`📈🔁 <b>SLOW BUILD</b> — ${esc(name)} ($${esc(symbol)}) · ${Math.round(note.age / 60)}m old${note.graduated ? " · graduated" : ""}\nPeak $${fmt(note.peakMc)} → low $${fmt(note.lowMc)} (${Math.round(note.sinceLow / 60)}m ago) → now <b>$${fmt(mc)}</b>\n5m volume ${note.vols.map((v) => "$" + fmt(v)).join(" → ")} · new buyers ${note.nbs.join(" → ")} · ${note.buyers} buyers total\n${links(mint)}`).then((id) => { pos.msgId = id; });
+  if (kind === "grad") { pos.alerted = (note.buyers || 0) >= CFG.GRAD_ALERT_BUYERS; if (pos.alerted) tg(`🎓 <b>GRADUATION ENTRY</b> — ${esc(name)} ($${esc(symbol)})\nGraduated at +${ageS != null ? Math.round(ageS / 60) + "m" : "?"} · ${note.buyers} buyers · 5m-mark MC ${note.mc5 ? "$" + fmt(note.mc5) : "n/a"} · 5m buyers ${note.buyers5 ?? "n/a"} · max 1m burst $${fmt(note.maxBurst || 0)}\nMC <b>$${fmt(mc)}</b> · now trading on PumpSwap\n${links(mint)}`).then((id) => { pos.msgId = id; }); }
+  if (note?.wall0) { // v0.18.89 P5 live-readiness measurement: lag = how far behind the chain our feed was at the trigger (block time is whole seconds, so ±0.5 s per trade; the average is what counts) · open = ms from seeing the trigger to this paper entry (name / age lookups)
+    pos.wall0 = note.wall0; pos.fs = { lag: note.blockTs ? Math.round(note.wall0 - note.blockTs * 1000) : null, open: Date.now() - note.wall0 }; try { q.setFirstSecs.run(JSON.stringify(pos.fs), pos.id); } catch {}
+    const fpm = (() => { try { const m = q.tokenMeta.get(mint); return !!m && m.bundle_wallets === 10 && m.bundle_pct >= 37 && m.bundle_pct <= 41 && m.bundle_sol >= 22 && m.bundle_sol <= 28 && (m.dev_buy_sol ?? 0) < 0.2; } catch { return false; } })(); // v0.18.164 (owner, 20 Oct 19:07 UK): the 10-wallet operator's coins are a pump-and-dump (median $218K at 60 s, $4K at 1 h) - no book buys them for real except S10
+    if (fpm && kind !== "sn10") pos.noExec = true;
+    pos.bl = blOf(kind, note.bundle, note.bundleWallets, mc); pos.gr2 = gr2Of(kind, mint); // v0.18.180 GR2 (owner go 21 Oct 16:44 UK): GR's graduation on a bundle-launch coin // v0.18.176 BL (owner go 21 Oct 13:50 UK): the executor's bundle-launch book takes only S8 fires with this flag
+    if (!pos.noExec) execSend({ type: "trigger", id: Number(pos.id), strategy: kind, mint, name, price, mc, ts, wall0: note.wall0, lagMs: pos.fs.lag, venue: note.venue || null, pass: note.pass !== false, skipWhy: note.skipWhy || null, bundle: note.bundle ?? null, wal60: note.wal60 ?? null, bundleWallets: note.bundleWallets ?? null, asStd: note.asStd ?? null, bl: pos.bl, gr2: pos.gr2 }); // v0.18.176 + bl (executor book BL) · v0.18.172 + asStd (executor book AS) · v0.18.124 + bundleWallets (book F) // v0.18.90 → executor (pass = the website's P5 filters)
+    try { startTrace(pos.id, mint, ts, price, note.preBuyers || null, note.creator || null); } catch (e) { console.error("[p5trace]", e.message); } } // v0.18.113: the data set's after-entry marks, taken or skipped alike
+  const arr = P.get(mint) || []; arr.push(pos); P.set(mint, arr); cp.entries++;
+  afterWatch(mint, pos.id, price, mc, null, null, null, ts);
+  setTimeout(() => close(mint, pos, "time"), CFG.MOM_MAX_HOLD_MIN * 60_000);
+  return pos;
+}
+// v0.18.176 (owner go 21 Oct 13:50 UK): copy / climber / wave2 / gradrun / gradrec / slow / revival are off-page books switched off — each listener opens nothing while its kind is in OFF_KINDS (open positions still close normally)
+onCopy(({ wallet, label, mint, name, symbol, price, mc, ts }) => !OFF_KINDS.has("copy") && openCopy("copy", label || wallet.slice(0, 6), mint, name, symbol, price, mc, ts));
+onClimb((c) => { if (c.price > 0 && !OFF_KINDS.has("climber")) openCopy("climber", `${Math.round(c.cp / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, c); });
+onWave2((c) => { if (c.price > 0 && !OFF_KINDS.has("wave2")) openCopy("wave2", `${Math.round(c.cp / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, buyers: c.buyers, bs: c.bs }); });
+onGradRunner((c) => { if (c.price > 0 && c.mc >= 20000 && !OFF_KINDS.has("gradrun")) openCopy("gradrun", `${Math.round(c.sinceGrad / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, ageS: c.age }); });
+onGradRecovery((c) => { if (c.price > 0 && !OFF_KINDS.has("gradrec")) openCopy("gradrec", `${Math.round(c.age / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, ageS: c.age, buyers: c.new5 }); });
+onSlowBuild((c) => { if (c.price > 0 && !OFF_KINDS.has("slow")) openCopy("slow", `${Math.round(c.age / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, ageS: c.age, buyers: c.buyers }); });
+onRevival((c) => { if (c.price > 0 && !OFF_KINDS.has("revival")) openCopy("revival", `${Math.round(c.age / 60)}m`, c.mint, c.name, c.symbol, c.price, c.mc, c.ts, { ...c, buyers: c.new5 }); });
+onCreatorLaunch(({ creator, label, mint, name, symbol, price, mc, ts }) => { if (price > 0) openCopy("copycreator", label || creator.slice(0, 6), mint, name, symbol, price, mc, ts); });
+// v0.15: graduation strategy — paper-enter every graduation we watched from launch, with the +5m snapshot as features (alert only when buyers >= GRAD_ALERT_BUYERS)
+on("graduated", (t, tr) => {
+  if (!(tr?.price > 0) || !(t.lastMc >= 20000)) return; // v0.17.1: entries below $20K are bad prices
+  const L = lifeSnap(t.mint); if (!L || L.buyers < 5) return; // only tokens tracked since launch, with real buyers (skips one-shot instant graduations)
+  const ts = tr.ts || Math.floor(Date.now() / 1000), ageS = ts - (t.ts || L.createTs);
+  const cp5 = L.cp5;
+  openCopy("grad", `${Math.round(ageS / 60)}m`, t.mint, t.name || t.mint.slice(0, 8), t.symbol || "", tr.price, t.lastMc, ts,
+    { ageS, buyers: L.buyers, mc5: cp5?.mc ?? null, buyers5: cp5?.buyers ?? null, b5: cp5?.b ?? null, s5: cp5?.sl ?? null, maxBurst: L.maxBurst, bs: cp5 && cp5.sl > 0 ? cp5.b / cp5.sl : null });
+  // v0.18.148 GR: fast, thin graduations only (272 buyers or fewer AND graduated within 185 s of launch) - the one background slice that held up at real prices (94 trades, +33% mean, +16% median at a 3-min sale, 18 Oct-20 Oct). Shadow answers whether the graduation price can actually be bought on the new pool.
+  if (L.buyers <= GR.MAX_BUYERS && ageS <= GR.MAX_AGE_S && ageS >= GR.MIN_AGE_S) openCopy("grf", `${L.buyers}b ${ageS}s`, t.mint, t.name || t.mint.slice(0, 8), t.symbol || "", tr.price, t.lastMc, ts,
+    { ageS, buyers: L.buyers, mc5: cp5?.mc ?? null, buyers5: cp5?.buyers ?? null, b5: cp5?.b ?? null, s5: cp5?.sl ?? null, maxBurst: L.maxBurst, bs: cp5 && cp5.sl > 0 ? cp5.b / cp5.sl : null, wall0: Date.now(), blockTs: ts, venue: "pumpswap", pass: true });
+});
+export const gr2Of = (kind, mint) => { if (kind !== "grf") return false; try { const m = q.tokenMeta.get(mint); return !!m && m.bundle_pct >= 70 && m.bundle_pct < 80 && m.bundle_wallets >= 4 && m.bundle_wallets <= 10; } catch { return false; } }; // v0.18.180 GR2: the launch bundle from the tokens table (GR's note carries no bundle fields)
+export const blOf = (kind, bundlePct, bundleWallets, mc) => kind === "sn8" && bundlePct >= 70 && bundlePct < 80 && bundleWallets >= 4 && bundleWallets <= 10 && mc >= 25000; // v0.18.176 BL (owner go 21 Oct 13:50 UK): a launch whose bundle bought 70-80% of the supply over 4-10 wallets, first trade at $25K+ MC - back-test 101 trades +32.9% a trade on paper at a 40% trail from the peak
+export const GR = { MAX_BUYERS: 155, MAX_AGE_S: 185, MIN_AGE_S: 10 }; // v0.18.174 (owner go 21 Oct 09:40 UK): under 156 buyers (was 272) - real-quote legs < 156 buyers +16.5% a leg on 52 vs 156+ -9.8% on 11; paper 10-185 s < 156 +37.1% on 92 vs 156-272 -4.4% on 49 // v0.18.153 (owner, 20 Oct 07:27 UK): skip coins that graduate inside their own launch (Leonida, MONUMENTAL EGO: paper took the curve price, the real buy paid +272% / +194%)
+
+// v0.18.146: how far behind the chain the tracker is — newest block time seen on any trade vs the wall clock (normally 1–5 s: block times are whole seconds and lag
+// the wall clock; 20 s+ after a restart while the backlog replays). A5 / F6 read a price 5–10 s after a trigger and must not act on a stale one.
+let newestBlockTs = 0; export const feedBehindS = () => (newestBlockTs ? Math.floor(Date.now() / 1000) - newestBlockTs : 999);
+function tick(mint, price, mc, sol, isBuy, ts, wallet = null, quiet = false) {
+  if (!quiet && ts > newestBlockTs) newestBlockTs = ts;
+  if (!quiet) try { traceTick(mint, price, sol, sol * solUsdCached(), isBuy, wallet, ts); } catch (e) { console.error("[p5trace]", e.message); } // v0.18.113 (traces outlive the paper position: 10 min after entry)
+  const arr = P.get(mint); if (!arr) return;
+  for (const p of arr) {
+    if (p.closed) continue;
+    if (quiet && !(p.e.x.h5 == null && ts - p.entryTs >= 300 && ts - (p.lastTs || 0) >= 5)) continue; // v0.18.140: a clock tick only settles a 5-min sale that no trade arrived to settle
+    if (!quiet) p.w5.push({ ts, usd: sol * solUsdCached(), b: isBuy }); while (p.w5.length && ts - p.w5[0].ts > 300) p.w5.shift();
+    if (!p.e.volAtEntry) p.e.volAtEntry = p.w5.reduce((a, x) => a + x.usd, 0);
+    const v5 = p.w5.reduce((a, x) => a + x.usd, 0), bu = p.w5.filter((x) => x.b).reduce((a, x) => a + x.usd, 0), su = v5 - bu;
+    p.lastMc = mc; p.lastPx = price; p.lastTs = ts;
+    if (p.fs && !p.fs.done) { try { const d = Date.now() - p.wall0; let ch = false; for (const k of [1, 2, 5, 10]) if (d >= k * 1000 && p.fs["t" + k] == null) { p.fs["t" + k] = { m: +(price / p.e.entry).toFixed(4), d }; ch = true; } if (p.fs.t10) p.fs.done = true; if (ch) q.setFirstSecs.run(JSON.stringify(p.fs), p.id); } catch {} } // v0.18.89 price seen 1 / 2 / 5 / 10 s after the trigger (wall clock)
+    const r = stepExits(p.e, price, mc, v5, bu, su, ts - p.entryTs); const x = p.e.x; // v0.18.17: seconds since entry for the fast-fail exit
+    if (p.kind === "grf" && !p.e.g10 && p.fs?.t10) { p.e.g10 = true; if (x.h3 == null && p.fs.t10.m < 1) { x.h3 = p.fs.t10.m; x.h3why = "10s"; } } // v0.18.174 GR 10-second rule (owner go 21 Oct 09:40 UK): price 10 s after the buy below the buy price -> sell now (the 3-min exit's x_h3). 64 real legs: +12.0% -> ~+15.5% a leg, 9 of 18 stops cut to small losses
+    if (p.wall0) { try { noteExits(p.id, mint, x, ts - p.entryTs); } catch {} } // v0.18.118: the data set's exit timings
+    if (x.s15be != null && p.e.s15Saved !== x.s15be) { p.e.s15Saved = x.s15be; try { q.setS15.run(x.s15be, p.id); } catch {} } // v0.18.49
+    { const kh = h5Key(x); if (p.e.h5Saved !== kh) { p.e.h5Saved = kh; try { q.setH5.run(x.h5 ?? null, x.h5f12 ?? null, x.h5f14 ?? null, x.h3 ?? null, x.h15 ?? null, x.h5fast ?? null, p.id); q.setH3L.run(x.h3l ?? null, x.t2n30 ?? null, p.id); } catch {} } } // v0.18.81
+    if (p.wall0 && !p.noExec) { if (p.kind === "grf" && x.h3 != null && !p.e.h3Sent) { p.e.h3Sent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "h3", mult: x.h3, why: x.h3why || null, ts }); } if (x.h5 != null && !p.e.h5Sent) { p.e.h5Sent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "h5", mult: x.h5, why: x.h5why || null, ts }); } if (x.flow4 != null && !p.e.flow4Sent) { p.e.flow4Sent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "flow4", mult: x.flow4, why: x.flow4why || null, ts }); } if ((p.bl || p.gr2) && x.tsl40 != null && !p.e.tslSent) { p.e.tslSent = true; execSend({ type: "exit", id: Number(p.id), mint, rule: "tsl40", mult: x.tsl40, why: "trail", ts }); } } // v0.18.176 BL: tsl40 (40% below the running peak) → executor (owner go 21 Oct 13:50 UK) // v0.18.90 → executor
+    if (x.h2t40 != null && p.e.h2Saved !== x.h2t40) { p.e.h2Saved = x.h2t40; try { q.setH2.run(x.h2t40, p.id); } catch {} } // v0.18.35
+    if (p.dv !== false && (p.kind === "sn8" || p.kind === "grf") && !quiet && (ts - (p.dvTs || 0) >= 5 || (wallet && wallet === p.dv?.cr))) devOutStep(mint, p, price, ts); // v0.18.176 creator-sold-out exit (record only): every 5 s, or on the creator's own trade
+    if (x.flow4ff != null && p.e.ffSaved !== x.flow4ff) { p.e.ffSaved = x.flow4ff; try { q.setFlow4ff.run(x.flow4ff, p.id); } catch {} }
+    if ((x.dead != null || x.split != null) && p.e.deadSaved !== `${x.dead}|${x.split}`) { p.e.deadSaved = `${x.dead}|${x.split}`; try { q.setDead.run(x.dead ?? null, p3dFinal(p.e, x, r.mult), p.id); } catch {} } // v0.18.30
+    { const ks = `${x.split}|${p.e.splitBranch}`; if (p.e.splitSaved !== ks) { p.e.splitSaved = ks; try { q.setSplit.run(x.split ?? null, p.e.splitBranch ?? null, p.id); } catch {} } } // v0.18.22
+    q.updMom.run(Math.max(mc, p.e.peak * CFG.TOTAL_SUPPLY * solUsdCached()), r.peakMult, x.tp ?? null, x.tsl40 ?? null, x.tsl60 ?? null, x.tsl80 ?? null, x.half60 ?? null, x.twophase ?? null, x.ladder ?? null, null, null, null, null, null, null, 0, x.levels ?? null, x.m1 ?? null, x.m1vol ?? null, x.volstop ?? null, p.id);
+    if (pathStep(p.e, p.entryTs, ts, r.mult, v5, v5 > 0 ? su / v5 : null)) { try { q.setPath.run(JSON.stringify(p.e.path), p.id); } catch {} } // v0.18.14
+    if (x.tp15 != null && !p.hit15Saved) { p.hit15Saved = true; try { q.setHit15.run(ts - p.entryTs, p.id); } catch {} }
+    { const k2 = `${x.flow}|${x.t15s40}|${x.t2s40}|${p.e.ddPre15}|${x.flow4}`; if (p.e.ex2Saved !== k2) { p.e.ex2Saved = k2; try { q.setExits2.run(x.flow ?? null, x.t15s40 ?? null, x.t2s40 ?? null, p.e.ddPre15 ?? null, x.flow4 ?? null, p.id); } catch {} } }
+    { const key = `${x.combo}|${x.tp15}|${x.tsl25}|${x.t15s25}|${x.t15s60}|${x.t2s25}|${x.t2s60}`; if (p.e.comboSaved !== key) { p.e.comboSaved = key; try { q.setCombo.run(x.combo ?? null, x.tp15 ?? null, x.tsl25 ?? null, x.t15s25 ?? null, x.t15s60 ?? null, x.t2s25 ?? null, x.t2s60 ?? null, p.id); } catch {} } }
+    if (x.tsl80 != null) close(mint, p, "tsl80");
+    else if (lowVolCopy(p, ts)) { try { close(mint, p, "lowvol"); } catch (e) { console.error("[lowvol copy]", e.message); } } // v0.18.36
+  }
+}
+on("trade", (t, tr) => { noteFeed(); tick(t.mint, tr.price, t.lastMc, tr.sol, tr.isBuy, tr.ts, tr.wallet || null); });
+onSwap((tr) => { noteFeed(); tick(tr.mint, tr.price, tr.mc, tr.sol, tr.isBuy, tr.ts, tr.wallet || null); });
+setInterval(() => { try { sweepTraces(); } catch {} }, 5000); // v0.18.113: marks for coins that went quiet
+// v0.18.140: the 5-min (h5) sale fired only on a trade, so a bonding-curve coin that went quiet after minute 5 kept its paper sale open and never told the
+// executor (19 Oct: 10 of 24 S9 shadow legs sold by the executor's 7-min backstop instead). Every 5 s, a position past 5 min with no h5 yet and no trade for 5 s
+// is stepped at its last price on the clock — the sale is booked at the price a seller would have met, and the exit message goes out on time.
+setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [mint, arr] of P) { const p = arr.find((x) => !x.closed && x.e?.x?.h5 == null && now - x.entryTs >= 300 && x.lastTs > 0 && now - x.lastTs >= 5 && x.lastPx > 0); if (p) { try { tick(mint, p.lastPx, p.lastMc, 0, true, now, null, true); } catch (e) { console.error("[quiet tick]", e.message); } } } }, 5000); // v0.18.146: x.lastTs > 0 — a position restored after a restart has seen no trade yet, so its last price is only the entry price
+
+// v0.18.176 creator-sold-out exit (record only, S8 / GR): x_devout = price ÷ entry at the first tick (checked at most once every 5 s per position, on trades only) when the creator wallet's
+// ledger balance is 0 after it has held tokens (a launch buy, dev_buy_sol > 0, or a balance seen on the ledger). Null when it never sold out while the position was open, when the launch was
+// not seen (no ledger), or when the creator never bought. Limitation: the ledger is built from the trades the feeds decode — a sell routed through an aggregator that only shows a "tx:" wallet is missed.
+function devOutStep(mint, p, price, ts) {
+  p.dvTs = ts;
+  if (p.dv === undefined) { try { if (p.restored && q.getDevOut.get(p.id) != null) { p.dv = false; return; } const m = q.tokenMeta.get(mint), cr = m?.creator || null; p.dv = cr ? { cr, held: (m.dev_buy_sol || 0) > 0 } : false; } catch { p.dv = false; } }
+  if (!p.dv) return;
+  const b = ledgerBal(mint, p.dv.cr); if (b == null) return;
+  if (b > LEDGER_DUST) { p.dv.held = true; return; }
+  if (!p.dv.held) return;
+  const mult = price / p.e.entry; p.e.x.devout = mult; p.dv = false; try { q.setDevOut.run(mult, p.id); } catch {}
+}
+
+function close(mint, p, reason) {
+  if (p.wall0 && !p.noExec) { try { const cm = (p.lastPx || p.e.entry) / p.e.entry, v = finalExits(p.e, cm); execSend({ type: "close", id: Number(p.id), mint, reason, mult: cm, h5: v.h5 ?? null, flow4: v.flow4 ?? null, h3: p.e.x.h3 ?? cm, tsl40: v.tsl40 ?? cm }); } catch {} } // v0.18.176 + tsl40 (BL) // v0.18.90 → executor (backstop: sell if still held)
+  if (p.closed) return; p.closed = true; cp.closes++; try { noteClose(p.id); } catch {}
+  const mult = p.lastPx / p.e.entry, v = finalExits(p.e, mult), peakMult = p.e.peak / p.e.entry, now = Math.floor(Date.now() / 1000);
+  q.updMom.run(p.lastMc, peakMult, v.tp, v.tsl40, v.tsl60, v.tsl80, v.half60, v.twophase, v.ladder, v.time, now, p.lastMc, p.lastPx, reason, (v.time - 1) * 100, 1, v.levels, v.m1, v.m1vol, v.volstop, p.id);
+  try { q.setCombo.run(v.combo, v.tp15, v.tsl25, v.t15s25, v.t15s60, v.t2s25, v.t2s60, p.id); q.setExits2.run(v.flow, v.t15s40, v.t2s40, p.e.ddPre15 ?? null, v.flow4, p.id); q.setFlow4ff.run(v.flow4ff, p.id); q.setH2.run(v.h2t40, p.id); q.setS15.run(v.s15be, p.id); q.setSplit.run(v.split, p.e.splitBranch ?? null, p.id); q.setDead.run(v.dead, v.p3d, p.id); q.setH5.run(v.h5, v.h5f12, v.h5f14, v.h3, v.h15, v.h5fast, p.id); q.setH3L.run(v.h3l ?? null, v.t2n30 ?? null, p.id); } catch {}
+  if (p.alerted !== false) tg(`${v.half60 >= 1 ? "✅" : "🔴"} <b>${p.kind === "climber" ? "CLIMBER CLOSE" : p.kind === "grad" ? "GRADUATION CLOSE" : p.kind === "wave2" ? "SECOND WAVE CLOSE" : p.kind === "revival" ? "REVIVAL CLOSE" : p.kind === "gradrun" ? "GRADUATION RUNNER CLOSE" : p.kind === "gradrec" ? "GRADUATION RECOVERY CLOSE" : p.kind === "slow" ? "SLOW BUILD CLOSE" : p.kind === "copycreator" ? "COPY CREATOR CLOSE" : "COPY CLOSE"}</b> — ${esc(p.label)} / ${esc(p.name)} (${reason}) · peak <b>${peakMult.toFixed(2)}x</b> · now ${mult.toFixed(2)}x\ncombo <b>${pc(v.combo)}</b> · ½@2x+60%: ${pc(v.half60)} · 2-phase ${pc(v.twophase)} · vol-stop ${pc(v.volstop)} · 2x-out ${pc(v.tp)} · trail40 ${pc(v.tsl40)} · hold ${pc(v.time)}`, { replyTo: p.msgId });
+  const arr = P.get(mint); if (arr && arr.every((z) => z.closed)) P.delete(mint);
+  for (const fn of closeListeners) { try { fn(mint, p, reason); } catch (e) { console.error("[copy close listener]", e.message); } }
+}
+setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const arr of P.values()) for (const p of arr) while (p.w5.length && now - p.w5[0].ts > 300) p.w5.shift(); }, 60_000); // v0.18.20
+// v0.18.36 low-volume exit: a variant position's window only holds trades since entry (or since a restart), so it applies once that
+// window covers a full 5 minutes. Quiet coins (no trades) are re-priced from DexScreener before closing.
+const BOOT = Math.floor(Date.now() / 1000);
+function lowVolCopy(p, now) {
+  if (now - Math.max(p.entryTs, BOOT) < CFG.LOWVOL_WARMUP_S) return false;
+  return p.w5.reduce((a, z) => a + (now - z.ts <= 300 ? z.usd : 0), 0) < CFG.LOWVOL_EXIT_USD;
+}
+let lvBusy = false;
+setInterval(async () => {
+  if (lvBusy) return; lvBusy = true;
+  try {
+    const now = Math.floor(Date.now() / 1000); let n = 0;
+    for (const [mint, arr] of [...P.entries()]) for (const p of arr) {
+      if (p.closed || !lowVolCopy(p, now)) continue;
+      if (now - (p.lastTs || 0) > 60 && n < 25) { n++; const px = await dexPrice(mint).catch(() => null); if (px > 0) { p.lastPx = px; p.lastMc = px * CFG.TOTAL_SUPPLY * solUsdCached(); } }
+      try { stepExits(p.e, p.lastPx, p.lastMc, 0, 0, 0, now - p.entryTs); } catch {}
+      try { close(mint, p, "lowvol"); } catch (e) { console.error("[lowvol copy]", mint, e.message); p.closed = true; }
+    }
+  } catch (e) { console.error("[lowvol loop]", e.message); } finally { lvBusy = false; }
+}, 20_000);
+
+// v0.18.28: variant positions (tiers, dip, re-entry, copy, wave2, grad…) still open in the database are rebuilt on startup, so a restart
+// never orphans them. Exits already recorded are kept; tracking resumes from the next swap.
+const qOpenCopy = db.prepare(`SELECT p.id, p.strategy, p.mint, p.name, p.entry_ts, p.entry_mc, p.entry_price, p.peak_mult, p.vol_at_entry, p.trigger_kind, p.x_tp, p.x_tp15, p.x_tsl25, p.x_tsl40, p.x_tsl60, p.x_tsl80, p.x_half60, p.x_twophase, p.x_ladder, p.x_levels, p.x_m1, p.x_m1vol, p.x_volstop, p.x_combo, p.x_h2t40, p.x_s15be, p.x_t15s25, p.x_t15s40, p.x_t15s60, p.x_t2s25, p.x_t2s40, p.x_t2s60, p.x_flow, p.x_flow4, p.x_flow4ff, p.x_split, p.split_branch, p.dd_pre15, p.path, p.t_hit15_s, p.x_h5, p.x_h5f12, p.x_h5f14, p.x_h3, p.x_h15, p.x_h5fast, t.bundle_pct tb_pct, t.bundle_wallets tb_wallets
+  FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint WHERE p.strategy NOT IN ('momentum','early','confirm','secondwave','p6','p7') AND p.closed=0 AND COALESCE(p.invalid,0)=0 AND p.entry_ts > ? ORDER BY p.entry_ts`); // v0.18.176: + the launch bundle from tokens (paper_trades.bundle_pct is null for copy kinds) so a restored S8 position knows whether it is BL
+export function restoreCopyFromDb() {
+  const now = Math.floor(Date.now() / 1000); let n = 0;
+  try {
+    for (const r of qOpenCopy.all(now - CFG.MOM_MAX_HOLD_MIN * 60)) {
+      if (!(r.entry_price > 0) || (P.get(r.mint) || []).some((p) => p.id === r.id)) continue;
+      const e = newExits(r.entry_price, r.entry_mc, r.vol_at_entry || 0); const pk = Math.max(r.peak_mult || 1, 1); e.peak = r.entry_price * pk; e.half = pk >= 2; e.s3 = pk >= 3;
+      for (const k of ["tp", "tp15", "tsl25", "tsl40", "tsl60", "tsl80", "half60", "twophase", "ladder", "levels", "m1", "m1vol", "volstop", "combo", "t15s25", "t15s40", "t15s60", "t2s25", "t2s40", "t2s60", "flow", "flow4", "flow4ff", "split", "h2t40", "s15be", "h5", "h5f12", "h5f14", "h3", "h15", "h5fast"]) if (r["x_" + k] != null) e.x[k] = r["x_" + k]; e.h2Half = pk >= 2; e.s15Half = pk >= 1.5; e.h5Armed = pk >= 1.5;
+      e.flowArmed = e.x.tp15 != null; e.ffDone = now - r.entry_ts >= 120; e.splitBranch = r.split_branch && r.split_branch !== "sweep" ? r.split_branch : null; e.splitHalf = r.split_branch === "mid" && pk >= 1.5; e.ddPre15 = r.dd_pre15 ?? null;
+      try { e.path = r.path ? JSON.parse(r.path) : {}; } catch { e.path = {}; }
+      const pos = { id: r.id, label: (r.trigger_kind || "").split(":").slice(1).join(":") || r.strategy, e, w5: [], closed: false, entryTs: r.entry_ts, lastMc: r.entry_mc, lastPx: r.entry_price, name: r.name, kind: r.strategy, alerted: false, hit15Saved: r.t_hit15_s != null, restored: "db" };
+      pos.bl = blOf(r.strategy, r.tb_pct, r.tb_wallets, r.entry_mc); pos.gr2 = r.strategy === "grf" && r.tb_pct >= 70 && r.tb_pct < 80 && r.tb_wallets >= 4 && r.tb_wallets <= 10; // v0.18.180 GR2 // v0.18.176 BL: recomputed from the launch bundle and the entry MC
+      if (/^p5[ewc]\d+$/.test(r.strategy) || /^sn(1|3|4|6|6b|7b|8|9|10)$/.test(r.strategy) || r.strategy === "grf") { pos.wall0 = r.entry_ts * 1000; if (e.x.h3 != null) e.h3Sent = true; if (e.x.h5 != null) e.h5Sent = true; if (e.x.flow4 != null) e.flow4Sent = true; if (e.x.tsl40 != null) e.tslSent = true; } // v0.18.176: + sn8 (BL) and its tsl40 // v0.18.90: a restored P5 position still tells the executor when its exit fires (rules already fired are not re-sent) // v0.18.146: + A5/F6 (p5c*) and the executor's sniper books — before, a restart cut their sell messages and the executor fell back to its 7-min / 6½-h backstop
+      const arr = P.get(r.mint) || []; arr.push(pos); P.set(r.mint, arr);
+      setTimeout(() => close(r.mint, pos, "time"), Math.max(5_000, CFG.MOM_MAX_HOLD_MIN * 60_000 - (Date.now() - r.entry_ts * 1000))); n++;
+    }
+  } catch (e) { console.error("[copy restore]", e.message); }
+  if (n) console.log(`[copy] rebuilt ${n} open variant positions from the database`);
+  return n;
+}
+setTimeout(restoreCopyFromDb, 1500);
+export const memStats = () => { let n = 0, w5 = 0; for (const arr of P.values()) for (const p of arr) { n++; w5 += p.w5.length; } return { mints: P.size, positions: n, w5 }; }; // v0.18.18
+export const cpStats = () => ({ ...cp, open: [...P.values()].flat().filter((p) => !p.closed).length });
+
+
+====================================================================================================
+=== FILE: src/db.js (37,858 chars)
+====================================================================================================
+import Database from "better-sqlite3";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { CFG } from "./config.js";
+mkdirSync(dirname(CFG.DB_PATH), { recursive: true });
+export const db = new Database(CFG.DB_PATH);
+db.pragma("journal_mode = WAL"); db.pragma("synchronous = NORMAL");
+db.exec(`
+CREATE TABLE IF NOT EXISTS tokens (
+  mint TEXT PRIMARY KEY, name TEXT, symbol TEXT, uri TEXT, creator TEXT, bonding_curve TEXT,
+  create_slot INTEGER, create_ts INTEGER, create_sig TEXT,
+  bundle_sol REAL DEFAULT 0, bundle_tokens REAL DEFAULT 0, bundle_pct REAL DEFAULT 0, bundle_wallets INTEGER DEFAULT 0,
+  dev_buy_sol REAL DEFAULT 0, tier INTEGER DEFAULT 0, finalized INTEGER DEFAULT 0,
+  entry_mc_usd REAL, peak_mc_usd REAL, last_mc_usd REAL, handoffs INTEGER DEFAULT 0, cluster_net_sol REAL DEFAULT 0,
+  first_seen INTEGER DEFAULT (strftime('%s','now'))
+);
+CREATE INDEX IF NOT EXISTS tokens_tier ON tokens(tier, create_ts);
+CREATE INDEX IF NOT EXISTS tokens_creator ON tokens(creator);
+CREATE TABLE IF NOT EXISTS cluster_wallets (
+  mint TEXT, wallet TEXT, role TEXT, tokens REAL DEFAULT 0, sol_in REAL DEFAULT 0, sol_out REAL DEFAULT 0,
+  first_slot INTEGER, funder TEXT, wallet_age_s INTEGER, PRIMARY KEY (mint, wallet)
+);
+CREATE TABLE IF NOT EXISTS trades (
+  mint TEXT, sig TEXT, slot INTEGER, ts INTEGER, wallet TEXT, is_buy INTEGER, sol REAL, tokens REAL, price_sol REAL
+);
+CREATE INDEX IF NOT EXISTS trades_mint ON trades(mint, slot);
+CREATE TABLE IF NOT EXISTS handoffs (
+  mint TEXT, slot INTEGER, ts INTEGER, seller TEXT, buyer TEXT, sol REAL, tokens REAL, same_tx INTEGER
+);
+CREATE TABLE IF NOT EXISTS mc_samples (mint TEXT, ts INTEGER, mc_usd REAL, price_sol REAL);
+CREATE TABLE IF NOT EXISTS creator_claims (creator TEXT, ts INTEGER, sol REAL, venue TEXT, sig TEXT, mint TEXT, ambiguous INTEGER);
+CREATE INDEX IF NOT EXISTS cc_creator ON creator_claims(creator, ts);
+CREATE TABLE IF NOT EXISTS pump_buyers (trade_id INTEGER, mint TEXT, wallet TEXT, ts INTEGER, sol REAL, mc REAL, lead_s INTEGER, venue TEXT);
+CREATE INDEX IF NOT EXISTS pb_wallet ON pump_buyers(wallet);
+CREATE TABLE IF NOT EXISTS dex_pools (pool TEXT PRIMARY KEY, venue TEXT, mint TEXT, sol_side INTEGER, m0 TEXT, m1 TEXT, dec INTEGER, supply REAL, bin_step INTEGER, ignore INTEGER DEFAULT 0, ts INTEGER);
+CREATE INDEX IF NOT EXISTS mc_mint ON mc_samples(mint, ts);
+CREATE TABLE IF NOT EXISTS paper_trades (
+  id INTEGER PRIMARY KEY, mint TEXT, name TEXT, entry_ts INTEGER, entry_mc REAL, entry_price REAL,
+  exit_ts INTEGER, exit_mc REAL, exit_price REAL, exit_reason TEXT, pnl_pct REAL, peak_mc REAL,
+  bundle_pct REAL, bundle_sol REAL, handoffs INTEGER
+);
+CREATE TABLE IF NOT EXISTS stats (k TEXT PRIMARY KEY, v REAL);
+`);
+db.exec(`
+CREATE TABLE IF NOT EXISTS wallet_buys (
+  wallet TEXT, mint TEXT, ts INTEGER, age_s INTEGER, sol REAL, entry_mc REAL, is_cluster INTEGER DEFAULT 0,
+  peak_30m REAL, peak_24h REAL, resolved INTEGER DEFAULT 0, PRIMARY KEY (wallet, mint)
+);
+CREATE INDEX IF NOT EXISTS wb_mint ON wallet_buys(mint);
+CREATE INDEX IF NOT EXISTS wb_ts ON wallet_buys(ts);
+CREATE TABLE IF NOT EXISTS token_peaks (mint TEXT PRIMARY KEY, create_ts INTEGER, peak_30m REAL DEFAULT 0, peak_24h REAL DEFAULT 0, until INTEGER);
+CREATE TABLE IF NOT EXISTS watch_wallets (wallet TEXT PRIMARY KEY, label TEXT, added_ts INTEGER, source TEXT);
+CREATE TABLE IF NOT EXISTS watch_creators (creator TEXT PRIMARY KEY, label TEXT, added_ts INTEGER);
+CREATE TABLE IF NOT EXISTS token_life (
+  mint TEXT, cp INTEGER, ts INTEGER, mc REAL, vol5m_usd REAL, buys5m INTEGER, sells5m INTEGER, buyers5m INTEGER, buyers_total INTEGER,
+  graduated INTEGER, top10_pct REAL, holders INTEGER, alive INTEGER, PRIMARY KEY (mint, cp)
+);
+CREATE INDEX IF NOT EXISTS life_cp ON token_life(cp, mc);
+CREATE TABLE IF NOT EXISTS big_buys (mint TEXT, wallet TEXT, ts INTEGER, age_s INTEGER, sol REAL, mc REAL, balance_sol REAL, venue TEXT);
+CREATE INDEX IF NOT EXISTS bb_mint ON big_buys(mint);
+`);
+// migrations (idempotent)
+for (const sql of [
+  "ALTER TABLE paper_trades ADD COLUMN x_h5 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h5f12 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h5f14 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h3l REAL", "ALTER TABLE paper_trades ADD COLUMN x_t2n30 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h3 REAL", "ALTER TABLE paper_trades ADD COLUMN h5_retro INTEGER", "ALTER TABLE paper_trades ADD COLUMN after_path TEXT", // v0.18.81
+  "ALTER TABLE paper_trades ADD COLUMN restart_span INTEGER", "ALTER TABLE paper_trades ADD COLUMN crashloop INTEGER", // v0.18.84 restart quarantine
+  "ALTER TABLE paper_trades ADD COLUMN x_h15 REAL", "ALTER TABLE paper_trades ADD COLUMN x_h5fast REAL", // v0.18.87 sell-rule variants
+  "ALTER TABLE paper_trades ADD COLUMN first_secs TEXT", // v0.18.89 P5: feed lag at the trigger + price 1/2/5/10 s after we saw it (what a live buy would get)
+  "ALTER TABLE tokens ADD COLUMN factory INTEGER DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN graduated INTEGER DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN cluster_sol_in REAL DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN cluster_sol_out REAL DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN outside_sol_in REAL DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN outside_sol_out REAL DEFAULT 0",
+  "ALTER TABLE tokens ADD COLUMN outside_buyers INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN tier INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN factory INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN inflow_sol REAL",
+  "ALTER TABLE paper_trades ADD COLUMN inflow_wallets INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN outside_share REAL",
+  "ALTER TABLE paper_trades ADD COLUMN entry_age_s INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN peak_mult REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_cluster REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tsl40 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tsl60 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tp REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_time REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_grad REAL",
+  "ALTER TABLE paper_trades ADD COLUMN closed INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN alerted INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN socials TEXT",
+  "ALTER TABLE paper_trades ADD COLUMN has_socials INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN buys INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN sells INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN mc_5m REAL",
+  "ALTER TABLE paper_trades ADD COLUMN mc_15m REAL",
+  "ALTER TABLE paper_trades ADD COLUMN buyers_5m INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN strategy TEXT DEFAULT 'early'",
+  "ALTER TABLE paper_trades ADD COLUMN vol5m_usd REAL",
+  "ALTER TABLE paper_trades ADD COLUMN vol1m_usd REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tsl80 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_half60 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_twophase REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_ladder REAL",
+  "ALTER TABLE paper_trades ADD COLUMN reentry_n INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN age_s INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN symbol TEXT",
+  "ALTER TABLE paper_trades ADD COLUMN x_levels REAL",
+  "ALTER TABLE paper_trades ADD COLUMN next_level REAL",
+  "ALTER TABLE paper_trades ADD COLUMN wave1_peak_mc REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_m1 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_m1vol REAL",
+  "ALTER TABLE paper_trades ADD COLUMN cluster_held_pct REAL",
+  "ALTER TABLE paper_trades ADD COLUMN trigger_kind TEXT",
+  "ALTER TABLE paper_trades ADD COLUMN x_volstop REAL",
+  "ALTER TABLE paper_trades ADD COLUMN vol_at_entry REAL",
+  "ALTER TABLE paper_trades ADD COLUMN after_peak_mult REAL",
+  "ALTER TABLE paper_trades ADD COLUMN after_peak_mc REAL",
+  "ALTER TABLE paper_trades ADD COLUMN handover INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN creator_prior INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN creator_best_peak REAL",
+  "ALTER TABLE paper_trades ADD COLUMN dev_buy_sol REAL",
+  "ALTER TABLE paper_trades ADD COLUMN snipers INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN hour_utc INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN parent_id INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN bs_ratio_entry REAL",
+  "ALTER TABLE paper_trades ADD COLUMN buyers_entry INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN invalid INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN buys_entry INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN q_score INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN x_combo REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tp15 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN x_tsl25 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN tight INTEGER DEFAULT 0",
+  "ALTER TABLE paper_trades ADD COLUMN churn_entry REAL",
+  "ALTER TABLE paper_trades ADD COLUMN cluster_out_entry REAL",
+  "ALTER TABLE paper_trades ADD COLUMN venue TEXT",
+  "ALTER TABLE paper_trades ADD COLUMN path TEXT",
+  "ALTER TABLE paper_trades ADD COLUMN x_flow REAL", "ALTER TABLE paper_trades ADD COLUMN x_flow4 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t15s40 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t2s40 REAL", "ALTER TABLE paper_trades ADD COLUMN dd_pre15 REAL",
+  "ALTER TABLE creator_claims ADD COLUMN mint TEXT", "ALTER TABLE creator_claims ADD COLUMN ambiguous INTEGER", "CREATE INDEX IF NOT EXISTS cc_mint ON creator_claims(mint)",
+  "UPDATE tokens SET fee_claims=NULL, fee_claimed_sol=NULL, first_claim_ts=NULL WHERE fee_claims IS NOT NULL AND NOT EXISTS (SELECT 1 FROM creator_claims c WHERE c.mint=tokens.mint)",
+  "ALTER TABLE paper_trades ADD COLUMN core_tight INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN trace TEXT", "ALTER TABLE paper_trades ADD COLUMN gmgn_json TEXT", "ALTER TABLE paper_trades ADD COLUMN early_json TEXT", "ALTER TABLE paper_trades ADD COLUMN x_s15be REAL", "ALTER TABLE paper_trades ADD COLUMN px_suspect INTEGER", "ALTER TABLE paper_trades ADD COLUMN px_verified_mult REAL", "ALTER TABLE paper_trades ADD COLUMN px_checked INTEGER", "ALTER TABLE paper_trades ADD COLUMN after_last_mult REAL", "ALTER TABLE paper_trades ADD COLUMN after_last_mc REAL", "ALTER TABLE paper_trades ADD COLUMN after_last_ts INTEGER", "ALTER TABLE paper_trades ADD COLUMN x_h2t40 REAL", "ALTER TABLE paper_trades ADD COLUMN v2m_usd REAL", "ALTER TABLE paper_trades ADD COLUMN core_v40 INTEGER", "ALTER TABLE paper_trades ADD COLUMN x_split REAL", "ALTER TABLE paper_trades ADD COLUMN x_dead REAL", "ALTER TABLE paper_trades ADD COLUMN x_manual REAL", "ALTER TABLE paper_trades ADD COLUMN conf_ok INTEGER", "ALTER TABLE paper_trades ADD COLUMN conf_ratio REAL", "ALTER TABLE paper_trades ADD COLUMN manual_pct REAL", "ALTER TABLE paper_trades ADD COLUMN manual_ts INTEGER", "ALTER TABLE paper_trades ADD COLUMN x_p3d REAL", "ALTER TABLE paper_trades ADD COLUMN split_branch TEXT", "ALTER TABLE paper_trades ADD COLUMN dex_paid INTEGER", "ALTER TABLE paper_trades ADD COLUMN dex_paid_types TEXT", "ALTER TABLE paper_trades ADD COLUMN dex_paid_lead_s INTEGER", "ALTER TABLE paper_trades ADD COLUMN snipers_n INTEGER", "ALTER TABLE paper_trades ADD COLUMN snipers_held_pct REAL", "ALTER TABLE paper_trades ADD COLUMN fresh_share REAL", "ALTER TABLE paper_trades ADD COLUMN fresh_n INTEGER", "ALTER TABLE paper_trades ADD COLUMN proven_vol_share REAL", "ALTER TABLE paper_trades ADD COLUMN proven_wallets_5m INTEGER", "ALTER TABLE paper_trades ADD COLUMN x_flow4ff REAL", "ALTER TABLE paper_trades ADD COLUMN bs_clean_entry REAL", "ALTER TABLE paper_trades ADD COLUMN bot_share_entry REAL", // v0.18.17
+  "ALTER TABLE paper_trades ADD COLUMN top10_entry REAL", "ALTER TABLE paper_trades ADD COLUMN largest_entry REAL", "ALTER TABLE paper_trades ADD COLUMN holders_entry INTEGER", "ALTER TABLE paper_trades ADD COLUMN dev_hold_entry REAL",
+  "ALTER TABLE paper_trades ADD COLUMN fee_accrued_entry REAL", "ALTER TABLE paper_trades ADD COLUMN fee_claims_entry INTEGER", "ALTER TABLE paper_trades ADD COLUMN fee_claimed_entry REAL", "ALTER TABLE paper_trades ADD COLUMN core INTEGER", "ALTER TABLE paper_trades ADD COLUMN t_hit15_s INTEGER",
+  "ALTER TABLE tokens ADD COLUMN creator_fee_sol REAL", "ALTER TABLE tokens ADD COLUMN fee_claims INTEGER", "ALTER TABLE tokens ADD COLUMN fee_claimed_sol REAL", "ALTER TABLE tokens ADD COLUMN first_claim_ts INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN x_t15s25 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t15s60 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t2s25 REAL", "ALTER TABLE paper_trades ADD COLUMN x_t2s60 REAL",
+  "UPDATE paper_trades SET invalid=1 WHERE COALESCE(invalid,0)=0 AND mint IN (SELECT mint FROM tokens WHERE bundle_pct BETWEEN 79.2 AND 79.4 AND bundle_sol BETWEEN 84.5 AND 85.5)",
+  "ALTER TABLE paper_trades ADD COLUMN q_wallets INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN q_per10k REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_top3 REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_roundtrip INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN q_retail REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_custom REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_size_cv REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_new_pct REAL",
+  "ALTER TABLE paper_trades ADD COLUMN q_px_per10k REAL",
+  "ALTER TABLE paper_trades ADD COLUMN sells_entry INTEGER",
+  "ALTER TABLE paper_trades ADD COLUMN proven_entry INTEGER",
+  "CREATE INDEX IF NOT EXISTS pt_open ON paper_trades(closed, entry_ts)",
+  "UPDATE paper_trades SET invalid=1 WHERE strategy='momentum' AND COALESCE(invalid,0)=0 AND (peak_mult>50 OR (vol5m_usd=bs_ratio_entry AND trigger_kind LIKE 'vol5m%'))",
+  "ALTER TABLE tokens ADD COLUMN creator_funder TEXT",
+  "ALTER TABLE tokens ADD COLUMN creator_age_s INTEGER",
+  "ALTER TABLE tokens ADD COLUMN creator_funded_sol REAL",
+  "ALTER TABLE tokens ADD COLUMN has_socials INTEGER",
+  "ALTER TABLE tokens ADD COLUMN socials TEXT",
+  // v0.18.98: the website's queries filter paper_trades by strategy (and mint) — without these every page build scanned the whole table, 18 s a time, freezing the feed
+  "CREATE INDEX IF NOT EXISTS pt_strat ON paper_trades(strategy, entry_ts)",
+  "CREATE INDEX IF NOT EXISTS pt_mint ON paper_trades(mint)",
+  // v0.18.118: copycat lookups (same name / symbol launched in the last 24 h) at every trigger
+  "CREATE INDEX IF NOT EXISTS tokens_name ON tokens(name, create_ts)",
+  "CREATE INDEX IF NOT EXISTS tokens_symbol ON tokens(symbol, create_ts)",
+  "CREATE INDEX IF NOT EXISTS wb_wallet ON wallet_buys(wallet)", // v0.18.119: a wallet's record at the moment it buys (Project S)
+  "CREATE INDEX IF NOT EXISTS tokens_cts ON tokens(create_ts)", // v0.18.121: launches by time (smart-wallet harvest, heat)
+  "ALTER TABLE paper_trades ADD COLUMN x_devout REAL", // v0.18.176 creator-sold-out exit (record only): the multiple when the creator's ledger balance first hit 0 after entry (S8 / GR)
+  "ALTER TABLE trades ADD COLUMN recv_ms INTEGER", // v0.19.1: when this process received the trade's log (observation latency, for the launcher's studies)
+  "ALTER TABLE trades ADD COLUMN vsol TEXT", "ALTER TABLE trades ADD COLUMN vtok TEXT", "ALTER TABLE trades ADD COLUMN venue TEXT", // v0.19.2
+  "CREATE TABLE IF NOT EXISTS feed_gaps (ts INTEGER, event TEXT, detail TEXT)", // v0.19.2
+]) { try { db.exec(sql); } catch {} }
+export const q = {
+  insToken: db.prepare(`INSERT OR IGNORE INTO tokens (mint,name,symbol,uri,creator,bonding_curve,create_slot,create_ts,create_sig) VALUES (?,?,?,?,?,?,?,?,?)`),
+  finToken: db.prepare(`UPDATE tokens SET bundle_sol=?, bundle_tokens=?, bundle_pct=?, bundle_wallets=?, dev_buy_sol=?, tier=?, finalized=1, entry_mc_usd=?, peak_mc_usd=?, last_mc_usd=? WHERE mint=?`),
+  insCluster: db.prepare(`INSERT OR IGNORE INTO cluster_wallets (mint,wallet,role,tokens,sol_in,first_slot) VALUES (?,?,?,?,?,?)`),
+  insTrade: db.prepare(`INSERT INTO trades (mint,sig,slot,ts,wallet,is_buy,sol,tokens,price_sol,recv_ms,vsol,vtok,venue) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'curve')`), // v0.19.1: recv_ms = when this process received the log; v0.19.2: vsol/vtok = the curve's virtual reserves AFTER this trade, as the event reports them (raw lamports / raw token units)
+  insGap: db.prepare(`INSERT INTO feed_gaps (ts, event, detail) VALUES (?,?,?)`), // v0.19.2: every socket status change (open / closed / idle / error) with its time — a gap is the span between a close and the next open; nothing is backfilled
+  bump: db.prepare(`INSERT INTO stats (k,v) VALUES (?,1) ON CONFLICT(k) DO UPDATE SET v=v+1`),
+  stat: db.prepare(`SELECT v FROM stats WHERE k=?`).pluck(),
+  countSince: db.prepare(`SELECT COUNT(*) FROM tokens WHERE create_ts>=?`).pluck(),
+  countTierSince: db.prepare(`SELECT COUNT(*) FROM tokens WHERE tier>=? AND create_ts>=?`).pluck(),
+  creatorRecent: db.prepare(`SELECT COUNT(*) FROM tokens WHERE creator=? AND create_ts>=? AND mint<>?`).pluck(),
+  // v0.18.118 trigger context: the creator's earlier launches, copycats, market heat
+  walletRecord: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END) x5, SUM(CASE WHEN peak_24h>=10*entry_mc THEN 1 ELSE 0 END) x10 FROM wallet_buys WHERE wallet=? AND resolved=1 AND is_cluster=0 AND age_s>=3 AND sol>=? AND entry_mc>0`),
+  creatorLast: db.prepare(`SELECT MAX(create_ts) FROM tokens WHERE creator=? AND mint<>? AND create_ts<?`).pluck(),
+  copycats: db.prepare(`SELECT COUNT(*) n, MAX(peak_mc_usd) best, MAX(create_ts) last, SUM(graduated) grads FROM tokens WHERE name=? AND mint<>? AND create_ts>=?`),
+  copySym: db.prepare(`SELECT COUNT(*) n FROM tokens WHERE symbol=? AND mint<>? AND create_ts>=?`).pluck(),
+  heatTrig: db.prepare(`SELECT COUNT(*) FROM paper_trades WHERE strategy IN ('p5e30','p5w30','p5e50') AND entry_ts>=? AND COALESCE(invalid,0)=0`).pluck(),
+  heatWin: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN MAX(COALESCE(json_extract(trace,'$.m.60.x'),0), COALESCE(json_extract(trace,'$.m.120.x'),0), COALESCE(json_extract(trace,'$.m.180.x'),0), COALESCE(json_extract(trace,'$.m.300.x'),0), COALESCE(json_extract(trace,'$.m.600.x'),0))>=1.5 THEN 1 ELSE 0 END) hit,
+    SUM(CASE WHEN COALESCE(json_extract(trace,'$.m.600.x'),1)<=0.5 THEN 1 ELSE 0 END) dead FROM paper_trades WHERE strategy='p5e30' AND entry_ts>=? AND entry_ts<=? AND COALESCE(invalid,0)=0`),
+  setFactory: db.prepare(`UPDATE tokens SET factory=1 WHERE mint=?`),
+  setGrad: db.prepare(`UPDATE tokens SET graduated=1 WHERE mint=?`),
+  updFlows: db.prepare(`UPDATE tokens SET cluster_sol_in=?, cluster_sol_out=?, outside_sol_in=?, outside_sol_out=?, outside_buyers=?, handoffs=?, cluster_net_sol=?, peak_mc_usd=?, last_mc_usd=? WHERE mint=?`),
+  insHandoff: db.prepare(`INSERT INTO handoffs (mint,slot,ts,seller,buyer,sol,tokens,same_tx) VALUES (?,?,?,?,?,?,?,?)`),
+  updWallet: db.prepare(`UPDATE cluster_wallets SET funder=?, wallet_age_s=? WHERE mint=? AND wallet=?`),
+  insPaper: db.prepare(`INSERT INTO paper_trades (mint,name,entry_ts,entry_mc,entry_price,bundle_pct,bundle_sol,handoffs,tier,factory,inflow_sol,inflow_wallets,outside_share,entry_age_s,peak_mc,strategy,next_level,wave1_peak_mc) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`),
+  setPaperExtra: db.prepare(`UPDATE paper_trades SET cluster_held_pct=?, trigger_kind=? WHERE id=?`),
+  setFeatures: db.prepare(`UPDATE paper_trades SET creator_prior=?, creator_best_peak=?, dev_buy_sol=?, snipers=?, hour_utc=?, parent_id=?, bs_ratio_entry=?, buyers_entry=? WHERE id=?`),
+  creatorHist: db.prepare(`SELECT COUNT(*) n, MAX(peak_mc_usd) best, SUM(graduated) grads, SUM(CASE WHEN peak_mc_usd>=100000 THEN 1 ELSE 0 END) over100k FROM tokens WHERE creator=? AND mint<>? AND create_ts<?`),
+  setVolEntry: db.prepare(`UPDATE paper_trades SET vol_at_entry=? WHERE id=?`),
+  setAfterLast: db.prepare(`UPDATE paper_trades SET after_last_mult=?, after_last_mc=?, after_last_ts=? WHERE id=?`), // v0.18.39
+  setAfter: db.prepare(`UPDATE paper_trades SET after_peak_mult=?, after_peak_mc=? WHERE id=?`),
+  setHandover: db.prepare(`UPDATE paper_trades SET handover=1 WHERE id=?`),
+  setPaperSocials: db.prepare(`UPDATE paper_trades SET socials=?, has_socials=? WHERE id=?`),
+  updPaper: db.prepare(`UPDATE paper_trades SET peak_mc=?, peak_mult=?, x_cluster=?, x_tsl40=?, x_tsl60=?, x_tp=?, x_time=?, x_grad=?, exit_ts=?, exit_mc=?, exit_price=?, exit_reason=?, pnl_pct=?, closed=?, x_tsl80=?, x_half60=?, x_twophase=?, x_ladder=?, x_levels=?, x_m1=?, x_m1vol=?, x_volstop=? WHERE id=?`),
+  setPaperMeta: db.prepare(`UPDATE paper_trades SET alerted=?, socials=?, has_socials=? WHERE id=?`),
+  setPaperCard: db.prepare(`UPDATE paper_trades SET mc_5m=COALESCE(?,mc_5m), mc_15m=COALESCE(?,mc_15m), buyers_5m=COALESCE(?,buyers_5m), buys=?, sells=? WHERE id=?`),
+  setTokenSocials: db.prepare(`UPDATE tokens SET has_socials=?, socials=? WHERE mint=?`),
+  digestTop: db.prepare(`SELECT p.name, p.entry_mc, p.peak_mult, p.x_time, p.tier, p.factory, p.has_socials, p.handoffs, p.inflow_sol, p.inflow_wallets, p.entry_age_s, p.buys, p.sells, t.outside_buyers, p.mint FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint WHERE p.entry_ts>=? AND p.entry_ts<? AND COALESCE(p.invalid,0)=0 ORDER BY p.peak_mult DESC LIMIT 10`),
+  digestAgg: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, SUM(CASE WHEN has_socials=0 THEN 1 ELSE 0 END) nosoc, SUM(CASE WHEN has_socials=0 AND peak_mult>=2 THEN 1 ELSE 0 END) nosoc2x, SUM(CASE WHEN factory=1 THEN 1 ELSE 0 END) fac, SUM(CASE WHEN factory=1 AND peak_mult>=2 THEN 1 ELSE 0 END) fac2x, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_time) xt FROM paper_trades WHERE entry_ts>=? AND entry_ts<?`),
+  insMom: db.prepare(`INSERT INTO paper_trades (strategy,mint,name,symbol,entry_ts,entry_mc,entry_price,bundle_pct,bundle_sol,handoffs,tier,factory,has_socials,socials,vol5m_usd,vol1m_usd,buys,sells,age_s,reentry_n,alerted,peak_mc) VALUES ('momentum',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`),
+  setStrategy: db.prepare(`UPDATE paper_trades SET strategy=? WHERE id=?`),
+  setQuality: db.prepare(`UPDATE paper_trades SET q_score=?, q_wallets=?, q_per10k=?, q_top3=?, q_roundtrip=?, q_retail=?, q_custom=?, q_size_cv=?, q_new_pct=?, q_px_per10k=? WHERE id=?`),
+  setCombo: db.prepare(`UPDATE paper_trades SET x_combo=?, x_tp15=?, x_tsl25=?, x_t15s25=?, x_t15s60=?, x_t2s25=?, x_t2s60=? WHERE id=?`),
+  setHolders: db.prepare(`UPDATE paper_trades SET top10_entry=?, largest_entry=?, holders_entry=?, dev_hold_entry=? WHERE id=?`),
+  setFees: db.prepare(`UPDATE paper_trades SET fee_accrued_entry=?, fee_claims_entry=?, fee_claimed_entry=? WHERE id=?`),
+  setCore: db.prepare(`UPDATE paper_trades SET core=?, core_tight=? WHERE id=?`),
+  setEnrich1: db.prepare(`UPDATE paper_trades SET snipers_n=?, snipers_held_pct=?, proven_vol_share=?, proven_wallets_5m=? WHERE id=?`), // v0.18.19
+  setDexPaid: db.prepare(`UPDATE paper_trades SET dex_paid=?, dex_paid_types=?, dex_paid_lead_s=? WHERE id=?`),
+  setFresh: db.prepare(`UPDATE paper_trades SET fresh_share=?, fresh_n=? WHERE id=?`),
+  setCoreV40: db.prepare(`UPDATE paper_trades SET core_v40=? WHERE id=?`), // v0.18.17
+  setS15: db.prepare(`UPDATE paper_trades SET x_s15be=? WHERE id=?`), // v0.18.49 split exit beside P1
+  setH2: db.prepare(`UPDATE paper_trades SET x_h2t40=? WHERE id=?`), // v0.18.35 Project 5 exit
+  setV2m: db.prepare(`UPDATE paper_trades SET v2m_usd=? WHERE id=?`),
+  hasStrat: db.prepare(`SELECT 1 FROM paper_trades WHERE strategy=? AND mint=? LIMIT 1`), setGmgn: db.prepare(`UPDATE paper_trades SET gmgn_json=? WHERE id=?`), setEarly: db.prepare(`UPDATE paper_trades SET early_json=? WHERE id=?`), // v0.18.50
+  hasP5: db.prepare(`SELECT 1 FROM paper_trades WHERE strategy='mom2m' AND mint=? LIMIT 1`),
+  setConf: db.prepare(`UPDATE paper_trades SET conf_ok=?, conf_ratio=? WHERE id=?`), // v0.18.32 Project 4 decision on the core row
+  setManual: db.prepare(`UPDATE paper_trades SET x_manual=?, manual_pct=?, manual_ts=? WHERE id=?`), // v0.18.30 dashboard sell button (paper)
+  setDead: db.prepare(`UPDATE paper_trades SET x_dead=?, x_p3d=? WHERE id=?`), // v0.18.30
+  setSplit: db.prepare(`UPDATE paper_trades SET x_split=?, split_branch=? WHERE id=?`), // v0.18.22
+  setFlow4ff: db.prepare(`UPDATE paper_trades SET x_flow4ff=? WHERE id=?`),
+  setCleanFlow: db.prepare(`UPDATE paper_trades SET bs_clean_entry=?, bot_share_entry=? WHERE id=?`),
+  setHit15: db.prepare(`UPDATE paper_trades SET t_hit15_s=? WHERE id=? AND t_hit15_s IS NULL`),
+  insClaim: db.prepare(`INSERT INTO creator_claims (creator, ts, sol, venue, sig, mint, ambiguous) VALUES (?,?,?,?,?,?,?)`),
+  claimsFor: db.prepare(`SELECT COUNT(*) n, COALESCE(SUM(sol),0) sol, MIN(ts) first, MAX(ts) last, SUM(COALESCE(ambiguous,0)) amb FROM creator_claims WHERE mint=?`),
+  latestMintOf: db.prepare(`SELECT mint, create_ts, (SELECT COUNT(*) FROM tokens t2 WHERE t2.creator=t.creator AND t2.create_ts>=?) n FROM tokens t WHERE creator=? AND create_ts<=? ORDER BY create_ts DESC LIMIT 1`),
+  upTokenFees: db.prepare(`UPDATE tokens SET creator_fee_sol=?, fee_claims=?, fee_claimed_sol=?, first_claim_ts=? WHERE mint=?`),
+  mintsByCreator: db.prepare(`SELECT mint, create_ts FROM tokens WHERE creator=? AND create_ts>=?`),
+  setStops: db.prepare(`UPDATE paper_trades SET x_tp15=?, x_tsl25=?, x_t15s25=?, x_t15s60=?, x_t2s25=?, x_t2s60=? WHERE id=?`),
+  setPath: db.prepare(`UPDATE paper_trades SET path=? WHERE id=?`),
+  setFirstSecs: db.prepare(`UPDATE paper_trades SET first_secs=? WHERE id=?`), // v0.18.89
+  setH5: db.prepare(`UPDATE paper_trades SET x_h5=?, x_h5f12=?, x_h5f14=?, x_h3=?, x_h15=?, x_h5fast=? WHERE id=?`), // v0.18.163: back to 7 values - v0.18.155 added x_h3l here and two callers kept passing 7, so the update threw (silently) from 16:25 to 19:00 UK 20 Oct
+  setH3L: db.prepare(`UPDATE paper_trades SET x_h3l=?, x_t2n30=? WHERE id=?`), // v0.18.163 GR-lock and PG-hold // v0.18.81 hold-5 exits · v0.18.87 + hold-15, fast-starters-run
+  setH5Retro: db.prepare(`UPDATE paper_trades SET x_h5=?, x_h5f12=?, x_h5f14=?, x_h3=?, h5_retro=1 WHERE id=?`),
+  setAfterPath: db.prepare(`UPDATE paper_trades SET after_path=? WHERE id=?`), // v0.18.81 7–30 min marks after entry
+  setTrace: db.prepare(`UPDATE paper_trades SET trace=? WHERE id=?`), // v0.18.113 P5 data set: marks after entry
+  setExits2: db.prepare(`UPDATE paper_trades SET x_flow=?, x_t15s40=?, x_t2s40=?, dd_pre15=?, x_flow4=? WHERE id=?`),
+  setTight: db.prepare(`UPDATE paper_trades SET tight=? WHERE id=?`),
+  setVenue: db.prepare(`UPDATE paper_trades SET venue=? WHERE id=?`),
+  insPumpBuyer: db.prepare(`INSERT INTO pump_buyers (trade_id, mint, wallet, ts, sol, mc, lead_s, venue) VALUES (?,?,?,?,?,?,?,?)`),
+  prepumpTop: db.prepare(`SELECT b.wallet, COUNT(DISTINCT b.mint) n, SUM(CASE WHEN p.peak_mult>=2 THEN 1 ELSE 0 END) hit2, SUM(CASE WHEN p.peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(b.lead_s) lead, SUM(b.sol) sol
+    FROM (SELECT trade_id, mint, wallet, MIN(ts) ts, MAX(lead_s) lead_s, SUM(sol) sol FROM pump_buyers WHERE ts>=? GROUP BY trade_id, wallet) b JOIN paper_trades p ON p.id=b.trade_id AND COALESCE(p.invalid,0)=0
+    GROUP BY b.wallet HAVING n>=? ORDER BY hit2 DESC, n DESC LIMIT ?`),
+  insDexPool: db.prepare(`INSERT OR REPLACE INTO dex_pools (pool, venue, mint, sol_side, m0, m1, dec, supply, bin_step, ignore, ts) VALUES (?,?,?,?,?,?,?,?,?,?,?)`),
+  allDexPools: db.prepare(`SELECT * FROM dex_pools`),
+  setChurn: db.prepare(`UPDATE paper_trades SET churn_entry=?, cluster_out_entry=?, cluster_held_pct=COALESCE(cluster_held_pct,?), handoffs=COALESCE(handoffs,?) WHERE id=?`),
+  setEntryCounts: db.prepare(`UPDATE paper_trades SET buys_entry=?, sells_entry=?, proven_entry=? WHERE id=?`),
+  provenWallets: db.prepare(`SELECT wallet FROM wallet_buys WHERE resolved=1 AND is_cluster=0 AND age_s>=3 AND sol>=? AND entry_mc>0 AND wallet NOT IN (SELECT wallet FROM wallet_buys WHERE ts>=? GROUP BY wallet HAVING COUNT(*)>?) GROUP BY wallet HAVING COUNT(*)>=? AND SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*)>=?`),
+  setNextLevel: db.prepare(`UPDATE paper_trades SET next_level=? WHERE id=?`),
+  updMom: db.prepare(`UPDATE paper_trades SET peak_mc=?, peak_mult=?, x_tp=?, x_tsl40=?, x_tsl60=?, x_tsl80=?, x_half60=?, x_twophase=?, x_ladder=?, x_time=?, exit_ts=?, exit_mc=?, exit_price=?, exit_reason=?, pnl_pct=?, closed=?, x_levels=?, x_m1=?, x_m1vol=?, x_volstop=? WHERE id=?`),
+  tokenMeta: db.prepare(`SELECT name, symbol, creator, create_ts, bundle_pct, bundle_sol, bundle_wallets, dev_buy_sol, handoffs, tier, factory, has_socials, socials, cluster_sol_in, cluster_sol_out FROM tokens WHERE mint=?`), // v0.18.141: + bundle_wallets (book F's rule read it and always got null — F never opened a trade)
+  stratSummary: db.prepare(`SELECT strategy, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, AVG(peak_mult) peak, AVG(x_tp) xtp, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_tsl80) x80, AVG(x_half60) xh, AVG(x_twophase) x2p, AVG(x_ladder) xl, AVG(x_levels) xlv, AVG(x_m1) xm1, AVG(x_m1vol) xm1v, AVG(x_volstop) xvs, AVG(x_time) xt, AVG(x_combo) xc, AVG(x_tp15) xtp15, AVG(x_tsl25) x25, AVG(x_t15s25) s1525, AVG(x_t15s60) s1560, AVG(x_t2s25) s225, AVG(x_t2s60) s260, AVG(x_flow) xflow, AVG(x_flow4) xflow4, AVG(x_flow4ff) xflow4ff, AVG(x_split) xsplit, AVG(x_p3d) xp3d, SUM(core_v40) nv40, AVG(CASE WHEN core_v40=1 THEN x_flow4 END) xv40, AVG(x_t15s40) s1540, AVG(x_t2s40) s240, SUM(CASE WHEN peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(after_peak_mult) ap, SUM(CASE WHEN after_peak_mult>=3 THEN 1 ELSE 0 END) ap3 FROM paper_trades WHERE entry_ts>=? AND entry_ts<? AND COALESCE(invalid,0)=0 GROUP BY strategy`),
+  stratSummaryCore: db.prepare(`SELECT 'momentum-core' strategy, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, AVG(peak_mult) peak, AVG(x_tp) xtp, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_tsl80) x80, AVG(x_half60) xh, AVG(x_twophase) x2p, AVG(x_ladder) xl, AVG(x_levels) xlv, AVG(x_m1) xm1, AVG(x_m1vol) xm1v, AVG(x_volstop) xvs, AVG(x_time) xt, AVG(x_combo) xc, AVG(x_tp15) xtp15, AVG(x_tsl25) x25, AVG(x_t15s25) s1525, AVG(x_t15s60) s1560, AVG(x_t2s25) s225, AVG(x_t2s60) s260, AVG(x_flow) xflow, AVG(x_flow4) xflow4, AVG(x_flow4ff) xflow4ff, AVG(x_split) xsplit, AVG(x_p3d) xp3d, SUM(core_v40) nv40, AVG(CASE WHEN core_v40=1 THEN x_flow4 END) xv40, AVG(x_t15s40) s1540, AVG(x_t2s40) s240, SUM(CASE WHEN peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(after_peak_mult) ap, SUM(CASE WHEN after_peak_mult>=3 THEN 1 ELSE 0 END) ap3 FROM paper_trades WHERE strategy='momentum' AND core=1 AND entry_ts>=? AND entry_ts<? AND COALESCE(invalid,0)=0`),
+  stratSummaryCoreTight: db.prepare(`SELECT 'momentum-core-tight' strategy, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, AVG(peak_mult) peak, AVG(x_tp) xtp, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_tsl80) x80, AVG(x_half60) xh, AVG(x_twophase) x2p, AVG(x_ladder) xl, AVG(x_levels) xlv, AVG(x_m1) xm1, AVG(x_m1vol) xm1v, AVG(x_volstop) xvs, AVG(x_time) xt, AVG(x_combo) xc, AVG(x_tp15) xtp15, AVG(x_tsl25) x25, AVG(x_t15s25) s1525, AVG(x_t15s60) s1560, AVG(x_t2s25) s225, AVG(x_t2s60) s260, AVG(x_flow) xflow, AVG(x_flow4) xflow4, AVG(x_flow4ff) xflow4ff, AVG(x_split) xsplit, AVG(x_p3d) xp3d, SUM(core_v40) nv40, AVG(CASE WHEN core_v40=1 THEN x_flow4 END) xv40, AVG(x_t15s40) s1540, AVG(x_t2s40) s240, SUM(CASE WHEN peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(after_peak_mult) ap, SUM(CASE WHEN after_peak_mult>=3 THEN 1 ELSE 0 END) ap3 FROM paper_trades WHERE strategy='momentum' AND core_tight=1 AND entry_ts>=? AND entry_ts<? AND COALESCE(invalid,0)=0`),
+  stratSummaryTight: db.prepare(`SELECT 'wave2-tight' strategy, COUNT(*) n, SUM(CASE WHEN peak_mult>=2 THEN 1 ELSE 0 END) hit2x, AVG(peak_mult) peak, AVG(x_tp) xtp, AVG(x_tsl40) x40, AVG(x_tsl60) x60, AVG(x_tsl80) x80, AVG(x_half60) xh, AVG(x_twophase) x2p, AVG(x_ladder) xl, AVG(x_levels) xlv, AVG(x_m1) xm1, AVG(x_m1vol) xm1v, AVG(x_volstop) xvs, AVG(x_time) xt, AVG(x_combo) xc, AVG(x_tp15) xtp15, AVG(x_tsl25) x25, AVG(x_t15s25) s1525, AVG(x_t15s60) s1560, AVG(x_t2s25) s225, AVG(x_t2s60) s260, AVG(x_flow) xflow, AVG(x_flow4) xflow4, AVG(x_flow4ff) xflow4ff, AVG(x_split) xsplit, AVG(x_p3d) xp3d, SUM(core_v40) nv40, AVG(CASE WHEN core_v40=1 THEN x_flow4 END) xv40, AVG(x_t15s40) s1540, AVG(x_t2s40) s240, SUM(CASE WHEN peak_mult>=1.5 THEN 1 ELSE 0 END) hit15, AVG(after_peak_mult) ap, SUM(CASE WHEN after_peak_mult>=3 THEN 1 ELSE 0 END) ap3 FROM paper_trades WHERE strategy='wave2' AND tight=1 AND entry_ts>=? AND entry_ts<? AND COALESCE(invalid,0)=0`),
+  insWB: db.prepare(`INSERT OR IGNORE INTO wallet_buys (wallet,mint,ts,age_s,sol,entry_mc,is_cluster) VALUES (?,?,?,?,?,?,?)`),
+  wbCount: db.prepare(`SELECT COUNT(*) FROM wallet_buys WHERE mint=?`).pluck(),
+  upPeak: db.prepare(`INSERT INTO token_peaks (mint,create_ts,peak_30m,peak_24h,until) VALUES (?,?,?,?,?) ON CONFLICT(mint) DO UPDATE SET peak_30m=MAX(peak_30m,excluded.peak_30m), peak_24h=MAX(peak_24h,excluded.peak_24h)`),
+  resolveWB: db.prepare(`UPDATE wallet_buys SET peak_30m=(SELECT peak_30m FROM token_peaks WHERE token_peaks.mint=wallet_buys.mint), peak_24h=(SELECT peak_24h FROM token_peaks WHERE token_peaks.mint=wallet_buys.mint), resolved=1 WHERE resolved=0 AND mint IN (SELECT mint FROM token_peaks WHERE until<=?)`),
+  pruneWB: db.prepare(`DELETE FROM wallet_buys WHERE ts<?`),
+  prunePeaks: db.prepare(`DELETE FROM token_peaks WHERE until<?`),
+  leaderboard: db.prepare(`SELECT wallet, COUNT(*) n,
+      SUM(CASE WHEN peak_24h>=2*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*) r2,
+      SUM(CASE WHEN peak_24h>=3*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*) r3,
+      SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*) r5,
+      SUM(CASE WHEN peak_24h>=10*entry_mc THEN 1 ELSE 0 END)*1.0/COUNT(*) r10,
+      AVG(peak_24h/entry_mc) avgpeak, AVG(entry_mc) avgmc, AVG(sol) avgsol, MAX(ts) last_ts, AVG(age_s) avgage
+    FROM wallet_buys WHERE resolved=1 AND is_cluster=0 AND age_s>=? AND entry_mc>0 AND ts>=?
+    GROUP BY wallet HAVING n>=? ORDER BY r5 DESC, r10 DESC, n DESC LIMIT ?`),
+  walletStats: db.prepare(`SELECT COUNT(*) n, SUM(CASE WHEN peak_24h>=2*entry_mc THEN 1 ELSE 0 END) h2, SUM(CASE WHEN peak_24h>=3*entry_mc THEN 1 ELSE 0 END) h3, SUM(CASE WHEN peak_24h>=5*entry_mc THEN 1 ELSE 0 END) h4, SUM(CASE WHEN peak_24h>=10*entry_mc THEN 1 ELSE 0 END) h10, AVG(peak_24h/entry_mc) avgpeak, AVG(entry_mc) avgmc, MAX(ts) last_ts, SUM(resolved=0) pending FROM wallet_buys WHERE wallet=? AND is_cluster=0 AND entry_mc>0`),
+  walletRecent: db.prepare(`SELECT w.mint, t.name, w.ts, w.age_s, w.sol, w.entry_mc, w.peak_24h, w.resolved FROM wallet_buys w LEFT JOIN tokens t ON t.mint=w.mint WHERE w.wallet=? ORDER BY w.ts DESC LIMIT 8`),
+  spamWallets: db.prepare(`SELECT wallet FROM wallet_buys WHERE ts>=? GROUP BY wallet HAVING COUNT(*)>?`),
+  creatorsTop: db.prepare(`SELECT creator, COUNT(*) n, MAX(peak_mc_usd) best, AVG(peak_mc_usd) avgpeak, SUM(CASE WHEN peak_mc_usd>=100000 THEN 1 ELSE 0 END) over100k, SUM(CASE WHEN graduated=1 THEN 1 ELSE 0 END) grads, MAX(create_ts) last_ts, SUM(factory) fac, AVG(bundle_pct) avgbundle FROM tokens WHERE create_ts>=? GROUP BY creator HAVING n>=? ORDER BY grads DESC, over100k DESC, best DESC LIMIT ?`),
+  creatorTokens: db.prepare(`SELECT name, symbol, create_ts, bundle_pct, bundle_sol, peak_mc_usd, graduated, has_socials, mint FROM tokens WHERE creator=? ORDER BY create_ts DESC LIMIT 10`),
+  creatorAgg: db.prepare(`SELECT COUNT(*) n, MAX(peak_mc_usd) best, AVG(peak_mc_usd) avgpeak, SUM(CASE WHEN peak_mc_usd>=100000 THEN 1 ELSE 0 END) over100k, SUM(graduated) grads, MIN(create_ts) first_ts, MAX(create_ts) last_ts FROM tokens WHERE creator=?`),
+  addWatchCreator: db.prepare(`INSERT OR REPLACE INTO watch_creators (creator,label,added_ts) VALUES (?,?,?)`),
+  delWatchCreator: db.prepare(`DELETE FROM watch_creators WHERE creator=?`),
+  listWatchCreators: db.prepare(`SELECT creator,label FROM watch_creators ORDER BY added_ts`),
+  setCreatorFunder: db.prepare(`UPDATE tokens SET creator_funder=?, creator_age_s=?, creator_funded_sol=? WHERE mint=?`),
+  runners: db.prepare(`SELECT p.mint, p.peak_24h, p.peak_30m, p.create_ts, t.name, t.symbol, t.bundle_pct, t.bundle_sol, t.bundle_wallets, t.dev_buy_sol, t.has_socials, t.factory, t.creator, t.handoffs, t.graduated, t.cluster_sol_in, t.cluster_sol_out, t.outside_buyers FROM token_peaks p LEFT JOIN tokens t ON t.mint=p.mint WHERE p.peak_24h>=? AND p.create_ts>=? ORDER BY p.peak_24h DESC LIMIT ?`),
+  lifeFor: db.prepare(`SELECT cp, mc, vol5m_usd, buys5m, sells5m, buyers_total, alive, top10_pct FROM token_life WHERE mint=? ORDER BY cp`),
+  papersFor: db.prepare(`SELECT strategy, trigger_kind, entry_ts, entry_mc, peak_mult, x_half60, x_tsl40, x_levels, after_peak_mult FROM paper_trades WHERE mint=? ORDER BY entry_ts`),
+  insLife: db.prepare(`INSERT OR REPLACE INTO token_life (mint,cp,ts,mc,vol5m_usd,buys5m,sells5m,buyers5m,buyers_total,graduated,top10_pct,holders,alive) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`),
+  setLifeHolders: db.prepare(`UPDATE token_life SET top10_pct=?, holders=? WHERE mint=? AND cp=?`),
+  insBigBuy: db.prepare(`INSERT INTO big_buys (mint,wallet,ts,age_s,sol,mc,balance_sol,venue) VALUES (?,?,?,?,?,?,?,?)`),
+  addWatch: db.prepare(`INSERT OR REPLACE INTO watch_wallets (wallet,label,added_ts,source) VALUES (?,?,?,?)`),
+  delWatch: db.prepare(`DELETE FROM watch_wallets WHERE wallet=?`),
+  listWatch: db.prepare(`SELECT wallet,label,source FROM watch_wallets ORDER BY added_ts`),
+  openPapers: db.prepare(`SELECT COUNT(*) FROM paper_trades WHERE closed=0`).pluck(),
+  closedSince: db.prepare(`SELECT COUNT(*) c, AVG(pnl_pct) p FROM paper_trades WHERE closed=1 AND exit_ts>=?`),
+  setDevOut: db.prepare(`UPDATE paper_trades SET x_devout=? WHERE id=?`), getDevOut: db.prepare(`SELECT x_devout FROM paper_trades WHERE id=?`).pluck(), // v0.18.176 creator-sold-out exit (record only)
+};
+
+
+====================================================================================================
+=== FILE: src/dex-decoder.js (5,841 chars)
+====================================================================================================
+// v0.18: swap-event decoders for the other Solana DEXes (Raydium CPMM / CLMM / LaunchLab, Meteora DLMM, Orca Whirlpool).
+// Layouts come from the official IDLs (raydium-io/raydium-idl, MeteoraAg/dlmm-sdk, orca-so/whirlpools). All five emit Anchor
+// events as "Program data:" log lines, so one logsSubscribe per program is enough — no getTransaction credits.
+import { createHash } from "node:crypto";
+import { bs58 } from "./bs58.js";
+
+export const WSOL = "So11111111111111111111111111111111111111112";
+export const PROGRAMS = {
+  CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C: "raydium-cpmm",
+  CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK: "raydium-clmm",
+  LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj: "raydium-launchlab",
+  LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo: "meteora-dlmm",
+  whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc: "orca",
+};
+const disc = (name) => createHash("sha256").update(`event:${name}`).digest().subarray(0, 8);
+const D_SWAP = disc("SwapEvent");      // Raydium CPMM + CLMM (same name, different lengths)
+const D_TRADE = disc("TradeEvent");    // Raydium LaunchLab
+const D_DLMM = disc("Swap");           // Meteora DLMM
+const D_TRADED = disc("Traded");       // Orca Whirlpool
+
+class R {
+  constructor(b, o = 0) { this.b = b; this.o = o; }
+  u8() { return this.b[this.o++]; }
+  bool() { return this.b[this.o++] === 1; }
+  u16() { const v = this.b.readUInt16LE(this.o); this.o += 2; return v; }
+  i32() { const v = this.b.readInt32LE(this.o); this.o += 4; return v; }
+  u64() { const v = this.b.readBigUInt64LE(this.o); this.o += 8; return v; }
+  u128() { const lo = this.b.readBigUInt64LE(this.o), hi = this.b.readBigUInt64LE(this.o + 8); this.o += 16; return (hi << 64n) + lo; }
+  pk() { const v = bs58(this.b.subarray(this.o, this.o + 32)); this.o += 32; return v; }
+  left() { return this.b.length - this.o; }
+}
+
+/** Decode one "Program data:" payload emitted by `program`. Returns a venue-tagged event or null. */
+export function decodeDexEvent(program, b64) {
+  const venue = PROGRAMS[program]; if (!venue) return null;
+  let b; try { b = Buffer.from(b64, "base64"); } catch { return null; }
+  if (b.length < 8) return null;
+  const d = b.subarray(0, 8), r = new R(b, 8);
+  try {
+    if (venue === "raydium-cpmm" && d.equals(D_SWAP)) {
+      const pool = r.pk(), inBefore = r.u64(), outBefore = r.u64(), amountIn = r.u64(), amountOut = r.u64(); r.u64(); r.u64(); const baseInput = r.bool();
+      let inMint = null, outMint = null; if (r.left() >= 64) { inMint = r.pk(); outMint = r.pk(); }
+      return { venue, pool, inBefore, outBefore, amountIn, amountOut, baseInput, inMint, outMint, wallet: null };
+    }
+    if (venue === "raydium-clmm" && d.equals(D_SWAP)) {
+      const pool = r.pk(), wallet = r.pk(); r.pk(); r.pk();
+      const amount0 = r.u64(); r.u64(); const amount1 = r.u64(); r.u64(); const zeroForOne = r.bool(); const sqrtPriceX64 = r.u128();
+      return { venue, pool, wallet, amount0, amount1, zeroForOne, sqrtPriceX64 };
+    }
+    if (venue === "raydium-launchlab" && d.equals(D_TRADE)) {
+      const pool = r.pk(); r.u64(); const vBase = r.u64(), vQuote = r.u64(); r.u64(); r.u64(); const rBaseAfter = r.u64(), rQuoteAfter = r.u64();
+      const amountIn = r.u64(), amountOut = r.u64(); r.u64(); r.u64(); r.u64(); r.u64(); const dir = r.u8();
+      return { venue, pool, vBase, vQuote, rBaseAfter, rQuoteAfter, amountIn, amountOut, isBuy: dir === 0, wallet: null };
+    }
+    if (venue === "meteora-dlmm" && d.equals(D_DLMM)) {
+      const pool = r.pk(), wallet = r.pk(); r.i32(); const endBin = r.i32(); const amountIn = r.u64(), amountOut = r.u64(); const swapForY = r.bool();
+      return { venue, pool, wallet, endBin, amountIn, amountOut, swapForY };
+    }
+    if (venue === "orca" && d.equals(D_TRADED)) {
+      const pool = r.pk(), aToB = r.bool(); r.u128(); const postSqrt = r.u128(); const amountIn = r.u64(), amountOut = r.u64();
+      return { venue, pool, aToB, postSqrt, amountIn, amountOut, wallet: null };
+    }
+  } catch { return null; }
+  return null;
+}
+
+/** Walk a transaction's logs with a program stack so each "Program data:" line is attributed to the program that emitted it. */
+export function dexEventsFromLogs(logs) {
+  const out = [], stack = [];
+  for (const l of logs || []) {
+    if (l.startsWith("Program data: ")) { const p = stack[stack.length - 1]; if (p && PROGRAMS[p]) { const e = decodeDexEvent(p, l.slice(14)); if (e) out.push(e); } continue; }
+    if (!l.startsWith("Program ")) continue;
+    if (l.endsWith("]") && l.includes(" invoke [")) { stack.push(l.slice(8, l.indexOf(" invoke ["))); continue; }
+    if (l.endsWith(" success") || l.includes(" failed: ") || l.endsWith(" failed")) { stack.pop(); }
+  }
+  return out;
+}
+
+// --- pool account parsers → {mint0, mint1, dec0, dec1, extra} (null when the layout doesn't match) ---
+const pk = (b, o) => bs58(b.subarray(o, o + 32));
+export function parsePoolAccount(venue, dataB64) {
+  const b = Buffer.from(dataB64, "base64");
+  try {
+    if (venue === "raydium-cpmm") { if (b.length < 333) return null; return { mint0: pk(b, 168), mint1: pk(b, 200), dec0: b[331], dec1: b[332] }; }
+    if (venue === "raydium-clmm") { if (b.length < 235) return null; return { mint0: pk(b, 73), mint1: pk(b, 105), dec0: b[233], dec1: b[234] }; }
+    if (venue === "raydium-launchlab") { if (b.length < 269) return null; return { mint0: pk(b, 205), mint1: pk(b, 237), dec0: b[18], dec1: b[19], supply: Number(b.readBigUInt64LE(21)) }; } // base, quote
+    if (venue === "meteora-dlmm") { if (b.length < 152) return null; return { mint0: pk(b, 88), mint1: pk(b, 120), binStep: b.readUInt16LE(80) }; } // x, y — decimals not stored
+    if (venue === "orca") { if (b.length < 213) return null; return { mint0: pk(b, 101), mint1: pk(b, 181) }; } // a, b — decimals not stored
+  } catch { return null; }
+  return null;
+}
+
+
+====================================================================================================
+=== FILE: src/dex.js (11,377 chars)
+====================================================================================================
+// v0.18: all-Solana volume feed. Subscribes to Raydium CPMM / CLMM / LaunchLab, Meteora DLMM and Orca on one WebSocket, decodes
+// their swap events, prices the token in SOL from the pool state carried in the event, and feeds the same onSwap listeners
+// momentum already uses — so "$100K in 5 minutes" now fires on any SOL-quoted pool, not just PumpSwap.
+// Credits: pool → mint lookup (getAccountInfo) and supply/decimals (getTokenSupply) only once a pool has DEX_RESOLVE_SWAPS swaps
+// in 5 minutes, capped by DEX_POOL_DAILY_BUDGET. Everything else is free log traffic.
+import WebSocket from "ws";
+import { CFG } from "./config.js";
+import { PROGRAMS, WSOL, dexEventsFromLogs, parsePoolAccount } from "./dex-decoder.js";
+import { rpc } from "./rpc.js";
+import { solUsdCached } from "./price.js";
+import { routeOf } from "./routes.js";
+import { emitSwap } from "./pumpswap.js";
+import { q } from "./db.js";
+
+export const dx = { txs: 0, dupes: 0, events: 0, emitted: 0, unknownPool: 0, resolved: 0, ignored: 0, lookupFail: 0, big: 0, reconnects: 0, byVenue: {}, get poolBudget() { return budgetUsed; } };
+const pools = new Map();        // pool -> {mint, solSide, dec, supply, binStep} | {ignore:true}
+const mintPools = new Map();    // mint -> Set(pool)
+const supplyCache = new Map();  // mint -> {dec, supply}
+const poolHits = new Map();     // pool -> [ts] rolling 5m (resolution gate)
+const pending = new Set(), queue = [];
+const seenSig = new Set(); let seenOrder = [];
+let budgetUsed = 0, budgetDay = new Date().getUTCDate(), inFlight = 0, samples = 0;
+const STABLE = new Set(["EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB", "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT", "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So", "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"]);
+// v0.18.1: pool cache survives restarts (every deploy restarted the process and re-spent the lookups)
+const now0 = Math.floor(Date.now() / 1000);
+try { for (const r of q.allDexPools.all()) { if (r.ignore) pools.set(r.pool, { ignore: true }); else { pools.set(r.pool, { mint: r.mint, solSide: r.sol_side, m0: r.m0, m1: r.m1, dec: r.dec, supply: r.supply, binStep: r.bin_step }); let set = mintPools.get(r.mint); if (!set) { set = new Set(); mintPools.set(r.mint, set); } set.add(r.pool); } } } catch (e) { console.error("[dex cache]", e.message); }
+const save = (pool, venue, info) => { try { q.insDexPool.run(pool, venue, info.mint || null, info.solSide ?? null, info.m0 || null, info.m1 || null, info.dec ?? null, info.supply ?? null, info.binStep ?? null, info.ignore ? 1 : 0, now0); } catch {} };
+const SUPPLY_SHORTCUT = (mint) => (mint.endsWith("pump") ? { dec: 6, supply: 1e9 } : null);
+
+function remember(sig) { if (seenSig.has(sig)) return false; seenSig.add(sig); seenOrder.push(sig); if (seenOrder.length > 8000) { for (const s of seenOrder.splice(0, 4000)) seenSig.delete(s); } return true; }
+function hit(pool, ts) {
+  let h = poolHits.get(pool); if (!h) { h = []; poolHits.set(pool, h); }
+  h.push(ts); while (h.length && ts - h[0] > 300) h.shift();
+  if (poolHits.size > 30000) poolHits.delete(poolHits.keys().next().value);
+  return h.length >= CFG.DEX_RESOLVE_SWAPS;
+}
+function enqueue(e) {
+  const pool = e.pool; if (pools.has(pool) || pending.has(pool)) return;
+  if (new Date().getUTCDate() !== budgetDay) { budgetDay = new Date().getUTCDate(); budgetUsed = 0; }
+  if (budgetUsed >= CFG.DEX_POOL_DAILY_BUDGET) return;
+  pending.add(pool); queue.push(e); drain();
+}
+async function supplyOf(mint) {
+  const c = supplyCache.get(mint) || SUPPLY_SHORTCUT(mint); if (c) return c;
+  budgetUsed++;
+  const r = await rpc("getTokenSupply", [mint]);
+  const v = r?.value; if (!v || v.decimals == null) throw new Error("no supply");
+  const out = { dec: v.decimals, supply: Number(v.uiAmount ?? Number(v.amount) / 10 ** v.decimals) };
+  supplyCache.set(mint, out); if (supplyCache.size > 20000) supplyCache.delete(supplyCache.keys().next().value);
+  return out;
+}
+async function drain() {
+  while (inFlight < CFG.PS_RESOLVE_CONCURRENCY && queue.length) {
+    const e = queue.shift(), pool = e.pool; inFlight++;
+    try {
+      let p = null;
+      if (e.venue === "raydium-cpmm" && e.inMint && e.outMint) p = { mint0: e.inMint, mint1: e.outMint, swapOrder: true };
+      else { budgetUsed++; const r = await rpc("getAccountInfo", [pool, { encoding: "base64" }]); p = parsePoolAccount(e.venue, r?.value?.data?.[0] || ""); }
+      if (!p) { dx.lookupFail++; pools.set(pool, { ignore: true }); save(pool, e.venue, { ignore: true }); continue; }
+      const solSide = p.mint0 === WSOL ? 0 : p.mint1 === WSOL ? 1 : -1;
+      const mint = solSide === 0 ? p.mint1 : p.mint0;
+      if (solSide < 0 || STABLE.has(mint)) { dx.ignored++; pools.set(pool, { ignore: true }); save(pool, e.venue, { ignore: true }); continue; }
+      let dec, supply;
+      if (e.venue === "raydium-launchlab") { dec = p.dec0; supply = p.supply / 10 ** dec; }
+      else { const s = await supplyOf(mint); dec = s.dec; supply = s.supply; }
+      const info = { mint, solSide: p.swapOrder ? null : solSide, m0: p.swapOrder ? null : p.mint0, m1: p.swapOrder ? null : p.mint1, dec, supply, binStep: p.binStep };
+      pools.set(pool, info); dx.resolved++; save(pool, e.venue, info);
+      let set = mintPools.get(mint); if (!set) { set = new Set(); mintPools.set(mint, set); } set.add(pool);
+      if (pools.size > 50000) pools.delete(pools.keys().next().value);
+    } catch (x) { dx.lookupFail++; }
+    finally { pending.delete(pool); inFlight--; }
+  }
+}
+
+const Q64 = 2 ** 64;
+/** Normalise a decoded event + pool info into {isBuy, sol, tokens, price} (price = SOL per whole token). */
+function priceOf(e, p) {
+  const dec = p.dec, tokDiv = 10 ** dec;
+  if (e.venue === "raydium-cpmm") {
+    const inMint = e.inMint ?? (e.baseInput ? p.m0 : p.m1), outMint = e.outMint ?? (e.baseInput ? p.m1 : p.m0); // old CPMM layout has no mints in the event
+    const solIn = inMint === WSOL; if (!solIn && outMint !== WSOL) return null;
+    const solRes = solIn ? e.inBefore + e.amountIn : e.outBefore - e.amountOut, tokRes = solIn ? e.outBefore - e.amountOut : e.inBefore + e.amountIn;
+    if (!(tokRes > 0n)) return null;
+    return { isBuy: solIn, sol: Number(solIn ? e.amountIn : e.amountOut) / 1e9, tokens: Number(solIn ? e.amountOut : e.amountIn) / tokDiv, price: (Number(solRes) / 1e9) / (Number(tokRes) / tokDiv) };
+  }
+  if (e.venue === "raydium-clmm" || e.venue === "orca") {
+    const sqrt = Number(e.venue === "orca" ? e.postSqrt : e.sqrtPriceX64) / Q64, raw = sqrt * sqrt; if (!(raw > 0)) return null; // token1 per token0, raw units
+    const aIn = e.venue === "orca" ? e.aToB : e.zeroForOne; // side-0 token is the input
+    const amt0 = e.venue === "orca" ? (aIn ? e.amountIn : e.amountOut) : e.amount0, amt1 = e.venue === "orca" ? (aIn ? e.amountOut : e.amountIn) : e.amount1;
+    if (p.solSide === 0) return { isBuy: aIn, sol: Number(amt0) / 1e9, tokens: Number(amt1) / tokDiv, price: (1 / raw) * tokDiv / 1e9 };
+    return { isBuy: !aIn, sol: Number(amt1) / 1e9, tokens: Number(amt0) / tokDiv, price: raw * tokDiv / 1e9 };
+  }
+  if (e.venue === "raydium-launchlab") {
+    const base = e.vBase - e.rBaseAfter; if (!(base > 0n)) return null;
+    const raw = Number(e.vQuote + e.rQuoteAfter) / Number(base);
+    return { isBuy: e.isBuy, sol: Number(e.isBuy ? e.amountIn : e.amountOut) / 1e9, tokens: Number(e.isBuy ? e.amountOut : e.amountIn) / tokDiv, price: raw * tokDiv / 1e9 };
+  }
+  if (e.venue === "meteora-dlmm") {
+    const raw = Math.pow(1 + (p.binStep || 0) / 10000, e.endBin); if (!(raw > 0)) return null; // y per x, raw units
+    if (p.solSide === 1) return { isBuy: !e.swapForY, sol: Number(e.swapForY ? e.amountOut : e.amountIn) / 1e9, tokens: Number(e.swapForY ? e.amountIn : e.amountOut) / tokDiv, price: raw * tokDiv / 1e9 };
+    return { isBuy: e.swapForY, sol: Number(e.swapForY ? e.amountIn : e.amountOut) / 1e9, tokens: Number(e.swapForY ? e.amountOut : e.amountIn) / tokDiv, price: (1 / raw) * tokDiv / 1e9 };
+  }
+  return null;
+}
+
+function handle({ sig, slot, logs, err }) {
+  dx.txs++;
+  if (err || !remember(sig)) { if (!err) dx.dupes++; return; }
+  const evs = dexEventsFromLogs(logs); if (!evs.length) return;
+  dx.events += evs.length;
+  const now = Math.floor(Date.now() / 1000), route = routeOf(logs);
+  for (const e of evs) {
+    dx.byVenue[e.venue] = (dx.byVenue[e.venue] || 0) + 1;
+    const p = pools.get(e.pool);
+    if (!p) { dx.unknownPool++; if (hit(e.pool, now)) enqueue(e); continue; }
+    if (p.ignore) continue;
+    const x = priceOf(e, p); if (!x || !(x.sol > 0) || !(x.price > 0) || x.sol > CFG.PS_MAX_SWAP_SOL) continue;
+    const mc = x.price * p.supply * solUsdCached();
+    if (mc > CFG.DEX_IGNORE_MC) { dx.big++; continue; }
+    const tr = { mint: p.mint, pool: e.pool, sig, slot, ts: now, wallet: e.wallet || `tx:${sig.slice(0, 12)}`, isBuy: x.isBuy, sol: x.sol, tokens: x.tokens, price: x.price, mc, route, venue: e.venue };
+    if (samples < 10) { samples++; console.log("[dex sample]", JSON.stringify({ venue: e.venue, mint: tr.mint.slice(0, 8), buy: tr.isBuy, sol: +x.sol.toFixed(4), px: x.price, mc: Math.round(mc) })); }
+    dx.emitted++; emitSwap(tr);
+  }
+}
+
+/** Pools we have mapped for a mint (for /check). */
+export const memStats = () => { let ph = 0; for (const a of poolHits.values()) ph += a.length; return { pools: pools.size, mintPools: mintPools.size, supplyCache: supplyCache.size, poolHits: poolHits.size, poolHitEntries: ph, seenSig: seenSig.size }; }; // v0.18.18
+export const dexSnap = (mint) => [...(mintPools.get(mint) || [])].map((pool) => ({ pool, ...pools.get(pool) }));
+
+export function startDex(onStatus = () => {}) {
+  const ids = Object.keys(PROGRAMS); if (!ids.length) return;
+  let i = 0, ws, pingT, idleT, backoff = 1000, lastMsg = Date.now();
+  const connect = () => {
+    const url = CFG.WS_URLS[i % CFG.WS_URLS.length];
+    ws = new WebSocket(url, { handshakeTimeout: 10000 });
+    ws.on("open", () => {
+      backoff = 1000; lastMsg = Date.now();
+      ids.forEach((pid, k) => ws.send(JSON.stringify({ jsonrpc: "2.0", id: 100 + k, method: "logsSubscribe", params: [{ mentions: [pid] }, { commitment: "processed" }] })));
+      pingT = setInterval(() => { try { ws.ping(); } catch {} }, 20000);
+      idleT = setInterval(() => { if (Date.now() - lastMsg > 60000) { try { ws.terminate(); } catch {} } }, 10000);
+      onStatus("open");
+    });
+    ws.on("message", (raw) => {
+      lastMsg = Date.now();
+      let m; try { m = JSON.parse(raw); } catch { return; }
+      if (m.id >= 100 && m.id < 100 + ids.length) return onStatus(`subscribed ${PROGRAMS[ids[m.id - 100]]} id=${m.result}${m.error ? " ERR " + JSON.stringify(m.error) : ""}`);
+      const v = m?.params?.result?.value; if (!v) return;
+      handle({ sig: v.signature, slot: m.params.result.context?.slot, logs: v.logs, err: v.err });
+    });
+    const down = (why) => { clearInterval(pingT); clearInterval(idleT); dx.reconnects++; i++; onStatus(`closed (${why}); reconnect in ${backoff}ms`); setTimeout(connect, backoff); backoff = Math.min(backoff * 2, 30000); };
+    ws.on("close", (c) => down(`close ${c}`));
+    ws.on("error", (e) => { onStatus(`error ${e.message}`); try { ws.terminate(); } catch {} });
+  };
+  connect();
+}
+export const __test = { pools, handle, priceOf };
+
+
+====================================================================================================
+=== FILE: src/enrich.js (5,035 chars)
+====================================================================================================
+// v0.18.19: extra entry-time features for the winners-vs-losers analysis. Recording only, nothing gated.
+//  - Dex Paid: has anyone paid DexScreener for this coin (profile / community takeover / ad / boost) and how long before our entry?
+//  - Snipers: wallets that bought in the launch slot(s); how many, and what share of supply they still hold at entry.
+//  - Fresh wallets: of a sample of the 5m window's buyers, what share are wallets younger than FRESH_WALLET_D days?
+//  - Proven wallets: what share of the 5m buy $ came from wallets with a proven record (wallets.js), and how many of them.
+import { CFG } from "./config.js";
+import { q } from "./db.js";
+import { on } from "./launch-monitor.js";
+import { balanceOf } from "./holders.js";
+import { walletInfo } from "./rpc.js";
+import { isProven } from "./wallets.js";
+
+export const en = { dexCalls: 0, dexPaid: 0, dexFail: 0, freshCalls: 0, freshDay: new Date().getUTCDate(), snipers: 0 };
+const SN = new Map(); // mint -> Set(sniper wallets)
+on("create", (t) => { SN.set(t.mint, new Set()); if (SN.size > 20000) SN.delete(SN.keys().next().value); });
+on("trade", (t, tr) => { const s = SN.get(t.mint); if (s && tr.isBuy && tr.slot <= t.slot + CFG.BUNDLE_SLOTS && tr.wallet !== t.creator) { s.add(tr.wallet); en.snipers++; } });
+on("expire", (t) => setTimeout(() => SN.delete(t.mint), 2 * 3600_000)); // keep a while past expiry — momentum entries come after the launch window
+
+export function sniperInfo(mint) {
+  const s = SN.get(mint);
+  // v0.18.172: the in-memory set is lost on every restart (32 restarts in 24 h left snipers_n blank on 58% of AS rows). Fall back to the saved launch data:
+  // snipers = launch-bundle wallets minus the creator if the creator bought (matches the live count on 1,295 of 1,308 rows). Held share unknown then.
+  if (!s) { try { const m = q.tokenMeta.get(mint); if (m && m.bundle_wallets != null) return { n: Math.max(0, m.bundle_wallets - ((m.dev_buy_sol || 0) > 0 ? 1 : 0)), heldPct: null }; } catch {} return null; }
+  let held = 0; for (const w of s) held += Math.max(0, balanceOf(mint, w) || 0);
+  return { n: s.size, heldPct: held / CFG.TOTAL_SUPPLY * 100 };
+}
+
+export async function dexPaid(mint, entryTs) {
+  en.dexCalls++;
+  try {
+    const r = await fetch(`https://api.dexscreener.com/orders/v1/solana/${mint}`, { signal: AbortSignal.timeout(6000) });
+    if (!r.ok) { en.dexFail++; return null; }
+    const arr = await r.json(); if (!Array.isArray(arr)) return { paid: 0, types: "", leadS: null };
+    const ok = arr.filter((o) => o.status === "approved");
+    const types = [...new Set(ok.map((o) => o.type))].join("|");
+    const first = ok.map((o) => { const t = Number(o.paymentTimestamp || 0); return t > 1e12 ? Math.floor(t / 1000) : t; }).filter((x) => x > 0).sort((a, b) => a - b)[0]; // ms or s
+    if (ok.length) en.dexPaid++;
+    return { paid: ok.length ? 1 : 0, types, leadS: first ? entryTs - first : null };
+  } catch { en.dexFail++; return null; }
+}
+
+/** Fresh-wallet share of a sample of buyers (RPC, budgeted) */
+export async function freshShare(wallets) {
+  const d = new Date().getUTCDate(); if (d !== en.freshDay) { en.freshDay = d; en.freshCalls = 0; }
+  const uniq = [...new Set(wallets.filter((w) => w && !w.startsWith("tx:")))];
+  for (let i = uniq.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [uniq[i], uniq[j]] = [uniq[j], uniq[i]]; }
+  const sample = uniq.slice(0, CFG.FRESH_SAMPLE);
+  if (!sample.length || en.freshCalls + sample.length > CFG.FRESH_DAILY_BUDGET) return null;
+  en.freshCalls += sample.length;
+  const infos = await Promise.all(sample.map((w) => walletInfo(w).catch(() => null)));
+  const known = infos.filter((x) => x && x.age_s != null);
+  if (known.length < 5) return null;
+  const fresh = known.filter((x) => x.age_s < CFG.FRESH_WALLET_D * 86400).length;
+  return { share: fresh / known.length, n: known.length };
+}
+
+export function provenShare(w5) {
+  let buy = 0, pv = 0; const ws = new Set();
+  for (const z of w5) { if (!z.b) continue; buy += z.usd; if (z.w && isProven(z.w)) { pv += z.usd; ws.add(z.w); } }
+  return { share: buy > 0 ? pv / buy : null, n: ws.size };
+}
+
+/** Fill the enrichment columns for a paper trade. Sync parts first, async parts as they land. */
+export function enrichEntry(id, mint, w5, entryTs) {
+  try { const sn = sniperInfo(mint); const pv = provenShare(w5); q.setEnrich1.run(sn?.n ?? null, sn?.heldPct ?? null, pv.share, pv.n, id); } catch (e) { console.error("[enrich]", e.message); }
+  dexPaid(mint, entryTs).then((dp) => { if (dp) { try { q.setDexPaid.run(dp.paid, dp.types, dp.leadS, id); } catch {} } });
+  freshShare(w5.filter((z) => z.b).map((z) => z.w)).then((fr) => { if (fr) { try { q.setFresh.run(fr.share, fr.n, id); } catch {} } }).catch(() => {});
+}
+export const enrichLine = (sn, pv) => [sn ? (sn.heldPct == null ? `snipers ${sn.n}` : `snipers ${sn.n} hold ${sn.heldPct.toFixed(1)}%`) : null, pv?.n ? `proven wallets ${pv.n} (${(pv.share * 100).toFixed(0)}% of buys)` : null].filter(Boolean).join(" · ");
+
+
+====================================================================================================
+=== FILE: src/env.js (352 chars)
+====================================================================================================
+import { readFileSync } from "node:fs";
+// Load /root/tracker/.env into process.env (no dependency). Imported first by every entrypoint.
+try {
+  for (const l of readFileSync("/root/tracker/.env", "utf8").split("\n")) {
+    const m = l.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+  }
+} catch {}
+
+
+====================================================================================================
+=== FILE: src/execlink.js (1,994 chars)
+====================================================================================================
+// v0.18.90: the one bridge between the tracker and the executor (executor/ — the live buy/sell bot, its own pm2 app, its own wallet).
+// A local Unix socket: the tracker pushes Project 5 triggers, the exit rules as they fire, paper closes and /live commands; nothing comes back
+// that the tracker depends on. If the executor is not running, messages are dropped (triggers are only worth anything for a second or two).
+import { connect } from "node:net";
+import { existsSync } from "node:fs";
+const SOCK = process.env.EXEC_SOCK || "/root/executor/exec.sock";
+export const execStats = { connected: false, sent: 0, dropped: 0, reconnects: 0, lastErr: "", lastFeed: 0 };
+export const noteFeed = () => { execStats.lastFeed = Date.now(); }; // last trade our feed delivered — sent with every ping so the executor can tell a dead feed from a quiet one
+let sock = null, timer = null;
+function open() {
+  if (process.env.SMOKE || !existsSync(SOCK)) { schedule(); return; }
+  try {
+    const s = connect(SOCK); sock = s;
+    s.on("connect", () => { execStats.connected = true; execStats.reconnects++; console.log("[execlink] connected"); });
+    s.on("error", (e) => { execStats.lastErr = e.message; });
+    s.on("close", () => { if (sock === s) sock = null; if (execStats.connected) console.log("[execlink] disconnected"); execStats.connected = false; schedule(); });
+    s.on("data", () => {}); // pongs etc. — nothing needed yet
+  } catch (e) { execStats.lastErr = e.message; schedule(); }
+}
+function schedule() { if (timer) return; timer = setTimeout(() => { timer = null; open(); }, 3000); }
+export function execSend(obj) {
+  if (!sock || !execStats.connected) { execStats.dropped++; return false; }
+  try { sock.write(JSON.stringify(obj) + "\n"); execStats.sent++; return true; } catch (e) { execStats.lastErr = e.message; execStats.dropped++; return false; }
+}
+open();
+setInterval(() => { if (execStats.connected) execSend({ type: "ping", t: Date.now(), feed: execStats.lastFeed }); }, 15_000);
+
+
+====================================================================================================
+=== FILE: src/exits.js (16,092 chars)
+====================================================================================================
+// Shared parallel-exit math (used by copy strategy; early/momentum have their own inline copies).
+import { CFG } from "./config.js";
+import { levelsStep, levelsFinal, newLevels, volStopExit } from "./levels.js";
+export function newExits(entry, entryMc, volAtEntry) {
+  return { entry, entryMc, peak: entry, x: {}, half: false, s3: false, lv: newLevels(), volAtEntry: volAtEntry || 0, aboveFloor: false, armed: false };
+}
+// v0.18.3: target + hard stop pairs — sell everything at the target, or cut at the stop from ENTRY, whichever comes first
+export const STOPS = { t15s25: [1.5, 0.25], t15s40: [1.5, 0.40], t15s60: [1.5, 0.60], t2s25: [2, 0.25], t2s40: [2, 0.40], t2s60: [2, 0.60] }; // v0.18.9: -40% added
+export function stopStep(x, mult) { for (const [k, [t, s]] of Object.entries(STOPS)) if (x[k] == null) { if (mult >= t) x[k] = t; else if (mult <= 1 - s) x[k] = mult; } }
+export function stopFinal(x, mult, peakMult) { const o = {}; for (const [k, [t]] of Object.entries(STOPS)) o[k] = x[k] ?? (peakMult >= t ? t : mult); return o; }
+// v0.18.9 "flow" exit: after 1.5x, hold while the 5m volume stays >= FLOW_MIN_VOL and buys outweigh sells; sell when either fails.
+// Before 1.5x: -40% hard stop. Backstop: 50% trail. Tracks the max drawdown before 1.5x (ddPre15) for the stop-width question.
+export function flowStep(e, x, mult, fromPeak, v5Usd, buyUsd, sellUsd) {
+  if (x.tp15 == null && (e.ddPre15 == null || mult < e.ddPre15)) e.ddPre15 = mult;
+  if (x.flow4 == null && x.flow == null && mult >= CFG.FLOW_CAP) { x.flow4 = CFG.FLOW_CAP; x.flow4why = "cap"; } // v0.18.10: flow with a voluntary sell at FLOW_CAP · v0.18.108: `why` = which part of the rule fired (the executor's exit-type cost study)
+  if (x.flow != null) return;
+  if (!e.flowArmed) { if (mult >= 1.5) { e.flowArmed = true; e.flowSince = Date.now(); } else if (mult <= 0.6) { x.flow = mult; if (x.flow4 == null) { x.flow4 = mult; x.flow4why = "stop"; } } return; }
+  if (Date.now() - e.flowSince < 20_000) return; // give the window a moment after arming
+  if (v5Usd < CFG.FLOW_MIN_VOL || (sellUsd > 0 && buyUsd / sellUsd < CFG.FLOW_BS_MIN) || fromPeak <= -0.50) { x.flow = mult; if (x.flow4 == null) { x.flow4 = mult; x.flow4why = fromPeak <= -0.50 ? "trail" : v5Usd < CFG.FLOW_MIN_VOL ? "fade-volume" : "fade-sellers"; } }
+}
+// v0.18.17 "fast-fail" on top of flow4: at the first tick FF_AT_S after entry, if price is below FF_BELOW x entry, sell there;
+// otherwise identical to flow4. Recorded as x_flow4ff next to x_flow4 — a hypothesis from 20 trades, to be tested on the next 100.
+export const FF_AT_S = 60, FF_BELOW = 0.95; // v0.18.142 (owner, 19 Oct 19:56 UK): book A2 — the 17:41 study: below 0.95 at 60 s won 1 of 12 (−39%), so sell there; otherwise the runner. Was 120 s / 0.90 (a stale 20-trade hypothesis); x_flow4ff before 19 Oct 19:00 UTC used those numbers
+export function ffStep(e, x, mult, sinceS) {
+  if (x.flow4ff != null) return;
+  if (!e.ffDone && sinceS != null && sinceS >= FF_AT_S) { e.ffDone = true; if (mult < FF_BELOW) { x.flow4ff = mult; return; } }
+  if (x.flow4 != null) x.flow4ff = x.flow4;
+}
+export const ffFinal = (x, flow4Final) => x.flow4ff ?? flow4Final;
+// v0.18.22 "Project 3" exit (x_split), decided at SPLIT_AT_S after entry:
+//   price < SPLIT_FAIL x entry  -> sell (fast-fail)
+//   price >= SPLIT_RUN x entry  -> runner: hold with a SPLIT_TRAIL trail from the peak, cap at SPLIT_CAP
+//   in between                  -> half out at 1.5x, the rest rides the same trail (stop = trail from peak before 1.5x)
+// Before the mark: -40% hard stop. Branch recorded in e.splitBranch ("ff" | "run" | "mid" | "stop").
+export const SPLIT_AT_S = 120, SPLIT_FAIL = 0.90, SPLIT_RUN = 1.20, SPLIT_TRAIL = 0.40, SPLIT_CAP = 4;
+export function splitStep(e, x, mult, fromPeak, sinceS) { const before = x.split; _splitStep(e, x, mult, fromPeak, sinceS); if (x.split != null && before == null && e.splitAt == null) e.splitAt = Math.floor(Date.now() / 1000); }
+function _splitStep(e, x, mult, fromPeak, sinceS) {
+  if (x.split != null) return;
+  if (!e.splitBranch) {
+    if (mult <= 0.6) { x.split = mult; e.splitBranch = "stop"; e.splitAt = Math.floor(Date.now() / 1000); return; }
+    if (sinceS == null || sinceS < SPLIT_AT_S) return;
+    if (mult < SPLIT_FAIL) { x.split = mult; e.splitBranch = "ff"; e.splitAt = Math.floor(Date.now() / 1000); return; }
+    e.splitBranch = mult >= SPLIT_RUN ? "run" : "mid"; e.splitHalf = false;
+  }
+  if (e.splitBranch === "run") { if (mult >= SPLIT_CAP) x.split = SPLIT_CAP; else if (fromPeak <= -SPLIT_TRAIL) x.split = mult; if (x.split != null) e.splitAt = Math.floor(Date.now() / 1000); return; }
+  if (e.splitBranch === "mid") {
+    if (!e.splitHalf && mult >= 1.5) e.splitHalf = true;
+    if (!e.splitHalf) { if (fromPeak <= -SPLIT_TRAIL) x.split = mult; return; }
+    if (mult >= SPLIT_CAP) x.split = 0.75 + 0.5 * SPLIT_CAP; else if (fromPeak <= -SPLIT_TRAIL) x.split = 0.75 + 0.5 * mult;
+    if (x.split != null) e.splitAt = Math.floor(Date.now() / 1000);
+  }
+}
+export const splitFinal = (e, x, mult) => x.split ?? (e.splitBranch === "mid" && e.splitHalf ? 0.75 + 0.5 * mult : mult);
+// v0.18.30 dead-coin exit: after DEAD_AFTER_S, if the 5-minute volume stays below DEAD_VOL for DEAD_FOR_S, sell at market whatever the price.
+// x_dead = that exit alone (else the hold value). x_p3d = Project 3 with the dead-coin branch added: whichever of split / dead fires first.
+export const DEAD_AFTER_S = 600, DEAD_VOL = 25_000, DEAD_FOR_S = 300;
+export function deadStep(e, x, mult, sinceS, v5Usd, now) {
+  if (x.dead != null || sinceS == null || sinceS < DEAD_AFTER_S) return;
+  if (v5Usd < DEAD_VOL) { if (!e.deadSince) e.deadSince = now; if (now - e.deadSince >= DEAD_FOR_S) { x.dead = mult; e.deadAt = now; } }
+  else e.deadSince = null;
+}
+export function p3dFinal(e, x, mult) {
+  if (x.split != null && (e.deadAt == null || (e.splitAt ?? 0) <= e.deadAt)) return x.split;            // split fired first (or only)
+  if (x.dead != null) return e.splitBranch === "mid" && e.splitHalf ? 0.75 + 0.5 * x.dead : x.dead; // dead fired first; mid branch keeps its banked half
+  return splitFinal(e, x, mult);
+}
+// v0.18.17 clean flow: a wallet that buys and sells the same coin within BOT_PAIR_S seconds is a sandwich/arb bot, and its $ is
+// paired volume that says nothing about direction. Returns buy/sell $ on the rest, plus the share of $ volume that was bot pairs.
+export const BOT_PAIR_S = 2;
+export function cleanFlow(win) {
+  const byW = new Map();
+  for (const z of win) { if (!z.w || z.w.startsWith("tx:")) continue; let a = byW.get(z.w); if (!a) { a = { b: [], s: [] }; byW.set(z.w, a); } (z.b ? a.b : a.s).push(z.ts); }
+  const near = (arr, t) => { for (const u of arr) if (Math.abs(u - t) <= BOT_PAIR_S) return true; return false; };
+  let buy = 0, sell = 0, bot = 0, total = 0;
+  for (const z of win) {
+    total += z.usd;
+    const a = z.w && !z.w.startsWith("tx:") ? byW.get(z.w) : null;
+    if (a && near(z.b ? a.s : a.b, z.ts)) { bot += z.usd; continue; }
+    if (z.b) buy += z.usd; else sell += z.usd;
+  }
+  return { buy, sell, bot, total, ratio: sell > 0 ? buy / sell : buy > 0 ? 99 : null, botShare: total > 0 ? bot / total : null, sellShare: buy + sell > 0 ? sell / (buy + sell) : null };
+}
+// v0.18.35 Project 5 exit "h2t40": −40% stop from entry until 2x; at 2x sell half (the initial back); the other half rides on a
+// 40% trailing stop from its peak, no cap. Value is the blended multiple of the whole position (half at 2x = 1.0 + 0.5 × exit mult).
+export function h2Step(e, x, mult, fromPeak) {
+  if (x.h2t40 != null) return;
+  if (!e.h2Half) { if (mult >= 2) e.h2Half = true; else if (mult <= 0.6) { x.h2t40 = mult; return; } }
+  if (e.h2Half && fromPeak <= -0.40) x.h2t40 = 1 + 0.5 * mult;
+}
+export const h2Final = (e, x, mult) => x.h2t40 ?? (e.h2Half ? 1 + 0.5 * mult : mult);
+// v0.18.49 "split" exit recorded beside Project 1 (x_s15be): −40% stop until 1.5x; at 1.5x sell half; the rest sells at 2x, or at the
+// buy price if it falls back (stop moved to entry). Whole-position multiple: 0.75 + 0.5 × second-half exit.
+export function s15Step(e, x, mult) {
+  if (x.s15be != null) return;
+  if (!e.s15Half) { if (mult >= 1.5) e.s15Half = true; else if (mult <= 0.6) { x.s15be = mult; return; } }
+  if (e.s15Half) { if (mult >= 2) x.s15be = 1.75; else if (mult <= 1.0) x.s15be = 0.75 + 0.5 * mult; }
+}
+export const s15Final = (e, x, mult) => x.s15be ?? (e.s15Half ? 0.75 + 0.5 * Math.min(mult, 2) : mult);
+// v0.18.81 "hold-5" exits (P5 analysis, 17 Oct): −40% stop until 1.5x; once 1.5x is seen never let it fall below the floor F; whatever is
+// left is sold at T seconds after entry. Variants: h5 (5 min, floor 1.3), h5f12 (floor 1.2), h5f14 (floor 1.4), h3 (3 min, floor 1.3).
+export const H5 = { h5: [300, 1.3], h5f12: [300, 1.2], h5f14: [300, 1.4], h3: [180, 1.3], h15: [900, 1.3], h3l: [180, 1.1, 1.25] }; // v0.18.155 h3l 'GR-lock': arms at 1.25x (not 1.5x), floor 1.1x - for the GR stops that peaked at ~1.3x and rolled over // v0.18.87: + hold-15
+// v0.18.87 "fast starters run": the state 60 s after entry decides — up 30%+ → hold until the position itself closes (golden rule / −80% / 6 h), no stop;
+// otherwise exactly hold-5 (floor 1.3). Recorded as x_h5fast. Before 60 s only the −40% stop applies.
+export const H5_KEYS = [...Object.keys(H5), "h5fast", "t2n30"];
+export function h5Step(e, x, mult, sinceS) {
+  if (!e.h5Armed && mult >= 1.5) e.h5Armed = true;
+  if (e.h5Fast == null && sinceS != null && sinceS >= 60) e.h5Fast = mult >= 1.3; // first tick at/after 60 s fixes the state (a restored position decides on its first tick)
+  if (x.h5fast == null) {
+    if (!e.h5Armed && mult <= 0.6 && e.h5Fast !== true) x.h5fast = mult;
+    else if (e.h5Fast === false) { if (e.h5Armed && mult <= 1.3) x.h5fast = mult; else if (sinceS != null && sinceS >= 300) x.h5fast = mult; }
+  }
+  if (x.t2n30 == null) { if (mult >= 2) x.t2n30 = mult; else if (sinceS != null && sinceS >= 1800) x.t2n30 = mult; } // v0.18.163 PG-hold (owner, 20 Oct 18:42 UK): sell at 2x, otherwise at 30 min, no stop
+  for (const [k, [T, F, ARM]] of Object.entries(H5)) {
+    if (x[k] != null) continue;
+    if (ARM) { e.armK = e.armK || {}; if (!e.armK[k] && mult >= ARM) e.armK[k] = true; const armed = !!e.armK[k]; if (!armed && mult <= 0.6) { x[k] = mult; continue; } if (armed && mult <= F) { x[k] = mult; continue; } if (sinceS != null && sinceS >= T) x[k] = mult; continue; }
+    if (!e.h5Armed && mult <= 0.6) { x[k] = mult; if (k === "h5" || k === "h3") x[k + "why"] = "stop"; continue; }
+    if (e.h5Armed && mult <= F) { x[k] = mult; if (k === "h5" || k === "h3") x[k + "why"] = "floor"; continue; }
+    if (sinceS != null && sinceS >= T) { x[k] = mult; if (k === "h5" || k === "h3") x[k + "why"] = "time"; }
+  }
+}
+export function h5Final(e, x, mult) { const o = {}; for (const k of H5_KEYS) o[k] = x[k] ?? mult; return o; }
+export const h5Key = (x) => H5_KEYS.map((k) => x[k]).join("|");
+/** v0.18.118: the second (since entry) at which each recorded exit fired — the data set prices the sale off the 5-s path from here. */
+export const EXIT_TIMED = ["flow4", "h5", "h3", "h15", "h5f14", "t15s40", "t2s40", "h2t40", "split", "tsl40", "flow", "tsl60", "tsl80"];
+export function markExitTimes(x, sinceS) { if (sinceS == null) return; for (const k of EXIT_TIMED) if (x[k] != null && x[k + "At"] == null) x[k + "At"] = Math.round(sinceS); }
+export function stepExits(e, price, mc, v5Usd, buyUsd, sellUsd, sinceS = null) {
+  if (price > e.peak) e.peak = price;
+  const mult = price / e.entry, fromPeak = price / e.peak - 1, x = e.x;
+  if (x.tp == null && mult >= 2) x.tp = 2;
+  if (x.tsl25 == null && fromPeak <= -0.25) x.tsl25 = mult; // v0.17.4
+  if (x.tp15 == null && mult >= 1.5) x.tp15 = 1.5;
+  stopStep(x, mult); flowStep(e, x, mult, fromPeak, v5Usd, buyUsd, sellUsd); ffStep(e, x, mult, sinceS); splitStep(e, x, mult, fromPeak, sinceS); deadStep(e, x, mult, sinceS, v5Usd, Math.floor(Date.now() / 1000)); h2Step(e, x, mult, fromPeak); s15Step(e, x, mult); h5Step(e, x, mult, sinceS);
+  if (x.tsl40 == null && fromPeak <= -0.40) x.tsl40 = mult;
+  if (x.tsl60 == null && fromPeak <= -0.60) x.tsl60 = mult;
+  if (x.tsl80 == null && fromPeak <= -0.80) x.tsl80 = mult;
+  markExitTimes(x, sinceS); // v0.18.118: when each rule fired (seconds after entry) — the data set prices the sale off the 5-s path at that moment
+  if (!e.half && mult >= 2) e.half = true;
+  if (!e.s3 && mult >= 3) e.s3 = true;
+  if (x.half60 == null && fromPeak <= -0.60) x.half60 = e.half ? 1 + 0.5 * mult : mult;
+  if (x.twophase == null) { if (!e.half && fromPeak <= -0.40) x.twophase = mult; else if (e.half && fromPeak <= -0.60) x.twophase = 1 + 0.5 * mult; }
+  if (x.ladder == null && fromPeak <= -0.60) x.ladder = (e.half ? 0.5 : 0) + (e.s3 ? 0.75 : 0) + (1 - (e.half ? 0.25 : 0) - (e.s3 ? 0.25 : 0)) * mult;
+  x.levels = levelsStep(e.lv, e.entryMc, mc, mult, fromPeak);
+  if (x.m1 == null) { if (mc >= CFG.M1_EXIT_USD) x.m1 = mult; else if (fromPeak <= -0.60) x.m1 = mult; }
+  if (x.m1vol == null) { if (mc >= CFG.M1_EXIT_USD && v5Usd < CFG.M1_HOLD_VOL5M) x.m1vol = mult; else if (fromPeak <= -0.60) x.m1vol = mult; }
+  if (x.volstop == null && fromPeak <= -0.60 && volStopExit(fromPeak, v5Usd, buyUsd, sellUsd, e.volAtEntry)) x.volstop = mult;
+  // v0.17 combined rule: half at 2x, then out on 60% trail, or volume stop, or MC back under the floor after being above it
+  if (mult >= CFG.COMBO_FLOOR_ARM) e.armed = true; if (e.armed && mc >= CFG.COMBO_FLOOR_MC) e.aboveFloor = true; // v0.17.1: floor only once in profit
+  if (x.combo == null) {
+    const half = e.half ? 1 + 0.5 * mult : mult;
+    if (fromPeak <= -0.60) x.combo = half;
+    else if (fromPeak <= -0.30 && volStopExit(fromPeak, v5Usd, buyUsd, sellUsd, e.volAtEntry)) x.combo = half;
+    else if (e.aboveFloor && mc < CFG.COMBO_FLOOR_MC && fromPeak <= -0.20) x.combo = half;
+  }
+  return { mult, fromPeak, peakMult: e.peak / e.entry };
+}
+export function finalExits(e, mult) {
+  const x = e.x;
+  return {
+    tp: x.tp ?? mult, tsl40: x.tsl40 ?? mult, tsl60: x.tsl60 ?? mult, tsl80: x.tsl80 ?? mult,
+    half60: x.half60 ?? (e.half ? 1 + 0.5 * mult : mult), twophase: x.twophase ?? (e.half ? 1 + 0.5 * mult : mult),
+    ladder: x.ladder ?? ((e.half ? 0.5 : 0) + (e.s3 ? 0.75 : 0) + (1 - (e.half ? 0.25 : 0) - (e.s3 ? 0.25 : 0)) * mult),
+    h2t40: h2Final(e, x, mult), s15be: s15Final(e, x, mult), levels: levelsFinal(e.lv, mult), m1: x.m1 ?? mult, m1vol: x.m1vol ?? mult, volstop: x.volstop ?? mult, time: mult, combo: x.combo ?? (e.half ? 1 + 0.5 * mult : mult), tp15: x.tp15 ?? mult, tsl25: x.tsl25 ?? mult, flow: x.flow ?? mult, flow4: x.flow4 ?? (x.flow ?? mult), flow4ff: ffFinal(x, x.flow4 ?? (x.flow ?? mult)), split: splitFinal(e, x, mult), dead: x.dead ?? mult, p3d: p3dFinal(e, x, mult), ...stopFinal(x, mult, e.peak / e.entry), ...h5Final(e, x, mult),
+  };
+}
+// v0.18.14: price path after entry — multiple at fixed seconds since entry (first tick at or after each mark), so any
+// "if not up X by minute Y" rule can be evaluated offline on every trade. Returns true when a new mark was filled.
+export const PATH_MARKS = [30, 60, 120, 180, 300, 600, 900, 1200]; // v0.18.81: 15 and 20 min added
+export function pathStep(holder, entryTs, now, mult, v5Usd = null, sellShare = null, win = null) {
+  holder.path ||= {}; let changed = false;
+  for (const m of PATH_MARKS) if (now - entryTs >= m && holder.path[m] == null) {
+    if (v5Usd == null) { holder.path[m] = +mult.toFixed(4); changed = true; continue; }
+    const o = { m: +mult.toFixed(4), v: Math.round(v5Usd), s: sellShare == null ? null : +sellShare.toFixed(3) }; // v0.18.15: + 5m volume and sell share
+    if (win) { const c = cleanFlow(win); o.cs = c.sellShare == null ? null : +c.sellShare.toFixed(3); o.bot = c.botShare == null ? null : +c.botShare.toFixed(3); o.cv = Math.round(c.buy + c.sell); } // v0.18.17: clean sell share, bot share, clean volume
+    holder.path[m] = o; changed = true;
+  }
+  return changed;
+}
+export const pc = (m) => (m == null ? "—" : `${m >= 1 ? "+" : ""}${((m - 1) * 100).toFixed(0)}%`);
+
+
+====================================================================================================
+=== FILE: src/export-sql.js (6,038 chars)
+====================================================================================================
+// v0.18.84: the export's SQL and CSV writer, shared by the bot (/csv) and the detached export process (website download).
+import { openSync, writeSync, closeSync } from "node:fs";
+export const PAPER_SQL = `SELECT p.id, p.strategy, p.name, p.symbol, p.mint, datetime(p.entry_ts,'unixepoch') entry_utc, p.entry_age_s, p.entry_mc, p.peak_mult, p.x_tp, p.x_tsl40, p.x_tsl60, p.x_cluster, p.x_grad, p.x_time, p.x_tsl80, p.x_half60, p.x_twophase, p.x_ladder, p.x_levels, p.x_m1, p.x_m1vol, p.next_level, p.wave1_peak_mc, p.cluster_held_pct, p.trigger_kind, p.x_volstop, p.vol_at_entry, p.after_peak_mult, p.after_peak_mc, p.handover, p.creator_prior, p.creator_best_peak, p.dev_buy_sol, p.snipers, p.hour_utc, p.parent_id, p.bs_ratio_entry, p.buyers_entry, p.vol5m_usd, p.vol1m_usd, p.age_s, p.reentry_n, p.exit_reason, p.closed, p.tier, p.factory, p.has_socials, p.bundle_pct, p.bundle_sol, p.handoffs, p.inflow_sol, p.inflow_wallets, p.outside_share, p.buys, p.sells, p.mc_5m, p.mc_15m, p.buyers_5m, p.alerted, p.invalid, p.buys_entry, p.sells_entry, p.proven_entry, p.q_score, p.q_wallets, p.q_per10k, p.q_top3, p.q_roundtrip, p.q_retail, p.q_custom, p.q_size_cv, p.q_new_pct, p.q_px_per10k, p.x_combo, p.x_tp15, p.x_tsl25, p.x_t15s25, p.x_t15s60, p.x_t2s25, p.x_t2s60, p.x_t15s40, p.x_t2s40, p.x_flow, p.x_flow4, p.x_flow4ff, p.x_split, p.split_branch, p.x_dead, p.x_p3d, p.x_manual, p.manual_pct, p.conf_ok, p.conf_ratio, p.x_h2t40, p.x_s15be, p.v2m_usd, p.early_json, p.trace, p.gmgn_json, p.gmgn_entry, p.p6_tier, p.x_p6a, p.x_p6b, p.x_p6c, p.x_p6, p.x_p6v3, p.p6_flags, p.x_p7_2, p.x_p7_3, p.x_p7_4, p.p7_json, p.p7_after_peak, p.x_h5, p.x_h5f12, p.x_h5f14, p.x_h3, p.x_h15, p.x_h5fast, p.h5_retro, p.first_secs, p.after_path, p.p6_low, p.p6_low_ts, p.p6_peak_ts, p.p6_last, datetime(p.exit_ts,'unixepoch') exit_utc, p.dd_pre15, p.path, p.venue, p.fee_accrued_entry, p.fee_claims_entry, p.fee_claimed_entry, p.core, p.core_tight, p.core_v40, p.bs_clean_entry, p.bot_share_entry, p.dex_paid, p.dex_paid_types, p.dex_paid_lead_s, p.snipers_n, p.snipers_held_pct, p.fresh_share, p.fresh_n, p.proven_vol_share, p.proven_wallets_5m, p.t_hit15_s, p.top10_entry, p.largest_entry, p.holders_entry, p.dev_hold_entry, p.tight, p.churn_entry, p.cluster_out_entry, p.restart_span, p.crashloop, t.outside_buyers, t.outside_sol_in, t.cluster_sol_in, t.cluster_sol_out, t.graduated, t.creator FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint ORDER BY p.id`;
+export const CSV_EXTRA = {
+  token_life: `SELECT l.mint, t.name, t.symbol, t.creator, datetime(t.create_ts,'unixepoch') launch_utc, t.bundle_pct, t.bundle_sol, t.tier, t.factory, t.has_socials, l.cp, l.mc, l.vol5m_usd, l.buys5m, l.sells5m, l.buyers5m, l.buyers_total, l.graduated, l.top10_pct, l.holders, l.alive FROM token_life l LEFT JOIN tokens t ON t.mint=l.mint ORDER BY l.mint, l.cp`,
+  wallet_buys: `SELECT w.wallet, w.mint, t.name, datetime(w.ts,'unixepoch') buy_utc, w.age_s, w.sol, w.entry_mc, w.is_cluster, w.peak_30m, w.peak_24h, w.resolved FROM wallet_buys w LEFT JOIN tokens t ON t.mint=w.mint ORDER BY w.ts`,
+  big_buys: `SELECT b.mint, t.name, b.wallet, datetime(b.ts,'unixepoch') buy_utc, b.age_s, b.sol, b.mc, b.balance_sol, b.venue FROM big_buys b LEFT JOIN tokens t ON t.mint=b.mint ORDER BY b.ts`,
+  creator_claims: `SELECT c.creator, c.mint, t.name, c.ambiguous, datetime(c.ts,'unixepoch') claim_utc, c.sol, c.venue, c.sig FROM creator_claims c LEFT JOIN tokens t ON t.mint=c.mint ORDER BY c.ts`,
+  pump_buyers: `SELECT b.trade_id, b.mint, p.name, b.wallet, datetime(b.ts,'unixepoch') buy_utc, b.sol, b.mc, b.lead_s, b.venue, p.peak_mult, p.entry_mc FROM pump_buyers b LEFT JOIN paper_trades p ON p.id=b.trade_id ORDER BY b.trade_id, b.lead_s DESC`,
+  vol_log: `SELECT id, mint, name, symbol, datetime(ts,'unixepoch') woke_utc, datetime(last_ts,'unixepoch') last_100k_utc, first_src, datetime(feed_ts,'unixepoch') feed_100k_utc, datetime(gmgn_ts,'unixepoch') gmgn_100k_utc, venue, exchange, launchpad, datetime(created_ts,'unixepoch') created_utc, ROUND(age_s/3600.0,1) age_h, mc, px0 price_usd, v5_feed, v5_gmgn, v5_feed_max, v5_gmgn_max, buy_usd, sell_usd, buys, sells, liq, holders, p6, p6_note, p6_hist, p6_id, peak_x, peak_mc, datetime(peak_ts,'unixepoch') peak_utc, low_x, low_mc, datetime(low_ts,'unixepoch') low_utc, mc_15m, mc_1h, mc_6h, mc_24h, done FROM vol_log ORDER BY ts`, // v0.18.62
+  gmgn_flags: `SELECT id, chain, mint, datetime(ts,'unixepoch') flagged_utc, name, symbol, exchange, launchpad, datetime(created_ts,'unixepoch') created_utc, mc, price, liquidity, vol5m, vol1m, buys, sells, swaps, holders, rug_ratio, bundler_rate, top10, smart, renowned, wash, dev_status, ath_mc, our_v5, our_seen, our_trade, mc5, mc15, mc60, peak_mc FROM gmgn_flags ORDER BY ts`, // v0.18.52
+  tokens: `SELECT mint, name, symbol, creator, datetime(create_ts,'unixepoch') launch_utc, bundle_pct, bundle_sol, bundle_wallets, handoffs, tier, factory, has_socials, outside_buyers, outside_sol_in, cluster_sol_in, cluster_sol_out, peak_mc_usd, graduated, dev_buy_sol, creator_age_s, creator_funded_sol, creator_fee_sol, fee_claims, fee_claimed_sol, first_claim_ts FROM tokens WHERE finalized=1 ORDER BY create_ts`,
+};
+export const CSV_FULL_ONLY = new Set(["token_life", "wallet_buys"]); // v0.18.16: the two big tables; only in /csvfull
+const escv = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+/** v0.18.16: stream a query to a CSV file row by row (never holds the table in memory). Returns row count. */
+export function queryToCsvFile(dbc, sql, path) {
+  const fd = openSync(path, "w"); let n = 0, cols = null, buf = [];
+  const flush = () => { if (buf.length) { writeSync(fd, buf.join("\n") + "\n"); buf = []; } };
+  try {
+    for (const r of dbc.prepare(sql).iterate()) {
+      if (!cols) { cols = Object.keys(r); buf.push(cols.join(",")); }
+      buf.push(cols.map((c) => escv(r[c])).join(",")); n++;
+      if (buf.length >= 2000) flush();
+    }
+    flush();
+  } finally { closeSync(fd); }
+  return n;
+}
+
+
+====================================================================================================
+=== FILE: src/export-worker.js (3,494 chars)
+====================================================================================================
+// v0.18.84: the export runs here, in its own low-priority process, so the bot never blocks and a bot restart cannot kill a build.
+// usage: node export-worker.js <dbPath> <outDir> <mode: full | recent>  (recent = paper_trades of the last 48 h only, seconds to build)
+// Writes <outDir>/status.json while working ({state, step, steps, table, startedAt, pid}) and the zip to <outDir>/<name> when done ({state:"ready", file:{...}}).
+import Database from "better-sqlite3";
+import { mkdirSync, writeFileSync, renameSync, rmSync, statSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { setPriority } from "node:os";
+import { PAPER_SQL, CSV_EXTRA, CSV_FULL_ONLY, queryToCsvFile } from "./export-sql.js";
+import { zipFiles } from "./zip.js";
+const [dbPath, outDir, modeArg] = process.argv.slice(2); const mode = modeArg === "recent" ? "recent" : "full", full = mode === "full";
+try { setPriority(19); } catch {}
+mkdirSync(outDir, { recursive: true });
+const status = (o) => { try { writeFileSync(join(outDir, "status.json.tmp"), JSON.stringify({ ...o, pid: process.pid, full, mode, now: Math.floor(Date.now() / 1000) })); renameSync(join(outDir, "status.json.tmp"), join(outDir, "status.json")); } catch {} };
+const startedAt = Math.floor(Date.now() / 1000), day = new Date().toISOString().slice(0, 10), name = full ? `tracker_export_${day}_full.zip` : `tracker_recent_${day}_${new Date().toISOString().slice(11, 16).replace(":", "")}.zip`;
+const work = join(outDir, "work"); try { rmSync(work, { recursive: true, force: true }); } catch {} mkdirSync(work, { recursive: true });
+try {
+  const dbc = new Database(dbPath, { readonly: true, fileMustExist: true }); dbc.pragma("query_only = 1");
+  const since = Math.floor(Date.now() / 1000) - 48 * 3600;
+  const tables = full ? { paper_trades: PAPER_SQL, ...CSV_EXTRA } : { paper_trades: PAPER_SQL.replace(" FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint ORDER BY p.id", ` FROM paper_trades p LEFT JOIN tokens t ON t.mint=p.mint WHERE p.entry_ts >= ${since} ORDER BY p.id`) };
+  const list = Object.entries(tables).filter(([n]) => full || !CSV_FULL_ONLY.has(n)); const files = [], counts = []; let i = 0;
+  for (const [t, sql] of list) {
+    status({ state: "building", step: i++, steps: list.length + 1, table: t, startedAt });
+    const path = join(work, `${t}_${day}.csv`);
+    try { const n = queryToCsvFile(dbc, sql, path); if (n) { files.push({ name: `${t}_${day}.csv`, path }); counts.push(`${n} ${t.replace("_", " ")}`); } } catch (e) { console.error("[export]", t, e.message); }
+  }
+  dbc.close();
+  if (!files.length) { status({ state: "error", err: "No data yet.", startedAt }); process.exit(0); }
+  status({ state: "building", step: list.length, steps: list.length + 1, table: "zip", startedAt });
+  const tmp = join(outDir, name + ".tmp"); const size = await zipFiles(files, tmp); renameSync(tmp, join(outDir, name));
+  for (const f of readdirSync(outDir)) if (f.endsWith(".zip") && f !== name) { try { rmSync(join(outDir, f)); } catch {} } // keep one zip
+  try { rmSync(work, { recursive: true, force: true }); } catch {}
+  status({ state: "ready", startedAt, file: { name, path: join(outDir, name), size: statSync(join(outDir, name)).size, builtAt: Math.floor(Date.now() / 1000), counts, full, mode } });
+} catch (e) {
+  console.error("[export]", e.message); try { rmSync(work, { recursive: true, force: true }); } catch {}
+  status({ state: "error", err: e.message, startedAt });
+  process.exit(1);
+}
