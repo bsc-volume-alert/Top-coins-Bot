@@ -334,14 +334,14 @@ export function fdLedger(db, tdb, hours = 24, books = ["BL", "BL27", "FD", "FDL"
 }
 /** 0.9.17: raw per-position evidence for every simulated fill row — identifiers, units, the six timestamps, the reserve state each value came from (verbatim), evidence quality per field. Nothing missing is filled from current data. */
 export function fdPositions(db, hours = 24) {
-  const since = now() - hours * 3600, out = [];
+  const since = now() - hours * 3600, out = [], ep2 = db.prepare("SELECT since_ts FROM fd_rules WHERE k='H4_EPOCH2'").get()?.since_ts ?? null, wq = db.prepare("SELECT created_ts FROM fd_watch WHERE mint=?");
   for (const f of db.prepare("SELECT f.*, v.strat AS v_strat, v.entry_price, v.entry_mc, v.holders AS v_holders, v.curve AS v_curve, v.row AS v_row FROM chain_fill f LEFT JOIN vol_paper v ON v.id=f.vol_id WHERE f.entry_ts>=? ORDER BY f.entry_ts, f.vol_id").all(since)) {
     let m = {}; try { m = JSON.parse(f.v_row || "{}"); } catch {}
-    const ev = (x) => (x == null ? "unavailable" : "recorded");
+    const ev = (x) => (x == null ? "unavailable" : "recorded"), w0 = wq.get(f.mint);
     out.push({ vol_id: f.vol_id, mint: f.mint, book: f.v_strat || f.strat, entered_group: f.strat, rule_ver: VER, fill_mv: f.s_mv || "fill-1", tz: "UTC",
       units: "tokens raw (6 decimals, supply 1e9); stake SOL; fees 0.0015 SOL; prices USD/token; r = fraction of stake",
       stake_sol: f.s_sol_in, stake02_sol: f.s_tokens02 ? 0.02 : null, fee_sol: 0.0015, sol_usd: m.sol_usd ?? null,
-      ts_metric_cutoff: m.at != null && f.entry_ts ? f.entry_ts : null, ts_decision: f.entry_ts, ms_decision: f.s_ms_decision ?? null, ms_reserve_read_check: f.s_ms_read_check ?? null, ms_landing: f.s_ms_land ?? null, ts_exit: f.s_exit_ts ?? null, ms_exit: f.s_ms_exit ?? null, delay_ms: f.s_delay_ms ?? null,
+      ts_metric_cutoff: m.at != null && w0 ? w0.created_ts + m.at : null, decision_age_s: w0 ? f.entry_ts - w0.created_ts : null, timing: w0 && m.at != null ? (f.entry_ts - w0.created_ts <= m.at + 15 ? "ontime" : "late") : null, h4_epoch: f.entry_ts >= (ep2 || Infinity) ? "h4-epoch2" : "h4-epoch1", ts_decision: f.entry_ts, ms_decision: f.s_ms_decision ?? null, ms_reserve_read_check: f.s_ms_read_check ?? null, ms_landing: f.s_ms_land ?? null, ts_exit: f.s_exit_ts ?? null, ms_exit: f.s_ms_exit ?? null, delay_ms: f.s_delay_ms ?? null,
       check_mc_sol: m.mcSol ?? null, check_px_usd: f.entry_price ?? null, check_px_src: "decoded trades (Helius) market cap × SOL/USD ÷ 1e9", check_net_sol: m.net ?? null, check_holders: f.v_holders ?? null,
       reserves_at_check: f.s_res_check ?? null, reserves_at_check_ev: ev(f.s_res_check), reserves_at_fill: f.s_res_fill ?? null, reserves_at_fill_ev: f.s_fail_kind === "landing-read" ? "unavailable (landing read failed)" : f.s_entry_state === 1 ? "recorded" : f.s_tokens ? "fallback: check-time state (fill-1)" : "unavailable",
       tokens_raw: f.s_tokens ?? null, tokens02_raw: f.s_tokens02 ?? null, fill_px_usd: f.s_px ?? null, fill_over_check: f.entry_price && f.s_px ? +(f.s_px / f.entry_price).toFixed(4) : null, x0_roundtrip: f.s_x0 ?? null, gap_dec: f.s_gap_dec ?? null,
