@@ -23,9 +23,9 @@ const srv = createServer(async (req, res) => {
     if (u.pathname === "/" || u.pathname === "/radar") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(RADAR_PAGE); } // 0.7.0
     if (u.pathname === "/api/radar") { let r; try { r = radarApi(Math.min(14, Number(u.searchParams.get("days") || 3))); } catch (e) { r = { ok: false, error: e.message }; } res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); return res.end(JSON.stringify(r)); }
     if (u.pathname.startsWith("/files/")) { // 0.10.14 (owner, 5 Nov 08:05 UK: the Codex data pack as a link, not a download through the app): files in scope/files/, same key, names only
-      const name = u.pathname.slice(7); if (!/^[A-Za-z0-9._-]+\.(zip|md|csv|json|txt)$/.test(name)) { res.writeHead(404); return res.end("no such file"); }
+      const name = u.pathname.slice(7); if (!/^(snap_[A-Za-z0-9_-]+\/)?[A-Za-z0-9._-]+\.(zip|md|csv|json|txt|gz)$/.test(name) || name.includes("..")) { res.writeHead(404); return res.end("no such file"); } // 0.12.11: frozen snapshot folders (snap_*/) and .gz
       const fp = new URL("../files/" + name, import.meta.url); let st; try { st = fs.statSync(fp); } catch { res.writeHead(404); return res.end("no such file"); }
-      res.writeHead(200, { "content-type": name.endsWith(".zip") ? "application/zip" : "text/plain; charset=utf-8", "content-length": st.size, "content-disposition": `attachment; filename="${name}"`, "cache-control": "no-store" }); return fs.createReadStream(fp).pipe(res); }
+      res.writeHead(200, { "content-type": name.endsWith(".zip") ? "application/zip" : name.endsWith(".gz") ? "application/gzip" : "text/plain; charset=utf-8", "content-length": st.size, "content-disposition": `attachment; filename="${name.split("/").pop()}"`, "cache-control": "no-store" }); return fs.createReadStream(fp).pipe(res); }
     if (u.pathname === "/fd2") { res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" }); return res.end(FD2_PAGE); } // 0.12.0
     if (u.pathname === "/api/fd/live") { // 0.12.0: STOP / RESUME real buys — the launcher re-reads its switch every 5 s; open positions still sell on their trail
       if (req.method !== "POST") { res.writeHead(405); return res.end(); } const act = u.searchParams.get("act"); let r;
