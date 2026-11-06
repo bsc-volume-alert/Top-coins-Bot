@@ -128,9 +128,11 @@ export function initFD(db) {
 }
 
 /** every 15 s: every tracker launch of the last SCAN_S seconds not yet seen → funder lookup → pre-filter. */
-let scanning = false;
+let scanning = false, scanSince = 0, scanSeq = 0;
+const STALL_MS = n("LAUNCH_FD_STALL_MS", 300000); // 0.9.22: a scan or check pass that has not finished in 5 min is abandoned (its flag reset, the stall counted) — 11:06 UK: both passes hung on awaits that never settled, no error, 20+ min
 export async function fdScan(db, tdb) {
-  if (scanning || !tdb) return; scanning = true;
+  if (scanning && Date.now() - scanSince > STALL_MS) { fdStat.stalls = (fdStat.stalls || 0) + 1; fdStat.lastErr = `scan stalled ${Math.round((Date.now() - scanSince) / 60000)} min — pass abandoned`; scanning = false; }
+  if (scanning || !tdb) return; scanning = true; scanSince = Date.now(); const mySeq = ++scanSeq;
   try {
     if (fdStat.creditsDay !== today()) { fdStat.creditsDay = today(); fdStat.credits = 0; }
     const rows = tdb.prepare("SELECT mint, name, symbol, creator, create_ts, bundle_pct, bundle_sol, dev_buy_sol, peak_mc_usd, graduated FROM tokens WHERE create_ts>=? AND creator IS NOT NULL AND creator<>'' ORDER BY create_ts DESC LIMIT 400").all(now() - SCAN_S);
@@ -175,7 +177,7 @@ export async function fdScan(db, tdb) {
     }
     fdStat.lastScan = new Date().toISOString();
   } catch (e) { fdStat.errors++; fdStat.lastErr = "scan: " + e.message.slice(0, 160); }
-  finally { scanning = false; }
+  finally { if (scanSeq === mySeq) scanning = false; } // an abandoned pass ending later must not clear a newer pass
 }
 
 export function metrics(r, upto, creator = null, bundle = null) {
@@ -197,9 +199,10 @@ export function metrics(r, upto, creator = null, bundle = null) {
 }
 
 /** every 15 s: checkpoints at 60 / 90 / 120 s for launches that passed any pre-filter (and a sample of the rest for the A1 control). */
-let checking = false;
+let checking = false, checkSince = 0, checkSeq = 0;
 export async function fdCheck(db, tdb = null) {
-  if (checking) return; checking = true;
+  if (checking && Date.now() - checkSince > STALL_MS) { fdStat.stalls = (fdStat.stalls || 0) + 1; fdStat.lastErr = `check stalled ${Math.round((Date.now() - checkSince) / 60000)} min — pass abandoned`; checking = false; }
+  if (checking) return; checking = true; checkSince = Date.now(); const mySeq = ++checkSeq;
   try {
     const t = now();
     // pre-filtered launches first; then the A1 control: every 7th other launch (so the control costs ~15% of the credits of "all launches")
@@ -267,7 +270,7 @@ export async function fdCheck(db, tdb = null) {
         db.prepare("UPDATE fd_watch SET checks=?, entered=?, done=? WHERE mint=?").run(JSON.stringify(checks), [...entered].join(","), dead || entered.size === RULES.length ? 1 : 0, w.mint);
       } catch (e) { fdStat.errors++; fdStat.lastErr = `${w.mint.slice(0, 6)}: ${e.message}`.slice(0, 160); checks.push({ at, err: e.message.slice(0, 80) }); db.prepare("UPDATE fd_watch SET checks=? WHERE mint=?").run(JSON.stringify(checks), w.mint); }
     }
-  } finally { checking = false; }
+  } finally { if (checkSeq === mySeq) checking = false; }
 }
 
 /** 0.8.11: the first buyers of a launch — the create-block wallets (b0) and anyone in the first 3 s — kept per wallet so hit rates can be counted later.
