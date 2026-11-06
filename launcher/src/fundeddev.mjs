@@ -222,14 +222,16 @@ export async function fdCheck(db, tdb = null) {
     const list = db.prepare("SELECT *, rowid AS rid, (CASE WHEN pre_nb=1 OR (rowid % 7)=0 THEN 1 ELSE 0 END) AS ctl FROM fd_watch WHERE done=0 AND created_ts>=? AND (pre_nb=1 OR (rowid % 7)=0 OR screened=1) ORDER BY pre DESC, created_ts").all(t - 300);
     fdStat.open = list.length;
     // 0.9.35 (owner 20:29 UK: "carry on, don't slow it down"): launches are checked CONCURRENTLY, FD_CONCURRENCY at a time (default 3), each still under the 60-s fetch cap, same order rules, same decision records — the sequential queue was starving the checks whenever Helius was slow (23 checks in 10 min at 20:12–20:22 UK)
-    let budgetHit = false; const one = async (w) => {
+    let budgetHit = false; const passSeq = mySeq; const one = async (w) => {
       const age = t - w.created_ts, checks = JSON.parse(w.checks || "[]"), doneAt = new Set(checks.map((c) => c.at));
       if (age > CHECKS[CHECKS.length - 1] + 60) { db.prepare("UPDATE fd_watch SET done=1 WHERE mint=?").run(w.mint); return; }
       const due = CHECKS.filter((c) => c <= age && !doneAt.has(c)); if (!due.length) return;
       if (fdStat.credits >= DAY_CREDITS) { fdStat.lastErr = `daily Helius budget ${DAY_CREDITS} reached`; budgetHit = true; return; }
       const at = due[0]; // 0.9.30 (Codex/Claude reviews 6 Nov): checkpoints in order — 60 before 90 before 120 — so a late-seen launch never gets a 90-s decision without its 60-s observation (was due[due.length-1], the latest first)
       try {
-        const c0 = studyStat.credits, r = await earlyTrades(w.mint, w.created_ts + at); fdStat.credits += studyStat.credits - c0; fdStat.checks++; fdStat.lastCheck = new Date().toISOString();
+        const c0 = studyStat.credits, r = await earlyTrades(w.mint, w.created_ts + at); fdStat.credits += studyStat.credits - c0;
+        if (checkSeq !== passSeq) { fdStat.lateDrops = (fdStat.lateDrops || 0) + 1; return; } // 0.9.37 (Codex 20:36 UK): a pass the guard has abandoned writes nothing late — the result is discarded and the next pass redoes the check
+        fdStat.checks++; fdStat.lastCheck = new Date().toISOString();
         let bundle = null; if (tdb && REC_BUNDLE) try { bundle = tdb.prepare("SELECT wallet FROM cluster_wallets WHERE mint=? AND role IN ('bundle','dev')").all(w.mint).map((x) => x.wallet); } catch {} // 0.8.12: behind LAUNCH_FD_REC_BUNDLE (off) — the launcher restarted every 2–6 min after 0.8.11 with nothing in the error log (pm2 memory limit?); the tracker-table lookup and the pump.fun page fetch are the two suspects, switched off until proven
         const mm = metrics(r, (r.t0 || w.created_ts) + at, w.creator, bundle), early = mm.early; delete mm.early; // the wallets go to fd_early, not into the check row
         const m = { at, ...mm, txs: r.txs, venue: r.pumpCurve ? (r.complete ? "pump.fun graduated" : "pump.fun curve") : "other" };
@@ -283,7 +285,7 @@ export async function fdCheck(db, tdb = null) {
       } catch (e) { fdStat.errors++; if (e.incomplete) fdStat.incomplete = (fdStat.incomplete || 0) + 1; fdStat.lastErr = `${w.mint.slice(0, 6)}: ${e.message}`.slice(0, 160); checks.push({ at, err: e.message.slice(0, 80), incomplete: e.incomplete ? 1 : 0 }); db.prepare("UPDATE fd_watch SET checks=? WHERE mint=?").run(JSON.stringify(checks), w.mint);
         for (const rule of RULES) try { recordDecision(w.mint, at, t, VER, rule.k, 0, "data unavailable: " + e.message.slice(0, 60)); } catch {} } // 0.9.30: every book gets a decision row, never silence
     };
-    { const queue = [...list]; const worker = async () => { while (queue.length && !budgetHit) { const w = queue.shift(); try { await one(w); } catch (e) { fdStat.errors++; fdStat.lastErr = ("check worker: " + e.message).slice(0, 160); } } }; await Promise.all(Array.from({ length: Math.max(1, FD_CONCURRENCY) }, worker)); }
+    { const queue = [...list]; const worker = async () => { while (queue.length && !budgetHit && checkSeq === passSeq) { const w = queue.shift(); try { await one(w); } catch (e) { fdStat.errors++; fdStat.lastErr = ("check worker: " + e.message).slice(0, 160); } } }; await Promise.all(Array.from({ length: Math.max(1, FD_CONCURRENCY) }, worker)); }
   } finally { if (checkSeq === mySeq) checking = false; }
 }
 
