@@ -7,11 +7,13 @@ const WEIGHT = { "/v1/token/info": 1, "/v1/token/security": 1, "/v1/user/created
 export const gmStat = { calls: 0, errors: 0, limited: 0, lastErr: "" };
 let next = 0, chain = Promise.resolve(), pausedUntil = 0;
 const nap = (ms) => new Promise((r) => setTimeout(r, ms));
-function slot(path) { const w = WEIGHT[path] ?? 3; const p = chain.then(async () => { while (Date.now() < pausedUntil) await nap(500); const wait = next - Date.now(); if (wait > 0) await nap(wait); next = Math.max(Date.now(), next) + (w / WPS) * 1000; }); chain = p.catch(() => {}); return p; }
+// 0.9.19: two lanes. The bulk jobs (copycat price refresh, study, operators — hundreds of calls, 12-s timeouts) queue on `chain`; a call marked hi (the books' 60/90/120-s checks) only respects the pacing clock, so a restart's 40-min refresh queue can no longer starve the checks (10:09–10:3x UK, 6 Nov: 1 check in 25 min).
+async function slotHi(path) { const w = WEIGHT[path] ?? 3; while (Date.now() < pausedUntil) await nap(500); const wait = next - Date.now(); if (wait > 0) await nap(wait); next = Math.max(Date.now(), next) + (w / WPS) * 1000; }
+function slot(path, hi = false) { if (hi) return slotHi(path); const w = WEIGHT[path] ?? 3; const p = chain.then(async () => { while (Date.now() < pausedUntil) await nap(500); const wait = next - Date.now(); if (wait > 0) await nap(wait); next = Math.max(Date.now(), next) + (w / WPS) * 1000; }); chain = p.catch(() => {}); return p; }
 export const gmgnOn = () => !!KEY();
-export async function gget(path, params) {
+export async function gget(path, params, opts = {}) {
   if (!KEY()) throw new Error("no GMGN key");
-  await slot(path); gmStat.calls++;
+  await slot(path, !!opts.hi); gmStat.calls++; if (opts.hi) gmStat.hi = (gmStat.hi || 0) + 1;
   const q = new URLSearchParams({ ...params, timestamp: String(Math.floor(Date.now() / 1000)), client_id: randomUUID() });
   const r = await fetch(`${HOST}${path}?${q}`, { headers: { "X-APIKEY": KEY(), "Content-Type": "application/json" }, signal: AbortSignal.timeout(12000) });
   const text = await r.text(); let j; try { j = JSON.parse(text); } catch { gmStat.errors++; throw new Error(`GMGN HTTP ${r.status}`); }

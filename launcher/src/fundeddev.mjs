@@ -87,7 +87,7 @@ const BASE_BAR = (m) => m.net >= 15 && (m.mcSol ?? 0) >= 60; // the loosest bar 
 // 0.8.3 (13:05 UK): GMGN's price for a 60–120 s old coin can lag badly ("I voted": GMGN $2K while the chain said 115 SOL ≈ $10.6K), which would
 // flatter every paper entry. The entry price is the CHAIN price at the check (market cap in SOL × SOL/USD ÷ supply); GMGN's is kept in the row for comparison.
 let solUsd = null, solAt = 0;
-async function solPrice() { if (Date.now() - solAt < 120000 && solUsd) return solUsd; try { const w = await gget("/v1/token/info", { chain: "sol", address: "So11111111111111111111111111111111111111112" }); const v = N(w?.price?.price ?? w?.price); if (v > 0) { solUsd = v; solAt = Date.now(); } } catch {} return solUsd; }
+async function solPrice() { if (Date.now() - solAt < 120000 && solUsd) return solUsd; try { const w = await gget("/v1/token/info", { chain: "sol", address: "So11111111111111111111111111111111111111112" }, { hi: true }); const v = N(w?.price?.price ?? w?.price); if (v > 0) { solUsd = v; solAt = Date.now(); } } catch {} return solUsd; }
 export const fdStat = { scanned: 0, traced: 0, pre: 0, checks: 0, entries: 0, errors: 0, lastErr: "", credits: 0, creditsDay: "", lastScan: null, lastCheck: null, open: 0 };
 const now = () => Math.floor(Date.now() / 1000), today = () => new Date().toISOString().slice(0, 10);
 const VER = (() => { try { return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version; } catch { return null; } })(); // 0.9.9: the rule version stamped on every decision row
@@ -228,7 +228,7 @@ export async function fdCheck(db, tdb = null) {
         checks.push(m); const entered = new Set(String(w.entered || "").split(",").filter(Boolean));
         const prev = checks.slice(0, -1).filter((c) => c.at != null && !c.err);
         // 0.8.9: GMGN's token info ONCE per check (it was fetched once per rule that passed), only past the loosest bar; its holder count goes into the check row and the FDH rules
-        let info = null; if (BASE_BAR(m) && entered.size < RULES.length) { try { info = await gget("/v1/token/info", { chain: "sol", address: w.mint }); } catch {} m.holders = N(info?.holder_count) || null;
+        let info = null; if (BASE_BAR(m) && entered.size < RULES.length) { try { info = await gget("/v1/token/info", { chain: "sol", address: w.mint }, { hi: true }); } catch {} m.holders = N(info?.holder_count) || null;
           const su0 = await solPrice(); m.mcUsd = m.mcSol > 0 && su0 > 0 ? +(m.mcSol * su0).toFixed(0) : null; } // 0.9.6: market cap in USD at the check, for the U books
         // 0.9.7: a second mint launched under a name a book already entered (Gemini, 5 Nov 19:18 UK: 6 of FDL+U's 10 remaining rugs, none of its winners; the generic same-name-in-the-hour count does NOT separate) — logged on every check, not a rule
         try { const sn = db.prepare("SELECT mint, entry_ts, strat FROM vol_paper WHERE lower(name)=lower(?) AND mint<>? AND entry_ts>=? AND entry_ts<? ORDER BY entry_ts LIMIT 1").get(w.name, w.mint, t - 7200, t); if (sn) { m.same_name_mint = sn.mint; m.same_name_min = +((t - sn.entry_ts) / 60).toFixed(1); } } catch {}
