@@ -240,7 +240,7 @@ export async function fdCheck(db, tdb = null) {
           if (rule.bl && !w.screened) { recordDecision(w.mint, at, t, VER, rule.k, 0, "below the 15 SOL screen"); continue; }
           if (rule.bl && m.hist) { recordDecision(w.mint, at, t, VER, rule.k, 0, "historical observation (before the screen saw it)"); continue; }
           let ok = false; try { ok = !!rule.ok(w, m, prev); } catch {}
-          if (!ok) { recordDecision(w.mint, at, t, VER, rule.k, 0, BASE_BAR(m) ? "failed" : "below base bar"); continue; }
+          if (!ok) { recordDecision(w.mint, at, t, VER, rule.k, 0, m.mcSol == null ? (m.net >= 15 ? "price unavailable (buying passed)" : "price unavailable") : BASE_BAR(m) ? "failed" : "below base bar"); continue; } // 0.9.14: a missing market cap is recorded as unavailable, never as a failed bar (Codex 6 Nov)
           const gpx = N(info?.price?.price ?? info?.price), supply = N(info?.total_supply) || N(info?.circulating_supply) || 1e9, su = await solPrice();
           const graduated = /graduated|other/.test(m.venue || ""), px = !graduated && m.mcSol > 0 && su > 0 ? m.mcSol * su / supply : gpx; // 0.8.3: chain price on the curve; 0.8.6: GMGN's after graduation (the pool market cap from the trade decoder came out 100× on 4 Nov — "$13,737K" entries)
           if (!(px > 0)) { m["skip_" + rule.k] = "no price"; recordDecision(w.mint, at, t, VER, rule.k, 0, "no price"); continue; }
@@ -272,6 +272,49 @@ export async function fdCheck(db, tdb = null) {
 
 /** 0.8.11: the first buyers of a launch — the create-block wallets (b0) and anyone in the first 3 s — kept per wallet so hit rates can be counted later.
  *  Inserted at the first check that sees them (at most 40 wallets, biggest buys first); "exited" (sold 95%+ of what it bought) is refreshed at every check. */
+/** 0.9.14: the missed-runner ledger (Codex 6 Nov: one primary terminal reason per coin, auditable) and the inventory of recorded winners by day.
+ *  Terminal reason (first that applies): not-recorded (tracker token with no fd_watch row), not-screened, no-check (screened but no check row yet / data late),
+ *  price-unavailable (every check lacked a market cap), historical-only, below-bar (BL), qualified-no-fill, entered-stopped-out, entered-open; plus the funding books' own reason. */
+export function fdLedger(db, tdb, hours = 24) {
+  const since = now() - hours * 3600, out = [];
+  const dec = db.prepare("SELECT rule, at, passed, reason FROM fd_decisions WHERE mint=? ORDER BY at, rule"), fills = db.prepare("SELECT strat, s_px, s_hi, s_exit_x, s_exit_reason, s_r, s_r02, s_err, done FROM chain_fill WHERE mint=?");
+  const tok = tdb ? tdb.prepare("SELECT peak_mc_usd, graduated, tier FROM tokens WHERE mint=?") : null;
+  for (const w of db.prepare("SELECT *, rowid AS rid FROM fd_watch WHERE created_ts>=? ORDER BY created_ts").all(since)) { w.ctl = w.pre_nb === 1 || w.rid % 7 === 0 ? 1 : 0;
+    let checks = []; try { checks = JSON.parse(w.checks || "[]"); } catch {}
+    const c60 = checks.find((c) => c.at === 60) || checks[0] || null, ds = dec.all(w.mint), fs = fills.all(w.mint), tk = tok ? tok.get(w.mint) : null;
+    const bl = ds.filter((d) => d.rule === "BL"), fd = ds.filter((d) => d.rule === "FD"), fdl = ds.filter((d) => d.rule === "FDL");
+    const entered = fs.filter((f) => !f.s_err), mcMissing = checks.length && checks.every((c) => c.mcSol == null);
+    let reason;
+    if (!w.screened && !w.ctl && !w.pre_nb) reason = "not-screened";
+    else if (!checks.length) reason = w.done ? "no-check (window passed without a check)" : "no-check (yet)";
+    else if (checks.every((c) => c.err)) reason = "data-unavailable: " + String(checks[0].err).slice(0, 60);
+    else if (mcMissing) reason = "price-unavailable";
+    else if (bl.length && bl.every((d) => /historical/.test(d.reason))) reason = "historical-only";
+    else if (entered.length) reason = entered.every((f) => f.done) ? "entered-stopped-out" : "entered-open";
+    else if (fs.length) reason = "qualified-no-fill: " + (fs[0].s_err || "").slice(0, 60);
+    else if (bl.some((d) => d.passed)) reason = "qualified-no-fill";
+    else if (bl.length) reason = "below-bar";
+    else reason = "not-in-baseline-population";
+    const best = entered.reduce((m, f) => Math.max(m, f.s_hi || 0), 0), net = entered.reduce((a, f) => a + (f.s_r02 ?? 0), 0);
+    const px60 = c60 && c60.mcSol ? c60.mcSol / 1e9 : null, fpx = entered[0]?.s_px ?? null; // check price (SOL per token, from the market cap) vs the executable fill price — the bracket audit
+    out.push({ mint: w.mint, name: w.name, created: new Date(w.created_ts * 1000).toISOString().slice(0, 19), grp: w.grp || null, pre: w.pre, screened: w.screened || 0, screened_s: w.screened_ts ? w.screened_ts - w.created_ts : null,
+      checks: checks.map((c) => c.at).join("|"), net60: c60?.net ?? null, mc60_sol: c60?.mcSol ?? null, holders60: c60?.holders ?? null, mc_missing_checks: checks.filter((c) => c.mcSol == null).length,
+      reason, bl: bl.map((d) => d.at + ":" + (d.passed ? "entered" : d.reason)).join("|"), fd: fd.map((d) => d.at + ":" + (d.passed ? "entered" : d.reason)).join("|"), fdl: fdl.map((d) => d.at + ":" + (d.passed ? "entered" : d.reason)).join("|"),
+      books: entered.map((f) => f.strat).join("|"), best_x: best || null, net_r02: entered.length ? +net.toFixed(4) : null, exit: entered[0]?.s_exit_reason || null,
+      check_px: px60, fill_px: fpx, px_ratio: px60 && fpx ? +(fpx / px60).toFixed(2) : null, peak_mc_usd: tk?.peak_mc_usd ?? null, graduated: tk?.graduated ?? null, tracked: tk ? 1 : 0 });
+  }
+  return out;
+}
+/** 0.9.14: provisional inventory — tracker tokens by UTC day that migrated or whose recorded peak reached $100K (peak only known for tracked coins), and how far each got through the pipeline. */
+export function fdInventory(db, tdb, days = 3) {
+  if (!tdb) return []; const since = now() - days * 86400, rows = [];
+  const w = db.prepare("SELECT screened, pre_nb, checks, entered, grp FROM fd_watch WHERE mint=?"), fl = db.prepare("SELECT COUNT(*) c FROM chain_fill WHERE mint=? AND s_err IS NULL");
+  for (const t of tdb.prepare("SELECT mint, name, create_ts, peak_mc_usd, graduated FROM tokens WHERE create_ts>=? AND (graduated=1 OR peak_mc_usd>=100000) ORDER BY create_ts").all(since)) {
+    const x = w.get(t.mint); let n = 0; try { n = JSON.parse(x?.checks || "[]").length; } catch {}
+    rows.push({ day: new Date(t.create_ts * 1000).toISOString().slice(0, 10), mint: t.mint, name: t.name, peak_mc_usd: t.peak_mc_usd, graduated: t.graduated, recorded: x ? 1 : 0, grp: x?.grp || null, funding_pass: x?.pre_nb ?? null, screened: x?.screened ?? null, checks: n, entered: x ? fl.get(t.mint).c : 0 }); }
+  return rows;
+}
+
 export function recordEarly(db, w, early, r, upto) {
   if (!early || !early.length) return;
   const have = db.prepare("SELECT COUNT(*) c FROM fd_early WHERE mint=?").get(w.mint).c;
