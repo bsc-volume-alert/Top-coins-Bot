@@ -60,12 +60,12 @@ export async function runRegistry(db, tdb) {
     try { db.prepare("INSERT OR REPLACE INTO registry_runs (ts, src, ok, rows, pages, new_mints, err) VALUES (?,?,?,?,?,?,?)").run(t + (kind === "mc" ? 0 : 1), "pumpfun-" + kind, err ? 0 : 1, rows, pages, 0, err); } catch {}
   }
   // GMGN rank (0.9.25): a CURRENT ranking (top 100 by 5-min volume / by market cap), not historical crossings — a brief crossing between runs is missed; recorded as its own source
-  for (const order of ["volume", "market_cap"]) { let rows = 0, err = null;
+  for (const order of ["volume", "marketcap", "history_high"]) { let rows = 0, err = null; // 0.9.26: GMGN accepts default | swaps | marketcap | history_high (+ volume); history_high ranks by the historical high — the nearest thing to a crossing source
     try { const d = await gget("/v1/market/rank", { chain: "sol", interval: "5m", order_by: order, limit: "100" }); const list = Array.isArray(d?.rank) ? d.rank : Array.isArray(d) ? d : [];
-      for (const c of list) { rows++; const mint = c.address, mc = Number(c.market_cap || 0), created = Number(c.creation_timestamp ?? c.open_timestamp) || null; if (!mint || mc < MC_USD) continue; if (created && created < since) continue;
+      for (const c of list) { rows++; const mint = c.address, mc = Math.max(Number(c.market_cap || 0), order === "history_high" ? Number(c.history_high_market_cap ?? c.max_market_cap ?? c.ath_market_cap ?? 0) : 0), created = Number(c.creation_timestamp ?? c.open_timestamp) || null; if (!mint || mc < MC_USD) continue; if (created && created < since) continue;
         add(mint, c.name || c.symbol, created); set("UPDATE runner_registry SET src_gmgn_mc=1, gmgn_mc_usd=MAX(COALESCE(gmgn_mc_usd,0),?), reached_mc=1 WHERE mint=?", mc, mint); }
       regStat.gmgn.ok++; } catch (e) { err = e.message.slice(0, 120); regStat.gmgn.fail++; regStat.gmgn.lastErr = err; }
-    regStat.gmgn.rows += rows; try { db.prepare("INSERT OR REPLACE INTO registry_runs (ts, src, ok, rows, pages, new_mints, err) VALUES (?,?,?,?,?,?,?)").run(t + (order === "volume" ? 3 : 4), "gmgn-" + order, err ? 0 : 1, rows, 1, 0, err); } catch {} }
+    regStat.gmgn.rows += rows; try { db.prepare("INSERT OR REPLACE INTO registry_runs (ts, src, ok, rows, pages, new_mints, err) VALUES (?,?,?,?,?,?,?)").run(t + (order === "volume" ? 3 : order === "marketcap" ? 4 : 5), "gmgn-" + order, err ? 0 : 1, rows, 1, 0, err); } catch {} }
   // match against our own records
   try {
     const tok = tdb.prepare("SELECT 1 FROM tokens WHERE mint=?"), tr = tdb.prepare("SELECT COUNT(*) c FROM trades WHERE mint=?"), fw = db.prepare("SELECT grp, checks FROM fd_watch WHERE mint=?"), en = db.prepare("SELECT COUNT(*) c FROM chain_fill WHERE mint=? AND s_err IS NULL");
@@ -95,11 +95,12 @@ export function registryCoverage(db, hours = 48) { // 0.9.25: the SAME cohort as
 export function earlyCheckpoints(tdb, hours = 24, cps = [15, 30, 60, 90, 120]) {
   if (!tdb) return []; const since = now() - hours * 3600, out = [], snap = now();
   const life = tdb.prepare("SELECT cp, ts, mc, buys5m, sells5m, buyers5m, buyers_total, graduated, obs_ts, src FROM token_life WHERE mint=? AND cp<=120");
-  const obs3 = (() => { try { return tdb.prepare("SELECT MIN(ts) t FROM token_life WHERE cp=15").get()?.t ?? null; } catch { return null; } })(); // first 15-s row = when the new checkpoints went live
+  const obs3 = (() => { try { return tdb.prepare("SELECT MIN(ts) t FROM token_life WHERE cp=15").get()?.t ?? null; } catch { return null; } })(); // first 15-s row = when the new checkpoints went live (tracker 0.19.4)
+  const obs4 = (() => { try { return tdb.prepare("SELECT MIN(ts) t FROM token_life WHERE src='exact'").get()?.t ?? null; } catch { return null; } })(); // first exact-cut row (tracker 0.19.5)
   for (const k of tdb.prepare("SELECT mint, name, create_ts FROM tokens WHERE create_ts>=? ORDER BY create_ts").all(since)) {
-    const rows = new Map(life.all(k.mint).map((r) => [r.cp, r])), o = { mint: k.mint, name: k.name, create_ts: k.create_ts, tracker_epoch: obs3 && k.create_ts >= obs3 ? "obs-3" : "pre-obs-3", complete: 1 };
+    const rows = new Map(life.all(k.mint).map((r) => [r.cp, r])), o = { snapshot_ts: snap, mint: k.mint, name: k.name, create_ts: k.create_ts, tracker_epoch: obs4 && k.create_ts >= obs4 ? "obs-4" : obs3 && k.create_ts >= obs3 ? "obs-3" : "pre-obs-3", complete: 1 };
     for (const cp of cps) { const r = rows.get(cp), cut = k.create_ts + cp; o["cutoff" + cp] = cut;
-      if (!r) { o["cp" + cp] = cut > snap ? "not-due" : "missing"; o["obs" + cp] = null; o["mc" + cp] = null; o["buys" + cp] = null; o["sells" + cp] = null; o["buyers" + cp] = null; if (cut <= snap && (o.tracker_epoch === "obs-3" || cp === 60)) o.complete = 0; continue; }
+      if (!r) { o["cp" + cp] = cut > snap ? "not-due" : "missing"; o["obs" + cp] = null; o["mc" + cp] = null; o["buys" + cp] = null; o["sells" + cp] = null; o["buyers" + cp] = null; if (cut <= snap && (o.tracker_epoch !== "pre-obs-3" || cp === 60)) o.complete = 0; continue; }
       const late = r.ts - cut, exact = r.src === "exact"; o["cp" + cp] = exact ? "exact" : late <= 15 ? "ontime:" + late : "late:" + late; o["obs" + cp] = r.obs_ts ?? r.ts; o["mc" + cp] = r.mc; o["buys" + cp] = r.buys5m; o["sells" + cp] = r.sells5m; o["buyers" + cp] = r.buyers5m; if (!exact && late > 15) o.complete = 0; }
     out.push(o); }
   return out;
