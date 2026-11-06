@@ -1,0 +1,22 @@
+REGISTRY SNAPSHOT — generated 2026-11-06 13:49:52 UTC (= UK/GMT) by launcher 0.9.24 (commit f22c71a); tracker 0.19.4 (obs-3).
+Operation confirmed, completeness NOT established.
+
+Files (same key, /files/<name>?key=…):
+  runner_registry_6nov.csv   — 1,338 coins detected as migrated or >= $100K in the last 48 h, one row per mint. Columns: src_* flags per source; peak_24h_usd; life_mc_first_ts / life_grad_first_ts (event time from the lifecycle checkpoints, UTC s); pumpfun_* (empty — see below); migrated / reached_mc as separate outcomes; launch_recorded, trades_kept (count), fd_recorded, fd_grp, fd_checked (count), fd_entered (count). first_detect_ts = registry's first detection (this run for all rows — the registry is 1 run old).
+  registry_coverage_6nov.csv — by UTC day of launch.
+  early_checkpoints_6nov.csv — every launch of the last 12 h (16,570), the 15/30/60/90/120-s samples with ACTUAL observation: ontime (<= 15 s after schedule), late:<s>, missing (no trade at or after the offset while the launch was in memory, i.e. its first 5 min; or launch before obs-3). Metrics (mc, buys, sells, buyers) are from the actual sample moment; missing stays missing.
+
+Sources this run:
+  tracker token_peaks (24-h peak)        attempted, ok — but curve trades are only SEEN while a launch is in memory (5 min; 125 min if bundle tier-1 or >= 15 SOL buys in 5 min) and after migration (pool). A curve climb between minute 5 and migration on an unpromoted coin is invisible to it.
+  tracker token_life checkpoints         attempted, ok — same visibility boundary.
+  tracker tokens.graduated / peak_mc_usd attempted, ok — older marks, window-bound.
+  pump.fun public API                    attempted, FAILED both lists: HTTP 403 from the droplet (Cloudflare). So this snapshot has NO independent external source; the three tracker sources share one dependency (what the tracker saw). "pumpfun_only" = 0 is a failure artefact, not a coverage result.
+
+Counts (48 h): runners 1,338 — migrated 1,238; >= $100K 650; both 550. Launch recorded 1,338 (by construction: tracker-derived). Trades kept 656 (49%). fd_watch row 1,262. Checked at 60 s by the books 384 (29%). Entered by any book 136 (10%).
+  By day of launch: 4 Nov 460 runners (trades 195, checked 151, entered 0 — before the FD books' simulated period); 5 Nov 649 (286 / 166 / 66); 6 Nov 296 (205 / 93 / 70).
+
+Checkpoints: tracker epoch boundary obs-3 = 2026-11-06 13:42:57 UTC (first launch created under 0.19.4; epoch 1793972577). Launches under obs-3 in this snapshot: 198 (the rest, 16,372, are pre-obs-3: only the 60-s checkpoint existed).
+  obs-3 completeness (198 launches): 15 s ontime 142 / late 21 / missing 35; 30 s 122 / 33 / 43; 60 s 107 / 36 / 55; 90 s 86 / 43 / 69; 120 s 81 / 38 / 79. All five on time: 58 of 198.
+  'missing' at a later checkpoint mostly means no trade happened at or after that offset (a dead launch) — that is information, kept as missing, never zero. 'late' means the sample is the first trade after the offset; its metrics are from that later moment.
+
+Known limits of this snapshot: (1) no external source succeeded; (2) tracker restarts today at 09:43 and ~13:46 UTC lost in-flight launches' memory; (3) launcher under-checked windows 09:47–10:25 and 11:06–11:45 UTC; (4) event times exist only where a lifecycle checkpoint crossed (life_*_first_ts), not for the peak source; (5) the registry is one run old — first_detect_ts is not meaningful yet.
