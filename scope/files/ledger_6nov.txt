@@ -1,6 +1,6 @@
-LEDGER PACK — 6 Nov 2026 10:10 UK — launcher 0.9.16 (commit deb3683). Data: fd_ledger.csv (last 24 h) and fd_inventory.csv (3 days) from the launcher-data branch.
+LEDGER PACK — 6 Nov 2026 09:10 UK (all times UTC = UK/GMT) — launcher 0.9.16 (commit deb3683). Data: fd_ledger.csv (last 24 h) and fd_inventory.csv (3 days) from the launcher-data branch.
 
-Definitions: 'screened' = net buying (buys−sells, tracker trades) reached 15 SOL — live only since 09:38 UK, so before that 'not-screened' means 'outside the funding pass and the 1-in-7 control'. grp = funding label at scan. check_px = the USD/token price the book entered on (decoded market cap × SOL/USD ÷ supply); fill_px = the executable fill price from the curve/pool reserves at the same moment; px_ratio = fill_px / check_px. peak_mc_usd = the tracker's recorded peak (only tracked coins have one; the repeated ~$383K values look like an artefact — unverified).
+Definitions: 'screened' = net buying (buys−sells, tracker trades) reached 15 SOL — live since 07:38 UK (0.9.13 was screening and entering from then on while it failed to publish), so before that 'not-screened' means 'outside the funding pass and the 1-in-7 control'. grp = funding label at scan. check_px = the USD/token price the book entered on (decoded market cap × SOL/USD ÷ supply); fill_px = the executable fill price from the curve/pool reserves at the same moment; px_ratio = fill_px / check_px. peak_mc_usd = the tracker's recorded peak (only tracked coins have one; the repeated ~$383K values look like an artefact — unverified).
 
 A. Terminal reasons, all 37429 recorded launches, last 24 h:
    31624  not-screened
@@ -115,7 +115,7 @@ D. Price audit — entries where fill_px / check_px is outside 0.5–2 (44 of 27
   Red Morning | 11-06T07:07 | A1 | 136.4 | 0.00001221 | 5.47245391 | 0 | 1 | -0.3298 | 9cEKQv8jUw7WtfAdwtoBakwQnCPb4kH65zrsVxXXpump
   all entries: median ratio 1.01; <0.5: 37; >2: 7
 
-E. Screened launches since 09:38 UK (59):
+E. Screened launches since 07:38 UK (59):
   by group: {'high-count': 32, 'tool': 7, 'lookup-failed': 13, 'below-threshold': 6, '-': 1}
   by reason: {'no-check (window passed without a check)': 2, 'historical-only': 5, 'entered-stopped-out': 30, 'below-bar': 14, 'entered-open': 6, 'no-check (yet)': 2}
   name | created | grp | screened after s | net60 | mc60 | h60 | reason | BL decisions | books | best | r02
@@ -178,5 +178,7 @@ E. Screened launches since 09:38 UK (59):
   Baby Don’t Hurt Me | 08:55 | high-count | 20 | 23.18 | 87.9 | 89 | entered-stopped-out | 60:entered|90:already entered|120:already entered | BL | 1.2421 | -1.4548
   The Last Memecoin | 08:55 | high-count | 29 | 22.54 | 85.8 | 55 | entered-open | 60:entered|90:already entered|120:already entered | BL | 2.4561 | 0
   Hell On Earth | 08:56 | high-count | 30 | - | - | - | no-check (yet) |  |  | - | -
+
+CORRECTIONS 09:30 UK (after Codex's audit): prices in D were cut to 10 characters, which dropped the exponent — rampad's fill is 4.9e-8, not 4.9; the 'dollars per token' class is withdrawn. 'real-0.02 net' is a return fraction (multiple − 1 − fee/stake, floor −1.075) summed across the coin's books, not SOL — values below −1.075 are that sum. 'Entered 270, none reached $100K' used only the $100K half of the target: 101 of the 270 carry the tracker's migration flag. 'Stopped out' means closed, including closed winners. Per-position raw export to follow.
 
 F. Questions for review: (1) which of the two price faults is which — the decoded market cap at the check (bracket/GTA6/Dacity/YouTube class) vs the fill price in dollars per token on some A1 rows (rampad/Hush Envelope/token22/FDX Money/Gigafactory/Red Morning class) vs the ~25 FD-family rows on 5 Nov 12:33–22:17 whose fill sits at the curve's starting price (2.5–2.8e-6 USD) while the check said 100–230 SOL cap; (2) whether the identical ~$383K peaks are one artefact; (3) the tracker's 'migrated' flag counts 445–780 a day, about 5–7% of launches — pump.fun's usual graduation rate is nearer 1%, so the flag may mean something wider than a completed curve; unverified; (4) whether any book result that includes rows from D can be used at all before the fix.
