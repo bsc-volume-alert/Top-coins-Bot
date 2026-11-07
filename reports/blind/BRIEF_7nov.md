@@ -48,13 +48,12 @@ One evaluation script, written and frozen (committed with a hash) before 8 Nov 0
    - The sell executes on the state **as of trigger + 700 ms**, under the same validity rule.
    - At your horizon (2 h at most), it sells on the state as of the horizon, same rule.
    - **Your rule must say what happens at migration** (curve → pool), and give an exit for each reported size.
-4. **Costs:**
-   - **On-chain fees on both legs, from the venue's on-chain config:**
-     - curve: protocol ~0.95% plus creator fee (~0.30% when set)
-     - pool: LP 0.20% + protocol 0.05% + coin-creator fee
-   - Plus 0.0015 SOL fixed per round trip (transaction and priority fees).
-   - Quote asset, decimals and fee configuration are **validated per pool**: quote_mint must be wrapped SOL; base/quote decimals and fee basis points are taken from the stored evidence or the venue's on-chain config. Any pool or trade where these cannot be confirmed is **unavailable**, never assumed.
-   - States failing basic checks (non-positive reserves, curve price above the curve maximum) make the fill or exit **unavailable**.
+4. **Costs (fixed, frozen with the evaluator eval-1.0):**
+   - Per leg: curve **125 bps** (protocol 95 + creator 30); pool **30 bps** (LP 20 + protocol 5 + creator 5).
+   - Plus 0.0015 SOL fixed per round trip.
+   - Every result is also reported with the pool fee at 125 bps, as a sensitivity check, because the pool creator-fee tier is not stored per trade.
+   - Quote asset and decimals are **validated per pool row**: quote_mint must be wSOL, base_dec 6, quote_dec 9 (tracker 0.19.9 evidence). Any state that cannot be confirmed is **unavailable**.
+   - States failing basic checks (non-positive reserves, curve price above the curve maximum) are also unavailable.
 5. **Counterfactual:**
    - Our own trade is assumed **not** to change later historical prices; we sell into the recorded path.
    - This is a replay scenario with fixed latency, not proof of live fills.
@@ -79,7 +78,7 @@ One evaluation script, written and frozen (committed with a hash) before 8 Nov 0
    - DECISIONS (entry and exit triggers) may use only information received by then (`recv_ms` ≤ t; lookup and trace times for funding).
    - EXECUTION is valued on the chain state at the assumed landing time: the reserves after the last trade ordered by (slot, ev_idx, row_id) whose block time is ≤ the landing time, subject to step 2a.
    - Any rule whose decisions would need trades without `recv_ms` is scored as a **hypothetical event-time replay**, reported separately and never pooled with operational results.
-10. **The evaluator** (script, version, unit tests for sparse trades, missing states, feed gaps, migration and multi-swap transactions) will be published with a commit hash and immutable data commits before 8 Nov 00:00 UTC, and not changed afterwards.
+10. **The evaluator is published and frozen:** reports/blind/eval/ (evaluate.py, 14 unit tests, README), git tag **blind-eval-1.0**. Rules are written as a small Python module (interface in the README). Your written rule will be translated into that module and sent back to you to confirm before scoring.
 11. Write your rule so it maps onto these steps. Anything that cannot be expressed this way cannot be scored.
 
 ## Loading the data (example)
