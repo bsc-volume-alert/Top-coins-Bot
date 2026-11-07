@@ -318,3 +318,10 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - Codex: "none supported", frozen 15:22:48 UTC, commit b06fa89f (local only; push blocked) — record in reports/blind/SUBMISSION_codex_7nov_RECORD.md.
 - Gemini (Jules): two errors (16:00, 16:14 UK), no submission. Can act as reviewer of the frozen submissions instead.
 - Rules to score after 10 Nov: 1 (MIG300), K = 1.
+
+## 7 Nov 2026 22:20 UK — Entry Features & Winners, evening read (reports/analysis/entry_winners/evening_7nov)
+- 861 coins, decided 6 Nov 20:00 → 7 Nov 20:02 UTC (2-h mature), independent 0.02, earliest entry per coin: mean −22.2% [−29.3, −13.8], median −43.3%, 17% win, 37% lose ≥ 50%. No 6-h block positive (best 07 06:00 −11.4%, CI includes 0).
+- Every book negative on the mean; E90C least bad per trade (−7.2%, n 192, CI includes 0).
+- H4 matched (706 E60-eligible coins): E60 −22.3%, E90 −17.7%, E90C −2.2% per eligible coin [−7.1, +4.5]; E90C − E60 = +20.1 pts, 99% [+11.6, +27.7] — the loss reduction holds on a larger sample; E90C itself is still not shown profitable.
+- Bought already on the pool: −31.2% (226 coins) vs on the curve −18.9% (635) — the pattern from the morning holds.
+- Losses: 65% from coins never +30% while held, 24% from 1.3–2×, 11% from coins that hit 2× then lost; the 17% winners average +121%.
