@@ -22,7 +22,7 @@ RULE MODULE INTERFACE (one file per rule):
 """
 import csv, gzip, glob, json, math, os, random, sys, importlib.util, argparse, calendar, time, io, collections, bisect
 
-VERSION = "eval-1.1"  # 1.1 (7 Nov 16:05 UK, before the test start): O(1) trade views — 1.0 rebuilt the received-trade list on every call (quadratic on busy coins); scoring rules unchanged
+VERSION = "eval-1.1"  # 1.1 (7 Nov 16:20 UK, before the test start): (a) O(1) trade views — 1.0 rebuilt the received-trade list on every call (quadratic on busy coins); (b) trades streamed ONE MINT AT A TIME (1.0 held all rows in memory and was killed on 4.2M rows). Scoring rules unchanged.
 FIXED_FEE_SOL = 0.0015            # per round trip (tx + priority), charged once per position
 CURVE_FEE_BPS = 95 + 30           # pump.fun curve: protocol 95 + creator 30 bps, per leg (launcher defaults when the global config cannot be read)
 POOL_FEE_BPS = 20 + 5 + 5         # PumpSwap: LP 20 + protocol 5 + coin-creator 5 bps, per leg (ASSUMPTION; sensitivity reported at 125)
@@ -48,15 +48,6 @@ def load(d, t_from, t_to):
     for r in csv.DictReader(opn(first(d, "tokens.csv"))):
         c = fl(r["create_ts"])
         if c is not None and t_from <= c < t_to: tok[r["mint"]] = {"created": c, "tier": int(fl(r.get("tier")) or 0)}
-    trades = collections.defaultdict(list); seen = set(); dups = 0
-    for p in sorted(glob.glob(os.path.join(d, "trades_part_*.csv*"))):
-        for r in csv.DictReader(opn(p)):
-            if r["mint"] not in tok: continue
-            fp = (r["mint"], r["sig"], r["wallet"], r["is_buy"], r["sol"], r["tokens"], r["venue"], r["vsol"], r["vtok"])  # full fingerprint, never sig alone
-            if fp in seen: dups += 1; continue
-            seen.add(fp); trades[r["mint"]].append(r)
-    for m, L in trades.items():
-        L.sort(key=lambda r: (int(r["slot"]), int(fl(r["ev_idx"])) if fl(r["ev_idx"]) is not None else -1, int(r["row_id"])))
     gaps = {"main": [], "pool": []}; openat = {"main": None, "pool": None}
     p = first(d, "feed_gaps.csv")
     if p:
@@ -78,7 +69,31 @@ def load(d, t_from, t_to):
         csv.field_size_limit(10**9)
         for r in csv.DictReader(opn(p)):
             if r["mint"] in tok: meta[r["mint"]] = r
-    return tok, trades, gaps, outages, meta, dups
+    return tok, gaps, outages, meta
+
+KEEP = ("row_id", "mint", "slot", "ts", "wallet", "is_buy", "sol", "tokens", "recv_ms", "vsol", "vtok", "venue", "pool", "ev_idx", "quote_mint", "base_dec", "quote_dec", "dec_ver")
+def iter_mints(d, tok, stats):
+    """Stream the trade parts and yield (mint, rows) one mint at a time (rows deduplicated by full fingerprint, in event order).
+    The exports are grouped by mint; a mint that reappears after another mint is merged and counted in stats['non_contiguous']."""
+    cur, rows, seen, held = None, [], set(), {}
+    def flush():
+        if cur is None: return None
+        rows.sort(key=lambda r: (int(r["slot"]), int(fl(r["ev_idx"])) if fl(r["ev_idx"]) is not None else -1, int(r["row_id"])))
+        return cur, rows
+    for p in sorted(glob.glob(os.path.join(d, "trades_part_*.csv*"))):
+        for r in csv.DictReader(opn(p)):
+            m = r["mint"]
+            if m not in tok: continue
+            if m != cur:
+                out = flush()
+                if out: held_rows = out; stats["mints_streamed"] += 1; yield held_rows
+                if m in stats["_done"]: stats["non_contiguous"] += 1
+                cur, rows, seen = m, [], set(); stats["_done"].add(m)
+            fp = hash((m, r["sig"], r["wallet"], r["is_buy"], r["sol"], r["tokens"], r["venue"], r["vsol"], r["vtok"]))  # full fingerprint, never sig alone
+            if fp in seen: stats["duplicates_removed"] += 1; continue
+            seen.add(fp); rows.append({k: r.get(k, "") for k in KEEP})
+    out = flush()
+    if out: stats["mints_streamed"] += 1; yield out
 
 # ---------------------------------------------------------------- state, valuation, validity
 def state_ok(r):
@@ -187,7 +202,7 @@ def run_launch(mod, R, m, info, L, gaps, outages, meta, pool_bps):
 # ---------------------------------------------------------------- scoring
 def lcb(vals, level, n=10000, seed=20261108):
     rnd = random.Random(seed); N = len(vals); s = []
-    for _ in range(n): s.append(sum(vals[rnd.randrange(N)] for _ in range(N)) / N)
+    for _ in range(n): s.append(math.fsum(rnd.choices(vals, k=N)) / N)
     s.sort(); return s[max(0, int(math.floor((1 - level) * n)) - 1)], s
 def score(results, size, K, worst):
     N = len(results); pts, lows = [], []
@@ -214,28 +229,29 @@ def main(argv=None):
     ap.add_argument("--from", dest="t0", default="2026-11-08T00:00:00"); ap.add_argument("--to", dest="t1", default="2026-11-10T00:00:00"); ap.add_argument("--out", default="results.json")
     a = ap.parse_args(argv)
     t0 = calendar.timegm(time.strptime(a.t0, "%Y-%m-%dT%H:%M:%S")); t1 = calendar.timegm(time.strptime(a.t1, "%Y-%m-%dT%H:%M:%S"))
-    tok, trades, gaps, outages, meta, dups = load(a.data, t0, t1)
+    tok, gaps, outages, meta = load(a.data, t0, t1)
+    mods = []
+    for path in a.rules:
+        spec = importlib.util.spec_from_file_location("rule_" + os.path.basename(path).replace(".", "_"), path); mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+        mods.append((path, mod, mod.RULE, [], [], [0]))
+    stats = {"mints_streamed": 0, "duplicates_removed": 0, "non_contiguous": 0, "_done": set()}; N = 0
     # common denominator: launches created in the window, retained at any point, and not inside a tracker outage over [created, created+2h]
-    universe = []
-    for m, info in tok.items():
-        L = trades.get(m, [])
-        if not L: continue
-        cum, ret = 0.0, info["tier"] >= 1
+    for m, L in iter_mints(a.data, tok, stats):
+        info = tok[m]; cum, ret = 0.0, info["tier"] >= 1
         for r in L:
             if r["venue"] in ("curve", "") and r["is_buy"] == "1": cum += fl(r["sol"]) or 0
             if cum >= RETAIN_SOL: ret = True; break
-        if ret and not any(s < info["created"] + 7200 and e > info["created"] for s, e in outages): universe.append(m)
-    K = len(a.rules); report = {"version": VERSION, "window": [a.t0, a.t1], "launches_in_window": len(tok), "N_common": len(universe), "duplicates_removed": dups,
-                                "assumptions": {"curve_fee_bps": CURVE_FEE_BPS, "pool_fee_bps": POOL_FEE_BPS, "fixed_fee_sol": FIXED_FEE_SOL, "land_buy_s": LAND_BUY_S, "land_sell_s": LAND_SELL_S}, "rules": {}}
-    for path in a.rules:
-        spec = importlib.util.spec_from_file_location("rule_" + os.path.basename(path).replace(".", "_"), path); mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
-        R = mod.RULE; res, hyp = [], 0
-        for m in universe:
-            r, h = run_launch(mod, R, m, tok[m], trades[m], gaps, outages, meta, POOL_FEE_BPS); res.append(r); hyp += h and r["cat"] != "abstain"
-        sens = []
-        for m in universe:
-            r, _ = run_launch(mod, R, m, tok[m], trades[m], gaps, outages, meta, 125); sens.append(r)
-        report["rules"][R["name"]] = {"file": path, "spec": R, "event_time_hypothetical_entries": hyp,
+        if not ret or any(s_ < info["created"] + 7200 and e_ > info["created"] for s_, e_ in outages): continue
+        N += 1
+        for path, mod, R, res, sens, hyp in mods:
+            r, h = run_launch(mod, R, m, info, L, gaps, outages, meta, POOL_FEE_BPS); res.append(r); hyp[0] += 1 if (h and r["cat"] != "abstain") else 0
+            r2, _ = run_launch(mod, R, m, info, L, gaps, outages, meta, 125); sens.append(r2)
+    if stats["non_contiguous"]: print("WARNING: mints not contiguous in the export:", stats["non_contiguous"], "- results for those mints are split; re-export grouped by mint", file=sys.stderr)
+    K = len(mods); report = {"version": VERSION, "window": [a.t0, a.t1], "launches_in_window": len(tok), "N_common": N, "duplicates_removed": stats["duplicates_removed"],
+                             "mints_streamed": stats["mints_streamed"], "non_contiguous_mints": stats["non_contiguous"],
+                             "assumptions": {"curve_fee_bps": CURVE_FEE_BPS, "pool_fee_bps": POOL_FEE_BPS, "fixed_fee_sol": FIXED_FEE_SOL, "land_buy_s": LAND_BUY_S, "land_sell_s": LAND_SELL_S}, "rules": {}}
+    for path, mod, R, res, sens, hyp in mods:
+        report["rules"][R["name"]] = {"file": path, "spec": R, "event_time_hypothetical_entries": hyp[0],
             "by_size": {str(s): score(res, s, K, (s + FIXED_FEE_SOL) / s) for s in R.get("sizes", [0.2])},
             "pool_fee_125bps_sensitivity": {str(s): score(sens, s, K, (s + FIXED_FEE_SOL) / s) for s in R.get("sizes", [0.2])}}
     json.dump(report, open(a.out, "w"), indent=1, default=str); print(json.dumps(report, indent=1, default=str)[:4000])
