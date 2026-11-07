@@ -11,11 +11,35 @@ Paper research only. You must not trade, change the bot, or ask for live trading
 - **Development data:** everything published up to the cutoff below. Use it however you like.
 - **Hidden test period:** launches created **8 Nov 2026 00:00 UTC → 10 Nov 2026 00:00 UTC**. Nobody has seen it, because it has not happened yet. The bot will collect it the same way.
 - **Freeze your rule before 8 Nov 00:00 UTC:**
-  - one primary rule, plus at most two alternates
+  - **one primary rule** (no alternates)
   - written precisely enough that someone else could code it from your description alone
   - with a timestamp
 - After 10 Nov, each frozen rule is replayed on the test period with the same cost and execution model. **Only test-period results count.** You may not change a rule after it is frozen.
 - **Report how many rules, thresholds and features you tried in development.** More searching means a higher chance of finding a lucky pattern.
+- **Universe:** a rule can only be evaluated on launches that have trade-level history. That means launches the tracker retained (15-SOL net-buying screen or bundle test), plus pool trades of every launch for 24 h after creation from 7 Nov 09:47 UTC. A rule that needs launches outside this universe cannot be scored. Say so if your rule depends on that.
+- **Independence:** submit your rule BEFORE reading anyone else's work. Critiques are exchanged only afterwards. If you revise after seeing test results, the revision needs a new, untouched test period.
+
+## How rules will be evaluated (fixed before the test starts)
+One evaluation script, written and frozen (committed with a hash) before 8 Nov 00:00 UTC and not changed afterwards, will score every submitted rule the same way:
+1. **Entry:** your rule is applied to each launch in the test period. It may use only data observable at its decision time t: the launch's trades with timestamp ≤ t, and the creator, funding and bundle fields recorded at or before t. Recognition delay: none beyond what your rule specifies.
+2. **Fill:** the buy executes on the first recorded trade state at or after t + 1,000 ms (reserves after that trade). Stake 0.2 SOL, and 0.02 SOL reported separately.
+3. **Exit:** your exit condition is evaluated trade by trade on the recorded path after the fill. The sell executes on the first trade state at or after trigger + 700 ms. If there is no exit by your horizon (2 h at most), it sells at the horizon.
+4. **Cost:** fee 0.0015 SOL per round trip. Price impact comes from the reserve state at the fill and exit trades.
+5. **Reported:**
+   - per unique coin and per position: number of entries, mean and median return, win rate, 95% bootstrap interval (resampling coins)
+   - result without the best coin
+   - share of entries losing ≥ 50%
+   - entries skipped because of missing data
+6. Write your rule so it maps onto these steps. Anything that cannot be expressed this way cannot be scored.
+
+## Loading the data (example)
+```
+git clone --branch entry-snap-7nov-1154 --depth 1 https://github.com/bsc-volume-alert/Top-coins-Bot.git snap3
+cd snap3 && sha256sum -c SHA256SUMS.txt && gunzip -k *.csv.gz
+python3 -c "import csv; r=list(csv.DictReader(open('fd_positions.csv'))); print(len(r), r[0].keys())"
+# supplement (uncapped trades): same pattern with --branch entry-supp-20261107t1433, files trades_part_*.csv.gz,
+# coverage_per_mint.csv.gz, feed_gaps_all.csv.gz — order within a mint: slot, ev_idx, row_id.
+```
 
 ## The data (all on GitHub, repo bsc-volume-alert/Top-coins-Bot)
 | What | Where | Cutoff |
@@ -60,7 +84,7 @@ Every file has sha256 checksums in its MANIFEST. Read the MANIFESTs fully: they 
 - You may ask the owner for additional existing data. You may not ask for new collection or code changes to the bot as part of this test.
 
 ## What to hand back (one document)
-1. **Your frozen rule(s):** exact entry conditions, exit conditions, sizing and timestamp.
+1. **Your frozen rule:** exact entry conditions, exit conditions, sizing and timestamp, written to map onto the evaluation steps above.
 2. **Development results:** both halves separately, with the numbers above.
 3. **Everything you tried:** a count and a list.
 4. **What you believe and why**, what would change your mind, and the main risks: data problems, execution, overfitting.
