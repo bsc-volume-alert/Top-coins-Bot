@@ -385,39 +385,44 @@ function status() {
     accounts: CFG.ACCOUNTS, twitter: { keySet: !!CFG.TWITTER_KEY, ...twStat }, ai: !!CFG.AI_KEY, aiStat, meta: metaStat, rpc: rpcStats, trackerDb: !!tdb, lastSweep: kvGet("lastSweep"), lastFeeCollect: kvGet("lastFeeCollect"), phantom: PHANTOM };
 }
 let pushing = false, soon = null;
-function exportNow() {
+let exportBusy = false;
+// 0.9.43: the export yields to the event loop between parts (it blocked the launcher 31–49 s per run at 03:52–03:57 UK; largest part token_life 7.6 s), so checks and
+// traces run in between. Files are then read over ~30 s instead of one instant — each file is still internally consistent; cross-file joins may differ by seconds.
+// exportBusy: never two exports at once (the timer, exportSoon and the study callback all call it).
+async function exportNow() { if (exportBusy) return; exportBusy = true; try { await exportBody(); } finally { exportBusy = false; } }
+async function exportBody() {
   const exportT0 = Date.now(); let exportPrev = exportT0; exportStat.parts = {}; const exportMark = (k) => { const t = Date.now(); exportStat.parts[k] = t - exportPrev; exportPrev = t; }; // 0.9.42: time of each export part (ms) — the whole export blocked the launcher 49 s at 03:52 UK
   try {
     csvOut(`${CFG.OUT_DIR}/launches.csv`, (db.prepare("SELECT * FROM launches ORDER BY id").iterate()));
-    exportMark("launches");
+    exportMark("launches"); await new Promise((r) => setImmediate(r));
     csvOut(`${CFG.OUT_DIR}/posts.csv`, (db.prepare("SELECT id, user, kind, text, parent_id, parent_user, parent_text, created_ms, recv_ms, ctx_ms FROM posts WHERE recv_ms>=? ORDER BY recv_ms").iterate((now() - 7 * 86400) * 1000)));
-    exportMark("posts");
+    exportMark("posts"); await new Promise((r) => setImmediate(r));
     try { csvOut(`${CFG.OUT_DIR}/copies.csv`, (db.prepare("SELECT * FROM copies ORDER BY launch_id, created_ts").iterate())); csvOut(`${CFG.OUT_DIR}/copy_picks.csv`, (db.prepare("SELECT * FROM copy_picks ORDER BY launch_id").iterate())); csvOut(`${CFG.OUT_DIR}/copy_peaks.csv`, (db.prepare("SELECT * FROM copy_peaks ORDER BY peak_mc DESC").iterate())); } catch {}
-    exportMark("copies");
+    exportMark("copies"); await new Promise((r) => setImmediate(r));
     try { csvOut(`${CFG.OUT_DIR}/operators.csv`, (db.prepare("SELECT * FROM operators ORDER BY coins DESC, runners DESC").iterate())); csvOut(`${CFG.OUT_DIR}/operator_coins.csv`, (db.prepare("SELECT * FROM operator_coins ORDER BY anchor, mint").iterate())); csvOut(`${CFG.OUT_DIR}/wallet_trace.csv`, (db.prepare("SELECT * FROM wallet_trace ORDER BY checked_ts").iterate())); csvOut(`${CFG.OUT_DIR}/wallet_out.csv`, (db.prepare("SELECT * FROM wallet_out WHERE dest<>'' ORDER BY ts").iterate())); csvOut(`${CFG.OUT_DIR}/snipers.csv`, (db.prepare("SELECT * FROM snipers ORDER BY coins DESC, runners DESC").iterate())); csvOut(`${CFG.OUT_DIR}/creator_trace.csv`, (db.prepare("SELECT * FROM creator_trace WHERE create_ts>=? ORDER BY create_ts DESC").iterate(Math.floor(Date.now() / 1000) - 7 * 86400))); csvOut(`${CFG.OUT_DIR}/fd_watch.csv`, (db.prepare("SELECT * FROM fd_watch WHERE created_ts>=? ORDER BY created_ts DESC").iterate(Math.floor(Date.now() / 1000) - 36 * 3600))); csvOut(`${CFG.OUT_DIR}/fd_early.csv`, (db.prepare("SELECT * FROM fd_early WHERE created_ts>=? ORDER BY created_ts DESC").iterate(Math.floor(Date.now() / 1000) - 86400))); csvOut(`${CFG.OUT_DIR}/fd_sniper_stats.csv`, (db.prepare("SELECT * FROM fd_sniper_stats ORDER BY launches DESC").iterate())); csvOut(`${CFG.OUT_DIR}/fd_quotes.csv`, (db.prepare("SELECT * FROM fd_quotes ORDER BY ts DESC LIMIT 5000").iterate())); } catch {}
-    exportMark("operators");
+    exportMark("operators"); await new Promise((r) => setImmediate(r));
     try { csvOut(`${CFG.OUT_DIR}/rf_watch.csv`, (db.prepare("SELECT * FROM rf_watch ORDER BY created_ts").iterate())); } catch {}
-    exportMark("rf_watch");
+    exportMark("rf_watch"); await new Promise((r) => setImmediate(r));
     try { csvOut(`${CFG.OUT_DIR}/vol_paper.csv`, (db.prepare("SELECT * FROM vol_paper ORDER BY id").iterate())); } catch {}
-    exportMark("vol_paper");
+    exportMark("vol_paper"); await new Promise((r) => setImmediate(r));
     try { csvOut(`${CFG.OUT_DIR}/live_trades.csv`, (db.prepare("SELECT * FROM live_trades ORDER BY id").iterate())); } catch {} // 0.8.17
-    exportMark("live_trades");
+    exportMark("live_trades"); await new Promise((r) => setImmediate(r));
     try { csvOut(`${CFG.OUT_DIR}/chain_fill.csv`, (db.prepare("SELECT * FROM chain_fill ORDER BY vol_id").iterate())); } catch {} // 0.9.0
-    exportMark("chain_fill");
+    exportMark("chain_fill"); await new Promise((r) => setImmediate(r));
     try { csvOut(`${CFG.OUT_DIR}/fd_hgrowth.csv`, (db.prepare("SELECT * FROM fd_hgrowth ORDER BY ts").iterate())); } catch {} // 0.9.6: holder growth 60 → 120 s on the U books' coins
-    exportMark("fd_hgrowth");
+    exportMark("fd_hgrowth"); await new Promise((r) => setImmediate(r));
     try { csvOut(`${CFG.OUT_DIR}/buyer_funding.csv`, (db.prepare("SELECT * FROM buyer_funding WHERE ts>=? ORDER BY mint, sol_in DESC").iterate(now() - 48 * 3600))); csvOut(`${CFG.OUT_DIR}/buyer_funding_sum.csv`, (db.prepare("SELECT * FROM buyer_funding_sum ORDER BY ts").iterate())); } catch {} // 0.9.11
-    exportMark("buyer_funding");
+    exportMark("buyer_funding"); await new Promise((r) => setImmediate(r));
     try { csvOut(`${CFG.OUT_DIR}/farm_dumps.csv`, (db.prepare("SELECT * FROM farm_dumps ORDER BY dump_ts").iterate())); csvOut(`${CFG.OUT_DIR}/farm_wallets.csv`, (db.prepare("SELECT * FROM farm_wallets ORDER BY dump_ts, mint").iterate())); } catch {} // 0.9.9
-    exportMark("farm");
+    exportMark("farm"); await new Promise((r) => setImmediate(r));
     try { csvOut(`${CFG.OUT_DIR}/fd_ledger.csv`, (fdLedger(db, tdb, 24))); csvOut(`${CFG.OUT_DIR}/fd_positions.csv`, (fdPositions(db, 24))); csvOut(`${CFG.OUT_DIR}/fd_inventory.csv`, (fdInventory(db, tdb, 3))); csvOut(`${CFG.OUT_DIR}/fd_coverage.csv`, (fdCoverage(db, tdb, 24))); csvOut(`${CFG.OUT_DIR}/runner_registry.csv`, (registryRows(db, 48))); csvOut(`${CFG.OUT_DIR}/registry_coverage.csv`, (registryCoverage(db, 48))); csvOut(`${CFG.OUT_DIR}/early_checkpoints.csv`, (earlyCheckpoints(tdb, 12))); } catch (e) { console.error("[export ledger]", e.message); } // 0.9.14
-    exportMark("ledger_registry");
+    exportMark("ledger_registry"); await new Promise((r) => setImmediate(r));
     try { if (tdb) { csvOut(`${CFG.OUT_DIR}/token_life.csv`, (tdb.prepare("SELECT l.mint, l.cp, l.ts, l.obs_ts, l.src, l.mc, l.vol5m_usd, l.buys5m, l.sells5m, l.buyers5m, l.buyers_total, l.graduated, l.top10_pct, l.holders, l.alive FROM token_life l JOIN tokens k ON k.mint=l.mint WHERE k.create_ts>=? ORDER BY l.mint, l.cp").iterate(now() - 12 * 3600))); /* 0.9.33: 12 h (48 h was ~380k rows, ~150 MB of transient heap every export; rss hit 597 MB against the 600 MB pm2 cap at 19:48 UK) */ csvOut(`${CFG.OUT_DIR}/feed_gaps.csv`, (tdb.prepare("SELECT * FROM feed_gaps ORDER BY rowid DESC LIMIT 5000").iterate())); } } catch (e) { console.error("[export token_life]", e.message); } // 0.9.29 (Codex 18:31 UK): the lifecycle checkpoints of every launch (48 h) and the feed gaps
-    exportMark("token_life");
+    exportMark("token_life"); await new Promise((r) => setImmediate(r));
     try { if (tdb) csvOut(`${CFG.OUT_DIR}/tracker_tokens.csv`, (tdb.prepare("SELECT mint, name, symbol, creator, create_ts, create_slot, bundle_sol, bundle_pct, bundle_wallets, dev_buy_sol, tier, finalized, graduated, peak_mc_usd, last_mc_usd, outside_buyers, handoffs FROM tokens WHERE create_ts>=? ORDER BY create_ts").iterate(now() - 48 * 3600))); } catch (e) { console.error("[export tracker_tokens]", e.message); } // 0.9.27: the launch census (Codex: launches.csv is the X-post launcher's own record, not the tracker's)
-    exportMark("tracker_tokens");
+    exportMark("tracker_tokens"); await new Promise((r) => setImmediate(r));
     try { const since = now() - 24 * 3600; csvOut(`${CFG.OUT_DIR}/fd_decisions.csv`, (db.prepare("SELECT d.*, w.created_ts, (d.ts - w.created_ts) AS decision_age_s, (w.created_ts + d.at) AS metric_cutoff_ts, (CASE WHEN d.ts - w.created_ts <= d.at + 15 THEN 'ontime' ELSE 'late' END) AS timing, (CASE WHEN d.ts >= (SELECT since_ts FROM fd_rules WHERE k='H4_EPOCH2') THEN 'h4-epoch2' ELSE 'h4-epoch1' END) AS epoch FROM fd_decisions d LEFT JOIN fd_watch w ON w.mint=d.mint WHERE d.ts>=? ORDER BY d.ts, d.mint, d.rule").iterate(since))); /* 0.9.31: decision age, cutoff, timing and epoch on EVERY decision row (abstentions and unavailable included) */ csvOut(`${CFG.OUT_DIR}/fd_wallet_state.csv`, (db.prepare("SELECT s.* FROM fd_wallet_state s JOIN (SELECT mint FROM fd_watch WHERE created_ts>=?) w ON w.mint=s.mint ORDER BY s.mint, s.at, s.sol_in DESC").iterate(now() - 12 * 3600))); } catch {} // 0.9.9
-    exportMark("fd_decisions");
+    exportMark("fd_decisions"); await new Promise((r) => setImmediate(r));
     // 0.9.7 (owner, 5 Nov 19:27 UK: "why not everything now"): the tracker already keeps every trade (wallet, slot, signature, SOL, tokens, price) of bundle tier-1 launches for 30 min,
     // and from tracker v0.19 of every launch that reaches 15 SOL of buys — the dump transactions of the books' coins. Exported for the coins entered in the last LAUNCH_TRADES_HOURS hours.
     try { if (tdb) { const hrs = Number(process.env.LAUNCH_TRADES_HOURS || 8), since = Math.floor(Date.now() / 1000) - hrs * 3600;
@@ -426,13 +431,13 @@ function exportNow() {
       function* allTrades() { for (const m of mints) yield* q.iterate(m); }
       const r = csvOut(`${CFG.OUT_DIR}/trades_books.csv`, allTrades(), 90 * 1048576); // 0.9.41: GitHub refuses files over 100 MB (the 01:38–03:27 UK publishing blackout) — cut at 90 MB, recorded in status
       exportStat.tradesBooks = { hours: hrs, coins: mints.length, rows: r.rows, mb: +(r.bytes / 1048576).toFixed(1), truncated: r.truncated }; if (r.truncated) console.error(`[export trades_books] cut at 90 MB: ${r.rows} rows`); } } catch (e) { console.error("[export trades_books]", e.message); }
-    exportMark("trades_books");
+    exportMark("trades_books"); await new Promise((r) => setImmediate(r));
     // 0.8.14: the study files (2 MB + 20 MB, ~150 MB of heap to build) only when the study has changed or once an hour — building them every 10 min on a 300 MB pm2 limit is what restarted the launcher every 90 s on 5 Nov 00:05–01:00 UK
     if (studyStat.studied !== lastStudyExport.n || Date.now() - lastStudyExport.t > 3600000) { lastStudyExport = { n: studyStat.studied, t: Date.now() };
     try { linesOut(`${CFG.OUT_DIR}/study_coins.jsonl`, db.prepare("SELECT * FROM study_coins ORDER BY studied_ts").iterate(), (r) => JSON.stringify({ ...r, data: JSON.parse(r.data || "{}") })); linesOut(`${CFG.OUT_DIR}/study_buyers.jsonl`, db.prepare("SELECT * FROM study_buyers ORDER BY mint, rank").iterate(), (r) => JSON.stringify({ mint: r.mint, wallet: r.wallet, rank: r.rank, ...JSON.parse(r.data || "{}") })); } catch {} }
-    exportMark("study");
+    exportMark("study"); await new Promise((r) => setImmediate(r));
     linesOut(`${CFG.OUT_DIR}/raw_events.jsonl`, db.prepare("SELECT raw FROM posts WHERE raw IS NOT NULL ORDER BY recv_ms").iterate(), (r) => r.raw);
-    exportMark("raw_events");
+    exportMark("raw_events"); await new Promise((r) => setImmediate(r));
     exportStat.lastMs = Date.now() - exportT0; { const m = process.memoryUsage(); exportStat.rssMb = Math.round(m.rss / 1048576); exportStat.heapMb = Math.round(m.heapUsed / 1048576); }
     writeFileSync(`${CFG.OUT_DIR}/status.json`, JSON.stringify(status(), null, 1)); st.exports++;
     if (process.env.LAUNCH_NO_PUSH || CFG.SMOKE || pushing) return; pushing = true;
