@@ -361,22 +361,20 @@ const csv = (rows) => { if (!rows.length) return ""; const cols = Object.keys(ro
 // <file>.tmp, renamed over the file only once complete. The whole file is never held as one string, so export memory no longer grows with the file (0.9.39 built
 // ~100 MB strings and crashed on the 400 MB heap 22 times, 00:06–03:26 UK). Same bytes as csv(): header, then "\n"-joined rows, no trailing newline; no rows → empty file.
 // maxBytes: stop at that size (newest rows must come first) and return {rows, bytes, truncated} so the cut is recorded, never silent.
-function streamOut(path, iter, line, header, maxBytes = Infinity) {
-  const tmp = path + ".tmp"; const fd = openSync(tmp, "w"); let buf = [], size = 0, bytes = 0, rows = 0, truncated = false, first = true;
-  const flush = () => { if (buf.length) { const s = buf.join(""); writeSync(fd, s); bytes += Buffer.byteLength(s); buf = []; size = 0; } };
-  try {
-    for (const r of iter) {
-      let t = line(r); if (first) { const h = header ? header(r) : null; if (h != null) t = h + "\n" + t; first = false; } else t = "\n" + t;
-      if (bytes + size + t.length > maxBytes) { truncated = true; break; }
-      buf.push(t); size += t.length; rows++; if (size > 1048576) flush();
-    }
-    flush(); closeSync(fd); renameSync(tmp, path); return { rows, bytes, truncated };
-  } catch (e) { try { closeSync(fd); } catch {} try { unlinkSync(tmp); } catch {} throw e; }
-}
-const csvE = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
-function csvOut(path, iter, maxBytes) { let cols = null; return streamOut(path, iter, (r) => { if (!cols) cols = Object.keys(r); return cols.map((c) => csvE(r[c])).join(","); }, (r) => Object.keys(r).join(","), maxBytes); }
-function linesOut(path, iter, fn) { return streamOut(path, iter, fn, null); }
+import { streamOut, csvOut, linesOut } from "./csvout.mjs"; // 0.9.46: moved to its own module so the export worker can use it
+import { Worker } from "node:worker_threads";
 const exportStat = { lastMs: 0, tradesBooks: null };
+// 0.9.46: the exports that read the TRACKER database (token_life 18.5 s, trades_books, tracker_tokens, feed_gaps at 04:12 UK) run in a worker thread with its own
+// read-only connection, so they no longer block checks at all. One job at a time; a job that runs over 180 s is abandoned and the worker replaced (its .tmp file is
+// never renamed, so no partial file is published). Worker heap capped at 512 MB.
+let exportWorker = null, workerJob = 0; const workerWaits = new Map();
+function inWorker(msg, ms = 180000) {
+  if (!exportWorker) { exportWorker = new Worker(new URL("./exportworker.mjs", import.meta.url), { resourceLimits: { maxOldGenerationSizeMb: 512 } });
+    exportWorker.on("message", (m) => { const w = workerWaits.get(m.id); if (w) { workerWaits.delete(m.id); clearTimeout(w.t); m.ok ? w.res(m.r) : w.rej(new Error(m.err)); } });
+    const dead = (e) => { for (const w of workerWaits.values()) { clearTimeout(w.t); w.rej(new Error("export worker stopped: " + (e?.message || e))); } workerWaits.clear(); exportWorker = null; };
+    exportWorker.on("error", dead); exportWorker.on("exit", (c) => { if (exportWorker) dead("exit " + c); }); }
+  const id = ++workerJob; return new Promise((res, rej) => { const t = setTimeout(() => { workerWaits.delete(id); const w = exportWorker; exportWorker = null; try { w?.terminate(); } catch {} rej(new Error("export worker timed out")); }, ms); workerWaits.set(id, { res, rej, t }); exportWorker.postMessage({ ...msg, id, db: CFG.TRACKER_DB }); });
+}
 export // 0.9.14: declared at module level — 0.9.13 had it inside the !SMOKE block, so status() threw ReferenceError on every export and nothing was published for 66 min
 const scopeStat = { probes: 0, fails: 0, consecutive: 0, reloads: 0, lastReload: null, lastErr: "" };
 function status() {
@@ -423,9 +421,9 @@ async function exportBody() {
     try { csvOut(`${CFG.OUT_DIR}/runner_registry.csv`, (registryRows(db, 48))); } catch (e) { console.error("[export runner_registry]", e.message); } exportMark("runner_registry"); await new Promise((r) => setImmediate(r));
     try { csvOut(`${CFG.OUT_DIR}/registry_coverage.csv`, (registryCoverage(db, 48))); } catch (e) { console.error("[export registry_coverage]", e.message); } exportMark("registry_coverage"); await new Promise((r) => setImmediate(r));
     try { csvOut(`${CFG.OUT_DIR}/early_checkpoints.csv`, (earlyCheckpoints(tdb, 12))); } catch (e) { console.error("[export early_checkpoints]", e.message); } exportMark("early_checkpoints"); await new Promise((r) => setImmediate(r));
-    try { if (tdb) { csvOut(`${CFG.OUT_DIR}/token_life.csv`, (tdb.prepare("SELECT l.mint, l.cp, l.ts, l.obs_ts, l.src, l.mc, l.vol5m_usd, l.buys5m, l.sells5m, l.buyers5m, l.buyers_total, l.graduated, l.top10_pct, l.holders, l.alive FROM token_life l JOIN tokens k ON k.mint=l.mint WHERE k.create_ts>=? ORDER BY l.mint, l.cp").iterate(now() - 12 * 3600))); /* 0.9.33: 12 h (48 h was ~380k rows, ~150 MB of transient heap every export; rss hit 597 MB against the 600 MB pm2 cap at 19:48 UK) */ csvOut(`${CFG.OUT_DIR}/feed_gaps.csv`, (tdb.prepare("SELECT * FROM feed_gaps ORDER BY rowid DESC LIMIT 5000").iterate())); } } catch (e) { console.error("[export token_life]", e.message); } // 0.9.29 (Codex 18:31 UK): the lifecycle checkpoints of every launch (48 h) and the feed gaps
+    try { if (tdb) { await inWorker({ path: `${CFG.OUT_DIR}/token_life.csv`, sql: "SELECT l.mint, l.cp, l.ts, l.obs_ts, l.src, l.mc, l.vol5m_usd, l.buys5m, l.sells5m, l.buyers5m, l.buyers_total, l.graduated, l.top10_pct, l.holders, l.alive FROM token_life l JOIN tokens k ON k.mint=l.mint WHERE k.create_ts>=? ORDER BY l.mint, l.cp", params: [now() - 12 * 3600] }); /* 0.9.33: 12 h (48 h was ~380k rows, ~150 MB of transient heap every export; rss hit 597 MB against the 600 MB pm2 cap at 19:48 UK) */ await inWorker({ path: `${CFG.OUT_DIR}/feed_gaps.csv`, sql: "SELECT * FROM feed_gaps ORDER BY rowid DESC LIMIT 5000", params: [] }); } } catch (e) { console.error("[export token_life]", e.message); } // 0.9.29 (Codex 18:31 UK): the lifecycle checkpoints of every launch (48 h) and the feed gaps
     exportMark("token_life"); await new Promise((r) => setImmediate(r));
-    try { if (tdb) csvOut(`${CFG.OUT_DIR}/tracker_tokens.csv`, (tdb.prepare("SELECT mint, name, symbol, creator, create_ts, create_slot, bundle_sol, bundle_pct, bundle_wallets, dev_buy_sol, tier, finalized, graduated, peak_mc_usd, last_mc_usd, outside_buyers, handoffs FROM tokens WHERE create_ts>=? ORDER BY create_ts").iterate(now() - 48 * 3600))); } catch (e) { console.error("[export tracker_tokens]", e.message); } // 0.9.27: the launch census (Codex: launches.csv is the X-post launcher's own record, not the tracker's)
+    try { if (tdb) await inWorker({ path: `${CFG.OUT_DIR}/tracker_tokens.csv`, sql: "SELECT mint, name, symbol, creator, create_ts, create_slot, bundle_sol, bundle_pct, bundle_wallets, dev_buy_sol, tier, finalized, graduated, peak_mc_usd, last_mc_usd, outside_buyers, handoffs FROM tokens WHERE create_ts>=? ORDER BY create_ts", params: [now() - 48 * 3600] }); } catch (e) { console.error("[export tracker_tokens]", e.message); } // 0.9.27: the launch census (Codex: launches.csv is the X-post launcher's own record, not the tracker's)
     exportMark("tracker_tokens"); await new Promise((r) => setImmediate(r));
     try { const since = now() - 24 * 3600; csvOut(`${CFG.OUT_DIR}/fd_decisions.csv`, (db.prepare("SELECT d.*, w.created_ts, (d.ts - w.created_ts) AS decision_age_s, (w.created_ts + d.at) AS metric_cutoff_ts, (CASE WHEN d.ts - w.created_ts <= d.at + 15 THEN 'ontime' ELSE 'late' END) AS timing, (CASE WHEN d.ts >= (SELECT since_ts FROM fd_rules WHERE k='H4_EPOCH2') THEN 'h4-epoch2' ELSE 'h4-epoch1' END) AS epoch FROM fd_decisions d LEFT JOIN fd_watch w ON w.mint=d.mint WHERE d.ts>=? ORDER BY d.ts, d.mint, d.rule").iterate(since))); /* 0.9.31: decision age, cutoff, timing and epoch on EVERY decision row (abstentions and unavailable included) */ csvOut(`${CFG.OUT_DIR}/fd_wallet_state.csv`, (db.prepare("SELECT s.* FROM fd_wallet_state s JOIN (SELECT mint FROM fd_watch WHERE created_ts>=?) w ON w.mint=s.mint ORDER BY s.mint, s.at, s.sol_in DESC").iterate(now() - 12 * 3600))); } catch {} // 0.9.9
     exportMark("fd_decisions"); await new Promise((r) => setImmediate(r));
@@ -433,9 +431,8 @@ async function exportBody() {
     // and from tracker v0.19 of every launch that reaches 15 SOL of buys — the dump transactions of the books' coins. Exported for the coins entered in the last LAUNCH_TRADES_HOURS hours.
     try { if (tdb) { const hrs = Number(process.env.LAUNCH_TRADES_HOURS || 8), since = Math.floor(Date.now() / 1000) - hrs * 3600;
       const mints = db.prepare("SELECT mint, MAX(entry_ts) t FROM chain_fill WHERE entry_ts>=? GROUP BY mint ORDER BY t DESC").all(since).map((x) => x.mint); // 0.9.41: newest-entered coins first, so a size cut drops the oldest
-      const q = tdb.prepare("SELECT mint, sig, slot, ts, wallet, is_buy, sol, tokens, price_sol, recv_ms, vsol, vtok, venue FROM trades WHERE mint=? ORDER BY slot, rowid LIMIT 6000"); // 0.9.27: reserves after each trade (vsol/vtok) and receive time
-      function* allTrades() { for (const m of mints) yield* q.iterate(m); }
-      const r = csvOut(`${CFG.OUT_DIR}/trades_books.csv`, allTrades(), 90 * 1048576); // 0.9.41: GitHub refuses files over 100 MB (the 01:38–03:27 UK publishing blackout) — cut at 90 MB, recorded in status
+      const q = "SELECT mint, sig, slot, ts, wallet, is_buy, sol, tokens, price_sol, recv_ms, vsol, vtok, venue FROM trades WHERE mint=? ORDER BY slot, rowid LIMIT 6000"; // 0.9.27: reserves after each trade (vsol/vtok) and receive time
+      const r = await inWorker({ path: `${CFG.OUT_DIR}/trades_books.csv`, sql: q, mints, maxBytes: 90 * 1048576 }); // 0.9.46: in the worker thread // 0.9.41: GitHub refuses files over 100 MB (the 01:38–03:27 UK publishing blackout) — cut at 90 MB, recorded in status
       exportStat.tradesBooks = { hours: hrs, coins: mints.length, rows: r.rows, mb: +(r.bytes / 1048576).toFixed(1), truncated: r.truncated }; if (r.truncated) console.error(`[export trades_books] cut at 90 MB: ${r.rows} rows`); } } catch (e) { console.error("[export trades_books]", e.message); }
     exportMark("trades_books"); await new Promise((r) => setImmediate(r));
     // 0.8.14: the study files (2 MB + 20 MB, ~150 MB of heap to build) only when the study has changed or once an hour — building them every 10 min on a 300 MB pm2 limit is what restarted the launcher every 90 s on 5 Nov 00:05–01:00 UK
