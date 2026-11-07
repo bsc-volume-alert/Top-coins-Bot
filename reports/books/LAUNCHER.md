@@ -234,3 +234,11 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - ~~Fix the ~0-SOL decoding~~ done 0.5.1 (19:28 UK): SOL taken from the wallet's balance change; those coins' market cap from the curve stays 0.
 - Keep the hourly study running and re-read with more posts (need ≥ 20 genuine runners before any rule).
 - Full check-in scheduled for 1 Nov 19:00 UK.
+
+## 7 Nov 02:50 UK — review report for a third party (data to 01:38 UK; fill-2 window from 6 Nov 10:27)
+- 555 distinct coins entered (earliest completed entry per coin): mean −26.5% (bootstrap 95% −34.7% to −16.8%), median −46.8%, 15% won, 44% lost ≥ 50%; net −2.94 SOL at 0.02 SOL a trade, −3.74 SOL without the five best coins.
+- Every book negative without its single best coin; The 7 Figure Fish (+533%) is the best trade in 14 of 22 books. Best book FDU120 +0.010 SOL on 16 filled trades (95% −66% to +93%).
+- Delayed/uncrowded books record skipped fills ("skipped-dump", price −30% before the fill) as r = 0: 38 of FDLU120's 68 decisions, 18 of FDU120's 34. Per filled trade they are worse than the per-decision figure.
+- Entries on coins that later migrated or reached $100K (181): mean +18.9%, median −30.6%, 32% won. Other entries (374): mean −48.4%, 6% won.
+- **fill-3 audit needed:** the independent 0.02 position (i02_*) is stamped fill-3 on rows entered from 5 Nov 20:25, before fill-3 existed (0.9.34, ~19:57 UK 6 Nov). 828 rows differ from the shared exit by > 30 points (e.g. i02 exit 0.024x vs shared 1.088x at the same trigger). i02 figures are excluded from the report until audited.
+- Report: Claude Doc "Pump.fun Launch Strategies — Research Review".
