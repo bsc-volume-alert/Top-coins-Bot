@@ -12,8 +12,11 @@ cp -f "$SRC"/* launcher/ 2>/dev/null || true
 date -u +%FT%TZ > launcher/pushed_at.txt
 # 30 Oct 2026: which pm2 apps are running, and the deployer's recent log (public info only — no keys)
 (pm2 jlist 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.stringify(JSON.parse(s).map(p=>({name:p.name,status:p.pm2_env.status,restarts:p.pm2_env.restart_time,mem_mb:Math.round((p.monit&&p.monit.memory||0)/1048576),max_mem:p.pm2_env.max_memory_restart||null,uptime:p.pm2_env.pm_uptime||null})),null,1))}catch(e){console.log("[]")}})' > launcher/pm2_all.json) 2>/dev/null
-# 0.9.52 (7 Nov 14:25 UK, reliability self-fix: disk 95.6% full): what is using the disk, published every push (sizes only)
-{ date -u +%FT%TZ; df -h / 2>/dev/null | tail -1; timeout 60 du -xsh /root/tracker-launcher-data /root/tracker/data /root/launcher /root/.pm2/logs /tmp /var/tmp /root/.cache /root/.npm /var/log 2>/dev/null; timeout 60 du -xsh /root/tracker/data/* 2>/dev/null | sort -rh | head -15; timeout 60 du -xsh /root/* 2>/dev/null | sort -rh | head -10; } > launcher/disk_usage.txt 2>&1
+# 0.9.54 (7 Nov 15:15 UK): disk report at most once an hour, each du capped at 15 s, written in the background — 0.9.52 ran it on every push
+# (du over ~25 GB, up to 3×60 s) and pushed the whole script past its 180-s limit: uploads failed 14:58–15:15 UK.
+DU=/root/tracker/data/disk_usage.txt
+if [ ! -f "$DU" ] || [ -n "$(find "$DU" -mmin +60 2>/dev/null)" ]; then (nice -n 19 bash -c '{ date -u +%FT%TZ; df -h / | tail -1; timeout 15 du -xsh /root/tracker-launcher-data /root/tracker/data /root/tracker-data /root/launcher /root/.pm2/logs /var/log 2>/dev/null; timeout 15 du -xsh /root/tracker/data/* 2>/dev/null | sort -rh | head -12; } > /root/tracker/data/disk_usage.tmp 2>&1; mv /root/tracker/data/disk_usage.tmp /root/tracker/data/disk_usage.txt' >/dev/null 2>&1 </dev/null &) ; fi
+{ df -h / | tail -1; cat "$DU" 2>/dev/null; } > launcher/disk_usage.txt
 tail -c 3000 /root/.pm2/logs/deployer-out.log > launcher/deploy_log.txt 2>/dev/null; tail -c 3000 /root/.pm2/logs/launcher-error.log > launcher/launcher_err.txt 2>/dev/null
 git add -A launcher
 git -c user.name=launcher -c user.email=launcher@tracker commit -q -m "launcher data $(date -u +%FT%TZ)" || exit 0
