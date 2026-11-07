@@ -312,3 +312,9 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - Submissions so far: Claude analyst (branch blind-fable-7nov @ 96bda1bf, frozen 15:19 UTC): no profitable rule supported; MIG300 (enter at first pool trade, sell after 300 s) frozen as the forward test with the prediction that it fails; found ~1.1M exact duplicate rows in the supplement. Codex (branch codex/frozen-rule-7nov-2026 @ b06fa89, frozen 15:22:48 UTC, push to GitHub requested): none supported. Gemini via Jules: running.
 - Evaluator eval-1.0 frozen: branch blind-eval-1.0 @ d5085efd (evaluate.py sha256 in EVAL_SHA256.txt; 14 unit tests pass). Hidden test: launches created 8 Nov 00:00 → 10 Nov 00:00 UTC; test export after 10 Nov 02:00 UTC (needs the owner's go for the all-retained-launch export).
 - Check failures rose to ~7% from ~15:15 UTC ("deadline": Helius history fetch over the 60-s cap for busy coins). Proposal pending owner/Codex: read early trades from the tracker database instead of Helius (faster, saves credits) — a measurement change, not done.
+
+## 7 Nov 2026 21:55 UK — blind test line-up at the freeze
+- Claude analyst: MIG300 frozen 15:19 UTC (expected by its author not to pass); dev re-run with eval-1.1 reproduces its figures (DEV_CHECK_MIG300.md).
+- Codex: "none supported", frozen 15:22:48 UTC, commit b06fa89f (local only; push blocked) — record in reports/blind/SUBMISSION_codex_7nov_RECORD.md.
+- Gemini (Jules): two errors (16:00, 16:14 UK), no submission. Can act as reviewer of the frozen submissions instead.
+- Rules to score after 10 Nov: 1 (MIG300), K = 1.
