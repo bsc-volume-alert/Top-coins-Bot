@@ -273,3 +273,11 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - O3: 583 registry runners (457 migrated, 333 ≥$100K detected, unverified); BL filled 178 (31%), E60 145, FDL 16, FD 13, FDU120 5. Missed-runner ledger: 2 (Iphone Duo, XTO — both A1-only, below the 15 SOL screen, both lost −52%/−54% in A1).
 - Timing (forward): 60 s 80% on time (median age 69 s, p90 104 s), 90 s 82%, 120 s 77%.
 - CONFIRMATION_START stamped 2026-11-07 09:00:00 UTC (void if any rule/book/measurement change).
+
+## 7 Nov 2026 10:45 UK — $100K backward study v1.1 (corrects v1 after Codex's 10:14 reproduction)
+- Bug: v1 did not time-check the 5/15-min readings or the multiples (some hours late). Fixed in v1.1; inputs unchanged (study100k-v1-inputs@3bd9c3b9).
+- New fact: the standard curve tops out at ≈ $36,979 (SOL $90) — matches observed completion $37,019. All 39 curve "$100K crossings" are above it → decode errors / non-standard, not runners. v1 positive 8GwMLgh8… reclassified SUSPECT.
+- 18 positives remain, all PumpSwap crossings after migration, 1.1–37.5 min after creation (median 8.0), DEV 9 / TEST 9.
+- Holds both halves (weak): sell share ≥ 0.50 at 60 s → 0/233 DEV, 0/78 TEST (warning, not exclusion; upper bound 4.7%). Cap held at 5 min vs 60 s → 1.6% / 3.1% vs fell 0.2% / 0.3%.
+- Does not hold: early cap, bundle size, funder SOL, buys/buyers/volume. After-cost trading: not defensible from these inputs.
+- Frozen hypotheses H-sell and H-hold5 for launches after 7 Nov 09:57:18 UTC: reports/analysis/100k/study_v1_1/HYPOTHESES_FROZEN.md.

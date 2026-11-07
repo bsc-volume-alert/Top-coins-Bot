@@ -1,0 +1,6 @@
+# study_v1_1 — sha256, 7 Nov 2026 UK. Inputs: see study100k-v1-inputs@3bd9c3b9 MANIFEST.txt (unchanged).
+68a6b613c4b70fcbf870c434b6f4d0b12cf71d4187b20d926d7e7a5ceafe35d7  study100k.py
+b35800dfab9e55ffb15358cea0f087b747e10ce099f586d6322aba94fd0f4b95  study100k_out.txt
+6991cedc02d7122085f656ff5f8f4c9133162317dab512c7d92d23e1115d5607  thresholds_tried.json
+5c61798a7b5b35ed9e9327e2b82bd2724e7b4c7fff6b3c431670be2c893d6882  RESULTS.md
+4807e109917649829c33b6cb8e51e18d576f9f6f0d4e2f9b61729ec64cdf0c03  HYPOTHESES_FROZEN.md

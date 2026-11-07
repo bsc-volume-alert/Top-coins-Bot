@@ -1,0 +1,842 @@
+[
+{
+"cp": 15,
+"feature": "buys",
+"quantile": 0.8,
+"threshold": 66.0
+},
+{
+"cp": 15,
+"feature": "buys",
+"quantile": 0.9,
+"threshold": 83.0
+},
+{
+"cp": 15,
+"feature": "sells",
+"quantile": 0.8,
+"threshold": 40.0
+},
+{
+"cp": 15,
+"feature": "sells",
+"quantile": 0.9,
+"threshold": 54.0
+},
+{
+"cp": 15,
+"feature": "sell_share",
+"quantile": 0.8,
+"threshold": 0.4393939393939394
+},
+{
+"cp": 15,
+"feature": "sell_share",
+"quantile": 0.9,
+"threshold": 0.4927536231884058
+},
+{
+"cp": 15,
+"feature": "buyers",
+"quantile": 0.8,
+"threshold": 55.0
+},
+{
+"cp": 15,
+"feature": "buyers",
+"quantile": 0.9,
+"threshold": 70.0
+},
+{
+"cp": 15,
+"feature": "buyers_total",
+"quantile": 0.8,
+"threshold": 55.0
+},
+{
+"cp": 15,
+"feature": "buyers_total",
+"quantile": 0.9,
+"threshold": 70.0
+},
+{
+"cp": 15,
+"feature": "mc",
+"quantile": 0.8,
+"threshold": 8106.111671629296
+},
+{
+"cp": 15,
+"feature": "mc",
+"quantile": 0.9,
+"threshold": 9768.738081810563
+},
+{
+"cp": 15,
+"feature": "vol",
+"quantile": 0.8,
+"threshold": 6712.132407523901
+},
+{
+"cp": 15,
+"feature": "vol",
+"quantile": 0.9,
+"threshold": 8931.13081000404
+},
+{
+"cp": 15,
+"feature": "bundle_pct",
+"quantile": 0.8,
+"threshold": 41.5078428597227
+},
+{
+"cp": 15,
+"feature": "bundle_pct",
+"quantile": 0.9,
+"threshold": 43.6768242286208
+},
+{
+"cp": 15,
+"feature": "bundle_sol",
+"quantile": 0.8,
+"threshold": 19.514074077
+},
+{
+"cp": 15,
+"feature": "bundle_sol",
+"quantile": 0.9,
+"threshold": 20.621234571000002
+},
+{
+"cp": 15,
+"feature": "bundle_wallets",
+"quantile": 0.8,
+"threshold": 9.0
+},
+{
+"cp": 15,
+"feature": "bundle_wallets",
+"quantile": 0.9,
+"threshold": 11.0
+},
+{
+"cp": 15,
+"feature": "dev_buy_sol",
+"quantile": 0.8,
+"threshold": 3.0
+},
+{
+"cp": 15,
+"feature": "dev_buy_sol",
+"quantile": 0.9,
+"threshold": 5.0
+},
+{
+"cp": 15,
+"feature": "funder_sol",
+"quantile": 0.8,
+"threshold": 25.478151385
+},
+{
+"cp": 15,
+"feature": "funder_sol",
+"quantile": 0.9,
+"threshold": 54.54378627
+},
+{
+"cp": 15,
+"feature": "name_1h",
+"quantile": 0.8,
+"threshold": 6.0
+},
+{
+"cp": 15,
+"feature": "name_1h",
+"quantile": 0.9,
+"threshold": 12.0
+},
+{
+"cp": 15,
+"feature": "name_24h",
+"quantile": 0.8,
+"threshold": 12.0
+},
+{
+"cp": 15,
+"feature": "name_24h",
+"quantile": 0.9,
+"threshold": 29.0
+},
+{
+"cp": 30,
+"feature": "buys",
+"quantile": 0.8,
+"threshold": 105.0
+},
+{
+"cp": 30,
+"feature": "buys",
+"quantile": 0.9,
+"threshold": 142.0
+},
+{
+"cp": 30,
+"feature": "sells",
+"quantile": 0.8,
+"threshold": 72.0
+},
+{
+"cp": 30,
+"feature": "sells",
+"quantile": 0.9,
+"threshold": 96.0
+},
+{
+"cp": 30,
+"feature": "sell_share",
+"quantile": 0.8,
+"threshold": 0.47761194029850745
+},
+{
+"cp": 30,
+"feature": "sell_share",
+"quantile": 0.9,
+"threshold": 0.5288461538461539
+},
+{
+"cp": 30,
+"feature": "buyers",
+"quantile": 0.8,
+"threshold": 85.0
+},
+{
+"cp": 30,
+"feature": "buyers",
+"quantile": 0.9,
+"threshold": 117.0
+},
+{
+"cp": 30,
+"feature": "buyers_total",
+"quantile": 0.8,
+"threshold": 85.0
+},
+{
+"cp": 30,
+"feature": "buyers_total",
+"quantile": 0.9,
+"threshold": 117.0
+},
+{
+"cp": 30,
+"feature": "mc",
+"quantile": 0.8,
+"threshold": 8393.111845940692
+},
+{
+"cp": 30,
+"feature": "mc",
+"quantile": 0.9,
+"threshold": 11158.161800687501
+},
+{
+"cp": 30,
+"feature": "vol",
+"quantile": 0.8,
+"threshold": 9424.040148808494
+},
+{
+"cp": 30,
+"feature": "vol",
+"quantile": 0.9,
+"threshold": 12837.013829552068
+},
+{
+"cp": 30,
+"feature": "bundle_pct",
+"quantile": 0.8,
+"threshold": 41.7051179918726
+},
+{
+"cp": 30,
+"feature": "bundle_pct",
+"quantile": 0.9,
+"threshold": 43.6963048294692
+},
+{
+"cp": 30,
+"feature": "bundle_sol",
+"quantile": 0.8,
+"threshold": 19.523827159
+},
+{
+"cp": 30,
+"feature": "bundle_sol",
+"quantile": 0.9,
+"threshold": 20.622222216
+},
+{
+"cp": 30,
+"feature": "bundle_wallets",
+"quantile": 0.8,
+"threshold": 9.0
+},
+{
+"cp": 30,
+"feature": "bundle_wallets",
+"quantile": 0.9,
+"threshold": 11.0
+},
+{
+"cp": 30,
+"feature": "dev_buy_sol",
+"quantile": 0.8,
+"threshold": 3.0
+},
+{
+"cp": 30,
+"feature": "dev_buy_sol",
+"quantile": 0.9,
+"threshold": 5.0
+},
+{
+"cp": 30,
+"feature": "funder_sol",
+"quantile": 0.8,
+"threshold": 26.264172823
+},
+{
+"cp": 30,
+"feature": "funder_sol",
+"quantile": 0.9,
+"threshold": 54.54378627
+},
+{
+"cp": 30,
+"feature": "name_1h",
+"quantile": 0.8,
+"threshold": 6.0
+},
+{
+"cp": 30,
+"feature": "name_1h",
+"quantile": 0.9,
+"threshold": 12.0
+},
+{
+"cp": 30,
+"feature": "name_24h",
+"quantile": 0.8,
+"threshold": 12.0
+},
+{
+"cp": 30,
+"feature": "name_24h",
+"quantile": 0.9,
+"threshold": 29.0
+},
+{
+"cp": 60,
+"feature": "buys",
+"quantile": 0.8,
+"threshold": 168.0
+},
+{
+"cp": 60,
+"feature": "buys",
+"quantile": 0.9,
+"threshold": 230.0
+},
+{
+"cp": 60,
+"feature": "sells",
+"quantile": 0.8,
+"threshold": 116.0
+},
+{
+"cp": 60,
+"feature": "sells",
+"quantile": 0.9,
+"threshold": 167.0
+},
+{
+"cp": 60,
+"feature": "sell_share",
+"quantile": 0.8,
+"threshold": 0.5
+},
+{
+"cp": 60,
+"feature": "sell_share",
+"quantile": 0.9,
+"threshold": 0.5567010309278351
+},
+{
+"cp": 60,
+"feature": "buyers",
+"quantile": 0.8,
+"threshold": 121.0
+},
+{
+"cp": 60,
+"feature": "buyers",
+"quantile": 0.9,
+"threshold": 178.0
+},
+{
+"cp": 60,
+"feature": "buyers_total",
+"quantile": 0.8,
+"threshold": 121.0
+},
+{
+"cp": 60,
+"feature": "buyers_total",
+"quantile": 0.9,
+"threshold": 178.0
+},
+{
+"cp": 60,
+"feature": "mc",
+"quantile": 0.8,
+"threshold": 8119.634715018689
+},
+{
+"cp": 60,
+"feature": "mc",
+"quantile": 0.9,
+"threshold": 11893.78408624838
+},
+{
+"cp": 60,
+"feature": "vol",
+"quantile": 0.8,
+"threshold": 12043.437145371978
+},
+{
+"cp": 60,
+"feature": "vol",
+"quantile": 0.9,
+"threshold": 16614.769439027506
+},
+{
+"cp": 60,
+"feature": "bundle_pct",
+"quantile": 0.8,
+"threshold": 42.9700788364868
+},
+{
+"cp": 60,
+"feature": "bundle_pct",
+"quantile": 0.9,
+"threshold": 43.894102446470704
+},
+{
+"cp": 60,
+"feature": "bundle_sol",
+"quantile": 0.8,
+"threshold": 20.061851850999997
+},
+{
+"cp": 60,
+"feature": "bundle_sol",
+"quantile": 0.9,
+"threshold": 20.818888889
+},
+{
+"cp": 60,
+"feature": "bundle_wallets",
+"quantile": 0.8,
+"threshold": 9.0
+},
+{
+"cp": 60,
+"feature": "bundle_wallets",
+"quantile": 0.9,
+"threshold": 11.0
+},
+{
+"cp": 60,
+"feature": "dev_buy_sol",
+"quantile": 0.8,
+"threshold": 3.0
+},
+{
+"cp": 60,
+"feature": "dev_buy_sol",
+"quantile": 0.9,
+"threshold": 5.0
+},
+{
+"cp": 60,
+"feature": "funder_sol",
+"quantile": 0.8,
+"threshold": 23.818140636
+},
+{
+"cp": 60,
+"feature": "funder_sol",
+"quantile": 0.9,
+"threshold": 42.786933607
+},
+{
+"cp": 60,
+"feature": "name_1h",
+"quantile": 0.8,
+"threshold": 5.0
+},
+{
+"cp": 60,
+"feature": "name_1h",
+"quantile": 0.9,
+"threshold": 10.0
+},
+{
+"cp": 60,
+"feature": "name_24h",
+"quantile": 0.8,
+"threshold": 11.0
+},
+{
+"cp": 60,
+"feature": "name_24h",
+"quantile": 0.9,
+"threshold": 28.0
+},
+{
+"cp": 90,
+"feature": "buys",
+"quantile": 0.8,
+"threshold": 186.0
+},
+{
+"cp": 90,
+"feature": "buys",
+"quantile": 0.9,
+"threshold": 291.0
+},
+{
+"cp": 90,
+"feature": "sells",
+"quantile": 0.8,
+"threshold": 141.0
+},
+{
+"cp": 90,
+"feature": "sells",
+"quantile": 0.9,
+"threshold": 217.0
+},
+{
+"cp": 90,
+"feature": "sell_share",
+"quantile": 0.8,
+"threshold": 0.5214007782101168
+},
+{
+"cp": 90,
+"feature": "sell_share",
+"quantile": 0.9,
+"threshold": 0.5816326530612245
+},
+{
+"cp": 90,
+"feature": "buyers",
+"quantile": 0.8,
+"threshold": 135.0
+},
+{
+"cp": 90,
+"feature": "buyers",
+"quantile": 0.9,
+"threshold": 231.0
+},
+{
+"cp": 90,
+"feature": "buyers_total",
+"quantile": 0.8,
+"threshold": 135.0
+},
+{
+"cp": 90,
+"feature": "buyers_total",
+"quantile": 0.9,
+"threshold": 231.0
+},
+{
+"cp": 90,
+"feature": "mc",
+"quantile": 0.8,
+"threshold": 7465.6531356282485
+},
+{
+"cp": 90,
+"feature": "mc",
+"quantile": 0.9,
+"threshold": 12470.391934389858
+},
+{
+"cp": 90,
+"feature": "vol",
+"quantile": 0.8,
+"threshold": 13819.62828182187
+},
+{
+"cp": 90,
+"feature": "vol",
+"quantile": 0.9,
+"threshold": 19954.185524794153
+},
+{
+"cp": 90,
+"feature": "bundle_pct",
+"quantile": 0.8,
+"threshold": 41.5078428597227
+},
+{
+"cp": 90,
+"feature": "bundle_pct",
+"quantile": 0.9,
+"threshold": 43.6963048294692
+},
+{
+"cp": 90,
+"feature": "bundle_sol",
+"quantile": 0.8,
+"threshold": 19.514074077
+},
+{
+"cp": 90,
+"feature": "bundle_sol",
+"quantile": 0.9,
+"threshold": 20.622222216
+},
+{
+"cp": 90,
+"feature": "bundle_wallets",
+"quantile": 0.8,
+"threshold": 9.0
+},
+{
+"cp": 90,
+"feature": "bundle_wallets",
+"quantile": 0.9,
+"threshold": 11.0
+},
+{
+"cp": 90,
+"feature": "dev_buy_sol",
+"quantile": 0.8,
+"threshold": 3.0
+},
+{
+"cp": 90,
+"feature": "dev_buy_sol",
+"quantile": 0.9,
+"threshold": 5.0
+},
+{
+"cp": 90,
+"feature": "funder_sol",
+"quantile": 0.8,
+"threshold": 26.264172823
+},
+{
+"cp": 90,
+"feature": "funder_sol",
+"quantile": 0.9,
+"threshold": 54.54378627
+},
+{
+"cp": 90,
+"feature": "name_1h",
+"quantile": 0.8,
+"threshold": 6.0
+},
+{
+"cp": 90,
+"feature": "name_1h",
+"quantile": 0.9,
+"threshold": 12.0
+},
+{
+"cp": 90,
+"feature": "name_24h",
+"quantile": 0.8,
+"threshold": 12.0
+},
+{
+"cp": 90,
+"feature": "name_24h",
+"quantile": 0.9,
+"threshold": 29.0
+},
+{
+"cp": 120,
+"feature": "buys",
+"quantile": 0.8,
+"threshold": 208.0
+},
+{
+"cp": 120,
+"feature": "buys",
+"quantile": 0.9,
+"threshold": 325.0
+},
+{
+"cp": 120,
+"feature": "sells",
+"quantile": 0.8,
+"threshold": 163.0
+},
+{
+"cp": 120,
+"feature": "sells",
+"quantile": 0.9,
+"threshold": 248.0
+},
+{
+"cp": 120,
+"feature": "sell_share",
+"quantile": 0.8,
+"threshold": 0.525
+},
+{
+"cp": 120,
+"feature": "sell_share",
+"quantile": 0.9,
+"threshold": 0.5816326530612245
+},
+{
+"cp": 120,
+"feature": "buyers",
+"quantile": 0.8,
+"threshold": 149.0
+},
+{
+"cp": 120,
+"feature": "buyers",
+"quantile": 0.9,
+"threshold": 255.0
+},
+{
+"cp": 120,
+"feature": "buyers_total",
+"quantile": 0.8,
+"threshold": 149.0
+},
+{
+"cp": 120,
+"feature": "buyers_total",
+"quantile": 0.9,
+"threshold": 255.0
+},
+{
+"cp": 120,
+"feature": "mc",
+"quantile": 0.8,
+"threshold": 6368.847857203068
+},
+{
+"cp": 120,
+"feature": "mc",
+"quantile": 0.9,
+"threshold": 11292.093964051317
+},
+{
+"cp": 120,
+"feature": "vol",
+"quantile": 0.8,
+"threshold": 14886.486128301663
+},
+{
+"cp": 120,
+"feature": "vol",
+"quantile": 0.9,
+"threshold": 21851.447047112968
+},
+{
+"cp": 120,
+"feature": "bundle_pct",
+"quantile": 0.8,
+"threshold": 41.40144017878741
+},
+{
+"cp": 120,
+"feature": "bundle_pct",
+"quantile": 0.9,
+"threshold": 43.6768242286208
+},
+{
+"cp": 120,
+"feature": "bundle_sol",
+"quantile": 0.8,
+"threshold": 19.376790125
+},
+{
+"cp": 120,
+"feature": "bundle_sol",
+"quantile": 0.9,
+"threshold": 20.621234571000002
+},
+{
+"cp": 120,
+"feature": "bundle_wallets",
+"quantile": 0.8,
+"threshold": 9.0
+},
+{
+"cp": 120,
+"feature": "bundle_wallets",
+"quantile": 0.9,
+"threshold": 11.0
+},
+{
+"cp": 120,
+"feature": "dev_buy_sol",
+"quantile": 0.8,
+"threshold": 3.0
+},
+{
+"cp": 120,
+"feature": "dev_buy_sol",
+"quantile": 0.9,
+"threshold": 5.0
+},
+{
+"cp": 120,
+"feature": "funder_sol",
+"quantile": 0.8,
+"threshold": 26.264172823
+},
+{
+"cp": 120,
+"feature": "funder_sol",
+"quantile": 0.9,
+"threshold": 54.54378627
+},
+{
+"cp": 120,
+"feature": "name_1h",
+"quantile": 0.8,
+"threshold": 6.0
+},
+{
+"cp": 120,
+"feature": "name_1h",
+"quantile": 0.9,
+"threshold": 12.0
+},
+{
+"cp": 120,
+"feature": "name_24h",
+"quantile": 0.8,
+"threshold": 12.0
+},
+{
+"cp": 120,
+"feature": "name_24h",
+"quantile": 0.9,
+"threshold": 29.0
+}
+]
