@@ -23,6 +23,7 @@ import { initPeaks, runPeaks, peakStat } from "./copypeaks.mjs";
 import { initStudy, runStudy, studyStat, studyAddress, manualStat, loadCensus } from "./study.mjs";
 import { initVol, volPoll, volScore, volStat, volBackfill, bfStat, volFillExitTime, volMark, markStat, volQuotePoll } from "./volpaper.mjs";
 import { initRF, rfFind, rfCheck, rfStat } from "./runnerfollow.mjs";
+import { tgAlarm } from "../../src/telegram.js"; // 0.9.53: disk alarm via the tracker's Telegram (alarms only)
 import { initFD, fdScan, fdCheck, fdStat, fdSniperStats, snStat, fdLedger, fdInventory, fdPositions, fdCoverage, LEDGER_VER } from "./fundeddev.mjs";
 import { initLive, livePoll, liveStat } from "./live.mjs"; // 0.8.17
 import { execSync } from "node:child_process";
@@ -71,6 +72,17 @@ initPeaks(db); // 0.2.2: market caps of every copycat (owner, 31 Oct 18:06 UK)
 const upd = (id, o) => { const ks = Object.keys(o); if (ks.length) db.prepare(`UPDATE launches SET ${ks.map((k) => `${k}=?`).join(", ")} WHERE id=?`).run(...ks.map((k) => (typeof o[k] === "bigint" ? o[k].toString() : o[k])), id); };
 const kvGet = (k) => db.prepare("SELECT v FROM kv WHERE k=?").get(k)?.v ?? null, kvSet = (k, v) => db.prepare("INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)").run(k, String(v));
 let tdb = null; try { tdb = new Database(CFG.TRACKER_DB, { readonly: true, fileMustExist: true }); tdb.pragma("busy_timeout = 2000"); tdb.pragma("cache_size = -16000"); } catch {} // 0.9.10: 16 MB cache on the read-only tracker handle
+// 0.9.53 (7 Nov 14:40 UK, reliability; Codex 14:34: alert earlier, by free space AND time to exhaustion, independent of any AI session):
+// every 5 min, read free disk space; keep 6 h of samples; Telegram alarm (at most every 2 h) when free < LAUNCH_DISK_MIN_GB (6) or the 30-min+ trend
+// says the disk is full within LAUNCH_DISK_HOURS (12). Reports only — nothing is ever deleted automatically. status.export.diskAlarm shows the state.
+const diskHist = []; let diskAlarmAt = 0;
+function diskWatch() { try { const f = statfsSync(CFG.OUT_DIR), free = f.bavail * f.bsize / 1073741824, t = Date.now() / 1000; diskHist.push([t, free]); while (diskHist.length && t - diskHist[0][0] > 6 * 3600) diskHist.shift();
+  const [t0, f0] = diskHist[0], span = (t - t0) / 3600, rate = span >= 0.5 ? (f0 - free) / span : null, hoursLeft = rate != null && rate > 0.02 ? free / rate : null;
+  const MIN = Number(process.env.LAUNCH_DISK_MIN_GB) || 6, HRS = Number(process.env.LAUNCH_DISK_HOURS) || 12, bad = free < MIN || (hoursLeft != null && hoursLeft < HRS);
+  exportStat.diskAlarm = { at: new Date().toISOString(), freeGb: +free.toFixed(2), rateGbPerH: rate == null ? null : +rate.toFixed(3), hoursLeft: hoursLeft == null ? null : +hoursLeft.toFixed(1), alarm: bad, lastSent: diskAlarmAt ? new Date(diskAlarmAt).toISOString() : null };
+  if (bad && Date.now() - diskAlarmAt > 2 * 3600000) { diskAlarmAt = Date.now(); tgAlarm(`⚠️ <b>Server disk</b>: ${free.toFixed(1)} GB free${hoursLeft != null ? `, full in ~${hoursLeft.toFixed(1)} h at ${rate.toFixed(2)} GB/h` : ""}. Nothing is deleted automatically — check disk_usage.txt on launcher-data.`).catch(() => {}); }
+} catch (e) { exportStat.diskAlarm = { err: String(e.message).slice(0, 100) }; } }
+setTimeout(diskWatch, 20000); setInterval(diskWatch, 300000);
 
 // ---------- wallet / chain state ----------
 const wallet = CFG.SMOKE ? Keypair.generate() : ensureKeypair(); // the key file is created on first start; only the public address is ever shown
