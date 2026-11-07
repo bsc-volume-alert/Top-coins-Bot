@@ -4,7 +4,7 @@
 // nobody else buys within 10 minutes, or when the coin goes quiet. Every post and every launch is recorded, with the copycat coins the tracker saw.
 // Modes: paper (record only) | shadow (default: build + simulate every launch, sign nothing) | live (owner sets LAUNCH_MODE=live in /root/launcher/.env).
 // Own pm2 app, own wallet, own database; reads the tracker's database read-only. SOL only ever leaves to the owner's Phantom (config.mjs PHANTOM).
-import { mkdirSync, writeFileSync, readFileSync, readdirSync, unlinkSync, existsSync, openSync, writeSync, closeSync, renameSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, readdirSync, unlinkSync, existsSync, openSync, writeSync, closeSync, renameSync, statfsSync, statSync } from "node:fs";
 import { execFile } from "node:child_process";
 import Database from "better-sqlite3";
 import { Keypair, PublicKey } from "@solana/web3.js";
@@ -431,7 +431,11 @@ async function exportBody() {
     // SOL/USD of the window ≥ $80K — generous on purpose, so a stale or low conversion cannot drop a candidate) and the SOL/USD series. Price convention:
     // price_sol = SOL per UI token (6 decimals), mc_usd = price_sol × 1e9 × SOL/USD (tracker launch-monitor.js). Worker thread, streamed, one job at a time,
     // 180-s cap each, every 60 min (0.9.49: the first run took 186 s). No coverage claim is made here: a quiet stretch is inactivity OR a capture gap — feed_gaps.csv and the outage log decide.
-    if (tdb && Date.now() - (exportStat.coverageAt || 0) > 3600000) { exportStat.coverageAt = Date.now(); const since = now() - 24 * 3600;
+    // 0.9.51 (7 Nov 14:20 UK, reliability self-fix): PAUSED by default. Since tracker 0.19.8 keeps pool trades for every launch, these window-function
+    // queries over 24 h of trades spill multi-GB temp sorts to disk — "database or disk is full" at 12:25 and 13:26 UK — and a full disk would stop the
+    // tracker writing trades. Re-enable only with LAUNCH_COVERAGE=1 after the per-mint (index-only) rewrite.
+    if (process.env.LAUNCH_COVERAGE !== "1") { if (!exportStat.coverage?.paused) exportStat.coverage = { ...(exportStat.coverage || {}), paused: "0.9.51: temp-sort disk risk; LAUNCH_COVERAGE=1 to re-enable" }; }
+    else if (tdb && Date.now() - (exportStat.coverageAt || 0) > 3600000) { exportStat.coverageAt = Date.now(); const since = now() - 24 * 3600;
       try { const t0 = Date.now(); const r1 = await inWorker({ path: `${CFG.OUT_DIR}/coverage_mints.csv`, sql: "WITH k AS (SELECT mint, create_ts, tier, graduated, finalized FROM tokens WHERE create_ts>=?), t AS (SELECT tr.mint, tr.venue, tr.ts, tr.slot, tr.sig, tr.price_sol, tr.ts - LAG(tr.ts) OVER (PARTITION BY tr.mint, tr.venue ORDER BY tr.slot, tr.rowid) AS gap FROM trades tr JOIN k ON k.mint=tr.mint), mx AS (SELECT mint, venue, price_sol, slot, ts, sig, ROW_NUMBER() OVER (PARTITION BY mint, venue ORDER BY price_sol DESC, slot) rn FROM t) SELECT k.mint, k.create_ts, k.tier, k.graduated, k.finalized, t.venue, MIN(t.ts) AS first_ts, MAX(t.ts) AS last_ts, COUNT(t.ts) AS n_trades, MAX(t.gap) AS max_gap_s, mx.price_sol AS max_price_sol, mx.slot AS max_slot, mx.ts AS max_ts, mx.sig AS max_sig, ? AS export_cutoff_ts FROM k LEFT JOIN t ON t.mint=k.mint LEFT JOIN mx ON mx.mint=t.mint AND mx.venue=t.venue AND mx.rn=1 GROUP BY k.mint, t.venue ORDER BY k.create_ts, k.mint", params: [since, now()] });
         // 0.9.49: the first $100K crossing per candidate, computed in the worker (0.9.48 exported every candidate trade: 370k rows, cut at 90 MB). Per mint: the first
         // trade whose price × 1e9 × SOL/USD AT THAT TIME (latest sol_px sample at or before it) is ≥ $100K, the trade before it (bounds the crossing time), the
@@ -458,6 +462,7 @@ async function exportBody() {
     linesOut(`${CFG.OUT_DIR}/raw_events.jsonl`, db.prepare("SELECT raw FROM posts WHERE raw IS NOT NULL ORDER BY recv_ms").iterate(), (r) => r.raw);
     exportMark("raw_events"); await new Promise((r) => setImmediate(r));
     exportStat.lastMs = Date.now() - exportT0; { const m = process.memoryUsage(); exportStat.rssMb = Math.round(m.rss / 1048576); exportStat.heapMb = Math.round(m.heapUsed / 1048576); }
+    try { const f = statfsSync(CFG.OUT_DIR), sz = (p) => { try { return statSync(p).size; } catch { return 0; } }; exportStat.disk = { at: new Date().toISOString(), freeGb: +(f.bavail * f.bsize / 1073741824).toFixed(2), totalGb: +(f.blocks * f.bsize / 1073741824).toFixed(2), usedPct: +(100 - 100 * f.bavail / f.blocks).toFixed(1), trackerDbGb: +((sz(CFG.TRACKER_DB) + sz(CFG.TRACKER_DB + "-wal")) / 1073741824).toFixed(2), launcherDbGb: +((sz(CFG.DB_PATH) + sz(CFG.DB_PATH + "-wal")) / 1073741824).toFixed(2) }; } catch (e) { exportStat.disk = { err: String(e.message).slice(0, 100) }; } // 0.9.51: disk visibility
     writeFileSync(`${CFG.OUT_DIR}/status.json`, JSON.stringify(status(), null, 1)); st.exports++;
     if (process.env.LAUNCH_NO_PUSH || CFG.SMOKE || pushing) return; pushing = true;
     execFile("bash", [new URL("../push.sh", import.meta.url).pathname], { timeout: 180000 }, (e, so, se) => { pushing = false; st.lastPush = e ? "failed: " + (se || e.message).slice(0, 160) : "ok " + new Date().toISOString(); });

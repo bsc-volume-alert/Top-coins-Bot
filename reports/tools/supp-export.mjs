@@ -1,4 +1,4 @@
-// supp-export 1.0 (owner's go 7 Nov 2026 14:03 UK; spec: Codex 14:02 UK) — ONE-OFF, READ-ONLY supplemental export for the
+// supp-export 1.1 (owner's go 7 Nov 2026 14:03 UK; spec: Codex 14:02 UK) — ONE-OFF, READ-ONLY supplemental export for the
 // Entry Features & Winners project. Opens the tracker and launcher databases read-only; changes nothing in either; no trading effect.
 // Lives in reports/tools/ so a push never restarts the tracker. Run by deploy-step.sh when scripts/job-now.txt starts with "supp". Publishes to a NEW branch (entry-supp-<UTC stamp>), never force-pushed.
 //   trades_part_NNN.csv.gz — EVERY retained trades row (curve and pool, incl. after our exits) of every mint in launcher chain_fill (all simulated
@@ -14,7 +14,7 @@ import { readFileSync as _rf } from "node:fs";
 try { for (const l of _rf("/root/tracker/.env", "utf8").split("\n")) { const m = l.match(/^\s*(DB_PATH)\s*=\s*(.*?)\s*$/); if (m && !process.env[m[1]]) process.env[m[1]] = m[2]; } } catch {}
 import Database from "better-sqlite3";
 import { createGzip } from "node:zlib";
-import { createWriteStream, mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from "node:fs";
+import { createWriteStream, mkdirSync, readFileSync, writeFileSync, existsSync, rmSync, statfsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
@@ -26,10 +26,14 @@ const TDB = process.env.DB_PATH || "/root/tracker/data/tracker.db", LDB = proces
 const STAMP = new Date().toISOString().replace(/[-:]/g, "").slice(0, 13); // e.g. 20261107T1415
 const BRANCH = `entry-supp-${STAMP.toLowerCase()}`, OUT = process.env.SUPP_OUT || `/root/tracker/data/supp_${STAMP}`, PART_MAX = (Number(process.env.SUPP_PART_MB) || 80) * 1048576;
 const t0 = Date.now(), now = () => Math.floor(Date.now() / 1000);
-const status = (o) => { try { writeFileSync(join(LOUT, "supp_status.json"), JSON.stringify({ ver: "supp-export 1.0", branch: BRANCH, at: new Date().toISOString(), secs: Math.round((Date.now() - t0) / 1000), ...o }, null, 1)); } catch {} console.log("[supp]", JSON.stringify(o)); };
+const status = (o) => { try { writeFileSync(join(LOUT, "supp_status.json"), JSON.stringify({ ver: "supp-export 1.1", branch: BRANCH, at: new Date().toISOString(), secs: Math.round((Date.now() - t0) / 1000), ...o }, null, 1)); } catch {} console.log("[supp]", JSON.stringify(o)); };
 const esc = (v) => (v == null ? "" : /[",\n\r]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
 
 try {
+  // 1.1 disk guard: never let this job fill the disk the tracker writes to (min free 6 GB before start; checked again per part)
+  const freeGb = () => { const f = statfsSync(process.env.SUPP_FS || "/root/tracker/data"); return f.bavail * f.bsize / 1073741824; };
+  const MIN_FREE = Number(process.env.SUPP_MIN_FREE_GB) || 6;
+  if (freeGb() < MIN_FREE) { status({ phase: "aborted-disk", freeGb: +freeGb().toFixed(2), minFreeGb: MIN_FREE }); process.exit(1); }
   if (existsSync(OUT)) rmSync(OUT, { recursive: true, force: true }); mkdirSync(OUT, { recursive: true });
   const tdb = new Database(TDB, { readonly: true, fileMustExist: true }); tdb.pragma("busy_timeout = 5000"); tdb.pragma("cache_size = -16000");
   const ldb = new Database(LDB, { readonly: true, fileMustExist: true }); ldb.pragma("busy_timeout = 5000");
@@ -47,7 +51,7 @@ try {
   const cov = [];
   for (let i = 0; i < mints.length; i++) {
     const m = mints[i];
-    if (!gz || partBytes >= PART_MAX) { await closePart(); openPart(); }
+    if (!gz || partBytes >= PART_MAX) { await closePart(); if (freeGb() < MIN_FREE) { status({ phase: "aborted-disk", freeGb: +freeGb().toFixed(2), done: i, of: mints.length }); rmSync(OUT, { recursive: true, force: true }); process.exit(1); } openPart(); }
     let n = 0, curve = 0, pool = 0, ev = 0, fts = null, lts = null, fslot = null, lslot = null, prev = null, gap = 0, buf = "";
     for (const r of qRows.iterate(m.mint)) {
       n++; if (r.venue === "curve") curve++; else if (r.venue) pool++; if (r.dec_ver) ev++;
