@@ -1,0 +1,16 @@
+SNAPSHOT 7 Nov 2026 — launcher-data commit 165e3d0f, exported 08:53:05 UTC (= UK). Read script: read7.py (run: python3 read7.py <dir with the CSVs unzipped>; fd_watch_prev.csv = fd_watch from frozen commit b971fcdf, branch analysis-inputs-7nov).
+trades_books.csv (87 MB) not included — on the droplet.
+
+ca2f293c1d6b836ed61e8da3d0644421463cda9e4a6605e2173ee76fc744ea24  chain_fill.csv.gz
+81b181b2432554b4fbd4f4b7b0879ad182a57a794ea21ecd7b2e3ec83a643385  early_checkpoints.csv.gz
+60b1d3f899ddc976587892d4254218f8931cd86d40d57467e599a16221b495da  fd_coverage.csv.gz
+eb4b8fc9d729ec15064b6d529da552d58fd9a8048b84d1e06b8031402c2bdb76  fd_decisions.csv.gz
+9ceab8d4453bf1d1611911cee0b5a3a936c74ace0550976e1f6fb7e9d5a81483  fd_ledger.csv.gz
+8e796c420a0be409f43fb217fce713af18b3a54a0bceb69f73815d5bc4430bef  fd_positions.csv.gz
+1bab62f3ccf5bfcb5b1478741b11b7ada242b936b3a020acf3991e9a6d29a270  fd_watch.csv.gz
+142e3abec2618e94d74624e675bb393e5f3011d278358a97a439d07cd5808e70  registry_coverage.csv.gz
+7123ef531f8a788f03445cbe3a8bf8ef314b9794abd8824baf7cc7941ef862e0  runner_registry.csv.gz
+bc5fc7a47cf8c49cb21ce7afdde77f5d36581bd42f225b0cdf4d6e827af9a485  tracker_tokens.csv.gz
+7bf5e060236239cb191f3b20d31433b00f2cd856c3502e325d16d43b4f571eb2  vol_paper.csv.gz
+296ccdefc79a6b6c0b9f73729e36a11dc05fa26ef70fedb866003b64042293f8  status.json
+30ceb75d95d5a2f3b0a2f4b1a2c49da763f34686aeea19496ae200fa104e944b  read7.py

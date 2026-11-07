@@ -1,0 +1,80 @@
+FORWARD READ 1 — 7 Nov 2026 09:00 UTC (= UK), per scope/files/forward_plan_6nov.txt. DEVELOPMENT READ, NOT A PROFITABILITY VERDICT. Live off.
+Data: launcher-data 165e3d0f (08:53:05 UTC) — snapshot scope/files/snap_7nov_0900/ (MANIFEST with sha256). Script: snap_7nov_0900/read7.py.
+Forward set: launches created after 14:22:20 UTC 6 Nov; entries by 07:00 UK (≥ 2 h follow-up). r = 0.02 SOL proceeds at the book's exit − 1 − 0.075 fee (shared exit with the 0.2 position; the independent 0.02 records are unverified and not used).
+
+COLLECTION OUTAGES INSIDE THE WINDOW (all development-data qualifiers)
+  19:30–20:12 outage; ~21:20 1-vCPU saturation (60-s on-time 8–22%); 21:24 and 23:33 tracker heap crashes; 21:37–21:46 server resize (no observation);
+  23:27–23:50 no decisions (launcher credit cap); 00:06 pm2 restart of all apps (cause unexplained); 00:06–03:26 22 launcher heap crashes;
+  01:38–03:27 publishing blackout; deploy restarts 03:31–04:32 (0.9.40–0.9.47); ~6 five-minute check stalls before 04:32; 1 check timeout after.
+ELIGIBLE (BL bar at 60 s, created after 14:22:20 UTC, decided by 07:00 UK): 435 | eligibility unknown (data/price unavailable at 60 s): 33
+
+O1 PER ELIGIBLE LAUNCH (common denominator; r per 0.02 SOL position after the 0.0015 fee) and O2 PER FILLED TRADE
+book | eligible-mints entered | done skipped fail open | O1 mean r per eligible [best..worst band for fails] | O2 n mean median win% severe% | without best mint
+A1       |  118 |  118   0   0   0 |  -11.0% [-11.0..-11.0] |  118  -40.6%  -62.0%  14%  58% |  -45.5%
+BL       |  435 |  435   0   0   0 |  -28.0% [-28.0..-28.0] |  435  -28.0%  -44.0%  18%  40% |  -29.3%
+BL27     |  281 |  281   0   0   0 |  -22.3% [-22.3..-22.3] |  281  -34.5%  -44.0%  17%  42% |  -36.6%
+E60      |  414 |  414   0   0   0 |  -26.8% [-26.8..-26.8] |  414  -28.2%  -44.6%  18%  40% |  -29.6%
+E90      |  337 |  337   0   0   0 |  -22.8% [-22.8..-22.8] |  337  -29.4%  -43.0%  18%  40% |  -31.1%
+E90C     |  115 |  115   0   0   0 |   -8.0% [-8.0..-8.0] |  115  -30.2%  -43.3%  19%  40% |  -33.7%
+FD       |   46 |   46   0   0   0 |   -4.2% [-4.2..-4.2] |   46  -40.2%  -86.6%  11%  72% |  -52.9%
+FD120    |   24 |   24   0   0   0 |   -1.9% [-1.9..-1.9] |   24  -35.3%  -90.6%  17%  79% |  -60.0%
+FD35     |   40 |   40   0   0   0 |   -3.3% [-3.3..-3.3] |   40  -35.9%  -88.4%  10%  68% |  -50.5%
+FDB      |   89 |   89   0   0   0 |   -9.5% [-9.5..-9.5] |   89  -46.5%  -79.7%  11%  66% |  -53.1%
+FDF      |   31 |   31   0   0   0 |   -2.7% [-2.7..-2.7] |   31  -38.2%  -86.3%  10%  74% |  -57.3%
+FDH      |   85 |   85   0   0   0 |   -9.4% [-9.4..-9.4] |   85  -48.1%  -83.6%  12%  69% |  -55.1%
+FDHF     |   23 |   23   0   0   0 |   -0.9% [-0.9..-0.9] |   23  -16.6%  -86.2%  26%  61% |  -41.6%
+FDL      |   61 |   61   0   0   0 |   -4.0% [-4.0..-4.0] |   61  -28.2%  -84.2%  11%  72% |  -37.5%
+FDLU     |   36 |   31   5   0   0 |   -0.1% [-0.1..-0.1] |   31   -1.5%  -78.7%  19%  77% |  -19.4%
+FDLU120  |   35 |   19  16   0   0 |   -0.1% [-0.1..-0.1] |   19   -1.7%  -86.3%  26%  68% |  -31.2%
+FDLU90   |   12 |   12   0   0   0 |    0.3% [0.3..0.3] |   12   11.5%  -79.7%  33%  67% |  -16.6%
+FDLUX    |   20 |   16   4   0   0 |   -1.2% [-1.2..-1.2] |   16  -32.4%  -77.7%  12%  81% |  -67.7%
+FDU      |   20 |   16   4   0   0 |   -0.3% [-0.3..-0.3] |   16   -7.1%  -86.6%  19%  75% |  -43.1%
+FDU120   |   19 |   10   9   0   0 |    0.3% [0.3..0.3] |   10   11.6%  -88.1%  30%  70% |  -45.8%
+FDU90    |    4 |    4   0   0   0 |   -0.2% [-0.2..-0.2] |    4  -18.7%  -90.1%  25%  75% |  -91.0%
+FDX      |   13 |   13   0   0   0 |   -0.3% [-0.3..-0.3] |   13  -10.3%  -91.7%  23%  77% |  -55.6%
+
+H1 BL − FDL, O1 per eligible launch, paired by mint (n=435): -24.0 points [95% -29.6, -18.0]
+H4 E90 − E60, O1 paired by mint (n=435): +4.1 points [95% +0.6, +7.6]
+H4 E90C − E60, O1 paired by mint (n=435): +18.8 points [95% +12.8, +24.9]
+H4 E90C − E90, O1 paired by mint (n=435): +14.8 points [95% +9.6, +19.7]
+H2 BL fills, group rest: n 334 mean -28.7% median -46.8% | without best mint -30.4%
+H2 BL fills, group high-count: n 211 mean -22.3% median -39.5% | without best mint -26.0%
+   grp values seen: [('high-count', 211), ('below-threshold', 92), ('tool', 88), ('lookup-failed', 74), ('funded-dev', 70), ('pending', 10)]
+
+H3 completed trades that reached ≥2× then closed ≤0: 235 (rows across books); landing valuation < 50% of trigger valuation: 164 — recorded gap only. Examples (book, mint, high, trigger x, exit x): [('A1', 'D7Xnv9DJ', 2.08, 1.044, 0.233), ('A1', 'Dt4xYwKb', 2.66, 0.917, 0.278), ('A1', '8yoVgrUk', 2.07, 1.061, 0.213), ('A1', 'DevgxbTW', 3.76, 2.199, 0.184), ('A1', 'WA3mM1vh', 4.29, 1.636, 0.626), ('A1', 'AN2YWAv4', 2.31, 1.068, 0.184)]
+
+O3 registry runners created 14:22 UTC 6 Nov → 05:00 UK 7 Nov: 583 (migrated 457, ≥$100K detected 333; detected, not verified; 41-style >$50M decode errors not removed here)
+   BL: checked 219, filled 178 (31% of runners); of ≥$100K: filled 117/333
+   E60: checked 206, filled 145 (25% of runners); of ≥$100K: filled 95/333
+   FDL: checked 219, filled 16 (3% of runners); of ≥$100K: filled 5/333
+   FD: checked 219, filled 13 (2% of runners); of ≥$100K: filled 5/333
+   FDU120: checked 219, filled 5 (1% of runners); of ≥$100K: filled 4/333
+
+O4 exposure at 0.02 SOL a position (max / mean concurrently open over the window):
+   BL: max 25 open (0.50 SOL), mean 9.7
+   BL27: max 17 open (0.34 SOL), mean 4.4
+   E60: max 20 open (0.40 SOL), mean 7.9
+   E90: max 17 open (0.34 SOL), mean 6.8
+   A1: max 10 open (0.20 SOL), mean 2.3
+   FDL: max 10 open (0.20 SOL), mean 2.2
+   FDU120: max 9 open (0.18 SOL), mean 7.6
+
+TIMING QUALITY (forward decisions):
+   60s: decisions 94729, on time 80%, decision age median 69 s, p90 104 s
+   90s: decisions 89018, on time 82%, decision age median 99 s, p90 122 s
+   120s: decisions 33589, on time 77%, decision age median 129 s, p90 156 s
+   status at 08:52 UK: launcher 0.9.47, stalls since last restart 0, check timeouts 1, incomplete fetches 0
+
+MISSED-RUNNER LEDGER (forward runners the old books entered and none of BL/BL27/E60/E90/E90C did): 2
+   ('Iphone Duo', 'GX7dUn5M', 'mig', '≥100K', 'A1', [('below the 15 SOL screen', 1)], -52)
+   ('XTO', '3oTCJjax', 'mig', '≥100K', 'A1', [('below the 15 SOL screen', 3)], -54)
+READING AGAINST THE PRE-REGISTERED THRESHOLDS
+  O1/O2: every book negative per filled trade (O2 mean −1.5% to −48%; medians −43% to −92%); best-looking O2 (FDLU90 +11.5%, n 12; FDU120 +11.6%, n 10) are negative without the best mint. No book is profitable.
+  H1 (funding gate): BL − FDL O1 = −24.0 points, interval excludes 0 → by the plan's O1 threshold the gate "helps" — but entirely by abstention (FDL fills 61 of 435 eligible); per filled trade FDL −28.2% vs BL −28.0% (no selection gain).
+  H2 (high-count): BL high-count fills −22.3% mean vs rest −28.7%; both negative, and without the best mint −26.0% — the "> 0" condition fails. Not supported.
+  H3: 235 rows reached ≥ 2× and closed ≤ 0; 164 have a landing valuation < 50% of trigger — recorded gap only; per-case slot/reserve reconciliation not done in this read.
+  H4: E90C − E60 O1 +18.8 points [+12.8, +24.9]; E90 − E60 +4.1 [+0.6, +7.6] — again mostly abstention (E90C fills 115 of 435). The plan also requires O2 mean AND median better: E90C O2 −30.2% / −43.3% vs E60 −28.2% / −44.6% — mean worse. Not supported.
+  H5: nothing (exploratory).
+  Preliminary: 435 eligible mints (floor 100/arm met for BL/E60/E90/E90C) but the period is development data with the outages above.
+
+CONFIRMATION_START: 2026-11-07 09:00:00 UTC — stamped by this read under the plan's condition "if the owner changes nothing after this read" (no rule, book or measurement change after it). Void and re-stamped if any rule/book/measurement change is made. Note: the reliability changes of 03:31–04:32 (exports, heap, per-check 100-s deadline) predate it; 0.9.47 is the build the confirmation period runs on.
