@@ -106,8 +106,9 @@ if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep '^launcher/' | gre
   for f in launcher/src/*.mjs; do node --check "$f" 2>/tmp/deploy-launcher.err || { LFAIL="syntax: $f $(head -c 300 /tmp/deploy-launcher.err)"; break; }; done
   if [ -z "$LFAIL" ]; then (cd launcher && LAUNCH_SMOKE=1 LAUNCH_HOME=/tmp/launcher-smoke LAUNCH_DB=/tmp/launcher-smoke.db LAUNCH_OUT=/tmp/launcher-smoke-out timeout 40 node src/index.mjs >/tmp/deploy-launcher-smoke.log 2>&1); LRC=$?; rm -rf /tmp/launcher-smoke.db* /tmp/launcher-smoke /tmp/launcher-smoke-out; [ "$LRC" != "0" ] && LFAIL="launcher smoke run exited with code $LRC: $(grep -E 'Error|error|at ' /tmp/deploy-launcher-smoke.log | head -5 | tr '\n' ' ' | head -c 400)"; fi
   if [ -n "$LFAIL" ]; then echo "[deploy] LAUNCHER REJECTED: $LFAIL"; notify "⛔ <b>launcher deploy rejected</b> — Reason: <code>$(echo "$LFAIL" | head -c 500)</code>"
-  elif pm2 startOrReload launcher/ecosystem.config.cjs --only launcher --update-env >/tmp/deploy-launcher-pm2.log 2>&1; then pm2 save >/dev/null 2>&1; echo "[deploy] launcher reloaded"
-  else echo "[deploy] LAUNCHER START FAILED: $(tail -c 300 /tmp/deploy-launcher-pm2.log)"; notify "⛔ <b>launcher start failed</b> — <code>$(tail -c 300 /tmp/deploy-launcher-pm2.log)</code>"; fi
+  else if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^launcher/ecosystem.config.cjs$'; then pm2 delete launcher >/dev/null 2>&1; echo "[deploy] launcher: ecosystem changed — fresh start"; fi # 0.9.40: a reload keeps the old node arguments (heap size)
+  if pm2 startOrReload launcher/ecosystem.config.cjs --only launcher --update-env >/tmp/deploy-launcher-pm2.log 2>&1; then pm2 save >/dev/null 2>&1; echo "[deploy] launcher reloaded"
+  else echo "[deploy] LAUNCHER START FAILED: $(tail -c 300 /tmp/deploy-launcher-pm2.log)"; notify "⛔ <b>launcher start failed</b> — <code>$(tail -c 300 /tmp/deploy-launcher-pm2.log)</code>"; fi; fi
 fi
 # launcher: changing launcher/push-now.txt makes the box push the launcher's data now
 if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^launcher/push-now\.txt$'; then (nohup bash -c 'sleep 90; bash /root/tracker/launcher/push.sh' >> /root/tracker/data/push-now.log 2>&1 &); fi
