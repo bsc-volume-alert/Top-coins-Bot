@@ -92,11 +92,14 @@ export function registryCoverage(db, hours = 48) { // 0.9.25: the SAME cohort as
 
 /** 0.9.24: early checkpoints with ACTUAL observation times and completeness flags — one row per launch of the last `hours`, from the tracker's token_life.
  *  Each cp column: "ontime" (taken within 15 s of schedule), "late:<s>" (taken later — the metrics are from that later moment), "missing" (no trade after the offset while the launch was in memory, or launch before tracker 0.19.4). Values stay missing, never zero. */
+const epochCache = { obs3: null, obs4: null };
 export function earlyCheckpoints(tdb, hours = 24, cps = [15, 30, 60, 90, 120]) {
   if (!tdb) return []; const since = now() - hours * 3600, out = [], snap = now();
   const life = tdb.prepare("SELECT cp, ts, mc, buys5m, sells5m, buyers5m, buyers_total, graduated, obs_ts, src FROM token_life WHERE mint=? AND cp<=120");
-  const obs3 = (() => { try { return tdb.prepare("SELECT MIN(ts) t FROM token_life WHERE cp=15").get()?.t ?? null; } catch { return null; } })(); // first 15-s row = when the new checkpoints went live (tracker 0.19.4)
-  const obs4 = (() => { try { return tdb.prepare("SELECT MIN(ts) t FROM token_life WHERE src='exact'").get()?.t ?? null; } catch { return null; } })(); // first exact-cut row (tracker 0.19.5)
+  // 0.9.45: the two epoch starts are fixed once found, so they are looked up once and kept — MIN(ts) WHERE src='exact' has no index and scanned all of token_life on
+  // every export (early_checkpoints took 14 s of the 04:12 UK export). Still null → asked again next export.
+  const obs3 = epochCache.obs3 ?? (epochCache.obs3 = (() => { try { return tdb.prepare("SELECT MIN(ts) t FROM token_life WHERE cp=15").get()?.t ?? null; } catch { return null; } })()); // first 15-s row = when the new checkpoints went live (tracker 0.19.4)
+  const obs4 = epochCache.obs4 ?? (epochCache.obs4 = (() => { try { return tdb.prepare("SELECT MIN(ts) t FROM token_life WHERE src='exact'").get()?.t ?? null; } catch { return null; } })()); // first exact-cut row (tracker 0.19.5)
   for (const k of tdb.prepare("SELECT mint, name, create_ts FROM tokens WHERE create_ts>=? ORDER BY create_ts").all(since)) {
     const rows = new Map(life.all(k.mint).map((r) => [r.cp, r])), o = { snapshot_ts: snap, mint: k.mint, name: k.name, create_ts: k.create_ts, tracker_epoch: obs4 && k.create_ts >= obs4 ? "obs-4" : obs3 && k.create_ts >= obs3 ? "obs-3" : "pre-obs-3", complete: 1 };
     for (const cp of cps) { const r = rows.get(cp), cut = k.create_ts + cp; o["cutoff" + cp] = cut;
