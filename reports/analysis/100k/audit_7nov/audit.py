@@ -1,4 +1,4 @@
-# $100K coverage audit, 7 Nov 2026 — reports/analysis/100k. Inputs: launcher-data export (COMMIT file). UK = UTC.
+# $100K coverage audit, 7 Nov 2026 (rev. 09:50 UK after Codex's review: labels renamed — no 'verified', no 'never crossed'; 1e9 supply is an assumption; outage list hardcoded) — reports/analysis/100k. Inputs: launcher-data export (COMMIT file). UK = UTC.
 import csv,sys,json,collections,statistics as st,time
 A=sys.argv[1]
 def f(x):
@@ -49,14 +49,14 @@ cat=collections.Counter(); hi_usd=max(f(r['usd']) for r in rd('sol_usd'))
 for m in mature:
   c=int(meta[m]['create_ts'])
   x=cx.get(m)
-  if x and int(x['ts'])<=c+7200: cat['VERIFIED within 2 h' + (' (suspect jump)' if x['suspect_jump']=='1' else '')]+=1; continue
+  if x and int(x['ts'])<=c+7200: cat['OBSERVED CROSSING within 2 h (pricing not independently validated)' if x['suspect_jump']!='1' else 'OBSERVED CROSSING within 2 h — SUSPECT price jump (kept separate)']+=1; continue
   if m in R and not (x and int(x['ts'])<=c+7200): cat['DETECTED only (registry)']+=1; continue
   v=mints[m]
   if not v: cat['UNKNOWN — not retained']+=1; continue
   if meta[m]['graduated'] in('1','true') and not any('pumpswap' in k for k in v): cat['UNKNOWN — migrated, no pool trades']+=1; continue
   if any(a<c+7200 and b>c for a,b in OUT): cat['UNKNOWN — tracker outage inside window']+=1; continue
   mx=max((f(r['max_price_sol']) or 0) for r in v.values())
-  if mx*1e9*hi_usd<100000: cat['NEVER CROSSED (retained, covered, max < $100K even at the window\'s highest SOL/USD)']+=1
+  if mx*1e9*hi_usd<100000: cat['NO CROSSING OBSERVED — coverage UNVERIFIED (retained, no listed outage, max price x 1e9 x highest SOL/USD < $100K; 1e9 supply ASSUMED)']+=1
   else: cat['UNKNOWN — max near $100K but no verified crossing']+=1
 p(f"\nPRIMARY OUTCOME, 2-h window, mature launches (created ≥ 2 h before the export cutoff): {len(mature)}")
 for k,v in cat.most_common(): p(f"  {v:6d}  {k}")

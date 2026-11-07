@@ -1,20 +1,16 @@
-# $100K coverage audit — 7 Nov 2026 09:35 UK (export a3d7db4f, launcher 0.9.50; launches created 6 Nov 09:23 → 7 Nov 09:23 UTC = UK)
-Full numbers: audit_out.txt (script audit.py; inputs coverage_mints / coverage_crossings / sol_usd .csv.gz here, sha256 in MANIFEST.txt).
+# $100K coverage audit — 7 Nov 2026 (export a3d7db4f; launches created 6 Nov 09:23 → 7 Nov 09:23 UTC = UK). REVISED 09:55 UK after Codex's reviews (09:32, 09:46).
+Reproduce: audit.py <dir> with the six inputs in this folder (coverage_mints, coverage_crossings, sol_usd, runner_registry .csv.gz; tracker outage windows are hardcoded in the script). sha256 in MANIFEST.txt. Frozen at the commit that adds this file.
 
-1. Retention: 3,318 of 43,662 launches (7.6%) have kept trades; 40,344 have none → their $100K outcome is UNKNOWN under the strict rule.
-2. Migration: 637 launches migrated (tracker flag); 421 retained; pool trades recorded for 191 (pool capture since tracker 0.19.6, ~20:00 UK, retained launches only).
-3. Recorded crossings: 168. Not all are real:
-   - the pump.fun curve completes at $37,019 at this SOL/USD (every retained migrated coin's curve max = $37,019); 37 of the 39 CURVE-venue crossings are on coins that never migrated — a curve price ≥ $100K without migration is impossible on the standard curve → price-decoding suspects (non-standard tokens; the same family as the registry's $100M–$2B peaks). 58 non-migrated retained coins show a curve max above $60K — same issue.
-   - 36 crossings have a > 10× jump from the previous trade; 20 crossing market caps exceed $10M.
-   - 127 of 168 crossings happen within 60 s of creation — already achieved before any 60-s decision (instant / concentrated launches; Codex 08:55 category).
-   - Crossings AFTER 60 s: 41 (21 pool, 20 curve); 1 suspect jump; none over $10M. The genuinely "predictable" verified set in 24 h is therefore ~20 pool crossings plus whatever of the 20 curve ones survive a decode check.
-   - SOL/USD sample age at crossing: median 54 s, max 119 s — no stale conversion.
-4. Registry vs verified, coin by coin: registry flags 423 ≥$100K in the window; 168 verified here (all 168 are in the registry); 255 registry-only = 141 not retained, 111 migrated with no pool trades, 3 retained with max < $100K; 4 have registry peaks > $50M.
-5. Primary outcome (2-h window, 41,653 mature launches): VERIFIED 116 (+32 with a suspect jump) · DETECTED only 252 · NEVER CROSSED 1,949 · UNKNOWN 39,304 (38,359 not retained, 834 tracker outage in window, 111 migrated without pool trades).
+Labels (no "verified", no "never crossed"):
+- OBSERVED CROSSING within 2 h — a recorded trade at ≥ $100K (price_sol × 1e9 × SOL/USD sample at or before it, age ≤ 119 s); pricing not independently validated: 116.
+- OBSERVED CROSSING — SUSPECT price jump (> 10× vs the previous trade), kept separate: 32.
+- DETECTED only (registry/GMGN, no recorded trade): 252.
+- NO CROSSING OBSERVED — coverage UNVERIFIED (retained, no listed tracker outage, max price × 1e9 × highest SOL/USD < $100K; the 1e9 supply is ASSUMED and complete capture through the window is NOT established): 1,949.
+- UNKNOWN: 39,304 (38,359 not retained; 834 tracker outage in window; 111 migrated without pool trades).
 
-What this means:
-- The verified $100K sample after 60 s is about 20 coins a day — too few to find patterns quickly, and smaller than the registry suggested.
-- Two collection gaps decide the outcome for most launches:
-  (a) POOL trades for EVERY migrated coin (~640/day), not only retained ones — the $100K run happens on the pool;
-  (b) a structural rule to verify: a launch that never migrates cannot pass the curve's $37K completion, so non-migrated launches could be labelled NEVER CROSSED — valid only if the tracker's migration flag is complete for every launch and the coin is a standard pump.fun curve (decode suspects excluded). This must be verified before use, not assumed.
-- Price-decoding suspects must be fixed or excluded before any study uses them as winners.
+Crossing counts reconcile as 168 = 127 within 60 s of creation + 41 after (21 pool, 20 curve). The 37 curve-venue crossings on coins the tracker never flagged as migrated OVERLAP both groups (19 within 60 s, ~18 after). They are SUSPECT, not established errors: the identical $37,019 curve maximum of every migrated retained coin is an observation — the terminal curve value has not yet been derived from the program configuration, supply, quote asset and contemporaneous SOL/USD, and a shared clamp in the calculation is not ruled out.
+Crossings within 60 s are coins ALREADY ≥ $100K before the 60-s checkpoint — kept in the census as their own group, not false runners; fast crossing alone does not establish bundling or common control.
+The 21 pool crossings after 60 s are one 24-h sample, not a daily population rate.
+"Migration not observed" ≠ "never migrated": the reserve-derived flag is not independent migration evidence.
+
+Collection change made after this audit (owner's go 09:46 UK): tracker 0.19.8 records pool trades for every launch from the census for 24 h after creation (not only retained ones) and logs pool-feed socket changes in feed_gaps as 'pool-…'. It improves pool coverage; it does not by itself make outcomes complete (handoff capture, pool identity, subscription gaps and dedup to be audited; cost measured before/after).

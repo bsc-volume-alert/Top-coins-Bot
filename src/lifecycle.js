@@ -1,6 +1,6 @@
 // v0.12: lifecycle sampler (survival funnel), top-10 holder snapshots for survivors, big-buy logging with wallet balance.
 import { CFG } from "./config.js";
-import { q } from "./db.js";
+import { q, db } from "./db.js";
 import { on, live } from "./launch-monitor.js";
 import { onSwap } from "./pumpswap.js";
 import { rpc } from "./rpc.js";
@@ -99,6 +99,16 @@ onSwap((tr) => { const s = L.get(tr.mint); const ct = s?.createTs ?? q.tokenMeta
 // vsol = the pool's quote reserve in lamports after the swap (SOL-quoted pools), vtok = the pool's base reserve in raw units when known.
 onSwap((tr) => { const t = live.get(tr.mint); if (!t || !t.finalized || !(t.tier >= 1 || t.vol)) return;
   try { q.insTradeVenue.run(tr.mint, tr.sig, tr.slot, tr.ts, tr.wallet || null, tr.isBuy ? 1 : 0, tr.sol, tr.tokens, tr.price, Date.now(), tr.poolSol != null ? String(Math.round(tr.poolSol * 1e9)) : null, tr.poolBase != null ? String(tr.poolBase) : null, tr.venue || "pumpswap"); lc.poolTrades = (lc.poolTrades || 0) + 1; } catch (e) { lc.poolErr = (lc.poolErr || 0) + 1; } });
+// v0.19.8 (owner's go 7 Nov 09:46 UK; Codex 09:32 / 09:46 UK): pool trades for EVERY recent pump.fun launch, not only the retained ones — the $100K run happens on the pool,
+// and the outcome audit found 446 of 637 migrated coins in 24 h with no pool record. Membership comes from the launch census (tokens.create_ts), independent of the
+// 15-SOL screen; a launch qualifies for POOL_ALL_HOURS (default 24) after creation. Retained launches stay on the handler above (no double insert). Counters:
+// lc.poolAll (rows), lc.poolAllMints (distinct mints recorded), lc.poolAllErr. Pool-feed socket changes are logged in feed_gaps as 'pool-…' (index.js).
+const POOL_ALL_S = (Number(process.env.POOL_ALL_HOURS) || 24) * 3600, ctCache = new Map(), seenPoolMints = new Set(); let qCt = null;
+onSwap((tr) => { const t = live.get(tr.mint); if (t && t.finalized && (t.tier >= 1 || t.vol)) return;
+  let ct = ctCache.get(tr.mint);
+  if (ct === undefined) { try { qCt = qCt || db.prepare("SELECT create_ts FROM tokens WHERE mint=?"); ct = qCt.get(tr.mint)?.create_ts ?? null; } catch { ct = null; } ctCache.set(tr.mint, ct); if (ctCache.size > 60000) ctCache.delete(ctCache.keys().next().value); }
+  if (ct == null || (tr.ts || 0) - ct > POOL_ALL_S) return;
+  try { q.insTradeVenue.run(tr.mint, tr.sig, tr.slot, tr.ts, tr.wallet || null, tr.isBuy ? 1 : 0, tr.sol, tr.tokens, tr.price, Date.now(), tr.poolSol != null ? String(Math.round(tr.poolSol * 1e9)) : null, tr.poolBase != null ? String(tr.poolBase) : null, tr.venue || "pumpswap"); lc.poolAll = (lc.poolAll || 0) + 1; if (!seenPoolMints.has(tr.mint)) { seenPoolMints.add(tr.mint); lc.poolAllMints = seenPoolMints.size; if (seenPoolMints.size > 20000) seenPoolMints.clear(); } } catch (e) { lc.poolAllErr = (lc.poolAllErr || 0) + 1; } });
 
 // time-based checkpoints for tokens that went quiet (so "dead" rows get written too), and cleanup
 setInterval(() => {

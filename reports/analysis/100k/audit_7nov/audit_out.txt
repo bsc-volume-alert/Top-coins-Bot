@@ -17,11 +17,11 @@ Registry '≥$100K detected' launches in the window: 423 | also verified here: 1
 
 PRIMARY OUTCOME, 2-h window, mature launches (created ≥ 2 h before the export cutoff): 41653
    38359  UNKNOWN — not retained
-    1949  NEVER CROSSED (retained, covered, max < $100K even at the window's highest SOL/USD)
+    1949  NO CROSSING OBSERVED — coverage UNVERIFIED (retained, no listed outage, max price x 1e9 x highest SOL/USD < $100K; 1e9 supply ASSUMED)
      834  UNKNOWN — tracker outage inside window
      252  DETECTED only (registry)
-     116  VERIFIED within 2 h
+     116  OBSERVED CROSSING within 2 h (pricing not independently validated)
      111  UNKNOWN — migrated, no pool trades
-      32  VERIFIED within 2 h (suspect jump)
+      32  OBSERVED CROSSING within 2 h — SUSPECT price jump (kept separate)
 
 Limits: 'retained' = the tracker kept trades (15-SOL screen or bundle tier-1); pool trades only since tracker 0.19.6 (6 Nov ~20:00 UK); 'never crossed' assumes no unlogged capture gap — feed_gaps.csv lists reconnects, the listed tracker outages are excluded, quiet stretches remain inactivity-or-gap. Crossing time = first OBSERVED trade ≥ $100K; the previous trade bounds it only where history between is complete.
