@@ -224,8 +224,11 @@ export function metrics(r, upto, creator = null, bundle = null) {
 
 /** every 15 s: checkpoints at 60 / 90 / 120 s for launches that passed any pre-filter (and a sample of the rest for the A1 control). */
 let checking = false, checkSince = 0, checkSeq = 0;
+// 0.9.47: each launch check has its own deadline (CHECK_MS) and records which await it is in, so a hung call costs one check (redone next pass) instead of the whole pass,
+// and a 5-min stall names its cause (fdStat.lastStall = the in-flight checks and their stage). A timed-out check writes nothing: no decision rows, no check row.
+const CHECK_MS = n("LAUNCH_FD_CHECK_MS", 100000), inflight = new Set();
 export async function fdCheck(db, tdb = null) {
-  if (checking && Date.now() - checkSince > STALL_MS) { fdStat.stalls = (fdStat.stalls || 0) + 1; fdStat.lastErr = `check stalled ${Math.round((Date.now() - checkSince) / 60000)} min — pass abandoned`; checking = false; }
+  if (checking && Date.now() - checkSince > STALL_MS) { fdStat.stalls = (fdStat.stalls || 0) + 1; fdStat.lastErr = `check stalled ${Math.round((Date.now() - checkSince) / 60000)} min — pass abandoned`; fdStat.lastStall = { at: new Date().toISOString(), inflight: [...inflight].map((k) => ({ mint: k.mint.slice(0, 8), at: k.at, stage: k.stage, s: Math.round((Date.now() - k.t0) / 1000) })) }; checking = false; }
   if (checking) return; checking = true; checkSince = Date.now(); const mySeq = ++checkSeq;
   try {
     const t = now();
@@ -236,15 +239,15 @@ export async function fdCheck(db, tdb = null) {
     const list = db.prepare("SELECT *, rowid AS rid, (CASE WHEN pre_nb=1 OR (rowid % 7)=0 THEN 1 ELSE 0 END) AS ctl FROM fd_watch WHERE done=0 AND created_ts>=? AND (pre_nb=1 OR (rowid % 7)=0 OR screened=1) ORDER BY pre DESC, created_ts").all(t - 300);
     fdStat.open = list.length;
     // 0.9.35 (owner 20:29 UK: "carry on, don't slow it down"): launches are checked CONCURRENTLY, FD_CONCURRENCY at a time (default 3), each still under the 60-s fetch cap, same order rules, same decision records — the sequential queue was starving the checks whenever Helius was slow (23 checks in 10 min at 20:12–20:22 UK)
-    let budgetHit = false; const passSeq = mySeq; const one = async (w) => {
+    let budgetHit = false; const passSeq = mySeq; const one = async (w, tok) => {
       const age = t - w.created_ts, checks = JSON.parse(w.checks || "[]"), doneAt = new Set(checks.map((c) => c.at));
       if (age > CHECKS[CHECKS.length - 1] + 60) { db.prepare("UPDATE fd_watch SET done=1 WHERE mint=?").run(w.mint); return; }
       const due = CHECKS.filter((c) => c <= age && !doneAt.has(c)); if (!due.length) return;
       if (fdStat.credits >= DAY_CREDITS) { fdStat.lastErr = `daily Helius budget ${DAY_CREDITS} reached`; budgetHit = true; return; }
       const at = due[0]; // 0.9.30 (Codex/Claude reviews 6 Nov): checkpoints in order — 60 before 90 before 120 — so a late-seen launch never gets a 90-s decision without its 60-s observation (was due[due.length-1], the latest first)
       try {
-        const c0 = studyStat.credits, r = await earlyTrades(w.mint, w.created_ts + at); fdStat.credits += studyStat.credits - c0;
-        if (checkSeq !== passSeq) { fdStat.lateDrops = (fdStat.lateDrops || 0) + 1; return; } // 0.9.37 (Codex 20:36 UK): a pass the guard has abandoned writes nothing late — the result is discarded and the next pass redoes the check
+        tok.at = at; tok.stage = "earlyTrades"; const c0 = studyStat.credits, r = await earlyTrades(w.mint, w.created_ts + at); fdStat.credits += studyStat.credits - c0;
+        if (checkSeq !== passSeq || tok.dead) { fdStat.lateDrops = (fdStat.lateDrops || 0) + 1; return; } // 0.9.37 (Codex 20:36 UK): a pass the guard has abandoned writes nothing late — the result is discarded and the next pass redoes the check
         fdStat.checks++; fdStat.lastCheck = new Date().toISOString();
         let bundle = null; if (tdb && REC_BUNDLE) try { bundle = tdb.prepare("SELECT wallet FROM cluster_wallets WHERE mint=? AND role IN ('bundle','dev')").all(w.mint).map((x) => x.wallet); } catch {} // 0.8.12: behind LAUNCH_FD_REC_BUNDLE (off) — the launcher restarted every 2–6 min after 0.8.11 with nothing in the error log (pm2 memory limit?); the tracker-table lookup and the pump.fun page fetch are the two suspects, switched off until proven
         const mm = metrics(r, (r.t0 || w.created_ts) + at, w.creator, bundle), early = mm.early; delete mm.early; // the wallets go to fd_early, not into the check row
@@ -258,12 +261,13 @@ export async function fdCheck(db, tdb = null) {
         checks.push(m); const entered = new Set(String(w.entered || "").split(",").filter(Boolean));
         const prev = checks.slice(0, -1).filter((c) => c.at != null && !c.err);
         // 0.8.9: GMGN's token info ONCE per check (it was fetched once per rule that passed), only past the loosest bar; its holder count goes into the check row and the FDH rules
-        let info = null; if (BASE_BAR(m) && entered.size < RULES.length) { try { info = await gget("/v1/token/info", { chain: "sol", address: w.mint }, { hi: true }); } catch {} m.holders = N(info?.holder_count) || null;
+        tok.stage = "gmgn info"; let info = null; if (BASE_BAR(m) && entered.size < RULES.length) { try { info = await gget("/v1/token/info", { chain: "sol", address: w.mint }, { hi: true }); } catch {} m.holders = N(info?.holder_count) || null;
           const su0 = await solPrice(); m.mcUsd = m.mcSol > 0 && su0 > 0 ? +(m.mcSol * su0).toFixed(0) : null; } // 0.9.6: market cap in USD at the check, for the U books
         // 0.9.7: a second mint launched under a name a book already entered (Gemini, 5 Nov 19:18 UK: 6 of FDL+U's 10 remaining rugs, none of its winners; the generic same-name-in-the-hour count does NOT separate) — logged on every check, not a rule
         try { const sn = db.prepare("SELECT mint, entry_ts, strat FROM vol_paper WHERE lower(name)=lower(?) AND mint<>? AND entry_ts>=? AND entry_ts<? ORDER BY entry_ts LIMIT 1").get(w.name, w.mint, t - 7200, t); if (sn) { m.same_name_mint = sn.mint; m.same_name_min = +((t - sn.entry_ts) / 60).toFixed(1); } } catch {}
         // 0.9.6: holder growth 60 → 120 s on every mint the U books took at 60 s (logged, not a rule)
         if (at === 120 && m.holders != null && [...entered].some((k) => /U/.test(k))) { const c60 = checks.find((c) => c.at === 60 && c.holders != null); if (c60) db.prepare("INSERT OR IGNORE INTO fd_hgrowth (mint, name, h60, h120, ratio, mc60, mc120, ts) VALUES (?,?,?,?,?,?,?,?)").run(w.mint, w.name, c60.holders, m.holders, +(m.holders / c60.holders).toFixed(2), c60.mcUsd ?? null, m.mcUsd ?? null, t); }
+        tok.stage = "sol price"; await solPrice(); if (tok.dead) return; tok.stage = "rules"; // 0.9.47: the price is cached for 120 s, so the rules loop below never waits on the network mid-way
         for (const rule of RULES) { // 0.9.9: every rule's decision is recorded at every check (passed / failed / already entered / no price), so rejected candidates are rows, not silence
           if (entered.has(rule.k)) { recordDecision(w.mint, at, t, VER, rule.k, 0, "already entered"); continue; }
           if (!rule.bl && w.lookup_status === "pending") { recordDecision(w.mint, at, t, VER, rule.k, 0, "funding pending (data unavailable)"); continue; } // 0.9.38: the trace has not come back yet — recorded as unavailable, never upgraded later
@@ -297,10 +301,10 @@ export async function fdCheck(db, tdb = null) {
         else if (at === 60 && entered.size === 0 && BASE_BAR(m) && SHADOW_SAMPLE > 0 && (fdStat.checks % SHADOW_SAMPLE) === 0) { const su = await solPrice(); if (su > 0 && m.mcSol > 0) shadowSample(db, w, m, m.mcSol * su / 1e9, su).catch(() => {}); }
         const dead = at >= 90 && m.net < 5 && m.buyers < 20 && w.pre !== 1; // nothing happening: stop reading it (credits); pre-filtered coins always get their 120 s check (FD120)
         db.prepare("UPDATE fd_watch SET checks=?, entered=?, done=? WHERE mint=?").run(JSON.stringify(checks), [...entered].join(","), dead || entered.size === RULES.length ? 1 : 0, w.mint);
-      } catch (e) { fdStat.errors++; if (e.incomplete) fdStat.incomplete = (fdStat.incomplete || 0) + 1; fdStat.lastErr = `${w.mint.slice(0, 6)}: ${e.message}`.slice(0, 160); checks.push({ at, err: e.message.slice(0, 80), incomplete: e.incomplete ? 1 : 0 }); db.prepare("UPDATE fd_watch SET checks=? WHERE mint=?").run(JSON.stringify(checks), w.mint);
+      } catch (e) { if (tok.dead || checkSeq !== passSeq) return; /* 0.9.47: a timed-out or abandoned check writes nothing, errors included */ fdStat.errors++; if (e.incomplete) fdStat.incomplete = (fdStat.incomplete || 0) + 1; fdStat.lastErr = `${w.mint.slice(0, 6)}: ${e.message}`.slice(0, 160); checks.push({ at, err: e.message.slice(0, 80), incomplete: e.incomplete ? 1 : 0 }); db.prepare("UPDATE fd_watch SET checks=? WHERE mint=?").run(JSON.stringify(checks), w.mint);
         for (const rule of RULES) try { recordDecision(w.mint, at, t, VER, rule.k, 0, "data unavailable: " + e.message.slice(0, 60)); } catch {} } // 0.9.30: every book gets a decision row, never silence
     };
-    { const queue = [...list]; const worker = async () => { while (queue.length && !budgetHit && checkSeq === passSeq) { const w = queue.shift(); try { await one(w); } catch (e) { fdStat.errors++; fdStat.lastErr = ("check worker: " + e.message).slice(0, 160); } } }; await Promise.all(Array.from({ length: Math.max(1, FD_CONCURRENCY) }, worker)); }
+    { const queue = [...list]; const worker = async () => { while (queue.length && !budgetHit && checkSeq === passSeq) { const w = queue.shift(); const tok = { mint: w.mint, at: null, stage: "start", t0: Date.now(), dead: false }; inflight.add(tok); let tm; try { await Promise.race([one(w, tok), new Promise((res) => { tm = setTimeout(() => { tok.dead = true; fdStat.checkTimeouts = (fdStat.checkTimeouts || 0) + 1; fdStat.lastTimeout = `${w.mint.slice(0, 6)} at ${tok.at}s stuck in ${tok.stage}`; res(); }, CHECK_MS); })]); } catch (e) { fdStat.errors++; fdStat.lastErr = ("check worker: " + e.message).slice(0, 160); } finally { clearTimeout(tm); inflight.delete(tok); } } }; await Promise.all(Array.from({ length: Math.max(1, FD_CONCURRENCY) }, worker)); }
   } finally { if (checkSeq === mySeq) checking = false; }
 }
 
