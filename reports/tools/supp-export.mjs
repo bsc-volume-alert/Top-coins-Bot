@@ -26,9 +26,28 @@ const TDB = process.env.DB_PATH || "/root/tracker/data/tracker.db", LDB = proces
 const STAMP = new Date().toISOString().replace(/[-:]/g, "").slice(0, 13); // e.g. 20261107T1415
 const BRANCH = `entry-supp-${STAMP.toLowerCase()}`, OUT = process.env.SUPP_OUT || `/root/tracker/data/supp_${STAMP}`, PART_MAX = (Number(process.env.SUPP_PART_MB) || 80) * 1048576;
 const t0 = Date.now(), now = () => Math.floor(Date.now() / 1000);
-const status = (o) => { try { writeFileSync(join(LOUT, "supp_status.json"), JSON.stringify({ ver: "supp-export 1.1", branch: BRANCH, at: new Date().toISOString(), secs: Math.round((Date.now() - t0) / 1000), ...o }, null, 1)); } catch {} console.log("[supp]", JSON.stringify(o)); };
+const status = (o) => { try { writeFileSync(join(LOUT, "supp_status.json"), JSON.stringify({ ver: "supp-export 1.2", branch: BRANCH, at: new Date().toISOString(), secs: Math.round((Date.now() - t0) / 1000), ...o }, null, 1)); } catch {} console.log("[supp]", JSON.stringify(o)); };
 const esc = (v) => (v == null ? "" : /[",\n\r]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
 
+// 1.2 (7 Nov 14:50 UK): the one-shot push of ~600 MB timed out (HTTP 408). Publishing now goes file by file — one commit and one push per file
+// (each ≤ ~80 MB), so no single upload is large. SUPP_PUBLISH_DIR=<completed dir> publishes an already-written export without re-reading anything.
+async function publish(dir, branch) {
+  const git = (...a) => execFileSync("git", a, { cwd: dir, stdio: "pipe", timeout: 900000 }).toString();
+  if (!existsSync(join(dir, "SHA256SUMS.txt"))) { status({ phase: "publish-refused", err: "no SHA256SUMS.txt — export incomplete", dir }); process.exit(1); }
+  const files = readFileSync(join(dir, "SHA256SUMS.txt"), "utf8").trim().split("\n").map((l) => l.split(/\s+/)[1]).concat(["SHA256SUMS.txt"]);
+  if (existsSync(join(dir, ".git"))) rmSync(join(dir, ".git"), { recursive: true, force: true }); // the failed attempt's local repo (nothing of it reached GitHub)
+  git("init", "-q"); git("checkout", "-q", "--orphan", branch); git("config", "http.postBuffer", "524288000");
+  git("remote", "add", "origin", process.env.SUPP_REMOTE || "https://github.com/bsc-volume-alert/Top-coins-Bot.git");
+  const order = ["MANIFEST.md", ...files.filter((f) => f !== "MANIFEST.md" && f !== "SHA256SUMS.txt"), "SHA256SUMS.txt"]; let done = 0, sha = null;
+  for (const f of order) {
+    git("add", "--", f); git("-c", "user.name=launcher", "-c", "user.email=launcher@tracker", "commit", "-q", "-m", `entry supplement: ${f}`); sha = git("rev-parse", "HEAD").trim();
+    let ok = false; for (let a = 1; a <= 4 && !ok; a++) { try { git("push", "-q", "origin", `HEAD:refs/heads/${branch}`); ok = true; } catch (e) { status({ phase: "publish-retry", file: f, attempt: a, err: String(e.stderr || e.message).replace(/https?:\/\/[^ ]*@/g, "").slice(0, 200) }); execFileSync("sleep", [String(20 * a)]); } }
+    if (!ok) { status({ phase: "push-failed", file: f, done, of: order.length, commit: sha }); process.exit(1); }
+    done++; status({ phase: "publishing", file: f, done, of: order.length, branch, commit: sha });
+  }
+  status({ phase: "pushed", branch, commit: sha, files: order.length }); process.exit(0);
+}
+if (process.env.SUPP_PUBLISH_DIR) { const d = process.env.SUPP_PUBLISH_DIR, b = process.env.SUPP_BRANCH || `entry-supp-${d.split("supp_")[1]?.toLowerCase() || STAMP.toLowerCase()}`; await publish(d, b); }
 try {
   // 1.1 disk guard: never let this job fill the disk the tracker writes to (min free 6 GB before start; checked again per part)
   const freeGb = () => { const f = statfsSync(process.env.SUPP_FS || "/root/tracker/data"); return f.bavail * f.bsize / 1073741824; };
@@ -95,13 +114,5 @@ try {
   writeFileSync(join(OUT, "SHA256SUMS.txt"), files.map((f) => `${createHash("sha256").update(readFileSync(join(OUT, f))).digest("hex")}  ${f}`).join("\n") + "\n");
   status({ phase: "written", rows: totalRows, parts: parts.length, mints: mints.length, recon_mismatch: recon, zero_rows: zero, evidence_mints: withEv });
   if (process.env.SUPP_NOPUSH) { status({ phase: "written-nopush", out: OUT }); process.exit(0); }
-  // publish: a NEW orphan branch, never force
-  const git = (...a) => execFileSync("git", a, { cwd: OUT, stdio: "pipe", timeout: 1800000 }).toString();
-  git("init", "-q"); git("checkout", "-q", "--orphan", BRANCH); git("add", "-A");
-  git("-c", "user.name=launcher", "-c", "user.email=launcher@tracker", "commit", "-q", "-m", `entry supplement ${STAMP}: uncapped trade histories, pool evidence, coverage, feed gaps (read-only export)`);
-  const sha = git("rev-parse", "HEAD").trim();
-  git("remote", "add", "origin", "https://github.com/bsc-volume-alert/Top-coins-Bot.git");
-  for (let a = 1; a <= 3; a++) { try { git("push", "-q", "origin", BRANCH); status({ phase: "pushed", branch: BRANCH, commit: sha, rows: totalRows, parts: parts.length, mints: mints.length, recon_mismatch: recon, zero_rows: zero, evidence_mints: withEv }); process.exit(0); }
-    catch (e) { const msg = String(e.stderr || e.message).replace(/https?:\/\/[^ ]*@/g, "").slice(0, 300); status({ phase: "push-failed", attempt: a, err: msg, commit: sha }); } }
-  process.exit(1);
+  await publish(OUT, BRANCH);
 } catch (e) { status({ phase: "error", err: String(e.message).slice(0, 300) }); process.exit(1); }
