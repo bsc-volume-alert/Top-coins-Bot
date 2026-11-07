@@ -7,7 +7,7 @@ Everything in reports/blind/BRIEF_7nov.md (rev 4) still applies: costs, fills, k
 ## The data: every coin, not just the ones earlier books bought
 | What | Where |
 |---|---|
-| **All-coins trade histories:** every launch created 6 Nov 07:40 → 7 Nov 20:00 UTC that the tracker captured (curve trades of retained launches; pool trades). Plus the census of every launch in that window (tokens_window.csv.gz), per-coin coverage and the full feed-gap log | branch **`entry-all-…`** (link given with this brief; start with its MANIFEST.md) |
+| **All-coins trade histories:** every launch created 6 Nov 07:40 → 7 Nov 20:00 UTC that the tracker captured (curve trades of retained launches; pool trades). Plus the census of every launch in that window (tokens_window.csv.gz), per-coin coverage and the full feed-gap log | branch **`entry-all-20261107t2210`** @ e67833121f1da0dc992c28fa26c5236a855c151a — start with its MANIFEST.md. 62,789 launches in the census; 4,913 with captured trades; 8,037,251 rows (2.27M curve, 5.77M pool) in 12 parts; sha256 verified after upload. NOTE: the MANIFEST's second paragraph is boilerplate from the earlier export (it mentions 'launcher chain_fill only') — the mint set line below it is the correct one. |
 | Everything from Round 1 (entered-coin histories, decisions, positions, checkpoints, wallet/funding traces, bundles, snipers, farm wallets, registry) | branch `entry-package-7nov` (INDEX.md) |
 
 Known data issues (dedup by full fingerprint, curve-ceiling decode errors, venue-label lag, receipt times, capture windows) are listed in BRIEF_7nov.md and the MANIFESTs. Read them first.
