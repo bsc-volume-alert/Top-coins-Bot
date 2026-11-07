@@ -287,3 +287,7 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - 24 h fd_positions: 3,676 positions = 1,421 decision keys = 826 mints; 3,521 closed · 53 open · 102 skipped-dump. 1,827 positions (474 mints) after 18:23:11 6 Nov.
 - Found: rule_ver on positions/ledger is the EXPORT version (0.9.50 on every row), not the decision version — map by ts_decision. 1,867 pre-fill-3 positions carry reconstructed i02_* values.
 - Gaps: trades_books lacks 0.19.9 pool evidence columns; no exported streams for entries 6 Nov 18:23 → 7 Nov 07:52 UTC.
+
+## 7 Nov 2026 13:15 UK — four-group read (reports/analysis/entry_winners/groups_7nov)
+- 391 mature prospective coins: 68% of losses come from coins that never got 30% up while held; 10% from coins that hit 2× and still lost. Selling ≥ 0.50 not supported for trading (11 coins). No entry feature repeats DEV→TEST.
+- Found: 105/391 coins (804/3,676 positions) bought already on the pool at large caps (brand-copy names) while the check says venue "curve"; mean −33% vs −23%. Audit pending (venue label, trail used, decoded cap).

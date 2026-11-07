@@ -1,0 +1,103 @@
+COHORT: prospective independent-0.02 positions decided 06 Nov 20:00 → 07 Nov 09:54 UTC (2-h mature), closed under both methods: 1471 positions, 391 mints (earliest filled entry per mint, vol_id tie-break).
+  decision-check metrics found for 370 of 391 mints
+
+FOUR GROUPS (independent 0.02 return; hi = the 0.2 position's recorded running high while held — not the coin's lifetime peak)
+  G1 little rise (<1.3x), lost   mints  219 (56.0%) · mean r  -46.9% · median  -47.0% · sum of r -102.8 stakes · after-exit path known 186 · after-exit ≥2× entry 4 · ≥3× 2
+  G1b rose 1.3-2x, lost          mints   73 (18.7%) · mean r  -45.4% · median  -31.5% · sum of r  -33.1 stakes · after-exit path known 70 · after-exit ≥2× entry 7 · ≥3× 2
+  G2 reached 2x+, still lost     mints   26 ( 6.6%) · mean r  -59.1% · median  -53.8% · sum of r  -15.4 stakes · after-exit path known 18 · after-exit ≥2× entry 1 · ≥3× 0
+  G3 profited                    mints   73 (18.7%) · mean r  +70.5% · median  +27.8% · sum of r  +51.5 stakes · after-exit path known 64 · after-exit ≥2× entry 23 · ≥3× 15
+  ALL 391 mints: sum of r -99.8 stakes; mean -25.5%
+  Loss budget: share of all losses (sum of negative r) by group:
+    G1 little rise (<1.3x), lost    67.9%
+    G1b rose 1.3-2x, lost           21.9%
+    G2 reached 2x+, still lost      10.2%
+    G3 profited                     -0.0%
+
+G2 DETAIL — reached ≥2× while held but the independent exit was ≤ 0 (each row: book · hi · i02 exit multiple · exit reason · minutes held · after-exit max ÷ entry (checkpoint)):
+    LTE6P1KH… BL     hi 10.07 · i02 exit 1.05 · trail  · held  56.2 min · after-exit unknown · hi02 10.1432
+    iMsdCv8D… FDB    hi  7.62 · i02 exit 0.02 · trail  · held  95.3 min · after-exit unknown · hi02 7.6522
+    9grujRgB… FDB    hi  6.05 · i02 exit 0.02 · trail  · held  77.7 min · after-exit unknown · hi02 6.078
+    6wEiUQd7… BL     hi  5.91 · i02 exit 0.81 · trail  · held  78.1 min · after-exit 0.03× @cp7200 · hi02 5.9326
+    AQpVEMRr… FDB    hi  5.73 · i02 exit 0.02 · trail  · held  90.9 min · after-exit unknown · hi02 5.7538
+    DPboYWuy… BL     hi  5.28 · i02 exit 0.79 · trail  · held  88.5 min · after-exit 0.04× @cp7200 · hi02 5.3017
+    9UWhBFgt… BL     hi  3.71 · i02 exit 0.02 · trail  · held  85.5 min · after-exit unknown · hi02 3.722
+    yKKtcgHe… FDB    hi  3.65 · i02 exit 0.72 · trail  · held  29.3 min · after-exit 0.10× @cp7200 · hi02 3.6617
+    7j75sRod… BL     hi  3.52 · i02 exit 0.89 · trail  · held  14.3 min · after-exit 0.37× @cp7200 · hi02 3.5508
+    5R7cG2Ku… BL     hi  3.38 · i02 exit 0.69 · trail  · held  51.0 min · after-exit unknown · hi02 3.3955
+    C6o1uFxu… BL     hi  3.27 · i02 exit 0.01 · trail  · held  46.6 min · after-exit unknown · hi02 3.2839
+    FGpLWJ7S… FDB    hi  3.11 · i02 exit 0.59 · trail  · held  62.5 min · after-exit 0.04× @cp7200 · hi02 3.1203
+    E4YoVyVm… BL     hi  3.09 · i02 exit 0.63 · trail  · held  35.3 min · after-exit 0.04× @cp7200 · hi02 3.1039
+    8kuUr4cC… BL     hi  2.97 · i02 exit 0.16 · trail  · held  63.0 min · after-exit 0.04× @cp7200 · hi02 2.9778
+    75XvqWsr… FDL    hi  2.77 · i02 exit 0.69 · trail  · held   0.6 min · after-exit 1.07× @cp300 · hi02 2.7944
+    6RJWAiYn… BL     hi  2.49 · i02 exit 0.41 · trail  · held  11.6 min · after-exit 0.13× @cp7200 · hi02 2.5042
+    dJsKJ9Fh… FDL    hi  2.47 · i02 exit 0.22 · trail  · held   2.5 min · after-exit 0.21× @cp300 · hi02 2.4881
+    BZ3LFGBy… BL     hi  2.47 · i02 exit 1.06 · trail  · held   3.3 min · after-exit 1.32× @cp300 · hi02 2.4901
+    14VvYUgy… FDB    hi  2.46 · i02 exit 0.55 · trail  · held  22.0 min · after-exit 0.98× @cp1800 · hi02 2.4722
+    xT1KU5r2… FDB    hi  2.38 · i02 exit 0.53 · trail  · held  20.2 min · after-exit 1.60× @cp3600 · hi02 2.3851
+    CQ1napYm… FDB    hi  2.31 · i02 exit 0.56 · trail  · held  18.9 min · after-exit unknown · hi02 2.3124
+    5qLGsjyd… FDB    hi  2.20 · i02 exit 0.59 · trail  · held  27.3 min · after-exit 2.23× @cp1800 · hi02 2.2046
+    EgsY9jNC… BL     hi  2.12 · i02 exit 0.52 · trail  · held  29.0 min · after-exit 0.03× @cp7200 · hi02 2.1297
+    24Rj99Ew… A1     hi  2.10 · i02 exit 0.23 · trail  · held  13.0 min · after-exit 0.23× @cp900 · hi02 2.1123
+    7WSw5CjM… BL     hi  2.03 · i02 exit 0.41 · trail  · held   7.0 min · after-exit 0.11× @cp7200 · hi02 2.0394
+    BEF8p2AL… BL     hi  2.02 · i02 exit 0.39 · trail  · held   6.8 min · after-exit 0.09× @cp7200 · hi02 2.0265
+
+FEATURES AT THE DECISION CHECK by group (median; n with value). Exploratory — no thresholds chosen here.
+  feature         G1 little         G1b rose 1        G2 reached        G3 profite        
+  sell_share_n    0.359 (n205)      0.357 (n70)       0.366 (n23)       0.347 (n72)       
+  sell_share_sol  0.384 (n205)      0.349 (n70)       0.06 (n23)        0.38 (n72)        
+  net             25.9 (n205)       34.3 (n70)        142 (n23)         27.7 (n72)        
+  mcSol           101 (n205)        130 (n70)         1.18e+03 (n23)    105 (n72)         
+  buyers          112 (n205)        132 (n70)         131 (n23)         91.5 (n72)        
+  exited_frac     0.411 (n205)      0.331 (n70)       0.115 (n23)       0.365 (n72)       
+  holding_frac    0.589 (n205)      0.669 (n70)       0.885 (n23)       0.635 (n72)       
+  top10_pct       28 (n205)         31.5 (n70)        87.3 (n23)        28 (n72)          
+  top1_pct        5.19 (n205)       6.1 (n70)         14.2 (n23)        5.2 (n72)         
+  dev_sold_pct    100 (n129)        100 (n53)         0 (n22)           17 (n54)          
+  big             5 (n205)          5.5 (n70)         7 (n23)           3 (n72)           
+  early_sol       23.1 (n205)       29.6 (n70)        145 (n23)         25.1 (n72)        
+  farm_sol_pct    5.7 (n205)        4.85 (n70)        0.3 (n23)         6.65 (n72)        
+  bundle_pct      24.9 (n205)       28.7 (n70)        74.4 (n23)        23.4 (n72)        
+  funder_sol      5.2 (n122)        3.12 (n52)        5.01 (n22)        4.98 (n54)        
+  curve           1 (n205)          1 (n70)           1 (n23)           1 (n72)           
+  d_net           3.75 (n73)        1.08 (n24)        -0.27 (n3)        0.3 (n19)         
+  d_buyers        28 (n73)          18.5 (n24)        24 (n3)           24 (n19)          
+  d_sells         29 (n73)          36.5 (n24)        33 (n3)           20 (n19)          
+  new_buyer_share 0.262 (n73)       0.194 (n24)       0.155 (n3)        0.254 (n19)       
+
+RANK CORRELATION with independent return, DEV (decided before 7 Nov 00:00) vs TEST (after). Same sign + |rho| ≥ 0.1 in both = 'repeats'; otherwise not. 20 features → expect ~1 chance repeat.
+  sell_share_n     DEV rho   0.132 (n95) · TEST rho  -0.147 (n275) 
+  sell_share_sol   DEV rho   0.216 (n95) · TEST rho   0.089 (n275) 
+  net              DEV rho  -0.058 (n95) · TEST rho  -0.057 (n275) 
+  mcSol            DEV rho  -0.068 (n95) · TEST rho  -0.026 (n275) 
+  buyers           DEV rho   0.052 (n95) · TEST rho  -0.088 (n275) 
+  exited_frac      DEV rho   0.264 (n95) · TEST rho  -0.013 (n275) 
+  holding_frac     DEV rho  -0.264 (n95) · TEST rho   0.013 (n275) 
+  top10_pct        DEV rho   0.034 (n95) · TEST rho  -0.103 (n275) 
+  top1_pct         DEV rho   0.096 (n95) · TEST rho  -0.044 (n275) 
+  dev_sold_pct     DEV rho  -0.015 (n72) · TEST rho   0.018 (n186) 
+  big              DEV rho   0.097 (n95) · TEST rho  -0.165 (n275) 
+  early_sol        DEV rho   0.052 (n95) · TEST rho  -0.046 (n275) 
+  farm_sol_pct     DEV rho    0.26 (n95) · TEST rho   0.081 (n275) 
+  bundle_pct       DEV rho  -0.121 (n95) · TEST rho  -0.028 (n275) 
+  funder_sol       DEV rho  -0.103 (n66) · TEST rho   0.039 (n184) 
+  curve            DEV rho  -0.127 (n95) · TEST rho  -0.097 (n275) 
+  d_net            DEV rho   0.232 (n35) · TEST rho  -0.096 (n84) 
+  d_buyers         DEV rho   0.169 (n35) · TEST rho  -0.039 (n84) 
+  d_sells          DEV rho   0.296 (n35) · TEST rho  -0.135 (n84) 
+  new_buyer_share  DEV rho    0.33 (n35) · TEST rho  -0.042 (n84) 
+
+C — SELL SHARE ≥ 0.50 (sells ÷ all trades at the decision check; threshold frozen in reports/analysis/100k/study_v1_1/HYPOTHESES_FROZEN.md, not tuned here). Trading outcome = independent 0.02 return, earliest entry per mint.
+  DEV  ≥0.50: mints    2 · mean  -45.2% [-80.5, -10.0] · median  -45.2% · win   0% · ≥2× hi 0
+  DEV  <0.50: mints   93 · mean  -27.0% [-44.1, -6.4] · median  -47.7% · win  12% · ≥2× hi 14
+  TEST ≥0.50: mints    9 · mean  -18.9% [-44.7, +4.3] · median  -15.8% · win  22% · ≥2× hi 1
+  TEST <0.50: mints  266 · mean  -24.0% [-32.2, -13.9] · median  -37.8% · win  22% · ≥2× hi 53
+  ALL  ≥0.50: mints   11 · mean  -23.7% [-47.8, -0.5] · median  -15.8% · win  18% · ≥2× hi 1
+  ALL  <0.50: mints  359 · mean  -24.7% [-32.7, -15.5] · median  -41.5% · win  19% · ≥2× hi 67
+
+  Per book (all positions, not first-per-mint): mean independent r with vs without the ≥0.50 coins
+    BL    all  381 mean  -25.2% | kept (<0.50)  352 mean  -24.4% | removed (≥0.50)  11 mean  -23.7%
+    E60   all  307 mean  -25.9% | kept (<0.50)  289 mean  -25.4% | removed (≥0.50)  10 mean  -21.6%
+    E90   all  270 mean  -28.0% | kept (<0.50)  243 mean  -29.5% | removed (≥0.50)   8 mean   +2.5%
+    E90C  all   77 mean  -20.7% | kept (<0.50)   70 mean  -18.8% | removed (≥0.50)   2 mean  -24.2%
+    BL27  all  194 mean  -35.3% | kept (<0.50)  174 mean  -35.9% | removed (≥0.50)   7 mean  -23.9%
+    A1    all   65 mean  -44.3% | kept (<0.50)   59 mean  -42.9% | removed (≥0.50)   3 mean  -42.5%
