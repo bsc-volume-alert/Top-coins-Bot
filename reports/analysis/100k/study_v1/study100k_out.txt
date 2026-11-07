@@ -1,0 +1,131 @@
+POPULATION: launches created 06 Nov 09:23 → 07 Nov 07:23 UTC (= UK), 2-h window complete: 41653
+
+LABELS AT EACH DECISION TIME (2-h outcome; NEG = 'no crossing observed — coverage unverified'):
+  decision  60 s: UNKNOWN_NOT_RETAINED 38359, NEG 1949, UNKNOWN_OUTAGE 834, DETECTED_ONLY 252, UNKNOWN_NO_POOL 111, ALREADY 65, SUSPECT 64, POS 19
+  decision 300 s: UNKNOWN_NOT_RETAINED 38359, NEG 1949, UNKNOWN_OUTAGE 834, DETECTED_ONLY 252, UNKNOWN_NO_POOL 111, ALREADY 74, SUSPECT 64, POS 10
+  decision 900 s: UNKNOWN_NOT_RETAINED 38359, NEG 1949, UNKNOWN_OUTAGE 834, DETECTED_ONLY 252, UNKNOWN_NO_POOL 111, ALREADY 79, SUSPECT 64, POS 5
+  30 min window, decision 60 s: POS 16 NEG 2338 ALREADY 65 (24-h window: not adequately observed — coverage export holds 24 h of launches, outcomes after the export cutoff unseen)
+  1 h window, decision 60 s: POS 19 NEG 2172 ALREADY 65 (24-h window: not adequately observed — coverage export holds 24 h of launches, outcomes after the export cutoff unseen)
+
+FIELD COVERAGE among POS+NEG launches at decision 60 s (on-time or exact checkpoint):
+   15 s checkpoint valid: 1522/1968 | holders field filled: 0 | top10 filled: 0
+   30 s checkpoint valid: 1522/1968 | holders field filled: 0 | top10 filled: 0
+   60 s checkpoint valid: 1909/1968 | holders field filled: 0 | top10 filled: 0
+   90 s checkpoint valid: 1514/1968 | holders field filled: 0 | top10 filled: 0
+  120 s checkpoint valid: 1511/1968 | holders field filled: 0 | top10 filled: 0
+  static fields filled: {'bundle_pct': 1968, 'bundle_sol': 1968, 'bundle_wallets': 1968, 'dev_buy_sol': 1968, 'funder_sol': 1128, 'name_1h': 1763, 'name_24h': 1763} of 1968
+  social links / image / replies: EMPTY for every launch (pump.fun API 403) — narrative cannot be assessed beyond name repetition.
+
+FEATURE TABLE — POS vs NEG (2-h outcome; coins already ≥ $100K at the decision excluded). Thresholds fixed on DEV (created before 7 Nov 00:00 UTC) as the DEV 80th and 90th percentile; TEST = 7 Nov 00:00 → 07:23 UTC.
+  cp  feature        thr(dev)   DEV: n_sel pos rate% [95%] recall% FA/pos | TEST: n_sel pos rate% [95%] recall% FA/pos | base dev%/test%
+   15 buys          ≥66          148   4   2.7 [ 1.1- 6.7]    40    36 |   146   2   1.4 [ 0.4- 4.9]    14    72 | 1.36/1.77
+   15 buys          ≥83           74   3   4.1 [ 1.4-11.3]    30    24 |    96   2   2.1 [ 0.6- 7.3]    14    47 | 1.36/1.77
+   15 sells         ≥40          149   3   2.0 [ 0.7- 5.8]    30    49 |   125   1   0.8 [ 0.1- 4.4]     7   124 | 1.36/1.77
+   15 sell_share    ≥0.4394      147   2   1.4 [ 0.4- 4.8]    20    72 |   108   0   0.0 [ 0.0- 3.4]     0   inf | 1.36/1.77
+   15 sell_share    ≥0.4928       74   0   0.0 [ 0.0- 4.9]     0   inf |    47   0   0.0 [ 0.0- 7.6]     0   inf | 1.36/1.77
+   15 buyers        ≥55          148   3   2.0 [ 0.7- 5.8]    30    48 |   101   2   2.0 [ 0.5- 6.9]    14    50 | 1.36/1.77
+   15 buyers        ≥70           79   3   3.8 [ 1.3-10.6]    30    25 |    51   1   2.0 [ 0.3-10.3]     7    50 | 1.36/1.77
+   15 buyers_total  ≥55          148   3   2.0 [ 0.7- 5.8]    30    48 |   101   2   2.0 [ 0.5- 6.9]    14    50 | 1.36/1.77
+   15 mc            ≥8106        147   7   4.8 [ 2.3- 9.5]    70    20 |   110  13  11.8 [ 7.0-19.2]    93     7 | 1.36/1.77
+   15 mc            ≥9769         74   6   8.1 [ 3.8-16.6]    60    11 |    90  13  14.4 [ 8.6-23.2]    93     6 | 1.36/1.77
+   15 vol           ≥6705        148   4   2.7 [ 1.1- 6.7]    40    36 |   151  10   6.6 [ 3.6-11.8]    71    14 | 1.36/1.77
+   15 bundle_pct    ≥41.41       148   6   4.1 [ 1.9- 8.6]    60    24 |    86  13  15.1 [ 9.1-24.2]    93     6 | 1.36/1.77
+   15 bundle_sol    ≥19.44       148   6   4.1 [ 1.9- 8.6]    60    24 |    85  13  15.3 [ 9.2-24.4]    93     6 | 1.36/1.77
+   15 bundle_wallets ≥9           170   6   3.5 [ 1.6- 7.5]    60    27 |    46   4   8.7 [ 3.4-20.3]    29    10 | 1.36/1.77
+   15 dev_buy_sol   ≥3           155   1   0.6 [ 0.1- 3.6]    10   154 |   155   2   1.3 [ 0.4- 4.6]    14    76 | 1.36/1.77
+   15 funder_sol    ≥25.48        99   3   3.0 [ 1.0- 8.5]    30    32 |    21   6  28.6 [13.8-50.0]    43     2 | 1.36/1.77
+   15 name_1h       ≥6           145   2   1.4 [ 0.4- 4.9]    20    72 |   138   4   2.9 [ 1.1- 7.2]    29    34 | 1.36/1.77
+   15 name_24h      ≥12          146   2   1.4 [ 0.4- 4.9]    20    72 |   191   5   2.6 [ 1.1- 6.0]    36    37 | 1.36/1.77
+   30 buys          ≥104         150   4   2.7 [ 1.0- 6.7]    40    36 |   175   1   0.6 [ 0.1- 3.2]    11   174 | 1.36/1.15
+   30 buys          ≥142          74   3   4.1 [ 1.4-11.3]    30    24 |    88   1   1.1 [ 0.2- 6.2]    11    87 | 1.36/1.15
+   30 sells         ≥72          149   3   2.0 [ 0.7- 5.8]    30    49 |   149   1   0.7 [ 0.1- 3.7]    11   148 | 1.36/1.15
+   30 sell_share    ≥0.4773      149   0   0.0 [ 0.0- 2.5]     0   inf |    69   0   0.0 [ 0.0- 5.3]     0   inf | 1.36/1.15
+   30 sell_share    ≥0.5288       74   0   0.0 [ 0.0- 4.9]     0   inf |    16   0   0.0 [ 0.0-19.4]     0   inf | 1.36/1.15
+   30 buyers        ≥85          148   7   4.7 [ 2.3- 9.4]    70    20 |    95   2   2.1 [ 0.6- 7.4]    22    46 | 1.36/1.15
+   30 buyers        ≥117          75   3   4.0 [ 1.4-11.1]    30    24 |    36   1   2.8 [ 0.5-14.2]    11    35 | 1.36/1.15
+   30 buyers_total  ≥85          148   7   4.7 [ 2.3- 9.4]    70    20 |    95   2   2.1 [ 0.6- 7.4]    22    46 | 1.36/1.15
+   30 mc            ≥8369        148   7   4.7 [ 2.3- 9.4]    70    20 |   123   8   6.5 [ 3.3-12.3]    89    14 | 1.36/1.15
+   30 mc            ≥1.116e+04    74   7   9.5 [ 4.7-18.3]    70    10 |    90   8   8.9 [ 4.6-16.6]    89    10 | 1.36/1.15
+   30 vol           ≥9382        148   4   2.7 [ 1.1- 6.7]    40    36 |   160   4   2.5 [ 1.0- 6.3]    44    39 | 1.36/1.15
+   30 bundle_pct    ≥41.51       148   6   4.1 [ 1.9- 8.6]    60    24 |    81   8   9.9 [ 5.1-18.3]    89     9 | 1.36/1.15
+   30 bundle_sol    ≥19.51       148   6   4.1 [ 1.9- 8.6]    60    24 |    80   8  10.0 [ 5.2-18.5]    89     9 | 1.36/1.15
+   30 bundle_wallets ≥9           171   6   3.5 [ 1.6- 7.4]    60    28 |    44   2   4.5 [ 1.3-15.1]    22    21 | 1.36/1.15
+   30 dev_buy_sol   ≥3           154   1   0.6 [ 0.1- 3.6]    10   153 |   155   2   1.3 [ 0.4- 4.6]    22    76 | 1.36/1.15
+   30 funder_sol    ≥26.26        99   3   3.0 [ 1.0- 8.5]    30    32 |    19   4  21.1 [ 8.5-43.3]    44     4 | 1.36/1.15
+   30 name_1h       ≥6           145   2   1.4 [ 0.4- 4.9]    20    72 |   137   3   2.2 [ 0.7- 6.2]    33    45 | 1.36/1.15
+   30 name_24h      ≥12          146   2   1.4 [ 0.4- 4.9]    20    72 |   189   3   1.6 [ 0.5- 4.6]    33    62 | 1.36/1.15
+   60 buys          ≥168         226   7   3.1 [ 1.5- 6.3]    70    31 |   165   2   1.2 [ 0.3- 4.3]    22    82 | 0.89/1.15
+   60 buys          ≥230         114   5   4.4 [ 1.9- 9.9]    50    22 |    76   1   1.3 [ 0.2- 7.1]    11    75 | 0.89/1.15
+   60 sells         ≥116         225   5   2.2 [ 1.0- 5.1]    50    44 |   180   1   0.6 [ 0.1- 3.1]    11   179 | 0.89/1.15
+   60 sell_share    ≥0.5         233   0   0.0 [ 0.0- 1.6]     0   inf |    78   0   0.0 [ 0.0- 4.7]     0   inf | 0.89/1.15
+   60 sell_share    ≥0.5567      113   0   0.0 [ 0.0- 3.3]     0   inf |    16   0   0.0 [ 0.0-19.4]     0   inf | 0.89/1.15
+   60 buyers        ≥121         225   7   3.1 [ 1.5- 6.3]    70    31 |    88   2   2.3 [ 0.6- 7.9]    22    43 | 0.89/1.15
+   60 buyers        ≥178         115   6   5.2 [ 2.4-10.9]    60    18 |    36   1   2.8 [ 0.5-14.2]    11    35 | 0.89/1.15
+   60 buyers_total  ≥121         225   7   3.1 [ 1.5- 6.3]    70    31 |    88   2   2.3 [ 0.6- 7.9]    22    43 | 0.89/1.15
+   60 mc            ≥8120        225   7   3.1 [ 1.5- 6.3]    70    31 |   132   8   6.1 [ 3.1-11.5]    89    16 | 0.89/1.15
+   60 mc            ≥1.189e+04   113   7   6.2 [ 3.0-12.2]    70    15 |    76   8  10.5 [ 5.4-19.4]    89     8 | 0.89/1.15
+   60 vol           ≥1.204e+04   225   7   3.1 [ 1.5- 6.3]    70    31 |   160   4   2.5 [ 1.0- 6.3]    44    39 | 0.89/1.15
+   60 bundle_pct    ≥42.97       225   5   2.2 [ 1.0- 5.1]    50    44 |    76   8  10.5 [ 5.4-19.4]    89     8 | 0.89/1.15
+   60 bundle_sol    ≥20.06       225   6   2.7 [ 1.2- 5.7]    60    36 |    76   8  10.5 [ 5.4-19.4]    89     8 | 0.89/1.15
+   60 bundle_wallets ≥9           286   6   2.1 [ 1.0- 4.5]    60    47 |    44   2   4.5 [ 1.3-15.1]    22    21 | 0.89/1.15
+   60 dev_buy_sol   ≥3           233   1   0.4 [ 0.1- 2.4]    10   232 |   155   2   1.3 [ 0.4- 4.6]    22    76 | 0.89/1.15
+   60 funder_sol    ≥23.82       147   3   2.0 [ 0.7- 5.8]    30    48 |    19   4  21.1 [ 8.5-43.3]    44     4 | 0.89/1.15
+   60 name_1h       ≥5           212   2   0.9 [ 0.3- 3.4]    20   105 |   166   4   2.4 [ 0.9- 6.0]    44    40 | 0.89/1.15
+   60 name_24h      ≥11          218   2   0.9 [ 0.3- 3.3]    20   108 |   202   3   1.5 [ 0.5- 4.3]    33    66 | 0.89/1.15
+   90 buys          ≥186         146   7   4.8 [ 2.3- 9.6]    78    20 |   213   5   2.3 [ 1.0- 5.4]    56    42 | 1.24/1.15
+   90 buys          ≥291          73   4   5.5 [ 2.2-13.3]    44    17 |    80   3   3.8 [ 1.3-10.5]    33    26 | 1.24/1.15
+   90 sells         ≥141         148   7   4.7 [ 2.3- 9.4]    78    20 |   205   3   1.5 [ 0.5- 4.2]    33    67 | 1.24/1.15
+   90 sell_share    ≥0.5214      146   0   0.0 [ 0.0- 2.6]     0   inf |    44   0   0.0 [ 0.0- 8.0]     0   inf | 1.24/1.15
+   90 sell_share    ≥0.5816       73   0   0.0 [ 0.0- 5.0]     0   inf |    12   0   0.0 [ 0.0-24.3]     0   inf | 1.24/1.15
+   90 buyers        ≥135         148   6   4.1 [ 1.9- 8.6]    67    24 |    95   4   4.2 [ 1.6-10.3]    44    23 | 1.24/1.15
+   90 buyers        ≥231          73   5   6.8 [ 3.0-15.1]    56    14 |    29   2   6.9 [ 1.9-22.0]    22    14 | 1.24/1.15
+   90 buyers_total  ≥135         148   6   4.1 [ 1.9- 8.6]    67    24 |    95   4   4.2 [ 1.6-10.3]    44    23 | 1.24/1.15
+   90 mc            ≥7466        146   6   4.1 [ 1.9- 8.7]    67    23 |   133   9   6.8 [ 3.6-12.4]   100    14 | 1.24/1.15
+   90 mc            ≥1.247e+04    73   6   8.2 [ 3.8-16.8]    67    11 |    70   8  11.4 [ 5.9-21.0]    89     8 | 1.24/1.15
+   90 vol           ≥1.382e+04   146   6   4.1 [ 1.9- 8.7]    67    23 |   164   7   4.3 [ 2.1- 8.5]    78    22 | 1.24/1.15
+   90 bundle_pct    ≥41.51       146   5   3.4 [ 1.5- 7.8]    56    28 |    81   8   9.9 [ 5.1-18.3]    89     9 | 1.24/1.15
+   90 bundle_sol    ≥19.51       146   5   3.4 [ 1.5- 7.8]    56    28 |    80   8  10.0 [ 5.2-18.5]    89     9 | 1.24/1.15
+   90 bundle_wallets ≥9           169   5   3.0 [ 1.3- 6.7]    56    33 |    44   2   4.5 [ 1.3-15.1]    22    21 | 1.24/1.15
+   90 dev_buy_sol   ≥3           150   1   0.7 [ 0.1- 3.7]    11   149 |   155   2   1.3 [ 0.4- 4.6]    22    76 | 1.24/1.15
+   90 funder_sol    ≥26.26        98   3   3.1 [ 1.0- 8.6]    33    32 |    19   4  21.1 [ 8.5-43.3]    44     4 | 1.24/1.15
+   90 name_1h       ≥6           145   2   1.4 [ 0.4- 4.9]    22    72 |   137   3   2.2 [ 0.7- 6.2]    33    45 | 1.24/1.15
+   90 name_24h      ≥12          144   2   1.4 [ 0.4- 4.9]    22    71 |   189   3   1.6 [ 0.5- 4.6]    33    62 | 1.24/1.15
+  120 buys          ≥208         146   5   3.4 [ 1.5- 7.8]    71    28 |   212   7   3.3 [ 1.6- 6.7]    78    29 | 0.97/1.15
+  120 buys          ≥325          73   3   4.1 [ 1.4-11.4]    43    23 |    92   5   5.4 [ 2.3-12.1]    56    17 | 0.97/1.15
+  120 sells         ≥163         145   5   3.4 [ 1.5- 7.8]    71    28 |   211   6   2.8 [ 1.3- 6.1]    67    34 | 0.97/1.15
+  120 sell_share    ≥0.525       145   0   0.0 [ 0.0- 2.6]     0   inf |    45   0   0.0 [ 0.0- 7.9]     0   inf | 0.97/1.15
+  120 sell_share    ≥0.5816       73   0   0.0 [ 0.0- 5.0]     0   inf |    12   0   0.0 [ 0.0-24.3]     0   inf | 0.97/1.15
+  120 buyers        ≥149         146   5   3.4 [ 1.5- 7.8]    71    28 |    95   7   7.4 [ 3.6-14.4]    78    13 | 0.97/1.15
+  120 buyers        ≥255          73   5   6.8 [ 3.0-15.1]    71    14 |    27   2   7.4 [ 2.1-23.4]    22    12 | 0.97/1.15
+  120 buyers_total  ≥149         146   5   3.4 [ 1.5- 7.8]    71    28 |    95   7   7.4 [ 3.6-14.4]    78    13 | 0.97/1.15
+  120 mc            ≥6369        145   6   4.1 [ 1.9- 8.7]    86    23 |   157   9   5.7 [ 3.0-10.5]   100    16 | 0.97/1.15
+  120 mc            ≥1.129e+04    73   5   6.8 [ 3.0-15.1]    71    14 |    84   9  10.7 [ 5.7-19.1]   100     8 | 0.97/1.15
+  120 vol           ≥1.489e+04   145   5   3.4 [ 1.5- 7.8]    71    28 |   170   8   4.7 [ 2.4- 9.0]    89    20 | 0.97/1.15
+  120 bundle_pct    ≥41.4        145   4   2.8 [ 1.1- 6.9]    57    35 |    81   8   9.9 [ 5.1-18.3]    89     9 | 0.97/1.15
+  120 bundle_sol    ≥19.38       145   4   2.8 [ 1.1- 6.9]    57    35 |    80   8  10.0 [ 5.2-18.5]    89     9 | 0.97/1.15
+  120 bundle_wallets ≥9           168   4   2.4 [ 0.9- 6.0]    57    41 |    44   2   4.5 [ 1.3-15.1]    22    21 | 0.97/1.15
+  120 dev_buy_sol   ≥3           150   1   0.7 [ 0.1- 3.7]    14   149 |   155   2   1.3 [ 0.4- 4.6]    22    76 | 0.97/1.15
+  120 funder_sol    ≥26.26        98   3   3.1 [ 1.0- 8.6]    43    32 |    19   4  21.1 [ 8.5-43.3]    44     4 | 0.97/1.15
+  120 name_1h       ≥6           144   2   1.4 [ 0.4- 4.9]    29    71 |   137   3   2.2 [ 0.7- 6.2]    33    45 | 0.97/1.15
+  120 name_24h      ≥12          143   2   1.4 [ 0.4- 5.0]    29    70 |   189   3   1.6 [ 0.5- 4.6]    33    62 | 0.97/1.15
+
+THRESHOLDS TRIED: 140 (every feature × checkpoint at the DEV 80th and 90th percentile; listed in thresholds_tried.json). With this many comparisons, roughly 1 in 20 ‘significant-looking’ differences is expected by chance.
+
+CONTINUATION — decision at 5 min and 15 min; coins already ≥ $100K by then excluded; feature = market cap at the decision ÷ market cap at 60 s (both on-time).
+   5 min held (≥1.0× the 60-s cap)  DEV :   256 coins,   4 reached $100K later (1.6% [0.6-3.9])
+   5 min held (≥1.0× the 60-s cap)  TEST:   173 coins,   4 reached $100K later (2.3% [0.9-5.8])
+   5 min fell (<1.0×)               DEV :   814 coins,   1 reached $100K later (0.1% [0.0-0.7])
+   5 min fell (<1.0×)               TEST:   609 coins,   1 reached $100K later (0.2% [0.0-0.9])
+  15 min held (≥1.0× the 60-s cap)  DEV :   122 coins,   3 reached $100K later (2.5% [0.8-7.0])
+  15 min held (≥1.0× the 60-s cap)  TEST:   121 coins,   1 reached $100K later (0.8% [0.1-4.5])
+  15 min fell (<1.0×)               DEV :   810 coins,   1 reached $100K later (0.1% [0.0-0.7])
+  15 min fell (<1.0×)               TEST:   657 coins,   0 reached $100K later (0.0% [0.0-0.6])
+
+SUBSEQUENT MULTIPLES from the 60-s market cap (max over later checkpoints 5/15/30/60/120 min — a lower bound on the true path high; checkpoints, not trades; no costs; NOT trading results):
+  POS: n 18 | ≥2× 72% · ≥3× 56% · ≥5× 33% · ≥10× 22% · median 3.06×
+  NEG: n 1842 | ≥2× 5% · ≥3× 2% · ≥5× 1% · ≥10× 1% · median 0.83×
+  POS uses the crossing as part of its own path (it reached $100K), so its multiples are partly by construction.
+
+AFTER-COST TRADING on identical entries: NOT DEFENSIBLE from these inputs — trade-level paths with reserves exist only for coins a book entered (trading study, chain_fill) and for the crossing trade itself here. Missing evidence: trade-level price paths after each decision for every POS/NEG coin (now prospectively collected for pool trades by tracker 0.19.8/0.19.9; curve trades only for retained launches).
+
+SHARED OPERATORS among POS (decision 60 s): creators with >1 POS: 2 ; funders with >1 POS: 1 (funder = attributed source; not proof of common control)
