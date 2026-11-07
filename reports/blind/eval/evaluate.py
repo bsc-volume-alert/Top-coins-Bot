@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Blind-test evaluator v1.0 (7 Nov 2026). Scores frozen rules on the hidden period (launches created 8 Nov 00:00 → 10 Nov 00:00 UTC)
+"""Blind-test evaluator v1.1 (7 Nov 2026). Scores frozen rules on the hidden period (launches created 8 Nov 00:00 → 10 Nov 00:00 UTC)
 exactly as specified in reports/blind/BRIEF_7nov.md. Frozen before 8 Nov 00:00 UTC; any later change = new version + new untouched period.
 
 Usage:  python3 -I evaluate.py --data <dir> --rules <rule.py> [<rule.py> ...] [--from 2026-11-08T00:00:00] [--to 2026-11-10T00:00:00] [--out results.json]
@@ -16,13 +16,13 @@ RULE MODULE INTERFACE (one file per rule):
   def decide(view) -> bool      # called at created+offset for each offset, and (if on_trade) after each RECEIVED trade, from retention onward;
                                 # the first True is the entry decision at view.t
   def exit_signal(pos) -> bool  # called after each RECEIVED trade after the fill (per size, independently); True = exit trigger at pos.t
-  view: t, created, retained_at, trades (list of dicts received by t, in event order), meta (dict), last (latest received trade or None)
+  view: t, created, retained_at, trades (sequence of dicts received by t, in RECEIPT order; supports len, [i], iteration, slicing), meta (dict), last (latest received trade or None)
   pos:  t, size, entry_t, fill_t, x (sell value now ÷ stake, after fees, on the latest received state), hi (max x so far), venue, migrated (bool),
         trades_since (received trades after the fill), seconds_held
 """
-import csv, gzip, glob, json, math, os, random, sys, importlib.util, argparse, calendar, time, io, collections
+import csv, gzip, glob, json, math, os, random, sys, importlib.util, argparse, calendar, time, io, collections, bisect
 
-VERSION = "eval-1.0"
+VERSION = "eval-1.1"  # 1.1 (7 Nov 16:05 UK, before the test start): O(1) trade views — 1.0 rebuilt the received-trade list on every call (quadratic on busy coins); scoring rules unchanged
 FIXED_FEE_SOL = 0.0015            # per round trip (tx + priority), charged once per position
 CURVE_FEE_BPS = 95 + 30           # pump.fun curve: protocol 95 + creator 30 bps, per leg (launcher defaults when the global config cannot be read)
 POOL_FEE_BPS = 20 + 5 + 5         # PumpSwap: LP 20 + protocol 5 + coin-creator 5 bps, per leg (ASSUMPTION; sensitivity reported at 125)
@@ -121,6 +121,16 @@ def state_at(L, t, gaps, outages, created, retained_at):
 
 class V:  # view for decide()
     pass
+class Prefix:
+    """read-only view of the first k items of a list, without copying"""
+    def __init__(self, L, k): self.L, self.k = L, k
+    def __len__(self): return self.k
+    def __iter__(self): return (self.L[i] for i in range(self.k))
+    def __getitem__(self, i):
+        if isinstance(i, slice): return [self.L[j] for j in range(*i.indices(self.k))]
+        if i < 0: i += self.k
+        if not 0 <= i < self.k: raise IndexError(i)
+        return self.L[i]
 
 # ---------------------------------------------------------------- one rule on one launch
 def run_launch(mod, R, m, info, L, gaps, outages, meta, pool_bps):
@@ -135,17 +145,18 @@ def run_launch(mod, R, m, info, L, gaps, outages, meta, pool_bps):
     if retained_at is None: return {"cat": "abstain", "why": "never retained"}, no_recv
     pre = sum(1 for r in L if fl(r["ts"]) <= retained_at)
     if pre > PRE_BUFFER: return {"cat": "unknown", "why": "pre-promotion buffer exceeded"}, no_recv
-    recv = sorted([r for r in L if fl(r["recv_ms"])], key=lambda r: fl(r["recv_ms"]))
-    if len(recv) < len(L): no_recv = True
+    if any(not fl(r["recv_ms"]) for r in L): no_recv = True
+    RO = sorted(L, key=lambda r: ((fl(r["recv_ms"]) or fl(r["ts"]) * 1000), int(r["slot"]), int(r["row_id"])))   # receipt order (event time where recv_ms is missing)
+    RT = [(fl(r["recv_ms"]) or fl(r["ts"]) * 1000) / 1000 for r in RO]
     def view(t):
         v = V(); v.t = t; v.created = created; v.retained_at = retained_at
-        v.trades = [r for r in L if (fl(r["recv_ms"]) or fl(r["ts"]) * 1000) <= t * 1000]; v.last = v.trades[-1] if v.trades else None
+        k = bisect.bisect_right(RT, t); v.trades = Prefix(RO, k); v.last = RO[k - 1] if k else None
         w = meta.get(m); mt = {"tier": info["tier"]}
         if w and w.get("lookup_status") == "ran" and (fl(w.get("trace_ts")) or fl(w.get("scanned_ts")) or 9e18) <= t:
             mt.update({k: w.get(k) for k in ("funder", "funder_sol", "funded_ts", "funder_launches", "grp", "bundle_pct", "bundle_sol", "dev_buy_sol")})
         v.meta = mt; return v
     times = [created + o for o in R.get("decision_offsets", [])]
-    if R.get("on_trade"): times += [(fl(r["recv_ms"]) or fl(r["ts"]) * 1000) / 1000 for r in L]
+    if R.get("on_trade"): times += RT
     t_entry = None
     for t in sorted(set(times)):
         if t < retained_at or t > created + 7200: continue
@@ -157,8 +168,8 @@ def run_launch(mod, R, m, info, L, gaps, outages, meta, pool_bps):
         if fs is None: return {"cat": "unknown", "why": "fill: " + why, "entry_t": t_entry}, no_recv
         tok = buy(fs, size, pool_bps); fill_venue = fs["venue"] or "curve"
         hi, trig = -1e9, None; horizon = t_entry + min(R.get("horizon_s", 7200), 7200)
-        for r in [x for x in L if (fl(x["recv_ms"]) or fl(x["ts"]) * 1000) / 1000 > t_entry + LAND_BUY_S]:
-            tr = (fl(r["recv_ms"]) or fl(r["ts"]) * 1000) / 1000
+        for j in range(bisect.bisect_right(RT, t_entry + LAND_BUY_S), len(RO)):
+            r = RO[j]; tr = RT[j]
             if tr >= horizon: break
             if not state_ok(r): continue
             p = V(); p.t = tr; p.size = size; p.entry_t = t_entry; p.fill_t = t_entry + LAND_BUY_S

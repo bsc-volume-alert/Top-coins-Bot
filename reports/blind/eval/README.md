@@ -1,4 +1,4 @@
-# Blind-test evaluator — eval-1.0 (frozen 7 Nov 2026, before the 8 Nov 00:00 UTC test start)
+# Blind-test evaluator — eval-1.1 (7 Nov 2026; 1.0 frozen earlier, 1.1 = speed fix only, scoring rules unchanged; freeze before the 8 Nov 00:00 UTC test start)
 
 Scores every frozen rule on launches created **8 Nov 00:00 → 10 Nov 00:00 UTC**, as specified in reports/blind/BRIEF_7nov.md (rev 4). It will not be changed for this test; any change = a new version plus a new untouched test period.
 
