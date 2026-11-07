@@ -281,3 +281,9 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - Holds both halves (weak): sell share ≥ 0.50 at 60 s → 0/233 DEV, 0/78 TEST (warning, not exclusion; upper bound 4.7%). Cap held at 5 min vs 60 s → 1.6% / 3.1% vs fell 0.2% / 0.3%.
 - Does not hold: early cap, bundle size, funder SOL, buys/buyers/volume. After-cost trading: not defensible from these inputs.
 - Frozen hypotheses H-sell and H-hold5 for launches after 7 Nov 09:57:18 UTC: reports/analysis/100k/study_v1_1/HYPOTHESES_FROZEN.md.
+
+## 7 Nov 2026 12:15 UK — Entry Features & Winners snapshot 3 frozen (export only)
+- Branch entry-snap-7nov-1154 @ e05e07da (launcher-data d15ddf2a, 11:54:21 UTC); MANIFEST.md, SHA256SUMS (verified after push), RECONCILIATION.txt, aged-out rows from the 6 Nov 18:23 and 7 Nov 08:53 snapshots.
+- 24 h fd_positions: 3,676 positions = 1,421 decision keys = 826 mints; 3,521 closed · 53 open · 102 skipped-dump. 1,827 positions (474 mints) after 18:23:11 6 Nov.
+- Found: rule_ver on positions/ledger is the EXPORT version (0.9.50 on every row), not the decision version — map by ts_decision. 1,867 pre-fill-3 positions carry reconstructed i02_* values.
+- Gaps: trades_books lacks 0.19.9 pool evidence columns; no exported streams for entries 6 Nov 18:23 → 7 Nov 07:52 UTC.
