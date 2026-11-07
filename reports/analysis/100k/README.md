@@ -13,3 +13,8 @@ Early data epochs: 60-s checkpoint for every launch since 4 Nov; 15/30/90/120-s 
 Verified outcomes exist only from tracker 0.19.6 (pool trades, 6 Nov ~20:00 UK) and only for retained launches (15-SOL screen or bundle tier-1).
 Process: develop on the earlier cohort → freeze the hypothesis here (dated) → test on later untouched launches.
 Contents: backward_7nov/ (first passes; 08:55/09:00 findings RETRACTED 09:10 — see reports/books/LAUNCHER.md). Frozen inputs: branch analysis-inputs-7nov.
+
+ACTIVATION STAMPS (collection, prospective only — earlier gaps are not repaired):
+- tracker 0.19.8 — pool trades for every launch in the census for 24 h after creation; pool-feed gaps in feed_gaps as 'pool-…': running since 2026-11-07 09:48 UTC (= UK).
+- tracker 0.19.9 — pool-trade evidence fields (pool, ev_idx, lossless raw amounts/reserves, mints, decimals with base 6 ASSUMED, dec_ver, px_adj): running since 2026-11-07 09:57:18 UTC.
+- Confirmation cohort for $100K hypotheses: launches created after 09:57:18 UTC 7 Nov.
