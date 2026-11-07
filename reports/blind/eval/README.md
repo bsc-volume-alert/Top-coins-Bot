@@ -7,7 +7,7 @@ Scores every frozen rule on launches created **8 Nov 00:00 → 10 Nov 00:00 UTC*
   - outage → excluded from N; duplicate removal by full fingerprint (not signature alone)
   - exit trigger; independent 0.02 size; receipt-time visibility; pool evidence required; migration; missing recv_ms flagged
   - Run: `python3 -I test_evaluate.py` (all must PASS).
-- Frozen identity: git tag `blind-eval-1.0` (and the commit it points to). SHA-256 of evaluate.py is in EVAL_SHA256.txt.
+- Frozen identity: branch `blind-eval-1.0` (never moved after creation; the commit it points to is the frozen evaluator). SHA-256 of evaluate.py is in EVAL_SHA256.txt.
 
 ## Fixed assumptions (scored as stated, not tuned)
 - Fill as of decision + 1.0 s; sell as of trigger + 0.7 s. The state is the last trade with block time ≤ that instant. Block times have 1-second resolution, which is a stated limitation.
