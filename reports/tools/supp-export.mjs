@@ -24,9 +24,9 @@ const LHOME = process.env.LAUNCH_HOME || "/root/launcher";
 try { for (const l of readFileSync(join(LHOME, ".env"), "utf8").split("\n")) { const m = l.match(/^\s*(LAUNCH_DB|LAUNCH_OUT)\s*=\s*(.*?)\s*$/); if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, ""); } } catch {}
 const TDB = process.env.DB_PATH || "/root/tracker/data/tracker.db", LDB = process.env.LAUNCH_DB || join(LHOME, "launcher.db"), LOUT = process.env.LAUNCH_OUT || "/root/tracker/data/launcher_out";
 const STAMP = new Date().toISOString().replace(/[-:]/g, "").slice(0, 13); // e.g. 20261107T1415
-const BRANCH = `entry-supp-${STAMP.toLowerCase()}`, OUT = process.env.SUPP_OUT || `/root/tracker/data/supp_${STAMP}`, PART_MAX = (Number(process.env.SUPP_PART_MB) || 80) * 1048576;
+const BRANCH = `${process.env.SUPP_MINTSET === "window" ? "entry-all" : "entry-supp"}-${STAMP.toLowerCase()}`, OUT = process.env.SUPP_OUT || `/root/tracker/data/supp_${STAMP}`, PART_MAX = (Number(process.env.SUPP_PART_MB) || 80) * 1048576;
 const t0 = Date.now(), now = () => Math.floor(Date.now() / 1000);
-const status = (o) => { try { writeFileSync(join(LOUT, "supp_status.json"), JSON.stringify({ ver: "supp-export 1.2", branch: BRANCH, at: new Date().toISOString(), secs: Math.round((Date.now() - t0) / 1000), ...o }, null, 1)); } catch {} console.log("[supp]", JSON.stringify(o)); };
+const status = (o) => { try { writeFileSync(join(LOUT, "supp_status.json"), JSON.stringify({ ver: "supp-export 1.3", branch: BRANCH, at: new Date().toISOString(), secs: Math.round((Date.now() - t0) / 1000), ...o }, null, 1)); } catch {} console.log("[supp]", JSON.stringify(o)); };
 const esc = (v) => (v == null ? "" : /[",\n\r]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
 
 // 1.2 (7 Nov 14:50 UK): the one-shot push of ~600 MB timed out (HTTP 408). Publishing now goes file by file — one commit and one push per file
@@ -45,7 +45,9 @@ async function publish(dir, branch) {
     if (!ok) { status({ phase: "push-failed", file: f, done, of: order.length, commit: sha }); process.exit(1); }
     done++; status({ phase: "publishing", file: f, done, of: order.length, branch, commit: sha });
   }
-  status({ phase: "pushed", branch, commit: sha, files: order.length }); process.exit(0);
+  status({ phase: "pushed", branch, commit: sha, files: order.length });
+  if (process.env.SUPP_CLEAN === "1") { try { const remote = execFileSync("git", ["ls-remote", "origin", `refs/heads/${branch}`], { cwd: dir, stdio: "pipe", timeout: 60000 }).toString().split(/\s/)[0]; if (remote === sha) { rmSync(dir, { recursive: true, force: true }); status({ phase: "pushed-cleaned", branch, commit: sha, note: "local copy removed after the remote branch was verified at the same commit" }); } } catch {} }
+  process.exit(0);
 }
 if (process.env.SUPP_PUBLISH_DIR) { const d = process.env.SUPP_PUBLISH_DIR, b = process.env.SUPP_BRANCH || `entry-supp-${d.split("supp_")[1]?.toLowerCase() || STAMP.toLowerCase()}`; await publish(d, b); }
 try {
@@ -57,7 +59,10 @@ try {
   const tdb = new Database(TDB, { readonly: true, fileMustExist: true }); tdb.pragma("busy_timeout = 5000"); tdb.pragma("cache_size = -16000");
   const ldb = new Database(LDB, { readonly: true, fileMustExist: true }); ldb.pragma("busy_timeout = 5000");
   const cutoff = now();
-  const mints = ldb.prepare("SELECT mint, MIN(entry_ts) first_entry, MAX(entry_ts) last_entry, COUNT(*) n FROM chain_fill GROUP BY mint ORDER BY first_entry, mint").all();
+  // 1.3 (owner's go 7 Nov 21:59 UK): SUPP_MINTSET=window → EVERY launch created in [SUPP_FROM, SUPP_TO) (tracker census), not only entered coins
+  const WIN = process.env.SUPP_MINTSET === "window", WF = Number(process.env.SUPP_FROM) || 0, WT = Number(process.env.SUPP_TO) || 0;
+  const mints = WIN ? tdb.prepare("SELECT mint, NULL first_entry, NULL last_entry, 0 n FROM tokens WHERE create_ts>=? AND create_ts<? ORDER BY create_ts, mint").all(WF, WT)
+                    : ldb.prepare("SELECT mint, MIN(entry_ts) first_entry, MAX(entry_ts) last_entry, COUNT(*) n FROM chain_fill GROUP BY mint ORDER BY first_entry, mint").all();
   status({ phase: "start", mints: mints.length, cutoff });
   const COLS = ["row_id", "mint", "sig", "slot", "ts", "wallet", "is_buy", "sol", "tokens", "price_sol", "recv_ms", "vsol", "vtok", "venue", "pool", "ev_idx", "base_raw", "quote_raw", "pool_base_raw", "pool_quote_raw", "base_mint", "quote_mint", "base_dec", "quote_dec", "dec_ver", "px_adj"];
   const qRows = tdb.prepare(`SELECT rowid AS ${COLS.join(", ")} FROM trades WHERE mint=? ORDER BY slot, COALESCE(ev_idx, -1), rowid`);
@@ -93,15 +98,21 @@ try {
   let fgRows = 0; { const g = createGzip({ level: 9 }), w = createWriteStream(join(OUT, "feed_gaps_all.csv.gz")); g.pipe(w); g.write("rowid,ts,event,detail\n");
     try { for (const r of tdb.prepare("SELECT rowid, ts, event, detail FROM feed_gaps ORDER BY rowid").iterate()) { g.write([r.rowid, r.ts, r.event, r.detail].map(esc).join(",") + "\n"); fgRows++; } } catch (e) { g.write(`,,error,${esc(e.message)}\n`); }
     await new Promise((res) => { w.on("finish", res); g.end(); }); }
+  let censusRows = 0;
+  if (WIN) { const g = createGzip({ level: 9 }), w = createWriteStream(join(OUT, "tokens_window.csv.gz")); g.pipe(w);
+    const cols = ["mint", "name", "symbol", "creator", "create_ts", "create_slot", "bundle_sol", "bundle_pct", "bundle_wallets", "dev_buy_sol", "tier", "finalized", "graduated", "peak_mc_usd", "last_mc_usd"];
+    g.write(cols.join(",") + "\n");
+    try { for (const r of tdb.prepare(`SELECT ${cols.join(", ")} FROM tokens WHERE create_ts>=? AND create_ts<? ORDER BY create_ts, mint`).iterate(WF, WT)) { g.write(cols.map((c) => esc(r[c])).join(",") + "\n"); censusRows++; } } catch (e) { g.write(`error,${esc(e.message)}\n`); }
+    await new Promise((res) => { w.on("finish", res); g.end(); }); }
   // retention facts (read, not assumed)
   let oldest = null; try { oldest = tdb.prepare("SELECT ts FROM trades ORDER BY rowid LIMIT 1").get()?.ts ?? null; } catch {}
   const recon = cov.filter((c) => c[7] !== 1).length, zero = cov.filter((c) => c[5] === 0).length, withEv = cov.filter((c) => c[11] > 0).length;
   const iso = (t) => (t ? new Date(t * 1000).toISOString() : "-");
   writeFileSync(join(OUT, "MANIFEST.md"), [
-    `# Entry Features & Winners — supplemental trade-history export (supp-export 1.0)`, ``,
+    WIN ? `# ALL-COINS trade-history export (supp-export 1.3, window mode) — every launch created ${iso(WF)} → ${iso(WT)}` : `# Entry Features & Winners — supplemental trade-history export (supp-export 1.3)`, ``,
     `Owner's go 7 Nov 2026 14:03 UK; spec Codex 14:02 UK. ONE-OFF, READ-ONLY export from the tracker database (${TDB}) and launcher database (chain_fill only). Snapshot 3 (branch entry-snap-7nov-1154 @ e05e07da) and older snapshots are unchanged.`, ``,
     `- Read cutoff: ${iso(cutoff)} (UTC = UK). Rows inserted after a mint was read are not included; rows_in_db_at_read is counted right after each mint's read.`,
-    `- Mint set: every mint in launcher chain_fill (all simulated entries, from 5 Nov 2026 12:20 UTC): ${mints.length} mints. Winners are not selected; mints with no retained trades are listed with rows_exported = 0 (${zero}).`,
+    WIN ? `- Mint set: EVERY launch in the tracker census created ${iso(WF)} → ${iso(WT)}: ${mints.length} launches (tokens_window.csv.gz, ${censusRows} rows). Trades exist only for launches the tracker retained (gross buys ≥ 15 SOL or bundle tier-1) and, from 7 Nov 09:47 UTC, pool trades of every launch for 24 h; all others have rows_exported = 0 (${zero}) — not selected, simply not captured.` : `- Mint set: every mint in launcher chain_fill (all simulated entries, from 5 Nov 2026 12:20 UTC): ${mints.length} mints. Winners are not selected; mints with no retained trades are listed with rows_exported = 0 (${zero}).`,
     `- Rows: ${totalRows} in ${parts.length} part(s), UNCAPPED. Columns exactly as stored plus row_id (tracker rowid). Order within a mint: slot, ev_idx (null first), rowid — deterministic. No dedup, no repair, no derived values. Duplicates from overlapping capture paths may exist — dedup by a full fingerprint (mint, sig, wallet, side, amounts, venue, reserves), never by signature alone.`,
     `- Reconciliation: per mint rows_exported vs COUNT(*) in the database at read; mints not equal: ${recon} (expected only if trades arrived during the read — those mints were still trading).`,
     `- Pool evidence fields (pool, ev_idx, base_raw, quote_raw, pool_base_raw, pool_quote_raw, base_mint, quote_mint, base_dec, quote_dec, dec_ver, px_adj) exist only on pool rows written by tracker 0.19.9 (activated 7 Nov 09:57:18 UTC); earlier rows have them empty. Mints with ≥ 1 evidence row: ${withEv}. base_dec is ASSUMED 6 by the decoder (dec_ver ps-0.19.9), not read from the mint.`,
@@ -109,8 +120,8 @@ try {
     `- Retention: the tracker code has no deletion of the trades table; the oldest retained row (by rowid) has ts ${iso(oldest)}. Which trades are CAPTURED is a different matter: curve trades are kept for launches the tracker retains (15-SOL screen / bundle tier-1), from creation for ~125 min of active tracking; pool trades for retained launches from tracker 0.19.6 (6 Nov 19:31 UTC) and for every census launch for 24 h after creation from 0.19.8 (7 Nov 09:47 UTC). After-exit history exists only inside those capture windows. Absence of rows outside them is a capture limit, not an absent event.`,
     `- Capture gaps: feed_gaps_all.csv.gz (${fgRows} rows: socket open/closed/idle/error, incl. pool-* events from 0.19.8). A gap = a close/idle until the next open; nothing was backfilled. Known tracker outages also in snapshot 3's MANIFEST (20:40–20:42, 20:57–21:06, 23:33–23:35 6 Nov; 00:06–00:08, 00:26:30–00:27:30 7 Nov UTC). coverage_per_mint.max_gap_s = longest gap between consecutive retained trades of that mint (activity OR capture — not separable from this file).`,
     `- Unavailable: trades of mints never retained by the tracker; pre-0.19.9 pool evidence fields; per-token decimals; any trade outside the capture windows above.`, ``,
-    `Files: ${parts.map((p) => `${p.name} (${p.rows} rows, ${p.mints} mints)`).join("; ")}; coverage_per_mint.csv.gz; feed_gaps_all.csv.gz; SHA256SUMS.txt.`, ""].join("\n"));
-  const files = [...parts.map((p) => p.name), "coverage_per_mint.csv.gz", "feed_gaps_all.csv.gz", "MANIFEST.md"];
+    `Files: ${parts.map((p) => `${p.name} (${p.rows} rows, ${p.mints} mints)`).join("; ")}; coverage_per_mint.csv.gz; feed_gaps_all.csv.gz;${WIN ? " tokens_window.csv.gz;" : ""} SHA256SUMS.txt.`, ""].join("\n"));
+  const files = [...parts.map((p) => p.name), "coverage_per_mint.csv.gz", "feed_gaps_all.csv.gz", ...(WIN ? ["tokens_window.csv.gz"] : []), "MANIFEST.md"];
   writeFileSync(join(OUT, "SHA256SUMS.txt"), files.map((f) => `${createHash("sha256").update(readFileSync(join(OUT, f))).digest("hex")}  ${f}`).join("\n") + "\n");
   status({ phase: "written", rows: totalRows, parts: parts.length, mints: mints.length, recon_mismatch: recon, zero_rows: zero, evidence_mints: withEv });
   if (process.env.SUPP_NOPUSH) { status({ phase: "written-nopush", out: OUT }); process.exit(0); }
