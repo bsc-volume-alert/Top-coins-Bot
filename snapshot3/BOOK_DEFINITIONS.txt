@@ -1,0 +1,80 @@
+# Verbatim from launcher/src/fundeddev.mjs (tracker branch commit 3330b763, launcher 0.9.50 — the code running at export), lines 41-112 and helpers
+const confirm = (m) => m.net >= 27 && (m.mcSol ?? 0) >= 100 && m.big >= 3;
+export const RULES = [
+  { k: "FD", ok: (w, m) => w.pre === 1 && confirm(m) },
+  { k: "FDF", ok: (w, m) => w.pre === 1 && confirm(m) && (w.funder_sol ?? 0) >= 15 }, // 0.8.21 (owner, 5 Nov 08:55 UK: "just add it"): FD + creator funded ≥ 15 SOL — the back-test on 62 FD trades: 42 kept, won 48%, +65%, no-best +47%; < 15 SOL: 20 trades, won 20%, −3%. Same direction in FDB/FDL/A1. Forward test.
+  { k: "FDL", ok: (w, m) => w.pre === 1 && m.net >= 15 && (m.mcSol ?? 0) >= 60 },
+  { k: "FDB", ok: (w, m) => w.pre_nb === 1 && confirm(m) },
+  { k: "A1", ok: (w, m) => confirm(m) },
+  // 0.8.6 (17:05 UK): 9 of FD's first 15 were dumped at minute 1–2, right after the 60 s entry; the 5 runners were still rising at 120 s.
+  // FD120 = FD's pre-filter and buying test, but entered only at the 120 s check, and only if the coin is still holding: market cap at 120 s ≥ 0.8 × the best earlier check and net buying still ≥ 27 SOL.
+  // 0.8.6 (17:15 UK, 69 scored coins): entries at $12–20K with 35–50 SOL net at minute 1 ran 9 of 13 (2 rugs); $8–12K with ~30 SOL ran 8 of 23 (10 rugs); the
+  // $9–10K / exactly-4-big-buys / 30-SOL script is the rug signature. FD35 = FD with the bar where the winners sit: net ≥ 35 SOL and mc ≥ 130 SOL (~$12K). In-sample; a forward variant, not a replacement.
+  { k: "FD35", ok: (w, m) => w.pre === 1 && m.net >= 35 && (m.mcSol ?? 0) >= 130 && m.big >= 3 },
+  // 17:40 UK, coin by coin: on the rugs the net buying COLLAPSED between 60 and 120 s (Denald Tremp 23.8→9.6, Sol 40.2→8.9, put the fries 27.2→8.1, Transgender 33.8→11.6);
+  // on the runners it rose (FOMO 27→37, Sol 30→56, SI Compute 27→39, a hidden gem 46→51). So FD120 enters at 120 s only if net buying is still at least 90% of its best earlier check and the market cap at least 80%.
+  // FDX (17:50 UK, the owner's "most revised version"): all three tells together — minute-1 bar of FD35 (net ≥ 35 SOL, mc ≥ 130 SOL), creator funded ≥ 20 SOL, and entry at the 120 s check only if buying is still rising (FD120's test).
+  { k: "FDX", ok: (w, m, prev) => w.pre === 1 && (w.funder_sol ?? 0) >= 20 && m.at >= 120 && m.net >= 35 && (m.mcSol ?? 0) >= 130 && m.big >= 3 && (!prev.length || ((m.net ?? 0) >= 0.9 * Math.max(...prev.map((p) => p.net || 0)) && (m.mcSol ?? 0) >= 0.8 * Math.max(...prev.map((p) => p.mcSol || 0)))) },
+  { k: "FD120", ok: (w, m, prev) => w.pre === 1 && m.at >= 120 && confirm(m) && (!prev.length || ((m.net ?? 0) >= 0.9 * Math.max(...prev.map((p) => p.net || 0)) && (m.mcSol ?? 0) >= 0.8 * Math.max(...prev.map((p) => p.mcSol || 0)))) },
+  // 0.8.9 (4 Nov 22:27 UK, owner: "go ship them both"): the failures-vs-successes study of 372 scored trades (LAUNCHER.md 4 Nov 22:40). The one thing most
+  // failures share that the successes don't is BUYERS ALREADY GONE AT 60 s — GMGN's holder count at entry below the chain buyers-so-far: hpb < 0.5 was 16 rugs
+  // of 16; ≥ 0.97 won 56% vs 28%. Entries after graduation (the 79%-bundle brand-name factory) won 11 of 37. So:
+  //   FDH  = FDB's test (funding, no bundle test, strong minute-1 buying) + still on the curve + holders ≥ 0.97 × buyers + holders ≥ 100;
+  //   FDHF = FDH + creator funded 19–100 SOL (the band where the runners sat; 23 back-tested trades only — a forward test).
+  // m.holders is GMGN's holder_count fetched once per check (below); m.holding is the chain-side count (buyers whose sells < 95% of their buys), kept beside it.
+  { k: "FDH", ok: (w, m) => w.pre_nb === 1 && confirm(m) && m.holders != null && m.buyers > 0 && m.holders >= 0.5 * m.buyers }, // 0.8.22 REVISED (owner go 5 Nov 09:11 UK): FDB minus the coins whose GMGN holder count is under half the chain buyers — the one part of the holder finding that held in all three analyses (0 wins under 0.5; removes 24 losers, no winners). The 0.8.9 three-part test (curve + ≥0.97 + 100 holders) scored 2 of 5 once the curve flag was fixed.
+  { k: "FDHF", ok: (w, m) => w.pre_nb === 1 && confirm(m) && m.venue === "pump.fun curve" && m.holders >= 100 && m.holders >= 0.97 * m.buyers && (w.funder_sol ?? 0) >= 19 && (w.funder_sol ?? 0) <= 100 },
+  // 0.9.8 (owner go 5 Nov 21:10 UK, after the Codex + Gemini reviews of the final document): the "U" books, frozen for a 3-day simulation run.
+  //   U = uncrowded at the 60-s check: GMGN holders < 200 and market cap < $15K. (holders < chain buys and the same-name copy are measured by FDLUX, not assumed.)
+  //   FDLU  = FDL's bar + U, entered at 60 s.        FDLUX = FDLU + holders < chain buy transactions + no other mint of the same name entered by any book in the last 2 h.
+  //   FDLU90 = FDLU's decision at 60 s, confirmed at the real 90-s check: net buying at 90 s minus at 60 s > +2 SOL, entered then.   FDU / FDU90 = the same on FD's bar.
+  //   FDLU120 / FDU120 = the 60-s decision, filled 60 s later (kept from 0.9.6). All U books: no fill if the reserve price read before submission is ≤ 0.7× the check price (chainfill guard).
+  //   On 5 Nov's 65 reconstructed coins (trade-stream re-simulation, fills landing 2 slots after the decision): 60-s entry −0.27 SOL; 90-s entry with the +2 gate −0.04 (12 winners kept of 15, rugs 36 → 16). A forward test; thresholds drawn after looking.
+  { k: "FDLU", ok: (w, m) => w.pre === 1 && m.at === 60 && m.net >= 15 && (m.mcSol ?? 0) >= 60 && uncrowded(m), u: 1 },
+  { k: "FDLUX", ok: (w, m) => w.pre === 1 && m.at === 60 && m.net >= 15 && (m.mcSol ?? 0) >= 60 && uncrowded(m) && m.holders < m.buys && !m.same_name_mint, u: 1 },
+  { k: "FDU", ok: (w, m) => w.pre === 1 && m.at === 60 && confirm(m) && uncrowded(m), u: 1 },
+  { k: "FDLU90", ok: (w, m, prev) => w.pre === 1 && m.at === 90 && gate90(m, prev, (c) => c.net >= 15 && (c.mcSol ?? 0) >= 60), u: 1 },
+  { k: "FDU90", ok: (w, m, prev) => w.pre === 1 && m.at === 90 && gate90(m, prev, confirm), u: 1 },
+  { k: "FDLU120", ok: (w, m) => w.pre === 1 && m.at === 60 && m.net >= 15 && (m.mcSol ?? 0) >= 60 && uncrowded(m), u: 1, delayMs: 60000 },
+  { k: "FDU120", ok: (w, m) => w.pre === 1 && m.at === 60 && confirm(m) && uncrowded(m), u: 1, delayMs: 60000 },
+];
+const uncrowded = (m) => m.holders != null && m.holders < 200 && m.mcUsd != null && m.mcUsd < 15000;
+// 0.9.13 (owner go 6 Nov 07:33, spec agreed with Codex + Gemini): the common baseline — no funding test at all — on every launch the 15-SOL screen observes. Funding is a label on the row (grp), read in groups.
+RULES.push({ k: "BL", ok: (w, m) => m.net >= 15 && (m.mcSol ?? 0) >= 60, bl: 1 }, { k: "BL27", ok: (w, m) => confirm(m), bl: 1 });
+// 0.9.28 (H4, forward_plan_6nov.txt; owner "Lets go" 14:45 UK): the 90-s gate isolated. One denominator = the BL bar at the 60-s check on the screened population. Identical sizing, execution and exits (plain chainEntry, the venue trail).
+//   E60  = enter at the 60-s check on the bar (the BL policy, booked separately so the three arms share nothing but the cohort)
+//   E90  = enter at the 90-s check if the SAME bar still holds at 90 s AND the mint was eligible at 60 (a 90-s failure is a deliberate no-entry, kept in the denominator)
+//   E90C = E90 plus net90 − net60 > +2 SOL and nothing else
+const blBar = (c) => c && c.net >= 15 && (c.mcSol ?? 0) >= 60, elig60 = (m, prev) => (m.at === 60 && blBar(m)) || prev.some((c) => c.at === 60 && blBar(c));
+RULES.push({ k: "E60", ok: (w, m) => m.at === 60 && blBar(m), bl: 1 }, // H4 epoch 2 from 0.9.30 (fd_rules H4_EPOCH2): checks in order + fetch cap; results before it are contaminated by late/inverted inputs
+  { k: "E90", ok: (w, m, prev) => m.at === 90 && blBar(m) && elig60(m, prev), bl: 1 },
+  { k: "E90C", ok: (w, m, prev) => { if (m.at !== 90 || !blBar(m) || !elig60(m, prev)) return false; const c60 = prev.find((c) => c.at === 60); return !!c60 && (m.net - (c60.net || 0)) > 2; }, bl: 1 });
+const GATE_SOL = n("LAUNCH_U_GATE_SOL", 2);
+/** the 90-s confirmation: the coin passed the bar and U at its 60-s check, and net buying has grown by more than GATE_SOL since */
+const gate90 = (m, prev, bar) => { const c60 = (prev || []).find((c) => c.at === 60); return !!c60 && bar(c60) && uncrowded(c60) && (m.net ?? 0) - (c60.net ?? 0) > GATE_SOL; };
+const U_GUARD = n("LAUNCH_U_GUARD", 0.3);
+const BASE_BAR = (m) => m.net >= 15 && (m.mcSol ?? 0) >= 60; // the loosest bar any rule accepts (FDL's): GMGN's token info is fetched once per check only past it
+// 0.8.3 (13:05 UK): GMGN's price for a 60–120 s old coin can lag badly ("I voted": GMGN $2K while the chain said 115 SOL ≈ $10.6K), which would
+// flatter every paper entry. The entry price is the CHAIN price at the check (market cap in SOL × SOL/USD ÷ supply); GMGN's is kept in the row for comparison.
+let solUsd = null, solAt = 0;
+async function solPrice() { if (Date.now() - solAt < 120000 && solUsd) return solUsd; try { const w = await gget("/v1/token/info", { chain: "sol", address: "So11111111111111111111111111111111111111112" }, { hi: true }); const v = N(w?.price?.price ?? w?.price); if (v > 0) { solUsd = v; solAt = Date.now(); } } catch {} return solUsd; }
+export const fdStat = { scanned: 0, traced: 0, pre: 0, checks: 0, entries: 0, errors: 0, lastErr: "", credits: 0, creditsDay: "", lastScan: null, lastCheck: null, open: 0 };
+const now = () => Math.floor(Date.now() / 1000), today = () => new Date().toISOString().slice(0, 10);
+const VER = (() => { try { return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version; } catch { return null; } })(); // 0.9.9: the rule version stamped on every decision row
+
+export function initFD(db) {
+  // 0.8.6: entries booked after graduation with the decoder's pool market cap (100× too high) → back to GMGN's price, re-scored
+  try { for (const t of db.prepare("SELECT id, row, entry_price FROM vol_paper WHERE strat IN ('FD','FDL','FDB','A1') AND row LIKE '%\"chain_px\"%' AND (row LIKE '%graduated%' OR row LIKE '%\"venue\":\"other\"%')").all()) { let r = {}; try { r = JSON.parse(t.row || "{}"); } catch {} const g = r.gmgn_px; if (!(g > 0) || r.fixed_grad) continue;
+      if (t.entry_price > g * 3) { r.fixed_grad = true; r.bad_px = t.entry_price; db.prepare("UPDATE vol_paper SET entry_price=?, entry_mc=?, row=?, done=0, err=NULL WHERE id=?").run(g, g * 1e9, JSON.stringify(r), t.id); } } } catch {}
+  // 0.8.4: the FD-family entries booked before 0.8.3 (4 Nov 10:45–13:05 UK) carry GMGN's lagging price; re-price them from the chain market cap stored in the row (SOL/USD ≈ the first chain-priced entry's rate, else 92)
+  try { const ref = db.prepare("SELECT row FROM vol_paper WHERE strat IN ('FD','FDL','FDB','A1') AND row LIKE '%\"sol_usd\"%' ORDER BY entry_ts LIMIT 1").get(); let su = 92; try { su = JSON.parse(ref?.row || "{}").sol_usd || su; } catch {}
+    for (const t of db.prepare("SELECT id, row, entry_price, entry_mc FROM vol_paper WHERE strat IN ('FD','FDL','FDB','A1') AND done=0 AND row NOT LIKE '%\"chain_px\"%'").all()) { let r = {}; try { r = JSON.parse(t.row || "{}"); } catch {} if (!(r.mcSol > 0)) continue;
+      const px = r.mcSol * su / 1e9; r.gmgn_px = t.entry_price; r.chain_px = px; r.sol_usd = su; r.repriced = true; db.prepare("UPDATE vol_paper SET entry_price=?, entry_mc=?, row=? WHERE id=?").run(px, px * 1e9, JSON.stringify(r), t.id); } } catch {}
+  db.exec(`CREATE TABLE IF NOT EXISTS fd_watch (mint TEXT PRIMARY KEY, name TEXT, symbol TEXT, creator TEXT, created_ts INTEGER, bundle_pct REAL, bundle_sol REAL, funder TEXT, funder_sol REAL, funded_ts INTEGER, funder_launches INTEGER,
+    pre INTEGER, pre_nb INTEGER, why TEXT, checks TEXT DEFAULT '[]', entered TEXT DEFAULT '', done INTEGER DEFAULT 0, scanned_ts INTEGER);
+
+# chainfill.mjs exit/fees
+const STAKE = n("LAUNCH_SHADOW_SOL", 0.2), LAMPORTS = BigInt(Math.round(STAKE * 1e9)), STAKE02 = n("LAUNCH_SIM_SMALL_SOL", 0.02), LAMPORTS02 = BigInt(Math.round(STAKE02 * 1e9)), HORIZON = 120 * 60, NET_FEE = n("LAUNCH_SIM_NET_FEE", 0.0015); // network + priority fee, both legs, in SOL
+const now = () => Math.floor(Date.now() / 1000);
+const BUY_LAND_MS = n("LAUNCH_SIM_BUY_LAND_MS", 1000), SELL_LAND_MS = n("LAUNCH_SIM_SELL_LAND_MS", 700); // 0.9.2: a transaction executes against the chain state this long after we decide (measured on the first live FD trades: buys landed 0.6–1.0 s after the check, sells 0.5 s after the trail)
+export const trailPct = (curve) => (curve === 1 ? 0.4 : 0.25);
