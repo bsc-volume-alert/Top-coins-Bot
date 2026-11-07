@@ -1,6 +1,7 @@
 // PumpSwap feed (post-graduation trading). OBSERVE mode: decode + log stats; volume alerts come in v0.5.
 import WebSocket from "ws";
 import { CFG } from "./config.js";
+const DEC_VER = "ps-0.19.9"; // v0.19.9: decoder version stamped on every pool trade row
 import { pumpSwapEventsFromLogs, parsePoolAccount, PUMPSWAP_PROGRAM, WSOL } from "./pumpswap-decoder.js";
 import { rpc } from "./rpc.js";
 import { solUsdCached } from "./price.js";
@@ -148,7 +149,8 @@ function handle({ sig, slot, logs, err }) {
   if (!evs.length) return;
   ps.data += evs.length;
   const route = routeOf(logs);
-  for (const e of evs) {
+  let evIdx = -1;
+  for (const e of evs) { evIdx++; // v0.19.9: event position in the transaction (log order)
     if (e.type === "claim") { ps.claims = (ps.claims || 0) + 1; emit("claim", null, { ...e, sig, venue: "pumpswap" }); continue; }
     if (e.type === "pool") { ps.pools++; poolMint.set(e.pool, { mint: e.baseMint, quote: e.quoteMint }); savePool(e.pool, e.baseMint, e.quoteMint); ring.pool.push(e.ts || Math.floor(Date.now() / 1000)); continue; }
     if (e.isBuy) ps.buys++; else ps.sells++;
@@ -166,6 +168,7 @@ function handle({ sig, slot, logs, err }) {
     const price = e.baseAmt > 0n && e.quoteAmt > 0n ? ((Number(e.quoteAmt) / qDiv) * qi.sol) / (Number(e.baseAmt) / 1e6) : poolQuoteSol / (Number(e.poolBase) / 1e6);
     const mc = price * CFG.TOTAL_SUPPLY * solUsdCached();
     const tr = { mint: pm.mint, pool: e.pool, sig, slot, ts: e.ts, wallet: e.user, isBuy: e.isBuy, sol: solQ, tokens, price, mc, route, venue: pm.quote === WSOL ? "pumpswap" : `pumpswap/${qi.sym}`, quote: qi.sym, creatorFee: (Number(e.creatorFee || 0n) / qDiv) * qi.sol, poolSol: +poolQuoteSol.toFixed(2), poolBase: e.poolBase != null ? e.poolBase : null }; // v0.18.118 poolSol = the pool's SOL side after this swap (depth)
+    Object.assign(tr, { evIdx, baseRaw: String(e.baseAmt), quoteRaw: String(e.quoteAmt), poolBaseRaw: e.poolBase != null ? String(e.poolBase) : null, poolQuoteRaw: e.poolQuote != null ? String(e.poolQuote) : null, baseMint: pm.mint, quoteMint: pm.quote, baseDec: 6, quoteDec: qi.dec, decVer: DEC_VER }); // v0.19.9: lossless evidence (BigInt → decimal string)
     if (samples < 5) { samples++; console.log("[ps sample]", JSON.stringify({ mint: tr.mint.slice(0, 8), buy: tr.isBuy, sol: +sol.toFixed(4), mc: Math.round(mc), wallet: tr.wallet.slice(0, 6) })); }
     emitSwap(tr); // v0.18.43: through the bad-price guard
   }

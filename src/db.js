@@ -176,12 +176,21 @@ for (const sql of [
   "ALTER TABLE trades ADD COLUMN recv_ms INTEGER", // v0.19.1: when this process received the trade's log (observation latency, for the launcher's studies)
   "ALTER TABLE trades ADD COLUMN vsol TEXT", "ALTER TABLE trades ADD COLUMN vtok TEXT", "ALTER TABLE trades ADD COLUMN venue TEXT", // v0.19.2
   "CREATE TABLE IF NOT EXISTS feed_gaps (ts INTEGER, event TEXT, detail TEXT)", // v0.19.2
+  // v0.19.9 (owner's go 7 Nov 09:54 UK; Codex 09:52/09:53): pool-trade EVIDENCE fields, written on new pool rows only (old rows: NULL = unavailable).
+  // pool = pool address; ev_idx = position of this PumpSwap event among the PumpSwap events decoded from the transaction's logs (0-based, log order);
+  // base_raw / quote_raw / pool_base_raw / pool_quote_raw = the event's integer amounts as decimal STRINGS (lossless, never through Number);
+  // base_mint / quote_mint / base_dec / quote_dec = the assets and decimals used (base_dec is ASSUMED 6 by the decoder — recorded as such); dec_ver = decoder version.
+  "ALTER TABLE trades ADD COLUMN pool TEXT", "ALTER TABLE trades ADD COLUMN ev_idx INTEGER", "ALTER TABLE trades ADD COLUMN base_raw TEXT", "ALTER TABLE trades ADD COLUMN quote_raw TEXT",
+  "ALTER TABLE trades ADD COLUMN pool_base_raw TEXT", "ALTER TABLE trades ADD COLUMN pool_quote_raw TEXT", "ALTER TABLE trades ADD COLUMN base_mint TEXT", "ALTER TABLE trades ADD COLUMN quote_mint TEXT",
+  "ALTER TABLE trades ADD COLUMN base_dec INTEGER", "ALTER TABLE trades ADD COLUMN quote_dec INTEGER", "ALTER TABLE trades ADD COLUMN dec_ver TEXT", "ALTER TABLE trades ADD COLUMN px_adj TEXT", // px_adj: NULL = price_sol is this swap's own price; 'primary:<pool>' = replaced by the primary pool's price; 'held' = held at the last accepted price by the jump guard (guardPx)
+
 ]) { try { db.exec(sql); } catch {} }
 export const q = {
   insToken: db.prepare(`INSERT OR IGNORE INTO tokens (mint,name,symbol,uri,creator,bonding_curve,create_slot,create_ts,create_sig) VALUES (?,?,?,?,?,?,?,?,?)`),
   finToken: db.prepare(`UPDATE tokens SET bundle_sol=?, bundle_tokens=?, bundle_pct=?, bundle_wallets=?, dev_buy_sol=?, tier=?, finalized=1, entry_mc_usd=?, peak_mc_usd=?, last_mc_usd=? WHERE mint=?`),
   insCluster: db.prepare(`INSERT OR IGNORE INTO cluster_wallets (mint,wallet,role,tokens,sol_in,first_slot) VALUES (?,?,?,?,?,?)`),
   insTrade: db.prepare(`INSERT INTO trades (mint,sig,slot,ts,wallet,is_buy,sol,tokens,price_sol,recv_ms,vsol,vtok,venue) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'curve')`),
+  insTradeEv: db.prepare(`INSERT INTO trades (mint,sig,slot,ts,wallet,is_buy,sol,tokens,price_sol,recv_ms,vsol,vtok,venue,pool,ev_idx,base_raw,quote_raw,pool_base_raw,pool_quote_raw,base_mint,quote_mint,base_dec,quote_dec,dec_ver,px_adj) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`), // v0.19.9: pool rows with evidence fields
   insTradeVenue: db.prepare(`INSERT INTO trades (mint,sig,slot,ts,wallet,is_buy,sol,tokens,price_sol,recv_ms,vsol,vtok,venue) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`), // v0.19.6: pool (pumpswap) trades for kept launches, venue column set
   insTradeIfNew: db.prepare(`INSERT INTO trades (mint,sig,slot,ts,wallet,is_buy,sol,tokens,price_sol,recv_ms,vsol,vtok,venue) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,'curve' WHERE NOT EXISTS (SELECT 1 FROM trades WHERE mint=? AND sig=?)`), // v0.19.3: duplicate-safe, for the promotion flush retry // v0.19.1: recv_ms = when this process received the log; v0.19.2: vsol/vtok = the curve's virtual reserves AFTER this trade, as the event reports them (raw lamports / raw token units)
   insGap: db.prepare(`INSERT INTO feed_gaps (ts, event, detail) VALUES (?,?,?)`), // v0.19.2: every socket status change (open / closed / idle / error) with its time — a gap is the span between a close and the next open; nothing is backfilled
