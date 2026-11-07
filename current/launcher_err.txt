@@ -1,0 +1,68 @@
+er] memory rss=682M heap=32M ext=5M
+[export trades_books] cut at 90 MB: 315626 rows
+[launcher] memory rss=693M heap=35M ext=6M
+[launcher] memory rss=375M heap=24M ext=5M
+[launcher] memory rss=360M heap=28M ext=5M
+[launcher] memory rss=245M heap=37M ext=9M
+[launcher] memory rss=252M heap=36M ext=7M
+[launcher] memory rss=254M heap=35M ext=9M
+[launcher] memory rss=258M heap=40M ext=11M
+[launcher] memory rss=257M heap=25M ext=5M
+[launcher] memory rss=257M heap=25M ext=8M
+[launcher] memory rss=259M heap=34M ext=12M
+[launcher] memory rss=258M heap=27M ext=5M
+[launcher] memory rss=258M heap=29M ext=6M
+[launcher] memory rss=258M heap=28M ext=7M
+[launcher] memory rss=258M heap=30M ext=7M
+[launcher] memory rss=258M heap=24M ext=4M
+[launcher] memory rss=258M heap=26M ext=5M
+[launcher] memory rss=563M heap=315M ext=4M
+[launcher] memory rss=320M heap=36M ext=4M
+[export trades_books] cut at 90 MB: 315609 rows
+[launcher] memory rss=320M heap=25M ext=4M
+[launcher] memory rss=320M heap=31M ext=7M
+[launcher] memory rss=320M heap=37M ext=6M
+[launcher] memory rss=320M heap=34M ext=4M
+[launcher] memory rss=318M heap=31M ext=4M
+[launcher] memory rss=318M heap=33M ext=5M
+[launcher] memory rss=318M heap=43M ext=8M
+[launcher] memory rss=321M heap=27M ext=5M
+[launcher] memory rss=538M heap=322M ext=5M
+[launcher] memory rss=335M heap=31M ext=7M
+[launcher] memory rss=332M heap=46M ext=5M
+[export trades_books] cut at 90 MB: 315446 rows
+[launcher] memory rss=318M heap=45M ext=5M
+[launcher] memory rss=577M heap=296M ext=4M
+[launcher] memory rss=621M heap=336M ext=14M
+[launcher] memory rss=318M heap=32M ext=4M
+[export trades_books] cut at 90 MB: 315462 rows
+[launcher] memory rss=316M heap=29M ext=6M
+[launcher] memory rss=490M heap=267M ext=4M
+[launcher] memory rss=601M heap=333M ext=6M
+[export trades_books] cut at 90 MB: 315504 rows
+[launcher] memory rss=552M heap=274M ext=4M
+[launcher] memory rss=615M heap=332M ext=6M
+[export trades_books] cut at 90 MB: 315495 rows
+[launcher] memory rss=320M heap=42M ext=6M
+[launcher] memory rss=322M heap=43M ext=6M
+[launcher] memory rss=555M heap=323M ext=6M
+[launcher] memory rss=250M heap=27M ext=4M
+[launcher] memory rss=320M heap=36M ext=10M
+[export trades_books] cut at 90 MB: 315451 rows
+[launcher] memory rss=321M heap=41M ext=4M
+[launcher] memory rss=623M heap=342M ext=13M
+[export trades_books] cut at 90 MB: 315395 rows
+[launcher] memory rss=634M heap=348M ext=11M
+[launcher] memory rss=715M heap=334M ext=4M
+[launcher] memory rss=713M heap=342M ext=9M
+[export trades_books] cut at 90 MB: 315379 rows
+[launcher] memory rss=715M heap=386M ext=10M
+[launcher] memory rss=714M heap=325M ext=8M
+[launcher] memory rss=713M heap=330M ext=10M
+[export trades_books] cut at 90 MB: 315377 rows
+[launcher] memory rss=713M heap=338M ext=12M
+[launcher] memory rss=255M heap=36M ext=10M
+[launcher] memory rss=265M heap=37M ext=7M
+[launcher] memory rss=494M heap=265M ext=4M
+[launcher] memory rss=610M heap=25M ext=4M
+[export trades_books] cut at 90 MB: 315394 rows
