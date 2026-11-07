@@ -1,0 +1,347 @@
+ts,event,detail
+1794072695,pool-subscribed,subscribed id=15828394
+1794072695,pool-open,open
+1794072694,pool-closed,closed (close 1006); reconnect in 1000ms
+1794072694,pool-error,error Invalid WebSocket frame: invalid status code 1006
+1794072153,subscribed,subscribed id=15784928
+1794072153,open,open
+1794072151,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794072150,closed,closed (close 1006); reconnect #14 in 1000ms
+1794072150,error,error Invalid WebSocket frame: invalid status code 1006
+1794072020,subscribed,subscribed id=362363
+1794072020,open,open
+1794072020,connecting,connecting wss://api.mainnet-beta.solana.com
+1794072019,closed,closed (close 1001); reconnect #13 in 1000ms
+1794072018,pool-subscribed,subscribed id=3199714
+1794072018,pool-open,open
+1794072010,pool-closed,closed (close 1006); reconnect in 1000ms
+1794071072,subscribed,subscribed id=15691394
+1794071072,open,open
+1794071072,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794071071,closed,closed (close 1006); reconnect #12 in 1000ms
+1794071071,error,error Invalid WebSocket frame: invalid status code 1006
+1794070498,pool-subscribed,subscribed id=15692083
+1794070498,pool-open,open
+1794070497,pool-closed,closed (close 1006); reconnect in 1000ms
+1794070497,pool-error,error Invalid WebSocket frame: invalid status code 1006
+1794070338,pool-subscribed,subscribed id=8406831
+1794070338,pool-open,open
+1794070337,pool-closed,closed (close 1001); reconnect in 1000ms
+1794070336,subscribed,subscribed id=6885935
+1794070336,open,open
+1794070335,connecting,connecting wss://api.mainnet-beta.solana.com
+1794070332,closed,closed (close 1006); reconnect #11 in 1000ms
+1794070330,idle,"idle 60s, reconnecting"
+1794069705,subscribed,subscribed id=15554960
+1794069705,open,open
+1794069705,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794069704,closed,closed (close 1006); reconnect #10 in 1000ms
+1794069704,error,error Invalid WebSocket frame: invalid status code 1006
+1794069124,pool-subscribed,subscribed id=15506185
+1794069124,pool-open,open
+1794069123,pool-closed,closed (close 1006); reconnect in 1000ms
+1794069123,pool-error,error Invalid WebSocket frame: invalid status code 1006
+1794068726,pool-subscribed,subscribed id=8406831
+1794068726,subscribed,subscribed id=362363
+1794068726,pool-open,open
+1794068726,open,open
+1794068726,connecting,connecting wss://api.mainnet-beta.solana.com
+1794068722,pool-closed,closed (close 1006); reconnect in 1000ms
+1794068722,closed,closed (close 1006); reconnect #9 in 1000ms
+1794068720,idle,"idle 60s, reconnecting"
+1794063728,subscribed,subscribed id=15187108
+1794063728,open,open
+1794063728,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794063727,closed,closed (close 1006); reconnect #8 in 1000ms
+1794063727,error,error Invalid WebSocket frame: invalid status code 1006
+1794061846,pool-subscribed,subscribed id=14976640
+1794061846,pool-open,open
+1794061845,subscribed,subscribed id=6885935
+1794061845,open,open
+1794061845,connecting,connecting wss://api.mainnet-beta.solana.com
+1794061845,pool-closed,closed (close 1006); reconnect in 1000ms
+1794061842,closed,closed (close 1006); reconnect #7 in 1000ms
+1794061839,idle,"idle 60s, reconnecting"
+1794059106,pool-subscribed,subscribed id=3199714
+1794059106,pool-open,open
+1794059105,pool-closed,closed (close 1001); reconnect in 1000ms
+1794059099,subscribed,subscribed id=14808344
+1794059099,open,open
+1794059098,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794059095,closed,closed (close 1006); reconnect #6 in 1000ms
+1794059094,idle,"idle 60s, reconnecting"
+1794057399,pool-subscribed,subscribed id=14704482
+1794057399,pool-open,open
+1794057398,subscribed,subscribed id=6885935
+1794057398,open,open
+1794057398,connecting,connecting wss://api.mainnet-beta.solana.com
+1794057398,pool-closed,closed (close 1006); reconnect in 1000ms
+1794057396,closed,closed (close 1006); reconnect #5 in 1000ms
+1794057392,idle,"idle 60s, reconnecting"
+1794056645,pool-subscribed,subscribed id=3199714
+1794056645,pool-open,open
+1794056644,pool-closed,closed (close 1001); reconnect in 1000ms
+1794056638,subscribed,subscribed id=14723983
+1794056638,open,open
+1794056637,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794056634,closed,closed (close 1006); reconnect #4 in 1000ms
+1794056633,idle,"idle 60s, reconnecting"
+1794056354,pool-subscribed,subscribed id=14707987
+1794056354,pool-open,open
+1794056353,subscribed,subscribed id=6885935
+1794056353,open,open
+1794056353,connecting,connecting wss://api.mainnet-beta.solana.com
+1794056353,pool-closed,closed (close 1006); reconnect in 1000ms
+1794056351,closed,closed (close 1006); reconnect #3 in 1000ms
+1794056341,idle,"idle 60s, reconnecting"
+1794055547,pool-subscribed,subscribed id=8406831
+1794055547,pool-open,open
+1794055546,pool-closed,closed (close 1001); reconnect in 1000ms
+1794055545,subscribed,subscribed id=14665317
+1794055545,open,open
+1794055544,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794055542,closed,closed (close 1006); reconnect #2 in 1000ms
+1794055541,idle,"idle 60s, reconnecting"
+1794055265,pool-subscribed,subscribed id=14652530
+1794055265,pool-open,open
+1794055264,subscribed,subscribed id=6885935
+1794055264,open,open
+1794055264,pool-closed,closed (close 1006); reconnect in 1000ms
+1794055264,connecting,connecting wss://api.mainnet-beta.solana.com
+1794055261,closed,closed (close 1006); reconnect #1 in 1000ms
+1794055259,idle,"idle 60s, reconnecting"
+1794048898,pool-subscribed,subscribed id=8406831
+1794048898,pool-open,open
+1794048894,pool-closed,closed (close 1006); reconnect in 1000ms
+1794045460,subscribed,subscribed id=14138928
+1794045460,open,open
+1794045460,pool-subscribed,subscribed id=14138926
+1794045460,pool-open,open
+1794045460,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794044948,subscribed,subscribed id=14119167
+1794044948,pool-subscribed,subscribed id=14201792
+1794044948,open,open
+1794044948,pool-open,open
+1794044948,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794043225,subscribed,subscribed id=6885935
+1794043225,open,open
+1794043224,connecting,connecting wss://api.mainnet-beta.solana.com
+1794043217,closed,closed (close 1006); reconnect #13 in 1000ms
+1794043216,idle,"idle 60s, reconnecting"
+1794042210,subscribed,subscribed id=14011616
+1794042210,open,open
+1794042210,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794042209,closed,closed (close 1006); reconnect #12 in 1000ms
+1794041591,subscribed,subscribed id=362363
+1794041591,open,open
+1794041591,connecting,connecting wss://api.mainnet-beta.solana.com
+1794041586,closed,closed (close 1006); reconnect #11 in 1000ms
+1794041586,idle,"idle 60s, reconnecting"
+1794040486,subscribed,subscribed id=13939453
+1794040486,open,open
+1794040486,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794040484,closed,closed (close 1006); reconnect #10 in 1000ms
+1794040484,error,error Invalid WebSocket frame: invalid status code 1006
+1794039825,subscribed,subscribed id=362363
+1794039825,open,open
+1794039824,connecting,connecting wss://api.mainnet-beta.solana.com
+1794039822,closed,closed (close 1006); reconnect #9 in 1000ms
+1794039820,idle,"idle 60s, reconnecting"
+1794037310,subscribed,subscribed id=13794508
+1794037310,open,open
+1794037310,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794037307,closed,closed (close 1006); reconnect #8 in 1000ms
+1794037306,idle,"idle 60s, reconnecting"
+1794036668,subscribed,subscribed id=362363
+1794036668,open,open
+1794036668,connecting,connecting wss://api.mainnet-beta.solana.com
+1794036667,closed,closed (close 1006); reconnect #7 in 1000ms
+1794030821,subscribed,subscribed id=13407018
+1794030821,open,open
+1794030821,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794030816,closed,closed (close 1006); reconnect #6 in 1000ms
+1794030814,idle,"idle 60s, reconnecting"
+1794029036,subscribed,subscribed id=6885935
+1794029036,open,open
+1794029036,connecting,connecting wss://api.mainnet-beta.solana.com
+1794029033,closed,closed (close 1006); reconnect #5 in 1000ms
+1794029032,idle,"idle 60s, reconnecting"
+1794027538,subscribed,subscribed id=13166506
+1794027538,open,open
+1794027538,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794027526,closed,closed (close 1006); reconnect #4 in 1000ms
+1794027397,idle,"idle 60s, reconnecting"
+1794021322,subscribed,subscribed id=362363
+1794021322,open,open
+1794021321,connecting,connecting wss://api.mainnet-beta.solana.com
+1794021320,closed,closed (close 1006); reconnect #3 in 1000ms
+1794016064,subscribed,subscribed id=12072698
+1794016064,open,open
+1794016064,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794016063,closed,closed (close 1006); reconnect #2 in 1000ms
+1794016063,error,error Invalid WebSocket frame: invalid status code 1006
+1794015937,subscribed,subscribed id=362363
+1794015937,open,open
+1794015937,connecting,connecting wss://api.mainnet-beta.solana.com
+1794015936,closed,closed (close 1006); reconnect #1 in 1000ms
+1794011227,subscribed,subscribed id=11472244
+1794011227,open,open
+1794011227,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794010008,subscribed,subscribed id=11315567
+1794010008,open,open
+1794010008,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794007976,subscribed,subscribed id=11237767
+1794007976,open,open
+1794007976,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794003127,subscribed,subscribed id=10711608
+1794003127,open,open
+1794003127,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794003125,closed,closed (close 1006); reconnect #2 in 1000ms
+1794003125,error,error Invalid WebSocket frame: invalid status code 1006
+1794003038,subscribed,subscribed id=362363
+1794003038,open,open
+1794003038,connecting,connecting wss://api.mainnet-beta.solana.com
+1794003031,closed,closed (close 1006); reconnect #1 in 1000ms
+1794003031,idle,"idle 60s, reconnecting"
+1794001543,subscribed,subscribed id=10519703
+1794001543,open,open
+1794001543,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794000359,subscribed,subscribed id=10393916
+1794000359,open,open
+1794000359,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793993651,subscribed,subscribed id=9367005
+1793993651,open,open
+1793993651,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793993267,subscribed,subscribed id=9325320
+1793993267,open,open
+1793993267,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793993266,closed,closed (close 1006); reconnect #2 in 1000ms
+1793993266,error,error Invalid WebSocket frame: invalid status code 1006
+1793993093,subscribed,subscribed id=1851042
+1793993093,open,open
+1793993093,connecting,connecting wss://api.mainnet-beta.solana.com
+1793993092,closed,closed (close 1006); reconnect #1 in 1000ms
+1793987626,subscribed,subscribed id=8609015
+1793987626,open,open
+1793987626,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793981230,subscribed,subscribed id=7820715
+1793981230,open,open
+1793981230,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793980759,subscribed,subscribed id=7768574
+1793980759,open,open
+1793980759,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793980758,closed,closed (close 1006); reconnect #2 in 1000ms
+1793980758,error,error Invalid WebSocket frame: invalid status code 1006
+1793980063,subscribed,subscribed id=362363
+1793980063,open,open
+1793980063,connecting,connecting wss://api.mainnet-beta.solana.com
+1793980062,closed,closed (close 1006); reconnect #1 in 1000ms
+1793974129,subscribed,subscribed id=7109760
+1793974129,open,open
+1793974129,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793972559,subscribed,subscribed id=6980203
+1793972559,open,open
+1793972559,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793971761,subscribed,subscribed id=362363
+1793971761,open,open
+1793971760,connecting,connecting wss://api.mainnet-beta.solana.com
+1793971751,closed,closed (close 1006); reconnect #5 in 1000ms
+1793971748,idle,"idle 60s, reconnecting"
+1793965368,subscribed,subscribed id=6808281
+1793965368,open,open
+1793965368,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793965364,closed,closed (close 1006); reconnect #4 in 1000ms
+1793965363,idle,"idle 60s, reconnecting"
+1793963820,subscribed,subscribed id=362363
+1793963820,open,open
+1793963819,connecting,connecting wss://api.mainnet-beta.solana.com
+1793963814,closed,closed (close 1006); reconnect #3 in 1000ms
+1793963811,idle,"idle 60s, reconnecting"
+1793963517,subscribed,subscribed id=6707766
+1793963517,open,open
+1793963517,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793963512,closed,closed (close 1006); reconnect #2 in 1000ms
+1793962860,subscribed,subscribed id=1851042
+1793962860,open,open
+1793962860,connecting,connecting wss://api.mainnet-beta.solana.com
+1793962859,closed,closed (close 1006); reconnect #1 in 1000ms
+1793958269,subscribed,subscribed id=6441748
+1793958269,open,open
+1793958269,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793957367,subscribed,subscribed id=1851042
+1793957367,open,open
+1793957367,connecting,connecting wss://api.mainnet-beta.solana.com
+1793957362,closed,closed (close 1006); reconnect #7 in 1000ms
+1793957361,idle,"idle 60s, reconnecting"
+1793951743,subscribed,subscribed id=5741577
+1793951743,open,open
+1793951742,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793951738,closed,closed (close 1006); reconnect #6 in 1000ms
+1793951737,idle,"idle 60s, reconnecting"
+1793949914,subscribed,subscribed id=1851042
+1793949914,open,open
+1793949914,connecting,connecting wss://api.mainnet-beta.solana.com
+1793949913,closed,closed (close 1001); reconnect #5 in 1000ms
+1793946884,subscribed,subscribed id=5452144
+1793946884,open,open
+1793946884,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793946883,closed,closed (close 1006); reconnect #4 in 1000ms
+1793946883,error,error Invalid WebSocket frame: invalid status code 1006
+1793946603,subscribed,subscribed id=1851042
+1793946601,open,open
+1793946598,connecting,connecting wss://api.mainnet-beta.solana.com
+1793946596,closed,closed (close 1006); reconnect #3 in 2000ms
+1793946596,error,error 
+1793946594,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793946593,closed,closed (close 1006); reconnect #2 in 1000ms
+1793946593,error,error Invalid WebSocket frame: invalid status code 1006
+1793946370,subscribed,subscribed id=1851042
+1793946370,open,open
+1793946370,connecting,connecting wss://api.mainnet-beta.solana.com
+1793946366,closed,closed (close 1006); reconnect #1 in 1000ms
+1793946365,idle,"idle 60s, reconnecting"
+1793945527,subscribed,subscribed id=5767669
+1793945527,open,open
+1793945527,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793945005,subscribed,subscribed id=5309855
+1793945005,open,open
+1793945003,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793944996,closed,closed (close 1006); reconnect #2 in 1000ms
+1793944995,idle,"idle 60s, reconnecting"
+1793940360,subscribed,subscribed id=362363
+1793940360,open,open
+1793940360,connecting,connecting wss://api.mainnet-beta.solana.com
+1793940359,closed,closed (close 1006); reconnect #1 in 1000ms
+1793932239,subscribed,subscribed id=4556176
+1793932239,open,open
+1793932239,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793927202,subscribed,subscribed id=3432750
+1793927202,open,open
+1793927200,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793927198,closed,closed (close 1006); reconnect #2 in 1000ms
+1793927198,error,error Invalid WebSocket frame: invalid status code 1006
+1793926928,subscribed,subscribed id=362363
+1793926928,open,open
+1793926928,connecting,connecting wss://api.mainnet-beta.solana.com
+1793926927,closed,closed (close 1001); reconnect #1 in 1000ms
+1793918537,subscribed,subscribed id=2836332
+1793918537,open,open
+1793918537,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793917277,subscribed,subscribed id=362363
+1793917277,open,open
+1793917275,connecting,connecting wss://api.mainnet-beta.solana.com
+1793917270,closed,closed (close 1006); reconnect #3 in 1000ms
+1793917267,idle,"idle 60s, reconnecting"
+1793916092,subscribed,subscribed id=2167309
+1793916092,open,open
+1793916091,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1793916090,closed,closed (close 1006); reconnect #2 in 1000ms
+1793916090,error,error Invalid WebSocket frame: invalid status code 1006
+1793916067,subscribed,subscribed id=362363
+1793916067,open,open
+1793916065,connecting,connecting wss://api.mainnet-beta.solana.com
+1793916060,closed,closed (close 1006); reconnect #1 in 1000ms
+1793916056,idle,"idle 60s, reconnecting"
+1793911183,subscribed,subscribed id=1609070
+1793911183,open,open
+1793911183,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***

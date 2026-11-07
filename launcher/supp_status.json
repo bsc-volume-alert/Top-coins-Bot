@@ -1,0 +1,14 @@
+{
+ "ver": "supp-export 1.1",
+ "branch": "entry-supp-20261107t1433",
+ "at": "2026-11-07T14:51:05.128Z",
+ "secs": 1054,
+ "phase": "pushed",
+ "commit": "ba9d688db1b2d1ed983eda7886ad0a55c16fb822",
+ "rows": 4241610,
+ "parts": 6,
+ "mints": 1247,
+ "recon_mismatch": 22,
+ "zero_rows": 64,
+ "evidence_mints": 107
+}
