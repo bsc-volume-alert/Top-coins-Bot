@@ -22,7 +22,7 @@ RULE MODULE INTERFACE (one file per rule):
 """
 import csv, gzip, glob, json, math, os, random, sys, importlib.util, argparse, calendar, time, io, collections, bisect
 
-VERSION = "eval-1.1"  # 1.1 (7 Nov 16:20 UK, before the test start): (a) O(1) trade views — 1.0 rebuilt the received-trade list on every call (quadratic on busy coins); (b) trades streamed ONE MINT AT A TIME (1.0 held all rows in memory and was killed on 4.2M rows). Scoring rules unchanged.
+VERSION = "eval-1.1"  # 1.1 (7 Nov 16:20 UK, before the test start): (a) O(1) trade views — 1.0 rebuilt the received-trade list on every call (quadratic on busy coins); (b) trades streamed ONE MINT AT A TIME (1.0 held all rows in memory and was killed on 4.2M rows). Scoring rules unchanged; (c) pool states of retained launches accepted from tracker 0.19.6 (6 Nov 19:31) within retention — no effect on the 8–10 Nov window; (d) EVAL_DEV_NO_EVIDENCE=1 diagnostic switch for development reproduction only, flagged in the report.
 FIXED_FEE_SOL = 0.0015            # per round trip (tx + priority), charged once per position
 CURVE_FEE_BPS = 95 + 30           # pump.fun curve: protocol 95 + creator 30 bps, per leg (launcher defaults when the global config cannot be read)
 POOL_FEE_BPS = 20 + 5 + 5         # PumpSwap: LP 20 + protocol 5 + coin-creator 5 bps, per leg (ASSUMPTION; sensitivity reported at 125)
@@ -30,7 +30,9 @@ LAND_BUY_S, LAND_SELL_S = 1.0, 0.7
 CURVE_MAX_PX = (30 * 1.073e9 / (1.073e9 - 793.1e6)) / (1.073e9 - 793.1e6)   # SOL per token at curve completion (~4.11e-7)
 WSOL = "So11111111111111111111111111111111111111112"
 RETAIN_SOL, RETAIN_MIN, PRE_BUFFER = 15.0, 125, 12000
-POOL_ALL_FROM = calendar.timegm(time.strptime("2026-11-07 09:47:00", "%Y-%m-%d %H:%M:%S"))
+POOL_ALL_FROM = calendar.timegm(time.strptime("2026-11-07 09:47:00", "%Y-%m-%d %H:%M:%S"))   # tracker 0.19.8: pool trades of EVERY launch for 24 h
+POOL_RET_FROM = calendar.timegm(time.strptime("2026-11-06 19:31:00", "%Y-%m-%d %H:%M:%S"))   # tracker 0.19.6: pool trades of RETAINED launches while retained
+DEV_NO_EVIDENCE = os.environ.get("EVAL_DEV_NO_EVIDENCE") == "1"  # DIAGNOSTIC ONLY (development reproduction): skip the pool evidence check; never used for scoring; flagged in the report
 
 def opn(p): return io.TextIOWrapper(gzip.open(p), newline="") if p.endswith(".gz") else open(p, newline="")
 def fl(x):
@@ -102,6 +104,7 @@ def state_ok(r):
     if r["venue"] == "curve" or not r["venue"]:
         return (vs / 1e9) / (vt / 1e6) <= CURVE_MAX_PX * 1.1
     # pool: evidence must confirm a wSOL quote and decimals (tracker 0.19.9+); otherwise unavailable
+    if DEV_NO_EVIDENCE: return True
     return r.get("quote_mint") == WSOL and str(r.get("base_dec")) == "6" and str(r.get("quote_dec")) == "9"
 
 def bps(r, pool_bps): return CURVE_FEE_BPS if (r["venue"] == "curve" or not r["venue"]) else pool_bps
@@ -131,7 +134,7 @@ def state_at(L, t, gaps, outages, created, retained_at):
     if gap_overlap(gaps, outages, fl(best["ts"]), t, best["venue"]): return None, "capture gap"
     pool = best["venue"] and best["venue"] != "curve"
     if not pool and t > retained_at + RETAIN_MIN * 60: return None, "outside retention"
-    if pool and not (t <= created + 86400 and created >= POOL_ALL_FROM): return None, "outside pool capture"
+    if pool and not ((created >= POOL_ALL_FROM and t <= created + 86400) or (created >= POOL_RET_FROM and t <= retained_at + RETAIN_MIN * 60)): return None, "outside pool capture"
     return best, None
 
 class V:  # view for decide()
@@ -247,7 +250,7 @@ def main(argv=None):
             r, h = run_launch(mod, R, m, info, L, gaps, outages, meta, POOL_FEE_BPS); res.append(r); hyp[0] += 1 if (h and r["cat"] != "abstain") else 0
             r2, _ = run_launch(mod, R, m, info, L, gaps, outages, meta, 125); sens.append(r2)
     if stats["non_contiguous"]: print("WARNING: mints not contiguous in the export:", stats["non_contiguous"], "- results for those mints are split; re-export grouped by mint", file=sys.stderr)
-    K = len(mods); report = {"version": VERSION, "window": [a.t0, a.t1], "launches_in_window": len(tok), "N_common": N, "duplicates_removed": stats["duplicates_removed"],
+    K = len(mods); report = {"version": VERSION, "DIAGNOSTIC_no_evidence_check": DEV_NO_EVIDENCE, "window": [a.t0, a.t1], "launches_in_window": len(tok), "N_common": N, "duplicates_removed": stats["duplicates_removed"],
                              "mints_streamed": stats["mints_streamed"], "non_contiguous_mints": stats["non_contiguous"],
                              "assumptions": {"curve_fee_bps": CURVE_FEE_BPS, "pool_fee_bps": POOL_FEE_BPS, "fixed_fee_sol": FIXED_FEE_SOL, "land_buy_s": LAND_BUY_S, "land_sell_s": LAND_SELL_S}, "rules": {}}
     for path, mod, R, res, sens, hyp in mods:

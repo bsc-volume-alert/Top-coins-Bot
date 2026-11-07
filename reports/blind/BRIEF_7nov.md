@@ -78,7 +78,7 @@ One evaluation script, written and frozen (committed with a hash) before 8 Nov 0
    - DECISIONS (entry and exit triggers) may use only information received by then (`recv_ms` ≤ t; lookup and trace times for funding).
    - EXECUTION is valued on the chain state at the assumed landing time: the reserves after the last trade ordered by (slot, ev_idx, row_id) whose block time is ≤ the landing time, subject to step 2a.
    - Any rule whose decisions would need trades without `recv_ms` is scored as a **hypothetical event-time replay**, reported separately and never pooled with operational results.
-10. **The evaluator is published and frozen:** reports/blind/eval/ (evaluate.py, 14 unit tests, README), branch **blind-eval-1.0** (fixed commit). Rules are written as a small Python module (interface in the README). Your written rule will be translated into that module and sent back to you to confirm before scoring.
+10. **The evaluator is published and frozen:** reports/blind/eval/ (evaluate.py, 14 unit tests, README), branch **blind-eval-1.1** (fixed commit; supersedes 1.0, same scoring rules). Rules are written as a small Python module (interface in the README). Your written rule will be translated into that module and sent back to you to confirm before scoring.
 11. Write your rule so it maps onto these steps. Anything that cannot be expressed this way cannot be scored.
 
 ## Loading the data (example)

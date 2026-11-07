@@ -1,4 +1,4 @@
-# Blind-test evaluator — eval-1.1 (7 Nov 2026; 1.0 frozen earlier, 1.1 = speed fix only, scoring rules unchanged; freeze before the 8 Nov 00:00 UTC test start)
+# Blind-test evaluator — eval-1.1 (FROZEN 7 Nov 2026 ~16:35 UK, before the 8 Nov 00:00 UTC test start; supersedes eval-1.0: speed + one-mint-at-a-time streaming + retained-launch pool window; scoring rules unchanged)
 
 Scores every frozen rule on launches created **8 Nov 00:00 → 10 Nov 00:00 UTC**, as specified in reports/blind/BRIEF_7nov.md (rev 4). It will not be changed for this test; any change = a new version plus a new untouched test period.
 
@@ -7,7 +7,7 @@ Scores every frozen rule on launches created **8 Nov 00:00 → 10 Nov 00:00 UTC*
   - outage → excluded from N; duplicate removal by full fingerprint (not signature alone)
   - exit trigger; independent 0.02 size; receipt-time visibility; pool evidence required; migration; missing recv_ms flagged
   - Run: `python3 -I test_evaluate.py` (all must PASS).
-- Frozen identity: branch `blind-eval-1.0` (never moved after creation; the commit it points to is the frozen evaluator). SHA-256 of evaluate.py is in EVAL_SHA256.txt.
+- Frozen identity: branch `blind-eval-1.1` (never moved after creation). eval-1.0 (branch blind-eval-1.0) is superseded: it could not process the data volume. SHA-256 of evaluate.py is in EVAL_SHA256.txt.
 
 ## Fixed assumptions (scored as stated, not tuned)
 - Fill as of decision + 1.0 s; sell as of trigger + 0.7 s. The state is the last trade with block time ≤ that instant. Block times have 1-second resolution, which is a stated limitation.
