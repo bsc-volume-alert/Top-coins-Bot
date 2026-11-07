@@ -1,0 +1,91 @@
+memory rss=627M heap=334M ext=9M
+[export trades_books] cut at 90 MB: 315496 rows
+[launcher] memory rss=630M heap=343M ext=11M
+[launcher] memory rss=724M heap=338M ext=10M
+[export trades_books] cut at 90 MB: 315483 rows
+[launcher] memory rss=725M heap=356M ext=12M
+[launcher] memory rss=727M heap=375M ext=15M
+[launcher] memory rss=714M heap=348M ext=8M
+[export trades_books] cut at 90 MB: 315496 rows
+[launcher] memory rss=726M heap=353M ext=11M
+[launcher] memory rss=659M heap=45M ext=4M
+[launcher] memory rss=710M heap=332M ext=7M
+[export trades_books] cut at 90 MB: 315529 rows
+[launcher] memory rss=718M heap=335M ext=9M
+[launcher] memory rss=723M heap=326M ext=12M
+[launcher] memory rss=723M heap=339M ext=12M
+[export trades_books] cut at 90 MB: 315536 rows
+[launcher] memory rss=723M heap=370M ext=14M
+[launcher] memory rss=727M heap=334M ext=6M
+[export trades_books] cut at 90 MB: 315528 rows
+[launcher] memory rss=726M heap=325M ext=8M
+[launcher] memory rss=724M heap=356M ext=9M
+[launcher] memory rss=710M heap=335M ext=6M
+[export trades_books] cut at 90 MB: 315528 rows
+[launcher] memory rss=715M heap=339M ext=7M
+[launcher] memory rss=722M heap=310M ext=5M
+[launcher] memory rss=285M heap=26M ext=4M
+[export trades_books] cut at 90 MB: 315602 rows
+[launcher] memory rss=323M heap=26M ext=4M
+[launcher] memory rss=324M heap=39M ext=7M
+[launcher] memory rss=266M heap=29M ext=6M
+[launcher] memory rss=605M heap=321M ext=8M
+[export trades_books] cut at 90 MB: 315629 rows
+[launcher] memory rss=629M heap=343M ext=10M
+[launcher] memory rss=285M heap=24M ext=4M
+[launcher] memory rss=292M heap=29M ext=5M
+[launcher] memory rss=295M heap=28M ext=5M
+[launcher] memory rss=303M heap=30M ext=7M
+[launcher] memory rss=321M heap=29M ext=4M
+[launcher] memory rss=322M heap=39M ext=4M
+[launcher] memory rss=325M heap=31M ext=4M
+[launcher] memory rss=325M heap=36M ext=5M
+[launcher] memory rss=325M heap=34M ext=5M
+[launcher] memory rss=325M heap=32M ext=4M
+[launcher] memory rss=325M heap=30M ext=5M
+[launcher] memory rss=325M heap=31M ext=4M
+[launcher] memory rss=326M heap=39M ext=10M
+[launcher] memory rss=325M heap=31M ext=4M
+[launcher] memory rss=326M heap=32M ext=4M
+[launcher] memory rss=326M heap=30M ext=4M
+[launcher] memory rss=326M heap=36M ext=5M
+[launcher] memory rss=326M heap=30M ext=4M
+[launcher] memory rss=333M heap=40M ext=4M
+[launcher] memory rss=636M heap=346M ext=11M
+[export trades_books] cut at 90 MB: 315753 rows
+[launcher] memory rss=650M heap=357M ext=16M
+[launcher] memory rss=599M heap=364M ext=18M
+[launcher] memory rss=589M heap=37M ext=7M
+[launcher] memory rss=589M heap=38M ext=4M
+[launcher] memory rss=263M heap=31M ext=5M
+[launcher] memory rss=267M heap=36M ext=4M
+[launcher] memory rss=267M heap=34M ext=4M
+[launcher] memory rss=267M heap=30M ext=7M
+[launcher] memory rss=267M heap=27M ext=5M
+[launcher] memory rss=267M heap=37M ext=5M
+[launcher] memory rss=267M heap=36M ext=8M
+[launcher] memory rss=267M heap=29M ext=5M
+[launcher] memory rss=267M heap=33M ext=4M
+[launcher] memory rss=268M heap=36M ext=4M
+[launcher] memory rss=504M heap=271M ext=4M
+[launcher] memory rss=631M heap=345M ext=6M
+[export trades_books] cut at 90 MB: 315746 rows
+[launcher] memory rss=639M heap=344M ext=7M
+[launcher] memory rss=597M heap=359M ext=10M
+[launcher] memory rss=589M heap=32M ext=4M
+[launcher] memory rss=273M heap=33M ext=4M
+[launcher] memory rss=275M heap=41M ext=10M
+[launcher] memory rss=274M heap=31M ext=6M
+[launcher] memory rss=274M heap=29M ext=4M
+[launcher] memory rss=274M heap=30M ext=5M
+[launcher] memory rss=274M heap=35M ext=6M
+[launcher] memory rss=274M heap=34M ext=4M
+[launcher] memory rss=274M heap=39M ext=6M
+[launcher] memory rss=274M heap=28M ext=6M
+[launcher] memory rss=274M heap=32M ext=5M
+[launcher] memory rss=274M heap=36M ext=5M
+[launcher] memory rss=276M heap=37M ext=9M
+[launcher] memory rss=275M heap=36M ext=7M
+[launcher] memory rss=274M heap=37M ext=4M
+[launcher] memory rss=274M heap=35M ext=4M
+[launcher] memory rss=505M heap=274M ext=4M

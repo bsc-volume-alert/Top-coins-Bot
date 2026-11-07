@@ -1,0 +1,12 @@
+Status: active
+
+To                         Action      From
+--                         ------      ----
+22/tcp                     ALLOW       Anywhere                  
+8787/tcp                   ALLOW       Anywhere                  
+8790/tcp                   ALLOW       Anywhere                  
+8791/tcp                   ALLOW       Anywhere                  
+22/tcp (v6)                ALLOW       Anywhere (v6)             
+8787/tcp (v6)              ALLOW       Anywhere (v6)             
+8790/tcp (v6)              ALLOW       Anywhere (v6)             
+8791/tcp (v6)              ALLOW       Anywhere (v6)             

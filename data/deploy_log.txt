@@ -1,0 +1,92 @@
+ld insert path unchanged, smoke boot clean
+[deploy] 2026-11-07T10:04:21Z updating 567bd57a3665a333f8f39488bb6d4bd59fdb66c7 -> da4ee26335012e12906e29f7dbdaf1706d44276b
+up to date in 651ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T10:05:24Z updating da4ee26335012e12906e29f7dbdaf1706d44276b -> b60594eb2edda9ce427dc08b88a21e171b20087e
+up to date in 372ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T10:19:00Z updating b60594eb2edda9ce427dc08b88a21e171b20087e -> 3330b7634c036a7e25aa32b205e00eb75379253c
+up to date in 660ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T12:06:40Z updating 3330b7634c036a7e25aa32b205e00eb75379253c -> 9827646954379fe0dd22d1100bbbec7aec05af26
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T12:55:32Z updating 9827646954379fe0dd22d1100bbbec7aec05af26 -> 1490e306067f1383b50870c0fc34587ff6db7e3d
+up to date in 633ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T13:24:45Z updating 1490e306067f1383b50870c0fc34587ff6db7e3d -> f10ee97672eec7fba464702f1c5760d6fb602ee9
+up to date in 723ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T14:08:33Z updating f10ee97672eec7fba464702f1c5760d6fb602ee9 -> 60f96b491b56f2a7ba202cdd15c5b690cdaca0a1
+up to date in 758ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T14:17:09Z updating 60f96b491b56f2a7ba202cdd15c5b690cdaca0a1 -> 19b88fde109432031210a7a9ac35f2c584a1970c
+up to date in 678ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] launcher changed — installing and checking
+up to date in 449ms
+[deploy] launcher reloaded
+[deploy] 2026-11-07T14:20:47Z updating 19b88fde109432031210a7a9ac35f2c584a1970c -> b609dc925485899a1c3b23029b1ffe7a9f23be0b
+up to date in 901ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] launcher changed — installing and checking
+up to date in 740ms
+[deploy] launcher reloaded
+[deploy] 2026-11-07T14:33:29Z updating b609dc925485899a1c3b23029b1ffe7a9f23be0b -> cc9f80fc85a8c2425b2a26521c8e99262c94d430
+up to date in 624ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] one-off job: supp
+[deploy] 2026-11-07T14:36:03Z updating cc9f80fc85a8c2425b2a26521c8e99262c94d430 -> d4925ceb1bcae878a6c4aec400847f94b1779214
+up to date in 724ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] launcher changed — installing and checking
+up to date in 480ms
+[deploy] launcher reloaded
+[deploy] 2026-11-07T14:44:46Z updating d4925ceb1bcae878a6c4aec400847f94b1779214 -> 36b705550933c21ba981c67af191cb627a2b0b23
+up to date in 829ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T14:47:52Z updating 36b705550933c21ba981c67af191cb627a2b0b23 -> 48b16776567a1e6d22762de79a6435b99f18db4a
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T14:49:28Z updating 48b16776567a1e6d22762de79a6435b99f18db4a -> 1de61a99b0efee4afde0caa5acafc04e858ba62b
+up to date in 813ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T14:53:34Z updating 1de61a99b0efee4afde0caa5acafc04e858ba62b -> ba971c5d23331844d5640b6a54a443e37d169c61
+up to date in 674ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T14:56:09Z updating ba971c5d23331844d5640b6a54a443e37d169c61 -> 87657c9ddd213a7510cac23af92b4fb43d2182c8
+up to date in 332ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T14:58:43Z updating 87657c9ddd213a7510cac23af92b4fb43d2182c8 -> 68ac601d63df5ff5c87082362624568f25112b06
+up to date in 614ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T15:02:48Z updating 68ac601d63df5ff5c87082362624568f25112b06 -> cf86e7604870422d7b634f0e8f4ecf88bc9824d0
+up to date in 399ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T15:14:28Z updating cf86e7604870422d7b634f0e8f4ecf88bc9824d0 -> 982fd8de03cece52eab5ccad84bc51ed526b02a0
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] launcher changed — installing and checking
+up to date in 464ms
+[deploy] launcher reloaded
+[deploy] 2026-11-07T15:26:14Z updating 982fd8de03cece52eab5ccad84bc51ed526b02a0 -> 13df448728810b64fa130da75a6328d1cf35b569
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T15:26:49Z updating 13df448728810b64fa130da75a6328d1cf35b569 -> 86885bce34c70fea6b39edd474a72f67cacd6b67
+up to date in 463ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T15:43:01Z updating 86885bce34c70fea6b39edd474a72f67cacd6b67 -> d9ddd0ed9ea2324f79ffd499609a821fddf30a11
+up to date in 933ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T15:55:13Z updating d9ddd0ed9ea2324f79ffd499609a821fddf30a11 -> 7b0197e6bfd3ee01d250ff3fd7b5842c8f7865ef
+up to date in 829ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T15:56:16Z updating 7b0197e6bfd3ee01d250ff3fd7b5842c8f7865ef -> 8f4f3d02ddfe94380b3ac723e53b9ff1fa19311f
+up to date in 968ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T15:56:49Z updating 8f4f3d02ddfe94380b3ac723e53b9ff1fa19311f -> e2bc9f0b9016cf63a8cf17f35cbe2a1b172b6117
+up to date in 369ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T16:00:23Z updating e2bc9f0b9016cf63a8cf17f35cbe2a1b172b6117 -> be9b5459e2f7670946d9ca012f875b77aaaf5d5b
+up to date in 386ms
+[deploy] tracker untouched — executor / reports / data-script push

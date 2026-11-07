@@ -1,0 +1,442 @@
+{
+ "ver": "0.9.54",
+ "mode": "paper",
+ "started": "2026-11-07T15:14:35.211Z",
+ "posts": 0,
+ "ignored": 0,
+ "launches": 0,
+ "live": {
+  "enabled": false,
+  "book": null,
+  "stake": 0,
+  "buys": 0,
+  "buyFails": 0,
+  "sells": 0,
+  "sellFails": 0,
+  "skipped": 0,
+  "open": 0,
+  "writtenOff": 0,
+  "balanceSol": null,
+  "lastErr": "",
+  "lastSig": "",
+  "polls": 0,
+  "expStart": 1794064475
+ },
+ "shadowOk": 0,
+ "shadowFail": 0,
+ "uploadsFailed": 0,
+ "sells": 0,
+ "errors": 0,
+ "lastErr": "",
+ "selfTest": {
+  "at": "2026-11-07T15:14:38.564Z",
+  "global": {
+   "feeBps": 95,
+   "creatorFeeBps": 5,
+   "initVSol": 30,
+   "initVTok": 1073000000
+  },
+  "payer": "launch wallet",
+  "quotedTokens": 3529605.192446,
+  "pctSupply": 0.353,
+  "classicBytes": 1253,
+  "classic": {
+   "ok": true,
+   "err": null,
+   "units": 197188,
+   "ms": 27,
+   "simTokens": 3520918.711316,
+   "logs": [
+    "Program log: Instruction: CreateV2",
+    "Program log: MetadataPointerInstruction::Initialize",
+    "Program log: Instruction: InitializeMint2",
+    "Program log: Instruction: GetAccountDataSize",
+    "Program log: Instruction: InitializeImmutableOwner",
+    "Program log: Instruction: InitializeAccount3",
+    "Program log: TokenMetadataInstruction: Initialize",
+    "Program log: TokenMetadataInstruction: UpdateAuthority",
+    "Program log: Instruction: MintTo",
+    "Program log: Instruction: SetAuthority",
+    "Program log: Instruction: GetAccountDataSize",
+    "Program log: Instruction: InitializeImmutableOwner"
+   ]
+  },
+  "v3Bytes": 1258,
+  "v3": {
+   "ok": true,
+   "err": null,
+   "units": 192434,
+   "ms": 30,
+   "simTokens": 3520918.711316,
+   "logs": [
+    "Program log: Instruction: CreateV2",
+    "Program log: MetadataPointerInstruction::Initialize",
+    "Program log: Instruction: InitializeMint2",
+    "Program log: Instruction: GetAccountDataSize",
+    "Program log: Instruction: InitializeImmutableOwner",
+    "Program log: Instruction: InitializeAccount3",
+    "Program log: TokenMetadataInstruction: Initialize",
+    "Program log: TokenMetadataInstruction: UpdateAuthority",
+    "Program log: Instruction: MintTo",
+    "Program log: Instruction: SetAuthority",
+    "Program log: Instruction: GetAccountDataSize",
+    "Program log: Instruction: InitializeImmutableOwner"
+   ]
+  },
+  "ai": {
+   "name": "Goosebumps",
+   "ticker": "GOOSEBUMPS",
+   "why": "Recognizable horror brand shown on both covers; political twist limits broad appeal",
+   "score": 6,
+   "by": "ai",
+   "ms": 2296
+  },
+  "twitterRest": {
+   "http": 200,
+   "ok": true,
+   "tweets": 1,
+   "msg": "success"
+  },
+  "upload": {
+   "ok": true,
+   "ms": 621,
+   "uri": "https://ipfs.io/ipfs/bafkreic7pdfcfcelv3p4kvlrkgxat3qmarvql7adozdf4mw6nawok4dgw4"
+  }
+ },
+ "exports": 15,
+ "lastPush": "ok 2026-11-07T15:56:11.114Z",
+ "inboxPublicKey": "MCowBQYDK2VuAyEAITMoqjDL063IDsN1URqLLED0kKKyIHnNO0XpumYL8xY=",
+ "census": 218,
+ "at": 1794067500,
+ "wallet": "AGEniepzBFf2Jesgv7XzqibjndgTRRTE9QDdSojrpYMj",
+ "balanceSol": 0.2769,
+ "liveToday": 0,
+ "cap": "none",
+ "minBalanceSol": 0.15,
+ "tpFraction": 0.5,
+ "stakeSol": 0.1,
+ "deadMin": 10,
+ "quietMin": 30,
+ "tpX": 3,
+ "lut": {
+  "address": null,
+  "addresses": 0,
+  "created": null,
+  "extended": 0,
+  "lastErr": ""
+ },
+ "copies": {
+  "scans": 8,
+  "found": 31,
+  "picks": 0,
+  "scored": 1,
+  "errors": 0,
+  "lastErr": "",
+  "lastRaw": "{\"coins\":[{\"chain\":\"sol\",\"address\":\"2MTv2WtQRjgCMdnAVQiNbnAWj9Mq7qFFoxMuERfgbonk\",\"name\":\"Back To The Moon\",\"symbol\":\"MOON\",\"trans_name\":\"\",\"trans_symbol\":\"\",\"trans_name_zhcn\":\"重返月球\",\"trans_symbol_zhcn\":\"月亮\",\"remark_name\":\"\",\"logo\":\"https://gmgn.ai/external-res/724d0b1a5fe8aa62639bc3ceddc9852d_v2.webp\",\"created_at\":1775137655,\"price\":\"\",\"price_24h\":\"\",\"volume_1h\":0,\"volume_24h\":0,\"mcp\":\"\",\"liquidity\":\"0.000000\",\"follow_state\":false,\"quote_address\":\"\",\"launch_quote_address\":\"USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB\",\"standard\":\"\",\"hot_level\":0,\"swaps_5m\":0,\"swaps_1h\":0,\"swaps_6h\":0,\"swaps_24h\":0,\"is_show_alert\":true,\"is_honeypot\":false,\"renounced_freeze_account\":true,\"buy_tax\":\"0\",\"sell_tax\":\"0\",\"total_buy_tax\":0,\"total_sell_tax\":0,\"token_link\":{\"address\":\"2MTv2WtQRjgCMdnAVQiNbnAWj9Mq7qFFoxMuERfgbonk\",\"gmgn\":\"https://gmgn.ai/sol/token/2MTv2WtQRjgCMdnAVQiNbnAWj9Mq7qFFoxMuERfgbonk\",\"geckoterminal\":\"https://www.geckoterminal.com/solana/tokens/2MTv2WtQRjgCMdnAVQiNbnAWj9Mq7qFFoxMuERfgbonk\",\"twitter_username\":\"https://x.com/beeple/status/2039552653793849806\",\"website\":\"\",\"telegram\":\"\",\"bitbucket\":\"\",\"discord\":\"\",\"description\":\"\",\"facebook\":\"\",\"github\":\"\",\"instagram\":\"\",\"linkedin\":\"\",\"medium\":\"\",\"reddit\":\"\",\"tiktok\":\"\",\"youtube\":\"\",\"verify_status\":0,\"fracaster\":null},\"dexscr_ad\":0,\"dexscr_update_link\":0,\"dexscr_boost_fee\":0,\"dexscr_trending_bar_ts\":0,\"cto_flag\":0,\"launchpad\":\"ray_launchpad\",\"launchpad_platform\":\"letsbonk\",\"launchpad_status\":0,\"exchange\":\"\",\"migrated_pool_exchange\"",
+  "gmgn": {
+   "calls": 2424,
+   "errors": 1,
+   "limited": 0,
+   "lastErr": "/v1/market/rank: BAD_REQUEST invalid order_by: get history_high but must be one of default, swaps, marketcap, history_highest_market_cap, liquidity, volume, hol",
+   "hi": 147
+  }
+ },
+ "peaks": {
+  "runs": 1,
+  "coins": 165,
+  "ok": 162,
+  "errors": 3,
+  "lastErr": "AQhRed info: fetch failed",
+  "lastRun": "2026-11-07T15:34:40.948Z",
+  "running": false,
+  "infoKeys": "address,symbol,name,decimals,logo,banner,biggest_pool_address,open_timestamp,migrated_timestamp,holder_count,circulating_supply,total_supply,max_supply,liquidity,creation_timestamp,standard,trade_fee,total_fee,og,image_dup_count,visiting_count,launchpad,launchpad_status,launchpad_progress,launchpad_platform,migrated_pool,migration_market_cap,migration_market_cap_quote,ath_price,locked_ratio,price,pool,dev,link,stat,wallet_tags_stat,fee_distribution"
+ },
+ "study": {
+  "runs": 1,
+  "studied": 0,
+  "errors": 0,
+  "lastErr": "",
+  "lastRun": "2026-11-07T15:15:21.297Z",
+  "running": false,
+  "credits": 34985,
+  "creditsDay": "2026-11-07",
+  "creditsToday": 34985,
+  "calls": 4906,
+  "gtfa": true,
+  "probe": "{\"keys\":[\"transaction\",\"meta\",\"version\",\"slot\",\"transactionIndex\",\"blockTime\"],\"ix\":39,\"ev\":\"create+trade\",\"inner\":3,\"logs\":96}",
+  "current": "",
+  "probeDone": true
+ },
+ "vol": {
+  "polls": 0,
+  "rows": 0,
+  "entries": 0,
+  "scored": 247,
+  "errors": 0,
+  "lastErr": "",
+  "lastPoll": null,
+  "maxVolSeen": null
+ },
+ "mark": {
+  "passes": 77,
+  "marked": 2768,
+  "sold": 261,
+  "calls": 690,
+  "errors": 2,
+  "lastErr": "CRGFKu fetch failed",
+  "lastPass": "2026-11-07T15:44:21.806Z"
+ },
+ "volBackfill": {
+  "coins": 0,
+  "done": 0,
+  "entries": 0,
+  "errors": 0,
+  "lastErr": "",
+  "finished": false
+ },
+ "rf": {
+  "searches": 12,
+  "found": 4,
+  "checks": 7,
+  "entries": 0,
+  "errors": 1,
+  "lastErr": "9p1LyL: deadline",
+  "credits": 594,
+  "creditsDay": "2026-11-07",
+  "lastCheck": "2026-11-07T15:19:09.498Z"
+ },
+ "manualStudy": {
+  "queued": 0,
+  "done": 0,
+  "lastErr": "",
+  "last": null
+ },
+ "operators": {
+  "runs": 1,
+  "traced": 103,
+  "outs": 5,
+  "errors": 1,
+  "lastErr": "UNIQUE constraint failed: operators.anchor",
+  "lastRun": null,
+  "running": false,
+  "calls": 108,
+  "cex": 28,
+  "unknown404": 0,
+  "operators": 0,
+  "sample": "{\"funder\":\"H97Pu6wWN9FfPoZiwSEAKakGfHSxZySKXnFuNm4YuscC\",\"funderName\":null,\"funderType\":null,\"mint\":\"So11111111111111111111111111111111111111111\",\"symbol\":\"SOL\",\"amount\":1,\"amountRaw\":\"1000000000\",\"decimals\":9,\"signature\":\"53AavCWsSbk3JjauTNsm9JP6s8cGhhZ1JC4u8s7UKAWZWADQxQ67Ey3Ywr4j1Ead7U5r6KWpTLFL2p61fbcoZprR\",\"timestamp\":1777326598,\"date\":\"2026-04-27T21:49:58.000Z\",\"slot\":416086577,\"explorerUrl\""
+ },
+ "creators": {
+  "runs": 1,
+  "creators": 11,
+  "traced": 641,
+  "errors": 0,
+  "lastErr": "",
+  "funders": 17,
+  "queued": 11,
+  "running": false,
+  "lastRun": "2026-11-07T15:15:30.577Z"
+ },
+ "fd": {
+  "scanned": 1784,
+  "traced": 630,
+  "pre": 68,
+  "checks": 859,
+  "entries": 207,
+  "errors": 6,
+  "lastErr": "C4Meka deadline",
+  "credits": 72322,
+  "creditsDay": "2026-11-07",
+  "lastScan": "2026-11-07T16:04:49.889Z",
+  "lastCheck": "2026-11-07T16:04:56.535Z",
+  "open": 22,
+  "traceQueue": 0,
+  "traceActive": 0,
+  "incomplete": 3
+ },
+ "snipers2": {
+  "runs": 0,
+  "wallets": 0,
+  "lastRun": null,
+  "lastErr": ""
+ },
+ "quotes": {
+  "buys": 72,
+  "sells": 0,
+  "samples": 0,
+  "polls": 0,
+  "pollExits": 0,
+  "paused": 0,
+  "errors": 0,
+  "lastErr": "",
+  "lastMs": 25,
+  "pauseUntil": 0,
+  "swaps": 0
+ },
+ "chain": {
+  "entries": 199,
+  "skipped": 8,
+  "entryErrs": 0,
+  "landFails": 0,
+  "unresolved": 0,
+  "updates": 153749,
+  "exits": 210,
+  "subs": 82,
+  "resubs": 1,
+  "drops": 21,
+  "backstops": 1470,
+  "errors": 2,
+  "lastErr": "backstop 77thvh: fetch failed",
+  "mv": "fill-2",
+  "exits02": 210
+ },
+ "farm": {
+  "builds": 2,
+  "wallets": 21915,
+  "dumps": 318,
+  "lastBuild": "2026-11-07T15:44:57.051Z",
+  "lastErr": "",
+  "bfWallets": 200,
+  "bfDay": "2026-11-07",
+  "bfErr": "",
+  "bfQueue": 0
+ },
+ "scope": {
+  "probes": 24,
+  "fails": 0,
+  "consecutive": 0,
+  "reloads": 0,
+  "lastReload": null,
+  "lastErr": ""
+ },
+ "export": {
+  "lastMs": 46646,
+  "tradesBooks": {
+   "hours": 4,
+   "coins": 180,
+   "rows": 315746,
+   "mb": 90,
+   "truncated": true
+  },
+  "parts": {
+   "launches": 32,
+   "posts": 72,
+   "copies": 153,
+   "operators": 4997,
+   "rf_watch": 43,
+   "vol_paper": 1309,
+   "live_trades": 38,
+   "chain_fill": 355,
+   "fd_hgrowth": 31,
+   "buyer_funding": 192,
+   "farm": 280,
+   "fd_ledger": 6589,
+   "fd_positions": 1169,
+   "fd_inventory": 223,
+   "fd_coverage": 357,
+   "runner_registry": 56,
+   "registry_coverage": 119,
+   "early_checkpoints": 2819
+  },
+  "diskAlarm": {
+   "at": "2026-11-07T16:01:09.610Z",
+   "freeGb": 10.3,
+   "rateGbPerH": 0.044,
+   "hoursLeft": 232.5,
+   "alarm": false,
+   "lastSent": null
+  },
+  "coverage": {
+   "paused": "0.9.51: temp-sort disk risk; LAUNCH_COVERAGE=1 to re-enable"
+  },
+  "rssMb": 635,
+  "heapMb": 339,
+  "disk": {
+   "at": "2026-11-07T15:55:22.212Z",
+   "freeGb": 10.32,
+   "totalGb": 47.39,
+   "usedPct": 78.2,
+   "trackerDbGb": 6.34,
+   "launcherDbGb": 0.41
+  }
+ },
+ "registry": {
+  "runs": 2,
+  "lastRun": "2026-11-07T15:18:08.377Z",
+  "lastErr": "",
+  "pumpfun": {
+   "ok": 0,
+   "fail": 4,
+   "rows": 0,
+   "pages": 0,
+   "lastErr": "pump.fun 403"
+  },
+  "gmgn": {
+   "ok": 2,
+   "fail": 1,
+   "rows": 200,
+   "lastErr": "/v1/market/rank: BAD_REQUEST invalid order_by: get history_high but must be one of default, swaps, marketcap, history_hi"
+  },
+  "registered": 2309,
+  "lastNew": 7
+ },
+ "meas": {
+  "ledger": "ledger-2",
+  "fill": "fill-2",
+  "tracker_obs": "obs-3 (tracker 0.19.4: early checkpoints 15/30/90/120 s for every launch)"
+ },
+ "sweep": {
+  "coins": 218,
+  "done": 216,
+  "errors": 2,
+  "lastErr": "B4RM8G fetch failed",
+  "running": false,
+  "finished": true
+ },
+ "paused": false,
+ "pausedAt": null,
+ "lastSellAll": null,
+ "openCoins": 0,
+ "accounts": [],
+ "twitter": {
+  "keySet": true,
+  "connected": true,
+  "since": "2026-11-07T15:47:41.628Z",
+  "events": 136,
+  "pings": 133,
+  "tweets": 0,
+  "reconnects": 2,
+  "lastClose": "1011 keepalive ping timeout at 2026-11-07T15:46:10.604Z",
+  "lastErr": "",
+  "lookups": 0,
+  "lookupErr": 0,
+  "lastLookupErr": "",
+  "lastEventAt": "2026-11-07T16:04:56.438Z"
+ },
+ "ai": true,
+ "aiStat": {
+  "calls": 1,
+  "ok": 1,
+  "errors": 0,
+  "lastErr": "",
+  "lastMs": 2296
+ },
+ "meta": {
+  "uploads": 1,
+  "errors": 0,
+  "lastErr": "",
+  "lastMs": 621,
+  "via": "pinata"
+ },
+ "rpc": {
+  "calls": 2660,
+  "errors": 2,
+  "sends": 0,
+  "senderErrors": 0,
+  "lastErr": "fetch failed",
+  "subs": 17
+ },
+ "trackerDb": true,
+ "lastSweep": null,
+ "lastFeeCollect": "2026-10-31T18:10:29.885Z confirmed 0.0360 SOL",
+ "phantom": "ARNZSdpFx5PAZBNWK7UJ1pR8P9cK7jNmgX9YwY3rAZXz"
+}

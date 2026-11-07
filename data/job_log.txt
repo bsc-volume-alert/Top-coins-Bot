@@ -1,0 +1,51 @@
+[revival] 2022 graduated coins since 2026-10-18T00:00:00.000Z
+[revival] debug s HTTP 200: {"code":0,"data":{"list":[]},"message":"success","reason":""}
+
+[revival] debug ms HTTP 200: {"code":0,"data":{"list":[{"time":1792476900000,"open":"0.0011589522","close":"0.0011756873","high":"0.001208917","low":"0.0011329778","volume":"27232.31071372","source":"","amount":"23159139.61999999"},{"time":1792477200000,"open":"0.0011756873","close":"0.0014376575","high":"0.0015028395","low":"0.0011602692","volume":"41386.15176702","source":"","amount":"31752910.083743006"},{"time":1792477500000,"open":"0.0014376575","close":"0.0014879643","high":"0.0017234019","low":"0.0014013869","volume":"79506.32045352","source":"","amount":"51651965.27936499"},{"time":1792477800000,"open":"0.0014879643","close":"0.0015045097","high":"0.0015404326","low":"0.0013946109","volume":"49334.15989608","sou
+[revival] probe: seconds 0 · ms 100
+[revival] debug ms HTTP 200: {"code":0,"data":{"list":[]},"message":"success","reason":""}
+
+[revival] debug ms HTTP 200: {"code":0,"data":{"list":[]},"message":"success","reason":""}
+
+[revival] 0/2022 · ok 1 · failed 0 · candles 9
+[revival] 50/2022 · ok 51 · failed 0 · candles 5752
+[revival] 100/2022 · ok 101 · failed 0 · candles 10781
+[revival] 150/2022 · ok 151 · failed 0 · candles 16698
+[revival] 200/2022 · ok 201 · failed 0 · candles 19801
+[revival] 250/2022 · ok 251 · failed 0 · candles 23925
+[revival] 300/2022 · ok 301 · failed 0 · candles 26286
+[revival] 350/2022 · ok 351 · failed 0 · candles 32130
+[revival] 400/2022 · ok 401 · failed 0 · candles 35125
+[revival] 450/2022 · ok 451 · failed 0 · candles 40093
+[revival] 500/2022 · ok 501 · failed 0 · candles 42256
+[revival] 550/2022 · ok 551 · failed 0 · candles 47722
+[revival] 600/2022 · ok 601 · failed 0 · candles 52157
+[revival] 650/2022 · ok 651 · failed 0 · candles 55891
+[revival] 700/2022 · ok 701 · failed 0 · candles 59101
+[revival] 750/2022 · ok 751 · failed 0 · candles 61854
+[revival] 800/2022 · ok 801 · failed 0 · candles 66773
+[revival] 850/2022 · ok 851 · failed 0 · candles 70023
+[revival] 900/2022 · ok 901 · failed 0 · candles 74503
+[revival] 950/2022 · ok 951 · failed 0 · candles 78538
+[revival] 1000/2022 · ok 1001 · failed 0 · candles 81693
+[revival] 1050/2022 · ok 1051 · failed 0 · candles 85729
+[revival] 1100/2022 · ok 1101 · failed 0 · candles 88617
+[revival] 1150/2022 · ok 1151 · failed 0 · candles 91832
+[revival] 1200/2022 · ok 1201 · failed 0 · candles 95530
+[revival] 1250/2022 · ok 1251 · failed 0 · candles 98026
+[revival] 1300/2022 · ok 1301 · failed 0 · candles 100633
+[revival] 1350/2022 · ok 1351 · failed 0 · candles 103636
+[revival] 1400/2022 · ok 1401 · failed 0 · candles 105888
+[revival] 1450/2022 · ok 1451 · failed 0 · candles 108194
+[revival] 1500/2022 · ok 1501 · failed 0 · candles 110445
+[revival] 1550/2022 · ok 1551 · failed 0 · candles 112786
+[revival] 1600/2022 · ok 1601 · failed 0 · candles 114465
+[revival] 1650/2022 · ok 1651 · failed 0 · candles 117341
+[revival] 1700/2022 · ok 1701 · failed 0 · candles 119480
+[revival] 1750/2022 · ok 1751 · failed 0 · candles 121337
+[revival] 1800/2022 · ok 1801 · failed 0 · candles 122719
+[revival] 1850/2022 · ok 1851 · failed 0 · candles 123932
+[revival] 1900/2022 · ok 1901 · failed 0 · candles 125303
+[revival] 1950/2022 · ok 1951 · failed 0 · candles 126283
+[revival] 2000/2022 · ok 2001 · failed 0 · candles 127058
+[revival] done: 2022 coins, 0 failed, 127179 candles → /root/tracker/data/revival_klines.jsonl.gz
