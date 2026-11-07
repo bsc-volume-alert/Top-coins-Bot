@@ -1,1 +1,1 @@
-supp 7 Nov 2026 14:33 UK — owner's go 14:03: supplemental uncapped trade-history export (reports/tools/supp-export.mjs 1.1)
+supp-all 7 Nov 2026 22:10 UTC — all-coins export 6 Nov 07:40 → 7 Nov 20:00 UTC (owner's go 21:59 UK)
