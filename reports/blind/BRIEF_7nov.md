@@ -1,6 +1,6 @@
-# Blind strategy brief — pump.fun launch trading (issued 7 Nov 2026, UK time = UTC)
+# Independent strategy brief — pump.fun launch trading (issued 7 Nov 2026, UK time = UTC; revised 15:05 after review)
 
-You are one of several independent analysts. You get the same data and this same brief. **You are not given anyone's previous conclusions, on purpose.** Work only from the raw records.
+You are one of several independent analysts. You get the same data and this same brief. No one's conclusions are given to you. **This is independent analysis with access to previous attempts, not a fully blind test:** the data includes the bot's earlier rules ("books"), their decisions and their simulated results. Treat those as data, not as guidance. Work from the raw records.
 
 ## The question
 Find a trading rule for newly launched pump.fun tokens (Solana) that makes money **after realistic costs**. Alternatively, conclude that the data does not support one. **"No profitable rule is supported" is an acceptable and useful answer.**
@@ -16,21 +16,51 @@ Paper research only. You must not trade, change the bot, or ask for live trading
   - with a timestamp
 - After 10 Nov, each frozen rule is replayed on the test period with the same cost and execution model. **Only test-period results count.** You may not change a rule after it is frozen.
 - **Report how many rules, thresholds and features you tried in development.** More searching means a higher chance of finding a lucky pattern.
-- **Universe:** a rule can only be evaluated on launches that have trade-level history. That means launches the tracker retained (15-SOL net-buying screen or bundle test), plus pool trades of every launch for 24 h after creation from 7 Nov 09:47 UTC. A rule that needs launches outside this universe cannot be scored. Say so if your rule depends on that.
+- **Universe and when a launch becomes eligible (no future information):**
+  - The tracker stores a launch's trades once the launch is bundle tier-1 at finalisation, or once its cumulative **GROSS** buy volume reaches **15 SOL** (`VOL_TRACK_SOL`). The earlier in-memory trades are written at that moment (up to 12,000 per launch). Storage then continues for 125 min.
+  - **A launch is eligible for a decision at time t only if it was already retained at or before t.** A coin that only reaches 15 SOL at 3 minutes cannot be entered by a 15-second rule.
+  - Pool trades: for retained launches from 6 Nov 19:31 UTC; for every launch, for 24 h after creation, from 7 Nov 09:47 UTC.
+  - The launcher's own "15-SOL screen" (`fd_watch.screened`) uses **net** buying. It is a different measure.
+  - **The development trade histories are a SELECTED population.** The uncapped supplement covers only coins that some earlier rule entered, not every retained launch. Findings there may not generalise. Lifecycle checkpoints (token_life) cover every launch, but only at fixed times.
 - **Independence:** submit your rule BEFORE reading anyone else's work. Critiques are exchanged only afterwards. If you revise after seeing test results, the revision needs a new, untouched test period.
 
 ## How rules will be evaluated (fixed before the test starts)
 One evaluation script, written and frozen (committed with a hash) before 8 Nov 00:00 UTC and not changed afterwards, will score every submitted rule the same way:
 1. **Entry:** your rule is applied to each launch in the test period. It may use only data observable at its decision time t: the launch's trades with timestamp ≤ t, and the creator, funding and bundle fields recorded at or before t. Recognition delay: none beyond what your rule specifies.
-2. **Fill:** the buy executes on the first recorded trade state at or after t + 1,000 ms (reserves after that trade). Stake 0.2 SOL, and 0.02 SOL reported separately.
-3. **Exit:** your exit condition is evaluated trade by trade on the recorded path after the fill. The sell executes on the first trade state at or after trigger + 700 ms. If there is no exit by your horizon (2 h at most), it sells at the horizon.
-4. **Cost:** fee 0.0015 SOL per round trip. Price impact comes from the reserve state at the fill and exit trades.
-5. **Reported:**
-   - per unique coin and per position: number of entries, mean and median return, win rate, 95% bootstrap interval (resampling coins)
+2. **Fill (state at the landing time, bounded):**
+   - The buy executes on the pool/curve state **as of t + 1,000 ms**: the reserves after the last recorded trade at or before that instant.
+   - This is valid only if capture was complete over that span: no feed gap in feed_gaps overlapping it, and the mint inside its retention window.
+   - Otherwise the fill is **unavailable**. It is never moved to a later trade. Unavailable fills stay visible in the denominator.
+   - Stake 0.2 SOL; a 0.02 SOL position is scored independently with its own exit.
+3. **Exit:**
+   - Your exit condition is evaluated on the state after each recorded trade.
+   - The sell executes on the state **as of trigger + 700 ms**, under the same validity rule.
+   - At your horizon (2 h at most), it sells on the state as of the horizon, same rule.
+   - **Your rule must say what happens at migration** (curve → pool), and give an exit for each reported size.
+4. **Costs:**
+   - **On-chain fees on both legs, from the venue's on-chain config:**
+     - curve: protocol ~0.95% plus creator fee (~0.30% when set)
+     - pool: LP 0.20% + protocol 0.05% + coin-creator fee
+   - Plus 0.0015 SOL fixed per round trip (transaction and priority fees).
+   - Quote asset: SOL (wrapped SOL in pools). Token decimals: 6 (assumed by the decoder).
+   - States failing basic checks (non-positive reserves, curve price above the curve maximum) make the fill or exit **unavailable**.
+5. **Counterfactual:**
+   - Our own trade is assumed **not** to change later historical prices; we sell into the recorded path.
+   - This is a replay scenario with fixed latency, not proof of live fills.
+6. **Primary score: total net SOL per eligible launch** (the rule's universe in the test period), so a rule cannot look good by trading rarely. Also reported:
+   - total net SOL
+   - entries, unique coins
+   - mean and median return per entry
+   - win rate
+   - 95% bootstrap interval (resampling coins)
    - result without the best coin
    - share of entries losing ≥ 50%
-   - entries skipped because of missing data
-6. Write your rule so it maps onto these steps. Anything that cannot be expressed this way cannot be scored.
+   - unavailable and failed fills and exits
+   - peak concurrent open positions
+7. **Portfolio:** unconstrained capital (every signal is taken), one entry per mint per rule, results labelled "unconstrained". Entries near the end of the period are scored only after their full horizon has been collected.
+8. **Multiple submissions:** the best of several submitted rules is expected to look better by chance. The comparison will account for the number of rules tested; a single rule beating zero is not proof.
+9. **The evaluator** (script, version, unit tests for sparse trades, missing states, feed gaps, migration and multi-swap transactions) will be published with a commit hash and immutable data commits before 8 Nov 00:00 UTC, and not changed afterwards.
+10. Write your rule so it maps onto these steps. Anything that cannot be expressed this way cannot be scored.
 
 ## Loading the data (example)
 ```
@@ -61,9 +91,11 @@ Every file has sha256 checksums in its MANIFEST. Read the MANIFESTs fully: they 
   - the buy lands 1,000 ms after the decision, on the reserves read then
   - the sell lands 700 ms after the exit trigger
   - fee 0.0015 SOL per round trip
-  - exits in the existing simulation are a trailing stop from the running high: 40% on the pump.fun curve, 25% after migration to the pool; 2-hour horizon
+  - exits in the existing simulation are a trailing stop from the running high, chosen BY THE ENTRY VENUE: 40% for a curve entry, 25% for a pool entry. A curve entry keeps the 40% trail after migration. 2-hour horizon.
+  - on-chain fees on both legs, from the venue config, plus the 0.0015 SOL fixed cost
   - an independent 0.02 SOL position (`i02_*`, from 6 Nov 20:00) has its own trail and exit
   - You may propose different exits, but they must be evaluated on trade-level paths with the same latency and fees, never on peaks seen afterwards.
+- **The replay is a scenario, not live performance.** Our own trade's effect on later prices is not modelled.
 - **Real-world calibration:** live_trades.csv holds a small number of real 0.02 SOL trades (5 Nov), and fd_quotes.csv holds Jupiter quote shadows.
 
 ## Known data issues (from audits; take them into account)
