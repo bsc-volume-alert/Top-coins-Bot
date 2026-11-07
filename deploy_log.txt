@@ -1,0 +1,34 @@
+r reloaded
+[deploy] 2026-11-07T09:19:57Z updating 6e767b0c49dad76dc789a30735ff3c1a70f091db -> 1f5085887c5f2fc53626ca6ff767f5a838c7ad99
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] launcher changed — installing and checking
+up to date in 1s
+[deploy] launcher reloaded
+[deploy] 2026-11-07T09:22:10Z updating 1f5085887c5f2fc53626ca6ff767f5a838c7ad99 -> c786053a4accb34b5341b5ba8f84b9f639069afe
+up to date in 766ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] launcher changed — installing and checking
+up to date in 769ms
+[deploy] launcher reloaded
+[deploy] 2026-11-07T09:27:49Z updating c786053a4accb34b5341b5ba8f84b9f639069afe -> 7845c3202420e48afc0c4918972bd5686a6d903f
+up to date in 806ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T09:29:23Z updating 7845c3202420e48afc0c4918972bd5686a6d903f -> 99500851e4517cb22df737dfaf9b7ee5640a7a73
+up to date in 835ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T09:48:03Z updating 99500851e4517cb22df737dfaf9b7ee5640a7a73 -> c6d351755ab3fdb013543f2938fe7b0efd834d1b
+up to date in 687ms
+[deploy] done: tracker 0.19.8: pool trades for EVERY recent launch from the census (24 h after creation), not only retained ones; pool-feed socket changes logged in feed_gaps as 'pool-…' (owner's go 7 Nov 09:46 UK). $100K audit revised per Codex: labels 'observed crossing' / 'suspect' / 'no crossing observed — coverage unverified'; runner_registry input added; FINDINGS corrected; manifest
+[deploy] 2026-11-07T09:56:27Z updating c6d351755ab3fdb013543f2938fe7b0efd834d1b -> 567bd57a3665a333f8f39488bb6d4bd59fdb66c7
+up to date in 577ms
+[deploy] done: tracker 0.19.9: pool-trade evidence fields on new pool rows (owner's go 7 Nov 09:54 UK) — pool, ev_idx (position among the PumpSwap events decoded from the tx logs), base_raw/quote_raw/pool_base_raw/pool_quote_raw as lossless decimal strings from the BigInt event fields, base/quote mint, decimals (base 6 is the decoder's ASSUMPTION, recorded as such), dec_ver, and px_adj (NULL = the swap's own price; 'primary:<pool>' / 'held' = replaced by guardPx). Old rows untouched (NULL). Tested: two events in one transaction kept, integers > 2^53 stored exactly, old insert path unchanged, smoke boot clean
+[deploy] 2026-11-07T10:04:21Z updating 567bd57a3665a333f8f39488bb6d4bd59fdb66c7 -> da4ee26335012e12906e29f7dbdaf1706d44276b
+up to date in 651ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T10:05:24Z updating da4ee26335012e12906e29f7dbdaf1706d44276b -> b60594eb2edda9ce427dc08b88a21e171b20087e
+up to date in 372ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-07T10:19:00Z updating b60594eb2edda9ce427dc08b88a21e171b20087e -> 3330b7634c036a7e25aa32b205e00eb75379253c
+up to date in 660ms
+[deploy] tracker untouched — executor / reports / data-script push

@@ -1,0 +1,81 @@
+RECONCILIATION — Entry Features & Winners snapshot (launcher-data d15ddf2a, exported 2026-11-07 11:54:21 UTC = UK)
+
+1. FILE WINDOWS (retention differs per file — a mint missing from one file is NOT an absent event)
+  tracker_tokens (census)          rows    85,016  05 Nov 11:54:06 → 07 Nov 11:53:57 UTC
+  fd_watch (launcher record)       rows    56,374  05 Nov 23:53:30 → 07 Nov 11:53:23 UTC
+  fd_decisions                     rows   300,054  06 Nov 11:54:17 → 07 Nov 11:53:56 UTC
+  fd_positions (decision time)     rows     3,676  06 Nov 11:54:32 → 07 Nov 11:52:01 UTC
+  chain_fill (entry)               rows     4,843  05 Nov 12:20:38 → 07 Nov 11:52:01 UTC
+  vol_paper (entry)                rows     5,711  22 Oct 10:40:00 → 07 Nov 11:52:00 UTC
+  fd_ledger (created)              rows    71,029  06 Nov 11:53:34 → 07 Nov 11:53:23 UTC
+  token_life (checkpoint ts)       rows   130,939  06 Nov 23:53:55 → 07 Nov 11:53:39 UTC
+  early_checkpoints (created)      rows    16,135  06 Nov 23:53:38 → 07 Nov 11:53:37 UTC
+  trades_books (trade ts)          rows   273,987  07 Nov 07:52:51 → 07 Nov 11:54:11 UTC
+  runner_registry (created)        rows     1,480  05 Nov 11:53:50 → 07 Nov 11:49:56 UTC
+
+2. POPULATION
+  distinct launches in census: 85,016
+  fd_watch launches 56,374 · with ≥1 check 8,592 · entered by ≥1 book 939 · funding pass (pre=1) 645 · pre_nb=1 1,045 · screened 1,427
+  fd_watch lookup_status: {'ran': 37152, '(empty)': 12143, 'failed': 5461, 'pending': 1618}
+  fd_watch launches not in census window: 0 (census holds 48 h; fd_watch ~36 h — differing windows, not missing launches)
+
+3. DECISIONS vs POSITIONS vs UNIQUE COINS
+  fd_decisions rows 300,054 · distinct (mint, check) 13,929 · distinct mints 6,366 · passed=1 rows 3,680
+  decision reasons (top): {'below base bar': 160847, 'below the 15 SOL screen': 48465, "not in this book's population": 35819, 'price unavailable': 23715, 'failed': 13234, 'already entered': 5723, 'funding pending (data unavailable)': 5661, 'entered': 3680, 'historical observation (before the screen saw it)': 1296, 'data unavailable': 1276}
+  decision timing: {'ontime': 250676, 'late': 49378} · epoch: {'h4-epoch1': 114374, 'h4-epoch2': 185680}
+  fd_positions 3,676 · distinct mints 826 · distinct same_decision_key 1,421
+  status: {'closed': 3521, 'skipped-dump': 102, 'open': 53} · i02_status: {'closed': 3521, 'no 0.02 quote': 102, 'open': 53}
+  chain_fill rows 4,843 (done 4,789) · s_fail_kind: {'(none)': 4843}
+  vol_paper rows 5,711 · by strat family: 32 strats
+
+4. BY BOOK (fd_positions): positions · unique mints · closed · open · skipped-dump · timing ontime/late · h4 epoch1/epoch2 · mean r_frac_020 closed · mean i02_r_frac closed
+  BL         802 ·  802 ·   790 ·  12 ·   0 ·  622/180  ·  359/443  · -0.192 · -0.464
+  E60        525 ·  525 ·   515 ·  10 ·   0 ·  409/116  ·  170/355  · -0.230 · -0.421
+  BL27       471 ·  471 ·   463 ·   8 ·   0 ·  354/117  ·  245/226  · -0.291 · -0.583
+  E90        453 ·  453 ·   445 ·   8 ·   0 ·  362/91   ·  143/310  · -0.221 · -0.442
+  A1         222 ·  222 ·   218 ·   4 ·   0 ·  177/45   ·  140/82   · -0.357 · -0.688
+  FDB        165 ·  165 ·   162 ·   3 ·   0 ·  131/34   ·  119/46   · -0.436 · -0.742
+  FDH        154 ·  154 ·   151 ·   3 ·   0 ·  124/30   ·  108/46   · -0.464 · -0.788
+  E90C       153 ·  153 ·   152 ·   1 ·   0 ·  122/31   ·   65/88   · -0.155 · -0.425
+  FDL        118 ·  118 ·   117 ·   1 ·   0 ·   94/24   ·   92/26   · -0.299 · -0.638
+  FD          86 ·   86 ·    86 ·   0 ·   0 ·   68/18   ·   74/12   · -0.354 · -0.718
+  FDLU        74 ·   74 ·    58 ·   1 ·  15 ·   59/15   ·   56/18   · -0.180 · -0.698
+  FDLU120     72 ·   72 ·    32 ·   1 ·  39 ·    0/72   ·   54/18   · -0.092 · -0.711
+  FD35        62 ·   62 ·    62 ·   0 ·   0 ·   47/15   ·   53/9    · -0.310 · -0.724
+  FDF         58 ·   58 ·    58 ·   0 ·   0 ·   45/13   ·   49/9    · -0.362 · -0.715
+  FDHF        46 ·   46 ·    46 ·   0 ·   0 ·   34/12   ·   40/6    · -0.261 · -0.778
+  FD120       45 ·   45 ·    45 ·   0 ·   0 ·   38/7    ·   39/6    · -0.263 · -0.817
+  FDLUX       41 ·   41 ·    28 ·   0 ·  13 ·   33/8    ·   32/9    · -0.421 · -0.743
+  FDU         37 ·   37 ·    27 ·   0 ·  10 ·   29/8    ·   33/4    · -0.077 · -0.850
+  FDU120      35 ·   35 ·    16 ·   0 ·  19 ·    0/35   ·   31/4    · +0.089 · -0.902
+  FDLU90      25 ·   25 ·    20 ·   1 ·   4 ·   20/5    ·   18/7    · -0.199 · -0.668
+  FDX         24 ·   24 ·    24 ·   0 ·   0 ·   19/5    ·   21/3    · -0.229 · -0.768
+  FDU90        8 ·    8 ·     6 ·   0 ·   2 ·    7/1    ·    7/1    · -0.355 · -0.908
+  (r means are per position, unweighted, overlapping books share coins — descriptive only; NOT independent results)
+
+5. MEASUREMENT EPOCHS (by decision time; boundaries from the deploy log — see MANIFEST)
+  before fill-3 (0.9.34, 6 Nov 20:00 UTC)              positions  1948 · mints  369
+  fill-3 → concurrent checks (0.9.35, 20:31)           positions     9 · mints    4
+  concurrent → per-check deadline (0.9.47, 7 Nov 04:31) positions   938 · mints  237
+  0.9.47 onward                                        positions   781 · mints  216
+  NOTE: rule_ver in fd_positions is the version at EXPORT (all 0.9.50), not at decision; use ts_decision against the deploy log. fill_mv = 'fill-2' on every row; the i02_* (fill-3) columns on rows decided before 6 Nov 20:00 UTC were computed by code that did not exist at the decision → treat as RECONSTRUCTED, not contemporaneous.
+  positions decided before fill-3 that nevertheless carry an i02_r_frac: 1,867
+
+6. NEW SINCE THE PREVIOUS SNAPSHOT (6 Nov 18:23:11 UTC)
+  census launches created after it: 30,899 · fd_watch: 27,873 · positions decided after it: 1,827 (mints 474)
+  vs 6 Nov 18:23:11 snapshot: positions then 2,502 · still present 1,849 · NO LONGER IN CURRENT EXPORT 653 (aged out of the 24-h window — retained only in that snapshot) · new 1,827
+     mints then 556 · mints no longer present 204
+     chain_fill then 3,016 · no longer present 0
+     fd_decisions then 227,239 · no longer present 123,777
+     positions closed in both with a DIFFERENT r_frac_020 now: 0
+  vs 7 Nov 08:53:05 snapshot: positions then 3,429 · still present 3,348 · NO LONGER IN CURRENT EXPORT 81 (aged out of the 24-h window — retained only in that snapshot) · new 328
+     mints then 778 · mints no longer present 39
+     chain_fill then 4,515 · no longer present 0
+     fd_decisions then 280,751 · no longer present 9,671
+     positions closed in both with a DIFFERENT r_frac_020 now: 0
+
+7. TRADE HISTORIES (trades_books.csv)
+  mints with a stream 106 · rows 273,987 · venues {'curve': 91766, 'pumpswap': 182221}
+  entered mints (fd_positions) 826 · decided in the last 4 h 109 · of those WITH a stream 106 · older entered mints with a stream 0
+  stream span per mint (min): median 16, max 122 (tracker retains trades ~125 min after launch; pool trades 24 h after creation from 0.19.8)
+  Pool evidence columns of tracker 0.19.9 (pool, ev_idx, raw amounts, decimals, dec_ver) are NOT in this export's trades_books — see MANIFEST 'Not included'.
