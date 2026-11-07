@@ -58,26 +58,27 @@ One evaluation script, written and frozen (committed with a hash) before 8 Nov 0
 5. **Counterfactual:**
    - Our own trade is assumed **not** to change later historical prices; we sell into the recorded path.
    - This is a replay scenario with fixed latency, not proof of live fills.
-6. **Primary score: total net SOL ÷ the COMMON denominator.** The denominator is the number of launches created in the test period that were retained at any point AND meet the coverage checks in step 2a, and it is the same for every rule. A launch your rule does not enter (filtered out, not yet retained at your decision time, unavailable) is an abstention inside that denominator, not a removal from it. Also reported:
-   - total net SOL
-   - entries, unique coins
-   - mean and median return per entry
-   - win rate
-   - 95% bootstrap interval (resampling coins)
-   - result without the best coin
-   - share of entries losing ≥ 50%
-   - unavailable and failed fills and exits
-   - peak concurrent open positions
-7. **Portfolio:** unconstrained capital (every signal is taken), one entry per mint per rule, results labelled "unconstrained". Entries near the end of the period are scored only after their full horizon has been collected.
-8. **Unavailable and uncertain outcomes:**
-   - Each is counted and reported.
-   - The primary score is computed with them EXCLUDED, plus a **worst-case bound** in which every unavailable or uncertain entry counts as −100% of stake.
-   - A rule with more than 10% of its attempted entries unavailable or uncertain is reported as **not scorable**, not as a result.
-   - They are never counted as zero profit.
-9. **Multiple submissions (exact method, fixed now):**
-   - For each rule, a one-sided test that the primary score is > 0, using a coin-level bootstrap (10,000 resamples, fixed seed 20261108).
-   - The p-values of all submitted rules are adjusted with **Holm–Bonferroni**, family-wise α = 0.05.
-   - Only a rule significant after that adjustment AND positive in the worst-case bound is called "supported".
+6. **Primary score and the common denominator.** N = the number of launches created in the test period that were retained at any point AND meet the coverage checks in step 2a. N is the same for every rule. Every launch in N falls into exactly one category for a rule:
+   - **(a) scored entry:** fill and exit both valid. Contributes its net SOL.
+   - **(b) deliberate abstention:** the rule did not enter, including "not yet retained at the decision time". Contributes 0.
+   - **(c) unknown outcome:** the rule would enter, but the fill or exit is unavailable or uncertain.
+   Reported for each rule:
+   - **Point estimate** = Σ net SOL of (a) ÷ N, with (c) counted as 0 and labelled as such.
+   - **Lower bound** = the same, with every (c) at the worst case.
+   - Counts of (a), (b), (c), total net SOL, mean and median per scored entry, win rate, result without the best coin, share of entries losing ≥ 50%, peak concurrent positions.
+   - A rule with (c) > 10% of its attempted entries is **not scorable**. Unknown outcomes can never raise a score.
+7. **Worst case and supported rules.**
+   - Losing the entire stake plus the fixed fee = **−100.75% at 0.2 SOL**, **−107.5% at 0.02 SOL**.
+   - Supported rules: **one entry and one complete exit per mint** (no partial exits, no re-entries, no retries). Rules needing more trades per mint are outside this evaluator.
+   - Portfolio: unconstrained capital, every signal taken, one entry per mint per rule, labelled "unconstrained". Entries near the end of the period are scored only after their full horizon has been collected.
+8. **Statistical test (fixed now).**
+   - The unit is the launch: resample the N launches with replacement, 10,000 times, seed 20261108, and recompute the LOWER-BOUND score each time.
+   - With K submitted rules, a rule is **"supported"** only if the one-sided percentile lower confidence bound at level 1 − 0.05/K (Bonferroni) of its lower-bound score is above 0.
+   - The point estimate and its two-sided 95% interval are reported for information only.
+9. **Observation time vs execution state.**
+   - DECISIONS (entry and exit triggers) may use only information received by then (`recv_ms` ≤ t; lookup and trace times for funding).
+   - EXECUTION is valued on the chain state at the assumed landing time: the reserves after the last trade ordered by (slot, ev_idx, row_id) whose block time is ≤ the landing time, subject to step 2a.
+   - Any rule whose decisions would need trades without `recv_ms` is scored as a **hypothetical event-time replay**, reported separately and never pooled with operational results.
 10. **The evaluator** (script, version, unit tests for sparse trades, missing states, feed gaps, migration and multi-swap transactions) will be published with a commit hash and immutable data commits before 8 Nov 00:00 UTC, and not changed afterwards.
 11. Write your rule so it maps onto these steps. Anything that cannot be expressed this way cannot be scored.
 
