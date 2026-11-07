@@ -93,8 +93,9 @@ python3 -c "import csv; r=list(csv.DictReader(open('fd_positions.csv'))); print(
 ## The data (all on GitHub, repo bsc-volume-alert/Top-coins-Bot)
 | What | Where | Cutoff |
 |---|---|---|
+| **Everything below in ONE place** (supplement at top level, snapshot3/, current/) with corrections and limits | branch **`entry-package-7nov`** — start with **INDEX.md** | 14:33 / 11:54 / 14:53 |
 | Main snapshot: launches, checks, decisions, simulated positions and fills, paper trades, checkpoints, wallet and funding traces, runner registry, quotes, live trades (5 Nov) | branch `entry-snap-7nov-1154`; start with its **MANIFEST.md** and **RECONCILIATION.txt** | 7 Nov 11:54:21 |
-| Uncapped trade-by-trade histories (curve and pool, incl. after exits) for every simulated entry since 5 Nov, plus pool evidence fields, per-coin coverage and feed gaps | branch `entry-supp-20261107t1433` (MANIFEST.md; uploading as this is written) | 7 Nov ~14:33 |
+| Uncapped trade-by-trade histories (curve and pool, incl. after exits) for every simulated entry since 5 Nov, plus pool evidence fields, per-coin coverage and feed gaps | branch `entry-supp-20261107t1433` (MANIFEST.md) | 7 Nov ~14:33 |
 | Earlier snapshot (more trade streams from 6 Nov) | branch `tracker`, folder `scope/files/snap_6nov_1830/` at commit b9213f9feca2cacd14edfeb33fac2745ba93ff98 | 6 Nov 18:23:11 |
 | Lifecycle checkpoints for every launch (mc at 15 s … 24 h) and launch census, 6–7 Nov | branch `study100k-v1-inputs` @ 3bd9c3b9 (folder inputs/) | 7 Nov 09:26 |
 

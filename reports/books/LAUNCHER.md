@@ -301,3 +301,8 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - WHAT MAY BE LOST: intermediate knowledge states of rebuilt/derived exports between those frozen points — farm_wallets/farm_dumps (rebuilt half-hourly), snipers, operators, fd_sniper_stats, fd_inventory, and exported states of positions that were open at an intermediate time. Current database values cannot reproduce them. Contemporaneous farm_* scores per check remain in fd_watch.checks.
 - NOT touched: databases, WAL/journal files, backups, radar.db, fomo.db, frozen snapshots. Rule from now: no further deletion without a verified off-server archive (checksums + restore test).
 - 0.9.53: on-server Telegram disk alarm every 5 min (free < 6 GB, or < 12 h to full on the 30-min+ trend; at most every 2 h), independent of any AI session.
+
+## 7 Nov 2026 15:05 UK — combined data package for Codex and the independent analysts
+- Supplement (supp-export 1.1, DB read 14:33:31 UTC): branch entry-supp-20261107t1433 @ ba9d688d — 1,247 mints, 4,241,610 uncapped trade rows (curve 831,469 · pool 3,314,151 · venue-empty pre-0.19.2 95,990), pool evidence on 107 mints, 22 mints still trading during the read, 64 with no rows. One-shot push timed out twice (HTTP 408), third attempt succeeded; supp-export 1.2 publishes file by file for next time.
+- Package: branch entry-package-7nov @ 0e3be03c = supplement + snapshot3/ (unchanged) + current/ (launcher-data f3399f9c, 14:53:26) + INDEX.md (cutoffs, corrections incl. trail-by-entry-venue and gross retention, limits). All three checksum sets verified from a fresh GitHub download.
+- Independent brief: reports/blind/BRIEF_7nov.md (rev 3 + package link); hidden forward test 8–10 Nov; evaluator to be frozen before 8 Nov 00:00 UTC.
