@@ -27,6 +27,17 @@ Paper research only. You must not trade, change the bot, or ask for live trading
 ## How rules will be evaluated (fixed before the test starts)
 One evaluation script, written and frozen (committed with a hash) before 8 Nov 00:00 UTC and not changed afterwards, will score every submitted rule the same way:
 1. **Entry:** your rule is applied to each launch in the test period. It may use only data observable at its decision time t: the launch's trades with timestamp ≤ t, and the creator, funding and bundle fields recorded at or before t. Recognition delay: none beyond what your rule specifies.
+2a. **What the system knew, and when:**
+   - A trade counts as known at t only if its receipt time `recv_ms` ≤ t. Where `recv_ms` is missing, the result is labelled a **hypothetical event-time replay**.
+   - Funding and creator fields count as known only from their recorded lookup or trace time (`fd_watch.trace_ts` / `scanned_ts`; lookup_status 'pending' or 'failed' means not known). Bundle fields count only from the launch's finalisation.
+   - Eligibility (retention) time is reconstructed as the receipt time of the trade whose cumulative gross buys first reach 15 SOL.
+   - **Coverage checks.** A span counts as captured only if all of these hold:
+     - no tracker outage or restart overlaps it (list in the MANIFEST and deploy log)
+     - no feed_gaps close/idle without a following open overlaps it
+     - the mint is inside its retention window
+     - the pre-promotion buffer (12,000 trades) was not exceeded
+     - events are ordered by (slot, ev_idx, row_id) without contradiction
+   - Absence of a logged gap is NOT proof of capture. Anything not shown to be captured counts as **uncertain**.
 2. **Fill (state at the landing time, bounded):**
    - The buy executes on the pool/curve state **as of t + 1,000 ms**: the reserves after the last recorded trade at or before that instant.
    - This is valid only if capture was complete over that span: no feed gap in feed_gaps overlapping it, and the mint inside its retention window.
@@ -42,12 +53,12 @@ One evaluation script, written and frozen (committed with a hash) before 8 Nov 0
      - curve: protocol ~0.95% plus creator fee (~0.30% when set)
      - pool: LP 0.20% + protocol 0.05% + coin-creator fee
    - Plus 0.0015 SOL fixed per round trip (transaction and priority fees).
-   - Quote asset: SOL (wrapped SOL in pools). Token decimals: 6 (assumed by the decoder).
+   - Quote asset, decimals and fee configuration are **validated per pool**: quote_mint must be wrapped SOL; base/quote decimals and fee basis points are taken from the stored evidence or the venue's on-chain config. Any pool or trade where these cannot be confirmed is **unavailable**, never assumed.
    - States failing basic checks (non-positive reserves, curve price above the curve maximum) make the fill or exit **unavailable**.
 5. **Counterfactual:**
    - Our own trade is assumed **not** to change later historical prices; we sell into the recorded path.
    - This is a replay scenario with fixed latency, not proof of live fills.
-6. **Primary score: total net SOL per eligible launch** (the rule's universe in the test period), so a rule cannot look good by trading rarely. Also reported:
+6. **Primary score: total net SOL ÷ the COMMON denominator.** The denominator is the number of launches created in the test period that were retained at any point AND meet the coverage checks in step 2a, and it is the same for every rule. A launch your rule does not enter (filtered out, not yet retained at your decision time, unavailable) is an abstention inside that denominator, not a removal from it. Also reported:
    - total net SOL
    - entries, unique coins
    - mean and median return per entry
@@ -58,9 +69,17 @@ One evaluation script, written and frozen (committed with a hash) before 8 Nov 0
    - unavailable and failed fills and exits
    - peak concurrent open positions
 7. **Portfolio:** unconstrained capital (every signal is taken), one entry per mint per rule, results labelled "unconstrained". Entries near the end of the period are scored only after their full horizon has been collected.
-8. **Multiple submissions:** the best of several submitted rules is expected to look better by chance. The comparison will account for the number of rules tested; a single rule beating zero is not proof.
-9. **The evaluator** (script, version, unit tests for sparse trades, missing states, feed gaps, migration and multi-swap transactions) will be published with a commit hash and immutable data commits before 8 Nov 00:00 UTC, and not changed afterwards.
-10. Write your rule so it maps onto these steps. Anything that cannot be expressed this way cannot be scored.
+8. **Unavailable and uncertain outcomes:**
+   - Each is counted and reported.
+   - The primary score is computed with them EXCLUDED, plus a **worst-case bound** in which every unavailable or uncertain entry counts as −100% of stake.
+   - A rule with more than 10% of its attempted entries unavailable or uncertain is reported as **not scorable**, not as a result.
+   - They are never counted as zero profit.
+9. **Multiple submissions (exact method, fixed now):**
+   - For each rule, a one-sided test that the primary score is > 0, using a coin-level bootstrap (10,000 resamples, fixed seed 20261108).
+   - The p-values of all submitted rules are adjusted with **Holm–Bonferroni**, family-wise α = 0.05.
+   - Only a rule significant after that adjustment AND positive in the worst-case bound is called "supported".
+10. **The evaluator** (script, version, unit tests for sparse trades, missing states, feed gaps, migration and multi-swap transactions) will be published with a commit hash and immutable data commits before 8 Nov 00:00 UTC, and not changed afterwards.
+11. Write your rule so it maps onto these steps. Anything that cannot be expressed this way cannot be scored.
 
 ## Loading the data (example)
 ```
@@ -82,7 +101,7 @@ python3 -c "import csv; r=list(csv.DictReader(open('fd_positions.csv'))); print(
 Every file has sha256 checksums in its MANIFEST. Read the MANIFESTs fully: they define units, time fields, retention windows and what is unavailable.
 
 ## How the system works (facts, not findings)
-- **Tracker:** listens to every pump.fun launch. It keeps trade-by-trade data for launches that pass a 15-SOL net-buying screen or a bundle test ("retained"). It keeps lifecycle checkpoints for every launch.
+- **Tracker:** listens to every pump.fun launch. It keeps trade-by-trade data for launches whose cumulative **gross** buy volume reaches 15 SOL, or that are bundle tier-1 at finalisation ("retained"). It keeps lifecycle checkpoints for every launch.
   - Pool (PumpSwap) trades after migration: kept for retained launches from 6 Nov 19:31, and for every launch (24 h) from 7 Nov 09:47.
 - **Launcher:** checks retained launches at 60, 90 and 120 s after creation (net buying, buyers, sells, holder concentration, dev selling, early wallets, farm-wallet scores, funding source, bundle). It records every decision of a set of predefined "books" (rules), including rejections.
   - The existing books are just previous attempts. **You are free to ignore them entirely.** Their definitions are in BOOK_DEFINITIONS.txt.
