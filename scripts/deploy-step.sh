@@ -31,7 +31,9 @@ if [ -n "$FAIL" ]; then
   notify "⛔ <b>Deploy rejected</b> — the live bot stays on $(git log -1 --pretty=%s | head -c 80). Reason: <code>$(echo "$FAIL" | head -c 500)</code>"
   exit 0
 fi
-pm2 startOrReload ecosystem.config.cjs --only tracker --update-env >/dev/null 2>&1
+# tracker 0.19.7: a reload does not pick up new node arguments (heap size) — same as scope 0.6.0 — so when the ecosystem file changed the app is restarted from it
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^ecosystem.config.cjs$'; then pm2 delete tracker >/dev/null 2>&1; echo "[deploy] tracker: ecosystem changed — fresh start"; fi
+pm2 startOrReload ecosystem.config.cjs --only tracker --update-env >/dev/null 2>&1; pm2 save >/dev/null 2>&1
 echo "[deploy] done: $(git log -1 --pretty=%s)"
 fi
 # v0.18.185 (owner, 23 Oct 19:44 UK: stop the bots): while scripts/executor-off exists the executor is kept stopped and is never reloaded; delete the file to bring it back on the next deploy
