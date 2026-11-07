@@ -1,0 +1,27 @@
+Window: launches created 06 Nov 09:23 → 07 Nov 09:23 UTC (=UK); export a3d7db4f
+Launches: 43662 | with kept trades (retained): 3318 | no kept trades (not retained): 40344
+Migrated per tracker: 637 | of which retained: 421 | with pool trades recorded: 191
+
+Recorded $100K crossings in the export: 168
+  by venue of the crossing trade: {'curve': 39, 'pumpswap': 129}
+  suspect price jump (>10x vs previous trade): 36
+  SOL/USD sample age at crossing: median 54 s, max 119 s, over 300 s: 0
+  only ONE trade ever at ≥$100K (a single print): 1
+  curve-venue crossings: 39 (pump.fun curve completes near ~$35–45K at this SOL/USD — a curve print ≥ $100K needs checking)
+  crossing market caps: median $109,215, max $1,947,736,771, over $10M: 20
+  crossing time after creation: ≤30 min 165, ≤2 h 168, later 0, before 60 s 127
+
+Registry '≥$100K detected' launches in the window: 423 | also verified here: 168 | registry only: 255 | verified but not in registry: 0
+  registry-only explained by: {'migrated, no pool trades recorded': 111, 'not retained (no kept trades)': 141, 'retained, max observed < $100K at SOL/USD of the time': 3}
+  of which registry peak > $50M (decode error): 4
+
+PRIMARY OUTCOME, 2-h window, mature launches (created ≥ 2 h before the export cutoff): 41653
+   38359  UNKNOWN — not retained
+    1949  NEVER CROSSED (retained, covered, max < $100K even at the window's highest SOL/USD)
+     834  UNKNOWN — tracker outage inside window
+     252  DETECTED only (registry)
+     116  VERIFIED within 2 h
+     111  UNKNOWN — migrated, no pool trades
+      32  VERIFIED within 2 h (suspect jump)
+
+Limits: 'retained' = the tracker kept trades (15-SOL screen or bundle tier-1); pool trades only since tracker 0.19.6 (6 Nov ~20:00 UK); 'never crossed' assumes no unlogged capture gap — feed_gaps.csv lists reconnects, the listed tracker outages are excluded, quiet stretches remain inactivity-or-gap. Crossing time = first OBSERVED trade ≥ $100K; the previous trade bounds it only where history between is complete.
