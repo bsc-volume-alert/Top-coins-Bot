@@ -359,3 +359,8 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - What does carry information: current cap itself (5-min cap $20–100K → ~20–30% reach $100K within 2 h vs ~1% under $10K). Whether buying at that size makes money after costs is untested.
 - Next (agreed with Codex): baseline = 5-min current cap; test whether persistence/selling add anything; then trade replay on identical opportunities.
 - 19:35 UK incremental test (incremental.py; strict cohort, 2,017 coins, 49 POS; fit on earlier half, scored on later half): 5-min cap alone AUC 0.910; adding held → 0.904, sell → 0.909, both → 0.904; AUC gain −0.006 [−0.020, +0.007]. In-sample likelihood-ratio 6.13 on 2 df (borderline). Conclusion: persistence and sell share add no usable prediction beyond current cap on this data. Ranking power is current size; 20–30% figures describe this selected cohort, not market-wide odds or trading returns.
+
+## 8 Nov 20:05 UK — storage: 100 GB volume added, backups moved and verified
+- Owner created a 100 GB DigitalOcean volume (19:05 UK). Backups moved to /mnt/volume_1794164707392/backups (copy → size check → symlink); fstab UUID entry added (nofail), mount -a OK.
+- Read-only restore test: 4 Nov .gz gzip ok; 6 Nov and 7 Nov .db quick_check ok (69 schema rows each). Oldest (5 Nov) backup deleted with owner's go. Main disk 19 GB free (was 5.5 GB).
+- Daily backups had been SKIPPED since 8 Nov (needed 2× DB size free on the main disk); with the volume they can run again (next 04:00 UTC 9 Nov — verify).

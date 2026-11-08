@@ -1,1 +1,1 @@
-vol-fix 8 Nov 2026 19:40 UTC — fstab entry for the volume + restore test of moved backups
+supp-k100 8 Nov 2026 20:05 UTC — trade export 7 Nov 20:00 → 8 Nov 15:00 UTC (owner's go 19:38 UK; backup check passed 19:58)
