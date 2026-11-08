@@ -1,0 +1,19 @@
+{
+  "early": {
+    "census_launches_in_supplement_time_range": 42937,
+    "selected_supplement_mints": 411,
+    "no_trade_mints": 44,
+    "reconciliation_mismatch_mints": 0
+  },
+  "late": {
+    "census_launches_in_supplement_time_range": 44828,
+    "selected_supplement_mints": 836,
+    "no_trade_mints": 20,
+    "reconciliation_mismatch_mints": 22
+  },
+  "time_range": [
+    "2026-11-05T12:19:32+00:00",
+    "2026-11-06T13:25:27+00:00",
+    "2026-11-07T14:31:23+00:00"
+  ]
+}

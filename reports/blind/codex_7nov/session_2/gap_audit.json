@@ -1,0 +1,12 @@
+{
+  "early": {
+    "signals_overlapping_logged_close_idle_or_documented_outage": 2,
+    "signals_with_reconciliation_mismatch": 0,
+    "signals_before_first_feed_open_log": 0
+  },
+  "late": {
+    "signals_overlapping_logged_close_idle_or_documented_outage": 11,
+    "signals_with_reconciliation_mismatch": 5,
+    "signals_before_first_feed_open_log": 0
+  }
+}

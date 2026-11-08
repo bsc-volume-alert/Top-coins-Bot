@@ -1,0 +1,20 @@
+{
+  "census_launches": 62789,
+  "with_trades": 4913,
+  "raw_rows": 8037251,
+  "halves": {
+    "early": {
+      "census": 36468,
+      "with_rows": 2626,
+      "zero_row_tier1_or_higher": 0,
+      "reconciliation_mismatches": 1
+    },
+    "late": {
+      "census": 26321,
+      "with_rows": 2287,
+      "zero_row_tier1_or_higher": 0,
+      "reconciliation_mismatches": 15
+    }
+  },
+  "round1_sha256": "642e8c80bea386784b8d5a01157a1a05d0db3a8ad21d6c993fe04a676bd91a35"
+}

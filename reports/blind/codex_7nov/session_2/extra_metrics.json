@@ -1,0 +1,74 @@
+{
+  "early": {
+    "peak_concurrent_shadow_positions": 6,
+    "max_predecision_rows": 1067,
+    "sizes": {
+      "0.2": {
+        "valid_pairs": 255,
+        "net_sol": -2.838983486525238,
+        "mean_pnl_sol": -0.011133268574608777,
+        "median_pnl_sol": -0.007106045804018411,
+        "mean_return": -0.05566634287304388,
+        "median_return": -0.03553022902009205,
+        "win_rate": 0.3607843137254902,
+        "loss_ge_half_rate": 0.20392156862745098,
+        "net_without_best_sol": -3.9977621116784396,
+        "mean_return_interval": [
+          -0.12099327955259985,
+          0.01833762167949252
+        ]
+      },
+      "0.02": {
+        "valid_pairs": 255,
+        "net_sol": -0.5977782539268148,
+        "mean_pnl_sol": -0.002344228446771823,
+        "median_pnl_sol": -0.002000525540591844,
+        "mean_return": -0.11721142233859115,
+        "median_return": -0.10002627702959219,
+        "win_rate": 0.30980392156862746,
+        "loss_ge_half_rate": 0.21568627450980393,
+        "net_without_best_sol": -0.7144822939105413,
+        "mean_return_interval": [
+          -0.1830908516291609,
+          -0.04222455010632086
+        ]
+      }
+    }
+  },
+  "late": {
+    "peak_concurrent_shadow_positions": 5,
+    "max_predecision_rows": 1494,
+    "sizes": {
+      "0.2": {
+        "valid_pairs": 636,
+        "net_sol": -3.421776199248986,
+        "mean_pnl_sol": -0.005380151256680796,
+        "median_pnl_sol": -0.007106045804018411,
+        "mean_return": -0.02690075628340398,
+        "median_return": -0.03553022902009205,
+        "win_rate": 0.42138364779874216,
+        "loss_ge_half_rate": 0.17452830188679244,
+        "net_without_best_sol": -3.8901577195724517,
+        "mean_return_interval": [
+          -0.06376440989350846,
+          0.010264049901372453
+        ]
+      },
+      "0.02": {
+        "valid_pairs": 636,
+        "net_sol": -1.1177723717805874,
+        "mean_pnl_sol": -0.00175750372921476,
+        "median_pnl_sol": -0.002000525540591844,
+        "mean_return": -0.087875186460738,
+        "median_return": -0.10002627702959219,
+        "win_rate": 0.37735849056603776,
+        "loss_ge_half_rate": 0.1949685534591195,
+        "net_without_best_sol": -1.1643236560764096,
+        "mean_return_interval": [
+          -0.12510896613888645,
+          -0.05033934965965388
+        ]
+      }
+    }
+  }
+}

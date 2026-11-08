@@ -1,0 +1,12 @@
+# Codex Round 2 Phase A pre-outcome protocol
+Written 8 Nov 2026 before reading all-coins returns. Work alone; no other analysts' reports.
+Immutable data e67833121f1da0dc992c28fa26c5236a855c151a; evaluator eval-1.1 unchanged.
+Time split: fixed window midpoint, 7 Nov 2026 01:50:00 UTC. Early selects; late checks one unchanged winner.
+Search exactly 72 specifications: decision age [15,30,60,120] seconds x 6 entry predicates x hold horizon [15,60,300] seconds from decision.
+All require receipt-stamped gross curve buys >=15 SOL, latest received state curve and evaluator-valid, receipt-time retention satisfied. Missing receipts never signal.
+Predicates: (0) baseline; (1) net>=10 SOL and >=20 distinct buying wallets; (2) last15s net>=3 SOL and >=5 distinct buying wallets; (3) last15s net<=-3 SOL and cumulative net>=10 SOL; (4) predicate1 plus largest buyer gross share<=0.15; (5) last15s net>=3 SOL, at least 1.5 times preceding15s net, cumulative buyers>=20.
+All exit fully at decision+horizon (no signal exit, no additional 0.7s delay on forced horizon), including through migration. No retry, reentry or partial exit. Buy lands +1.0s. Independent sizes .2 and .02. Fixed curve 125bps, pool30bps and pool125 sensitivity, .0015 SOL fixed roundtrip. Use frozen evaluator state/valuation/capture functions without DEV_NO_EVIDENCE.
+Audit canonical order, full fingerprint duplicates, gaps, documented outages and 12,000 prebuffer. Every unavailable attempted outcome remains unknown at full stake+fee loss in lower bound. Missing receipt mints remain distinctly labelled hypothetical; no operational claim from mixed results.
+Choose early winner among rules with >=30 attempts and <=10% unknown, maximizing worst size normalized lower-bound total (net/stake); deterministic id tie break. If no rule meets minimum, choose best with >=30 attempts for diagnostic reporting and disclose unscorable status. No late thresholds or candidate changes. Publish complete early leaderboard. Late results of other grid rules are not computed or used for selection.
+Selected winner: both halves separately, full scores and intervals, wins, losses, without-best, fees sensitivity, unknowns, frequency and unconstrained capital/concurrency. 10,000 launch bootstrap seed20261108; development intervals not future support. Additional stricter coverage/missing-receipt audit distinct from frozen evaluator behavior.
+No funding/bundle/tier feature search or prior-book return selection. No active strategy is frozen in Phase A. Final rule only after critique before Nov10 00:00 UTC.

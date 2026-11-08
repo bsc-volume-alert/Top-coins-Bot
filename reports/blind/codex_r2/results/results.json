@@ -1,0 +1,419 @@
+{
+  "search_count": 72,
+  "winner": {
+    "id": 34,
+    "spec": [
+      30,
+      5,
+      60
+    ],
+    "attempted": 35,
+    "scored": 35,
+    "unknown": 0,
+    "unknown_share": 0.0,
+    "lower_totals": [
+      0.4802220797452443,
+      0.006984886933397772
+    ],
+    "rank": 0.34924434666988863
+  },
+  "fallback": false,
+  "universe": {
+    "early": 1593,
+    "late": 2045
+  },
+  "audit": {
+    "unique_rows": 6468371,
+    "missing_receipt_rows": 0,
+    "contradictory_mints": 5,
+    "not_retained_streams": 301,
+    "outage_excluded": 974
+  },
+  "stream_stats": {
+    "mints_streamed": 4913,
+    "duplicates_removed": 1568880,
+    "non_contiguous": 0
+  },
+  "by_half": {
+    "early": {
+      "30": {
+        "0.2": {
+          "N": 1593,
+          "scored": 35,
+          "abstain": 1558,
+          "unknown": 0,
+          "unknown_reasons": {},
+          "unknown_share": 0.0,
+          "net_sol": 0.48022207974524433,
+          "lower_total_sol": 0.4802220797452443,
+          "point_per_launch": 0.0003014576771784333,
+          "lower_per_launch": 0.0003014576771784333,
+          "point_bootstrap": [
+            -0.0004812554936787638,
+            0.0011822295753327176,
+            -0.00035935173069874825,
+            -0.0009162749586193584
+          ],
+          "lower_bootstrap": [
+            -0.0004812554936787638,
+            0.0011822295753327176,
+            -0.00035935173069874825,
+            -0.0009162749586193584
+          ],
+          "peak_attempted_positions": 2,
+          "peak_stake_sol": 0.4,
+          "stake_sol_hours": 0.11472222222222223,
+          "hypothetical_scored": 0,
+          "contradictory_attempts": 0,
+          "strict_unknown": 0,
+          "strict_lower_total_sol": 0.4802220797452443,
+          "reconciliation_attempts": 0,
+          "mean_return": 0.06860315424932062,
+          "median_return": 0.01995982351602505,
+          "win_rate": 0.5142857142857142,
+          "loss_ge50": 0.11428571428571428,
+          "worst_return": -0.7238175953396864,
+          "without_best_net_sol": 0.1084258115954172,
+          "mean_return_bootstrap": [
+            -0.11116704806871003,
+            0.27126861983045747,
+            -0.08544918604330874,
+            -0.19831186516979016
+          ],
+          "pool_exit_scored": 0
+        },
+        "0.02": {
+          "N": 1593,
+          "scored": 35,
+          "abstain": 1558,
+          "unknown": 0,
+          "unknown_reasons": {},
+          "unknown_share": 0.0,
+          "net_sol": 0.006984886933397768,
+          "lower_total_sol": 0.006984886933397772,
+          "point_per_launch": 4.38473756019948e-06,
+          "lower_per_launch": 4.38473756019948e-06,
+          "point_bootstrap": [
+            -7.520767228073561e-05,
+            9.20777411869975e-05,
+            -6.229229652411428e-05,
+            -0.00012080420784740196
+          ],
+          "lower_bootstrap": [
+            -7.520767228073561e-05,
+            9.20777411869975e-05,
+            -6.229229652411428e-05,
+            -0.00012080420784740196
+          ],
+          "peak_attempted_positions": 2,
+          "peak_stake_sol": 0.04,
+          "stake_sol_hours": 0.01147222222222222,
+          "hypothetical_scored": 0,
+          "contradictory_attempts": 0,
+          "strict_unknown": 0,
+          "strict_lower_total_sol": 0.006984886933397772,
+          "reconciliation_attempts": 0,
+          "mean_return": 0.009978409904853955,
+          "median_return": -0.03989303817664169,
+          "win_rate": 0.45714285714285713,
+          "loss_ge50": 0.14285714285714285,
+          "worst_return": -0.7900411840520168,
+          "without_best_net_sol": -0.029621570593965117,
+          "mean_return_bootstrap": [
+            -0.17168501949952428,
+            0.21511259583792522,
+            -0.1459873771682094,
+            -0.25960349829469864
+          ],
+          "pool_exit_scored": 0
+        }
+      },
+      "125": {
+        "0.2": {
+          "N": 1593,
+          "scored": 35,
+          "abstain": 1558,
+          "unknown": 0,
+          "unknown_reasons": {},
+          "unknown_share": 0.0,
+          "net_sol": 0.48022207974524433,
+          "lower_total_sol": 0.4802220797452443,
+          "point_per_launch": 0.0003014576771784333,
+          "lower_per_launch": 0.0003014576771784333,
+          "point_bootstrap": [
+            -0.0004812554936787638,
+            0.0011822295753327176,
+            -0.00035935173069874825,
+            -0.0009162749586193584
+          ],
+          "lower_bootstrap": [
+            -0.0004812554936787638,
+            0.0011822295753327176,
+            -0.00035935173069874825,
+            -0.0009162749586193584
+          ],
+          "peak_attempted_positions": 2,
+          "peak_stake_sol": 0.4,
+          "stake_sol_hours": 0.11472222222222223,
+          "hypothetical_scored": 0,
+          "contradictory_attempts": 0,
+          "strict_unknown": 0,
+          "strict_lower_total_sol": 0.4802220797452443,
+          "reconciliation_attempts": 0,
+          "mean_return": 0.06860315424932062,
+          "median_return": 0.01995982351602505,
+          "win_rate": 0.5142857142857142,
+          "loss_ge50": 0.11428571428571428,
+          "worst_return": -0.7238175953396864,
+          "without_best_net_sol": 0.1084258115954172,
+          "mean_return_bootstrap": [
+            -0.11116704806871003,
+            0.27126861983045747,
+            -0.08544918604330874,
+            -0.19831186516979016
+          ],
+          "pool_exit_scored": 0
+        },
+        "0.02": {
+          "N": 1593,
+          "scored": 35,
+          "abstain": 1558,
+          "unknown": 0,
+          "unknown_reasons": {},
+          "unknown_share": 0.0,
+          "net_sol": 0.006984886933397768,
+          "lower_total_sol": 0.006984886933397772,
+          "point_per_launch": 4.38473756019948e-06,
+          "lower_per_launch": 4.38473756019948e-06,
+          "point_bootstrap": [
+            -7.520767228073561e-05,
+            9.20777411869975e-05,
+            -6.229229652411428e-05,
+            -0.00012080420784740196
+          ],
+          "lower_bootstrap": [
+            -7.520767228073561e-05,
+            9.20777411869975e-05,
+            -6.229229652411428e-05,
+            -0.00012080420784740196
+          ],
+          "peak_attempted_positions": 2,
+          "peak_stake_sol": 0.04,
+          "stake_sol_hours": 0.01147222222222222,
+          "hypothetical_scored": 0,
+          "contradictory_attempts": 0,
+          "strict_unknown": 0,
+          "strict_lower_total_sol": 0.006984886933397772,
+          "reconciliation_attempts": 0,
+          "mean_return": 0.009978409904853955,
+          "median_return": -0.03989303817664169,
+          "win_rate": 0.45714285714285713,
+          "loss_ge50": 0.14285714285714285,
+          "worst_return": -0.7900411840520168,
+          "without_best_net_sol": -0.029621570593965117,
+          "mean_return_bootstrap": [
+            -0.17168501949952428,
+            0.21511259583792522,
+            -0.1459873771682094,
+            -0.25960349829469864
+          ],
+          "pool_exit_scored": 0
+        }
+      }
+    },
+    "late": {
+      "30": {
+        "0.2": {
+          "N": 2045,
+          "scored": 45,
+          "abstain": 1999,
+          "unknown": 1,
+          "unknown_reasons": {
+            "exit: capture gap": 1
+          },
+          "unknown_share": 0.021739130434782608,
+          "net_sol": -1.1198839973174572,
+          "lower_total_sol": -1.3213839973174573,
+          "point_per_launch": -0.0005476205365855536,
+          "lower_per_launch": -0.000646153543920517,
+          "point_bootstrap": [
+            -0.0010849113997115254,
+            -6.499117229757805e-05,
+            -0.0009923470214138973,
+            -0.0014474538017032878
+          ],
+          "lower_bootstrap": [
+            -0.0012120812362078496,
+            -0.00012324043820667835,
+            -0.001120355923015987,
+            -0.0016006776142475894
+          ],
+          "peak_attempted_positions": 2,
+          "peak_stake_sol": 0.4,
+          "stake_sol_hours": 0.1507777777777778,
+          "hypothetical_scored": 0,
+          "contradictory_attempts": 0,
+          "strict_unknown": 1,
+          "strict_lower_total_sol": -1.3213839973174573,
+          "reconciliation_attempts": 0,
+          "mean_return": -0.12443155525749525,
+          "median_return": -0.08998650927943677,
+          "win_rate": 0.3111111111111111,
+          "loss_ge50": 0.15555555555555556,
+          "worst_return": -0.9150135920952874,
+          "without_best_net_sol": -1.309441510673096,
+          "mean_return_bootstrap": [
+            -0.23585108510274785,
+            -0.011561900012657587,
+            -0.21799003431968877,
+            -0.30368865803120204
+          ],
+          "pool_exit_scored": 0
+        },
+        "0.02": {
+          "N": 2045,
+          "scored": 45,
+          "abstain": 1999,
+          "unknown": 1,
+          "unknown_reasons": {
+            "exit: capture gap": 1
+          },
+          "unknown_share": 0.021739130434782608,
+          "net_sol": -0.1663432030882671,
+          "lower_total_sol": -0.1878432030882671,
+          "point_per_launch": -8.134141960306461e-05,
+          "lower_per_launch": -9.185486703582743e-05,
+          "point_bootstrap": [
+            -0.00013879410096343962,
+            -3.0530232457265555e-05,
+            -0.00012847231080270302,
+            -0.00017924768435611746
+          ],
+          "lower_bootstrap": [
+            -0.0001522867260404615,
+            -3.719664776415136e-05,
+            -0.000142678972919073,
+            -0.00019430268283486757
+          ],
+          "peak_attempted_positions": 2,
+          "peak_stake_sol": 0.04,
+          "stake_sol_hours": 0.015077777777777777,
+          "hypothetical_scored": 0,
+          "contradictory_attempts": 0,
+          "strict_unknown": 1,
+          "strict_lower_total_sol": -0.1878432030882671,
+          "reconciliation_attempts": 0,
+          "mean_return": -0.18482578120918566,
+          "median_return": -0.15093115998147086,
+          "win_rate": 0.26666666666666666,
+          "loss_ge50": 0.15555555555555556,
+          "worst_return": -0.9815985672463455,
+          "without_best_net_sol": -0.18422689790773245,
+          "mean_return_bootstrap": [
+            -0.297270742246174,
+            -0.07086677479495125,
+            -0.27926753758572564,
+            -0.3653492047644267
+          ],
+          "pool_exit_scored": 0
+        }
+      },
+      "125": {
+        "0.2": {
+          "N": 2045,
+          "scored": 45,
+          "abstain": 1999,
+          "unknown": 1,
+          "unknown_reasons": {
+            "exit: capture gap": 1
+          },
+          "unknown_share": 0.021739130434782608,
+          "net_sol": -1.1198839973174572,
+          "lower_total_sol": -1.3213839973174573,
+          "point_per_launch": -0.0005476205365855536,
+          "lower_per_launch": -0.000646153543920517,
+          "point_bootstrap": [
+            -0.0010849113997115254,
+            -6.499117229757805e-05,
+            -0.0009923470214138973,
+            -0.0014474538017032878
+          ],
+          "lower_bootstrap": [
+            -0.0012120812362078496,
+            -0.00012324043820667835,
+            -0.001120355923015987,
+            -0.0016006776142475894
+          ],
+          "peak_attempted_positions": 2,
+          "peak_stake_sol": 0.4,
+          "stake_sol_hours": 0.1507777777777778,
+          "hypothetical_scored": 0,
+          "contradictory_attempts": 0,
+          "strict_unknown": 1,
+          "strict_lower_total_sol": -1.3213839973174573,
+          "reconciliation_attempts": 0,
+          "mean_return": -0.12443155525749525,
+          "median_return": -0.08998650927943677,
+          "win_rate": 0.3111111111111111,
+          "loss_ge50": 0.15555555555555556,
+          "worst_return": -0.9150135920952874,
+          "without_best_net_sol": -1.309441510673096,
+          "mean_return_bootstrap": [
+            -0.23585108510274785,
+            -0.011561900012657587,
+            -0.21799003431968877,
+            -0.30368865803120204
+          ],
+          "pool_exit_scored": 0
+        },
+        "0.02": {
+          "N": 2045,
+          "scored": 45,
+          "abstain": 1999,
+          "unknown": 1,
+          "unknown_reasons": {
+            "exit: capture gap": 1
+          },
+          "unknown_share": 0.021739130434782608,
+          "net_sol": -0.1663432030882671,
+          "lower_total_sol": -0.1878432030882671,
+          "point_per_launch": -8.134141960306461e-05,
+          "lower_per_launch": -9.185486703582743e-05,
+          "point_bootstrap": [
+            -0.00013879410096343962,
+            -3.0530232457265555e-05,
+            -0.00012847231080270302,
+            -0.00017924768435611746
+          ],
+          "lower_bootstrap": [
+            -0.0001522867260404615,
+            -3.719664776415136e-05,
+            -0.000142678972919073,
+            -0.00019430268283486757
+          ],
+          "peak_attempted_positions": 2,
+          "peak_stake_sol": 0.04,
+          "stake_sol_hours": 0.015077777777777777,
+          "hypothetical_scored": 0,
+          "contradictory_attempts": 0,
+          "strict_unknown": 1,
+          "strict_lower_total_sol": -0.1878432030882671,
+          "reconciliation_attempts": 0,
+          "mean_return": -0.18482578120918566,
+          "median_return": -0.15093115998147086,
+          "win_rate": 0.26666666666666666,
+          "loss_ge50": 0.15555555555555556,
+          "worst_return": -0.9815985672463455,
+          "without_best_net_sol": -0.18422689790773245,
+          "mean_return_bootstrap": [
+            -0.297270742246174,
+            -0.07086677479495125,
+            -0.27926753758572564,
+            -0.3653492047644267
+          ],
+          "pool_exit_scored": 0
+        }
+      }
+    }
+  }
+}
