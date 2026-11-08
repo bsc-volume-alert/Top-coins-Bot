@@ -1,0 +1,9 @@
+STRICT COHORT labels at 5 min: {'ALREADY': 209, 'NOCROSS_OBS': 3025, 'UNKNOWN_NO_POOL': 90, 'POS': 57, 'UNKNOWN_NEAR': 2, 'SUSPECT': 87}
+modelled coins 2017, POS 49 (NOCROSS_OBS = 'no crossing observed', coverage unverified)
+Time split: fit on first half (earlier launches), score on second half. Lower log-loss / higher AUC = better.
+  cap only        test AUC 0.910  log-loss 0.0928  coefs [1.64]  (train POS 20, test POS 29)
+  cap+held        test AUC 0.904  log-loss 0.0941  coefs [1.48, 0.88]  (train POS 20, test POS 29)
+  cap+sell        test AUC 0.909  log-loss 0.0927  coefs [1.53, -3.66]  (train POS 20, test POS 29)
+  cap+held+sell   test AUC 0.904  log-loss 0.0941  coefs [1.33, 1.0, -3.96]  (train POS 20, test POS 29)
+Full-sample likelihood-ratio test, adding held+sell to cap: LR 6.13 on 2 df (5% critical value 5.99); coefs [1.4, 0.48, -3.05]
+Test-half AUC gain from adding held+sell: -0.006, 95% bootstrap [-0.020, +0.007]
