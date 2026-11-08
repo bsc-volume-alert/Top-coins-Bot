@@ -1,0 +1,25 @@
+=== A. crossings among ALL cohort launches (incl. not retained)
+Counter({('retained', 'ALREADY'): 199, ('retained', 'SUSPECT'): 89, ('retained', 'POS'): 73, ('retained', 'UNKNOWN_NEAR'): 2})
+=== B. ALREADY at 60s: venue of crossing / suspect_jump / minutes
+[('pumpswap', 199), ('pumpswap/PUMP', 1)] graduated 200
+secs to cross [0.0, 0.0, 1.0]
+=== C. POS timing (min to $100K) [6.941666666666666, 15.416666666666666, 28.766666666666666]
+=== D. checkpoint trade test: BUY at 5-min cap if held (5m>=60s), coins not already >=$100K; exit at fixed checkpoint. Gross, no costs, cap-based
+  held  exit  15m: n 358 missing 156 mean +3.6% median +0.0% win 32% mean-no-best +1.5% after~3.3%cost +0.3%
+  held  exit  30m: n 320 missing 194 mean +5.4% median -17.5% win 22% mean-no-best -5.7% after~3.3%cost +2.1%
+  held  exit  60m: n 276 missing 238 mean -7.5% median -33.1% win 17% mean-no-best -13.5% after~3.3%cost -10.8%
+  held  exit 120m: n 304 missing 210 mean -23.0% median -45.2% win 13% mean-no-best -28.1% after~3.3%cost -26.2%
+  fell  exit  15m: n 1022 missing 521 mean -3.9% median +0.0% win 13% mean-no-best -4.6% after~3.3%cost -7.2%
+  fell  exit  30m: n 823 missing 720 mean -1.1% median -0.1% win 12% mean-no-best -3.6% after~3.3%cost -4.3%
+  fell  exit  60m: n 773 missing 770 mean -6.7% median -0.2% win 9% mean-no-best -8.4% after~3.3%cost -9.9%
+  fell  exit 120m: n 781 missing 762 mean -4.0% median -0.2% win 10% mean-no-best -6.6% after~3.3%cost -7.2%
+  all   exit  15m: n 1380 missing 677 mean -2.0% median +0.0% win 18% mean-no-best -2.5% after~3.3%cost -5.2%
+  all   exit  30m: n 1143 missing 914 mean +0.7% median -0.3% win 15% mean-no-best -2.4% after~3.3%cost -2.5%
+  all   exit  60m: n 1049 missing 1008 mean -6.9% median -0.7% win 11% mean-no-best -8.5% after~3.3%cost -10.2%
+  all   exit 120m: n 1085 missing 972 mean -9.3% median -0.8% win 11% mean-no-best -11.2% after~3.3%cost -12.6%
+=== E. held + 60s cap band: rate & 30m mean return
+  5-min cap $0K-5K: n 151 POS 1 0.7% | 30m mean +0% median +0% n83
+  5-min cap $5K-10K: n 143 POS 2 1.4% | 30m mean +13% median -50% n86
+  5-min cap $10K-20K: n 108 POS 9 8.3% | 30m mean -1% median -48% n79
+  5-min cap $20K-40K: n 77 POS 16 20.8% | 30m mean +13% median -23% n49
+  5-min cap $40K-1000000K: n 35 POS 8 22.9% | 30m mean +2% median +0% n23

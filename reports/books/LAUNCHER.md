@@ -336,3 +336,11 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - Export k100-20261108t1722 (90,137 launches 6 Nov 07:40 → 8 Nov 15:00 UTC; census, token_life, per-mint coverage, 556 first crossings, SOL/USD).
 - Confirmation cohort (after 7 Nov 09:57:18, retained, n 3,544, 77 POS): H-sell SUPPORTED (sell share ≥ 0.5 at 60 s: 0.87% reach $100K vs 2.70%); H-hold5 SUPPORTED (held at 5 min 7.0% vs fell 0.84%). Robust to dropping non-SOL-quoted pools and to excluding coins already ≥ $30K at 5 min.
 - Detection only; profit not tested. New data issue: some pump pools are quoted in PUMP/BTC/USDC etc. — mc_usd assumes SOL.
+
+## 8 Nov 18:55 UK — $100K diagnosis (confirm_8nov/diagnosis.py, checkpoint-level only)
+- Every $100K crossing in the cohort came from a retained launch (≥ 15 SOL gross buys): the 15-SOL filter lost none.
+- 199 retained coins were ALREADY ≥ $100K at 60 s, crossing 0–1 s after creation, all on pumpswap — unexplained (direct-to-pool launches or a pricing artefact); to investigate.
+- POS reach $100K at median 15 min (quartiles 7 / 29 min).
+- Rate by 5-min cap among "held" coins: <$5K 0.7%, $5–10K 1.4%, $10–20K 8.3%, $20–40K 20.8% (16/77), >$40K 22.9%.
+- Checkpoint trade view (buy at 5-min cap if held, sell at a fixed later checkpoint, ~3.3% cost): 15 min +0.3%, 30 min +2.1% (median −17.5%, −5.7% without the best coin), 60 min −10.8%, 120 min −26.2%. 40–60% of later checkpoints missing (likely dead coins) → these are OPTIMISTIC. No profit shown; fixed-time exits lose with time.
+- Gap: trade rows for 7 Nov 20:00 → 8 Nov 15:00 not yet exported → no fill-level after-cost test possible.
