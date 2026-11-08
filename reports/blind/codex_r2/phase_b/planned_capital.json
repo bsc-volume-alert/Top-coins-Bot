@@ -1,0 +1,16 @@
+{
+  "tp12h30": {
+    "attempts": 2326,
+    "per_day": 1536.440366972477,
+    "planned_peak": 6,
+    "peak_stake_0.2": 1.2000000000000002,
+    "unknown_release_assumption": "30 seconds after decision; actual release unconfirmed"
+  },
+  "h30": {
+    "attempts": 2326,
+    "per_day": 1536.440366972477,
+    "planned_peak": 7,
+    "peak_stake_0.2": 1.4000000000000001,
+    "unknown_release_assumption": "30 seconds after decision; actual release unconfirmed"
+  }
+}

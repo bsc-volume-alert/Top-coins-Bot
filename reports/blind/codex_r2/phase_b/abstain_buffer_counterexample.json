@@ -1,0 +1,9 @@
+{
+  "synthetic_only": true,
+  "rows": 12001,
+  "decide_returns": false,
+  "result": {
+    "cat": "unknown",
+    "why": "pre-promotion buffer exceeded"
+  }
+}
