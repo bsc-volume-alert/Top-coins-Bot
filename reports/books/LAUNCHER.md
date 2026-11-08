@@ -364,3 +364,8 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - Owner created a 100 GB DigitalOcean volume (19:05 UK). Backups moved to /mnt/volume_1794164707392/backups (copy → size check → symlink); fstab UUID entry added (nofail), mount -a OK.
 - Read-only restore test: 4 Nov .gz gzip ok; 6 Nov and 7 Nov .db quick_check ok (69 schema rows each). Oldest (5 Nov) backup deleted with owner's go. Main disk 19 GB free (was 5.5 GB).
 - Daily backups had been SKIPPED since 8 Nov (needed 2× DB size free on the main disk); with the volume they can run again (next 04:00 UTC 9 Nov — verify).
+
+## 8 Nov 20:30 UK — trade export for the $100K replay (owner's go 19:38 UK)
+- Branch entry-all-20261108t2002 @ 05f47f12; all 13 files sha256-verified after download. Read cutoff 8 Nov 20:02:43 UTC (covers 2-h holds to 17:05:17).
+- 27,348 launches created 7 Nov 20:00 → 8 Nov 15:00 UTC; 2,160 with captured trades; 6,086,313 rows (1,080,707 curve, 5,005,606 pool, every pool row with evidence fields; 278 mints with pool rows); feed-gap log 760 rows; 11 mints still trading during the read.
+- Together with entry-all-20261107t2210 (to 7 Nov 20:00) this covers the whole replay cohort (7 Nov 10:45 → 8 Nov 15:00). MANIFEST header line "Owner's go 7 Nov 14:03 / spec Codex 14:02" is boilerplate from the first export.
