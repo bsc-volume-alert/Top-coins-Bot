@@ -19,13 +19,13 @@ Kept by the coordinator chat (referee). Times UTC (= UK time this week). Newest 
 | Codex | "none supported" | 7 Nov 15:22:48 | reports/blind/SUBMISSION_codex_7nov_RECORD.md (commit b06fa89f exists only in Codex's environment; full text still not published verbatim) |
 | Gemini (Jules) | no submission (errored 16:00, 16:14 UK) | — | — |
 
-Round 1 test: launches created 8 Nov 00:00 → 10 Nov 00:00. Export after 10 Nov 02:00 (needs owner's go). Score MIG300 with eval-1.1, K = 1.
+Round 1 test: launches created 8 Nov 00:00 → 10 Nov 00:00. Export after **10 Nov 04:00** (not 02:00 — a launch created 23:59 can enter up to 2 h later and hold up to 2 h; needs owner's go). Score MIG300 with eval-1.1, K = 1.
 
 ## Round 2 timeline
 - A. Independent exploration — until 8 Nov 18:00
 - B. Cross-critique — 8 Nov 18:00 → 9 Nov 18:00
 - C. Freeze — before 10 Nov 00:00
-- D. Test — launches created 10 Nov 00:00 → 12 Nov 00:00; export after 12 Nov 02:00 (needs owner's go); score with eval-1.1, K = number of rules
+- D. Test — launches created 10 Nov 00:00 → 12 Nov 00:00; export after **12 Nov 04:00** (same reason as above; needs owner's go); score with eval-1.1, K = number of rules
 
 ## Submissions log
 | Time (UTC) | Analyst | What | Branch / file | Commit | Checked by coordinator |
@@ -34,3 +34,5 @@ Round 1 test: launches created 8 Nov 00:00 → 10 Nov 00:00. Export after 10 Nov
 
 ## Coordinator entries
 - **8 Nov 06:15** — Coordinator chat started. Read ROUND2_BRIEF.md, BRIEF_7nov.md (rev 4), eval README, LOOP_PLAN.md, LAUNCHER.md (tail). Checked every remote branch (34). No Round 2 submission from any analyst: no new `blind-*`, `codex/*`, `gemini/*` or `jules/*` branch; only automated data pushes since the brief (`data` 04:06:58, `launcher-data` 06:09:27). Open Round 1 item: Codex's full submission text is still "not yet retrieved" in its record.
+- **8 Nov 06:30** — Owner sent the Round 2 message to the Claude analyst and Codex. Gemini (Jules) not yet working; joins as a critic in phase B if it has nothing by 18:00.
+- **8 Nov 06:30** — Codex (as second referee) raised four evaluator points; coordinator checked each against blind-eval-1.1 code. (1) A retained mint with no exported rows is left out of N — partly true, should only occur on capture failures. (2) Bundle tier-1 taken from the census with no finalisation-time check; `finalized` column unused — true. (3) MIG300 horizon exit uses the state at t+300.0, the written rule says t+300.7 — true, 0.7 s; analyst to confirm before scoring (README step). (4) Export at +02:00 is too early: entry up to created+2 h, hold up to 2 h → export after 04:00 — true, adopted above. eval-1.1 is NOT changed mid-test; (2) and (3) are candidates for eval-1.2 in a later round. Codex also confirms its Round 1 commit b06fa89f resolves nowhere on GitHub.
