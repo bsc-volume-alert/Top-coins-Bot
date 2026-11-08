@@ -1,0 +1,15 @@
+### CHECK 2 attrition
+ at 60 s, excluded labels: {'UNKNOWN_NO_POOL': 91, 'ALREADY': 200, 'SUSPECT': 89, 'UNKNOWN_NEAR': 4} kept 3160
+ hold5 eligible 3144 dropped 1087 POS among dropped 12 {'60s mc0 / 5m late': 1078, '60s mc0 / 5m mc0': 9}
+ alive flag at 5m among dropped: {'1': 1058, '0': 29}
+ worst case: all dropped counted as FELL -> fell 25/2630 = 0.95% CI ['0.64', '1.40']
+ worst case: all dropped counted as HELD -> held 48/1601 = 3.00% CI ['2.27', '3.95']
+
+### CHECK 3 non-SOL-quoted pools in cohort (any coin with such a pool row): 17 of which POS/NOCROSS at 300: 13
+
+### CHECK 4 strict cohort: created after freeze 7 Nov 10:45 UK, non-SOL pools excluded
+  sell>=0.5: 4/453 = 0.88% [0.34-2.25]
+  sell<0.5: 68/2644 = 2.57% [2.03-3.25]
+  held: 36/502 = 7.17% [5.22-9.77]
+  fell: 13/1515 = 0.86% [0.50-1.46]
+  POS at 60s in strict cohort: 72  coins 3470

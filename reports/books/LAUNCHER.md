@@ -344,3 +344,9 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - Rate by 5-min cap among "held" coins: <$5K 0.7%, $5–10K 1.4%, $10–20K 8.3%, $20–40K 20.8% (16/77), >$40K 22.9%.
 - Checkpoint trade view (buy at 5-min cap if held, sell at a fixed later checkpoint, ~3.3% cost): 15 min +0.3%, 30 min +2.1% (median −17.5%, −5.7% without the best coin), 60 min −10.8%, 120 min −26.2%. 40–60% of later checkpoints missing (likely dead coins) → these are OPTIMISTIC. No profit shown; fixed-time exits lose with time.
 - Gap: trade rows for 7 Nov 20:00 → 8 Nov 15:00 not yet exported → no fill-level after-cost test possible.
+
+## 8 Nov 19:05 UK — Codex's four checks on the $100K confirmation (confirm_8nov/codex_checks.py)
+1. Already-crossed: excluded by construction — the crossing file holds each coin's FIRST trade ≥ $100K, so any coin above $100K before the decision is ALREADY, even if it fell back.
+2. Attrition: 3,544 → 3,160 = minus ALREADY 200, SUSPECT 89, UNKNOWN_NO_POOL 91, UNKNOWN_NEAR 4. 3,144 → 2,057 for hold5: 1,078 had market cap recorded as 0 at 60 s and a late 5-min reading (1,058 still flagged alive) — a recording gap, not dead coins. 12 POS among the 1,087 dropped. Bounds: all dropped as "fell" → fell 0.95% [0.64–1.40]; all as "held" → held 3.0% [2.27–3.95]; both still clear of the other group. NEW DATA ISSUE: token_life mc = 0 at 60 s for ~1/3 of retained coins.
+3. Non-SOL quotes: 17 cohort coins have a non-SOL pool; excluded from every comparison in the strict run.
+4. Freeze: hypotheses frozen 10:45 UK, cohort began 09:57:18 (48 min overlap). Strict cohort (after 10:45, non-SOL excluded, 72 POS): sell ≥ 0.5 4/453 0.88% [0.34–2.25] vs 68/2,644 2.57%; held 36/502 7.17% [5.22–9.77] vs fell 13/1,515 0.86% [0.50–1.46]. Both still SUPPORTED. Stopping rule: evaluated once (at 77 POS, beyond the 15 required) — not peeked, but later than the rule's first-possible point.
