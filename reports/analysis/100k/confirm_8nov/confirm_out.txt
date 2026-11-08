@@ -1,0 +1,95 @@
+CONFIRMATION COHORT: created 07 Nov 09:57:18 → 08 Nov 15:22:40 UTC (= UK); launches 43791; retained (captured trades) 3544
+  labels at decision 60 s: NOCROSS_OBS 3083, ALREADY 200, UNKNOWN_NO_POOL 91, SUSPECT 89, POS 77, UNKNOWN_NEAR 4
+  labels at decision 300 s: NOCROSS_OBS 3083, ALREADY 216, UNKNOWN_NO_POOL 91, SUSPECT 89, POS 61, UNKNOWN_NEAR 4
+  POS at decision 60 s: 77 (evaluation condition: ≥ 15 POS → MET)
+
+H-sell (sell share at 60 s ≥ 0.50 = warning sign):
+  sell share ≥ 0.50: n 458, POS 4, rate 0.87% [95% 0.34–2.22], recall 5%, false alarms per POS 114
+  sell share < 0.50: n 2702, POS 73, rate 2.70% [95% 2.15–3.38], recall 95%, false alarms per POS 36
+  VERDICT H-sell: SUPPORTED (needs ≥0.50 group's upper bound 2.22% < other group's rate 2.70%, and < 1 POS per 50 in the ≥0.50 group: 4/458)
+
+H-hold5 (cap at 5 min ≥ cap at 60 s → more likely to reach $100K within 2 h):
+  held: n 514, POS 36, rate 7.00% [95% 5.10–9.54], recall 73%, false alarms per POS 13
+  fell: n 1543, POS 13, rate 0.84% [95% 0.49–1.44], recall 27%, false alarms per POS 118
+  VERDICT H-hold5: SUPPORTED (held 7.00% [5.10–9.54] vs fell 0.84% [0.49–1.44]; needs held > fell with non-overlapping intervals)
+
+POSITIVE CASES (decision 60 s): mint · created · minutes to $100K · venue · cap at crossing · sell share 60 s · cap 60 s → 5 min
+  iW4XP2BW · 07 Nov 10:40:49 · 48.6 · pumpswap · $100,320 · 0.43 · $4,230 → -
+  FHCntFVz · 07 Nov 11:26:29 · 7.8 · pumpswap · $100,229 · 0.30 · $75,881 → $88,761
+  8SYPUhG5 · 07 Nov 11:45:40 · 4.2 · pumpswap · $100,605 · 0.36 · $21,683 → $124,007
+  CBK1wqUV · 07 Nov 12:12:22 · 2.0 · pumpswap · $100,095 · 0.14 · $93,783 → $88,042
+  88mAiDpP · 07 Nov 12:32:39 · 2.4 · pumpswap · $122,730 · 0.44 · $601 → -
+  BWsGBEcT · 07 Nov 12:43:36 · 3.0 · pumpswap · $101,861 · 0.00 · $83,288 → $119,861
+  4gyubJ7s · 07 Nov 12:59:30 · 30.1 · pumpswap · $135,904 · 0.39 · $6,729 → -
+  ASTLrYPQ · 07 Nov 13:04:20 · 13.9 · pumpswap · $100,757 · 0.23 · $10,598 → $18,617
+  6JmDY4eY · 07 Nov 13:23:46 · 42.8 · pumpswap · $100,766 · 0.00 · $11,444 → $27,395
+  41nYSc3p · 07 Nov 13:58:35 · 8.9 · pumpswap · $101,006 · 0.31 · $30,154 → $10,816
+  tH8k9UDj · 07 Nov 14:07:14 · 23.5 · pumpswap · $113,782 · 0.36 · $10,891 → $10,169
+  2QehMYSz · 07 Nov 14:31:05 · 28.9 · pumpswap · $100,055 · 0.20 · $12,763 → $39,865
+  FkCsLU7T · 07 Nov 14:33:38 · 4.5 · pumpswap · $101,602 · 0.24 · $85,389 → $95,331
+  CFxxQDnQ · 07 Nov 15:05:00 · 13.7 · pumpswap · $100,270 · 0.38 · $18,103 → $33,586
+  75VDY6P9 · 07 Nov 15:05:52 · 12.7 · pumpswap · $100,929 · 0.19 · $16,377 → -
+  HnBPXXcX · 07 Nov 15:52:01 · 1.7 · pumpswap · $101,806 · 0.19 · $82,215 → $40,811
+  G3PzMuSp · 07 Nov 16:12:01 · 18.3 · pumpswap · $101,631 · 0.18 · $43,452 → $42,244
+  DY3o5SLK · 07 Nov 16:16:32 · 21.8 · pumpswap · $104,952 · 0.35 · $6,726 → -
+  EQyfgpJs · 07 Nov 17:17:23 · 3.0 · pumpswap · $126,026 · 0.00 · $36,787 → $151,991
+  FUrCEzJz · 07 Nov 17:20:47 · 6.5 · pumpswap · $100,408 · 0.32 · $9,170 → $45,833
+  CM8RLtQy · 07 Nov 17:21:36 · 12.9 · pumpswap · $100,237 · 0.23 · $7,704 → $34,138
+  5UWfbqWE · 07 Nov 18:46:48 · 53.3 · pumpswap/DJT · $101,937 · 0.32 · - → -
+  6MidA49V · 07 Nov 18:58:19 · 15.8 · pumpswap · $100,386 · 0.30 · $5,647 → $27,463
+  F7PuP5Ty · 07 Nov 19:52:14 · 8.7 · pumpswap · $105,440 · 0.06 · $15,106 → $26,752
+  F3cCiTtB · 07 Nov 19:59:10 · 80.2 · pumpswap · $101,757 · 0.33 · $5,210 → $12,134
+  3MW1ffhw · 07 Nov 20:07:33 · 13.1 · pumpswap · $101,930 · 0.29 · $21,763 → $40,971
+  AFfoew4h · 07 Nov 20:45:29 · 11.7 · pumpswap · $101,517 · 0.25 · $27,750 → $37,543
+  9wzpthiK · 07 Nov 20:45:42 · 17.6 · pumpswap · $100,052 · 0.38 · $16,802 → $35,302
+  AYVQ28hu · 07 Nov 21:18:27 · 13.8 · pumpswap · $105,708 · 0.49 · $6,401 → $8,478
+  Hb2fnvwp · 07 Nov 21:45:39 · 4.9 · pumpswap · $102,933 · 0.26 · $6,320 → $116,252
+  QwUt7EVM · 07 Nov 21:47:35 · 1.3 · pumpswap · $100,211 · 0.46 · $69,210 → $69,394
+  DsKhkbTU · 07 Nov 21:52:07 · 28.7 · pumpswap · $101,212 · 0.26 · $14,360 → $31,156
+  Ddg7ng6T · 07 Nov 21:52:30 · 26.2 · pumpswap · $101,040 · 0.39 · $10,932 → $20,518
+  8MHHRJvp · 07 Nov 22:20:54 · 8.8 · pumpswap/PUMP · $102,321 · 0.14 · - → -
+  8fV1ZSro · 07 Nov 22:28:56 · 19.9 · pumpswap · $100,417 · 0.29 · $12,985 → $24,004
+  22xUt4i2 · 07 Nov 22:47:20 · 29.8 · pumpswap · $100,734 · 0.41 · $10,781 → $29,694
+  CM5ZLrUH · 07 Nov 22:47:51 · 1.4 · pumpswap/BTC · $101,657 · 0.33 · $70,192 → $291,049
+  C5EDzQAN · 07 Nov 22:55:57 · 19.6 · pumpswap · $100,389 · 0.21 · $14,583 → $36,869
+  CoWYU3Gb · 07 Nov 23:07:16 · 23.6 · pumpswap · $100,618 · 0.31 · $7,159 → $24,551
+  AW4dczVG · 07 Nov 23:21:11 · 1.9 · pumpswap · $100,034 · 0.36 · $41,374 → $38,176
+  EWLHpB5f · 07 Nov 23:55:51 · 26.0 · pumpswap · $100,012 · 0.32 · $16,034 → $29,563
+  8rHoAfpd · 07 Nov 23:56:02 · 8.8 · pumpswap · $101,382 · 0.50 · $2,506 → $11,315
+  8SQXVMEf · 08 Nov 00:16:10 · 75.5 · pumpswap · $113,313 · 0.50 · $5,650 → $17,161
+  FevRmdX2 · 08 Nov 00:21:50 · 39.1 · pumpswap · $109,968 · 0.34 · $7,910 → $10,044
+  FccWxiLJ · 08 Nov 00:41:23 · 37.3 · pumpswap · $101,063 · 0.27 · $4,354 → $11,113
+  GbzXyDrg · 08 Nov 00:54:08 · 5.2 · pumpswap · $100,243 · 0.24 · $39,830 → $91,783
+  H8pqscWC · 08 Nov 01:17:15 · 1.1 · pumpswap · $100,788 · 0.21 · $92,659 → $85,734
+  8geK7NzG · 08 Nov 01:22:59 · 101.0 · pumpswap · $101,991 · 0.33 · $542 → $541
+  HuZ6dVQW · 08 Nov 01:26:31 · 1.2 · pumpswap · $102,551 · 0.39 · $72,243 → $159,161
+  984e63ao · 08 Nov 01:47:08 · 22.1 · pumpswap · $102,949 · 0.16 · $69,982 → $68,081
+  9GpJDZrg · 08 Nov 01:49:00 · 20.4 · pumpswap · $107,162 · 0.27 · $9,581 → $20,952
+  CCeygruV · 08 Nov 02:12:33 · 8.7 · pumpswap · $101,242 · 0.36 · $23,206 → $22,853
+  EXgMnKTG · 08 Nov 02:59:24 · 27.1 · pumpswap · $101,618 · 0.45 · $8,047 → $6,480
+  AirpGszw · 08 Nov 03:29:45 · 7.3 · pumpswap · $101,381 · 0.22 · $85,173 → $78,441
+  8pP2Hgkk · 08 Nov 04:29:59 · 9.6 · pumpswap · $100,474 · 0.44 · $25,356 → $68,080
+  GTdy1uDa · 08 Nov 04:38:58 · 19.1 · pumpswap · $107,758 · 0.42 · $28,630 → $51,245
+  6Deksqa8 · 08 Nov 05:08:59 · 32.0 · pumpswap · $107,091 · 0.47 · $2,635 → -
+  2NE9a9gW · 08 Nov 05:16:54 · 16.6 · pumpswap · $104,633 · 0.28 · $3,859 → $5,868
+  5cxhUCLS · 08 Nov 05:21:04 · 2.1 · pumpswap · $101,076 · 0.42 · $98,467 → $91,576
+  8N6Xy7SA · 08 Nov 05:48:34 · 5.4 · pumpswap · $100,948 · 0.63 · $28,583 → $83,699
+  CdmzERuZ · 08 Nov 06:11:39 · 15.0 · pumpswap · $100,012 · 0.20 · $4,634 → -
+  2Ad2dvFm · 08 Nov 06:16:31 · 8.8 · pumpswap · $100,180 · 0.26 · $83,480 → $83,220
+  CxRfGZyU · 08 Nov 06:19:38 · 3.1 · pumpswap · $114,369 · 0.44 · $1,625 → $2,181
+  J1c4tDDU · 08 Nov 06:57:43 · 12.2 · pumpswap · $101,396 · 0.26 · $72,907 → $56,712
+  2cdswcuZ · 08 Nov 07:48:32 · 66.8 · pumpswap · $107,684 · 0.36 · $11,111 → $6,581
+  AFv7Xu3N · 08 Nov 08:31:24 · 61.1 · pumpswap · $100,912 · 0.40 · $2,744 → $4,926
+  AKeCyQBK · 08 Nov 10:26:05 · 37.4 · pumpswap/USDC · $101,099 · 0.35 · - → -
+  HsXo7d9b · 08 Nov 10:40:57 · 15.4 · pumpswap · $100,181 · 0.31 · $48,529 → -
+  HJSJ7NUX · 08 Nov 11:09:21 · 85.2 · pumpswap · $105,891 · 0.39 · $8,485 → $13,739
+  693RVZyu · 08 Nov 11:45:46 · 19.7 · pumpswap · $112,225 · 0.22 · $4,809 → $12,299
+  2tHh71KS · 08 Nov 12:12:57 · 23.1 · pumpswap · $101,166 · 0.20 · $44,042 → $36,651
+  5PmU19op · 08 Nov 12:38:33 · 48.0 · pumpswap · $100,152 · 0.17 · $7,069 → $12,995
+  4wQ3aNY5 · 08 Nov 12:49:40 · 8.1 · pumpswap · $106,028 · 0.35 · $17,768 → -
+  27gyAq3p · 08 Nov 12:57:05 · 1.7 · pumpswap · $147,744 · 0.51 · $218 → -
+  8r1dELDh · 08 Nov 13:16:27 · 73.2 · pumpswap · $124,897 · 0.28 · $8,812 → $6,719
+  BQn2Wz51 · 08 Nov 13:17:07 · 21.6 · pumpswap · $100,582 · 0.19 · $15,682 → -
+  2HhH7Lwf · 08 Nov 14:35:08 · 82.9 · pumpswap · $100,464 · 0.00 · $4,709 → $56,851
+
+LIMITS: no outage list for this window (UNKNOWN_OUTAGE label not applied — feed gaps could hide crossings among NOCROSS_OBS); detection only, no trading value.

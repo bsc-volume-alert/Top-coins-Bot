@@ -331,3 +331,8 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - Effect: pre/pre_nb = 0 for every launch in that window, so FD, FDL, FDB, FDH, FDF, FD35, FD120, FDX, FDHF, FDLU, FDLUX, FDLU90, FDLU120, FDU*, A1 recorded NO entries for ~18 h. **This gap is a data outage, not "the rule found nothing"** — exclude 7 Nov 23:00 → 8 Nov 17:21 UK from any frequency/return comparison of those books. BL, E60, E90, E90C, BL27 were unaffected.
 - Fix 0.9.55: per-trace watchdog (TRACE_CAP_MS + 15 s) frees the worker and marks 'failed:hung' (fdStat.traceHung); queue served newest first; pending launches of the last 30 min re-traced after restart.
 - Verified 17:24:54 UTC: 342 traced in ~4 min, pre = 2, traceQueue 56, traceHung 5.
+
+## 8 Nov 17:50 UK — $100K frozen hypotheses confirmed (reports/analysis/100k/confirm_8nov)
+- Export k100-20261108t1722 (90,137 launches 6 Nov 07:40 → 8 Nov 15:00 UTC; census, token_life, per-mint coverage, 556 first crossings, SOL/USD).
+- Confirmation cohort (after 7 Nov 09:57:18, retained, n 3,544, 77 POS): H-sell SUPPORTED (sell share ≥ 0.5 at 60 s: 0.87% reach $100K vs 2.70%); H-hold5 SUPPORTED (held at 5 min 7.0% vs fell 0.84%). Robust to dropping non-SOL-quoted pools and to excluding coins already ≥ $30K at 5 min.
+- Detection only; profit not tested. New data issue: some pump pools are quoted in PUMP/BTC/USDC etc. — mc_usd assumes SOL.

@@ -1,0 +1,9 @@
+SENSITIVITY: non-SOL-quoted pool crossings dropped: 6
+  H-hold5 all: held n 514 POS 36 7.00% [5.10-9.54]
+  H-hold5 all: fell n 1543 POS 13 0.84% [0.49-1.44]
+  H-hold5 cap at 5 min < $50K: held n 490 POS 30 6.12% [4.32-8.61]
+  H-hold5 cap at 5 min < $50K: fell n 1530 POS 9 0.59% [0.31-1.11]
+  H-hold5 cap at 5 min < $30K: held n 444 POS 21 4.73% [3.11-7.12]
+  H-hold5 cap at 5 min < $30K: fell n 1523 POS 7 0.46% [0.22-0.95]
+  H-sell no non-SOL pools: sell≥0.5 n 458 POS 4 0.87% [0.34-2.22]
+  H-sell no non-SOL pools: sell<0.5 n 2698 POS 69 2.56% [2.03-3.22]
