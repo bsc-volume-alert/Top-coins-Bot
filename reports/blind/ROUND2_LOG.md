@@ -30,7 +30,7 @@ Round 1 test: launches created 8 Nov 00:00 → 10 Nov 00:00. Export after **10 N
 ## Submissions log
 | Time (UTC) | Analyst | What | Branch / file | Commit | Checked by coordinator |
 |---|---|---|---|---|---|
-| — | — | nothing yet | — | — | — |
+| 8 Nov 12:01:25 | Codex | Round 1 full text + code (3 internal sessions, archive sha256s) and Round 2 phase A report: **none supported** (72 specifications fixed before outcomes; selected ID 34 lost on the later half) | branch `blind-codex-r2-8nov`: reports/blind/codex_7nov/, reports/blind/codex_r2/, ROUND2_codex_REPORT.md | d9ba6012 | Branch verified on GitHub; nothing outside reports/blind/ touched. Report prepared 11:39:28 UTC. Headline numbers not yet reproduced. Codex Round 1 text now published (b06fa89f content, sha256 642e8c80…); note its own caveat: publication now ≠ publication at freeze time. |
 
 ## Coordinator entries
 - **8 Nov 06:15** — Coordinator chat started. Read ROUND2_BRIEF.md, BRIEF_7nov.md (rev 4), eval README, LOOP_PLAN.md, LAUNCHER.md (tail). Checked every remote branch (34). No Round 2 submission from any analyst: no new `blind-*`, `codex/*`, `gemini/*` or `jules/*` branch; only automated data pushes since the brief (`data` 04:06:58, `launcher-data` 06:09:27). Open Round 1 item: Codex's full submission text is still "not yet retrieved" in its record.
@@ -40,3 +40,4 @@ Round 1 test: launches created 8 Nov 00:00 → 10 Nov 00:00. Export after **10 N
 - **8 Nov 11:31** — Codex analyst (ChatGPT Codex chat "Review attached file", the Round 1 analyst; 3 agents) received the Round 2 message and started. Output will be pasted by the owner and published here verbatim. Codex's separate "Coordinate Pump.fun Research Project" chat is a second referee, not an analyst (it has read Claude's Round 1 work).
 - Gemini (Jules): not started.
 - **8 Nov 11:42** — Gemini (Jules) session "Pump.fun Paper-Trading Research: Round 2 Analyst Brief" started with the full Round 2 message plus a memory constraint (stream one part at a time). Third Jules attempt overall; the two Round 1 sessions errored. Expected output: branch `blind-gemini-r2-8nov`. NOTE: Jules announces it goes read-only on 11 Nov 2026 — it cannot take part in phase D or later rounds; its Round 2 role is phase A analyst if it finishes, otherwise critic in phase B.
+- **8 Nov 12:02** — Codex connected to GitHub (ChatGPT Codex Connector app, repo-scoped to Top-coins-Bot) and pushed `blind-codex-r2-8nov` itself. No more pasting needed for Codex. Open Round 1 item (Codex full text) is now closed.
