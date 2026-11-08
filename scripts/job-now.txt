@@ -1,1 +1,1 @@
-prune-backups 8 Nov 2026 19:05 UTC — keep newest 2 backups (owner go 18:59 UK)
+vol-setup 8 Nov 2026 19:08 UTC — move backups to the new 100 GB volume (owner created it 19:05 UK)
