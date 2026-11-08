@@ -141,7 +141,17 @@ export function initFD(db) {
 /** every 15 s: every tracker launch of the last SCAN_S seconds not yet seen → funder lookup → pre-filter. */
 let scanning = false, scanSince = 0, scanSeq = 0;
 const traceQueue = []; let traceActive = 0; // 0.9.39: persistent bounded trace pool, independent of the scan passes
-function pumpTraces() { while (traceActive < Math.max(1, FD_TRACE_WORKERS) && traceQueue.length) { const { t, traceOne } = traceQueue.shift(); traceActive++; traceOne(t).catch(() => {}).finally(() => { traceActive--; fdStat.traceQueue = traceQueue.length; pumpTraces(); }); } fdStat.traceQueue = traceQueue.length; fdStat.traceActive = traceActive; }
+// 0.9.55 (8 Nov 17:20 UK, reliability self-fix): from ~23:00 UK 7 Nov the 3 trace workers hung on awaits that never settled — traceActive stuck at 3, 24k launches
+// left 'pending', every funding-based book starved for 18 h. Now (a) each trace has a hard watchdog (TRACE_CAP_MS + 15 s): a hung trace frees its worker,
+// the launch is marked lookup_status 'failed:hung' (counted in fdStat.traceHung); (b) the queue is served NEWEST FIRST, so a backlog cannot delay the
+// traces of launches that are about to be checked (an old launch past its checks gains nothing from a late trace; it is still traced when the queue allows).
+let markHung = null;
+function pumpTraces() { while (traceActive < Math.max(1, FD_TRACE_WORKERS) && traceQueue.length) { const { t, traceOne } = traceQueue.pop(); traceActive++;
+    let timer; const guard = new Promise((_, rej) => { timer = setTimeout(() => rej(Object.assign(new Error("trace hung"), { hung: true })), TRACE_CAP_MS + 15000); });
+    Promise.race([traceOne(t), guard]).catch((e) => { if (e?.hung) { fdStat.traceHung = (fdStat.traceHung || 0) + 1; fdStat.lastTraceHung = `${t.mint.slice(0, 6)} at ${new Date().toISOString()}`; tracingNow.delete(t.mint); try { markHung?.(t.mint); } catch {} } })
+      .finally(() => { clearTimeout(timer); traceActive--; fdStat.traceQueue = traceQueue.length; fdStat.traceActive = traceActive; pumpTraces(); }); }
+  fdStat.traceQueue = traceQueue.length; fdStat.traceActive = traceActive; }
+let requeued = false;
 const STALL_MS = n("LAUNCH_FD_STALL_MS", 300000); // 0.9.22: a scan or check pass that has not finished in 5 min is abandoned (its flag reset, the stall counted) — 11:06 UK: both passes hung on awaits that never settled, no error, 20+ min
 export async function fdScan(db, tdb) {
   if (scanning && Date.now() - scanSince > STALL_MS) { fdStat.stalls = (fdStat.stalls || 0) + 1; fdStat.lastErr = `scan stalled ${Math.round((Date.now() - scanSince) / 60000)} min — pass abandoned`; scanning = false; }
@@ -157,6 +167,10 @@ export async function fdScan(db, tdb) {
     const insNow = db.prepare("INSERT OR IGNORE INTO fd_watch (mint, name, symbol, creator, created_ts, bundle_pct, bundle_sol, pre, pre_nb, why, scanned_ts, dev_buy_sol, lookup_status, grp) VALUES (?,?,?,?,?,?,?,0,0,'funding pending',?,?,'pending','pending')");
     const upd = db.prepare("UPDATE fd_watch SET funder=?, funder_sol=?, funded_ts=?, funder_launches=?, pre=?, pre_nb=?, why=?, trace_ts=?, name_1h=?, name_24h=? WHERE mint=?");
     const pending = [];
+    markHung = (mint) => db.prepare("UPDATE fd_watch SET lookup_status='failed:hung', grp='lookup-failed', why='trace hung (watchdog)', trace_ts=? WHERE mint=? AND lookup_status='pending'").run(now(), mint);
+    if (!requeued) { requeued = true; // 0.9.55: after a restart, launches of the last 30 min still 'pending' are traced again (the in-memory queue is lost on restart)
+      for (const w of db.prepare("SELECT mint, name, symbol, creator, created_ts AS create_ts, bundle_pct, bundle_sol, dev_buy_sol FROM fd_watch WHERE lookup_status='pending' AND created_ts>=? ORDER BY created_ts").all(now() - 1800))
+        if (!tracingNow.has(w.mint)) { tracingNow.add(w.mint); pending.push({ ...w, peak_mc_usd: null, graduated: 0 }); } }
     for (const t of rows) {
       if (db.prepare("SELECT 1 FROM fd_watch WHERE mint=?").get(t.mint)) continue;
       if (fdStat.credits >= DAY_CREDITS) { fdStat.lastErr = `daily Helius budget ${DAY_CREDITS} reached`; break; }
