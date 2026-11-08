@@ -350,3 +350,11 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 2. Attrition: 3,544 → 3,160 = minus ALREADY 200, SUSPECT 89, UNKNOWN_NO_POOL 91, UNKNOWN_NEAR 4. 3,144 → 2,057 for hold5: 1,078 had market cap recorded as 0 at 60 s and a late 5-min reading (1,058 still flagged alive) — a recording gap, not dead coins. 12 POS among the 1,087 dropped. Bounds: all dropped as "fell" → fell 0.95% [0.64–1.40]; all as "held" → held 3.0% [2.27–3.95]; both still clear of the other group. NEW DATA ISSUE: token_life mc = 0 at 60 s for ~1/3 of retained coins.
 3. Non-SOL quotes: 17 cohort coins have a non-SOL pool; excluded from every comparison in the strict run.
 4. Freeze: hypotheses frozen 10:45 UK, cohort began 09:57:18 (48 min overlap). Strict cohort (after 10:45, non-SOL excluded, 72 POS): sell ≥ 0.5 4/453 0.88% [0.34–2.25] vs 68/2,644 2.57%; held 36/502 7.17% [5.22–9.77] vs fell 13/1,515 0.86% [0.50–1.46]. Both still SUPPORTED. Stopping rule: evaluated once (at 77 POS, beyond the 15 required) — not peeked, but later than the rule's first-possible point.
+
+## 8 Nov 19:25 UK — CORRECTION: the $100K "signals" are mostly current size (Codex audit, reproduced by stratified.py)
+- Codex's independent audit (hashes matched, outputs reproduced) stratified by current cap. Reproduced here on the strict cohort (after 10:45 UK, non-SOL excluded):
+  - H-hold5, held vs fell within 5-min cap bands: Mantel-Haenszel odds ratio **0.99** (crude 8.93). E.g. $10–15K: 9.1% vs 9.1%; $50–100K: 28.6% vs 30.8%.
+  - H-sell, within 60-s cap bands: odds ratio **0.80** (crude ≈ 0.33); very few heavy-sell coins above $5K, so weakly measured.
+- So the eightfold "held" contrast mostly re-identifies coins that are already bigger at 5 min. My earlier "still holds below $30K" check was inadequate — it did not compare held and fell coins of the same size. The frozen hypotheses "passed" their criteria, but they add little or nothing beyond current market cap.
+- What does carry information: current cap itself (5-min cap $20–100K → ~20–30% reach $100K within 2 h vs ~1% under $10K). Whether buying at that size makes money after costs is untested.
+- Next (agreed with Codex): baseline = 5-min current cap; test whether persistence/selling add anything; then trade replay on identical opportunities.
