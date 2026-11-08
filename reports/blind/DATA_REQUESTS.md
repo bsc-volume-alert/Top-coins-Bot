@@ -1,0 +1,26 @@
+# Data requests — collected by the coordinator (Round 2 phase A, 8 Nov 2026)
+
+Sources: Claude report §7 (blind-fable-r2-8nov @ 8011d4ee), Codex report "Data requests" (blind-codex-r2-8nov @ d9ba6012), the owner's research inventory (8 Nov 12:18 UK). Gemini: pending. Owner decides; nothing here is approved until he says so. All items are **knowable-at-time**: every field must carry the time it became known (receipt / lookup / scan time) so a rule can only use what existed at its decision time.
+
+## Ranked list
+
+| # | Question it would test | Data needed | Source | Cost | Requested by |
+|---|---|---|---|---|---|
+| 1 | Does any signal survive other days and regimes? (36 h holds one good 9-h stretch; nothing can be learned about regimes from one) | All-coins export (same format as entry-all-20261107t2210) for ≥ 7 consecutive days before each test; plus an evaluator option to process launches in time order with a small cross-launch state (e.g. realised return of a rule over the previous 3 h) | tracker.db — rows already stored (no deletion); supp-export window mode | Disk/GitHub size only (~1 GB per 36 h compressed); export-code change for the time-ordered mode | Claude 3, Codex 4 |
+| 2 | Does "first launch by this creator" (7+ days of history) separate winners from losers at the retention entry? | Census `creator`, `create_ts` for all launches ≥ 7 days before each test day; exposed in `view.meta.creator_prior_launches` computed from launches with create_ts < t | tracker census — already stored | Export only; small evaluator extension (eval-1.2) | Claude 1 |
+| 3 | Is the 1.0 s decision→fill assumption real at the receipt of the 15-SOL trade — the only non-negative spot found? What do 1.5 s and 2.0 s look like? | ~50 real 0.02 SOL buys sent at receipt of the retention trade: send time, landed slot/time, fill price; or at minimum the launcher's measured decision→landed distribution and Jupiter quote shadows matched to these entries | Live tiny trades (owner's decision — this is real SOL, ~1 SOL total incl. losses) or existing fd_quotes/chain_fill matched by time | ~1 SOL + Helius credits for ~50 confirmations | Claude 2, Codex 5 |
+| 4 | Is early acceleration independent demand or coordinated recycling? Do sniper/farm/bundle wallet groups at the retention trade predict the 30-s outcome? | Funding/transfer traces with trace_ts and lookup_status; sniper and creation-slot buyer lists; farm-wallet flags **as recorded at each check**, with the time each wallet was first flagged; operator/funder links | launcher.db (fd_watch.checks, snipers, operators, funding traces) — exists for checked coins only | Export only for what exists; Helius credits if extended to all retained launches (~1 trace per creator; measured per trace) | Claude 6, Codex 1 |
+| 5 | Does ownership concentration (not gross-buy share) explain later losses? | Token-account balances / transfers around decision and exit times, with observation times; GMGN holder counts where checked | GMGN holder snapshots (API credits — measure the per-call cost first); transfers need an indexer (Helius) | Credits — unmeasured; do not fund until #1–#4 are done | Codex 2 |
+| 6 | Were quiet spans complete captures or buffer/feed losses? Were the 55 retained launches of 6 Nov 18:00–24:00 representative? | Restart/subscription ledger, per-mint retention/finalisation times, buffer-overflow records; tracker's own count of retained launches it did not record | pm2/deploy logs, tracker status fields — exist | Export only | Claude 4, Codex 3 |
+| 7 | Are the "instant graduation" pool states real? (4 mints score +178× to +3,494× in eval-1.1 — artefact) | For 5kdsd8zW…, LLzYn4…, fBidsB…, dEJEFG…: pool account, base-mint decimals read from the mint, one on-chain reserve read; whether tracker 0.19.9 reads base_dec or assumes 6 | One RPC read per mint | Negligible | Claude 5 |
+| 8 | Does attention BEFORE the rise add anything? | Timestamped social data (first-seen times, account age, follower growth) per launch | Not captured; pump.fun API answers 403 to the droplet; X API is paid | Highest cost, lowest confidence — defer | Owner inventory §10 |
+
+## Proposed Round 3 data package (one export, needs the owner's "go" to the control room)
+From tracker.db and launcher.db, knowable-at-time, for the 7 days before the Round 3 test: (a) all-coins trades (#1); (b) census with creator history (#2); (c) funding traces, sniper/creation-slot buyers, bundle and creator selling, farm signals as recorded at each check (#4); (d) capture ledger (#6); (e) GMGN holder counts where already checked (#5, existing only). Items #3 and #7 are separate small jobs. #8 deferred.
+
+## Evaluator changes queued for eval-1.2 (new version, new untouched test period — never applied mid-test)
+- Completed-curve state (vTok at the floor) unavailable for buying; pool state priced > 3× the curve ceiling within 2 h of completion invalid; base decimals read from the mint (Claude §6).
+- Bundle tier-1 retention to use the census `finalized` time (Codex second-referee point 2).
+- Horizon exit to use the state as of horizon + 0.7 s, matching the written rules (Codex point 3).
+- `view.meta` to carry creator_prior_launches and the knowable-at-time wallet-group fields (#2, #4).
+- Optional time-ordered mode with cross-launch state (#1).
