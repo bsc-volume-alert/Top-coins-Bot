@@ -325,3 +325,9 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - H4 matched (706 E60-eligible coins): E60 −22.3%, E90 −17.7%, E90C −2.2% per eligible coin [−7.1, +4.5]; E90C − E60 = +20.1 pts, 99% [+11.6, +27.7] — the loss reduction holds on a larger sample; E90C itself is still not shown profitable.
 - Bought already on the pool: −31.2% (226 coins) vs on the curve −18.9% (635) — the pattern from the morning holds.
 - Losses: 65% from coins never +30% while held, 24% from 1.3–2×, 11% from coins that hit 2× then lost; the 17% winners average +121%.
+
+## 8 Nov 17:25 UK — funding-trace stall (reliability fault, self-fixed in launcher 0.9.55)
+- From ~23:00 UK 7 Nov to 17:21 UK 8 Nov the 3 funding-trace workers hung on awaits that never settled (traceActive stuck at 3, 24,196 launches left lookup_status 'pending').
+- Effect: pre/pre_nb = 0 for every launch in that window, so FD, FDL, FDB, FDH, FDF, FD35, FD120, FDX, FDHF, FDLU, FDLUX, FDLU90, FDLU120, FDU*, A1 recorded NO entries for ~18 h. **This gap is a data outage, not "the rule found nothing"** — exclude 7 Nov 23:00 → 8 Nov 17:21 UK from any frequency/return comparison of those books. BL, E60, E90, E90C, BL27 were unaffected.
+- Fix 0.9.55: per-trace watchdog (TRACE_CAP_MS + 15 s) frees the worker and marks 'failed:hung' (fdStat.traceHung); queue served newest first; pending launches of the last 30 min re-traced after restart.
+- Verified 17:24:54 UTC: 342 traced in ~4 min, pre = 2, traceQueue 56, traceHung 5.
