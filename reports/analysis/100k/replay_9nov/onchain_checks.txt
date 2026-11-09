@@ -1,0 +1,19 @@
+# On-chain evidence for POOL_DIAGNOSIS.md (9 Nov 2026).
+# Sample swaps, with full signatures, pools and event reserves: reports/tools/pool-vault-sample.json. Pools: reports/tools/pool-virtual-sample.json.
+# Scripts: reports/tools/pool-vault-check.mjs (getTransaction, jsonParsed, maxSupportedTransactionVersion 0 — 6 of 9 swaps are version-1 transactions it could not read),
+#          reports/tools/pool-virtual-check.mjs (getAccountInfo, virtual_quote_reserves i128 @ byte 245; CURRENT state read 9 Nov ~20:00 UTC).
+# Output copied verbatim from the server deploy log (vault run ~19:45 UTC, virt run ~20:00 UTC, 9 Nov):
+[vault] 3MW1ff buy  0.100 SOL ev_idx 0 | event Q 72.8998 B 194466292 | vault WSOL pre 72.8998 post 72.9989 | vault base pre 194466292 post 194254036 | data-logs 1
+[vault] 3MW1ff buy  7.226 SOL ev_idx 0 | event Q 134.2999 B 122367716 | vault WSOL pre 134.2999 post 141.4544 | vault base pre 122367716 post 116868823 | data-logs 1
+[vault] JCp59xaS no result {"code":-32015,"message":"Transaction version (1) is not supported by the reques
+[vault] DoHGGb buy  0.100 SOL ev_idx 0 | event Q 67.4059 B 206900000 | vault WSOL pre 67.4059 post 67.5046 | vault base pre 206900000 post 206659845 | data-logs 1
+[vault] VqmoZ1Jj no result {"code":-32015,"message":"Transaction version (1) is not supported by the reques
+[vault] kUVFuuJ2 no result {"code":-32015,"message":"Transaction version (1) is not supported by the reques
+[vault] BwJeGV buy  0.100 SOL ev_idx 0 | event Q 67.6049 B 206420247 | vault WSOL pre 67.6049 post 67.7037 | vault base pre 206420247 post 206181204 | data-logs 1
+[vault] 2YAYcg5U no result {"code":-32015,"message":"Transaction version (1) is not supported by the reques
+[vault] 3Yhp6zCg no result {"code":-32015,"message":"Transaction version (1) is not supported by the reques
+[virt] 3MW1ff pool 8ixGUy len 301 virtual_quote 17.5834 SOL | fitted c median 17.209 (first50 17.530, last50 17.023, n 13460)
+[virt] DoHGGb pool Eg26iu len 301 virtual_quote 17.5841 SOL | fitted c median 17.495 (first50 18.096, last50 16.904, n 3437)
+[virt] BwJeGV pool 4R1Qc6 len 301 virtual_quote 17.5840 SOL | fitted c median 17.419 (first50 17.578, last50 16.930, n 5236)
+# Worked check (3MW1ff 7.226 SOL buy): vault quote +7.1545 SOL, base out 5,498,893. Constant product on the vault reserves alone predicts 6.19M tokens;
+# on vault quote + 17.2 SOL it predicts 5.51M — matching the observed 5.50M.
