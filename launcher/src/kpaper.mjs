@@ -42,8 +42,8 @@ function poll() {
     lastRowid = rows.length === 500 ? rows[rows.length - 1].rid : mx; }
   catch (e) { kStat.errors++; kStat.lastErr = "poll: " + e.message.slice(0, 100); return; }
   try { const mx = tdb.prepare("SELECT MAX(rowid) r FROM token_cp_clock").get().r || lastClock; // 0.9.59: the clock checkpoint (tracker 0.19.10+); absent table = not yet deployed
-    const cr = tdb.prepare("SELECT rowid AS rid, mint, cutoff_ts, processed_ts, mc, price_age_s, status FROM token_cp_clock WHERE rowid > ? AND rowid <= ? AND cp = 300 ORDER BY rowid LIMIT 500").all(lastClock, mx);
-    for (const r of cr) rows.unshift({ src: "clock", mint: r.mint, cpTs: r.cutoff_ts, avail: r.processed_ts, mc: Number(r.mc), clockStatus: r.status, priceAge: r.price_age_s });
+    const cr = tdb.prepare("SELECT rowid AS rid, mint, cutoff_ts, processed_ts, mc, price_age_s, status, epoch FROM token_cp_clock WHERE rowid > ? AND rowid <= ? AND cp = 300 ORDER BY rowid LIMIT 500").all(lastClock, mx);
+    for (const r of cr) rows.unshift({ src: "clock", mint: r.mint, cpTs: r.cutoff_ts, avail: r.processed_ts, mc: Number(r.mc), clockStatus: r.status, priceAge: r.price_age_s, epoch: r.epoch });
     lastClock = cr.length === 500 ? cr[cr.length - 1].rid : mx;
     if (cr.length && !kStat.epoch2) { kStat.epoch2 = now(); try { db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('K_EPOCH2', ?, ?)").run(kStat.epoch2, K_EPOCH); } catch {} } }
   catch {}
@@ -69,7 +69,7 @@ function poll() {
       const ids = [];
       for (const b of take) {
         db.prepare("INSERT OR IGNORE INTO vol_paper (strat, mint, entry_ts, entry_price, entry_mc, created_ts, age_min, row) VALUES (?,?,?,?,?,?,?,?)")
-          .run(b.k, r.mint, readTs, px, mc, c, +((readTs - c) / 60).toFixed(2), JSON.stringify({ k: { ver: K_VER, epoch: r.src === "clock" ? K_EPOCH : "trade-cp", src: r.src, mc5: mc, cp_ts: r.cpTs, avail_ts: avail, read_ts: readTs, price_age_s: r.priceAge ?? null, sol_usd: su } }));
+          .run(b.k, r.mint, readTs, px, mc, c, +((readTs - c) / 60).toFixed(2), JSON.stringify({ k: { ver: K_VER, epoch: r.src === "clock" ? (r.epoch || K_EPOCH) : "trade-cp", src: r.src, mc5: mc, cp_ts: r.cpTs, avail_ts: avail, read_ts: readTs, price_age_s: r.priceAge ?? null, sol_usd: su } }));
         const id = db.prepare("SELECT id FROM vol_paper WHERE strat=? AND mint=?").get(b.k, r.mint)?.id;
         if (id) { ids.push(id); setTrail(id, K_TRAIL[b.k]); }
       }
