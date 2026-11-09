@@ -1,0 +1,15 @@
+=== 30-50K T25: v1 → v2 by entry venue
+  curve     n 9 v1 mean +54.9%  v2 mean +52.9%  change -2.0 pts
+  pumpswap  n 34 v1 mean +6.7%  v2 mean +1.7%  change -5.0 pts
+  largest drops: [('3ofzkdBY', 'pumpswap', 13, -93), ('EWXmXLRD', 'pumpswap', 5, -94), ('CT67RgHX', 'curve', 36, 29), ('CJk9kG36', 'pumpswap', 57, 53), ('CFxxQDnQ', 'curve', 128, 124)]
+
+=== 30-40K band, T25 (v2): winners vs losers — features known BEFORE entry
+  net60            winners n19 median 3.19 | losers n14 median 3.00
+  sellshare        winners n19 median 0.44 | losers n14 median 0.49
+  ntr60            winners n19 median 242.00 | losers n14 median 462.50
+  mins_since_pool  winners n11 median 0.97 | losers n13 median 1.20
+  entry venue: winners Counter({'pumpswap': 11, 'curve': 8}) losers Counter({'pumpswap': 13, 'curve': 1})
+
+=== Extreme-winner audit: 10-15K band, T25/T40 with and without 693RVZyu (The Year 2021)
+  T25: with n82 mean +54.5% | without 693RVZyu n81 mean +6.3% | best coin 693RVZyu +3955%
+  T40: with n82 mean +42.3% | without 693RVZyu n81 mean -0.0% | best coin 693RVZyu +3475%
