@@ -1,0 +1,11 @@
+pairs 942833 matching pre-trade base reserves 931072
+BUY: (Q_next - Q) / quote_amount_in : n 512894 median 0.9998 p10 0.9901 p90 1.0113
+SELL: (Q - Q_next) / quote_amount_out: n 418178 median 0.9980 p10 0.9882 p90 0.9998
+BUY: base_out / constant-product(pre Q,B, quote_amount_in): n 512894 median 0.8693 p10 0.7856 p90 0.9522
+price_sol / (Q/B) on these rows: n 931072 median 1.1533 p10 1.0488 p90 1.2779
+BUY implied Q'/Q: n 505087 median 1.1486 p10 1.0501 p90 1.2778
+SELL implied Q'/Q: n 435181 median 1.1525 p10 1.0483 p90 1.2927
+per-mint median (Q'-Q) in SOL: n 149 median 17.2635 p10 12.8366 p90 17.5588
+pools with >=200 swaps 138
+change in c, last50 - first50 (SOL): n 138 median -0.6213 p10 -3.4823 p90 0.0550
+p90-p10 spread of c within pool (SOL): n 138 median 2.1430 p10 1.2344 p90 12.0193
