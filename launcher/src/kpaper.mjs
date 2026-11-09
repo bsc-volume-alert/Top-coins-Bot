@@ -16,9 +16,9 @@
 import { chainEntry, setTrail, K_TRAIL } from "./chainfill.mjs";
 const now = () => Math.floor(Date.now() / 1000);
 export const K_VER = "K-1";
-export const kStat = { polled: 0, seen: 0, onTime: 0, late: 0, inBand: 0, entries: 0, errors: 0, lastErr: "", lastRow: null, activated: null };
+export const kStat = { polled: 0, seen: 0, onTime: 0, late: 0, lateAvail: 0, lateRead: 0, availLagP50: null, readLagP50: null, inBand: 0, entries: 0, errors: 0, lastErr: "", lastRow: null, activated: null };
 const BOOKS = [{ k: "K30-50T25", lo: 30000, hi: 50000 }, { k: "K30-40T25", lo: 30000, hi: 40000 }, { k: "K30-40T20", lo: 30000, hi: 40000 }];
-let db = null, tdb = null, lastRowid = 0;
+let db = null, tdb = null, lastRowid = 0; const LAGS = [];
 export function initK(d, t) {
   db = d; tdb = t; if (!tdb) return;
   db.exec("CREATE TABLE IF NOT EXISTS kpaper_decisions (mint TEXT PRIMARY KEY, create_ts INTEGER, cp_ts INTEGER, avail_ts INTEGER, read_ts INTEGER, mc5 REAL, status TEXT, books TEXT, ver TEXT)");
@@ -47,6 +47,8 @@ function poll() {
       const avail = r.obs_ts || r.ts, mc = Number(r.mc);
       const rec = (status, books) => db.prepare("INSERT OR IGNORE INTO kpaper_decisions (mint, create_ts, cp_ts, avail_ts, read_ts, mc5, status, books, ver) VALUES (?,?,?,?,?,?,?,?,?)").run(r.mint, c ?? null, r.ts, avail, readTs, mc || null, status, books || null, K_VER);
       if (!c) { rec("no creation time"); continue; }
+      LAGS.push([avail - c, readTs - c]); if (LAGS.length > 400) LAGS.shift(); const sa = LAGS.map((x) => x[0]).sort((a, b) => a - b), sr = LAGS.map((x) => x[1]).sort((a, b) => a - b); kStat.availLagP50 = sa[sa.length >> 1]; kStat.readLagP50 = sr[sr.length >> 1]; // logging only (0.9.57)
+      if (avail > c + 315) kStat.lateAvail++; else if (readTs > c + 315) kStat.lateRead++;
       if (avail > c + 315 || readTs > c + 315) { kStat.late++; rec(avail > c + 315 ? "late: reading available after 315 s" : "late: read by launcher after 315 s"); continue; }
       kStat.onTime++;
       if (!(mc > 0)) { rec("no market cap"); continue; }
