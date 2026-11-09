@@ -1,0 +1,325 @@
+===== /root/tracker/data/push-now.log
+[push-data] pushed 2026-10-19T19:16:59Z
+[push-data] csv fetch failed
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-20T04:03:31Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-20T06:25:16Z
+[push-data] pushed 2026-10-20T08:30:20Z
+[push-data] pushed 2026-10-20T08:50:33Z
+[push-data] pushed 2026-10-20T09:26:00Z
+[push-data] pushed 2026-10-20T14:04:39Z
+[push-data] pushed 2026-10-20T15:11:46Z
+[push-data] pushed 2026-10-20T15:14:50Z
+[push-data] pushed 2026-10-20T17:31:05Z
+[push-data] pushed 2026-10-20T17:52:20Z
+[push-data] pushed 2026-10-20T18:42:03Z
+[push-data] pushed 2026-10-20T22:27:31Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-20T23:10:20Z
+[push-data] pushed 2026-10-20T23:59:49Z
+[push-data] pushed 2026-10-21T00:29:56Z
+[push-data] pushed 2026-10-21T00:43:12Z
+[push-data] pushed 2026-10-21T07:29:39Z
+[push-data] pushed 2026-10-21T07:43:26Z
+[push-data] pushed 2026-10-21T08:21:22Z
+[push-data] pushed 2026-10-21T08:48:18Z
+[push-data] pushed 2026-10-21T09:20:57Z
+[push-data] pushed 2026-10-21T09:30:45Z
+[push-data] pushed 2026-10-21T09:36:26Z
+[push-data] pushed 2026-10-21T12:21:04Z
+[push-data] pushed 2026-10-21T13:13:41Z
+[push-data] pushed 2026-10-21T15:27:17Z
+[push-data] pushed 2026-10-21T15:50:40Z
+[push-data] pushed 2026-10-21T15:54:02Z
+[push-data] pushed 2026-10-21T16:26:11Z
+[push-data] pushed 2026-10-21T16:37:09Z
+[push-data] pushed 2026-10-21T16:49:17Z
+[push-data] pushed 2026-10-21T16:53:03Z
+[push-data] pushed 2026-10-21T16:56:12Z
+[push-data] pushed 2026-10-21T17:17:27Z
+[push-data] pushed 2026-10-21T17:24:15Z
+[push-data] pushed 2026-10-21T17:28:04Z
+[push-data] pushed 2026-10-21T17:33:24Z
+[push-data] pushed 2026-10-21T17:37:33Z
+[push-data] pushed 2026-10-21T17:37:59Z
+[push-data] pushed 2026-10-21T17:48:57Z
+[push-data] pushed 2026-10-21T18:51:49Z
+[push-data] pushed 2026-10-21T21:31:19Z
+[push-data] pushed 2026-10-21T21:37:36Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-21T22:36:18Z
+[push-data] pushed 2026-10-21T22:41:23Z
+[push-data] pushed 2026-10-21T23:01:12Z
+[push-data] pushed 2026-10-21T23:04:51Z
+[push-data] pushed 2026-10-21T23:08:42Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-23T06:10:31Z
+[push-data] pushed 2026-10-23T12:17:03Z
+[push-data] pushed 2026-10-23T12:21:26Z
+[push-data] pushed 2026-10-23T12:26:13Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-23T18:50:43Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-30T22:17:38Z
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[push-data] csv fetch failed
+[push-data] csv fetch failed
+[push-data] fomo flow_hourly fetch failed
+[push-data] fomo trades fetch failed
+[push-data] fomo theses fetch failed
+[push-data] pushed 2026-11-04T10:35:07Z
+[push-data] csv fetch failed
+===== /root/.pm2/logs/launcher-out.log
+===== /root/.pm2/logs/launcher-error.log
+[launcher] memory rss=554M heap=36M ext=5M
+[launcher] memory rss=554M heap=35M ext=4M
+[launcher] memory rss=554M heap=40M ext=7M
+[launcher] memory rss=554M heap=38M ext=6M
+[launcher] memory rss=554M heap=41M ext=7M
+[launcher] memory rss=554M heap=42M ext=6M
+[launcher] memory rss=554M heap=42M ext=4M
+[launcher] memory rss=554M heap=36M ext=6M
+[launcher] memory rss=554M heap=38M ext=5M
+[launcher] memory rss=555M heap=43M ext=6M
+[launcher] memory rss=555M heap=37M ext=4M
+[launcher] memory rss=555M heap=41M ext=4M
+[launcher] memory rss=555M heap=44M ext=5M
+[launcher] memory rss=555M heap=32M ext=4M
+[launcher] memory rss=555M heap=32M ext=4M
+[launcher] memory rss=578M heap=280M ext=4M
+[launcher] memory rss=599M heap=323M ext=7M
+[launcher] memory rss=624M heap=348M ext=8M
+[export trades_books] cut at 90 MB: 316147 rows
+[launcher] memory rss=637M heap=349M ext=10M
+[launcher] memory rss=318M heap=40M ext=5M
+[launcher] memory rss=321M heap=42M ext=6M
+[launcher] memory rss=322M heap=40M ext=4M
+[launcher] memory rss=322M heap=32M ext=7M
+[launcher] memory rss=322M heap=33M ext=4M
+[launcher] memory rss=322M heap=41M ext=4M
+[launcher] memory rss=322M heap=39M ext=6M
+[launcher] memory rss=322M heap=38M ext=4M
+[launcher] memory rss=319M heap=28M ext=6M
+[launcher] memory rss=320M heap=35M ext=4M
+[launcher] memory rss=321M heap=29M ext=4M
+[launcher] memory rss=264M heap=41M ext=5M
+[launcher] memory rss=304M heap=51M ext=4M
+[launcher] memory rss=519M heap=43M ext=6M
+[launcher] memory rss=522M heap=31M ext=5M
+[export trades_books] cut at 90 MB: 316200 rows
+[launcher] memory rss=523M heap=40M ext=5M
+[launcher] memory rss=523M heap=42M ext=8M
+[launcher] memory rss=466M heap=31M ext=5M
+[launcher] memory rss=466M heap=33M ext=6M
+[launcher] memory rss=466M heap=41M ext=7M
+[launcher] memory rss=465M heap=39M ext=8M
+[launcher] memory rss=466M heap=34M ext=6M
+[launcher] memory rss=466M heap=33M ext=7M
+[launcher] memory rss=466M heap=38M ext=6M
+[launcher] memory rss=466M heap=42M ext=6M
+[launcher] memory rss=466M heap=46M ext=7M
+[launcher] memory rss=466M heap=42M ext=4M
+[launcher] memory rss=466M heap=43M ext=7M
+[launcher] memory rss=466M heap=37M ext=6M
+[launcher] memory rss=467M heap=40M ext=7M
+[launcher] memory rss=466M heap=39M ext=7M
+[launcher] memory rss=466M heap=38M ext=7M
+[launcher] memory rss=481M heap=255M ext=4M
+[launcher] memory rss=562M heap=311M ext=8M
+[launcher] memory rss=602M heap=329M ext=9M
+[export trades_books] cut at 90 MB: 315971 rows
+[launcher] memory rss=619M heap=341M ext=12M
+[launcher] memory rss=322M heap=46M ext=11M
+[launcher] memory rss=326M heap=46M ext=10M
+[launcher] memory rss=326M heap=45M ext=4M
+[launcher] memory rss=326M heap=32M ext=4M
+[launcher] memory rss=326M heap=39M ext=7M
+[launcher] memory rss=326M heap=36M ext=6M
+[launcher] memory rss=326M heap=42M ext=4M
+[launcher] memory rss=326M heap=39M ext=4M
+[launcher] memory rss=326M heap=42M ext=6M
+[launcher] memory rss=326M heap=42M ext=6M
+[launcher] memory rss=326M heap=37M ext=4M
+[launcher] memory rss=326M heap=33M ext=6M
+[launcher] memory rss=326M heap=41M ext=6M
+[launcher] memory rss=326M heap=43M ext=6M
+[launcher] memory rss=326M heap=40M ext=6M
+[launcher] memory rss=335M heap=40M ext=4M
+[launcher] memory rss=616M heap=334M ext=10M
+[launcher] memory rss=626M heap=344M ext=14M
+[launcher] memory rss=629M heap=39M ext=5M
+[export trades_books] cut at 90 MB: 315661 rows
+[launcher] memory rss=628M heap=40M ext=5M
+[launcher] memory rss=628M heap=35M ext=7M
+===== /root/.pm2/logs/deployer-out.log
+[deploy] [vol-ls] total 22393692
+[deploy] [vol-ls] drwxr-xr-x 2 root root        4096 09Nov04:06 .
+[deploy] [vol-ls] drwxr-xr-x 4 root root        4096 08Nov19:13 ..
+[deploy] [vol-ls] -rw-r--r-- 1 root root  1431594917 06Nov22:05 tracker-2026-11-04.db.gz
+[deploy] [vol-ls] -rw-r--r-- 1 root root  3551715328 06Nov02:42 tracker-2026-11-06.db
+[deploy] [vol-ls] -rw-r--r-- 1 root root       32768 08Nov19:33 tracker-2026-11-06.db-shm
+[deploy] [vol-ls] -rw-r--r-- 1 root root           0 08Nov19:33 tracker-2026-11-06.db-wal
+[deploy] [vol-ls] -rw-r--r-- 1 root root  4611440640 07Nov04:08 tracker-2026-11-07.db
+[deploy] [vol-ls] -rw-r--r-- 1 root root       32768 08Nov19:44 tracker-2026-11-07.db-shm
+[deploy] [vol-ls] -rw-r--r-- 1 root root           0 08Nov19:44 tracker-2026-11-07.db-wal
+[deploy] [vol-ls] -rw-r--r-- 1 root root 13336301568 09Nov04:06 tracker-2026-11-09.db
+[deploy] [vol-ls] Filesystem      Size  Used Avail Use% Mounted on
+[deploy] [vol-ls] /dev/vda1        48G   32G   17G  66% /
+[deploy] [vol-ls] /dev/sda        100G   22G   73G  23% /mnt/volume_1794164707392
+[deploy] 2026-11-09T05:05:40Z updating 676df3d0e83e11343b00a51ee4dc2c8f30a402e1 -> 8a5799088a2c475ec6e0ee6bd6d5a57c0fc94e47
+up to date in 760ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-09T11:39:07Z updating 8a5799088a2c475ec6e0ee6bd6d5a57c0fc94e47 -> 704b198b6697bab2d45a3e574938159c3474b4c4
+up to date in 768ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-09T11:40:40Z updating 704b198b6697bab2d45a3e574938159c3474b4c4 -> 84c20b2a556b1f9659ad0f6765db862086f8f8fb
+up to date in 453ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-09T11:44:14Z updating 84c20b2a556b1f9659ad0f6765db862086f8f8fb -> b1561923366718fe2dccc69fcbb664e57ac85e63
+up to date in 619ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] one-off job: k100b
+[deploy] 2026-11-09T11:46:47Z updating b1561923366718fe2dccc69fcbb664e57ac85e63 -> 45d8a88502d91d3e6251d5415552151b906dcb64
+up to date in 570ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-09T11:48:20Z updating 45d8a88502d91d3e6251d5415552151b906dcb64 -> fc013a5b4a98abcacf4c4072340a8528662a0e27
+up to date in 311ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-09T14:01:15Z updating fc013a5b4a98abcacf4c4072340a8528662a0e27 -> 9cc98cec7274bfeeb660f2f9f884cebedd3be998
+up to date in 977ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-09T14:01:48Z updating 9cc98cec7274bfeeb660f2f9f884cebedd3be998 -> 2efaaf4d1cc0c5b1f172bd8bc56a583a3e77fc8d
+up to date in 493ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-09T18:05:13Z updating 2efaaf4d1cc0c5b1f172bd8bc56a583a3e77fc8d -> ad37591a56a2d11d5e8f5d4f4c8054519ad762ae
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-09T18:05:48Z updating ad37591a56a2d11d5e8f5d4f4c8054519ad762ae -> d1e9f0b6c2ac6fd66309566b7e534d0593474a84
+up to date in 549ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-09T18:16:57Z updating d1e9f0b6c2ac6fd66309566b7e534d0593474a84 -> 3747654a0383e7d4e8e75e57b13b8f8dac6cc484
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-09T18:23:35Z updating 3747654a0383e7d4e8e75e57b13b8f8dac6cc484 -> 10ed68657c6fba1c28e97a8910f5397c223076b2
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] one-off job: vault-check
+[deploy] [vault] 3MW1ff buy  0.100 SOL ev_idx 0 | event Q 72.8998 B 194466292 | vault WSOL pre 72.8998 post 72.9989 | vault base pre 194466292 post 194254036 | data-logs 1
+[deploy] [vault] 3MW1ff buy  7.226 SOL ev_idx 0 | event Q 134.2999 B 122367716 | vault WSOL pre 134.2999 post 141.4544 | vault base pre 122367716 post 116868823 | data-logs 1
+[deploy] [vault] JCp59xaS no result {"code":-32015,"message":"Transaction version (1) is not supported by the reques
+[deploy] [vault] DoHGGb buy  0.100 SOL ev_idx 0 | event Q 67.4059 B 206900000 | vault WSOL pre 67.4059 post 67.5046 | vault base pre 206900000 post 206659845 | data-logs 1
+[deploy] [vault] VqmoZ1Jj no result {"code":-32015,"message":"Transaction version (1) is not supported by the reques
+[deploy] [vault] kUVFuuJ2 no result {"code":-32015,"message":"Transaction version (1) is not supported by the reques
+[deploy] [vault] BwJeGV buy  0.100 SOL ev_idx 0 | event Q 67.6049 B 206420247 | vault WSOL pre 67.6049 post 67.7037 | vault base pre 206420247 post 206181204 | data-logs 1
+[deploy] [vault] 2YAYcg5U no result {"code":-32015,"message":"Transaction version (1) is not supported by the reques
+[deploy] [vault] 3Yhp6zCg no result {"code":-32015,"message":"Transaction version (1) is not supported by the reques
+[deploy] [vault] done
+[deploy] 2026-11-09T18:27:11Z updating 10ed68657c6fba1c28e97a8910f5397c223076b2 -> 2514c3a40ac5f3c7e5c1d30295f36b580d6e486a
+up to date in 900ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-09T18:37:19Z updating 2514c3a40ac5f3c7e5c1d30295f36b580d6e486a -> c35c68eecdeb8c644187fbaa74d131600ef4c4f7
+up to date in 791ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] one-off job: virt-check
+[deploy] [virt] 3MW1ff pool 8ixGUy len 301 virtual_quote 17.5834 SOL | fitted c median 17.209 (first50 17.530, last50 17.023, n 13460)
+[deploy] [virt] DoHGGb pool Eg26iu len 301 virtual_quote 17.5841 SOL | fitted c median 17.495 (first50 18.096, last50 16.904, n 3437)
+[deploy] [virt] BwJeGV pool 4R1Qc6 len 301 virtual_quote 17.5840 SOL | fitted c median 17.419 (first50 17.578, last50 16.930, n 5236)
+[deploy] [virt] done
+[deploy] 2026-11-09T18:47:27Z updating c35c68eecdeb8c644187fbaa74d131600ef4c4f7 -> acf8780b0f8bdb9b1bc47d6f229f0efb5a97d9cb
+up to date in 893ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-09T20:16:13Z updating acf8780b0f8bdb9b1bc47d6f229f0efb5a97d9cb -> ea5081e296fe2b9a34da02a4c30a23a42c37ba63
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] one-off job: diag
+===== /root/.pm2/logs/tracker-error.log
+[web snapshot plain] build took 11722 ms
+[stall] 19:24:39Z event loop blocked 13.6 s · heap 615 MB · rss 990 MB · slow jobs: flagTrades 2649 ms @18:45:34Z · flagTrades 2219 ms @18:50:34Z · flagTrades 4116 ms @18:55:34Z · flagTrades 3788 ms @19:06:15Z · flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z
+[stall] 19:25:44Z event loop blocked 2.6 s · heap 626 MB · rss 1004 MB · slow jobs: flagTrades 2649 ms @18:45:34Z · flagTrades 2219 ms @18:50:34Z · flagTrades 4116 ms @18:55:34Z · flagTrades 3788 ms @19:06:15Z · flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z
+[slow] flagTrades took 4937 ms
+[stall] 19:26:23Z event loop blocked 5.0 s · heap 639 MB · rss 1010 MB · slow jobs: flagTrades 2219 ms @18:50:34Z · flagTrades 4116 ms @18:55:34Z · flagTrades 3788 ms @19:06:15Z · flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z
+[web snapshot plain] build took 7185 ms
+[stall] 19:26:33Z event loop blocked 6.9 s · heap 741 MB · rss 1111 MB · slow jobs: flagTrades 2219 ms @18:50:34Z · flagTrades 4116 ms @18:55:34Z · flagTrades 3788 ms @19:06:15Z · flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z
+[web snapshot plain] build took 2140 ms
+[mem] rss 1110 MB — pm2 restarts at 900
+[web snapshot plain] build took 3970 ms
+[stall] 19:30:28Z event loop blocked 3.2 s · heap 587 MB · rss 1112 MB · slow jobs: flagTrades 2219 ms @18:50:34Z · flagTrades 4116 ms @18:55:34Z · flagTrades 3788 ms @19:06:15Z · flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z
+[web snapshot plain] build took 2002 ms
+[web snapshot plain] build took 3587 ms
+[stall] 19:34:28Z event loop blocked 2.6 s · heap 589 MB · rss 1125 MB · slow jobs: flagTrades 2219 ms @18:50:34Z · flagTrades 4116 ms @18:55:34Z · flagTrades 3788 ms @19:06:15Z · flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z
+[stall] 19:36:12Z event loop blocked 2.6 s · heap 488 MB · rss 895 MB · slow jobs: flagTrades 2219 ms @18:50:34Z · flagTrades 4116 ms @18:55:34Z · flagTrades 3788 ms @19:06:15Z · flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z
+[slow] flagTrades took 2008 ms
+[stall] 19:36:20Z event loop blocked 2.3 s · heap 492 MB · rss 902 MB · slow jobs: flagTrades 4116 ms @18:55:34Z · flagTrades 3788 ms @19:06:15Z · flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z
+[web snapshot plain] build took 3862 ms
+[stall] 19:36:28Z event loop blocked 3.8 s · heap 620 MB · rss 1030 MB · slow jobs: flagTrades 4116 ms @18:55:34Z · flagTrades 3788 ms @19:06:15Z · flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z
+[web snapshot plain] build took 3578 ms
+[stall] 19:38:28Z event loop blocked 2.9 s · heap 621 MB · rss 1028 MB · slow jobs: flagTrades 4116 ms @18:55:34Z · flagTrades 3788 ms @19:06:15Z · flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z
+[stall] 19:39:16Z event loop blocked 7.0 s · heap 668 MB · rss 1047 MB · slow jobs: flagTrades 4116 ms @18:55:34Z · flagTrades 3788 ms @19:06:15Z · flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z
+[mem] rss 1057 MB — pm2 restarts at 900
+[web snapshot plain] build took 3858 ms
+[stall] 19:40:28Z event loop blocked 3.1 s · heap 609 MB · rss 1109 MB · slow jobs: flagTrades 4116 ms @18:55:34Z · flagTrades 3788 ms @19:06:15Z · flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z
+[web snapshot plain] build took 3296 ms
+[stall] 19:42:27Z event loop blocked 2.6 s · heap 620 MB · rss 1031 MB · slow jobs: flagTrades 4116 ms @18:55:34Z · flagTrades 3788 ms @19:06:15Z · flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z
+[web snapshot plain] build took 9800 ms
+[stall] 19:44:34Z event loop blocked 9.2 s · heap 620 MB · rss 1024 MB · slow jobs: flagTrades 4116 ms @18:55:34Z · flagTrades 3788 ms @19:06:15Z · flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z
+[slow] flagTrades took 8307 ms
+[stall] 19:46:26Z event loop blocked 8.2 s · heap 641 MB · rss 1043 MB · slow jobs: flagTrades 3788 ms @19:06:15Z · flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z
+[web snapshot plain] build took 5584 ms
+[stall] 19:46:32Z event loop blocked 4.9 s · heap 737 MB · rss 1144 MB · slow jobs: flagTrades 3788 ms @19:06:15Z · flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z
+[web snapshot plain] build took 1893 ms
+[mem] rss 1140 MB — pm2 restarts at 900
+[web snapshot plain] build took 5674 ms
+[stall] 19:50:32Z event loop blocked 5.3 s · heap 588 MB · rss 1139 MB · slow jobs: flagTrades 3788 ms @19:06:15Z · flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z
+[slow] flagTrades took 2137 ms
+[web snapshot plain] build took 5461 ms
+[stall] 19:52:32Z event loop blocked 4.8 s · heap 617 MB · rss 1035 MB · slow jobs: flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z
+[web snapshot plain] build took 6080 ms
+[stall] 19:54:33Z event loop blocked 5.5 s · heap 605 MB · rss 1026 MB · slow jobs: flagTrades 4705 ms @19:16:17Z · flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z
+[slow] flagTrades took 5564 ms
+[stall] 19:56:24Z event loop blocked 4.8 s · heap 618 MB · rss 1042 MB · slow jobs: flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z
+[web snapshot plain] build took 5611 ms
+[stall] 19:56:32Z event loop blocked 5.4 s · heap 727 MB · rss 1143 MB · slow jobs: flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z
+[web snapshot plain] build took 1927 ms
+[mem] rss 1141 MB — pm2 restarts at 900
+[web snapshot plain] build took 4525 ms
+[stall] 20:00:31Z event loop blocked 4.0 s · heap 584 MB · rss 1142 MB · slow jobs: flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z
+[stall] 20:01:16Z event loop blocked 8.3 s · heap 597 MB · rss 1142 MB · slow jobs: flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z
+[stall] 20:02:17Z event loop blocked 2.7 s · heap 483 MB · rss 919 MB · slow jobs: flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z
+[web snapshot plain] build took 4149 ms
+[stall] 20:02:30Z event loop blocked 3.6 s · heap 609 MB · rss 1041 MB · slow jobs: flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z
+[stall] 20:04:15Z event loop blocked 3.3 s · heap 474 MB · rss 907 MB · slow jobs: flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z
+[web snapshot plain] build took 5109 ms
+[stall] 20:04:31Z event loop blocked 4.6 s · heap 600 MB · rss 1031 MB · slow jobs: flagTrades 3954 ms @19:21:17Z · flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z
+[slow] p5dataCsv took 18740 ms
+[stall] 20:05:21Z event loop blocked 18.9 s · heap 909 MB · rss 1417 MB · slow jobs: flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z · p5dataCsv 18740 ms @20:05:02Z
+[stall] 20:05:25Z event loop blocked 2.7 s · heap 560 MB · rss 1333 MB · slow jobs: flagTrades 4937 ms @19:26:18Z · flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z · p5dataCsv 18740 ms @20:05:02Z
+[slow] flagTrades took 6485 ms
+[stall] 20:06:25Z event loop blocked 6.7 s · heap 581 MB · rss 1291 MB · slow jobs: flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z · p5dataCsv 18740 ms @20:05:02Z · flagTrades 6485 ms @20:06:18Z
+[web snapshot plain] build took 9508 ms
+[stall] 20:06:37Z event loop blocked 9.0 s · heap 680 MB · rss 1294 MB · slow jobs: flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z · p5dataCsv 18740 ms @20:05:02Z · flagTrades 6485 ms @20:06:18Z
+[stall] 20:07:10Z event loop blocked 5.4 s · heap 478 MB · rss 916 MB · slow jobs: flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z · p5dataCsv 18740 ms @20:05:02Z · flagTrades 6485 ms @20:06:18Z
+[stall] 20:09:59Z event loop blocked 116.1 s · heap 490 MB · rss 931 MB · slow jobs: flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z · p5dataCsv 18740 ms @20:05:02Z · flagTrades 6485 ms @20:06:18Z
+[stall] 20:10:06Z event loop blocked 5.3 s · heap 467 MB · rss 886 MB · slow jobs: flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z · p5dataCsv 18740 ms @20:05:02Z · flagTrades 6485 ms @20:06:18Z
+[web snapshot plain] build took 4114 ms
+[stall] 20:10:10Z event loop blocked 3.5 s · heap 591 MB · rss 1024 MB · slow jobs: flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z · p5dataCsv 18740 ms @20:05:02Z · flagTrades 6485 ms @20:06:18Z
+[mem] rss 1031 MB — pm2 restarts at 900
+[tg] fetch failed
+[stall] 20:12:26Z event loop blocked 113.0 s · heap 621 MB · rss 1038 MB · slow jobs: flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z · p5dataCsv 18740 ms @20:05:02Z · flagTrades 6485 ms @20:06:18Z
+[web snapshot plain] build took 3540 ms
+[stall] 20:12:32Z event loop blocked 2.7 s · heap 576 MB · rss 1127 MB · slow jobs: flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z · p5dataCsv 18740 ms @20:05:02Z · flagTrades 6485 ms @20:06:18Z
+[stall] 20:14:23Z event loop blocked 2.3 s · heap 484 MB · rss 894 MB · slow jobs: flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z · p5dataCsv 18740 ms @20:05:02Z · flagTrades 6485 ms @20:06:18Z
+[stall] 20:14:31Z event loop blocked 2.5 s · heap 487 MB · rss 899 MB · slow jobs: flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z · p5dataCsv 18740 ms @20:05:02Z · flagTrades 6485 ms @20:06:18Z
+[web snapshot plain] build took 11671 ms
+[stall] 20:14:44Z event loop blocked 11.9 s · heap 617 MB · rss 1035 MB · slow jobs: flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z · p5dataCsv 18740 ms @20:05:02Z · flagTrades 6485 ms @20:06:18Z
+[stall] 20:15:31Z event loop blocked 3.3 s · heap 633 MB · rss 1040 MB · slow jobs: flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z · p5dataCsv 18740 ms @20:05:02Z · flagTrades 6485 ms @20:06:18Z
+[stall] 20:15:36Z event loop blocked 3.7 s · heap 622 MB · rss 1041 MB · slow jobs: flagTrades 2008 ms @19:36:18Z · flagTrades 8307 ms @19:46:18Z · flagTrades 2137 ms @19:51:18Z · flagTrades 5564 ms @19:56:18Z · p5dataCsv 18740 ms @20:05:02Z · flagTrades 6485 ms @20:06:18Z
