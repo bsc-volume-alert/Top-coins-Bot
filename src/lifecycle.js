@@ -27,6 +27,7 @@ function st(mint, createTs) {
 function trade(mint, createTs, tr, mc, graduated, venue) {
   const s = st(mint, createTs); if (!s) return;
   const now = tr.ts || Math.floor(Date.now() / 1000);
+  if (tr.recvMs && tr.ts && venue === "curve") { LAG.push(tr.recvMs / 1000 - tr.ts); if (LAG.length > 200) LAG.shift(); } // v0.19.10: ingestion lag for the clock checkpoint
   s.w5.push({ ts: now, sol: tr.sol, b: tr.isBuy, w: tr.wallet }); while (s.w5.length && now - s.w5[0].ts > 300) s.w5.shift();
   if (tr.isBuy && s.buyers.size < 20000 && !s.buyers.has(tr.wallet)) { s.buyers.add(tr.wallet); s.bts.push({ ts: now, w: tr.wallet }); } // v0.18.18: buyer set capped at 20K wallets (count saturates)
   while (s.bts.length && now - s.bts[0].ts > 1260) s.bts.shift();
@@ -55,6 +56,37 @@ function sampleExact(mint, s, now) {
     const i = CFG.LIFE_CHECKPOINTS.indexOf(cp); if (i === s.next) s.next++; }
 }
 setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [mint, s] of L) if (now - s.createTs <= 130) sampleExact(mint, s, now); }, 1000);
+// v0.19.10 (owner 9 Nov 22:44 UK, spec Codex): the CLOCK 5-minute checkpoint — computed once per launch when create+300 has passed (plus a 2-s grace for in-flight
+// trades), from what had been received by then; written to token_cp_clock beside the trade-triggered token_life cp=300 row. Nothing is backdated: a late tick is
+// recorded as late-processed; a stale or missing price, a feed gap or a slow feed make it uncertain, never a fresh market cap.
+const CLOCK_EPOCH = "C5-1", CLOCK_CP = 300, LAG = [];
+let gapCache = { at: 0, rows: [] };
+function feedOk(cutoff, graduated) {
+  const nowS = Math.floor(Date.now() / 1000);
+  if (nowS - gapCache.at > 5) { try { gapCache = { at: nowS, rows: q.gapsSince.all(nowS - 3600) }; } catch { return null; } }
+  const bad = (pre) => { let down = null; for (const g of gapCache.rows) { const e = g.event; const mine = pre ? e.startsWith("pool-") : !e.startsWith("pool-");
+      if (!mine) continue; const ev = pre ? e.slice(5) : e;
+      if (ev === "closed" || ev === "error" || ev === "idle") { if (down == null) down = ev === "idle" ? g.ts - 60 : g.ts; }
+      else if (ev === "subscribed" && down != null) { if (down <= cutoff && g.ts >= cutoff - 60) return true; down = null; } }
+    return down != null && down <= cutoff; };
+  return !(bad(false) || (graduated && bad(true)));
+}
+function sampleClock(mint, s, nowMs) {
+  if (s.clk) return; const cut = s.createTs + CLOCK_CP; if (nowMs / 1000 < cut + 2) return; s.clk = 1;
+  const proc = Math.floor(nowMs / 1000);
+  const w = s.w5.filter((x) => x.ts <= cut && x.ts > cut - 300), b = w.filter((x) => x.b).length, sl = w.length - b;
+  let mc = null, pts = null; for (let i = s.ring.length - 1; i >= 0; i--) if (s.ring[i].ts <= cut) { mc = s.ring[i].mc; pts = s.ring[i].ts; break; }
+  const byTot = s.bts.filter((x) => x.ts <= cut).length, grad = s.graduated && s.gradTs != null && s.gradTs <= cut ? 1 : 0;
+  const lagS = LAG.length ? [...LAG].sort((a, c) => a - c)[LAG.length >> 1] : null, fo = feedOk(cut, grad);
+  let status = "ok";
+  if (proc > cut + 15) status = "late-processed";
+  else if (mc == null || !(mc > 0)) status = "no-price";
+  else if (fo === false) status = "uncertain: feed gap";
+  else if (fo == null) status = "uncertain: feed state unreadable";
+  else if (lagS != null && lagS > 5) status = "uncertain: ingestion lag";
+  try { q.insCpClock.run(mint, CLOCK_CP, s.createTs, cut, proc, mc, pts, pts != null ? cut - pts : null, grad ? "pumpswap" : "curve", grad, w.length, b, sl, byTot, fo == null ? null : fo ? 1 : 0, lagS, status, CLOCK_EPOCH); lc.clock = (lc.clock || 0) + 1; lc["clock_" + status.split(":")[0]] = (lc["clock_" + status.split(":")[0]] || 0) + 1; } catch {}
+}
+setInterval(() => { const ms = Date.now(), now = Math.floor(ms / 1000); for (const [mint, s] of L) { const a = now - s.createTs; if (a >= CLOCK_CP && a <= CLOCK_CP + 120) sampleClock(mint, s, ms); } }, 1000);
 function sample(mint, s, now) {
   const cps = CFG.LIFE_CHECKPOINTS;
   while (s.next < cps.length && now - s.createTs >= cps[s.next]) {

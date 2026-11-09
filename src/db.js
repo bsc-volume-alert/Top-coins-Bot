@@ -176,6 +176,11 @@ for (const sql of [
   "ALTER TABLE trades ADD COLUMN recv_ms INTEGER", // v0.19.1: when this process received the trade's log (observation latency, for the launcher's studies)
   "ALTER TABLE trades ADD COLUMN vsol TEXT", "ALTER TABLE trades ADD COLUMN vtok TEXT", "ALTER TABLE trades ADD COLUMN venue TEXT", // v0.19.2
   "CREATE TABLE IF NOT EXISTS feed_gaps (ts INTEGER, event TEXT, detail TEXT)", // v0.19.2
+  // v0.19.10 (owner 9 Nov 22:44 UK, spec Codex): clock-scheduled 5-minute checkpoint, kept BESIDE the trade-triggered token_life cp=300 row (never replaces it).
+  // cutoff_ts = create+300 (intended); processed_ts = when this process computed it; metrics only from trades with ts <= cutoff that had been RECEIVED by processed_ts;
+  // price_ts / price_age_s = the latest price observation at or before the cutoff and its age; feed_ok = no curve-feed gap (and, if migrated, no pool-feed gap) in [cutoff-60, cutoff];
+  // ingest_lag_s = median receipt lag of the last 200 curve trades at processing; status = ok | uncertain:<why> | no-price | late-processed. epoch = collection epoch (C5-1).
+  "CREATE TABLE IF NOT EXISTS token_cp_clock (mint TEXT, cp INTEGER, create_ts INTEGER, cutoff_ts INTEGER, processed_ts INTEGER, mc REAL, price_ts INTEGER, price_age_s INTEGER, venue TEXT, graduated INTEGER, trades_thru INTEGER, buys INTEGER, sells INTEGER, buyers_total INTEGER, feed_ok INTEGER, ingest_lag_s REAL, status TEXT, epoch TEXT, PRIMARY KEY (mint, cp))",
   // v0.19.9 (owner's go 7 Nov 09:54 UK; Codex 09:52/09:53): pool-trade EVIDENCE fields, written on new pool rows only (old rows: NULL = unavailable).
   // pool = pool address; ev_idx = position of this PumpSwap event among the PumpSwap events decoded from the transaction's logs (0-based, log order);
   // base_raw / quote_raw / pool_base_raw / pool_quote_raw = the event's integer amounts as decimal STRINGS (lossless, never through Number);
@@ -310,6 +315,8 @@ export const q = {
   lifeFor: db.prepare(`SELECT cp, mc, vol5m_usd, buys5m, sells5m, buyers_total, alive, top10_pct FROM token_life WHERE mint=? ORDER BY cp`),
   papersFor: db.prepare(`SELECT strategy, trigger_kind, entry_ts, entry_mc, peak_mult, x_half60, x_tsl40, x_levels, after_peak_mult FROM paper_trades WHERE mint=? ORDER BY entry_ts`),
   insLife: db.prepare(`INSERT OR REPLACE INTO token_life (mint,cp,ts,mc,vol5m_usd,buys5m,sells5m,buyers5m,buyers_total,graduated,top10_pct,holders,alive) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`),
+  insCpClock: db.prepare(`INSERT OR IGNORE INTO token_cp_clock (mint,cp,create_ts,cutoff_ts,processed_ts,mc,price_ts,price_age_s,venue,graduated,trades_thru,buys,sells,buyers_total,feed_ok,ingest_lag_s,status,epoch) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`), // v0.19.10
+  gapsSince: db.prepare(`SELECT ts, event FROM feed_gaps WHERE ts >= ? ORDER BY ts`), // v0.19.10
   insLifeExact: db.prepare(`INSERT OR IGNORE INTO token_life (mint,cp,ts,mc,vol5m_usd,buys5m,sells5m,buyers5m,buyers_total,graduated,top10_pct,holders,alive,obs_ts,src) VALUES (?,?,?,?,?,?,?,?,?,?,NULL,NULL,?,?,'exact')`), // v0.19.5
   setLifeHolders: db.prepare(`UPDATE token_life SET top10_pct=?, holders=? WHERE mint=? AND cp=?`),
   insBigBuy: db.prepare(`INSERT INTO big_buys (mint,wallet,ts,age_s,sol,mc,balance_sol,venue) VALUES (?,?,?,?,?,?,?,?)`),
