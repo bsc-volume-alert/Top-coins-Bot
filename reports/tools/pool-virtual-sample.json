@@ -1,0 +1,26 @@
+[
+{
+"pool": "8ixGUy1H5FK3UcHKsXqPL1yKhrWkHhVMgMv8H1rjKU7o",
+"mint": "3MW1ffhwdBYPMoeuPA2SJfJeUsPm4BPSnYTNVhPepump",
+"c_median": 17.209156992034195,
+"c_first50": 17.530013082011216,
+"c_last50": 17.023336874959703,
+"n": 13460
+},
+{
+"pool": "Eg26iuYoK2Nbs6fXCJwzYH4mqZVSTAN16c72Vi9xZ5qn",
+"mint": "DoHGGb8C24NKH38Y1D6DtTYLx6LS3JYwartHNykhpump",
+"c_median": 17.495075293450228,
+"c_first50": 18.095561895753633,
+"c_last50": 16.903841055018283,
+"n": 3437
+},
+{
+"pool": "4R1Qc6JATQL6EXgUUp2gBToGdniB4T2voQWeiCGgwt6P",
+"mint": "BwJeGVxAEBj6csfrfvXpPKsFp3sGoRpQJ45MQH35pump",
+"c_median": 17.419093219134325,
+"c_first50": 17.577972160615644,
+"c_last50": 16.929859814262905,
+"n": 5236
+}
+]
