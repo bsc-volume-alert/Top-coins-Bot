@@ -1,1 +1,1 @@
-virt-check 9 Nov 2026 20:00 UTC — pool virtual quote reserves vs fitted offset (3 calls)
+diag 9 Nov 2026 20:16 UTC — no launcher data push since 19:55
