@@ -1,1 +1,1 @@
-supp-k100 8 Nov 2026 20:05 UTC — trade export 7 Nov 20:00 → 8 Nov 15:00 UTC (owner's go 19:38 UK; backup check passed 19:58)
+vol-ls 9 Nov 2026 04:30 UTC — check the 04:00 backup landed on the volume
