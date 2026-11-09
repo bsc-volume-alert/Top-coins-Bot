@@ -24,6 +24,7 @@ import { initStudy, runStudy, studyStat, studyAddress, manualStat, loadCensus } 
 import { initVol, volPoll, volScore, volStat, volBackfill, bfStat, volFillExitTime, volMark, markStat, volQuotePoll } from "./volpaper.mjs";
 import { initRF, rfFind, rfCheck, rfStat } from "./runnerfollow.mjs";
 import { tgAlarm } from "../../src/telegram.js"; // 0.9.53: disk alarm via the tracker's Telegram (alarms only)
+import { initK, kStat, K_VER } from "./kpaper.mjs"; // 0.9.56
 import { initFD, fdScan, fdCheck, fdStat, fdSniperStats, snStat, fdLedger, fdInventory, fdPositions, fdCoverage, LEDGER_VER } from "./fundeddev.mjs";
 import { initLive, livePoll, liveStat } from "./live.mjs"; // 0.8.17
 import { execSync } from "node:child_process";
@@ -86,7 +87,7 @@ setTimeout(diskWatch, 20000); setInterval(diskWatch, 300000);
 
 // ---------- wallet / chain state ----------
 const wallet = CFG.SMOKE ? Keypair.generate() : ensureKeypair(); // the key file is created on first start; only the public address is ever shown
-initChainFill(db); initFarm(db, tdb); // 0.9.9 // 0.9.0: simulated executable fills from the chain's reserves, every book
+initChainFill(db); initFarm(db, tdb); if (!CFG.SMOKE) initK(db, tdb); // 0.9.56: the provisional K books (kpaper.mjs) // 0.9.9 // 0.9.0: simulated executable fills from the chain's reserves, every book
 initLive(db, wallet); // 0.8.17: live shadow trades (livebook.txt), signed with this wallet; off under SMOKE
 const ME = wallet.publicKey;
 let G = null, gAt = 0, balance = null, balAt = 0;
@@ -391,7 +392,7 @@ export // 0.9.14: declared at module level — 0.9.13 had it inside the !SMOKE b
 const scopeStat = { probes: 0, fails: 0, consecutive: 0, reloads: 0, lastReload: null, lastErr: "" };
 function status() {
   return { ...st, at: now(), wallet: ME.toBase58(), balanceSol: balance != null ? +sol(balance).toFixed(4) : null, liveToday: liveToday(), cap: CFG.DAILY_CAP || "none", minBalanceSol: CFG.MIN_BALANCE_SOL, tpFraction: CFG.TP_FRACTION, stakeSol: CFG.STAKE_SOL, deadMin: CFG.DEAD_MIN, quietMin: CFG.QUIET_MIN, tpX: CFG.TP_X,
-    lut: lutStat, copies: copyStatus(), peaks: peakStat, study: studyStat, vol: volStat, mark: markStat, volBackfill: bfStat, rf: rfStat, manualStudy: manualStat, operators: opStat, creators: ctStat, fd: fdStat, snipers2: snStat, quotes: qStat, live: liveStat, chain: cfStat, farm: farmStat, scope: scopeStat, export: exportStat, registry: regStat, meas: { ledger: LEDGER_VER, fill: cfStat.mv, tracker_obs: "obs-3 (tracker 0.19.4: early checkpoints 15/30/90/120 s for every launch)" }, sweep: sweepStat, paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
+    k: { ver: K_VER, ...kStat }, lut: lutStat, copies: copyStatus(), peaks: peakStat, study: studyStat, vol: volStat, mark: markStat, volBackfill: bfStat, rf: rfStat, manualStudy: manualStat, operators: opStat, creators: ctStat, fd: fdStat, snipers2: snStat, quotes: qStat, live: liveStat, chain: cfStat, farm: farmStat, scope: scopeStat, export: exportStat, registry: regStat, meas: { ledger: LEDGER_VER, fill: cfStat.mv, tracker_obs: "obs-3 (tracker 0.19.4: early checkpoints 15/30/90/120 s for every launch)" }, sweep: sweepStat, paused: kvGet("paused") === "1", pausedAt: kvGet("pausedAt"), lastSellAll: kvGet("lastSellAll"), openCoins: db.prepare("SELECT COUNT(*) n FROM launches WHERE mode='live' AND status IN ('open','selling','stuck')").get().n,
     accounts: CFG.ACCOUNTS, twitter: { keySet: !!CFG.TWITTER_KEY, ...twStat }, ai: !!CFG.AI_KEY, aiStat, meta: metaStat, rpc: rpcStats, trackerDb: !!tdb, lastSweep: kvGet("lastSweep"), lastFeeCollect: kvGet("lastFeeCollect"), phantom: PHANTOM };
 }
 let pushing = false, soon = null;

@@ -54,8 +54,13 @@ let db = null, G = null, gAt = 0, CFG = null, cfgAt = 0;
 async function global() { if (G && Date.now() - gAt < 600000) return G; const [a] = await getAccounts([GLOBAL], "confirmed"); const g = decodeGlobal(a?.data); if (g) { G = g; gAt = Date.now(); } return G; }
 async function ammCfg() { if (CFG && Date.now() - cfgAt < 600000) return CFG; const [a] = await getAccounts([GLOBAL_CONFIG], "confirmed"); const c = decodeCfg(a?.data); if (c) { CFG = c; cfgAt = Date.now(); } return CFG; }
 
+// 0.9.56 (owner's go 9 Nov 21:45 UK): fixed trail per position for the provisional K books — K30-50T25 / K30-40T25 = 25%, K30-40T20 = 20%, on any venue.
+// Keyed by vol_id; rebuilt from vol_paper on start. Rows not in the map keep the venue trail (40% curve / 25% pool) exactly as before.
+export const TRAIL_OVR = new Map(); export const K_TRAIL = { "K30-50T25": 0.25, "K30-40T25": 0.25, "K30-40T20": 0.2 };
+export function setTrail(id, pct) { TRAIL_OVR.set(id, pct); }
 export function initChainFill(d) { STMT.clear();
   db = d;
+  try { for (const r of d.prepare(`SELECT id, strat FROM vol_paper WHERE strat IN (${Object.keys(K_TRAIL).map(() => "?").join(",")})`).all(...Object.keys(K_TRAIL))) TRAIL_OVR.set(r.id, K_TRAIL[r.strat]); } catch {}
   db.exec(`CREATE TABLE IF NOT EXISTS chain_fill (vol_id INTEGER PRIMARY KEY, mint TEXT, strat TEXT, entry_ts INTEGER, venue TEXT, curve INTEGER, s_sol_in REAL, s_tokens TEXT, s_px REAL, s_in_gap REAL, s_x0 REAL,
     s_hi REAL, s_last_x REAL, s_last_ts INTEGER, s_n INTEGER DEFAULT 0, s_exit_x REAL, s_exit_ts INTEGER, s_exit_reason TEXT, s_r REAL, s_drops INTEGER DEFAULT 0, s_backstops INTEGER DEFAULT 0, s_err TEXT, done INTEGER DEFAULT 0)`);
   db.exec("CREATE INDEX IF NOT EXISTS chain_fill_open ON chain_fill (done)");
@@ -151,7 +156,7 @@ function apply(mint, lamportsOf, src, res = null) {
   const t = now(); let open = 0;
   for (const r of rows(mint)) {
     const lam = lamportsOf(BigInt(r.s_tokens)); if (lam == null) { open++; continue; }
-    const x = Number(lam) / Number(LAMPORTS), hi = Math.max(r.s_hi || 1, x), keep = 1 - trailPct(r.curve);
+    const x = Number(lam) / Number(LAMPORTS), hi = Math.max(r.s_hi || 1, x), keep = 1 - (TRAIL_OVR.get(r.vol_id) ?? trailPct(r.curve)); // 0.9.56: per-book trail for the K books (kpaper.mjs); every other book unchanged
     const lam02 = r.s_tokens02 ? lamportsOf(BigInt(r.s_tokens02)) : null, x02 = lam02 != null ? Number(lam02) / Number(LAMPORTS02) : null, hi02 = x02 != null ? Math.max(r.s_hi02 || 1, x02) : null; // 0.9.8: the real 0.02 position, valued on the same state
     // fill-3 (0.9.34, owner's go 19:57 UK): the INDEPENDENT 0.02 position — its own trail on its own high (hi02), its own trigger, its own landing (SELL_LAND_MS), its own exit and return. i02_* columns. The shared-exit column (s_r02) stays as it was.
     if (x02 != null && hi02 != null && r.s_tokens02 && !r.i02_done) { const tms0 = Date.now();
