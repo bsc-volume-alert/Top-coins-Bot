@@ -1,1 +1,1 @@
-k100b 9 Nov 2026 11:45 UTC — $100K export 8 Nov 15:00 → 9 Nov 09:00 UTC
+vault-check 9 Nov 2026 19:40 UTC — bounded on-chain check of pool reserve offset (9 calls)
