@@ -52,3 +52,28 @@
 - **Read lag after availability:** median 4 s, p90 61 s.
 - **Availability after creation:** median 315 s, p90 329 s.
 - **Expect few entries:** the replay counted 35% late on availability alone.
+
+## Epoch 2 — clock 5-minute checkpoint (owner 9 Nov 22:44 UK, spec Codex)
+- **Versions:** tracker 0.19.10 (epoch C5-1, 22:53 UK), then 0.19.11 (epoch **C5-2**, about 23:02 UK). In C5-2 the feed-health check covers the whole interval from the last price observation to the cutoff. Launcher 0.9.59 / 0.9.60. fd_rules K_EPOCH2 = 1794264802.
+- **What changed:**
+  - The tracker writes token_cp_clock at creation + 300 s (+2 s grace), only from trades with ts ≤ cutoff that had been received by then.
+  - **Recorded:** the cutoff, processing time, last-price time and age, venue, feed_ok, ingestion lag, and status (ok | uncertain:* | no-price | late-processed).
+  - The trade-triggered token_life cp=300 row is kept beside it.
+  - The K books read both. There is one decision per coin (the first usable reading). A clock reading that is not 'ok' is recorded and never entered.
+- **Unchanged:** the entry and exit predicates (K-1) and the ≤ 315 s rule.
+- **The population is wider than in the replay:**
+  - Quiet coins are now included. The replay's returns were for trade-triggered readings and do not carry over automatically.
+  - Every K entry records src (clock | trade) and, for clock, the price age. Report coins that would have qualified under the old method separately from those admitted only by the clock.
+- **First measurements, 23:05 UK:**
+  - All clock readings were on time: available about 302 s after creation, read at about 304 s.
+  - About 25% were 'no-price' (to investigate).
+  - Price age at the cutoff: median 215 s (8–300 s). Many coins are quiet at 5 minutes.
+- **First records (verified in fd_positions.csv), 0.2 SOL:**
+
+| Coin | Reading | Entry (cap, fill vs reading) | 100K1 (K30-50T25) | 100K2 (K30-40T25) | 100K3 (K30-40T20) |
+|---|---|---|---|---|---|
+| 8xcAhQmS | trade-triggered, 22:31 UK | $31.5K at 5 min, fill 3.5% above the reading | +83.5% (trail, exit ×1.84) | +83.5% (same) | +28.5% (tighter trail exited first, ×1.29) |
+| HYxUWHLP | trade-triggered, 22:57 UK | $37.8K, fill +7.2% | +20.4% | +20.4% | +20.4% |
+| 5LCZtSCq | clock, 23:04 UK | $40.1K, last price 244 s old, fill +0.9% | open | not taken (above $40K) | not taken |
+
+- **Backend kept running while the page was blank** (≈ 21:50–22:36): the 22:31 entry and the data pushes continued. That was a display failure only, not a collection outage.
