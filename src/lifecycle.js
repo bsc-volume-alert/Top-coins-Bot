@@ -59,15 +59,15 @@ setInterval(() => { const now = Math.floor(Date.now() / 1000); for (const [mint,
 // v0.19.10 (owner 9 Nov 22:44 UK, spec Codex): the CLOCK 5-minute checkpoint — computed once per launch when create+300 has passed (plus a 2-s grace for in-flight
 // trades), from what had been received by then; written to token_cp_clock beside the trade-triggered token_life cp=300 row. Nothing is backdated: a late tick is
 // recorded as late-processed; a stale or missing price, a feed gap or a slow feed make it uncertain, never a fresh market cap.
-const CLOCK_EPOCH = "C5-1", CLOCK_CP = 300, LAG = [];
+const CLOCK_EPOCH = "C5-2", CLOCK_CP = 300, LAG = [];
 let gapCache = { at: 0, rows: [] };
-function feedOk(cutoff, graduated) {
+function feedOk(cutoff, graduated, from = cutoff - 60) { // v0.19.11: the window is [last price observation, cutoff] (at least 60 s) — an unchanged price is only valid if the feed was up the whole time
   const nowS = Math.floor(Date.now() / 1000);
   if (nowS - gapCache.at > 5) { try { gapCache = { at: nowS, rows: q.gapsSince.all(nowS - 3600) }; } catch { return null; } }
   const bad = (pre) => { let down = null; for (const g of gapCache.rows) { const e = g.event; const mine = pre ? e.startsWith("pool-") : !e.startsWith("pool-");
       if (!mine) continue; const ev = pre ? e.slice(5) : e;
       if (ev === "closed" || ev === "error" || ev === "idle") { if (down == null) down = ev === "idle" ? g.ts - 60 : g.ts; }
-      else if (ev === "subscribed" && down != null) { if (down <= cutoff && g.ts >= cutoff - 60) return true; down = null; } }
+      else if (ev === "subscribed" && down != null) { if (down <= cutoff && g.ts >= from) return true; down = null; } }
     return down != null && down <= cutoff; };
   return !(bad(false) || (graduated && bad(true)));
 }
@@ -77,7 +77,7 @@ function sampleClock(mint, s, nowMs) {
   const w = s.w5.filter((x) => x.ts <= cut && x.ts > cut - 300), b = w.filter((x) => x.b).length, sl = w.length - b;
   let mc = null, pts = null; for (let i = s.ring.length - 1; i >= 0; i--) if (s.ring[i].ts <= cut) { mc = s.ring[i].mc; pts = s.ring[i].ts; break; }
   const byTot = s.bts.filter((x) => x.ts <= cut).length, grad = s.graduated && s.gradTs != null && s.gradTs <= cut ? 1 : 0;
-  const lagS = LAG.length ? [...LAG].sort((a, c) => a - c)[LAG.length >> 1] : null, fo = feedOk(cut, grad);
+  const lagS = LAG.length ? [...LAG].sort((a, c) => a - c)[LAG.length >> 1] : null, fo = feedOk(cut, grad, Math.min(cut - 60, pts ?? cut - 60));
   let status = "ok";
   if (proc > cut + 15) status = "late-processed";
   else if (mc == null || !(mc > 0)) status = "no-price";

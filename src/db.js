@@ -178,7 +178,7 @@ for (const sql of [
   "CREATE TABLE IF NOT EXISTS feed_gaps (ts INTEGER, event TEXT, detail TEXT)", // v0.19.2
   // v0.19.10 (owner 9 Nov 22:44 UK, spec Codex): clock-scheduled 5-minute checkpoint, kept BESIDE the trade-triggered token_life cp=300 row (never replaces it).
   // cutoff_ts = create+300 (intended); processed_ts = when this process computed it; metrics only from trades with ts <= cutoff that had been RECEIVED by processed_ts;
-  // price_ts / price_age_s = the latest price observation at or before the cutoff and its age; feed_ok = no curve-feed gap (and, if migrated, no pool-feed gap) in [cutoff-60, cutoff];
+  // price_ts / price_age_s = the latest price observation at or before the cutoff and its age; feed_ok = no curve-feed gap (and, if migrated, no pool-feed gap) from the last price observation (or cutoff-60 if later) to the cutoff (0.19.11, epoch C5-2);
   // ingest_lag_s = median receipt lag of the last 200 curve trades at processing; status = ok | uncertain:<why> | no-price | late-processed. epoch = collection epoch (C5-1).
   "CREATE TABLE IF NOT EXISTS token_cp_clock (mint TEXT, cp INTEGER, create_ts INTEGER, cutoff_ts INTEGER, processed_ts INTEGER, mc REAL, price_ts INTEGER, price_age_s INTEGER, venue TEXT, graduated INTEGER, trades_thru INTEGER, buys INTEGER, sells INTEGER, buyers_total INTEGER, feed_ok INTEGER, ingest_lag_s REAL, status TEXT, epoch TEXT, PRIMARY KEY (mint, cp))",
   // v0.19.9 (owner's go 7 Nov 09:54 UK; Codex 09:52/09:53): pool-trade EVIDENCE fields, written on new pool rows only (old rows: NULL = unavailable).
