@@ -18,5 +18,9 @@ Five-interval ledger = the above without #3 (what the Claude analyst used). Veri
 - Round 1 (launches created 8 Nov 00:00 → 10 Nov 00:00): ledger to be built from the control room's pm2/deploy logs and feed_gaps at export time, listed here before MIG300 is scored. Known from the tracker branch commit log: launcher data pushes missing 9 Nov ~19:55–20:15 and 9 Nov 23:51 → 10 Nov 00:13 (launcher, not necessarily the tracker feed); tracker 0.19.10/0.19.11/0.19.12 deploys 9 Nov 22:46, 22:56, 10 Nov 00:24; tracker DB move/repair 10 Nov 04:11 → 08:49 (after the window, but inside the 2-h follow-up of the last launches until 02:00 only — check). To be confirmed from logs, not inferred from this list.
 - Round 2 (10 Nov 00:00 → 12 Nov 00:00): no active rule was frozen — nothing to score.
 
+## Status of this ledger
+- The six-interval ledger is a **post-freeze input decision** made by the coordinator on 10 Nov 2026, after both analysts' phase B reports. It was not preregistered. Provenance is the table above; the five-interval result is always reported beside it.
+- Any score excluding instant-graduation launches is a **diagnostic**, not a repaired confirmatory score. The original denominator, exclusions and unknown counts stay visible next to it.
+
 ## Rule
 A launch is excluded from N only on a documented interval. Inferred gaps (a bare reconnect in feed_gaps with no log evidence) are reported as a sensitivity, never silently added.
