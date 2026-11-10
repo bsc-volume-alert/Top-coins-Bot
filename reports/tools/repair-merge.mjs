@@ -17,12 +17,15 @@ for (const t of tables) {
     const maxR = live.prepare(`SELECT MAX(rowid) r FROM ${t}`).get().r; if (!maxR) { console.log(`[repair] ${t}: empty`); continue; }
     const at = (r) => { const x = live.prepare(`SELECT rowid AS r, ${tc} AS v FROM ${t} WHERE rowid >= ? ORDER BY rowid LIMIT 1`).get(r); return x; };
     let lo = 1, hi = maxR; while (lo < hi) { const mid = Math.floor((lo + hi) / 2), x = at(mid); if (!x || Number(x.v) >= CUT) hi = mid; else lo = mid + 1; }
-    const rows = live.prepare(`SELECT * FROM ${t} WHERE rowid >= ? AND ${tc} >= ?`).all(lo, CUT);
+    // v2 (08:10): STREAMED (the v1 .all() ran out of memory on trades); rows already present are skipped (idempotent re-run, no duplicates)
     const cols = vi.map((x) => x.name).filter((c) => li.some((y) => y.name === c)), hasPk = vi.some((x) => x.pk > 0), intPk = vi.filter((x) => x.pk > 0).length === 1 && /INT/i.test(vi.find((x) => x.pk > 0).type);
     const useCols = intPk ? cols.filter((c) => c !== vi.find((x) => x.pk > 0).name) : cols;
     const st = vol.prepare(`INSERT ${hasPk && !intPk ? "OR REPLACE " : ""}INTO ${t} (${useCols.join(",")}) VALUES (${useCols.map(() => "?").join(",")})`);
-    const tx = vol.transaction((rs) => { let n = 0; for (const r of rs) n += st.run(...useCols.map((c) => r[c])).changes; return n; });
-    let n = 0; for (let i = 0; i < rows.length; i += 5000) n += tx(rows.slice(i, i + 5000)); total += n;
+    const ex = hasPk && !intPk ? null : vol.prepare(`SELECT 1 FROM ${t} WHERE ${useCols.map((c) => `${c} IS ?`).join(" AND ")} LIMIT 1`);
+    const tx = vol.transaction((rs) => { let n = 0; for (const r of rs) { const v = useCols.map((c) => r[c]); if (ex && ex.get(...v)) continue; n += st.run(...v).changes; } return n; });
+    let n = 0, seen = 0, batch = [];
+    for (const r of live.prepare(`SELECT * FROM ${t} WHERE rowid >= ? AND ${tc} >= ?`).iterate(lo, CUT)) { batch.push(r); seen++; if (batch.length >= 5000) { n += tx(batch); batch = []; } }
+    if (batch.length) n += tx(batch); total += n; const rows = { length: seen };
     console.log(`[repair] ${t}: ${rows.length} live rows since cutoff (${tc}), inserted ${n}`);
   } catch (e) { console.log(`[repair] ${t}: ERROR ${e.message}`); }
 }
