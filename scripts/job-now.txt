@@ -1,1 +1,1 @@
-db-check 10 Nov 2026 06:40 UTC
+repair-db 10 Nov 2026 08:00 UTC — rebuild the tracker DB
