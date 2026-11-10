@@ -77,3 +77,32 @@
 | 5LCZtSCq | clock, 23:04 UK | $40.1K, last price 244 s old, fill +0.9% | open | not taken (above $40K) | not taken |
 
 - **Backend kept running while the page was blank** (≈ 21:50–22:36): the 22:31 entry and the data pushes continued. That was a display failure only, not a collection outage.
+
+## Impact report — 10 Nov 01:37 UK (Codex 01:46 request; data: launcher-data at 01:37)
+- **What the K books depend on:** their decisions read the tracker's own database (token_life / token_cp_clock) and make NO Helius checks. The fdCheck timeouts and errors belong to the older 60/90/120-s books.
+  - The K books touch RPC only at the fill and the exit (chainfill reserve reads).
+  - Entry failures there would show as chain_fill data-failure rows: none among the 13 K mints.
+- **Older books, since the 0.9.61 restart (~00:21 UK):**
+  - 693 recorded checks (60 s: 303, 90 s: 298, 120 s: 92), of which 3 failed with "data unavailable: deadline". All 3 coins were below the base bar at their earlier checks, so they could not have entered.
+  - 5 checks timed out (checkTimeouts). A timed-out check writes NO row (0.9.47), so its due/never-attempted impact cannot be measured from exports. This is a gap.
+  - fd.errors (13) mixes funding-trace errors, scan errors and check failures. incomplete (6) is a subset of errors. Timeouts are counted separately.
+- **K decisions so far (5,013):**
+  - **Clock readings (epoch C5-1/2):**
+    - out of band 2,075
+    - no-price 493
+    - feed gap 303
+    - late-processed 179
+    - read late 132
+    - ingestion lag 10
+    - entered 5
+  - **Trade-triggered readings:** about half late in epoch 1. 8 entered across the two trade-triggered epochs.
+- **Positions (0.2 SOL, after costs), 13 unique mints:**
+
+| Book | Closed | Open | Mean | Median | Total | Without the best | 0.02 SOL independent |
+|---|---|---|---|---|---|---|---|
+| 100K1 | 10 | 3 | −13.4% | −5.1% | −0.267 SOL | −24.1% | −19.9% |
+| 100K2 | 4 | 1 | −3.0% | | −0.024 SOL | | |
+| 100K3 | 4 | 1 | −16.6% | | −0.133 SOL | | |
+
+- **Execution evidence:** fill price vs the 5-min reading is median about +1%, but 3FRaTecs filled **+80%** above its reading. The trade-triggered reading was stale relative to the market at fill: an execution-quality case to audit. CRWuYpES lost 91% through a 25% trail, a dump between trades.
+- **Small numbers:** no conclusion. Rules unchanged.
