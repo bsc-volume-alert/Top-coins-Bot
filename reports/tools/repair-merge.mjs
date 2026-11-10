@@ -5,7 +5,7 @@
 // argv: source (damaged) path, target path, cutoff ts.
 import Database from "better-sqlite3";
 const [SRC, DST, CUT] = [process.argv[2], process.argv[3], Number(process.argv[4])];
-const src = new Database(SRC, { readonly: true, fileMustExist: true }), dst = new Database(DST, { fileMustExist: true, timeout: 20000 });
+const src = new Database(SRC, { readonly: true, fileMustExist: true }), dst = new Database(DST, { fileMustExist: true, timeout: Number(process.env.MERGE_TIMEOUT_MS || 20000) });
 const TCOLS = ["ts", "cutoff_ts", "create_ts", "first_ts", "entry_ts", "added_ts", "found_ts", "ts_first", "seen_ts", "until"];
 const tables = dst.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all().map((x) => x.name);
 let total = 0, totalBad = 0;
