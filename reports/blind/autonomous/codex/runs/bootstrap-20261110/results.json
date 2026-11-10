@@ -1,0 +1,29 @@
+{
+  "blind-eval-1.0": {
+    "exit_code": 0,
+    "summary": "FAILURES: 0",
+    "sha256": "e0896fe573a73c4d750fac864887f0c5b2d5271f56c3cbdb907876bce28f0834"
+  },
+  "blind-eval-1.1": {
+    "exit_code": 0,
+    "summary": "FAILURES: 0",
+    "sha256": "f5686511fcae09c1c191ca5ffee167c6ad1421cddbb1be8b1c4f0f3eb4cc8a86"
+  },
+  "retained_census_mint_without_rows": {
+    "launches": 2,
+    "N_common": 1,
+    "unknown": 0
+  },
+  "tier_flag_no_finalisation_time": {
+    "entry_at_age_1s_scored": 1,
+    "note": "Finalisation time is neither loaded nor checked; tier alone admits entry."
+  },
+  "fixed_hold_exit": {
+    "landing_age_seconds": [
+      2.0,
+      301
+    ],
+    "written_MIG300_exit_age_for_decision_at_1s": 301.7,
+    "actual_exit_age": 301
+  }
+}
