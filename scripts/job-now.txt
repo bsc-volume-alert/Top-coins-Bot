@@ -1,1 +1,1 @@
-mv-idle-dbs 10 Nov 2026 02:30 UTC — move stopped radar/fomo DBs to the volume (reliability)
+mv-tracker-db 10 Nov 2026 04:20 UTC — move tracker.db to the volume (reliability; quiet hour)
