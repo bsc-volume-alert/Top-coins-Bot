@@ -143,3 +143,12 @@
 ### Consequences for the measurement
 - **Tracker restarts blank in-flight coins.** Restarts must be minimised and logged as capture gaps for the coins alive at that moment (to do in the reliability work).
 - **Dedup takes the first reading of any kind.** An unusable clock reading recorded first blocks a later trade-triggered reading of the same coin. That is valid as "one decision per coin", but it limits the old-versus-new method comparison. This will be reported.
+
+## Snapshot 10 Nov 2026 10:11 UK (36 unique coins since activation 9 Nov 21:48)
+| Book | Closed | Open | Wins | Mean r | Median r | Total (0.2 SOL stake) |
+|---|---|---|---|---|---|---|
+| 100K1 K30-50T25 | 34 | 2 | 5 | −17.0% | −2.7% | −1.158 SOL |
+| 100K2 K30-40T25 | 14 | 1 | 3 | −1.3% | −2.7% | −0.038 SOL |
+| 100K3 K30-40T20 | 14 | 1 | 3 | −6.7% | −2.7% | −0.187 SOL |
+- 30-coin mark passed for 100K1; 100K2/3 (the $30–40K band) only 15 coins each. No conclusions drawn yet; coin-by-coin analysis is next.
+- Recording gaps during the DB repair: 07:53–07:57 and 08:31–08:33 UK (see LAUNCHER.md).
