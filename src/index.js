@@ -1,7 +1,7 @@
 import "./env.js";
 import { rpcStat } from "./rpc.js"; // v0.18.59 (after env.js so .env is loaded first)
 import { readFileSync } from "node:fs";
-import { CFG } from "./config.js";
+import { CFG, BOOKS_OFF } from "./config.js";
 import { q } from "./db.js";
 import { tg, tgAlarm } from "./telegram.js";
 import { execStats } from "./execlink.js"; // v0.18.91 watchdog: feed / executor status
@@ -87,7 +87,7 @@ setInterval(hb, CFG.HEARTBEAT_MIN * 60_000);
     if (!execStats.connected && process.uptime() > 300) { fails.exec = (fails.exec || 0) + 1; if (fails.exec >= 3) once("exec", `⚠️ <b>Executor unreachable</b> for 5+ min — the tracker is running but the buy/sell bot is not connected. <code>pm2 ls</code> / <code>pm2 logs executor</code>.`); } else fails.exec = 0;
   }, 120_000); }
 setTimeout(() => { try { const n = flagTrades(0); if (n) console.log(`[restarts] flagged ${n} trades`); } catch (e) { console.error("[restarts]", e.message); } }, 8000); // v0.18.84
-setInterval(() => { try { timed("flagTrades", () => flagTrades(Math.floor(Date.now() / 1000) - 7200)); } catch {} }, 5 * 60_000);
+setInterval(() => { if (BOOKS_OFF) return; try { timed("flagTrades", () => flagTrades(Math.floor(Date.now() / 1000) - 7200)); } catch {} }, 5 * 60_000); // v0.19.12 (reliability, 10 Nov 00:30 UK): with the paper books off since 23 Oct there are no new trades to flag — the 5-min rescan of leftover open rows blocked the event loop 2–4 s each time (stalls in tracker-error.log), delaying the clock checkpoints
 // v0.18.97 stall monitor: the executor saw triggers whose trade was 18–80 s old an hour after boot (18 Oct). Log every event-loop stall over 2 s with
 // the heap size, and the heap every 10 min, so tomorrow's log says whether it is GC on a growing heap, a slow synchronous job, or the feed itself.
 { let last = Date.now(); const mb = () => Math.round(process.memoryUsage().heapUsed / 1048576);
