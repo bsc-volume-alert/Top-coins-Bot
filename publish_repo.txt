@@ -1,0 +1,12 @@
+===== launcher-data repo
+fatal: your current branch 'ld-new' does not have any commits yet
+?? launcher/
+494M	.git
+-rw-r--r-- 1 root root 25216862 Nov 10 00:11 study_buyers.jsonl
+-rw-r--r-- 1 root root 27891879 Nov 10 00:11 fd_ledger.csv
+-rw-r--r-- 1 root root 29702120 Nov 10 00:11 fd_wallet_state.csv
+-rw-r--r-- 1 root root 29852674 Nov 10 00:11 fd_watch.csv
+-rw-r--r-- 1 root root 42260558 Nov 10 00:11 fd_decisions.csv
+-rw-r--r-- 1 root root 46502611 Nov 10 00:11 creator_trace.csv
+-rw-r--r-- 1 root root 94371660 Nov 10 00:11 trades_books.csv
+-rw-r--r-- 1 root root 94371684 Nov 10 00:11 coverage_candidate_trades.csv

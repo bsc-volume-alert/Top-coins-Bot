@@ -1,0 +1,66 @@
+[
+ {
+  "name": "pm2-logrotate",
+  "status": "online",
+  "restarts": 0,
+  "mem_mb": 32,
+  "cpu": 0,
+  "uptime": 1794009974539
+ },
+ {
+  "name": "tracker",
+  "status": "online",
+  "restarts": 5,
+  "mem_mb": 551,
+  "cpu": 65,
+  "uptime": 1794265085520
+ },
+ {
+  "name": "deployer",
+  "status": "online",
+  "restarts": 0,
+  "mem_mb": 3,
+  "cpu": 0,
+  "uptime": 1794009974593
+ },
+ {
+  "name": "executor",
+  "status": "stopped",
+  "restarts": 55,
+  "mem_mb": 0,
+  "cpu": 0,
+  "uptime": 1792623975387
+ },
+ {
+  "name": "fomo",
+  "status": "stopped",
+  "restarts": 46,
+  "mem_mb": 0,
+  "cpu": 0,
+  "uptime": 1792743811996
+ },
+ {
+  "name": "scope",
+  "status": "online",
+  "restarts": 7,
+  "mem_mb": 26,
+  "cpu": 0,
+  "uptime": 1794263765166
+ },
+ {
+  "name": "radar",
+  "status": "stopped",
+  "restarts": 3486,
+  "mem_mb": 0,
+  "cpu": 0,
+  "uptime": 1793399905179
+ },
+ {
+  "name": "launcher",
+  "status": "online",
+  "restarts": 20,
+  "mem_mb": 650,
+  "cpu": 10,
+  "uptime": 1794265092528
+ }
+]

@@ -1,0 +1,132 @@
+===== /root/tracker/data/push-now.log
+[push-data] pushed 2026-10-19T19:16:59Z
+[push-data] csv fetch failed
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-20T04:03:31Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-20T06:25:16Z
+[push-data] pushed 2026-10-20T08:30:20Z
+[push-data] pushed 2026-10-20T08:50:33Z
+[push-data] pushed 2026-10-20T09:26:00Z
+[push-data] pushed 2026-10-20T14:04:39Z
+[push-data] pushed 2026-10-20T15:11:46Z
+[push-data] pushed 2026-10-20T15:14:50Z
+[push-data] pushed 2026-10-20T17:31:05Z
+[push-data] pushed 2026-10-20T17:52:20Z
+[push-data] pushed 2026-10-20T18:42:03Z
+[push-data] pushed 2026-10-20T22:27:31Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-20T23:10:20Z
+[push-data] pushed 2026-10-20T23:59:49Z
+[push-data] pushed 2026-10-21T00:29:56Z
+[push-data] pushed 2026-10-21T00:43:12Z
+[push-data] pushed 2026-10-21T07:29:39Z
+[push-data] pushed 2026-10-21T07:43:26Z
+[push-data] pushed 2026-10-21T08:21:22Z
+[push-data] pushed 2026-10-21T08:48:18Z
+[push-data] pushed 2026-10-21T09:20:57Z
+[push-data] pushed 2026-10-21T09:30:45Z
+[push-data] pushed 2026-10-21T09:36:26Z
+[push-data] pushed 2026-10-21T12:21:04Z
+[push-data] pushed 2026-10-21T13:13:41Z
+[push-data] pushed 2026-10-21T15:27:17Z
+[push-data] pushed 2026-10-21T15:50:40Z
+[push-data] pushed 2026-10-21T15:54:02Z
+[push-data] pushed 2026-10-21T16:26:11Z
+[push-data] pushed 2026-10-21T16:37:09Z
+[push-data] pushed 2026-10-21T16:49:17Z
+[push-data] pushed 2026-10-21T16:53:03Z
+[push-data] pushed 2026-10-21T16:56:12Z
+[push-data] pushed 2026-10-21T17:17:27Z
+[push-data] pushed 2026-10-21T17:24:15Z
+[push-data] pushed 2026-10-21T17:28:04Z
+[push-data] pushed 2026-10-21T17:33:24Z
+[push-data] pushed 2026-10-21T17:37:33Z
+[push-data] pushed 2026-10-21T17:37:59Z
+[push-data] pushed 2026-10-21T17:48:57Z
+[push-data] pushed 2026-10-21T18:51:49Z
+[push-data] pushed 2026-10-21T21:31:19Z
+[push-data] pushed 2026-10-21T21:37:36Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-21T22:36:18Z
+[push-data] pushed 2026-10-21T22:41:23Z
+[push-data] pushed 2026-10-21T23:01:12Z
+[push-data] pushed 2026-10-21T23:04:51Z
+[push-data] pushed 2026-10-21T23:08:42Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-23T06:10:31Z
+[push-data] pushed 2026-10-23T12:17:03Z
+[push-data] pushed 2026-10-23T12:21:26Z
+[push-data] pushed 2026-10-23T12:26:13Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-23T18:50:43Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-30T22:17:38Z
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[push-data] csv fetch failed
+[push-data] csv fetch failed
+[push-data] fomo flow_hourly fetch failed
+[push-data] fomo trades fetch failed
+[push-data] fomo theses fetch failed
+[push-data] pushed 2026-11-04T10:35:07Z
+[push-data] csv fetch failed
+===== /root/.pm2/logs/launcher-out.log
+===== /root/.pm2/logs/launcher-error.log
+[launcher] memory rss=241M heap=26M ext=4M
+[launcher] memory rss=574M heap=331M ext=5M
+[launcher] memory rss=616M heap=328M ext=10M
+[launcher] memory rss=633M heap=343M ext=12M
+[export trades_books] cut at 90 MB: 315100 rows
+[launcher] memory rss=634M heap=27M ext=4M
+[launcher] memory rss=634M heap=37M ext=12M
+[launcher] memory rss=577M heap=32M ext=9M
+[launcher] memory rss=578M heap=43M ext=8M
+[launcher] memory rss=578M heap=34M ext=4M
+[launcher] memory rss=578M heap=32M ext=5M
+[launcher] memory rss=578M heap=31M ext=5M
+[launcher] memory rss=578M heap=31M ext=4M
+[launcher] memory rss=578M heap=27M ext=4M
+[launcher] memory rss=582M heap=43M ext=16M
+[launcher] memory rss=579M heap=42M ext=7M
+[launcher] memory rss=579M heap=33M ext=4M
+[launcher] memory rss=579M heap=39M ext=7M
+[launcher] memory rss=579M heap=33M ext=4M
+[launcher] memory rss=580M heap=33M ext=4M
+[launcher] memory rss=580M heap=37M ext=4M
+[launcher] memory rss=581M heap=33M ext=6M
+[launcher] memory rss=609M heap=347M ext=7M
+[launcher] memory rss=644M heap=369M ext=8M
+[export trades_books] cut at 90 MB: 315115 rows
+===== /root/.pm2/logs/deployer-out.log
+[deploy] 2026-11-10T00:11:49Z updating 520896f5240ff2a392608437aba78e4e49adb28e -> 0293c3edd553b1a3a696e1d1deeabe1aff3f2027
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] one-off job: diag
+===== /root/.pm2/logs/tracker-error.log
+[web snapshot plain] build took 3154 ms
+[stall] 00:00:18Z event loop blocked 3.0 s · heap 284 MB · rss 482 MB · slow jobs: flagTrades 2341 ms @23:03:29Z · flagTrades 3743 ms @23:08:29Z · flagTrades 1964 ms @23:13:29Z · flagTrades 1867 ms @23:23:29Z · flagTrades 2746 ms @23:33:29Z · flagTrades 2258 ms @23:43:29Z
+[web snapshot plain] build took 10538 ms
+[stall] 00:02:26Z event loop blocked 9.9 s · heap 302 MB · rss 481 MB · slow jobs: flagTrades 2341 ms @23:03:29Z · flagTrades 3743 ms @23:08:29Z · flagTrades 1964 ms @23:13:29Z · flagTrades 1867 ms @23:23:29Z · flagTrades 2746 ms @23:33:29Z · flagTrades 2258 ms @23:43:29Z
+[stall] 00:02:39Z event loop blocked 3.0 s · heap 194 MB · rss 480 MB · slow jobs: flagTrades 2341 ms @23:03:29Z · flagTrades 3743 ms @23:08:29Z · flagTrades 1964 ms @23:13:29Z · flagTrades 1867 ms @23:23:29Z · flagTrades 2746 ms @23:33:29Z · flagTrades 2258 ms @23:43:29Z
+[slow] flagTrades took 2239 ms
+[stall] 00:03:38Z event loop blocked 2.3 s · heap 193 MB · rss 480 MB · slow jobs: flagTrades 3743 ms @23:08:29Z · flagTrades 1964 ms @23:13:29Z · flagTrades 1867 ms @23:23:29Z · flagTrades 2746 ms @23:33:29Z · flagTrades 2258 ms @23:43:29Z · flagTrades 2239 ms @00:03:36Z
+[web snapshot plain] build took 2875 ms
+[stall] 00:04:18Z event loop blocked 2.5 s · heap 290 MB · rss 483 MB · slow jobs: flagTrades 3743 ms @23:08:29Z · flagTrades 1964 ms @23:13:29Z · flagTrades 1867 ms @23:23:29Z · flagTrades 2746 ms @23:33:29Z · flagTrades 2258 ms @23:43:29Z · flagTrades 2239 ms @00:03:36Z
+[slow] p5dataCsv took 13401 ms
+[stall] 00:05:15Z event loop blocked 12.7 s · heap 622 MB · rss 885 MB · slow jobs: flagTrades 1964 ms @23:13:29Z · flagTrades 1867 ms @23:23:29Z · flagTrades 2746 ms @23:33:29Z · flagTrades 2258 ms @23:43:29Z · flagTrades 2239 ms @00:03:36Z · p5dataCsv 13401 ms @00:05:01Z
+[mem] rss 885 MB — pm2 restarts at 900
+[tg] fetch failed
+[web snapshot plain] build took 2327 ms
+[web snapshot plain] build took 2341 ms
+[stall] 00:08:18Z event loop blocked 2.0 s · heap 313 MB · rss 546 MB · slow jobs: flagTrades 1964 ms @23:13:29Z · flagTrades 1867 ms @23:23:29Z · flagTrades 2746 ms @23:33:29Z · flagTrades 2258 ms @23:43:29Z · flagTrades 2239 ms @00:03:36Z · p5dataCsv 13401 ms @00:05:01Z
+[web snapshot plain] build took 2541 ms
+[stall] 00:10:18Z event loop blocked 2.3 s · heap 314 MB · rss 550 MB · slow jobs: flagTrades 1964 ms @23:13:29Z · flagTrades 1867 ms @23:23:29Z · flagTrades 2746 ms @23:33:29Z · flagTrades 2258 ms @23:43:29Z · flagTrades 2239 ms @00:03:36Z · p5dataCsv 13401 ms @00:05:01Z
