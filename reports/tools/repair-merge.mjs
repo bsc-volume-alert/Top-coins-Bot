@@ -25,10 +25,13 @@ for (const t of tables) {
     const tx = dst.transaction((rs) => { let n = 0; for (const r of rs) { const v = useCols.map((c) => r[c]); if (ex && ex.get(...v)) continue; n += st.run(...v).changes; } return n; });
     const rd = src.prepare(`SELECT * FROM ${t} WHERE rowid BETWEEN ? AND ? AND ${tc} >= ?`);
     let n = 0, seen = 0, bad = 0;
-    const take = (a, b) => { try { const rs = rd.all(a, b, CUT); seen += rs.length; if (rs.length) n += tx(rs); } catch (e) { if (!/corrupt|malformed/i.test(e.message)) throw e; if (a === b) { bad++; return; } const m = Math.floor((a + b) / 2); take(a, m); take(m + 1, b); } };
+    const take = (a, b) => { try { const rs = rd.all(a, b, CUT); seen += rs.length; if (rs.length) n += tx.immediate(rs); } catch (e) { if (!/corrupt|malformed/i.test(e.message)) throw e; if (a === b) { bad++; return; } const m = Math.floor((a + b) / 2); take(a, m); take(m + 1, b); } };
     for (let a = lo; a <= maxR; a += 2000) take(a, Math.min(maxR, a + 1999));
     total += n; totalBad += bad;
     console.log(`[repair] ${t}: ${seen} source rows since cutoff (${tc}), inserted ${n}${bad ? `, ${bad} unreadable rows skipped` : ""}`);
   } catch (e) { console.log(`[repair] ${t}: ERROR ${e.message}`); }
 }
 console.log(`[repair] total inserted ${total}, unreadable ${totalBad}`); dst.close(); console.log("[repair] merge done");
+// v4 (08:50): each batch is an IMMEDIATE transaction (takes the write lock first, so it waits for the tracker instead of failing "database is locked"
+// when its read snapshot goes stale). vol_log: the 08:41 re-run re-added 10 rows the tracker had updated meanwhile — remove those duplicates (gap window only).
+if (process.env.MERGE_DEDUP_VOLLOG === "1") { const d = new Database(DST, { timeout: 120000 }); const r = d.prepare(`DELETE FROM vol_log WHERE ts >= ? AND ts < 1794297185 AND id NOT IN (SELECT MIN(id) FROM vol_log WHERE ts >= ? AND ts < 1794297185 GROUP BY mint, ts)`).run(CUT, CUT); console.log(`[repair] vol_log duplicates removed: ${r.changes}`); d.close(); }
