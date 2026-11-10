@@ -1,1 +1,1 @@
-ls-dbs 1249
+wal-trunc 1308
