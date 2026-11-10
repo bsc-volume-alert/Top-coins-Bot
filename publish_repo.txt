@@ -1,0 +1,11 @@
+===== launcher-data repo
+2026-11-10 04:33:49 +0000 39d6e01 launcher data 2026-11-10T04:33:49Z
+270M	.git
+-rw-r--r-- 1 root root 25478672 Nov 10 04:33 vol_paper.csv
+-rw-r--r-- 1 root root 27797421 Nov 10 04:33 fd_wallet_state.csv
+-rw-r--r-- 1 root root 28392308 Nov 10 04:33 fd_ledger.csv
+-rw-r--r-- 1 root root 30517204 Nov 10 04:33 fd_watch.csv
+-rw-r--r-- 1 root root 42541423 Nov 10 04:33 fd_decisions.csv
+-rw-r--r-- 1 root root 47645397 Nov 10 04:33 creator_trace.csv
+-rw-r--r-- 1 root root 94371627 Nov 10 04:33 trades_books.csv
+-rw-r--r-- 1 root root 94371684 Nov 10 04:33 coverage_candidate_trades.csv

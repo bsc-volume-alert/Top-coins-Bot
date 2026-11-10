@@ -1,0 +1,324 @@
+===== /root/tracker/data/push-now.log
+[push-data] pushed 2026-10-19T19:16:59Z
+[push-data] csv fetch failed
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-20T04:03:31Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-20T06:25:16Z
+[push-data] pushed 2026-10-20T08:30:20Z
+[push-data] pushed 2026-10-20T08:50:33Z
+[push-data] pushed 2026-10-20T09:26:00Z
+[push-data] pushed 2026-10-20T14:04:39Z
+[push-data] pushed 2026-10-20T15:11:46Z
+[push-data] pushed 2026-10-20T15:14:50Z
+[push-data] pushed 2026-10-20T17:31:05Z
+[push-data] pushed 2026-10-20T17:52:20Z
+[push-data] pushed 2026-10-20T18:42:03Z
+[push-data] pushed 2026-10-20T22:27:31Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-20T23:10:20Z
+[push-data] pushed 2026-10-20T23:59:49Z
+[push-data] pushed 2026-10-21T00:29:56Z
+[push-data] pushed 2026-10-21T00:43:12Z
+[push-data] pushed 2026-10-21T07:29:39Z
+[push-data] pushed 2026-10-21T07:43:26Z
+[push-data] pushed 2026-10-21T08:21:22Z
+[push-data] pushed 2026-10-21T08:48:18Z
+[push-data] pushed 2026-10-21T09:20:57Z
+[push-data] pushed 2026-10-21T09:30:45Z
+[push-data] pushed 2026-10-21T09:36:26Z
+[push-data] pushed 2026-10-21T12:21:04Z
+[push-data] pushed 2026-10-21T13:13:41Z
+[push-data] pushed 2026-10-21T15:27:17Z
+[push-data] pushed 2026-10-21T15:50:40Z
+[push-data] pushed 2026-10-21T15:54:02Z
+[push-data] pushed 2026-10-21T16:26:11Z
+[push-data] pushed 2026-10-21T16:37:09Z
+[push-data] pushed 2026-10-21T16:49:17Z
+[push-data] pushed 2026-10-21T16:53:03Z
+[push-data] pushed 2026-10-21T16:56:12Z
+[push-data] pushed 2026-10-21T17:17:27Z
+[push-data] pushed 2026-10-21T17:24:15Z
+[push-data] pushed 2026-10-21T17:28:04Z
+[push-data] pushed 2026-10-21T17:33:24Z
+[push-data] pushed 2026-10-21T17:37:33Z
+[push-data] pushed 2026-10-21T17:37:59Z
+[push-data] pushed 2026-10-21T17:48:57Z
+[push-data] pushed 2026-10-21T18:51:49Z
+[push-data] pushed 2026-10-21T21:31:19Z
+[push-data] pushed 2026-10-21T21:37:36Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-21T22:36:18Z
+[push-data] pushed 2026-10-21T22:41:23Z
+[push-data] pushed 2026-10-21T23:01:12Z
+[push-data] pushed 2026-10-21T23:04:51Z
+[push-data] pushed 2026-10-21T23:08:42Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-23T06:10:31Z
+[push-data] pushed 2026-10-23T12:17:03Z
+[push-data] pushed 2026-10-23T12:21:26Z
+[push-data] pushed 2026-10-23T12:26:13Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-23T18:50:43Z
+[push-data] csv fetch failed
+[push-data] pushed 2026-10-30T22:17:38Z
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[launcher] pushed
+[push-data] csv fetch failed
+[push-data] csv fetch failed
+[push-data] fomo flow_hourly fetch failed
+[push-data] fomo trades fetch failed
+[push-data] fomo theses fetch failed
+[push-data] pushed 2026-11-04T10:35:07Z
+[push-data] csv fetch failed
+===== /root/.pm2/logs/launcher-out.log
+[launcher] 0.9.61 up — mode paper, wallet AGEniepzBFf2Jesgv7XzqibjndgTRRTE9QDdSojrpYMj, stake 0.1 SOL, cap 0/day, X stream on, AI on
+[launcher] 0.9.61 up — mode paper, wallet AGEniepzBFf2Jesgv7XzqibjndgTRRTE9QDdSojrpYMj, stake 0.1 SOL, cap 0/day, X stream on, AI on
+===== /root/.pm2/logs/launcher-error.log
+[launcher] memory rss=262M heap=32M ext=5M
+[launcher] memory rss=262M heap=32M ext=4M
+[launcher] memory rss=272M heap=55M ext=4M
+[launcher] memory rss=583M heap=350M ext=6M
+[launcher] memory rss=634M heap=355M ext=8M
+[export trades_books] cut at 90 MB: 315513 rows
+[launcher] memory rss=650M heap=367M ext=9M
+[launcher] memory rss=297M heap=28M ext=4M
+[launcher] memory rss=322M heap=37M ext=8M
+[launcher] memory rss=325M heap=37M ext=4M
+[launcher] memory rss=325M heap=42M ext=5M
+[launcher] memory rss=325M heap=36M ext=6M
+[launcher] memory rss=325M heap=30M ext=6M
+[launcher] memory rss=325M heap=42M ext=6M
+[launcher] memory rss=325M heap=42M ext=5M
+[launcher] memory rss=325M heap=32M ext=6M
+[launcher] memory rss=325M heap=46M ext=7M
+[launcher] memory rss=325M heap=43M ext=8M
+[launcher] memory rss=288M heap=27M ext=4M
+[launcher] memory rss=299M heap=29M ext=5M
+[launcher] memory rss=311M heap=29M ext=4M
+[launcher] memory rss=311M heap=35M ext=4M
+[launcher] memory rss=319M heap=30M ext=4M
+[launcher] memory rss=547M heap=255M ext=4M
+[launcher] memory rss=640M heap=354M ext=6M
+[launcher] memory rss=663M heap=369M ext=9M
+[export trades_books] cut at 90 MB: 315385 rows
+[launcher] memory rss=668M heap=383M ext=11M
+[launcher] memory rss=320M heap=42M ext=9M
+[launcher] memory rss=267M heap=30M ext=6M
+[launcher] memory rss=268M heap=30M ext=4M
+[launcher] memory rss=269M heap=31M ext=5M
+[launcher] memory rss=269M heap=32M ext=4M
+[launcher] memory rss=269M heap=36M ext=4M
+[launcher] memory rss=269M heap=40M ext=6M
+[launcher] memory rss=269M heap=40M ext=8M
+[launcher] memory rss=269M heap=39M ext=6M
+[launcher] memory rss=269M heap=40M ext=4M
+[launcher] memory rss=269M heap=46M ext=5M
+[launcher] memory rss=270M heap=33M ext=8M
+[launcher] memory rss=525M heap=302M ext=5M
+[launcher] memory rss=613M heap=367M ext=11M
+[launcher] memory rss=652M heap=384M ext=11M
+[export trades_books] cut at 90 MB: 315372 rows
+[launcher] memory rss=649M heap=37M ext=5M
+[launcher] memory rss=650M heap=36M ext=6M
+[launcher] memory rss=650M heap=30M ext=5M
+[launcher] memory rss=650M heap=35M ext=5M
+[launcher] memory rss=649M heap=38M ext=4M
+[launcher] memory rss=649M heap=37M ext=4M
+[launcher] memory rss=487M heap=262M ext=4M
+ws error: 
+[launcher] memory rss=568M heap=340M ext=4M
+[launcher] memory rss=313M heap=54M ext=4M
+[launcher] memory rss=392M heap=32M ext=7M
+[export trades_books] cut at 90 MB: 315346 rows
+[launcher] memory rss=335M heap=29M ext=8M
+[launcher] memory rss=338M heap=28M ext=7M
+[launcher] memory rss=340M heap=26M ext=4M
+[launcher] memory rss=341M heap=28M ext=6M
+[launcher] memory rss=341M heap=25M ext=4M
+[launcher] memory rss=342M heap=41M ext=7M
+[launcher] memory rss=342M heap=32M ext=4M
+[launcher] memory rss=342M heap=37M ext=6M
+[launcher] memory rss=343M heap=32M ext=7M
+[launcher] memory rss=343M heap=29M ext=4M
+[launcher] memory rss=343M heap=27M ext=4M
+[launcher] memory rss=343M heap=37M ext=5M
+[launcher] memory rss=343M heap=37M ext=5M
+[launcher] memory rss=343M heap=39M ext=6M
+[launcher] memory rss=343M heap=24M ext=4M
+[launcher] memory rss=343M heap=36M ext=4M
+[launcher] memory rss=343M heap=39M ext=6M
+[launcher] memory rss=343M heap=27M ext=4M
+[launcher] memory rss=343M heap=32M ext=5M
+[launcher] memory rss=382M heap=38M ext=4M
+[launcher] memory rss=649M heap=320M ext=4M
+[launcher] memory rss=658M heap=330M ext=10M
+[launcher] memory rss=664M heap=345M ext=16M
+[launcher] memory rss=329M heap=25M ext=5M
+===== /root/.pm2/logs/deployer-out.log
+[deploy] 2026-11-10T00:11:49Z updating 520896f5240ff2a392608437aba78e4e49adb28e -> 0293c3edd553b1a3a696e1d1deeabe1aff3f2027
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] one-off job: diag
+[deploy] 2026-11-10T00:13:56Z updating 0293c3edd553b1a3a696e1d1deeabe1aff3f2027 -> 2af1f7bc4e30c042f7695a02d3138760a6df64ad
+up to date in 339ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] launcher changed — installing and checking
+up to date in 419ms
+[deploy] launcher reloaded
+[deploy] 2026-11-10T00:25:09Z updating 2af1f7bc4e30c042f7695a02d3138760a6df64ad -> 92bc13d2924dec9fe8c0ea7590bd4c5f2b185121
+up to date in 1s
+[deploy] done: LAUNCHER.md: push timeout and tracker stall fixes
+[deploy] 2026-11-10T01:47:32Z updating 92bc13d2924dec9fe8c0ea7590bd4c5f2b185121 -> febcba8f1f498b46037b5e8ec43547af44dabd11
+up to date in 764ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-10T02:00:09Z updating febcba8f1f498b46037b5e8ec43547af44dabd11 -> 4080092ab23f2796c0ca3060519022992f127a06
+up to date in 825ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-10T02:10:17Z updating 4080092ab23f2796c0ca3060519022992f127a06 -> b7dc4b1f47372ca1c78048b741ca272d81925c33
+up to date in 655ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] one-off job: audit
+[deploy] [audit] mints 2
+[deploy] remote: Create a pull request for 'audit-20261110t0210' on GitHub by visiting:        
+[deploy] remote:      https://github.com/bsc-volume-alert/Top-coins-Bot/pull/new/audit-20261110t0210        
+[deploy] remote: 
+[deploy] [audit] pushed audit-20261110t0210
+[deploy] 2026-11-10T02:11:51Z updating b7dc4b1f47372ca1c78048b741ca272d81925c33 -> 0aeee55f00122259809d189ed0feca09fe5d2506
+up to date in 358ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-10T02:19:26Z updating 0aeee55f00122259809d189ed0feca09fe5d2506 -> 5de798ffa45996471ed18d40eaf4c7cdedb73c55
+up to date in 642ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-10T02:30:02Z updating 5de798ffa45996471ed18d40eaf4c7cdedb73c55 -> 2f74b1787e095760f44623d9d58dc728f04e4adc
+up to date in 869ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] one-off job: mv-idle-dbs
+[deploy] [mvdb] radar status stopped
+[deploy] [mvdb] fomo status stopped
+[deploy] [mvdb] moved radar.db (2.7G)
+[deploy] [mvdb] moved radar.db-wal (7.2M)
+[deploy] [mvdb] moved radar.db-shm (32K)
+[deploy] [mvdb] moved fomo.db (2.2G)
+[deploy] [mvdb] moved fomo.db-wal (163M)
+[deploy] [mvdb] moved fomo.db-shm (352K)
+[deploy] [mvdb] /dev/vda1        48G   32G   17G  66% /
+[deploy] [mvdb] /dev/sda        100G   40G   55G  43% /mnt/volume_1794164707392
+[deploy] 2026-11-10T02:39:53Z updating 2f74b1787e095760f44623d9d58dc728f04e4adc -> ecfa8c978ac9dac3d6dd54db345a5c8982cbbdc3
+up to date in 621ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-10T04:11:30Z updating ecfa8c978ac9dac3d6dd54db345a5c8982cbbdc3 -> 94c304967412aba33b76f3abbe1f1eaad89c0fe3
+up to date in 774ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-10T04:20:06Z updating 94c304967412aba33b76f3abbe1f1eaad89c0fe3 -> d2ae6cc049ed63e08ec805878ddc41be8df5a542
+up to date in 842ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] one-off job: mv-tracker-db
+[mvtdb] tracker stopped 04:20:08
+[mvtdb] wal checkpoint [{"busy":0,"log":0,"checkpointed":0}]
+[mvtdb] tracker started 04:21:11 (capture gap 04:20:08 → 04:21:11)
+[mvtdb] launcher + scope restarted 04:21:32
+lrwxrwxrwx 1 root root   47 Nov 10 04:21 /root/tracker/data/tracker.db -> /mnt/volume_1794164707392/tracker-db/tracker.db
+
+/mnt/volume_1794164707392/tracker-db/:
+total 18545720
+drwxr-xr-x 2 root root        4096 Nov 10 04:21 .
+drwxr-xr-x 6 root root        4096 Nov 10 04:20 ..
+-rw-r--r-- 1 root root 18990772224 Nov 10 04:20 tracker.db
+-rw-r--r-- 1 root root       32768 Nov 10 04:21 tracker.db-shm
+-rw-r--r-- 1 root root           0 Nov 10 04:21 tracker.db-wal
+/dev/vda1        48G   32G   17G  67% /
+/dev/sda        100G   58G   37G  62% /mnt/volume_1794164707392
+[deploy] 2026-11-10T04:45:48Z updating d2ae6cc049ed63e08ec805878ddc41be8df5a542 -> b38e32349d4e73af0aebd12803f0430e9c4a01c9
+up to date in 656ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] one-off job: diag
+===== /root/.pm2/logs/tracker-error.log
+[stall] 03:46:36Z event loop blocked 2.6 s · heap 447 MB · rss 708 MB · slow jobs: none over 300 ms
+[mem] rss 728 MB — pm2 restarts at 900
+[stall] 03:48:22Z event loop blocked 2.9 s · heap 337 MB · rss 601 MB · slow jobs: none over 300 ms
+[web snapshot plain] build took 7305 ms
+[stall] 03:48:43Z event loop blocked 7.9 s · heap 447 MB · rss 715 MB · slow jobs: none over 300 ms
+[stall] 03:49:49Z event loop blocked 2.6 s · heap 456 MB · rss 722 MB · slow jobs: none over 300 ms
+[stall] 03:53:07Z event loop blocked 183.1 s · heap 458 MB · rss 723 MB · slow jobs: none over 300 ms
+[stall] 03:53:13Z event loop blocked 4.5 s · heap 461 MB · rss 723 MB · slow jobs: none over 300 ms
+[web snapshot plain] build took 7323 ms
+[stall] 03:53:20Z event loop blocked 6.4 s · heap 405 MB · rss 770 MB · slow jobs: none over 300 ms
+[web snapshot plain] build took 2762 ms
+[stall] 03:55:10Z event loop blocked 2.3 s · heap 423 MB · rss 713 MB · slow jobs: none over 300 ms
+[stall] 03:56:26Z event loop blocked 2.4 s · heap 434 MB · rss 722 MB · slow jobs: none over 300 ms
+[stall] 03:56:34Z event loop blocked 6.9 s · heap 476 MB · rss 734 MB · slow jobs: none over 300 ms
+[web snapshot plain] build took 2723 ms
+[mem] rss 722 MB — pm2 restarts at 900
+[web snapshot plain] build took 8832 ms
+[stall] 03:59:16Z event loop blocked 8.8 s · heap 419 MB · rss 775 MB · slow jobs: none over 300 ms
+[stall] 03:59:20Z event loop blocked 3.3 s · heap 425 MB · rss 774 MB · slow jobs: none over 300 ms
+[web snapshot plain] build took 3676 ms
+[stall] 04:01:11Z event loop blocked 2.9 s · heap 440 MB · rss 730 MB · slow jobs: none over 300 ms
+[web snapshot plain] build took 2767 ms
+[stall] 04:03:10Z event loop blocked 2.5 s · heap 441 MB · rss 727 MB · slow jobs: none over 300 ms
+[slow] p5dataCsv took 13626 ms
+[stall] 04:05:15Z event loop blocked 14.1 s · heap 757 MB · rss 1144 MB · slow jobs: p5dataCsv 13626 ms @04:05:01Z
+[web snapshot plain] build took 1829 ms
+[stall] 04:05:18Z event loop blocked 2.1 s · heap 517 MB · rss 1062 MB · slow jobs: p5dataCsv 13626 ms @04:05:01Z
+[gmgn] empty rank response, keys: code,data,message,reason {"code":0,"data":{"code":0,"data":{"rank":[]},"message":"success","reason":""}}
+[web snapshot plain] build took 3341 ms
+[stall] 04:07:19Z event loop blocked 3.2 s · heap 442 MB · rss 773 MB · slow jobs: p5dataCsv 13626 ms @04:05:01Z
+[mem] rss 782 MB — pm2 restarts at 900
+[web snapshot plain] build took 8731 ms
+[stall] 04:09:24Z event loop blocked 8.2 s · heap 445 MB · rss 770 MB · slow jobs: p5dataCsv 13626 ms @04:05:01Z
+[web snapshot plain] build took 2655 ms
+[stall] 04:11:18Z event loop blocked 2.5 s · heap 435 MB · rss 831 MB · slow jobs: p5dataCsv 13626 ms @04:05:01Z
+[web snapshot plain] build took 2926 ms
+[stall] 04:13:18Z event loop blocked 2.6 s · heap 453 MB · rss 781 MB · slow jobs: p5dataCsv 13626 ms @04:05:01Z
+[web snapshot plain] build took 3190 ms
+[stall] 04:15:19Z event loop blocked 3.0 s · heap 459 MB · rss 783 MB · slow jobs: p5dataCsv 13626 ms @04:05:01Z
+[gmgn] empty rank response, keys: code,data,message,reason {"code":0,"data":{"code":0,"data":{"rank":[]},"message":"success","reason":""}}
+[web snapshot plain] build took 3176 ms
+[stall] 04:17:19Z event loop blocked 2.8 s · heap 454 MB · rss 846 MB · slow jobs: p5dataCsv 13626 ms @04:05:01Z
+[mem] rss 844 MB — pm2 restarts at 900
+[tg] fetch failed
+[web snapshot plain] build took 10318 ms
+[stall] 04:19:26Z event loop blocked 10.0 s · heap 468 MB · rss 784 MB · slow jobs: p5dataCsv 13626 ms @04:05:01Z
+[gmgn] empty rank response, keys: code,data,message,reason {"code":0,"data":{"code":0,"data":{"rank":[]},"message":"success","reason":""}}
+[stall] 04:23:11Z event loop blocked 2.2 s · heap 60 MB · rss 226 MB · slow jobs: none over 300 ms
+[stall] 04:23:43Z event loop blocked 5.0 s · heap 64 MB · rss 259 MB · slow jobs: none over 300 ms
+[stall] 04:24:44Z event loop blocked 6.7 s · heap 90 MB · rss 274 MB · slow jobs: none over 300 ms
+[stall] 04:24:50Z event loop blocked 5.1 s · heap 99 MB · rss 278 MB · slow jobs: none over 300 ms
+[smartmoney kol] fetch failed
+[web snapshot plain] build took 19230 ms
+[stall] 04:25:25Z event loop blocked 18.5 s · heap 172 MB · rss 368 MB · slow jobs: none over 300 ms
+[stall] 04:25:50Z event loop blocked 5.4 s · heap 184 MB · rss 373 MB · slow jobs: none over 300 ms
+[stall] 04:26:49Z event loop blocked 5.3 s · heap 58 MB · rss 376 MB · slow jobs: none over 300 ms
+[web snapshot plain] build took 9867 ms
+[stall] 04:27:16Z event loop blocked 9.9 s · heap 164 MB · rss 379 MB · slow jobs: none over 300 ms
+[stall] 04:27:49Z event loop blocked 4.7 s · heap 169 MB · rss 380 MB · slow jobs: none over 300 ms
+[stall] 04:28:49Z event loop blocked 4.9 s · heap 192 MB · rss 381 MB · slow jobs: none over 300 ms
+[web snapshot plain] build took 9238 ms
+[stall] 04:29:15Z event loop blocked 8.3 s · heap 183 MB · rss 381 MB · slow jobs: none over 300 ms
+[stall] 04:29:48Z event loop blocked 4.1 s · heap 192 MB · rss 388 MB · slow jobs: none over 300 ms
+[stall] 04:30:48Z event loop blocked 3.9 s · heap 72 MB · rss 395 MB · slow jobs: none over 300 ms
+[web snapshot plain] build took 9448 ms
+[stall] 04:31:15Z event loop blocked 8.8 s · heap 175 MB · rss 387 MB · slow jobs: none over 300 ms
+[stall] 04:32:54Z event loop blocked 2.4 s · heap 202 MB · rss 388 MB · slow jobs: none over 300 ms
+[web snapshot plain] build took 8712 ms
+[stall] 04:33:15Z event loop blocked 7.8 s · heap 195 MB · rss 390 MB · slow jobs: none over 300 ms
+[gmgn] empty rank response, keys: code,data,message,reason {"code":0,"data":{"code":0,"data":{"rank":[]},"message":"success","reason":""}}
+[web snapshot plain] build took 17955 ms
+[stall] 04:35:24Z event loop blocked 17.2 s · heap 185 MB · rss 392 MB · slow jobs: none over 300 ms
+[stall] 04:35:28Z event loop blocked 2.1 s · heap 189 MB · rss 391 MB · slow jobs: none over 300 ms
+[web snapshot plain] build took 1945 ms
+[stall] 04:40:45Z event loop blocked 175.3 s · heap 202 MB · rss 392 MB · slow jobs: none over 300 ms
+[web snapshot plain] build took 1920 ms
+[web snapshot plain] build took 1956 ms
+[web snapshot plain] build took 2065 ms
+[stall] 04:44:52Z event loop blocked 2.4 s · heap 243 MB · rss 425 MB · slow jobs: none over 300 ms
+[gmgn meteora] fetch failed
