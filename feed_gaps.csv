@@ -1,0 +1,46 @@
+ts,event,detail
+1794269631,idle,"idle 60s, reconnecting"
+1794269634,closed,closed (close 1006); reconnect #3 in 1000ms
+1794269639,connecting,connecting wss://api.mainnet-beta.solana.com
+1794269640,open,open
+1794269641,subscribed,subscribed id=10983133
+1794269654,pool-closed,closed (close 1001); reconnect in 1000ms
+1794269655,pool-open,open
+1794269655,pool-subscribed,subscribed id=15439108
+1794270124,idle,"idle 60s, reconnecting"
+1794270129,closed,closed (close 1006); reconnect #4 in 1000ms
+1794270136,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794270136,pool-closed,closed (close 1006); reconnect in 1000ms
+1794270136,open,open
+1794270136,subscribed,subscribed id=32926547
+1794270137,pool-open,open
+1794270137,pool-subscribed,subscribed id=32926636
+1794270383,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794270383,open,open
+1794270383,pool-open,open
+1794270383,subscribed,subscribed id=32957848
+1794270383,pool-subscribed,subscribed id=32957849
+1794270447,pool-closed,closed (close 1001); reconnect in 1000ms
+1794270448,pool-open,open
+1794270448,pool-subscribed,subscribed id=15439108
+1794270467,pool-error,error Invalid WebSocket frame: invalid status code 1006
+1794270467,pool-closed,closed (close 1006); reconnect in 1000ms
+1794270468,pool-open,open
+1794270468,pool-subscribed,subscribed id=31755099
+1794272638,idle,"idle 60s, reconnecting"
+1794272639,closed,closed (close 1006); reconnect #1 in 1000ms
+1794272641,connecting,connecting wss://api.mainnet-beta.solana.com
+1794272642,open,open
+1794272642,subscribed,subscribed id=12440406
+1794272649,pool-closed,closed (close 1001); reconnect in 1000ms
+1794272650,pool-open,open
+1794272650,pool-subscribed,subscribed id=15439108
+1794273460,error,error Invalid WebSocket frame: invalid status code 1006
+1794273460,closed,closed (close 1006); reconnect #2 in 1000ms
+1794273461,connecting,connecting wss://mainnet.helius-rpc.com/?api-key=***
+1794273461,open,open
+1794273461,subscribed,subscribed id=33287234
+1794273480,pool-error,error Invalid WebSocket frame: invalid status code 1006
+1794273489,pool-closed,closed (close 1006); reconnect in 1000ms
+1794273491,pool-open,open
+1794273491,pool-subscribed,subscribed id=32087252
