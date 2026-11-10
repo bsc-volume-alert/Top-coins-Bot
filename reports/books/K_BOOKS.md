@@ -160,3 +160,11 @@
 | 100K2 K30-40T25 | 48 | 4 | 16 | −0.3% | −2.7% | −0.033 SOL | 4 | −0.733 | +0.700 |
 | 100K3 K30-40T20 | 48 | 4 | 15 | −2.2% | −2.7% | −0.213 SOL | 4 | −0.732 | +0.519 |
 - Fact (not yet a conclusion): the $40–50K slice that only 100K1 buys = 28 closed coins with 12 crashes (43%); the $30–40K slice = 48 coins with 4 crashes (8%). To check coin by coin: what the crashes had in common.
+
+## Evidence package for Codex audit — 10 Nov 2026 21:02 UTC read (branch k100-audit-20261110t2102 @ c093afef; export @ da33a7e2)
+- Export: reports/tools/k100-audit-export.mjs (read-only). Reconciliations: recon.py + RECON.md on the package branch.
+- 83 coins entered (52 in all three books, 31 in 100K1 only), 187 positions; shared entry identical for 83/83. 30,338 decisions (19,521 out of band; 7,502 clock readings unusable; 2,831 late; 401 no market cap).
+- Closed net (0.2 SOL): 100K1 −2.386 · 100K2 −0.235 · 100K3 −0.247 SOL; open 3/1/1.
+- 100K1's $40–50K entries: 29 closed, 2 wins, 12 severe (< −50%), net −2.151 SOL; its $30–40K entries: 51 closed, 16 wins, 5 severe, net −0.235 SOL. (Facts, not yet a conclusion.)
+- 20% vs 25% trail on the same 52 coins: 20% better 16, 25% better 11, equal 24; mean difference −0.1 pts.
+- MISSING EVIDENCE: 20 of 83 entered coins have no stored trade history (19 decided on the clock checkpoint — not tracker-retained launches). Backfilling them from chain would be new collection → needs the owner's go.
