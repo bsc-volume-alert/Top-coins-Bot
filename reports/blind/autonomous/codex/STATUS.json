@@ -1,0 +1,16 @@
+{
+  "worker": "Codex",
+  "run_id": "bootstrap-20261110",
+  "state": "bootstrap_complete",
+  "lease_expires_at": null,
+  "task": "Synthetic integrity audit subset",
+  "next_task": "C001",
+  "remaining": [
+    "Reproduce a published development market result",
+    "Complete C002 jackpot and buffer cases",
+    "C003 runner-data inventory"
+  ],
+  "scheduled_execution_verified": false,
+  "claude_worker": "not configured: no CLI, provider credentials or scheduler access available",
+  "immediate_run_endpoint": "404; scheduled first wake requested instead"
+}
