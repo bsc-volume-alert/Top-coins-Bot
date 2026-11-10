@@ -152,3 +152,11 @@
 | 100K3 K30-40T20 | 14 | 1 | 3 | −6.7% | −2.7% | −0.187 SOL |
 - 30-coin mark passed for 100K1; 100K2/3 (the $30–40K band) only 15 coins each. No conclusions drawn yet; coin-by-coin analysis is next.
 - Recording gaps during the DB repair: 07:53–07:57 and 08:31–08:33 UK (see LAUNCHER.md).
+
+## Snapshot 10 Nov 2026 20:35 UK (82 unique coins)
+| Book | Closed | Open | Wins | Mean r | Median r | Total | Crashes (r < −50%) | Crash total | Rest total |
+|---|---|---|---|---|---|---|---|---|---|
+| 100K1 K30-50T25 | 76 | 6 | 18 | −14.0% | −2.7% | −2.130 SOL | 16 | −2.622 | +0.492 |
+| 100K2 K30-40T25 | 48 | 4 | 16 | −0.3% | −2.7% | −0.033 SOL | 4 | −0.733 | +0.700 |
+| 100K3 K30-40T20 | 48 | 4 | 15 | −2.2% | −2.7% | −0.213 SOL | 4 | −0.732 | +0.519 |
+- Fact (not yet a conclusion): the $40–50K slice that only 100K1 buys = 28 closed coins with 12 crashes (43%); the $30–40K slice = 48 coins with 4 crashes (8%). To check coin by coin: what the crashes had in common.
