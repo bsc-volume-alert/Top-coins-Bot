@@ -9,8 +9,8 @@ const T = [["tokens", "create_ts"], ["trades", "ts"], ["token_life", "ts"], ["to
 for (const [t, c] of T) { try { const a = live.prepare(`SELECT COUNT(*) n FROM ${t} WHERE ${c} BETWEEN ? AND ?`).get(A, B).n, b = vol.prepare(`SELECT COUNT(*) n FROM ${t} WHERE ${c} BETWEEN ? AND ?`).get(A, B).n; console.log(`[gap] ${t}: live ${a} · volume ${b}`); } catch (e) { console.log(`[gap] ${t}: ${e.message}`); } }
 if (MODE === "merge") {
   const cols = (t) => vol.prepare(`PRAGMA table_info(${t})`).all().map((x) => x.name);
-  const ins = (t, how) => { const cs = cols(t).filter((c) => live.prepare(`PRAGMA table_info(${t})`).all().some((x) => x.name === c)); return live.prepare(`INSERT ${how} INTO ${t} (${cs.join(",")}) VALUES (${cs.map(() => "?").join(",")})`), cs; };
-  const merge = (t, c, how, exists) => { const [st, cs] = [ins(t, how)].flat(); let n = 0, k = 0; const rows = vol.prepare(`SELECT * FROM ${t} WHERE ${c} BETWEEN ? AND ?`).all(A, B);
+  const ins = (t, how) => { const cs = cols(t).filter((c) => live.prepare(`PRAGMA table_info(${t})`).all().some((x) => x.name === c)); return [live.prepare(`INSERT ${how} INTO ${t} (${cs.join(",")}) VALUES (${cs.map(() => "?").join(",")})`), cs]; };
+  const merge = (t, c, how, exists) => { const [st, cs] = ins(t, how); let n = 0, k = 0; const rows = vol.prepare(`SELECT * FROM ${t} WHERE ${c} BETWEEN ? AND ?`).all(A, B);
     const tx = live.transaction((batch) => { for (const r of batch) { if (exists && exists(r)) continue; n += st.run(...cs.map((x) => r[x])).changes; } });
     for (let i = 0; i < rows.length; i += 2000) tx(rows.slice(i, i + 2000)); console.log(`[gap] merged ${t}: +${n} of ${rows.length}`); };
   merge("tokens", "create_ts", "OR IGNORE"); merge("token_life", "ts", "OR IGNORE"); try { merge("token_cp_clock", "cutoff_ts", "OR IGNORE"); } catch (e) { console.log("[gap] cp_clock", e.message); }
