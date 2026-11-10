@@ -479,7 +479,10 @@ async function exportBody() {
     try { const f = statfsSync(CFG.OUT_DIR), sz = (p) => { try { return statSync(p).size; } catch { return 0; } }; exportStat.disk = { at: new Date().toISOString(), freeGb: +(f.bavail * f.bsize / 1073741824).toFixed(2), totalGb: +(f.blocks * f.bsize / 1073741824).toFixed(2), usedPct: +(100 - 100 * f.bavail / f.blocks).toFixed(1), trackerDbGb: +((sz(CFG.TRACKER_DB) + sz(CFG.TRACKER_DB + "-wal")) / 1073741824).toFixed(2), launcherDbGb: +((sz(CFG.DB_PATH) + sz(CFG.DB_PATH + "-wal")) / 1073741824).toFixed(2) }; } catch (e) { exportStat.disk = { err: String(e.message).slice(0, 100) }; } // 0.9.51: disk visibility
     writeFileSync(`${CFG.OUT_DIR}/status.json`, JSON.stringify(status(), null, 1)); st.exports++;
     if (process.env.LAUNCH_NO_PUSH || CFG.SMOKE || pushing) return; pushing = true;
-    execFile("bash", [new URL("../push.sh", import.meta.url).pathname], { timeout: 180000 }, (e, so, se) => { pushing = false; st.lastPush = e ? "failed: " + (se || e.message).slice(0, 160) : "ok " + new Date().toISOString(); });
+    const p0 = Date.now(); // 0.9.61 (reliability, 10 Nov 00:15 UK): pushes failed at 20:05, ~00:01 and ~00:11 with no reason recorded — 7-min limit (was 3), and the reason (timeout/kill/exit code + output tail) and duration are now kept
+    execFile("bash", [new URL("../push.sh", import.meta.url).pathname], { timeout: 420000, maxBuffer: 4 << 20 }, (e, so, se) => { pushing = false; const dur = Math.round((Date.now() - p0) / 1000); st.lastPushS = dur;
+      if (e) { st.pushFails = (st.pushFails || 0) + 1; st.lastPushFail = `${new Date().toISOString()} after ${dur}s ${e.killed ? "killed (" + (e.signal || "timeout") + ")" : "exit " + e.code} ${String(se || so || "").trim().split("\n").slice(-2).join(" | ").slice(0, 200)}`; }
+      st.lastPush = e ? "failed: " + st.lastPushFail : "ok " + new Date().toISOString(); });
   } catch (e) { st.errors++; st.lastErr = "export: " + e.message; }
 }
 function exportSoon() { clearTimeout(soon); soon = setTimeout(exportNow, 90000); }
