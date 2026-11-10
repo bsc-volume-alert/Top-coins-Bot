@@ -1,0 +1,228 @@
+[deploy] one-off job: diag
+[deploy] one-off job: audit
+[deploy] one-off job: mv-idle-dbs
+[deploy] [mvdb] radar status stopped
+[deploy] [mvdb] fomo status stopped
+[deploy] [mvdb] moved radar.db (2.7G)
+[deploy] [mvdb] moved radar.db-wal (7.2M)
+[deploy] [mvdb] moved radar.db-shm (32K)
+[deploy] [mvdb] moved fomo.db (2.2G)
+[deploy] [mvdb] moved fomo.db-wal (163M)
+[deploy] [mvdb] moved fomo.db-shm (352K)
+[deploy] [mvdb] /dev/vda1        48G   32G   17G  66% /
+[deploy] [mvdb] /dev/sda        100G   40G   55G  43% /mnt/volume_1794164707392
+[deploy] one-off job: mv-tracker-db
+[deploy] one-off job: diag
+[deploy] one-off job: mv-tracker-db-back
+[mvback] tracker stopped 04:57:02
+[mvback] wal checkpoint [{"busy":1,"log":53701,"checkpointed":788}]
+[mvback] /dev/vda1        48G   14G   34G  29% /
+[mvback] tracker started on the main disk 04:58:49 (capture gap 04:57:02 → 04:58:49)
+[mvback] launcher + scope restarted 04:59:09
+[mvback] /dev/vda1        48G   32G   16G  67% /
+[mvback] /dev/sda        100G   59G   36G  62% /mnt/volume_1794164707392
+[deploy] one-off job: ls-dbs
+[deploy] one-off job: gap-compare
+[deploy] [gap] tokens: live 656 · volume 690
+[deploy] [gap] trades: live 293164 · volume 313170
+[deploy] [gap] token_life: live 3688 · volume 3935
+[deploy] [gap] token_cp_clock: live 468 · volume 500
+[deploy] [gap] feed_gaps: live 8 · volume 8
+[deploy] [gap] sol_px: live 18 · volume 19
+[deploy] [gap] done
+[deploy] one-off job: gap-merge
+[gap] tokens: live 656 · volume 690
+[gap] trades: live 293164 · volume 313170
+[gap] token_life: live 3688 · volume 3935
+[gap] token_cp_clock: live 468 · volume 500
+[gap] feed_gaps: live 8 · volume 8
+[gap] sol_px: live 18 · volume 19
+[deploy] one-off job: gap-merge
+[gap] tokens: live 656 · volume 690
+[gap] trades: live 293164 · volume 313170
+[gap] token_life: live 3688 · volume 3935
+[gap] token_cp_clock: live 468 · volume 500
+[gap] feed_gaps: live 8 · volume 8
+[gap] sol_px: live 18 · volume 19
+[gap] merged tokens: +34 of 690
+[gap] merged token_life: +247 of 3935
+[gap] merged token_cp_clock: +32 of 500
+[gap] merged sol_px: +1 of 19
+[deploy] one-off job: db-check
+[dbcheck] /root/tracker/data/tracker.db: 1 problem(s) in 671 s
+[dbcheck]   *** in database main ***
+[dbcheck] /mnt/volume_1794164707392/tracker-db/tracker.db: OK in 2759 s
+[dbcheck] done
+[deploy] one-off job: repair-db
+[repairdb] tracker stopped 07:53:05
+[repairdb] [repair] tokens: 3090 live rows since cutoff (create_ts), inserted 3090
+[repairdb] [repair] cluster_wallets: no time column — not merged
+[repairdb] 
+[repairdb] <--- Last few GCs --->
+[repairdb] 
+[repairdb] [218151:0x1acb0000]    79078 ms: Mark-Compact (reduce) 1956.1 (1993.7) -> 1955.8 (1992.7) MB, pooled: 0 MB, 1126.09 / 0.00 ms  (+ 1.8 ms in 0 steps since start of marking, biggest step 0.0 ms, walltime since start of marking 1147 ms) (average mu = 0.808, 
+[repairdb] 
+[repairdb] <--- JS stacktrace --->
+[repairdb] 
+[repairdb] FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory
+[repairdb] ----- Native stack trace -----
+[repairdb] 
+[repairdb]  1: 0xe46bbe node::OOMErrorHandler(char const*, v8::OOMDetails const&) [node]
+[repairdb]  2: 0x1245390 v8::Utils::ReportOOMFailure(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [node]
+[repairdb]  3: 0x1245667 v8::internal::V8::FatalProcessOutOfMemory(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [node]
+[repairdb]  4: 0x1474575  [node]
+[repairdb]  5: 0x148de09 v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags) [node]
+[repairdb]  6: 0x1462508 v8::internal::HeapAllocator::AllocateRawWithLightRetrySlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [node]
+[repairdb]  7: 0x1463435 v8::internal::HeapAllocator::AllocateRawWithRetryOrFailSlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [node]
+[repairdb]  8: 0x143b75e v8::internal::Factory::AllocateRaw(int, v8::internal::AllocationType, v8::internal::AllocationAlignment) [node]
+[repairdb]  9: 0x1429aea v8::internal::FactoryBase<v8::internal::Factory>::AllocateRawArray(int, v8::internal::AllocationType, v8::internal::AllocationAlignment) [node]
+[repairdb] 10: 0x1445ca7 v8::internal::Factory::CopyPropertyArrayAndGrow(v8::internal::Handle<v8::internal::PropertyArray>, int) [node]
+[repairdb] 11: 0x16b7550 v8::internal::JSObject::MigrateToMap(v8::internal::Isolate*, v8::internal::Handle<v8::internal::JSObject>, v8::internal::Handle<v8::internal::Map>, int) [node]
+[repairdb] 12: 0x171cdd1 v8::internal::LookupIterator::ApplyTransitionToDataProperty(v8::internal::Handle<v8::internal::JSReceiver>) [node]
+[repairdb] 13: 0x17343b5 v8::internal::Object::TransitionAndWriteDataProperty(v8::internal::LookupIterator*, v8::internal::Handle<v8::internal::Object>, v8::internal::PropertyAttributes, v8::Maybe<v8::internal::ShouldThrow>, v8::internal::StoreOrigin) [node]
+[repairdb] 14: 0x18a7b45 v8::internal::Runtime::SetObjectProperty(v8::internal::Isolate*, v8::internal::Handle<v8::internal::Object>, v8::internal::Handle<v8::internal::Object>, v8::internal::Handle<v8::internal::Object>, v8::internal::StoreOrigin, v8::Maybe<v8::internal::ShouldThrow>) [node]
+[repairdb] 15: 0x12542cf v8::Object::Set(v8::Local<v8::Context>, v8::Local<v8::Value>, v8::Local<v8::Value>) [node]
+[repairdb] 16: 0x7eaf5c23683f Data::GetFlatRowJS(v8::Isolate*, v8::Local<v8::Context>, sqlite3_stmt*, bool) [/root/tracker/node_modules/better-sqlite3/build/Release/better_sqlite3.node]
+[repairdb] 17: 0x7eaf5c23bab0 Statement::JS_all(v8::FunctionCallbackInfo<v8::Value> const&) [/root/tracker/node_modules/better-sqlite3/build/Release/better_sqlite3.node]
+[repairdb] 18: 0x1d615e2  [node]
+[repairdb] damaged DB moved to the volume 07:56:14
+[repairdb] FAILED copy — running the tracker on the repaired volume copy via symlink
+[repairdb] tracker started 07:57:30 (recording gap 07:53:05 → 07:57:30)
+[repairdb] launcher + scope restarted
+[repairdb] /dev/vda1        48G   13G   35G  27% /
+[repairdb] /dev/sda        100G   78G   17G  83% /mnt/volume_1794164707392
+[repairdb] done
+[deploy] one-off job: ls-dbs
+[deploy] one-off job: repair-db2
+[repair2] tracker, launcher, scope stopped 08:31:43
+[repair2] checkpoint busy/log/done: 0 0 0
+[repair2] copying 18G to the main disk 08:31:48
+[repair2] tracker started on the MAIN disk 08:33:26 (recording gap 08:31:43 → 08:33:26)
+[repair2] launcher + scope started 08:33:46
+[repair2] /dev/vda1        48G   31G   17G  65% /
+[repair2] /dev/sda        100G   77G   18G  82% /mnt/volume_1794164707392
+[repair2] merging the damaged DB's rows from 04:58:49 UTC (tracker running) 08:33:46
+[repair2] [repair] tokens: ERROR database is locked
+[repair2] [repair] cluster_wallets: no time column — not merged
+[repair2] [repair] trades: ERROR database is locked
+[repair2] [repair] handoffs: ERROR database is locked
+[repair2] [repair] mc_samples: empty
+[repair2] [repair] paper_trades: 0 source rows since cutoff (entry_ts), inserted 0
+[repair2] [repair] stats: no time column — not merged
+[repair2] [repair] wallet_buys: 648 source rows since cutoff (ts), inserted 648
+[repair2] [repair] token_peaks: 2318 source rows since cutoff (create_ts), inserted 2308
+[repair2] [repair] watch_wallets: 0 source rows since cutoff (added_ts), inserted 0
+[repair2] [repair] watch_creators: 0 source rows since cutoff (added_ts), inserted 0
+[repair2] [repair] token_life: 24024 source rows since cutoff (ts), inserted 24024
+[repair2] [repair] big_buys: 507 source rows since cutoff (ts), inserted 359
+[repair2] [repair] dex_pools: 0 source rows since cutoff (ts), inserted 0
+[repair2] [repair] pump_buyers: 0 source rows since cutoff (ts), inserted 0
+[repair2] [repair] creator_claims: 922 source rows since cutoff (ts), inserted 673
+[repair2] [repair] gmgn_flags: 1 source rows since cutoff (ts), inserted 1
+[repair2] [repair] ps_pools: 311 source rows since cutoff (ts), inserted 271
+[repair2] [repair] vol_log: 13 source rows since cutoff (ts), inserted 13
+[repair2] [repair] sol_px: 81 source rows since cutoff (ts), inserted 80
+[repair2] [repair] gmgn_harvest: 23 source rows since cutoff (ts), inserted 15
+[repair2] [repair] smart_trades: no time column — not merged
+[repair2] [repair] smart_wallets: 2 source rows since cutoff (first_ts), inserted 2
+[repair2] [repair] sm_trades: 2166 source rows since cutoff (ts), inserted 2166
+[repair2] [repair] radar_hits: 903 source rows since cutoff (ts), inserted 903
+[repair2] [repair] feed_gaps: 45 source rows since cutoff (ts), inserted 45
+[repair2] [repair] token_cp_clock: 2585 source rows since cutoff (cutoff_ts), inserted 2585
+[repair2] [repair] total inserted 34093, unreadable 0
+[repair2] [repair] merge done
+[repair2] tokens created 04:00 - 05:00 UTC: 1109
+[repair2] tokens created 05:00 - 06:00 UTC: 1162
+[repair2] tokens created 06:00 - 07:00 UTC: 970
+[repair2] tokens created 07:00 - 08:00 UTC: 963
+[repair2] tokens created 08:00 - 09:00 UTC: 624
+[repair2] done 08:34:14
+[deploy] one-off job: repair-merge
+[repair3] [repair] tokens: 3090 source rows since cutoff (create_ts), inserted 0
+[repair3] [repair] cluster_wallets: no time column — not merged
+[repair3] [repair] trades: ERROR database is locked
+[repair3] [repair] handoffs: ERROR database is locked
+[repair3] [repair] mc_samples: empty
+[repair3] [repair] paper_trades: 0 source rows since cutoff (entry_ts), inserted 0
+[repair3] [repair] stats: no time column — not merged
+[repair3] [repair] wallet_buys: 648 source rows since cutoff (ts), inserted 0
+[repair3] [repair] token_peaks: 2318 source rows since cutoff (create_ts), inserted 0
+[repair3] [repair] watch_wallets: 0 source rows since cutoff (added_ts), inserted 0
+[repair3] [repair] watch_creators: 0 source rows since cutoff (added_ts), inserted 0
+[repair3] [repair] token_life: 24024 source rows since cutoff (ts), inserted 0
+[repair3] [repair] big_buys: 507 source rows since cutoff (ts), inserted 0
+[repair3] [repair] dex_pools: 0 source rows since cutoff (ts), inserted 0
+[repair3] [repair] pump_buyers: 0 source rows since cutoff (ts), inserted 0
+[repair3] [repair] creator_claims: 922 source rows since cutoff (ts), inserted 0
+[repair3] [repair] gmgn_flags: 1 source rows since cutoff (ts), inserted 0
+[repair3] [repair] ps_pools: 311 source rows since cutoff (ts), inserted 0
+[repair3] [repair] vol_log: 13 source rows since cutoff (ts), inserted 10
+[repair3] [repair] sol_px: 81 source rows since cutoff (ts), inserted 0
+[repair3] [repair] gmgn_harvest: 23 source rows since cutoff (ts), inserted 0
+[repair3] [repair] smart_trades: no time column — not merged
+[repair3] [repair] smart_wallets: 2 source rows since cutoff (first_ts), inserted 0
+[repair3] [repair] sm_trades: 2166 source rows since cutoff (ts), inserted 0
+[repair3] [repair] radar_hits: 903 source rows since cutoff (ts), inserted 0
+[repair3] [repair] feed_gaps: 45 source rows since cutoff (ts), inserted 0
+[repair3] [repair] token_cp_clock: 2585 source rows since cutoff (cutoff_ts), inserted 0
+[repair3] [repair] total inserted 10, unreadable 0
+[repair3] [repair] merge done
+[deploy] one-off job: repair-merge
+[repair3] [repair] tokens: 3090 source rows since cutoff (create_ts), inserted 0
+[repair3] [repair] cluster_wallets: no time column — not merged
+[repair3] [repair] trades: 1057809 source rows since cutoff (ts), inserted 1053795
+[repair3] [repair] handoffs: 219 source rows since cutoff (ts), inserted 219
+[repair3] [repair] mc_samples: empty
+[repair3] [repair] paper_trades: 0 source rows since cutoff (entry_ts), inserted 0
+[repair3] [repair] stats: no time column — not merged
+[repair3] [repair] wallet_buys: 648 source rows since cutoff (ts), inserted 0
+[repair3] [repair] token_peaks: 2318 source rows since cutoff (create_ts), inserted 0
+[repair3] [repair] watch_wallets: 0 source rows since cutoff (added_ts), inserted 0
+[repair3] [repair] watch_creators: 0 source rows since cutoff (added_ts), inserted 0
+[repair3] [repair] token_life: 24024 source rows since cutoff (ts), inserted 0
+[repair3] [repair] big_buys: 507 source rows since cutoff (ts), inserted 0
+[repair3] [repair] dex_pools: 0 source rows since cutoff (ts), inserted 0
+[repair3] [repair] pump_buyers: 0 source rows since cutoff (ts), inserted 0
+[repair3] [repair] creator_claims: 922 source rows since cutoff (ts), inserted 0
+[repair3] [repair] gmgn_flags: 1 source rows since cutoff (ts), inserted 0
+[repair3] [repair] ps_pools: 311 source rows since cutoff (ts), inserted 0
+[repair3] [repair] vol_log: 13 source rows since cutoff (ts), inserted 7
+[repair3] [repair] sol_px: 81 source rows since cutoff (ts), inserted 0
+[repair3] [repair] gmgn_harvest: 23 source rows since cutoff (ts), inserted 0
+[repair3] [repair] smart_trades: no time column — not merged
+[repair3] [repair] smart_wallets: 2 source rows since cutoff (first_ts), inserted 0
+[repair3] [repair] sm_trades: 2166 source rows since cutoff (ts), inserted 0
+[repair3] [repair] radar_hits: 903 source rows since cutoff (ts), inserted 0
+[repair3] [repair] feed_gaps: 45 source rows since cutoff (ts), inserted 0
+[repair3] [repair] token_cp_clock: 2585 source rows since cutoff (cutoff_ts), inserted 0
+[repair3] [repair] total inserted 1054021, unreadable 0
+[repair3] [repair] merge done
+[repair3] [repair] vol_log duplicates removed: 17
+[deploy] one-off job: db-check
+[dbcheck] /root/tracker/data/tracker.db: OK in 805 s
+[dbcheck] /mnt/volume_1794164707392/tracker-db/tracker.db: OK in 2811 s
+[dbcheck] done
+[deploy] one-off job: ls-dbs
+[deploy] one-off job: wal-trunc
+[deploy] [wal] before -rw-r--r-- 1 root root 1729547192 Nov 10 13:08 /root/tracker/data/tracker.db-wal
+[deploy] [wal] checkpoint [{"busy":1,"log":7823,"checkpointed":511}] 3009 ms
+[deploy] [wal] after -rw-r--r-- 1 root root 1729547192 Nov 10 13:08 /root/tracker/data/tracker.db-wal
+[deploy] [wal] /dev/vda1        48G   34G   14G  72% /
+[deploy] one-off job: k100-audit
+[deploy] one-off job: revival pull
+[deploy] one-off job: revival pull
+[deploy] one-off job: revival pull
+[deploy] one-off job: revival pull
+[deploy] one-off job: supp
+[deploy] one-off job: supp-all
+[deploy] one-off job: k100
+[deploy] one-off job: clean-supp
+[deploy] one-off job: prune-backups
+[deploy] one-off job: vol-setup
+[deploy] one-off job: vol-fix
+[deploy] one-off job: supp-k100
+[deploy] one-off job: vol-ls
+[deploy] one-off job: k100b
+[deploy] one-off job: vault-check
+[deploy] one-off job: virt-check
+[deploy] one-off job: diag
