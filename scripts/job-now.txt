@@ -1,1 +1,1 @@
-repair-db 10 Nov 2026 08:00 UTC — rebuild the tracker DB
+ls-dbs 0810
