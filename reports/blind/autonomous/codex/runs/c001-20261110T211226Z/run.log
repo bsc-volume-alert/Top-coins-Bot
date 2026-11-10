@@ -1,0 +1,173 @@
+CHECKED 500
+CHECKED 1000
+CHECKED 1500
+CHECKED 2000
+CHECKED 2500
+CHECKED 3000
+CHECKED 3500
+{
+  "task": "C001",
+  "research": "Reproduce published ID34, not new discovery",
+  "spec": {
+    "name": "published_ID34",
+    "decision_offsets": [
+      30
+    ],
+    "on_trade": false,
+    "horizon_s": 60,
+    "sizes": [
+      0.2,
+      0.02
+    ]
+  },
+  "data_commit": "e67833121f1da0dc992c28fa26c5236a855c151a",
+  "evaluator_commit": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b",
+  "checked_launches": 3638,
+  "expected_launches": 3638,
+  "fee_scenarios": 2,
+  "sizes": [
+    0.2,
+    0.02
+  ],
+  "mismatches": [],
+  "missing_mints": [],
+  "all_categories_and_values_match": true,
+  "audit": {
+    "not_retained_streams": 301,
+    "outage_excluded": 974
+  },
+  "stream_stats": {
+    "mints_streamed": 4913,
+    "duplicates_removed": 1568880,
+    "non_contiguous": 0
+  },
+  "summary": {
+    "early": {
+      "fee30_size0.2": {
+        "N": 1593,
+        "abstain": 1558,
+        "scored": 35,
+        "net_sol": 0.4802220797452443,
+        "lower_total_sol": 0.4802220797452443,
+        "net_sol_per_eligible_launch": 0.0003014576771784333,
+        "mean_return": 0.0686031542493206,
+        "median_return": 0.01995982351602505,
+        "win_rate": 0.5142857142857142,
+        "loss_ge50": 0.11428571428571428,
+        "without_best_net_sol": 0.10842581159541714,
+        "worst_return": -0.7238175953396864
+      },
+      "fee30_size0.02": {
+        "N": 1593,
+        "abstain": 1558,
+        "scored": 35,
+        "net_sol": 0.006984886933397772,
+        "lower_total_sol": 0.006984886933397772,
+        "net_sol_per_eligible_launch": 4.38473756019948e-06,
+        "mean_return": 0.00997840990485396,
+        "median_return": -0.03989303817664169,
+        "win_rate": 0.45714285714285713,
+        "loss_ge50": 0.14285714285714285,
+        "without_best_net_sol": -0.029621570593965113,
+        "worst_return": -0.7900411840520168
+      },
+      "fee125_size0.2": {
+        "N": 1593,
+        "abstain": 1558,
+        "scored": 35,
+        "net_sol": 0.4802220797452443,
+        "lower_total_sol": 0.4802220797452443,
+        "net_sol_per_eligible_launch": 0.0003014576771784333,
+        "mean_return": 0.0686031542493206,
+        "median_return": 0.01995982351602505,
+        "win_rate": 0.5142857142857142,
+        "loss_ge50": 0.11428571428571428,
+        "without_best_net_sol": 0.10842581159541714,
+        "worst_return": -0.7238175953396864
+      },
+      "fee125_size0.02": {
+        "N": 1593,
+        "abstain": 1558,
+        "scored": 35,
+        "net_sol": 0.006984886933397772,
+        "lower_total_sol": 0.006984886933397772,
+        "net_sol_per_eligible_launch": 4.38473756019948e-06,
+        "mean_return": 0.00997840990485396,
+        "median_return": -0.03989303817664169,
+        "win_rate": 0.45714285714285713,
+        "loss_ge50": 0.14285714285714285,
+        "without_best_net_sol": -0.029621570593965113,
+        "worst_return": -0.7900411840520168
+      }
+    },
+    "late": {
+      "fee30_size0.2": {
+        "N": 2045,
+        "abstain": 1999,
+        "scored": 45,
+        "unknown": 1,
+        "net_sol": -1.1198839973174572,
+        "lower_total_sol": -1.3213839973174573,
+        "net_sol_per_eligible_launch": -0.0005476205365855536,
+        "mean_return": -0.12443155525749525,
+        "median_return": -0.08998650927943677,
+        "win_rate": 0.3111111111111111,
+        "loss_ge50": 0.15555555555555556,
+        "without_best_net_sol": -1.309441510673096,
+        "worst_return": -0.9150135920952874
+      },
+      "fee30_size0.02": {
+        "N": 2045,
+        "abstain": 1999,
+        "scored": 45,
+        "unknown": 1,
+        "net_sol": -0.1663432030882671,
+        "lower_total_sol": -0.1878432030882671,
+        "net_sol_per_eligible_launch": -8.134141960306461e-05,
+        "mean_return": -0.18482578120918566,
+        "median_return": -0.15093115998147086,
+        "win_rate": 0.26666666666666666,
+        "loss_ge50": 0.15555555555555556,
+        "without_best_net_sol": -0.18422689790773245,
+        "worst_return": -0.9815985672463455
+      },
+      "fee125_size0.2": {
+        "N": 2045,
+        "abstain": 1999,
+        "scored": 45,
+        "unknown": 1,
+        "net_sol": -1.1198839973174572,
+        "lower_total_sol": -1.3213839973174573,
+        "net_sol_per_eligible_launch": -0.0005476205365855536,
+        "mean_return": -0.12443155525749525,
+        "median_return": -0.08998650927943677,
+        "win_rate": 0.3111111111111111,
+        "loss_ge50": 0.15555555555555556,
+        "without_best_net_sol": -1.309441510673096,
+        "worst_return": -0.9150135920952874
+      },
+      "fee125_size0.02": {
+        "N": 2045,
+        "abstain": 1999,
+        "scored": 45,
+        "unknown": 1,
+        "net_sol": -0.1663432030882671,
+        "lower_total_sol": -0.1878432030882671,
+        "net_sol_per_eligible_launch": -8.134141960306461e-05,
+        "mean_return": -0.18482578120918566,
+        "median_return": -0.15093115998147086,
+        "win_rate": 0.26666666666666666,
+        "loss_ge50": 0.15555555555555556,
+        "without_best_net_sol": -0.18422689790773245,
+        "worst_return": -0.9815985672463455
+      }
+    }
+  },
+  "limitations": [
+    "Published strategy and validation outcomes were already known; no fresh confirmation",
+    "Frozen evaluator limitations and outage assumptions retained",
+    "No bootstrap or exposure recomputation; these are not newly verified here",
+    "No live execution evidence or profitability claim",
+    "No protected evaluation outcomes read"
+  ]
+}

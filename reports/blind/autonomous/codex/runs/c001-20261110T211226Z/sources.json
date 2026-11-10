@@ -1,0 +1,22 @@
+{
+  "explore.py": {
+    "commit": "93a9ed57ace4216d42e7b7a90d4967078e7ac9dc",
+    "path": "reports/blind/codex_r2/explore.py",
+    "sha256": "26a85b9b8a5255672b63d9bd7a34d39d4fef1daf6f52e2589f4978d2a1eea2af"
+  },
+  "expected_entries.json": {
+    "commit": "93a9ed57ace4216d42e7b7a90d4967078e7ac9dc",
+    "path": "reports/blind/codex_r2/results/selected_entries.json",
+    "sha256": "45fc2d684e85a6e2e2dd11fd01196520fba3aa59971827c2a124798d9484387c"
+  },
+  "expected_results.json": {
+    "commit": "93a9ed57ace4216d42e7b7a90d4967078e7ac9dc",
+    "path": "reports/blind/codex_r2/results/results.json",
+    "sha256": "8f0174e358a8b3d2f23a61bd82ffb1c4d5433f396c5098af5919fbdc39ed09f9"
+  },
+  "evaluate.py": {
+    "commit": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b",
+    "path": "reports/blind/eval/evaluate.py",
+    "sha256": "f5686511fcae09c1c191ca5ffee167c6ad1421cddbb1be8b1c4f0f3eb4cc8a86"
+  }
+}

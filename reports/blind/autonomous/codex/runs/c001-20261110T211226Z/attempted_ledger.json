@@ -1,0 +1,3702 @@
+{
+ "early": [
+  {
+   "mint": "Fprum2EexXg8mhY2zURch8SEoysvwiRooM2wqK5Hpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793951046.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.07183654873254519,
+       "ret": -0.35918274366272596,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.008461088650339302,
+       "ret": -0.42305443251696506,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793951046.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.07183654873254519,
+       "ret": -0.35918274366272596,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.008461088650339302,
+       "ret": -0.42305443251696506,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "Hjbx76nvfrMkF5FjxsiGkEKSSucQWFJYm7uvm8o3pump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793953999.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.08524596933414039,
+       "ret": -0.4262298466707019,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.009795787867328197,
+       "ret": -0.48978939336640986,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793953999.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.08524596933414039,
+       "ret": -0.4262298466707019,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.009795787867328197,
+       "ret": -0.48978939336640986,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "3KPsxWXwRMKLeWLsSbzuQF5X8QuwNU3zerx2jFttpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793954800.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.012747464645263077,
+       "ret": -0.06373732322631538,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.002456566454021937,
+       "ret": -0.12282832270109685,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793954800.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.012747464645263077,
+       "ret": -0.06373732322631538,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.002456566454021937,
+       "ret": -0.12282832270109685,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "959frphhNATT477na6oZEYZ1djAP91tdNip4Z37xpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793954872.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.0899800405467947,
+       "ret": -0.4499002027339735,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.010265823146430632,
+       "ret": -0.5132911573215316,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793954872.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.0899800405467947,
+       "ret": -0.4499002027339735,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.010265823146430632,
+       "ret": -0.5132911573215316,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "8Z5iMQoU8dbMBQBmT6zVXGynSY1a6696Dkex5cDApump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793956034.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.012098865402925154,
+       "ret": 0.060494327014625766,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 1.9807214198448633e-05,
+       "ret": 0.0009903607099224316,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793956034.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.012098865402925154,
+       "ret": 0.060494327014625766,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 1.9807214198448633e-05,
+       "ret": 0.0009903607099224316,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "8EAZqH8N45JHbPsqbwtz8SRdFZ3Cak4q6SsACbwnSm1R",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793957700.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.06053441987809596,
+       "ret": -0.3026720993904798,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.007307336127626147,
+       "ret": -0.3653668063813073,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793957700.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.06053441987809596,
+       "ret": -0.3026720993904798,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.007307336127626147,
+       "ret": -0.3653668063813073,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "GtHiMzpyt9njdbfFHhSEd8cwNBjLymQg5RZRWpakpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793960422.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.016399772730359308,
+       "ret": -0.08199886365179654,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0028477519954325328,
+       "ret": -0.14238759977162663,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793960422.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.016399772730359308,
+       "ret": -0.08199886365179654,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0028477519954325328,
+       "ret": -0.14238759977162663,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "BmHoHaY8jk9FXkT7z9aqiA4xjG9xuCaWRcDjCJsapump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793960795.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.05239153622635867,
+       "ret": 0.26195768113179335,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.004131971811054331,
+       "ret": 0.20659859055271657,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793960795.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.05239153622635867,
+       "ret": 0.26195768113179335,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.004131971811054331,
+       "ret": 0.20659859055271657,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "EZb2kGPBApvGUtuVrE46tuqcWhm5wQZgaxiSvKdYpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793961505.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.08673081714468901,
+       "ret": -0.43365408572344505,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.009955380274597959,
+       "ret": -0.4977690137298979,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793961505.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.08673081714468901,
+       "ret": -0.43365408572344505,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.009955380274597959,
+       "ret": -0.4977690137298979,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "3S4B1BzpjDLvPgP44mjTACwZpT282eyg5WYGdccGpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793961791.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.06774921408677831,
+       "ret": 0.33874607043389154,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.005630553661523293,
+       "ret": 0.2815276830761646,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793961791.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.06774921408677831,
+       "ret": 0.33874607043389154,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.005630553661523293,
+       "ret": 0.2815276830761646,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "B4BLwUBoikdcBRKAcq2xH3YJoLrrkxrCobh5U7Mdpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793963595.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.04765289687129051,
+       "ret": 0.23826448435645256,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0036469744776306905,
+       "ret": 0.18234872388153453,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793963595.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.04765289687129051,
+       "ret": 0.23826448435645256,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0036469744776306905,
+       "ret": 0.18234872388153453,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "67cXhNcEJqYFRMVr3XZt8kPsTKLdnLgBcHdgCYWapump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793963945.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.2934698328762914,
+       "ret": 1.467349164381457,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.028504760046799502,
+       "ret": 1.425238002339975,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793963945.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.2934698328762914,
+       "ret": 1.467349164381457,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.028504760046799502,
+       "ret": 1.425238002339975,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "EMMN3cqjyGXmFzhBkC6i6PhMgmtnMPR7BU9YqjSt39ah",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793968199.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.027795788648972197,
+       "ret": 0.138978943244861,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0016737716596702894,
+       "ret": 0.08368858298351448,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793968199.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.027795788648972197,
+       "ret": 0.138978943244861,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0016737716596702894,
+       "ret": 0.08368858298351448,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "DwW9BPRvadcwijX4n1AiGbD8Dv5HufMr1hm5U16Lpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793971102.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.08400402556409325,
+       "ret": -0.42002012782046627,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0096557862782434,
+       "ret": -0.48278931391217,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793971102.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.08400402556409325,
+       "ret": -0.42002012782046627,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0096557862782434,
+       "ret": -0.48278931391217,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "41hQrK5BEb35pGm35CjKaCQZWSxC2NRNiFFQ3GVbpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793971826.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.018111320876424475,
+       "ret": -0.09055660438212237,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.002984271459005943,
+       "ret": -0.14921357295029716,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793971826.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.018111320876424475,
+       "ret": -0.09055660438212237,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.002984271459005943,
+       "ret": -0.14921357295029716,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "A4oL7WDF3nw9TWtuVP5uVaJ9CVR3u4a9j2htqZKQpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793972371.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.22910688332132884,
+       "ret": 1.1455344166066441,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.021943117646351488,
+       "ret": 1.0971558823175744,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793972371.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.22910688332132884,
+       "ret": 1.1455344166066441,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.021943117646351488,
+       "ret": 1.0971558823175744,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "8pzMmzawgCUVbZFKRDeBXK8kvPnZQgJzakpnsuMJpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793973533.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.02701642593899284,
+       "ret": -0.1350821296949642,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0038900056165214977,
+       "ret": -0.19450028082607487,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793973533.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.02701642593899284,
+       "ret": -0.1350821296949642,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0038900056165214977,
+       "ret": -0.19450028082607487,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "CP2AYvERxicJK5qU2BzdTVs64yqjNa4ADmw5C6sapump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793973620.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.124440569753636,
+       "ret": -0.62220284876818,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.013753665216707246,
+       "ret": -0.6876832608353622,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793973620.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.124440569753636,
+       "ret": -0.62220284876818,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.013753665216707246,
+       "ret": -0.6876832608353622,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "A5HkJyFXtJLEyWTVddsMSXukxxdTyRQgNDqvchk2pump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793975709.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.20562271521334408,
+       "ret": 1.0281135760667204,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.019435485620136302,
+       "ret": 0.9717742810068151,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793975709.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.20562271521334408,
+       "ret": 1.0281135760667204,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.019435485620136302,
+       "ret": 0.9717742810068151,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "Ae17m1RbskkiETPCyFNutj4jenYzdmw4dC5HqVGYt6aU",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793975752.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.14476351906793727,
+       "ret": -0.7238175953396864,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.015800823681040337,
+       "ret": -0.7900411840520168,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793975752.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.14476351906793727,
+       "ret": -0.7238175953396864,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.015800823681040337,
+       "ret": -0.7900411840520168,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "ET3o6by8V4AszpCxVigLAJc5pBH5kyNySQPTx8nkNFCK",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793976353.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.07008874976633006,
+       "ret": -0.3504437488316503,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.008249132113708263,
+       "ret": -0.41245660568541315,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793976353.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.07008874976633006,
+       "ret": -0.3504437488316503,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.008249132113708263,
+       "ret": -0.41245660568541315,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "2MdNZeqUNq2hGwYmRyFJqZbGrEdytruKsTyDKVHBpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793977751.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.024124297539065503,
+       "ret": -0.12062148769532752,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0035798567381528216,
+       "ret": -0.1789928369076411,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793977751.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.024124297539065503,
+       "ret": -0.12062148769532752,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0035798567381528216,
+       "ret": -0.1789928369076411,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "ACx7gRfbgGZiWy7AsyXbd3pfdAjksoeG9eafs7capump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793979172.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.018353414935893958,
+       "ret": 0.09176707467946979,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.000718994717931997,
+       "ret": 0.035949735896599846,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793979172.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.018353414935893958,
+       "ret": 0.09176707467946979,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.000718994717931997,
+       "ret": 0.035949735896599846,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "2emGeezZ7qZVxYkTQVwTZG1jZPFfZRgdoARD9bdxpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793980833.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.03044515248590049,
+       "ret": 0.15222576242950245,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.001776459075911703,
+       "ret": 0.08882295379558515,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793980833.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.03044515248590049,
+       "ret": 0.15222576242950245,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.001776459075911703,
+       "ret": 0.08882295379558515,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "Ej14KTCuL7xyPNhT1RULAEeth6G8Ajh4pXXYuh2ZA3ir",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793981085.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.005743023455288489,
+       "ret": 0.028715117276442444,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0005950076293801836,
+       "ret": -0.02975038146900918,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793981085.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.005743023455288489,
+       "ret": 0.028715117276442444,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0005950076293801836,
+       "ret": -0.02975038146900918,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "DiHxAwXMMm9F8QG4qxkGd57a4dVQYvs1iUyTn9VKpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793981268.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.014469440473366737,
+       "ret": 0.07234720236683367,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.00022040629858136518,
+       "ret": 0.011020314929068258,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793981268.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.014469440473366737,
+       "ret": 0.07234720236683367,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.00022040629858136518,
+       "ret": 0.011020314929068258,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "5LTBr773cZzwferebajcGDpnyiioHfxrTs9geDkU21o3",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793981625.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.08321129750998152,
+       "ret": 0.4160564875499076,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.007228673616571578,
+       "ret": 0.3614336808285789,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793981625.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.08321129750998152,
+       "ret": 0.4160564875499076,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.007228673616571578,
+       "ret": 0.3614336808285789,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "Cfquv1b2bho3WCKNCSYo8ihMWxbQiW2akcVX2tdoJmLU",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793983701.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.37179626814982714,
+       "ret": 1.8589813407491356,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.036606457527362884,
+       "ret": 1.8303228763681443,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793983701.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.37179626814982714,
+       "ret": 1.8589813407491356,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.036606457527362884,
+       "ret": 1.8303228763681443,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "BRLmD7GLVXL8xbHr6e5vMwrZzN8VErvdQr1s1oH6pump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793984861.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.07925917264407173,
+       "ret": 0.39629586322035865,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.006791376555424918,
+       "ret": 0.33956882777124586,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793984861.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.07925917264407173,
+       "ret": 0.39629586322035865,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.006791376555424918,
+       "ret": 0.33956882777124586,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "D76pGgtxXG47Z2TQdxQudAHftJay1St9zAJXpUAqpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793985029.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.10489987801313344,
+       "ret": -0.5244993900656671,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.011772844337493277,
+       "ret": -0.5886422168746639,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793985029.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.10489987801313344,
+       "ret": -0.5244993900656671,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.011772844337493277,
+       "ret": -0.5886422168746639,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "26z2dX4WLcwsnDMT3ZqrhFsLrEhBEZmxcA4md8uxpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793985057.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.0039919647032050105,
+       "ret": 0.01995982351602505,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0007978607635328338,
+       "ret": -0.03989303817664169,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793985057.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.0039919647032050105,
+       "ret": 0.01995982351602505,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0007978607635328338,
+       "ret": -0.03989303817664169,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "6awh4N8WeTfn77JcCDeJ3vD1DN2kSciNzBZCmJvcpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793987423.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.06701865606808802,
+       "ret": -0.33509328034044006,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.007950633016097334,
+       "ret": -0.3975316508048667,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793987423.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.06701865606808802,
+       "ret": -0.33509328034044006,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.007950633016097334,
+       "ret": -0.3975316508048667,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "G3tmXVvcao4Y9mp9aQwXitXAwTQHFYAcm3ScmRnzWWb4",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793988504.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.016312303129662614,
+       "ret": 0.08156151564831307,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0004006887405826275,
+       "ret": 0.020034437029131377,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793988504.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.016312303129662614,
+       "ret": 0.08156151564831307,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0004006887405826275,
+       "ret": 0.020034437029131377,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "F1fvzeTbmPXFDFL26jEN3FHmk558kJSA1cYqNRANpump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793988574.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.11250042535001759,
+       "ret": 0.5625021267500879,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.010040232902886926,
+       "ret": 0.5020116451443463,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793988574.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.11250042535001759,
+       "ret": 0.5625021267500879,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.010040232902886926,
+       "ret": 0.5020116451443463,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "2fBRb36QNU1WYpr7PXjGD4gV78sw7rxp7hfkChE6pump",
+   "half": "early",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1793988702.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.10380564013967164,
+       "ret": -0.5190282006983582,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.011665223273560728,
+       "ret": -0.5832611636780364,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1793988702.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.10380564013967164,
+       "ret": -0.5190282006983582,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.011665223273560728,
+       "ret": -0.5832611636780364,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  }
+ ],
+ "late": [
+  {
+   "mint": "DhYhdWUdSJBsY7D4qQuALXQgLCEZe5cBAP9sbPbjpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794017336.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.017997301855887354,
+       "ret": -0.08998650927943677,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0030186231996294174,
+       "ret": -0.15093115998147086,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794017336.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.017997301855887354,
+       "ret": -0.08998650927943677,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0030186231996294174,
+       "ret": -0.15093115998147086,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "4fLHH8mL1QNg4zZ9F55VxhwKFsCtPfqMwbJ1LxShpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794019446.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.14113266333595412,
+       "ret": -0.7056633166797706,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.015434638908546237,
+       "ret": -0.7717319454273118,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794019446.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.14113266333595412,
+       "ret": -0.7056633166797706,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.015434638908546237,
+       "ret": -0.7717319454273118,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "BPcmv1ZDK99FienyWpeFo2zvY6EndeHCQ5zzBhKJpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794020944.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.00446190888886999,
+       "ret": -0.02230954444434995,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0016481781803828117,
+       "ret": -0.08240890901914058,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794020944.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.00446190888886999,
+       "ret": -0.02230954444434995,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0016481781803828117,
+       "ret": -0.08240890901914058,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "CcZ3QSQvxkionK3z8J896UDsYofkox4MybefHjHzpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794021239.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.008251347646531374,
+       "ret": -0.04125673823265687,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0020121108713761723,
+       "ret": -0.10060554356880862,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794021239.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.008251347646531374,
+       "ret": -0.04125673823265687,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0020121108713761723,
+       "ret": -0.10060554356880862,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "3AP8LrM61wQUVBdv7aBTasPSw8zxR53MoJDPsWUspump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794023878.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.11790310789409679,
+       "ret": -0.589515539470484,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.013093355392641755,
+       "ret": -0.6546677696320877,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794023878.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.11790310789409679,
+       "ret": -0.589515539470484,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.013093355392641755,
+       "ret": -0.6546677696320877,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "GyBMTGkpeM5h53LMQENLjkWxjdqoxWE5ZKk7asmvpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794024123.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.1830027184190575,
+       "ret": -0.9150135920952874,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.01963197134492691,
+       "ret": -0.9815985672463455,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794024123.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.1830027184190575,
+       "ret": -0.9150135920952874,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.01963197134492691,
+       "ret": -0.9815985672463455,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "9nwCcc7nidT3FF8D5jg5kjpMP4a2rvz2iVjY3g3epump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794024730.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.011225304719233718,
+       "ret": -0.056126523596168584,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.002320403331928888,
+       "ret": -0.1160201665964444,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794024730.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.011225304719233718,
+       "ret": -0.056126523596168584,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.002320403331928888,
+       "ret": -0.1160201665964444,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "8npccB8MJfkpgmn4SmAj3dUqr75m4BmZzw926augkaeL",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794024970.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.023986065919577526,
+       "ret": 0.11993032959788763,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0012706490634704823,
+       "ret": 0.06353245317352411,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794024970.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.023986065919577526,
+       "ret": 0.11993032959788763,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0012706490634704823,
+       "ret": 0.06353245317352411,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "4ijyLxRGMiqJFT6XHBS6ubr3AfvgdA5S8ySqQSMipump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794025017.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.02167059015025863,
+       "ret": -0.10835295075129314,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0033256656836636923,
+       "ret": -0.1662832841831846,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794025017.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.02167059015025863,
+       "ret": -0.10835295075129314,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0033256656836636923,
+       "ret": -0.1662832841831846,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "3Sdocqm9yAQA6p7gvW7aomPWEeSyeaniGZdvMoMquVvm",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794025622.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.010388972431297413,
+       "ret": 0.05194486215648706,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.00012809900759111004,
+       "ret": -0.006404950379555502,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794025622.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.010388972431297413,
+       "ret": 0.05194486215648706,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.00012809900759111004,
+       "ret": -0.006404950379555502,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "DzncCmBTJxcbsoLHaG85kRgR9FfQY7pdzbVEFyabpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794026070.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.08545553367557897,
+       "ret": -0.4272776683778948,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.009806088372072981,
+       "ret": -0.49030441860364904,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794026070.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.08545553367557897,
+       "ret": -0.4272776683778948,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.009806088372072981,
+       "ret": -0.49030441860364904,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "6db4sRXCF7s59BLECraN9rxP5k8GnwvcvftfAbbqpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794026381.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.06141741225162195,
+       "ret": -0.30708706125810975,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.007370243168660974,
+       "ret": -0.3685121584330487,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794026381.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.06141741225162195,
+       "ret": -0.30708706125810975,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.007370243168660974,
+       "ret": -0.3685121584330487,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "5S8nJ7o1jVtEkCx1Bu6cnncUJQdijX39sK8ZAQK3pump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794027677.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.10235982800424717,
+       "ret": -0.5117991400212358,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.011517790054147612,
+       "ret": -0.5758895027073806,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794027677.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.10235982800424717,
+       "ret": -0.5117991400212358,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.011517790054147612,
+       "ret": -0.5758895027073806,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "XMbmFvk8KGpXibvsagNx8CKSuUjAuobKAo5SUBUpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794027737.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.018351702041717793,
+       "ret": 0.09175851020858897,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0006516856801407254,
+       "ret": 0.032584284007036265,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794027737.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.018351702041717793,
+       "ret": 0.09175851020858897,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0006516856801407254,
+       "ret": 0.032584284007036265,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "CT7WioNPAeaf3x7QPjwYAZDLpmxePReGscqr27pZpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794027803.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.1603608788889422,
+       "ret": -0.801804394444711,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.017371372608342484,
+       "ret": -0.8685686304171242,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794027803.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.1603608788889422,
+       "ret": -0.801804394444711,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.017371372608342484,
+       "ret": -0.8685686304171242,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "9sqY8BYKhpQMZdetX5rWdnaMRPwjFBzXNjh9MszUpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794029386.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.038441075167479466,
+       "ret": -0.19220537583739733,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.00508691848954154,
+       "ret": -0.254345924477077,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794029386.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.038441075167479466,
+       "ret": -0.19220537583739733,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.00508691848954154,
+       "ret": -0.254345924477077,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "7UGfs79iueWxzDQHGztKt2f88TnQW4FP6BCCebEJpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794030428.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.04041443189121177,
+       "ret": -0.20207215945605886,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.005255211285724213,
+       "ret": -0.26276056428621064,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794030428.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.04041443189121177,
+       "ret": -0.20207215945605886,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.005255211285724213,
+       "ret": -0.26276056428621064,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "A5Y2BEXahnJ2zt7Nrmhgifvi9EqF4ywsZreyYpAtpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794031706.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.026170385258025536,
+       "ret": 0.13085192629012768,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0014185315194490517,
+       "ret": 0.07092657597245258,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794031706.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.026170385258025536,
+       "ret": 0.13085192629012768,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0014185315194490517,
+       "ret": 0.07092657597245258,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "4MmuCCqikatFhMT5sTAvi9BDWJVkpYasjr5khxnhpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794034529.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.18955751335563886,
+       "ret": 0.9477875667781943,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.017883694819465324,
+       "ret": 0.8941847409732662,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794034529.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.18955751335563886,
+       "ret": 0.9477875667781943,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.017883694819465324,
+       "ret": 0.8941847409732662,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "6psruuGkna3YAcyh6gEK7XaHqiKiruR5B9qxWUgXpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794034560.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.04665342412306503,
+       "ret": -0.23326712061532515,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.005924801842172969,
+       "ret": -0.29624009210864843,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794034560.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.04665342412306503,
+       "ret": -0.23326712061532515,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.005924801842172969,
+       "ret": -0.29624009210864843,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "SMsXhePJF6uRgSAxzcKxQa4siGa9yEpqAN1iupCpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794034763.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.0035194289725965487,
+       "ret": -0.017597144862982743,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.001593728154402388,
+       "ret": -0.0796864077201194,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794034763.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.0035194289725965487,
+       "ret": -0.017597144862982743,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.001593728154402388,
+       "ret": -0.0796864077201194,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "39s3DR52ynUnKNiyUT9ecUimEPN4RCUWAVxH7NF1pump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794039440.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.07172087839154573,
+       "ret": 0.35860439195772864,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.006066384813728584,
+       "ret": 0.3033192406864292,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794039440.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.07172087839154573,
+       "ret": 0.35860439195772864,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.006066384813728584,
+       "ret": 0.3033192406864292,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "4JQvBq7W5d9yqyPnG1nE3PvzsTjpJtqiQyou6i8Dpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794040028.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.09490989950534173,
+       "ret": 0.47454949752670866,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.008287970523254718,
+       "ret": 0.41439852616273587,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794040028.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.09490989950534173,
+       "ret": 0.47454949752670866,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.008287970523254718,
+       "ret": 0.41439852616273587,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "AwqdTCLMuD9zinHEZLM4MXN84P4yqSob6TKBZH9apump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794044701.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.004085015012252944,
+       "ret": -0.02042507506126472,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0016220104002813173,
+       "ret": -0.08110052001406587,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794044701.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.004085015012252944,
+       "ret": -0.02042507506126472,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0016220104002813173,
+       "ret": -0.08110052001406587,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "AmZyXuRvrJs3RQsqPbxA1giuoSLMbbkAsKwRKYPnpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794048173.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.029236168949061003,
+       "ret": -0.14618084474530502,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.004134210537440923,
+       "ret": -0.20671052687204614,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794048173.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.029236168949061003,
+       "ret": -0.14618084474530502,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.004134210537440923,
+       "ret": -0.20671052687204614,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "6carBZnpZDBfLjvvTDHpDnmXfKHw8ckKsKFMZ9xhSipo",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794048903.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.07188019715833388,
+       "ret": -0.3594009857916694,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.00843948459096365,
+       "ret": -0.4219742295481825,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794048903.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.07188019715833388,
+       "ret": -0.3594009857916694,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.00843948459096365,
+       "ret": -0.4219742295481825,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "7PcgFRfifR9VDniF8bfJfsuyi9TWuQY9A5sRMsgspump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794050145.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.052230618068111884,
+       "ret": -0.2611530903405594,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.006471689692941795,
+       "ret": -0.3235844846470898,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794050145.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.052230618068111884,
+       "ret": -0.2611530903405594,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.006471689692941795,
+       "ret": -0.3235844846470898,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "HuS9FymDFLCxGpzyv5oyVaPsU74udtQGDppxW9dXCgia",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794056913.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.0002215898938500425,
+       "ret": -0.0011079494692502125,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0011938856909447467,
+       "ret": -0.05969428454723733,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794056913.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.0002215898938500425,
+       "ret": -0.0011079494692502125,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0011938856909447467,
+       "ret": -0.05969428454723733,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "FPFbcBhacaJfvBBbqeRHbWJHfBfxYJBa7yoh256bpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794058654.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.07271992472779198,
+       "ret": -0.3635996236389599,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.008519735692478944,
+       "ret": -0.42598678462394723,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794058654.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.07271992472779198,
+       "ret": -0.3635996236389599,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.008519735692478944,
+       "ret": -0.42598678462394723,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "5Ax3KPoEgxBhHZYaPtEHrNKwX75RruUWpAHKb7DMmAbU",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794061296.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.037861085973634884,
+       "ret": 0.18930542986817442,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0026633593876933133,
+       "ret": 0.13316796938466566,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794061296.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.037861085973634884,
+       "ret": 0.18930542986817442,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0026633593876933133,
+       "ret": 0.13316796938466566,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "FP7Tv8TFvUmUPcsLhjFtwZpwxd5z4QnpMuQYBp2qpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794063517.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.01280074898967534,
+       "ret": -0.0640037449483767,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0024104530967397017,
+       "ret": -0.12052265483698509,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794063517.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.01280074898967534,
+       "ret": -0.0640037449483767,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0024104530967397017,
+       "ret": -0.12052265483698509,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "GetD2J9BuNCggAUK7AKAqaRS7c4ctzEjSVBbV1XBpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794066190.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.052629269797348666,
+       "ret": -0.26314634898674333,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.006506713440961674,
+       "ret": -0.3253356720480837,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794066190.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.052629269797348666,
+       "ret": -0.26314634898674333,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.006506713440961674,
+       "ret": -0.3253356720480837,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "2hMsts4w7spbogsQcuWRBc9H9dHx1ePYvPGc3Kzapump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794067215.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.06540216659829823,
+       "ret": -0.32701083299149114,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0077756218176372426,
+       "ret": -0.38878109088186213,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794067215.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.06540216659829823,
+       "ret": -0.32701083299149114,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.0077756218176372426,
+       "ret": -0.38878109088186213,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "6QAcBK6c5w7P48opBaS9Zu4uTsMgopyVeaij6QoZpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794067713.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.0817894777302188,
+       "ret": -0.408947388651094,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.009445389706000989,
+       "ret": -0.4722694853000494,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794067713.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.0817894777302188,
+       "ret": -0.408947388651094,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.009445389706000989,
+       "ret": -0.4722694853000494,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "5MKyGHr68n121KfnRy3DCZroj6zzzAztodMmNnTXpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794068276.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.1768194580765149,
+       "ret": -0.8840972903825745,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.01901609532615935,
+       "ret": -0.9508047663079675,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794068276.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.1768194580765149,
+       "ret": -0.8840972903825745,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.01901609532615935,
+       "ret": -0.9508047663079675,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "D4PzByx8kzwBnBL3vLe7xV3gNTXETk3NGdPTdFzJbkM4",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794069705.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.02811293087205899,
+       "ret": -0.14056465436029494,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.004050312235782944,
+       "ret": -0.20251561178914718,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794069705.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.02811293087205899,
+       "ret": -0.14056465436029494,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.004050312235782944,
+       "ret": -0.20251561178914718,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "5GCyVotqrpeU5qmrzC8LgzjEADh7ywh1BREtwftbpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794070062.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.030711534692406922,
+       "ret": -0.1535576734620346,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.004291318846329618,
+       "ret": -0.2145659423164809,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794070062.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.030711534692406922,
+       "ret": -0.1535576734620346,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.004291318846329618,
+       "ret": -0.2145659423164809,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "BKTCEbzmkHRBKkxoySRG3YNu9WRz4Fx6QoRhWBqNpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794071302.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.025905983430315666,
+       "ret": 0.12952991715157833,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0014759051441634529,
+       "ret": 0.07379525720817265,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794071302.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.025905983430315666,
+       "ret": 0.12952991715157833,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0014759051441634529,
+       "ret": 0.07379525720817265,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "9obA9vpfiZ8UqwE8kbz52pnF2L5ry7cpY18i9fMxpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794073558.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.016165656023797964,
+       "ret": 0.08082828011898982,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0004376585574509171,
+       "ret": 0.021882927872545855,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794073558.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.016165656023797964,
+       "ret": 0.08082828011898982,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0004376585574509171,
+       "ret": 0.021882927872545855,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "7PXe88AQnfeZWbZAvvU8pxHBu5SDpbwY9iwriJMGgK22",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794075172.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.008522526795248285,
+       "ret": -0.04261263397624142,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.002014872092992731,
+       "ret": -0.10074360464963655,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794075172.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.008522526795248285,
+       "ret": -0.04261263397624142,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.002014872092992731,
+       "ret": -0.10074360464963655,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "AnQQSyHgXfym426HtBJ34SjRNJM8uSs5s6ZnCXhWQF8L",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794076193.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.10223584551990111,
+       "ret": 0.5111792275995055,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.009250092353988276,
+       "ret": 0.4625046176994138,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794076193.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.10223584551990111,
+       "ret": 0.5111792275995055,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.009250092353988276,
+       "ret": 0.4625046176994138,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "FYcEbwgNxiVQP7NbHrjgyVdHcqsEHtBR9PXrCWuVpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "unknown",
+     "why": "exit: capture gap",
+     "entry_t": 1794076694.0
+    },
+    "125": {
+     "cat": "unknown",
+     "why": "exit: capture gap",
+     "entry_t": 1794076694.0
+    }
+   }
+  },
+  {
+   "mint": "BJD24quj4PSZjsrb3BRbCQoumWrHbhoQuEDQb3BYpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794078122.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.16335042618760334,
+       "ret": -0.8167521309380167,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.01767108569248268,
+       "ret": -0.8835542846241339,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794078122.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": -0.16335042618760334,
+       "ret": -0.8167521309380167,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.01767108569248268,
+       "ret": -0.8835542846241339,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "CcKq1Pobkt4Es1nmJMGDyGUJnwzNEXTkZDYDDK2Bpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794079345.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.00013682610957480154,
+       "ret": 0.0006841305478740077,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.001191799043056037,
+       "ret": -0.05958995215280184,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794079345.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.00013682610957480154,
+       "ret": 0.0006841305478740077,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": -0.001191799043056037,
+       "ret": -0.05958995215280184,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "6fZWR52e4gTMEmvofUhrbSMtget8Db5BnzojM3rhpo7d",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794079443.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.11514366162674428,
+       "ret": 0.5757183081337214,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.01047414656823646,
+       "ret": 0.523707328411823,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794079443.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.11514366162674428,
+       "ret": 0.5757183081337214,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.01047414656823646,
+       "ret": 0.523707328411823,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  },
+  {
+   "mint": "Ab1jbybZrJGEbH6QohBAuirrSmQQVc9uYbDC6D7xpump",
+   "half": "late",
+   "fees": {
+    "30": {
+     "cat": "scored",
+     "entry_t": 1794080852.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.04236053652883734,
+       "ret": 0.2118026826441867,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0030705962796380866,
+       "ret": 0.15352981398190432,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    },
+    "125": {
+     "cat": "scored",
+     "entry_t": 1794080852.0,
+     "sizes": {
+      "0.2": {
+       "net_sol": 0.04236053652883734,
+       "ret": 0.2118026826441867,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      },
+      "0.02": {
+       "net_sol": 0.0030705962796380866,
+       "ret": 0.15352981398190432,
+       "exit": "horizon",
+       "fill_venue": "curve",
+       "exit_venue": "curve"
+      }
+     }
+    }
+   }
+  }
+ ]
+}

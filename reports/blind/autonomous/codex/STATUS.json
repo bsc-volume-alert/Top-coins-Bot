@@ -1,16 +1,27 @@
 {
   "worker": "Codex",
   "run_id": "c001-20261110T211226Z",
-  "state": "running",
+  "state": "completed",
   "task": "C001",
   "started_at": "2026-11-10T21:12:26Z",
-  "lease_expires_at": "2026-11-10T22:12:26Z",
+  "lease_expires_at": null,
   "queue_commit": "042df157c07f4424544a0ae46e4fbe304e3fe4a4",
   "inputs": {
     "development": "e67833121f1da0dc992c28fa26c5236a855c151a",
     "evaluator": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b",
-    "original_code": "93a9ed57"
+    "original_code": "93a9ed57ace4216d42e7b7a90d4967078e7ac9dc"
   },
   "scope": "Reproduce fixed ID34 on raw development histories; no parameter search or test outcomes",
-  "previous_run": "bootstrap-20261110"
+  "previous_run": "bootstrap-20261110",
+  "completed_at": "2026-11-10 21:15:31 UTC",
+  "result": "3638/3638 launch categories and per-size net SOL match at both fee assumptions; 16/16 data checksums pass",
+  "next_task": "C002",
+  "artifacts": "reports/blind/autonomous/codex/runs/c001-20261110T211226Z/",
+  "claude_worker": "not configured; no Claude runtime, provider credential or scheduler interface available",
+  "scheduler": {
+    "enabled": true,
+    "cadence_hours": 6,
+    "prompt_delivery_observed": true,
+    "separate_unattended_completion_verified": false
+  }
 }
