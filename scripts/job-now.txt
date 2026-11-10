@@ -1,1 +1,1 @@
-mv-tracker-db 10 Nov 2026 04:20 UTC — move tracker.db to the volume (reliability; quiet hour)
+diag 10 Nov 2026 04:46 UTC — launcher slow after tracker DB move
