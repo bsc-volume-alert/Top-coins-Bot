@@ -106,3 +106,40 @@
 
 - **Execution evidence:** fill price vs the 5-min reading is median about +1%, but 3FRaTecs filled **+80%** above its reading. The trade-triggered reading was stale relative to the market at fill: an execution-quality case to audit. CRWuYpES lost 91% through a 25% trail, a dump between trades.
 - **Small numbers:** no conclusion. Rules unchanged.
+
+## Audit of the two abnormal trades — 10 Nov 02:25 UK (branch audit-20261110t0210, read-only dump)
+
+### 3FRaTecs — 100K1 fill 80% above the 5-minute reading
+**Timeline (UK = UTC):** created 00:18:03; trade-triggered 5-min reading at 00:23:03 (age 300 s, price age 0); launcher read 00:23:04.
+- **Decision:** 00:23:04.577 at $41,665. Reserves read at the check: 00:23:04.597. Fill landed at 00:23:05.612, on the curve.
+- **The reading:** $41.7K is the price of the first trade in second 300 (4.82e-7 SOL/token).
+- **What moved before the fill:** in the same and the next second, trades pushed the price to 6.92e-7, then 8.24e-7 (+71%). Our 0.2 SOL buy then landed on that state.
+- **Fill price:** the chain-read fill (check state vSol 805.6 SOL / vTok 978.2M) is the genuine executable price 1 s later. **No pricing error.**
+- **The clock reading for the same coin said $59.8K** and was flagged 'uncertain: feed gap', so it was not used.
+
+**Why:**
+- **Non-standard curve** (tokens.factory = 1). Virtual SOL swings 250–1,032 SOL on sub-SOL trades. A 0.7-SOL buy moved the price +19%, and the price moved ±20–40% per second in the 10 s before the decision.
+- **The 5-minute "market cap" is not a stable quantity for this coin.** The exit fired 0.6 s after entry (trail from a 1.20 high), giving −7.6%.
+
+**Warnings available before entry:** per-trade price impact and 10-s price range from the trades, and the non-standard curve flag. None of these is used by the K-1 rules (unchanged).
+
+### CRWuYpES — 100K1 loss of 91% through a 25% trail
+**Launch:** created 00:26:29 with an 84-SOL dev buy, migrating at once ("instant graduation"). Bundle 79% held in 2 wallets.
+
+**Our position:** K entry at 00:31:29 (age 300 s), on the pool: quote 82.3 SOL, base 177.0M tokens.
+
+**The dump:**
+- **The last watch value before the trigger** was close to the 1.03 high.
+- **Trigger:** at 00:32:20.3 (age 751 s), the chain read showed sale value ×0.32. The pool had gone from 82.3 SOL / 177M tokens to 14.7 SOL / 569M tokens, so about 392M tokens were sold into it.
+- **Sell:** landed at 00:32:21, ×0.0986 (−91% after costs).
+- **The same dump hit BL, E60 and E90 positions in this coin** (exit ×0.12).
+
+**Assessment:**
+- **The loss is genuine executable market conditions.** The exit valuation is a direct chain read of the pool vaults, not a carried-forward state.
+- **The tracker recorded NO trades of this coin after age 352 s (00:32:21)**, the moment the tracker restarted for 0.19.12. In-flight coins lose their lifecycle and trade capture on a tracker restart. That is a capture gap caused by my restart; it did not affect the launcher's exit, which reads the chain directly.
+
+**Warnings available before entry:** an instant-graduation launch with 79% held by 2 bundle wallets and an 84-SOL dev buy, so a single holder could drain the pool. The K-1 rules do not use concentration (unchanged).
+
+### Consequences for the measurement
+- **Tracker restarts blank in-flight coins.** Restarts must be minimised and logged as capture gaps for the coins alive at that moment (to do in the reliability work).
+- **Dedup takes the first reading of any kind.** An unusable clock reading recorded first blocks a later trade-triggered reading of the same coin. That is valid as "one decision per coin", but it limits the old-versus-new method comparison. This will be reported.
