@@ -1,0 +1,15 @@
+# C010 / CDEX-L003 — registered before this run's trading outcomes
+Claude source fixed at7a9cd6a98680b660d15b952079b7f367d3ad180f; F006 runf006-20261111T185410Z. Rebuild its feature table from approved e67833121f1da0dc992c28fa26c5236a855c151a and package0e3be03c71949e069a7a31b5951f332bb563f68f FX; verify artifact checksums and core matched AUCs with an independently computed rank statistic. Reproduction is not fresh confirmation.
+
+Memory: K003/K007 warn about label coverage, K004 about fills, K005/K008 about failed inventory/depth gates, K006 about transfer/funding limits. Strong buyer-activity separation may be stale/dead-vs-active selection rather than executable profit. Test that explanation instead of repeating failed gates.
+
+Three NEW proposals:
+1. Material buyer persistence (tested): atcreation+300s, on a receipt-known valid CURVE state, >=20 distinct buyers in the preceding60 RECEIPT seconds; >=10 of those buyers each have NET curve buying >=0.1SOL in that interval; >=3 of the five60s receipt-time buckets since creation have positive net curve buying; received gross curve buys>=15SOL. No dollar-cap/chart threshold, no transfer-derived holdings or common-control assertion. Counter-hypothesis: activity merely identifies fillable coins and still loses after costs.
+2. Creator restraint conditional on outside demand (untested): future fixed filter requiring no observed creator sales by5min AND >=10 noncreator buyers each with net>=0.1SOL last60s; creator inventory provenance must be available, missing initial allocations unknown. Compare to a matched unchanged control, not a blanket repeat-creator blacklist.
+3. Early-buyer sell synchrony exit (unconventional, untested): on a fixed entry set, exit when >=3 previously identified first-minute buyers sell in a2s RECEIPT window before the ordinary proceeds trail fires; respect0.7s sell delay. Test whether synchrony gives useful advance notice or merely arrives after a one-block drain. No current result claimed.
+
+L003 uses one fixed rule above and one control (same5min curve eligibility but no activity gate): TWO trading specifications, no sweep or retuning. Both chronological halves reported but neither is untouched because F006 and prior work already inspected development outcomes.
+
+Separate owner common exploratory scenario, not a frozen evaluator modification:0.2SOL; buy landing+1s; sell+0.7s;125bps curve/55bps pool;0.0015SOL fixed;30% trail on sellable proceeds;2h cap; landingstateage<=30s. Completed-curve buys invalid, strict quote/decimal evidence, capture windows and six prior outages. In-hold gaps/invalid states make exits uncertain; unknowns separate; all winners counted with best1/best3 stress tests.
+
+C010 reproduces F006 original strict and its reported tol30 labels; coordinator R2 tol30 is a new standing sustained-label rule, not permission to ignore execution gaps or single $100K crossings. Do not silently replace original labels, extrapolated FX or old cross100k with new v2. C012 remains a distinct next job. Audit definitions and label limitations, including gaps in positive episodes and bootstrap-vs-p-value claims.
