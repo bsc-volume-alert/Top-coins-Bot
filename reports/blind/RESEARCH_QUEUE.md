@@ -53,5 +53,6 @@ Reads research-codex and research-claude; reproduces any row claiming a positive
 reports/blind/autonomous/codex/STATUS.json — current task/run/lease, input refs, completion/blocker.
 reports/blind/autonomous/codex/runs/<unique-run-id>/ — hypothesis, code, commands, results, record-level evidence and limitations.
 reports/blind/autonomous/codex/SCOREBOARD.md — all attempts; separate measured results from hypotheses. Include costs, unknowns, mean/median, net SOL per eligible launch, losses/exposure and no-best-mint when relevant.
+reports/blind/autonomous/codex/runs/<unique-run-id>/SUMMARY.txt — five plain-English lines: what was done, what was found, what did not reproduce or is unknown, what is next (added 11 Nov 17:45 UTC for the /research page; Claude's contract already has it).
 reports/blind/autonomous/codex/REVIEW_REQUESTS.md — factual requests for Claude/Gemini to pick up when genuinely active; never claim contact or review occurred.
 A blocked run still records useful evidence. It must not claim a successful push, execution, enforced isolation or profitability without confirmation.
