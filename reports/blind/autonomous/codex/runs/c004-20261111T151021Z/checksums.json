@@ -1,0 +1,62 @@
+[
+  {
+    "path": "snapshot3/live_trades.csv.gz",
+    "sha256": "f80c922033888f3d48f12fa11d33ccfe4c4a0549c32f16fa2958eb34e1e5a986",
+    "ok": true
+  },
+  {
+    "path": "snapshot3/fd_quotes.csv.gz",
+    "sha256": "d67b84eeced921af4fcf2af63c37fbeb0d9113ac10ac00816510a7af0717a456",
+    "ok": true
+  },
+  {
+    "path": "snapshot3/chain_fill.csv.gz",
+    "sha256": "b031347c69647f944591d1d54fc51b9c0ed002b707e4920e51fd11cd912bda9f",
+    "ok": true
+  },
+  {
+    "path": "snapshot3/fd_positions.csv.gz",
+    "sha256": "a13be8a942e2af96b275196d38aaed6475d2cc7aeed760bcf2c20d7a5700a672",
+    "ok": true
+  },
+  {
+    "path": "snapshot3/fd_decisions.csv.gz",
+    "sha256": "803f5aecc4d191e1b615f918fdc66ca18c8d2436b7f9ba23a95a09c7d1f43d4a",
+    "ok": true
+  },
+  {
+    "path": "snapshot3/vol_paper.csv.gz",
+    "sha256": "b4a0dc40757cfdc54c57dfb9d58e929ac50d3db8b383471bace232c9866328e2",
+    "ok": true
+  },
+  {
+    "path": "current/live_trades.csv.gz",
+    "sha256": "6f07f28ec42524a403305eee97baae634f17f60af86897a6118722a9223c0e2e",
+    "ok": true
+  },
+  {
+    "path": "current/fd_quotes.csv.gz",
+    "sha256": "38ef9cf88c62038850343df887b7b671f86bd5f7c5c5f2d3c1d115adbb91103e",
+    "ok": true
+  },
+  {
+    "path": "current/chain_fill.csv.gz",
+    "sha256": "643fd2bd1b51a931595f1f31ca5de56bbcf7feaf959e7cdeb5df013cb9dd87f4",
+    "ok": true
+  },
+  {
+    "path": "current/fd_positions.csv.gz",
+    "sha256": "57b9745dbba385d1ea4fdc25efed175da0fe5e3f5b9e3becc852cfb6bf41019f",
+    "ok": true
+  },
+  {
+    "path": "current/fd_decisions.csv.gz",
+    "sha256": "a2b1dea7c06962430244e4a47ff6551c6177791ee9f6372ba754666a8a9c8c26",
+    "ok": true
+  },
+  {
+    "path": "current/vol_paper.csv.gz",
+    "sha256": "880097aaba9f9c3ca43473bd246f263b6dab4a0c1965a7a982922e954c996d5b",
+    "ok": true
+  }
+]

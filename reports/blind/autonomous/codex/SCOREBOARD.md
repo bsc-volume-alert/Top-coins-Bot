@@ -16,3 +16,7 @@ C002 corrects attribution: 5kdsd8zW scores +178.773683 at 30s and unknown at 2h;
 | c003-20261111T090819Z | Runner evidence and causal coverage | 18/18 inspected raw-file checksums pass; seven external evidence branches resolved by metadata only; lifecycle timing/coverage measured | No strategy/return search; missing crossings are not negative labels | C004 |
 
 C003: snapshot3 census 85,016 versus 14,455 lifecycle mints reflects different export windows; 59,116 lifecycle rows lack obs_ts. Crossing table: 200 records, 45 suspicious-jump flags, 87 FX ages >60s. No 24h lifecycle checkpoints in the audited exports. See coverage.json and README; protected branches remain unopened.
+
+| c004-20261111T151021Z | Existing execution/quote latency calibration | 12/12 input checksums pass; 57 unique live records, 40 confirmed. Success-only buy workflow median 867ms, P95 1294.3ms; paper-to-fill lag median 2s | No profit search; reliable current retention-to-fill latency not established | C005 |
+
+C004 keeps simulated reserve-read timing separate from live send-to-confirmation timing. Snapshot live records are duplicates, not 114 independent observations. No new live trades or paid API calls. See source_evidence.json, timing ledger and matched-ID audit.

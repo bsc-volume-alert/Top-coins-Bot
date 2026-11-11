@@ -1,0 +1,678 @@
+{
+  "snapshot3": {
+    "live": {
+      "buy_ms": {
+        "n": 40,
+        "min": 609.0,
+        "p50": 867.0,
+        "p90": 1083.9000000000003,
+        "p95": 1294.2999999999988,
+        "max": 1908.0,
+        "negative": 0
+      },
+      "buy_quote_ms": {
+        "n": 40,
+        "min": 47.0,
+        "p50": 99.0,
+        "p90": 182.80000000000004,
+        "p95": 216.5499999999996,
+        "max": 878.0,
+        "negative": 0
+      },
+      "buy_sim_ms": {
+        "n": 40,
+        "min": 16.0,
+        "p50": 30.0,
+        "p90": 68.9,
+        "p95": 92.84999999999984,
+        "max": 151.0,
+        "negative": 0
+      },
+      "buy_land_ms": {
+        "n": 40,
+        "min": 388.0,
+        "p50": 690.5,
+        "p90": 814.5,
+        "p95": 982.05,
+        "max": 1381.0,
+        "negative": 0
+      },
+      "buy_lag_s": {
+        "n": 40,
+        "min": 1.0,
+        "p50": 2.0,
+        "p90": 6.100000000000001,
+        "p95": 7.0,
+        "max": 9.0,
+        "negative": 0
+      },
+      "sell_ms": {
+        "n": 40,
+        "min": 511.0,
+        "p50": 761.5,
+        "p90": 1005.7000000000004,
+        "p95": 1250.1499999999999,
+        "max": 1413.0,
+        "negative": 0
+      },
+      "sell_land_ms": {
+        "n": 40,
+        "min": 467.0,
+        "p50": 722.0,
+        "p90": 925.5,
+        "p95": 1202.25,
+        "max": 1365.0,
+        "negative": 0
+      },
+      "sell_tries": {
+        "n": 40,
+        "min": 1.0,
+        "p50": 1.0,
+        "p90": 1.1000000000000014,
+        "p95": 2.0,
+        "max": 2.0,
+        "negative": 0
+      },
+      "stake_sol": {
+        "n": 40,
+        "min": 0.02,
+        "p50": 0.02,
+        "p90": 0.02,
+        "p95": 0.02,
+        "max": 0.02,
+        "negative": 0
+      },
+      "records": 57,
+      "unique_mints": 57,
+      "buy_status": {
+        "failed": 11,
+        "confirmed": 40,
+        "skipped": 6
+      },
+      "sell_status": {
+        "missing": 17,
+        "confirmed": 40
+      },
+      "successful_buy_ms_le1000": 33,
+      "successful_land_field_ms_le1000": 38,
+      "successful_sell_ms_le700": 14,
+      "successful_paper_entry_to_blocktime_lag_le1s": 5,
+      "sell_tries_gt1": 4,
+      "failed_records_with_signature": 0,
+      "failed_records_with_land_field": 0,
+      "buy_lag_equals_buy_ts_minus_entry_ts": 1,
+      "entry_min_utc": "2026-11-05T08:27:15+00:00",
+      "entry_max_utc": "2026-11-05T17:23:39+00:00",
+      "remainder_buy_ms_minus_quote_sim_land": {
+        "n": 40,
+        "min": 21.0,
+        "p50": 36.5,
+        "p90": 106.10000000000002,
+        "p95": 127.79999999999961,
+        "max": 263.0,
+        "negative": 0
+      }
+    },
+    "simulation": {
+      "chain_fill_rows": {
+        "records": 4843,
+        "read_minus_decision_ms": {
+          "n": 3752,
+          "min": 10.0,
+          "p50": 25.0,
+          "p90": 90.90000000000009,
+          "p95": 176.44999999999982,
+          "max": 93050.0,
+          "negative": 0
+        },
+        "landing_minus_decision_ms": {
+          "n": 3650,
+          "min": 1022.0,
+          "p50": 1062.0,
+          "p90": 1271.0,
+          "p95": 1547.9999999999945,
+          "max": 130680.0,
+          "negative": 0
+        },
+        "landing_minus_read_ms": {
+          "n": 3650,
+          "min": 1011.0,
+          "p50": 1027.0,
+          "p90": 1143.0,
+          "p95": 1282.0,
+          "max": 130642.0,
+          "negative": 0
+        },
+        "exit_minus_trigger_ms": {
+          "n": 3601,
+          "min": 700.0,
+          "p50": 856.0,
+          "p90": 1369.0,
+          "p95": 1866.0,
+          "max": 172062.0,
+          "negative": 0
+        }
+      },
+      "chain_fill_unique_mint_decision": {
+        "records": 1552,
+        "read_minus_decision_ms": {
+          "n": 1552,
+          "min": 10.0,
+          "p50": 22.0,
+          "p90": 81.0,
+          "p95": 146.89999999999964,
+          "max": 93050.0,
+          "negative": 0
+        },
+        "landing_minus_decision_ms": {
+          "n": 1496,
+          "min": 1022.0,
+          "p50": 1058.0,
+          "p90": 1212.5,
+          "p95": 1425.0,
+          "max": 130680.0,
+          "negative": 0
+        },
+        "landing_minus_read_ms": {
+          "n": 1496,
+          "min": 1011.0,
+          "p50": 1023.0,
+          "p90": 1128.0,
+          "p95": 1257.25,
+          "max": 130642.0,
+          "negative": 0
+        },
+        "exit_minus_trigger_ms": {
+          "n": 1471,
+          "min": 700.0,
+          "p50": 854.0,
+          "p90": 1318.0,
+          "p95": 1842.5,
+          "max": 172062.0,
+          "negative": 0
+        }
+      },
+      "position_rows": {
+        "records": 3676,
+        "read_minus_decision_ms": {
+          "n": 3676,
+          "min": 10.0,
+          "p50": 25.0,
+          "p90": 90.0,
+          "p95": 181.0,
+          "max": 93050.0,
+          "negative": 0
+        },
+        "landing_minus_decision_ms": {
+          "n": 3574,
+          "min": 1022.0,
+          "p50": 1061.5,
+          "p90": 1271.0,
+          "p95": 1568.0999999999976,
+          "max": 130680.0,
+          "negative": 0
+        },
+        "landing_minus_read_ms": {
+          "n": 3574,
+          "min": 1011.0,
+          "p50": 1027.0,
+          "p90": 1140.0,
+          "p95": 1282.0,
+          "max": 130642.0,
+          "negative": 0
+        },
+        "exit_minus_trigger_ms": {
+          "n": 3521,
+          "min": 700.0,
+          "p50": 856.0,
+          "p90": 1425.0,
+          "p95": 1866.0,
+          "max": 172062.0,
+          "negative": 0
+        }
+      },
+      "position_unique_decision": {
+        "records": 1421,
+        "read_minus_decision_ms": {
+          "n": 1421,
+          "min": 10.0,
+          "p50": 21.0,
+          "p90": 76.0,
+          "p95": 140.0,
+          "max": 93050.0,
+          "negative": 0
+        },
+        "landing_minus_decision_ms": {
+          "n": 1381,
+          "min": 1022.0,
+          "p50": 1056.0,
+          "p90": 1204.0,
+          "p95": 1425.0,
+          "max": 130680.0,
+          "negative": 0
+        },
+        "landing_minus_read_ms": {
+          "n": 1381,
+          "min": 1011.0,
+          "p50": 1023.0,
+          "p90": 1124.0,
+          "p95": 1258.0,
+          "max": 130642.0,
+          "negative": 0
+        },
+        "exit_minus_trigger_ms": {
+          "n": 1358,
+          "min": 700.0,
+          "p50": 853.0,
+          "p90": 1324.599999999999,
+          "p95": 1842.1499999999999,
+          "max": 172062.0,
+          "negative": 0
+        }
+      }
+    },
+    "quote_shadows": {
+      "rows": 1829,
+      "unique_mints": 1214,
+      "venue": {
+        "pump.fun curve": 1532,
+        "pump.fun graduated": 297
+      },
+      "entered": {
+        "entry": 1805,
+        "sample": 24
+      },
+      "nonempty_error_rows": 0,
+      "q_ms": {
+        "n": 1829,
+        "min": 13.0,
+        "p50": 35.0,
+        "p90": 75.0,
+        "p95": 110.0,
+        "max": 3643.0,
+        "negative": 0
+      },
+      "q_gap_recorded_fraction": {
+        "n": 1829,
+        "min": -0.985,
+        "p50": 0.0146,
+        "p90": 0.15706,
+        "p95": 0.25311999999999973,
+        "max": 4.5941,
+        "negative": 634
+      },
+      "q_ms_gt1000": 7,
+      "rows_with_chain_px_q_px": 1829,
+      "ts_min_utc": "2026-11-05T01:08:52+00:00",
+      "ts_max_utc": "2026-11-07T11:52:01+00:00"
+    },
+    "join_audit": {
+      "confirmed_live_with_chainfill_same_vol_id": 39,
+      "with_sim_decision_and_land_ms": 0,
+      "with_high_resolution_live_send_timestamp": 0,
+      "note": "entry_ts in live_trades is live invocation wall time; buy_lag_s is referenced to original paper row time; buy_ts may use blockTime or fallback wall time",
+      "confirmed_live_with_paper_same_vol_id": 40,
+      "paper_to_fill_lag_matches_recorded": 40,
+      "live_invocation_minus_paper_entry_s": {
+        "n": 40,
+        "min": 0.0,
+        "p50": 2.0,
+        "p90": 5.100000000000001,
+        "p95": 7.0,
+        "max": 9.0,
+        "negative": 0
+      },
+      "buy_ts_minus_live_invocation_s": {
+        "n": 40,
+        "min": 0.0,
+        "p50": 0.0,
+        "p90": 1.0,
+        "p95": 1.0,
+        "max": 2.0,
+        "negative": 0
+      }
+    },
+    "fd_decisions_rows": 300054
+  },
+  "current": {
+    "live": {
+      "buy_ms": {
+        "n": 40,
+        "min": 609.0,
+        "p50": 867.0,
+        "p90": 1083.9000000000003,
+        "p95": 1294.2999999999988,
+        "max": 1908.0,
+        "negative": 0
+      },
+      "buy_quote_ms": {
+        "n": 40,
+        "min": 47.0,
+        "p50": 99.0,
+        "p90": 182.80000000000004,
+        "p95": 216.5499999999996,
+        "max": 878.0,
+        "negative": 0
+      },
+      "buy_sim_ms": {
+        "n": 40,
+        "min": 16.0,
+        "p50": 30.0,
+        "p90": 68.9,
+        "p95": 92.84999999999984,
+        "max": 151.0,
+        "negative": 0
+      },
+      "buy_land_ms": {
+        "n": 40,
+        "min": 388.0,
+        "p50": 690.5,
+        "p90": 814.5,
+        "p95": 982.05,
+        "max": 1381.0,
+        "negative": 0
+      },
+      "buy_lag_s": {
+        "n": 40,
+        "min": 1.0,
+        "p50": 2.0,
+        "p90": 6.100000000000001,
+        "p95": 7.0,
+        "max": 9.0,
+        "negative": 0
+      },
+      "sell_ms": {
+        "n": 40,
+        "min": 511.0,
+        "p50": 761.5,
+        "p90": 1005.7000000000004,
+        "p95": 1250.1499999999999,
+        "max": 1413.0,
+        "negative": 0
+      },
+      "sell_land_ms": {
+        "n": 40,
+        "min": 467.0,
+        "p50": 722.0,
+        "p90": 925.5,
+        "p95": 1202.25,
+        "max": 1365.0,
+        "negative": 0
+      },
+      "sell_tries": {
+        "n": 40,
+        "min": 1.0,
+        "p50": 1.0,
+        "p90": 1.1000000000000014,
+        "p95": 2.0,
+        "max": 2.0,
+        "negative": 0
+      },
+      "stake_sol": {
+        "n": 40,
+        "min": 0.02,
+        "p50": 0.02,
+        "p90": 0.02,
+        "p95": 0.02,
+        "max": 0.02,
+        "negative": 0
+      },
+      "records": 57,
+      "unique_mints": 57,
+      "buy_status": {
+        "failed": 11,
+        "confirmed": 40,
+        "skipped": 6
+      },
+      "sell_status": {
+        "missing": 17,
+        "confirmed": 40
+      },
+      "successful_buy_ms_le1000": 33,
+      "successful_land_field_ms_le1000": 38,
+      "successful_sell_ms_le700": 14,
+      "successful_paper_entry_to_blocktime_lag_le1s": 5,
+      "sell_tries_gt1": 4,
+      "failed_records_with_signature": 0,
+      "failed_records_with_land_field": 0,
+      "buy_lag_equals_buy_ts_minus_entry_ts": 1,
+      "entry_min_utc": "2026-11-05T08:27:15+00:00",
+      "entry_max_utc": "2026-11-05T17:23:39+00:00",
+      "remainder_buy_ms_minus_quote_sim_land": {
+        "n": 40,
+        "min": 21.0,
+        "p50": 36.5,
+        "p90": 106.10000000000002,
+        "p95": 127.79999999999961,
+        "max": 263.0,
+        "negative": 0
+      }
+    },
+    "simulation": {
+      "chain_fill_rows": {
+        "records": 5462,
+        "read_minus_decision_ms": {
+          "n": 4371,
+          "min": 10.0,
+          "p50": 23.0,
+          "p90": 85.0,
+          "p95": 174.0,
+          "max": 93050.0,
+          "negative": 0
+        },
+        "landing_minus_decision_ms": {
+          "n": 4266,
+          "min": 1022.0,
+          "p50": 1060.0,
+          "p90": 1252.0,
+          "p95": 1434.0,
+          "max": 130680.0,
+          "negative": 0
+        },
+        "landing_minus_read_ms": {
+          "n": 4266,
+          "min": 1011.0,
+          "p50": 1025.0,
+          "p90": 1127.0,
+          "p95": 1254.0,
+          "max": 130642.0,
+          "negative": 0
+        },
+        "exit_minus_trigger_ms": {
+          "n": 4224,
+          "min": 700.0,
+          "p50": 850.0,
+          "p90": 1238.2000000000016,
+          "p95": 1828.2999999999984,
+          "max": 172062.0,
+          "negative": 0
+        }
+      },
+      "chain_fill_unique_mint_decision": {
+        "records": 1786,
+        "read_minus_decision_ms": {
+          "n": 1786,
+          "min": 10.0,
+          "p50": 21.0,
+          "p90": 75.5,
+          "p95": 138.75,
+          "max": 93050.0,
+          "negative": 0
+        },
+        "landing_minus_decision_ms": {
+          "n": 1728,
+          "min": 1022.0,
+          "p50": 1056.0,
+          "p90": 1195.6,
+          "p95": 1393.4499999999982,
+          "max": 130680.0,
+          "negative": 0
+        },
+        "landing_minus_read_ms": {
+          "n": 1728,
+          "min": 1011.0,
+          "p50": 1023.0,
+          "p90": 1117.3,
+          "p95": 1232.6499999999999,
+          "max": 130642.0,
+          "negative": 0
+        },
+        "exit_minus_trigger_ms": {
+          "n": 1707,
+          "min": 700.0,
+          "p50": 850.0,
+          "p90": 1214.800000000001,
+          "p95": 1812.6999999999998,
+          "max": 172062.0,
+          "negative": 0
+        }
+      },
+      "position_rows": {
+        "records": 3597,
+        "read_minus_decision_ms": {
+          "n": 3597,
+          "min": 10.0,
+          "p50": 21.0,
+          "p90": 81.0,
+          "p95": 161.19999999999982,
+          "max": 93050.0,
+          "negative": 0
+        },
+        "landing_minus_decision_ms": {
+          "n": 3542,
+          "min": 1022.0,
+          "p50": 1057.5,
+          "p90": 1228.0,
+          "p95": 1431.0,
+          "max": 130680.0,
+          "negative": 0
+        },
+        "landing_minus_read_ms": {
+          "n": 3542,
+          "min": 1011.0,
+          "p50": 1026.0,
+          "p90": 1122.8000000000002,
+          "p95": 1273.8499999999995,
+          "max": 130642.0,
+          "negative": 0
+        },
+        "exit_minus_trigger_ms": {
+          "n": 3495,
+          "min": 700.0,
+          "p50": 835.0,
+          "p90": 1157.6,
+          "p95": 1709.2999999999997,
+          "max": 172062.0,
+          "negative": 0
+        }
+      },
+      "position_unique_decision": {
+        "records": 1427,
+        "read_minus_decision_ms": {
+          "n": 1427,
+          "min": 10.0,
+          "p50": 20.0,
+          "p90": 65.0,
+          "p95": 115.10000000000014,
+          "max": 93050.0,
+          "negative": 0
+        },
+        "landing_minus_decision_ms": {
+          "n": 1404,
+          "min": 1022.0,
+          "p50": 1053.0,
+          "p90": 1181.8000000000002,
+          "p95": 1363.6499999999992,
+          "max": 130680.0,
+          "negative": 0
+        },
+        "landing_minus_read_ms": {
+          "n": 1404,
+          "min": 1011.0,
+          "p50": 1023.0,
+          "p90": 1114.0,
+          "p95": 1223.85,
+          "max": 130642.0,
+          "negative": 0
+        },
+        "exit_minus_trigger_ms": {
+          "n": 1383,
+          "min": 700.0,
+          "p50": 838.0,
+          "p90": 1154.8,
+          "p95": 1708.3999999999992,
+          "max": 172062.0,
+          "negative": 0
+        }
+      }
+    },
+    "quote_shadows": {
+      "rows": 2052,
+      "unique_mints": 1337,
+      "venue": {
+        "pump.fun curve": 1724,
+        "pump.fun graduated": 328
+      },
+      "entered": {
+        "entry": 2028,
+        "sample": 24
+      },
+      "nonempty_error_rows": 0,
+      "q_ms": {
+        "n": 2052,
+        "min": 13.0,
+        "p50": 34.0,
+        "p90": 73.0,
+        "p95": 108.44999999999982,
+        "max": 3643.0,
+        "negative": 0
+      },
+      "q_gap_recorded_fraction": {
+        "n": 2052,
+        "min": -0.985,
+        "p50": 0.0145,
+        "p90": 0.15727000000000002,
+        "p95": 0.24851499999999951,
+        "max": 4.5941,
+        "negative": 710
+      },
+      "q_ms_gt1000": 7,
+      "rows_with_chain_px_q_px": 2052,
+      "ts_min_utc": "2026-11-05T01:08:52+00:00",
+      "ts_max_utc": "2026-11-07T14:51:14+00:00"
+    },
+    "join_audit": {
+      "confirmed_live_with_chainfill_same_vol_id": 39,
+      "with_sim_decision_and_land_ms": 0,
+      "with_high_resolution_live_send_timestamp": 0,
+      "note": "entry_ts in live_trades is live invocation wall time; buy_lag_s is referenced to original paper row time; buy_ts may use blockTime or fallback wall time",
+      "confirmed_live_with_paper_same_vol_id": 40,
+      "paper_to_fill_lag_matches_recorded": 40,
+      "live_invocation_minus_paper_entry_s": {
+        "n": 40,
+        "min": 0.0,
+        "p50": 2.0,
+        "p90": 5.100000000000001,
+        "p95": 7.0,
+        "max": 9.0,
+        "negative": 0
+      },
+      "buy_ts_minus_live_invocation_s": {
+        "n": 40,
+        "min": 0.0,
+        "p50": 0.0,
+        "p90": 1.0,
+        "p95": 1.0,
+        "max": 2.0,
+        "negative": 0
+      }
+    },
+    "fd_decisions_rows": 296406
+  },
+  "overlap": {
+    "identical_live_records": 57,
+    "unique_live_records_union": 57,
+    "identical_quote_rows": 1829,
+    "unique_quote_rows_union": 2052
+  }
+}
