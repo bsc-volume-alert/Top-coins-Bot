@@ -405,3 +405,8 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - Recording gaps left (tracker stopped): 07:53:05–07:57:30 and 08:31:43–08:33:26 UTC. Merged old rows produced 0 K decisions.
 - Kept, not deleted: damaged DB and the volume copy in /mnt/volume…/tracker-db (38 GB). Main disk 17 GB free after the move.
 - Lessons: never copy a WAL database unless a TRUNCATE checkpoint returns busy 0 with all readers stopped; never .all() a big table; merge into a live DB only with IMMEDIATE transactions.
+
+## 11 Nov 2026 — tracker 0.19.13 / 0.19.14 (reliability self-fixes; Codex review 11 Nov)
+- 0.19.13 (10:44 UTC): every SQLite call/transaction ≥ 2 s is logged with SQL and caller ([slowsql]). First 80 min: NO stall ≥ 10 s at all (vs several per hour before); slow SQL seen 2–8 s: smartwallets rebuild, refreshProven, web snapshot, creator-count lookup, wallet_buys peak update.
+- 0.19.14: (a) stall lines add CPU user/sys s, GC pause s, disk read/write MB and context switches during the block (classifies compute vs GC vs disk wait);
+  (b) RESTART RECOVERY: launches created up to 420 s before a tracker start are tracked again from their first post-restart trade; clock rows for them are stamped epoch C5-2R, processed_ts is the real availability time; their early (≤ 120 s) and trade-triggered 5-min checkpoints are never computed from partial buffers.

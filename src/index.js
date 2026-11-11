@@ -1,6 +1,7 @@
 import "./env.js";
 import { rpcStat } from "./rpc.js"; // v0.18.59 (after env.js so .env is loaded first)
 import { readFileSync } from "node:fs";
+import { PerformanceObserver } from "node:perf_hooks"; // v0.19.14 stall diagnostics (GC pauses)
 import { CFG, BOOKS_OFF } from "./config.js";
 import { q } from "./db.js";
 import { tg, tgAlarm } from "./telegram.js";
@@ -90,8 +91,15 @@ setTimeout(() => { try { const n = flagTrades(0); if (n) console.log(`[restarts]
 setInterval(() => { if (BOOKS_OFF) return; try { timed("flagTrades", () => flagTrades(Math.floor(Date.now() / 1000) - 7200)); } catch {} }, 5 * 60_000); // v0.19.12 (reliability, 10 Nov 00:30 UK): with the paper books off since 23 Oct there are no new trades to flag — the 5-min rescan of leftover open rows blocked the event loop 2–4 s each time (stalls in tracker-error.log), delaying the clock checkpoints
 // v0.18.97 stall monitor: the executor saw triggers whose trade was 18–80 s old an hour after boot (18 Oct). Log every event-loop stall over 2 s with
 // the heap size, and the heap every 10 min, so tomorrow's log says whether it is GC on a growing heap, a slow synchronous job, or the feed itself.
+// v0.19.14 (11 Nov, reliability self-fix, logging only): each stall line also says what the process did DURING the block — CPU user/system seconds, GC pause
+// seconds, bytes read/written (/proc/self/io) and voluntary/involuntary context switches — so a block is classed as JS compute, GC, or waiting on disk.
 { let last = Date.now(); const mb = () => Math.round(process.memoryUsage().heapUsed / 1048576);
-  setInterval(() => { const now = Date.now(), late = now - last - 1000; last = now; if (late > 2000) console.error(`[stall] ${new Date().toISOString().slice(11, 19)}Z event loop blocked ${(late / 1000).toFixed(1)} s · heap ${mb()} MB · rss ${Math.round(process.memoryUsage().rss / 1048576)} MB · slow jobs: ${slowJobs()}`); }, 1000).unref();
+  let gcMs = 0; try { new PerformanceObserver((l) => { for (const e of l.getEntries()) gcMs += e.duration; }).observe({ entryTypes: ["gc"] }); } catch {}
+  const io = () => { try { const t = readFileSync("/proc/self/io", "utf8"); return { r: +(t.match(/read_bytes: (\d+)/)?.[1] || 0), w: +(t.match(/write_bytes: (\d+)/)?.[1] || 0) }; } catch { return { r: 0, w: 0 }; } };
+  let cpu0 = process.cpuUsage(), io0 = io(), ru0 = process.resourceUsage(), gc0 = 0;
+  setInterval(() => { const now = Date.now(), late = now - last - 1000; last = now; const cpu = process.cpuUsage(cpu0), io1 = io(), ru = process.resourceUsage();
+    if (late > 2000) console.error(`[stall] ${new Date().toISOString().slice(11, 19)}Z event loop blocked ${(late / 1000).toFixed(1)} s · cpu user ${(cpu.user / 1e6).toFixed(1)} s sys ${(cpu.system / 1e6).toFixed(1)} s · gc ${((gcMs - gc0) / 1000).toFixed(1)} s · disk read ${((io1.r - io0.r) / 1048576).toFixed(0)} MB write ${((io1.w - io0.w) / 1048576).toFixed(0)} MB · ctxsw vol ${ru.voluntaryContextSwitches - ru0.voluntaryContextSwitches} invol ${ru.involuntaryContextSwitches - ru0.involuntaryContextSwitches} · heap ${mb()} MB · rss ${Math.round(process.memoryUsage().rss / 1048576)} MB · slow jobs: ${slowJobs()}`);
+    cpu0 = process.cpuUsage(); io0 = io1; ru0 = ru; gc0 = gcMs; }, 1000).unref();
   setInterval(() => console.log(`[heap] ${mb()} MB used · rss ${Math.round(process.memoryUsage().rss / 1048576)} MB · up ${Math.round(process.uptime() / 60)} min`), 600_000).unref(); }
 process.on("unhandledRejection", (e) => console.error("[unhandled]", e));
 // v0.18.83: a throw inside a timer must not take the whole bot down (v0.18.81 crash-looped every 30 s on one). Logged loudly; state lives in SQLite anyway.

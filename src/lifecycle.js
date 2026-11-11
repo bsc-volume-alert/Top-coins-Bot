@@ -17,11 +17,21 @@ const L = new Map(); // mint -> { createTs, w5:[{ts,sol,b,w}], buyers:Set, lastM
 let holderBudget = 0, balBudget = 0, day = new Date().getUTCDate();
 const balCache = new Map();
 const START_TS = Math.floor(Date.now() / 1000);
+const RECOVER_S = 420; // v0.19.14 restart recovery window (the clock checkpoint is taken at 300–420 s)
+export const recov = { tracked: 0, clock: 0 };
+function recoverStamp(s) { // never backfill: mark every checkpoint already due at recovery as done, and skip the trade-triggered 5-min reading (the clock row covers it, stamped C5-2R)
+  s.recovered = 1; recov.tracked++; const age = Math.floor(Date.now() / 1000) - s.createTs; s.ex = {};
+  for (const cp of CFG.LIFE_CHECKPOINTS) if (cp <= 120) s.ex[cp] = 1; // early checkpoints are never computed from a buffer that misses pre-restart trades
+  while (s.next < CFG.LIFE_CHECKPOINTS.length && (CFG.LIFE_CHECKPOINTS[s.next] <= age || CFG.LIFE_CHECKPOINTS[s.next] <= 300)) s.next++;
+}
 const resetDay = () => { const d = new Date().getUTCDate(); if (d !== day) { day = d; holderBudget = 0; balBudget = 0; } };
 
 function st(mint, createTs) {
   let s = L.get(mint);
-  if (!s && createTs && createTs >= START_TS) { s = { createTs, w5: [], buyers: new Set(), lastMc: 0, lastTs: 0, graduated: 0, next: 0, cp: {}, maxBurst: 0, lastPx: 0, climbed: false, bts: [], ring: [], peakMc: 0, peakTs: 0, w2: new Set(), revDone: false, lastRev: 0, gradTs: 0, gradPx: 0, gradPeak: 0, grDone: false, grecDone: false, lastGr: 0, dumped: false, lowMc: Infinity, lowTs: 0, slowDone: false, lastSlow: 0 }; L.set(mint, s); }
+  // v0.19.14 (11 Nov, restart recovery; Codex 11 Nov): launches created up to RECOVER_S before this process started are tracked again from their first
+  // post-restart trade, instead of being dropped (470 launches lost on 9–10 Nov). Their buffers hold only trades received after the restart, so they are
+  // STAMPED: s.recovered = 1 → clock rows get epoch "C5-2R"; checkpoints already past at recovery (and the trade-triggered 5-min one) are never backfilled.
+  if (!s && createTs && createTs >= START_TS - RECOVER_S) { s = { createTs, w5: [], buyers: new Set(), lastMc: 0, lastTs: 0, graduated: 0, next: 0, cp: {}, maxBurst: 0, lastPx: 0, climbed: false, bts: [], ring: [], peakMc: 0, peakTs: 0, w2: new Set(), revDone: false, lastRev: 0, gradTs: 0, gradPx: 0, gradPeak: 0, grDone: false, grecDone: false, lastGr: 0, dumped: false, lowMc: Infinity, lowTs: 0, slowDone: false, lastSlow: 0 }; L.set(mint, s); if (createTs < START_TS) recoverStamp(s); }
   return s;
 }
 function trade(mint, createTs, tr, mc, graduated, venue) {
@@ -84,7 +94,7 @@ function sampleClock(mint, s, nowMs) {
   else if (fo === false) status = "uncertain: feed gap";
   else if (fo == null) status = "uncertain: feed state unreadable";
   else if (lagS != null && lagS > 5) status = "uncertain: ingestion lag";
-  try { q.insCpClock.run(mint, CLOCK_CP, s.createTs, cut, proc, mc, pts, pts != null ? cut - pts : null, grad ? "pumpswap" : "curve", grad, w.length, b, sl, byTot, fo == null ? null : fo ? 1 : 0, lagS, status, CLOCK_EPOCH); lc.clock = (lc.clock || 0) + 1; lc["clock_" + status.split(":")[0]] = (lc["clock_" + status.split(":")[0]] || 0) + 1; } catch {}
+  try { q.insCpClock.run(mint, CLOCK_CP, s.createTs, cut, proc, mc, pts, pts != null ? cut - pts : null, grad ? "pumpswap" : "curve", grad, w.length, b, sl, byTot, fo == null ? null : fo ? 1 : 0, lagS, status, s.recovered ? CLOCK_EPOCH + "R" : CLOCK_EPOCH); if (s.recovered) recov.clock++; lc.clock = (lc.clock || 0) + 1; lc["clock_" + status.split(":")[0]] = (lc["clock_" + status.split(":")[0]] || 0) + 1; } catch {}
 }
 setInterval(() => { const ms = Date.now(), now = Math.floor(ms / 1000); for (const [mint, s] of L) { const a = now - s.createTs; if (a >= CLOCK_CP && a <= CLOCK_CP + 120) sampleClock(mint, s, ms); } }, 1000);
 function sample(mint, s, now) {
