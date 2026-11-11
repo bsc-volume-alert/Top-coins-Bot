@@ -32,6 +32,23 @@ Do not assume historical coverage from the earliest row or declare snapshots com
 Finish one bounded task per run. Do not stop after writing a plan. If a task is blocked, record it and attempt another independent ready task. After this list, propose and execute the next documented development experiment; do not repeatedly retest failed rules without new evidence.
 Preserve preregistration, all search counts, failures and unknown outcomes. Require independent review before a candidate is described as supported. Never promise profit.
 
+
+## Claude worker (activated 11 Nov 2026 16:50 UTC by the coordinator — scheduled task, every 6 h)
+Claude writes ONLY reports/blind/autonomous/claude/ on branch research-claude. Same rules as Codex above: never force-push, never touch tracker history, bots, workflows, frozen evaluators, raw data or historical submissions; no live trading, no paid API calls, no protected outcome data; one bounded task per run; a blocked run still records evidence. Same lease/STATUS.json/runs/<id>/SCOREBOARD.md/REVIEW_REQUESTS.md contract as Codex, under the claude/ folder.
+
+| ID | Owner | Initial state | Deliverable |
+|---|---|---|---|
+| F001 | Claude | READY | Independent review of Codex runs C001–C004 on research-codex: re-run their reproduce scripts from the allowlisted inputs, confirm or dispute every number in their SCOREBOARD rows, answer anything in codex/REVIEW_REQUESTS.md. Record agreement/disagreement per row. |
+| F002 | Claude | READY | Operator persistence on development data only: for every creator in the entry-all census with ≥ 2 launches inside 6 Nov 07:40 → 7 Nov 20:00, measure whether the first launch's outcome (retention, peak multiple, time-to-dump) predicts the second's. Knowable-at-time only (creator history as of the second launch's creation). Report with the never-launched-before baseline, counts, and unknowns. No rule search. |
+| F003 | Claude | READY after F002 | Loss-avoidance experiment: register ONE filter built from F002/C005 evidence (e.g. "skip creators whose previous launch dumped > X % within Y s") and measure, with eval-1.1 unchanged, how much of the always-on loss at retention+0 s / hold 30 s it removes on each half, with costs, unknowns and no-best-mint. Pre-register the threshold before scoring. |
+| F004 | Claude | READY | Reproduce the Claude analyst's 11 Nov early-winners study (branch analysis-fable-11nov) from raw allowlisted data; state what is knowable-at-time and what is not. |
+| F005 | Claude | BLOCKED on Round 1 scoring and explicit dataset release | Regime question (same wording as C008), independently of Codex. |
+
+Cross-review rule: a worker may read the other worker's branch at any time; it must cite the exact commit and must not copy conclusions without re-running the numbers.
+
+## Coordinator (scheduled task, every 6 h, offset 3 h from the workers)
+Reads research-codex and research-claude; reproduces any row claiming a positive result; checks the output contract was honoured; updates this queue (states, new tasks, releases) and reports/blind/AUTONOMOUS_STATUS.md on tracker with a short plain-English status for the owner; logs to ROUND2_LOG.md. Never runs a discovery task itself.
+
 ## Output contract
 reports/blind/autonomous/codex/STATUS.json — current task/run/lease, input refs, completion/blocker.
 reports/blind/autonomous/codex/runs/<unique-run-id>/ — hypothesis, code, commands, results, record-level evidence and limitations.
