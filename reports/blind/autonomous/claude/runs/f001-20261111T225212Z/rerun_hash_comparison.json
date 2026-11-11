@@ -1,0 +1,66 @@
+{
+  "rerun_output_hashes": {
+    "c001-20261110T211226Z/reproduction.json": {
+      "codex_sha256": "fd8b2cc785f0754181de76c8b3bcffec4a6f23052ea795925a969188777eb127",
+      "rerun_sha256": "fd8b2cc785f0754181de76c8b3bcffec4a6f23052ea795925a969188777eb127",
+      "byte_identical": true
+    },
+    "c002-20261111T031305Z/results.json": {
+      "codex_sha256": "fa3e627638ad1a21ba6a1b2636247f3c39d35aba08eaa6ee92855655daef20cc",
+      "rerun_sha256": "fa3e627638ad1a21ba6a1b2636247f3c39d35aba08eaa6ee92855655daef20cc",
+      "byte_identical": true
+    },
+    "c003-20261111T090819Z/coverage.json": {
+      "codex_sha256": "69df1afcd0fc10e4bbcda03dfc233821217edfbd0f1201740718e3d002765527",
+      "rerun_sha256": "69df1afcd0fc10e4bbcda03dfc233821217edfbd0f1201740718e3d002765527",
+      "byte_identical": true
+    },
+    "c004-20261111T151021Z/results.json": {
+      "codex_sha256": "c39a5bb4fb6c206459043d85aecd8fb7d5eca0f8eb7e98a705bbb6677404173d",
+      "rerun_sha256": "c39a5bb4fb6c206459043d85aecd8fb7d5eca0f8eb7e98a705bbb6677404173d",
+      "byte_identical": true
+    },
+    "c004-20261111T151021Z/live_timing_ledger.json": {
+      "codex_sha256": "1c0adbcca27d3da49a0600784b41c26e3ceb122a70bc09b9cf67e6670226780f",
+      "rerun_sha256": "1c0adbcca27d3da49a0600784b41c26e3ceb122a70bc09b9cf67e6670226780f",
+      "byte_identical": true
+    },
+    "c004-20261111T151021Z/checksums.json": {
+      "codex_sha256": "b6b4b31e45e6a54333014a2b5bf91e97feb8b184d190d72c25ab5cd4f9b705df",
+      "rerun_sha256": "b6b4b31e45e6a54333014a2b5bf91e97feb8b184d190d72c25ab5cd4f9b705df",
+      "byte_identical": true
+    },
+    "c001-20261110T211226Z/data_checksums.json": {
+      "codex_sha256": "95ef163705dd028bf26fefda6c9adf1fc2108384fc51e41490ef9dcd01156992",
+      "rerun_sha256": "95ef163705dd028bf26fefda6c9adf1fc2108384fc51e41490ef9dcd01156992",
+      "byte_identical": true
+    },
+    "c002-20261111T031305Z/data_checksums.json": {
+      "codex_sha256": "881a3b7a57b103782974e9400913a930c30afb185e5ee8780be2af7a57d309e2",
+      "rerun_sha256": "881a3b7a57b103782974e9400913a930c30afb185e5ee8780be2af7a57d309e2",
+      "byte_identical": true
+    }
+  },
+  "codex_artifact_sha256sums_check": {
+    "c001-20261110T211226Z": {
+      "listed": 8,
+      "match": 8,
+      "missing_or_mismatch": []
+    },
+    "c002-20261111T031305Z": {
+      "listed": 8,
+      "match": 8,
+      "missing_or_mismatch": []
+    },
+    "c003-20261111T090819Z": {
+      "listed": 8,
+      "match": 8,
+      "missing_or_mismatch": []
+    },
+    "c004-20261111T151021Z": {
+      "listed": 7,
+      "match": 7,
+      "missing_or_mismatch": []
+    }
+  }
+}

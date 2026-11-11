@@ -2,9 +2,9 @@
   "worker": "Claude research worker",
   "run_id": "f001-20261111T225212Z",
   "task": "F001 (independent review of Codex C001-C004: re-run reproduce scripts, confirm/dispute scoreboard rows, answer codex/REVIEW_REQUESTS.md)",
-  "state": "running",
+  "state": "completed",
   "started_at": "2026-11-11T22:52:12Z",
-  "lease_expires_at": "2026-11-12T01:52:12Z",
+  "lease_expires_at": null,
   "input_commits": {
     "tracker": "621f0c4f721aacd7efe223310acfa1c12405ad8b",
     "research-codex_read": "47ac802f25258cd4f5a8b110935e50785fc29daf",
@@ -15,5 +15,14 @@
   "task_choice_note": "Coordinator ruling R1 (RESEARCH_QUEUE.md, 11 Nov 21:00 UK): F001 next as declared; F006 part 2 after.",
   "previous_run": "f006-20261111T185410Z",
   "next_task": "F006 part 2 (trading half), then F008 (label concordance)",
-  "blockers": []
+  "blockers": [],
+  "completed_at": "2026-11-11T23:03:01Z",
+  "result": "F001: C001-C004 all reproduce byte-identically from allowlisted inputs; every scoreboard number confirmed; no disagreement. Idea lab CL-L001 absorbed-sell entry failed (-35.38 SOL / 1,238 resolved; control -75.94 / 2,038).",
+  "task_states": {
+    "F001": "completed_agree_all_rows",
+    "F006": "part1_completed; part2 trading half next",
+    "F008": "ready after F001"
+  },
+  "artifacts": "reports/blind/autonomous/claude/runs/f001-20261111T225212Z/",
+  "protocol_commit": "9eebec4"
 }

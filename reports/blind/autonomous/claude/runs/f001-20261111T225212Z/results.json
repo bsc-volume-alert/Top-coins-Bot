@@ -1,0 +1,352 @@
+{
+  "run_id": "f001-20261111T225212Z",
+  "task": "F001",
+  "verdict_per_row": {
+    "c001": "agree exactly",
+    "c002": "agree exactly",
+    "c003": "agree exactly",
+    "c004": "agree exactly"
+  },
+  "rerun_byte_identical": {
+    "c001-20261110T211226Z/reproduction.json": true,
+    "c002-20261111T031305Z/results.json": true,
+    "c003-20261111T090819Z/coverage.json": true,
+    "c004-20261111T151021Z/results.json": true,
+    "c004-20261111T151021Z/live_timing_ledger.json": true,
+    "c004-20261111T151021Z/checksums.json": true,
+    "c001-20261110T211226Z/data_checksums.json": true,
+    "c002-20261111T031305Z/data_checksums.json": true
+  },
+  "codex_artifact_sums_check": {
+    "c001-20261110T211226Z": {
+      "listed": 8,
+      "match": 8,
+      "missing_or_mismatch": []
+    },
+    "c002-20261111T031305Z": {
+      "listed": 8,
+      "match": 8,
+      "missing_or_mismatch": []
+    },
+    "c003-20261111T090819Z": {
+      "listed": 8,
+      "match": 8,
+      "missing_or_mismatch": []
+    },
+    "c004-20261111T151021Z": {
+      "listed": 7,
+      "match": 7,
+      "missing_or_mismatch": []
+    }
+  },
+  "field_comparison": {
+    "c001/reproduction.json": {
+      "fields": 126,
+      "diffs": 0
+    },
+    "c002/results.json": {
+      "fields": 478,
+      "diffs": 0
+    },
+    "c003/coverage.json": {
+      "fields": 933,
+      "diffs": 0
+    },
+    "c004/results.json": {
+      "fields": 511,
+      "diffs": 0
+    },
+    "c004/live_timing_ledger.json": {
+      "fields": 1197,
+      "diffs": 0
+    },
+    "c004/checksums.json": {
+      "fields": 36,
+      "diffs": 0
+    }
+  },
+  "independent_rederivation": {
+    "c004": {
+      "unique_live_records_union": 57,
+      "confirmed": 40,
+      "buy_status": {
+        "failed": 11,
+        "confirmed": 40,
+        "skipped": 6
+      },
+      "buy_ms_median": 867.0,
+      "buy_ms_p95_linear": 1294.2999999999988,
+      "buy_lag_s_median": 2.0,
+      "buy_lag_s_p95": 7.0,
+      "stake_sol_all_0.02": true,
+      "buy_ms_le1000": 33,
+      "lag_le1": 5,
+      "all_confirmed_have_sell_confirmed": true,
+      "sell_tries_gt1": 4,
+      "quotes_union": 2052,
+      "q_ms_median": 34.0,
+      "q_ms_p95": 108.44999999999982,
+      "quote_unique_mints": 1337
+    },
+    "c003": {
+      "snapshot3": {
+        "census_unique_mints": 85016,
+        "life_rows": 130939,
+        "life_mints": 14455,
+        "census_without_life": 70561,
+        "life_missing_obs_ts": 59116,
+        "mints_cp_ge_7200": 9185,
+        "mints_cp_ge_86400": 0,
+        "max_cp": 14400.0,
+        "crossings_rows": 200,
+        "suspect_jump": 45,
+        "fx_age_gt60": 87,
+        "fx_age_max": 119.0,
+        "registry_rows": 1480
+      },
+      "current": {
+        "census_unique_mints": 83856,
+        "life_rows": 121081,
+        "life_mints": 13041,
+        "census_without_life": 70815,
+        "life_missing_obs_ts": 56128,
+        "mints_cp_ge_7200": 8619,
+        "mints_cp_ge_86400": 0,
+        "max_cp": 14400.0,
+        "crossings_rows": 200,
+        "suspect_jump": 45,
+        "fx_age_gt60": 87,
+        "fx_age_max": 119.0,
+        "registry_rows": 1476
+      }
+    }
+  },
+  "observations": [
+    "ID34 fee30 and fee125 summaries identical: all 80 scored positions fill and exit on the curve",
+    "C002 four mints: single curve row, 85.005359057 SOL buy, vtok at 279900000000000 floor; pool exit states vsol 5429/5088/5427 SOL and 1160 SOL (5kdsd8zW h30) with 3.24M/3.45M/3.24M/14.96M tokens",
+    "outage intervals in reproduce.py equal OUTAGE_LEDGER.md six-interval ledger",
+    "C003 seven evidence branches resolve to the same commits on origin (ls-remote 11 Nov 23:10 UTC), contents not read"
+  ],
+  "idea_lab": {
+    "exp_id": "CL-L001",
+    "protocol_commit": "9eebec4",
+    "summary": {
+      "spec": {
+        "size": 0.2,
+        "pool_bps": 55,
+        "curve_bps": 125,
+        "fixed": 0.0015,
+        "land_buy_s": 1.0,
+        "land_sell_s": 0.7,
+        "trail": 0.3,
+        "horizon_s": 7200,
+        "entry_window_age_s": [
+          60,
+          1800
+        ],
+        "sell_min_sol": 1.0,
+        "sell_window_before_t_s": [
+          10,
+          30
+        ],
+        "min_new_buyers": 3,
+        "stale_s": 30
+      },
+      "audit": {
+        "not_retained": 301,
+        "eligible_early": 1593,
+        "outage_excluded": 974,
+        "eligible_late": 2045
+      },
+      "stream_stats": {
+        "mints_streamed": 4913,
+        "duplicates_removed": 1568880,
+        "non_contiguous": 0
+      },
+      "candidate": {
+        "attempted": 1419,
+        "filled": 1413,
+        "unavailable_fill": 6,
+        "unavailable_reasons": {
+          "fill: state invalid": 5,
+          "fill: capture gap": 1
+        },
+        "stale_fill_gt30s_marked_unavailable": 0,
+        "resolved_raw_evaluator": {
+          "n": 1283,
+          "total_sol": -33.91594646097043,
+          "mean_ret": -0.13217438215499,
+          "median_ret": -0.2701787903062104,
+          "win_rate": 0.23070927513639908,
+          "share_loss_gt50": 0.1402961808261886,
+          "without_best1_sol": -36.35857248333027,
+          "without_best3_sol": -38.188440115040855,
+          "best3_sol": [
+            0.7430842170660056,
+            1.0867834146445805,
+            2.4426260223598395
+          ],
+          "worst_sol": -0.19039600100569193,
+          "exit_trigger": 1238,
+          "exit_horizon": 45
+        },
+        "uncertain_exit": 130,
+        "uncertain_reasons": {
+          "exit: capture gap": 122,
+          "exit: state invalid": 7,
+          "exit: outside retention": 1
+        },
+        "stale_exit_gt30s_marked_uncertain": 45,
+        "resolved_after_staleness": {
+          "n": 1238,
+          "total_sol": -35.38168194778583,
+          "mean_ret": -0.14289855390866651,
+          "median_ret": -0.2754888622250842,
+          "win_rate": 0.22778675282714056,
+          "share_loss_gt50": 0.14539579967689822,
+          "without_best1_sol": -37.82430797014567,
+          "without_best3_sol": -39.65417560185626,
+          "best3_sol": [
+            0.7430842170660056,
+            1.0867834146445805,
+            2.4426260223598395
+          ],
+          "worst_sol": -0.19039600100569193,
+          "exit_trigger": 1238,
+          "exit_horizon": 0
+        },
+        "by_half": {
+          "early": {
+            "n": 530,
+            "total_sol": -17.713254268727997,
+            "mean_ret": -0.16710617234649053,
+            "median_ret": -0.2754888622250842,
+            "win_rate": 0.22264150943396227,
+            "share_loss_gt50": 0.14150943396226415,
+            "without_best1_sol": -18.28791156844791,
+            "without_best3_sol": -19.321166293740536,
+            "best3_sol": [
+              0.5135479940298832,
+              0.5197067312627416,
+              0.5746572997199159
+            ],
+            "worst_sol": -0.18231288293900738,
+            "exit_trigger": 530,
+            "exit_horizon": 0
+          },
+          "late": {
+            "n": 708,
+            "total_sol": -17.668427679057835,
+            "mean_ret": -0.12477703163176437,
+            "median_ret": -0.2756589458587564,
+            "win_rate": 0.23163841807909605,
+            "share_loss_gt50": 0.1483050847457627,
+            "without_best1_sol": -20.111053701417674,
+            "without_best3_sol": -21.940921333128262,
+            "best3_sol": [
+              0.7430842170660056,
+              1.0867834146445805,
+              2.4426260223598395
+            ],
+            "worst_sol": -0.19039600100569193,
+            "exit_trigger": 708,
+            "exit_horizon": 0
+          }
+        },
+        "entry_age_median": 65.24499988555908
+      },
+      "control": {
+        "attempted": 3205,
+        "filled": 3196,
+        "unavailable_fill": 9,
+        "unavailable_reasons": {
+          "fill: capture gap": 3,
+          "fill: state invalid": 6
+        },
+        "stale_fill_gt30s_marked_unavailable": 5,
+        "resolved_raw_evaluator": {
+          "n": 2301,
+          "total_sol": -79.11534639579531,
+          "mean_ret": -0.17191513775705194,
+          "median_ret": -0.26017755148319677,
+          "win_rate": 0.17687961755758366,
+          "share_loss_gt50": 0.18339852238157323,
+          "without_best1_sol": -81.6592526658165,
+          "without_best3_sol": -84.30638960702076,
+          "best3_sol": [
+            1.2805773693157205,
+            1.366559571888548,
+            2.543906270021182
+          ],
+          "worst_sol": -0.19014718245531206,
+          "exit_trigger": 2040,
+          "exit_horizon": 261
+        },
+        "uncertain_exit": 892,
+        "uncertain_reasons": {
+          "exit: capture gap": 860,
+          "exit: outside retention": 16,
+          "exit: state invalid": 16
+        },
+        "stale_exit_gt30s_marked_uncertain": 261,
+        "resolved_after_staleness": {
+          "n": 2038,
+          "total_sol": -75.93871356736776,
+          "mean_ret": -0.18630695183358134,
+          "median_ret": -0.29767406315860545,
+          "win_rate": 0.18842001962708538,
+          "share_loss_gt50": 0.2070657507360157,
+          "without_best1_sol": -78.48261983738894,
+          "without_best3_sol": -81.1297567785932,
+          "best3_sol": [
+            1.2805773693157205,
+            1.366559571888548,
+            2.543906270021182
+          ],
+          "worst_sol": -0.19014718245531206,
+          "exit_trigger": 2038,
+          "exit_horizon": 0
+        },
+        "by_half": {
+          "early": {
+            "n": 857,
+            "total_sol": -34.610893745957775,
+            "mean_ret": -0.201930535273966,
+            "median_ret": -0.28967368890029405,
+            "win_rate": 0.18319719953325556,
+            "share_loss_gt50": 0.2147024504084014,
+            "without_best1_sol": -35.977453317846326,
+            "without_best3_sol": -37.43897594929313,
+            "best3_sol": [
+              0.7273397875619158,
+              0.734182843884894,
+              1.366559571888548
+            ],
+            "worst_sol": -0.18657331162482318,
+            "exit_trigger": 857,
+            "exit_horizon": 0
+          },
+          "late": {
+            "n": 1181,
+            "total_sol": -41.32781982140998,
+            "mean_ret": -0.1749696012760795,
+            "median_ret": -0.30396090373039153,
+            "win_rate": 0.1922099915325995,
+            "share_loss_gt50": 0.20152413209144793,
+            "without_best1_sol": -43.871726091431164,
+            "without_best3_sol": -46.33222185344325,
+            "best3_sol": [
+              1.179918392696363,
+              1.2805773693157205,
+              2.543906270021182
+            ],
+            "worst_sol": -0.19014718245531206,
+            "exit_trigger": 1181,
+            "exit_horizon": 0
+          }
+        },
+        "entry_age_median": 62.01699995994568
+      }
+    }
+  }
+}

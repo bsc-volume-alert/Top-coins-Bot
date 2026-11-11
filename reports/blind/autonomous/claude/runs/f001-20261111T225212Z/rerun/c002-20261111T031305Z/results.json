@@ -1,0 +1,603 @@
+{
+  "task": "C002",
+  "development_commit": "e67833121f1da0dc992c28fa26c5236a855c151a",
+  "evaluator_commit": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b",
+  "reference_commit": "93a9ed57ace4216d42e7b7a90d4967078e7ac9dc",
+  "artifact_results_match": true,
+  "compared_mints": 4,
+  "comparisons": 8,
+  "mismatches": [],
+  "artifacts": {
+    "LLzYn4ZZ4anByo4Xud8jMvE7y9zCf2APwRsTCZcpump": {
+      "h30": {
+        "cat": "unknown",
+        "why": "exit: state invalid",
+        "entry_t": 1794038376.919
+      },
+      "states_h30": {
+        "fill": {
+          "row_id": "8125044",
+          "mint": "LLzYn4ZZ4anByo4Xud8jMvE7y9zCf2APwRsTCZcpump",
+          "slot": "466437090",
+          "ts": "1794038377",
+          "wallet": "Aq2WoBjDSBupVAneTtYaVgTWZ35eQvWLbf4krRDabSVL",
+          "is_buy": "1",
+          "sol": "85.005359057",
+          "tokens": "793100000",
+          "recv_ms": "1794038376919",
+          "vsol": "115005359057",
+          "vtok": "279900000000000",
+          "venue": "curve",
+          "pool": "",
+          "ev_idx": "",
+          "quote_mint": "",
+          "base_dec": "",
+          "quote_dec": "",
+          "dec_ver": ""
+        },
+        "fill_unavailable_reason": null,
+        "exit": null,
+        "exit_unavailable_reason": "state invalid",
+        "fill_valid": true,
+        "exit_valid": false
+      },
+      "h7200": {
+        "cat": "scored",
+        "entry_t": 1794038376.919,
+        "sizes": {
+          "0.2": {
+            "net_sol": 698.8922892419689,
+            "ret": 3494.4614462098443,
+            "exit": "horizon",
+            "fill_venue": "curve",
+            "exit_venue": "pumpswap"
+          },
+          "0.02": {
+            "net_sol": 79.20363148755598,
+            "ret": 3960.181574377799,
+            "exit": "horizon",
+            "fill_venue": "curve",
+            "exit_venue": "pumpswap"
+          }
+        }
+      },
+      "states_h7200": {
+        "fill": {
+          "row_id": "8125044",
+          "mint": "LLzYn4ZZ4anByo4Xud8jMvE7y9zCf2APwRsTCZcpump",
+          "slot": "466437090",
+          "ts": "1794038377",
+          "wallet": "Aq2WoBjDSBupVAneTtYaVgTWZ35eQvWLbf4krRDabSVL",
+          "is_buy": "1",
+          "sol": "85.005359057",
+          "tokens": "793100000",
+          "recv_ms": "1794038376919",
+          "vsol": "115005359057",
+          "vtok": "279900000000000",
+          "venue": "curve",
+          "pool": "",
+          "ev_idx": "",
+          "quote_mint": "",
+          "base_dec": "",
+          "quote_dec": "",
+          "dec_ver": ""
+        },
+        "fill_unavailable_reason": null,
+        "exit": {
+          "row_id": "8542724",
+          "mint": "LLzYn4ZZ4anByo4Xud8jMvE7y9zCf2APwRsTCZcpump",
+          "slot": "466470722",
+          "ts": "1794045576",
+          "wallet": "B1P6VkNvB6xpd8LwLEUhAdrkszNW2miTGmvD5U2u6Qm5",
+          "is_buy": "1",
+          "sol": "0.000991709",
+          "tokens": "0.589187",
+          "recv_ms": "1794045576836",
+          "vsol": "5429000000000",
+          "vtok": "3235888434808",
+          "venue": "pumpswap",
+          "pool": "4wCZHfTnBGjG1gPaBbhtf3rhtGSFoktcbrVDeFzZf2kd",
+          "ev_idx": "0",
+          "quote_mint": "So11111111111111111111111111111111111111112",
+          "base_dec": "6",
+          "quote_dec": "9",
+          "dec_ver": "ps-0.19.9"
+        },
+        "exit_unavailable_reason": null,
+        "fill_valid": true,
+        "exit_valid": true
+      },
+      "raw_unique_rows": 45679,
+      "first_curve": {
+        "row_id": "8125044",
+        "mint": "LLzYn4ZZ4anByo4Xud8jMvE7y9zCf2APwRsTCZcpump",
+        "slot": "466437090",
+        "ts": "1794038377",
+        "wallet": "Aq2WoBjDSBupVAneTtYaVgTWZ35eQvWLbf4krRDabSVL",
+        "is_buy": "1",
+        "sol": "85.005359057",
+        "tokens": "793100000",
+        "recv_ms": "1794038376919",
+        "vsol": "115005359057",
+        "vtok": "279900000000000",
+        "venue": "curve",
+        "pool": "",
+        "ev_idx": "",
+        "quote_mint": "",
+        "base_dec": "",
+        "quote_dec": "",
+        "dec_ver": ""
+      },
+      "completed_curve_floor": true,
+      "first_curve_buy_sol": 85.005359057
+    },
+    "dEJEFGBeTyMBrKZ25VeEFaQymTgSLj7zuqPGnLkpump": {
+      "h30": {
+        "cat": "unknown",
+        "why": "exit: state invalid",
+        "entry_t": 1794039109.829
+      },
+      "states_h30": {
+        "fill": {
+          "row_id": "8161492",
+          "mint": "dEJEFGBeTyMBrKZ25VeEFaQymTgSLj7zuqPGnLkpump",
+          "slot": "466440505",
+          "ts": "1794039109",
+          "wallet": "8oGCR6MGXDJ62Gr9vppapSG4UnLbm8QThBoZ93MENJPE",
+          "is_buy": "1",
+          "sol": "85.005359057",
+          "tokens": "793100000",
+          "recv_ms": "1794039109829",
+          "vsol": "115005359057",
+          "vtok": "279900000000000",
+          "venue": "curve",
+          "pool": "",
+          "ev_idx": "",
+          "quote_mint": "",
+          "base_dec": "",
+          "quote_dec": "",
+          "dec_ver": ""
+        },
+        "fill_unavailable_reason": null,
+        "exit": null,
+        "exit_unavailable_reason": "state invalid",
+        "fill_valid": true,
+        "exit_valid": false
+      },
+      "h7200": {
+        "cat": "scored",
+        "entry_t": 1794039109.829,
+        "sizes": {
+          "0.2": {
+            "net_sol": 619.027416128167,
+            "ret": 3095.137080640835,
+            "exit": "horizon",
+            "fill_venue": "curve",
+            "exit_venue": "pumpswap"
+          },
+          "0.02": {
+            "net_sol": 69.65058871579221,
+            "ret": 3482.5294357896105,
+            "exit": "horizon",
+            "fill_venue": "curve",
+            "exit_venue": "pumpswap"
+          }
+        }
+      },
+      "states_h7200": {
+        "fill": {
+          "row_id": "8161492",
+          "mint": "dEJEFGBeTyMBrKZ25VeEFaQymTgSLj7zuqPGnLkpump",
+          "slot": "466440505",
+          "ts": "1794039109",
+          "wallet": "8oGCR6MGXDJ62Gr9vppapSG4UnLbm8QThBoZ93MENJPE",
+          "is_buy": "1",
+          "sol": "85.005359057",
+          "tokens": "793100000",
+          "recv_ms": "1794039109829",
+          "vsol": "115005359057",
+          "vtok": "279900000000000",
+          "venue": "curve",
+          "pool": "",
+          "ev_idx": "",
+          "quote_mint": "",
+          "base_dec": "",
+          "quote_dec": "",
+          "dec_ver": ""
+        },
+        "fill_unavailable_reason": null,
+        "exit": {
+          "row_id": "8578073",
+          "mint": "dEJEFGBeTyMBrKZ25VeEFaQymTgSLj7zuqPGnLkpump",
+          "slot": "466474123",
+          "ts": "1794046309",
+          "wallet": "2PcsEqLFTLWGgJtetGKV1dgHJfHgiNzRDMiC6XxrqWqZ",
+          "is_buy": "1",
+          "sol": "0.000840376",
+          "tokens": "0.568133",
+          "recv_ms": "1794046309239",
+          "vsol": "5087720000000",
+          "vtok": "3451422959422",
+          "venue": "pumpswap",
+          "pool": "GcDt19f2gYBPF8UKPeoTNMvHi83LfmZQFXpeijUjdmDM",
+          "ev_idx": "0",
+          "quote_mint": "So11111111111111111111111111111111111111112",
+          "base_dec": "6",
+          "quote_dec": "9",
+          "dec_ver": "ps-0.19.9"
+        },
+        "exit_unavailable_reason": null,
+        "fill_valid": true,
+        "exit_valid": true
+      },
+      "raw_unique_rows": 33683,
+      "first_curve": {
+        "row_id": "8161492",
+        "mint": "dEJEFGBeTyMBrKZ25VeEFaQymTgSLj7zuqPGnLkpump",
+        "slot": "466440505",
+        "ts": "1794039109",
+        "wallet": "8oGCR6MGXDJ62Gr9vppapSG4UnLbm8QThBoZ93MENJPE",
+        "is_buy": "1",
+        "sol": "85.005359057",
+        "tokens": "793100000",
+        "recv_ms": "1794039109829",
+        "vsol": "115005359057",
+        "vtok": "279900000000000",
+        "venue": "curve",
+        "pool": "",
+        "ev_idx": "",
+        "quote_mint": "",
+        "base_dec": "",
+        "quote_dec": "",
+        "dec_ver": ""
+      },
+      "completed_curve_floor": true,
+      "first_curve_buy_sol": 85.005359057
+    },
+    "fBidsBVNH6HdAba7pD6dqSoxmU2jAT7z3YuCUVzpump": {
+      "h30": {
+        "cat": "unknown",
+        "why": "exit: state invalid",
+        "entry_t": 1794039264.45
+      },
+      "states_h30": {
+        "fill": {
+          "row_id": "8165986",
+          "mint": "fBidsBVNH6HdAba7pD6dqSoxmU2jAT7z3YuCUVzpump",
+          "slot": "466441226",
+          "ts": "1794039264",
+          "wallet": "5b4a6yv2YmtX9v2zBoKqc2mRio4zzVS4itP3XFG1pBtE",
+          "is_buy": "1",
+          "sol": "85.005359057",
+          "tokens": "793100000",
+          "recv_ms": "1794039264450",
+          "vsol": "115005359057",
+          "vtok": "279900000000000",
+          "venue": "curve",
+          "pool": "",
+          "ev_idx": "",
+          "quote_mint": "",
+          "base_dec": "",
+          "quote_dec": "",
+          "dec_ver": ""
+        },
+        "fill_unavailable_reason": null,
+        "exit": null,
+        "exit_unavailable_reason": "state invalid",
+        "fill_valid": true,
+        "exit_valid": false
+      },
+      "h7200": {
+        "cat": "scored",
+        "entry_t": 1794039264.45,
+        "sizes": {
+          "0.2": {
+            "net_sol": 698.3448039503646,
+            "ret": 3491.724019751823,
+            "exit": "horizon",
+            "fill_venue": "curve",
+            "exit_venue": "pumpswap"
+          },
+          "0.02": {
+            "net_sol": 79.13780531528167,
+            "ret": 3956.8902657640833,
+            "exit": "horizon",
+            "fill_venue": "curve",
+            "exit_venue": "pumpswap"
+          }
+        }
+      },
+      "states_h7200": {
+        "fill": {
+          "row_id": "8165986",
+          "mint": "fBidsBVNH6HdAba7pD6dqSoxmU2jAT7z3YuCUVzpump",
+          "slot": "466441226",
+          "ts": "1794039264",
+          "wallet": "5b4a6yv2YmtX9v2zBoKqc2mRio4zzVS4itP3XFG1pBtE",
+          "is_buy": "1",
+          "sol": "85.005359057",
+          "tokens": "793100000",
+          "recv_ms": "1794039264450",
+          "vsol": "115005359057",
+          "vtok": "279900000000000",
+          "venue": "curve",
+          "pool": "",
+          "ev_idx": "",
+          "quote_mint": "",
+          "base_dec": "",
+          "quote_dec": "",
+          "dec_ver": ""
+        },
+        "fill_unavailable_reason": null,
+        "exit": {
+          "row_id": "8587342",
+          "mint": "fBidsBVNH6HdAba7pD6dqSoxmU2jAT7z3YuCUVzpump",
+          "slot": "466474847",
+          "ts": "1794046464",
+          "wallet": "3qtvfxDWELTayHtC12dadamTNSRE9x1Yrjd9z3ZN8Hgp",
+          "is_buy": "1",
+          "sol": "0.000426528",
+          "tokens": "0.253618",
+          "recv_ms": "1794046464401",
+          "vsol": "5426720000000",
+          "vtok": "3237238960546",
+          "venue": "pumpswap",
+          "pool": "6BjNETYb4NsssEwg6AXZNBAhkn3SK73359nGxUuKudmB",
+          "ev_idx": "0",
+          "quote_mint": "So11111111111111111111111111111111111111112",
+          "base_dec": "6",
+          "quote_dec": "9",
+          "dec_ver": "ps-0.19.9"
+        },
+        "exit_unavailable_reason": null,
+        "fill_valid": true,
+        "exit_valid": true
+      },
+      "raw_unique_rows": 44944,
+      "first_curve": {
+        "row_id": "8165986",
+        "mint": "fBidsBVNH6HdAba7pD6dqSoxmU2jAT7z3YuCUVzpump",
+        "slot": "466441226",
+        "ts": "1794039264",
+        "wallet": "5b4a6yv2YmtX9v2zBoKqc2mRio4zzVS4itP3XFG1pBtE",
+        "is_buy": "1",
+        "sol": "85.005359057",
+        "tokens": "793100000",
+        "recv_ms": "1794039264450",
+        "vsol": "115005359057",
+        "vtok": "279900000000000",
+        "venue": "curve",
+        "pool": "",
+        "ev_idx": "",
+        "quote_mint": "",
+        "base_dec": "",
+        "quote_dec": "",
+        "dec_ver": ""
+      },
+      "completed_curve_floor": true,
+      "first_curve_buy_sol": 85.005359057
+    },
+    "5kdsd8zW37T2rK47gULpPLLCY181iKCuT8wZrChhpump": {
+      "h30": {
+        "cat": "scored",
+        "entry_t": 1794070380.652,
+        "sizes": {
+          "0.2": {
+            "net_sol": 35.75473666216855,
+            "ret": 178.77368331084273,
+            "exit": "horizon",
+            "fill_venue": "curve",
+            "exit_venue": "pumpswap"
+          },
+          "0.02": {
+            "net_sol": 3.683306842469186,
+            "ret": 184.16534212345928,
+            "exit": "horizon",
+            "fill_venue": "curve",
+            "exit_venue": "pumpswap"
+          }
+        }
+      },
+      "states_h30": {
+        "fill": {
+          "row_id": "11444961",
+          "mint": "5kdsd8zW37T2rK47gULpPLLCY181iKCuT8wZrChhpump",
+          "slot": "466586425",
+          "ts": "1794070380",
+          "wallet": "24d4nobkbfzDyyBFRm62qfGoBWu9HfKMFkg3bLABJrW3",
+          "is_buy": "1",
+          "sol": "85.005359057",
+          "tokens": "793100000",
+          "recv_ms": "1794070380652",
+          "vsol": "115005359057",
+          "vtok": "279900000000000",
+          "venue": "curve",
+          "pool": "",
+          "ev_idx": "",
+          "quote_mint": "",
+          "base_dec": "",
+          "quote_dec": "",
+          "dec_ver": ""
+        },
+        "fill_unavailable_reason": null,
+        "exit": {
+          "row_id": "11448460",
+          "mint": "5kdsd8zW37T2rK47gULpPLLCY181iKCuT8wZrChhpump",
+          "slot": "466586562",
+          "ts": "1794070409",
+          "wallet": "M3rrormwkUUHAKdviFPqniRrva4h3d5xw8j1uo31ZpH",
+          "is_buy": "1",
+          "sol": "0.12",
+          "tokens": "1517.930436",
+          "recv_ms": "1794070410925",
+          "vsol": "1160230000000",
+          "vtok": "14959796869843",
+          "venue": "pumpswap",
+          "pool": "DiDppkp1x52gwdEAbDSQmCBSdsZ4rmv1eCpWZTanoNMT",
+          "ev_idx": "0",
+          "quote_mint": "So11111111111111111111111111111111111111112",
+          "base_dec": "6",
+          "quote_dec": "9",
+          "dec_ver": "ps-0.19.9"
+        },
+        "exit_unavailable_reason": null,
+        "fill_valid": true,
+        "exit_valid": true
+      },
+      "h7200": {
+        "cat": "unknown",
+        "why": "exit: capture gap",
+        "entry_t": 1794070380.652
+      },
+      "states_h7200": {
+        "fill": {
+          "row_id": "11444961",
+          "mint": "5kdsd8zW37T2rK47gULpPLLCY181iKCuT8wZrChhpump",
+          "slot": "466586425",
+          "ts": "1794070380",
+          "wallet": "24d4nobkbfzDyyBFRm62qfGoBWu9HfKMFkg3bLABJrW3",
+          "is_buy": "1",
+          "sol": "85.005359057",
+          "tokens": "793100000",
+          "recv_ms": "1794070380652",
+          "vsol": "115005359057",
+          "vtok": "279900000000000",
+          "venue": "curve",
+          "pool": "",
+          "ev_idx": "",
+          "quote_mint": "",
+          "base_dec": "",
+          "quote_dec": "",
+          "dec_ver": ""
+        },
+        "fill_unavailable_reason": null,
+        "exit": null,
+        "exit_unavailable_reason": "capture gap",
+        "fill_valid": true,
+        "exit_valid": false
+      },
+      "raw_unique_rows": 4373,
+      "first_curve": {
+        "row_id": "11444961",
+        "mint": "5kdsd8zW37T2rK47gULpPLLCY181iKCuT8wZrChhpump",
+        "slot": "466586425",
+        "ts": "1794070380",
+        "wallet": "24d4nobkbfzDyyBFRm62qfGoBWu9HfKMFkg3bLABJrW3",
+        "is_buy": "1",
+        "sol": "85.005359057",
+        "tokens": "793100000",
+        "recv_ms": "1794070380652",
+        "vsol": "115005359057",
+        "vtok": "279900000000000",
+        "venue": "curve",
+        "pool": "",
+        "ev_idx": "",
+        "quote_mint": "",
+        "base_dec": "",
+        "quote_dec": "",
+        "dec_ver": ""
+      },
+      "completed_curve_floor": true,
+      "first_curve_buy_sol": 85.005359057
+    }
+  },
+  "buffer_counterexamples": [
+    {
+      "rows": 12000,
+      "decide_calls": 1,
+      "result": {
+        "cat": "abstain",
+        "why": "rule did not enter"
+      },
+      "hypothetical": false,
+      "scores": {
+        "0.2": {
+          "N": 1,
+          "scored": 0,
+          "abstain": 1,
+          "unknown": 0,
+          "point_sol_per_launch": 0.0,
+          "lower_sol_per_launch": 0.0,
+          "total_net_sol_scored": 0.0,
+          "unknown_share_of_attempts": 0,
+          "mean_ret": null,
+          "median_ret": null,
+          "win_rate": null,
+          "share_loss_ge_50": null,
+          "scorable": true,
+          "bonferroni_lcb_lower": 0.0,
+          "supported": false
+        },
+        "0.02": {
+          "N": 1,
+          "scored": 0,
+          "abstain": 1,
+          "unknown": 0,
+          "point_sol_per_launch": 0.0,
+          "lower_sol_per_launch": 0.0,
+          "total_net_sol_scored": 0.0,
+          "unknown_share_of_attempts": 0,
+          "mean_ret": null,
+          "median_ret": null,
+          "win_rate": null,
+          "share_loss_ge_50": null,
+          "scorable": true,
+          "bonferroni_lcb_lower": 0.0,
+          "supported": false
+        }
+      }
+    },
+    {
+      "rows": 12001,
+      "decide_calls": 0,
+      "result": {
+        "cat": "unknown",
+        "why": "pre-promotion buffer exceeded"
+      },
+      "hypothetical": false,
+      "scores": {
+        "0.2": {
+          "N": 1,
+          "scored": 0,
+          "abstain": 0,
+          "unknown": 1,
+          "point_sol_per_launch": 0.0,
+          "lower_sol_per_launch": -0.2015,
+          "total_net_sol_scored": 0.0,
+          "unknown_share_of_attempts": 1.0,
+          "mean_ret": null,
+          "median_ret": null,
+          "win_rate": null,
+          "share_loss_ge_50": null,
+          "scorable": false,
+          "bonferroni_lcb_lower": -0.2015,
+          "supported": false
+        },
+        "0.02": {
+          "N": 1,
+          "scored": 0,
+          "abstain": 0,
+          "unknown": 1,
+          "point_sol_per_launch": 0.0,
+          "lower_sol_per_launch": -0.0215,
+          "total_net_sol_scored": 0.0,
+          "unknown_share_of_attempts": 1.0,
+          "mean_ret": null,
+          "median_ret": null,
+          "win_rate": null,
+          "share_loss_ge_50": null,
+          "scorable": false,
+          "bonferroni_lcb_lower": -0.0215,
+          "supported": false
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Reproduces evaluator outputs, not executable profits",
+    "Pool account units/decoder cause not independently established by chain evidence",
+    "No new chain calls or protected test records",
+    "Synthetic buffer case demonstrates logic; not measured population prevalence",
+    "No evaluator repair or new hypothesis selection"
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "c004": {
+    "unique_live_records_union": 57,
+    "confirmed": 40,
+    "buy_status": {
+      "failed": 11,
+      "confirmed": 40,
+      "skipped": 6
+    },
+    "buy_ms_median": 867.0,
+    "buy_ms_p95_linear": 1294.2999999999988,
+    "buy_lag_s_median": 2.0,
+    "buy_lag_s_p95": 7.0,
+    "stake_sol_all_0.02": true,
+    "buy_ms_le1000": 33,
+    "lag_le1": 5,
+    "all_confirmed_have_sell_confirmed": true,
+    "sell_tries_gt1": 4,
+    "quotes_union": 2052,
+    "q_ms_median": 34.0,
+    "q_ms_p95": 108.44999999999982,
+    "quote_unique_mints": 1337
+  },
+  "c003": {
+    "snapshot3": {
+      "census_unique_mints": 85016,
+      "life_rows": 130939,
+      "life_mints": 14455,
+      "census_without_life": 70561,
+      "life_missing_obs_ts": 59116,
+      "mints_cp_ge_7200": 9185,
+      "mints_cp_ge_86400": 0,
+      "max_cp": 14400.0,
+      "crossings_rows": 200,
+      "suspect_jump": 45,
+      "fx_age_gt60": 87,
+      "fx_age_max": 119.0,
+      "registry_rows": 1480
+    },
+    "current": {
+      "census_unique_mints": 83856,
+      "life_rows": 121081,
+      "life_mints": 13041,
+      "census_without_life": 70815,
+      "life_missing_obs_ts": 56128,
+      "mints_cp_ge_7200": 8619,
+      "mints_cp_ge_86400": 0,
+      "max_cp": 14400.0,
+      "crossings_rows": 200,
+      "suspect_jump": 45,
+      "fx_age_gt60": 87,
+      "fx_age_max": 119.0,
+      "registry_rows": 1476
+    }
+  }
+}
