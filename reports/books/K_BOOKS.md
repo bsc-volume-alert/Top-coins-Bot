@@ -168,3 +168,12 @@
 - 100K1's $40–50K entries: 29 closed, 2 wins, 12 severe (< −50%), net −2.151 SOL; its $30–40K entries: 51 closed, 16 wins, 5 severe, net −0.235 SOL. (Facts, not yet a conclusion.)
 - 20% vs 25% trail on the same 52 coins: 20% better 16, 25% better 11, equal 24; mean difference −0.1 pts.
 - MISSING EVIDENCE: 20 of 83 entered coins have no stored trade history (19 decided on the clock checkpoint — not tracker-retained launches). Backfilling them from chain would be new collection → needs the owner's go.
+
+## Codex independent check of the 21:02 package — 11 Nov 2026 10:01 UK (verified by me 10:10)
+- Totals reproduce (100K1 −2.386 / 100K2 −0.235 / 100K3 −0.247 SOL, closed 80/51/51).
+- CORRECTION to my RECON.md: 2 of 100K1's "open" positions are NO-FILLS (fetch failed, no tokens, no stake: JCaj6rnW, B22nnGeh). 100K1 funnel = 83 attempts → 81 fills → 80 closed, 1 open (FNxnauVJ, curve, open in all three books).
+- 100K1 by band × venue at entry (closed): $40–50K pool 20, mean −52.3%, all 12 severe; $40–50K curve 9, −3.3%, 0 severe; $30–40K pool 33, −1.8%, 5 severe; $30–40K curve 18, −3.3%, 0 severe.
+- Coverage: Codex counts 5,548 of 35,801 decision-age launches with no K decision record — to reconcile (missing-checkpoint reconciliation).
+- Clock entries $30–40K: median recorded price age 99 s — quiet-price verification needed.
+- 20% vs 25% trail: 20% 0.12 pts worse on 51 shared closed trades — effectively tied.
+- Agreed next: books stay frozen; investigate $40–50K pool losses, missing-checkpoint reconciliation, quiet-price verification; any band exclusion only as a separately versioned forward test (owner's go). No profitable strategy demonstrated yet.
