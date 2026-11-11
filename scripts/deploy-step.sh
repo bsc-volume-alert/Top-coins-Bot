@@ -3,6 +3,8 @@
 # for 45 s (SMOKE=1: no Telegram, no command polling, own web port) BEFORE the live bot is reloaded. If it fails, the previous
 # version stays live and Telegram gets a message. Lives in its own file so changes apply without restarting the deployer.
 cd /root/tracker || exit 1
+# 11 Nov 2026 (Codex 12:51 UK via owner: report coverage, ingestion delay and stalls continuously): read-only hourly collection metrics, at most every 10 min
+M=/root/tracker/data/launcher_out/collection_metrics.json; if [ -f /root/tracker/reports/tools/collection-metrics.mjs ] && { [ ! -f "$M" ] || [ $(( $(date +%s) - $(stat -c %Y "$M") )) -gt 600 ]; }; then touch "$M"; (cd /root/tracker && nohup flock -n /tmp/collection-metrics.lock nice -n 19 ionice -c3 timeout 300 node reports/tools/collection-metrics.mjs >> /root/tracker/data/metrics.log 2>&1 &); fi
 git fetch -q origin tracker 2>/dev/null
 LOCAL=$(git rev-parse HEAD 2>/dev/null); REMOTE=$(git rev-parse origin/tracker 2>/dev/null)
 [ -z "$REMOTE" ] && exit 0; [ "$LOCAL" = "$REMOTE" ] && exit 0
@@ -126,8 +128,6 @@ if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^scripts/push-
 for A in tracker; do if [ -f /root/tracker/data/maint.lock ]; then echo "[deploy] maintenance lock present — not auto-starting $A"; continue; fi; if ! grep -qx "$A" scripts/apps-off 2>/dev/null; then
   if pm2 jlist 2>/dev/null | A="$A" node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.exit(JSON.parse(s).some(p=>p.name===process.env.A&&p.pm2_env.status==="stopped")?0:1)}catch(e){process.exit(1)}})'; then
     pm2 start "$A" >/dev/null 2>&1 && pm2 save >/dev/null 2>&1 && echo "[deploy] $A started (no longer in scripts/apps-off)"; fi; fi; done
-# 11 Nov 2026 (Codex 12:51 UK via owner: report coverage, ingestion delay and stalls continuously): read-only hourly collection metrics, at most every 10 min
-M=/root/tracker/data/launcher_out/collection_metrics.json; if [ -f /root/tracker/reports/tools/collection-metrics.mjs ] && { [ ! -f "$M" ] || [ $(( $(date +%s) - $(stat -c %Y "$M") )) -gt 600 ]; }; then touch "$M"; (cd /root/tracker && nohup flock -n /tmp/collection-metrics.lock nice -n 19 ionice -c3 timeout 300 node reports/tools/collection-metrics.mjs >> /root/tracker/data/metrics.log 2>&1 &); fi
 # owner, 30 Oct 2026 22:36 UK: stop (and keep stopped) every app listed in scripts/apps-off — run last, so nothing reloaded above stays up
 if [ -f scripts/apps-off ]; then for A in $(grep -Eo '^[a-z0-9-]+' scripts/apps-off); do
   if pm2 jlist 2>/dev/null | A="$A" node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.exit(JSON.parse(s).some(p=>p.name===process.env.A&&p.pm2_env.status!=="stopped")?0:1)}catch(e){process.exit(1)}})'; then
