@@ -3,6 +3,16 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { CFG } from "./config.js";
 mkdirSync(dirname(CFG.DB_PATH), { recursive: true });
+// v0.19.13 (11 Nov 2026, reliability self-fix — logging only): the tracker's event loop is blocked for 1.5–6 min 20–50× a day (dated [stall] lines;
+// 83 blocks of 9–10 Nov cost 3.4 h of blindness: missed clock checkpoints, late readings, feed idle-reconnects) and no instrumented job explains them.
+// Time every SQLite call (statement run/get/all, exec, pragma, whole transactions incl. COMMIT) and log any taking ≥ 2 s with its SQL and caller.
+{ const SP = Object.getPrototypeOf(new Database(":memory:").prepare("SELECT 1")), DP = Database.prototype;
+  const say = (d, what, sql) => console.error(`[slowsql] ${new Date().toISOString().slice(11, 19)}Z ${d} ms ${what} ${String(sql ?? "").replace(/\s+/g, " ").slice(0, 160)} @ ${(new Error().stack.split("\n")[3] || "").trim().slice(0, 140)}`);
+  const wrap = (o, k, what, sqlOf) => { const f = o[k]; o[k] = function (...a) { const t = Date.now(); try { return f.apply(this, a); } finally { const d = Date.now() - t; if (d >= 2000) say(d, what, sqlOf(this, a)); } }; };
+  for (const k of ["run", "get", "all"]) wrap(SP, k, "stmt." + k, (st) => st.source);
+  wrap(DP, "exec", "exec", (_, a) => a[0]); wrap(DP, "pragma", "pragma", (_, a) => a[0]);
+  const tx = DP.transaction; DP.transaction = function (fn) { const w = tx.call(this, fn); const g = function (...a) { const t = Date.now(); try { return w.apply(this, a); } finally { const d = Date.now() - t; if (d >= 2000) say(d, "transaction", fn.name || "(anonymous)"); } };
+    for (const m of ["deferred", "immediate", "exclusive"]) g[m] = w[m]; return g; }; }
 export const db = new Database(CFG.DB_PATH);
 db.pragma("journal_mode = WAL"); db.pragma("synchronous = NORMAL");
 db.exec(`
