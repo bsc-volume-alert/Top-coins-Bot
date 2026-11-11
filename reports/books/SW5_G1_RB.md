@@ -3,7 +3,8 @@
 - **Status:** proposed 11 Nov 2026 (Codex recommendation 13:41 UK: "all three, one combined diff for review"); activated on the owner's go — fd_rules 'SW5_ACTIVATION' / 'G1_ACTIVATION' / 'RB_ACTIVATION' hold the exact second.
 - **Live trading:** OFF. R3C, the reference books, the K books and the page clean-up are untouched.
 - **Judged** at 100 coins or 7 days each, on net SOL against cash with failed fills and unresolved positions visible; a lower severe-loss rate or a higher win rate alone is not success. Overlap and combined exposure measured as data arrives (entries were disjoint historically: SW5 ∩ R3C = 1 of 30).
-- **Historical basis** (reports/analysis/entry_winners/fable_11nov, scripts 14–16; not independently verified by Codex yet): SW5 30 entries, +10% at a 5-min hold / −45% with a trail; G1 388 entries, −1% scalp in the light simulation, −18% with a trail against real reserves; RB 54 entries, 37% severe losses. Each is a hypothesis under test, not an expectation.
+- **Historical basis** (reports/analysis/entry_winners/fable_11nov, scripts 14–16; Codex's independent check 11 Nov 17:16): SW5 — the 30-entry / 80%-at-5-min figure used a looser entry; under the deployed rule (none of the three wallets has sold, ≥ 0.5 SOL net each) only **11 of those coins qualify, 5 at the original time** — so SW5 starts with no usable historical figure; G1 388 entries, −1% scalp in the light simulation, −18% with a trail against real reserves; RB 54 entries, 37% severe losses. Each is a hypothesis under test, not an expectation.
+- **Codex code review (17:16) fixes, all in launcher 0.10.1:** policy clocks (hold / stagnation) run from the recorded fill (s_ms_land), not the decision; coins created before the launcher started reading the stream are never eligible for R3C / SW5 / G1 / RB (no history seen → no false 'first pool trade', no unseen earlier sale); the 0.02 position's trigger schedules its own landing read; RB coins that go silent after the dump are expired on the clock with a 'no recovery' record; R3C's curve-only check is repeated at landing (graduation during the 1-s buy delay → 'skipped-graduated-at-landing', no pool fill). Unit test launcher/test/policy_exits.test.mjs: 15/15.
 
 ## SW5 — wallet-led entry, fixed 5-minute hold (SW5-1)
 - Wallet list: launcher/lists/sw5_wallets.json — 200 wallets, FROZEN 11 Nov (train half only: coins created before 7 Nov 12:00 UTC; wallets that bought ≥ 8 of them at 15–180 s with ≥ 35% reaching 3× the 60-s price).
@@ -29,4 +30,4 @@
 - Exports: sw5_decisions.csv, g1_decisions.csv, rb_decisions.csv (48 h). Site: SW5, G1, RB after R3C on /fd and /fd2 (scope 0.13.1).
 
 ## Change history
-- 11 Nov 2026 — written (launcher 0.10.1 / scope 0.13.1), awaiting the owner's go.
+- 11 Nov 2026 — written (launcher 0.10.1 / scope 0.13.1); Codex review fixes applied 17:30 UK; awaiting the owner's go.

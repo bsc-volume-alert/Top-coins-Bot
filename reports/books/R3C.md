@@ -17,13 +17,14 @@
 - Exports: r3_decisions.csv (48 h) on launcher-data; positions in chain_fill / fd_positions as strat 'R3C'.
 
 ## What the replay said (why this book exists)
-- 3× on the curve within 15 min, 30% trail, reserve-based fills (04_replay.py): 99 fills, +5.0 SOL total, +26% uncapped mean, +7.6% with winners capped at 5×, 10% severe losses; positive on both chronological halves (train +4%, test +13% capped).
+- 3× on the curve within 15 min, 30% trail, reserve-based fills (04_replay.py): 99 fills — 96 closed at +5.00 SOL, 3 unresolved (Codex's check 11 Nov: +4.40 SOL if those three stakes are written off) — +26% uncapped mean, +7.6% with winners capped at 5×, 10% severe losses; positive on both chronological halves (train +4%, test +13% capped).
 - The profit sits in the 43 of 99 that graduated during the hold (+7.9 SOL; +1.7 without the top five); the 56 that never graduated lost 27% with 9% wins. The bet is the 43% graduation rate, not a per-coin edge.
 - Already-in-pool 3× entries: −5% capped. First-pool-trade entries: −18% against real reserves. Scale-out/moonbag exits, dump-and-recover, smart-wallet copying: all worse or failed (LESSONS.md 11 Nov).
 - Expect ~45–50 triggers a day from the 6–8 Nov rate; the forward population is the tracker's retained set, slightly wider than the replay's.
 
 ## Change history
 - 11 Nov 2026 — created (launcher 0.10.0, scope 0.13.0: R3C on /fd and /fd2 at the top of the list).
+- 11 Nov 2026 (0.10.1, with the SW5/G1/RB push) — Codex review: the curve-only check is now repeated at the 1-s landing read ('skipped-graduated-at-landing'); coins created before the launcher started reading the stream are ineligible. Rule R3C-1 itself unchanged.
 
 ## Open items
 - Reconcile forward fills against the replay's fill model once 100 coins are in (fill gap, landing lag, skipped-graduated rate).

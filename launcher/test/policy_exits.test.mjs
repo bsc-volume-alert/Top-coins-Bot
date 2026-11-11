@@ -16,7 +16,10 @@ async function run(p, xs) { // xs: sequence of (x02 = x) valuations; returns the
 const out = []; const check = (name, cond, row) => { out.push(`${cond ? "PASS" : "FAIL"} ${name} ${JSON.stringify(row)}`); };
 // 1. SW5: no trail on either size — a 40% drawdown does not exit; the hold does, on both sizes, even with no price change
 let p = pos("SW5", 100); let r = await run(p, [1.0, 1.5, 0.9, 0.9]); check("SW5 no trail at -40% from high (0.2 and 0.02 both open)", r.done === 0 && r.i02_done === 0, r);
-p = pos("SW5", 301); r = await run(p, [0.95, 0.95]); check("SW5 hold fires at 300 s on both sizes", r.s_exit_reason === "hold" && r.done === 1 && r.i02_exit_reason === "hold" && r.i02_done === 1, r);
+p = pos("SW5", 301); r = await run(p, [0.95, 0.95]); check("SW5 hold fires at 300 s after the FILL (decision + 1 s) on both sizes", r.s_exit_reason === "hold" && r.done === 1 && r.i02_exit_reason === "hold" && r.i02_done === 1, r);
+p = pos("SW5", 300); r = await run(p, [0.95]); check("SW5 at 300 s after the decision = 299 s after the fill: not yet", r.done === 0 && r.i02_done === 0, r);
+db.prepare("UPDATE chain_fill SET s_ms_land=? WHERE vol_id=?").run((now() - 310) * 1000, p.id); r = await run(p, [0.95, 0.95]); check("SW5 clock uses the recorded landing time when present (s_ms_land 310 s ago → hold)", r.s_exit_reason === "hold" && r.done === 1, r);
+p = pos("G1", 10); db.prepare("UPDATE chain_fill SET done=1, s_r=0 WHERE vol_id=?").run(p.id); _apply(p.mint, (tok) => BigInt(Math.round(Number(tok === 1000000n ? LAM : LAM02) * 1.5)), "test"); check("0.02-only position: its trigger schedules a landing read (pending)", cf._pending().has(p.mint) && db.prepare("SELECT i02_trig_ts FROM chain_fill WHERE vol_id=?").get(p.id).i02_trig_ts != null, { pending: cf._pending().has(p.mint) });
 // 2. G1: take profit, fixed stop (not a trail), stagnation window, continue outside the band
 p = pos("G1", 10); r = await run(p, [1.2, 1.46, 1.46]); check("G1 take profit at 1.45", r.s_exit_reason === "tp" && r.done === 1 && r.i02_exit_reason === "tp", r);
 p = pos("G1", 10); r = await run(p, [1.4, 0.8, 0.8]); check("G1 1.4 -> 0.8 (43% off the high, above the 0.5 stop) does NOT exit: no trail", r.done === 0 && r.i02_done === 0, r);

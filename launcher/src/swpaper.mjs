@@ -9,7 +9,7 @@
 //   Exit        : sell at fill + 300 s (the 300 s run from the actual fill, chain_fill.entry_ts); no trail (trail 1), 2-h horizon as the backstop.
 //   Recorded    : the listed wallets in, their net SOL, and (as events) when 2 of them have sold ≥ 50% of their tokens (sw5_decisions.copyexit_ts).
 import { chainEntry, setPolicy, BOOK_POLICY } from "./chainfill.mjs";
-import { onTradeRows } from "./r3paper.mjs";
+import { onTradeRows, STREAM_START } from "./r3paper.mjs";
 import { readFileSync } from "node:fs";
 const now = () => Math.floor(Date.now() / 1000);
 export const SW_VER = "SW5-1"; const BOOK = "SW5", NEED = 3, MIN_NET = 0.5, T_MAX = 180, LATE_S = 5;
@@ -31,7 +31,7 @@ function onRows(rows, readTs) {
   for (const r of rows) {
     if (!LIST.has(r.wallet)) { const s = S.get(r.mint); if (s) s.seen = readTs; continue; }
     let s = S.get(r.mint);
-    if (!s) { const c = tdb.prepare("SELECT create_ts FROM tokens WHERE mint=?").get(r.mint)?.create_ts; s = { c: c || null, net: new Map(), sold: new Set(), bought: new Map(), soldTok: new Map(), trig: null, tracked: null, soldHalf: new Set(), done: !c, seen: readTs }; S.set(r.mint, s); swStat.coins++; }
+    if (!s) { const c = tdb.prepare("SELECT create_ts FROM tokens WHERE mint=?").get(r.mint)?.create_ts; s = { c: c || null, net: new Map(), sold: new Set(), bought: new Map(), soldTok: new Map(), trig: null, tracked: null, soldHalf: new Set(), done: !c || c < STREAM_START, seen: readTs }; S.set(r.mint, s); swStat.coins++; }
     s.seen = readTs; if (s.done) continue;
     try {
       const sol = Number(r.sol) || 0, tok = Number(r.tokens) || 0;

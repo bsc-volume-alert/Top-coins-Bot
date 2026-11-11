@@ -11,7 +11,7 @@
 //   Exit      : 30% trail on the position's own proceeds; sell lands 0.7 s after the trigger; 2-h horizon.
 //   Recorded  : H, tD, L, the dump print, the recovery print, new-buyer count, and (as an event) a second ≥ 35% wave after entry (rb_decisions.second_dump_ts).
 import { chainEntry, setPolicy, BOOK_POLICY } from "./chainfill.mjs";
-import { onTradeRows } from "./r3paper.mjs";
+import { onTradeRows, STREAM_START } from "./r3paper.mjs";
 const now = () => Math.floor(Date.now() / 1000);
 export const RB_VER = "RB-1"; const BOOK = "RB", LIFE_X = 2, T_LIFE = 1800, DUMP = 0.65, DUMP_WIN = 60, RECL = 0.60, RECL_WIN = 180, NEW_BUYERS = 15, LATE_S = 5;
 export const rbStat = { coins: 0, alive: 0, dumps: 0, recoveries: 0, noRecovery: 0, late: 0, entries: 0, errors: 0, lastErr: "", activated: null };
@@ -23,7 +23,9 @@ export function initRB(d, t) {
   db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES (?,?,?)").run(BOOK, t0, RB_VER);
   db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('RB_ACTIVATION', ?, ?)").run(t0, RB_VER);
   rbStat.activated = db.prepare("SELECT since_ts FROM fd_rules WHERE k='RB_ACTIVATION'").get()?.since_ts ?? t0;
-  onTradeRows(onRows); setInterval(() => { const t = now(); for (const [m, s] of S) if (t - s.seen > 3600 || (s.done && t - s.seen > 600)) S.delete(m); }, 60000);
+  onTradeRows(onRows); setInterval(() => { const t = now();
+    for (const [m, s] of S) { if (!s.done && !s.trig && s.tD != null && t > s.tD + RECL_WIN) { s.done = true; rbStat.noRecovery++; rec(s, m, "no recovery by dump + 180 s (no further trade)", { readTs: t }); } // 0.10.1 (review): silent coins expire on the clock, not on the next trade
+      if (t - s.seen > 3600 || (s.done && t - s.seen > 600)) S.delete(m); } }, 15000);
 }
 function solUsd() { try { return tdb.prepare("SELECT usd FROM sol_px ORDER BY ts DESC LIMIT 1").get()?.usd ?? null; } catch { return null; } }
 function rec(s, mint, status, extra = {}) {
@@ -33,7 +35,7 @@ function rec(s, mint, status, extra = {}) {
 function onRows(rows, readTs) {
   for (const r of rows) {
     let s = S.get(r.mint);
-    if (!s) { const c = tdb.prepare("SELECT create_ts FROM tokens WHERE mint=?").get(r.mint)?.create_ts; s = { c: c || null, p60: null, prev: null, alive: false, H: null, Hts: null, tD: null, dumpPx: null, L: null, buyersBefore: new Set(), newBuyers: new Set(), trig: null, post: null, done: !c, seen: readTs }; S.set(r.mint, s); rbStat.coins++; }
+    if (!s) { const c = tdb.prepare("SELECT create_ts FROM tokens WHERE mint=?").get(r.mint)?.create_ts; s = { c: c || null, p60: null, prev: null, alive: false, H: null, Hts: null, tD: null, dumpPx: null, L: null, buyersBefore: new Set(), newBuyers: new Set(), trig: null, post: null, done: !c || c < STREAM_START, seen: readTs }; S.set(r.mint, s); rbStat.coins++; }
     s.seen = readTs; if (s.done) continue;
     try {
       const px = Number(r.price_sol); if (!(px > 0)) continue;
