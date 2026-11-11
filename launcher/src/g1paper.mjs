@@ -10,7 +10,7 @@
 //               to the 2-h horizon. No trail (trail 1).
 //   Recorded  : the last curve print before migration and the first pool print (the gap), and the curve/pool prints 60 s either side as diagnostics.
 import { chainEntry, setPolicy, BOOK_POLICY } from "./chainfill.mjs";
-import { onTradeRows } from "./r3paper.mjs";
+import { onTradeRows, STREAM_START } from "./r3paper.mjs";
 const now = () => Math.floor(Date.now() / 1000);
 export const G1_VER = "G1-1"; const BOOK = "G1", T_MAX = 3600, LATE_S = 5;
 export const g1Stat = { coins: 0, triggers: 0, late: 0, entries: 0, errors: 0, lastErr: "", activated: null };
@@ -28,7 +28,7 @@ function solUsd() { try { return tdb.prepare("SELECT usd FROM sol_px ORDER BY ts
 function onRows(rows, readTs) {
   for (const r of rows) {
     let s = S.get(r.mint);
-    if (!s) { const c = tdb.prepare("SELECT create_ts FROM tokens WHERE mint=?").get(r.mint)?.create_ts; s = { c: c || null, lastCurvePx: null, lastCurveTs: null, trig: null, seen: readTs }; S.set(r.mint, s); g1Stat.coins++; }
+    if (!s) { const c = tdb.prepare("SELECT create_ts FROM tokens WHERE mint=?").get(r.mint)?.create_ts; s = { c: c || null, lastCurvePx: null, lastCurveTs: null, trig: c && c < STREAM_START ? -1 : null /* created before the stream started: pool history unseen → never a G1 coin */, seen: readTs }; S.set(r.mint, s); g1Stat.coins++; }
     s.seen = readTs; if (!s.c || s.trig) continue;
     try {
       const px = Number(r.price_sol) || null;

@@ -23,6 +23,7 @@ export const R3_VER = "R3C-1";
 const BOOK = "R3C", RUN = 3, RUN5 = 5, T_MIN = 60, T_MAX = 900, LATE_S = 5, TRAIL = 0.30, CURVE_MAX_PX = 4.2e-7;
 export const r3Stat = { polled: 0, trades: 0, coins: 0, eligible: 0, triggers: 0, late: 0, entries: 0, graduatedAtRead: 0, r5: 0, errors: 0, lastErr: "", activated: null, lastTrig: null };
 const HOOKS = []; export function onTradeRows(fn) { HOOKS.push(fn); } // 0.10.1: sibling paper books (SW5 / G1 / RB) read the same 2-s trade batches
+export let STREAM_START = 0; // 0.10.1 (review): coins created before the launcher began reading the stream are never eligible (no history seen)
 let db = null, tdb = null, lastRowid = 0; const S = new Map(); // mint → { c, p60, p60ts, prev, done, trigTs, r5 }
 export function initR3(d, t) {
   db = d; tdb = t; if (!tdb) return;
@@ -35,13 +36,14 @@ export function initR3(d, t) {
   db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('R3C_ACTIVATION', ?, ?)").run(t0, R3_VER);
   r3Stat.activated = db.prepare("SELECT since_ts FROM fd_rules WHERE k='R3C_ACTIVATION'").get()?.since_ts ?? t0;
   try { lastRowid = tdb.prepare("SELECT MAX(rowid) r FROM trades").get().r || 0; } catch { lastRowid = 0; } // start from now: no backfill, no hindsight
+  STREAM_START = now();
   setInterval(poll, 2000); setInterval(sweep, 60000);
 }
 function solUsd() { try { return tdb.prepare("SELECT usd FROM sol_px ORDER BY ts DESC LIMIT 1").get()?.usd ?? null; } catch { return null; } }
 function state(mint) {
   let s = S.get(mint); if (s) return s;
   const c = tdb.prepare("SELECT create_ts FROM tokens WHERE mint=?").get(mint)?.create_ts;
-  s = { c: c || null, p60: null, p60ts: null, prev: null, done: !c, trigTs: null, r5: null, seen: now() }; S.set(mint, s); r3Stat.coins++; return s;
+  s = { c: c || null, p60: null, p60ts: null, prev: null, done: !c || c < STREAM_START, trigTs: null, r5: null, seen: now() }; S.set(mint, s); r3Stat.coins++; return s; // created before the stream started → not eligible
 }
 function sweep() { const t = now(); for (const [m, s] of S) if (t - s.seen > 1200 || (s.c && t > s.c + T_MAX + 600 && !s.trigTs)) S.delete(m); }
 function diagnostics(mint, trigTs, trigRowid) {
