@@ -43,3 +43,9 @@ Sell at slot+2 and trail on sellable proceeds (branch next-strategy-v22 @ 0e501e
 | 0.05, no add | +0.013 / 0.000 | +0.006 / −0.003 | +26.7% / +11.3% | 0.25 / 0.15 |
 | 0.05 + add 0.15 | +0.015 / −0.002 | +0.014 / −0.005 | +15.5% / +13.6% | 0.55 / 0.45 |
 - Adds made in 53 of 179 (A) and 32 of 88 (B). Scale-in cut exposure, but its return on the money invested was no better than buying upfront: it risks less, it does not time better. Without the top 3, all three arms are about zero or negative in both periods.
+
+## 11 Nov 2026 17:35 UK — Codex review of the breakout / scale-in tests: corrections
+- **Missing receipt times:** the code falls back to the trade time when a swap has no receipt time (assumed immediate arrival). Checked: 0 of 2,080,832 swaps in A and 0 of 2,119,806 in B lack a receipt time, so these results are unaffected. Future code will treat a missing receipt time as not received.
+- **Base range:** the code kept base prices between median ÷ 1.15 (−13.0%) and median × 1.15 (+15%), not a symmetric ±15%. Recorded, not re-run (no rescue of a failed test).
+- **False breakouts:** A 26 of 79 (33%), B 27 of 59 (46%), not "about one in three" for both.
+- Both versions shelved and archived. Next: on identical momentum signals, does holder information available BEFORE buying cut crash losses by more than the winners it excludes? Fresh observations only. Holder snapshots count only if their read time is before the entry.
