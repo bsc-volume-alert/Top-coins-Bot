@@ -1,24 +1,11 @@
 {
   "worker": "Codex",
-  "run_id": "c004-20261111T151021Z",
-  "task": "C004",
-  "state": "completed",
-  "started_at": "2026-11-11T15:10:21Z",
-  "lease_expires_at": null,
-  "previous_run": "c003-20261111T090819Z",
-  "scope": "Existing development execution/quote timing audit only; no live trades",
-  "completed_at": "2026-11-11T15:15:51Z",
-  "result": "12/12 input checksums pass; audited 57 unique historical live records (40 confirmed, 11 failed, 6 skipped), simulator and quote timings separately; no current retention-to-fill calibration",
-  "next_task": "C005",
-  "inputs": {
-    "package": "0e3be03c71949e069a7a31b5951f332bb563f68f",
-    "source_definitions": "68ac601d63df5ff5c87082362624568f25112b06"
-  },
-  "artifacts": "reports/blind/autonomous/codex/runs/c004-20261111T151021Z/",
-  "blockers": [],
-  "limitations": [
-    "Successful-only historical timing is conditional, not reliable current signal-to-fill distribution",
-    "buy_land_ms measures confirmation polling, not exact inclusion",
-    "No new live measurement authorised"
-  ]
+  "run_id": "c005-lab-20261111T175731Z",
+  "task": "C005 + Idea Lab",
+  "state": "running",
+  "started_at": "2026-11-11T17:57:31Z",
+  "lease_expires_at": "2026-11-11T19:57:31Z",
+  "previous_run": "c004-20261111T151021Z",
+  "scope": "Causal wallet evidence audit plus one preregistered exploratory dummy-trade specification",
+  "claude_read_status": "research-claude ref not found (404) for DIALOGUE.md and EXPERIMENTS.md"
 }
