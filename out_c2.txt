@@ -1,0 +1,27 @@
+C2 check (proposal 11 Nov 14:48): 5-min reading $20,000–39,999 AND net SOL last 2 min ≤ 20 (missing → not eligible); sell half at 2× then 25% trail (+ second fixed fee), 2 h max
+
+Reconciliation A: eligible in $20–40K 90; selected 75; unpriced (old) 14; net 2 min > 20 SOL 15; priced 59; unpriced (curve-complete) 2
+  A TP2×T25 modeled                n=59 mean +16.0% med -0.0% win 49% sev 7% tot +1.889 SOL | −best +12.3% −top3 +8.5%
+  A TP2×T25 flagged legs at 50%    n=59 mean +12.9% med -1.3% win 46% sev 8% tot +1.522 SOL | −best +9.1% −top3 +5.2%
+  A TP2×T25 flagged legs at 0      n=59 mean +9.8% med -1.3% win 46% sev 12% tot +1.156 SOL | −best +6.0% −top3 +1.9%
+  A 95% CI: [-6.3, +32.4] (7 blocks)
+  A plain T25 for comparison: n=59 mean +14.3% med -1.3% win 46% sev 8% tot +1.691 SOL | −best +8.3% −top3 +4.1%
+  A venue mix: Counter({'curve': 33, 'pumpswap': 26})
+
+Reconciliation B: decisions in $20–40K 179; excluded: not live-eligible (late/unusable) 40; eligible in $20–40K 139; net 2 min > 20 SOL 14; no stored trade history (net buying unknown) 54; selected 71; priced 48; unpriced (curve-complete) 4; unpriced (old) 19
+  B TP2×T25 modeled                n=48 mean +9.0% med +0.2% win 50% sev 8% tot +0.868 SOL | −best +6.5% −top3 +1.6%
+  B TP2×T25 flagged legs at 50%    n=48 mean +8.0% med -0.4% win 50% sev 10% tot +0.769 SOL | −best +5.4% −top3 +0.5%
+  B TP2×T25 flagged legs at 0      n=48 mean +7.0% med -0.4% win 50% sev 10% tot +0.670 SOL | −best +4.4% −top3 -0.6%
+  B 95% CI: [+2.5, +23.1] (7 blocks)
+  B plain T25 for comparison: n=48 mean +4.1% med -3.1% win 48% sev 10% tot +0.391 SOL | −best +1.2% −top3 -4.3%
+  B venue mix: Counter({'pumpswap': 31, 'curve': 17})
+
+POOLED: 
+  modeled                n=107 mean +12.9% med -0.0% win 50% sev 7% tot +2.757 SOL | −best +10.8% −top3 +8.6%
+  flagged legs at 50%    n=107 mean +10.7% med -1.3% win 48% sev 9% tot +2.291 SOL | −best +8.6% −top3 +6.3%
+  flagged legs at 0      n=107 mean +8.5% med -1.3% win 48% sev 11% tot +1.825 SOL | −best +6.4% −top3 +4.1%
+  95% CI: [+1.7, +23.6]
+
+REAL 100K2 paper fills ($30–40K, 25% trail, actual chain fills) that also meet C2's net-buying condition: n=33 mean -1.8%; net buying unknown (no stored trades): n=12 mean +2.2%
+
+SAME COINS (n=27): real chain-fill T25 mean +1.0% | simulated T25 +0.7% | simulated TP2×T25 +9.2% | median real−sim gap +0.1 pts
