@@ -1,0 +1,13 @@
+Reconciliation (deployed rules, cohort):
+  no 3x curve print in 60 s-15 min: 1802
+  filled: 173
+  no fill (skipped-graduated): 35
+  late (read > trigger + 5 s): 8
+  no print by 60 s: 1
+A) Original R3C reserve replay, all its coins (T30, closed): n=96 mean +26.0% median -13.5% win 34% severe(<=-50%) 7% total +5.00 SOL | top coin +4.34 SOL | without top3 -3.0% | without top5 -6.8% (-1.24 SOL)
+B) Original replay, only coins in this cohort: n=52 mean +4.8% median -9.6% win 40% severe(<=-50%) 8% total +0.50 SOL | top coin +0.77 SOL | without top3 -8.4% | without top5 -12.0% (-1.12 SOL)
+C) Deployed rules + v2.2 execution, this cohort (modeled): n=173 mean +4.0% median -22.6% win 31% severe(<=-50%) 6% total +1.38 SOL | top coin +2.51 SOL | without top3 -7.6% | without top5 -9.5% (-3.21 SOL)
+C0) same, flagged exits counted at -100%: n=173 mean -0.0% median -23.4% win 29% severe(<=-50%) 10% total -0.02 SOL | top coin +2.51 SOL | without top3 -11.7% | without top5 -13.7% (-4.60 SOL)
+Coins in both B and C: 50; only original: 2; only deployed: 123
+  halves by decision time, original (A): first n=48 +2.1% | second n=48 +49.9%
+  halves by decision time, deployed (C): first n=87 +4.1% | second n=86 +3.9%
