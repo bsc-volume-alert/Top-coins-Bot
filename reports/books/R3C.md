@@ -29,3 +29,23 @@
 - Reconcile forward fills against the replay's fill model once 100 coins are in (fill gap, landing lag, skipped-graduated rate).
 - Holder snapshot: does top-3-excluding-vault share at the trigger predict the drains? (Trade-ledger concentration did not.)
 - Codex's wider population (747 R3 triggers incl. 566 unbought coins) to be replayed when its features are on a branch.
+
+## 11 Nov 2026 17:00 UK — Codex review (16:34) and deployed-rule reconciliation (branch next-strategy-v22, r3_deployed.py)
+**Corrections to "What the replay said" (from replay_runs.csv, T30, 96 closed on-curve fills):**
+- +5.00 SOL total, of which one coin +4.34 SOL. Without the best 3: −3.0% a trade; without the best 5: −6.8% (−1.24 SOL). "+1.7 SOL without the top five" does not reproduce from this file.
+- Chronological halves by decision time: first 48 +2.1%, second 48 +49.9%. "Positive on both halves (train +4%, test +13% capped)" came from a different calculation (capped, other split) and is withdrawn as a description of this replay.
+- 11 of the 43 "graduated during the hold" graduated after the position had already sold (Codex); 32 graduated before or at the sale.
+- The replay's fees were curve 1.0% / pool 0.30%; deployed maths ≈ curve 1.25% / pool 0.55%. Its clock started at the first stored trade; deployment starts at creation. The replay had an exit delay (1 s).
+
+**Deployed rules replayed** (creation clock, arrival order, read = receipt rounded to the 2-s poll, LATE if > trigger + 5 s, buy +1 s, skipped-graduated, 30% trail on sellable proceeds, sell at slot + 2, deployed fees), period-A cohort of 2,019 coins:
+| | Fills | Mean | Median | Without top 3 | Without top 5 | Total |
+|---|---|---|---|---|---|---|
+| Original replay, all its coins | 96 | +26.0% | −13.5% | −3.0% | −6.8% | +5.00 SOL |
+| Original replay, same cohort only | 52 | +4.8% | −9.6% | −8.4% | −12.0% | +0.50 SOL |
+| **Deployed rules, same cohort** | **173** | **+4.0%** | **−22.6%** | **−7.6%** | **−9.5%** | **+1.38 SOL** |
+| Deployed, flagged exits at −100% | 173 | 0.0% | −23.4% | −11.7% | −13.7% | −0.02 SOL |
+- Reconciliation: 1,802 no 3× print, 8 late, 35 skipped-graduated, 1 no print by 60 s, 173 filled. Halves: +4.1% / +3.9%.
+- The creation clock triggers on about 3× as many coins as the first-trade clock (173 vs 52 on the same coins): the deployed book is not the replayed book.
+- Limit: the cohort excludes launches with a late/missing 5-minute reading (1,065) and those past $100K before 5 min (209). The original's +4.34 SOL coin is not in it. A full-population run needs the other page's trades parquet.
+
+**Forward (paper, since 13:13 UK):** 21 closed, mean −25.7%, −1.08 SOL, 5 lost ≥ 50%, best +42%.
