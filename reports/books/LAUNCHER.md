@@ -415,3 +415,9 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 
 ## 11 Nov 13:30 UK — R3C paper book activated (launcher 0.10.0, scope 0.13.0) — see R3C.md
 - Owner's go 13:13 UK. One new paper book, R3C: buy the first curve print at 3× the 60-s price (60 s–15 min), still on the curve, 0.2 SOL, 30% trail, 2 h. Live off. R5 crossings and trigger diagnostics (curve vSol, 60-s flow, zero-buy sellers, chain holder snapshot) recorded, not used. Export r3_decisions.csv. Site: R3C first on /fd and /fd2. All other books and the K books unchanged; the 16-book page clean-up still awaits the owner's word.
+
+## 11 Nov 2026 15:05 UK — launcher 0.10.2 / scope 0.13.2: old books stopped (owner: "save credits … focus on the new conclusions")
+- Stopped: the 22 funded-dev / baseline books (FD, FDF, FDL, FDB, A1, FD35, FD120, FDX, FDH, FDHF, FDLU, FDLUX, FDLU90, FDU, FDU90, FDLU120, FDU120, BL, BL27, E60, E90, E90C). fdScan (funder traces, Helius) and fdCheck (GMGN checks) no longer run, so no new entries. Open positions still exit through chainfill. All history kept (vol_paper, chain_fill, fd_watch, fd_positions.csv).
+- Reason: every one was losing in the last 12 h (BL −24.3, E60 −20.9, E90 −18.1, BL27 −16.7, A1 −12.1 SOL…) after weeks of evidence; they were the main user of Helius credits.
+- Kept running: 100K1–3 (frozen benchmarks), R3C, C2. /fd2 shows only these five.
+- The missed-runner ledger against BL ends here (owner chose to stop BL too). Turn back on with LAUNCH_FD_BOOKS=1.
