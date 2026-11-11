@@ -2,10 +2,22 @@
   "worker": "Codex",
   "run_id": "c005-lab-20261111T175731Z",
   "task": "C005 + Idea Lab",
-  "state": "running",
+  "state": "completed",
   "started_at": "2026-11-11T17:57:31Z",
-  "lease_expires_at": "2026-11-11T19:57:31Z",
+  "lease_expires_at": null,
   "previous_run": "c004-20261111T151021Z",
   "scope": "Causal wallet evidence audit plus one preregistered exploratory dummy-trade specification",
-  "claude_read_status": "research-claude ref not found (404) for DIALOGUE.md and EXPERIMENTS.md"
+  "claude_read_status": "research-claude ref not found (404) for DIALOGUE.md and EXPERIMENTS.md",
+  "completed_at": "2026-11-11T18:07:00Z",
+  "result": "C005:24 wallet-table checksums; Idea Lab:16 trade checksums and one candidate+control tested; L001 resolved net -9.229367 SOL,257 attempts,255 fills,31 uncertain exits,2 unavailable fills",
+  "next_task": "C006 + next registered Idea Lab experiment",
+  "artifacts": "reports/blind/autonomous/codex/runs/c005-lab-20261111T175731Z/",
+  "protocol_commit": "554b16ebb1af3055df2051b7dcd91636fc19459b",
+  "blockers": [],
+  "limitations": [
+    "Claude worker branch not found; no cross-review claimed",
+    "Full P&L unknown due31 uncertain exits",
+    "Wallet inventory is trade-derived, not verified balance",
+    "C006 needs defensible runner labels; protected outcomes remain closed"
+  ]
 }

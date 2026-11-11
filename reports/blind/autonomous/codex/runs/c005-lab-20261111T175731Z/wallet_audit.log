@@ -1,0 +1,13 @@
+VERIFIED_TABLES 24
+creator_trace.csv.gz 154434 None {'create_ts': {'n': 154434, 'min': 1793742698.0, 'max': 1794063145.0}, 'checked_ts': {'n': 154434, 'min': 1793744155.0, 'max': 1794063148.0}, 'funded_ts': {'n': 130753, 'min': 1616822985.0, 'max': 1794063035.0}}
+buyer_funding.csv.gz 10576 None {'ts': {'n': 10576, 'min': 1793922080.0, 'max': 1794063044.0}, 'first_ts': {'n': 10576, 'min': 1793922016.0, 'max': 1794063024.0}, 'funded_ts': {'n': 10576, 'min': 1617261543.0, 'max': 1794061868.0}}
+buyer_funding_sum.csv.gz 1065 None {'ts': {'n': 1065, 'min': 1793922080.0, 'max': 1794063044.0}}
+fd_sniper_stats.csv.gz 278 None {'updated': {'n': 278, 'min': 1793837985.0, 'max': 1793837985.0}, 'first_ts': {'n': 278, 'min': 1793837056.0, 'max': 1793837892.0}, 'last_ts': {'n': 278, 'min': 1793837068.0, 'max': 1793837892.0}}
+snipers.csv.gz 697 None {'updated': {'n': 697, 'min': 1793786133.0, 'max': 1793786133.0}, 'first_ts': {'n': 697, 'min': 1793562233.0, 'max': 1793774570.0}, 'last_ts': {'n': 697, 'min': 1793562262.0, 'max': 1793776345.0}}
+farm_wallets.csv.gz 28089 None {'dump_ts': {'n': 28089, 'min': 1793881452.0, 'max': 1794062001.0}}
+farm_dumps.csv.gz 300 None {'built_ts': {'n': 300, 'min': 1793922148.0, 'max': 1794062259.0}, 'dump_ts': {'n': 300, 'min': 1793881452.0, 'max': 1794062001.0}}
+operators.csv.gz 22 None {'updated': {'n': 22, 'min': 1794062245.0, 'max': 1794062245.0}, 'first_ts': {'n': 22, 'min': 1791921969.0, 'max': 1793581676.0}, 'last_ts': {'n': 22, 'min': 1792527107.0, 'max': 1794033861.0}}
+operator_coins.csv.gz 716 None {}
+fd_watch.csv.gz 55225 {'ran': 40548, 'failed': 5793, 'pending': 1894, '': 6990} {'created_ts': {'n': 55225, 'min': 1793933556.0, 'max': 1794063145.0}, 'trace_ts': {'n': 46341, 'min': 1793950783.0, 'max': 1794063148.0}, 'scanned_ts': {'n': 55225, 'min': 1793933561.0, 'max': 1794063147.0}, 'funded_ts': {'n': 45883, 'min': 1617910808.0, 'max': 1794063035.0}}
+fd_early.csv.gz 36480 None {'created_ts': {'n': 36480, 'min': 1793976767.0, 'max': 1794063078.0}}
+fd_hgrowth.csv.gz 51 None {'ts': {'n': 51, 'min': 1793906015.0, 'max': 1794059730.0}}

@@ -1,0 +1,1217 @@
+{
+  "package_commit": "0e3be03c71949e069a7a31b5951f332bb563f68f",
+  "tables": {
+    "snapshot3": {
+      "creator_trace.csv.gz": {
+        "rows": 150417,
+        "sha256": "c3c9e932ebf8101e6bee9ea61bef141776f8e477c2e46a6facda83ec57223f02",
+        "columns": [
+          "mint",
+          "creator",
+          "create_ts",
+          "peak_mc_usd",
+          "graduated",
+          "bundle_pct",
+          "bundle_sol",
+          "funder",
+          "funder_sol",
+          "funded_ts",
+          "creator_txs",
+          "err",
+          "checked_ts"
+        ],
+        "populated": {
+          "mint": 150417,
+          "creator": 150417,
+          "create_ts": 150417,
+          "peak_mc_usd": 145131,
+          "graduated": 150417,
+          "bundle_pct": 150417,
+          "bundle_sol": 150417,
+          "funder": 127082,
+          "funder_sol": 127082,
+          "funded_ts": 127082,
+          "creator_txs": 76710,
+          "err": 23335,
+          "checked_ts": 150417
+        },
+        "times": {
+          "create_ts": {
+            "n": 150417,
+            "min": 1793742698.0,
+            "max": 1794052403.0
+          },
+          "checked_ts": {
+            "n": 150417,
+            "min": 1793744155.0,
+            "max": 1794052405.0
+          },
+          "funded_ts": {
+            "n": 127082,
+            "min": 1616822985.0,
+            "max": 1794052300.0
+          }
+        }
+      },
+      "buyer_funding.csv.gz": {
+        "rows": 9348,
+        "sha256": "03bc82be799d4a056ed95649825276c00c0db4f91eef42731534986132698e78",
+        "columns": [
+          "mint",
+          "wallet",
+          "sol_in",
+          "first_ts",
+          "funder",
+          "funder_sol",
+          "funded_ts",
+          "age_s",
+          "txs",
+          "err",
+          "ts"
+        ],
+        "populated": {
+          "mint": 9348,
+          "wallet": 9348,
+          "sol_in": 9348,
+          "first_ts": 9348,
+          "funder": 9348,
+          "funder_sol": 9348,
+          "funded_ts": 9348,
+          "age_s": 9348,
+          "txs": 9348,
+          "err": 0,
+          "ts": 9348
+        },
+        "times": {
+          "ts": {
+            "n": 9348,
+            "min": 1793922080.0,
+            "max": 1794052321.0
+          },
+          "first_ts": {
+            "n": 9348,
+            "min": 1793922016.0,
+            "max": 1794052249.0
+          },
+          "funded_ts": {
+            "n": 9348,
+            "min": 1636217468.0,
+            "max": 1794051981.0
+          }
+        }
+      },
+      "buyer_funding_sum.csv.gz": {
+        "rows": 942,
+        "sha256": "adf04d2fd474596e1a4678eae31eb53674b9f130996e8106ba1ca62c663f9ab4",
+        "columns": [
+          "mint",
+          "n",
+          "traced",
+          "funders",
+          "same_funder_max",
+          "same_funder_wallet",
+          "fresh_n",
+          "fresh_10m_n",
+          "ts"
+        ],
+        "populated": {
+          "mint": 942,
+          "n": 942,
+          "traced": 942,
+          "funders": 942,
+          "same_funder_max": 942,
+          "same_funder_wallet": 941,
+          "fresh_n": 942,
+          "fresh_10m_n": 942,
+          "ts": 942
+        },
+        "times": {
+          "ts": {
+            "n": 942,
+            "min": 1793922080.0,
+            "max": 1794052321.0
+          }
+        }
+      },
+      "fd_sniper_stats.csv.gz": {
+        "rows": 278,
+        "sha256": "e429f3262b697371ba864fd145e0c313543bedb6b65845aef368b0972df08e1c",
+        "columns": [
+          "wallet",
+          "launches",
+          "slot0",
+          "graduated",
+          "peak50k",
+          "peak100k",
+          "sol_avg",
+          "exit_pct",
+          "first_ts",
+          "last_ts",
+          "updated"
+        ],
+        "populated": {
+          "wallet": 278,
+          "launches": 278,
+          "slot0": 278,
+          "graduated": 278,
+          "peak50k": 278,
+          "peak100k": 278,
+          "sol_avg": 278,
+          "exit_pct": 278,
+          "first_ts": 278,
+          "last_ts": 278,
+          "updated": 278
+        },
+        "times": {
+          "updated": {
+            "n": 278,
+            "min": 1793837985.0,
+            "max": 1793837985.0
+          },
+          "first_ts": {
+            "n": 278,
+            "min": 1793837056.0,
+            "max": 1793837892.0
+          },
+          "last_ts": {
+            "n": 278,
+            "min": 1793837068.0,
+            "max": 1793837892.0
+          }
+        }
+      },
+      "snipers.csv.gz": {
+        "rows": 697,
+        "sha256": "8d14261d3aff28ed19d03a0461125ff82b53af2891c73e4708d6f03a5ba98e32",
+        "columns": [
+          "wallet",
+          "coins",
+          "census",
+          "runners",
+          "hit_rate",
+          "buy_sol",
+          "sell_sol",
+          "block0",
+          "creator_linked",
+          "funder",
+          "funder_name",
+          "txs",
+          "first_ts",
+          "last_ts",
+          "updated"
+        ],
+        "populated": {
+          "wallet": 697,
+          "coins": 697,
+          "census": 697,
+          "runners": 697,
+          "hit_rate": 697,
+          "buy_sol": 697,
+          "sell_sol": 697,
+          "block0": 697,
+          "creator_linked": 697,
+          "funder": 635,
+          "funder_name": 214,
+          "txs": 697,
+          "first_ts": 697,
+          "last_ts": 697,
+          "updated": 697
+        },
+        "times": {
+          "updated": {
+            "n": 697,
+            "min": 1793786133.0,
+            "max": 1793786133.0
+          },
+          "first_ts": {
+            "n": 697,
+            "min": 1793562233.0,
+            "max": 1793774570.0
+          },
+          "last_ts": {
+            "n": 697,
+            "min": 1793562262.0,
+            "max": 1793776345.0
+          }
+        }
+      },
+      "farm_wallets.csv.gz": {
+        "rows": 25225,
+        "sha256": "fb6939065ac9dc22d69bdfec9d67401ab2ad7d5a5c4e9011d02c3ae3c73dadfb",
+        "columns": [
+          "wallet",
+          "mint",
+          "dump_ts",
+          "sold_sol",
+          "drop_pct"
+        ],
+        "populated": {
+          "wallet": 25225,
+          "mint": 25225,
+          "dump_ts": 25225,
+          "sold_sol": 25225,
+          "drop_pct": 25225
+        },
+        "times": {
+          "dump_ts": {
+            "n": 25225,
+            "min": 1793881452.0,
+            "max": 1794052199.0
+          }
+        }
+      },
+      "farm_dumps.csv.gz": {
+        "rows": 262,
+        "sha256": "ab8bed5e475e98bdf69463955d552a32d4b059a00fdeac78a82f6036b03e2e5d",
+        "columns": [
+          "mint",
+          "name",
+          "entry_ts",
+          "dump_ts",
+          "slot0",
+          "slot1",
+          "drop_pct",
+          "sellers",
+          "sold_sol",
+          "built_ts"
+        ],
+        "populated": {
+          "mint": 262,
+          "name": 262,
+          "entry_ts": 262,
+          "dump_ts": 262,
+          "slot0": 262,
+          "slot1": 262,
+          "drop_pct": 262,
+          "sellers": 262,
+          "sold_sol": 262,
+          "built_ts": 262
+        },
+        "times": {
+          "built_ts": {
+            "n": 262,
+            "min": 1793922148.0,
+            "max": 1794052338.0
+          },
+          "dump_ts": {
+            "n": 262,
+            "min": 1793881452.0,
+            "max": 1794052199.0
+          }
+        }
+      },
+      "operators.csv.gz": {
+        "rows": 22,
+        "sha256": "146e2044b27260f2b73e856089678e1e9e5bac437f91055025441d51bf0504e9",
+        "columns": [
+          "op_id",
+          "anchor",
+          "kind",
+          "coins",
+          "runners",
+          "hit_rate",
+          "med_peak",
+          "best_peak",
+          "bundle_sol",
+          "wallets",
+          "cex_funded",
+          "first_ts",
+          "last_ts",
+          "updated",
+          "launches",
+          "graduated_all",
+          "hits_all",
+          "hit_rate_all"
+        ],
+        "populated": {
+          "op_id": 22,
+          "anchor": 22,
+          "kind": 22,
+          "coins": 22,
+          "runners": 22,
+          "hit_rate": 22,
+          "med_peak": 22,
+          "best_peak": 22,
+          "bundle_sol": 21,
+          "wallets": 22,
+          "cex_funded": 22,
+          "first_ts": 22,
+          "last_ts": 22,
+          "updated": 22,
+          "launches": 7,
+          "graduated_all": 7,
+          "hits_all": 7,
+          "hit_rate_all": 7
+        },
+        "times": {
+          "updated": {
+            "n": 22,
+            "min": 1794046990.0,
+            "max": 1794046990.0
+          },
+          "first_ts": {
+            "n": 22,
+            "min": 1791921969.0,
+            "max": 1793581676.0
+          },
+          "last_ts": {
+            "n": 22,
+            "min": 1792527107.0,
+            "max": 1794033861.0
+          }
+        }
+      },
+      "operator_coins.csv.gz": {
+        "rows": 716,
+        "sha256": "6ea7e10385e90fa144ec8378096d11822b9745956290cfac52d956cb5088bfb6",
+        "columns": [
+          "anchor",
+          "mint",
+          "role",
+          "link"
+        ],
+        "populated": {
+          "anchor": 716,
+          "mint": 716,
+          "role": 716,
+          "link": 716
+        },
+        "times": {}
+      },
+      "fd_watch.csv.gz": {
+        "rows": 56374,
+        "sha256": "248a5cef56bbdb64b936a6d59ba7110f3116a852d8fa05d9e0e3a813fe1ef4b2",
+        "columns": [
+          "mint",
+          "name",
+          "symbol",
+          "creator",
+          "created_ts",
+          "bundle_pct",
+          "bundle_sol",
+          "funder",
+          "funder_sol",
+          "funded_ts",
+          "funder_launches",
+          "pre",
+          "pre_nb",
+          "why",
+          "checks",
+          "entered",
+          "done",
+          "scanned_ts",
+          "dev_buy_sol",
+          "name_1h",
+          "name_24h",
+          "socials",
+          "image",
+          "replies",
+          "koth_ts",
+          "meta_ts",
+          "meta_err",
+          "screened",
+          "screened_ts",
+          "lookup_status",
+          "funder_found",
+          "tool_sig",
+          "high_count",
+          "service_funded",
+          "grp",
+          "trace_ts"
+        ],
+        "populated": {
+          "mint": 56374,
+          "name": 56317,
+          "symbol": 56365,
+          "creator": 56374,
+          "created_ts": 56374,
+          "bundle_pct": 56374,
+          "bundle_sol": 56374,
+          "funder": 46694,
+          "funder_sol": 41010,
+          "funded_ts": 46694,
+          "funder_launches": 46694,
+          "pre": 56374,
+          "pre_nb": 56374,
+          "why": 55729,
+          "checks": 56374,
+          "entered": 939,
+          "done": 56374,
+          "scanned_ts": 56374,
+          "dev_buy_sol": 56374,
+          "name_1h": 54699,
+          "name_24h": 54699,
+          "socials": 0,
+          "image": 0,
+          "replies": 0,
+          "koth_ts": 0,
+          "meta_ts": 0,
+          "meta_err": 0,
+          "screened": 1427,
+          "screened_ts": 1427,
+          "lookup_status": 44231,
+          "funder_found": 42613,
+          "tool_sig": 42613,
+          "high_count": 42613,
+          "service_funded": 42613,
+          "grp": 44231,
+          "trace_ts": 42613
+        },
+        "times": {
+          "created_ts": {
+            "n": 56374,
+            "min": 1793922810.0,
+            "max": 1794052403.0
+          },
+          "trace_ts": {
+            "n": 42613,
+            "min": 1793950783.0,
+            "max": 1794052405.0
+          },
+          "scanned_ts": {
+            "n": 56374,
+            "min": 1793922822.0,
+            "max": 1794052403.0
+          },
+          "funded_ts": {
+            "n": 46694,
+            "min": 1617910808.0,
+            "max": 1794052300.0
+          }
+        },
+        "lookup_status": {
+          "failed": 5461,
+          "ran": 37152,
+          "pending": 1618,
+          "": 12143
+        },
+        "checks_json_rows": 8592,
+        "checks_rows_invalid_json": 0,
+        "check_age_keys": {
+          "60": 8218,
+          "90": 7977,
+          "120": 2576
+        },
+        "check_records": 18771,
+        "check_field_populated": {
+          "at": 18771,
+          "net": 18715,
+          "buySol": 18715,
+          "sellSol": 18715,
+          "buyers": 18715,
+          "buys": 18715,
+          "sells": 18715,
+          "big": 18715,
+          "mcSol": 16718,
+          "exited": 18715,
+          "holding": 18715,
+          "sellers": 18715,
+          "top1_pct": 18715,
+          "top5_pct": 18715,
+          "top10_pct": 18715,
+          "dev_buy": 18715,
+          "dev_sell": 18715,
+          "dev_sold_pct": 13270,
+          "early_n": 18715,
+          "early_sol": 18715,
+          "txs": 18715,
+          "venue": 18715,
+          "hist": 14915,
+          "grp": 14906,
+          "farm_buyers_pct": 17223,
+          "farm_sol_pct": 17198,
+          "farm_held_pct": 17223,
+          "farm4h_buyers_pct": 17223,
+          "farm4h_sol_pct": 17198,
+          "farm4h_held_pct": 17223,
+          "farm_known": 17223,
+          "same_name_mint": 1640,
+          "same_name_min": 1640,
+          "funder_hist": 2092,
+          "holders": 2459,
+          "mcUsd": 2460,
+          "gmgn_px": 1473,
+          "chain_px": 1473,
+          "sol_usd": 1473,
+          "bundle_sold_pct": 1687,
+          "bundle_sell_sol": 1687,
+          "bundle_n": 1687,
+          "meta_reuse": 903,
+          "err": 56,
+          "incomplete": 56
+        }
+      },
+      "fd_early.csv.gz": {
+        "rows": 39219,
+        "sha256": "aad7182d0658d3387fa0bd387e7fc61a5d7774f38d082f9c41e096ac78e5a65b",
+        "columns": [
+          "mint",
+          "wallet",
+          "slot0",
+          "sec",
+          "sol",
+          "tok",
+          "exited",
+          "created_ts"
+        ],
+        "populated": {
+          "mint": 39219,
+          "wallet": 39219,
+          "slot0": 39219,
+          "sec": 39219,
+          "sol": 39219,
+          "tok": 39219,
+          "exited": 39219,
+          "created_ts": 39219
+        },
+        "times": {
+          "created_ts": {
+            "n": 39219,
+            "min": 1793966021.0,
+            "max": 1794052241.0
+          }
+        }
+      },
+      "fd_hgrowth.csv.gz": {
+        "rows": 46,
+        "sha256": "b7693e2dc7dfcfcad5fa010f2b607b36e322d83054e7c38fa25e609accd07f99",
+        "columns": [
+          "mint",
+          "name",
+          "h60",
+          "h120",
+          "ratio",
+          "mc60",
+          "mc120",
+          "ts"
+        ],
+        "populated": {
+          "mint": 46,
+          "name": 46,
+          "h60": 46,
+          "h120": 46,
+          "ratio": 46,
+          "mc60": 46,
+          "mc120": 46,
+          "ts": 46
+        },
+        "times": {
+          "ts": {
+            "n": 46,
+            "min": 1793906015.0,
+            "max": 1794052260.0
+          }
+        }
+      }
+    },
+    "current": {
+      "creator_trace.csv.gz": {
+        "rows": 154434,
+        "sha256": "b6fa058c6c81335331e325f9dec3ee0159b836c0dd597684e6a6106c33f524e6",
+        "columns": [
+          "mint",
+          "creator",
+          "create_ts",
+          "peak_mc_usd",
+          "graduated",
+          "bundle_pct",
+          "bundle_sol",
+          "funder",
+          "funder_sol",
+          "funded_ts",
+          "creator_txs",
+          "err",
+          "checked_ts"
+        ],
+        "populated": {
+          "mint": 154434,
+          "creator": 154434,
+          "create_ts": 154434,
+          "peak_mc_usd": 149009,
+          "graduated": 154434,
+          "bundle_pct": 154434,
+          "bundle_sol": 154434,
+          "funder": 130753,
+          "funder_sol": 130753,
+          "funded_ts": 130753,
+          "creator_txs": 78149,
+          "err": 23681,
+          "checked_ts": 154434
+        },
+        "times": {
+          "create_ts": {
+            "n": 154434,
+            "min": 1793742698.0,
+            "max": 1794063145.0
+          },
+          "checked_ts": {
+            "n": 154434,
+            "min": 1793744155.0,
+            "max": 1794063148.0
+          },
+          "funded_ts": {
+            "n": 130753,
+            "min": 1616822985.0,
+            "max": 1794063035.0
+          }
+        }
+      },
+      "buyer_funding.csv.gz": {
+        "rows": 10576,
+        "sha256": "cc5d69c600b32267b28878a74401d86154cdaaf1d7f202ec0a9b9c5c7f93c743",
+        "columns": [
+          "mint",
+          "wallet",
+          "sol_in",
+          "first_ts",
+          "funder",
+          "funder_sol",
+          "funded_ts",
+          "age_s",
+          "txs",
+          "err",
+          "ts"
+        ],
+        "populated": {
+          "mint": 10576,
+          "wallet": 10576,
+          "sol_in": 10576,
+          "first_ts": 10576,
+          "funder": 10576,
+          "funder_sol": 10576,
+          "funded_ts": 10576,
+          "age_s": 10576,
+          "txs": 10576,
+          "err": 0,
+          "ts": 10576
+        },
+        "times": {
+          "ts": {
+            "n": 10576,
+            "min": 1793922080.0,
+            "max": 1794063044.0
+          },
+          "first_ts": {
+            "n": 10576,
+            "min": 1793922016.0,
+            "max": 1794063024.0
+          },
+          "funded_ts": {
+            "n": 10576,
+            "min": 1617261543.0,
+            "max": 1794061868.0
+          }
+        }
+      },
+      "buyer_funding_sum.csv.gz": {
+        "rows": 1065,
+        "sha256": "df5963acec57450e86972128a82c9e42d5e986b9d2f9e809870d639025875d3d",
+        "columns": [
+          "mint",
+          "n",
+          "traced",
+          "funders",
+          "same_funder_max",
+          "same_funder_wallet",
+          "fresh_n",
+          "fresh_10m_n",
+          "ts"
+        ],
+        "populated": {
+          "mint": 1065,
+          "n": 1065,
+          "traced": 1065,
+          "funders": 1065,
+          "same_funder_max": 1065,
+          "same_funder_wallet": 1064,
+          "fresh_n": 1065,
+          "fresh_10m_n": 1065,
+          "ts": 1065
+        },
+        "times": {
+          "ts": {
+            "n": 1065,
+            "min": 1793922080.0,
+            "max": 1794063044.0
+          }
+        }
+      },
+      "fd_sniper_stats.csv.gz": {
+        "rows": 278,
+        "sha256": "96092b9fe261439595ebd8f6c77e1a521a1d03da5bf5f28f8a839d05dae94bba",
+        "columns": [
+          "wallet",
+          "launches",
+          "slot0",
+          "graduated",
+          "peak50k",
+          "peak100k",
+          "sol_avg",
+          "exit_pct",
+          "first_ts",
+          "last_ts",
+          "updated"
+        ],
+        "populated": {
+          "wallet": 278,
+          "launches": 278,
+          "slot0": 278,
+          "graduated": 278,
+          "peak50k": 278,
+          "peak100k": 278,
+          "sol_avg": 278,
+          "exit_pct": 278,
+          "first_ts": 278,
+          "last_ts": 278,
+          "updated": 278
+        },
+        "times": {
+          "updated": {
+            "n": 278,
+            "min": 1793837985.0,
+            "max": 1793837985.0
+          },
+          "first_ts": {
+            "n": 278,
+            "min": 1793837056.0,
+            "max": 1793837892.0
+          },
+          "last_ts": {
+            "n": 278,
+            "min": 1793837068.0,
+            "max": 1793837892.0
+          }
+        }
+      },
+      "snipers.csv.gz": {
+        "rows": 697,
+        "sha256": "81275ab0940eff6d51bb5ba71df21db9a55c1649a5788ffd81290faef48fb4fe",
+        "columns": [
+          "wallet",
+          "coins",
+          "census",
+          "runners",
+          "hit_rate",
+          "buy_sol",
+          "sell_sol",
+          "block0",
+          "creator_linked",
+          "funder",
+          "funder_name",
+          "txs",
+          "first_ts",
+          "last_ts",
+          "updated"
+        ],
+        "populated": {
+          "wallet": 697,
+          "coins": 697,
+          "census": 697,
+          "runners": 697,
+          "hit_rate": 697,
+          "buy_sol": 697,
+          "sell_sol": 697,
+          "block0": 697,
+          "creator_linked": 697,
+          "funder": 635,
+          "funder_name": 214,
+          "txs": 697,
+          "first_ts": 697,
+          "last_ts": 697,
+          "updated": 697
+        },
+        "times": {
+          "updated": {
+            "n": 697,
+            "min": 1793786133.0,
+            "max": 1793786133.0
+          },
+          "first_ts": {
+            "n": 697,
+            "min": 1793562233.0,
+            "max": 1793774570.0
+          },
+          "last_ts": {
+            "n": 697,
+            "min": 1793562262.0,
+            "max": 1793776345.0
+          }
+        }
+      },
+      "farm_wallets.csv.gz": {
+        "rows": 28089,
+        "sha256": "e763471e7d6cd63c257a715cb0eb45a456db0d5cb80d6b11d5255dce8233b102",
+        "columns": [
+          "wallet",
+          "mint",
+          "dump_ts",
+          "sold_sol",
+          "drop_pct"
+        ],
+        "populated": {
+          "wallet": 28089,
+          "mint": 28089,
+          "dump_ts": 28089,
+          "sold_sol": 28089,
+          "drop_pct": 28089
+        },
+        "times": {
+          "dump_ts": {
+            "n": 28089,
+            "min": 1793881452.0,
+            "max": 1794062001.0
+          }
+        }
+      },
+      "farm_dumps.csv.gz": {
+        "rows": 300,
+        "sha256": "e26914447afdccc92c78dd6374b9122b009fac393fd6268b858dbb67bd6de44d",
+        "columns": [
+          "mint",
+          "name",
+          "entry_ts",
+          "dump_ts",
+          "slot0",
+          "slot1",
+          "drop_pct",
+          "sellers",
+          "sold_sol",
+          "built_ts"
+        ],
+        "populated": {
+          "mint": 300,
+          "name": 300,
+          "entry_ts": 300,
+          "dump_ts": 300,
+          "slot0": 300,
+          "slot1": 300,
+          "drop_pct": 300,
+          "sellers": 300,
+          "sold_sol": 300,
+          "built_ts": 300
+        },
+        "times": {
+          "built_ts": {
+            "n": 300,
+            "min": 1793922148.0,
+            "max": 1794062259.0
+          },
+          "dump_ts": {
+            "n": 300,
+            "min": 1793881452.0,
+            "max": 1794062001.0
+          }
+        }
+      },
+      "operators.csv.gz": {
+        "rows": 22,
+        "sha256": "3f5a98b9e04bb54ecc8f04b9ec29ed6ece589e163fc8bbf26edd502ba8ea0c53",
+        "columns": [
+          "op_id",
+          "anchor",
+          "kind",
+          "coins",
+          "runners",
+          "hit_rate",
+          "med_peak",
+          "best_peak",
+          "bundle_sol",
+          "wallets",
+          "cex_funded",
+          "first_ts",
+          "last_ts",
+          "updated",
+          "launches",
+          "graduated_all",
+          "hits_all",
+          "hit_rate_all"
+        ],
+        "populated": {
+          "op_id": 22,
+          "anchor": 22,
+          "kind": 22,
+          "coins": 22,
+          "runners": 22,
+          "hit_rate": 22,
+          "med_peak": 22,
+          "best_peak": 22,
+          "bundle_sol": 21,
+          "wallets": 22,
+          "cex_funded": 22,
+          "first_ts": 22,
+          "last_ts": 22,
+          "updated": 22,
+          "launches": 7,
+          "graduated_all": 7,
+          "hits_all": 7,
+          "hit_rate_all": 7
+        },
+        "times": {
+          "updated": {
+            "n": 22,
+            "min": 1794062245.0,
+            "max": 1794062245.0
+          },
+          "first_ts": {
+            "n": 22,
+            "min": 1791921969.0,
+            "max": 1793581676.0
+          },
+          "last_ts": {
+            "n": 22,
+            "min": 1792527107.0,
+            "max": 1794033861.0
+          }
+        }
+      },
+      "operator_coins.csv.gz": {
+        "rows": 716,
+        "sha256": "d4da4956adc808565f021e5fd04c47f8acc8c4046aadf0f29297c44cdb1da1da",
+        "columns": [
+          "anchor",
+          "mint",
+          "role",
+          "link"
+        ],
+        "populated": {
+          "anchor": 716,
+          "mint": 716,
+          "role": 716,
+          "link": 716
+        },
+        "times": {}
+      },
+      "fd_watch.csv.gz": {
+        "rows": 55225,
+        "sha256": "e55949b086c57a69d00462324a38d72a93473c65d7dd8ca51f4245ce1b0aa57e",
+        "columns": [
+          "mint",
+          "name",
+          "symbol",
+          "creator",
+          "created_ts",
+          "bundle_pct",
+          "bundle_sol",
+          "funder",
+          "funder_sol",
+          "funded_ts",
+          "funder_launches",
+          "pre",
+          "pre_nb",
+          "why",
+          "checks",
+          "entered",
+          "done",
+          "scanned_ts",
+          "dev_buy_sol",
+          "name_1h",
+          "name_24h",
+          "socials",
+          "image",
+          "replies",
+          "koth_ts",
+          "meta_ts",
+          "meta_err",
+          "screened",
+          "screened_ts",
+          "lookup_status",
+          "funder_found",
+          "tool_sig",
+          "high_count",
+          "service_funded",
+          "grp",
+          "trace_ts"
+        ],
+        "populated": {
+          "mint": 55225,
+          "name": 55171,
+          "symbol": 55216,
+          "creator": 55225,
+          "created_ts": 55225,
+          "bundle_pct": 55225,
+          "bundle_sol": 55225,
+          "funder": 45883,
+          "funder_sol": 40348,
+          "funded_ts": 45883,
+          "funder_launches": 45883,
+          "pre": 55225,
+          "pre_nb": 55225,
+          "why": 54541,
+          "checks": 55225,
+          "entered": 1041,
+          "done": 55225,
+          "scanned_ts": 55225,
+          "dev_buy_sol": 55225,
+          "name_1h": 53277,
+          "name_24h": 53277,
+          "socials": 0,
+          "image": 0,
+          "replies": 0,
+          "koth_ts": 0,
+          "meta_ts": 0,
+          "meta_err": 0,
+          "screened": 1598,
+          "screened_ts": 1598,
+          "lookup_status": 48235,
+          "funder_found": 46341,
+          "tool_sig": 46341,
+          "high_count": 46341,
+          "service_funded": 46341,
+          "grp": 48235,
+          "trace_ts": 46341
+        },
+        "times": {
+          "created_ts": {
+            "n": 55225,
+            "min": 1793933556.0,
+            "max": 1794063145.0
+          },
+          "trace_ts": {
+            "n": 46341,
+            "min": 1793950783.0,
+            "max": 1794063148.0
+          },
+          "scanned_ts": {
+            "n": 55225,
+            "min": 1793933561.0,
+            "max": 1794063147.0
+          },
+          "funded_ts": {
+            "n": 45883,
+            "min": 1617910808.0,
+            "max": 1794063035.0
+          }
+        },
+        "lookup_status": {
+          "ran": 40548,
+          "failed": 5793,
+          "pending": 1894,
+          "": 6990
+        },
+        "checks_json_rows": 8574,
+        "checks_rows_invalid_json": 0,
+        "check_age_keys": {
+          "60": 8206,
+          "90": 7949,
+          "120": 2689
+        },
+        "check_records": 18844,
+        "check_field_populated": {
+          "at": 18844,
+          "net": 18782,
+          "buySol": 18782,
+          "sellSol": 18782,
+          "buyers": 18782,
+          "buys": 18782,
+          "sells": 18782,
+          "big": 18782,
+          "mcSol": 16826,
+          "exited": 18782,
+          "holding": 18782,
+          "sellers": 18782,
+          "top1_pct": 18782,
+          "top5_pct": 18782,
+          "top10_pct": 18782,
+          "dev_buy": 18782,
+          "dev_sell": 18782,
+          "dev_sold_pct": 13480,
+          "early_n": 18782,
+          "early_sol": 18782,
+          "txs": 18782,
+          "venue": 18782,
+          "hist": 16598,
+          "grp": 16589,
+          "farm_buyers_pct": 17295,
+          "farm_sol_pct": 17272,
+          "farm_held_pct": 17295,
+          "farm4h_buyers_pct": 17295,
+          "farm4h_sol_pct": 17272,
+          "farm4h_held_pct": 17295,
+          "farm_known": 17295,
+          "funder_hist": 2270,
+          "meta_reuse": 993,
+          "holders": 2677,
+          "mcUsd": 2678,
+          "gmgn_px": 1675,
+          "chain_px": 1675,
+          "sol_usd": 1675,
+          "same_name_mint": 1820,
+          "same_name_min": 1820,
+          "bundle_sold_pct": 1851,
+          "bundle_sell_sol": 1851,
+          "bundle_n": 1851,
+          "err": 62,
+          "incomplete": 62
+        }
+      },
+      "fd_early.csv.gz": {
+        "rows": 36480,
+        "sha256": "fa9c9380ad1bb83321b7ff4c5cf961a09e0f535c6910a8b26456c48c663d4d00",
+        "columns": [
+          "mint",
+          "wallet",
+          "slot0",
+          "sec",
+          "sol",
+          "tok",
+          "exited",
+          "created_ts"
+        ],
+        "populated": {
+          "mint": 36480,
+          "wallet": 36480,
+          "slot0": 36480,
+          "sec": 36480,
+          "sol": 36480,
+          "tok": 36480,
+          "exited": 36480,
+          "created_ts": 36480
+        },
+        "times": {
+          "created_ts": {
+            "n": 36480,
+            "min": 1793976767.0,
+            "max": 1794063078.0
+          }
+        }
+      },
+      "fd_hgrowth.csv.gz": {
+        "rows": 51,
+        "sha256": "6d9e18793215a55c69431c9ce1f8c00ab4ca1f675117bd2121fde8263229f061",
+        "columns": [
+          "mint",
+          "name",
+          "h60",
+          "h120",
+          "ratio",
+          "mc60",
+          "mc120",
+          "ts"
+        ],
+        "populated": {
+          "mint": 51,
+          "name": 51,
+          "h60": 51,
+          "h120": 51,
+          "ratio": 51,
+          "mc60": 51,
+          "mc120": 51,
+          "ts": 51
+        },
+        "times": {
+          "ts": {
+            "n": 51,
+            "min": 1793906015.0,
+            "max": 1794059730.0
+          }
+        }
+      }
+    }
+  },
+  "limitations": [
+    "updated timestamps are not first-label timestamps",
+    "Funding attribution is heuristic unless trace proof confirms incoming transfer",
+    "Trades omit transfers; sold/bought is not verified balance",
+    "No classification supplied to the experiment from these export-time lists"
+  ]
+}

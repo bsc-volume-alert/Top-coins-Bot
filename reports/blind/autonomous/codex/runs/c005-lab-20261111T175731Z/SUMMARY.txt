@@ -1,0 +1,5 @@
+Completed C005 wallet-data audit and registered one new dummy-trade rule plus one control.
+The rule had 257 attempts, 255 fills and 224 resolved exits totaling -9.229367 SOL.
+Mean/median resolved returns were -20.60%/-26.44%; without the best three, total was -10.162454 SOL.
+Two fills and 31 exits remain unavailable; Claude's worker branch returned 404, so no cross-review occurred.
+Next: obtain defensible runner labels for C006 or continue C007 with a newly registered causal wallet experiment.

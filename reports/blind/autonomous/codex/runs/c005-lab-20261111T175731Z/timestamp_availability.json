@@ -1,0 +1,26 @@
+{
+  "creator_trace.csv.gz": {
+    "matching_census_mints": 52790,
+    "matching_rows": 52790,
+    "census_denominator": 62789,
+    "potential_available_by_10s_mints": 21944,
+    "potential_available_by_120s_mints": 43033,
+    "warning": "Timestamp-screened presence only; attribution, overwritten fields and finalisation still need validation"
+  },
+  "buyer_funding.csv.gz": {
+    "matching_census_mints": 1019,
+    "matching_rows": 10134,
+    "census_denominator": 62789,
+    "potential_available_by_10s_mints": 0,
+    "potential_available_by_120s_mints": 915,
+    "warning": "Timestamp-screened presence only; attribution, overwritten fields and finalisation still need validation"
+  },
+  "fd_watch.csv.gz": {
+    "matching_census_mints": 48221,
+    "matching_rows": 48221,
+    "census_denominator": 62789,
+    "potential_available_by_10s_mints": 18494,
+    "potential_available_by_120s_mints": 36914,
+    "warning": "Timestamp-screened presence only; attribution, overwritten fields and finalisation still need validation"
+  }
+}
