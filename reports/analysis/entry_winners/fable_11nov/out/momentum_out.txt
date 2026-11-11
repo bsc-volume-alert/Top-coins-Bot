@@ -1,0 +1,90 @@
+Population: 2127 mints with trades; entries per trigger:
+trigger
+BASE60         1319
+ATH120          758
+BURST           666
+GRAD            388
+RUN2            343
+RUN3            166
+RUN5             59
+RUN2_HOLD60      29
+
+=== ATH120: n=758  trigger time median 140 s  run at entry median 1.30x  peak>=2x 34.6%  peak>=5x 11.1%  trough<=0.5 85.1%
+  trail30       mean +0.002 (cap5x -0.089)  median -0.275  SOL@0.2 +0.26  win% 25.3  severe% 31.7  unresolved%  1.1
+  trail50       mean -0.052 (cap5x -0.145)  median -0.464  SOL@0.2 -7.89  win% 20.8  severe% 58.7  unresolved%  2.5
+  tp1.5_stop50  mean -0.023 (cap5x -0.023)  median +0.352  SOL@0.2 -3.45  win% 51.8  severe% 47.1  unresolved%  0.4
+  tp2.0_stop50  mean -0.062 (cap5x -0.062)  median -0.521  SOL@0.2 -9.45  win% 34.7  severe% 63.5  unresolved%  1.1
+  tp3.0_stop50  mean -0.066 (cap5x -0.066)  median -0.532  SOL@0.2 -9.97  win% 23.5  severe% 74.3  unresolved%  1.5
+  t300          mean -0.067 (cap5x -0.070)  median -0.070  SOL@0.2 -10.21  win% 46.6  severe% 35.9  unresolved%  1.1
+  t900          mean -0.015 (cap5x -0.061)  median -0.463  SOL@0.2 -2.28  win% 38.1  severe% 52.0  unresolved% 16.1
+  t3600         mean -0.057 (cap5x -0.293)  median -0.770  SOL@0.2 -8.62  win% 19.1  severe% 76.1  unresolved% 54.6
+
+=== BASE60: n=1319  trigger time median 60 s  run at entry median 1.00x  peak>=2x 33.7%  peak>=5x 9.2%  trough<=0.5 81.7%
+  trail30       mean +0.031 (cap5x -0.053)  median -0.239  SOL@0.2 +8.18  win% 29.2  severe% 27.9  unresolved%  0.7
+  trail50       mean -0.032 (cap5x -0.130)  median -0.429  SOL@0.2 -8.46  win% 20.6  severe% 54.0  unresolved%  1.7
+  tp1.5_stop50  mean -0.018 (cap5x -0.020)  median +0.159  SOL@0.2 -4.82  win% 50.9  severe% 47.6  unresolved%  0.5
+  tp2.0_stop50  mean -0.055 (cap5x -0.057)  median -0.513  SOL@0.2 -14.60  win% 33.6  severe% 63.9  unresolved%  0.8
+  tp3.0_stop50  mean -0.078 (cap5x -0.082)  median -0.522  SOL@0.2 -20.57  win% 21.1  severe% 75.5  unresolved%  0.9
+  t300          mean -0.052 (cap5x -0.073)  median -0.304  SOL@0.2 -13.61  win% 36.6  severe% 46.0  unresolved%  0.7
+  t900          mean -0.029 (cap5x -0.141)  median -0.581  SOL@0.2 -7.75  win% 27.5  severe% 61.3  unresolved% 14.7
+  t3600         mean -0.079 (cap5x -0.331)  median -0.677  SOL@0.2 -20.73  win% 14.0  severe% 79.4  unresolved% 55.0
+
+=== BURST: n=666  trigger time median 78 s  run at entry median 1.15x  peak>=2x 29.7%  peak>=5x 10.1%  trough<=0.5 85.6%
+  trail30       mean +0.046 (cap5x +0.007)  median -0.189  SOL@0.2 +6.13  win% 30.9  severe% 13.8  unresolved%  0.8
+  trail50       mean -0.021 (cap5x -0.079)  median -0.396  SOL@0.2 -2.84  win% 21.8  severe% 49.7  unresolved%  2.1
+  tp1.5_stop50  mean -0.076 (cap5x -0.076)  median -0.495  SOL@0.2 -10.10  win% 44.3  severe% 54.5  unresolved%  0.8
+  tp2.0_stop50  mean -0.106 (cap5x -0.106)  median -0.516  SOL@0.2 -14.14  win% 29.1  severe% 69.2  unresolved%  0.9
+  tp3.0_stop50  mean -0.099 (cap5x -0.102)  median -0.523  SOL@0.2 -13.17  win% 19.2  severe% 78.7  unresolved%  1.5
+  t300          mean -0.073 (cap5x -0.082)  median -0.392  SOL@0.2 -9.78  win% 32.0  severe% 49.4  unresolved%  0.8
+  t900          mean -0.101 (cap5x -0.192)  median -0.644  SOL@0.2 -13.43  win% 21.8  severe% 69.5  unresolved% 14.0
+  t3600         mean -0.157 (cap5x -0.376)  median -0.707  SOL@0.2 -20.95  win% 11.4  severe% 84.1  unresolved% 47.7
+
+=== GRAD: n=388  trigger time median 5 s  run at entry median 1.01x  peak>=2x 49.2%  peak>=5x 12.1%  trough<=0.5 82.0%
+  trail30       mean -0.047 (cap5x -0.090)  median -0.284  SOL@0.2 -3.65  win% 26.3  severe% 35.1  unresolved%  1.8
+  trail50       mean -0.059 (cap5x -0.115)  median -0.419  SOL@0.2 -4.59  win% 25.5  severe% 52.3  unresolved%  5.2
+  tp1.5_stop50  mean +0.116 (cap5x +0.116)  median +0.462  SOL@0.2 +9.03  win% 66.2  severe% 32.0  unresolved%  1.5
+  tp2.0_stop50  mean +0.132 (cap5x +0.132)  median -0.066  SOL@0.2 +10.21  win% 49.2  severe% 48.7  unresolved%  3.6
+  tp3.0_stop50  mean +0.090 (cap5x +0.090)  median -0.526  SOL@0.2 +7.00  win% 32.2  severe% 64.9  unresolved%  5.4
+  t300          mean +0.065 (cap5x +0.065)  median +0.041  SOL@0.2 +5.01  win% 60.6  severe% 11.9  unresolved%  0.8
+  t900          mean +0.112 (cap5x +0.093)  median +0.167  SOL@0.2 +8.69  win% 57.0  severe% 28.9  unresolved% 19.1
+  t3600         mean -0.083 (cap5x -0.181)  median -0.898  SOL@0.2 -6.45  win% 26.3  severe% 67.3  unresolved% 68.6
+
+=== RUN2: n=343  trigger time median 195 s  run at entry median 2.04x  peak>=2x 35.0%  peak>=5x 12.2%  trough<=0.5 84.0%
+  trail30       mean +0.172 (cap5x +0.055)  median -0.188  SOL@0.2 +11.80  win% 33.5  severe% 15.5  unresolved%  1.7
+  trail50       mean +0.012 (cap5x -0.053)  median -0.369  SOL@0.2 +0.79  win% 26.5  severe% 47.5  unresolved%  5.0
+  tp1.5_stop50  mean -0.015 (cap5x -0.015)  median +0.329  SOL@0.2 -1.04  win% 53.6  severe% 45.8  unresolved%  0.6
+  tp2.0_stop50  mean -0.041 (cap5x -0.041)  median -0.515  SOL@0.2 -2.82  win% 36.4  severe% 62.4  unresolved%  2.3
+  tp3.0_stop50  mean -0.025 (cap5x -0.025)  median -0.523  SOL@0.2 -1.69  win% 26.2  severe% 72.0  unresolved%  4.1
+  t300          mean -0.015 (cap5x -0.027)  median -0.127  SOL@0.2 -1.05  win% 42.9  severe% 38.2  unresolved%  1.2
+  t900          mean +0.048 (cap5x -0.046)  median -0.625  SOL@0.2 +3.31  win% 33.5  severe% 57.4  unresolved% 17.2
+  t3600         mean -0.028 (cap5x -0.304)  median -0.803  SOL@0.2 -1.90  win% 19.8  severe% 77.0  unresolved% 49.9
+
+=== RUN2_HOLD60: n=29  trigger time median 365 s  run at entry median 2.67x  peak>=2x 34.5%  peak>=5x 6.9%  trough<=0.5 79.3%
+  trail30       mean +0.702 (cap5x +0.135)  median -0.044  SOL@0.2 +4.07  win% 37.9  severe% 17.2  unresolved%  0.0
+  trail50       mean +0.084 (cap5x -0.121)  median -0.300  SOL@0.2 +0.48  win% 24.1  severe% 37.9  unresolved%  6.9
+  tp1.5_stop50  mean -0.051 (cap5x -0.051)  median +0.351  SOL@0.2 -0.30  win% 51.7  severe% 44.8  unresolved%  3.4
+  tp2.0_stop50  mean -0.045 (cap5x -0.045)  median -0.508  SOL@0.2 -0.26  win% 37.9  severe% 58.6  unresolved%  3.4
+  tp3.0_stop50  mean -0.042 (cap5x -0.042)  median -0.539  SOL@0.2 -0.24  win% 27.6  severe% 69.0  unresolved%  6.9
+  t300          mean +0.228 (cap5x +0.145)  median -0.056  SOL@0.2 +1.32  win% 41.4  severe% 31.0  unresolved%  3.4
+  t900          mean +0.494 (cap5x -0.068)  median -0.583  SOL@0.2 +2.87  win% 27.6  severe% 55.2  unresolved% 20.7
+  t3600         mean +1.147 (cap5x -0.140)  median -0.842  SOL@0.2 +6.65  win% 24.1  severe% 65.5  unresolved% 51.7
+
+=== RUN3: n=166  trigger time median 352 s  run at entry median 3.05x  peak>=2x 38.6%  peak>=5x 13.3%  trough<=0.5 83.7%
+  trail30       mean +0.203 (cap5x +0.074)  median -0.156  SOL@0.2 +6.73  win% 34.9  severe%  9.0  unresolved%  3.0
+  trail50       mean +0.079 (cap5x -0.023)  median -0.373  SOL@0.2 +2.62  win% 27.7  severe% 47.6  unresolved%  9.0
+  tp1.5_stop50  mean -0.026 (cap5x -0.026)  median +0.332  SOL@0.2 -0.86  win% 53.0  severe% 46.4  unresolved%  3.6
+  tp2.0_stop50  mean -0.041 (cap5x -0.041)  median -0.512  SOL@0.2 -1.37  win% 36.7  severe% 62.0  unresolved%  7.8
+  tp3.0_stop50  mean +0.010 (cap5x +0.010)  median -0.519  SOL@0.2 +0.33  win% 27.7  severe% 71.1  unresolved% 11.4
+  t300          mean +0.021 (cap5x +0.016)  median -0.055  SOL@0.2 +0.69  win% 45.2  severe% 30.7  unresolved%  4.8
+  t900          mean +0.134 (cap5x +0.009)  median -0.425  SOL@0.2 +4.45  win% 36.7  severe% 51.8  unresolved% 22.9
+  t3600         mean +0.069 (cap5x -0.252)  median -0.850  SOL@0.2 +2.29  win% 22.9  severe% 71.1  unresolved% 54.2
+
+=== RUN5: n=59  trigger time median 525 s  run at entry median 5.02x  peak>=2x 42.4%  peak>=5x 10.2%  trough<=0.5 78.0%
+  trail30       mean +0.289 (cap5x +0.139)  median -0.098  SOL@0.2 +3.41  win% 32.2  severe%  5.1  unresolved%  0.0
+  trail50       mean +0.056 (cap5x +0.023)  median -0.260  SOL@0.2 +0.66  win% 32.2  severe% 33.9  unresolved%  6.8
+  tp1.5_stop50  mean +0.036 (cap5x +0.036)  median +0.238  SOL@0.2 +0.42  win% 57.6  severe% 35.6  unresolved%  3.4
+  tp2.0_stop50  mean +0.030 (cap5x +0.030)  median -0.464  SOL@0.2 +0.35  win% 42.4  severe% 50.8  unresolved%  6.8
+  tp3.0_stop50  mean +0.087 (cap5x +0.087)  median -0.513  SOL@0.2 +1.03  win% 30.5  severe% 62.7  unresolved%  8.5
+  t300          mean +0.181 (cap5x +0.159)  median +0.018  SOL@0.2 +2.14  win% 52.5  severe% 25.4  unresolved%  5.1
+  t900          mean +0.185 (cap5x +0.135)  median -0.102  SOL@0.2 +2.19  win% 47.5  severe% 42.4  unresolved% 15.3
+  t3600         mean +0.119 (cap5x -0.201)  median -0.809  SOL@0.2 +1.40  win% 20.3  severe% 66.1  unresolved% 55.9

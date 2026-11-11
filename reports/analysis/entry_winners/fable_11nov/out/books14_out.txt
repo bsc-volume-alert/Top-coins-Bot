@@ -1,0 +1,85 @@
+Population 2127 mints; entries: {'GRAD': 388, 'R3': 166, 'R5': 59, 'SHAKE': 54, 'SMART': 30}; haircut 3% applied to every result
+
+== MFE: share of entries touching k x before dropping 40% (sim +1 s landing) ==
+  R3     n= 166 1.3x: 56.6%  1.5x: 48.2%  1.8x: 32.5%  2.0x: 30.1%  3.0x: 19.3%  5.0x: 11.4%   (ever: 2x 38.6%  5x 13.3%)
+  R5     n=  59 1.3x: 59.3%  1.5x: 50.8%  1.8x: 40.7%  2.0x: 35.6%  3.0x: 23.7%  5.0x:  8.5%   (ever: 2x 42.4%  5x 10.2%)
+  GRAD   n= 388 1.3x: 72.7%  1.5x: 60.6%  1.8x: 49.0%  2.0x: 42.8%  3.0x: 23.7%  5.0x: 10.6%   (ever: 2x 49.2%  5x 12.1%)
+  SHAKE  n=  54 1.3x: 66.7%  1.5x: 63.0%  1.8x: 46.3%  2.0x: 37.0%  3.0x: 22.2%  5.0x: 11.1%   (ever: 2x 42.6%  5x 13.0%)
+
+== concentration at the trigger second (trade-ledger reconstruction) ==
+  R3     top3 share median: severe 0.122 (n=15) | others 0.114 | 5x-runners 0.121 (n=22)   dump-impact(top3 sell all) median: severe 0.55 | others 0.53   zero-buy sellers: severe 46 | others 146
+  R5     top3 share median: severe 0.793 (n=3) | others 0.124 | 5x-runners 0.114 (n=6)   dump-impact(top3 sell all) median: severe 0.16 | others 0.42   zero-buy sellers: severe 386 | others 266
+  GRAD   top3 share median: severe 0.405 (n=136) | others 0.257 | 5x-runners 0.413 (n=47)   dump-impact(top3 sell all) median: severe 0.11 | others 0.23   zero-buy sellers: severe 1162 | others 410
+  SHAKE  top3 share median: severe 0.104 (n=3) | others 0.097 | 5x-runners 0.097 (n=7)   dump-impact(top3 sell all) median: severe 0.60 | others 0.54   zero-buy sellers: severe 49 | others 263
+
+== books (haircut applied) ==
+  R3 trail30 all                               n= 166  mean +0.173  cap5x +0.044  median -0.186  SOL@0.2 +5.74  win% 34.3  severe% 10.2  unresolved% 3.0
+  R3 trail30 top3<12%                          n=  88  mean -0.125  cap5x -0.125  median -0.212  SOL@0.2 -2.20  win% 27.3  severe%  9.1  unresolved% 3.4
+  R3 trail30 top5<18%                          n=  98  mean +0.091  cap5x -0.087  median -0.214  SOL@0.2 +1.78  win% 28.6  severe%  9.2  unresolved% 3.1
+  R3 trail30 top3-dump would cut price <45%    n=  69  mean +0.180  cap5x -0.073  median -0.220  SOL@0.2 +2.48  win% 30.4  severe% 11.6  unresolved% 1.4
+  R3 trail30 >=25 buyers in last 60 s          n= 143  mean +0.224  cap5x +0.075  median -0.177  SOL@0.2 +6.40  win% 37.1  severe%  9.8  unresolved% 3.5
+  R3 trail30 in pool                           n=  58  mean +0.019  cap5x -0.049  median -0.214  SOL@0.2 +0.22  win% 29.3  severe% 12.1  unresolved% 6.9
+  R3 trail30 on curve                          n= 108  mean +0.256  cap5x +0.095  median -0.176  SOL@0.2 +5.52  win% 37.0  severe%  9.3  unresolved% 0.9
+  R3 trail30 top5<18% & >=25 buyers            n=  85  mean +0.122  cap5x -0.082  median -0.211  SOL@0.2 +2.08  win% 29.4  severe%  9.4  unresolved% 3.5
+  R3 trail30 first half (train)                n=  58  mean +0.005  cap5x +0.005  median -0.235  SOL@0.2 +0.06  win% 29.3  severe% 10.3  unresolved% 0.0
+  R3 trail30 second half (test)                n= 108  mean +0.263  cap5x +0.065  median -0.162  SOL@0.2 +5.67  win% 37.0  severe% 10.2  unresolved% 4.6
+  R3 r3_free all                               n= 166  mean -0.009  cap5x -0.009  median -0.064  SOL@0.2 -0.31  win% 40.4  severe% 13.9  unresolved% 1.2
+  R3 r3_free top3<12%                          n=  88  mean -0.049  cap5x -0.049  median -0.075  SOL@0.2 -0.87  win% 39.8  severe% 13.6  unresolved% 2.3
+  R3 r3_free top5<18%                          n=  98  mean -0.040  cap5x -0.040  median -0.080  SOL@0.2 -0.79  win% 39.8  severe% 15.3  unresolved% 2.0
+  R3 r3_free top3-dump would cut price <45%    n=  69  mean -0.011  cap5x -0.011  median -0.063  SOL@0.2 -0.15  win% 43.5  severe% 17.4  unresolved% 2.9
+  R3 r3_free >=25 buyers in last 60 s          n= 143  mean +0.008  cap5x +0.008  median -0.063  SOL@0.2 +0.23  win% 40.6  severe% 12.6  unresolved% 1.4
+  R3 r3_free in pool                           n=  58  mean -0.092  cap5x -0.092  median -0.081  SOL@0.2 -1.06  win% 22.4  severe% 17.2  unresolved% 0.0
+  R3 r3_free on curve                          n= 108  mean +0.035  cap5x +0.035  median -0.002  SOL@0.2 +0.75  win% 50.0  severe% 12.0  unresolved% 1.9
+  R3 r3_free top5<18% & >=25 buyers            n=  85  mean -0.036  cap5x -0.036  median -0.075  SOL@0.2 -0.61  win% 40.0  severe% 16.5  unresolved% 2.4
+  R3 r3_free first half (train)                n=  58  mean -0.078  cap5x -0.078  median -0.113  SOL@0.2 -0.90  win% 32.8  severe% 17.2  unresolved% 0.0
+  R3 r3_free second half (test)                n= 108  mean +0.027  cap5x +0.027  median -0.030  SOL@0.2 +0.59  win% 44.4  severe% 12.0  unresolved% 1.9
+  R5 trail30 all                               n=  59  mean +0.259  cap5x +0.110  median -0.128  SOL@0.2 +3.05  win% 32.2  severe%  5.1  unresolved% 0.0
+  R5 trail30 top3<12%                          n=  26  mean -0.083  cap5x -0.083  median -0.139  SOL@0.2 -0.43  win% 26.9  severe%  0.0  unresolved% 0.0
+  R5 trail30 top5<18%                          n=  29  mean +0.349  cap5x +0.054  median -0.128  SOL@0.2 +2.02  win% 27.6  severe%  0.0  unresolved% 0.0
+  R5 trail30 top3-dump would cut price <45%    n=  11  mean -0.007  cap5x -0.007  median -0.113  SOL@0.2 -0.02  win% 36.4  severe%  0.0  unresolved% 0.0
+  R5 trail30 >=25 buyers in last 60 s          n=  50  mean +0.312  cap5x +0.137  median -0.128  SOL@0.2 +3.12  win% 34.0  severe%  2.0  unresolved% 0.0
+  R5 trail30 in pool                           n=  35  mean +0.008  cap5x +0.002  median -0.174  SOL@0.2 +0.06  win% 22.9  severe%  8.6  unresolved% 0.0
+  R5 trail30 on curve                          n=  24  mean +0.624  cap5x +0.268  median -0.109  SOL@0.2 +2.99  win% 45.8  severe%  0.0  unresolved% 0.0
+  R5 trail30 top5<18% & >=25 buyers            n=  25  mean +0.405  cap5x +0.063  median -0.128  SOL@0.2 +2.02  win% 28.0  severe%  0.0  unresolved% 0.0
+  R5 trail30 first half (train)                n=  18  mean +0.043  cap5x +0.043  median -0.154  SOL@0.2 +0.15  win% 33.3  severe%  5.6  unresolved% 0.0
+  R5 trail30 second half (test)                n=  41  mean +0.354  cap5x +0.140  median -0.119  SOL@0.2 +2.90  win% 31.7  severe%  4.9  unresolved% 0.0
+  R5 r3_free all                               n=  59  mean -0.014  cap5x -0.014  median -0.056  SOL@0.2 -0.16  win% 42.4  severe% 16.9  unresolved% 0.0
+  R5 r3_free top3<12%                          n=  26  mean -0.003  cap5x -0.003  median -0.101  SOL@0.2 -0.01  win% 42.3  severe% 11.5  unresolved% 0.0
+  R5 r3_free top5<18%                          n=  29  mean +0.078  cap5x +0.078  median -0.079  SOL@0.2 +0.45  win% 44.8  severe% 10.3  unresolved% 0.0
+  R5 r3_free top3-dump would cut price <45%    n=  11  mean +0.173  cap5x +0.173  median +0.083  SOL@0.2 +0.38  win% 54.5  severe%  9.1  unresolved% 0.0
+  R5 r3_free >=25 buyers in last 60 s          n=  50  mean +0.004  cap5x +0.004  median -0.068  SOL@0.2 +0.04  win% 44.0  severe% 14.0  unresolved% 0.0
+  R5 r3_free in pool                           n=  35  mean -0.132  cap5x -0.132  median -0.121  SOL@0.2 -0.92  win% 34.3  severe% 20.0  unresolved% 0.0
+  R5 r3_free on curve                          n=  24  mean +0.159  cap5x +0.159  median +0.024  SOL@0.2 +0.76  win% 54.2  severe% 12.5  unresolved% 0.0
+  R5 r3_free top5<18% & >=25 buyers            n=  25  mean +0.114  cap5x +0.114  median -0.079  SOL@0.2 +0.57  win% 44.0  severe%  8.0  unresolved% 0.0
+  R5 r3_free first half (train)                n=  18  mean -0.077  cap5x -0.077  median -0.001  SOL@0.2 -0.28  win% 50.0  severe% 16.7  unresolved% 0.0
+  R5 r3_free second half (test)                n=  41  mean +0.014  cap5x +0.014  median -0.102  SOL@0.2 +0.12  win% 39.0  severe% 17.1  unresolved% 0.0
+  GRAD trail30 all                             n= 388  mean -0.077  cap5x -0.120  median -0.314  SOL@0.2 -5.98  win% 25.3  severe% 37.6  unresolved% 1.8
+  GRAD trail30 top3<12%                        n=  88  mean -0.113  cap5x -0.113  median -0.172  SOL@0.2 -1.99  win% 33.0  severe% 15.9  unresolved% 3.4
+  GRAD trail30 top5<18%                        n=  90  mean -0.011  cap5x -0.057  median -0.172  SOL@0.2 -0.20  win% 33.3  severe% 15.6  unresolved% 3.3
+  GRAD trail30 top3-dump would cut price <45%  n=  41  mean -0.195  cap5x -0.195  median -0.232  SOL@0.2 -1.60  win% 31.7  severe% 36.6  unresolved% 7.3
+  GRAD trail30 top3<12% & pool gap<=35%        n=  58  mean -0.025  cap5x -0.025  median -0.100  SOL@0.2 -0.29  win% 44.8  severe%  5.2  unresolved% 3.4
+  GRAD trail30 first half (train)              n= 104  mean +0.084  cap5x +0.015  median -0.242  SOL@0.2 +1.76  win% 28.8  severe% 31.7  unresolved% 0.0
+  GRAD trail30 second half (test)              n= 284  mean -0.136  cap5x -0.169  median -0.322  SOL@0.2 -7.74  win% 23.9  severe% 39.8  unresolved% 2.5
+  GRAD grad_scalp all                          n= 388  mean -0.010  cap5x -0.010  median -0.025  SOL@0.2 -0.79  win% 42.8  severe%  5.7  unresolved% 0.0
+  GRAD grad_scalp top3<12%                     n=  88  mean +0.003  cap5x +0.003  median -0.024  SOL@0.2 +0.05  win% 44.3  severe%  5.7  unresolved% 0.0
+  GRAD grad_scalp top5<18%                     n=  90  mean +0.006  cap5x +0.006  median -0.023  SOL@0.2 +0.10  win% 45.6  severe%  5.6  unresolved% 0.0
+  GRAD grad_scalp top3-dump would cut price <45% n=  41  mean +0.014  cap5x +0.014  median -0.002  SOL@0.2 +0.12  win% 46.3  severe%  4.9  unresolved% 0.0
+  GRAD grad_scalp top3<12% & pool gap<=35%     n=  58  mean +0.037  cap5x +0.037  median -0.027  SOL@0.2 +0.42  win% 46.6  severe%  5.2  unresolved% 0.0
+  GRAD grad_scalp first half (train)           n= 104  mean -0.022  cap5x -0.022  median -0.025  SOL@0.2 -0.45  win% 44.2  severe%  7.7  unresolved% 0.0
+  GRAD grad_scalp second half (test)           n= 284  mean -0.006  cap5x -0.006  median -0.025  SOL@0.2 -0.34  win% 42.3  severe%  4.9  unresolved% 0.0
+  SHAKE trail30 all                            n=  54  mean -0.020  cap5x -0.020  median -0.164  SOL@0.2 -0.22  win% 35.2  severe% 11.1  unresolved% 0.0
+  SHAKE trail30 top3<12%                       n=  41  mean +0.023  cap5x +0.023  median -0.083  SOL@0.2 +0.19  win% 41.5  severe%  9.8  unresolved% 0.0
+  SHAKE trail30 top5<18%                       n=  42  mean +0.014  cap5x +0.014  median -0.124  SOL@0.2 +0.12  win% 40.5  severe%  9.5  unresolved% 0.0
+  SHAKE trail30 top3-dump would cut price <45% n=  25  mean +0.022  cap5x +0.022  median -0.133  SOL@0.2 +0.11  win% 36.0  severe% 12.0  unresolved% 0.0
+  SHAKE trail30 first half (train)             n=  12  mean -0.121  cap5x -0.121  median -0.239  SOL@0.2 -0.29  win% 16.7  severe% 16.7  unresolved% 0.0
+  SHAKE trail30 second half (test)             n=  42  mean +0.009  cap5x +0.009  median -0.124  SOL@0.2 +0.08  win% 40.5  severe%  9.5  unresolved% 0.0
+  SHAKE shake all                              n=  54  mean +0.064  cap5x +0.037  median -0.214  SOL@0.2 +0.69  win% 33.3  severe% 37.0  unresolved% 0.0
+  SHAKE shake top3<12%                         n=  41  mean +0.113  cap5x +0.077  median -0.191  SOL@0.2 +0.92  win% 34.1  severe% 34.1  unresolved% 0.0
+  SHAKE shake top5<18%                         n=  42  mean +0.098  cap5x +0.064  median -0.193  SOL@0.2 +0.83  win% 33.3  severe% 35.7  unresolved% 0.0
+  SHAKE shake top3-dump would cut price <45%   n=  25  mean +0.064  cap5x +0.006  median -0.260  SOL@0.2 +0.32  win% 24.0  severe% 36.0  unresolved% 0.0
+  SHAKE shake first half (train)               n=  12  mean -0.217  cap5x -0.217  median -0.389  SOL@0.2 -0.52  win% 16.7  severe% 50.0  unresolved% 0.0
+  SHAKE shake second half (test)               n=  42  mean +0.144  cap5x +0.109  median -0.163  SOL@0.2 +1.21  win% 38.1  severe% 33.3  unresolved% 0.0
+
+== SMART-CLUSTER: 200 wallets qualified on the first half (>=8 coins, >=35% of them reached 3x); test-half entries: 30 ==
+  SMART copy-exit book (test half only)        n=  30  mean -0.013  cap5x -0.013  median -0.042  SOL@0.2 -0.08  win% 13.3  severe%  3.3  unresolved% 0.0
+  entry time median 122 s; peak>=2x from entry 50.0%; >=5x 20.0%

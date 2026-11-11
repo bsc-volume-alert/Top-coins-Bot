@@ -1,0 +1,89 @@
+fill status by trigger:
+fill_status  artefact (curve complete at fill: instant graduation, no pool state)  filled
+trigger                                                                                  
+BASE60                                                                         13    1306
+GRAD                                                                            0     388
+R3                                                                              6     160
+R5                                                                              2      57
+
+Reserve-based results, 0.2 SOL, LAND_S=1 (closed = sale on a state <= 600 s old; stale/unresolved reported separately, worst case = 0)
+  T30         BASE60 all      n=1306 closed=1277  mean -0.018  cap5x -0.099  median -0.270  SOL@0.2 -4.47  severe% 31.6  win% 26.4  | stale/unresolved  29  worst-case mean -0.039
+  T30         R3     all      n= 160 closed= 156  mean +0.166  cap5x +0.027  median -0.157  SOL@0.2 +5.19  severe% 10.9  win% 32.7  | stale/unresolved   4  worst-case mean +0.137
+  T30         R3     on curve n=  99 closed=  96  mean +0.260  cap5x +0.076  median -0.135  SOL@0.2 +5.00  severe% 10.4  win% 34.4  | stale/unresolved   3  worst-case mean +0.222
+  T30         R3     in pool  n=  61 closed=  60  mean +0.016  cap5x -0.052  median -0.181  SOL@0.2 +0.19  severe% 11.7  win% 30.0  | stale/unresolved   1  worst-case mean -0.001
+  T30         R5     all      n=  57 closed=  55  mean +0.297  cap5x +0.134  median -0.096  SOL@0.2 +3.26  severe%  9.1  win% 34.5  | stale/unresolved   2  worst-case mean +0.251
+  T30         R5     on curve n=  20 closed=  18  mean +0.760  cap5x +0.296  median -0.063  SOL@0.2 +2.74  severe% 11.1  win% 44.4  | stale/unresolved   2  worst-case mean +0.584
+  T30         R5     in pool  n=  37 closed=  37  mean +0.071  cap5x +0.055  median -0.096  SOL@0.2 +0.53  severe%  8.1  win% 29.7  | stale/unresolved   0  worst-case mean +0.071
+  T30         GRAD   all      n= 388 closed= 378  mean -0.137  cap5x -0.177  median -0.284  SOL@0.2 -10.34  severe% 37.3  win% 24.1  | stale/unresolved  10  worst-case mean -0.159
+  T25         BASE60 all      n=1306 closed=1281  mean -0.042  cap5x -0.063  median -0.201  SOL@0.2 -10.80  severe% 25.8  win% 29.7  | stale/unresolved  25  worst-case mean -0.060
+  T25         R3     all      n= 160 closed= 157  mean +0.055  cap5x +0.026  median -0.113  SOL@0.2 +1.74  severe%  6.4  win% 36.3  | stale/unresolved   3  worst-case mean +0.036
+  T25         R3     on curve n=  99 closed=  97  mean +0.040  cap5x +0.040  median -0.091  SOL@0.2 +0.78  severe%  6.2  win% 42.3  | stale/unresolved   2  worst-case mean +0.019
+  T25         R3     in pool  n=  61 closed=  60  mean +0.080  cap5x +0.003  median -0.121  SOL@0.2 +0.96  severe%  6.7  win% 26.7  | stale/unresolved   1  worst-case mean +0.062
+  T25         R5     all      n=  57 closed=  55  mean +0.094  cap5x +0.080  median -0.097  SOL@0.2 +1.04  severe%  7.3  win% 40.0  | stale/unresolved   2  worst-case mean +0.056
+  T25         R5     on curve n=  20 closed=  18  mean +0.167  cap5x +0.167  median -0.066  SOL@0.2 +0.60  severe%  5.6  win% 44.4  | stale/unresolved   2  worst-case mean +0.050
+  T25         R5     in pool  n=  37 closed=  37  mean +0.059  cap5x +0.037  median -0.097  SOL@0.2 +0.44  severe%  8.1  win% 37.8  | stale/unresolved   0  worst-case mean +0.059
+  T25         GRAD   all      n= 388 closed= 378  mean -0.154  cap5x -0.183  median -0.240  SOL@0.2 -11.68  severe% 34.4  win% 24.1  | stale/unresolved  10  worst-case mean -0.176
+  T50         BASE60 all      n=1306 closed=1258  mean -0.144  cap5x -0.220  median -0.461  SOL@0.2 -36.18  severe% 58.5  win% 18.0  | stale/unresolved  48  worst-case mean -0.175
+  T50         R3     all      n= 160 closed= 150  mean -0.033  cap5x -0.129  median -0.402  SOL@0.2 -1.00  severe% 50.7  win% 22.0  | stale/unresolved  10  worst-case mean -0.094
+  T50         R3     on curve n=  99 closed=  91  mean -0.064  cap5x -0.113  median -0.385  SOL@0.2 -1.17  severe% 47.3  win% 23.1  | stale/unresolved   8  worst-case mean -0.140
+  T50         R3     in pool  n=  61 closed=  59  mean +0.014  cap5x -0.155  median -0.437  SOL@0.2 +0.16  severe% 55.9  win% 20.3  | stale/unresolved   2  worst-case mean -0.019
+  T50         R5     all      n=  57 closed=  54  mean +0.003  cap5x -0.005  median -0.251  SOL@0.2 +0.04  severe% 35.2  win% 25.9  | stale/unresolved   3  worst-case mean -0.049
+  T50         R5     on curve n=  20 closed=  17  mean +0.357  cap5x +0.330  median -0.122  SOL@0.2 +1.21  severe% 11.8  win% 41.2  | stale/unresolved   3  worst-case mean +0.153
+  T50         R5     in pool  n=  37 closed=  37  mean -0.159  cap5x -0.159  median -0.376  SOL@0.2 -1.18  severe% 45.9  win% 18.9  | stale/unresolved   0  worst-case mean -0.159
+  T50         GRAD   all      n= 388 closed= 375  mean -0.180  cap5x -0.237  median -0.457  SOL@0.2 -13.50  severe% 57.9  win% 19.2  | stale/unresolved  13  worst-case mean -0.207
+  H300        BASE60 all      n=1306 closed=1305  mean -0.078  cap5x -0.090  median -0.284  SOL@0.2 -20.41  severe% 45.7  win% 37.1  | stale/unresolved   1  worst-case mean -0.079
+  H300        R3     all      n= 160 closed= 160  mean +0.009  cap5x +0.003  median -0.066  SOL@0.2 +0.28  severe% 32.5  win% 45.0  | stale/unresolved   0  worst-case mean +0.009
+  H300        R3     on curve n=  99 closed=  99  mean +0.078  cap5x +0.070  median -0.046  SOL@0.2 +1.55  severe% 30.3  win% 46.5  | stale/unresolved   0  worst-case mean +0.078
+  H300        R3     in pool  n=  61 closed=  61  mean -0.104  cap5x -0.104  median -0.084  SOL@0.2 -1.27  severe% 36.1  win% 42.6  | stale/unresolved   0  worst-case mean -0.104
+  H300        R5     all      n=  57 closed=  57  mean +0.222  cap5x +0.200  median +0.087  SOL@0.2 +2.53  severe% 26.3  win% 57.9  | stale/unresolved   0  worst-case mean +0.222
+  H300        R5     on curve n=  20 closed=  20  mean +0.658  cap5x +0.596  median +0.245  SOL@0.2 +2.63  severe% 10.0  win% 70.0  | stale/unresolved   0  worst-case mean +0.658
+  H300        R5     in pool  n=  37 closed=  37  mean -0.013  cap5x -0.013  median +0.058  SOL@0.2 -0.10  severe% 35.1  win% 51.4  | stale/unresolved   0  worst-case mean -0.013
+  H300        GRAD   all      n= 388 closed= 388  mean +0.066  cap5x +0.066  median +0.046  SOL@0.2 +5.15  severe% 11.9  win% 61.9  | stale/unresolved   0  worst-case mean +0.066
+  H600        BASE60 all      n=1306 closed=1305  mean -0.023  cap5x -0.101  median -0.507  SOL@0.2 -5.90  severe% 55.2  win% 31.3  | stale/unresolved   1  worst-case mean -0.023
+  H600        R3     all      n= 160 closed= 160  mean +0.081  cap5x -0.003  median -0.334  SOL@0.2 +2.59  severe% 48.8  win% 39.4  | stale/unresolved   0  worst-case mean +0.081
+  H600        R3     on curve n=  99 closed=  99  mean +0.198  cap5x +0.076  median -0.265  SOL@0.2 +3.92  severe% 44.4  win% 39.4  | stale/unresolved   0  worst-case mean +0.198
+  H600        R3     in pool  n=  61 closed=  61  mean -0.109  cap5x -0.131  median -0.704  SOL@0.2 -1.33  severe% 55.7  win% 39.3  | stale/unresolved   0  worst-case mean -0.109
+  H600        R5     all      n=  57 closed=  57  mean +0.208  cap5x +0.201  median -0.088  SOL@0.2 +2.37  severe% 35.1  win% 45.6  | stale/unresolved   0  worst-case mean +0.208
+  H600        R5     on curve n=  20 closed=  20  mean +0.560  cap5x +0.542  median +0.235  SOL@0.2 +2.24  severe% 20.0  win% 60.0  | stale/unresolved   0  worst-case mean +0.560
+  H600        R5     in pool  n=  37 closed=  37  mean +0.017  cap5x +0.017  median -0.147  SOL@0.2 +0.13  severe% 43.2  win% 37.8  | stale/unresolved   0  worst-case mean +0.017
+  H600        GRAD   all      n= 388 closed= 388  mean +0.125  cap5x +0.116  median +0.140  SOL@0.2 +9.69  severe% 20.4  win% 62.4  | stale/unresolved   0  worst-case mean +0.125
+  TP1.5_T40   BASE60 all      n=1306 closed=1286  mean -0.012  cap5x -0.013  median -0.213  SOL@0.2 -3.16  severe% 31.8  win% 44.6  | stale/unresolved  20  worst-case mean -0.027
+  TP1.5_T40   R3     all      n= 160 closed= 157  mean -0.014  cap5x -0.014  median -0.182  SOL@0.2 -0.44  severe% 26.1  win% 43.9  | stale/unresolved   3  worst-case mean -0.033
+  TP1.5_T40   R3     on curve n=  99 closed=  97  mean +0.021  cap5x +0.021  median -0.194  SOL@0.2 +0.40  severe% 21.6  win% 44.3  | stale/unresolved   2  worst-case mean -0.000
+  TP1.5_T40   R3     in pool  n=  61 closed=  60  mean -0.070  cap5x -0.070  median -0.178  SOL@0.2 -0.84  severe% 33.3  win% 43.3  | stale/unresolved   1  worst-case mean -0.085
+  TP1.5_T40   R5     all      n=  57 closed=  55  mean +0.090  cap5x +0.090  median +0.287  SOL@0.2 +0.99  severe% 16.4  win% 50.9  | stale/unresolved   2  worst-case mean +0.052
+  TP1.5_T40   R5     on curve n=  20 closed=  18  mean +0.215  cap5x +0.215  median +0.372  SOL@0.2 +0.77  severe% 11.1  win% 61.1  | stale/unresolved   2  worst-case mean +0.093
+  TP1.5_T40   R5     in pool  n=  37 closed=  37  mean +0.029  cap5x +0.029  median -0.142  SOL@0.2 +0.22  severe% 18.9  win% 45.9  | stale/unresolved   0  worst-case mean +0.029
+  TP1.5_T40   GRAD   all      n= 388 closed= 382  mean +0.084  cap5x +0.084  median +0.449  SOL@0.2 +6.41  severe% 25.9  win% 57.9  | stale/unresolved   6  worst-case mean +0.067
+  SL50_TP2.0  BASE60 all      n=1306 closed=1259  mean -0.067  cap5x -0.068  median -0.510  SOL@0.2 -16.83  severe% 66.2  win% 32.6  | stale/unresolved  47  worst-case mean -0.100
+  SL50_TP2.0  R3     all      n= 160 closed= 154  mean -0.067  cap5x -0.067  median -0.508  SOL@0.2 -2.06  severe% 64.3  win% 34.4  | stale/unresolved   6  worst-case mean -0.102
+  SL50_TP2.0  R3     on curve n=  99 closed=  94  mean +0.036  cap5x +0.036  median -0.503  SOL@0.2 +0.68  severe% 60.6  win% 38.3  | stale/unresolved   5  worst-case mean -0.016
+  SL50_TP2.0  R3     in pool  n=  61 closed=  60  mean -0.228  cap5x -0.228  median -0.520  SOL@0.2 -2.74  severe% 70.0  win% 28.3  | stale/unresolved   1  worst-case mean -0.241
+  SL50_TP2.0  R5     all      n=  57 closed=  53  mean -0.031  cap5x -0.031  median -0.485  SOL@0.2 -0.33  severe% 60.4  win% 37.7  | stale/unresolved   4  worst-case mean -0.099
+  SL50_TP2.0  R5     on curve n=  20 closed=  16  mean +0.246  cap5x +0.246  median +0.389  SOL@0.2 +0.79  severe% 43.8  win% 56.2  | stale/unresolved   4  worst-case mean -0.003
+  SL50_TP2.0  R5     in pool  n=  37 closed=  37  mean -0.151  cap5x -0.151  median -0.512  SOL@0.2 -1.12  severe% 67.6  win% 29.7  | stale/unresolved   0  worst-case mean -0.151
+  SL50_TP2.0  GRAD   all      n= 388 closed= 381  mean +0.094  cap5x +0.094  median -0.479  SOL@0.2 +7.15  severe% 52.5  win% 46.2  | stale/unresolved   7  worst-case mean +0.074
+  HALF2.0_T40 BASE60 all      n=1306 closed=1266  mean -0.037  cap5x -0.074  median -0.302  SOL@0.2 -9.38  severe% 38.3  win% 32.1  | stale/unresolved  40  worst-case mean -0.067
+  HALF2.0_T40 R3     all      n= 160 closed= 153  mean +0.027  cap5x -0.014  median -0.225  SOL@0.2 +0.84  severe% 28.8  win% 26.8  | stale/unresolved   7  worst-case mean -0.017
+  HALF2.0_T40 R3     on curve n=  99 closed=  93  mean +0.093  cap5x +0.030  median -0.235  SOL@0.2 +1.73  severe% 25.8  win% 26.9  | stale/unresolved   6  worst-case mean +0.027
+  HALF2.0_T40 R3     in pool  n=  61 closed=  60  mean -0.074  cap5x -0.082  median -0.206  SOL@0.2 -0.89  severe% 33.3  win% 26.7  | stale/unresolved   1  worst-case mean -0.089
+  HALF2.0_T40 R5     all      n=  57 closed=  54  mean +0.127  cap5x +0.095  median -0.162  SOL@0.2 +1.37  severe% 20.4  win% 35.2  | stale/unresolved   3  worst-case mean +0.068
+  HALF2.0_T40 R5     on curve n=  20 closed=  17  mean +0.541  cap5x +0.438  median +0.030  SOL@0.2 +1.84  severe% 11.8  win% 52.9  | stale/unresolved   3  worst-case mean +0.310
+  HALF2.0_T40 R5     in pool  n=  37 closed=  37  mean -0.063  cap5x -0.063  median -0.177  SOL@0.2 -0.46  severe% 24.3  win% 27.0  | stale/unresolved   0  worst-case mean -0.063
+  HALF2.0_T40 GRAD   all      n= 388 closed= 378  mean +0.002  cap5x -0.006  median -0.223  SOL@0.2 +0.12  severe% 36.5  win% 43.1  | stale/unresolved  10  worst-case mean -0.024
+  TVENUE      BASE60 all      n=1306 closed=1267  mean -0.051  cap5x -0.156  median -0.357  SOL@0.2 -12.93  severe% 43.7  win% 21.7  | stale/unresolved  39  worst-case mean -0.079
+  TVENUE      R3     all      n= 160 closed= 153  mean +0.150  cap5x +0.024  median -0.174  SOL@0.2 +4.58  severe% 19.0  win% 25.5  | stale/unresolved   7  worst-case mean +0.099
+  TVENUE      R3     on curve n=  99 closed=  93  mean +0.194  cap5x +0.037  median -0.239  SOL@0.2 +3.62  severe% 26.9  win% 24.7  | stale/unresolved   6  worst-case mean +0.122
+  TVENUE      R3     in pool  n=  61 closed=  60  mean +0.080  cap5x +0.003  median -0.121  SOL@0.2 +0.96  severe%  6.7  win% 26.7  | stale/unresolved   1  worst-case mean +0.062
+  TVENUE      R5     all      n=  57 closed=  54  mean +0.323  cap5x +0.187  median -0.086  SOL@0.2 +3.49  severe%  9.3  win% 42.6  | stale/unresolved   3  worst-case mean +0.254
+  TVENUE      R5     on curve n=  20 closed=  17  mean +0.898  cap5x +0.511  median +0.030  SOL@0.2 +3.05  severe% 11.8  win% 52.9  | stale/unresolved   3  worst-case mean +0.614
+  TVENUE      R5     in pool  n=  37 closed=  37  mean +0.059  cap5x +0.037  median -0.097  SOL@0.2 +0.44  severe%  8.1  win% 37.8  | stale/unresolved   0  worst-case mean +0.059
+  TVENUE      GRAD   all      n= 388 closed= 378  mean -0.154  cap5x -0.183  median -0.240  SOL@0.2 -11.68  severe% 34.4  win% 24.1  | stale/unresolved  10  worst-case mean -0.176
+
+fill price impact (x_land = immediate round trip after costs):
+          count   mean    50%    min
+trigger                             
+BASE60   1306.0  0.969  0.966  0.960
+GRAD      388.0  0.983  0.984  0.978
+R3        160.0  0.974  0.969  0.965
+R5         57.0  0.978  0.982  0.966
