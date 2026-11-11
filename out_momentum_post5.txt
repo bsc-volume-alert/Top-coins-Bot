@@ -1,0 +1,118 @@
+
+=== Period A ===
+BASE (every live coin at 5 min): n=1710 reach 2x before halving 8% | halve first 16% | neither in 60 min 77%
+CONTINUATION when the chart is going up (first time per coin):
+  up 1.5x in  5 min, near high, $10-50K  : n= 178  2x next  31%  halve first  56%  neither  13%
+  up 1.5x in  5 min, near high, $50-200K : n=  63  2x next  48%  halve first  38%  neither  14%
+  up 1.5x in  5 min, near high, >=$200K  : n=   8  2x next  25%  halve first  75%  neither   0%
+  up 2x in  5 min, near high, $10-50K  : n= 150  2x next  35%  halve first  54%  neither  11%
+  up 2x in  5 min, near high, $50-200K : n=  49  2x next  41%  halve first  47%  neither  12%
+  up 2x in  5 min, near high, >=$200K  : n=   4  2x next  25%  halve first  75%  neither   0%
+  up 3x in  5 min, near high, $10-50K  : n= 101  2x next  34%  halve first  54%  neither  12%
+  up 3x in  5 min, near high, $50-200K : n=  23  2x next  39%  halve first  39%  neither  22%
+  up 3x in  5 min, near high, >=$200K  : n=   1  2x next   0%  halve first 100%  neither   0%
+  up 1.5x in 15 min, near high, $10-50K  : n= 189  2x next  30%  halve first  56%  neither  15%
+  up 1.5x in 15 min, near high, $50-200K : n=  75  2x next  45%  halve first  39%  neither  16%
+  up 1.5x in 15 min, near high, >=$200K  : n=   9  2x next  22%  halve first  78%  neither   0%
+  up 2x in 15 min, near high, $10-50K  : n= 185  2x next  30%  halve first  56%  neither  14%
+  up 2x in 15 min, near high, $50-200K : n=  72  2x next  43%  halve first  43%  neither  14%
+  up 2x in 15 min, near high, >=$200K  : n=   9  2x next  22%  halve first  78%  neither   0%
+  up 3x in 15 min, near high, $10-50K  : n= 171  2x next  32%  halve first  55%  neither  13%
+  up 3x in 15 min, near high, $50-200K : n=  65  2x next  45%  halve first  42%  neither  14%
+  up 3x in 15 min, near high, >=$200K  : n=   6  2x next  17%  halve first  83%  neither   0%
+TRADING (0.2 SOL, v2.2 execution):
+  up 1.5x/ 5m $10-50K   T25: n=173 mean  +31.0% med  -11.7% win  36% lost>=50%   9% | -top3   +3.8% | unpriced 5 flagged 8
+  up 1.5x/ 5m $10-50K   T40: n=173 mean  +25.8% med  -26.4% win  30% lost>=50%  21% | -top3   -7.1% | unpriced 5 flagged 12
+  up 1.5x/ 5m $50-200K  T25: n= 61 mean  +12.2% med   -5.1% win  44% lost>=50%   2% | -top3   +1.1% | unpriced 2 flagged 1
+  up 1.5x/ 5m $50-200K  T40: n= 61 mean  +14.8% med   -1.0% win  48% lost>=50%  10% | -top3   -0.6% | unpriced 2 flagged 2
+  up 1.5x/ 5m >=$200K   T25: n=  8 mean  +19.2% med  -10.8% win  38% lost>=50%   0% | -top3  -14.7% | unpriced 0 flagged 0
+  up 1.5x/ 5m >=$200K   T40: n=  8 mean   +5.1% med  -21.4% win  38% lost>=50%   0% | -top3  -27.9% | unpriced 0 flagged 0
+  up 2x/ 5m $10-50K   T25: n=145 mean  +42.0% med   -7.1% win  41% lost>=50%   4% | -top3  +10.3% | unpriced 5 flagged 8
+  up 2x/ 5m $10-50K   T40: n=145 mean  +35.7% med  -24.3% win  33% lost>=50%  18% | -top3   -3.4% | unpriced 5 flagged 11
+  up 2x/ 5m $50-200K  T25: n= 47 mean  +10.1% med   -4.7% win  40% lost>=50%   2% | -top3   -3.4% | unpriced 2 flagged 0
+  up 2x/ 5m $50-200K  T40: n= 47 mean  +17.3% med  -12.5% win  43% lost>=50%   6% | -top3   -2.9% | unpriced 2 flagged 0
+  up 2x/ 5m >=$200K   T25: n=  4 mean  +28.2% med   +7.4% win  50% lost>=50%   0% | -top3  -24.4% | unpriced 0 flagged 0
+  up 2x/ 5m >=$200K   T40: n=  4 mean   +7.0% med  -14.1% win  50% lost>=50%   0% | -top3  -39.5% | unpriced 0 flagged 0
+  up 3x/ 5m $10-50K   T25: n= 96 mean  +54.0% med   -3.5% win  44% lost>=50%   3% | -top3   +9.0% | unpriced 5 flagged 6
+  up 3x/ 5m $10-50K   T40: n= 96 mean  +48.3% med  -19.9% win  35% lost>=50%  16% | -top3   -3.3% | unpriced 5 flagged 9
+  up 3x/ 5m $50-200K  T25: n= 21 mean  +19.3% med   +1.6% win  52% lost>=50%   0% | -top3   +2.4% | unpriced 2 flagged 0
+  up 3x/ 5m $50-200K  T40: n= 21 mean  +30.7% med   +1.0% win  52% lost>=50%   0% | -top3   +2.2% | unpriced 2 flagged 0
+  up 3x/ 5m >=$200K   T25: n=  1 mean  -12.7% med  -12.7% win   0% lost>=50%   0% | -top3   +nan% | unpriced 0 flagged 0
+  up 3x/ 5m >=$200K   T40: n=  1 mean  -29.6% med  -29.6% win   0% lost>=50%   0% | -top3   +nan% | unpriced 0 flagged 0
+  up 1.5x/15m $10-50K   T25: n=183 mean  +26.8% med  -13.0% win  34% lost>=50%   9% | -top3   +1.1% | unpriced 6 flagged 8
+  up 1.5x/15m $10-50K   T40: n=183 mean  +23.7% med  -26.7% win  30% lost>=50%  21% | -top3   -7.5% | unpriced 6 flagged 15
+  up 1.5x/15m $50-200K  T25: n= 71 mean   +5.8% med   -3.8% win  46% lost>=50%   8% | -top3   -4.0% | unpriced 4 flagged 1
+  up 1.5x/15m $50-200K  T40: n= 71 mean   +5.8% med   -6.7% win  45% lost>=50%  18% | -top3   -7.7% | unpriced 4 flagged 2
+  up 1.5x/15m >=$200K   T25: n=  9 mean  +14.2% med  -11.7% win  33% lost>=50%   0% | -top3  -16.6% | unpriced 0 flagged 0
+  up 1.5x/15m >=$200K   T40: n=  9 mean   +0.1% med  -25.0% win  33% lost>=50%   0% | -top3  -29.8% | unpriced 0 flagged 0
+  up 2x/15m $10-50K   T25: n=179 mean  +28.0% med  -12.6% win  35% lost>=50%   9% | -top3   +1.7% | unpriced 6 flagged 8
+  up 2x/15m $10-50K   T40: n=179 mean  +25.0% med  -26.4% win  31% lost>=50%  21% | -top3   -6.8% | unpriced 6 flagged 14
+  up 2x/15m $50-200K  T25: n= 68 mean   +4.3% med   -5.3% win  46% lost>=50%   9% | -top3   -6.0% | unpriced 4 flagged 2
+  up 2x/15m $50-200K  T40: n= 68 mean   +5.6% med   -6.0% win  44% lost>=50%  18% | -top3   -8.6% | unpriced 4 flagged 2
+  up 2x/15m >=$200K   T25: n=  9 mean  +14.2% med  -11.7% win  33% lost>=50%   0% | -top3  -16.6% | unpriced 0 flagged 0
+  up 2x/15m >=$200K   T40: n=  9 mean   +0.1% med  -25.0% win  33% lost>=50%   0% | -top3  -29.8% | unpriced 0 flagged 0
+  up 3x/15m $10-50K   T25: n=165 mean  +32.9% med  -10.9% win  37% lost>=50%   8% | -top3   +4.4% | unpriced 6 flagged 8
+  up 3x/15m $10-50K   T40: n=165 mean  +30.2% med  -25.7% win  32% lost>=50%  21% | -top3   -4.2% | unpriced 6 flagged 13
+  up 3x/15m $50-200K  T25: n= 61 mean   +6.6% med   -5.1% win  46% lost>=50%   8% | -top3   -4.8% | unpriced 4 flagged 1
+  up 3x/15m $50-200K  T40: n= 61 mean   +7.9% med   -5.4% win  46% lost>=50%  18% | -top3   -7.9% | unpriced 4 flagged 1
+  up 3x/15m >=$200K   T25: n=  6 mean  +14.8% med  -11.0% win  33% lost>=50%   0% | -top3  -17.3% | unpriced 0 flagged 0
+  up 3x/15m >=$200K   T40: n=  6 mean   +0.6% med  -12.1% win  33% lost>=50%   0% | -top3  -28.9% | unpriced 0 flagged 0
+
+=== Period B ===
+BASE (every live coin at 5 min): n=232 reach 2x before halving 31% | halve first 50% | neither in 60 min 19%
+CONTINUATION when the chart is going up (first time per coin):
+  up 1.5x in  5 min, near high, $10-50K  : n=  96  2x next  34%  halve first  54%  neither  11%
+  up 1.5x in  5 min, near high, $50-200K : n=  59  2x next  22%  halve first  59%  neither  19%
+  up 1.5x in  5 min, near high, >=$200K  : n=   4  2x next  25%  halve first  75%  neither   0%
+  up 2x in  5 min, near high, $10-50K  : n=  89  2x next  35%  halve first  53%  neither  12%
+  up 2x in  5 min, near high, $50-200K : n=  38  2x next  29%  halve first  47%  neither  24%
+  up 2x in  5 min, near high, >=$200K  : n=   2  2x next  50%  halve first  50%  neither   0%
+  up 3x in  5 min, near high, $10-50K  : n=  65  2x next  34%  halve first  52%  neither  14%
+  up 3x in  5 min, near high, $50-200K : n=  30  2x next  20%  halve first  47%  neither  33%
+  up 3x in  5 min, near high, >=$200K  : n=   2  2x next  50%  halve first  50%  neither   0%
+  up 1.5x in 15 min, near high, $10-50K  : n=  99  2x next  34%  halve first  54%  neither  12%
+  up 1.5x in 15 min, near high, $50-200K : n=  86  2x next  31%  halve first  53%  neither  15%
+  up 1.5x in 15 min, near high, >=$200K  : n=  11  2x next  27%  halve first  73%  neither   0%
+  up 2x in 15 min, near high, $10-50K  : n=  99  2x next  34%  halve first  54%  neither  12%
+  up 2x in 15 min, near high, $50-200K : n=  76  2x next  29%  halve first  54%  neither  17%
+  up 2x in 15 min, near high, >=$200K  : n=   5  2x next  20%  halve first  80%  neither   0%
+  up 3x in 15 min, near high, $10-50K  : n=  94  2x next  34%  halve first  54%  neither  12%
+  up 3x in 15 min, near high, $50-200K : n=  73  2x next  27%  halve first  55%  neither  18%
+  up 3x in 15 min, near high, >=$200K  : n=   3  2x next  33%  halve first  67%  neither   0%
+TRADING (0.2 SOL, v2.2 execution):
+  up 1.5x/ 5m $10-50K   T25: n= 86 mean  +13.8% med   -6.2% win  40% lost>=50%  13% | -top3   -2.9% | unpriced 10 flagged 4
+  up 1.5x/ 5m $10-50K   T40: n= 86 mean   +1.2% med  -24.7% win  30% lost>=50%  34% | -top3  -17.8% | unpriced 10 flagged 5
+  up 1.5x/ 5m $50-200K  T25: n= 51 mean   -2.0% med  -14.5% win  29% lost>=50%  10% | -top3  -15.3% | unpriced 8 flagged 3
+  up 1.5x/ 5m $50-200K  T40: n= 51 mean   -6.6% med  -21.5% win  27% lost>=50%  20% | -top3  -22.7% | unpriced 8 flagged 4
+  up 1.5x/ 5m >=$200K   T25: n=  4 mean  +87.0% med  -20.3% win  25% lost>=50%  25% | -top3  -75.7% | unpriced 0 flagged 1
+  up 1.5x/ 5m >=$200K   T40: n=  4 mean  +80.6% med  -33.1% win  25% lost>=50%  25% | -top3  -75.7% | unpriced 0 flagged 1
+  up 2x/ 5m $10-50K   T25: n= 81 mean  +12.9% med   -6.7% win  40% lost>=50%  14% | -top3   -4.8% | unpriced 8 flagged 4
+  up 2x/ 5m $10-50K   T40: n= 81 mean   +2.6% med  -25.2% win  30% lost>=50%  33% | -top3  -17.6% | unpriced 8 flagged 5
+  up 2x/ 5m $50-200K  T25: n= 30 mean  +13.1% med   -7.8% win  37% lost>=50%   3% | -top3   -8.2% | unpriced 8 flagged 0
+  up 2x/ 5m $50-200K  T40: n= 30 mean   +7.7% med  -16.4% win  33% lost>=50%  10% | -top3  -15.2% | unpriced 8 flagged 2
+  up 2x/ 5m >=$200K   T25: n=  2 mean +194.2% med +194.2% win  50% lost>=50%  50% | -top3   +nan% | unpriced 0 flagged 1
+  up 2x/ 5m >=$200K   T40: n=  2 mean +194.2% med +194.2% win  50% lost>=50%  50% | -top3   +nan% | unpriced 0 flagged 1
+  up 3x/ 5m $10-50K   T25: n= 59 mean  +18.2% med   -6.7% win  37% lost>=50%   8% | -top3   -4.7% | unpriced 6 flagged 4
+  up 3x/ 5m $10-50K   T40: n= 59 mean  +14.5% med  -24.2% win  29% lost>=50%  31% | -top3  -13.0% | unpriced 6 flagged 4
+  up 3x/ 5m $50-200K  T25: n= 22 mean  +16.1% med  -13.2% win  23% lost>=50%   0% | -top3  -13.4% | unpriced 8 flagged 0
+  up 3x/ 5m $50-200K  T40: n= 22 mean  +11.5% med  -25.1% win  23% lost>=50%   0% | -top3  -19.7% | unpriced 8 flagged 2
+  up 3x/ 5m >=$200K   T25: n=  2 mean +194.2% med +194.2% win  50% lost>=50%  50% | -top3   +nan% | unpriced 0 flagged 1
+  up 3x/ 5m >=$200K   T40: n=  2 mean +194.2% med +194.2% win  50% lost>=50%  50% | -top3   +nan% | unpriced 0 flagged 1
+  up 1.5x/15m $10-50K   T25: n= 88 mean  +13.0% med   -6.2% win  41% lost>=50%  14% | -top3   -3.2% | unpriced 11 flagged 4
+  up 1.5x/15m $10-50K   T40: n= 88 mean   +0.2% med  -24.7% win  31% lost>=50%  34% | -top3  -18.4% | unpriced 11 flagged 5
+  up 1.5x/15m $50-200K  T25: n= 78 mean  +11.2% med  -16.7% win  31% lost>=50%  19% | -top3  -22.5% | unpriced 8 flagged 6
+  up 1.5x/15m $50-200K  T40: n= 78 mean   +2.9% med  -30.8% win  24% lost>=50%  29% | -top3  -30.4% | unpriced 8 flagged 8
+  up 1.5x/15m >=$200K   T25: n= 11 mean   +7.1% med  -37.8% win  27% lost>=50%  45% | -top3  -61.0% | unpriced 0 flagged 1
+  up 1.5x/15m >=$200K   T40: n= 11 mean  -12.9% med  -68.5% win  18% lost>=50%  55% | -top3  -77.2% | unpriced 0 flagged 1
+  up 2x/15m $10-50K   T25: n= 88 mean  +13.0% med   -6.2% win  41% lost>=50%  14% | -top3   -3.2% | unpriced 11 flagged 4
+  up 2x/15m $10-50K   T40: n= 88 mean   +0.2% med  -24.7% win  31% lost>=50%  34% | -top3  -18.4% | unpriced 11 flagged 5
+  up 2x/15m $50-200K  T25: n= 68 mean   -8.3% med  -15.9% win  31% lost>=50%  15% | -top3  -19.6% | unpriced 8 flagged 5
+  up 2x/15m $50-200K  T40: n= 68 mean  -15.8% med  -28.4% win  25% lost>=50%  25% | -top3  -28.1% | unpriced 8 flagged 7
+  up 2x/15m >=$200K   T25: n=  5 mean  +50.0% med  -37.8% win  20% lost>=50%  40% | -top3  -86.9% | unpriced 0 flagged 1
+  up 2x/15m >=$200K   T40: n=  5 mean  +44.8% med  -37.8% win  20% lost>=50%  40% | -top3  -86.9% | unpriced 0 flagged 1
+  up 3x/15m $10-50K   T25: n= 84 mean  +13.3% med   -6.2% win  40% lost>=50%  14% | -top3   -3.8% | unpriced 10 flagged 4
+  up 3x/15m $10-50K   T40: n= 84 mean   -0.0% med  -25.3% win  30% lost>=50%  36% | -top3  -19.6% | unpriced 10 flagged 5
+  up 3x/15m $50-200K  T25: n= 65 mean  -10.8% med  -15.2% win  31% lost>=50%  17% | -top3  -21.6% | unpriced 8 flagged 6
+  up 3x/15m $50-200K  T40: n= 65 mean  -14.9% med  -23.1% win  26% lost>=50%  26% | -top3  -27.8% | unpriced 8 flagged 8
+  up 3x/15m >=$200K   T25: n=  3 mean +128.5% med   -2.7% win  33% lost>=50%  33% | -top3   +nan% | unpriced 0 flagged 1
+  up 3x/15m >=$200K   T40: n=  3 mean +120.0% med  -28.4% win  33% lost>=50%  33% | -top3   +nan% | unpriced 0 flagged 1
