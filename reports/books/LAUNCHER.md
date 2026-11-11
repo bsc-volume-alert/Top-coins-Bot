@@ -421,3 +421,6 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - Reason: every one was losing in the last 12 h (BL −24.3, E60 −20.9, E90 −18.1, BL27 −16.7, A1 −12.1 SOL…) after weeks of evidence; they were the main user of Helius credits.
 - Kept running: 100K1–3 (frozen benchmarks), R3C, C2. /fd2 shows only these five.
 - The missed-runner ledger against BL ends here (owner chose to stop BL too). Turn back on with LAUNCH_FD_BOOKS=1.
+
+## 11 Nov 13:50 UK — SW5 / G1 / RB paper books prepared (launcher 0.10.1, scope 0.13.1) — see SW5_G1_RB.md
+- One combined diff per Codex's 13:41 recommendation: wallet-led 5-min hold (frozen 200-wallet list), post-graduation scalp (TP 1.45 / fixed −50% stop / 90–120 s stagnation, continues otherwise), one-wave recovery with 15 new buyers (30% trail). Per-book exit policies added to chainfill beside the trail override. R3C, references, K books, page clean-up unchanged. Pushed only on the owner's go.

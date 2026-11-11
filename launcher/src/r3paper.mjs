@@ -22,6 +22,7 @@ const now = () => Math.floor(Date.now() / 1000);
 export const R3_VER = "R3C-1";
 const BOOK = "R3C", RUN = 3, RUN5 = 5, T_MIN = 60, T_MAX = 900, LATE_S = 5, TRAIL = 0.30, CURVE_MAX_PX = 4.2e-7;
 export const r3Stat = { polled: 0, trades: 0, coins: 0, eligible: 0, triggers: 0, late: 0, entries: 0, graduatedAtRead: 0, r5: 0, errors: 0, lastErr: "", activated: null, lastTrig: null };
+const HOOKS = []; export function onTradeRows(fn) { HOOKS.push(fn); } // 0.10.1: sibling paper books (SW5 / G1 / RB) read the same 2-s trade batches
 let db = null, tdb = null, lastRowid = 0; const S = new Map(); // mint → { c, p60, p60ts, prev, done, trigTs, r5 }
 export function initR3(d, t) {
   db = d; tdb = t; if (!tdb) return;
@@ -68,10 +69,11 @@ function poll() {
   if (!tdb) return; r3Stat.polled++;
   let rows;
   try { const mx = tdb.prepare("SELECT MAX(rowid) r FROM trades").get().r || lastRowid;
-    rows = tdb.prepare("SELECT rowid AS rid, mint, ts, price_sol, venue FROM trades WHERE rowid > ? AND rowid <= ? ORDER BY rowid LIMIT 5000").all(lastRowid, mx);
+    rows = tdb.prepare("SELECT rowid AS rid, mint, ts, price_sol, venue, wallet, is_buy, sol, tokens FROM trades WHERE rowid > ? AND rowid <= ? ORDER BY rowid LIMIT 5000").all(lastRowid, mx); // 0.10.1: wallet / side / size for the sibling books
     lastRowid = rows.length === 5000 ? rows[rows.length - 1].rid : mx; }
   catch (e) { r3Stat.errors++; r3Stat.lastErr = ("poll " + e.message).slice(0, 120); return; }
   const readTs = now(); r3Stat.trades += rows.length;
+  for (const h of HOOKS) { try { h(rows, readTs, tdb, db); } catch (e) { r3Stat.lastErr = ("hook " + e.message).slice(0, 120); } }
   for (const r of rows) {
     try {
       const s = state(r.mint); s.seen = readTs; if (s.done || !s.c) continue;
