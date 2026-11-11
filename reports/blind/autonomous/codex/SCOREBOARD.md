@@ -12,3 +12,7 @@ C001 mean/median, severe losses, unknown lower bounds, per-launch SOL and no-bes
 | c002-20261111T031305Z | Named jackpot and never-enter buffer defects | Four mints × two horizons match at both sizes; 16/16 checksums pass. 12,001-row never-enter case is unknown before decide() | No valid profit claim; artificial lower bounds are not losses | C003 |
 
 C002 corrects attribution: 5kdsd8zW scores +178.773683 at 30s and unknown at 2h; +3494.461446 at 2h belongs to LLzYn4ZZ. Pool-decoder root cause remains unverified. No repair to frozen evaluator or retrospective exclusions applied.
+
+| c003-20261111T090819Z | Runner evidence and causal coverage | 18/18 inspected raw-file checksums pass; seven external evidence branches resolved by metadata only; lifecycle timing/coverage measured | No strategy/return search; missing crossings are not negative labels | C004 |
+
+C003: snapshot3 census 85,016 versus 14,455 lifecycle mints reflects different export windows; 59,116 lifecycle rows lack obs_ts. Crossing table: 200 records, 45 suspicious-jump flags, 87 FX ages >60s. No 24h lifecycle checkpoints in the audited exports. See coverage.json and README; protected branches remain unopened.

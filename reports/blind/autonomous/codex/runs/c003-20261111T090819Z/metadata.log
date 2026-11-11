@@ -1,0 +1,56 @@
+[
+  {
+    "branch": "audit-20261110t0210",
+    "commit": "6203f13025cc4fc77fe3a7f2ee1c49d6d96f0a76",
+    "files": 9,
+    "agents": []
+  },
+  {
+    "branch": "k100-20261108t1722",
+    "commit": "72d673ed0e5cec92ebf4e7ff612ba419991a3005",
+    "files": 7,
+    "agents": []
+  },
+  {
+    "branch": "k100-20261109t1144",
+    "commit": "66f2371c99cc8e06c558ed76d64b183cda866d69",
+    "files": 7,
+    "agents": []
+  },
+  {
+    "branch": "k100-audit-20261110t2102",
+    "commit": "c093afef0b9cc71aa166ac459f543f5f772cbb26",
+    "files": 49,
+    "agents": []
+  },
+  {
+    "branch": "replay-9nov-inputs-20261109t1410",
+    "commit": "f9a0086c31e529e9c70409ad743e872968a2ae6e",
+    "files": 35,
+    "agents": []
+  },
+  {
+    "branch": "replay-9nov-v2-20261109t1900",
+    "commit": "7cd714fb9fb2e1133bdf84d646c49a3e62d8c265",
+    "files": 11,
+    "agents": []
+  },
+  {
+    "branch": "research-codex",
+    "commit": "611852064e85fefac882c01a88cdf03423241b27",
+    "files": 77,
+    "agents": []
+  },
+  {
+    "branch": "study100k-v1-inputs",
+    "commit": "3bd9c3b90d6882b80f3dfd6189831f0f43c30998",
+    "files": 20,
+    "agents": []
+  },
+  {
+    "branch": "tracker",
+    "commit": "47c3eeb26aa6fadebd0f1e1a43e2ce4d283ec8c6",
+    "files": 75,
+    "agents": []
+  }
+]

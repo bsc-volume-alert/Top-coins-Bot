@@ -1,0 +1,378 @@
+[
+  {
+    "name": "analysis-inputs-7nov",
+    "commit": {
+      "sha": "95bd782e8f22fcd4cd16e1d4f4218a8c82fc5a14",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/95bd782e8f22fcd4cd16e1d4f4218a8c82fc5a14"
+    },
+    "protected": false
+  },
+  {
+    "name": "audit-20261110t0210",
+    "commit": {
+      "sha": "6203f13025cc4fc77fe3a7f2ee1c49d6d96f0a76",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/6203f13025cc4fc77fe3a7f2ee1c49d6d96f0a76"
+    },
+    "protected": false
+  },
+  {
+    "name": "blind-codex-r2-8nov",
+    "commit": {
+      "sha": "93a9ed57ace4216d42e7b7a90d4967078e7ac9dc",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/93a9ed57ace4216d42e7b7a90d4967078e7ac9dc"
+    },
+    "protected": false
+  },
+  {
+    "name": "blind-eval-1.0",
+    "commit": {
+      "sha": "d5085efd0a02b1200f0f8a761bc6354585d03a05",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/d5085efd0a02b1200f0f8a761bc6354585d03a05"
+    },
+    "protected": false
+  },
+  {
+    "name": "blind-eval-1.1",
+    "commit": {
+      "sha": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/be9b5459e2f7670946d9ca012f875b77aaaf5d5b"
+    },
+    "protected": false
+  },
+  {
+    "name": "blind-fable-7nov",
+    "commit": {
+      "sha": "96bda1bf2c919cf989bcc44d676d78cc43de6dc2",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/96bda1bf2c919cf989bcc44d676d78cc43de6dc2"
+    },
+    "protected": false
+  },
+  {
+    "name": "blind-fable-r2-8nov",
+    "commit": {
+      "sha": "532cc3d01f565c9221455fcc3572593f3ca7d5be",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/532cc3d01f565c9221455fcc3572593f3ca7d5be"
+    },
+    "protected": false
+  },
+  {
+    "name": "bsc",
+    "commit": {
+      "sha": "f51d267a7419119b6a172d895a8a6a3ae581b86f",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/f51d267a7419119b6a172d895a8a6a3ae581b86f"
+    },
+    "protected": false
+  },
+  {
+    "name": "data",
+    "commit": {
+      "sha": "fd01bda122797bc27f5f5d94b9d81cd7ce08572e",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/fd01bda122797bc27f5f5d94b9d81cd7ce08572e"
+    },
+    "protected": false
+  },
+  {
+    "name": "diag-20261109t2016",
+    "commit": {
+      "sha": "c40d6fe55122abafc9fed9c74f39978e323d6da3",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/c40d6fe55122abafc9fed9c74f39978e323d6da3"
+    },
+    "protected": false
+  },
+  {
+    "name": "diag-20261110t0011",
+    "commit": {
+      "sha": "db46319ea713244b51da0c92bb955c280460a6ea",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/db46319ea713244b51da0c92bb955c280460a6ea"
+    },
+    "protected": false
+  },
+  {
+    "name": "diag-20261110t0445",
+    "commit": {
+      "sha": "8dee1aac7960ae9416e65dc3dc8471598f8b252c",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/8dee1aac7960ae9416e65dc3dc8471598f8b252c"
+    },
+    "protected": false
+  },
+  {
+    "name": "entry-all-20261107t2210",
+    "commit": {
+      "sha": "e67833121f1da0dc992c28fa26c5236a855c151a",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/e67833121f1da0dc992c28fa26c5236a855c151a"
+    },
+    "protected": false
+  },
+  {
+    "name": "entry-all-20261108t2002",
+    "commit": {
+      "sha": "05f47f12293cc3653eb9f9bd8ec937e107a70b53",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/05f47f12293cc3653eb9f9bd8ec937e107a70b53"
+    },
+    "protected": false
+  },
+  {
+    "name": "entry-package-7nov",
+    "commit": {
+      "sha": "0e3be03c71949e069a7a31b5951f332bb563f68f",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/0e3be03c71949e069a7a31b5951f332bb563f68f"
+    },
+    "protected": false
+  },
+  {
+    "name": "entry-snap-7nov-1154",
+    "commit": {
+      "sha": "e05e07da9a67e42e74df3afcd1f2fe207a0b6a7e",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/e05e07da9a67e42e74df3afcd1f2fe207a0b6a7e"
+    },
+    "protected": false
+  },
+  {
+    "name": "entry-supp-20261107t1433",
+    "commit": {
+      "sha": "ba9d688db1b2d1ed983eda7886ad0a55c16fb822",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/ba9d688db1b2d1ed983eda7886ad0a55c16fb822"
+    },
+    "protected": false
+  },
+  {
+    "name": "k100-20261108t1722",
+    "commit": {
+      "sha": "72d673ed0e5cec92ebf4e7ff612ba419991a3005",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/72d673ed0e5cec92ebf4e7ff612ba419991a3005"
+    },
+    "protected": false
+  },
+  {
+    "name": "k100-20261109t1144",
+    "commit": {
+      "sha": "66f2371c99cc8e06c558ed76d64b183cda866d69",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/66f2371c99cc8e06c558ed76d64b183cda866d69"
+    },
+    "protected": false
+  },
+  {
+    "name": "k100-audit-20261110t2102",
+    "commit": {
+      "sha": "c093afef0b9cc71aa166ac459f543f5f772cbb26",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/c093afef0b9cc71aa166ac459f543f5f772cbb26"
+    },
+    "protected": false
+  },
+  {
+    "name": "launcher-data",
+    "commit": {
+      "sha": "587f42d07dcd1ac77993697bd48c0f99eac916f4",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/587f42d07dcd1ac77993697bd48c0f99eac916f4"
+    },
+    "protected": false
+  },
+  {
+    "name": "main",
+    "commit": {
+      "sha": "761ae93b1a35c0188159ca9289c8b72c93127e3c",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/761ae93b1a35c0188159ca9289c8b72c93127e3c"
+    },
+    "protected": false
+  },
+  {
+    "name": "pending-v0.18.59",
+    "commit": {
+      "sha": "e95f86d09e5ee31dfb05c6d89262f106a015ab25",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/e95f86d09e5ee31dfb05c6d89262f106a015ab25"
+    },
+    "protected": false
+  },
+  {
+    "name": "pending-v0.18.61",
+    "commit": {
+      "sha": "991d73180db7a03f797cfcf581e0009abb605d61",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/991d73180db7a03f797cfcf581e0009abb605d61"
+    },
+    "protected": false
+  },
+  {
+    "name": "pending-v0.18.62",
+    "commit": {
+      "sha": "2ab3cf41e93d835da026f3abae59b7489d7a409e",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/2ab3cf41e93d835da026f3abae59b7489d7a409e"
+    },
+    "protected": false
+  },
+  {
+    "name": "push-test",
+    "commit": {
+      "sha": "0e6088a8fea69e21df0a48c09110d3af6abbff5b",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/0e6088a8fea69e21df0a48c09110d3af6abbff5b"
+    },
+    "protected": false
+  },
+  {
+    "name": "radar-data",
+    "commit": {
+      "sha": "54e7ef2f38b6aa8015fd58719d300348f89709d8",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/54e7ef2f38b6aa8015fd58719d300348f89709d8"
+    },
+    "protected": false
+  },
+  {
+    "name": "replay-9nov-inputs-20261109t1410",
+    "commit": {
+      "sha": "f9a0086c31e529e9c70409ad743e872968a2ae6e",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/f9a0086c31e529e9c70409ad743e872968a2ae6e"
+    },
+    "protected": false
+  },
+  {
+    "name": "replay-9nov-v2-20261109t1900",
+    "commit": {
+      "sha": "7cd714fb9fb2e1133bdf84d646c49a3e62d8c265",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/7cd714fb9fb2e1133bdf84d646c49a3e62d8c265"
+    },
+    "protected": false
+  },
+  {
+    "name": "research-codex",
+    "commit": {
+      "sha": "611852064e85fefac882c01a88cdf03423241b27",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/611852064e85fefac882c01a88cdf03423241b27"
+    },
+    "protected": false
+  },
+  {
+    "name": "rh",
+    "commit": {
+      "sha": "12778fde44fed433a8a60abb5828f768f1b2bfb6",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/12778fde44fed433a8a60abb5828f768f1b2bfb6"
+    },
+    "protected": false
+  },
+  {
+    "name": "scope-data",
+    "commit": {
+      "sha": "69415d01fd8f462fecaf5b34f52733ee3f385659",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/69415d01fd8f462fecaf5b34f52733ee3f385659"
+    },
+    "protected": false
+  },
+  {
+    "name": "study100k-v1-inputs",
+    "commit": {
+      "sha": "3bd9c3b90d6882b80f3dfd6189831f0f43c30998",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/3bd9c3b90d6882b80f3dfd6189831f0f43c30998"
+    },
+    "protected": false
+  },
+  {
+    "name": "tracker",
+    "commit": {
+      "sha": "47c3eeb26aa6fadebd0f1e1a43e2ce4d283ec8c6",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/47c3eeb26aa6fadebd0f1e1a43e2ce4d283ec8c6"
+    },
+    "protected": false
+  },
+  {
+    "name": "v0.18.62",
+    "commit": {
+      "sha": "f41990607272b0700972086d4c1938e8fe5f078d",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/f41990607272b0700972086d4c1938e8fe5f078d"
+    },
+    "protected": false
+  },
+  {
+    "name": "v0.18.63",
+    "commit": {
+      "sha": "60128c2fb4647835030210b936b424f2d92807cd",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/60128c2fb4647835030210b936b424f2d92807cd"
+    },
+    "protected": false
+  },
+  {
+    "name": "v0.18.64",
+    "commit": {
+      "sha": "dda8456aea80780814a7eac522ad38bc0de04336",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/dda8456aea80780814a7eac522ad38bc0de04336"
+    },
+    "protected": false
+  },
+  {
+    "name": "v0.18.65",
+    "commit": {
+      "sha": "477508ebec66bdb1d29d34f6fa9b643a572d8956",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/477508ebec66bdb1d29d34f6fa9b643a572d8956"
+    },
+    "protected": false
+  },
+  {
+    "name": "v0.18.66",
+    "commit": {
+      "sha": "26f0967dc2cfd37ffaab5cae71cfd3fac4051a72",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/26f0967dc2cfd37ffaab5cae71cfd3fac4051a72"
+    },
+    "protected": false
+  },
+  {
+    "name": "v0.18.67",
+    "commit": {
+      "sha": "e20a471b6af9110ec88580103d54c298486d38a0",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/e20a471b6af9110ec88580103d54c298486d38a0"
+    },
+    "protected": false
+  },
+  {
+    "name": "v0.18.68",
+    "commit": {
+      "sha": "8ee4c5e60275bbe1377dfaa68f843241309f8dc4",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/8ee4c5e60275bbe1377dfaa68f843241309f8dc4"
+    },
+    "protected": false
+  },
+  {
+    "name": "v0.18.69",
+    "commit": {
+      "sha": "de504547265b8ec248459771d4a235f36f29effe",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/de504547265b8ec248459771d4a235f36f29effe"
+    },
+    "protected": false
+  },
+  {
+    "name": "v0.18.70",
+    "commit": {
+      "sha": "48b9773edf1e78ee458a3d8854143fe59588e578",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/48b9773edf1e78ee458a3d8854143fe59588e578"
+    },
+    "protected": false
+  },
+  {
+    "name": "v0.18.71",
+    "commit": {
+      "sha": "3843326dacd55e7e1ab585b02d89107f8ca14d53",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/3843326dacd55e7e1ab585b02d89107f8ca14d53"
+    },
+    "protected": false
+  },
+  {
+    "name": "v0.18.72",
+    "commit": {
+      "sha": "5dc94e125f2551283bac0889640cb7a3e0551b63",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/5dc94e125f2551283bac0889640cb7a3e0551b63"
+    },
+    "protected": false
+  },
+  {
+    "name": "v0.18.73",
+    "commit": {
+      "sha": "74578253f03f5398c768f94cb72c10c0d577d79a",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/74578253f03f5398c768f94cb72c10c0d577d79a"
+    },
+    "protected": false
+  },
+  {
+    "name": "v0.18.74",
+    "commit": {
+      "sha": "7634ba208d5535bd939db558004a82b5e13c91d6",
+      "url": "https://api.github.com/repos/bsc-volume-alert/Top-coins-Bot/commits/7634ba208d5535bd939db558004a82b5e13c91d6"
+    },
+    "protected": false
+  }
+]

@@ -2,9 +2,24 @@
   "worker": "Codex",
   "run_id": "c003-20261111T090819Z",
   "task": "C003",
-  "state": "running",
+  "state": "completed",
   "started_at": "2026-11-11T09:08:19Z",
-  "lease_expires_at": "2026-11-11T10:08:19Z",
+  "lease_expires_at": null,
   "previous_run": "c002-20261111T031305Z",
-  "scope": "Runner evidence inventory and causal coverage; approved raw inputs only; other branches metadata only"
+  "scope": "Runner evidence inventory and causal coverage; approved raw inputs only; other branches metadata only",
+  "completed_at": "2026-11-11T09:12:05Z",
+  "result": "Executed 18-file checksum/schema/coverage audit and metadata-only inventory of seven runner/replay/audit branches",
+  "next_task": "C004",
+  "inputs": {
+    "package": "0e3be03c71949e069a7a31b5951f332bb563f68f",
+    "allcoins": "e67833121f1da0dc992c28fa26c5236a855c151a",
+    "queue_snapshot": "47c3eeb26aa6fadebd0f1e1a43e2ce4d283ec8c6"
+  },
+  "artifacts": "reports/blind/autonomous/codex/runs/c003-20261111T090819Z/",
+  "blockers": [],
+  "constraints": [
+    "No protected runner/replay outcomes opened",
+    "C006 needs defensible negative labels or a narrower checkpoint-observed target",
+    "No allowlist expansion authorised by this inventory"
+  ]
 }

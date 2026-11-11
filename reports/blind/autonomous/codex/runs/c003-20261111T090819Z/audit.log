@@ -1,0 +1,293 @@
+{
+  "snapshot3": {
+    "census_unique_mints": 85016,
+    "create_min_utc": "2026-11-05T11:54:06+00:00",
+    "create_max_utc": "2026-11-07T11:53:57+00:00",
+    "life": {
+      "unique_mints": 14455,
+      "census_mints_without_life": 70561,
+      "rows_for_mints_outside_export_census": 0,
+      "checkpoint_counts": {
+        "15": 14455,
+        "30": 14434,
+        "60": 14380,
+        "90": 14304,
+        "120": 14250,
+        "300": 13851,
+        "900": 12835,
+        "1800": 12050,
+        "3600": 11138,
+        "7200": 9185,
+        "14400": 57
+      },
+      "source_counts": {
+        "exact": 71823,
+        "": 59116
+      },
+      "missing_obs_ts": 59116,
+      "duplicate_mint_cp": 0,
+      "obs_minus_ts_s": {
+        "min": -1.0,
+        "max": 283.0,
+        "positive": 6310,
+        "negative": 10
+      },
+      "holders_populated_rows": 189,
+      "top10_populated_rows": 189,
+      "mints_with_checkpoint_at_least_horizon": {
+        "1800": 12050,
+        "3600": 11138,
+        "7200": 9185
+      },
+      "latest_obs_utc": "2026-11-07T11:53:39+00:00"
+    },
+    "early_checkpoints": {
+      "15": {
+        "counts": {
+          "rows": 16135,
+          "mc_present": 14147,
+          "obs_present": 14456,
+          "source_exact": 14456,
+          "source_missing": 1674,
+          "source_not-due": 5
+        },
+        "obs_minus_cutoff_s": {
+          "min": -1.0,
+          "max": 283.0,
+          "late_positive": 1285,
+          "before_cutoff": 5
+        }
+      },
+      "30": {
+        "counts": {
+          "rows": 16135,
+          "mc_present": 14242,
+          "obs_present": 14435,
+          "source_exact": 14435,
+          "source_missing": 1690,
+          "source_not-due": 10
+        },
+        "obs_minus_cutoff_s": {
+          "min": -1.0,
+          "max": 268.0,
+          "late_positive": 1138,
+          "before_cutoff": 4
+        }
+      },
+      "60": {
+        "counts": {
+          "rows": 16135,
+          "mc_present": 14275,
+          "obs_present": 14381,
+          "source_exact": 14381,
+          "source_missing": 1732,
+          "source_not-due": 22
+        },
+        "obs_minus_cutoff_s": {
+          "min": -1.0,
+          "max": 274.0,
+          "late_positive": 1303,
+          "before_cutoff": 1
+        }
+      },
+      "90": {
+        "counts": {
+          "rows": 16135,
+          "mc_present": 14233,
+          "obs_present": 14305,
+          "source_exact": 14305,
+          "source_missing": 1797,
+          "source_not-due": 33
+        },
+        "obs_minus_cutoff_s": {
+          "min": 0.0,
+          "max": 273.0,
+          "late_positive": 1227,
+          "before_cutoff": 0
+        }
+      },
+      "120": {
+        "counts": {
+          "rows": 16135,
+          "mc_present": 14202,
+          "obs_present": 14251,
+          "source_exact": 14251,
+          "source_missing": 1846,
+          "source_not-due": 38
+        },
+        "obs_minus_cutoff_s": {
+          "min": 0.0,
+          "max": 274.0,
+          "late_positive": 1357,
+          "before_cutoff": 0
+        }
+      }
+    },
+    "crossings": {
+      "rows": 200,
+      "suspect_jump": 45,
+      "missing_fx": 0,
+      "fx_age_gt60s": 87
+    }
+  },
+  "current": {
+    "census_unique_mints": 83856,
+    "create_min_utc": "2026-11-05T14:53:06+00:00",
+    "create_max_utc": "2026-11-07T14:53:05+00:00",
+    "life": {
+      "unique_mints": 13041,
+      "census_mints_without_life": 70815,
+      "rows_for_mints_outside_export_census": 0,
+      "checkpoint_counts": {
+        "15": 13041,
+        "30": 13024,
+        "60": 12994,
+        "90": 12961,
+        "120": 12933,
+        "300": 12767,
+        "900": 12286,
+        "1800": 11770,
+        "3600": 10660,
+        "7200": 8619,
+        "14400": 26
+      },
+      "source_counts": {
+        "exact": 64953,
+        "": 56128
+      },
+      "missing_obs_ts": 56128,
+      "duplicate_mint_cp": 0,
+      "obs_minus_ts_s": {
+        "min": -1.0,
+        "max": 283.0,
+        "positive": 6618,
+        "negative": 10
+      },
+      "holders_populated_rows": 153,
+      "top10_populated_rows": 153,
+      "mints_with_checkpoint_at_least_horizon": {
+        "1800": 11770,
+        "3600": 10660,
+        "7200": 8619
+      },
+      "latest_obs_utc": "2026-11-07T14:52:49+00:00"
+    },
+    "early_checkpoints": {
+      "15": {
+        "counts": {
+          "rows": 14557,
+          "mc_present": 12831,
+          "obs_present": 13042,
+          "source_exact": 13042,
+          "source_missing": 1507,
+          "source_not-due": 8
+        },
+        "obs_minus_cutoff_s": {
+          "min": -1.0,
+          "max": 283.0,
+          "late_positive": 1222,
+          "before_cutoff": 5
+        }
+      },
+      "30": {
+        "counts": {
+          "rows": 14557,
+          "mc_present": 12892,
+          "obs_present": 13027,
+          "source_exact": 13027,
+          "source_missing": 1511,
+          "source_not-due": 19
+        },
+        "obs_minus_cutoff_s": {
+          "min": -1.0,
+          "max": 268.0,
+          "late_positive": 1150,
+          "before_cutoff": 4
+        }
+      },
+      "60": {
+        "counts": {
+          "rows": 14557,
+          "mc_present": 12923,
+          "obs_present": 12997,
+          "source_exact": 12997,
+          "source_missing": 1530,
+          "source_not-due": 30
+        },
+        "obs_minus_cutoff_s": {
+          "min": -1.0,
+          "max": 274.0,
+          "late_positive": 1298,
+          "before_cutoff": 1
+        }
+      },
+      "90": {
+        "counts": {
+          "rows": 14557,
+          "mc_present": 12909,
+          "obs_present": 12963,
+          "source_exact": 12963,
+          "source_missing": 1551,
+          "source_not-due": 43
+        },
+        "obs_minus_cutoff_s": {
+          "min": 0.0,
+          "max": 273.0,
+          "late_positive": 1393,
+          "before_cutoff": 0
+        }
+      },
+      "120": {
+        "counts": {
+          "rows": 14557,
+          "mc_present": 12904,
+          "obs_present": 12936,
+          "source_exact": 12936,
+          "source_missing": 1561,
+          "source_not-due": 60
+        },
+        "obs_minus_cutoff_s": {
+          "min": 0.0,
+          "max": 274.0,
+          "late_positive": 1558,
+          "before_cutoff": 0
+        }
+      }
+    },
+    "crossings": {
+      "rows": 200,
+      "suspect_jump": 45,
+      "missing_fx": 0,
+      "fx_age_gt60s": 87
+    }
+  },
+  "allcoins": {
+    "census_rows": 62789,
+    "census_unique": 62789,
+    "coverage_rows": 62789,
+    "coverage_columns": [
+      "mint",
+      "create_ts",
+      "first_entry_ts",
+      "last_entry_ts",
+      "entries",
+      "rows_exported",
+      "rows_in_db_at_read",
+      "reconciled",
+      "curve_rows",
+      "pool_rows",
+      "other_venue_rows",
+      "rows_with_pool_evidence",
+      "first_trade_ts",
+      "last_trade_ts",
+      "first_slot",
+      "last_slot",
+      "max_gap_s",
+      "part"
+    ],
+    "zero_rows_exported": 57876,
+    "nonzero_rows_exported": 4913,
+    "create_min_utc": "2026-11-06T07:40:03+00:00",
+    "create_max_utc": "2026-11-07T19:59:59+00:00"
+  }
+}

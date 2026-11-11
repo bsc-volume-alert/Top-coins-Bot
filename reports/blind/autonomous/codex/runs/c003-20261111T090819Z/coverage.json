@@ -1,0 +1,1211 @@
+{
+  "task": "C003",
+  "package_commit": "0e3be03c71949e069a7a31b5951f332bb563f68f",
+  "allcoins_commit": "e67833121f1da0dc992c28fa26c5236a855c151a",
+  "summary": {
+    "snapshot3": {
+      "census_unique_mints": 85016,
+      "create_min_utc": "2026-11-05T11:54:06+00:00",
+      "create_max_utc": "2026-11-07T11:53:57+00:00",
+      "life": {
+        "unique_mints": 14455,
+        "census_mints_without_life": 70561,
+        "rows_for_mints_outside_export_census": 0,
+        "checkpoint_counts": {
+          "15": 14455,
+          "30": 14434,
+          "60": 14380,
+          "90": 14304,
+          "120": 14250,
+          "300": 13851,
+          "900": 12835,
+          "1800": 12050,
+          "3600": 11138,
+          "7200": 9185,
+          "14400": 57
+        },
+        "source_counts": {
+          "exact": 71823,
+          "": 59116
+        },
+        "missing_obs_ts": 59116,
+        "duplicate_mint_cp": 0,
+        "obs_minus_ts_s": {
+          "min": -1.0,
+          "max": 283.0,
+          "positive": 6310,
+          "negative": 10
+        },
+        "holders_populated_rows": 189,
+        "top10_populated_rows": 189,
+        "mints_with_checkpoint_at_least_horizon": {
+          "1800": 12050,
+          "3600": 11138,
+          "7200": 9185
+        },
+        "latest_obs_utc": "2026-11-07T11:53:39+00:00"
+      },
+      "early_checkpoints": {
+        "15": {
+          "counts": {
+            "rows": 16135,
+            "mc_present": 14147,
+            "obs_present": 14456,
+            "source_exact": 14456,
+            "source_missing": 1674,
+            "source_not-due": 5
+          },
+          "obs_minus_cutoff_s": {
+            "min": -1.0,
+            "max": 283.0,
+            "late_positive": 1285,
+            "before_cutoff": 5
+          }
+        },
+        "30": {
+          "counts": {
+            "rows": 16135,
+            "mc_present": 14242,
+            "obs_present": 14435,
+            "source_exact": 14435,
+            "source_missing": 1690,
+            "source_not-due": 10
+          },
+          "obs_minus_cutoff_s": {
+            "min": -1.0,
+            "max": 268.0,
+            "late_positive": 1138,
+            "before_cutoff": 4
+          }
+        },
+        "60": {
+          "counts": {
+            "rows": 16135,
+            "mc_present": 14275,
+            "obs_present": 14381,
+            "source_exact": 14381,
+            "source_missing": 1732,
+            "source_not-due": 22
+          },
+          "obs_minus_cutoff_s": {
+            "min": -1.0,
+            "max": 274.0,
+            "late_positive": 1303,
+            "before_cutoff": 1
+          }
+        },
+        "90": {
+          "counts": {
+            "rows": 16135,
+            "mc_present": 14233,
+            "obs_present": 14305,
+            "source_exact": 14305,
+            "source_missing": 1797,
+            "source_not-due": 33
+          },
+          "obs_minus_cutoff_s": {
+            "min": 0.0,
+            "max": 273.0,
+            "late_positive": 1227,
+            "before_cutoff": 0
+          }
+        },
+        "120": {
+          "counts": {
+            "rows": 16135,
+            "mc_present": 14202,
+            "obs_present": 14251,
+            "source_exact": 14251,
+            "source_missing": 1846,
+            "source_not-due": 38
+          },
+          "obs_minus_cutoff_s": {
+            "min": 0.0,
+            "max": 274.0,
+            "late_positive": 1357,
+            "before_cutoff": 0
+          }
+        }
+      },
+      "crossings": {
+        "rows": 200,
+        "suspect_jump": 45,
+        "missing_fx": 0,
+        "fx_age_gt60s": 87
+      }
+    },
+    "current": {
+      "census_unique_mints": 83856,
+      "create_min_utc": "2026-11-05T14:53:06+00:00",
+      "create_max_utc": "2026-11-07T14:53:05+00:00",
+      "life": {
+        "unique_mints": 13041,
+        "census_mints_without_life": 70815,
+        "rows_for_mints_outside_export_census": 0,
+        "checkpoint_counts": {
+          "15": 13041,
+          "30": 13024,
+          "60": 12994,
+          "90": 12961,
+          "120": 12933,
+          "300": 12767,
+          "900": 12286,
+          "1800": 11770,
+          "3600": 10660,
+          "7200": 8619,
+          "14400": 26
+        },
+        "source_counts": {
+          "exact": 64953,
+          "": 56128
+        },
+        "missing_obs_ts": 56128,
+        "duplicate_mint_cp": 0,
+        "obs_minus_ts_s": {
+          "min": -1.0,
+          "max": 283.0,
+          "positive": 6618,
+          "negative": 10
+        },
+        "holders_populated_rows": 153,
+        "top10_populated_rows": 153,
+        "mints_with_checkpoint_at_least_horizon": {
+          "1800": 11770,
+          "3600": 10660,
+          "7200": 8619
+        },
+        "latest_obs_utc": "2026-11-07T14:52:49+00:00"
+      },
+      "early_checkpoints": {
+        "15": {
+          "counts": {
+            "rows": 14557,
+            "mc_present": 12831,
+            "obs_present": 13042,
+            "source_exact": 13042,
+            "source_missing": 1507,
+            "source_not-due": 8
+          },
+          "obs_minus_cutoff_s": {
+            "min": -1.0,
+            "max": 283.0,
+            "late_positive": 1222,
+            "before_cutoff": 5
+          }
+        },
+        "30": {
+          "counts": {
+            "rows": 14557,
+            "mc_present": 12892,
+            "obs_present": 13027,
+            "source_exact": 13027,
+            "source_missing": 1511,
+            "source_not-due": 19
+          },
+          "obs_minus_cutoff_s": {
+            "min": -1.0,
+            "max": 268.0,
+            "late_positive": 1150,
+            "before_cutoff": 4
+          }
+        },
+        "60": {
+          "counts": {
+            "rows": 14557,
+            "mc_present": 12923,
+            "obs_present": 12997,
+            "source_exact": 12997,
+            "source_missing": 1530,
+            "source_not-due": 30
+          },
+          "obs_minus_cutoff_s": {
+            "min": -1.0,
+            "max": 274.0,
+            "late_positive": 1298,
+            "before_cutoff": 1
+          }
+        },
+        "90": {
+          "counts": {
+            "rows": 14557,
+            "mc_present": 12909,
+            "obs_present": 12963,
+            "source_exact": 12963,
+            "source_missing": 1551,
+            "source_not-due": 43
+          },
+          "obs_minus_cutoff_s": {
+            "min": 0.0,
+            "max": 273.0,
+            "late_positive": 1393,
+            "before_cutoff": 0
+          }
+        },
+        "120": {
+          "counts": {
+            "rows": 14557,
+            "mc_present": 12904,
+            "obs_present": 12936,
+            "source_exact": 12936,
+            "source_missing": 1561,
+            "source_not-due": 60
+          },
+          "obs_minus_cutoff_s": {
+            "min": 0.0,
+            "max": 274.0,
+            "late_positive": 1558,
+            "before_cutoff": 0
+          }
+        }
+      },
+      "crossings": {
+        "rows": 200,
+        "suspect_jump": 45,
+        "missing_fx": 0,
+        "fx_age_gt60s": 87
+      }
+    },
+    "allcoins": {
+      "census_rows": 62789,
+      "census_unique": 62789,
+      "coverage_rows": 62789,
+      "coverage_columns": [
+        "mint",
+        "create_ts",
+        "first_entry_ts",
+        "last_entry_ts",
+        "entries",
+        "rows_exported",
+        "rows_in_db_at_read",
+        "reconciled",
+        "curve_rows",
+        "pool_rows",
+        "other_venue_rows",
+        "rows_with_pool_evidence",
+        "first_trade_ts",
+        "last_trade_ts",
+        "first_slot",
+        "last_slot",
+        "max_gap_s",
+        "part"
+      ],
+      "zero_rows_exported": 57876,
+      "nonzero_rows_exported": 4913,
+      "create_min_utc": "2026-11-06T07:40:03+00:00",
+      "create_max_utc": "2026-11-07T19:59:59+00:00"
+    }
+  },
+  "files": {
+    "snapshot3/tracker_tokens.csv.gz": {
+      "rows": 85016,
+      "columns": [
+        "mint",
+        "name",
+        "symbol",
+        "creator",
+        "create_ts",
+        "create_slot",
+        "bundle_sol",
+        "bundle_pct",
+        "bundle_wallets",
+        "dev_buy_sol",
+        "tier",
+        "finalized",
+        "graduated",
+        "peak_mc_usd",
+        "last_mc_usd",
+        "outside_buyers",
+        "handoffs"
+      ],
+      "populated_counts": {
+        "mint": 85016,
+        "name": 85007,
+        "symbol": 85006,
+        "creator": 85016,
+        "create_ts": 85016,
+        "create_slot": 85016,
+        "bundle_sol": 85016,
+        "bundle_pct": 85016,
+        "bundle_wallets": 85016,
+        "dev_buy_sol": 85016,
+        "tier": 85016,
+        "finalized": 85016,
+        "graduated": 85016,
+        "peak_mc_usd": 85011,
+        "last_mc_usd": 85011,
+        "outside_buyers": 85016,
+        "handoffs": 85016
+      },
+      "sha256": "775af2010b32526d65247d13c3ef0d9ce37f4199ec45e007b09af95802003008",
+      "ranges": {
+        "create_ts": {
+          "min": 1793879646.0,
+          "max": 1794052437.0,
+          "min_utc": "2026-11-05T11:54:06+00:00",
+          "max_utc": "2026-11-07T11:53:57+00:00"
+        }
+      }
+    },
+    "snapshot3/token_life.csv.gz": {
+      "rows": 130939,
+      "columns": [
+        "mint",
+        "cp",
+        "ts",
+        "obs_ts",
+        "src",
+        "mc",
+        "vol5m_usd",
+        "buys5m",
+        "sells5m",
+        "buyers5m",
+        "buyers_total",
+        "graduated",
+        "top10_pct",
+        "holders",
+        "alive"
+      ],
+      "populated_counts": {
+        "mint": 130939,
+        "cp": 130939,
+        "ts": 130939,
+        "obs_ts": 71823,
+        "src": 71823,
+        "mc": 130210,
+        "vol5m_usd": 130939,
+        "buys5m": 130939,
+        "sells5m": 130939,
+        "buyers5m": 130939,
+        "buyers_total": 130939,
+        "graduated": 130939,
+        "alive": 130939,
+        "top10_pct": 189,
+        "holders": 189
+      },
+      "sha256": "2a775b4c1c5cebbfea94ad3f0ab96006bfdc6b0606297ca9c3d545ad16d6908f",
+      "ranges": {
+        "ts": {
+          "min": 1794009235.0,
+          "max": 1794052419.0,
+          "min_utc": "2026-11-06T23:53:55+00:00",
+          "max_utc": "2026-11-07T11:53:39+00:00"
+        },
+        "obs_ts": {
+          "min": 1794009235.0,
+          "max": 1794052419.0,
+          "min_utc": "2026-11-06T23:53:55+00:00",
+          "max_utc": "2026-11-07T11:53:39+00:00"
+        }
+      }
+    },
+    "snapshot3/early_checkpoints.csv.gz": {
+      "rows": 16135,
+      "columns": [
+        "snapshot_ts",
+        "mint",
+        "name",
+        "create_ts",
+        "tracker_epoch",
+        "complete",
+        "cutoff15",
+        "cp15",
+        "obs15",
+        "mc15",
+        "buys15",
+        "sells15",
+        "buyers15",
+        "cutoff30",
+        "cp30",
+        "obs30",
+        "mc30",
+        "buys30",
+        "sells30",
+        "buyers30",
+        "cutoff60",
+        "cp60",
+        "obs60",
+        "mc60",
+        "buys60",
+        "sells60",
+        "buyers60",
+        "cutoff90",
+        "cp90",
+        "obs90",
+        "mc90",
+        "buys90",
+        "sells90",
+        "buyers90",
+        "cutoff120",
+        "cp120",
+        "obs120",
+        "mc120",
+        "buys120",
+        "sells120",
+        "buyers120"
+      ],
+      "populated_counts": {
+        "snapshot_ts": 16135,
+        "mint": 16135,
+        "name": 16133,
+        "create_ts": 16135,
+        "tracker_epoch": 16135,
+        "complete": 16135,
+        "cutoff15": 16135,
+        "cp15": 16135,
+        "obs15": 14456,
+        "mc15": 14147,
+        "buys15": 14456,
+        "sells15": 14456,
+        "buyers15": 14456,
+        "cutoff30": 16135,
+        "cp30": 16135,
+        "obs30": 14435,
+        "mc30": 14242,
+        "buys30": 14435,
+        "sells30": 14435,
+        "buyers30": 14435,
+        "cutoff60": 16135,
+        "cp60": 16135,
+        "obs60": 14381,
+        "mc60": 14275,
+        "buys60": 14381,
+        "sells60": 14381,
+        "buyers60": 14381,
+        "cutoff90": 16135,
+        "cp90": 16135,
+        "obs90": 14305,
+        "mc90": 14233,
+        "buys90": 14305,
+        "sells90": 14305,
+        "buyers90": 14305,
+        "cutoff120": 16135,
+        "cp120": 16135,
+        "obs120": 14251,
+        "mc120": 14202,
+        "buys120": 14251,
+        "sells120": 14251,
+        "buyers120": 14251
+      },
+      "sha256": "038e13c61d370c2c25df05c0f740e72ae7614b2a0d8d9c37eb39513fc023256c",
+      "ranges": {
+        "create_ts": {
+          "min": 1794009218.0,
+          "max": 1794052417.0,
+          "min_utc": "2026-11-06T23:53:38+00:00",
+          "max_utc": "2026-11-07T11:53:37+00:00"
+        },
+        "snapshot_ts": {
+          "min": 1794052417.0,
+          "max": 1794052417.0,
+          "min_utc": "2026-11-07T11:53:37+00:00",
+          "max_utc": "2026-11-07T11:53:37+00:00"
+        }
+      }
+    },
+    "snapshot3/runner_registry.csv.gz": {
+      "rows": 1480,
+      "columns": [
+        "mint",
+        "name",
+        "create_ts",
+        "first_detect_ts",
+        "last_seen_ts",
+        "src_peaks",
+        "src_life_mc",
+        "src_life_grad",
+        "src_tokens_grad",
+        "src_tokens_peak",
+        "src_pumpfun_mc",
+        "src_pumpfun_complete",
+        "peak_24h_usd",
+        "life_mc_first_ts",
+        "life_grad_first_ts",
+        "pumpfun_mc_usd",
+        "pumpfun_complete_ts",
+        "migrated",
+        "reached_mc",
+        "launch_recorded",
+        "trades_kept",
+        "fd_recorded",
+        "fd_grp",
+        "fd_checked",
+        "fd_entered",
+        "note",
+        "src_gmgn_mc",
+        "gmgn_mc_usd"
+      ],
+      "populated_counts": {
+        "mint": 1480,
+        "name": 1480,
+        "create_ts": 1480,
+        "first_detect_ts": 1480,
+        "last_seen_ts": 1480,
+        "src_peaks": 1480,
+        "src_life_mc": 1480,
+        "src_life_grad": 1480,
+        "src_tokens_grad": 1480,
+        "src_tokens_peak": 1480,
+        "src_pumpfun_mc": 1480,
+        "src_pumpfun_complete": 1480,
+        "peak_24h_usd": 635,
+        "life_grad_first_ts": 1169,
+        "migrated": 1480,
+        "reached_mc": 1480,
+        "launch_recorded": 1402,
+        "trades_kept": 1402,
+        "fd_recorded": 1402,
+        "fd_checked": 1402,
+        "fd_entered": 1402,
+        "src_gmgn_mc": 1480,
+        "life_mc_first_ts": 479,
+        "gmgn_mc_usd": 72,
+        "fd_grp": 722
+      },
+      "sha256": "88b239c371a25cdf776877948cc844630f1f282532514659f636d4fd65fae846",
+      "ranges": {
+        "create_ts": {
+          "min": 1793879630.0,
+          "max": 1794052196.0,
+          "min_utc": "2026-11-05T11:53:50+00:00",
+          "max_utc": "2026-11-07T11:49:56+00:00"
+        },
+        "first_detect_ts": {
+          "min": 1793972685.0,
+          "max": 1794052401.0,
+          "min_utc": "2026-11-06T13:44:45+00:00",
+          "max_utc": "2026-11-07T11:53:21+00:00"
+        }
+      }
+    },
+    "snapshot3/registry_coverage.csv.gz": {
+      "rows": 3,
+      "columns": [
+        "day",
+        "runners",
+        "migrated",
+        "reached_mc",
+        "both",
+        "src_peaks",
+        "src_life",
+        "src_tokens",
+        "src_pumpfun",
+        "src_gmgn",
+        "external_only",
+        "launch_recorded",
+        "trades_kept",
+        "fd_recorded",
+        "fd_checked",
+        "fd_entered"
+      ],
+      "populated_counts": {
+        "day": 3,
+        "runners": 3,
+        "migrated": 3,
+        "reached_mc": 3,
+        "both": 3,
+        "src_peaks": 3,
+        "src_life": 3,
+        "src_tokens": 3,
+        "src_pumpfun": 3,
+        "src_gmgn": 3,
+        "external_only": 3,
+        "launch_recorded": 3,
+        "trades_kept": 3,
+        "fd_recorded": 3,
+        "fd_checked": 3,
+        "fd_entered": 3
+      },
+      "sha256": "6f2470fe2a4d32aec652dbaa023c0a86be0c62f4443ad780d2c5ce22278438c6",
+      "ranges": {}
+    },
+    "snapshot3/sol_usd.csv.gz": {
+      "rows": 770,
+      "columns": [
+        "ts",
+        "usd"
+      ],
+      "populated_counts": {
+        "ts": 770,
+        "usd": 770
+      },
+      "sha256": "3ee379074a708e105c333ab07728f46e13099c18080e66eeb4bde2b81186a307",
+      "ranges": {
+        "ts": {
+          "min": 1793960680.0,
+          "max": 1794050717.0,
+          "min_utc": "2026-11-06T10:24:40+00:00",
+          "max_utc": "2026-11-07T11:25:17+00:00"
+        }
+      }
+    },
+    "snapshot3/coverage_mints.csv.gz": {
+      "rows": 44017,
+      "columns": [
+        "mint",
+        "create_ts",
+        "tier",
+        "graduated",
+        "finalized",
+        "venue",
+        "first_ts",
+        "last_ts",
+        "n_trades",
+        "max_gap_s",
+        "max_price_sol",
+        "max_slot",
+        "max_ts",
+        "max_sig",
+        "export_cutoff_ts"
+      ],
+      "populated_counts": {
+        "mint": 44017,
+        "create_ts": 44017,
+        "tier": 44017,
+        "graduated": 44017,
+        "finalized": 44017,
+        "n_trades": 44017,
+        "export_cutoff_ts": 44017,
+        "venue": 3555,
+        "first_ts": 3555,
+        "last_ts": 3555,
+        "max_gap_s": 3511,
+        "max_price_sol": 3555,
+        "max_slot": 3555,
+        "max_ts": 3555,
+        "max_sig": 3555
+      },
+      "sha256": "c903f40286b776c580431c1208ba320af976263f6c557f27ecd5eb641c63059f",
+      "ranges": {
+        "create_ts": {
+          "min": 1793964230.0,
+          "max": 1794050626.0,
+          "min_utc": "2026-11-06T11:23:50+00:00",
+          "max_utc": "2026-11-07T11:23:46+00:00"
+        },
+        "export_cutoff_ts": {
+          "min": 1794050627.0,
+          "max": 1794050627.0,
+          "min_utc": "2026-11-07T11:23:47+00:00",
+          "max_utc": "2026-11-07T11:23:47+00:00"
+        }
+      }
+    },
+    "snapshot3/coverage_crossings.csv.gz": {
+      "rows": 200,
+      "columns": [
+        "mint",
+        "venue",
+        "slot",
+        "ts",
+        "sig",
+        "price_sol",
+        "sol_usd",
+        "sol_usd_ts",
+        "sol_usd_age_s",
+        "mc_usd",
+        "pricing",
+        "prev_venue",
+        "prev_slot",
+        "prev_ts",
+        "prev_price_sol",
+        "suspect_jump",
+        "n_trades_ge_100k",
+        "max_mc_usd_ge_100k"
+      ],
+      "populated_counts": {
+        "mint": 200,
+        "venue": 200,
+        "slot": 200,
+        "ts": 200,
+        "sig": 200,
+        "price_sol": 200,
+        "sol_usd": 200,
+        "sol_usd_ts": 200,
+        "sol_usd_age_s": 200,
+        "mc_usd": 200,
+        "pricing": 200,
+        "prev_venue": 195,
+        "prev_slot": 195,
+        "prev_ts": 195,
+        "prev_price_sol": 195,
+        "suspect_jump": 200,
+        "n_trades_ge_100k": 200,
+        "max_mc_usd_ge_100k": 200
+      },
+      "sha256": "4cffa7cdd068b1725ad6ac36cc61545b71a06dc8aee5ad6b6361d47968297d02",
+      "ranges": {
+        "ts": {
+          "min": 1793977391.0,
+          "max": 1794049925.0,
+          "min_utc": "2026-11-06T15:03:11+00:00",
+          "max_utc": "2026-11-07T11:12:05+00:00"
+        },
+        "sol_usd_age_s": {
+          "min": 0.0,
+          "max": 119.0,
+          "min_utc": null,
+          "max_utc": null
+        }
+      }
+    },
+    "current/tracker_tokens.csv.gz": {
+      "rows": 83856,
+      "columns": [
+        "mint",
+        "name",
+        "symbol",
+        "creator",
+        "create_ts",
+        "create_slot",
+        "bundle_sol",
+        "bundle_pct",
+        "bundle_wallets",
+        "dev_buy_sol",
+        "tier",
+        "finalized",
+        "graduated",
+        "peak_mc_usd",
+        "last_mc_usd",
+        "outside_buyers",
+        "handoffs"
+      ],
+      "populated_counts": {
+        "mint": 83856,
+        "name": 83847,
+        "symbol": 83846,
+        "creator": 83856,
+        "create_ts": 83856,
+        "create_slot": 83856,
+        "bundle_sol": 83856,
+        "bundle_pct": 83856,
+        "bundle_wallets": 83856,
+        "dev_buy_sol": 83856,
+        "tier": 83856,
+        "finalized": 83856,
+        "graduated": 83856,
+        "peak_mc_usd": 83851,
+        "last_mc_usd": 83851,
+        "outside_buyers": 83856,
+        "handoffs": 83856
+      },
+      "sha256": "eeae74c32416433cb524776bac56ca1e12318249878f47d4caa53e441a4baa92",
+      "ranges": {
+        "create_ts": {
+          "min": 1793890386.0,
+          "max": 1794063185.0,
+          "min_utc": "2026-11-05T14:53:06+00:00",
+          "max_utc": "2026-11-07T14:53:05+00:00"
+        }
+      }
+    },
+    "current/token_life.csv.gz": {
+      "rows": 121081,
+      "columns": [
+        "mint",
+        "cp",
+        "ts",
+        "obs_ts",
+        "src",
+        "mc",
+        "vol5m_usd",
+        "buys5m",
+        "sells5m",
+        "buyers5m",
+        "buyers_total",
+        "graduated",
+        "top10_pct",
+        "holders",
+        "alive"
+      ],
+      "populated_counts": {
+        "mint": 121081,
+        "cp": 121081,
+        "ts": 121081,
+        "obs_ts": 64953,
+        "src": 64953,
+        "mc": 120575,
+        "vol5m_usd": 121081,
+        "buys5m": 121081,
+        "sells5m": 121081,
+        "buyers5m": 121081,
+        "buyers_total": 121081,
+        "graduated": 121081,
+        "alive": 121081,
+        "top10_pct": 153,
+        "holders": 153
+      },
+      "sha256": "546e5cc307df93e80404a14bf8526a3e120fdd473d6d47a7fdee817d3f234ab2",
+      "ranges": {
+        "ts": {
+          "min": 1794019984.0,
+          "max": 1794063169.0,
+          "min_utc": "2026-11-07T02:53:04+00:00",
+          "max_utc": "2026-11-07T14:52:49+00:00"
+        },
+        "obs_ts": {
+          "min": 1794019984.0,
+          "max": 1794063169.0,
+          "min_utc": "2026-11-07T02:53:04+00:00",
+          "max_utc": "2026-11-07T14:52:49+00:00"
+        }
+      }
+    },
+    "current/early_checkpoints.csv.gz": {
+      "rows": 14557,
+      "columns": [
+        "snapshot_ts",
+        "mint",
+        "name",
+        "create_ts",
+        "tracker_epoch",
+        "complete",
+        "cutoff15",
+        "cp15",
+        "obs15",
+        "mc15",
+        "buys15",
+        "sells15",
+        "buyers15",
+        "cutoff30",
+        "cp30",
+        "obs30",
+        "mc30",
+        "buys30",
+        "sells30",
+        "buyers30",
+        "cutoff60",
+        "cp60",
+        "obs60",
+        "mc60",
+        "buys60",
+        "sells60",
+        "buyers60",
+        "cutoff90",
+        "cp90",
+        "obs90",
+        "mc90",
+        "buys90",
+        "sells90",
+        "buyers90",
+        "cutoff120",
+        "cp120",
+        "obs120",
+        "mc120",
+        "buys120",
+        "sells120",
+        "buyers120"
+      ],
+      "populated_counts": {
+        "snapshot_ts": 14557,
+        "mint": 14557,
+        "name": 14556,
+        "create_ts": 14557,
+        "tracker_epoch": 14557,
+        "complete": 14557,
+        "cutoff15": 14557,
+        "cp15": 14557,
+        "obs15": 13042,
+        "mc15": 12831,
+        "buys15": 13042,
+        "sells15": 13042,
+        "buyers15": 13042,
+        "cutoff30": 14557,
+        "cp30": 14557,
+        "obs30": 13027,
+        "mc30": 12892,
+        "buys30": 13027,
+        "sells30": 13027,
+        "buyers30": 13027,
+        "cutoff60": 14557,
+        "cp60": 14557,
+        "obs60": 12997,
+        "mc60": 12923,
+        "buys60": 12997,
+        "sells60": 12997,
+        "buyers60": 12997,
+        "cutoff90": 14557,
+        "cp90": 14557,
+        "obs90": 12963,
+        "mc90": 12909,
+        "buys90": 12963,
+        "sells90": 12963,
+        "buyers90": 12963,
+        "cutoff120": 14557,
+        "cp120": 14557,
+        "obs120": 12936,
+        "mc120": 12904,
+        "buys120": 12936,
+        "sells120": 12936,
+        "buyers120": 12936
+      },
+      "sha256": "ebdfb21706b60db81c2622c4100f2d6f8ddeeb71d08a18ca47bd9fd53b769204",
+      "ranges": {
+        "create_ts": {
+          "min": 1794019968.0,
+          "max": 1794063158.0,
+          "min_utc": "2026-11-07T02:52:48+00:00",
+          "max_utc": "2026-11-07T14:52:38+00:00"
+        },
+        "snapshot_ts": {
+          "min": 1794063165.0,
+          "max": 1794063165.0,
+          "min_utc": "2026-11-07T14:52:45+00:00",
+          "max_utc": "2026-11-07T14:52:45+00:00"
+        }
+      }
+    },
+    "current/runner_registry.csv.gz": {
+      "rows": 1476,
+      "columns": [
+        "mint",
+        "name",
+        "create_ts",
+        "first_detect_ts",
+        "last_seen_ts",
+        "src_peaks",
+        "src_life_mc",
+        "src_life_grad",
+        "src_tokens_grad",
+        "src_tokens_peak",
+        "src_pumpfun_mc",
+        "src_pumpfun_complete",
+        "peak_24h_usd",
+        "life_mc_first_ts",
+        "life_grad_first_ts",
+        "pumpfun_mc_usd",
+        "pumpfun_complete_ts",
+        "migrated",
+        "reached_mc",
+        "launch_recorded",
+        "trades_kept",
+        "fd_recorded",
+        "fd_grp",
+        "fd_checked",
+        "fd_entered",
+        "note",
+        "src_gmgn_mc",
+        "gmgn_mc_usd"
+      ],
+      "populated_counts": {
+        "mint": 1476,
+        "name": 1476,
+        "create_ts": 1476,
+        "first_detect_ts": 1476,
+        "last_seen_ts": 1476,
+        "src_peaks": 1476,
+        "src_life_mc": 1476,
+        "src_life_grad": 1476,
+        "src_tokens_grad": 1476,
+        "src_tokens_peak": 1476,
+        "src_pumpfun_mc": 1476,
+        "src_pumpfun_complete": 1476,
+        "peak_24h_usd": 622,
+        "life_mc_first_ts": 471,
+        "life_grad_first_ts": 1162,
+        "migrated": 1476,
+        "reached_mc": 1476,
+        "launch_recorded": 1455,
+        "trades_kept": 1455,
+        "fd_recorded": 1455,
+        "fd_checked": 1455,
+        "fd_entered": 1455,
+        "src_gmgn_mc": 1476,
+        "gmgn_mc_usd": 80,
+        "fd_grp": 859
+      },
+      "sha256": "6dccee2763d000b84c1f2c2683ad4005238a24b3ca87ce1f013a54e37163818b",
+      "ranges": {
+        "create_ts": {
+          "min": 1793890398.0,
+          "max": 1794062243.0,
+          "min_utc": "2026-11-05T14:53:18+00:00",
+          "max_utc": "2026-11-07T14:37:23+00:00"
+        },
+        "first_detect_ts": {
+          "min": 1793972685.0,
+          "max": 1794062357.0,
+          "min_utc": "2026-11-06T13:44:45+00:00",
+          "max_utc": "2026-11-07T14:39:17+00:00"
+        }
+      }
+    },
+    "current/registry_coverage.csv.gz": {
+      "rows": 3,
+      "columns": [
+        "day",
+        "runners",
+        "migrated",
+        "reached_mc",
+        "both",
+        "src_peaks",
+        "src_life",
+        "src_tokens",
+        "src_pumpfun",
+        "src_gmgn",
+        "external_only",
+        "launch_recorded",
+        "trades_kept",
+        "fd_recorded",
+        "fd_checked",
+        "fd_entered"
+      ],
+      "populated_counts": {
+        "day": 3,
+        "runners": 3,
+        "migrated": 3,
+        "reached_mc": 3,
+        "both": 3,
+        "src_peaks": 3,
+        "src_life": 3,
+        "src_tokens": 3,
+        "src_pumpfun": 3,
+        "src_gmgn": 3,
+        "external_only": 3,
+        "launch_recorded": 3,
+        "trades_kept": 3,
+        "fd_recorded": 3,
+        "fd_checked": 3,
+        "fd_entered": 3
+      },
+      "sha256": "8375f2e79a4ec937fc6cbd849cd47fa6e7d2cb5de0ab578b95132d919fd3d1db",
+      "ranges": {}
+    },
+    "current/sol_usd.csv.gz": {
+      "rows": 770,
+      "columns": [
+        "ts",
+        "usd"
+      ],
+      "populated_counts": {
+        "ts": 770,
+        "usd": 770
+      },
+      "sha256": "93cb758f122d26762be56f78e4677760bd87fc082d8df00124a4df16fbaa615d",
+      "ranges": {
+        "ts": {
+          "min": 1793960680.0,
+          "max": 1794050717.0,
+          "min_utc": "2026-11-06T10:24:40+00:00",
+          "max_utc": "2026-11-07T11:25:17+00:00"
+        }
+      }
+    },
+    "current/coverage_mints.csv.gz": {
+      "rows": 44017,
+      "columns": [
+        "mint",
+        "create_ts",
+        "tier",
+        "graduated",
+        "finalized",
+        "venue",
+        "first_ts",
+        "last_ts",
+        "n_trades",
+        "max_gap_s",
+        "max_price_sol",
+        "max_slot",
+        "max_ts",
+        "max_sig",
+        "export_cutoff_ts"
+      ],
+      "populated_counts": {
+        "mint": 44017,
+        "create_ts": 44017,
+        "tier": 44017,
+        "graduated": 44017,
+        "finalized": 44017,
+        "n_trades": 44017,
+        "export_cutoff_ts": 44017,
+        "venue": 3555,
+        "first_ts": 3555,
+        "last_ts": 3555,
+        "max_gap_s": 3511,
+        "max_price_sol": 3555,
+        "max_slot": 3555,
+        "max_ts": 3555,
+        "max_sig": 3555
+      },
+      "sha256": "8a4669e81226029e5eb181badcaadb35c2e7f45b61e086aab26485fc601d7b5a",
+      "ranges": {
+        "create_ts": {
+          "min": 1793964230.0,
+          "max": 1794050626.0,
+          "min_utc": "2026-11-06T11:23:50+00:00",
+          "max_utc": "2026-11-07T11:23:46+00:00"
+        },
+        "export_cutoff_ts": {
+          "min": 1794050627.0,
+          "max": 1794050627.0,
+          "min_utc": "2026-11-07T11:23:47+00:00",
+          "max_utc": "2026-11-07T11:23:47+00:00"
+        }
+      }
+    },
+    "current/coverage_crossings.csv.gz": {
+      "rows": 200,
+      "columns": [
+        "mint",
+        "venue",
+        "slot",
+        "ts",
+        "sig",
+        "price_sol",
+        "sol_usd",
+        "sol_usd_ts",
+        "sol_usd_age_s",
+        "mc_usd",
+        "pricing",
+        "prev_venue",
+        "prev_slot",
+        "prev_ts",
+        "prev_price_sol",
+        "suspect_jump",
+        "n_trades_ge_100k",
+        "max_mc_usd_ge_100k"
+      ],
+      "populated_counts": {
+        "mint": 200,
+        "venue": 200,
+        "slot": 200,
+        "ts": 200,
+        "sig": 200,
+        "price_sol": 200,
+        "sol_usd": 200,
+        "sol_usd_ts": 200,
+        "sol_usd_age_s": 200,
+        "mc_usd": 200,
+        "pricing": 200,
+        "prev_venue": 195,
+        "prev_slot": 195,
+        "prev_ts": 195,
+        "prev_price_sol": 195,
+        "suspect_jump": 200,
+        "n_trades_ge_100k": 200,
+        "max_mc_usd_ge_100k": 200
+      },
+      "sha256": "ea365f854b8c021f47e86ac9c5edea4e34083eac7ac6593c7be394c82f2e78cd",
+      "ranges": {
+        "ts": {
+          "min": 1793977391.0,
+          "max": 1794049925.0,
+          "min_utc": "2026-11-06T15:03:11+00:00",
+          "max_utc": "2026-11-07T11:12:05+00:00"
+        },
+        "sol_usd_age_s": {
+          "min": 0.0,
+          "max": 119.0,
+          "min_utc": null,
+          "max_utc": null
+        }
+      }
+    }
+  },
+  "limitations": [
+    "Descriptive coverage only; no predictor, ROI or hidden outcomes",
+    "Checkpoint availability is not complete path coverage",
+    "obs_ts need not be actual receipt/knowledge timestamp",
+    "Registry is outcome-selected; never use it alone as denominator",
+    "No first-crossing or negative outcome certified by checkpoint-only absence"
+  ]
+}
