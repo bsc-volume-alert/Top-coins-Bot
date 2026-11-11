@@ -8,3 +8,8 @@ Totals count every resolved winner and exclude separately reported unknown outco
 | CDEX-L001-CONTROL | Same age120s/exit, without wallet and newcomer filter | e6783312;same period | 2,374;873 fills unavailable;1,186 exits uncertain;1,188 resolved (3,247 attempts) | -53.736008 observed | -22.62% / -29.46% | -55.317758 SOL | 1 control;2 total with candidate | inconclusive | c005-lab-20261111T175731Z |
 
 L001's unresolved outcomes leave its full unconditional total uncertain despite negative resolved results in both halves. No-best1: -9.606189SOL (candidate), -54.360737SOL (control). No best-three rule was used to disqualify a positive idea. Code, protocol, full metrics and partitioned per-trade CSV records are in runs/c005-lab-20261111T175731Z/.
+
+| CDEX-L002 | Fixed5min liquidity stress gate against a hypothetical5SOL inventory sale | e6783312;6Nov07:40–7Nov20:00UTC | 572;248 fills unavailable;191 exits uncertain;381 resolved (820 attempts) | -15.293066 observed | -20.07% / -24.78% | -16.208778SOL | 1 candidate;2 total with control | failed | c009-20261111T181843Z |
+| CDEX-L002-CONTROL | Same5min execution and exit, no stress gate | e6783312;same period | 1,394;2,095 fills unavailable;857 exits uncertain;537 resolved (3,489 attempts) | -19.469149 observed | -18.13% / -26.50% | -22.212237SOL | 1 control;2 total with candidate | inconclusive | c009-20261111T181843Z |
+
+C009 autopsy diagnostics at15/30min were not extra selected trading candidates. Matched sustained-runner/non-runner pairs:0 because no negative path passed registered coverage; the predictive comparison remains blocked. All unresolved outcomes stay separate. No-best1 for L002/control: -15.616334/-21.293953SOL.

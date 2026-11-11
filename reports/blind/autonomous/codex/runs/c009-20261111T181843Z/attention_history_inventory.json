@@ -1,0 +1,282 @@
+{
+  "task": "C011",
+  "posts": {
+    "snapshot3": {
+      "rows": 733,
+      "unique_users": 5,
+      "kinds": {
+        "repost": 358,
+        "reply": 149,
+        "post": 114,
+        "quote": 102,
+        "": 10
+      },
+      "columns": [
+        "id",
+        "user",
+        "kind",
+        "text",
+        "parent_id",
+        "parent_user",
+        "parent_text",
+        "created_ms",
+        "recv_ms",
+        "ctx_ms"
+      ],
+      "times": {
+        "created_ms": {
+          "populated": 733,
+          "min": 1793448959578.0,
+          "max": 1794041008538.0
+        },
+        "recv_ms": {
+          "populated": 733,
+          "min": 1793448959760.0,
+          "max": 1794041008705.0
+        },
+        "ctx_ms": {
+          "populated": 723,
+          "min": 0.0,
+          "max": 27446.0
+        }
+      },
+      "sha256": "0e7a828d453a3c5fc76301c35fc348bc7fc790aa104ea1c14bb076c6d279ce90",
+      "texts_inspected_for_signal": false,
+      "complete_launch_token_linkage_available": false
+    },
+    "current": {
+      "rows": 723,
+      "unique_users": 5,
+      "kinds": {
+        "repost": 355,
+        "quote": 98,
+        "reply": 148,
+        "post": 112,
+        "": 10
+      },
+      "columns": [
+        "id",
+        "user",
+        "kind",
+        "text",
+        "parent_id",
+        "parent_user",
+        "parent_text",
+        "created_ms",
+        "recv_ms",
+        "ctx_ms"
+      ],
+      "times": {
+        "created_ms": {
+          "populated": 723,
+          "min": 1793458870234.0,
+          "max": 1794062810123.0
+        },
+        "recv_ms": {
+          "populated": 723,
+          "min": 1793458870386.0,
+          "max": 1794062810263.0
+        },
+        "ctx_ms": {
+          "populated": 713,
+          "min": 0.0,
+          "max": 27446.0
+        }
+      },
+      "sha256": "a46daae00ab63e42b0090f13a745475f6e0711d7719c74ebfdb89a06b5c4d86f",
+      "texts_inspected_for_signal": false,
+      "complete_launch_token_linkage_available": false
+    }
+  },
+  "histories": {
+    "curve": {
+      "raw_rows_including_duplicates": 2266635,
+      "rows_with_recv": 2266635,
+      "rows_with_quote_decimal_fields": 0,
+      "mints": 4880,
+      "mints_observed_at_age_ge_seconds": {
+        "7200": 83,
+        "14400": 0,
+        "43200": 0,
+        "86400": 0
+      },
+      "max_observed_age_s": 7763.0,
+      "max_first_to_last_span_s": 7763.0
+    },
+    "pumpswap": {
+      "raw_rows_including_duplicates": 5674642,
+      "rows_with_recv": 5674642,
+      "rows_with_quote_decimal_fields": 3615188,
+      "mints": 389,
+      "mints_observed_at_age_ge_seconds": {
+        "7200": 92,
+        "14400": 68,
+        "43200": 46,
+        "86400": 3
+      },
+      "max_observed_age_s": 86400.0,
+      "max_first_to_last_span_s": 84908.0
+    },
+    "pumpswap/WBTC": {
+      "raw_rows_including_duplicates": 630,
+      "rows_with_recv": 630,
+      "rows_with_quote_decimal_fields": 630,
+      "mints": 1,
+      "mints_observed_at_age_ge_seconds": {
+        "7200": 1,
+        "14400": 1,
+        "43200": 1,
+        "86400": 0
+      },
+      "max_observed_age_s": 86398.0,
+      "max_first_to_last_span_s": 17094.0
+    },
+    "pumpswap/DOGE": {
+      "raw_rows_including_duplicates": 345,
+      "rows_with_recv": 345,
+      "rows_with_quote_decimal_fields": 345,
+      "mints": 1,
+      "mints_observed_at_age_ge_seconds": {
+        "7200": 1,
+        "14400": 1,
+        "43200": 1,
+        "86400": 0
+      },
+      "max_observed_age_s": 86287.0,
+      "max_first_to_last_span_s": 34003.0
+    },
+    "pumpswap/Fapcoin": {
+      "raw_rows_including_duplicates": 15025,
+      "rows_with_recv": 15025,
+      "rows_with_quote_decimal_fields": 15025,
+      "mints": 1,
+      "mints_observed_at_age_ge_seconds": {
+        "7200": 1,
+        "14400": 1,
+        "43200": 1,
+        "86400": 1
+      },
+      "max_observed_age_s": 86400.0,
+      "max_first_to_last_span_s": 37307.0
+    },
+    "pumpswap/mihao": {
+      "raw_rows_including_duplicates": 892,
+      "rows_with_recv": 892,
+      "rows_with_quote_decimal_fields": 889,
+      "mints": 1,
+      "mints_observed_at_age_ge_seconds": {
+        "7200": 1,
+        "14400": 1,
+        "43200": 1,
+        "86400": 0
+      },
+      "max_observed_age_s": 86100.0,
+      "max_first_to_last_span_s": 40586.0
+    },
+    "pumpswap/PRIVACY": {
+      "raw_rows_including_duplicates": 2880,
+      "rows_with_recv": 2880,
+      "rows_with_quote_decimal_fields": 2820,
+      "mints": 2,
+      "mints_observed_at_age_ge_seconds": {
+        "7200": 2,
+        "14400": 2,
+        "43200": 2,
+        "86400": 0
+      },
+      "max_observed_age_s": 86349.0,
+      "max_first_to_last_span_s": 44260.0
+    },
+    "pumpswap/PUMP": {
+      "raw_rows_including_duplicates": 23208,
+      "rows_with_recv": 23208,
+      "rows_with_quote_decimal_fields": 23187,
+      "mints": 4,
+      "mints_observed_at_age_ge_seconds": {
+        "7200": 3,
+        "14400": 3,
+        "43200": 2,
+        "86400": 0
+      },
+      "max_observed_age_s": 82129.0,
+      "max_first_to_last_span_s": 44454.0
+    },
+    "pumpswap/BTC": {
+      "raw_rows_including_duplicates": 3887,
+      "rows_with_recv": 3887,
+      "rows_with_quote_decimal_fields": 3887,
+      "mints": 2,
+      "mints_observed_at_age_ge_seconds": {
+        "7200": 2,
+        "14400": 2,
+        "43200": 2,
+        "86400": 0
+      },
+      "max_observed_age_s": 80268.0,
+      "max_first_to_last_span_s": 41890.0
+    },
+    "pumpswap/USDC": {
+      "raw_rows_including_duplicates": 8180,
+      "rows_with_recv": 8180,
+      "rows_with_quote_decimal_fields": 8180,
+      "mints": 2,
+      "mints_observed_at_age_ge_seconds": {
+        "7200": 2,
+        "14400": 2,
+        "43200": 2,
+        "86400": 0
+      },
+      "max_observed_age_s": 75532.0,
+      "max_first_to_last_span_s": 40507.0
+    },
+    "pumpswap/scamsem": {
+      "raw_rows_including_duplicates": 2600,
+      "rows_with_recv": 2600,
+      "rows_with_quote_decimal_fields": 2600,
+      "mints": 2,
+      "mints_observed_at_age_ge_seconds": {
+        "7200": 2,
+        "14400": 2,
+        "43200": 2,
+        "86400": 0
+      },
+      "max_observed_age_s": 71127.0,
+      "max_first_to_last_span_s": 43539.0
+    },
+    "pumpswap/NVDAx": {
+      "raw_rows_including_duplicates": 13070,
+      "rows_with_recv": 13070,
+      "rows_with_quote_decimal_fields": 12953,
+      "mints": 1,
+      "mints_observed_at_age_ge_seconds": {
+        "7200": 1,
+        "14400": 1,
+        "43200": 1,
+        "86400": 0
+      },
+      "max_observed_age_s": 68964.0,
+      "max_first_to_last_span_s": 44585.0
+    },
+    "pumpswap/DJT": {
+      "raw_rows_including_duplicates": 25257,
+      "rows_with_recv": 25257,
+      "rows_with_quote_decimal_fields": 25257,
+      "mints": 3,
+      "mints_observed_at_age_ge_seconds": {
+        "7200": 2,
+        "14400": 0,
+        "43200": 0,
+        "86400": 0
+      },
+      "max_observed_age_s": 12909.0,
+      "max_first_to_last_span_s": 12802.0
+    }
+  },
+  "limits": [
+    "Counts are raw, duplicates included, no performance/label inference",
+    "One late observation does not certify continuous capture or a horizon outcome",
+    "Post publication and receipt/context timestamps have different meanings; absent receipt makes causal attention features unavailable",
+    "No trending history or all-launch attention census established",
+    "No protected outcome files or new social/blockchain calls"
+  ]
+}

@@ -2,9 +2,24 @@
   "worker": "Codex",
   "run_id": "c009-20261111T181843Z",
   "task": "C009 + Idea Lab",
-  "state": "running",
+  "state": "completed",
   "started_at": "2026-11-11T18:18:43Z",
-  "lease_expires_at": "2026-11-11T20:18:43Z",
+  "lease_expires_at": null,
   "previous_run": "c005-lab-20261111T175731Z",
-  "scope": "Matched-age liquidity/execution autopsy and one fixed depth-stress candidate; build evidence-linked knowledge register"
+  "scope": "Matched-age liquidity/execution autopsy and one fixed depth-stress candidate; build evidence-linked knowledge register",
+  "completed_at": "2026-11-11T18:30:33Z",
+  "task_states": {
+    "C009": "partial_blocked_negative_labels",
+    "C011": "completed"
+  },
+  "result": "L002 tested:820 attempts,572 filled,381 resolved,-15.293066SOL; matched pairs0; C011 inventory and evidence memory completed",
+  "next_task": "C010 when F006 is published; otherwise independent C007/C006 work only with defensible causal evidence",
+  "artifacts": "reports/blind/autonomous/codex/runs/c009-20261111T181843Z/",
+  "protocol_commit": "0aa4b4998d296239f5950ec599e3989eefc6f907",
+  "blockers": [
+    "C009 matched comparison:zero negative labels pass registered coverage",
+    "C010 awaiting published F006; research-claude ref unavailable at initial read"
+  ],
+  "knowledge_register": "reports/blind/autonomous/codex/KNOWLEDGE.md",
+  "scheduler_memory_requirement_updated": true
 }

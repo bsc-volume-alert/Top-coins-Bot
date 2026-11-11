@@ -24,3 +24,7 @@ C004 keeps simulated reserve-read timing separate from live send-to-confirmation
 | c005-lab-20261111T175731Z | C005 wallet audit + owner Idea Lab | 24 wallet-table and16 trade checksums pass; L001257 attempts/255 filled/224 resolved/31 uncertain exits/2 unavailable fills | -9.229367SOL observed; mean/median -20.60%/-26.44%; no-best3 -10.162454SOL; full total unknown | C006 + next preregistered idea |
 
 Owner-requested scenario is separate from frozen eval-1.1:125bps curve/55bps pool,0.2SOL,1s buy/0.7s sell,30% proceeds trail,30s state freshness. One candidate plus one control, no sweep or retuning. DIALOGUE.md and EXPERIMENTS.md contain plain-English results. research-claude returned404; no contact or reproduction claim.
+
+| c009-20261111T181843Z | Priority C009 autopsy + L002; independent C011 | L002820/572/381 attempted/filled/resolved; no matched negative-label pairs; posts/longer histories inventoried | -15.293066SOL observed; mean/median -20.07%/-24.78%;248 missing fills/191 uncertain sells; no-best3 -16.208778SOL | C009 label review; C010 when F006 exists |
+
+C009 is partial/blocked for matched inference, not a completed predictive comparison. C011 is complete. KNOWLEDGE.md and the scheduled memory requirement were added; three new hypotheses are in DIALOGUE, one candidate/control tested. No protected data or new paid calls.

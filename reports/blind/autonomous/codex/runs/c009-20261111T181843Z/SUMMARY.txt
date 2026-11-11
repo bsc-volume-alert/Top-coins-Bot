@@ -1,0 +1,5 @@
+Ran the liquidity/execution autopsy at5/15/30min, tested one fixed stress gate, and inventoried existing attention/longer histories.
+The gate lost15.293066SOL across381 resolved trades;191 exits and248 fills remain unavailable.
+No negative path met the registered coverage rule, so the requested matched comparison could not be completed.
+Archived posts and some24h pool observations exist, but neither establishes a complete attention or survivor dataset.
+Next: review causal negative-label coverage and reproduce Claude F006 once published; knowledge memory now guides scheduled runs.
