@@ -1,1 +1,1 @@
-stall-log 1032
+slowsql 1124
