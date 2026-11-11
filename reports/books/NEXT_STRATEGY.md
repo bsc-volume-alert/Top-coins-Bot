@@ -27,3 +27,19 @@ Sell at slot+2 and trail on sellable proceeds (branch next-strategy-v22 @ 0e501e
 - **Going up does predict more upside:** of coins climbing at $10–50K, about 1 in 3 double again (34% in both periods), against 8% for an average coin in A. But 54% halve first, in both periods.
 - **Trading it, $10–50K, T25:** A +27% to +54% a trade (+1% to +10% without the top 3); B +13% to +18% (−3% to −5% without the top 3). $50–200K: A +4% to +19%, B −11% to +16%, mostly negative without the top 3.
 - Same shape as C1, C2 and R3C: positive averages carried by a few runners, not positive on the typical trade in the second period. Not a new edge; no book proposed.
+
+## 11 Nov 2026 17:45 UK — exploratory: quiet-base breakout and scale-in (owner/Codex go 17:11; spec frozen in BASE_SCALE_SPEC.md, branch next-strategy-v22)
+**Quiet-base breakout** (3-min base within ±15% of its median, break > 1.15× with > 3 SOL net buying in 60 s, $10–100K, 0.2 SOL, T25):
+| | Signals | Return on invested | Without top 3 (per trade) | False breakouts | Sudden dumps |
+|---|---|---|---|---|---|
+| A | 79 | +11.6% | −6.7% | 26 (they lost 25%) | 9 |
+| B | 59 | −13.2% | −20.1% | 27 (they lost 38%) | 20 |
+- The "quiet" bases were not quiet: median 22–34 SOL traded and 91–326 swaps in the 3 minutes (flat price, heavy churn). The quieter half: A −0.1%, B −6.2%. Fails.
+
+**Scale-in vs upfront vs small, same signals** (up 2× in 15 min, near high, $10–50K):
+| Arm | A profit per opportunity / without top 3 | B profit per opportunity / without top 3 | Return on invested A / B | Max simultaneous |
+|---|---|---|---|---|
+| 0.2 upfront | +0.056 / +0.003 SOL | +0.026 / −0.007 SOL | +28.0% / +13.0% | 1.00 / 0.60 SOL |
+| 0.05, no add | +0.013 / 0.000 | +0.006 / −0.003 | +26.7% / +11.3% | 0.25 / 0.15 |
+| 0.05 + add 0.15 | +0.015 / −0.002 | +0.014 / −0.005 | +15.5% / +13.6% | 0.55 / 0.45 |
+- Adds made in 53 of 179 (A) and 32 of 88 (B). Scale-in cut exposure, but its return on the money invested was no better than buying upfront: it risks less, it does not time better. Without the top 3, all three arms are about zero or negative in both periods.
