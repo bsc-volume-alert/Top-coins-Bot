@@ -194,3 +194,9 @@
 - Stalls: 83 blocks ≥ 10 s on 9–10 Nov, 46 of them ≥ 2 min (not all 1.5–6 min). Delayed-vs-lost trades during blocks still to be measured.
 - HYoM6KGc's exit (sell 66 s after trigger) is an execution delay, kept separate from the sub-second collapses.
 - Still no new trading filter from this sample; books frozen.
+
+## 11 Nov 12:45 UK — v3 analysis fixes, freeze cause, confirmation-window versions
+- Investigations v3 (k100-investigations-20261111 @ 0a43dc61): knowledge-time flags (0 affected fills), retrospective vs decision-time instant graduation separated, unknown features reported separately — decision-time instant graduation: hit 23 (14 severe, 5 winners), passed −9.1% (29), unknown −2.0% (28). No filter adopted.
+- Freeze cause found (tracker-freeze-20261111 @ d135d19a): latestMintOf blocked 175.8 s; fixed in tracker 0.19.15. Smaller disk-bound queries (2–10 s) remain, to fix one by one.
+- Confirmation window 12 Nov — FROZEN: launcher 0.9.61 scoring (K-1, unchanged since 9 Nov), tracker 0.19.15 (feddbd5) collection, clock epochs C5-2 + C5-2R (restart-recovered, 0.19.14). Any later change is listed with its time in the confirmation report.
+- Codex's framing adopted: no strategy permutations; finish reliability; run the confirmation window; one decision report (returns, uncertainty, execution sensitivity, dependence on best coins); if negative, reject these candidates rather than move thresholds.
