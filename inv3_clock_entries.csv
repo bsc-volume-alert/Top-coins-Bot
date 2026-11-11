@@ -1,0 +1,40 @@
+mint,band,venue_at_entry,decision_utc,mc5_usd,clock_price_age_s,fill_over_check,status,OUT_r,OUT_exit_reason,freshness,age_bucket
+5LCZtSCqjYRocjzyh1SZbs3EJKZ4v5LDu53Wo63vpump,40-50K,curve,09 23:04:01,40072,244,1.009,closed,-0.0271,2h,verified unchanged (reserves agree),> 10 s
+9Rk9M1XLBLj4aKT7c8uSK8p4jxBAk4VshSVnQz3Lpump,40-50K,curve,09 23:44:02,40336,169,1.0107,closed,-0.0271,2h,verified unchanged (reserves agree),> 10 s
+GV9T3GVoQbTcsUaKnT9EsT9gRNy7MG4T3EvpfdQ7pump,30-40K,curve,09 23:57:25,34055,4,1.01,closed,-0.3378,trail,verified unchanged (reserves agree),≤ 10 s
+z68Nv2CRghYz4XZzHSoE8pkHtiF1V83MjJ5ip2vpump,30-40K,curve,10 00:31:56,32147,232,1.0106,closed,-0.0273,2h,verified unchanged (reserves agree),> 10 s
+6kitH34UZEkhd5LtzRwitweNBpmfuMqzFHVSTySdpump,30-40K,pool,10 01:05:48,31407,0,1.0049,closed,-0.8212,trail,verified unchanged (reserves agree),≤ 10 s
+6iQVahUmwVQKJXuKEPgVBcf89VHBiySAim1HeHrJpump,30-40K,curve,10 01:39:39,37993,212,1.0095,closed,-0.0274,2h,verified unchanged (reserves agree),> 10 s
+21v6J6jYix45Fths6v5oNLDzDJNrXyFoMbDAiUiApump,30-40K,curve,10 01:47:48,34201,212,1.0097,closed,-0.0273,2h,verified unchanged (reserves agree),> 10 s
+8g5vALXX5U1C53jAM629L5s67XUq9dW4wVac71Rcpump,40-50K,curve,10 01:52:29,49762,207,1.0109,closed,-0.027,2h,verified unchanged (reserves agree),> 10 s
+CXUsMSq15sQqziiKTdA3LsUnke9jsHcpets6ahHYpump,30-40K,curve,10 02:04:25,34850,99,1.0105,closed,-0.0274,2h,verified unchanged (reserves agree),> 10 s
+HWXR3P6f81KNZNTK82GpBonJ5tqqP7HUPgvDgHtXpump,40-50K,pool,10 02:21:39,47115,4,1.0126,closed,-0.1894,trail,verified unchanged (reserves agree),≤ 10 s
+Aswv9dnHE9QJuB5xtMmxagefTm3Ti3GpDvVLNmy9pump,30-40K,curve,10 02:39:29,38758,255,1.0099,closed,-0.4018,trail,verified unchanged (reserves agree),> 10 s
+F2qCYbvgjrcZiPX6Ma9UabMQoA7Ffob5pPCnp5ripump,30-40K,curve,10 03:05:41,34436,208,1.0113,closed,-0.0273,2h,verified unchanged (reserves agree),> 10 s
+EDhfrwv57sPDeeduas3TAJrKEH67Sm8EofS54p9Kpump,30-40K,curve,10 03:41:32,33462,107,1.0093,closed,0.5595,2h,verified unchanged (reserves agree),> 10 s
+GLeeS5nXmbG9GzzNhCEpuHDyBe18QVzS2rTXcEBgpump,30-40K,curve,10 03:48:32,35245,201,1.0115,closed,-0.0272,2h,verified unchanged (reserves agree),> 10 s
+HwTb87NYmpnCVBv95nLrN8VHKVY8eGtjPNVy3KDepump,40-50K,curve,10 04:34:46,44333,101,1.01,closed,-0.0279,2h,verified unchanged (reserves agree),> 10 s
+GYELUksU3yjpLymD9g7TL5YcJwGzArBBtLJLE5hpump,40-50K,curve,10 04:41:59,48772,164,1.0098,closed,-0.027,2h,verified unchanged (reserves agree),> 10 s
+J68JLX62q9pmTKeAYJRVwTPAmSRrcj8UQ16pp9aApump,40-50K,pool,10 04:50:45,42940,6,1.011,closed,-0.0747,trail,verified unchanged (reserves agree),≤ 10 s
+Aa52FKgwmjsgMXwZWWNCp83bwKwjQTu3wvesUqYBpump,30-40K,curve,10 05:09:29,30993,149,1.0106,closed,-0.0275,2h,verified unchanged (reserves agree),> 10 s
+7HGGYfa9QMcXkvJDmHeRboLSE4W9aiQiWy2oqF2ppump,40-50K,curve,10 06:34:30,41882,272,1.01,closed,-0.0271,2h,verified unchanged (reserves agree),> 10 s
+7Tw9KfqYbi3A3ENuHkws3CLBeq9Nf8df4QMkjZDppump,30-40K,curve,10 08:41:18,31255,261,1.0098,closed,-0.0273,2h,verified unchanged (reserves agree),> 10 s
+EMfnF5D4XaUn4qQ6UMWeHCCvkm1Yyuj3DGuvHfCWpump,30-40K,pool,10 10:37:31,37698,0,0.9923,closed,1.3743,trail,verified unchanged (reserves agree),≤ 10 s
+FJ2tS7N8Z9rHXf3irns43qc87Q41Hg8eN61UpJvUpump,30-40K,curve,10 10:40:44,32016,89,1.01,closed,-0.0273,2h,verified unchanged (reserves agree),> 10 s
+Ffs4KXjK7HmQMVmdjc86BUAEvHmQoqbNLyDv96Qzpump,30-40K,pool,10 10:56:49,39061,0,1.0025,closed,-0.9674,trail,verified unchanged (reserves agree),≤ 10 s
+44P8ufDZVLdSR9hRZNdLHPs348b72enMa6JowAzNpump,30-40K,curve,10 11:32:37,34655,105,1.0074,closed,-0.0272,2h,verified unchanged (reserves agree),> 10 s
+5wzp3d5bimC7bdnQc8bQvymXkdEdxFwB8QpQEoXVpump,40-50K,pool,10 13:01:48,41722,1,1.0009,closed,-0.4888,trail,verified unchanged (reserves agree),≤ 10 s
+J1W5iWVz62beYgBd3bNr8Yc7oEifaJRyRmA8yaxapump,30-40K,pool,10 15:31:38,30858,5,1.0116,closed,0.3361,trail,verified unchanged (reserves agree),≤ 10 s
+3HyA7Q2TUMksEQqJsG4xLudrUvJcDCDBWUocyRFzpump,30-40K,pool,10 15:51:36,35535,0,1.0236,closed,0.0132,trail,verified unchanged (reserves agree),≤ 10 s
+B8dvdSHW8Ejgfh7yigevPRA6wgzxjxKttftXqcBEpump,40-50K,pool,10 16:00:20,46748,6,0.8628,closed,-0.9533,trail,"fresh price, market moved before the fill (down)",≤ 10 s
+nWQJK83jpwD3qtYzii21TuqRKCYUuUXxd5vgtQCpump,30-40K,curve,10 17:02:24,38435,269,1.0137,closed,-0.0272,2h,verified unchanged (reserves agree),> 10 s
+A7b25wzw3VqsuLmqWw1afYGDLu6oauL3ZiQVaSdApump,30-40K,pool,10 17:06:48,36894,0,1.0554,closed,-0.3739,trail,"fresh price, market moved before the fill (up)",≤ 10 s
+EKgANR64wDs69gLZUaSNKWHSrJQ7LcP29A3UHcppump,30-40K,pool,10 17:10:44,32798,1,1.0342,closed,0.0456,trail,verified unchanged (reserves agree),≤ 10 s
+GJZZYWz3ecGS3N7HVgqbpYqXFYiD8UHuVurJzJykpump,40-50K,curve,10 17:19:31,45045,108,1.0109,closed,-0.027,2h,verified unchanged (reserves agree),> 10 s
+7LtE7Yr6X1MKf9oxvccydXCrMGkZ6ZeYL1AVhX1Hpump,30-40K,pool,10 17:31:20,34755,0,1.0223,closed,0.5759,trail,verified unchanged (reserves agree),≤ 10 s
+E9TehaEqnHiPUm1ucbr13cLr6Fg4dfjUJZedYbR1pump,30-40K,curve,10 17:55:55,31869,3,1.01,closed,-0.0273,2h,verified unchanged (reserves agree),≤ 10 s
+9zgKYpYrrjY1GkLA6LF1hXQahWD1Nnt1SLkJ4mJepump,30-40K,curve,10 18:11:35,30978,8,1.0103,closed,-0.0281,2h,verified unchanged (reserves agree),≤ 10 s
+Fn6h2hxWFgfgsMr7EhE9BUKoLNYp81HUoUysmAQMpump,30-40K,curve,10 18:38:39,36377,268,1.0113,closed,-0.0272,2h,verified unchanged (reserves agree),> 10 s
+9gNZB2AykXaWxQgFs5PbnEFNwEjMQpV6r8xiKogkpump,30-40K,curve,10 18:56:59,31762,258,1.0119,closed,-0.0273,2h,verified unchanged (reserves agree),> 10 s
+FNxnauVJo9Y39yf3NEgj6uTFcCzLHTiyNnDYCPagpump,30-40K,curve,10 19:39:10,30747,239,1.0079,open,,,verified unchanged (reserves agree),> 10 s
+8hF6kWfrGPzrRFqgWJVdDMkenhtrmsPU6JYu24SSpump,30-40K,pool,10 19:52:36,34023,4,0.8726,closed,1.1258,trail,"fresh price, market moved before the fill (down)",≤ 10 s
