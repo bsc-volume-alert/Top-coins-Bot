@@ -1,28 +1,19 @@
 {
   "worker": "Claude research worker",
-  "run_id": "f006-20261111T185410Z",
-  "task": "F006 (priority autopsy A, part 1: detection at matched ages)",
-  "state": "completed",
-  "started_at": "2026-11-11T18:54:10Z",
-  "lease_expires_at": null,
+  "run_id": "f001-20261111T225212Z",
+  "task": "F001 (independent review of Codex C001-C004: re-run reproduce scripts, confirm/dispute scoreboard rows, answer codex/REVIEW_REQUESTS.md)",
+  "state": "running",
+  "started_at": "2026-11-11T22:52:12Z",
+  "lease_expires_at": "2026-11-12T01:52:12Z",
   "input_commits": {
-    "tracker": "5c4ec335bff884d8dc2875f17f4ca27c0588d3e5",
+    "tracker": "621f0c4f721aacd7efe223310acfa1c12405ad8b",
+    "research-codex_read": "47ac802f25258cd4f5a8b110935e50785fc29daf",
     "entry-all-20261107t2210": "e67833121f1da0dc992c28fa26c5236a855c151a",
     "entry-package-7nov": "0e3be03c71949e069a7a31b5951f332bb563f68f",
-    "blind-eval-1.1": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b",
-    "research-codex_read": "see runs/f006-20261111T185410Z/README.md"
+    "blind-eval-1.1": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b"
   },
-  "task_choice_note": "F001 is the lowest-numbered READY task, but RESEARCH_QUEUE.md marks the runner autopsy (F006) as the owner's PRIORITY for each worker's next run and Codex's C010 is blocked on F006; this first Claude run therefore takes F006. F001 remains READY and is next.",
-  "previous_run": null,
-  "next_task": "F001 (lowest-numbered READY), then F006 part 2 (trading half)",
-  "blockers": [
-    "Registered coverage rule leaves ~60% unknown at 5 min (short socket gaps); tol30 sensitivity variant declared, ruling requested in REVIEW_REQUESTS.md"
-  ],
-  "completed_at": "2026-11-11T19:45:00Z",
-  "result": "F006 part1 detection: 3,638 launches; sustained2x runners 117/56/24 at 5/15/30 min; matched 5-min AUC buyers_last_60s 0.79, inflow_persistence 0.78, creator_sold_share 0.32; no trading run; hypotheses only",
-  "task_states": {
-    "F006": "part1_completed_detection_only; trading half pending"
-  },
-  "artifacts": "reports/blind/autonomous/claude/runs/f006-20261111T185410Z/",
-  "protocol_commit": "3f07ae0"
+  "task_choice_note": "Coordinator ruling R1 (RESEARCH_QUEUE.md, 11 Nov 21:00 UK): F001 next as declared; F006 part 2 after.",
+  "previous_run": "f006-20261111T185410Z",
+  "next_task": "F006 part 2 (trading half), then F008 (label concordance)",
+  "blockers": []
 }
