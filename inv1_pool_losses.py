@@ -54,10 +54,15 @@ for r in fp:
     x["duplicate_rows_removed"] = DUPS.get(m, 0); x["rows_received_after_decision_excluded"] = sum(1 for z in tr.get(m, []) if z["ts"] and int(z["ts"]) <= t0 and z["recv_ms"] and int(z["recv_ms"]) > msd)
     if T:
         cts = int(d["create_ts"]) if d.get("create_ts") else int(cz.get("create_ts") or 0)
+        # v3 (Codex 12:00): RETROSPECTIVE launch class (first pool trade anywhere in the stored history) kept apart from the DECISION-TIME signal
+        # (first pool trade among swaps received by the decision, receipt time proven); rows without recv_ms are knowledge-time uncertain.
         pool = [z for z in tr[m] if z["venue"] and z["venue"] != "curve"]
         g = int(pool[0]["ts"]) if pool else None
-        x["migrated_before_entry"] = int(g is not None and g <= t0); x["secs_since_migration"] = (t0 - g) if g is not None and g <= t0 else None
-        x["secs_create_to_migration"] = (g - cts) if g is not None and cts else None
+        x["RETRO_secs_create_to_first_pool_trade"] = (g - cts) if g is not None and cts else None
+        Tk = [z for z in T if z["recv_ms"]]; x["kt_uncertain_rows"] = len(T) - len(Tk)
+        pk_ = [z for z in Tk if z["venue"] and z["venue"] != "curve"]; gk = int(pk_[0]["ts"]) if pk_ else None
+        x["secs_create_to_migration"] = (gk - cts) if gk is not None and cts else None   # decision-time signal (proven receipt)
+        x["migrated_before_entry"] = int(gk is not None); x["secs_since_migration"] = (t0 - gk) if gk is not None else None
         px = [(int(z["ts"]), fl(z["price_sol"])) for z in T if fl(z["price_sol"])]
         last = px[-1][1] if px else None
         w60 = [z for z in T if int(z["ts"]) > t0 - 60]; w300 = [z for z in T if int(z["ts"]) > t0 - 300]
@@ -67,6 +72,9 @@ for r in fp:
         x.update({"buy_sol_60s": round(b60, 3), "sell_sol_60s": round(s60, 3), "net_sol_60s": round(b60 - s60, 3), "buy_sol_300s": round(b300, 3), "sell_sol_300s": round(s300, 3),
                   "net_sol_300s": round(b300 - s300, 3), "trades_300s": len(w300), "wallets_300s": len({z["wallet"] for z in w300})})
         pk = max(p for _, p in px) if px else None
+        pxk = [(int(z["ts"]), fl(z["price_sol"])) for z in Tk if fl(z["price_sol"])]; pkk = max(p for _, p in pxk) if pxk else None
+        x["price_vs_peak_strict"] = round(pxk[-1][1] / pkk, 3) if pkk else None
+        wk = [z for z in Tk if int(z["ts"]) > t0 - 300]; x["net_sol_300s_strict"] = round(sum((fl(z["sol"]) or 0) * (1 if z["is_buy"] == "1" else -1) for z in wk), 3)
         x["price_vs_peak_before_entry"] = round(last / pk, 3) if pk else None
         p60 = [p for t, p in px if t <= t0 - 60]; x["price_change_60s"] = round(last / p60[-1] - 1, 3) if p60 and last else None
         lr = [math.log(px[i][1] / px[i - 1][1]) for i in range(1, len(px)) if px[i][0] > t0 - 300 and px[i - 1][1] > 0]
@@ -105,22 +113,25 @@ W("| mint | decision | mc5 | src | price age | quote SOL | since migration s | n
 for r in sorted(P40, key=lambda r: r["OUT_r"]):
     W(f"| {r['mint'][:8]} | {r['decision_utc']} | {r['mc5_usd']} | {r['decision_src']} | {r['clock_price_age_s'] or ''} | {round(r['quote_sol_at_check'],1) if r['quote_sol_at_check'] else ''} | {r.get('secs_since_migration','')} | {r.get('net_sol_300s','')} | {r.get('price_vs_peak_before_entry','')} | {r['fill_over_check']} | {r['OUT_exit_reason']} | {100*r['OUT_r']:.0f}% | {r['OUT_hi_x']} | {r['EXE_max_gap_s']} |")
 # candidate warnings, evaluated on ALL 100K1 closed fills (both bands, both venues) — exploratory, in-sample
-def evalw(name, f):
-    hit = [r for r in closed if f(r)]; miss = [r for r in closed if not f(r)]; unk = [r for r in closed if f(r) is None]  # unknown (no retained trades) counts as kept
-    if not hit: return f"| {name} | 0 | | | | | |"
-    return (f"| {name} | {len(hit)} | {sum(r['OUT_r'] < -0.5 for r in hit)} | {sum(r['OUT_r'] > 0 for r in hit)} | {100*S.mean(r['OUT_r'] for r in hit):.1f}% | "
-            f"{100*S.mean(r['OUT_r'] for r in miss):.1f}% ({len(miss)}) | {0.2*sum(r['OUT_r'] for r in miss):+.3f} | {sum((r['OUT_hi_x'] or 0) >= 2 for r in hit)} | " + ", ".join(r['mint'][:8] + " %+.0f%%" % (100*r['OUT_r']) for r in hit if r['OUT_r'] > 0) + " |")
+def evalw(name, f):  # v3: hit = rule fires; passed = rule evaluated and does not fire; unknown = feature missing (reported separately, NOT counted as passing)
+    v = [(r, f(r)) for r in closed]; hit = [r for r, t in v if t is True]; ok_ = [r for r, t in v if t is False]; unk = [r for r, t in v if t is None]
+    mr = lambda g: f"{100*S.mean(r['OUT_r'] for r in g):.1f}%" if g else "–"
+    if not hit: return f"| {name} | 0 | | | | {mr(ok_)} ({len(ok_)}) | {mr(unk)} ({len(unk)}) | | |"
+    return (f"| {name} | {len(hit)} | {sum(r['OUT_r'] < -0.5 for r in hit)} | {sum(r['OUT_r'] > 0 for r in hit)} | {mr(hit)} | {mr(ok_)} ({len(ok_)}) | {mr(unk)} ({len(unk)}) | "
+            f"{sum((r['OUT_hi_x'] or 0) >= 2 for r in hit)} | " + ", ".join(r['mint'][:8] + " %+.0f%%" % (100*r['OUT_r']) for r in hit if r['OUT_r'] > 0) + " |")
 G = lambda k, op_, v: (lambda r: None if r.get(k) in (None, "") else op_(float(r[k]), v))
 import operator as OP
 W("\n## Candidate warnings (in-sample, exploratory — all 100K1 closed fills, n=%d, baseline mean %.1f%%, net %+.3f SOL)\n" % (len(closed), 100*S.mean(r['OUT_r'] for r in closed), 0.2*sum(r['OUT_r'] for r in closed)))
-W("| warning (skip the entry if …) | entries hit | severe avoided | winners rejected | mean r of hit | mean r kept (n) | net SOL kept | runners (hi ≥ 2×) rejected | winners rejected (r) |"); W("|---|---|---|---|---|---|---|---|---|")
-for name, f in [("band $40–50K AND pool", lambda r: r["band"] == "40-50K" and r["venue_at_entry"] == "pool"), ("instant graduation (create→pool ≤ 5 s)", lambda r: None if r.get("secs_create_to_migration") is None else r["secs_create_to_migration"] <= 5),
+W("| warning (skip the entry if …) | entries hit | severe avoided | winners rejected | mean r of hit | mean r passed (n) | mean r feature unknown (n) | runners (hi ≥ 2×) rejected | winners rejected (r) |"); W("|---|---|---|---|---|---|---|---|---|")
+for name, f in [("band $40–50K AND pool", lambda r: r["band"] == "40-50K" and r["venue_at_entry"] == "pool"), ("RETROSPECTIVE launch class: instant graduation (first stored pool trade ≤ 5 s)", lambda r: None if r.get("RETRO_secs_create_to_first_pool_trade") is None else r["RETRO_secs_create_to_first_pool_trade"] <= 5),
+                ("decision-time: instant graduation (pool trade received by decision, ≤ 5 s after create)", lambda r: None if r.get("secs_create_to_migration") is None else r["secs_create_to_migration"] <= 5),
                 ("instant graduation AND price < 0.8 × pre-entry peak", lambda r: None if r.get("secs_create_to_migration") is None or r.get("price_vs_peak_before_entry") is None else (r["secs_create_to_migration"] <= 5 and r["price_vs_peak_before_entry"] < 0.8)),
                 ("pool AND migrated < 300 s before entry", lambda r: r["venue_at_entry"] == "pool" and r.get("secs_since_migration") is not None and r["secs_since_migration"] < 300),
-                ("net SOL last 300 s < 0", G("net_sol_300s", OP.lt, 0)), ("net SOL last 60 s < 0", G("net_sol_60s", OP.lt, 0)), ("price < 0.8 × pre-entry peak", G("price_vs_peak_before_entry", OP.lt, 0.8)),
+                ("net SOL last 300 s < 0", G("net_sol_300s", OP.lt, 0)), ("net SOL last 300 s < 0 — proven-receipt rows only", G("net_sol_300s_strict", OP.lt, 0)), ("net SOL last 60 s < 0", G("net_sol_60s", OP.lt, 0)), ("price < 0.8 × pre-entry peak", G("price_vs_peak_before_entry", OP.lt, 0.8)), ("price < 0.8 × pre-entry peak — proven-receipt rows only", G("price_vs_peak_strict", OP.lt, 0.8)),
                 ("fill/check > 1.05", G("fill_over_check", OP.gt, 1.05)), ("volatility_300s > 0.05", G("volatility_300s", OP.gt, 0.05)), ("quote SOL at check < 40", lambda r: None if r["quote_sol_at_check"] is None else r["quote_sol_at_check"] < 40),
                 ("clock price age > 60 s", G("clock_price_age_s", OP.gt, 60)), ("bundle_pct > 20", G("bundle_pct", OP.gt, 20))]:
     W(evalw(name, f))
+W(f"\nKnowledge time: {sum(1 for r in closed if (r.get('kt_uncertain_rows') or 0) > 0)} of {len(closed)} closed fills have pre-entry rows without a receipt time (block time used); the 'proven-receipt rows only' lines exclude those rows.")
 W("\nCaution: 81 fills, 29 in the $40–50K band; thresholds were chosen by eye on this same sample, so every row above is a hypothesis to test on later coins, not a rule.")
 W("\n## Execution check of the severe losses — did the trail fail because of one crash, and is the exit evidenced?\n")
 W("| mint | trigger x | exit x | exit/trigger | biggest sell within 5 s before exit (SOL) | its share of pool quote | exit reserves recorded |"); W("|---|---|---|---|---|---|---|")

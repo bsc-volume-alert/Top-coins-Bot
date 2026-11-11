@@ -14,3 +14,10 @@
    not establish that every earlier exit would have failed.
 Unchanged conclusions: the 12 severe $40–50K pool losses are instant-graduation, heavily bundled coins at ~0.42× their pre-entry peak with net selling;
 hundreds of distinct wallets (after deduplication) sell within ~1 s. No new trading filter is proposed from this sample.
+
+# Corrections v3 (11 Nov 2026 12:40 UK, Codex review of v2)
+7. **Knowledge time.** Rows without a receipt time are now flagged (`kt_uncertain_rows`) and the flow/peak warnings are also computed on proven-receipt rows only. In this sample 0 of 80 closed fills had any pre-entry row without a receipt time, so nothing changes.
+8. **Instant graduation, two separate things.** `RETRO_secs_create_to_first_pool_trade` = retrospective launch class from the whole stored history (not usable by a bot);
+   `secs_create_to_migration` = decision-time signal from pool trades received by the decision. Both give 23 hits / 14 severe / 5 winners here.
+9. **Unknown features are no longer counted as "kept".** The warning table now shows hit / passed / feature-unknown separately. This matters: e.g. decision-time instant graduation —
+   passed mean −9.1% (29), unknown −2.0% (28); v2's "kept −5.6%" was flattered by the 28 coins without retained trades (mostly curve entries).

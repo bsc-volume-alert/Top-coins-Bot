@@ -18,7 +18,7 @@
 | fill_over_check | 1 (n=12) | 1.01 (n=8) | 1.01 (n=33) |
 | roundtrip_x0 | 0.991 (n=12) | 0.991 (n=8) | 0.991 (n=33) |
 | secs_since_migration | 301 (n=12) | 299 (n=8) | 89 (n=32) |
-| secs_create_to_migration | 0 (n=12) | 1.5 (n=8) | 214 (n=33) |
+| secs_create_to_migration | 0 (n=12) | 1.5 (n=8) | 212 (n=32) |
 | bundle_pct | 79.3 (n=12) | 60.3 (n=8) | 39.6 (n=33) |
 | dev_buy_sol | 0.0494 (n=12) | 0.593 (n=8) | 0.889 (n=33) |
 | top10_pct_cp300 | – (n=0) | – (n=0) | – (n=0) |
@@ -65,20 +65,25 @@
 
 ## Candidate warnings (in-sample, exploratory — all 100K1 closed fills, n=80, baseline mean -14.9%, net -2.386 SOL)
 
-| warning (skip the entry if …) | entries hit | severe avoided | winners rejected | mean r of hit | mean r kept (n) | net SOL kept | runners (hi ≥ 2×) rejected | winners rejected (r) |
+| warning (skip the entry if …) | entries hit | severe avoided | winners rejected | mean r of hit | mean r passed (n) | mean r feature unknown (n) | runners (hi ≥ 2×) rejected | winners rejected (r) |
 |---|---|---|---|---|---|---|---|---|
-| band $40–50K AND pool | 20 | 12 | 2 | -52.3% | -2.4% (60) | -0.293 | 2 | 5JZCjeSS +30%, DJmHV336 +27% |
-| instant graduation (create→pool ≤ 5 s) | 23 | 14 | 5 | -38.0% | -5.6% (57) | -0.636 | 6 | 5JZCjeSS +30%, DJmHV336 +27%, EMfnF5D4 +137%, CtUeBwNo +19%, 8hF6kWfr +113% |
-| instant graduation AND price < 0.8 × pre-entry peak | 20 | 13 | 4 | -40.0% | -6.6% (60) | -0.786 | 6 | 5JZCjeSS +30%, EMfnF5D4 +137%, CtUeBwNo +19%, 8hF6kWfr +113% |
-| pool AND migrated < 300 s before entry | 30 | 3 | 12 | -7.9% | -19.1% (50) | -1.914 | 3 | 8xcAhQmS +84%, HYxUWHLP +20%, DJmHV336 +27%, 9e3qBX1e +17%, 4EB8RZVp +49%, 7b4VfXAw +15%, 52TS3puK +22%, 3HyA7Q2T +1%, G8uy3NRg +9%, EKgANR64 +5%, 7LtE7Yr6 +58%, Ae9DKPq1 +46% |
-| net SOL last 300 s < 0 | 27 | 13 | 4 | -31.3% | -6.6% (53) | -0.696 | 6 | 5JZCjeSS +30%, EMfnF5D4 +137%, CtUeBwNo +19%, 8hF6kWfr +113% |
-| net SOL last 60 s < 0 | 17 | 5 | 6 | -9.2% | -16.4% (63) | -2.072 | 5 | 8xcAhQmS +84%, HYxUWHLP +20%, EMfnF5D4 +137%, CtUeBwNo +19%, 7b4VfXAw +15%, 8hF6kWfr +113% |
-| price < 0.8 × pre-entry peak | 26 | 13 | 6 | -29.7% | -7.8% (54) | -0.841 | 7 | 8xcAhQmS +84%, HYxUWHLP +20%, 5JZCjeSS +30%, EMfnF5D4 +137%, CtUeBwNo +19%, 8hF6kWfr +113% |
-| fill/check > 1.05 | 7 | 1 | 2 | -17.2% | -14.7% (73) | -2.145 | 0 | HYxUWHLP +20%, Ae9DKPq1 +46% |
-| volatility_300s > 0.05 | 9 | 0 | 0 | -10.9% | -15.4% (71) | -2.190 | 0 |  |
-| quote SOL at check < 40 | 0 | | | | | |
-| clock price age > 60 s | 22 | 0 | 1 | -1.8% | -19.9% (58) | -2.308 | 0 | EDhfrwv5 +56% |
-| bundle_pct > 20 | 49 | 17 | 17 | -20.8% | -5.6% (31) | -0.346 | 9 | 8xcAhQmS +84%, HYxUWHLP +20%, 5JZCjeSS +30%, DJmHV336 +27%, EMfnF5D4 +137%, 9e3qBX1e +17%, CtUeBwNo +19%, 4EB8RZVp +49%, 7b4VfXAw +15%, J1W5iWVz +34%, 52TS3puK +22%, 3HyA7Q2T +1%, G8uy3NRg +9%, EKgANR64 +5%, 7LtE7Yr6 +58%, Ae9DKPq1 +46%, 8hF6kWfr +113% |
+| band $40–50K AND pool | 20 | 12 | 2 | -52.3% | -2.4% (60) | – (0) | 2 | 5JZCjeSS +30%, DJmHV336 +27% |
+| RETROSPECTIVE launch class: instant graduation (first stored pool trade ≤ 5 s) | 23 | 14 | 5 | -38.0% | -7.6% (30) | -3.3% (27) | 6 | 5JZCjeSS +30%, DJmHV336 +27%, EMfnF5D4 +137%, CtUeBwNo +19%, 8hF6kWfr +113% |
+| decision-time: instant graduation (pool trade received by decision, ≤ 5 s after create) | 23 | 14 | 5 | -38.0% | -9.1% (29) | -2.0% (28) | 6 | 5JZCjeSS +30%, DJmHV336 +27%, EMfnF5D4 +137%, CtUeBwNo +19%, 8hF6kWfr +113% |
+| instant graduation AND price < 0.8 × pre-entry peak | 20 | 13 | 4 | -40.0% | -10.6% (32) | -2.0% (28) | 6 | 5JZCjeSS +30%, EMfnF5D4 +137%, CtUeBwNo +19%, 8hF6kWfr +113% |
+| pool AND migrated < 300 s before entry | 30 | 3 | 12 | -7.9% | -19.1% (50) | – (0) | 3 | 8xcAhQmS +84%, HYxUWHLP +20%, DJmHV336 +27%, 9e3qBX1e +17%, 4EB8RZVp +49%, 7b4VfXAw +15%, 52TS3puK +22%, 3HyA7Q2T +1%, G8uy3NRg +9%, EKgANR64 +5%, 7LtE7Yr6 +58%, Ae9DKPq1 +46% |
+| net SOL last 300 s < 0 | 27 | 13 | 4 | -31.3% | -10.2% (35) | 0.5% (18) | 6 | 5JZCjeSS +30%, EMfnF5D4 +137%, CtUeBwNo +19%, 8hF6kWfr +113% |
+| net SOL last 300 s < 0 — proven-receipt rows only | 27 | 13 | 4 | -31.3% | -10.2% (35) | 0.5% (18) | 6 | 5JZCjeSS +30%, EMfnF5D4 +137%, CtUeBwNo +19%, 8hF6kWfr +113% |
+| net SOL last 60 s < 0 | 17 | 5 | 6 | -9.2% | -23.2% (45) | 0.5% (18) | 5 | 8xcAhQmS +84%, HYxUWHLP +20%, EMfnF5D4 +137%, CtUeBwNo +19%, 7b4VfXAw +15%, 8hF6kWfr +113% |
+| price < 0.8 × pre-entry peak | 26 | 13 | 6 | -29.7% | -12.0% (36) | 0.5% (18) | 7 | 8xcAhQmS +84%, HYxUWHLP +20%, 5JZCjeSS +30%, EMfnF5D4 +137%, CtUeBwNo +19%, 8hF6kWfr +113% |
+| price < 0.8 × pre-entry peak — proven-receipt rows only | 26 | 13 | 6 | -29.7% | -12.0% (36) | 0.5% (18) | 7 | 8xcAhQmS +84%, HYxUWHLP +20%, 5JZCjeSS +30%, EMfnF5D4 +137%, CtUeBwNo +19%, 8hF6kWfr +113% |
+| fill/check > 1.05 | 7 | 1 | 2 | -17.2% | -14.7% (73) | – (0) | 0 | HYxUWHLP +20%, Ae9DKPq1 +46% |
+| volatility_300s > 0.05 | 9 | 0 | 0 | -10.9% | -20.8% (53) | 0.5% (18) | 0 |  |
+| quote SOL at check < 40 | 0 | | | | -21.9% (52) | -2.0% (28) | | |
+| clock price age > 60 s | 22 | 0 | 1 | -1.8% | -4.9% (16) | -25.6% (42) | 0 | EDhfrwv5 +56% |
+| bundle_pct > 20 | 49 | 17 | 17 | -20.8% | -5.6% (31) | – (0) | 9 | 8xcAhQmS +84%, HYxUWHLP +20%, 5JZCjeSS +30%, DJmHV336 +27%, EMfnF5D4 +137%, 9e3qBX1e +17%, CtUeBwNo +19%, 4EB8RZVp +49%, 7b4VfXAw +15%, J1W5iWVz +34%, 52TS3puK +22%, 3HyA7Q2T +1%, G8uy3NRg +9%, EKgANR64 +5%, 7LtE7Yr6 +58%, Ae9DKPq1 +46%, 8hF6kWfr +113% |
+
+Knowledge time: 0 of 80 closed fills have pre-entry rows without a receipt time (block time used); the 'proven-receipt rows only' lines exclude those rows.
 
 Caution: 81 fills, 29 in the $40–50K band; thresholds were chosen by eye on this same sample, so every row above is a hypothesis to test on later coins, not a rule.
 
