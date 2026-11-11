@@ -17,3 +17,6 @@
 - Re-checked under live eligibility + second fee: A +16.0% (59), B +9.0% (48; was +12.3%), pooled +12.9% CI [+1.7, +23.6]; without top 3 pooled +8.6% (B +1.6%); flagged exits at 0 pooled +8.5%. Half at 2× drives it (B whole-position T25 only +4.1%).
 - Simulator validated on 27 real 100K2 fills meeting the condition: real +1.0% vs simulated +0.7% (median gap 0.1 pt).
 - Chosen with both periods in view → no out-of-sample result yet. Frozen; evaluated by replay on the same fresh window as C1 (13 Nov →), same four pre-fixed outcomes; C1 and C2 judged separately.
+
+## 11 Nov 2026 15:30 UK — execution model v2.2
+Sell at slot+2 and trail on sellable proceeds (branch next-strategy-v22 @ 0e501e1). C1 pooled +19.1% → +18.8%, without top 3 +4.7% → +4.6%, flagged at 0 without top 3 −5.7%. C2 pooled +12.9% → +11.9%. The C1 fresh-data test (from 13 Nov) will use c1_v22.py, frozen at 0e501e1.
