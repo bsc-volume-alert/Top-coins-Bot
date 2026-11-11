@@ -118,6 +118,9 @@ export async function chainEntry(mint, ids, chainPx, su, strat, opts = {}) {
     let tokens = 0n, tokens02 = 0n, venue = "curve", curve = 1, resCheck = c && !c.complete ? resOf(st, c) : null;
     if (c && !c.complete) { tokens = quoteBuy(c, g, LAMPORTS).tokens; tokens02 = quoteBuy(c, g, LAMPORTS02).tokens; st.sellOf = (tok) => quoteSell(c, g, tok); }
     else { // graduated (or not a pump.fun curve): the pool
+      if (opts.curveOnly) { // 0.10.0 (R3C): the book is curve-eligible only — a coin that graduated between its trigger and this read gets no fill, recorded
+        const skip = q("INSERT OR IGNORE INTO chain_fill (vol_id, mint, strat, entry_ts, venue, curve, s_sol_in, s_exit_reason, s_r, s_r02, s_delay_ms, done, s_mv, s_ms_decision, s_ms_read_check) VALUES (?,?,?,?,'pool',0,0,'skipped-graduated',0,0,?,1,?,?,?)");
+        for (const id of ids) skip.run(id, mint, strat, t, delayMs, MV, msDecision, msReadCheck); cfStat.skipped = (cfStat.skipped || 0) + ids.length; return; }
       const pkp = migratedPoolOf(pk(mint)); const [p] = await getAccounts([pkp], "processed"); const pool = decodePool(p?.data);
       if (!pool) throw new Error(c ? "migrating: no pool yet" : "no curve, no pool");
       const cfg = await ammCfg(); const [b, q] = await getAccounts([pool.baseAcc, pool.quoteAcc], "processed"); const br = tokenAmount(b?.data), qr = tokenAmount(q?.data);
