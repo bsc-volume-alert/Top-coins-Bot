@@ -58,9 +58,14 @@ async function ammCfg() { if (CFG && Date.now() - cfgAt < 600000) return CFG; co
 // Keyed by vol_id; rebuilt from vol_paper on start. Rows not in the map keep the venue trail (40% curve / 25% pool) exactly as before.
 export const TRAIL_OVR = new Map(); export const K_TRAIL = { "K30-50T25": 0.25, "K30-40T25": 0.25, "K30-40T20": 0.2 };
 export function setTrail(id, pct) { TRAIL_OVR.set(id, pct); }
+// 0.10.1: per-book exit policies beside the trail (paper books SW5 / G1 / RB, owner's go 11 Nov). trail 1 = no trail. hold = sell at entry + hold s.
+// tp = sell at x >= tp; sl = sell at x <= sl (a fixed stop on the entry, not a trail); stag = sell if x is inside [lo, hi] on any reading between entry + at and entry + at + win s.
+export const POLICY_OVR = new Map(); export const BOOK_POLICY = { SW5: { trail: 1, hold: 300 }, G1: { trail: 1, tp: 1.45, sl: 0.5, stag: { at: 90, lo: 0.85, hi: 1.15, win: 30 } }, RB: { trail: 0.30 } };
+export function setPolicy(id, pol) { POLICY_OVR.set(id, pol); if (pol.trail != null) TRAIL_OVR.set(id, pol.trail); }
 export function initChainFill(d) { STMT.clear();
   db = d;
   try { for (const r of d.prepare(`SELECT id, strat FROM vol_paper WHERE strat IN (${Object.keys(K_TRAIL).map(() => "?").join(",")})`).all(...Object.keys(K_TRAIL))) TRAIL_OVR.set(r.id, K_TRAIL[r.strat]); } catch {}
+  try { for (const r of d.prepare(`SELECT id, strat FROM vol_paper WHERE strat IN (${Object.keys(BOOK_POLICY).map(() => "?").join(",")})`).all(...Object.keys(BOOK_POLICY))) setPolicy(r.id, BOOK_POLICY[r.strat]); } catch {} // 0.10.1
   db.exec(`CREATE TABLE IF NOT EXISTS chain_fill (vol_id INTEGER PRIMARY KEY, mint TEXT, strat TEXT, entry_ts INTEGER, venue TEXT, curve INTEGER, s_sol_in REAL, s_tokens TEXT, s_px REAL, s_in_gap REAL, s_x0 REAL,
     s_hi REAL, s_last_x REAL, s_last_ts INTEGER, s_n INTEGER DEFAULT 0, s_exit_x REAL, s_exit_ts INTEGER, s_exit_reason TEXT, s_r REAL, s_drops INTEGER DEFAULT 0, s_backstops INTEGER DEFAULT 0, s_err TEXT, done INTEGER DEFAULT 0)`);
   db.exec("CREATE INDEX IF NOT EXISTS chain_fill_open ON chain_fill (done)");
@@ -153,7 +158,7 @@ export async function chainEntry(mint, ids, chainPx, su, strat, opts = {}) {
 const W = new Map(); // mint → { st, subs: [ids], lastPush }
 const pending = new Set(); // 0.9.2: mints with a triggered sell waiting for the landing state
 setInterval(() => { for (const mint of [...pending]) { pending.delete(mint); setTimeout(() => { const w = W.get(mint); if (!w) return; readValue(mint, 1n, w.st).then((v) => { if (!v || v.lamports == null) return; const st = w.st; if (v.venue === "curve") getAccounts([curveOf(pk(mint))], "processed").then(([a]) => { const c = decodeCurve(a?.data); if (c && G) apply(mint, (tok) => quoteSell(c, G, tok), "land", resOf(null, c)); }).catch(() => {}); else if (st.pool && CFG) apply(mint, (tok) => poolSell(st.pool, CFG, st.baseRes, st.quoteRes, tok), "land", resOf(st, null, st.baseRes, st.quoteRes)); }).catch(() => {}); }, SELL_LAND_MS + 50); } }, 200);
-function rows(mint) { return q("SELECT vol_id, strat, curve, s_tokens, s_hi, entry_ts, s_last_ts, s_max_gap_s, s_trig_ts, s_trig_x, s_half_x, s_tokens02, s_hi02, s_x60, s_t2x, s_t3x, s_t5x, done, i02_trig_ts, i02_trig_x, i02_done FROM chain_fill WHERE mint=? AND (done=0 OR (i02_done=0 AND s_tokens02 IS NOT NULL)) AND s_tokens IS NOT NULL").all(mint); } // fill-3: a row stays watched while its independent 0.02 position is open
+function rows(mint) { return q("SELECT vol_id, strat, curve, s_tokens, s_hi, entry_ts, s_exit_reason, s_last_ts, s_max_gap_s, s_trig_ts, s_trig_x, s_half_x, s_tokens02, s_hi02, s_x60, s_t2x, s_t3x, s_t5x, done, i02_trig_ts, i02_trig_x, i02_done FROM chain_fill WHERE mint=? AND (done=0 OR (i02_done=0 AND s_tokens02 IS NOT NULL)) AND s_tokens IS NOT NULL").all(mint); } // fill-3: a row stays watched while its independent 0.02 position is open
 export const _apply = (...a) => apply(...a); // tests
 function apply(mint, lamportsOf, src, res = null) {
   const t = now(); let open = 0;
@@ -172,15 +177,20 @@ function apply(mint, lamportsOf, src, res = null) {
     const gap = Math.max(r.s_max_gap_s || 0, r.s_last_ts ? t - r.s_last_ts : 0); // the longest silence between price updates so far
     const tms = Date.now();
     if (r.s_trig_ts != null) { // 0.9.2: the sell was decided at s_trig_ts; it executes on the first state SELL_LAND_MS or more after that
-      if (tms - r.s_trig_ts * 1000 >= SELL_LAND_MS) { const reason = t - r.entry_ts >= HORIZON && !(r.s_trig_x <= (r.s_hi || 1) * keep) ? "2h" : "trail";
+      if (tms - r.s_trig_ts * 1000 >= SELL_LAND_MS) { const reason = r.s_exit_reason || (t - r.entry_ts >= HORIZON && !(r.s_trig_x <= (r.s_hi || 1) * keep) ? "2h" : "trail"); // 0.10.1: a policy exit names itself at the trigger
         // 0.10.1: for the C2 book the result (s_r) IS its exit policy: half at the first executable 2× print + half on the 25% trail exit, a second network fee when the half was sold
         const rHalf = r.s_half_x != null ? 0.5 * r.s_half_x + 0.5 * x - 1 - NET_FEE / STAKE : x - 1 - NET_FEE / STAKE; // 0.9.6: half sold at the first 2x print, the rest on this exit
         const r02 = x02 != null ? x02 - 1 - NET_FEE / STAKE02 : x - 1 - NET_FEE / STAKE02; // 0.9.8: true 0.02 result from the real 0.02 position (falls back to the rescaled figure if the small quote was unavailable)
         q("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_exit_x=?, s_exit_ts=?, s_exit_reason=?, s_r=?, s_r02=?, s_exit_x02=?, s_r_half=?, s_exit_src=?, s_max_gap_s=?, s_fill_ms=?, s_res_exit=?, s_ms_exit=?, done=1 WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), +x.toFixed(4), t, reason, +(r.strat === "C2" ? rHalf - (r.s_half_x != null ? NET_FEE / STAKE : 0) : x - 1 - NET_FEE / STAKE).toFixed(4), +r02.toFixed(4), x02 != null ? +x02.toFixed(4) : null, +rHalf.toFixed(4), src, gap, Math.round(tms - r.s_trig_ts * 1000), res, tms, r.vol_id); cfStat.exits++; }
       else { q("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_max_gap_s=? WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), gap, r.vol_id); open++; }
       cfStat.updates++; continue; }
-    const trigger = x <= (r.s_hi || 1) * keep || t - r.entry_ts >= HORIZON;
-    if (trigger) { q("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_max_gap_s=?, s_trig_ts=?, s_trig_x=?, s_res_trig=? WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), gap, tms / 1000, +x.toFixed(4), res, r.vol_id); open++; pending.add(mint); }
+    let trigger = x <= (r.s_hi || 1) * keep || t - r.entry_ts >= HORIZON, why = null;
+    const pol = POLICY_OVR.get(r.vol_id); // 0.10.1: per-book policies (SW5 / G1 / RB); every other book unchanged
+    if (pol && !trigger) { const age = t - r.entry_ts;
+      if (pol.tp != null && x >= pol.tp) why = "tp"; else if (pol.sl != null && x <= pol.sl) why = "stop"; else if (pol.hold != null && age >= pol.hold) why = "hold";
+      else if (pol.stag && age >= pol.stag.at && age <= pol.stag.at + pol.stag.win && x >= pol.stag.lo && x <= pol.stag.hi) why = "stagnation";
+      if (why) trigger = true; }
+    if (trigger) { q("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_max_gap_s=?, s_trig_ts=?, s_trig_x=?, s_res_trig=?, s_exit_reason=COALESCE(s_exit_reason, ?) WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), gap, tms / 1000, +x.toFixed(4), res, why, r.vol_id); open++; pending.add(mint); }
     else { q("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_max_gap_s=? WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), gap, r.vol_id); open++; }
     if (r.s_half_x == null && x >= 2) q("UPDATE chain_fill SET s_half_x=? WHERE vol_id=? AND s_half_x IS NULL").run(+x.toFixed(4), r.vol_id); // 0.9.6: the half-at-2x column — the first print at or above 2x is where half would have gone
     if (r.s_t2x == null && x >= 2) q("UPDATE chain_fill SET s_t2x=? WHERE vol_id=? AND s_t2x IS NULL").run(t, r.vol_id); // 0.9.9: executable milestones, kept apart from the final result
