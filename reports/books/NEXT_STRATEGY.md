@@ -20,3 +20,10 @@
 
 ## 11 Nov 2026 15:30 UK — execution model v2.2
 Sell at slot+2 and trail on sellable proceeds (branch next-strategy-v22 @ 0e501e1). C1 pooled +19.1% → +18.8%, without top 3 +4.7% → +4.6%, flagged at 0 without top 3 −5.7%. C2 pooled +12.9% → +11.9%. The C1 fresh-data test (from 13 Nov) will use c1_v22.py, frozen at 0e501e1.
+
+## 11 Nov 2026 17:30 UK — "buy the chart going up" (owner 16:45), branch next-strategy-v22 momentum*.py
+18 rules fixed in advance: up 1.5/2/3× over the last 5 or 15 min, within 10% of the high, by market cap band; buy 1 s later, 25% or 40% trail on sellable proceeds, sell at slot+2.
+- The first run let entries happen before 5 min on populations chosen at 5 min (look-ahead: B +58% a trade). Withdrawn. Re-run with entries only after the 5-minute decision:
+- **Going up does predict more upside:** of coins climbing at $10–50K, about 1 in 3 double again (34% in both periods), against 8% for an average coin in A. But 54% halve first, in both periods.
+- **Trading it, $10–50K, T25:** A +27% to +54% a trade (+1% to +10% without the top 3); B +13% to +18% (−3% to −5% without the top 3). $50–200K: A +4% to +19%, B −11% to +16%, mostly negative without the top 3.
+- Same shape as C1, C2 and R3C: positive averages carried by a few runners, not positive on the typical trade in the second period. Not a new edge; no book proposed.
