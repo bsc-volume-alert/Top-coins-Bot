@@ -1,18 +1,14 @@
-// scope 0.14.0 (owner go 11 Nov 2026 17:39 UK): /research — a READ-ONLY window onto the autonomous research loop.
+// agents 0.1.0 (owner 11 Nov 2026 17:49 UK: "build another link for the agents" — its own website, apart from the trading site). READ-ONLY window onto the autonomous research loop.
 // Every 10 min: `git fetch` of ONLY research-claude, research-codex and tracker into a separate bare copy (/root/research-mirror, borrowing the
 // deployer clone's objects through git alternates, so nothing is downloaded twice). Public GitHub, no tokens, no API credits, never pushes.
 // Shown: worker run summaries (SUMMARY.txt, else the README's first paragraph marked "(README)"), new REVIEW_REQUESTS.md paragraphs, the
-// coordinator's AUTONOMOUS_STATUS.md top paragraph (tracker), both SCOREBOARD.md tables with the coordinator's verdict, and the live paper books
-// from the launcher's database (read-only). Nothing here writes to GitHub, the bot or any book.
+// coordinator's AUTONOMOUS_STATUS.md top paragraph (tracker), both SCOREBOARD.md tables with the coordinator's verdict. Nothing here writes to GitHub, the bot or any book.
 import { execFile } from "node:child_process";
 import fs from "node:fs";
-import Database from "better-sqlite3";
 
 const MIRROR = process.env.RESEARCH_MIRROR || "/root/research-mirror", SRC = process.env.RESEARCH_SRC_REPO || "/root/tracker";
-const LDB = process.env.LAUNCH_DB || "/root/launcher/launcher.db";
 const WORKERS = [{ branch: "research-claude", dir: "claude", label: "Claude" }, { branch: "research-codex", dir: "codex", label: "ChatGPT" }];
 const COORD = { branch: "tracker", path: "reports/blind/AUTONOMOUS_STATUS.md", label: "Coordinator" };
-const BOOKS = [["M2", "M2"], ["R3C", "R3C"], ["C2", "C2"], ["K30-50T25", "100K1"], ["K30-40T25", "100K2"], ["K30-40T20", "100K3"]];
 let cache = { ok: false, fetchedAt: null, fetchErr: "not fetched yet", branches: {}, chat: [], runs: [], codexStatus: null }, busy = false;
 
 const git = (args, timeout = 120000) => new Promise((resolve, reject) =>
@@ -111,24 +107,10 @@ async function refresh() {
   } catch (e) { cache = { ...cache, fetchErr: e.message.slice(0, 300), fetchedAt: Math.floor(Date.now() / 1000) }; }
   finally { busy = false; }
 }
-function books() {
-  let d; try { d = new Database(LDB, { readonly: true, fileMustExist: true }); d.pragma("busy_timeout = 2000"); } catch (e) { return { error: e.message }; }
-  try {
-    const rules = {}; try { for (const r of d.prepare("SELECT k, since_ts FROM fd_rules").all()) rules[r.k] = r.since_ts; } catch {}
-    return BOOKS.map(([k, label]) => {
-      const rows = d.prepare("SELECT done, s_r, s_r02, s_sol_in, s_exit_reason, entry_ts FROM chain_fill WHERE strat=?").all(k);
-      const filled = rows.filter((r) => (r.s_sol_in || 0) > 0), closed = filled.filter((r) => r.done === 1 && r.s_r != null);
-      const r02 = closed.map((r) => (r.s_r02 != null ? r.s_r02 : r.s_r - 0.0675));
-      return { book: k, label, since: rules[k + "_ACTIVATION"] ?? (rows.length ? Math.min(...rows.map((r) => r.entry_ts)) : null), closed: closed.length, wins: closed.filter((r) => r.s_r > 0).length,
-        open: filled.filter((r) => r.done !== 1).length, notFilled: rows.length - filled.length,
-        net02: +(closed.reduce((a, r) => a + r.s_r, 0) * 0.2).toFixed(4), net002: +(r02.reduce((a, v) => a + v, 0) * 0.02).toFixed(4) };
-    });
-  } catch (e) { return { error: e.message }; } finally { try { d.close(); } catch {} }
-}
-export function researchApi() { return { ...cache, books: books(), now: Math.floor(Date.now() / 1000) }; }
+export function researchApi() { return { ...cache, now: Math.floor(Date.now() / 1000) }; }
 export function initResearch() { setTimeout(() => refresh().catch(() => {}), 30000); setInterval(() => refresh().catch(() => {}), 600000); }
 
-export const RESEARCH_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Research control room</title>
+export const RESEARCH_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Agents — research room</title>
 <style>
 :root{--bg:#0f1115;--card:#171a21;--line:#2a2f3a;--tx:#e6e8ec;--mut:#9aa3b2;--ok:#4cc38a;--bad:#ef6b6b;--c:#7aa7ff;--g:#c58bff;--co:#f0b35a}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 -apple-system,system-ui,Segoe UI,Roboto,sans-serif}
@@ -144,10 +126,9 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 .ok{color:var(--ok)}.bad{color:var(--bad)}.tag{display:inline-block;font-size:11px;padding:1px 6px;border:1px solid var(--line);border-radius:999px;color:var(--mut);margin-left:6px}
 .tbl{overflow-x:auto}.err{color:var(--bad)}
 </style></head><body>
-<header><h1>Research control room <span class="tag">read-only</span></h1><div id="hdr" class="small mut">loading…</div></header>
+<header><h1>Agents — research room <span class="tag">read-only</span></h1><div id="hdr" class="small mut">loading…</div></header>
 <div class="wrap"><section class="card"><h2>Messages <span class="mut small">— newest first; every entry is a file a worker or the coordinator wrote</span></h2><div id="chat"></div></section>
-<section><div class="card" style="margin-bottom:14px"><h2>Live paper books <span class="mut small">— the launcher's own simulated fills; closed trades only in the totals</span></h2><div id="books" class="tbl"></div></div>
-<div class="card"><h2>Research runs <span class="mut small">— both SCOREBOARD.md files, as written; verdict from AUTONOMOUS_STATUS.md</span></h2><div id="runs" class="tbl"></div></div></section></div>
+<section><div class="card"><h2>Research runs <span class="mut small">— both SCOREBOARD.md files, as written; verdict from AUTONOMOUS_STATUS.md</span></h2><div id="runs" class="tbl"></div></div></section></div>
 <script>
 var KEY=new URLSearchParams(location.search).get('key')||'';
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
@@ -161,10 +142,8 @@ function draw(j){
   '<br>Next: Claude worker <b>'+nextAt(CW)+'</b> (02:50 / 06:50 / 10:50 / 14:50 / 18:50 / 22:50) · Coordinator <b>'+nextAt(CO)+'</b> (00:35 / 04:35 / 08:35 / 12:35 / 16:35 / 20:35) · ChatGPT (Codex): '+(cs&&cs.next_run?esc(cs.next_run):'per its own scheduler')+(cs?' — last run '+esc(cs.run_id)+' '+esc(cs.state)+(cs.completed_at?' at '+UK(Date.parse(cs.completed_at)/1000):'')+(cs.next_task?', next task '+esc(cs.next_task):''):'')+
   '<br>Branches: '+['research-claude','research-codex','tracker'].map(function(b){return b+' '+(br[b]?'<code>'+br[b]+'</code>':'<span class="mut">not on GitHub yet</span>')}).join(' · ');
  var ch=j.chat||[];document.getElementById('chat').innerHTML=ch.length?ch.map(function(e){return '<div class="msg '+e.who+'"><div><span class="who">'+e.who+'</span> <span class="mut small">'+UK(e.ts)+' · '+esc(e.branch)+' @ <code>'+esc(e.commit)+'</code> · '+esc(e.kind==='readme'?'run '+e.run+' (README)':e.kind==='summary'?'run '+e.run:e.kind)+'</span></div><pre>'+esc(e.text)+'</pre></div>'}).join(''):'<div class="mut">Nothing written yet.</div>';
- var B=j.books;if(B&&B.error){document.getElementById('books').innerHTML='<span class="err">'+esc(B.error)+'</span>'}else{
-  document.getElementById('books').innerHTML='<table><tr><th>Book</th><th>Since</th><th>Closed</th><th>Wins</th><th>Open</th><th>Net at 0.2</th><th>Net at 0.02</th></tr>'+(B||[]).map(function(b){return '<tr><td><b>'+esc(b.label)+'</b>'+(b.label!==b.book?' <span class="mut small">'+esc(b.book)+'</span>':'')+'</td><td class="small">'+UK(b.since)+'</td><td>'+b.closed+(b.notFilled?' <span class="mut small">+'+b.notFilled+' not filled</span>':'')+'</td><td>'+b.wins+'</td><td>'+b.open+'</td><td class="'+(b.net02>=0?'ok':'bad')+'">'+sol(b.net02)+' SOL</td><td class="'+(b.net002>=0?'ok':'bad')+'">'+sol(b.net002)+' SOL</td></tr>'}).join('')+'</table>'}
  var R=j.runs||[];document.getElementById('runs').innerHTML=R.length?'<table><tr><th>Worker / run</th><th>Question</th><th>Executed result</th><th>After-cost / profitability</th><th>Coordinator</th></tr>'+R.map(function(r){return '<tr><td><b>'+esc(r.who)+'</b><br><span class="small mut">'+esc(r.run)+'</span></td><td>'+esc(r.question)+'</td><td class="small">'+esc(r.executed)+'</td><td class="small">'+esc(r.profitability)+'</td><td class="small">'+(r.verdict?'<b class="'+(r.verdict==='reproduced'?'ok':'bad')+'">'+r.verdict+'</b>':'<span class="mut">no verdict yet</span>')+'</td></tr>'}).join('')+'</table>':'<div class="mut">No scoreboard rows yet.</div>';
 }
-function load(){fetch('/research/data?key='+encodeURIComponent(KEY),{cache:'no-store'}).then(function(r){return r.json()}).then(draw).catch(function(e){document.getElementById('hdr').textContent='error: '+e.message})}
+function load(){fetch('/api/data?key='+encodeURIComponent(KEY),{cache:'no-store'}).then(function(r){return r.json()}).then(draw).catch(function(e){document.getElementById('hdr').textContent='error: '+e.message})}
 load();setInterval(load,60000);
 </script></body></html>`;

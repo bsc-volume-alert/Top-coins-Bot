@@ -1,0 +1,9 @@
+{
+  "name": "agents-room",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Read-only website for the research agents: what the Claude worker, the ChatGPT (Codex) worker and the coordinator wrote on GitHub. Own pm2 app and port; no dependencies; never writes.",
+  "engines": { "node": ">=22" },
+  "scripts": { "start": "node src/index.mjs" }
+}
