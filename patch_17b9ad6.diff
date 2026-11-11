@@ -1,0 +1,74 @@
+commit 17b9ad651758cc9396541bbfea5bb9b75ae41251
+Author: Claude <noreply@anthropic.com>
+Date:   Wed Nov 11 12:13:39 2026 +0000
+
+    tracker 0.19.14 (reliability self-fix): stall lines report CPU/GC/disk/context switches during the block; restart recovery of launches created <= 420 s before start, clock rows stamped C5-2R, no backfill
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+    Claude-Session: https://claude.ai/code/session_01M8E4mN6YNqzVa2trM75PXK
+
+diff --git a/src/index.js b/src/index.js
+index ab488fd..2386d05 100644
+--- a/src/index.js
++++ b/src/index.js
+@@ -1,6 +1,7 @@
+ import "./env.js";
+ import { rpcStat } from "./rpc.js"; // v0.18.59 (after env.js so .env is loaded first)
+ import { readFileSync } from "node:fs";
++import { PerformanceObserver } from "node:perf_hooks"; // v0.19.14 stall diagnostics (GC pauses)
+ import { CFG, BOOKS_OFF } from "./config.js";
+ import { q } from "./db.js";
+ import { tg, tgAlarm } from "./telegram.js";
+@@ -90,8 +91,15 @@ setTimeout(() => { try { const n = flagTrades(0); if (n) console.log(`[restarts]
+ setInterval(() => { if (BOOKS_OFF) return; try { timed("flagTrades", () => flagTrades(Math.floor(Date.now() / 1000) - 7200)); } catch {} }, 5 * 60_000); // v0.19.12 (reliability, 10 Nov 00:30 UK): with the paper books off since 23 Oct there are no new trades to flag — the 5-min rescan of leftover open rows blocked the event loop 2–4 s each time (stalls in tracker-error.log), delaying the clock checkpoints
+ // v0.18.97 stall monitor: the executor saw triggers whose trade was 18–80 s old an hour after boot (18 Oct). Log every event-loop stall over 2 s with
+ // the heap size, and the heap every 10 min, so tomorrow's log says whether it is GC on a growing heap, a slow synchronous job, or the feed itself.
++// v0.19.14 (11 Nov, reliability self-fix, logging only): each stall line also says what the process did DURING the block — CPU user/system seconds, GC pause
++// seconds, bytes read/written (/proc/self/io) and voluntary/involuntary context switches — so a block is classed as JS compute, GC, or waiting on disk.
+ { let last = Date.now(); const mb = () => Math.round(process.memoryUsage().heapUsed / 1048576);
+-  setInterval(() => { const now = Date.now(), late = now - last - 1000; last = now; if (late > 2000) console.error(`[stall] ${new Date().toISOString().slice(11, 19)}Z event loop blocked ${(late / 1000).toFixed(1)} s · heap ${mb()} MB · rss ${Math.round(process.memoryUsage().rss / 1048576)} MB · slow jobs: ${slowJobs()}`); }, 1000).unref();
++  let gcMs = 0; try { new PerformanceObserver((l) => { for (const e of l.getEntries()) gcMs += e.duration; }).observe({ entryTypes: ["gc"] }); } catch {}
++  const io = () => { try { const t = readFileSync("/proc/self/io", "utf8"); return { r: +(t.match(/read_bytes: (\d+)/)?.[1] || 0), w: +(t.match(/write_bytes: (\d+)/)?.[1] || 0) }; } catch { return { r: 0, w: 0 }; } };
++  let cpu0 = process.cpuUsage(), io0 = io(), ru0 = process.resourceUsage(), gc0 = 0;
++  setInterval(() => { const now = Date.now(), late = now - last - 1000; last = now; const cpu = process.cpuUsage(cpu0), io1 = io(), ru = process.resourceUsage();
++    if (late > 2000) console.error(`[stall] ${new Date().toISOString().slice(11, 19)}Z event loop blocked ${(late / 1000).toFixed(1)} s · cpu user ${(cpu.user / 1e6).toFixed(1)} s sys ${(cpu.system / 1e6).toFixed(1)} s · gc ${((gcMs - gc0) / 1000).toFixed(1)} s · disk read ${((io1.r - io0.r) / 1048576).toFixed(0)} MB write ${((io1.w - io0.w) / 1048576).toFixed(0)} MB · ctxsw vol ${ru.voluntaryContextSwitches - ru0.voluntaryContextSwitches} invol ${ru.involuntaryContextSwitches - ru0.involuntaryContextSwitches} · heap ${mb()} MB · rss ${Math.round(process.memoryUsage().rss / 1048576)} MB · slow jobs: ${slowJobs()}`);
++    cpu0 = process.cpuUsage(); io0 = io1; ru0 = ru; gc0 = gcMs; }, 1000).unref();
+   setInterval(() => console.log(`[heap] ${mb()} MB used · rss ${Math.round(process.memoryUsage().rss / 1048576)} MB · up ${Math.round(process.uptime() / 60)} min`), 600_000).unref(); }
+ process.on("unhandledRejection", (e) => console.error("[unhandled]", e));
+ // v0.18.83: a throw inside a timer must not take the whole bot down (v0.18.81 crash-looped every 30 s on one). Logged loudly; state lives in SQLite anyway.
+diff --git a/src/lifecycle.js b/src/lifecycle.js
+index 0dbe1c1..d21605f 100644
+--- a/src/lifecycle.js
++++ b/src/lifecycle.js
+@@ -17,11 +17,21 @@ const L = new Map(); // mint -> { createTs, w5:[{ts,sol,b,w}], buyers:Set, lastM
+ let holderBudget = 0, balBudget = 0, day = new Date().getUTCDate();
+ const balCache = new Map();
+ const START_TS = Math.floor(Date.now() / 1000);
++const RECOVER_S = 420; // v0.19.14 restart recovery window (the clock checkpoint is taken at 300–420 s)
++export const recov = { tracked: 0, clock: 0 };
++function recoverStamp(s) { // never backfill: mark every checkpoint already due at recovery as done, and skip the trade-triggered 5-min reading (the clock row covers it, stamped C5-2R)
++  s.recovered = 1; recov.tracked++; const age = Math.floor(Date.now() / 1000) - s.createTs; s.ex = {};
++  for (const cp of CFG.LIFE_CHECKPOINTS) if (cp <= 120) s.ex[cp] = 1; // early checkpoints are never computed from a buffer that misses pre-restart trades
++  while (s.next < CFG.LIFE_CHECKPOINTS.length && (CFG.LIFE_CHECKPOINTS[s.next] <= age || CFG.LIFE_CHECKPOINTS[s.next] <= 300)) s.next++;
++}
+ const resetDay = () => { const d = new Date().getUTCDate(); if (d !== day) { day = d; holderBudget = 0; balBudget = 0; } };
+ 
+ function st(mint, createTs) {
+   let s = L.get(mint);
+-  if (!s && createTs && createTs >= START_TS) { s = { createTs, w5: [], buyers: new Set(), lastMc: 0, lastTs: 0, graduated: 0, next: 0, cp: {}, maxBurst: 0, lastPx: 0, climbed: false, bts: [], ring: [], peakMc: 0, peakTs: 0, w2: new Set(), revDone: false, lastRev: 0, gradTs: 0, gradPx: 0, gradPeak: 0, grDone: false, grecDone: false, lastGr: 0, dumped: false, lowMc: Infinity, lowTs: 0, slowDone: false, lastSlow: 0 }; L.set(mint, s); }
++  // v0.19.14 (11 Nov, restart recovery; Codex 11 Nov): launches created up to RECOVER_S before this process started are tracked again from their first
++  // post-restart trade, instead of being dropped (470 launches lost on 9–10 Nov). Their buffers hold only trades received after the restart, so they are
++  // STAMPED: s.recovered = 1 → clock rows get epoch "C5-2R"; checkpoints already past at recovery (and the trade-triggered 5-min one) are never backfilled.
++  if (!s && createTs && createTs >= START_TS - RECOVER_S) { s = { createTs, w5: [], buyers: new Set(), lastMc: 0, lastTs: 0, graduated: 0, next: 0, cp: {}, maxBurst: 0, lastPx: 0, climbed: false, bts: [], ring: [], peakMc: 0, peakTs: 0, w2: new Set(), revDone: false, lastRev: 0, gradTs: 0, gradPx: 0, gradPeak: 0, grDone: false, grecDone: false, lastGr: 0, dumped: false, lowMc: Infinity, lowTs: 0, slowDone: false, lastSlow: 0 }; L.set(mint, s); if (createTs < START_TS) recoverStamp(s); }
+   return s;
+ }
+ function trade(mint, createTs, tr, mc, graduated, venue) {
+@@ -84,7 +94,7 @@ function sampleClock(mint, s, nowMs) {
+   else if (fo === false) status = "uncertain: feed gap";
+   else if (fo == null) status = "uncertain: feed state unreadable";
+   else if (lagS != null && lagS > 5) status = "uncertain: ingestion lag";
+-  try { q.insCpClock.run(mint, CLOCK_CP, s.createTs, cut, proc, mc, pts, pts != null ? cut - pts : null, grad ? "pumpswap" : "curve", grad, w.length, b, sl, byTot, fo == null ? null : fo ? 1 : 0, lagS, status, CLOCK_EPOCH); lc.clock = (lc.clock || 0) + 1; lc["clock_" + status.split(":")[0]] = (lc["clock_" + status.split(":")[0]] || 0) + 1; } catch {}
++  try { q.insCpClock.run(mint, CLOCK_CP, s.createTs, cut, proc, mc, pts, pts != null ? cut - pts : null, grad ? "pumpswap" : "curve", grad, w.length, b, sl, byTot, fo == null ? null : fo ? 1 : 0, lagS, status, s.recovered ? CLOCK_EPOCH + "R" : CLOCK_EPOCH); if (s.recovered) recov.clock++; lc.clock = (lc.clock || 0) + 1; lc["clock_" + status.split(":")[0]] = (lc["clock_" + status.split(":")[0]] || 0) + 1; } catch {}
+ }
+ setInterval(() => { const ms = Date.now(), now = Math.floor(ms / 1000); for (const [mint, s] of L) { const a = now - s.createTs; if (a >= CLOCK_CP && a <= CLOCK_CP + 120) sampleClock(mint, s, ms); } }, 1000);
+ function sample(mint, s, now) {

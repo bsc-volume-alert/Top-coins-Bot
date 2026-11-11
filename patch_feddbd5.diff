@@ -1,0 +1,30 @@
+commit feddbd5762f708d07d0f83fb3c9a37f5f29e6252
+Author: Claude <noreply@anthropic.com>
+Date:   Wed Nov 11 12:23:04 2026 +0000
+
+    tracker 0.19.15 (reliability self-fix): latestMintOf took 175.8 s (the event-loop freezes) — add tokens(creator, create_ts) index, cap the ambiguity count at 2; identical results
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+    Claude-Session: https://claude.ai/code/session_01M8E4mN6YNqzVa2trM75PXK
+
+diff --git a/src/db.js b/src/db.js
+index df889f1..c683b80 100644
+--- a/src/db.js
++++ b/src/db.js
+@@ -182,6 +182,7 @@ for (const sql of [
+   "CREATE INDEX IF NOT EXISTS tokens_symbol ON tokens(symbol, create_ts)",
+   "CREATE INDEX IF NOT EXISTS wb_wallet ON wallet_buys(wallet)", // v0.18.119: a wallet's record at the moment it buys (Project S)
+   "CREATE INDEX IF NOT EXISTS tokens_cts ON tokens(create_ts)", // v0.18.121: launches by time (smart-wallet harvest, heat)
++  "CREATE INDEX IF NOT EXISTS tokens_creator_ts ON tokens(creator, create_ts)", // v0.19.15 (11 Nov, reliability self-fix): latestMintOf took 175.8 s for a prolific creator (12:12:45Z [slowsql]) — the event-loop stalls
+   "ALTER TABLE paper_trades ADD COLUMN x_devout REAL", // v0.18.176 creator-sold-out exit (record only): the multiple when the creator's ledger balance first hit 0 after entry (S8 / GR)
+   "ALTER TABLE trades ADD COLUMN recv_ms INTEGER", // v0.19.1: when this process received the trade's log (observation latency, for the launcher's studies)
+   "ALTER TABLE trades ADD COLUMN vsol TEXT", "ALTER TABLE trades ADD COLUMN vtok TEXT", "ALTER TABLE trades ADD COLUMN venue TEXT", // v0.19.2
+@@ -267,7 +268,7 @@ export const q = {
+   setHit15: db.prepare(`UPDATE paper_trades SET t_hit15_s=? WHERE id=? AND t_hit15_s IS NULL`),
+   insClaim: db.prepare(`INSERT INTO creator_claims (creator, ts, sol, venue, sig, mint, ambiguous) VALUES (?,?,?,?,?,?,?)`),
+   claimsFor: db.prepare(`SELECT COUNT(*) n, COALESCE(SUM(sol),0) sol, MIN(ts) first, MAX(ts) last, SUM(COALESCE(ambiguous,0)) amb FROM creator_claims WHERE mint=?`),
+-  latestMintOf: db.prepare(`SELECT mint, create_ts, (SELECT COUNT(*) FROM tokens t2 WHERE t2.creator=t.creator AND t2.create_ts>=?) n FROM tokens t WHERE creator=? AND create_ts<=? ORDER BY create_ts DESC LIMIT 1`),
++  latestMintOf: db.prepare(`SELECT mint, create_ts, (SELECT COUNT(*) FROM (SELECT 1 FROM tokens t2 WHERE t2.creator=t.creator AND t2.create_ts>=? LIMIT 2)) n FROM tokens t WHERE creator=? AND create_ts<=? ORDER BY create_ts DESC LIMIT 1`), // v0.19.15: count capped at 2 (only n > 1 is used) + (creator, create_ts) index → two index seeks
+   upTokenFees: db.prepare(`UPDATE tokens SET creator_fee_sol=?, fee_claims=?, fee_claimed_sol=?, first_claim_ts=? WHERE mint=?`),
+   mintsByCreator: db.prepare(`SELECT mint, create_ts FROM tokens WHERE creator=? AND create_ts>=?`),
+   setStops: db.prepare(`UPDATE paper_trades SET x_tp15=?, x_tsl25=?, x_t15s25=?, x_t15s60=?, x_t2s25=?, x_t2s60=? WHERE id=?`),
