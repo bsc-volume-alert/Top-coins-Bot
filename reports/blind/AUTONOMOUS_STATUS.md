@@ -1,0 +1,31 @@
+# Autonomous research — coordinator status
+Written by the coordinator (Claude scheduled task) on **Wednesday 11 November 2026, 21:05 UK**. Covers everything both workers published up to that time. Live trading off; no protected data touched by anyone.
+
+**Read this in 30 seconds.** Both workers are running and keeping to the contract: Codex has finished C001–C005, C011 and two Idea-lab trading tests (L001, L002); Claude's first run finished the detection half of the runner autopsy (F006 part 1). Nobody claims a profit. I re-ran all three new runs from the checksummed raw inputs and every number reproduces exactly: Codex L001 (−9.23 SOL on 224 resolved trades), Codex L002 (−15.29 SOL on 381), and Claude's F006 (3,638 launches; at 5 minutes, launches that later made a sustained 2× had more buyers in the last 60 s, steadier inflow, more net holders and a creator who had not sold — AUC 0.76–0.79 against matched non-runners; this is a hypothesis on development data, not a tradable result). Two things are blocked and one needs you: (1) Codex's matched runner-vs-failure comparison produced zero certified non-runners because its coverage rule is stricter than Claude's — I have registered a common 30-s gap-tolerance rule and queued C012 so both workers label the same way; (2) the Round 1 MIG300 export (launches 8 Nov 00:00 → 10 Nov 00:00) does not exist on any branch, so Round 1 cannot be scored — **please ask the control room for that export**; (3) tracker commit 371bb5a says the "Idea lab" rules were added to RESEARCH_QUEUE.md but they are not in the file — I wrote Codex's cost scenario into the queue as the common one for both workers; **please confirm or correct it**. Codex also asks whether `study100k-v1-inputs` (6–7 Nov exports) may join the allowlist — your call.
+
+## Checks this run
+- Output contract: every new run folder has README, code, commands, results, checksums, SUMMARY and a protocol committed before results (Codex 0aa4b49 → e9f952d; Claude 3f07ae0 → 7a9cd6a). Both STATUS.json files are consistent with their scoreboards. Codex's 14 commits touch only reports/blind/autonomous/codex/; Claude's 2 commits touch only reports/blind/autonomous/claude/. No tracker history, bots, evaluator or raw data touched. Worker scripts reference only the allowlisted refs (entry-all @ e678331, entry-package-7nov @ 0e3be03, blind-eval-1.1 @ be9b545); no 8–10 Nov data, no protected branches opened. **No violations.**
+- Reproduction (coordinator, from raw allowlisted inputs; 16/16 SHA256SUMS verified; evaluate.py sha f5686511… verified): see table. No scoreboard row claims a positive after-cost result; Codex's and Claude's C009/F006 label definitions differ but neither disputes the other's numbers.
+- Stalls: none. Codex last published 18:31 UTC, Claude 19:17 UTC. Next expected: Claude 00:50 UK, Codex ~00:20 UK.
+- Round 1 export: not present (55 remote branches checked by MANIFEST metadata only).
+- Documentation gap: queue references "Idea lab cost/latency rules" that are not on tracker (see R4 in RESEARCH_QUEUE.md).
+
+## Decisions taken (recorded in RESEARCH_QUEUE.md, rulings R1–R6)
+F006-before-F001 ordering confirmed. tol30 coverage rule registered for sustained-2× labels only, strict result always shown beside it. cross100k redefined as "crosses $100K AND ≥ 2× from t" for further use. Common exploratory cost scenario fixed (Codex's) pending owner confirmation. New tasks: C012 (Codex re-labels C009 under tol30), F008 (Claude label concordance). C010 and F007 now READY.
+
+## Decisions that need the owner
+1. Request the Round 1 export from the control room (launches created 8 Nov 00:00 → 10 Nov 00:00 UTC, read after 10 Nov 04:00, plus the pm2/deploy outage list).
+2. Confirm or correct the Idea-lab cost scenario written in R4.
+3. Allowlist `study100k-v1-inputs @ 3bd9c3b` or not (Codex C003 request).
+
+## All runs by both workers
+| Worker | Run | Task | Worker's result | Coordinator verdict |
+|---|---|---|---|---|
+| Codex | bootstrap-20261110 | Evaluator integrity | Supplied test suites pass; 3 synthetic cases | Not re-run; folder complete |
+| Codex | c001-20261110T211226Z | Reproduce ID34 on raw dev data | 3,638/3,638 match; −1.119884 SOL (0.2), −0.166343 (0.02) | Spot-check: evaluator sha and 16/16 data checksums match mine; P&L already matched by the Round 2 cross-check (8 Nov); F001 will re-run |
+| Codex | c002-20261111T031305Z | Jackpot artefact + never-enter buffer | 4 mints × 2 horizons match; decide() skipped on 12,001-row case | Not re-run; consistent with NONE_SUPPORTED_SCORING.md |
+| Codex | c003-20261111T090819Z | Runner evidence inventory | 18/18 checksums; metadata only for protected branches | Spot-check: protected branches indeed not opened (metadata only) |
+| Codex | c004-20261111T151021Z | Historical latency audit | 40 confirmed live buys, median 867 ms send→confirm; paper→fill lag median 2 s | Not re-run; no profit claim |
+| Codex | c005-lab-20261111T175731Z | C005 wallet audit + L001 (dominant early buyer exits, newcomers arrive) | L001 257 attempted / 255 filled / 224 resolved / 31 uncertain / 2 unavailable; **−9.229367 SOL**; control −53.736008 on 1,188 resolved | **Reproduced exactly** (lab.py from raw; 171/171 result fields identical). Verdict: failed on resolved trades; full total unknown |
+| Codex | c009-20261111T181843Z | C009 autopsy B + L002 (5-min liquidity stress gate) + C011 inventory | L002 820 / 572 / 381 / 191 uncertain / 248 unavailable; **−15.293066 SOL**; control −19.469149; 0 matched pairs (0 certified negatives); C011 complete | **Reproduced exactly** (autopsy.py from raw; 217/217 fields and matched_pairs.json identical). Verdict: L002 failed on resolved trades; matched comparison blocked → C012 |
+| Claude | f006-20261111T185410Z | F006 part 1: buyer/ownership detection at matched ages | 3,638 launches; sustained2x runners 117/56/24 at 5/15/30 min; matched 5-min AUC buyers_last_60s 0.792 [0.74, 0.84], inflow_persistence 0.781, n_net_holders 0.763, creator_sold_share 0.319; buyer-history shares not separating; cross100k weak as registered | **Reproduced exactly** (build_features.py + analyze.py from raw; feature table byte-identical; 11,424/11,424 result fields identical including bootstrap CIs). Verdict: hypotheses only, no trading result; tol30 deviation declared properly |
