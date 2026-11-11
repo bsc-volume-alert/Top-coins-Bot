@@ -15,7 +15,7 @@ TOKEN=$(grep -E '^TG_BOT_TOKEN=' .env | cut -d= -f2-); CHAT=$(grep -E '^TG_CHAT_
 notify() { [ -n "$TOKEN" ] && curl -s -m 10 -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" -d chat_id="$CHAT" -d parse_mode=HTML --data-urlencode text="$1" >/dev/null 2>&1; }
 # v0.18.93: a push that touches only executor/ (and docs) leaves the tracker alone — no smoke boot, no reload, no lost P5 restore
 TRACKER_CHANGED=1
-if ! git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -vqE '^(executor/|fomo/|scope/|radar/|launcher/|reports/|scripts/push-data\.sh$|scripts/dump-live\.cjs$|scripts/dump-launches\.cjs$|scripts/study\.mjs$|scripts/push-now\.txt$|scripts/job-now\.txt$|scripts/executor-off$|scripts/apps-off$|scripts/deploy-step\.sh$|scripts/revival-pull\.mjs$|scripts/s10-check\.cjs$|.*\.md$)'; then TRACKER_CHANGED=0; echo "[deploy] tracker untouched — executor / reports / data-script push"; fi # v0.18.114: the 4-hourly study's reports and the data scripts never restart the bot
+if ! git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -vqE '^(executor/|fomo/|scope/|agents/|radar/|launcher/|reports/|scripts/push-data\.sh$|scripts/dump-live\.cjs$|scripts/dump-launches\.cjs$|scripts/study\.mjs$|scripts/push-now\.txt$|scripts/job-now\.txt$|scripts/executor-off$|scripts/apps-off$|scripts/deploy-step\.sh$|scripts/revival-pull\.mjs$|scripts/s10-check\.cjs$|.*\.md$)'; then TRACKER_CHANGED=0; echo "[deploy] tracker untouched — executor / reports / data-script push"; fi # v0.18.114: the 4-hourly study's reports and the data scripts never restart the bot
 # owner, 30 Oct 2026 22:36 UK ("stop everything … only this dev launch"): every app named in scripts/apps-off is kept stopped and never reloaded
 [ -f scripts/apps-off ] && grep -qx tracker scripts/apps-off && TRACKER_CHANGED=0
 FAIL=""
@@ -86,6 +86,20 @@ if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^scope/'; then
     if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active" && ! ufw status | grep -q "^$SP/tcp"; then ufw allow "$SP/tcp" >/dev/null 2>&1 && echo "[deploy] firewall: opened $SP/tcp for coin scope"; fi
     else echo "[deploy] SCOPE START FAILED: $(tail -c 300 /tmp/deploy-scope-pm2.log)"; notify "⛔ <b>coin scope start failed</b> — <code>$(tail -c 300 /tmp/deploy-scope-pm2.log)</code>"; fi
   fi
+fi
+# agents 0.1.0 (owner, 11 Nov 2026 17:49 UK: the research agents on their own website): agents/, pm2 app `agents`, port AGENTS_PORT (default 8792),
+# deploys only when agents/ changed — syntax check, smoke boot, own reload, firewall port; never touches the tracker, launcher or coin scope
+if git diff --name-only "$LOCAL" "$REMOTE" 2>/dev/null | grep -q '^agents/'; then
+  echo "[deploy] agents changed — checking"
+  AFAIL=""
+  for f in agents/src/*.mjs; do node --check "$f" 2>/tmp/deploy-agents.err || { AFAIL="syntax: $f $(head -c 300 /tmp/deploy-agents.err)"; break; }; done
+  if [ -z "$AFAIL" ]; then (cd agents && AGENTS_SMOKE=1 AGENTS_PORT=18792 timeout 30 node src/index.mjs >/tmp/deploy-agents-smoke.log 2>&1); ARC=$?; [ "$ARC" != "0" ] && AFAIL="agents smoke boot exited with code $ARC: $(tail -c 300 /tmp/deploy-agents-smoke.log)"; fi
+  if [ -n "$AFAIL" ]; then echo "[deploy] AGENTS REJECTED: $AFAIL"
+  elif pm2 startOrReload agents/ecosystem.config.cjs --only agents --update-env >/tmp/deploy-agents-pm2.log 2>&1; then pm2 save >/dev/null 2>&1; echo "[deploy] agents reloaded"
+    AP=$(grep -E '^AGENTS_PORT=' .env | cut -d= -f2- | tr -d '"'); AP=${AP:-8792}
+    if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active" && ! ufw status | grep -q "^$AP/tcp"; then ufw allow "$AP/tcp" >/dev/null 2>&1 && echo "[deploy] firewall: opened $AP/tcp for agents"; fi
+    sleep 4; echo "[deploy] agents local check: HTTP $(curl -s -o /dev/null -w %{http_code} -m 5 http://127.0.0.1:$AP/) (403 = up, key required)"
+  else echo "[deploy] AGENTS START FAILED: $(tail -c 300 /tmp/deploy-agents-pm2.log)"; fi
 fi
 # radar 0.1.0 (owner, 24 Oct 2026 16:22 UK): records GMGN / Birdeye / FOMO on every coin the tracker's GMGN scanner flags ($100K in 5 min) — own pm2 app
 # `radar`, deploys only when radar/ changed (own npm install, syntax check, smoke run, own reload); never touches the tracker, executor, fomo or coin scope
