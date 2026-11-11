@@ -1,0 +1,101 @@
+CHECKSUMS 16 PASS
+REPLAYED LLzYn4ZZ4anByo4Xud8jMvE7y9zCf2APwRsTCZcpump
+REPLAYED dEJEFGBeTyMBrKZ25VeEFaQymTgSLj7zuqPGnLkpump
+REPLAYED fBidsBVNH6HdAba7pD6dqSoxmU2jAT7z3YuCUVzpump
+REPLAYED 5kdsd8zW37T2rK47gULpPLLCY181iKCuT8wZrChhpump
+{
+  "artifact_results_match": true,
+  "mints": 4,
+  "buffer": [
+    {
+      "rows": 12000,
+      "decide_calls": 1,
+      "result": {
+        "cat": "abstain",
+        "why": "rule did not enter"
+      },
+      "hypothetical": false,
+      "scores": {
+        "0.2": {
+          "N": 1,
+          "scored": 0,
+          "abstain": 1,
+          "unknown": 0,
+          "point_sol_per_launch": 0.0,
+          "lower_sol_per_launch": 0.0,
+          "total_net_sol_scored": 0.0,
+          "unknown_share_of_attempts": 0,
+          "mean_ret": null,
+          "median_ret": null,
+          "win_rate": null,
+          "share_loss_ge_50": null,
+          "scorable": true,
+          "bonferroni_lcb_lower": 0.0,
+          "supported": false
+        },
+        "0.02": {
+          "N": 1,
+          "scored": 0,
+          "abstain": 1,
+          "unknown": 0,
+          "point_sol_per_launch": 0.0,
+          "lower_sol_per_launch": 0.0,
+          "total_net_sol_scored": 0.0,
+          "unknown_share_of_attempts": 0,
+          "mean_ret": null,
+          "median_ret": null,
+          "win_rate": null,
+          "share_loss_ge_50": null,
+          "scorable": true,
+          "bonferroni_lcb_lower": 0.0,
+          "supported": false
+        }
+      }
+    },
+    {
+      "rows": 12001,
+      "decide_calls": 0,
+      "result": {
+        "cat": "unknown",
+        "why": "pre-promotion buffer exceeded"
+      },
+      "hypothetical": false,
+      "scores": {
+        "0.2": {
+          "N": 1,
+          "scored": 0,
+          "abstain": 0,
+          "unknown": 1,
+          "point_sol_per_launch": 0.0,
+          "lower_sol_per_launch": -0.2015,
+          "total_net_sol_scored": 0.0,
+          "unknown_share_of_attempts": 1.0,
+          "mean_ret": null,
+          "median_ret": null,
+          "win_rate": null,
+          "share_loss_ge_50": null,
+          "scorable": false,
+          "bonferroni_lcb_lower": -0.2015,
+          "supported": false
+        },
+        "0.02": {
+          "N": 1,
+          "scored": 0,
+          "abstain": 0,
+          "unknown": 1,
+          "point_sol_per_launch": 0.0,
+          "lower_sol_per_launch": -0.0215,
+          "total_net_sol_scored": 0.0,
+          "unknown_share_of_attempts": 1.0,
+          "mean_ret": null,
+          "median_ret": null,
+          "win_rate": null,
+          "share_loss_ge_50": null,
+          "scorable": false,
+          "bonferroni_lcb_lower": -0.0215,
+          "supported": false
+        }
+      }
+    }
+  ]
+}

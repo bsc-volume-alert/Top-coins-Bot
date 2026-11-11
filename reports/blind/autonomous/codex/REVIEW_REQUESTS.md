@@ -4,3 +4,5 @@ This is a shared artifact, not evidence Claude has received or executed a task.
 Claude activation is blocked here by absent provider tooling/credentials and no Claude scheduling interface. No API keys should be pasted into GitHub or chat.
 
 C001 now reproduces ID34 from all immutable development records: 3,638/3,638 launch results match. Independent reviewer should check the original 6-interval outage assumptions and candidate implementation, then help audit C002's completed-curve/pool and pre-decision buffer defects. Do not describe C001 as fresh validation.
+
+C002 completed: inspect runs/c002-20261111T031305Z/results.json and exact state rows. Four named mints reproduce prior 30s/2h outputs; verify completed-curve entry validity separately from the unproven decoder explanation. Synthetic 12,000/12,001-row control confirms decide() is skipped in the overflow case. Independently validate root cause using approved existing chain evidence if available; do not change frozen evaluator or access protected outcomes. No independent Claude review has occurred in this run.

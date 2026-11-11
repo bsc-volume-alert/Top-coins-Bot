@@ -2,14 +2,24 @@
   "worker": "Codex",
   "run_id": "c002-20261111T031305Z",
   "task": "C002",
-  "state": "running",
+  "state": "completed",
   "started_at": "2026-11-11T03:13:05Z",
-  "lease_expires_at": "2026-11-11T04:13:05Z",
+  "lease_expires_at": null,
   "previous_run": "c001-20261110T211226Z",
   "inputs": {
     "development": "e67833121f1da0dc992c28fa26c5236a855c151a",
     "evaluator": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b",
     "original_code": "93a9ed57ace4216d42e7b7a90d4967078e7ac9dc"
   },
-  "scope": "Named raw-development jackpot plus synthetic no-entry buffer counterexample; no new strategy search"
+  "scope": "Named raw-development jackpot plus synthetic no-entry buffer counterexample; no new strategy search",
+  "completed_at": "2026-11-11T03:15:53Z",
+  "result": "All four named mints match published 30s/2h results at both sizes; no-entry buffer boundary reproduced; 16/16 checksums pass",
+  "next_task": "C003",
+  "artifacts": "reports/blind/autonomous/codex/runs/c002-20261111T031305Z/",
+  "limitations": [
+    "Not live-executable profit",
+    "Pool-decoder root cause not independently established",
+    "Synthetic boundary does not establish market prevalence"
+  ],
+  "blockers": []
 }

@@ -1,0 +1,17 @@
+{
+  "data_commit": "e67833121f1da0dc992c28fa26c5236a855c151a",
+  "evaluator_commit": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b",
+  "reference_commit": "93a9ed57ace4216d42e7b7a90d4967078e7ac9dc",
+  "evaluator_sha256": "f5686511fcae09c1c191ca5ffee167c6ad1421cddbb1be8b1c4f0f3eb4cc8a86",
+  "target_rows_extraction": {
+    "bytes": 66157075,
+    "sha256": "2a9a765c3fa28c5fa39673eaa69dafb2f7a5eb0245e5838addd72c7e64fe0c03",
+    "published": false,
+    "reason": "Derived 66 MB duplicate of existing raw data; reproduce.py regenerates it; exact fill/exit state evidence is in results.json"
+  },
+  "reference_blobs": {
+    "artifact_checks.json": "152b94d665a9a36884341c89fb7f9a8f005b2a69",
+    "abstain_buffer_counterexample.json": "0a5e1fdc01f4a3000ef4a3e2bb3b2349743e47e0"
+  },
+  "source_claim_commit": "c579fac19ac5b4e22839552f9c1be04a23b9b1fe"
+}
