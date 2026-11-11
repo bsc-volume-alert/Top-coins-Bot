@@ -186,3 +186,11 @@
 3. Clock-price freshness: all 23 clock entries with price age > 10 s (up to 272 s) were confirmed by live reserves within ~1 s (fill ÷ reading inside our own buy's impact band) → genuinely quiet, not stale. 3 fresh-price pool entries moved > 5% before the fill (market movement, not staleness). Unverifiable: 53 non-entered clock decisions near the band with prices older than 60 s (no independent price stored).
 - Codex note accepted: 100K2 already tests "exclude $40–50K" against 100K1; a new book only for a genuinely different policy. Judge by after-cost expected return, severe-loss rate, runner capture, uncertainty.
 - Monitoring backstop: hourly cloud scheduled task "Bot health watch (independent backstop)" (push notifications), independent of the chat workspace.
+
+## Corrections v2 to investigations 1–3 — 11 Nov 2026 11:50 UK (Codex review; branch k100-investigations-20261111 @ 80cc3c97, see CORRECTIONS.md)
+- Trades are now deduplicated (same swap stored by two capture paths) and pre-entry features use only swaps received by the decision. Dump-window sells halve for several coins (4srewArZ 219.3 → 109.7 SOL etc.); book P&L unchanged.
+- WITHDRAWN: "Ffs4KXjK likely liquidity removal" — after deduplication its unexplained residual is −1.2 SOL. No withdrawal is claimed for any coin.
+- Quiet-price wording: "consistent with a quiet market within the tested tolerance" (pool −5.1% … +4.4%), not "verified unchanged".
+- Stalls: 83 blocks ≥ 10 s on 9–10 Nov, 46 of them ≥ 2 min (not all 1.5–6 min). Delayed-vs-lost trades during blocks still to be measured.
+- HYoM6KGc's exit (sell 66 s after trigger) is an execution delay, kept separate from the sub-second collapses.
+- Still no new trading filter from this sample; books frozen.
