@@ -20,6 +20,16 @@ tr = collections.defaultdict(list)
 for part in sorted(f for f in os.listdir(P) if f.startswith("trades_part_")):
     for r in csv.DictReader(op(part)):
         if r["mint"] in mints: tr[r["mint"]].append(r)
+# v2 (11 Nov, Codex review): DEDUPLICATE — overlapping capture paths store the same swap more than once. Fingerprint = signature, wallet, side, SOL,
+# tokens, venue, pool, event index; the first-received copy is kept (lowest recv_ms, then row_id). Raw duplicates are counted per mint.
+DUPS = collections.Counter()
+for m in list(tr):
+    seen, keep = set(), []
+    for z in sorted(tr[m], key=lambda r: (int(r["recv_ms"] or 9e18), int(r["row_id"]))):
+        fp_ = (z["sig"], z["wallet"], z["is_buy"], z["sol"], z["tokens"], z["venue"], z["pool"], z["ev_idx"])
+        if fp_ in seen: DUPS[m] += 1; continue
+        seen.add(fp_); keep.append(z)
+    tr[m] = keep
 for m in tr: tr[m].sort(key=lambda r: (int(r["slot"] or 0), int(r["ev_idx"] or -1) if r["ev_idx"] not in ("", None) else -1, int(r["row_id"])))
 def q_sol(js):
     try: return int(json.loads(js)["quote"]) / 1e9
@@ -38,7 +48,10 @@ for r in fp:
     t5 = tl.get(m, {}); x["top10_pct_cp300"] = t5.get("top10_pct") or None; x["holders_cp300"] = t5.get("holders") or None
     x["buyers_total_cp300"] = t5.get("buyers_total") or None
     # trade-derived pre-entry features (only trades with ts <= decision time)
-    T = [z for z in tr.get(m, []) if z["ts"] and int(z["ts"]) <= t0]; x["trade_rows_before_entry"] = len(T) if m in tr else None
+    # v2: only swaps the tracker had RECEIVED by the decision (recv_ms <= decision ms; rows without recv_ms fall back to ts <= decision)
+    msd = int(r["ms_decision"] or t0 * 1000)
+    T = [z for z in tr.get(m, []) if z["ts"] and int(z["ts"]) <= t0 and (not z["recv_ms"] or int(z["recv_ms"]) <= msd)]; x["trade_rows_before_entry"] = len(T) if m in tr else None
+    x["duplicate_rows_removed"] = DUPS.get(m, 0); x["rows_received_after_decision_excluded"] = sum(1 for z in tr.get(m, []) if z["ts"] and int(z["ts"]) <= t0 and z["recv_ms"] and int(z["recv_ms"]) > msd)
     if T:
         cts = int(d["create_ts"]) if d.get("create_ts") else int(cz.get("create_ts") or 0)
         pool = [z for z in tr[m] if z["venue"] and z["venue"] != "curve"]
@@ -117,8 +130,9 @@ for r in sorted([r for r in closed if r["OUT_r"] < -0.5], key=lambda r: r["OUT_r
     big = max(S5, key=lambda z: fl(z["sol"]) or 0) if S5 else None; qs = r["quote_sol_at_check"]
     W(f"| {r['mint'][:8]} | {r['OUT_exit_trigger_x']} | {r['OUT_exit_x']} | {r['EXE_exit_slip']} | {round(fl(big['sol']),1) if big else 'no retained trade'} | {round(fl(big['sol'])/qs,2) if big and qs else ''} | {'yes' if r['EXE_reserve_evidence'] else 'no'} |")
 open(os.path.join(O, "INV1.md"), "w").write("\n".join(out) + "\n"); print("\n".join(out))
-# --- liquidity removal test: does the pool's SOL fall by more than the swaps explain? (quote at check vs at exit, net swap flow in between)
-out2 = ["\n## Pool SOL between entry and exit: swaps vs reserves (severe losses)\n", "| mint | pool at check | pool at exit | quote SOL at check | quote SOL at exit | change | net swap SOL in between (buys − sells) | unexplained change |", "|---|---|---|---|---|---|---|---|"]
+# --- reserves vs recorded (deduplicated) swaps between entry and exit. A residual is NOT evidence of liquidity removal on its own (missing capture, fees and
+#     decoding all produce residuals); a withdrawal needs the withdrawal transaction, which this package does not contain.
+out2 = ["\n## Pool SOL between entry and exit: reserves vs recorded swaps, deduplicated (severe losses) — residuals are unexplained, NOT evidence of withdrawal\n", "| mint | pool at check | pool at exit | quote SOL at check | quote SOL at exit | change | net swap SOL in between (buys − sells) | unexplained change |", "|---|---|---|---|---|---|---|---|"]
 def pj(js):
     try: return json.loads(js)
     except Exception: return {}

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Investigation 3 — clock-price freshness. Run: python3 inv3_clock_freshness.py <package dir> <out dir> (needs out/inv1_positions.csv from inv1).
+"""Investigation 3 (v2: wording per Codex review — inside the tolerance means CONSISTENT with an unchanged market, not proof; the tolerance is the 10–90%
+range of fill ÷ reading on trade-sourced entries, which also contains ~1 s of normal market movement)
+Investigation 3 — clock-price freshness. Run: python3 inv3_clock_freshness.py <package dir> <out dir> (needs out/inv1_positions.csv from inv1).
 price_age_s = clock cutoff (create+300) − time of the last price the tracker had received. An old price is correct only if the market did not move.
 Independent evidence used: for ENTERED coins, the simulator read the live pool/curve reserves within ~1 s of the decision (reserves_at_check) and filled
 from reserves 1 s later; fill_over_check = fill price ÷ the 5-min reading's price. With an unchanged market this equals the price impact of our own
@@ -23,17 +25,17 @@ for r in pos:
     if r["decision_src"] != "clock": continue
     f = fl(r["fill_over_check"]); age = fl(r["clock_price_age_s"]); v = r["venue_at_entry"]; lo, hi = band[v]
     young = age is not None and age <= 10
-    if f and lo <= f <= hi: cls = "verified unchanged (reserves agree)"
+    if f and lo <= f <= hi: cls = "consistent with a quiet market within the tested tolerance"
     elif young: cls = "fresh price, market moved before the fill (" + ("down" if f < lo else "up") + ")"
-    else: cls = "STALE price — reserves " + ("lower" if f < lo else "higher")
+    else: cls = "outside tolerance (old price) — reserves " + ("lower" if f < lo else "higher")
     rows.append({**{k: r[k] for k in ("mint", "band", "venue_at_entry", "decision_utc", "mc5_usd", "clock_price_age_s", "fill_over_check", "status", "OUT_r", "OUT_exit_reason")}, "freshness": cls, "age_bucket": "≤ 10 s" if age is not None and age <= 10 else "> 10 s"})
 with open(os.path.join(O, "inv3_clock_entries.csv"), "w", newline="") as fo: w = csv.DictWriter(fo, fieldnames=list(rows[0])); w.writeheader(); w.writerows(rows)
-out += ["", "## Clock-sourced entries (all three books share these fills; 100K1 rows)\n", "| price age | entries | verified unchanged | moved/stale: lower | moved/stale: higher | mean r (closed) |", "|---|---|---|---|---|---|"]
+out += ["", "## Clock-sourced entries (all three books share these fills; 100K1 rows)\n", "| price age | entries | consistent with quiet (within tolerance) | moved/stale: lower | moved/stale: higher | mean r (closed) |", "|---|---|---|---|---|---|"]
 for ab in ("≤ 10 s", "> 10 s"):
     g = [r for r in rows if r["age_bucket"] == ab]; c = [fl(r["OUT_r"]) for r in g if r["status"] == "closed" and fl(r["OUT_r"]) is not None]
-    out.append(f"| {ab} | {len(g)} | {sum(r['freshness'].startswith('verified') for r in g)} | {sum(('down' in r['freshness'] or 'lower' in r['freshness']) for r in g)} | {sum(('(up' in r['freshness'] or 'higher' in r['freshness']) for r in g)} | {100*S.mean(c):.1f}% (n={len(c)}) |")
+    out.append(f"| {ab} | {len(g)} | {sum(r['freshness'].startswith('consistent') for r in g)} | {sum(('down' in r['freshness'] or 'lower' in r['freshness']) for r in g)} | {sum(('(up' in r['freshness'] or 'higher' in r['freshness']) for r in g)} | {100*S.mean(c):.1f}% (n={len(c)}) |")
 st = [r for r in rows if not r["freshness"].startswith("verified")]
-out += ["", "Clock entries outside the unchanged band (with their classification): " + ("; ".join(f"{r['mint'][:8]} — {r['freshness']} ({r['band']} {r['venue_at_entry']}, age {r['clock_price_age_s']} s, fill÷reading {r['fill_over_check']}, r {100*fl(r['OUT_r']):+.0f}%)" if r['OUT_r'] else r['mint'][:8] for r in st) if st else "none")]
+out += ["", "Clock entries outside the tolerance (with their classification): " + ("; ".join(f"{r['mint'][:8]} — {r['freshness']} ({r['band']} {r['venue_at_entry']}, age {r['clock_price_age_s']} s, fill÷reading {r['fill_over_check']}, r {100*fl(r['OUT_r']):+.0f}%)" if r['OUT_r'] else r['mint'][:8] for r in st) if st else "none")]
 # 3. every clock reading in the population: how often decisions rested on an old price
 clk = [r for r in csv.DictReader(op("token_cp_clock.csv.gz")) if r["cp"] == "300"]
 dec = {r["mint"]: r for r in csv.DictReader(op("decisions_kpaper.csv.gz"))}
