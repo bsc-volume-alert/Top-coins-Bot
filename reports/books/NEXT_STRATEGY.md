@@ -11,3 +11,9 @@
 - T25 modeled: A +13.5% (67), B +26.0% (55), pooled +19.1% CI [+0.6, +41.1]; without top 3 +4.7%; flagged exits at 0: pooled +9.1%, without top 3 −5.5%. Positive hypothesis, runner- and exit-pricing-dependent; not an edge.
 - C1 ≠ R3C: ~60% of C1 coins never trigger R3C (A 41/69, B 33/57).
 - FROZEN rule C1-2 and evaluation: replay only (no book) on launches from 13 Nov 00:00 UTC until 150 filled or 7 days; outcomes fixed in advance: INSUFFICIENT EVIDENCE / PROFITABLE ON THIS TEST (strong) / ADVANCE AS RESEARCH ONLY (screen) / FAIL.
+
+## 11 Nov 2026 ~15:05 UK — candidate C2 (proposed 14:48 after a 12,576-combination search over A and B) — next-strategy-20261111 @ 19f73453 (C2_SPEC_FROZEN.md, c2_check.py, out_c2.txt)
+- Rule: 5-min reading $20–40K (any venue), net SOL in the last 2 min ≤ 20, sell half at 2× then 25% trail, 2 h max.
+- Re-checked under live eligibility + second fee: A +16.0% (59), B +9.0% (48; was +12.3%), pooled +12.9% CI [+1.7, +23.6]; without top 3 pooled +8.6% (B +1.6%); flagged exits at 0 pooled +8.5%. Half at 2× drives it (B whole-position T25 only +4.1%).
+- Simulator validated on 27 real 100K2 fills meeting the condition: real +1.0% vs simulated +0.7% (median gap 0.1 pt).
+- Chosen with both periods in view → no out-of-sample result yet. Frozen; evaluated by replay on the same fresh window as C1 (13 Nov →), same four pre-fixed outcomes; C1 and C2 judged separately.
