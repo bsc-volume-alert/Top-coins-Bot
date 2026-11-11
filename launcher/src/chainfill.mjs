@@ -173,9 +173,10 @@ function apply(mint, lamportsOf, src, res = null) {
     const tms = Date.now();
     if (r.s_trig_ts != null) { // 0.9.2: the sell was decided at s_trig_ts; it executes on the first state SELL_LAND_MS or more after that
       if (tms - r.s_trig_ts * 1000 >= SELL_LAND_MS) { const reason = t - r.entry_ts >= HORIZON && !(r.s_trig_x <= (r.s_hi || 1) * keep) ? "2h" : "trail";
+        // 0.10.1: for the C2 book the result (s_r) IS its exit policy: half at the first executable 2× print + half on the 25% trail exit, a second network fee when the half was sold
         const rHalf = r.s_half_x != null ? 0.5 * r.s_half_x + 0.5 * x - 1 - NET_FEE / STAKE : x - 1 - NET_FEE / STAKE; // 0.9.6: half sold at the first 2x print, the rest on this exit
         const r02 = x02 != null ? x02 - 1 - NET_FEE / STAKE02 : x - 1 - NET_FEE / STAKE02; // 0.9.8: true 0.02 result from the real 0.02 position (falls back to the rescaled figure if the small quote was unavailable)
-        q("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_exit_x=?, s_exit_ts=?, s_exit_reason=?, s_r=?, s_r02=?, s_exit_x02=?, s_r_half=?, s_exit_src=?, s_max_gap_s=?, s_fill_ms=?, s_res_exit=?, s_ms_exit=?, done=1 WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), +x.toFixed(4), t, reason, +(x - 1 - NET_FEE / STAKE).toFixed(4), +r02.toFixed(4), x02 != null ? +x02.toFixed(4) : null, +rHalf.toFixed(4), src, gap, Math.round(tms - r.s_trig_ts * 1000), res, tms, r.vol_id); cfStat.exits++; }
+        q("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_exit_x=?, s_exit_ts=?, s_exit_reason=?, s_r=?, s_r02=?, s_exit_x02=?, s_r_half=?, s_exit_src=?, s_max_gap_s=?, s_fill_ms=?, s_res_exit=?, s_ms_exit=?, done=1 WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), +x.toFixed(4), t, reason, +(r.strat === "C2" ? rHalf - (r.s_half_x != null ? NET_FEE / STAKE : 0) : x - 1 - NET_FEE / STAKE).toFixed(4), +r02.toFixed(4), x02 != null ? +x02.toFixed(4) : null, +rHalf.toFixed(4), src, gap, Math.round(tms - r.s_trig_ts * 1000), res, tms, r.vol_id); cfStat.exits++; }
       else { q("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_max_gap_s=? WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), gap, r.vol_id); open++; }
       cfStat.updates++; continue; }
     const trigger = x <= (r.s_hi || 1) * keep || t - r.entry_ts >= HORIZON;
