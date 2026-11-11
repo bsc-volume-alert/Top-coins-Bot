@@ -49,3 +49,8 @@ Sell at slot+2 and trail on sellable proceeds (branch next-strategy-v22 @ 0e501e
 - **Base range:** the code kept base prices between median ÷ 1.15 (−13.0%) and median × 1.15 (+15%), not a symmetric ±15%. Recorded, not re-run (no rescue of a failed test).
 - **False breakouts:** A 26 of 79 (33%), B 27 of 59 (46%), not "about one in three" for both.
 - Both versions shelved and archived. Next: on identical momentum signals, does holder information available BEFORE buying cut crash losses by more than the winners it excludes? Fresh observations only. Holder snapshots count only if their read time is before the entry.
+
+## 11 Nov 2026 18:20 UK — corrections (Codex review 18:17) to my 18:07 explanation to the owner
+- 14,455 was the number of coins with lifecycle checkpoints in snapshot3, not full trade histories; the broader approved trade export has 4,913 mints with histories out of 62,789 launches (Codex's figure). Newer pool capture can extend to 24 h, so "first two hours only" was too strong.
+- Not established: that on-chain information contains no edge, that winners and losers are indistinguishable, or that attention is the most likely source of profit. These are hypotheses.
+- Next: runner autopsy split between the workers (RESEARCH_QUEUE F006 / C009, then cross-reproduction F007 / C010; C011 inventory of attention and longer-history data before any new collection).

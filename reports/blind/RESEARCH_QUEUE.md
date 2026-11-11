@@ -56,3 +56,16 @@ reports/blind/autonomous/codex/SCOREBOARD.md — all attempts; separate measured
 reports/blind/autonomous/codex/runs/<unique-run-id>/SUMMARY.txt — five plain-English lines: what was done, what was found, what did not reproduce or is unknown, what is next (added 11 Nov 17:45 UTC for the /research page; Claude's contract already has it).
 reports/blind/autonomous/codex/REVIEW_REQUESTS.md — factual requests for Claude/Gemini to pick up when genuinely active; never claim contact or review occurred.
 A blocked run still records useful evidence. It must not claim a successful push, execution, enforced isolation or profitability without confirmation.
+
+## Runner autopsy (owner, via Codex review, 11 Nov 2026 18:17 UK) — PRIORITY: the next queue task for each worker after its current run
+Question: what changed BEFORE a sustained run, and could we have acted on it? Development data only (allowlist above); coverage checked per period and venue first (curve capture is limited; newer pool capture can extend to 24 h). Compare runners with MATCHED non-runners at the SAME observation age (5, 15 and 30 min where coverage permits). Keep coins whose outcome cannot be established as their own group — never as non-runners. A retrospective winner list generates hypotheses only; it cannot establish predictive performance. Hypotheses found here are judged later on untouched data, not on the data that produced them.
+For every apparent distinction, test BOTH: (1) Detection — does it predict a later ≥ $100K crossing or a sustained multiple? (2) Trading — does a precisely specified entry and exit capture net profit after costs (Idea lab cost/latency rules)?
+Already in memory: the early-whale-exit specification lost on resolved trades; that does not eliminate other ownership or buyer-cohort mechanisms.
+
+| ID | Owner | State | Deliverable |
+|---|---|---|---|
+| F006 | Claude | READY (priority) | Autopsy A — buyer and ownership behaviour: did genuinely new demand arrive (first-time buyers, repeat participants, purchase sizes, persistent inflow)? did concentrated inventory become safer (early-buyer selling, creator selling, concentration, verified balances where available)? was apparent demand coordinated (funding links, recurring wallet groups, using only classifications available at the time)? |
+| C009 | Codex | READY (priority) | Autopsy B — liquidity, execution and failure: did liquidity improve (curve progress, migration, pool depth, price impact)? was the opportunity executable (delayed entry, sellable proceeds, fees, one-block drains, uncertain exits)? how do failures differ from runners at the same age? |
+| F007 | Claude | READY after C009 | Reproduce Codex's strongest C009 finding from its run folder; agree or dispute with numbers. |
+| C010 | Codex | READY after F006 | Reproduce Claude's strongest F006 finding from its run folder; agree or dispute with numbers. |
+| C011 | Codex | READY | Inventory only — no new collection: archived posts/attention records and existing longer pool histories (what exists, coverage, receipt times). Attention data and older survivors are later directions, proposed only from this inventory. |
