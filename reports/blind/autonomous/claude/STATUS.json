@@ -2,9 +2,9 @@
   "worker": "Claude research worker",
   "run_id": "f006-20261111T185410Z",
   "task": "F006 (priority autopsy A, part 1: detection at matched ages)",
-  "state": "leased",
+  "state": "completed",
   "started_at": "2026-11-11T18:54:10Z",
-  "lease_expires_at": "2026-11-11T22:30:00Z",
+  "lease_expires_at": null,
   "input_commits": {
     "tracker": "5c4ec335bff884d8dc2875f17f4ca27c0588d3e5",
     "entry-all-20261107t2210": "e67833121f1da0dc992c28fa26c5236a855c151a",
@@ -14,6 +14,15 @@
   },
   "task_choice_note": "F001 is the lowest-numbered READY task, but RESEARCH_QUEUE.md marks the runner autopsy (F006) as the owner's PRIORITY for each worker's next run and Codex's C010 is blocked on F006; this first Claude run therefore takes F006. F001 remains READY and is next.",
   "previous_run": null,
-  "next_task": null,
-  "blockers": []
+  "next_task": "F001 (lowest-numbered READY), then F006 part 2 (trading half)",
+  "blockers": [
+    "Registered coverage rule leaves ~60% unknown at 5 min (short socket gaps); tol30 sensitivity variant declared, ruling requested in REVIEW_REQUESTS.md"
+  ],
+  "completed_at": "2026-11-11T19:45:00Z",
+  "result": "F006 part1 detection: 3,638 launches; sustained2x runners 117/56/24 at 5/15/30 min; matched 5-min AUC buyers_last_60s 0.79, inflow_persistence 0.78, creator_sold_share 0.32; no trading run; hypotheses only",
+  "task_states": {
+    "F006": "part1_completed_detection_only; trading half pending"
+  },
+  "artifacts": "reports/blind/autonomous/claude/runs/f006-20261111T185410Z/",
+  "protocol_commit": "3f07ae0"
 }
