@@ -1,0 +1,47 @@
+C1 v2 — 5-min reading $15–100K, still on the curve (evidence), 0.2 SOL, buy 1 s after the decision; exits as stated. Every count reconciled.
+
+Period A universe: tracker-retained launches with an on-time trade-triggered 5-min reading (cohort.json; clock checkpoint did not exist yet).
+  Already excluded upstream (counts only, bands unknown): ALREADY past $100K before 5 min 209, UNKNOWN_NO_POOL 90, SUSPECT 87, late/missing 5-min reading 1,065.
+Reconciliation A:
+  on time, outside $15–100K: 1843
+  eligible checkpoint in $15–100K: 176
+  venue pool: checkpoint says graduated: 74
+  curve (evidence): 69
+  venue pool: curve complete: 33
+  filled: 67
+  fill unavailable (old): 2
+  A T25 modeled                n=67 mean +13.5% med -7.8% win 40% sev 7% tot +1.806 SOL | −best +8.2% −top3 +1.7%
+  A T25 flagged legs at 50%    n=67 mean +8.6% med -14.8% win 36% sev 12% tot +1.157 SOL | −best +3.2% −top3 -3.4%
+  A T25 flagged legs at 0      n=67 mean +3.8% med -14.8% win 36% sev 16% tot +0.508 SOL | −best -1.7% −top3 -8.4%
+  A T25 modeled 95% CI (4-h blocks): [-6.1%, +28.4%] (7 blocks)
+  A positions with a flagged (quiet-priced or unresolved) exit: 6 of 67
+  A TP2×T25 (+second fee when the half-sale happened) n=67 mean +14.0% med -4.9% win 43% sev 6% tot +1.874 SOL | −best +10.2% −top3 +5.0%
+  A T15 (whole position)                         n=67 mean +3.2% med +0.2% win 51% sev 1% tot +0.427 SOL | −best +1.9% −top3 -0.2%
+
+Period B universe: every K decision 9 Nov 21:48 → 10 Nov 20:57 UTC (decisions_kpaper).
+Reconciliation B:
+  B decisions: 30261
+  excluded: not a live-eligible decision (late / unusable clock / no market cap): 10662
+  on time, outside $15–100K: 19267
+  eligible checkpoint in $15–100K: 332
+  curve (evidence): 57
+  venue pool: checkpoint says graduated: 112
+  no stored trade history (checkpoint venue: curve): 115
+  venue pool: curve complete: 46
+  no stored trade history (checkpoint venue: pool): 2
+  filled: 55
+  fill unavailable (old): 2
+  B T25 modeled                n=55 mean +26.0% med -3.7% win 38% sev 9% tot +2.859 SOL | −best +6.1% −top3 +0.1%
+  B T25 flagged legs at 50%    n=55 mean +20.8% med -13.0% win 38% sev 20% tot +2.286 SOL | −best +0.8% −top3 -5.4%
+  B T25 flagged legs at 0      n=55 mean +15.6% med -13.0% win 38% sev 20% tot +1.713 SOL | −best -4.5% −top3 -10.9%
+  B T25 modeled 95% CI (4-h blocks): [-4.1%, +70.3%] (7 blocks)
+  B positions with a flagged (quiet-priced or unresolved) exit: 6 of 55
+  B TP2×T25 (+second fee when the half-sale happened) n=55 mean +15.2% med -3.7% win 38% sev 9% tot +1.676 SOL | −best +4.5% −top3 -0.6%
+  B T15 (whole position)                         n=55 mean +0.8% med -3.7% win 40% sev 7% tot +0.086 SOL | −best -1.1% −top3 -4.7%
+
+POOLED A+B, T25:
+  modeled                n=122 mean +19.1% med -6.7% win 39% sev 8% tot +4.666 SOL | −best +10.2% −top3 +4.7%
+  flagged legs at 50%    n=122 mean +14.1% med -14.5% win 37% sev 16% tot +3.443 SOL | −best +5.1% −top3 -0.4%
+  flagged legs at 0      n=122 mean +9.1% med -14.5% win 37% sev 18% tot +2.220 SOL | −best +0.1% −top3 -5.5%
+  95% CI modeled: [+0.6%, +41.1%] (14 blocks)
+  top 5: B FgoLzGV2 +1102%; A 8fV1ZSro +365%; A ASTLrYPQ +302%; B ArAwJfk4 +174%; B 3w5hcV8w +146%
