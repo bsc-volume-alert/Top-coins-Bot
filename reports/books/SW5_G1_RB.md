@@ -30,4 +30,5 @@
 - Exports: sw5_decisions.csv, g1_decisions.csv, rb_decisions.csv (48 h). Site: SW5, G1, RB after R3C on /fd and /fd2 (scope 0.13.1).
 
 ## Change history
-- 11 Nov 2026 — written (launcher 0.10.1 / scope 0.13.1); Codex review fixes applied 17:30 UK; awaiting the owner's go.
+- 11 Nov 2026 — written (as launcher 0.10.1 / scope 0.13.1); Codex review fixes applied 17:30 UK.
+- 12 Nov 2026 — owner's go 04:38 UK ("paper trail these 100%"); rebased onto the live tree (C2 0.10.1, old books stopped 0.10.2, M2 0.10.3) and deployed as **launcher 0.10.4 / scope 0.14.2**. Books on the page: M2, R3C, C2, SW5, G1, RB, 100K1-3.
