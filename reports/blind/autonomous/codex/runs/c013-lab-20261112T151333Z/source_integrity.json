@@ -1,0 +1,33 @@
+{
+  "input_commits": {
+    "tracker": "9f65186b535e829bac110a288f20f60241ce833d",
+    "codex": "5024b9ef640b6e198c24851e1fc5f632001e525e",
+    "claude": "fc6b05aa75162444776a93035b34a7ad24c77395",
+    "entry-package": "0e3be03c71949e069a7a31b5951f332bb563f68f",
+    "entry-all": "e67833121f1da0dc992c28fa26c5236a855c151a",
+    "evaluator": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b"
+  },
+  "frozen_evaluator_sha256": "f5686511fcae09c1c191ca5ffee167c6ad1421cddbb1be8b1c4f0f3eb4cc8a86",
+  "verified_development_files": 16,
+  "peer_verified_files": 6,
+  "AGENTS_reads": {
+    "AGENTS.md": 404,
+    "reports/AGENTS.md": 404,
+    "reports/blind/AGENTS.md": 404,
+    "reports/blind/autonomous/AGENTS.md": 404,
+    "reports/blind/autonomous/codex/AGENTS.md": 404
+  },
+  "peer_KNOWLEDGE_read": "exists at cited peer commit; supersedes earlier404",
+  "output_filesystem_mtimes_UTC": {
+    "control_reconciliation.json": "2026-11-12T15:22:46.911701+00:00",
+    "partial_comparison.json": "2026-11-12T15:22:46.942652+00:00",
+    "exposure.json": "2026-11-12T15:20:51.356465+00:00",
+    "best_trade_audit.json": "2026-11-12T15:20:54.405734+00:00",
+    "raw_pool_evidence.json": "2026-11-12T15:22:17.511991+00:00"
+  },
+  "network_note": "Default public GitHub read failed inherited proxy connect; approved escalated immutable GitHub reads succeeded; no data-provider/blockchain/model APIs or credentials used.",
+  "new_strategy_specs": 1,
+  "locked_control_specs": 1,
+  "historical_peer_specs_rerun_for_reproduction": 3,
+  "registered_model_attribution_diagnostics": 1
+}

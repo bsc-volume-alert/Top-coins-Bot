@@ -1,0 +1,44 @@
+ELIGIBLE 500 {'not_retained': 26, 'eligible_early': 500}
+ELIGIBLE 1000 {'not_retained': 46, 'eligible_early': 1000}
+ELIGIBLE 1500 {'not_retained': 58, 'eligible_early': 1500, 'outage_excluded': 974}
+ELIGIBLE 2000 {'not_retained': 138, 'eligible_early': 1593, 'outage_excluded': 974, 'eligible_late': 407}
+ELIGIBLE 2500 {'not_retained': 179, 'eligible_early': 1593, 'outage_excluded': 974, 'eligible_late': 907}
+ELIGIBLE 3000 {'not_retained': 240, 'eligible_early': 1593, 'outage_excluded': 974, 'eligible_late': 1407}
+ELIGIBLE 3500 {'not_retained': 300, 'eligible_early': 1593, 'outage_excluded': 974, 'eligible_late': 1907}
+{
+ "audit": {
+  "not_retained": 301,
+  "eligible_early": 1593,
+  "outage_excluded": 974,
+  "eligible_late": 2045
+ },
+ "diagnostics": {
+  "launches": 3638,
+  "retained_by_300s": 3636,
+  "eligible_E": 679,
+  "E_by_half": {
+   "early": 313,
+   "late": 366
+  },
+  "within_E": {
+   "cond_t1": 120,
+   "c_creator_sold0": 373,
+   "c_early_le0.8": 247,
+   "c_top10_le0.8": 476,
+   "creator_on_tape": 428,
+   "no_early_buyers": 0,
+   "cond_l002": 668,
+   "mode_size_share_median": 0.0975609756097561,
+   "top10_median": 0.5746350386628565,
+   "early_sold_median": 0.8581293734979165
+  },
+  "not_E_reasons": {
+   "buyers60_lt5": 2685,
+   "last_not_valid_curve": 272,
+   "not_retained_by_300s": 2
+  }
+ }
+}
+control {"attempted": 679, "filled": 679, "unavailable_fill": 0, "uncertain_exit": 185, "stale_fill_gt30s_marked_unavailable": 16, "stale_exit_gt30s_marked_uncertain": 59} {"n": 419, "total_sol": -10.011571773352646, "mean_ret": -0.11946983023093849, "median_ret": -0.2412103648600883, "win_rate": 0.22911694510739858, "share_loss_gt50": 0.11217183770883055, "without_best1_sol": -11.387526840491985, "without_best3_sol": -12.393117549072963, "best3_sol": [0.423680455105637, 0.5819102534753425, 1.375955067139338], "worst_sol": -0.19312455384970328, "exit_trigger": 419, "exit_horizon": 0, "median_hold_s": 131.17700004577637, "fill_state_age_median_s": 0.0}
+t1 {"attempted": 120, "filled": 120, "unavailable_fill": 0, "uncertain_exit": 22, "stale_fill_gt30s_marked_unavailable": 1, "stale_exit_gt30s_marked_uncertain": 12} {"n": 85, "total_sol": -0.4926748190160763, "mean_ret": -0.02898087170682801, "median_ret": -0.20276362398967088, "win_rate": 0.27058823529411763, "share_loss_gt50": 0.15294117647058825, "without_best1_sol": -1.8686298861554143, "without_best3_sol": -2.799211346021777, "best3_sol": [0.34867120639102045, 0.5819102534753425, 1.375955067139338], "worst_sol": -0.184997460963298, "exit_trigger": 85, "exit_horizon": 0, "median_hold_s": 156.125, "fill_state_age_median_s": 0.0}
+l002 {"attempted": 668, "filled": 668, "unavailable_fill": 0, "uncertain_exit": 180, "stale_fill_gt30s_marked_unavailable": 16, "stale_exit_gt30s_marked_uncertain": 58} {"n": 414, "total_sol": -9.836446123327963, "mean_ret": -0.11879765849429906, "median_ret": -0.24181536015013905, "win_rate": 0.22705314009661837, "share_loss_gt50": 0.1111111111111111, "without_best1_sol": -11.2124011904673, "without_best3_sol": -12.21799189904828, "best3_sol": [0.423680455105637, 0.5819102534753425, 1.375955067139338], "worst_sol": -0.19312455384970328, "exit_trigger": 414, "exit_horizon": 0, "median_hold_s": 131.37800002098083, "fill_state_age_median_s": 0.0}

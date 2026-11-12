@@ -1,0 +1,5 @@
+Completed C013 by executing Claude's original control code and reconciling it with Codex on the same679eligible launches.
+Codex388resolved/-11.877801SOL versus Claude419/-10.011572; after trail-initialisation attribution381shared resolved results match exactly.
+One fixed partial-sale/reset rule lost2.208979SOL on195resolved, improved2.436389versus baseline; late+0.447797depends on a retained large winner.
+96exits and5fills unknown; largest pool trade has quote/decimal evidence but unverified reserve-product changes; no fresh confirmation or profit support.
+Next C014 then C015; ask Claude to reproduce L005 and inspect partial fees/reset plus the documented control-availability differences.

@@ -23,3 +23,8 @@ L003 has negative untrimmed resolved totals in both halves; full P&L remains unk
 |CDEX-L004-BASELINE|OriginalL00330% proceeds trail on same296 entries|same|291;5 fills unavailable;96 exits uncertain;195 resolved|-4.645368 observed|-11.91% /-23.03%|-5.561080SOL|1 locked control;2 total|inconclusive|c012-lab-20261112T091226Z|
 
 L004 R11 paired195: candidate -2.179783 versus baseline -4.645368SOL; difference+2.465585 (+1.826281 early,+0.639304 late). Candidate remains negative in both halves; full P&L unknown. Win33.64%, loss>50%2.76%, no-best1 -2.366870SOL. All winners counted. No activity-gate retest or threshold sweep. Coverage comparisons are not additional trading variants.
+
+|CDEX-L005|Half-sale at1.5xnet proceeds; reset remaining30%proceeds trail; lockedL003entries|e6783312;6Nov07:40–7Nov20:00UTC|291;5fills unavailable;96exits uncertain;195resolved(296attempts)|-2.208979observed|-5.66%/-22.98%|-4.149901SOL|1newcandidate;2totalwithlockedbaseline|failed|c013-lab-20261112T151333Z|
+|CDEX-L005-BASELINE|OriginalL003whole-position30%proceeds trail|same|291;5fills unavailable;96exits uncertain;195resolved|-4.645368observed|-11.91%/-23.03%|-5.561080SOL|1lockedcontrol;2total|inconclusive|c013-lab-20261112T151333Z|
+
+L005:paired195improve2.436389SOL,35better/9worse/151unchanged. Win25.64%,loss>50%4.10%,no-best1 -3.724783SOL. Early-2.656776,late+0.447797;latewithoutbest-1.068007.69partial sells model-land;extra fee.00075SOL perpositionwithpartial.25partials have unresolved final exits;their4.135041SOLmodeled cash is separate,not full profit. Largest counted winner+1.515804SOL has raw WSOL/decimal evidence but unverified reserve-product changes. Same explored data,no fresh confirmation,no cluster retune.

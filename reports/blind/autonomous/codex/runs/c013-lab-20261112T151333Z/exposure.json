@@ -1,0 +1,42 @@
+{
+  "L005": {
+    "early": {
+      "modeled_peak_open_initial_stake_sol": 3.3000000000000007,
+      "modeled_stake_seconds": 55805.178501176844,
+      "median_final_hold_sec": 145.37800002098083,
+      "limits": "Independent positions; partial reserve impact does not persist. Unresolved positions may remain open past modeled exit time."
+    },
+    "late": {
+      "modeled_peak_open_initial_stake_sol": 3.400000000000001,
+      "modeled_stake_seconds": 55959.578701305465,
+      "median_final_hold_sec": 220.40950000286102,
+      "limits": "Independent positions; partial reserve impact does not persist. Unresolved positions may remain open past modeled exit time."
+    },
+    "all": {
+      "modeled_peak_open_initial_stake_sol": 3.4000000000000004,
+      "modeled_stake_seconds": 111764.75720248232,
+      "median_final_hold_sec": 184.2850000858307,
+      "limits": "Independent positions; partial reserve impact does not persist. Unresolved positions may remain open past modeled exit time."
+    }
+  },
+  "BASELINE": {
+    "early": {
+      "modeled_peak_open_initial_stake_sol": 3.600000000000001,
+      "modeled_stake_seconds": 64599.5098011971,
+      "median_final_hold_sec": 145.37800002098083,
+      "limits": "Independent positions; partial reserve impact does not persist. Unresolved positions may remain open past modeled exit time."
+    },
+    "late": {
+      "modeled_peak_open_initial_stake_sol": 3.400000000000001,
+      "modeled_stake_seconds": 58011.15540132528,
+      "median_final_hold_sec": 216.59450006484985,
+      "limits": "Independent positions; partial reserve impact does not persist. Unresolved positions may remain open past modeled exit time."
+    },
+    "all": {
+      "modeled_peak_open_initial_stake_sol": 3.600000000000001,
+      "modeled_stake_seconds": 122610.66520252239,
+      "median_final_hold_sec": 181.29800009727478,
+      "limits": "Independent positions; partial reserve impact does not persist. Unresolved positions may remain open past modeled exit time."
+    }
+  }
+}

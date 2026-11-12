@@ -1,0 +1,41 @@
+{
+  "commit": "fc6b05aa75162444776a93035b34a7ad24c77395",
+  "source_run": "f006p2-20261112T025028Z",
+  "files": [
+    {
+      "path": "run_s2.py",
+      "sha256": "5dee179f9ac6285ebd14e20d15e3631763e211adb28e3419c121081df39b2c72",
+      "matches_manifest": true
+    },
+    {
+      "path": "rules_common.py",
+      "sha256": "f4ad6bdc17bf7d941cc7692ad0cbdb61ba03f04f3923046cbac66f8986fe7c0b",
+      "matches_manifest": true
+    },
+    {
+      "path": "features_at_300s.csv.gz",
+      "sha256": "076bbc50a6d2a1b648b3f6735361e0accbd3218969de6abd6d3d2f471b45e14e",
+      "matches_manifest": true
+    },
+    {
+      "path": "ledger.csv.gz",
+      "sha256": "1aa1681e954352467691542b106b400f7eb3f814f400f25b1db2b0f693b78988",
+      "matches_manifest": true
+    },
+    {
+      "path": "results_s2.json",
+      "sha256": "a23a915bc8bc3c9b41a08744945a8687d14d92ca4a1bde4294dd8127eef22179",
+      "matches_manifest": true
+    },
+    {
+      "path": "README.md",
+      "sha256": "fd8896c1c0b9c068fb5863817c068805addf56bfd0d59d44be6b1d3954e474ff",
+      "matches_manifest": true
+    }
+  ],
+  "not_requested_manifest_files": [
+    "s1.log",
+    "s2.log"
+  ],
+  "manifest_defect_already_recorded_by_coordinator": "R18"
+}

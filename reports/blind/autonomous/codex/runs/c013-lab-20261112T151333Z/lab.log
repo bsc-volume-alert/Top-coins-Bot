@@ -1,0 +1,211 @@
+CHECKSUMS 16 PASS
+{
+  "experiment": "CDEX-L005",
+  "protocol_commit": "6e9db558fd1feb1745d4bd9be97c1ceb50c8166a",
+  "data_commit": "e67833121f1da0dc992c28fa26c5236a855c151a",
+  "fee_bps": {
+    "curve": 125,
+    "pool": 55
+  },
+  "stake": 0.2,
+  "fixed_cost": 0.0015,
+  "variant_count": 2,
+  "results": {
+    "L005": {
+      "early": {
+        "eligible_denominator": 1593,
+        "attempted": 143,
+        "filled": 139,
+        "fill_unavailable": 4,
+        "scored": 95,
+        "uncertain_exits": 44,
+        "unavailable_total": 48,
+        "total_observed_net_sol": -2.6567762967050053,
+        "mean_return": -0.1398303314055266,
+        "median_return": -0.2412103648600883,
+        "mean_net_sol": -0.027966066281105317,
+        "median_net_sol": -0.04824207297201766,
+        "win_rate": 0.2,
+        "share_loss_gt50": 0.07368421052631578,
+        "without_best1_sol": -2.830114981999833,
+        "without_best3_sol": -3.1237582687809144,
+        "observed_net_per_eligible_launch": -0.0016677817305116166,
+        "unknown_zero_scenario_total": -2.6567762967050053,
+        "unknown_fullstake_scenario_total": -12.328776296705005,
+        "unknown_reasons": {
+          "state older than 30s": 42,
+          "capture gap during hold": 1,
+          "completed curve cannot accept buy": 4,
+          "state invalid or pool evidence absent": 1
+        },
+        "peak_attempted_position_stake_sol": 3.6,
+        "variant_count_total": 2
+      },
+      "late": {
+        "eligible_denominator": 2045,
+        "attempted": 153,
+        "filled": 152,
+        "fill_unavailable": 1,
+        "scored": 100,
+        "uncertain_exits": 52,
+        "unavailable_total": 53,
+        "total_observed_net_sol": 0.44779711225919794,
+        "mean_return": 0.022389855612959895,
+        "median_return": -0.21378239359558668,
+        "mean_net_sol": 0.004477971122591979,
+        "median_net_sol": -0.042756478719117336,
+        "win_rate": 0.31,
+        "share_loss_gt50": 0.01,
+        "without_best1_sol": -1.0680066000482475,
+        "without_best3_sol": -1.4931250609795155,
+        "observed_net_per_eligible_launch": 0.00021897169303628262,
+        "unknown_zero_scenario_total": 0.44779711225919794,
+        "unknown_fullstake_scenario_total": -10.231702887740802,
+        "unknown_reasons": {
+          "capture gap during hold": 16,
+          "state older than 30s": 36,
+          "invalid received state during hold": 1
+        },
+        "peak_attempted_position_stake_sol": 3.4000000000000004,
+        "variant_count_total": 2
+      },
+      "all": {
+        "eligible_denominator": 3638,
+        "attempted": 296,
+        "filled": 291,
+        "fill_unavailable": 5,
+        "scored": 195,
+        "uncertain_exits": 96,
+        "unavailable_total": 101,
+        "total_observed_net_sol": -2.2089791844458073,
+        "mean_return": -0.056640491908866844,
+        "median_return": -0.2298315445957587,
+        "mean_net_sol": -0.01132809838177337,
+        "median_net_sol": -0.04596630891915174,
+        "win_rate": 0.2564102564102564,
+        "share_loss_gt50": 0.041025641025641026,
+        "without_best1_sol": -3.724782896753253,
+        "without_best3_sol": -4.149901357684521,
+        "observed_net_per_eligible_launch": -0.0006071960375057194,
+        "unknown_zero_scenario_total": -2.2089791844458073,
+        "unknown_fullstake_scenario_total": -22.56047918444581,
+        "unknown_reasons": {
+          "state older than 30s": 78,
+          "capture gap during hold": 17,
+          "completed curve cannot accept buy": 4,
+          "state invalid or pool evidence absent": 1,
+          "invalid received state during hold": 1
+        },
+        "peak_attempted_position_stake_sol": 3.6,
+        "variant_count_total": 2
+      }
+    },
+    "BASELINE": {
+      "early": {
+        "eligible_denominator": 1593,
+        "attempted": 143,
+        "filled": 139,
+        "fill_unavailable": 4,
+        "scored": 95,
+        "uncertain_exits": 44,
+        "unavailable_total": 48,
+        "total_observed_net_sol": -3.0892848278002583,
+        "mean_return": -0.16259393830527674,
+        "median_return": -0.2456165717724343,
+        "mean_net_sol": -0.03251878766105535,
+        "median_net_sol": -0.04912331435448686,
+        "win_rate": 0.18947368421052632,
+        "share_loss_gt50": 0.08421052631578947,
+        "without_best1_sol": -3.3334376621312547,
+        "without_best3_sol": -3.708359901216356,
+        "observed_net_per_eligible_launch": -0.0019392873997490635,
+        "unknown_zero_scenario_total": -3.0892848278002583,
+        "unknown_fullstake_scenario_total": -12.761284827800258,
+        "unknown_reasons": {
+          "state older than 30s": 42,
+          "capture gap during hold": 1,
+          "completed curve cannot accept buy": 4,
+          "state invalid or pool evidence absent": 1
+        },
+        "peak_attempted_position_stake_sol": 3.6,
+        "variant_count_total": 2
+      },
+      "late": {
+        "eligible_denominator": 2045,
+        "attempted": 153,
+        "filled": 152,
+        "fill_unavailable": 1,
+        "scored": 100,
+        "uncertain_exits": 52,
+        "unavailable_total": 53,
+        "total_observed_net_sol": -1.556083287012918,
+        "mean_return": -0.0778041643506459,
+        "median_return": -0.21378239359558668,
+        "mean_net_sol": -0.015560832870129179,
+        "median_net_sol": -0.042756478719117336,
+        "win_rate": 0.27,
+        "share_loss_gt50": 0.02,
+        "without_best1_sol": -1.8793509330329357,
+        "without_best3_sol": -2.4717951548365193,
+        "observed_net_per_eligible_launch": -0.0007609209227447031,
+        "unknown_zero_scenario_total": -1.556083287012918,
+        "unknown_fullstake_scenario_total": -12.235583287012918,
+        "unknown_reasons": {
+          "capture gap during hold": 16,
+          "state older than 30s": 36,
+          "invalid received state during hold": 1
+        },
+        "peak_attempted_position_stake_sol": 3.4000000000000004,
+        "variant_count_total": 2
+      },
+      "all": {
+        "eligible_denominator": 3638,
+        "attempted": 296,
+        "filled": 291,
+        "fill_unavailable": 5,
+        "scored": 195,
+        "uncertain_exits": 96,
+        "unavailable_total": 101,
+        "total_observed_net_sol": -4.645368114813176,
+        "mean_return": -0.11911200294392758,
+        "median_return": -0.2303426519602758,
+        "mean_net_sol": -0.023822400588785517,
+        "median_net_sol": -0.04606853039205516,
+        "win_rate": 0.23076923076923078,
+        "share_loss_gt50": 0.05128205128205128,
+        "without_best1_sol": -4.968635760833194,
+        "without_best3_sol": -5.561079982636778,
+        "observed_net_per_eligible_launch": -0.0012769016258419945,
+        "unknown_zero_scenario_total": -4.645368114813176,
+        "unknown_fullstake_scenario_total": -24.99686811481318,
+        "unknown_reasons": {
+          "state older than 30s": 78,
+          "capture gap during hold": 17,
+          "completed curve cannot accept buy": 4,
+          "state invalid or pool evidence absent": 1,
+          "invalid received state during hold": 1
+        },
+        "peak_attempted_position_stake_sol": 3.6,
+        "variant_count_total": 2
+      }
+    }
+  },
+  "denominator": {
+    "early": 1593,
+    "late": 2045
+  },
+  "audit": {
+    "not_retained_streams": 301,
+    "unknown_signal_time_contradiction": 5,
+    "outage_excluded": 974
+  },
+  "limitations": [
+    "Exploratory previously examined data; not fresh confirmation",
+    "Trade-derived purchases/sales omit transfers and common ownership",
+    "Invalid in-hold states and gaps make exits uncertain",
+    "Thirty-second freshness is an evidence screen, not live-fill proof",
+    "Observed profit excludes unresolved outcomes, which are separately counted",
+    "No price cap suppresses legitimate winners; pool evidence still inherits decoder assumptions",
+    "Frozen evaluator unchanged; separate owner scenario"
+  ]
+}

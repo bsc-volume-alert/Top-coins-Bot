@@ -2,14 +2,28 @@
   "worker": "Codex",
   "run_id": "c013-lab-20261112T151333Z",
   "task": "C013 + Idea Lab",
-  "state": "running",
+  "state": "completed",
   "started_at": "2026-11-12T15:13:33Z",
-  "lease_expires_at": "2026-11-12T17:13:33.000Z",
+  "lease_expires_at": null,
   "previous_run": "c012-lab-20261112T091226Z",
   "input_commits": {
     "tracker": "9f65186b535e829bac110a288f20f60241ce833d",
     "codex": "5024b9ef640b6e198c24851e1fc5f632001e525e",
     "claude": "fc6b05aa75162444776a93035b34a7ad24c77395"
   },
-  "scope": "Common-eligibility control reconciliation; one fixed partial-profit exit experiment; approved development data only"
+  "scope": "Common-eligibility control reconciliation; one fixed partial-profit exit experiment; approved development data only",
+  "calculation_completed_at": "2026-11-12T15:22:46.942652Z",
+  "protocol_commit": "6e9db558fd1feb1745d4bd9be97c1ceb50c8166a",
+  "artifacts": "reports/blind/autonomous/codex/runs/c013-lab-20261112T151333Z/",
+  "result": "C013 original peer control reproduced; high-init diagnostic381 exact paired proceeds. L005195resolved -2.208979SOL,paired improvement2.436389;96exits/5fills unknown.",
+  "next_task": "C014",
+  "blockers": [],
+  "limitations": [
+    "Previously explored development data; no fresh test",
+    "Full total unknown",
+    "Largest winner reserve-product change lacks LP/decoder proof",
+    "Partial extra-sale cost assumed; own price impact does not persist",
+    "F010 generalisation read, not rerun in this run"
+  ],
+  "completed_at": "2026-11-12 15:28:33 UTC"
 }
