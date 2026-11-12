@@ -2,9 +2,9 @@
   "worker": "Claude research worker",
   "run_id": "f010-20261112T145045Z",
   "task": "F010 generalisation test of Codex's L004 sell-cluster exit on the 679 eligibility-E entries of f006p2 (R4 scenario + eval-1.1 unchanged; R11 paired view vs E control 679/419/-10.011572; both halves; F009 A/B/C cells as fixed breakdown; no parameter changes)",
-  "state": "leased",
+  "state": "completed",
   "started_at": "2026-11-12T14:50:45Z",
-  "lease_expires_at": "2026-11-12T17:50:45Z",
+  "lease_expires_at": null,
   "input_commits": {
     "tracker": "9f65186b535e829bac110a288f20f60241ce833d",
     "research-codex_read": "5024b9ef640b6e198c24851e1fc5f632001e525e",
@@ -17,5 +17,20 @@
   "previous_run": "f009-20261112T105030Z",
   "next_task": "F002 (operator persistence), then F004",
   "blockers": [],
-  "artifacts": "reports/blind/autonomous/claude/runs/f010-20261112T145045Z/"
+  "artifacts": "reports/blind/autonomous/claude/runs/f010-20261112T145045Z/",
+  "completed_at": "2026-11-12T15:20:00Z",
+  "protocol_commit": "462894aeeed07fd68b154febc7811c9829013477",
+  "result": "F010: Codex's L004 sell-cluster exit transcribed exactly (116/116 cluster exits identical; +2.465585 on Codex's 195 pairs) and applied to the 679 E entries: R4 679 / 446 resolved / -7.997302 SOL (control 419 / -10.011572); R11 paired 419: +2.108691 (112 better / 38 worse / 269 unchanged), early +2.501846 (CI above zero), late -0.393155, cells A +1.605934 / B -1.100084 / C +1.602841; full-E iid CI [-1.67, +4.99], block CI [-2.89, +6.44] (two cut winners in cell B); 27 resolved only under the candidate -0.094; S1 506 / 173 / -9.727740. Not profitable, not supported. Idea lab CL-L005 demand-decay exit failed: paired +0.921393 on 418 (CI across zero), 84 quiet-tape launches realised at -3.277548; all-in 502 / -12.426409. Five of Codex's 22 L004-only launches resolve under both here: baseline +1.714591 vs L004 +0.038873.",
+  "task_states": {
+    "F001": "completed_agree_all_rows",
+    "F006": "completed",
+    "F007": "closed by F008 (R22)",
+    "F008": "completed",
+    "F009": "completed",
+    "F010": "completed",
+    "F002": "next",
+    "F003": "ready after F002",
+    "F004": "ready",
+    "F005": "blocked (Round 1 release)"
+  }
 }

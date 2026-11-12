@@ -1,0 +1,50 @@
+{
+  "codex_l004_attempts": 296,
+  "in_E": 295,
+  "cohort_n_equal": 290,
+  "cohort_n_compared": 290,
+  "cluster_cluster_pairs": 116,
+  "trigger_t_equal": 116,
+  "net_equal_cluster": 116,
+  "max_abs_net_diff_cluster": 0.0,
+  "trail_trail_pairs": 99,
+  "trail_net_equal": 98,
+  "status_crosstab": {
+    "status | exit_uncertain | unknown | exit: capture gap": 47,
+    "early_cohort_sell_cluster | cluster": 116,
+    "30pct_proceeds_trail | trail": 99,
+    "status | exit_uncertain | scored | ": 25,
+    "status | fill_unavailable | unknown | exit: capture gap": 3,
+    "status | fill_unavailable | scored | ": 2,
+    "30pct_proceeds_trail | cluster": 2,
+    "status | exit_uncertain | unknown | exit: state invalid": 1
+  },
+  "codex_195_pairs_in_my_framework": {
+    "n": 193,
+    "control_sol": -4.510111042481464,
+    "sc_sol": -2.0445264174728006,
+    "difference": 2.4655846250086633,
+    "better": 69,
+    "worse": 23,
+    "unchanged": 101
+  },
+  "codex_195_pairs_count": 195,
+  "E_complement_of_L003_pairs": {
+    "n": 208,
+    "control_sol": -7.398884491062504,
+    "sc_sol": -6.133851268665817,
+    "difference": 1.2650332223966874,
+    "better": 38,
+    "worse": 11,
+    "unchanged": 159
+  },
+  "E_intersect_L003_pairs": {
+    "n": 211,
+    "control_sol": -2.6126872822901417,
+    "sc_sol": -1.7690299018123097,
+    "difference": 0.8436573804778318,
+    "better": 74,
+    "worse": 27,
+    "unchanged": 110
+  }
+}
