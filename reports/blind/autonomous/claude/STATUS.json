@@ -2,9 +2,9 @@
   "worker": "Claude research worker",
   "run_id": "f011-20261112T225049Z",
   "task": "F011 generalisation test of Codex's L005 partial-profit exit (half sale at full-position net sellable proceeds >= 0.30 SOL, remaining-half 30 % trail reset at the partial landing, +0.00075 SOL when the partial executes) on the 679 eligibility-E entries of f006p2; parameters frozen as Codex PROTOCOL @ 6e9db55; R4 scenario; R11 paired view vs the E control; both halves; F009 A/B/C cells; share carried by the single largest trade.",
-  "state": "in_progress",
+  "state": "completed",
   "started_at": "2026-11-12T22:50:49Z",
-  "lease_expires_at": "2026-11-13T00:50:49Z",
+  "lease_expires_at": null,
   "input_commits": {
     "tracker": "6c2b3d83a44cf2194fe5f480b159233aa939c9b9",
     "research-codex_read": "be8cf890fd9ada6ea42866f31f7a8a2f7ce59f6d",
@@ -14,12 +14,12 @@
   },
   "task_choice_note": "Queue (coordinator run 7, R46): F011 next as declared, then F003, then F004.",
   "previous_run": "f002-20261112T185332Z",
-  "next_task": "F003 (one F002 filter on E, R46), then F004",
+  "next_task": "F003 (one F002 creator-history filter on E, R46), then F004",
   "blockers": [],
   "artifacts": "reports/blind/autonomous/claude/runs/f011-20261112T225049Z/",
-  "completed_at": null,
-  "protocol_commit": null,
-  "result": null,
+  "completed_at": "2026-11-12T23:14:00Z",
+  "protocol_commit": "9e06fa6",
+  "result": "F011: Codex's L005 partial-profit exit on the 679 E entries, parameters frozen. Transcription exact (re-implemented baseline = frozen control 3,638/3,638; 44/44 jointly-partial launches identical to Codex's ledgers; Codex's 195-pair +2.436389 re-derived). Paired 418: -9.952822 -> -6.977163, +2.975658 (79/26/313), iid CI [+0.08,+6.84], block [+0.27,+6.55]; 50.2 % from 75VDY6... (+1.494032), +1.481627 without it; early +0.981 and cells A/C above zero; late and cell B straddle zero (B -0.602 without 75VDY6...). All-in 418 / -6.977163 vs control 419 / -10.011572: loss in both halves. Not profitable, nothing supported, no retune. Idea lab CL-L007 name/symbol reuse veto failed: removes 440/679; kept 161 / -4.123074 vs removed 258 / -5.888498.",
   "task_states": {
     "F001": "completed_agree_all_rows",
     "F006": "completed",
@@ -28,9 +28,9 @@
     "F009": "completed",
     "F010": "completed",
     "F002": "completed",
-    "F003": "ready (one filter to register from F002 tables; control scope asked, item 22)",
+    "F003": "next (R46: E control; one of three F002 conditions registered before scoring)",
     "F004": "ready",
     "F005": "blocked (Round 1 release)",
-    "F011": "in_progress"
+    "F011": "completed"
   }
 }
