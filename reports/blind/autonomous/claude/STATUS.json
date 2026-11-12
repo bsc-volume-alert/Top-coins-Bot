@@ -2,9 +2,9 @@
   "worker": "Claude research worker",
   "run_id": "f002-20261112T185332Z",
   "task": "F002 operator persistence on development data: for every census creator with >= 2 launches inside 6 Nov 07:40 -> 7 Nov 20:00, does the first launch's outcome (retention, peak multiple, time-to-dump), as knowable at the second launch's creation, predict the second's? Never-launched-before (in-window) baseline, counts, unknowns; no rule search.",
-  "state": "leased",
+  "state": "completed",
   "started_at": "2026-11-12T18:53:32Z",
-  "lease_expires_at": "2026-11-12T21:00:00Z",
+  "lease_expires_at": null,
   "input_commits": {
     "tracker": "9d6419ff0af17d60ce8191c15173c8184d2377af",
     "research-codex_read": "e9b20e1c055040ec7ddd872ff6e122d6fc35dba6",
@@ -15,12 +15,12 @@
   },
   "task_choice_note": "Queue (coordinator run 6, R44/F011 row): F002 next as declared, then F011, then F004.",
   "previous_run": "f010-20261112T145045Z",
-  "next_task": "F011, then F004",
+  "next_task": "F011 (L005 generalisation to E), then F004; F003 after a ruling on item 22",
   "blockers": [],
   "artifacts": "reports/blind/autonomous/claude/runs/f002-20261112T185332Z/",
-  "completed_at": null,
-  "protocol_commit": null,
-  "result": null,
+  "completed_at": "2026-11-12T19:10:00Z",
+  "protocol_commit": "c0b1339a760a19a6ab02a446a889b8d0012e0a1f",
+  "result": "F002: census 62,789 / 21,831 creators; 2,941 first->second pairs (history unknown for 2,775: previous never retained by t2), 40,958 consecutive pairs. Next launch retained: previous retained by t2 42.8% (71/166; 33.4% over 1,513 consecutive) vs 3.6% (99/2,775; 2.8% of 39,445) vs 13.7% first-in-window (2,985/21,831). Peak rank correlation 0.47 [0.22,0.66] n=63 (0.31 n=440). Previous dumped <=120 s -> next dumped <=120 s 64.3% (28) / 81.4% (291) vs 37.5% (16) / 51.6% (64). Serial (>=20 prior) after non-retained 2.4% (24,115). Dev buy persists (Spearman 0.82/0.91). Reused name/symbol dumps <=120 s 62.5% vs 42.6%. Counts only, no trading result. Idea lab CL-L006 slot diversity >=8 failed: keeps 576/679, 376/-8.373670 vs control 419/-10.011572 (exact). Codex L005 195-pair figures re-derived exactly (+2.436389, 61.3% one trade).",
   "task_states": {
     "F001": "completed_agree_all_rows",
     "F006": "completed",
@@ -28,10 +28,10 @@
     "F008": "completed",
     "F009": "completed",
     "F010": "completed",
-    "F002": "leased",
-    "F003": "ready after F002",
+    "F002": "completed",
+    "F003": "ready (one filter to register from F002 tables; control scope asked, item 22)",
     "F004": "ready",
     "F005": "blocked (Round 1 release)",
-    "F011": "ready after F002"
+    "F011": "next"
   }
 }

@@ -1,0 +1,78 @@
+{
+ "retained_launches_dev_buy": {
+  "n": 4612,
+  "median_dev_buy_sol": 0.5,
+  "share_dev_buy_ge15": 0.029488291413703384,
+  "share_dev_buy_ge5": 0.1131830008673027,
+  "share_dev_buy_0": 0.2888117953165655
+ },
+ "all_launches_dev_buy": {
+  "n": 62789,
+  "share_dev_buy_ge15": 0.0022933953399480803,
+  "share_dev_buy_0": 0.3751771807163675
+ },
+ "spearman_dev_buy_vs_peak_1h_known": {
+  "n": 3882,
+  "rho": 0.050020824520504
+ },
+ "primary": {
+  "yes": {
+   "n": 166,
+   "second_retained": 71,
+   "median_dev_buy_second_all": 2.725575523,
+   "share_second_dev_buy_ge15": 0.030120481927710843,
+   "retained_second_share_dev_buy_ge15": 0.07042253521126761,
+   "retained_second_median_dev_buy": 3.950617283
+  },
+  "no": {
+   "n": 2775,
+   "second_retained": 99,
+   "median_dev_buy_second_all": 0.059170466,
+   "share_second_dev_buy_ge15": 0.00036036036036036037,
+   "retained_second_share_dev_buy_ge15": 0.010101010101010102,
+   "retained_second_median_dev_buy": 2.0
+  },
+  "spearman_dev_buy_prev_vs_next": {
+   "n": 2941,
+   "rho": 0.8179539304904486
+  },
+  "prev_dev_buy_ge15": {
+   "n": 8,
+   "second_retained_rate": 0.75
+  },
+  "prev_dev_buy_lt15": {
+   "n": 2933,
+   "second_retained_rate": 0.05591544493692465
+  }
+ },
+ "all_consecutive": {
+  "yes": {
+   "n": 1513,
+   "second_retained": 505,
+   "median_dev_buy_second_all": 2.917265048,
+   "share_second_dev_buy_ge15": 0.01982815598149372,
+   "retained_second_share_dev_buy_ge15": 0.05742574257425743,
+   "retained_second_median_dev_buy": 3.950617282
+  },
+  "no": {
+   "n": 39445,
+   "second_retained": 1122,
+   "median_dev_buy_second_all": 0.088673172,
+   "share_second_dev_buy_ge15": 0.00030422106730891113,
+   "retained_second_share_dev_buy_ge15": 0.0071301247771836,
+   "retained_second_median_dev_buy": 1.4183283245
+  },
+  "spearman_dev_buy_prev_vs_next": {
+   "n": 40958,
+   "rho": 0.9088926869157015
+  },
+  "prev_dev_buy_ge15": {
+   "n": 44,
+   "second_retained_rate": 0.7045454545454546
+  },
+  "prev_dev_buy_lt15": {
+   "n": 40914,
+   "second_retained_rate": 0.03900865229505793
+  }
+ }
+}

@@ -1,0 +1,28 @@
+{
+ "n_pairs": 195,
+ "baseline_sol": -4.645368114813176,
+ "candidate_sol": -2.2089791844458073,
+ "difference_sol": 2.436388930367369,
+ "better": 35,
+ "worse": 9,
+ "unchanged": 151,
+ "partial_done": 44,
+ "largest_candidate_trade": {
+  "mint": "75VDY6P9",
+  "candidate_net_sol": 1.5158037123074455,
+  "delta_sol": 1.4940315647498448
+ },
+ "difference_without_largest_delta": 0.9423573656175241,
+ "share_of_difference_from_largest_delta": 0.613215544582436,
+ "by_half": {
+  "early": {
+   "n": 95,
+   "difference_sol": 0.4325085310952531
+  },
+  "late": {
+   "n": 100,
+   "difference_sol": 2.003880399272116
+  }
+ },
+ "source": "research-codex @ e9b20e1 runs/c013-lab-20261112T151333Z/paired_partial_00[12].csv"
+}
