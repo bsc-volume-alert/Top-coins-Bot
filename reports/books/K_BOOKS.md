@@ -202,3 +202,25 @@
 - Codex's framing adopted: no strategy permutations; finish reliability; run the confirmation window; one decision report (returns, uncertainty, execution sensitivity, dependence on best coins); if negative, reject these candidates rather than move thresholds.
 - 11 Nov 13:18 UK — CHANGE DURING THE FROZEN PERIOD (by the owner's other page, not this one): launcher 0.9.61 → 0.10.0 (new R3C paper book). K scoring code checked: kpaper.mjs unchanged; chainfill.mjs only gains an `opts.curveOnly` branch that K books never pass → K fills/exits unchanged. The launcher restart itself is a decision gap (rows written while it restarted are skipped by the rowid ceiling); to be counted in the confirmation report.
 - 11 Nov 13:20 UK — owner forwarded Codex: the three 100K books are classified NOT SUPPORTED FOR LIVE TRADING; kept frozen as paper benchmarks. Next-strategy research authorised (design/analysis only; no new book without a separate decision).
+
+## 12 Nov 2026 16:50 UK — full analysis, 9 Nov 21:48 → 12 Nov 16:40 (launcher-data chain_fill + k_decisions + fd_positions)
+Method: one chain_fill row per book per coin (vol_id order = 100K1, 100K2, 100K3; checked against fd_positions: 243/243 book labels match). 0.2 SOL, after costs. 12 Nov = the confirmation window (partial, to 16:40).
+| Book | Period | Closed | Win | Mean | Median | Lost > 50% | Total @0.2 | Without best 3 | @0.02 |
+|---|---|---|---|---|---|---|---|---|---|
+| 100K1 $30–50K T25 | 9–11 Nov | 198 | 22% | −13.5% | −2.7% | 23% | −5.34 | −17.6% | −0.79 |
+| | 12 Nov | 53 | 13% | −11.3% | −2.7% | 17% | −1.20 | −19.5% | −0.19 |
+| 100K2 $30–40K T25 | 9–11 Nov | 129 | 28% | −8.1% | −2.7% | 17% | −2.09 | −11.7% | −0.38 |
+| | 12 Nov | 28 | 14% | −13.6% | −2.7% | 14% | −0.76 | −18.7% | −0.11 |
+| 100K3 $30–40K T20 | 9–11 Nov | 129 | 27% | −3.9% | −2.7% | 12% | −1.00 | −7.9% | −0.27 |
+| | 12 Nov | 28 | 14% | −5.1% | −2.7% | 4% | −0.29 | −9.4% | −0.07 |
+Totals since activation: 100K1 −6.54 SOL (251), 100K2 −2.85 (157), 100K3 −1.29 (157). Open at the read: 6 / 2 / 2.
+- Not filled: 41 positions (17 coins for 100K1), of which 19 positions after 14:59 UK on 12 Nov with "429 Too Many Requests: max usage reached" (Helius limit; launcher rpc errors 3,394 of 41,836 calls since 04:40). The confirmation window is incomplete from 14:59.
+- T20 vs T25 on the same 157 coins: T20 better on 51, worse on 25 (mean −4.1% vs −9.1%).
+
+**Successes (100K1, 251 coins):** all profit comes from the 26 coins (10%) whose position peaked ≥ 2×: +3.32 SOL (2–3×: 16 coins +1.52; 3×+: 10 coins +1.80, best +439%). Almost all are coins already trading in the pool at entry. Peaks 1.5–2× (29 coins) came out about flat (−0.21 SOL): the 25% trail gives most of a 1.5–2× move back.
+**Failures:**
+1. Dead curve coins — 39% of trades never moved: 86 of 100 curve entries sat at exactly the entry price for 2 h (≈ 215 on-chain re-reads each found the reserves unchanged — no trades at all), sold at 2 h for −2.7% (fees). Cost −1.75 SOL in total; 2 wins in 99 curve entries. Mostly clock-triggered decisions (no trade at the 5-min mark).
+2. Small pop then dump — the biggest leak: 60 trades (24%) peaked only 1.0–1.25× and averaged −48.7% (−5.85 SOL). Severe losers (≤ −50%): 55, of which 51 pool coins; median peak 1.2×; median 4.4 min to exit; every one filled below half its peak → one-block drains the trail cannot escape.
+3. By band: $30–35K −2.9% (67), $35–40K −21.3% (57), $40–50K −13.2% (69).
+- Pool vs curve: pool coins carry every big winner and nearly every severe loss (pool −17.3%, 34% lose > 50%; curve −6.5%, 4%).
+**Reading:** negative in every book in both periods; 12 Nov so far confirms (win rate down to 13–14%). Under the agreed framing (no threshold moves on these candidates) they stay rejected; kept frozen as paper benchmarks unless the owner stops them. Avoiding dead curve coins would only save fees; the leak is pool coins drained right after entry — only a pre-entry ownership/seller signal could address it (unproven; Codex's whale-exit test failed).
