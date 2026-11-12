@@ -1,0 +1,68 @@
+{
+ "L004": {
+  "attempts": 296,
+  "status": {
+   "exit_uncertain": 74,
+   "scored": 217,
+   "fill_unavailable": 5
+  },
+  "resolved": 217,
+  "total": -2.043602,
+  "mean_ret": -0.0471,
+  "median_ret": -0.1262,
+  "wo_best1": -2.36687,
+  "wo_best3": -2.910945,
+  "win": 0.3364,
+  "loss_gt50": 0.0276,
+  "by_half": {
+   "early": -1.058164,
+   "late": -0.985438
+  },
+  "triggers": {
+   "early_cohort_sell_cluster": 116,
+   "30pct_proceeds_trail": 101
+  }
+ },
+ "baseline": {
+  "attempts": 296,
+  "status": {
+   "exit_uncertain": 96,
+   "scored": 195,
+   "fill_unavailable": 5
+  },
+  "resolved": 195,
+  "total": -4.645368,
+  "mean_ret": -0.1191,
+  "median_ret": -0.2303,
+  "wo_best1": -4.968636,
+  "wo_best3": -5.56108,
+  "win": 0.2308,
+  "loss_gt50": 0.0513,
+  "by_half": {
+   "early": -3.089285,
+   "late": -1.556083
+  },
+  "triggers": {
+   "30pct_proceeds_trail": 195
+  }
+ },
+ "paired": {
+  "n": 195,
+  "baseline": -4.645368,
+  "l004": -2.179783,
+  "diff": 2.465585,
+  "better": 69,
+  "worse": 23,
+  "eq": 103,
+  "by_half": {
+   "early": 1.826281,
+   "late": 0.639304
+  }
+ },
+ "ordering_violations": 0,
+ "cluster_exit_sell_minus_trigger_s": [
+  0.7
+ ],
+ "cluster_sol_min": 2.006498433,
+ "cluster_wallets_min": 3
+}

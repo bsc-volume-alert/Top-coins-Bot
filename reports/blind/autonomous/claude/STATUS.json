@@ -2,9 +2,9 @@
   "worker": "Claude research worker",
   "run_id": "f009-20261112T105030Z",
   "task": "F009 creator-absent split of eligibility E (679 launches): creator never on tape by 300 s vs creator bought & sold 0 vs creator sold > 0; eval-1.1 unchanged + R4 scenario, R11 paired view, both halves; counts and totals only",
-  "state": "leased",
+  "state": "completed",
   "started_at": "2026-11-12T10:50:30Z",
-  "lease_expires_at": "2026-11-12T12:50:30Z",
+  "lease_expires_at": null,
   "input_commits": {
     "tracker": "e6092be205520a448b88438426bf13914e3ec1cc",
     "research-codex_read": "5024b9ef640b6e198c24851e1fc5f632001e525e",
@@ -15,7 +15,21 @@
   },
   "task_choice_note": "R22: F009 is Claude's next task (F007 closed by F008), then F002 and F004.",
   "previous_run": "f008-20261112T065028Z",
-  "next_task": "F002, then F004",
+  "next_task": "F002 (operator persistence), then F004",
   "blockers": [],
-  "artifacts": "reports/blind/autonomous/claude/runs/f009-20261112T105030Z/"
+  "artifacts": "reports/blind/autonomous/claude/runs/f009-20261112T105030Z/",
+  "completed_at": "2026-11-12T11:12:00Z",
+  "protocol_commit": "b0aa5f6dd254514a7da0831c19c718a19d9a6801",
+  "result": "F009: fixed creator partition of the 679 E launches \u2014 A absent 251 (= no dev buy) 166 resolved -4.820931 SOL (mean -14.5 %, deep losses 4.8 %, CI negative); B bought-held 122 \u2192 74 resolved -0.654013 (mean -4.4 %, deep losses 25.7 %, all three best control trades, w/o best 3 -3.035559, CI [-3.68,+3.16]); C sold 306 \u2192 179 resolved -4.536627 (CI negative); cells sum to the control -10.011572 exactly; S1 eval-1.1 A/B/C -5.640601/-0.695322/-5.478936 (sum = f006p2 control -11.814859). No cell profitable; 'creator sold 0' pools two shapes, not two signs. Idea lab CL-L004 time-stop exit failed: paired 419 +0.356226 SOL (CI [-0.47,+1.18]), 62 quiet-tape launches newly resolved at -2.590300, all-in 481 / -12.245646. Codex L004 re-derived exactly from its ledgers.",
+  "task_states": {
+    "F001": "completed_agree_all_rows",
+    "F006": "completed",
+    "F007": "closed by F008 (R22)",
+    "F008": "completed",
+    "F009": "completed",
+    "F002": "next",
+    "F003": "ready after F002",
+    "F004": "ready",
+    "F005": "blocked (Round 1 release)"
+  }
 }

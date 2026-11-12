@@ -1,0 +1,297 @@
+{
+ "version": "eval-1.1",
+ "DIAGNOSTIC_no_evidence_check": false,
+ "window": [
+  "2026-11-06T07:40:00",
+  "2026-11-07T20:00:00"
+ ],
+ "launches_in_window": 62789,
+ "N_common": 3638,
+ "duplicates_removed": 1568880,
+ "mints_streamed": 4913,
+ "non_contiguous_mints": 0,
+ "assumptions": {
+  "curve_fee_bps": 125,
+  "pool_fee_bps": 30,
+  "fixed_fee_sol": 0.0015,
+  "land_buy_s": 1.0,
+  "land_sell_s": 0.7
+ },
+ "rules": {
+  "F009-CONTROL": {
+   "file": "/home/claude/rc/reports/blind/autonomous/claude/runs/f009-20261112T105030Z/rule_control.py",
+   "spec": {
+    "name": "F009-CONTROL",
+    "decision_offsets": [
+     300
+    ],
+    "on_trade": false,
+    "horizon_s": 7200,
+    "sizes": [
+     0.2
+    ]
+   },
+   "event_time_hypothetical_entries": 0,
+   "by_size": {
+    "0.2": {
+     "N": 3638,
+     "scored": 484,
+     "abstain": 2959,
+     "unknown": 195,
+     "point_sol_per_launch": -0.003247624805159203,
+     "lower_sol_per_launch": -0.014048202045401095,
+     "total_net_sol_scored": -11.81485904116918,
+     "unknown_share_of_attempts": 0.28718703976435933,
+     "mean_ret": -0.12205432893769813,
+     "median_ret": -0.2308873935397518,
+     "win_rate": 0.21487603305785125,
+     "share_loss_ge_50": 0.10537190082644628,
+     "mean_ret_without_best": -0.1365919208689268,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.016346180315989476,
+     "supported": false
+    }
+   },
+   "pool_fee_125bps_sensitivity": {
+    "0.2": {
+     "N": 3638,
+     "scored": 484,
+     "abstain": 2959,
+     "unknown": 195,
+     "point_sol_per_launch": -0.003267870247877664,
+     "lower_sol_per_launch": -0.014068447488119555,
+     "total_net_sol_scored": -11.888511961778942,
+     "unknown_share_of_attempts": 0.28718703976435933,
+     "mean_ret": -0.1228152062167246,
+     "median_ret": -0.2308873935397518,
+     "win_rate": 0.21487603305785125,
+     "share_loss_ge_50": 0.10537190082644628,
+     "mean_ret_without_best": -0.1371983827697185,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.01636564445073555,
+     "supported": false
+    }
+   }
+  },
+  "F009-CELL-A": {
+   "file": "/home/claude/rc/reports/blind/autonomous/claude/runs/f009-20261112T105030Z/rule_cellA.py",
+   "spec": {
+    "name": "F009-CELL-A",
+    "decision_offsets": [
+     300
+    ],
+    "on_trade": false,
+    "horizon_s": 7200,
+    "sizes": [
+     0.2
+    ]
+   },
+   "event_time_hypothetical_entries": 0,
+   "by_size": {
+    "0.2": {
+     "N": 3638,
+     "scored": 187,
+     "abstain": 3387,
+     "unknown": 64,
+     "point_sol_per_launch": -0.001550467609733788,
+     "lower_sol_per_launch": -0.005095272447556768,
+     "total_net_sol_scored": -5.640601164211521,
+     "unknown_share_of_attempts": 0.2549800796812749,
+     "mean_ret": -0.1508182129468321,
+     "median_ret": -0.2412103648600883,
+     "win_rate": 0.19786096256684493,
+     "share_loss_ge_50": 0.0427807486631016,
+     "mean_ret_without_best": -0.16103912379863997,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.0063463170804648975,
+     "supported": false
+    }
+   },
+   "pool_fee_125bps_sensitivity": {
+    "0.2": {
+     "N": 3638,
+     "scored": 187,
+     "abstain": 3387,
+     "unknown": 64,
+     "point_sol_per_launch": -0.0015551411247076825,
+     "lower_sol_per_launch": -0.005099945962530662,
+     "total_net_sol_scored": -5.657603411686549,
+     "unknown_share_of_attempts": 0.2549800796812749,
+     "mean_ret": -0.15127281849429272,
+     "median_ret": -0.2412103648600883,
+     "win_rate": 0.19786096256684493,
+     "share_loss_ge_50": 0.0427807486631016,
+     "mean_ret_without_best": -0.1613548957230738,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.006349520851525492,
+     "supported": false
+    }
+   }
+  },
+  "F009-CELL-B": {
+   "file": "/home/claude/rc/reports/blind/autonomous/claude/runs/f009-20261112T105030Z/rule_cellB.py",
+   "spec": {
+    "name": "F009-CELL-B",
+    "decision_offsets": [
+     300
+    ],
+    "on_trade": false,
+    "horizon_s": 7200,
+    "sizes": [
+     0.2
+    ]
+   },
+   "event_time_hypothetical_entries": 0,
+   "by_size": {
+    "0.2": {
+     "N": 3638,
+     "scored": 90,
+     "abstain": 3516,
+     "unknown": 32,
+     "point_sol_per_launch": -0.00019112754037804255,
+     "lower_sol_per_launch": -0.0019635299592895322,
+     "total_net_sol_scored": -0.6953219918953188,
+     "unknown_share_of_attempts": 0.26229508196721313,
+     "mean_ret": -0.03862899954973993,
+     "median_ret": -0.22291923212197917,
+     "win_rate": 0.24444444444444444,
+     "share_loss_ge_50": 0.2111111111111111,
+     "mean_ret_without_best": -0.11658665767777916,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.003197458889670542,
+     "supported": false
+    }
+   },
+   "pool_fee_125bps_sensitivity": {
+    "0.2": {
+     "N": 3638,
+     "scored": 90,
+     "abstain": 3516,
+     "unknown": 32,
+     "point_sol_per_launch": -0.00019929370124099048,
+     "lower_sol_per_launch": -0.00197169612015248,
+     "total_net_sol_scored": -0.7250304851147233,
+     "unknown_share_of_attempts": 0.26229508196721313,
+     "mean_ret": -0.04027947139526241,
+     "median_ret": -0.22291923212197917,
+     "win_rate": 0.24444444444444444,
+     "share_loss_ge_50": 0.2111111111111111,
+     "mean_ret_without_best": -0.11740911791520152,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.0032016420302698506,
+     "supported": false
+    }
+   }
+  },
+  "F009-CELL-C": {
+   "file": "/home/claude/rc/reports/blind/autonomous/claude/runs/f009-20261112T105030Z/rule_cellC.py",
+   "spec": {
+    "name": "F009-CELL-C",
+    "decision_offsets": [
+     300
+    ],
+    "on_trade": false,
+    "horizon_s": 7200,
+    "sizes": [
+     0.2
+    ]
+   },
+   "event_time_hypothetical_entries": 0,
+   "by_size": {
+    "0.2": {
+     "N": 3638,
+     "scored": 207,
+     "abstain": 3332,
+     "unknown": 99,
+     "point_sol_per_launch": -0.0015060296550473721,
+     "lower_sol_per_launch": -0.006989399638554794,
+     "total_net_sol_scored": -5.47893588506234,
+     "unknown_share_of_attempts": 0.3235294117647059,
+     "mean_ret": -0.13234144649909033,
+     "median_ret": -0.22899254042978698,
+     "win_rate": 0.21739130434782608,
+     "share_loss_ge_50": 0.11594202898550725,
+     "mean_ret_without_best": -0.14114829998726544,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.008539192660850497,
+     "supported": false
+    }
+   },
+   "pool_fee_125bps_sensitivity": {
+    "0.2": {
+     "N": 3638,
+     "scored": 207,
+     "abstain": 3332,
+     "unknown": 99,
+     "point_sol_per_launch": -0.0015134354219289914,
+     "lower_sol_per_launch": -0.006996805405436414,
+     "total_net_sol_scored": -5.50587806497767,
+     "unknown_share_of_attempts": 0.3235294117647059,
+     "mean_ret": -0.13299222379173117,
+     "median_ret": -0.22899254042978698,
+     "win_rate": 0.21739130434782608,
+     "share_loss_ge_50": 0.11594202898550725,
+     "mean_ret_without_best": -0.14180223639297737,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.008546827331714621,
+     "supported": false
+    }
+   }
+  },
+  "CL-L004-timestop": {
+   "file": "/home/claude/rc/reports/blind/autonomous/claude/runs/f009-20261112T105030Z/rule_l004ts.py",
+   "spec": {
+    "name": "CL-L004-timestop",
+    "decision_offsets": [
+     300
+    ],
+    "on_trade": false,
+    "horizon_s": 7200,
+    "sizes": [
+     0.2
+    ]
+   },
+   "event_time_hypothetical_entries": 0,
+   "by_size": {
+    "0.2": {
+     "N": 3638,
+     "scored": 516,
+     "abstain": 2959,
+     "unknown": 163,
+     "point_sol_per_launch": -0.003481828403683662,
+     "lower_sol_per_launch": -0.012510003225014065,
+     "total_net_sol_scored": -12.666891732601163,
+     "unknown_share_of_attempts": 0.24005891016200295,
+     "mean_ret": -0.1227411989593136,
+     "median_ret": -0.21846270926563147,
+     "win_rate": 0.2189922480620155,
+     "share_loss_ge_50": 0.09883720930232558,
+     "mean_ret_without_best": -0.13637681793563414,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.01467981112639983,
+     "supported": false
+    }
+   },
+   "pool_fee_125bps_sensitivity": {
+    "0.2": {
+     "N": 3638,
+     "scored": 516,
+     "abstain": 2959,
+     "unknown": 163,
+     "point_sol_per_launch": -0.0035004767048218972,
+     "lower_sol_per_launch": -0.012528651526152299,
+     "total_net_sol_scored": -12.734734252142061,
+     "unknown_share_of_attempts": 0.24005891016200295,
+     "mean_ret": -0.12339858771455485,
+     "median_ret": -0.21846270926563147,
+     "win_rate": 0.2189922480620155,
+     "share_loss_ge_50": 0.09883720930232558,
+     "mean_ret_without_best": -0.13688918510599926,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.014696831029648989,
+     "supported": false
+    }
+   }
+  }
+ }
+}
