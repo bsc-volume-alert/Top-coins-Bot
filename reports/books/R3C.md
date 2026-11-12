@@ -59,3 +59,14 @@
 - Median hold 21 s: the 30% trail fires almost immediately on these volatile runs. Trigger-to-landing slip on severe losses: median −16%.
 - Trigger diagnostics (entered): run_x median 3.12, curve vSol median 73 (≈ 50% through), buyers in the last 60 s median 24, zero-buy sellers median 2. Holder snapshot recorded on 316 of 336 triggers (Helius 429 rate limit on the rest). **Snapshot shares cannot be read yet:** "ex1" assumed the largest token account is the curve vault, which is false near graduation (vault holds ~20% at vSol 73), so top-3-ex1 is 74% on severe losses AND 71% on 2× coins — a measurement artefact, not a signal. Fix needed: record the curve's token account address with the snapshot.
 - Verdict at 27 h: negative, and not on the path the replay promised. Review stands at 100 coins / 7 days per the rule, but the honest reading now is that the back-test's +5 SOL was a cohort-and-clock artefact (per the deployed-rules replay above) and the forward book is a −8% book with a thin tail.
+
+## Pre-registered shadow variants on R3C fills (Codex 12 Nov 16:50; thresholds are exploratory choices, not discovered boundaries)
+Evaluated on identical future R3C fills, same exit, same costs, full follow-up; report accepted / rejected, net SOL, severe losses, runner capture, profit concentration. Checkpoint at the next 100 parent fills; not a verdict.
+| Variant | Frozen condition at the trigger | On the first 183 fills (in-sample, for the record only) |
+|---|---|---|
+| Activity | buys + sells in the last 60 s ≤ 80 AND net buying ≥ 5 SOL | accepted 30: +0.92 SOL, 3 severe (10%), 2 of 8 runners; without its best coin −0.30 |
+| Activity-strict | same with net > 10 SOL (the evidence pointed at >10; 5 is the looser pre-registration) | accepted 26: +0.54, 3 severe, 1 runner; without best −0.68 |
+| Progress | trigger virtual SOL ≥ 80 | accepted 71: −0.55, 16 severe (23%), 5 of 8 runners |
+| Combined | Activity AND Progress | accepted 6: +0.16 |
+Honesty notes: every accepted subset's positive total is one coin (FjFVmDDM +1.22 SOL); the "low buyers ≤ 24" subset (+0.18 on 97) is −1.04 without it with 29% severe — withdrawn as an improvement. Graduation is not necessary for a profitable trade (CepsHkmD, 7hgYd5eb). Runner rate by hour band (fills / runners / severe / net): 00–05 38/1/4/−0.89; 06–11 49/2/11/−0.68; 12–17 51/0/18/−2.16; 18–23 45/5/8/+0.71 — exposure is even, the evening band differs, n small.
+Extra fields to record at the trigger (needs a launcher change, owner's go): transactions per active wallet (last 60 s), net SOL / gross buy+sell SOL, wallets that both bought and sold in the last 60 s, new vs returning buyers, and the curve's token-account address for the holder snapshot.
