@@ -50,3 +50,12 @@
 - Limit: the cohort excludes launches with a late/missing 5-minute reading (1,065) and those past $100K before 5 min (209). The original's +4.34 SOL coin is not in it. A full-population run needs the other page's trades parquet.
 
 **Forward (paper, since 13:13 UK):** 21 closed, mean −25.7%, −1.08 SOL, 5 lost ≥ 50%, best +42%.
+
+## Forward results — 12 Nov 16:27 UK read (27 h since activation; launcher-data push 16:27)
+- Triggers in the last 48 h: 336 — 198 entered, 138 LATE (41%: the 2-s poll plus the tracker's write lag; recorded, not entered). ~170 triggers a day, not the ~47 estimated from the replay (the deployed creation clock fires on ~3× as many coins — see the deployed-rules replay above).
+- Fills 183 (15 landing failures), all closed: **−3.02 SOL, mean −8.2%, median −23.6%**. 47 wins (26%), 41 severe (22%), 15 rugs ≤ −60% (8%), 26 reached 2× (14%), 8 reached 3×. Best FjFVmDDM +612% (hi 10.5×), then +236%, +236%, +196%, +180%. Without the best three coins: −5.19 SOL, −14.4% a trade. 0.02 SOL positions: −0.48 SOL.
+- By day: 11 Nov 79 fills −1.08 SOL; 12 Nov 104 fills −1.94 SOL.
+- The structure the replay predicted holds, the odds do not: entries that migrated during the hold 24 of 183 (13%, not 43%) made +2.04 SOL (mean +43%, 15 wins, 3 severe); the 159 that stayed on the curve lost −5.06 SOL (mean −16%, median −25%, 38 severe). The book's result is the graduation rate, and forward it is 13%.
+- Median hold 21 s: the 30% trail fires almost immediately on these volatile runs. Trigger-to-landing slip on severe losses: median −16%.
+- Trigger diagnostics (entered): run_x median 3.12, curve vSol median 73 (≈ 50% through), buyers in the last 60 s median 24, zero-buy sellers median 2. Holder snapshot recorded on 316 of 336 triggers (Helius 429 rate limit on the rest). **Snapshot shares cannot be read yet:** "ex1" assumed the largest token account is the curve vault, which is false near graduation (vault holds ~20% at vSol 73), so top-3-ex1 is 74% on severe losses AND 71% on 2× coins — a measurement artefact, not a signal. Fix needed: record the curve's token account address with the snapshot.
+- Verdict at 27 h: negative, and not on the path the replay promised. Review stands at 100 coins / 7 days per the rule, but the honest reading now is that the back-test's +5 SOL was a cohort-and-clock artefact (per the deployed-rules replay above) and the forward book is a −8% book with a thin tail.
