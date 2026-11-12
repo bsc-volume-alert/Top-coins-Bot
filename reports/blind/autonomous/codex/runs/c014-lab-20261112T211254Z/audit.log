@@ -1,0 +1,102 @@
+{
+  "task": "C014",
+  "protocol_commit": "c17f7f65efbfef247cef33cc329d9cba0751a37a",
+  "peer_csv_commit": "c1cf6d39b942de76771d79ba403856a1526db0df",
+  "peer_rows": 61,
+  "selected_filled_unknown": 53,
+  "excluded_unavailable_fills": 8,
+  "local_c009_records_sha256": "08a762258ffc8f5fc2b4fda4a77ae7b5c3659b5b090503465ecec97ef9a2e114",
+  "data_commit": "e67833121f1da0dc992c28fa26c5236a855c151a",
+  "summary": {
+    "early": {
+      "N": 10,
+      "maxima_reproduced": 10,
+      "ge2x_anywhere": 10,
+      "never_observed_ge2x": 0,
+      "ge2x_before_first_raw_gap_or_no_gap": 3,
+      "ge2x_before_actual_first_raw_gap": 2,
+      "ge2x_without_observed_raw_gap": 1,
+      "ge2x_only_after_first_raw_gap": 7,
+      "ge2x_before_first_c009_gap": 3,
+      "ge2x_before_any_original_continuity_failure": 3,
+      "unfiltered_sustained2x_anywhere": 8,
+      "unfiltered_sustain_before_raw_gap": 0,
+      "unfiltered_sustain_before_any_original_failure": 0,
+      "with_raw_gap": 9,
+      "tail_censored_gt30s": 8,
+      "median_fill_price_over_claude_decision": 1.0,
+      "median_max_sellable_proceeds_sol": 0.5372466713636002,
+      "first_continuity_failure_reasons": {
+        "no observed-prefix failure; check horizon tail": 1,
+        "valid-observation receipt gap>30s; received state event-age>30s": 2,
+        "valid-observation receipt gap>30s": 7
+      }
+    },
+    "late": {
+      "N": 43,
+      "maxima_reproduced": 43,
+      "ge2x_anywhere": 43,
+      "never_observed_ge2x": 0,
+      "ge2x_before_first_raw_gap_or_no_gap": 12,
+      "ge2x_before_actual_first_raw_gap": 9,
+      "ge2x_without_observed_raw_gap": 3,
+      "ge2x_only_after_first_raw_gap": 31,
+      "ge2x_before_first_c009_gap": 12,
+      "ge2x_before_any_original_continuity_failure": 5,
+      "unfiltered_sustained2x_anywhere": 37,
+      "unfiltered_sustain_before_raw_gap": 6,
+      "unfiltered_sustain_before_any_original_failure": 0,
+      "with_raw_gap": 40,
+      "tail_censored_gt30s": 33,
+      "median_fill_price_over_claude_decision": 1.0,
+      "median_max_sellable_proceeds_sol": 0.8102051677648205,
+      "first_continuity_failure_reasons": {
+        "valid-observation receipt gap>30s": 14,
+        "valid-observation receipt gap>30s; logged capture gap/outage before observation": 17,
+        "logged capture gap/outage before observation": 5,
+        "received state event-age>30s": 2,
+        "valid-observation receipt gap>30s; received state event-age>30s": 3,
+        "valid-observation receipt gap>30s; received state event-age>30s; logged capture gap/outage before observation": 2
+      }
+    },
+    "all": {
+      "N": 53,
+      "maxima_reproduced": 53,
+      "ge2x_anywhere": 53,
+      "never_observed_ge2x": 0,
+      "ge2x_before_first_raw_gap_or_no_gap": 15,
+      "ge2x_before_actual_first_raw_gap": 11,
+      "ge2x_without_observed_raw_gap": 4,
+      "ge2x_only_after_first_raw_gap": 38,
+      "ge2x_before_first_c009_gap": 15,
+      "ge2x_before_any_original_continuity_failure": 8,
+      "unfiltered_sustained2x_anywhere": 45,
+      "unfiltered_sustain_before_raw_gap": 6,
+      "unfiltered_sustain_before_any_original_failure": 0,
+      "with_raw_gap": 49,
+      "tail_censored_gt30s": 41,
+      "median_fill_price_over_claude_decision": 1.0,
+      "median_max_sellable_proceeds_sol": 0.6421243984171657,
+      "first_continuity_failure_reasons": {
+        "no observed-prefix failure; check horizon tail": 1,
+        "valid-observation receipt gap>30s; received state event-age>30s": 5,
+        "valid-observation receipt gap>30s": 21,
+        "valid-observation receipt gap>30s; logged capture gap/outage before observation": 17,
+        "logged capture gap/outage before observation": 5,
+        "received state event-age>30s": 2,
+        "valid-observation receipt gap>30s; received state event-age>30s; logged capture gap/outage before observation": 2
+      }
+    }
+  },
+  "peer_export_missing_max_fields": 53,
+  "peer_text_lt2x_with_missing_max_fields": 53,
+  "limitations": [
+    "No labels or returns changed; no >=100K inference",
+    "A2x quote is not an executable sale or sustained episode",
+    "Unfiltered sustained diagnostic skips invalid states and ignores gaps, so cannot certify persistence",
+    "Before-gap uses near-side start of first gap, not the resumed observation",
+    "Missing histories remain unknown; no non-runner denominator",
+    "Fill+1s, fees, impact and decision-state baselines differ from a price multiple; no isolated causal attribution to fees",
+    "Maxima can occur after original evidence continuity failed; receipt/event clocks remain distinct"
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "experiment": "CDEX-L006",
+  "baseline_fields_reproduced": 5663,
+  "new_specs": 1,
+  "total_specs_with_locked_baseline": 2,
+  "quote_features": {
+    "eligible_l003_decisions": 296,
+    "feature_available": 296,
+    "feature_unavailable": 0,
+    "vetoed": 0,
+    "retained": 296,
+    "same_row_id": 296,
+    "quote_ratio_min": 1.0,
+    "quote_ratio_median": 1.0,
+    "quote_ratio_max": 1.0,
+    "registered_veto_threshold": 1.05,
+    "thresholds_tried": 1
+  },
+  "paired": {
+    "early": {
+      "both_resolved": 95,
+      "candidate_total_sol": -3.0892848278002583,
+      "baseline_total_sol": -3.0892848278002583,
+      "paired_delta_sol": 0.0,
+      "candidate_mean_sol": -0.03251878766105535,
+      "candidate_median_sol": -0.04912331435448686,
+      "baseline_mean_sol": -0.03251878766105535,
+      "baseline_median_sol": -0.04912331435448686,
+      "all_shared_records_identical": true
+    },
+    "late": {
+      "both_resolved": 100,
+      "candidate_total_sol": -1.556083287012918,
+      "baseline_total_sol": -1.556083287012918,
+      "paired_delta_sol": 0.0,
+      "candidate_mean_sol": -0.015560832870129179,
+      "candidate_median_sol": -0.042756478719117336,
+      "baseline_mean_sol": -0.015560832870129179,
+      "baseline_median_sol": -0.042756478719117336,
+      "all_shared_records_identical": true
+    },
+    "all": {
+      "both_resolved": 195,
+      "candidate_total_sol": -4.645368114813176,
+      "baseline_total_sol": -4.645368114813176,
+      "paired_delta_sol": 0.0,
+      "candidate_mean_sol": -0.023822400588785517,
+      "candidate_median_sol": -0.04606853039205516,
+      "baseline_mean_sol": -0.023822400588785517,
+      "baseline_median_sol": -0.04606853039205516,
+      "all_shared_records_identical": true
+    }
+  },
+  "verdict": "inconclusive: veto removes fewer than30resolved controls; no parameter adjustment",
+  "profitability": "candidate retains the losing baseline; full net unknown",
+  "limitations": [
+    "296selected L003 decisions, not all market decisions or all timestamps",
+    "Zero binding vetoes do not show asynchronous quote risk never matters",
+    "VETOED and FEATURE_UNAVAILABLE arrays are partitions, not extra strategy specifications",
+    "Previously explored development data; no fresh confirmation"
+  ]
+}
