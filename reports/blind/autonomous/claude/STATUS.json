@@ -1,26 +1,25 @@
 {
   "worker": "Claude research worker",
-  "run_id": "f002-20261112T185332Z",
-  "task": "F002 operator persistence on development data: for every census creator with >= 2 launches inside 6 Nov 07:40 -> 7 Nov 20:00, does the first launch's outcome (retention, peak multiple, time-to-dump), as knowable at the second launch's creation, predict the second's? Never-launched-before (in-window) baseline, counts, unknowns; no rule search.",
-  "state": "completed",
-  "started_at": "2026-11-12T18:53:32Z",
-  "lease_expires_at": null,
+  "run_id": "f011-20261112T225049Z",
+  "task": "F011 generalisation test of Codex's L005 partial-profit exit (half sale at full-position net sellable proceeds >= 0.30 SOL, remaining-half 30 % trail reset at the partial landing, +0.00075 SOL when the partial executes) on the 679 eligibility-E entries of f006p2; parameters frozen as Codex PROTOCOL @ 6e9db55; R4 scenario; R11 paired view vs the E control; both halves; F009 A/B/C cells; share carried by the single largest trade.",
+  "state": "in_progress",
+  "started_at": "2026-11-12T22:50:49Z",
+  "lease_expires_at": "2026-11-13T00:50:49Z",
   "input_commits": {
-    "tracker": "9d6419ff0af17d60ce8191c15173c8184d2377af",
-    "research-codex_read": "e9b20e1c055040ec7ddd872ff6e122d6fc35dba6",
-    "research-claude_base": "fc6b05aa75162444776a93035b34a7ad24c77395",
+    "tracker": "6c2b3d83a44cf2194fe5f480b159233aa939c9b9",
+    "research-codex_read": "be8cf890fd9ada6ea42866f31f7a8a2f7ce59f6d",
+    "research-claude_base": "3393d27944978438cbc3723d500f320161963563",
     "entry-all-20261107t2210": "e67833121f1da0dc992c28fa26c5236a855c151a",
-    "entry-package-7nov": "0e3be03c71949e069a7a31b5951f332bb563f68f",
     "blind-eval-1.1": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b"
   },
-  "task_choice_note": "Queue (coordinator run 6, R44/F011 row): F002 next as declared, then F011, then F004.",
-  "previous_run": "f010-20261112T145045Z",
-  "next_task": "F011 (L005 generalisation to E), then F004; F003 after a ruling on item 22",
+  "task_choice_note": "Queue (coordinator run 7, R46): F011 next as declared, then F003, then F004.",
+  "previous_run": "f002-20261112T185332Z",
+  "next_task": "F003 (one F002 filter on E, R46), then F004",
   "blockers": [],
-  "artifacts": "reports/blind/autonomous/claude/runs/f002-20261112T185332Z/",
-  "completed_at": "2026-11-12T19:10:00Z",
-  "protocol_commit": "c0b1339a760a19a6ab02a446a889b8d0012e0a1f",
-  "result": "F002: census 62,789 / 21,831 creators; 2,941 first->second pairs (history unknown for 2,775: previous never retained by t2), 40,958 consecutive pairs. Next launch retained: previous retained by t2 42.8% (71/166; 33.4% over 1,513 consecutive) vs 3.6% (99/2,775; 2.8% of 39,445) vs 13.7% first-in-window (2,985/21,831). Peak rank correlation 0.47 [0.22,0.66] n=63 (0.31 n=440). Previous dumped <=120 s -> next dumped <=120 s 64.3% (28) / 81.4% (291) vs 37.5% (16) / 51.6% (64). Serial (>=20 prior) after non-retained 2.4% (24,115). Dev buy persists (Spearman 0.82/0.91). Reused name/symbol dumps <=120 s 62.5% vs 42.6%. Counts only, no trading result. Idea lab CL-L006 slot diversity >=8 failed: keeps 576/679, 376/-8.373670 vs control 419/-10.011572 (exact). Codex L005 195-pair figures re-derived exactly (+2.436389, 61.3% one trade).",
+  "artifacts": "reports/blind/autonomous/claude/runs/f011-20261112T225049Z/",
+  "completed_at": null,
+  "protocol_commit": null,
+  "result": null,
   "task_states": {
     "F001": "completed_agree_all_rows",
     "F006": "completed",
@@ -32,6 +31,6 @@
     "F003": "ready (one filter to register from F002 tables; control scope asked, item 22)",
     "F004": "ready",
     "F005": "blocked (Round 1 release)",
-    "F011": "next"
+    "F011": "in_progress"
   }
 }
