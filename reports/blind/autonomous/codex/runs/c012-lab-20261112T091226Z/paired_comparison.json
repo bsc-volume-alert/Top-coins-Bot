@@ -1,0 +1,156 @@
+{
+  "baseline_reproduced": true,
+  "baseline_fields_compared": 5663,
+  "baseline_attempts": 296,
+  "new_specifications": 1,
+  "total_specs_with_locked_control": 2,
+  "paired": {
+    "early": {
+      "both_resolved": 95,
+      "baseline_resolved": 95,
+      "candidate_resolved": 109,
+      "baseline": {
+        "n": 95,
+        "total_net_sol": -3.0892848278002583,
+        "mean_net_sol": -0.03251878766105535,
+        "median_net_sol": -0.04912331435448686,
+        "win_rate": 0.18947368421052632,
+        "without_best1": -3.3334376621312547,
+        "without_best3": -3.708359901216356
+      },
+      "candidate": {
+        "n": 95,
+        "total_net_sol": -1.2630041300311161,
+        "mean_net_sol": -0.01329478031611701,
+        "median_net_sol": -0.026299938533571016,
+        "win_rate": 0.3263157894736842,
+        "without_best1": -1.5071569643621126,
+        "without_best3": -1.915805929115362
+      },
+      "candidate_minus_baseline_total_sol": 1.8262806977691421,
+      "delta_median_sol": 0.0,
+      "improved": 38,
+      "worse": 7,
+      "equal": 50,
+      "exploratory_3h_block_bootstrap_delta_total_95pct": [
+        0.6386321792950772,
+        3.421600356013863
+      ],
+      "creation_blocks": 6
+    },
+    "late": {
+      "both_resolved": 100,
+      "baseline_resolved": 100,
+      "candidate_resolved": 108,
+      "baseline": {
+        "n": 100,
+        "total_net_sol": -1.556083287012918,
+        "mean_net_sol": -0.015560832870129179,
+        "median_net_sol": -0.042756478719117336,
+        "win_rate": 0.27,
+        "without_best1": -1.8793509330329357,
+        "without_best3": -2.4717951548365193
+      },
+      "candidate": {
+        "n": 100,
+        "total_net_sol": -0.916779359773397,
+        "mean_net_sol": -0.00916779359773397,
+        "median_net_sol": -0.030226814760127063,
+        "win_rate": 0.34,
+        "without_best1": -1.2400470057934145,
+        "without_best3": -1.7498661487815543
+      },
+      "candidate_minus_baseline_total_sol": 0.639303927239521,
+      "delta_median_sol": 0.0,
+      "improved": 31,
+      "worse": 16,
+      "equal": 53,
+      "exploratory_3h_block_bootstrap_delta_total_95pct": [
+        -0.655919420086523,
+        2.013254015355647
+      ],
+      "creation_blocks": 7
+    },
+    "all": {
+      "both_resolved": 195,
+      "baseline_resolved": 195,
+      "candidate_resolved": 217,
+      "baseline": {
+        "n": 195,
+        "total_net_sol": -4.645368114813176,
+        "mean_net_sol": -0.023822400588785517,
+        "median_net_sol": -0.04606853039205516,
+        "win_rate": 0.23076923076923078,
+        "without_best1": -4.968635760833194,
+        "without_best3": -5.561079982636778
+      },
+      "candidate": {
+        "n": 195,
+        "total_net_sol": -2.179783489804513,
+        "mean_net_sol": -0.011178376870792374,
+        "median_net_sol": -0.027502651563554942,
+        "win_rate": 0.3333333333333333,
+        "without_best1": -2.503051135824531,
+        "without_best3": -3.0471268274863856
+      },
+      "candidate_minus_baseline_total_sol": 2.4655846250086633,
+      "delta_median_sol": 0.0,
+      "improved": 69,
+      "worse": 23,
+      "equal": 103,
+      "exploratory_3h_block_bootstrap_delta_total_95pct": [
+        0.5044745418008427,
+        4.647887868126982
+      ],
+      "creation_blocks": 12
+    }
+  },
+  "trigger_counts": {
+    "L004": {
+      "2h": 61,
+      "early_cohort_sell_cluster": 120,
+      "30pct_proceeds_trail": 110,
+      "fill_unavailable": 5
+    },
+    "BASELINE": {
+      "2h": 78,
+      "30pct_proceeds_trail": 213,
+      "fill_unavailable": 5
+    }
+  },
+  "source_knowledge_ids": [
+    "K004",
+    "K006",
+    "K010",
+    "K012"
+  ],
+  "baseline_result_commit": "59d657b75b8378273b1e1a239ce2c0fe2e4be2b5",
+  "limitations": [
+    "Paired set is selected by joint outcome availability; not representative by assumption",
+    "Independent positions, unlimited capital; no portfolio cash constraint",
+    "Observed totals exclude unresolved outcomes",
+    "Previously examined development data; no fresh validation"
+  ],
+  "availability_cross_table": [
+    {
+      "baseline": "exit_uncertain",
+      "candidate": "exit_uncertain",
+      "count": 74
+    },
+    {
+      "baseline": "exit_uncertain",
+      "candidate": "scored",
+      "count": 22
+    },
+    {
+      "baseline": "fill_unavailable",
+      "candidate": "fill_unavailable",
+      "count": 5
+    },
+    {
+      "baseline": "scored",
+      "candidate": "scored",
+      "count": 195
+    }
+  ]
+}

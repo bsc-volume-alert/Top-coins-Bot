@@ -1,0 +1,10 @@
+{
+  "scored_launches": 80,
+  "positions_two_sizes": 160,
+  "fill_exit_venue_counts": {
+    "curve/curve": 160
+  },
+  "fee_scenario_records_identical_all_launches": true,
+  "source_commit": "e622e625d626c365969321f7aa2634e87c7c858b",
+  "meaning": "No pool-fee sensitivity established for ID34"
+}

@@ -1,0 +1,48 @@
+{
+  "L004": {
+    "early": {
+      "modeled_fill_to_exit_median_sec": 65.58500003814697,
+      "modeled_fill_to_exit_mean_sec": 1566.020273428169,
+      "modeled_position_stake_seconds": 43535.36360130311,
+      "filled_count": 139,
+      "lower_bound_on_capital_requirement_sol": "See peak overlapping modeled positions in lab_results.json; unresolved holdings could last longer."
+    },
+    "late": {
+      "modeled_fill_to_exit_median_sec": 102.55450010299683,
+      "modeled_fill_to_exit_mean_sec": 1669.7234539860174,
+      "modeled_position_stake_seconds": 50759.59300117493,
+      "filled_count": 152,
+      "lower_bound_on_capital_requirement_sol": "See peak overlapping modeled positions in lab_results.json; unresolved holdings could last longer."
+    },
+    "all": {
+      "modeled_fill_to_exit_median_sec": 88.20500016212463,
+      "modeled_fill_to_exit_mean_sec": 1620.1882577745366,
+      "modeled_position_stake_seconds": 94294.95660247804,
+      "filled_count": 291,
+      "lower_bound_on_capital_requirement_sol": "See peak overlapping modeled positions in lab_results.json; unresolved holdings could last longer."
+    }
+  },
+  "BASELINE": {
+    "early": {
+      "modeled_fill_to_exit_median_sec": 145.37800002098083,
+      "modeled_fill_to_exit_mean_sec": 2323.723374143779,
+      "modeled_position_stake_seconds": 64599.509801197055,
+      "filled_count": 139,
+      "lower_bound_on_capital_requirement_sol": "See peak overlapping modeled positions in lab_results.json; unresolved holdings could last longer."
+    },
+    "late": {
+      "modeled_fill_to_exit_median_sec": 216.59450006484985,
+      "modeled_fill_to_exit_mean_sec": 1908.2616908330667,
+      "modeled_position_stake_seconds": 58011.15540132523,
+      "filled_count": 152,
+      "lower_bound_on_capital_requirement_sol": "See peak overlapping modeled positions in lab_results.json; unresolved holdings could last longer."
+    },
+    "all": {
+      "modeled_fill_to_exit_median_sec": 181.29800009727478,
+      "modeled_fill_to_exit_mean_sec": 2106.7124605244376,
+      "modeled_position_stake_seconds": 122610.66520252229,
+      "filled_count": 291,
+      "lower_bound_on_capital_requirement_sol": "See peak overlapping modeled positions in lab_results.json; unresolved holdings could last longer."
+    }
+  }
+}

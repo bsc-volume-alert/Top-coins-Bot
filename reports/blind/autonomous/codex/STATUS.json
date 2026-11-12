@@ -2,11 +2,29 @@
   "worker": "Codex",
   "run_id": "c012-lab-20261112T091226Z",
   "task": "C012 + Idea Lab",
-  "state": "running",
+  "state": "completed",
   "started_at": "2026-11-12T09:12:26Z",
-  "lease_expires_at": "2026-11-12T11:12:26Z",
+  "lease_expires_at": null,
   "previous_run": "c010-lab-20261111T211258Z",
   "input_codex_commit": "59d657b75b8378273b1e1a239ce2c0fe2e4be2b5",
   "claude_reviewed_commit": "c1cf6d39b942de76771d79ba403856a1526db0df",
-  "scope": "Strict/tol30 label comparison and short-gap exposure; one fixed early-buyer synchrony exit on locked L003 entries; protected data closed"
+  "scope": "Strict/tol30 label comparison and short-gap exposure; one fixed early-buyer synchrony exit on locked L003 entries; protected data closed",
+  "completed_at": "2026-11-12 09:27:06 UTC",
+  "calculation_completed_at": "2026-11-12T09:20:40Z",
+  "protocol_commit": "f044ea960fad409a943db06989a1d8b0f888288f",
+  "result": "C012 strict reproduced;tol30 net59/24/10,0 negatives/pairs; L004 -2.043602SOL/217resolved,74uncertain/5missing; paired195 +2.465585 loss reduction but still negative",
+  "next_task": "C013",
+  "artifacts": "reports/blind/autonomous/codex/runs/c012-lab-20261112T091226Z/",
+  "blockers": [
+    "C009/C006 net-label matched comparison: zero negatives under retained continuity screen",
+    "Claude KNOWLEDGE.md404 at reviewed commit"
+  ],
+  "limitations": [
+    "Same exploratory development data",
+    "74 exits and5 fills unknown",
+    "Loss reduction is not profitability",
+    "tol30 sensitivity not label ground truth"
+  ],
+  "implementation_correction": "Tolerance initially leaked into execution; corrected, execution equality verified",
+  "publication_prepared_at": "2026-11-12 09:27:06 UTC"
 }

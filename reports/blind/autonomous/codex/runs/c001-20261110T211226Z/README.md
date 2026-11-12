@@ -26,3 +26,5 @@ Frozen evaluator's known causality/decoder/coverage limitations remain. This doe
 Next task: C002, named instant-graduation and no-entry/buffer counterexamples, using the existing verified development cache. C003 may proceed independently if C002 blocks.
 
 Scheduler is enabled every six hours and its worker prompt was delivered into this thread during setup. A separate unattended completed run and delivery status are not established by this interactive result. Claude/Gemini are not configured in this environment (no CLI/provider credentials available).
+
+R7 clarification (12Nov2026): all80 scored ID34 launches have curve fills and curve exits at both sizes; the30bps/125bps pool-fee runs are identical and do not establish fee sensitivity. C012 run/c001_fee_scope_audit.json independently checks the saved ledger.

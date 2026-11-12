@@ -1,0 +1,299 @@
+CHECKSUMS_PASS 16
+MINTS 500 COHORT_ROWS 1492
+MINTS 1000 COHORT_ROWS 2977
+MINTS 1500 COHORT_ROWS 4423
+MINTS 2000 COHORT_ROWS 5774
+MINTS 2500 COHORT_ROWS 7100
+MINTS 3000 COHORT_ROWS 8572
+MINTS 3500 COHORT_ROWS 10055
+{
+  "task": "C009",
+  "protocol_commit": "0aa4b4998d296239f5950ec599e3989eefc6f907",
+  "data_commit": "e67833121f1da0dc992c28fa26c5236a855c151a",
+  "denominator": 3638,
+  "audit": {
+    "invalid_decision_state_age300": 142,
+    "invalid_decision_state_age900": 145,
+    "invalid_decision_state_age1800": 146,
+    "signal_unknown_mints": 5
+  },
+  "trading_specs": 2,
+  "trading": {
+    "L002": {
+      "early": {
+        "attempted": 388,
+        "filled": 208,
+        "fill_unavailable": 180,
+        "scored": 156,
+        "uncertain_exits": 52,
+        "total_observed_net_sol": -6.035662709945701,
+        "mean_return": -0.193450727882875,
+        "median_return": -0.26245624890825864,
+        "win_rate": 0.1858974358974359,
+        "share_loss_gt50": 0.1282051282051282,
+        "without_best1_sol": -6.279815544276697,
+        "without_best3_sol": -6.7125612888361665,
+        "unknown_reasons": {
+          "state older than30s": 225,
+          "capture gap during hold": 1,
+          "completed curve buy": 4,
+          "invalid state during hold": 1,
+          "invalid state or absent pool evidence": 1
+        },
+        "instant_flag_attempts": 21,
+        "labels": {
+          "unknown": 367,
+          "observed_sustained2x": 21
+        }
+      },
+      "late": {
+        "attempted": 432,
+        "filled": 364,
+        "fill_unavailable": 68,
+        "scored": 225,
+        "uncertain_exits": 139,
+        "total_observed_net_sol": -9.257403216060727,
+        "mean_return": -0.20572007146801616,
+        "median_return": -0.24351630745421543,
+        "win_rate": 0.2222222222222222,
+        "share_loss_gt50": 0.19555555555555557,
+        "without_best1_sol": -9.580670862080744,
+        "without_best3_sol": -10.173115083884328,
+        "unknown_reasons": {
+          "state older than30s": 139,
+          "capture gap during hold": 66,
+          "invalid state during hold": 1,
+          "capture gap before landing": 1
+        },
+        "instant_flag_attempts": 13,
+        "labels": {
+          "unknown": 400,
+          "observed_sustained2x": 32
+        }
+      },
+      "all": {
+        "attempted": 820,
+        "filled": 572,
+        "fill_unavailable": 248,
+        "scored": 381,
+        "uncertain_exits": 191,
+        "total_observed_net_sol": -15.293065926006427,
+        "mean_return": -0.2006964032284308,
+        "median_return": -0.24784170423934354,
+        "win_rate": 0.2073490813648294,
+        "share_loss_gt50": 0.1679790026246719,
+        "without_best1_sol": -15.616333572026445,
+        "without_best3_sol": -16.20877779383003,
+        "unknown_reasons": {
+          "state older than30s": 364,
+          "capture gap during hold": 67,
+          "completed curve buy": 4,
+          "invalid state during hold": 2,
+          "invalid state or absent pool evidence": 1,
+          "capture gap before landing": 1
+        },
+        "instant_flag_attempts": 34,
+        "labels": {
+          "unknown": 767,
+          "observed_sustained2x": 53
+        }
+      }
+    },
+    "CONTROL": {
+      "early": {
+        "attempted": 1559,
+        "filled": 588,
+        "fill_unavailable": 971,
+        "scored": 233,
+        "uncertain_exits": 355,
+        "total_observed_net_sol": -9.899555720630923,
+        "mean_return": -0.21243681803929015,
+        "median_return": -0.2878809714872439,
+        "win_rate": 0.1630901287553648,
+        "share_loss_gt50": 0.12446351931330472,
+        "without_best1_sol": -10.14370855496192,
+        "without_best3_sol": -10.576454299521389,
+        "unknown_reasons": {
+          "state older than30s": 1310,
+          "completed curve buy": 6,
+          "capture gap during hold": 8,
+          "invalid state during hold": 1,
+          "invalid state or absent pool evidence": 1
+        },
+        "instant_flag_attempts": 21,
+        "labels": {
+          "unknown": 1538,
+          "observed_sustained2x": 21
+        }
+      },
+      "late": {
+        "attempted": 1930,
+        "filled": 806,
+        "fill_unavailable": 1124,
+        "scored": 304,
+        "uncertain_exits": 502,
+        "total_observed_net_sol": -9.569593140269676,
+        "mean_return": -0.15739462401759335,
+        "median_return": -0.25060817225777315,
+        "win_rate": 0.23026315789473684,
+        "share_loss_gt50": 0.17434210526315788,
+        "without_best1_sol": -11.39439710989039,
+        "without_best3_sol": -12.312681437778728,
+        "unknown_reasons": {
+          "state older than30s": 1544,
+          "capture gap during hold": 79,
+          "completed curve buy": 1,
+          "invalid state during hold": 1,
+          "capture gap before landing": 1
+        },
+        "instant_flag_attempts": 14,
+        "labels": {
+          "unknown": 1892,
+          "observed_sustained2x": 38
+        }
+      },
+      "all": {
+        "attempted": 3489,
+        "filled": 1394,
+        "fill_unavailable": 2095,
+        "scored": 537,
+        "uncertain_exits": 857,
+        "total_observed_net_sol": -19.4691488609006,
+        "mean_return": -0.18127699125605773,
+        "median_return": -0.264966388182121,
+        "win_rate": 0.2011173184357542,
+        "share_loss_gt50": 0.1527001862197393,
+        "without_best1_sol": -21.293952830521313,
+        "without_best3_sol": -22.21223715840965,
+        "unknown_reasons": {
+          "state older than30s": 2854,
+          "completed curve buy": 7,
+          "capture gap during hold": 87,
+          "invalid state during hold": 2,
+          "invalid state or absent pool evidence": 1,
+          "capture gap before landing": 1
+        },
+        "instant_flag_attempts": 35,
+        "labels": {
+          "unknown": 3430,
+          "observed_sustained2x": 59
+        }
+      }
+    }
+  },
+  "autopsy": {
+    "300": {
+      "cohort": {
+        "attempted": 3489,
+        "filled": 1394,
+        "fill_unavailable": 2095,
+        "scored": 537,
+        "uncertain_exits": 857,
+        "total_observed_net_sol": -19.4691488609006,
+        "mean_return": -0.18127699125605773,
+        "median_return": -0.264966388182121,
+        "win_rate": 0.2011173184357542,
+        "share_loss_gt50": 0.1527001862197393,
+        "without_best1_sol": -21.293952830521313,
+        "without_best3_sol": -22.21223715840965,
+        "unknown_reasons": {
+          "state older than30s": 2854,
+          "completed curve buy": 7,
+          "capture gap during hold": 87,
+          "invalid state during hold": 2,
+          "invalid state or absent pool evidence": 1,
+          "capture gap before landing": 1
+        },
+        "instant_flag_attempts": 35,
+        "labels": {
+          "unknown": 3430,
+          "observed_sustained2x": 59
+        }
+      },
+      "matched_pairs": 0,
+      "runner_depth_median": null,
+      "nonrunner_depth_median": null,
+      "runner_stress_median": null,
+      "nonrunner_stress_median": null,
+      "runner_drain_count": 0,
+      "nonrunner_drain_count": 0
+    },
+    "900": {
+      "cohort": {
+        "attempted": 3488,
+        "filled": 425,
+        "fill_unavailable": 3063,
+        "scored": 211,
+        "uncertain_exits": 214,
+        "total_observed_net_sol": -8.449480135431209,
+        "mean_return": -0.20022464775903337,
+        "median_return": -0.2635174476763903,
+        "win_rate": 0.16113744075829384,
+        "share_loss_gt50": 0.10426540284360189,
+        "without_best1_sol": -8.95829900415241,
+        "without_best3_sol": -9.911495259693359,
+        "unknown_reasons": {
+          "state older than30s": 3215,
+          "invalid state during hold": 1,
+          "capture gap during hold": 59,
+          "outside pool capture": 1,
+          "capture gap before landing": 1
+        },
+        "instant_flag_attempts": 36,
+        "labels": {
+          "unknown": 3464,
+          "observed_sustained2x": 24
+        }
+      },
+      "matched_pairs": 0,
+      "runner_depth_median": null,
+      "nonrunner_depth_median": null,
+      "runner_stress_median": null,
+      "nonrunner_stress_median": null,
+      "runner_drain_count": 0,
+      "nonrunner_drain_count": 0
+    },
+    "1800": {
+      "cohort": {
+        "attempted": 3487,
+        "filled": 248,
+        "fill_unavailable": 3239,
+        "scored": 110,
+        "uncertain_exits": 138,
+        "total_observed_net_sol": -6.1559829711600225,
+        "mean_return": -0.27981740778000097,
+        "median_return": -0.3076561829325468,
+        "win_rate": 0.14545454545454545,
+        "share_loss_gt50": 0.18181818181818182,
+        "without_best1_sol": -6.2655192805616275,
+        "without_best3_sol": -6.4751390494860885,
+        "unknown_reasons": {
+          "state older than30s": 3336,
+          "capture gap during hold": 40,
+          "outside pool capture": 1
+        },
+        "instant_flag_attempts": 36,
+        "labels": {
+          "unknown": 3477,
+          "observed_sustained2x": 10
+        }
+      },
+      "matched_pairs": 0,
+      "runner_depth_median": null,
+      "nonrunner_depth_median": null,
+      "runner_stress_median": null,
+      "nonrunner_stress_median": null,
+      "runner_drain_count": 0,
+      "nonrunner_drain_count": 0
+    }
+  },
+  "limitations": [
+    "Exploratory, not fresh confirmation",
+    "Captured-path sustained2x target is not a >=$100K target",
+    "Operational path completeness assumes30s-spaced observations and logged coverage; no absolute capture proof",
+    "Unknown labels never become negative controls",
+    "Same-state depth stress is hypothetical, not ownership evidence",
+    "Initial instant-graduation flags remain visible; decoder root cause unverified",
+    "Ages900/1800 trade results are descriptive autopsy diagnostics, not extra selected candidates"
+  ]
+}

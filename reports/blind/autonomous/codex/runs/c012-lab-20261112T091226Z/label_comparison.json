@@ -1,0 +1,790 @@
+{
+  "task": "C012",
+  "protocol_commit": "f044ea960fad409a943db06989a1d8b0f888288f",
+  "original_records_identical": true,
+  "original_results_identical": true,
+  "strict_tol30_execution_records_identical": true,
+  "common_denominator": 3638,
+  "by_age": {
+    "300": {
+      "net2h_strict": {
+        "labels_within_state_cohort": {
+          "unknown": 3433,
+          "observed_sustained2x": 56,
+          "captured_path_nonrunner": 0,
+          "outside_c009_eligible_state": 149
+        },
+        "unknown_on_common_denominator": 3582,
+        "matched_pairs": 0
+      },
+      "net2h_tol30": {
+        "labels_within_state_cohort": {
+          "unknown": 3430,
+          "observed_sustained2x": 59,
+          "captured_path_nonrunner": 0,
+          "outside_c009_eligible_state": 149
+        },
+        "unknown_on_common_denominator": 3579,
+        "matched_pairs": 0
+      },
+      "price1h_strict": {
+        "unknown": 2272,
+        "nonrunner": 1249,
+        "runner": 117
+      },
+      "price1h_tol30": {
+        "nonrunner": 3052,
+        "unknown": 469,
+        "runner": 117
+      },
+      "tol30_negative_short_gap_exposure": {
+        "early": {
+          "negative_count": 1467,
+          "any_short_gap": 728
+        },
+        "late": {
+          "negative_count": 1585,
+          "any_short_gap": 1075
+        },
+        "all": {
+          "negative_count": 3052,
+          "any_short_gap": 1803
+        }
+      },
+      "strict_price1h_vs_net2h_cross_table": [
+        {
+          "price1h": "nonrunner",
+          "net2h": "unknown",
+          "count": 1249
+        },
+        {
+          "price1h": "runner",
+          "net2h": "observed_sustained2x",
+          "count": 56
+        },
+        {
+          "price1h": "runner",
+          "net2h": "unknown",
+          "count": 61
+        },
+        {
+          "price1h": "unknown",
+          "net2h": "outside_c009_eligible_state",
+          "count": 149
+        },
+        {
+          "price1h": "unknown",
+          "net2h": "unknown",
+          "count": 2123
+        }
+      ],
+      "tol30_price1h_vs_net2h_cross_table": [
+        {
+          "price1h": "nonrunner",
+          "net2h": "outside_c009_eligible_state",
+          "count": 2
+        },
+        {
+          "price1h": "nonrunner",
+          "net2h": "unknown",
+          "count": 3050
+        },
+        {
+          "price1h": "runner",
+          "net2h": "observed_sustained2x",
+          "count": 59
+        },
+        {
+          "price1h": "runner",
+          "net2h": "unknown",
+          "count": 58
+        },
+        {
+          "price1h": "unknown",
+          "net2h": "outside_c009_eligible_state",
+          "count": 147
+        },
+        {
+          "price1h": "unknown",
+          "net2h": "unknown",
+          "count": 322
+        }
+      ]
+    },
+    "900": {
+      "net2h_strict": {
+        "labels_within_state_cohort": {
+          "unknown": 3467,
+          "observed_sustained2x": 21,
+          "captured_path_nonrunner": 0,
+          "outside_c009_eligible_state": 150
+        },
+        "unknown_on_common_denominator": 3617,
+        "matched_pairs": 0
+      },
+      "net2h_tol30": {
+        "labels_within_state_cohort": {
+          "unknown": 3464,
+          "observed_sustained2x": 24,
+          "captured_path_nonrunner": 0,
+          "outside_c009_eligible_state": 150
+        },
+        "unknown_on_common_denominator": 3614,
+        "matched_pairs": 0
+      },
+      "price1h_strict": {
+        "unknown": 2475,
+        "nonrunner": 1107,
+        "runner": 56
+      },
+      "price1h_tol30": {
+        "unknown": 923,
+        "nonrunner": 2659,
+        "runner": 56
+      },
+      "tol30_negative_short_gap_exposure": {
+        "early": {
+          "negative_count": 1397,
+          "any_short_gap": 725
+        },
+        "late": {
+          "negative_count": 1262,
+          "any_short_gap": 827
+        },
+        "all": {
+          "negative_count": 2659,
+          "any_short_gap": 1552
+        }
+      },
+      "strict_price1h_vs_net2h_cross_table": [
+        {
+          "price1h": "nonrunner",
+          "net2h": "unknown",
+          "count": 1107
+        },
+        {
+          "price1h": "runner",
+          "net2h": "observed_sustained2x",
+          "count": 21
+        },
+        {
+          "price1h": "runner",
+          "net2h": "unknown",
+          "count": 35
+        },
+        {
+          "price1h": "unknown",
+          "net2h": "outside_c009_eligible_state",
+          "count": 150
+        },
+        {
+          "price1h": "unknown",
+          "net2h": "unknown",
+          "count": 2325
+        }
+      ],
+      "tol30_price1h_vs_net2h_cross_table": [
+        {
+          "price1h": "nonrunner",
+          "net2h": "outside_c009_eligible_state",
+          "count": 2
+        },
+        {
+          "price1h": "nonrunner",
+          "net2h": "unknown",
+          "count": 2657
+        },
+        {
+          "price1h": "runner",
+          "net2h": "observed_sustained2x",
+          "count": 24
+        },
+        {
+          "price1h": "runner",
+          "net2h": "unknown",
+          "count": 32
+        },
+        {
+          "price1h": "unknown",
+          "net2h": "outside_c009_eligible_state",
+          "count": 148
+        },
+        {
+          "price1h": "unknown",
+          "net2h": "unknown",
+          "count": 775
+        }
+      ]
+    },
+    "1800": {
+      "net2h_strict": {
+        "labels_within_state_cohort": {
+          "unknown": 3478,
+          "observed_sustained2x": 9,
+          "captured_path_nonrunner": 0,
+          "outside_c009_eligible_state": 151
+        },
+        "unknown_on_common_denominator": 3629,
+        "matched_pairs": 0
+      },
+      "net2h_tol30": {
+        "labels_within_state_cohort": {
+          "unknown": 3477,
+          "observed_sustained2x": 10,
+          "captured_path_nonrunner": 0,
+          "outside_c009_eligible_state": 151
+        },
+        "unknown_on_common_denominator": 3628,
+        "matched_pairs": 0
+      },
+      "price1h_strict": {
+        "unknown": 2708,
+        "nonrunner": 906,
+        "runner": 24
+      },
+      "price1h_tol30": {
+        "unknown": 1396,
+        "nonrunner": 2218,
+        "runner": 24
+      },
+      "tol30_negative_short_gap_exposure": {
+        "early": {
+          "negative_count": 1265,
+          "any_short_gap": 718
+        },
+        "late": {
+          "negative_count": 953,
+          "any_short_gap": 594
+        },
+        "all": {
+          "negative_count": 2218,
+          "any_short_gap": 1312
+        }
+      },
+      "strict_price1h_vs_net2h_cross_table": [
+        {
+          "price1h": "nonrunner",
+          "net2h": "unknown",
+          "count": 906
+        },
+        {
+          "price1h": "runner",
+          "net2h": "observed_sustained2x",
+          "count": 9
+        },
+        {
+          "price1h": "runner",
+          "net2h": "unknown",
+          "count": 15
+        },
+        {
+          "price1h": "unknown",
+          "net2h": "outside_c009_eligible_state",
+          "count": 151
+        },
+        {
+          "price1h": "unknown",
+          "net2h": "unknown",
+          "count": 2557
+        }
+      ],
+      "tol30_price1h_vs_net2h_cross_table": [
+        {
+          "price1h": "nonrunner",
+          "net2h": "outside_c009_eligible_state",
+          "count": 2
+        },
+        {
+          "price1h": "nonrunner",
+          "net2h": "unknown",
+          "count": 2216
+        },
+        {
+          "price1h": "runner",
+          "net2h": "observed_sustained2x",
+          "count": 10
+        },
+        {
+          "price1h": "runner",
+          "net2h": "unknown",
+          "count": 14
+        },
+        {
+          "price1h": "unknown",
+          "net2h": "outside_c009_eligible_state",
+          "count": 149
+        },
+        {
+          "price1h": "unknown",
+          "net2h": "unknown",
+          "count": 1247
+        }
+      ]
+    }
+  },
+  "main_gaps": [
+    [
+      1793916056.0,
+      1793916067.0
+    ],
+    [
+      1793916090.0,
+      1793916092.0
+    ],
+    [
+      1793917267.0,
+      1793917277.0
+    ],
+    [
+      1793926927.0,
+      1793926928.0
+    ],
+    [
+      1793927198.0,
+      1793927202.0
+    ],
+    [
+      1793940359.0,
+      1793940360.0
+    ],
+    [
+      1793944995.0,
+      1793945005.0
+    ],
+    [
+      1793946365.0,
+      1793946370.0
+    ],
+    [
+      1793946593.0,
+      1793946601.0
+    ],
+    [
+      1793946883.0,
+      1793946884.0
+    ],
+    [
+      1793949913.0,
+      1793949914.0
+    ],
+    [
+      1793951737.0,
+      1793951743.0
+    ],
+    [
+      1793957361.0,
+      1793957367.0
+    ],
+    [
+      1793962859.0,
+      1793962860.0
+    ],
+    [
+      1793963512.0,
+      1793963517.0
+    ],
+    [
+      1793963811.0,
+      1793963820.0
+    ],
+    [
+      1793965363.0,
+      1793965368.0
+    ],
+    [
+      1793971748.0,
+      1793971761.0
+    ],
+    [
+      1793980062.0,
+      1793980063.0
+    ],
+    [
+      1793980758.0,
+      1793980759.0
+    ],
+    [
+      1793993092.0,
+      1793993093.0
+    ],
+    [
+      1793993266.0,
+      1793993267.0
+    ],
+    [
+      1794003031.0,
+      1794003038.0
+    ],
+    [
+      1794003125.0,
+      1794003127.0
+    ],
+    [
+      1794015936.0,
+      1794015937.0
+    ],
+    [
+      1794016063.0,
+      1794016064.0
+    ],
+    [
+      1794021320.0,
+      1794021322.0
+    ],
+    [
+      1794027397.0,
+      1794027538.0
+    ],
+    [
+      1794029032.0,
+      1794029036.0
+    ],
+    [
+      1794030814.0,
+      1794030821.0
+    ],
+    [
+      1794036667.0,
+      1794036668.0
+    ],
+    [
+      1794037306.0,
+      1794037310.0
+    ],
+    [
+      1794039820.0,
+      1794039825.0
+    ],
+    [
+      1794040484.0,
+      1794040486.0
+    ],
+    [
+      1794041586.0,
+      1794041591.0
+    ],
+    [
+      1794042209.0,
+      1794042210.0
+    ],
+    [
+      1794043216.0,
+      1794043225.0
+    ],
+    [
+      1794055259.0,
+      1794055264.0
+    ],
+    [
+      1794055541.0,
+      1794055545.0
+    ],
+    [
+      1794056341.0,
+      1794056353.0
+    ],
+    [
+      1794056633.0,
+      1794056638.0
+    ],
+    [
+      1794057392.0,
+      1794057398.0
+    ],
+    [
+      1794059094.0,
+      1794059099.0
+    ],
+    [
+      1794061839.0,
+      1794061845.0
+    ],
+    [
+      1794063727.0,
+      1794063728.0
+    ],
+    [
+      1794068720.0,
+      1794068726.0
+    ],
+    [
+      1794069704.0,
+      1794069705.0
+    ],
+    [
+      1794070330.0,
+      1794070336.0
+    ],
+    [
+      1794071071.0,
+      1794071072.0
+    ],
+    [
+      1794072019.0,
+      1794072020.0
+    ],
+    [
+      1794072150.0,
+      1794072153.0
+    ],
+    [
+      1794075293.0,
+      1794075299.0
+    ],
+    [
+      1794076753.0,
+      1794076755.0
+    ],
+    [
+      1794078325.0,
+      1794078332.0
+    ],
+    [
+      1794078577.0,
+      1794078579.0
+    ],
+    [
+      1794088985.0,
+      1794088986.0
+    ],
+    [
+      1794089807.0,
+      1794089809.0
+    ]
+  ],
+  "short_main_gaps": [
+    [
+      1793916056.0,
+      1793916067.0
+    ],
+    [
+      1793916090.0,
+      1793916092.0
+    ],
+    [
+      1793917267.0,
+      1793917277.0
+    ],
+    [
+      1793926927.0,
+      1793926928.0
+    ],
+    [
+      1793927198.0,
+      1793927202.0
+    ],
+    [
+      1793940359.0,
+      1793940360.0
+    ],
+    [
+      1793944995.0,
+      1793945005.0
+    ],
+    [
+      1793946365.0,
+      1793946370.0
+    ],
+    [
+      1793946593.0,
+      1793946601.0
+    ],
+    [
+      1793946883.0,
+      1793946884.0
+    ],
+    [
+      1793949913.0,
+      1793949914.0
+    ],
+    [
+      1793951737.0,
+      1793951743.0
+    ],
+    [
+      1793957361.0,
+      1793957367.0
+    ],
+    [
+      1793962859.0,
+      1793962860.0
+    ],
+    [
+      1793963512.0,
+      1793963517.0
+    ],
+    [
+      1793963811.0,
+      1793963820.0
+    ],
+    [
+      1793965363.0,
+      1793965368.0
+    ],
+    [
+      1793971748.0,
+      1793971761.0
+    ],
+    [
+      1793980062.0,
+      1793980063.0
+    ],
+    [
+      1793980758.0,
+      1793980759.0
+    ],
+    [
+      1793993092.0,
+      1793993093.0
+    ],
+    [
+      1793993266.0,
+      1793993267.0
+    ],
+    [
+      1794003031.0,
+      1794003038.0
+    ],
+    [
+      1794003125.0,
+      1794003127.0
+    ],
+    [
+      1794015936.0,
+      1794015937.0
+    ],
+    [
+      1794016063.0,
+      1794016064.0
+    ],
+    [
+      1794021320.0,
+      1794021322.0
+    ],
+    [
+      1794029032.0,
+      1794029036.0
+    ],
+    [
+      1794030814.0,
+      1794030821.0
+    ],
+    [
+      1794036667.0,
+      1794036668.0
+    ],
+    [
+      1794037306.0,
+      1794037310.0
+    ],
+    [
+      1794039820.0,
+      1794039825.0
+    ],
+    [
+      1794040484.0,
+      1794040486.0
+    ],
+    [
+      1794041586.0,
+      1794041591.0
+    ],
+    [
+      1794042209.0,
+      1794042210.0
+    ],
+    [
+      1794043216.0,
+      1794043225.0
+    ],
+    [
+      1794055259.0,
+      1794055264.0
+    ],
+    [
+      1794055541.0,
+      1794055545.0
+    ],
+    [
+      1794056341.0,
+      1794056353.0
+    ],
+    [
+      1794056633.0,
+      1794056638.0
+    ],
+    [
+      1794057392.0,
+      1794057398.0
+    ],
+    [
+      1794059094.0,
+      1794059099.0
+    ],
+    [
+      1794061839.0,
+      1794061845.0
+    ],
+    [
+      1794063727.0,
+      1794063728.0
+    ],
+    [
+      1794068720.0,
+      1794068726.0
+    ],
+    [
+      1794069704.0,
+      1794069705.0
+    ],
+    [
+      1794070330.0,
+      1794070336.0
+    ],
+    [
+      1794071071.0,
+      1794071072.0
+    ],
+    [
+      1794072019.0,
+      1794072020.0
+    ],
+    [
+      1794072150.0,
+      1794072153.0
+    ],
+    [
+      1794075293.0,
+      1794075299.0
+    ],
+    [
+      1794076753.0,
+      1794076755.0
+    ],
+    [
+      1794078325.0,
+      1794078332.0
+    ],
+    [
+      1794078577.0,
+      1794078579.0
+    ],
+    [
+      1794088985.0,
+      1794088986.0
+    ],
+    [
+      1794089807.0,
+      1794089809.0
+    ]
+  ],
+  "claude_source_commit": "7a9cd6a98680b660d15b952079b7f367d3ad180f",
+  "peer_review_commit": "c1cf6d39b942de76771d79ba403856a1526db0df",
+  "limitations": [
+    "tol30 is an operational sensitivity, not ground truth; R21",
+    "C009 path-density requirement unchanged; dropping it would be a new label specification",
+    "Price1h F006 labels are published exploratory outputs, not newly certified truth",
+    "Short-gap-exposed negatives bound possible errors; do not count them as observed errors",
+    "Sustained multiple labels are separate from >=100K outcomes"
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "development_commits": [
+    "0e3be03c71949e069a7a31b5951f332bb563f68f",
+    "e67833121f1da0dc992c28fa26c5236a855c151a"
+  ],
+  "data_files_verified": 16,
+  "frozen_evaluator_commit": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b",
+  "frozen_evaluator_sha256": "f5686511fcae09c1c191ca5ffee167c6ad1421cddbb1be8b1c4f0f3eb4cc8a86",
+  "claude_features_source_commit": "7a9cd6a98680b660d15b952079b7f367d3ad180f",
+  "claude_features_sha256": "0744d6589e169ea74e24cb36f6e0dcd6b7b10283278bd5b628d30a8f95685f05",
+  "claude_features_manifest_match": true,
+  "peer_review_commit": "c1cf6d39b942de76771d79ba403856a1526db0df",
+  "queue_blob": "afa4ccb5363b76af19c18f8a34f600904f34c577",
+  "claude_KNOWLEDGE_error": "GitHub API404 at peer_review_commit; DIALOGUE and EXPERIMENTS read successfully",
+  "AGENTS_reads": {
+    "AGENTS.md": 404,
+    "reports/AGENTS.md": 404,
+    "reports/blind/AGENTS.md": 404,
+    "reports/blind/autonomous/AGENTS.md": 404,
+    "reports/blind/autonomous/codex/AGENTS.md": 404
+  },
+  "network": "Default public GitHub API read failed proxy connect; same read succeeded escalated, no credentials used or collection calls."
+}

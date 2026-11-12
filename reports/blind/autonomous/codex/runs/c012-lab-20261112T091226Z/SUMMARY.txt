@@ -1,0 +1,5 @@
+Completed C012 strict/tol30 coverage audit and one preregistered sell-cluster exit test on unchanged L003 entries.
+Tol30 yields59/24/10 net2x positives but0 negatives/pairs;1803 of3052 five-minute price negatives overlap short logged gaps.
+L004 loses2.043602SOL on217 resolved; paired195 trades improve2.465585SOL but still lose2.179783SOL;74 exits and5 fills remain unknown.
+No profitability or fresh confirmation; matched depth comparison blocked, implementation scope correction recorded, Claude KNOWLEDGE returned404.
+Next C013 common-eligibility control reconciliation, then C014 pre-gap proceeds audit; request independent L004 reproduction.

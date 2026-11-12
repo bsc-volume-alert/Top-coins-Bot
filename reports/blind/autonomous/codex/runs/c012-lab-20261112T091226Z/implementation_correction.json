@@ -1,0 +1,7 @@
+{
+  "issue": "Initial tol30 driver filtered gaps globally, affecting exit availability outside R2 scope. Corrected to two sustained-label checks only; original execution gaps preserved. No rule thresholds changed.",
+  "initial_result_sha256": "1c9655fe9e1868f831bb8026e7d840f9030bfa76cdc4a5f4df6137736f7fba2b",
+  "initial_execution_changed_records": 90,
+  "initial_fill_status_changes": 0,
+  "not_a_new_strategy_variant": true
+}

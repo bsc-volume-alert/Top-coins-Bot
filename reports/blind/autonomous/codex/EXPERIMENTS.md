@@ -18,3 +18,8 @@ C009 autopsy diagnostics at15/30min were not extra selected trading candidates. 
 | CDEX-L003-CONTROL |Same5min curve eligibility/exit, no activity gate |e6783312;same period|1,271;2,091 fills unavailable;805 exits uncertain;466 resolved (3,362 attempts)|-15.418002 observed|-16.54% / -25.78%|-16.659554SOL|1 control;2 total with candidate|inconclusive|c010-lab-20261111T211258Z|
 
 L003 has negative untrimmed resolved totals in both halves; full P&L remains unknown. No-best1 candidate/control:-4.968636/-15.999912SOL. C010 detection reproduction is not another trading variant. Publication recovered12Nov after an interrupted GitHub request, without rerunning or retuning the experiment.
+
+|CDEX-L004|Early-cohort3-wallet>=2SOL/2s sell-cluster exit; lockedL003 entries|e6783312;6Nov07:40–7Nov20:00UTC|291;5 fills unavailable;74 exits uncertain;217 resolved (296 attempts)|-2.043602 observed|-4.71% /-12.62%|-2.910945SOL|1 new exit;2 total with locked baseline|failed|c012-lab-20261112T091226Z|
+|CDEX-L004-BASELINE|OriginalL00330% proceeds trail on same296 entries|same|291;5 fills unavailable;96 exits uncertain;195 resolved|-4.645368 observed|-11.91% /-23.03%|-5.561080SOL|1 locked control;2 total|inconclusive|c012-lab-20261112T091226Z|
+
+L004 R11 paired195: candidate -2.179783 versus baseline -4.645368SOL; difference+2.465585 (+1.826281 early,+0.639304 late). Candidate remains negative in both halves; full P&L unknown. Win33.64%, loss>50%2.76%, no-best1 -2.366870SOL. All winners counted. No activity-gate retest or threshold sweep. Coverage comparisons are not additional trading variants.
