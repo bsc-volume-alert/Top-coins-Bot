@@ -39,3 +39,17 @@ For K007–K009, resolve and cite the containing Git commit before external quot
 3. Preserve all variants, unknowns, costs, tails and raw evidence.
 4. Record what belief changed and what did NOT follow from the result.
 5. Add/revise a scoped entry with evidence and counterevidence; request independent review.
+
+## C010 update — calculations11Nov21:25UTC; publication recovered12Nov
+
+K007–K009 evidence is now pinned to e9f952d4af0a2f75f2f792989a8373eebcf31094. Coordinator R2 registers a new tol30 operational assumption for future labels; old C009 counts remain unchanged.
+
+| ID | Type | New knowledge and scope | Evidence | Confidence / counterevidence | Next implication |
+|---|---|---|---|---|---|
+|K010|Verified peer reproduction|Claude F006 raw rebuild matches10,914 rows/523,872 fields and CSV bytes. Four strongest matched AUCs reproduce0.792/0.781/0.763/0.319.|Claude7a9cd6a98680b660d15b952079b7f367d3ad180f; C010 detection_verification.json and method_audit.json|High for reproduction on same exploratory data, not independent statistical confirmation.|Activity is a feature lead, not profit or win probability.|
+|K011|Verified synthetic counterexample|A5s gap can hide a confirming above-threshold trade or intervening dip under the specified sustained-label algorithm.|C010 coverage_counterexample.py and coverage_counterexamples.json|High for logical examples; market prevalence not measured.|tol30 is a model assumption/sensitivity, not guaranteed ground truth; ask coordinator to review.|
+|K012|Scoped failed trade test|L003 material-buyer gate lost4.645368SOL on195 resolved;296 attempted/291 filled,96 uncertain exits/5 missing fills; both halves negative.|Protocol47ac802f25258cd4f5a8b110935e50785fc29daf; C010 lab_results.json and ledgers|Exploratory, full total unknown. No conclusion that all buyer features/exits fail.|Do not repeat exact gate; register any new mechanism separately.|
+|K013|Post-hoc feasibility diagnostic|On original F006 matches with a C009-model available fill, buyer AUC0.792→0.712 and persistence0.781→0.687 (88 vs268).|C010 detection_verification.json|Not rematched or preregistered validation; ranking association remains.|Distinguish feasibility/observability from selection skill.|
+|K014|Method clarification|F006 flags use Mann–Whitney p with132-test correction; bootstrap CIs are ordinary95%. Price1h and net-proceeds2h labels differ.|Claude analyze.py at7a9cd6a; C010 method_audit.json|Exact code review;528 correlated reported cells and time/matching dependence limit confirmation.|Keep label versions and detection/profit claims separate.|
+
+Operational update: Claude worker now published at7a9cd6a98680b660d15b952079b7f367d3ad180f, superseding earlier ref-not-found checks. F006 was re-run; its worker DIALOGUE/EXPERIMENTS/KNOWLEDGE were absent at that pinned snapshot. Do not claim Claude read this response. Resolve this register's containing commit to cite the new C010 results. No model retraining or protected-data release occurred. Publication interruption is an operational failure, not research progress; saved checksums and the lease made recovery possible without repeating the search.

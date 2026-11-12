@@ -1,0 +1,101 @@
+variant,mint,half,status,why,decision_t,fill_t,fill_row_id,fill_venue,trigger_t,trigger_reason,sell_t,exit_row_id,exit_venue,net_sol,ret,recent_buyers_60s,material_net_buyers_60s,inflow_persistence_receipt,gross_received_curve_sol,negative_trade_balance_wallets
+CONTROL,6MBE64Kxew77NBMfkrQfbTkS3sywaQQpLD8Ps9zQpump,late,exit_uncertain,state older than 30s,1794058729.0,1794058730.0,10035416,curve,1794065928.3,2h,1794065929.0,,,,,1,0,0.4,142.54250914300002,11
+CONTROL,6hwCGUNppTMkt4Poc1tGuZxzPDLSRU5s96JwQFA6pump,late,fill_unavailable,state older than 30s,1794058748.0,,,,,,,,,,,0,0,0.2,28.263732029,80
+CONTROL,HzJL94kzizxAUVpwnnjK5XVBx8xeDVwc7gCtWqFipump,late,fill_unavailable,state older than 30s,1794058756.0,,,,,,,,,,,0,0,0.2,27.574209777000014,4
+CONTROL,9f2Kd5fsG8kMhe2NQn9Bp73G9nePiY2CRxD4D9Dapump,late,fill_unavailable,state older than 30s,1794058761.0,,,,,,,,,,,0,0,0.2,38.543087402999994,82
+CONTROL,EZwLz76b2hARGcbRBuCVVMPvBdJYjLNxFZecUBCApump,late,fill_unavailable,state older than 30s,1794058771.0,,,,,,,,,,,0,0,0.2,36.66002687699999,80
+CONTROL,8ZqRbzBsAMahhPJ6uPkG6j4FCEFi7EmipbYmHaJupump,late,fill_unavailable,state older than 30s,1794058790.0,,,,,,,,,,,0,0,0.4,74.76139513300002,80
+CONTROL,5dsb3dALpRMq5eFbGyfWvjFxpBTYL7W62gLgusnEpump,late,fill_unavailable,state older than 30s,1794058794.0,,,,,,,,,,,0,0,0.2,20.661851336,4
+CONTROL,C2ruR5VFZnbp9Mf3NCwcATmEV68gBDrGkgs4FAaipump,late,fill_unavailable,state older than 30s,1794058851.0,,,,,,,,,,,0,0,0.2,48.137231006999976,2
+CONTROL,EMUyG1x5HAAEfLy1cW71X4jsStVsaTZ7SPra83EVpump,late,exit_uncertain,state older than 30s,1794058862.0,1794058863.0,10050140,curve,1794066061.3,2h,1794066062.0,,,,,6,0,0.6,23.187533965999986,2
+CONTROL,2tVDbvfdo6AMFkVqDmL2dLpv2opfs6m6KWWoyjgJpump,late,fill_unavailable,state older than 30s,1794058916.0,,,,,,,,,,,0,0,0.2,17.906317165000004,4
+CONTROL,FPFbcBhacaJfvBBbqeRHbWJHfBfxYJBa7yoh256bpump,late,fill_unavailable,state older than 30s,1794058924.0,,,,,,,,,,,0,0,0.2,19.032123711,0
+CONTROL,8ESMAZJ9ihYYWGLRb8XVhVftVv3wesqhnLaZiTbkpump,late,exit_uncertain,state older than 30s,1794058925.0,1794058926.0,10059865,curve,1794066124.3,2h,1794066125.0,,,,,0,0,0.4,72.52620700499993,11
+CONTROL,E6G5xbmoDAjRhpQofWCMwL1nJwHPKNFdLU5mRiSApump,late,fill_unavailable,state older than 30s,1794058948.0,,,,,,,,,,,0,0,0.2,105.50387387200007,89
+CONTROL,Tq9EEWDvkMexkZWuxbpuuzz33szd3uUMuePxYURpump,late,fill_unavailable,state older than 30s,1794059005.0,,,,,,,,,,,0,0,0.4,48.23009558000003,5
+CONTROL,Bp2hV16r4RUnWRzhVF6d9MP5mw2Zh13qubu5mpVQpump,late,fill_unavailable,state older than 30s,1794059059.0,,,,,,,,,,,0,0,0.4,191.17253931100007,57
+CONTROL,9U6t238Nfy6AhoxPtkXUuroduf8YtbLmqjf5BjEBpump,late,exit_uncertain,state older than 30s,1794059109.0,1794059110.0,10073703,curve,1794066308.3,2h,1794066309.0,,,,,0,0,0.6,44.49517990600002,0
+CONTROL,84voubMsCctu4h45mXCGqFFJAzEo6iRKCcmn9gfdpump,late,fill_unavailable,state older than 30s,1794059166.0,,,,,,,,,,,1,1,0.4,18.671240091999998,0
+CONTROL,BPSdqnTckS9cmVAvT3C9ihMkMpMpmnDGaU1j77ppump,late,exit_uncertain,state older than 30s,1794059235.0,1794059236.0,10091364,curve,1794066434.3,2h,1794066435.0,,,,,48,12,0.6,78.16968850399995,17
+CONTROL,CXuheMngdLnt3Usc6otmDj7sdfxiwFYAR6bGQDKFpump,late,scored,,1794059250.0,1794059251.0,10093584,curve,1794059254.452,30pct_proceeds_trail,1794059255.152,10094062,curve,-0.06589491611564732,-0.3294745805782366,2,0,0.6,16.347174287,0
+CONTROL,4Efa5s9ffx7R1UAN6iNKCQpzJraZzkMYSrT5bm8wpump,late,scored,,1794059443.0,1794059444.0,10122337,curve,1794059650.607,30pct_proceeds_trail,1794059651.3070002,10152261,curve,-0.014039888598571774,-0.07019944299285887,83,37,0.6,257.53406635699986,16
+CONTROL,G7cs2WVh2TzZw1C2d7t7FLwXgTHXQ27owBB99aVxpump,late,fill_unavailable,state older than 30s,1794059467.0,,,,,,,,,,,0,0,0.2,54.49530562300001,2
+CONTROL,EYWi7ZLZpGvbisczxD1EfVgHywRCGsQbuEd4wsq7pump,late,scored,,1794059473.0,1794059474.0,10126604,curve,1794059561.025,30pct_proceeds_trail,1794059561.7250001,10139199,pumpswap,0.03567460698773231,0.17837303493866155,124,66,0.8,175.41925844399987,6
+CONTROL,FZiRELAfbBdUdxU1JDPCBT3F8viG8tNSbcwj8rEapump,late,fill_unavailable,state older than 30s,1794059475.0,,,,,,,,,,,0,0,0.4,46.433155244,1
+CONTROL,27NyqyrDpRDeVTEUWM1y8ngNkk46r6yap9tNFmWTpump,late,exit_uncertain,state older than 30s,1794059516.0,1794059517.0,10132625,curve,1794066715.3,2h,1794066716.0,,,,,3,2,0.4,136.69491611700005,9
+CONTROL,ALHauRTUbXJXWgCXE9VvQqZhfU9fgFvsRdazRt1cpump,late,fill_unavailable,state older than 30s,1794059523.0,,,,,,,,,,,0,0,0.2,43.977911846,4
+CONTROL,GtDXXHx9K2LJHKdqPezPDVUbPom9EfRArhRUBGWopump,late,fill_unavailable,state older than 30s,1794059539.0,,,,,,,,,,,0,0,0.2,121.38721033699989,5
+CONTROL,6g49kT3yaQjJh1KWSUM3LiT14jVqkq5xbhRhoUXMobLo,late,exit_uncertain,state older than 30s,1794059578.0,1794059579.0,10142037,curve,1794066777.3,2h,1794066778.0,,,,,2,1,0.4,280.50123842999983,16
+CONTROL,233RNrjJhDu3WHamtZtKMtBWMLK9ZtKLR2TVb4HMpump,late,fill_unavailable,state older than 30s,1794059593.0,,,,,,,,,,,0,0,0.2,17.39131619099999,4
+CONTROL,8igaRLSnzxAi86KS11HT2RXQ3qWqtSW4gwQmFZ8Fpump,late,exit_uncertain,capture gap during hold,1794059616.0,1794059617.0,10146861,curve,1794062008.153,30pct_proceeds_trail,1794062008.8530002,10477172,curve,,,2,2,0.8,22.349014871000005,0
+CONTROL,g6uKo5PCvwV5oaxnRHknmetSSPXuAHhiQbMFKB6pump,late,scored,,1794059628.0,1794059629.0,10149675,curve,1794059910.899,30pct_proceeds_trail,1794059911.599,10184598,curve,0.06156637136622106,0.3078318568311053,63,22,0.6,172.53818351999993,6
+CONTROL,H61Jhhy2ygRy7b5rNsia6HK3z8MZSzBmv6eMfsd9pump,late,scored,,1794059633.0,1794059634.0,10149968,curve,1794060215.09,30pct_proceeds_trail,1794060215.79,10228046,curve,-0.15157310127071866,-0.7578655063535933,5,2,1.0,32.327850474999984,1
+CONTROL,EN3Y368ErecTRzNBaJPdWDeAaQoC2xf33icvotX3pump,late,fill_unavailable,state older than 30s,1794059688.0,,,,,,,,,,,0,0,0.2,101.007493192,5
+CONTROL,9wdjVWGagi1fCKvZqC4ez6KSgGRQjwxkW2DY1vcspump,late,fill_unavailable,state older than 30s,1794059709.0,,,,,,,,,,,0,0,0.4,22.07556703400001,9
+CONTROL,8MTSDA6PsXGz6W6tuCz27t5tgCzZtPXfYrZ7Ahbupump,late,fill_unavailable,state older than 30s,1794059731.0,,,,,,,,,,,0,0,0.2,79.55718969300001,43
+CONTROL,5Wd1mZtBKWqH4hjUbzCWxVRFVGd7aQsFXN9NCKM5pump,late,fill_unavailable,state older than 30s,1794059754.0,,,,,,,,,,,0,0,0.2,24.781909619000004,7
+CONTROL,DRBchuWKoQjGvdEhgwKoFAKFL4YrwZHv22aw1Cq1pump,late,scored,,1794059821.0,1794059822.0,10173258,curve,1794059851.004,30pct_proceeds_trail,1794059851.704,10176801,curve,-0.04662991001903438,-0.2331495500951719,87,68,1.0,277.19971295399995,7
+CONTROL,2xt9EjxFc2UwUuDzByS7gHc6oHtEfiunXaHR8wtjpump,late,fill_unavailable,state older than 30s,1794059832.0,,,,,,,,,,,0,0,0.2,46.01390789799999,48
+CONTROL,2ycKkkbwKMve3mmwmRNQL5h8JUqpS1rQsopX9YSapump,late,fill_unavailable,state older than 30s,1794059859.0,,,,,,,,,,,0,0,0.2,36.30508288100001,7
+CONTROL,AmYEdUz8BSV3ygUnCYckFHZYjq7esYwrsABkF1depump,late,scored,,1794059904.0,1794059905.0,10183303,curve,1794060880.07,30pct_proceeds_trail,1794060880.77,10327591,pumpswap,0.1547586216539203,0.7737931082696015,19,10,1.0,193.2241243800001,80
+CONTROL,9rNo9Zpg5jrcLkSu1ZkvUiQWe8QvzWywxJDFt43pump,late,fill_unavailable,state older than 30s,1794060041.0,,,,,,,,,,,0,0,0.4,43.717571812,2
+CONTROL,GDBzkXFyZhEhEtGRs5gmoJ2PdDLS1Gth7TpYRTZppump,late,fill_unavailable,state older than 30s,1794060044.0,,,,,,,,,,,1,0,0.2,65.45599941999998,4
+CONTROL,EwMvScenJFJHDTxqj7b5tJ7taRA5MCCRLXYpJnmZpump,late,fill_unavailable,state older than 30s,1794060092.0,,,,,,,,,,,0,0,0.2,18.843027806999988,5
+CONTROL,6YZ2gMKhN2Du8yof48BHzgyqX3XEAP3BqMiJLcYwpump,late,scored,,1794060183.0,1794060184.0,10220770,curve,1794060654.608,30pct_proceeds_trail,1794060655.308,10284782,curve,-0.06066288078995846,-0.3033144039497923,1,1,0.6,24.765119489000003,0
+CONTROL,CJmnw6KDDi5XzyibGyHZNmb7imqSYnmrZQXKk4Cnpump,late,fill_unavailable,state older than 30s,1794060189.0,,,,,,,,,,,0,0,0.2,66.73272794299996,5
+CONTROL,AHmxU8NQS1BoCe2CvHpvQuc3ex6uzYYuzUqKebB4pump,late,exit_uncertain,state older than 30s,1794060212.0,1794060213.0,10226739,curve,1794067411.3,2h,1794067412.0,,,,,1,0,0.2,156.27051075699976,11
+CONTROL,ANCMbNQZBSH5JA98iQfwSB6yGAWC2NhNthSuF6uZpump,late,fill_unavailable,state older than 30s,1794060263.0,,,,,,,,,,,0,0,0.2,22.521977412000005,0
+CONTROL,HKV3XaShhMsErAbjH9aB2SaCT3MUjHkD1BXVmX7ipump,late,fill_unavailable,state older than 30s,1794060362.0,,,,,,,,,,,0,0,0.2,19.318508533000013,5
+CONTROL,4BfcmHfG7jo1rzk5LEJRjog1YrrgrDC1aPJW35Mupump,late,fill_unavailable,state older than 30s,1794060376.0,,,,,,,,,,,0,0,0.2,36.66555417699999,1
+CONTROL,BtvuvaBC6Gr9drx2AEonHJ8icn9diPLuxsb6ivgcpump,late,fill_unavailable,state older than 30s,1794060409.0,,,,,,,,,,,0,0,0.2,67.836912321,6
+CONTROL,BZKtnyQdhqTw19bjHhfnpg8vZ2E1g49K5w4wZcMJpump,late,fill_unavailable,state older than 30s,1794060418.0,,,,,,,,,,,0,0,0.2,58.04970293899995,45
+CONTROL,EeVWvBfFREhwaPuzkRXY3XMYcvT9BxvuTRy7DVFDZJUX,late,exit_uncertain,state older than 30s,1794060425.0,1794060426.0,10248362,curve,1794067624.3,2h,1794067625.0,,,,,0,0,0.2,35.294277120999986,2
+CONTROL,DMqePL7bbf1VcQAsMfTijouP45Sf69acZhCA9fc3pump,late,fill_unavailable,state older than 30s,1794060471.0,,,,,,,,,,,1,0,0.4,103.082607753,10
+CONTROL,8mM7fgeVFz6XPfiVoq1A2A8S7bCDxCiyJG67a9Y4pump,late,fill_unavailable,state older than 30s,1794060505.0,,,,,,,,,,,0,0,0.6,87.64596200700001,44
+CONTROL,EXh8QyuW9ZMyqfq89F75uSgenN6bUnYGgk31fkqxpump,late,fill_unavailable,state older than 30s,1794060510.0,,,,,,,,,,,0,0,0.2,112.56965734399998,5
+CONTROL,BqbtTs5rCM7RcgJtukMGpZGpPVs1qwo12WAjvRUXpump,late,exit_uncertain,state older than 30s,1794060521.0,1794060522.0,10263156,curve,1794067720.3,2h,1794067721.0,,,,,1,0,0.4,73.73631411699996,7
+CONTROL,HyKZfJwB19SZ3cQKKkmjnpnE5ZWBFDN91oDa88DSpump,late,exit_uncertain,state older than 30s,1794060643.0,1794060644.0,10282244,curve,1794067842.3,2h,1794067843.0,,,,,0,0,0.2,61.372599393,5
+CONTROL,51PMf9V8zwhqtjALNvHpgLUfrQMXDXwseyopkbphpump,late,fill_unavailable,state older than 30s,1794060702.0,,,,,,,,,,,3,0,0.4,42.87380986500001,3
+CONTROL,5M8jG2BFPrMGchEwpw9XhAXMbe41PQ5jaGwhyKDJ625,late,exit_uncertain,state older than 30s,1794060722.0,1794060723.0,10296452,curve,1794067921.3,2h,1794067922.0,,,,,1,1,0.2,76.5917874489999,4
+CONTROL,Hb3gz8H3mMPQqyWZdF4pxXnYGkLd6Fk4NkSg6C1Ypump,late,fill_unavailable,state older than 30s,1794060728.0,,,,,,,,,,,0,0,0.2,21.777754782999974,5
+CONTROL,tH8k9UDjoYgVeYJfhzbFC8Bj29jedpoKDVx78h4pump,late,scored,,1794060734.0,1794060735.0,10299694,curve,1794060895.337,30pct_proceeds_trail,1794060896.037,10330652,curve,0.06713663378033907,0.33568316890169536,86,41,0.4,138.9402302059999,7
+CONTROL,ATnaawuvSSJC9hURUVhmKWLpyk8uyvYaNjmK1UQQpump,late,scored,,1794060755.0,1794060756.0,10303885,curve,1794061088.995,30pct_proceeds_trail,1794061089.695,10366331,curve,-0.0621712034755226,-0.310856017377613,1,0,0.2,95.22485098500003,3
+CONTROL,rEP4nd8wWMMrtu55wuCeF5KnqQXBhbSY2NU7CWFbCiN,late,exit_uncertain,state older than 30s,1794060775.0,1794060776.0,10307504,curve,1794067974.3,2h,1794067975.0,,,,,0,0,0.2,32.190586904,1
+CONTROL,EC4EsKVTbgKuBBmBouQvFb3ueszMZZ5KkuMz2o4Bpump,late,fill_unavailable,state older than 30s,1794060825.0,,,,,,,,,,,0,0,0.2,27.136642847,1
+CONTROL,77thvhPc82v9TMrMvPux2Ts3hRuCeccXdbkbgyVKpump,late,fill_unavailable,state older than 30s,1794060859.0,,,,,,,,,,,0,0,0.2,80.31023659000003,2
+CONTROL,ATsaywu8RdvZCe8BDhxXjgQrLWA6ueffSFm4zv2Qpump,late,scored,,1794060900.0,1794060901.0,10330915,curve,1794060961.947,30pct_proceeds_trail,1794060962.647,10342253,curve,-0.08269981366707048,-0.4134990683353524,12,5,0.4,115.27374547899987,7
+CONTROL,Gg2dqnVuKFG8MwqMAbrjm2DLhoBHdevEtGjBXJsvpump,late,fill_unavailable,state older than 30s,1794060928.0,,,,,,,,,,,0,0,0.2,19.839627716,1
+CONTROL,7QhX3QPw6JCarH99yHqtBECHheqvv6swrVJy1aDXpump,late,exit_uncertain,state older than 30s,1794060948.0,1794060949.0,10338559,curve,1794068147.3,2h,1794068148.0,,,,,3,0,0.6,47.41708526400003,2
+CONTROL,5C36eRq9isuGxMtG1t32Wz2rJZjmUneddTJW9KUApump,late,fill_unavailable,state older than 30s,1794060950.0,,,,,,,,,,,0,0,0.2,37.39933044800001,2
+CONTROL,EojZ5VyZfQf473SKqM8fFgEi68b1ebrh7pkkzeZTpump,late,scored,,1794061021.0,1794061022.0,10353007,curve,1794061150.934,30pct_proceeds_trail,1794061151.634,10376545,curve,-0.00355518305745489,-0.01777591528727445,126,52,1.0,276.36771749899935,13
+CONTROL,DTaRYLdxKV1Qti1T4ZvSDMY8BvZrJbTCWh6VJbwjpump,late,fill_unavailable,state older than 30s,1794061033.0,,,,,,,,,,,0,0,0.2,36.831498753000005,3
+CONTROL,6LXRTgmAjQgfbbXjL9eVx1FLeCkGjBQygdQhs5mpump,late,fill_unavailable,state older than 30s,1794061050.0,,,,,,,,,,,0,0,0.2,175.95520649300013,4
+CONTROL,GVUds8Akfxk2cakQC1Ur9Xm6RYVg9LqwQBmokbavpump,late,fill_unavailable,state older than 30s,1794061097.0,,,,,,,,,,,0,0,0.2,32.59799344800002,9
+CONTROL,7s2rJAdn2XdnSpAmzA2CKcdjkK9GFoJtXzVv8Hk3pump,late,exit_uncertain,state older than 30s,1794061143.0,1794061144.0,10372435,curve,1794068342.3,2h,1794068343.0,,,,,3,2,0.4,117.55240760199989,9
+CONTROL,EWrf6hMqjT6CLNhQVPbuNxqDC8sZxC4HvYZWZbGHpump,late,fill_unavailable,state older than 30s,1794061264.0,,,,,,,,,,,0,0,0.4,15.950774044000017,4
+CONTROL,98z2AAiZxsKkAJz4Q19Nk4VWc1abBRLQA2ZLcd93pump,late,scored,,1794061279.0,1794061280.0,10402435,curve,1794061305.177,30pct_proceeds_trail,1794061305.877,10406836,curve,-0.05381281285319062,-0.2690640642659531,52,18,0.8,236.80352544000135,7
+CONTROL,76zQDwHhCtVRdTvAfceUHphWBpBdXxPjfVJQMJsFpump,late,fill_unavailable,state older than 30s,1794061353.0,,,,,,,,,,,0,0,0.2,15.623419911000022,7
+CONTROL,DjsHWbXkAWYBGQkxd1k3axXJacym3Fdjw5SuSh7SfEGH,late,fill_unavailable,state older than 30s,1794061405.0,,,,,,,,,,,0,0,0.2,43.184949756,0
+CONTROL,AU25VVyywWXGmbehPnTZK9haoBQLHXebVimazb6Npump,late,fill_unavailable,state older than 30s,1794061543.0,,,,,,,,,,,0,0,0.4,24.56355066200001,0
+CONTROL,5Ax3KPoEgxBhHZYaPtEHrNKwX75RruUWpAHKb7DMmAbU,late,exit_uncertain,capture gap during hold,1794061566.0,1794061567.0,10451646,curve,1794061846.112,30pct_proceeds_trail,1794061846.812,10460006,curve,,,112,53,0.8,199.13806319500014,12
+CONTROL,FrRBfNbTyxhQTqM8GWuHtuFMAnGAm2N2wLeHgo6qpump,late,fill_unavailable,state older than 30s,1794061598.0,,,,,,,,,,,0,0,0.2,19.729015178000015,5
+CONTROL,AFSYxQEUsbyNidLkNJYQ4DY5VkQErm5FZUS8MZVNpump,late,fill_unavailable,state older than 30s,1794061665.0,,,,,,,,,,,5,2,0.6,134.43984057199992,2
+CONTROL,DNzwP7oysSi4vaSX7YM2BqLk32cDSPVKm4prpgjKpump,late,fill_unavailable,state older than 30s,1794061709.0,,,,,,,,,,,0,0,0.2,82.87340198999995,5
+CONTROL,GrMftoUt92WYPufPKGNxgRMER47gqmS6mRurHQMvpump,late,fill_unavailable,state older than 30s,1794061758.0,,,,,,,,,,,0,0,0.2,215.9809357319999,10
+CONTROL,T6NVYtTgECTjBGeo5YNW1LwCFURNeuCRN9pQ3ESpump,late,fill_unavailable,state older than 30s,1794061838.0,,,,,,,,,,,0,0,0.4,49.25373414199998,1
+CONTROL,2mTmHS5TfvwEGoziQCyW96j1LH2HSPwNxVzeAFXWpump,late,fill_unavailable,state older than 30s,1794061846.0,,,,,,,,,,,0,0,0.4,41.45711425699999,1
+CONTROL,6B3woE3oLEHWdJdjAhfBSi2ZbEH5XhnkerXr9Liopump,late,exit_uncertain,state older than 30s,1794061887.0,1794061888.0,10463103,curve,1794069086.3,2h,1794069087.0,,,,,16,11,0.4,81.51768838900001,0
+CONTROL,8eV2FnxnT6RoCXwy88KRv1S8chpP3t6v87FWoF6cpump,late,fill_unavailable,state older than 30s,1794062170.0,,,,,,,,,,,0,0,0.4,312.8535120940001,18
+CONTROL,d6sDRvG1kPaEDRDBKuMRKRWmzptSQmX41KDhJX2pump,late,fill_unavailable,state older than 30s,1794062231.0,,,,,,,,,,,0,0,0.4,22.807367438000014,2
+CONTROL,5ds4pXPbsb52yGXL1nu5JFHUprJp1mMMnHcTGjiLpump,late,fill_unavailable,state older than 30s,1794062242.0,,,,,,,,,,,0,0,0.2,18.380768456000006,1
+CONTROL,Gzscxwd8dgAxoG53ar4Lc1fwSYyBxovQJzLZJEnFpump,late,fill_unavailable,state older than 30s,1794062279.0,,,,,,,,,,,0,0,0.2,67.03785978699993,6
+CONTROL,EM4SC5mxMHZ7mpuVN7F9Wg4yVKY31BCtytEMWuHepump,late,fill_unavailable,state older than 30s,1794062349.0,,,,,,,,,,,0,0,0.4,24.254477408999993,2
+CONTROL,3S1VMYBWqJ6BPXED26PP7hAxJ6zzksyStcSNTVDQpump,late,fill_unavailable,state older than 30s,1794062418.0,,,,,,,,,,,0,0,0.2,58.033945976999945,1
+CONTROL,94LTKizb2o4stE56NT5rr7k5B1NfuGWUqkAGj1Wqpump,late,exit_uncertain,state older than 30s,1794062446.0,1794062447.0,10531523,curve,1794069645.3,2h,1794069646.0,,,,,0,0,0.4,72.72061257200001,5
+CONTROL,Eutjw4vj4WCqadU6bmu49Rh7qkKCTqCaLjd2qhmxpump,late,fill_unavailable,state older than 30s,1794062468.0,,,,,,,,,,,0,0,0.2,16.060303199000007,5
+CONTROL,5GwxUSinYrfZ2LJu1FtRo7PNaF3zCs6PniCK7g5Mpump,late,fill_unavailable,state older than 30s,1794062487.0,,,,,,,,,,,0,0,0.2,71.87761436,1
+CONTROL,BbSEjLgtFRwbgwkT7CpjrDqqG2aHAuuoeHznqUoJ8DHU,late,exit_uncertain,state older than 30s,1794062488.0,1794062489.0,10539188,curve,1794069687.3,2h,1794069688.0,,,,,0,0,0.2,71.4868163939999,6
+CONTROL,Gsy2Z3BCjVCTiaDBNFg8wURZt1dvq21WA1PcTwWepump,late,fill_unavailable,state older than 30s,1794062511.0,,,,,,,,,,,0,0,0.2,16.753532626999995,0
+CONTROL,DxFewkjbUYvhc6xXknwhBqc1q8fz6kgHim3qSKHYpump,late,fill_unavailable,state older than 30s,1794062517.0,,,,,,,,,,,0,0,0.4,103.25261750300007,4
+CONTROL,ERLi8EsXUpbyDi9qeEfHQaK32Nw6rQ21vgJTPyQ8pump,late,scored,,1794062517.0,1794062518.0,10543479,curve,1794062519.88,30pct_proceeds_trail,1794062520.5800002,10543840,curve,-0.17147096148552535,-0.8573548074276267,22,1,0.4,72.42279721799996,6
+CONTROL,E7BKCbk5cfBsQ5b87z9XRjUyJ5LrjChwb39BSJrRnidG,late,fill_unavailable,state older than 30s,1794062541.0,,,,,,,,,,,0,0,0.2,58.92955964499997,4

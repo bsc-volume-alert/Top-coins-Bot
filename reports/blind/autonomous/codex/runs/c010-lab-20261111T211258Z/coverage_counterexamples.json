@@ -1,0 +1,91 @@
+{
+  "synthetic": true,
+  "cases": [
+    {
+      "name": "missed_confirming_trade",
+      "full": [
+        [
+          1,
+          2.1
+        ],
+        [
+          29,
+          2.1
+        ],
+        [
+          31,
+          2.1
+        ],
+        [
+          36,
+          1.9
+        ]
+      ],
+      "gap": [
+        30,
+        35
+      ],
+      "observed": [
+        [
+          1,
+          2.1
+        ],
+        [
+          29,
+          2.1
+        ],
+        [
+          36,
+          1.9
+        ]
+      ],
+      "full_label_event": true,
+      "observed_label_event": false,
+      "gap_duration": 5
+    },
+    {
+      "name": "missed_intervening_dip",
+      "full": [
+        [
+          1,
+          2.1
+        ],
+        [
+          29,
+          2.1
+        ],
+        [
+          31,
+          1.9
+        ],
+        [
+          36,
+          2.1
+        ]
+      ],
+      "gap": [
+        30,
+        35
+      ],
+      "observed": [
+        [
+          1,
+          2.1
+        ],
+        [
+          29,
+          2.1
+        ],
+        [
+          36,
+          2.1
+        ]
+      ],
+      "full_label_event": false,
+      "observed_label_event": true,
+      "gap_duration": 5
+    }
+  ],
+  "conclusion": "tol30 is an operational assumption/sensitivity, not a proof that labels cannot be wrong; even strict source positives are observed events, not guaranteed continuous paths",
+  "market_prevalence_measured": false
+}

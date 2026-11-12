@@ -1,0 +1,45 @@
+{
+  "commit": "7a9cd6a98680b660d15b952079b7f367d3ad180f",
+  "files": [
+    {
+      "path": "build_features.py",
+      "sha256": "c62bd17c0eb2e20e6d5109c95ca90ec7cb3788673edc07174c8ef160224d35b9",
+      "ok": true
+    },
+    {
+      "path": "analyze.py",
+      "sha256": "81617e9087d606764a90add0fd1017f44736957e6083d72d2a6fa31dae622c26",
+      "ok": true
+    },
+    {
+      "path": "build_summary.json",
+      "sha256": "f38107f6a374f060716e51a56bbd0294a60f0b2cb324a2c168325e04b3f750b4",
+      "ok": true
+    },
+    {
+      "path": "results.json",
+      "sha256": "6fb6e7d2c7cf1db16056f5a12d692d668601915e5326648a06cc9a0f78c3fa65",
+      "ok": true
+    },
+    {
+      "path": "features_labels.csv.gz",
+      "sha256": "0744d6589e169ea74e24cb36f6e0dcd6b7b10283278bd5b628d30a8f95685f05",
+      "ok": true
+    },
+    {
+      "path": "matched/matched_sustained2x_300s.csv.gz",
+      "sha256": "6cb609380e90ffbbb2081e845e24a1bfd5d8df9c90c2f904e2f8faf5ce0bcc88",
+      "ok": true
+    },
+    {
+      "path": "PROTOCOL.md",
+      "sha256": "2e1bcbb06efe48669737a51a3b5b2baea08ebb33568fe07eef7a25d9c41cff4b",
+      "ok": true
+    },
+    {
+      "path": "README.md",
+      "sha256": "c23c20b97484ebd3a933d26cac16016650498d01d3c78d7e0a78ecce0bea23b6",
+      "ok": true
+    }
+  ]
+}

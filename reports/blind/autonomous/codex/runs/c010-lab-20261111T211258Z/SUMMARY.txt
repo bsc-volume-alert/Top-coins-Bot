@@ -1,0 +1,5 @@
+Rebuilt Claude F006 from raw approved data; all10,914 rows and four strongest matched AUCs reproduce.
+Buyer-activity AUC is0.792; a post-hoc filled-subset diagnostic gives0.712, which is not trading accuracy.
+The registered material-buyer rule lost4.645368SOL on195 resolved trades;96 exits and5 fills remain unknown.
+Synthetic examples show short gaps can hide confirmation trades or dips, so tol30 is an assumption rather than certified ground truth.
+Next: C012 label harmonisation and Claude review, with the new evidence added to research memory.

@@ -1,0 +1,127 @@
+pass1 start 21:17:16
+pass1 500 21:17:19
+pass1 1000 21:17:21
+pass1 1500 21:17:32
+pass1 2000 21:17:39
+pass1 2500 21:17:55
+pass1 3000 21:18:07
+pass1 3500 21:18:18
+pass1 done {'never_retained': 301, 'eligible': 3638, 'outage_excluded': 974} {'mints_streamed': 4913, 'duplicates_removed': 1568880, 'non_contiguous': 0}
+wallet history built 220336 wallets 21:18:20
+{
+ "checks": {
+  "evaluate.py": "f5686511fcae09c1c191ca5ffee167c6ad1421cddbb1be8b1c4f0f3eb4cc8a86",
+  "trades_part_001.csv.gz": "9b30ebe2871d14a698eeb5ea6d6f53e6ee7e4deeb737dbbb686eb8a922e7c5de",
+  "trades_part_002.csv.gz": "cf38217809345109d2c5682a659a6212dcf40a0e841c5fcdc5a8434ab56f4dd4",
+  "trades_part_003.csv.gz": "0566705d7b65fb54675371e201122f47eddf49af3d5025874190de5db95ed86d",
+  "trades_part_004.csv.gz": "a01aca9e32cdb6d1fab26d7da970010550610e2ea86cc8a80add582fd572fe73",
+  "trades_part_005.csv.gz": "76e7ee678fa1ac822573dfc1b2e0a57537f73810d06eac7dd39b0db6f5004022",
+  "trades_part_006.csv.gz": "29780dc006c3aaebd3c0d05d9cc0a3021bbf48b3f6db6deb9a87ef879f8dc24a",
+  "trades_part_007.csv.gz": "c487257b6c3834969fd460a46be13e401a37511aa09e1fe415b52666015e4b99",
+  "trades_part_008.csv.gz": "61e10d0ffaddaec8e8162bdf19da6de930f94675da65686ba7f76462dff5ebb6",
+  "trades_part_009.csv.gz": "f69047629fa04d538a26f239edcf50cae08104f3db5df5f3533072bff349e9e0",
+  "trades_part_010.csv.gz": "ec9fe6372a3a59ef08e70848b7240817f0a422f89d563340034d9afa07725f29",
+  "trades_part_011.csv.gz": "972f973a7654ed76a45fff82e3c1fafea77568fbeb28eecf6d54c545910ee696",
+  "trades_part_012.csv.gz": "6d18994bbbde4fbda8bcd213087356d82e0475138cf3deae16ecec624f55a64f",
+  "coverage_per_mint.csv.gz": "f28adc7549e8dd053cf85f071c28a8d73b56766621ec109886fdca98d74b17f1",
+  "feed_gaps_all.csv.gz": "d1163fd4b2813560920330a2708a5d3397d4d1f11dafcaa85db49f174e4575f8",
+  "tokens_window.csv.gz": "843d24ac1484b0b98a8fd2e5afe64d408665a05cafe6cd9c1394e23432d227ca",
+  "MANIFEST.md": "b3142c4932f81193949a7f655ebbd343f5198ecfffafe47d51870b8a9490db9b",
+  "sol_usd.csv.gz": "93cb758f122d26762be56f78e4677760bd87fc082d8df00124a4df16fbaa615d"
+ },
+ "audit": {
+  "never_retained": 301,
+  "eligible": 3638,
+  "outage_excluded": 974
+ },
+ "stream_stats": {
+  "mints_streamed": 4913,
+  "duplicates_removed": 1568880,
+  "non_contiguous": 0
+ },
+ "launches_in_window": 62789,
+ "label_counts": {
+  "300|100k:already": 51,
+  "300|100k:nonrunner": 1261,
+  "300|100k:runner": 36,
+  "300|100k:unknown": 2062,
+  "300|100k_tol30:already": 51,
+  "300|100k_tol30:nonrunner": 3099,
+  "300|100k_tol30:runner": 36,
+  "300|100k_tol30:unknown": 224,
+  "300|2x:nonrunner": 1249,
+  "300|2x:runner": 117,
+  "300|2x:unknown": 2044,
+  "300|2x_tol30:nonrunner": 3052,
+  "300|2x_tol30:runner": 117,
+  "300|2x_tol30:unknown": 241,
+  "300|not_retained_by_age": 2,
+  "300|unknown_no_state": 226,
+  "900|100k:already": 53,
+  "900|100k:nonrunner": 1106,
+  "900|100k:runner": 22,
+  "900|100k:unknown": 1777,
+  "900|100k_tol30:already": 53,
+  "900|100k_tol30:nonrunner": 2673,
+  "900|100k_tol30:runner": 22,
+  "900|100k_tol30:unknown": 210,
+  "900|2x:nonrunner": 1107,
+  "900|2x:runner": 56,
+  "900|2x:unknown": 1795,
+  "900|2x_tol30:nonrunner": 2659,
+  "900|2x_tol30:runner": 56,
+  "900|2x_tol30:unknown": 243,
+  "900|unknown_no_state": 680,
+  "1800|100k:already": 42,
+  "1800|100k:nonrunner": 902,
+  "1800|100k:runner": 13,
+  "1800|100k:unknown": 1494,
+  "1800|100k_tol30:already": 42,
+  "1800|100k_tol30:nonrunner": 2215,
+  "1800|100k_tol30:runner": 13,
+  "1800|100k_tol30:unknown": 181,
+  "1800|2x:nonrunner": 906,
+  "1800|2x:runner": 24,
+  "1800|2x:unknown": 1521,
+  "1800|2x_tol30:nonrunner": 2218,
+  "1800|2x_tol30:runner": 24,
+  "1800|2x_tol30:unknown": 209,
+  "1800|unknown_no_state": 1187
+ },
+ "ages": [
+  300,
+  900,
+  1800
+ ],
+ "horizon_s": 3600,
+ "split": 1794016200,
+ "features": [
+  "n_buyers",
+  "n_buys",
+  "n_sells",
+  "buy_sol_total",
+  "median_buy_sol",
+  "p90_buy_sol",
+  "share_buy_sol_ge_1sol",
+  "first_time_buyer_share",
+  "repeat_buyer_share",
+  "net_inflow_last_60s",
+  "net_inflow_last_300s",
+  "inflow_persistence",
+  "buyers_last_60s",
+  "early_buyer_sold_share",
+  "creator_bought_sol",
+  "creator_sold_share",
+  "top10_holder_share",
+  "hhi",
+  "n_net_holders",
+  "same_creator_repeat_share",
+  "tape_recurring_share",
+  "sells_to_buys_ratio"
+ ],
+ "sol_usd_rows": 770,
+ "sol_usd_range": [
+  1793960680.0,
+  1794050717.0
+ ]
+}

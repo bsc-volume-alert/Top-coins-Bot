@@ -1,0 +1,90 @@
+{
+  "claude_commit": "7a9cd6a98680b660d15b952079b7f367d3ad180f",
+  "rows_compared": 10914,
+  "fields_compared": 523872,
+  "numeric_or_category_mismatches": [],
+  "build_summary_matches": true,
+  "matched_mint_order_matches": true,
+  "matched_runners": 94,
+  "matched_nonrunners": 460,
+  "features": {
+    "buyers_last_60s": {
+      "auc": 0.7921831637372803,
+      "bootstrap95": [
+        0.7434898242368178,
+        0.8352682701202591
+      ],
+      "median_runner": 45.0,
+      "median_nonrunner": 1.0,
+      "n_runner": 94,
+      "n_nonrunner": 460,
+      "mw_p_two_sided": 2.0655368064174608e-20
+    },
+    "inflow_persistence": {
+      "auc": 0.7807123034227567,
+      "bootstrap95": [
+        0.7366558741905643,
+        0.8206290471785384
+      ],
+      "median_runner": 0.8,
+      "median_nonrunner": 0.4,
+      "n_runner": 94,
+      "n_nonrunner": 460,
+      "mw_p_two_sided": 1.0813589097826456e-18
+    },
+    "n_net_holders": {
+      "auc": 0.7631244218316374,
+      "bootstrap95": [
+        0.7120721554116559,
+        0.8104070305272896
+      ],
+      "median_runner": 107.0,
+      "median_nonrunner": 21.0,
+      "n_runner": 94,
+      "n_nonrunner": 460,
+      "mw_p_two_sided": 8.498458882752765e-16
+    },
+    "creator_sold_share": {
+      "auc": 0.3186960690316395,
+      "bootstrap95": [
+        0.2513902205177373,
+        0.3838686481303931
+      ],
+      "median_runner": 8.861799428823604e-05,
+      "median_nonrunner": 1.0,
+      "n_runner": 70,
+      "n_nonrunner": 298,
+      "mw_p_two_sided": 1.5892006137354124e-07
+    }
+  },
+  "limits": [
+    "Reproduction on the same exploratory data, not independent statistical confirmation",
+    "95% bootstrap CI is descriptive; source Bonferroni flag uses Mann-Whitney p, not adjusted bootstrap endpoints",
+    "Source labels and matching assumptions remain subject to audit"
+  ],
+  "fixed_matched_subset_with_C009_owner_scenario_fill": {
+    "note": "Feasibility-stratum diagnostic, not an entry feature or a rematched validation; C009 requirements differ from F006",
+    "features": {
+      "buyers_last_60s": {
+        "n_runner": 88,
+        "n_nonrunner": 268,
+        "auc": 0.7115629240162822
+      },
+      "inflow_persistence": {
+        "n_runner": 88,
+        "n_nonrunner": 268,
+        "auc": 0.6872879918588873
+      },
+      "n_net_holders": {
+        "n_runner": 88,
+        "n_nonrunner": 268,
+        "auc": 0.6955987109905021
+      },
+      "creator_sold_share": {
+        "n_runner": 68,
+        "n_nonrunner": 167,
+        "auc": 0.35311729482212045
+      }
+    }
+  }
+}

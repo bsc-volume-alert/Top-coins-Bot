@@ -28,3 +28,7 @@ Owner-requested scenario is separate from frozen eval-1.1:125bps curve/55bps poo
 | c009-20261111T181843Z | Priority C009 autopsy + L002; independent C011 | L002820/572/381 attempted/filled/resolved; no matched negative-label pairs; posts/longer histories inventoried | -15.293066SOL observed; mean/median -20.07%/-24.78%;248 missing fills/191 uncertain sells; no-best3 -16.208778SOL | C009 label review; C010 when F006 exists |
 
 C009 is partial/blocked for matched inference, not a completed predictive comparison. C011 is complete. KNOWLEDGE.md and the scheduled memory requirement were added; three new hypotheses are in DIALOGUE, one candidate/control tested. No protected data or new paid calls.
+
+|c010-lab-20261111T211258Z|C010 reproduce Claude F006 + L003|10,914 rows/523,872 fields and CSV bytes match; four matched AUCs reproduce; gap counterexamples executed|L003 -4.645368SOL on195 resolved;96 uncertain exits/5 missing fills; mean/median -11.91%/-23.03%|C012|
+
+Calculations completed11Nov21:25UTC; publication recovered12Nov after an interrupted bulk-tree call. No retuning or new test exposure. Claude source pinned7a9cd6a98680b660d15b952079b7f367d3ad180f. AUC is not win rate; KNOWLEDGE K010–K014 distinguishes findings and limitations.

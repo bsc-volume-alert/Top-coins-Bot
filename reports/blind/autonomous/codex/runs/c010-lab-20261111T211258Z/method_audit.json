@@ -1,0 +1,37 @@
+{
+  "source_commit": "7a9cd6a98680b660d15b952079b7f367d3ad180f",
+  "uncompressed_feature_bytes_identical": true,
+  "source_feature_uncompressed_sha256": "9b3df8e27e912408f02b7b810bf12dbcaf6677dcb8287f63562ee4e5b19864dd",
+  "rebuilt_feature_uncompressed_sha256": "9b3df8e27e912408f02b7b810bf12dbcaf6677dcb8287f63562ee4e5b19864dd",
+  "future_state_quality_counts": {
+    "300": {
+      "status_ok": 3410,
+      "strict_nonrunners": 1249,
+      "nonrunners_without_valid_future_rows": 459,
+      "nonrunners_with_some_invalid_future_rows": 2,
+      "runners_with_some_invalid_future_rows": 8
+    },
+    "900": {
+      "status_ok": 2958,
+      "strict_nonrunners": 1107,
+      "nonrunners_without_valid_future_rows": 700,
+      "nonrunners_with_some_invalid_future_rows": 0,
+      "runners_with_some_invalid_future_rows": 4
+    },
+    "1800": {
+      "status_ok": 2451,
+      "strict_nonrunners": 906,
+      "nonrunners_without_valid_future_rows": 668,
+      "nonrunners_with_some_invalid_future_rows": 0,
+      "runners_with_some_invalid_future_rows": 0
+    }
+  },
+  "notes": [
+    "Counts do not establish actual mislabels; quiet capture and invalid states differ",
+    "Source positive-label loop skips invalid states and assigns observed positives before checking gap coverage",
+    "Source monetary features include rows with unconfirmed/non-wSOL price evidence; do not equate raw sol fields across assets without validation",
+    "Recent-window monetary features in F006 use event time within receipt-known rows; L003 explicitly uses receipt-time windows",
+    "Feasibility-stratum AUC diagnostic added after the primary reproduction; exploratory, not preregistered validation",
+    "Source tests132 primary feature-age-outcome cells but reports528 including matched/full and tol variants; flags are not family-wide confirmatory evidence"
+  ]
+}
