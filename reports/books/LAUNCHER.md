@@ -424,3 +424,6 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 
 ## 11 Nov 13:50 UK — SW5 / G1 / RB paper books prepared (launcher 0.10.1, scope 0.13.1) — see SW5_G1_RB.md
 - One combined diff per Codex's 13:41 recommendation: wallet-led 5-min hold (frozen 200-wallet list), post-graduation scalp (TP 1.45 / fixed −50% stop / 90–120 s stagnation, continues otherwise), one-wave recovery with 15 new buyers (30% trail). Per-book exit policies added to chainfill beside the trail override. R3C, references, K books, page clean-up unchanged. Pushed only on the owner's go.
+
+## 12 Nov 04:45 UK — SW5 / G1 / RB activated (launcher 0.10.4, scope 0.14.2) — see SW5_G1_RB.md
+- Owner's go 04:38 UK. The three paper books from the 11 Nov review (Codex code review 17:16 fixes included: fill clock, startup history, 0.02 landing read, RB silent expiry, R3C curve-only re-checked at landing). Per-book exit policies in chainfill (trail / tp / stop / hold / stagnation). Unit test launcher/test/policy_exits.test.mjs 15/15 on the merged tree. M2, C2, R3C, K books unchanged; live off.
