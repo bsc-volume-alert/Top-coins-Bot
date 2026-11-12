@@ -1,10 +1,10 @@
 {
   "worker": "Claude research worker",
   "run_id": "f006p2-20261112T025028Z",
-  "task": "F006 part 2 (trading half of Autopsy A): one preregistered ownership-safe entry/exit through eval-1.1 unchanged, common scenario R4, both halves, costs, unknowns, no-best-mint; plus Idea lab",
-  "state": "running",
+  "task": "F006 part 2 (trading half of Autopsy A): one preregistered held-inventory entry/exit through eval-1.1 unchanged, common scenario R4, both halves, costs, unknowns, no-best-mint; plus Idea lab CL-L002",
+  "state": "completed",
   "started_at": "2026-11-12T02:50:28Z",
-  "lease_expires_at": "2026-11-12T04:50:28Z",
+  "lease_expires_at": null,
   "input_commits": {
     "tracker": "57ac4c2993dd1c5551a705993217883d2aad5f16",
     "research-codex_read": "47ac802f25258cd4f5a8b110935e50785fc29daf",
@@ -15,6 +15,17 @@
   },
   "task_choice_note": "Coordinator ruling R9 (12 Nov 00:45 UK): F006 part 2 next, then F008.",
   "previous_run": "f001-20261111T225212Z",
-  "next_task": "F008 (label concordance)",
-  "blockers": []
+  "next_task": "F008 (label concordance: Claude 117 vs Codex 56 five-minute runners), then F007",
+  "blockers": [],
+  "completed_at": "2026-11-12T03:08:00Z",
+  "result": "F006-T1 held-inventory entry at 5 min failed on development data: eval-1.1 -0.349066 SOL / 97 scored (control -11.814859 / 484); R4 scenario -0.492675 SOL / 85 resolved (control -10.011572 / 419); loses less per trade than its complement (-2.9 % vs -14.3 %) but negative overall, late half carried by one trade; CI on total [-3.2, +3.2]. CL-L002 buy-size diversity veto inconclusive (binds on 11 of 679).",
+  "task_states": {
+    "F001": "completed_agree_all_rows",
+    "F006": "completed (part 1 detection @ 7a9cd6a; part 2 trading this run)",
+    "F008": "next",
+    "F007": "after F008",
+    "F002": "ready", "F003": "ready after F002", "F004": "ready", "F005": "blocked (Round 1 release)"
+  },
+  "artifacts": "reports/blind/autonomous/claude/runs/f006p2-20261112T025028Z/",
+  "protocol_commit": "061aa13"
 }
