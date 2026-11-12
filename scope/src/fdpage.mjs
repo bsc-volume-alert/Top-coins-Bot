@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 const LDB = process.env.LAUNCH_DB || "/root/launcher/launcher.db", STATUS = (process.env.LAUNCH_OUT || "/root/tracker/data/launcher_out") + "/status.json";
 let ldb = null;
 const open = () => { if (!ldb) { ldb = new Database(LDB, { readonly: true, fileMustExist: true }); ldb.pragma("busy_timeout = 2000"); } return ldb; };
-const BOOKS = ["M2", "R3C", "C2", "SW5", "G1", "RB"]; // 0.14.3 (12 Nov 04:45 UK, owner: books page not loading): the 22 books stopped on 11 Nov dropped from the feed — /api/fd was 5.5 MB, too heavy for the iPad on mobile data; their history stays in the database and fd_positions.csv; // 0.12.4: the U books (launcher 0.9.6) // 0.10.8: FDH / FDHF (launcher 0.8.9)
+const BOOKS = ["M2", "R3C", "C2", "SW5", "G1", "G1B", "RB", "RB2"]; // 0.14.3 (12 Nov 04:45 UK, owner: books page not loading): the 22 books stopped on 11 Nov dropped from the feed — /api/fd was 5.5 MB, too heavy for the iPad on mobile data; their history stays in the database and fd_positions.csv; // 0.12.4: the U books (launcher 0.9.6) // 0.10.8: FDH / FDHF (launcher 0.8.9)
 const EXITS = ["r_tp2sl50", "r_tp15sl30", "r_half2", "r_trail25", "r_trail40", "r_venue", "r_trail60", "r_tw", "r_out10", "r_out15", "r_out20", "r_hold60"]; // 0.10.10: r_venue
 
 export function fdApi(days = 7) {
@@ -15,7 +15,7 @@ export function fdApi(days = 7) {
   const d = open(), since = Math.floor(Date.now() / 1000) - days * 86400;
   const trades = d.prepare(`SELECT id, strat, mint, name, symbol, entry_ts, entry_price, entry_mc, age_min, holders, exchange, curve, done, err, x5, x15, x30, x60, x120, peak120, peak_min, low_before_peak,
       x_tp2sl50, x_tp15sl30, x_trail40, x_half2, x_out10, x_out15, x_out20, r_tp2sl50, r_tp15sl30, r_trail40, r_half2, r_out10, r_out15, r_out20, r_hold60, r_hold120, r_trail25, r_trail60, r_tw, m_trail40, x_venue, r_venue, m_venue, mk_ts, mk_x, mk_hi, mk_sold_x, mk_sold_ts, mk_r, mk_pct, q_gap, q_exit_x, q_exit_gap, q_exit_src, q_exit_delay, q_exit_err, q_live_x, q_live_hi, q_live_n, row
-    FROM vol_paper WHERE strat IN ('M2','R3C','C2','SW5','G1','RB','K30-40T20','K30-40T25','K30-50T25') AND entry_ts>=? ORDER BY entry_ts DESC LIMIT 2000`).all(since);
+    FROM vol_paper WHERE strat IN ('M2','R3C','C2','SW5','G1','G1B','RB','RB2','K30-40T20','K30-40T25','K30-50T25') AND entry_ts>=? ORDER BY entry_ts DESC LIMIT 2000`).all(since);
   let liveBy = new Map(); try { for (const l of d.prepare("SELECT * FROM live_trades WHERE entry_ts>=?").all(since)) liveBy.set(l.vol_id, l); } catch {} // 0.10.11
   let simBy = new Map(); try { for (const c of d.prepare("SELECT * FROM chain_fill WHERE entry_ts>=?").all(since)) simBy.set(c.vol_id, c); } catch {} // 0.11.0: simulated executable fills (launcher 0.9.0)
   let rules = {}; try { for (const r of d.prepare("SELECT k, since_ts, ver FROM fd_rules").all()) rules[r.k] = r; } catch {} // 0.10.8: when each rule was loaded (launcher 0.8.9)

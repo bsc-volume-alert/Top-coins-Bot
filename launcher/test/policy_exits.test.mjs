@@ -31,6 +31,15 @@ p = pos("G1", 130); r = await run(p, [1.0, 1.0]); check("G1 flat at 130 s (windo
 p = pos("RB", 10); r = await run(p, [1.0, 2.0, 1.39, 1.39]); check("RB 30% trail from the high (2.0 -> 1.39)", r.s_exit_reason === "trail" && r.done === 1, r);
 p = pos("R3C", 10); setTrail(p.id, 0.30); r = await run(p, [1.0, 2.0, 1.45, 1.45]); check("R3C 27.5% off the high does not exit (trail 30%)", r.done === 0, r);
 p = pos("BL", 10); r = await run(p, [1.0, 2.0, 1.0, 1.0]); check("BL default trail exits", r.s_exit_reason === "trail" && r.done === 1, r);
+
+// 5. G1B: one-shot check at the first observation >= 90 s after the fill, per size
+p = pos("G1B", 95); r = await run(p, [0.80, 0.80]); check("G1B first observation at 95 s, 0.80x (down) -> sells (check90)", r.s_exit_reason === "check90" && r.done === 1 && r.i02_exit_reason === "check90" && r.i02_done === 1, r);
+p = pos("G1B", 95); r = await run(p, [1.0, 1.0]); check("G1B flat at 95 s -> sells (check90)", r.s_exit_reason === "check90" && r.done === 1, r);
+p = pos("G1B", 95); r = await run(p, [1.3, 1.0, 1.0]); check("G1B 1.3x at the first observation continues; later 1.0x does NOT re-trigger the check", r.done === 0 && r.i02_done === 0, r);
+p = pos("G1B", 95); r = await run(p, [1.3, 1.46, 1.46]); check("G1B above the line keeps the take-profit", r.s_exit_reason === "tp" && r.done === 1, r);
+p = pos("G1B", 95); r = await run(p, [1.3, 0.49, 0.49]); check("G1B above the line keeps the fixed stop", r.s_exit_reason === "stop" && r.done === 1, r);
+p = pos("G1B", 80); r = await run(p, [0.9]); check("G1B at 80 s: no check yet", r.done === 0, r);
+p = pos("G1", 95); r = await run(p, [0.80, 0.80]); check("G1 (unchanged) at 0.80x at 95 s continues", r.done === 0, r);
 // 4. restart: policies restored from vol_paper by initChainFill
-TRAIL_OVR.clear(); cf.POLICY_OVR.clear(); initChainFill(db); p = { id: 1, mint: "M1" }; check("restart restores SW5 policy (trail 1, hold 300)", cf.POLICY_OVR.get(1)?.hold === 300 && TRAIL_OVR.get(1) === 1, { pol: cf.POLICY_OVR.get(1), trail: TRAIL_OVR.get(1) });
+TRAIL_OVR.clear(); cf.POLICY_OVR.clear(); initChainFill(db); p = { id: 1, mint: "M1" }; check("restart restores G1B policy (once check)", cf.POLICY_OVR.get(db.prepare("SELECT id FROM vol_paper WHERE strat='G1B' LIMIT 1").get().id)?.stag?.once === true, {}); check("restart restores SW5 policy (trail 1, hold 300)", cf.POLICY_OVR.get(1)?.hold === 300 && TRAIL_OVR.get(1) === 1, { pol: cf.POLICY_OVR.get(1), trail: TRAIL_OVR.get(1) });
 console.log(out.join("\n")); process.exit(out.some((l) => l.startsWith("FAIL")) ? 1 : 0);

@@ -43,7 +43,12 @@ function onRows(rows, readTs) {
       db.prepare("INSERT OR IGNORE INTO vol_paper (strat, mint, entry_ts, entry_price, entry_mc, created_ts, age_min, row) VALUES (?,?,?,?,?,?,?,?)")
         .run(BOOK, r.mint, readTs, usdPx, usdPx ? +(usdPx * 1e9).toFixed(0) : null, s.c, +((readTs - s.c) / 60).toFixed(2), JSON.stringify({ g1: { ver: G1_VER, trig_ts: r.ts, read_ts: readTs, first_pool_px: px, last_curve_px: s.lastCurvePx, pool_gap: gap, sol_usd: su } }));
       const id = db.prepare("SELECT id FROM vol_paper WHERE strat=? AND mint=?").get(BOOK, r.mint)?.id;
-      if (id) { setPolicy(id, BOOK_POLICY[BOOK]); g1Stat.entries++; chainEntry(r.mint, [id], usdPx, su, BOOK).catch(() => {}); }
+      // 0.10.5: G1B takes the same decision and the same fill read (one chainEntry, two ids); its chain_fill rows are relabelled once written
+      db.prepare("INSERT OR IGNORE INTO vol_paper (strat, mint, entry_ts, entry_price, entry_mc, created_ts, age_min, row) VALUES (?,?,?,?,?,?,?,?)")
+        .run("G1B", r.mint, readTs, usdPx, usdPx ? +(usdPx * 1e9).toFixed(0) : null, s.c, +((readTs - s.c) / 60).toFixed(2), JSON.stringify({ g1: { ver: G1_VER, variant: "G1B", trig_ts: r.ts, read_ts: readTs, first_pool_px: px, last_curve_px: s.lastCurvePx, pool_gap: gap, sol_usd: su } }));
+      const idB = db.prepare("SELECT id FROM vol_paper WHERE strat='G1B' AND mint=?").get(r.mint)?.id;
+      if (id) { setPolicy(id, BOOK_POLICY[BOOK]); if (idB) setPolicy(idB, BOOK_POLICY.G1B); g1Stat.entries++;
+        chainEntry(r.mint, idB ? [id, idB] : [id], usdPx, su, BOOK).then(() => { if (idB) db.prepare("UPDATE chain_fill SET strat='G1B' WHERE vol_id=?").run(idB); }).catch(() => {}); }
     } catch (e) { g1Stat.errors++; g1Stat.lastErr = `${r.mint.slice(0, 6)}: ${e.message}`.slice(0, 120); }
   }
 }

@@ -60,11 +60,18 @@ export const TRAIL_OVR = new Map(); export const K_TRAIL = { "K30-50T25": 0.25, 
 export function setTrail(id, pct) { TRAIL_OVR.set(id, pct); }
 // 0.10.1: per-book exit policies beside the trail (paper books SW5 / G1 / RB, owner's go 11 Nov). trail 1 = no trail. hold = sell at entry + hold s.
 // tp = sell at x >= tp; sl = sell at x <= sl (a fixed stop on the entry, not a trail); stag = sell if x is inside [lo, hi] on any reading between entry + at and entry + at + win s.
-export const POLICY_OVR = new Map(); export const BOOK_POLICY = { SW5: { trail: 1, hold: 300 }, G1: { trail: 1, tp: 1.45, sl: 0.5, stag: { at: 90, lo: 0.85, hi: 1.15, win: 30 } }, RB: { trail: 0.30 } };
+export const POLICY_OVR = new Map(); export const BOOK_POLICY = { SW5: { trail: 1, hold: 300 }, G1: { trail: 1, tp: 1.45, sl: 0.5, stag: { at: 90, lo: 0.85, hi: 1.15, win: 30 } }, RB: { trail: 0.30 },
+  // 0.10.5 (owner + Codex go 12 Nov 17:07): G1B — same entries and fills as G1; at the FIRST observation at or after fill + 90 s sell if the after-cost value is <= 1.15x
+  // (flat OR down); above that, continue under the same take-profit / fixed stop / 2-h hold. once: that one observation decides, per position size. RB2: the looser recovery funnel (rbpaper.mjs).
+  G1B: { trail: 1, tp: 1.45, sl: 0.5, stag: { at: 90, lo: 0, hi: 1.15, once: true } }, RB2: { trail: 0.30 } };
+const ONCE = new Set(); // vol_id:size pairs whose one-shot check has been made (in memory; after a restart an open position is checked once more at its next observation)
 export function setPolicy(id, pol) { POLICY_OVR.set(id, pol); if (pol.trail != null) TRAIL_OVR.set(id, pol.trail); }
-function policyWhy(pol, x, age) { // the policy exit that applies to a position valued at x, age s after its fill (null = none)
+function policyWhy(pol, x, age, key) { // the policy exit that applies to a position valued at x, age s after its fill (null = none); key = vol_id:size for one-shot checks
   if (pol.tp != null && x >= pol.tp) return "tp"; if (pol.sl != null && x <= pol.sl) return "stop"; if (pol.hold != null && age >= pol.hold) return "hold";
-  if (pol.stag && age >= pol.stag.at && age <= pol.stag.at + pol.stag.win && x >= pol.stag.lo && x <= pol.stag.hi) return "stagnation"; return null; }
+  if (pol.stag && age >= pol.stag.at) {
+    if (pol.stag.once) { if (key && !ONCE.has(key)) { ONCE.add(key); if (x >= pol.stag.lo && x <= pol.stag.hi) return "check90"; } }
+    else if (age <= pol.stag.at + pol.stag.win && x >= pol.stag.lo && x <= pol.stag.hi) return "stagnation"; }
+  return null; }
 export function initChainFill(d) { STMT.clear();
   db = d;
   try { for (const r of d.prepare(`SELECT id, strat FROM vol_paper WHERE strat IN (${Object.keys(K_TRAIL).map(() => "?").join(",")})`).all(...Object.keys(K_TRAIL))) TRAIL_OVR.set(r.id, K_TRAIL[r.strat]); } catch {}
@@ -175,7 +182,7 @@ function apply(mint, lamportsOf, src, res = null) {
     const lam02 = r.s_tokens02 ? lamportsOf(BigInt(r.s_tokens02)) : null, x02 = lam02 != null ? Number(lam02) / Number(LAMPORTS02) : null, hi02 = x02 != null ? Math.max(r.s_hi02 || 1, x02) : null; // 0.9.8: the real 0.02 position, valued on the same state
     // fill-3 (0.9.34, owner's go 19:57 UK): the INDEPENDENT 0.02 position — its own trail on its own high (hi02), its own trigger, its own landing (SELL_LAND_MS), its own exit and return. i02_* columns. The shared-exit column (s_r02) stays as it was.
     if (x02 != null && hi02 != null && r.s_tokens02 && !r.i02_done) { const tms0 = Date.now();
-      const pol02 = POLICY_OVR.get(r.vol_id), why02 = pol02 ? policyWhy(pol02, x02, t - fillTs) : null; // 0.10.1: the book's policy applies to the 0.02 position on its own value
+      const pol02 = POLICY_OVR.get(r.vol_id), why02 = pol02 ? policyWhy(pol02, x02, t - fillTs, r.vol_id + ":02") : null; // 0.10.1: the book's policy applies to the 0.02 position on its own value
       if (r.i02_trig_ts != null) { if (tms0 - r.i02_trig_ts * 1000 >= SELL_LAND_MS) { const reason02 = r.i02_exit_reason || (t - r.entry_ts >= HORIZON && !(r.i02_trig_x <= (r.s_hi02 || 1) * keep) ? "2h" : "trail");
           q("UPDATE chain_fill SET i02_exit_x=?, i02_exit_ts=?, i02_exit_reason=?, i02_r=?, i02_done=1, i02_res_exit=?, i02_mv='fill-3' WHERE vol_id=?").run(+x02.toFixed(4), t, reason02, +(x02 - 1 - NET_FEE / STAKE02).toFixed(4), res, r.vol_id); cfStat.exits02 = (cfStat.exits02 || 0) + 1; } }
       else if (x02 <= hi02 * keep || t - r.entry_ts >= HORIZON || why02) { q("UPDATE chain_fill SET i02_trig_ts=?, i02_trig_x=?, i02_exit_reason=COALESCE(i02_exit_reason, ?) WHERE vol_id=? AND i02_trig_ts IS NULL").run(tms0 / 1000, +x02.toFixed(4), why02, r.vol_id); pending.add(mint); } } // 0.10.1 (review): the 0.02 trigger schedules its own landing read
@@ -194,7 +201,7 @@ function apply(mint, lamportsOf, src, res = null) {
       cfStat.updates++; continue; }
     let trigger = x <= (r.s_hi || 1) * keep || t - r.entry_ts >= HORIZON, why = null;
     const pol = POLICY_OVR.get(r.vol_id); // 0.10.1: per-book policies (SW5 / G1 / RB); every other book unchanged
-    if (pol && !trigger) { why = policyWhy(pol, x, t - fillTs); if (why) trigger = true; } // evaluated on every reading: trades, subscription states and the 30-s backstop, so a hold / stagnation exit fires within 30 s even with no trade
+    if (pol && !trigger) { why = policyWhy(pol, x, t - fillTs, r.vol_id + ":20"); if (why) trigger = true; } // evaluated on every reading: trades, subscription states and the 30-s backstop, so a hold / stagnation exit fires within 30 s even with no trade
     if (trigger) { q("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_max_gap_s=?, s_trig_ts=?, s_trig_x=?, s_res_trig=?, s_exit_reason=COALESCE(s_exit_reason, ?) WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), gap, tms / 1000, +x.toFixed(4), res, why, r.vol_id); open++; pending.add(mint); }
     else { q("UPDATE chain_fill SET s_last_x=?, s_last_ts=?, s_hi=?, s_n=s_n+1, s_max_gap_s=? WHERE vol_id=?").run(+x.toFixed(4), t, +hi.toFixed(4), gap, r.vol_id); open++; }
     if (r.s_half_x == null && x >= 2) q("UPDATE chain_fill SET s_half_x=? WHERE vol_id=? AND s_half_x IS NULL").run(+x.toFixed(4), r.vol_id); // 0.9.6: the half-at-2x column — the first print at or above 2x is where half would have gone

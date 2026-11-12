@@ -18,6 +18,9 @@
 import { chainEntry, setTrail, K_TRAIL } from "./chainfill.mjs";
 import { conn, rpcStats } from "./rpc.mjs";
 import { PublicKey } from "@solana/web3.js";
+import { curveOf } from "./pump.mjs";
+const TOKEN_PROGRAM = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"), ATA_PROGRAM = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+const curveAta = (mint) => { try { const m = new PublicKey(mint); return PublicKey.findProgramAddressSync([curveOf(m).toBuffer(), TOKEN_PROGRAM.toBuffer(), m.toBuffer()], ATA_PROGRAM)[0].toBase58(); } catch { return null; } }; // 0.10.5: the curve vault token account, so snapshot shares can exclude it
 const now = () => Math.floor(Date.now() / 1000);
 export const R3_VER = "R3C-1";
 const BOOK = "R3C", RUN = 3, RUN5 = 5, T_MIN = 60, T_MAX = 900, LATE_S = 5, TRAIL = 0.30, CURVE_MAX_PX = 4.2e-7;
@@ -31,6 +34,7 @@ export function initR3(d, t) {
     vsol REAL, buyers60 INTEGER, buys60 INTEGER, sells60 INTEGER, net60 REAL, zero_buy_sellers INTEGER, holders_json TEXT, holders_ts INTEGER, top1_pct REAL, top3_pct REAL, top5_pct REAL, top10_pct REAL,
     top3_ex1_pct REAL, top5_ex1_pct REAL, top10_ex1_pct REAL, r5_ts INTEGER, ver TEXT)`);
   db.exec("CREATE TABLE IF NOT EXISTS fd_rules (k TEXT PRIMARY KEY, since_ts INTEGER, ver TEXT)");
+  for (const col of ["tx_per_wallet60 REAL", "net_over_gross60 REAL", "both_sides60 INTEGER", "new_buyers60 INTEGER", "returning_buyers60 INTEGER", "curve_ata TEXT", "obs_ms INTEGER"]) { try { db.exec(`ALTER TABLE r3_decisions ADD COLUMN ${col}`); } catch {} } // 0.10.5 logging fields (Codex 12 Nov 16:50)
   const t0 = now();
   db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES (?,?,?)").run(BOOK, t0, R3_VER);
   db.prepare("INSERT OR IGNORE INTO fd_rules (k, since_ts, ver) VALUES ('R3C_ACTIVATION', ?, ?)").run(t0, R3_VER);
@@ -52,6 +56,12 @@ function diagnostics(mint, trigTs, trigRowid) {
     const w = tdb.prepare("SELECT wallet, is_buy, sol FROM trades WHERE mint=? AND ts > ? AND ts <= ? AND rowid <= ?").all(mint, trigTs - 60, trigTs, trigRowid);
     d.buyers60 = new Set(w.filter((x) => x.is_buy).map((x) => x.wallet)).size; d.buys60 = w.filter((x) => x.is_buy).length; d.sells60 = w.length - d.buys60;
     d.net60 = +w.reduce((a, x) => a + (x.is_buy ? x.sol : -x.sol), 0).toFixed(3);
+    // 0.10.5: activity quality in the last 60 s — transactions per active wallet, net / gross SOL, wallets on both sides, new vs returning buyers (bought before the window)
+    const active = new Set(w.map((x) => x.wallet)); d.tx_per_wallet60 = active.size ? +(w.length / active.size).toFixed(2) : null;
+    const gross = w.reduce((a, x) => a + Math.abs(x.sol), 0); d.net_over_gross60 = gross > 0 ? +(d.net60 / gross).toFixed(3) : null;
+    const bs = new Set(w.filter((x) => x.is_buy).map((x) => x.wallet)), ss = new Set(w.filter((x) => !x.is_buy).map((x) => x.wallet)); d.both_sides60 = [...bs].filter((x) => ss.has(x)).length;
+    const earlier = new Set(tdb.prepare("SELECT DISTINCT wallet FROM trades WHERE mint=? AND is_buy=1 AND ts <= ?").all(mint, trigTs - 60).map((x) => x.wallet));
+    d.returning_buyers60 = [...bs].filter((x) => earlier.has(x)).length; d.new_buyers60 = bs.size - d.returning_buyers60;
     const all = tdb.prepare("SELECT wallet, is_buy, tokens FROM trades WHERE mint=? AND rowid <= ? ORDER BY slot, rowid").all(mint, trigRowid);
     const bal = new Map(); const zb = new Set();
     for (const x of all) { const b = bal.get(x.wallet) || 0; if (x.is_buy) bal.set(x.wallet, b + x.tokens); else { if (b < x.tokens * 0.5) zb.add(x.wallet); bal.set(x.wallet, b - x.tokens); } }
@@ -90,8 +100,9 @@ function poll() {
       s.trigTs = r.ts; r3Stat.triggers++; r3Stat.lastTrig = r.mint.slice(0, 6);
       const runX = +(px / s.p60).toFixed(3), late = readTs > r.ts + LATE_S;
       const dg = diagnostics(r.mint, r.ts, r.rid); const vsol = (() => { try { const v = tdb.prepare("SELECT vsol FROM trades WHERE rowid=?").get(r.rid)?.vsol; return v ? Number(v) / 1e9 : null; } catch { return null; } })();
-      db.prepare(`INSERT OR IGNORE INTO r3_decisions (mint, create_ts, p60, p60_ts, trig_ts, trig_px, run_x, read_ts, status, vsol, buyers60, buys60, sells60, net60, zero_buy_sellers, ver)
-                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(r.mint, s.c, s.p60, s.p60ts, r.ts, px, runX, readTs, late ? "late: read after trigger + 5 s" : "entered", vsol, dg.buyers60 ?? null, dg.buys60 ?? null, dg.sells60 ?? null, dg.net60 ?? null, dg.zero_buy_sellers ?? null, R3_VER);
+      db.prepare(`INSERT OR IGNORE INTO r3_decisions (mint, create_ts, p60, p60_ts, trig_ts, trig_px, run_x, read_ts, status, vsol, buyers60, buys60, sells60, net60, zero_buy_sellers, ver, tx_per_wallet60, net_over_gross60, both_sides60, new_buyers60, returning_buyers60, curve_ata, obs_ms)
+                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(r.mint, s.c, s.p60, s.p60ts, r.ts, px, runX, readTs, late ? "late: read after trigger + 5 s" : "entered", vsol, dg.buyers60 ?? null, dg.buys60 ?? null, dg.sells60 ?? null, dg.net60 ?? null, dg.zero_buy_sellers ?? null, R3_VER,
+                  dg.tx_per_wallet60 ?? null, dg.net_over_gross60 ?? null, dg.both_sides60 ?? null, dg.new_buyers60 ?? null, dg.returning_buyers60 ?? null, curveAta(r.mint), Date.now());
       holders(r.mint).then((h) => db.prepare("UPDATE r3_decisions SET holders_json=?, holders_ts=?, top1_pct=?, top3_pct=?, top5_pct=?, top10_pct=?, top3_ex1_pct=?, top5_ex1_pct=?, top10_ex1_pct=? WHERE mint=?").run(h.json, h.ts, h.top1, h.top3, h.top5, h.top10, h.top3x, h.top5x, h.top10x, r.mint)).catch((e) => { r3Stat.lastErr = ("holders " + e.message).slice(0, 120); });
       if (late) { r3Stat.late++; continue; }
       const su = solUsd(), usdPx = su ? px * su : null;
