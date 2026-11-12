@@ -8,7 +8,7 @@ replay = pathlib.Path(sys.argv[1]); out = pathlib.Path(sys.argv[2]); out.mkdir(p
 ev = rc.ev(); assert hashlib.sha256(open(os.environ["F006P2_EVAL"], "rb").read()).hexdigest() == "f5686511fcae09c1c191ca5ffee167c6ad1421cddbb1be8b1c4f0f3eb4cc8a86"
 assert not ev.DEV_NO_EVIDENCE
 START, SPLIT, END = 1793950800, 1794016200, 1794081600
-POOL_BPS = 55; SIZE = 0.2; TRAIL = 0.30; AGE = 300; CROWD_WIN = 600; CROWD_MAX = 10
+POOL_BPS = 55; SIZE = 0.2; TRAIL = 0.30; STALE = 30; AGE = 300; CROWD_WIN = 600; CROWD_MAX = 10
 tok, gaps, outages, meta = ev.load(str(replay), START, END); fl = ev.fl
 
 def retained(info, L):
@@ -35,8 +35,26 @@ def run(m, info, L, ret, enter):
     R = {"decision_offsets": [AGE], "on_trade": False, "horizon_s": 7200, "sizes": [SIZE]}
     res, hyp = ev.run_launch(mod, R, m, info, L, gaps, outages, meta, POOL_BPS)
     rec = {"cat": res["cat"], "why": res.get("why"), "entry_t": res.get("entry_t"), "hypothetical": hyp}
+    if res.get("entry_t") is not None:
+        te = res["entry_t"]; fs, fw = ev.state_at(L, te + ev.LAND_BUY_S, gaps, outages, info["created"], ret)
+        rec["fill_state_age_s"] = (te + ev.LAND_BUY_S - fl(fs["ts"])) if fs else None
     if res["cat"] == "scored":
         s = res["sizes"][str(SIZE)]; rec.update(net_sol=s["net_sol"], ret=s["ret"], exit=s["exit"], fill_venue=s["fill_venue"], exit_venue=s["exit_venue"])
+        if s["exit"] == "horizon": ts_ = te + 7200
+        else:  # re-derive the trigger time exactly as run_launch does (identical to f006p2 run_s2.py)
+            RO = sorted(L, key=lambda r: ((fl(r["recv_ms"]) or fl(r["ts"]) * 1000), int(r["slot"]), int(r["row_id"]))); RT = [(fl(r["recv_ms"]) or fl(r["ts"]) * 1000) / 1000 for r in RO]
+            tokq = ev.buy(fs, SIZE, POOL_BPS); hi = -1e9; ts_ = None
+            for j in range(bisect.bisect_right(RT, te + ev.LAND_BUY_S), len(RO)):
+                r = RO[j]; tr = RT[j]
+                if tr >= te + 7200: break
+                if not ev.state_ok(r): continue
+                x = (ev.sell(r, tokq, POOL_BPS) - ev.FIXED_FEE_SOL) / SIZE; hi = max(hi, x)
+                if hi > 0 and x <= hi * (1 - TRAIL): ts_ = tr + ev.LAND_SELL_S; break
+        ss, sw = ev.state_at(L, ts_, gaps, outages, info["created"], ret) if ts_ else (None, "n/a")
+        rec["exit_state_age_s"] = (ts_ - fl(ss["ts"])) if ss else None
+        # R4 staleness post-check (as f006p2 S2 / CL-L001): landing state older than 30 s => fill unavailable / exit uncertain
+        if rec["fill_state_age_s"] is None or rec["fill_state_age_s"] > STALE: rec["cat"] = "unknown"; rec["why"] = "fill: state older than 30 s"
+        elif rec["exit_state_age_s"] is None or rec["exit_state_age_s"] > STALE: rec["cat"] = "unknown"; rec["why"] = "exit: state older than 30 s"
     return rec
 
 stats = {"mints_streamed": 0, "duplicates_removed": 0, "non_contiguous": 0, "_done": set()}; audit = collections.Counter(); rows = []
@@ -52,7 +70,7 @@ for m, L in ev.iter_mints(str(replay), tok, stats):
     E = bool(f is not None and rc.eligible(f)); c10 = crowd(m, t)
     rec = run(m, info, L, ret, E); rec.update(mint=m, half=half, created=info["created"], eligible_E=E, crowd10=c10, cand=bool(E and c10 <= CROWD_MAX)); rows.append(rec)
 assert stats["non_contiguous"] == 0
-keys = ["mint", "half", "created", "eligible_E", "crowd10", "cand", "cat", "why", "entry_t", "net_sol", "ret", "exit", "fill_venue", "exit_venue", "hypothetical"]
+keys = ["mint", "half", "created", "eligible_E", "crowd10", "cand", "cat", "why", "entry_t", "fill_state_age_s", "exit_state_age_s", "net_sol", "ret", "exit", "fill_venue", "exit_venue", "hypothetical"]
 with open(out / "ledger_l003.csv", "w", newline="") as fh:
     w = csv.DictWriter(fh, fieldnames=keys, extrasaction="ignore"); w.writeheader(); w.writerows(rows)
 
@@ -60,14 +78,14 @@ def block(rs):
     att = [r for r in rs if r["eligible_E"]]; sc = [r for r in att if r["cat"] == "scored"]
     if not att: return {"attempted": 0}
     v = sorted(r["net_sol"] for r in sc); rets = [r["ret"] for r in sc]
-    b = {"attempted": len(att), "filled": sum(1 for r in att if r["entry_t"] is not None and r["why"] not in ("fill_unavailable",) and not (r["cat"] != "scored" and str(r["why"]).startswith("fill"))),
+    b = {"attempted": len(att), "filled": sum(1 for r in att if r["cat"] == "scored" or str(r["why"]).startswith("exit")), "fill_unavailable": sum(1 for r in att if r["cat"] != "scored" and not str(r["why"]).startswith("exit")), "uncertain_exits": sum(1 for r in att if r["cat"] != "scored" and str(r["why"]).startswith("exit")),
          "cats": dict(collections.Counter(r["cat"] for r in att)), "whys": dict(collections.Counter(str(r["why"]) for r in att if r["cat"] != "scored")),
          "resolved": len(sc), "unknown": len(att) - len(sc), "unknown_share": (len(att) - len(sc)) / len(att), "total_sol": math.fsum(v)}
     if sc: b.update(mean_ret=statistics.mean(rets), median_ret=statistics.median(rets), win_rate=sum(x > 0 for x in v) / len(v), share_loss_gt50=sum(x < -0.5 * SIZE for x in v) / len(v),
                     without_best1=math.fsum(v[:-1]), without_best3=math.fsum(v[:-3]) if len(v) > 3 else None, best=v[-3:])
     return b
 E_rows = [r for r in rows if r["eligible_E"]]
-res = {"scenario": "R4 (pool 55 bps, staleness post-check by eval-1.1 run_launch)", "denominator_audit": dict(audit), "pass1_retained_launches": len(RET), "crowd_window_s": CROWD_WIN, "crowd_max": CROWD_MAX,
+res = {"scenario": "R4 (eval-1.1 run_launch unchanged at pool 55 bps + 30-s staleness post-check on fill and exit landing states, as f006p2 S2)", "denominator_audit": dict(audit), "pass1_retained_launches": len(RET), "crowd_window_s": CROWD_WIN, "crowd_max": CROWD_MAX,
        "crowd10_in_E": {"n": len(E_rows), "min": min(r["crowd10"] for r in E_rows), "median": statistics.median(r["crowd10"] for r in E_rows), "max": max(r["crowd10"] for r in E_rows),
                         "quartiles": statistics.quantiles([r["crowd10"] for r in E_rows], n=4)},
        "control_E": {"all": block(E_rows), "early": block([r for r in E_rows if r["half"] == "early"]), "late": block([r for r in E_rows if r["half"] == "late"])},

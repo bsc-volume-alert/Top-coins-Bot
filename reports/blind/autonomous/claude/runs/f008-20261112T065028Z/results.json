@@ -1,0 +1,598 @@
+{
+  "run_id": "f008-20261112T065028Z",
+  "task": "F008 label concordance (counts only)",
+  "idea_lab": "CL-L003 launch crowding",
+  "f008": {
+    "inputs": {
+      "claude": "f006 features_labels.csv.gz @ 7a9cd6a (age_s=300)",
+      "codex": "c009 ledger_001..053.csv @ e9f952d (age=300)"
+    },
+    "n_claude": 3638,
+    "n_codex": 3489,
+    "codex_mints_not_in_claude": [],
+    "claude_mints_not_in_codex": 149,
+    "crosstab_label2x": {
+      "no_record | not_in_codex_cohort": 2,
+      "nonrunner | unknown": 1249,
+      "runner | observed_sustained2x": 56,
+      "runner | unknown": 61,
+      "unknown | not_in_codex_cohort": 147,
+      "unknown | unknown": 2123
+    },
+    "crosstab_label2x_tol30": {
+      "no_record | not_in_codex_cohort": 144,
+      "no_record | unknown": 84,
+      "nonrunner | not_in_codex_cohort": 2,
+      "nonrunner | unknown": 3050,
+      "runner | observed_sustained2x": 56,
+      "runner | unknown": 61,
+      "unknown | not_in_codex_cohort": 3,
+      "unknown | unknown": 238
+    },
+    "claude_runners": 117,
+    "codex_runners": 56,
+    "in_both": 56,
+    "claude_only": 61,
+    "codex_only": 0,
+    "claude_only_reasons": {
+      "codex_filled_label_unknown(path_not_continuous): max_proceeds<2x": 53,
+      "codex_fill_unavailable: state older than30s": 8
+    },
+    "claude_only_codex_filled": {
+      "n": 53,
+      "median_claude_max_multiple_1h": 3.302106169375831,
+      "n_codex_max_proceeds_ge_0.4": 0,
+      "n_codex_max_proceeds_lt_0.4": 0,
+      "n_codex_max_proceeds_missing": 53
+    },
+    "codex_only_reasons": {},
+    "claude_runners_by_codex_trade_status": {
+      "scored": 77,
+      "exit_uncertain": 32,
+      "fill_unavailable": 8
+    },
+    "claude_runners_codex_fill_reasons": {
+      "fill_unavailable:state older than30s": 8
+    },
+    "both_by_half": {
+      "late": 35,
+      "early": 21
+    },
+    "claude_runners_by_half": {
+      "late": 80,
+      "early": 37
+    },
+    "codex_runners_by_half": {
+      "late": 35,
+      "early": 21
+    },
+    "codex_runners_by_claude_status": {
+      "ok": 56
+    },
+    "codex_runners_scored_trades": {
+      "n": 46,
+      "total_sol": 6.1531532092212835,
+      "n_positive": 33
+    },
+    "claude_runners_codex_scored_trades": {
+      "n": 77,
+      "total_sol": 6.882550091965072,
+      "n_positive": 52
+    },
+    "codex_label_counts": {
+      "unknown": 3433,
+      "observed_sustained2x": 56
+    },
+    "claude_label_counts": {
+      "unknown": 2270,
+      "nonrunner": 1249,
+      "runner": 117,
+      "no_record": 2
+    },
+    "claude_label_tol30_counts": {
+      "nonrunner": 3052,
+      "no_record": 228,
+      "runner": 117,
+      "unknown": 241
+    },
+    "claude_tol30_nonrunners_by_codex": {
+      "unknown": 3050,
+      "not_in_codex_cohort": 2
+    },
+    "claude_tol30_nonrunners_by_codex_status": {
+      "exit_uncertain": 723,
+      "fill_unavailable": 1915,
+      "scored": 412,
+      "not_in_codex_cohort": 2
+    }
+  },
+  "cl_l003": {
+    "scenario": "R4 (eval-1.1 run_launch unchanged at pool 55 bps + 30-s staleness post-check on fill and exit landing states, as f006p2 S2)",
+    "denominator_audit": {
+      "not_retained": 301,
+      "eligible_early": 1593,
+      "outage_excluded": 974,
+      "eligible_late": 2045
+    },
+    "pass1_retained_launches": 4612,
+    "crowd_window_s": 600,
+    "crowd_max": 10,
+    "crowd10_in_E": {
+      "n": 679,
+      "min": 3,
+      "median": 20,
+      "max": 47,
+      "quartiles": [
+        14.0,
+        20.0,
+        28.0
+      ]
+    },
+    "control_E": {
+      "all": {
+        "attempted": 679,
+        "filled": 673,
+        "fill_unavailable": 6,
+        "uncertain_exits": 254,
+        "cats": {
+          "unknown": 260,
+          "scored": 419
+        },
+        "whys": {
+          "exit: capture gap": 188,
+          "exit: state older than 30 s": 59,
+          "fill: state older than 30 s": 6,
+          "exit: state invalid": 7
+        },
+        "resolved": 419,
+        "unknown": 260,
+        "unknown_share": 0.38291605301914583,
+        "total_sol": -10.011571773352646,
+        "mean_ret": -0.11946983023093849,
+        "median_ret": -0.2412103648600883,
+        "win_rate": 0.22911694510739858,
+        "share_loss_gt50": 0.11217183770883055,
+        "without_best1": -11.387526840491985,
+        "without_best3": -12.393117549072963,
+        "best": [
+          0.423680455105637,
+          0.5819102534753425,
+          1.375955067139338
+        ]
+      },
+      "early": {
+        "attempted": 313,
+        "filled": 311,
+        "fill_unavailable": 2,
+        "uncertain_exits": 114,
+        "cats": {
+          "unknown": 116,
+          "scored": 197
+        },
+        "whys": {
+          "exit: capture gap": 72,
+          "exit: state older than 30 s": 39,
+          "fill: state older than 30 s": 2,
+          "exit: state invalid": 3
+        },
+        "resolved": 197,
+        "unknown": 116,
+        "unknown_share": 0.3706070287539936,
+        "total_sol": -7.6619223165704184,
+        "mean_ret": -0.19446503341549284,
+        "median_ret": -0.26221012717300124,
+        "win_rate": 0.17766497461928935,
+        "share_loss_gt50": 0.1218274111675127,
+        "without_best1": -7.906075150901415,
+        "without_best3": -8.338820895460884,
+        "best": [
+          0.20328984577091358,
+          0.22945589878855543,
+          0.2441528343309966
+        ]
+      },
+      "late": {
+        "attempted": 366,
+        "filled": 362,
+        "fill_unavailable": 4,
+        "uncertain_exits": 140,
+        "cats": {
+          "scored": 222,
+          "unknown": 144
+        },
+        "whys": {
+          "exit: capture gap": 116,
+          "exit: state older than 30 s": 20,
+          "exit: state invalid": 4,
+          "fill: state older than 30 s": 4
+        },
+        "resolved": 222,
+        "unknown": 144,
+        "unknown_share": 0.39344262295081966,
+        "total_sol": -2.3496494567822275,
+        "mean_ret": -0.05292003281041052,
+        "median_ret": -0.23191370214529322,
+        "win_rate": 0.2747747747747748,
+        "share_loss_gt50": 0.1036036036036036,
+        "without_best1": -3.7256045239215654,
+        "without_best3": -4.731195232502545,
+        "best": [
+          0.423680455105637,
+          0.5819102534753425,
+          1.375955067139338
+        ]
+      }
+    },
+    "candidate_crowd_le10": {
+      "all": {
+        "attempted": 68,
+        "filled": 67,
+        "fill_unavailable": 1,
+        "uncertain_exits": 17,
+        "cats": {
+          "unknown": 18,
+          "scored": 50
+        },
+        "whys": {
+          "exit: capture gap": 15,
+          "exit: state older than 30 s": 2,
+          "fill: state older than 30 s": 1
+        },
+        "resolved": 50,
+        "unknown": 18,
+        "unknown_share": 0.2647058823529412,
+        "total_sol": -1.7748481987148435,
+        "mean_ret": -0.17748481987148432,
+        "median_ret": -0.23308695375655164,
+        "win_rate": 0.18,
+        "share_loss_gt50": 0.14,
+        "without_best1": -2.067369563187569,
+        "without_best3": -2.3550965409023217,
+        "best": [
+          0.09071027316023783,
+          0.1970167045545151,
+          0.2925213644727253
+        ]
+      },
+      "early": {
+        "attempted": 22,
+        "filled": 22,
+        "fill_unavailable": 0,
+        "uncertain_exits": 8,
+        "cats": {
+          "unknown": 8,
+          "scored": 14
+        },
+        "whys": {
+          "exit: capture gap": 7,
+          "exit: state older than 30 s": 1
+        },
+        "resolved": 14,
+        "unknown": 8,
+        "unknown_share": 0.36363636363636365,
+        "total_sol": -0.724538046639743,
+        "mean_ret": -0.2587635880856225,
+        "median_ret": -0.24293440373635655,
+        "win_rate": 0.07142857142857142,
+        "share_loss_gt50": 0.21428571428571427,
+        "without_best1": -0.7655655862743983,
+        "without_best3": -0.7373001619449262,
+        "best": [
+          -0.021833054256435253,
+          -0.006432370073036845,
+          0.0410275396346553
+        ]
+      },
+      "late": {
+        "attempted": 46,
+        "filled": 45,
+        "fill_unavailable": 1,
+        "uncertain_exits": 9,
+        "cats": {
+          "unknown": 10,
+          "scored": 36
+        },
+        "whys": {
+          "exit: capture gap": 8,
+          "exit: state older than 30 s": 1,
+          "fill: state older than 30 s": 1
+        },
+        "resolved": 36,
+        "unknown": 10,
+        "unknown_share": 0.21739130434782608,
+        "total_sol": -1.0503101520751004,
+        "mean_ret": -0.1458764100104306,
+        "median_ret": -0.23308695375655164,
+        "win_rate": 0.2222222222222222,
+        "share_loss_gt50": 0.1111111111111111,
+        "without_best1": -1.3428315165478257,
+        "without_best3": -1.6305584942625786,
+        "best": [
+          0.09071027316023783,
+          0.1970167045545151,
+          0.2925213644727253
+        ]
+      }
+    },
+    "complement_crowd_gt10": {
+      "all": {
+        "attempted": 611,
+        "filled": 606,
+        "fill_unavailable": 5,
+        "uncertain_exits": 237,
+        "cats": {
+          "unknown": 242,
+          "scored": 369
+        },
+        "whys": {
+          "exit: capture gap": 173,
+          "exit: state older than 30 s": 57,
+          "fill: state older than 30 s": 5,
+          "exit: state invalid": 7
+        },
+        "resolved": 369,
+        "unknown": 242,
+        "unknown_share": 0.3960720130932897,
+        "total_sol": -8.236723574637802,
+        "mean_ret": -0.11160872052354745,
+        "median_ret": -0.24242035544018978,
+        "win_rate": 0.23577235772357724,
+        "share_loss_gt50": 0.10840108401084012,
+        "without_best1": -9.61267864177714,
+        "without_best3": -10.61826935035812,
+        "best": [
+          0.423680455105637,
+          0.5819102534753425,
+          1.375955067139338
+        ]
+      },
+      "early": {
+        "attempted": 291,
+        "filled": 289,
+        "fill_unavailable": 2,
+        "uncertain_exits": 106,
+        "cats": {
+          "unknown": 108,
+          "scored": 183
+        },
+        "whys": {
+          "exit: capture gap": 65,
+          "exit: state older than 30 s": 38,
+          "fill: state older than 30 s": 2,
+          "exit: state invalid": 3
+        },
+        "resolved": 183,
+        "unknown": 108,
+        "unknown_share": 0.3711340206185567,
+        "total_sol": -6.937384269930676,
+        "mean_ret": -0.1895460183041168,
+        "median_ret": -0.26221012717300124,
+        "win_rate": 0.18579234972677597,
+        "share_loss_gt50": 0.11475409836065574,
+        "without_best1": -7.181537104261672,
+        "without_best3": -7.614282848821141,
+        "best": [
+          0.20328984577091358,
+          0.22945589878855543,
+          0.2441528343309966
+        ]
+      },
+      "late": {
+        "attempted": 320,
+        "filled": 317,
+        "fill_unavailable": 3,
+        "uncertain_exits": 131,
+        "cats": {
+          "scored": 186,
+          "unknown": 134
+        },
+        "whys": {
+          "exit: capture gap": 108,
+          "exit: state older than 30 s": 19,
+          "exit: state invalid": 4,
+          "fill: state older than 30 s": 3
+        },
+        "resolved": 186,
+        "unknown": 134,
+        "unknown_share": 0.41875,
+        "total_sol": -1.299339304707127,
+        "mean_ret": -0.034928475932987285,
+        "median_ret": -0.23191370214529322,
+        "win_rate": 0.2849462365591398,
+        "share_loss_gt50": 0.10215053763440861,
+        "without_best1": -2.675294371846465,
+        "without_best3": -3.6808850804274447,
+        "best": [
+          0.423680455105637,
+          0.5819102534753425,
+          1.375955067139338
+        ]
+      }
+    },
+    "paired_view_R11": "candidate trades are a fixed subset of the control's trades with identical execution; on the candidate's resolved launches the control's total/mean/median equal the candidate's (see candidate_crowd_le10); the informative comparison is candidate vs complement, each on its own resolved set",
+    "post_hoc_quartiles": {
+      "Q1": {
+        "attempted": 178,
+        "filled": 177,
+        "fill_unavailable": 1,
+        "uncertain_exits": 56,
+        "cats": {
+          "unknown": 57,
+          "scored": 121
+        },
+        "whys": {
+          "exit: capture gap": 51,
+          "exit: state older than 30 s": 5,
+          "fill: state older than 30 s": 1
+        },
+        "resolved": 121,
+        "unknown": 57,
+        "unknown_share": 0.3202247191011236,
+        "total_sol": -3.3068489982263727,
+        "mean_ret": -0.1366466528192716,
+        "median_ret": -0.2434127633038516,
+        "win_rate": 0.19834710743801653,
+        "share_loss_gt50": 0.09917355371900827,
+        "without_best1": -3.64322307263937,
+        "without_best3": -4.270575573150701,
+        "best": [
+          0.3040848544913133,
+          0.3232676460200177,
+          0.33637407441299727
+        ]
+      },
+      "Q2": {
+        "attempted": 163,
+        "filled": 160,
+        "fill_unavailable": 3,
+        "uncertain_exits": 61,
+        "cats": {
+          "unknown": 64,
+          "scored": 99
+        },
+        "whys": {
+          "exit: capture gap": 49,
+          "exit: state older than 30 s": 8,
+          "fill: state older than 30 s": 3,
+          "exit: state invalid": 4
+        },
+        "resolved": 99,
+        "unknown": 64,
+        "unknown_share": 0.39263803680981596,
+        "total_sol": -1.9072602119291968,
+        "mean_ret": -0.0963262733297574,
+        "median_ret": -0.2456165717724343,
+        "win_rate": 0.26262626262626265,
+        "share_loss_gt50": 0.09090909090909091,
+        "without_best1": -3.2832152790685347,
+        "without_best3": -3.571797369422457,
+        "best": [
+          0.133823468700002,
+          0.1547586216539203,
+          1.375955067139338
+        ]
+      },
+      "Q3": {
+        "attempted": 180,
+        "filled": 179,
+        "fill_unavailable": 1,
+        "uncertain_exits": 73,
+        "cats": {
+          "scored": 106,
+          "unknown": 74
+        },
+        "whys": {
+          "exit: state older than 30 s": 23,
+          "exit: capture gap": 49,
+          "exit: state invalid": 1,
+          "fill: state older than 30 s": 1
+        },
+        "resolved": 106,
+        "unknown": 74,
+        "unknown_share": 0.4111111111111111,
+        "total_sol": -2.797396947463853,
+        "mean_ret": -0.13195268620112513,
+        "median_ret": -0.20571879436823398,
+        "win_rate": 0.22641509433962265,
+        "share_loss_gt50": 0.1320754716981132,
+        "without_best1": -3.1460681538548734,
+        "without_best3": -3.6130664732928097,
+        "best": [
+          0.22284548510693952,
+          0.2441528343309966,
+          0.34867120639102045
+        ]
+      },
+      "Q4": {
+        "attempted": 158,
+        "filled": 157,
+        "fill_unavailable": 1,
+        "uncertain_exits": 64,
+        "cats": {
+          "unknown": 65,
+          "scored": 93
+        },
+        "whys": {
+          "exit: capture gap": 39,
+          "exit: state older than 30 s": 23,
+          "fill: state older than 30 s": 1,
+          "exit: state invalid": 2
+        },
+        "resolved": 93,
+        "unknown": 65,
+        "unknown_share": 0.41139240506329117,
+        "total_sol": -2.0000656157332233,
+        "mean_ret": -0.10753040944802275,
+        "median_ret": -0.264966388182121,
+        "win_rate": 0.23655913978494625,
+        "share_loss_gt50": 0.12903225806451613,
+        "without_best1": -2.581975869208566,
+        "without_best3": -3.3055791816450615,
+        "best": [
+          0.29992285733085855,
+          0.423680455105637,
+          0.5819102534753425
+        ]
+      }
+    },
+    "post_hoc_quartile_bounds": [
+      14.0,
+      20.0,
+      28.0
+    ]
+  },
+  "codex_numbers_reproduced_from_published_ledgers": {
+    "c009_control_5min": {
+      "attempted": 3489,
+      "filled": 1394,
+      "fill_unavailable": 2095,
+      "resolved": 537,
+      "uncertain": 857,
+      "total_sol": -19.4691488609006,
+      "without_best3": -22.21223715840965
+    },
+    "c009_L002_5min": {
+      "attempted": 820,
+      "filled": 572,
+      "fill_unavailable": 248,
+      "resolved": 381,
+      "uncertain": 191,
+      "total_sol": -15.293065926006427,
+      "without_best3": -16.20877779383003
+    },
+    "c009_runners_5_15_30": [
+      56,
+      21,
+      9
+    ],
+    "c010_L003": {
+      "attempted": 296,
+      "filled": 291,
+      "fill_unavailable": 5,
+      "resolved": 195,
+      "uncertain": 96,
+      "total_sol": -4.645368114813176,
+      "without_best1": -4.968635760833194,
+      "without_best3": -5.561079982636778,
+      "early_resolved_total": [
+        95,
+        -3.0892848278002583
+      ],
+      "late_resolved_total": [
+        100,
+        -1.556083287012918
+      ]
+    },
+    "c010_control": {
+      "attempted": 3362,
+      "fill_unavailable": 2091,
+      "uncertain": 805,
+      "resolved": 466,
+      "total_sol": -15.418001699796786
+    },
+    "c010_L003_attempts_inside_claude_E": [
+      295,
+      296
+    ]
+  }
+}

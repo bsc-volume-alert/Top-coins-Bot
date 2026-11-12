@@ -1,0 +1,62 @@
+mint,claude_half,claude_max_multiple_1h,claude_coverage_ok,codex,codex_trade_status,codex_max_proceeds_sol,codex_net_sol,codex_quote_reserve_sol
+21azpu32qfuNZR6TkKdUZKVnDtmvTUSBrXxhRFE5pump,late,3.70922937508309,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.013557223437151211,58.391429136
+2D88NTW3ND7gGYRXpZvsD9jkYn9yN3Qm8CVyprHLpump,early,2.6295562175687777,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:state older than30s,,,70.921326362
+2KUBwAW6FD2jJMXdPTCES9A9sCRMTgYnZh7bPBMypump,late,2.9099130738823313,False,codex_fill_unavailable: state older than30s,fill_unavailable:state older than30s,,,34.413290002
+2PUNufi4HQ48LrATKf5k5yjSUii383WdNdUpdoSipump,late,2.293991248634666,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,114.64
+2Sp2h2Uaxiuvkfoj2cNEV4aeUoJToA9uLHUZ948Mpump,late,2.915606784292318,True,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,-0.00833981251468724,50.744058749
+3YuHBm4oeb3tmsixZd72LmedMEAM5ttBMuwCBxSMpump,early,3.0588903844122224,True,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.18900614873728266,36.28990591
+4FHEBKNYy6BZ1QFMKj1xL8HDTM12rdXLRYw8DgiCUnQn,early,12.745585300395978,False,codex_fill_unavailable: state older than30s,fill_unavailable:state older than30s,,,32.213520391
+4HqpRjsRS8pjdWa2B3mBAmNNxTXUeJ9L6AfFnRgipump,late,23.481867981871535,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,31.763391347
+4ZzioLtLxHpyocbyAtpvja9x9YbBGWUi39v4PgUxpump,early,3.5667430475433424,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,-0.08145031360522503,2.237066931
+4gyubJ7sqYDySUDmVFEfSdvvC43F1eWLUXgEHDDWpump,late,9.987043782421155,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,69.841739547
+4zDEPMYaRUWG3KzKhEPs8noQVLoghspb6vo86dsgpump,late,2.6609877379913978,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,132.6
+6JmDY4eYXiBJhKFjLhM2oG95UiwkEoAN2daqq6tUpump,late,3.659278275518873,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,-0.017739029276962193,99.118202004
+6MidA49VWEJaYoyDGTcDKxmFFxrq3ohyCYgZQWfbpump,late,4.747844507047374,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,99.300135145
+6MirdmcPpW2KmbfZ4ufAzbqrpC1LnGuqQWHJuUFNpump,early,3.090979166179543,False,codex_fill_unavailable: state older than30s,fill_unavailable:state older than30s,,,37.606946113
+6QAcBK6c5w7P48opBaS9Zu4uTsMgopyVeaij6QoZpump,late,8.914779998480569,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.005392930040821531,39.561620594
+7UCDfJxF2T9SDUdByJft69nCQn6EWvHYGvF9FSSspump,late,2.208369302650692,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,132.72
+7mUEXQfEmAUFch8tjzrwxxNp9eDcDRoNdWZJdXP9pump,early,3.304550195613236,False,codex_fill_unavailable: state older than30s,fill_unavailable:state older than30s,,,30.000000071
+88eJsrdknXmCVw9JXh6PSSuJ224KprNpCSmUFUiZhe4k,late,2.211964859368432,True,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.05251631613073526,38.349255293
+8GZUjjGXp8cwvbg7JQ4sHA9SPxgGFMyDLiZgv6Y5Kwwm,early,11.57426793694149,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,-0.016874586318040535,33.80425082
+9MPxmHjMNgvG2CHudTUjsbyFiZb36Kxi1RHawxagpump,late,5.03888335813836,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,2262.57
+9SmbwLHuANf8zneau43H4tGvmknwGeySTVqw856spump,late,2.498811704703376,True,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.10424705792789785,30.175836063
+9duFcKkzxmkSs1feJ9AtSXUEPpfeqQFkiJGbnXbYpump,late,2.9392588235510657,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.15193841664952762,71.677642107
+9k6SKDWHkQhVgFpWxmCXmCqQjwKyF4Xfw7LHiFn1pump,late,2.272981389504929,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,-0.06325115034031983,52.772927467
+9yhSHqFw3sSTu8m9DgY4YceJyDdNQAXEsphCw5xdpump,late,3.559888817361336,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,136.09
+AD1YinQp275pnhpG4897PbgiAEkXXmJf4ARuaSkqpump,late,5.063715766462993,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,134.51
+ASTLrYPQeCt4iTdiZu439i4cfkcWEH1RrPA4ctyEpump,late,11.583210000198328,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,81.101686652
+Ay3Aw2BkwHsc55ZLPHbG5CFej79M9Ycfw7YNLZUkpump,late,2.2318751645054142,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.1391968086895436,45.13451675
+B5GL62DYSttevEJGEJvnN8upeEvxtR9MfjcYHUSApump,late,4.204590200460302,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,130.28
+B85CZwwGQN7HpKduxYGyP1B6Wq3U58m94oQ3poWGpump,late,4.866006542743414,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.036286705742573006,169.76
+Berk1mwwwV7obmWfMaEwkh63T1ntLZ5pPN4f4NX6pump,early,4.378236832476353,False,codex_fill_unavailable: state older than30s,fill_unavailable:state older than30s,,,54.962750981
+BmHoHaY8jk9FXkT7z9aqiA4xjG9xuCaWRcDjCJsapump,early,2.367162481851957,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.06054224731784785,38.777465115
+C1kd6g65hLXLF2xzM6Wu3XueXEN88dqCRBCHsEKhpump,late,3.508683304698642,True,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.22284548510693952,43.199119115
+CM8RLtQy1X5QS2WyGqBnoWyCrAvbcej2KNbDFd5Tpump,late,4.003141481002009,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.00774719144176414,60.92
+D2KgRyM2nABmguJHhcFCCdCjnZFjF9nYDGGkSaxGpump,late,5.521548825963344,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,90.77
+DFq4aBnZkNd4PcKaSb37wRpaUGKAFUXenGbd78pTpump,late,3.2971043988399567,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:state older than30s,,,63.614482494
+DXXLf6zptReh2BM46XKRAhwWkEgipqtjSH6mxHedpump,late,4.984675034097469,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,63.000219475
+DY3o5SLKeZkhkyqJJL4bbxxHos86yLqoVD4wVVaHpiLL,late,11.01478545055037,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,65.268334967
+DtUf51MUPPEMkgB41U32WAi8msaB8pia14Js2d79pump,late,2.4287738099089484,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,-0.13975100078661826,131.99
+EFPMJHM3m4yZmZJBrEALMqTmTsbLGafjRuZ5jtzKpump,late,2.6987493949029604,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,133.1
+EKYs2vrs3mMTwzSBktRFM3FxVpkh5RW8iGVNvY4apump,late,3.454990803661783,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,131.27
+EVNuBvvk5RgqKVStMEV9ha9nnZ3ZPeUVS1byL4Udpump,early,2.3006134432847567,True,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.05108132484965466,55.173764499
+Ey4YG29k4hQmTPfRr3aRrpzSx8THEeSWbgCo2yWypump,early,14.695293708616848,False,codex_fill_unavailable: state older than30s,fill_unavailable:state older than30s,,,30.000531456
+EyWezCsLhzE3GmjUB1pjWHKiGUVrMfko2sU2xMBpump,early,5.365234258229873,True,codex_fill_unavailable: state older than30s,fill_unavailable:state older than30s,,,33.218196902
+EyvmSJy7z7VLj8158NNnJizKSH1rekfbnx1wSgMVpump,late,5.1759805832446295,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,65.049727945
+FVNk2M39wzEMBbakuARv9VoWCRQoTC5ECjnWRKGZpump,late,5.332768242290288,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,129.92
+Fm2qHdNqrCk4sbaVzQgnYEUUysMLteQP6Zh8As6buheV,early,3.302106169375831,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,-0.06800328812930354,37.506733449
+G3PzMuSp2A7oP2qiTwnEywEYsVgTPFKzR8V7QrS9pump,late,4.290018327989357,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.08518087459878526,72.3
+GNKV96CghmXbgSxR4HpYgbjxczZBouQ68wjU2xG4pump,early,2.264615074383145,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.0944748801496349,70.517427285
+GfJp1CbDsaoSGf3rXqVbgmwRx3HtZ6mCtv16GzFgpump,early,2.955733102109066,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.028344825326828138,66.966324774
+GpTxxPvZZB656fWgMaf6Hd33hXiX7k4yQni98GFspump,late,2.24688758679121,True,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.004403429642875406,57.963065491
+HLDDW1gNhAFPN9isXMUFeQTre8hwKq2x36KomYSBSKEc,late,2.4644069254066623,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.0783493224854237,45.611688811
+HSBAtDyNtcFfgrim6TJsahM767geVvb1QAbuWTnGpump,late,2.3080123857144583,False,codex_fill_unavailable: state older than30s,fill_unavailable:state older than30s,,,34.830524477
+J32Qr74Noip5QbUMwamVacC9n95h4nDDrAPhmV28pump,late,2.9305649337260964,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap during hold,,,139.69
+J47X5jJ1FwDthYCG2d16NTq6HRsocRwyjyDWj6Jpump,late,9.045239722094324,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,-0.07207142609934886,143.49
+JeDUqiKwtjQjkdyTkoCSuyKw3seCMhmT1MExJkepump,late,4.523409052519506,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,-0.04272356290017973,50.158795997
+Lp4jroDsTe75q4SXoxQedSSJBzvEXAjL9LYgoTKpump,late,2.401259512370922,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,-0.045617801468726155,99.05
+Q6ygmYMWg24tng6am4bezf6Ax8ro47NjDBe6zMtpump,late,2.2177627574744325,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,-0.05773770500833769,144.62
+gJ7ZvMtqhUxxcrosSiAMVhy2PGJAUYRP7bk1gNrpump,late,2.391493846821787,True,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,-0.03752795452195201,56.666139872
+odQFtGvndCsPYdhPg2WBg673nm9UiwzxEyUoT7Mpump,late,2.615446952286072,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,exit_uncertain:capture gap before landing,,,145.26
+pqgMvhGdQmNk4b1r8NRUjFTUewuSPqHQujKohiQpump,late,2.2532899653549636,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.03947870424604144,64.42
+ssZ1onnCGNtajcR4BDcq5ntqNc6BHHSuKc85D6Apump,early,5.139598315644262,False,codex_filled_label_unknown(path_not_continuous): max_proceeds<2x,scored,,0.015894621192162284,43.297843856

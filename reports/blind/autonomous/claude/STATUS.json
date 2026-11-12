@@ -2,9 +2,9 @@
   "worker": "Claude research worker",
   "run_id": "f008-20261112T065028Z",
   "task": "F008 label concordance: Claude sustained2x (price,1h) vs Codex C009 sustained2x (net proceeds,2h) at 5 min on the 3,638 denominator; counts only",
-  "state": "leased",
+  "state": "completed",
   "started_at": "2026-11-12T06:50:28Z",
-  "lease_expires_at": "2026-11-12T08:50:28Z",
+  "lease_expires_at": null,
   "input_commits": {
     "tracker": "b357ca7",
     "research-codex_read": "59d657b75b8378273b1e1a239ce2c0fe2e4be2b5",
@@ -15,20 +15,21 @@
   },
   "task_choice_note": "R9: F008 after F006 part 2. F007 next.",
   "previous_run": "f006p2-20261112T025028Z",
-  "next_task": "F008 (label concordance: Claude 117 vs Codex 56 five-minute runners), then F007",
+  "next_task": "F007 (unless the coordinator closes it on F008's evidence), then F009",
   "blockers": [],
-  "completed_at": null,
-  "result": null,
+  "completed_at": "2026-11-12T07:16:00Z",
+  "result": "F008: Codex's 56 five-minute runners are all among Claude's 117 (Codex-only 0); the 61 Claude-only are 8 Codex fill-unavailable + 53 filled-but-unknown under Codex's 30-s continuity rule (median 1-h price multiple 3.3x); horizon explains none; Codex's 0 negatives come from 2,095/3,489 unavailable fills + the 2-h continuity requirement. Codex C009/C010 counts re-derived exactly from ledgers. Idea lab CL-L003 launch crowding failed: 68/50 resolved, -1.774848 SOL, mean -17.7%, both halves negative; control 679/419/-10.011572 (= f006p2).",
   "task_states": {
     "F001": "completed_agree_all_rows",
     "F006": "completed (part 1 detection @ 7a9cd6a; part 2 trading this run)",
-    "F008": "next",
-    "F007": "after F008",
+    "F008": "completed",
+    "F007": "next (scope question to coordinator: REVIEW_REQUESTS 12)",
     "F002": "ready",
     "F003": "ready after F002",
     "F004": "ready",
-    "F005": "blocked (Round 1 release)"
+    "F005": "blocked (Round 1 release)",
+    "F009": "ready after F007"
   },
   "artifacts": "reports/blind/autonomous/claude/runs/f008-20261112T065028Z/",
-  "protocol_commit": "061aa13"
+  "protocol_commit": "3a281db"
 }
