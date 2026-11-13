@@ -33,3 +33,10 @@ L005:paired195improve2.436389SOL,35better/9worse/151unchanged. Win25.64%,loss>50
 | CDEX-L006-BASELINE | Original L003 entries and whole-position 30% proceeds trail | same | 291 filled; 5 fills unavailable; 96 exits uncertain; 195 resolved | −4.645368 observed | −11.91% / −23.03% | −5.561080 SOL | 1 locked control; 2 total | inconclusive | c014-lab-20261112T211254Z |
 
 Quote states are the same row at all 296 decisions: ratio 1.0, zero vetoes. Candidate retains all controls; paired 195-trade difference is zero. No lower threshold or timing retune. Win rate 23.08%; losses over 50%: 5.13%; without best one: −4.968636 SOL; early/late: −3.089285/−1.556083. Full total remains unknown. C014 is a counts/opportunity audit, not another strategy test or fresh validation.
+
+R54 accounting note (13 Nov): CDEX-L006 rows above are the unchanged baseline replay and a zero-binding feature-equality fact. They do not count as an operative Idea Lab test. Their recorded values are retained rather than silently removed.
+
+| CDEX-L007 | Exit on first post-fill creator sale recovering reported buy SOL while retaining positive trade-derived inventory | e6783312; 6 Nov 07:40–7 Nov 20:00 UTC | 291 filled; 5 fills unavailable; 96 exits uncertain; 195 resolved (296 attempts) | −4.953473 observed | −12.70% / −23.03% | −5.813415 SOL | 1 new candidate; 2 total with locked baseline | failed | c015-lab-20261113T031524Z |
+| CDEX-L007-BASELINE | Original L003 entries and whole-position 30% proceeds trail | same | 291 filled; 5 fills unavailable; 96 exits uncertain; 195 resolved | −4.645368 observed | −11.91% / −23.03% | −5.561080 SOL | 1 locked control; 2 total | inconclusive | c015-lab-20261113T031524Z |
+
+Only two creator-event exits; one worsens proceeds and one leaves them unchanged. R11 paired 195: −0.308105 SOL difference (early 0, late −0.308105). Win rate 22.56%; losses over 50%: 5.13%; without best one: −5.276740 SOL. Early/late totals: −3.089285/−1.864188. Full total unknown; sparse support, no general creator-mechanism claim or threshold retune. This is an event exit, not an entry veto; R54’s removal-share precheck is not applicable.

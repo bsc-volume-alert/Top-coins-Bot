@@ -1,0 +1,53 @@
+{
+  "codex_l004_only_22_resolved_both_in_claude_framework": 5,
+  "mints": [
+    {
+      "mint": "BPcmv1ZDK99FienyWpeFo2zvY6EndeHCQ5zzBhKJpump",
+      "codex_baseline_why": "capture gap during hold",
+      "claude_control_net_sol": -0.03377328496755125,
+      "claude_control_exit_state_age_s": 1.2910001277923584,
+      "claude_control_hold_s": 3625.2910001277924,
+      "sc_net_sol": -0.017710236287013764,
+      "codex_l004_net_sol": -0.017710236287013764
+    },
+    {
+      "mint": "ASTLrYPQeCt4iTdiZu439i4cfkcWEH1RrPA4ctyEpump",
+      "codex_baseline_why": "capture gap during hold",
+      "claude_control_net_sol": 1.375955067139338,
+      "claude_control_exit_state_age_s": 0.5829999446868896,
+      "claude_control_hold_s": 1940.582999944687,
+      "sc_net_sol": -0.012145478403147473,
+      "codex_l004_net_sol": -0.012145478403147473
+    },
+    {
+      "mint": "FdkG3mGaq8BcnYejs1fR4y6NV2wVmDjkRLYEWvjSpump",
+      "codex_baseline_why": "capture gap during hold",
+      "claude_control_net_sol": 0.06420988624826557,
+      "claude_control_exit_state_age_s": 0.7810001373291016,
+      "claude_control_hold_s": 416.7810001373291,
+      "sc_net_sol": 0.016457613715421787,
+      "codex_l004_net_sol": 0.016457613715421787
+    },
+    {
+      "mint": "rztrL3rKMB6g6H8qtmnGjv8B8TdT9Qv9M4sGENspump",
+      "codex_baseline_why": "capture gap during hold",
+      "claude_control_net_sol": -0.11548117664325308,
+      "claude_control_exit_state_age_s": 0.03900003433227539,
+      "claude_control_hold_s": 1519.0390000343323,
+      "sc_net_sol": 0.0661156750756609,
+      "codex_l004_net_sol": 0.0661156750756609
+    },
+    {
+      "mint": "DY3o5SLKeZkhkyqJJL4bbxxHos86yLqoVD4wVVaHpiLL",
+      "codex_baseline_why": "capture gap during hold",
+      "claude_control_net_sol": 0.423680455105637,
+      "claude_control_exit_state_age_s": 0.7929999828338623,
+      "claude_control_hold_s": 797.7929999828339,
+      "sc_net_sol": -0.013844885861226118,
+      "codex_l004_net_sol": -0.013844885861226118
+    }
+  ],
+  "control_total": 1.7145909468824363,
+  "sc_total": 0.038872688239695335,
+  "difference": -1.675718258642741
+}

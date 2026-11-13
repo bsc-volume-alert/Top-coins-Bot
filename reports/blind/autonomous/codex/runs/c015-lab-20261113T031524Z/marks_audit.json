@@ -1,0 +1,121 @@
+{
+  "task": "C015",
+  "protocol_commit": "88c7c23db92541bd9f566238f8899bcda8d56f9f",
+  "data_commit": "e67833121f1da0dc992c28fa26c5236a855c151a",
+  "source_c012_results_commit": "5024b9ef640b6e198c24851e1fc5f632001e525e",
+  "source_c012_local_ledger_sha256": "c5cc4e5dc603c8e05bcfc325abb029e399ddc4a08e5bb110edc98f1c606c2f55",
+  "peer_source_commit": "fc6b05aa75162444776a93035b34a7ad24c77395",
+  "summary": {
+    "early": {
+      "positions": 14,
+      "l004_exit_arithmetic_reproduced": 14,
+      "available_pre_obstruction_marks": 14,
+      "unavailable_marks": 0,
+      "marks_above_l004_exit": 12,
+      "marks_below_l004_exit": 0,
+      "equal": 2,
+      "last_mark_proceeds_sum_sol": 4.851830464499905,
+      "last_mark_pnl_sum_sol": 2.051830464499905,
+      "l004_proceeds_sum_on_marked_sol": 3.004840377747297,
+      "l004_net_sum_on_marked_sol": 0.2048403777472968,
+      "mark_minus_l004_proxy_total_sol": 1.846990086752608,
+      "l004_total_net_sol": 0.2048403777472968,
+      "baseline_reason_counts": {
+        "state older than 30s": 13,
+        "state invalid or pool evidence absent": 1
+      },
+      "obstruction_kind_counts": {
+        "final stale-state tail": 11,
+        "invalid received state": 3
+      },
+      "true_baseline_outcomes_unavailable": 14
+    },
+    "late": {
+      "positions": 8,
+      "l004_exit_arithmetic_reproduced": 8,
+      "available_pre_obstruction_marks": 8,
+      "unavailable_marks": 0,
+      "marks_above_l004_exit": 6,
+      "marks_below_l004_exit": 2,
+      "equal": 0,
+      "last_mark_proceeds_sum_sol": 2.1076379775664584,
+      "last_mark_pnl_sum_sol": 0.5076379775664585,
+      "l004_proceeds_sum_on_marked_sol": 1.531341247122232,
+      "l004_net_sum_on_marked_sol": -0.06865875287776799,
+      "mark_minus_l004_proxy_total_sol": 0.5762967304442265,
+      "l004_total_net_sol": -0.06865875287776799,
+      "baseline_reason_counts": {
+        "capture gap during hold": 5,
+        "state older than 30s": 3
+      },
+      "obstruction_kind_counts": {
+        "logged main gap": 5,
+        "final stale-state tail": 1,
+        "invalid received state": 2
+      },
+      "true_baseline_outcomes_unavailable": 8
+    },
+    "all": {
+      "positions": 22,
+      "l004_exit_arithmetic_reproduced": 22,
+      "available_pre_obstruction_marks": 22,
+      "unavailable_marks": 0,
+      "marks_above_l004_exit": 18,
+      "marks_below_l004_exit": 2,
+      "equal": 2,
+      "last_mark_proceeds_sum_sol": 6.959468442066363,
+      "last_mark_pnl_sum_sol": 2.5594684420663634,
+      "l004_proceeds_sum_on_marked_sol": 4.5361816248695295,
+      "l004_net_sum_on_marked_sol": 0.13618162486952884,
+      "mark_minus_l004_proxy_total_sol": 2.4232868171968343,
+      "l004_total_net_sol": 0.13618162486952884,
+      "baseline_reason_counts": {
+        "state older than 30s": 16,
+        "state invalid or pool evidence absent": 1,
+        "capture gap during hold": 5
+      },
+      "obstruction_kind_counts": {
+        "final stale-state tail": 12,
+        "invalid received state": 5,
+        "logged main gap": 5
+      },
+      "true_baseline_outcomes_unavailable": 22
+    }
+  },
+  "peer_five": {
+    "pre_mark_comparison": {
+      "positions": 5,
+      "l004_exit_arithmetic_reproduced": 5,
+      "available_pre_obstruction_marks": 5,
+      "unavailable_marks": 0,
+      "marks_above_l004_exit": 4,
+      "marks_below_l004_exit": 1,
+      "equal": 0,
+      "last_mark_proceeds_sum_sol": 1.3480753441733344,
+      "last_mark_pnl_sum_sol": 0.3480753441733343,
+      "l004_proceeds_sum_on_marked_sol": 1.0388726882396955,
+      "l004_net_sum_on_marked_sol": 0.038872688239695335,
+      "mark_minus_l004_proxy_total_sol": 0.30920265593363894,
+      "l004_total_net_sol": 0.038872688239695335,
+      "baseline_reason_counts": {
+        "capture gap during hold": 5
+      },
+      "obstruction_kind_counts": {
+        "logged main gap": 5
+      },
+      "true_baseline_outcomes_unavailable": 5
+    },
+    "reported_scenario_arithmetic_reproduced": 5,
+    "peer_scenario_net_sum_sol": 1.714590946882436,
+    "l004_net_sum_sol": 0.038872688239695335,
+    "peer_scenario_minus_l004_sol": 1.6757182586427408
+  },
+  "limitations": [
+    "Pre-obstruction quotes are marks, not actual missing exit proceeds or statistical bounds",
+    "Direction/size of actual paired-selection bias is unidentified",
+    "All22true baseline exits stay unknown; no zero/mark imputation",
+    "Peer5post-gap scenario arithmetic verified only, not a new whole-evaluator reproduction or real fill proof",
+    "Snapshot retention/capture/decoder uncertainty and independent nonpersistent own-impact assumptions remain",
+    "Counts are selected on outcome availability; not a full-population causal effect"
+  ]
+}

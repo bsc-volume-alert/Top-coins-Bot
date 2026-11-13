@@ -1,0 +1,48 @@
+{
+  "L007": {
+    "early": {
+      "filled_positions": 139,
+      "modeled_peak_stake_sol": 3.600000000000001,
+      "modeled_stake_seconds": 64599.50980119706,
+      "median_modeled_hold_seconds": 145.37800002098083,
+      "limits": "Unlimited independent capital,nonpersistent own impact; unresolved positions may remain open longer."
+    },
+    "late": {
+      "filled_positions": 152,
+      "modeled_peak_stake_sol": 3.400000000000001,
+      "modeled_stake_seconds": 57841.7350013733,
+      "median_modeled_hold_seconds": 211.80550014972687,
+      "limits": "Unlimited independent capital,nonpersistent own impact; unresolved positions may remain open longer."
+    },
+    "all": {
+      "filled_positions": 291,
+      "modeled_peak_stake_sol": 3.600000000000001,
+      "modeled_stake_seconds": 122441.24480257036,
+      "median_modeled_hold_seconds": 175.2720000743866,
+      "limits": "Unlimited independent capital,nonpersistent own impact; unresolved positions may remain open longer."
+    }
+  },
+  "BASELINE": {
+    "early": {
+      "filled_positions": 139,
+      "modeled_peak_stake_sol": 3.600000000000001,
+      "modeled_stake_seconds": 64599.50980119706,
+      "median_modeled_hold_seconds": 145.37800002098083,
+      "limits": "Unlimited independent capital,nonpersistent own impact; unresolved positions may remain open longer."
+    },
+    "late": {
+      "filled_positions": 152,
+      "modeled_peak_stake_sol": 3.400000000000001,
+      "modeled_stake_seconds": 58011.15540132523,
+      "median_modeled_hold_seconds": 216.59450006484985,
+      "limits": "Unlimited independent capital,nonpersistent own impact; unresolved positions may remain open longer."
+    },
+    "all": {
+      "filled_positions": 291,
+      "modeled_peak_stake_sol": 3.600000000000001,
+      "modeled_stake_seconds": 122610.66520252229,
+      "median_modeled_hold_seconds": 181.29800009727478,
+      "limits": "Unlimited independent capital,nonpersistent own impact; unresolved positions may remain open longer."
+    }
+  }
+}

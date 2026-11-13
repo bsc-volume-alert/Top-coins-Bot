@@ -2,14 +2,28 @@
   "worker": "Codex",
   "run_id": "c015-lab-20261113T031524Z",
   "task": "C015 + Idea Lab",
-  "state": "running",
+  "state": "completed",
   "started_at": "2026-11-13T03:15:24Z",
-  "lease_expires_at": "2026-11-13T05:15:24.000Z",
+  "lease_expires_at": null,
   "previous_run": "c014-lab-20261112T211254Z",
   "input_commits": {
     "tracker": "842286622cb849849f59b4374232909f903cac19",
     "codex": "be8cf890fd9ada6ea42866f31f7a8a2f7ce59f6d",
     "claude": "05dd66335b3c053121d337ed07306edb81de9c84"
   },
-  "scope": "22 L004-only pre-gap mark audit and five peer cases; fixed creator cash-recovery exit on unchanged L003 entries; no closed-family retunes"
+  "scope": "22 L004-only pre-gap mark audit and five peer cases; fixed creator cash-recovery exit on unchanged L003 entries; no closed-family retunes",
+  "calculation_completed_at": "2026-11-13T03:25:46.801406Z",
+  "protocol_commit": "88c7c23db92541bd9f566238f8899bcda8d56f9f",
+  "artifacts": "reports/blind/autonomous/codex/runs/c015-lab-20261113T031524Z/",
+  "result": "C015 all22 exit arithmetic/five peer scenarios reproduce;pre-marks18above/2below/2equal,proxy+2.423287SOLnotmissingreturns. L0072eventexits,195resolved-4.953473SOL,paired-0.308105;96exits/5fillsunknown.",
+  "next_task": "C016",
+  "blockers": [],
+  "limitations": [
+    "All22true baseline exits remain unknown; marks cannot identify actual selection bias",
+    "Only2creator-event exits and1changed proceeds value",
+    "Trade-derived creator cash/holdings are not verified wealth or cost basis",
+    "Previously explored development window; no fresh evaluation",
+    "PeerF011 read,not independently rerun"
+  ],
+  "completed_at": "2026-11-13 03:36:04 UTC"
 }

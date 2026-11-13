@@ -1,0 +1,124 @@
+{
+  "experiment": "CDEX-L007",
+  "protocol_commit": "88c7c23db92541bd9f566238f8899bcda8d56f9f",
+  "new_strategy_specs": 1,
+  "total_specs_with_baseline": 2,
+  "baseline_fields_identical": 5663,
+  "same_entry_attempts": 296,
+  "R54_scope": "No entry filter/veto;296entries retained. Trigger support reported, no entry-removal precheck used as an outcome-selection device.",
+  "trigger_counts": {
+    "2h": 78,
+    "30pct_proceeds_trail": 211,
+    "fill_unavailable": 5,
+    "creator_cash_recovery_sell": 2
+  },
+  "creator_event_actual_exits": 2,
+  "creator_event_exit_statuses": {
+    "scored": 2
+  },
+  "creator_condition_on_trail_tie": 0,
+  "cashflow_at_fill_groups": {
+    "no captured creator purchase": 119,
+    "no positive trade-derived token balance": 85,
+    "recorded purchase SOL already recovered; positive proxy inventory": 31,
+    "recorded purchase SOL not yet recovered; positive proxy inventory": 56
+  },
+  "candidate_actor_history_unknown_count": 1,
+  "paired": {
+    "early": {
+      "both_resolved": 95,
+      "candidate": {
+        "n": 95,
+        "total_net_sol": -3.0892848278002583,
+        "mean_net_sol": -0.03251878766105535,
+        "median_net_sol": -0.04912331435448686
+      },
+      "baseline": {
+        "n": 95,
+        "total_net_sol": -3.0892848278002583,
+        "mean_net_sol": -0.03251878766105535,
+        "median_net_sol": -0.04912331435448686
+      },
+      "delta_total_sol": 0.0,
+      "improved": 0,
+      "worse": 0,
+      "equal": 95,
+      "exploratory_3h_block_delta_total_95pct": [
+        0.0,
+        0.0
+      ],
+      "blocks": 6
+    },
+    "late": {
+      "both_resolved": 100,
+      "candidate": {
+        "n": 100,
+        "total_net_sol": -1.86418791902707,
+        "mean_net_sol": -0.018641879190270702,
+        "median_net_sol": -0.042756478719117336
+      },
+      "baseline": {
+        "n": 100,
+        "total_net_sol": -1.556083287012918,
+        "mean_net_sol": -0.015560832870129179,
+        "median_net_sol": -0.042756478719117336
+      },
+      "delta_total_sol": -0.3081046320141521,
+      "improved": 0,
+      "worse": 1,
+      "equal": 99,
+      "exploratory_3h_block_delta_total_95pct": [
+        -0.9243138960424564,
+        0.0
+      ],
+      "blocks": 7
+    },
+    "all": {
+      "both_resolved": 195,
+      "candidate": {
+        "n": 195,
+        "total_net_sol": -4.9534727468273285,
+        "mean_net_sol": -0.025402424342704247,
+        "median_net_sol": -0.04606853039205516
+      },
+      "baseline": {
+        "n": 195,
+        "total_net_sol": -4.645368114813176,
+        "mean_net_sol": -0.023822400588785517,
+        "median_net_sol": -0.04606853039205516
+      },
+      "delta_total_sol": -0.3081046320141521,
+      "improved": 0,
+      "worse": 1,
+      "equal": 194,
+      "exploratory_3h_block_delta_total_95pct": [
+        -0.9243138960424564,
+        0.0
+      ],
+      "blocks": 12
+    }
+  },
+  "availability_cross_table": [
+    {
+      "candidate": "exit_uncertain",
+      "baseline": "exit_uncertain",
+      "count": 96
+    },
+    {
+      "candidate": "fill_unavailable",
+      "baseline": "fill_unavailable",
+      "count": 5
+    },
+    {
+      "candidate": "scored",
+      "baseline": "scored",
+      "count": 195
+    }
+  ],
+  "limitations": [
+    "Two event exits cannot establish a population-level mechanism effect",
+    "Trade-derived creator cash recovery is not verified cost basis/profit or actual token balance",
+    "Existing quote,retention,gap and decoder uncertainty preserved",
+    "Previously explored development window; no fresh evaluation or family retune"
+  ]
+}

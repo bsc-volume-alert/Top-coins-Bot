@@ -1,0 +1,5 @@
+Completed C015: recomputed all22L004-only exit amounts and published last usable pre-obstruction marks, with five peer gap scenarios kept separate.
+Pre-marks exceed L004in18cases,trail it in2and equal it in2;proxy total+2.423287SOLdoes not identify true missing baseline exits or bias direction.
+One fixed creator-cash recovery exit acted twice:195resolved-4.953473SOLversus-4.645368baseline;one outcome worsened,others unchanged.
+96exits and5fills stay unknown;two-event support is weak,all22true baseline exits remain unknown,and no marked returns were imputed.
+Next C016dev-buy provenance;knowledge,scoreboard and review requests updated with explicit point-estimate-versus-support distinction.
