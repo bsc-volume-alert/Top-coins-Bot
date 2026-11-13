@@ -1,0 +1,37 @@
+{
+  "condition": "sells == 0 in (created+60 s, trigger]",
+  "sell_from_s": 60,
+  "counts": {
+    "not_retained": 301,
+    "denominator_early": 1593,
+    "RUN2_early": 231,
+    "RUN2C_early": 4,
+    "outage_excluded": 974,
+    "denominator_late": 2045,
+    "RUN2_late": 337,
+    "RUN2C_late": 14
+  },
+  "denominator": 3638,
+  "RUN2_control_attempts": 568,
+  "RUN2C_candidate_attempts": 18,
+  "removed": 550,
+  "removed_share_of_control": 0.9683098591549296,
+  "testable_5_95": false,
+  "sells_at_trigger_quantiles_counts_only": {
+    "min": 0,
+    "p10": 5,
+    "p25": 15,
+    "median": 48.0,
+    "p75": 116,
+    "p90": 236,
+    "max": 1069,
+    "share_zero": 0.03169014084507042,
+    "share_le_1": 0.04929577464788732,
+    "share_le_3": 0.08098591549295775
+  },
+  "stream_stats": {
+    "mints_streamed": 4913,
+    "duplicates_removed": 1568880,
+    "non_contiguous": 0
+  }
+}

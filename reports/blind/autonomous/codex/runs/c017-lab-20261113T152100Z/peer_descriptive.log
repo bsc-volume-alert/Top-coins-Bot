@@ -1,0 +1,130 @@
+{
+ "control_attempts": 568,
+ "by_half": {
+  "early": {
+   "attempts": 231,
+   "zero_sell": 4,
+   "sells_quantiles": {
+    "n": 231,
+    "min": 0,
+    "p25": 20,
+    "median": 57,
+    "p75": 136,
+    "max": 1069
+   }
+  },
+  "late": {
+   "attempts": 337,
+   "zero_sell": 14,
+   "sells_quantiles": {
+    "n": 337,
+    "min": 0,
+    "p25": 13,
+    "median": 43,
+    "p75": 110,
+    "max": 893
+   }
+  }
+ },
+ "zero_sell": {
+  "n": 18,
+  "entry_age_s": {
+   "n": 18,
+   "min": 61.0699999332428,
+   "p25": 69.81399989128113,
+   "median": 122.5809999704361,
+   "p75": 238.08100008964539,
+   "max": 789.9790000915527
+  },
+  "breadth": {
+   "n": 18,
+   "min": 0,
+   "p25": 0,
+   "median": 1.0,
+   "p75": 1,
+   "max": 18
+  },
+  "buys": {
+   "n": 18,
+   "min": 0,
+   "p25": 0,
+   "median": 1.0,
+   "p75": 3,
+   "max": 18
+  },
+  "price_over_p60": {
+   "n": 18,
+   "min": 2.0036703802976135,
+   "p25": 2.091346903737894,
+   "median": 2.156840657917842,
+   "p75": 2.40028284794607,
+   "max": 246.3242166664106
+  },
+  "breadth_ge_10": 1
+ },
+ "positive_sell": {
+  "n": 550,
+  "entry_age_s": {
+   "n": 550,
+   "min": 60.759000062942505,
+   "p25": 91.625,
+   "median": 154.34899997711182,
+   "p75": 243.0130000114441,
+   "max": 877.5780000686646
+  },
+  "breadth": {
+   "n": 550,
+   "min": 0,
+   "p25": 8,
+   "median": 45.0,
+   "p75": 134,
+   "max": 552
+  },
+  "buys": {
+   "n": 550,
+   "min": 1,
+   "p25": 33,
+   "median": 81.5,
+   "p75": 198,
+   "max": 1134
+  },
+  "price_over_p60": {
+   "n": 550,
+   "min": 2.0000689655710637,
+   "p25": 2.014483553249346,
+   "median": 2.0552135244011174,
+   "p75": 2.2323271769626554,
+   "max": 61.535037473738434
+  },
+  "breadth_ge_10": 399,
+  "sell_share_of_curve_rows": {
+   "n": 550,
+   "min": 0.05405405405405406,
+   "p25": 0.3275862068965517,
+   "median": 0.38473671438971124,
+   "p75": 0.4326923076923077,
+   "max": 0.8407960199004975
+  },
+  "first_sell_minus_60_s": {
+   "n": 550,
+   "min": 0.003999948501586914,
+   "p25": 0.38700008392333984,
+   "median": 1.1770000457763672,
+   "p75": 4.569999933242798,
+   "max": 323.19799995422363
+  },
+  "trigger_row_is_sell": 14
+ },
+ "crosstab_zero_sell_x_breadth_ge_10": {
+  "sells0_breadth>=10": 1,
+  "sells0_breadth<10": 17,
+  "sells>0_breadth>=10": 399,
+  "sells>0_breadth<10": 151
+ },
+ "stream_stats": {
+  "mints_streamed": 4913,
+  "duplicates_removed": 1568880,
+  "non_contiguous": 0
+ },
+ "note": "counts and knowable-at-time features only; no exit, P&L or outcome category was computed or read"
+}

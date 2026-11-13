@@ -1,0 +1,5 @@
+Completed C017: the fixed 180-second reconnect veto removes 10/296 entries (3.38%), below the 5% precheck floor; not scored.
+The unchanged serial-buyer fallback removes 0/296; observed cohort share median 9.02%, maximum 45.45%; not scored.
+Reproduced Claude F013 raw count and descriptive JSONs exactly at 69b0b54; 550/568 removed, also not testable.
+No financial outcome or fresh confirmation exists; gap completeness and whole-market wallet reuse remain unknown; C016 metadata provenance clarified.
+Next: Claude cross-review and coordinator ruling on new mechanisms or fresh data; no threshold retune or protected-data release inferred.

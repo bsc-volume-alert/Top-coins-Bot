@@ -1,0 +1,70 @@
+{
+  "counts_only": true,
+  "source_input_commit": "e67833121f1da0dc992c28fa26c5236a855c151a",
+  "main_intervals_independently_parsed": 57,
+  "H2_independent_vetoes": 10,
+  "H2_all_296_flags_equal": true,
+  "H2_age_since_reopen_s": {
+    "n": 10,
+    "min": 0.0,
+    "p25": 18.0,
+    "median": 82.0,
+    "p75": 100.0,
+    "max": 159.0
+  },
+  "H2_distinct_reopenings": 9,
+  "H3_feature_arithmetic_equal_296": true,
+  "H3_share_distribution": {
+    "n": 296,
+    "min": 0.0,
+    "p25": 0.041666666666666664,
+    "median": 0.09023066485753053,
+    "p75": 0.14705882352941177,
+    "max": 0.45454545454545453
+  },
+  "H3_serial_buyer_count_distribution": {
+    "n": 296,
+    "min": 0,
+    "p25": 3,
+    "median": 5.0,
+    "p75": 8,
+    "max": 30
+  },
+  "H3_recent_buyer_count_distribution": {
+    "n": 296,
+    "min": 20,
+    "p25": 38,
+    "median": 58.0,
+    "p75": 83,
+    "max": 256
+  },
+  "H3_share_halves": {
+    "early": {
+      "n": 143,
+      "min": 0.0,
+      "p25": 0.03773584905660377,
+      "median": 0.07692307692307693,
+      "p75": 0.13793103448275862,
+      "max": 0.45454545454545453
+    },
+    "late": {
+      "n": 153,
+      "min": 0.0,
+      "p25": 0.0449438202247191,
+      "median": 0.09473684210526316,
+      "p75": 0.15151515151515152,
+      "max": 0.42857142857142855
+    }
+  },
+  "F013_precheck_raw_reproduction_exact": true,
+  "peer_commit": "69b0b54ff7c457fa0d063caf3e236bf027c56bc1",
+  "data_files_verified": 16,
+  "field_lag_is_not_pure_network_latency": true,
+  "financial_outcomes_computed": false,
+  "candidate_only_resolved": "not computed; neither rule scored",
+  "limits": [
+    "H3 arithmetic audit is not an independent second full raw reconstruction",
+    "Logged reopen time not separately timestamped delivery",
+    "Whole-market wallet reuse and actual funder identity unavailable"
+  ]
+}

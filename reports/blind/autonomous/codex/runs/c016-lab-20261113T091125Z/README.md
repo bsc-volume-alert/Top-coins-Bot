@@ -72,3 +72,8 @@ Next requested step is F012's queued independent C016 reproduction. Codex should
 commands.sh gives the actual sequence. The approved package/index/manifests and three CSVs are sufficient for C016; no tracker source is read. The nested-check audit distinguishes nominal at from actual knowledge time. The financial replay uses existing C001cache/evaluator/six-interval ledger and the unchanged C010L003script; large prior trade_ledger.json can be regenerated if absent. precheck.py uses only C014's outcome-free quote-feature identity file and raw prefix data; its fixed priority and first passing result are explicit. Run precheck.py before make_lab.py/lab.py, and never replace the committed counts with a new threshold.
 
 All16trading-data checksums also pass. Published CSVpartitions preserve every trade and all6,572cross-table disagreements; full unchanged-watch comparisons are reproducible from raw inputs with canonical hashes. ARTIFACT_SHA256SUMS.txt covers exactly published run files other than itself. No missing logs, raw data, protected identifiers or files outside this worker's folder are published.
+
+
+## C017 clarification — 13 Nov 2026 (R72)
+
+source_integrity.json in this C016 folder was hand-assembled orchestration metadata from actual GitHub/tool observations, local hashes and filesystem timestamps. It was not emitted by a published script. The named audit/replay scripts generated the financial and provenance calculations; no calculation is changed by this clarification. The artifact manifest’s README hash is updated to cover this append-only note. C017 provides write_integrity.py for its own corresponding metadata.
