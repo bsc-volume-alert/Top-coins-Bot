@@ -1,26 +1,23 @@
 {
   "worker": "Claude research worker",
-  "run_id": "f013-20261113T145108Z",
-  "task": "F013 (queue run 11, R75): Codex C017 not yet published on research-codex (HEAD d820bda = C016), so parts (b) and (c): Idea-lab CL-L011 'no-sell run' (F004-RUN2 trigger entered only if zero curve sells received in (created+60 s, trigger]), R54 pre-check first, control = F004-RUN2 unchanged, eval-1.1 + R4 scenario, 3,638 denominator; plus the R73 correction note in KNOWLEDGE.md / SCOREBOARD. C017 cross-review deferred to the following run.",
-  "state": "completed",
-  "started_at": "2026-11-13T14:51:08Z",
-  "lease_expires_at": null,
+  "run_id": "f014-20261113T185102Z",
+  "task": "F014 (queue run 12, R80/R79): (a) counts-only confirmation of Codex C017 precheck.py unchanged at 9aa2696; (b) Idea-lab CL-L012 retention-speed veto on the E control (skip E launches whose creation-to-15-SOL-retention receipt time exceeds T, T fixed in PROTOCOL.md before any count; R54 pre-check first; eval-1.1 + R4 scenario; 3,638 denominator); (c) CK21 scoping per R83(a).",
+  "state": "running",
+  "started_at": "2026-11-13T18:51:02Z",
+  "lease_expires_at": "2026-11-13T20:51:02Z",
   "input_commits": {
-    "tracker": "4079855248085314b487b47f740b9ba9b43fadc5",
-    "research-codex_read": "d820bda863f680e9e097274412ddcce5c0d47e6a",
-    "research-claude_base": "d34884229ee0590d842a32e4afa86fb48ef124a6",
+    "tracker": "6479ed99a1916bdadf277a6510797a4ed1e14362",
+    "research-codex_read": "9aa269669121c22b9bb280af508d19ec02dc41bf",
+    "research-claude_base": "69b0b54ff7c457fa0d063caf3e236bf027c56bc1",
     "entry-all-20261107t2210": "e67833121f1da0dc992c28fa26c5236a855c151a",
     "entry-package-7nov": "0e3be03c71949e069a7a31b5951f332bb563f68f",
     "blind-eval-1.1": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b"
   },
-  "task_choice_note": "Queue run 11 F013: C017 absent at run start -> (b)+(c) now, (a) next run. (b) ended NOT TESTABLE by the R54 pre-check; nothing scored by rule.",
-  "previous_run": "f012-20261113T105105Z",
-  "next_task": "F013 (a): cross-review of Codex C017 when published on research-codex; Idea-lab slot: await coordinator ruling (REVIEW_REQUESTS 43) on a replacement test \u2014 retention-speed veto or creation-metadata veto \u2014 register nothing until ruled",
-  "blockers": [
-    "Codex C017 not published at run start (research-codex HEAD d820bda) \u2014 part (a) deferred",
-    "CL-L011 NOT TESTABLE (R54, 96.8 % removed) \u2014 Idea-lab slot ended without a scored test; ruling requested"
-  ],
-  "artifacts": "reports/blind/autonomous/claude/runs/f013-20261113T145108Z/",
+  "task_choice_note": "Queue run 12: F014 is READY and Claude's next task; C018 is Codex's. T for CL-L012 is fixed in PROTOCOL.md (committed before any retention-time count is read).",
+  "previous_run": "f013-20261113T145108Z",
+  "next_task": null,
+  "blockers": [],
+  "artifacts": "reports/blind/autonomous/claude/runs/f014-20261113T185102Z/",
   "task_states": {
     "F001": "completed_agree_all_rows",
     "F006": "completed",
@@ -34,9 +31,10 @@
     "F005": "blocked (Round 1 release)",
     "F011": "completed",
     "F012": "completed",
-    "F013": "partial: (b) NOT TESTABLE recorded, (c) done, (a) deferred to next run"
+    "F013": "partial: (b) NOT TESTABLE recorded, (c) done, (a) deferred to next run",
+    "F014": "running"
   },
-  "completed_at": "2026-11-13T15:01:39Z",
-  "protocol_commit": "f8d7128",
-  "result": "F013 (b): CL-L011 no-sell run (F004-RUN2 trigger only if zero curve sells received in (created+60 s, trigger]; zero-sell condition fixed in PROTOCOL @ f8d7128 before any count) is NOT TESTABLE under R54: removes 550/568 control triggers (96.8 %; early 227/231, late 323/337) \u2014 not scored, no outcome read for either arm, no threshold or alternative statistic tried; RUN2-trigger family closed on this window (R75). Counts-only features: first curve sell after the 60-s mark received a median 1.18 s later on active tapes; sells a median 38 % of curve rows by the trigger; the 18 zero-sell triggers have a median 1 buy / 1 outside buyer since 60 s, 17/18 breadth < 10. (c): R73 correction recorded in KNOWLEDGE CK18 and the f012 SCOREBOARD row (99.7 % / 4,899 of 4,913; all 596 equal). Codex L008 re-derived again from its CSVs @ d820bda: identical to f012. (a) C017 cross-review deferred: not published at run start."
+  "completed_at": null,
+  "protocol_commit": null,
+  "result": null
 }
