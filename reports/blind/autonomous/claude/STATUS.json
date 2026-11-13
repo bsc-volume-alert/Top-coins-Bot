@@ -2,9 +2,9 @@
   "worker": "Claude research worker",
   "run_id": "f014-20261113T185102Z",
   "task": "F014 (queue run 12, R80/R79): (a) counts-only confirmation of Codex C017 precheck.py unchanged at 9aa2696; (b) Idea-lab CL-L012 retention-speed veto on the E control (skip E launches whose creation-to-15-SOL-retention receipt time exceeds T, T fixed in PROTOCOL.md before any count; R54 pre-check first; eval-1.1 + R4 scenario; 3,638 denominator); (c) CK21 scoping per R83(a).",
-  "state": "running",
+  "state": "completed",
   "started_at": "2026-11-13T18:51:02Z",
-  "lease_expires_at": "2026-11-13T20:51:02Z",
+  "lease_expires_at": null,
   "input_commits": {
     "tracker": "6479ed99a1916bdadf277a6510797a4ed1e14362",
     "research-codex_read": "9aa269669121c22b9bb280af508d19ec02dc41bf",
@@ -15,7 +15,7 @@
   },
   "task_choice_note": "Queue run 12: F014 is READY and Claude's next task; C018 is Codex's. T for CL-L012 is fixed in PROTOCOL.md (committed before any retention-time count is read).",
   "previous_run": "f013-20261113T145108Z",
-  "next_task": null,
+  "next_task": "Await the coordinator's R81 decision (window exhausted?) after C018; cross-review Codex C018 if queued; Idea-lab proposals (price drift at E, same-tape re-buyer share, arrival-regularity CV) held until ruled (REVIEW_REQUESTS 48)",
   "blockers": [],
   "artifacts": "reports/blind/autonomous/claude/runs/f014-20261113T185102Z/",
   "task_states": {
@@ -31,10 +31,11 @@
     "F005": "blocked (Round 1 release)",
     "F011": "completed",
     "F012": "completed",
-    "F013": "partial: (b) NOT TESTABLE recorded, (c) done, (a) deferred to next run",
-    "F014": "running"
+    "F013": "completed: (b) NOT TESTABLE, (c) done, (a) discharged by R78 + f014 counts-only confirmation",
+    "F014": "completed (weak; T = 60 only)"
   },
-  "completed_at": null,
-  "protocol_commit": null,
-  "result": null
+  "completed_at": "2026-11-13T19:05:13Z",
+  "protocol_commit": "934a86e",
+  "result": "F014 (a): Codex C017 precheck.py re-run unchanged @ 9aa2696 \u2014 PRECHECK.json 50/50 leaves identical, precheck_features.csv byte-identical (H2 10/296 = 3.38 %, H3 0/296, both NOT TESTABLE; lag medians 1.2905 / 0.7797 s; overlap 2); agree. (b): CL-L012 retention-speed veto on E, T = 60 s fixed in PROTOCOL @ 934a86e before any count; R54 pre-check @ 6a4fc23: 131/679 removed (19.3 %), TESTABLE. S2 (R4): control 679 / 419 / -10.011572 exact; kept (fast) 548 / 355 resolved / -8.053181 (-0.022685 per trade, 9.0 % > 50 % losses); removed (slow) 131 / 64 / -1.958391 (-0.030600, 23.4 %, 51 % unknown). Kept - removed per trade +0.007915 [-0.0269, +0.0393] (across zero); > 50 %-loss share -0.144 [-0.256, -0.038] (excludes zero); per-trade direction reverses in the late half and cell B. Verdict WEAK; not profitable; T = 60 only. S1 eval-1.1: 404 / 144 unknown / -8.868959, not scorable. R68 caution: slow side has fewer 5-min buyers (median 12 vs 31). (c): CK21 scoped; CK22-23 added.",
+  "precheck_commit": "6a4fc23"
 }

@@ -1,0 +1,16 @@
+{
+ "codex_commit": "9aa269669121c22b9bb280af508d19ec02dc41bf",
+ "script": "runs/c017-lab-20261113T152100Z/precheck.py sha d71128597a19f9365d8673eddaecb056efb49a6bac27851f4042acf09f25c64f, unchanged",
+ "published_leaves": 50,
+ "identical_leaves": 50,
+ "differing_leaves": [],
+ "precheck_features_csv_byte_identical": true,
+ "H2_removed": 10,
+ "H2_share": 0.033783783783783786,
+ "H3_removed": 0,
+ "chosen": null,
+ "lag_median_H1": 1.2905000448226929,
+ "lag_median_H2": 0.7797499895095825,
+ "overlap": 2,
+ "verdict": "agree \u2014 counts only, nothing scored by either side"
+}
