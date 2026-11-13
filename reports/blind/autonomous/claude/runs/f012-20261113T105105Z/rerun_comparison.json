@@ -1,0 +1,62 @@
+{
+  "codex_commit": "d820bda863f680e9e097274412ddcce5c0d47e6a",
+  "run": "c016-lab-20261113T091125Z",
+  "json": {
+    "PRECHECK.json": {
+      "fields": 22,
+      "identical": 22,
+      "differing": []
+    },
+    "cross_table_audit.json": {
+      "fields": 18,
+      "identical": 18,
+      "differing": []
+    },
+    "exposure.json": {
+      "fields": 45,
+      "identical": 45,
+      "differing": []
+    },
+    "filter_verification.json": {
+      "fields": 79,
+      "identical": 79,
+      "differing": []
+    },
+    "input_checksums.json": {
+      "fields": 9,
+      "identical": 9,
+      "differing": []
+    },
+    "lab_results.json": {
+      "fields": 240,
+      "identical": 240,
+      "differing": []
+    },
+    "nested_checks_audit.json": {
+      "fields": 109,
+      "identical": 109,
+      "differing": []
+    },
+    "provenance_results.json": {
+      "fields": 169,
+      "identical": 169,
+      "differing": []
+    },
+    "trade_checksums.json": {
+      "fields": 48,
+      "identical": 48,
+      "differing": []
+    }
+  },
+  "csv": {
+    "published": 44,
+    "byte_identical": 44,
+    "not_identical": []
+  },
+  "not_regenerated": [
+    "source_integrity.json"
+  ],
+  "lab_py_regenerated_sha256_matches_published": true,
+  "c010_lab_results_regenerated": "172/172 fields identical (needed for c010 trade_ledger.json, an unpublished intermediate read by analyze_lab.py)",
+  "note": "source_integrity.json is written by no published script (hand-made); its input commit and sha256 values were checked by eye against the fetched inputs and agree."
+}

@@ -1,0 +1,33 @@
+{
+  "B": 10,
+  "counts": {
+    "not_retained": 301,
+    "denominator_early": 1593,
+    "RUN2_early": 231,
+    "RUN2B_early": 184,
+    "outage_excluded": 974,
+    "denominator_late": 2045,
+    "RUN2_late": 337,
+    "RUN2B_late": 216
+  },
+  "denominator": 3638,
+  "RUN2_control_attempts": 568,
+  "RUN2B_candidate_attempts": 400,
+  "removed": 168,
+  "removed_share_of_control": 0.295774647887324,
+  "testable_5_95": true,
+  "breadth_at_trigger_quantiles_counts_only": {
+    "min": 0,
+    "p10": 2,
+    "p25": 7,
+    "median": 41.5,
+    "p75": 132,
+    "p90": 242,
+    "max": 552
+  },
+  "stream_stats": {
+    "mints_streamed": 4913,
+    "duplicates_removed": 1568880,
+    "non_contiguous": 0
+  }
+}

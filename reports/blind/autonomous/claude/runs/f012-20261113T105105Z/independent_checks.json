@@ -1,0 +1,289 @@
+{
+  "inputs": {
+    "snapshot3_rows": 56374,
+    "current_rows": 55225,
+    "census_rows": 62789,
+    "duplicate_mint_keys": {
+      "snapshot3": 0,
+      "current": 0
+    }
+  },
+  "population": {
+    "snapshot3": {
+      "rows": 56374,
+      "zero": 29778,
+      "positive": 26596,
+      "missing_or_nonfinite": 0
+    },
+    "current": {
+      "rows": 55225,
+      "zero": 28596,
+      "positive": 26629,
+      "missing_or_nonfinite": 0
+    },
+    "census": {
+      "rows": 62789,
+      "zero": 23557,
+      "positive": 39232,
+      "missing_or_nonfinite": 0
+    }
+  },
+  "paired_watch": {
+    "common": 51221,
+    "snapshot3_only": 5153,
+    "current_only": 4004,
+    "categories": {
+      "unchanged_numeric": 51221
+    }
+  },
+  "cross_table": {
+    "snapshot3_vs_census": {
+      "overlap": 44217,
+      "equal": 38394,
+      "different": 5823,
+      "kinds": {
+        "watch_zero_census_positive": 5823
+      },
+      "abs_diff_sol": {
+        "min": "4E-9",
+        "median": "0.145999487",
+        "p95": "4",
+        "max": "85.005359057",
+        "count_gt_1e-6": 5794
+      }
+    },
+    "current_vs_census": {
+      "overlap": 48221,
+      "equal": 41649,
+      "different": 6572,
+      "kinds": {
+        "watch_zero_census_positive": 6572
+      },
+      "abs_diff_sol": {
+        "min": "2E-9",
+        "median": "0.128167520",
+        "p95": "4",
+        "max": "85.005359057",
+        "count_gt_1e-6": 6536
+      }
+    },
+    "current_disagreements_also_in_snapshot3": 5823,
+    "current_disagreements_also_zero_in_snapshot3": 5823
+  },
+  "nested_checks": {
+    "snapshot3": {
+      "rows_nonempty": 8592,
+      "check_objects": 18771,
+      "objects_with_dev_buy": 18715,
+      "mints_positive_nested_dev_buy_but_top_level_zero": 1844,
+      "at_values": {
+        "60": 8218,
+        "90": 7977,
+        "120": 2576
+      },
+      "object_keys": {
+        "at": 18771,
+        "net": 18715,
+        "buySol": 18715,
+        "sellSol": 18715,
+        "buyers": 18715,
+        "buys": 18715,
+        "sells": 18715,
+        "big": 18715,
+        "mcSol": 18715,
+        "exited": 18715,
+        "holding": 18715,
+        "sellers": 18715,
+        "top1_pct": 18715,
+        "top5_pct": 18715,
+        "top10_pct": 18715,
+        "dev_buy": 18715,
+        "dev_sell": 18715,
+        "dev_sold_pct": 18715,
+        "early_n": 18715,
+        "early_sol": 18715,
+        "txs": 18715,
+        "venue": 18715,
+        "hist": 14915,
+        "grp": 14915,
+        "farm_buyers_pct": 17223,
+        "farm_sol_pct": 17223,
+        "farm_held_pct": 17223,
+        "farm4h_buyers_pct": 17223,
+        "farm4h_sol_pct": 17223,
+        "farm4h_held_pct": 17223,
+        "farm_known": 17223,
+        "same_name_mint": 1640,
+        "same_name_min": 1640,
+        "funder_hist": 2461,
+        "holders": 2461,
+        "mcUsd": 2461,
+        "gmgn_px": 1473,
+        "chain_px": 1473,
+        "sol_usd": 1473,
+        "bundle_sold_pct": 1687,
+        "bundle_sell_sol": 1687,
+        "bundle_n": 1687,
+        "meta_reuse": 903,
+        "err": 56,
+        "incomplete": 56
+      }
+    },
+    "current": {
+      "rows_nonempty": 8574,
+      "check_objects": 18844,
+      "objects_with_dev_buy": 18782,
+      "mints_positive_nested_dev_buy_but_top_level_zero": 1841,
+      "at_values": {
+        "60": 8206,
+        "90": 7949,
+        "120": 2689
+      },
+      "object_keys": {
+        "at": 18844,
+        "net": 18782,
+        "buySol": 18782,
+        "sellSol": 18782,
+        "buyers": 18782,
+        "buys": 18782,
+        "sells": 18782,
+        "big": 18782,
+        "mcSol": 18782,
+        "exited": 18782,
+        "holding": 18782,
+        "sellers": 18782,
+        "top1_pct": 18782,
+        "top5_pct": 18782,
+        "top10_pct": 18782,
+        "dev_buy": 18782,
+        "dev_sell": 18782,
+        "dev_sold_pct": 18782,
+        "early_n": 18782,
+        "early_sol": 18782,
+        "txs": 18782,
+        "venue": 18782,
+        "hist": 16598,
+        "grp": 16598,
+        "farm_buyers_pct": 17295,
+        "farm_sol_pct": 17295,
+        "farm_held_pct": 17295,
+        "farm4h_buyers_pct": 17295,
+        "farm4h_sol_pct": 17295,
+        "farm4h_held_pct": 17295,
+        "farm_known": 17295,
+        "funder_hist": 2679,
+        "meta_reuse": 993,
+        "holders": 2679,
+        "mcUsd": 2679,
+        "gmgn_px": 1675,
+        "chain_px": 1675,
+        "sol_usd": 1675,
+        "same_name_mint": 1820,
+        "same_name_min": 1820,
+        "bundle_sold_pct": 1851,
+        "bundle_sell_sol": 1851,
+        "bundle_n": 1851,
+        "err": 62,
+        "incomplete": 62
+      }
+    }
+  },
+  "row_timestamps_descriptive": {
+    "snapshot3": {
+      "scanned_ts_minus_created_s": {
+        "n": 56374,
+        "p10": 2.0,
+        "median": 10.0,
+        "p90": 66.0,
+        "p99": 281.0,
+        "max": 991.0,
+        "share_le_5s": 0.25155213396246495,
+        "share_le_60s": 0.892964841948416
+      },
+      "trace_ts_minus_created_s": {
+        "n": 42613,
+        "p10": 3.0,
+        "median": 11.0,
+        "p90": 110.0,
+        "p99": 361.0,
+        "max": 991.0,
+        "share_le_5s": 0.2262455119329782,
+        "share_le_60s": 0.8523220613427828
+      }
+    },
+    "current": {
+      "scanned_ts_minus_created_s": {
+        "n": 55225,
+        "p10": 2.0,
+        "median": 10.0,
+        "p90": 68.0,
+        "p99": 283.0,
+        "max": 991.0,
+        "share_le_5s": 0.25177003168854684,
+        "share_le_60s": 0.8915708465368946
+      },
+      "trace_ts_minus_created_s": {
+        "n": 46341,
+        "p10": 3.0,
+        "median": 11.0,
+        "p90": 99.0,
+        "p99": 346.0,
+        "max": 991.0,
+        "share_le_5s": 0.22951597937032,
+        "share_le_60s": 0.862281780712544
+      }
+    },
+    "note": "scanned_ts/trace_ts are row-level lookup clocks; they do not date the dev_buy_sol write (Codex C016). Shown only as an upper bound on when the ROW first existed."
+  },
+  "tape_vs_tables": {
+    "mints_in_census_with_tape_rows": 4913,
+    "census": {
+      "mints_on_tape_and_in_table": 4913,
+      "equal_to_creator_buy_in_first_slot": 4743,
+      "table_zero": 1367,
+      "tape_zero": 1379,
+      "both_positive_different": 156,
+      "table_positive_tape_zero": 13,
+      "table_zero_tape_positive": 1
+    },
+    "snapshot3": {
+      "mints_on_tape_and_in_table": 3322,
+      "table_zero_tape_positive": 527,
+      "table_zero": 1439,
+      "tape_zero": 914,
+      "equal_to_creator_buy_in_first_slot": 2734,
+      "both_positive_different": 59,
+      "table_positive_tape_zero": 2
+    },
+    "current": {
+      "mints_on_tape_and_in_table": 3681,
+      "table_zero_tape_positive": 597,
+      "table_zero": 1582,
+      "tape_zero": 989,
+      "equal_to_creator_buy_in_first_slot": 2992,
+      "both_positive_different": 88,
+      "table_positive_tape_zero": 4
+    },
+    "definition": "tape creator buy = sum of curve buys by the census creator wallet in the lowest slot on the mint tape (received rows only); tolerance 1e-6 SOL",
+    "caveat": "tape exists only for retained launches (and book-entered mints); the slot-first buy may miss a creator buy delayed by a slot; not a census-wide statement",
+    "current_watch_disagreements_with_tape": {
+      "n": 596,
+      "tape_creator_buy_first_slot_positive": 596,
+      "tape_equals_census_1e-6": 571,
+      "tape_creator_buy_within_60s_positive": 596
+    },
+    "creator_first_slot_buy_receipt_minus_create_ts_s": {
+      "n": 3534,
+      "p10": 0.351,
+      "median": 0.831,
+      "p90": 1.646,
+      "p99": 10.416,
+      "max": 49.887,
+      "note": "create_ts has 1-s granularity; recv_ms is the tracker receipt of the creator buy row; this is when the tape-derived quantity became knowable"
+    }
+  },
+  "creator_field_agreement": {
+    "snapshot3_vs_census": 44217,
+    "snapshot3_vs_census_overlap": 44217
+  }
+}
