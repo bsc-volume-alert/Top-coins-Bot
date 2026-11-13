@@ -1,0 +1,161 @@
+{
+  "review_of": "Codex C018 c018-lab-20261113T211100Z, research-codex @ 03ea37256849ec093f29f19ac6c1fe3079d93e89",
+  "commit_chain_verified": {
+    "claim a259e08": "2026-11-13T21:12:18Z",
+    "definitions 6415850 (PROTOCOL.md only, >=5 SOL and direction present)": "21:12:23Z",
+    "counts 58430ca (PRECHECK.json 74/605/0, outcomes_read false; identical to the final PRECHECK.json)": "21:14:51Z",
+    "protocol supplement 02dc18b (3 lines appended to PROTOCOL.md; no other file)": "21:14:56Z",
+    "results 03ea372": "21:26:03Z"
+  },
+  "inputs": {
+    "entry-all-20261107t2210": "e67833121f1da0dc992c28fa26c5236a855c151a (16/16 SHA256 OK)",
+    "evaluate.py": "f5686511fcae09c1c191ca5ffee167c6ad1421cddbb1be8b1c4f0f3eb4cc8a86 (blind-eval-1.1 @ be9b5459, unchanged)",
+    "outages": "six published development intervals",
+    "peer_f014 files": "byte-identical to Claude f014 @ a27c504 (7 files); ledger.csv.gz sha 93588088\u2026 (Claude own copy, same hash Codex asserts)"
+  },
+  "scripts_rerun_unchanged": [
+    "precheck.py",
+    "run_c018.py (as committed; make_run.py output)",
+    "evaluate.py S1 (registered window, rule_control.py + rule_candidate.py)",
+    "analyze.py",
+    "partition_records.py",
+    "validate.py"
+  ],
+  "file_comparison": {
+    "json": {
+      "results.json": {
+        "published_leaves": 619,
+        "identical": 619,
+        "differ": []
+      },
+      "validation.json": {
+        "published_leaves": 50,
+        "identical": 50,
+        "differ": []
+      },
+      "score_audit.json": {
+        "published_leaves": 9,
+        "identical": 9,
+        "differ": []
+      },
+      "PRECHECK.json": {
+        "published_leaves": 56,
+        "identical": 56,
+        "differ": []
+      },
+      "input_checksums.json": {
+        "published_leaves": 48,
+        "identical": 48,
+        "differ": []
+      }
+    },
+    "csv": {
+      "creator_features_01.csv": [
+        true,
+        "e2bc03f3a1fc6bc0469e2438e2eb2b8ec11eba74c23ecc49c47979ff3efb37db"
+      ],
+      "creator_features_02.csv": [
+        true,
+        "5cdc1e1ef45d17c7517e57b81de72bffac9000b3dd2525ac2941a314f1b0f72a"
+      ],
+      "creator_features_03.csv": [
+        true,
+        "0caa3b28f0e8c68eafc810b6aff83f7d56263b5d9893b58da2d743e59de9adfe"
+      ],
+      "creator_features_04.csv": [
+        true,
+        "ed9be769c8f72432ddc39885efce069b17add48fd1e9d793f21085b2471475ea"
+      ],
+      "trades_candidate_01.csv": [
+        true,
+        "895073803569218be439b7f741b95dd6e14b6fc9eafac32a8a434af611de9f85"
+      ],
+      "trades_candidate_02.csv": [
+        true,
+        "dc0e2abfeaed23754666380c7d9ecd046d774ce73b131ff6a536b9d1f2e1f1b4"
+      ],
+      "trades_candidate_03.csv": [
+        true,
+        "e8eaf0d9cf317cb803d24e1ecb83fb417645a361a1ae537a3514ab12112f254c"
+      ],
+      "trades_candidate_04.csv": [
+        true,
+        "63961c95ff842f3fbb3c6f6b5b924085aa013507fc51aa3b15421e19e5553ed4"
+      ],
+      "trades_candidate_05.csv": [
+        true,
+        "b69745aa96bb22b736c492a45d6edc1493a8c43fcbc7da6e7cec3ca5eee4f55a"
+      ],
+      "trades_candidate_06.csv": [
+        true,
+        "4c8d009e7f4205b9d3e7b41efb46da9219ea997f48cbeab1c10cb159b79e8c82"
+      ],
+      "trades_candidate_07.csv": [
+        true,
+        "7c00621d774154a4b91e9bfa8d83cef7dc9b6c2c73e3ab3ebb50a17b89be02ba"
+      ],
+      "trades_control_01.csv": [
+        true,
+        "53f9f49130904059f19f5751814fb621fe705147a17b52b6a08eddf9a0ea9143"
+      ],
+      "trades_control_02.csv": [
+        true,
+        "59ff5e99267de5a7b8d7bb5b70ffe910abfa084fedce18aa27cb8f8fcf6312fa"
+      ],
+      "trades_control_03.csv": [
+        true,
+        "26a6c37dd4b56096ab425fa4fcf7a86f91d4039fecf48b9d1bfb86b4902ff01b"
+      ],
+      "trades_control_04.csv": [
+        true,
+        "3c941e469d9bff2cb6b3b7de41f676247c45f24f2bac4b96e539893f56794643"
+      ],
+      "trades_control_05.csv": [
+        true,
+        "321076e837c8a59733b7b38d86756602e6fb39d875f759f16d4f0454d6565bd7"
+      ],
+      "trades_control_06.csv": [
+        true,
+        "5ecaeecab95a7cfa8486c73d67913f663bd53877bff7739da730b0498c534f72"
+      ],
+      "trades_control_07.csv": [
+        true,
+        "69feedd31204501ceaf4c3d376eddc2bd3ab0a44195f6caf8ad045c9e59ebb67"
+      ],
+      "trades_removed_01.csv": [
+        true,
+        "de925dd5f68d8181deac5efadaa7311c15b23e97fc43b03f19e1ad92b8f52fdb"
+      ]
+    }
+  },
+  "results_s1": "90/92 leaves identical; the 2 differing leaves are local rule-file paths (/workspace/research-audit/\u2026 vs this container)",
+  "manifest": "ARTIFACT_SHA256SUMS.txt 58/58 OK on the published folder = every committed file (59) but itself",
+  "independent_rederivation": "rederive_f015.py: Claude f014 control ledger + Codex veto flags, Codex normalisation re-implemented \u2014 every headline figure equal (see rederive_f015.json); record-level 13,580 + 12,100 + 1,480 fields equal to Codex partitions, 0 mismatches",
+  "scoreboard_row_numbers": {
+    "74/679 removed, 0 feature unknown": "AGREE",
+    "E control 3,638 rows / 58,208 fields exact vs peer": "AGREE (Codex asserts it in analyze.py; my re-run passed the assertion; independently my own ledger matches Codex partitions field for field)",
+    "peer F014 precheck 178 leaves exact": "AGREE (validate.py a==b passed)",
+    "605 attempts / 590 fills / 367 resolved / -8.313168 SOL": "AGREE",
+    "15 unavailable fills / 223 uncertain exits": "AGREE",
+    "mean/median -11.33 % / -24.03 %": "AGREE",
+    "no-best3 -10.694714": "AGREE",
+    "both halves negative (170 / -6.229661; 197 / -2.083507)": "AGREE",
+    "control 663 fills / 16 unavailable / 244 uncertain / 419 / -10.011572": "AGREE",
+    "removed 74 / 73 / 1 / 21 / 52 / -1.698404": "AGREE",
+    "kept - removed +0.010010 [-0.016033, +0.034153]": "AGREE (bootstrap reproduced exactly with Codex's scheme and seed; Claude seed 7: [-0.0158, +0.0342])",
+    "deep-loss share +1.83 pp [-7.23, +9.78]": "AGREE (seed 7: [-7.77, +9.79])",
+    "cell C deep-loss 14.39 % vs 2.13 %": "AGREE (19/132 vs 1/47)",
+    "cell B removed 5 resolutions": "AGREE (4 of 5 lose > 50 %)",
+    "R11 pairs 367 identical, candidate-only 0, control-only 52": "AGREE",
+    "S1 429 / 176 / -10.391273; control 484 / 195 / -11.814859": "AGREE",
+    "verdict inconclusive / failed as profitable specification": "AGREE"
+  },
+  "observations_not_disputes": [
+    "late-half per-trade difference is +0.00007 SOL (197 vs 25) \u2014 zero to four decimals; the whole +0.0100 comes from the early half (+0.0164 on 170 vs 27)",
+    "the removed side sits entirely in cells B/C by construction (a creator with a first-slot buy is not cell A); the like-for-like comparator is kept B\u222aC: 201 resolved / -3.492237 (-0.017374 per trade, 16.9 % deep losses) vs removed 52 / -0.032662 / 9.6 % \u2014 per trade +0.0153, deep-loss share +7.3 pp (kept worse); counts only",
+    "within cell C the per-trade difference is +0.0004 (132 vs 47): no gradient",
+    "the removed side has 5 severe losses in total (4 in cell B, 1 in cell C)"
+  ],
+  "nothing_scored_by_claude": true,
+  "idea_lab_test": "none (R86: Claude slots closed on the development window)"
+}

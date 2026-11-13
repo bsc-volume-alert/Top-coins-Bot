@@ -1,0 +1,107 @@
+{
+ "json": {
+  "results.json": {
+   "published_leaves": 619,
+   "identical": 619,
+   "differ": []
+  },
+  "validation.json": {
+   "published_leaves": 50,
+   "identical": 50,
+   "differ": []
+  },
+  "score_audit.json": {
+   "published_leaves": 9,
+   "identical": 9,
+   "differ": []
+  },
+  "PRECHECK.json": {
+   "published_leaves": 56,
+   "identical": 56,
+   "differ": []
+  },
+  "input_checksums.json": {
+   "published_leaves": 48,
+   "identical": 48,
+   "differ": []
+  }
+ },
+ "csv": {
+  "creator_features_01.csv": [
+   true,
+   "e2bc03f3a1fc6bc0469e2438e2eb2b8ec11eba74c23ecc49c47979ff3efb37db"
+  ],
+  "creator_features_02.csv": [
+   true,
+   "5cdc1e1ef45d17c7517e57b81de72bffac9000b3dd2525ac2941a314f1b0f72a"
+  ],
+  "creator_features_03.csv": [
+   true,
+   "0caa3b28f0e8c68eafc810b6aff83f7d56263b5d9893b58da2d743e59de9adfe"
+  ],
+  "creator_features_04.csv": [
+   true,
+   "ed9be769c8f72432ddc39885efce069b17add48fd1e9d793f21085b2471475ea"
+  ],
+  "trades_candidate_01.csv": [
+   true,
+   "895073803569218be439b7f741b95dd6e14b6fc9eafac32a8a434af611de9f85"
+  ],
+  "trades_candidate_02.csv": [
+   true,
+   "dc0e2abfeaed23754666380c7d9ecd046d774ce73b131ff6a536b9d1f2e1f1b4"
+  ],
+  "trades_candidate_03.csv": [
+   true,
+   "e8eaf0d9cf317cb803d24e1ecb83fb417645a361a1ae537a3514ab12112f254c"
+  ],
+  "trades_candidate_04.csv": [
+   true,
+   "63961c95ff842f3fbb3c6f6b5b924085aa013507fc51aa3b15421e19e5553ed4"
+  ],
+  "trades_candidate_05.csv": [
+   true,
+   "b69745aa96bb22b736c492a45d6edc1493a8c43fcbc7da6e7cec3ca5eee4f55a"
+  ],
+  "trades_candidate_06.csv": [
+   true,
+   "4c8d009e7f4205b9d3e7b41efb46da9219ea997f48cbeab1c10cb159b79e8c82"
+  ],
+  "trades_candidate_07.csv": [
+   true,
+   "7c00621d774154a4b91e9bfa8d83cef7dc9b6c2c73e3ab3ebb50a17b89be02ba"
+  ],
+  "trades_control_01.csv": [
+   true,
+   "53f9f49130904059f19f5751814fb621fe705147a17b52b6a08eddf9a0ea9143"
+  ],
+  "trades_control_02.csv": [
+   true,
+   "59ff5e99267de5a7b8d7bb5b70ffe910abfa084fedce18aa27cb8f8fcf6312fa"
+  ],
+  "trades_control_03.csv": [
+   true,
+   "26a6c37dd4b56096ab425fa4fcf7a86f91d4039fecf48b9d1bfb86b4902ff01b"
+  ],
+  "trades_control_04.csv": [
+   true,
+   "3c941e469d9bff2cb6b3b7de41f676247c45f24f2bac4b96e539893f56794643"
+  ],
+  "trades_control_05.csv": [
+   true,
+   "321076e837c8a59733b7b38d86756602e6fb39d875f759f16d4f0454d6565bd7"
+  ],
+  "trades_control_06.csv": [
+   true,
+   "5ecaeecab95a7cfa8486c73d67913f663bd53877bff7739da730b0498c534f72"
+  ],
+  "trades_control_07.csv": [
+   true,
+   "69feedd31204501ceaf4c3d376eddc2bd3ab0a44195f6caf8ad045c9e59ebb67"
+  ],
+  "trades_removed_01.csv": [
+   true,
+   "de925dd5f68d8181deac5efadaa7311c15b23e97fc43b03f19e1ad92b8f52fdb"
+  ]
+ }
+}
