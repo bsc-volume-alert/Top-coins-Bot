@@ -1,0 +1,133 @@
+{
+  "all": {
+    "control": {
+      "attempted": 679,
+      "filled_after_30s_screen": 663,
+      "unavailable_fill": 16,
+      "uncertain_exits": 244,
+      "resolved": 419,
+      "unknown_total": 260,
+      "total_net_sol_resolved": -10.011571773352646,
+      "net_sol_per_eligible_launch_observed": -0.0027519438629336574,
+      "eligible_denominator": 3638,
+      "mean_sol": -0.0238939660461877,
+      "median_sol": -0.04824207297201766,
+      "mean_ROI": -0.11946983023093849,
+      "median_ROI": -0.2412103648600883,
+      "win_rate": 0.22911694510739858,
+      "loss_gt50_share": 0.11217183770883055,
+      "without_best1_sol": -11.387526840491985,
+      "without_best3_sol": -12.393117549072963,
+      "worst_sol": -0.19312455384970328,
+      "severe_loss_count": 47,
+      "raw_frozen_scored": 484,
+      "raw_frozen_total_sol": -11.834241388698064,
+      "stale_fill_reclassified": 6,
+      "stale_exit_reclassified": 59,
+      "median_resolved_hold_s": 131.17700004577637,
+      "peak_modeled_stake_SOL": 8.4,
+      "modeled_stake_seconds": 380247.75540432933,
+      "unknown_why": {
+        "exit: capture gap": 178,
+        "stale fill >30s": 16,
+        "stale exit >30s": 59,
+        "exit: state invalid": 7
+      }
+    },
+    "candidate": {
+      "attempted": 605,
+      "filled_after_30s_screen": 590,
+      "unavailable_fill": 15,
+      "uncertain_exits": 223,
+      "resolved": 367,
+      "unknown_total": 238,
+      "total_net_sol_resolved": -8.313168064599049,
+      "net_sol_per_eligible_launch_observed": -0.002285092925948062,
+      "eligible_denominator": 3638,
+      "mean_sol": -0.022651684099724928,
+      "median_sol": -0.04805187463542135,
+      "mean_ROI": -0.11325842049862464,
+      "median_ROI": -0.24025937317710674,
+      "win_rate": 0.23978201634877383,
+      "loss_gt50_share": 0.11444141689373297,
+      "without_best1_sol": -9.689123131738386,
+      "without_best3_sol": -10.694713840319366,
+      "worst_sol": -0.19312455384970328,
+      "severe_loss_count": 42,
+      "raw_frozen_scored": 429,
+      "raw_frozen_total_sol": -10.407050251815235,
+      "stale_fill_reclassified": 5,
+      "stale_exit_reclassified": 57,
+      "median_resolved_hold_s": 131.17700004577637,
+      "peak_modeled_stake_SOL": 8.200000000000001,
+      "modeled_stake_seconds": 346858.93080391886,
+      "unknown_why": {
+        "exit: capture gap": 159,
+        "stale fill >30s": 15,
+        "stale exit >30s": 57,
+        "exit: state invalid": 7
+      }
+    },
+    "removed": {
+      "attempted": 74,
+      "filled_after_30s_screen": 73,
+      "unavailable_fill": 1,
+      "uncertain_exits": 21,
+      "resolved": 52,
+      "unknown_total": 22,
+      "total_net_sol_resolved": -1.698403708753597,
+      "net_sol_per_eligible_launch_observed": -0.00046685093698559566,
+      "eligible_denominator": 3638,
+      "mean_sol": -0.032661609783723025,
+      "median_sol": -0.05088885079806267,
+      "mean_ROI": -0.1633080489186151,
+      "median_ROI": -0.25444425399031334,
+      "win_rate": 0.15384615384615385,
+      "loss_gt50_share": 0.09615384615384616,
+      "without_best1_sol": -1.9983265660844556,
+      "without_best3_sol": -2.3809558196679372,
+      "worst_sol": -0.15157310127071866,
+      "severe_loss_count": 5,
+      "raw_frozen_scored": 55,
+      "raw_frozen_total_sol": -1.4271911368828294,
+      "stale_fill_reclassified": 1,
+      "stale_exit_reclassified": 2,
+      "median_resolved_hold_s": 132.21250009536743,
+      "peak_modeled_stake_SOL": 1.4000000000000001,
+      "modeled_stake_seconds": 33388.824600410466,
+      "unknown_why": {
+        "exit: capture gap": 19,
+        "stale exit >30s": 2,
+        "stale fill >30s": 1
+      }
+    }
+  },
+  "comparison": {
+    "kept_resolved": 367,
+    "removed_resolved": 52,
+    "has_30_each": true,
+    "mean_kept_minus_removed_sol": 0.010009925683998097,
+    "mean_difference_iid95": [
+      -0.016033037971412405,
+      0.03415335355557514
+    ],
+    "deep_loss_share_kept_minus_removed": 0.018287570739886808,
+    "deep_loss_difference_iid95": [
+      -0.07225948438482498,
+      0.09777824355481032
+    ],
+    "uncertainty": "Exploratory iid95 intervals; no independence across time/operators, no multiple-search-adjusted confirmation; <30 each -> inconclusive"
+  },
+  "paired": {
+    "both_resolved": 367,
+    "candidate_sol": -8.313168064599049,
+    "baseline_same_mints_sol": -8.313168064599049,
+    "difference_sol": 0.0,
+    "candidate_only_resolved": 0,
+    "control_only_resolved": 52,
+    "all_kept_records_identical": true,
+    "R63": "True baseline exit on candidate-only launches would be unknown; last usable marks do not identify its sign. Candidate-only count is zero here."
+  },
+  "peer_fields_equal": 58208,
+  "verdict": "inconclusive"
+}

@@ -1,0 +1,15 @@
+{
+  "audit": {
+    "not_retained": 301,
+    "eligible_early": 1593,
+    "outage_excluded": 974,
+    "eligible_late": 2045
+  },
+  "stats": {
+    "mints_streamed": 4913,
+    "duplicates_removed": 1568880,
+    "non_contiguous": 0
+  },
+  "all_kept_control_results_identical": true,
+  "features_recomputed_causally_equal": true
+}

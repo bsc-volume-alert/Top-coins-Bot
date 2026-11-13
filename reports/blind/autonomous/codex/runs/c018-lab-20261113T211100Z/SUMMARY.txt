@@ -1,0 +1,5 @@
+Completed C018: the single preregistered creator first-slot buy >=5 SOL veto removes 74/679 entries; all decision-time features known.
+Kept 605 attempts, 590 available fills, 367 resolved trades: -8.313168 SOL; 15 fills unavailable and 223 exits uncertain.
+Mean/median -11.33%/-24.03%; without best three -10.694714 SOL; no profitable rule supported and benefit intervals cross zero.
+Reproduced the E control across 3,638 records/58,208 fields and Claude F014's 178 precheck leaves; S1 wrong-date invocation excluded and corrected.
+Next: F015 cross-review and coordinator closure/release decision; three new hypotheses held for fresh data, no threshold retune.

@@ -1,0 +1,7 @@
+PROCESSED {'not_retained': 26, 'eligible_early': 500}
+PROCESSED {'not_retained': 46, 'eligible_early': 1000}
+PROCESSED {'not_retained': 58, 'eligible_early': 1500, 'outage_excluded': 974}
+PROCESSED {'not_retained': 138, 'eligible_early': 1593, 'outage_excluded': 974, 'eligible_late': 407}
+PROCESSED {'not_retained': 179, 'eligible_early': 1593, 'outage_excluded': 974, 'eligible_late': 907}
+PROCESSED {'not_retained': 240, 'eligible_early': 1593, 'outage_excluded': 974, 'eligible_late': 1407}
+PROCESSED {'not_retained': 300, 'eligible_early': 1593, 'outage_excluded': 974, 'eligible_late': 1907}

@@ -1,0 +1,132 @@
+{
+ "version": "eval-1.1",
+ "DIAGNOSTIC_no_evidence_check": false,
+ "window": [
+  "2026-11-06T07:40:00",
+  "2026-11-07T20:00:00"
+ ],
+ "launches_in_window": 62789,
+ "N_common": 3638,
+ "duplicates_removed": 1568880,
+ "mints_streamed": 4913,
+ "non_contiguous_mints": 0,
+ "assumptions": {
+  "curve_fee_bps": 125,
+  "pool_fee_bps": 30,
+  "fixed_fee_sol": 0.0015,
+  "land_buy_s": 1.0,
+  "land_sell_s": 0.7
+ },
+ "rules": {
+  "C018-CONTROL": {
+   "file": "/workspace/research-audit/c018-lab-20261113T211100Z/rule_control.py",
+   "spec": {
+    "name": "C018-CONTROL",
+    "decision_offsets": [
+     300
+    ],
+    "on_trade": false,
+    "horizon_s": 7200,
+    "sizes": [
+     0.2
+    ]
+   },
+   "event_time_hypothetical_entries": 0,
+   "by_size": {
+    "0.2": {
+     "N": 3638,
+     "scored": 484,
+     "abstain": 2959,
+     "unknown": 195,
+     "point_sol_per_launch": -0.003247624805159203,
+     "lower_sol_per_launch": -0.014048202045401095,
+     "total_net_sol_scored": -11.81485904116918,
+     "unknown_share_of_attempts": 0.28718703976435933,
+     "mean_ret": -0.12205432893769813,
+     "median_ret": -0.2308873935397518,
+     "win_rate": 0.21487603305785125,
+     "share_loss_ge_50": 0.10537190082644628,
+     "mean_ret_without_best": -0.1365919208689268,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.01595841098349235,
+     "supported": false
+    }
+   },
+   "pool_fee_125bps_sensitivity": {
+    "0.2": {
+     "N": 3638,
+     "scored": 484,
+     "abstain": 2959,
+     "unknown": 195,
+     "point_sol_per_launch": -0.003267870247877664,
+     "lower_sol_per_launch": -0.014068447488119555,
+     "total_net_sol_scored": -11.888511961778942,
+     "unknown_share_of_attempts": 0.28718703976435933,
+     "mean_ret": -0.1228152062167246,
+     "median_ret": -0.2308873935397518,
+     "win_rate": 0.21487603305785125,
+     "share_loss_ge_50": 0.10537190082644628,
+     "mean_ret_without_best": -0.1371983827697185,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.01597501657796943,
+     "supported": false
+    }
+   }
+  },
+  "C018-L010": {
+   "file": "/workspace/research-audit/c018-lab-20261113T211100Z/rule_candidate.py",
+   "spec": {
+    "name": "C018-L010",
+    "decision_offsets": [
+     300
+    ],
+    "on_trade": false,
+    "horizon_s": 7200,
+    "sizes": [
+     0.2
+    ]
+   },
+   "event_time_hypothetical_entries": 0,
+   "by_size": {
+    "0.2": {
+     "N": 3638,
+     "scored": 429,
+     "abstain": 3033,
+     "unknown": 176,
+     "point_sol_per_launch": -0.0028563146738377334,
+     "lower_sol_per_launch": -0.012604527977850928,
+     "total_net_sol_scored": -10.391272783421675,
+     "unknown_share_of_attempts": 0.2909090909090909,
+     "mean_ret": -0.121110405401185,
+     "median_ret": -0.2306778541954145,
+     "win_rate": 0.22144522144522144,
+     "share_loss_ge_50": 0.10722610722610723,
+     "mean_ret_without_best": -0.1375139403994255,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.01446790818384053,
+     "supported": false
+    }
+   },
+   "pool_fee_125bps_sensitivity": {
+    "0.2": {
+     "N": 3638,
+     "scored": 429,
+     "abstain": 3033,
+     "unknown": 176,
+     "point_sol_per_launch": -0.0028727947122917,
+     "lower_sol_per_launch": -0.012621008016304894,
+     "total_net_sol_scored": -10.451227163317204,
+     "unknown_share_of_attempts": 0.2909090909090909,
+     "mean_ret": -0.12180917439763642,
+     "median_ret": -0.2306778541954145,
+     "win_rate": 0.22144522144522144,
+     "share_loss_ge_50": 0.10722610722610723,
+     "mean_ret_without_best": -0.138038305807162,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.01447851734177851,
+     "supported": false
+    }
+   }
+  }
+ }
+}

@@ -2,9 +2,9 @@
   "worker": "Codex",
   "run_id": "c018-lab-20261113T211100Z",
   "task": "C018 + Idea Lab",
-  "state": "running",
-  "started_at": "2026-11-13T21:11:00Z",
-  "lease_expires_at": "2026-11-13T23:11:00Z",
+  "state": "completed",
+  "started_at": "2026-11-13T21:12:18Z",
+  "lease_expires_at": null,
   "previous_run": "c017-lab-20261113T152100Z",
   "input_commits": {
     "tracker": "a882aacf2427fc75fbef2de4d413386bf363aac1",
@@ -12,5 +12,22 @@
     "research-claude": "a27c504dfe240fecf132123bcfc5c18cb2dd4091"
   },
   "scope": "One fixed creator first-slot buy-size veto at >=5 SOL on unchanged E control; R54 count before scoring",
-  "artifacts": "reports/blind/autonomous/codex/runs/c018-lab-20261113T211100Z/"
+  "artifacts": "reports/blind/autonomous/codex/runs/c018-lab-20261113T211100Z/",
+  "claim_commit": "a259e0820ccf971c309afb2c3b0a804e7f12f24d",
+  "definitions_commit": "64158505d3ac4e081598ea55d97234b6a376ad8d",
+  "precheck_published_commit": "58430ca2bac1c9c3c3382445c8f97d79beb5936d",
+  "protocol_commit": "02dc18bb26e5c79eee84c01a530f2099bc2227ba",
+  "result": "C018 >=5SOL veto removes74/679,0featureunknown;605attempts/590fills/367resolved -8.313168SOL;15unavailablefills/223uncertainexits. No profitable rule supported;benefit inconclusive.",
+  "next_task": "Read F015 cross-review and coordinator R81/R86 closure/release ruling; no threshold retune",
+  "blockers": [
+    "Full P&L unknown due to unavailable outcomes",
+    "No fresh-data release; new proposals held only"
+  ],
+  "limitations": [
+    "Explored development window",
+    "Same original E/evaluator assumptions; S1 separate",
+    "Removed halves27/25resolutions; no inferential half/cell claim when sparse",
+    "One erroneous S1 date invocation stopped/excluded; exact corrected window verified"
+  ],
+  "completed_at": "2026-11-13 21:25:54 UTC"
 }

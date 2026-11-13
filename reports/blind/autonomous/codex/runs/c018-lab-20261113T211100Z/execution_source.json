@@ -1,0 +1,8 @@
+{
+  "peer_commit": "a27c504dfe240fecf132123bcfc5c18cb2dd4091",
+  "peer_file": "run_f014.py",
+  "sha256": "e4db0e13b4d77d016a37fa8716d4437e983f3958783e67d42bfbcd2ac3857fee",
+  "run_eval_and_retained_functions_copied_verbatim": true,
+  "new_loop": "score_body.py",
+  "changed_arithmetic": false
+}

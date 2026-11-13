@@ -1,0 +1,64 @@
+{
+  "peer_commit": "a27c504dfe240fecf132123bcfc5c18cb2dd4091",
+  "peer_F014_precheck_equal_leaves": 178,
+  "peer_F014_precheck_JSON_exact": true,
+  "peer_source_and_ledger_hashes_verified": 6,
+  "control_record_fields_equal": 58208,
+  "control_record_count": 3638,
+  "all_accounting_invariants": true,
+  "all_679_known_before_decision": true,
+  "zero_first_slot_size_by_F009_cell": {
+    "A": 251,
+    "C": 3
+  },
+  "normalized_fill_counts": {
+    "control": 663,
+    "candidate": 590
+  },
+  "corrected_S1_exact_window_verified": true,
+  "no_claim_original_wrong_window_invocation_is_evidence": true,
+  "s1": {
+    "C018-CONTROL": {
+      "N": 3638,
+      "scored": 484,
+      "abstain": 2959,
+      "unknown": 195,
+      "point_sol_per_launch": -0.003247624805159203,
+      "lower_sol_per_launch": -0.014048202045401095,
+      "total_net_sol_scored": -11.81485904116918,
+      "unknown_share_of_attempts": 0.28718703976435933,
+      "mean_ret": -0.12205432893769813,
+      "median_ret": -0.2308873935397518,
+      "win_rate": 0.21487603305785125,
+      "share_loss_ge_50": 0.10537190082644628,
+      "mean_ret_without_best": -0.1365919208689268,
+      "scorable": false,
+      "bonferroni_lcb_lower": -0.01595841098349235,
+      "supported": false
+    },
+    "C018-L010": {
+      "N": 3638,
+      "scored": 429,
+      "abstain": 3033,
+      "unknown": 176,
+      "point_sol_per_launch": -0.0028563146738377334,
+      "lower_sol_per_launch": -0.012604527977850928,
+      "total_net_sol_scored": -10.391272783421675,
+      "unknown_share_of_attempts": 0.2909090909090909,
+      "mean_ret": -0.121110405401185,
+      "median_ret": -0.2306778541954145,
+      "win_rate": 0.22144522144522144,
+      "share_loss_ge_50": 0.10722610722610723,
+      "mean_ret_without_best": -0.1375139403994255,
+      "scorable": false,
+      "bonferroni_lcb_lower": -0.01446790818384053,
+      "supported": false
+    }
+  },
+  "s1_bootstrap_note": "Frozen K=2 for this invocation, not cumulative search control; unknown lower scores are artificial penalties, not realized losses",
+  "remaining_limits": [
+    ">=100K detection was not scored",
+    "Receipt evidence proves recorded availability,not complete blockchain history",
+    "No fresh test release; no rule retune"
+  ]
+}
