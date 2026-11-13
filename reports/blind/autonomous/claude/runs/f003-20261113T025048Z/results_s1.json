@@ -1,0 +1,187 @@
+{
+ "version": "eval-1.1",
+ "DIAGNOSTIC_no_evidence_check": false,
+ "window": [
+  "2026-11-06T07:40:00",
+  "2026-11-07T20:00:00"
+ ],
+ "launches_in_window": 62789,
+ "N_common": 3638,
+ "duplicates_removed": 1568880,
+ "mints_streamed": 4913,
+ "non_contiguous_mints": 0,
+ "assumptions": {
+  "curve_fee_bps": 125,
+  "pool_fee_bps": 30,
+  "fixed_fee_sol": 0.0015,
+  "land_buy_s": 1.0,
+  "land_sell_s": 0.7
+ },
+ "rules": {
+  "F003-CONTROL": {
+   "file": "/home/claude/top-coins-bot/reports/blind/autonomous/claude/runs/f003-20261113T025048Z/rule_control.py",
+   "spec": {
+    "name": "F003-CONTROL",
+    "decision_offsets": [
+     300
+    ],
+    "on_trade": false,
+    "horizon_s": 7200,
+    "sizes": [
+     0.2
+    ]
+   },
+   "event_time_hypothetical_entries": 0,
+   "by_size": {
+    "0.2": {
+     "N": 3638,
+     "scored": 484,
+     "abstain": 2959,
+     "unknown": 195,
+     "point_sol_per_launch": -0.003247624805159203,
+     "lower_sol_per_launch": -0.014048202045401095,
+     "total_net_sol_scored": -11.81485904116918,
+     "unknown_share_of_attempts": 0.28718703976435933,
+     "mean_ret": -0.12205432893769813,
+     "median_ret": -0.2308873935397518,
+     "win_rate": 0.21487603305785125,
+     "share_loss_ge_50": 0.10537190082644628,
+     "mean_ret_without_best": -0.1365919208689268,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.01613101065715513,
+     "supported": false
+    }
+   },
+   "pool_fee_125bps_sensitivity": {
+    "0.2": {
+     "N": 3638,
+     "scored": 484,
+     "abstain": 2959,
+     "unknown": 195,
+     "point_sol_per_launch": -0.003267870247877664,
+     "lower_sol_per_launch": -0.014068447488119555,
+     "total_net_sol_scored": -11.888511961778942,
+     "unknown_share_of_attempts": 0.28718703976435933,
+     "mean_ret": -0.1228152062167246,
+     "median_ret": -0.2308873935397518,
+     "win_rate": 0.21487603305785125,
+     "share_loss_ge_50": 0.10537190082644628,
+     "mean_ret_without_best": -0.1371983827697185,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.016143388606665456,
+     "supported": false
+    }
+   }
+  },
+  "F003-C1-PREVNOTRET-VETO": {
+   "file": "/home/claude/top-coins-bot/reports/blind/autonomous/claude/runs/f003-20261113T025048Z/rule_c1.py",
+   "spec": {
+    "name": "F003-C1-PREVNOTRET-VETO",
+    "decision_offsets": [
+     300
+    ],
+    "on_trade": false,
+    "horizon_s": 7200,
+    "sizes": [
+     0.2
+    ]
+   },
+   "event_time_hypothetical_entries": 0,
+   "by_size": {
+    "0.2": {
+     "N": 3638,
+     "scored": 404,
+     "abstain": 3096,
+     "unknown": 138,
+     "point_sol_per_launch": -0.002248255324901258,
+     "lower_sol_per_launch": -0.009891740756457058,
+     "total_net_sol_scored": -8.179152871990777,
+     "unknown_share_of_attempts": 0.25461254612546125,
+     "mean_ret": -0.10122713950483633,
+     "median_ret": -0.22634836143126835,
+     "win_rate": 0.21782178217821782,
+     "share_loss_ge_50": 0.08168316831683169,
+     "mean_ret_without_best": -0.11859892539404374,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.011739710221577727,
+     "supported": false
+    }
+   },
+   "pool_fee_125bps_sensitivity": {
+    "0.2": {
+     "N": 3638,
+     "scored": 404,
+     "abstain": 3096,
+     "unknown": 138,
+     "point_sol_per_launch": -0.002267572720822983,
+     "lower_sol_per_launch": -0.009911058152378784,
+     "total_net_sol_scored": -8.249429558354013,
+     "unknown_share_of_attempts": 0.25461254612546125,
+     "mean_ret": -0.10209690047467837,
+     "median_ret": -0.22634836143126835,
+     "win_rate": 0.21782178217821782,
+     "share_loss_ge_50": 0.08168316831683169,
+     "mean_ret_without_best": -0.1192838879916858,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.011755301388079483,
+     "supported": false
+    }
+   }
+  },
+  "CL-L008-FTB-GE-0.125": {
+   "file": "/home/claude/top-coins-bot/reports/blind/autonomous/claude/runs/f003-20261113T025048Z/rule_l008ftb.py",
+   "spec": {
+    "name": "CL-L008-FTB-GE-0.125",
+    "decision_offsets": [
+     300
+    ],
+    "on_trade": false,
+    "horizon_s": 7200,
+    "sizes": [
+     0.2
+    ]
+   },
+   "event_time_hypothetical_entries": 0,
+   "by_size": {
+    "0.2": {
+     "N": 3638,
+     "scored": 247,
+     "abstain": 3291,
+     "unknown": 100,
+     "point_sol_per_launch": -0.0012986079240051955,
+     "lower_sol_per_launch": -0.006837365483103601,
+     "total_net_sol_scored": -4.724335627530901,
+     "unknown_share_of_attempts": 0.2881844380403458,
+     "mean_ret": -0.09563432444394536,
+     "median_ret": -0.22314308048972067,
+     "win_rate": 0.23076923076923078,
+     "share_loss_ge_50": 0.08906882591093117,
+     "mean_ret_without_best": -0.12407024679471648,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.008412822889386367,
+     "supported": false
+    }
+   },
+   "pool_fee_125bps_sensitivity": {
+    "0.2": {
+     "N": 3638,
+     "scored": 247,
+     "abstain": 3291,
+     "unknown": 100,
+     "point_sol_per_launch": -0.001308771748111803,
+     "lower_sol_per_launch": -0.006847529307210209,
+     "total_net_sol_scored": -4.76131161963074,
+     "unknown_share_of_attempts": 0.2881844380403458,
+     "mean_ret": -0.09638282630831456,
+     "median_ret": -0.22314308048972067,
+     "win_rate": 0.23076923076923078,
+     "share_loss_ge_50": 0.08906882591093117,
+     "mean_ret_without_best": -0.1245155169391586,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.008417158305832078,
+     "supported": false
+    }
+   }
+  }
+ }
+}
