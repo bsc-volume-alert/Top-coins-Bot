@@ -1,23 +1,23 @@
 {
   "worker": "Claude research worker",
-  "run_id": "f014-20261113T185102Z",
-  "task": "F014 (queue run 12, R80/R79): (a) counts-only confirmation of Codex C017 precheck.py unchanged at 9aa2696; (b) Idea-lab CL-L012 retention-speed veto on the E control (skip E launches whose creation-to-15-SOL-retention receipt time exceeds T, T fixed in PROTOCOL.md before any count; R54 pre-check first; eval-1.1 + R4 scenario; 3,638 denominator); (c) CK21 scoping per R83(a).",
-  "state": "completed",
-  "started_at": "2026-11-13T18:51:02Z",
-  "lease_expires_at": null,
+  "run_id": "f015-20261113T225026Z",
+  "task": "F015 (queue run 13, R81/R86/R89): (a) cross-review of Codex C018 (c018-lab-20261113T211100Z, research-codex @ 03ea372) \u2014 re-run precheck.py, run_c018.py, eval-1.1 S1, analyze.py, validate.py unchanged from the allowlisted inputs; confirm or dispute every number in its SCOREBOARD row; (c) no new Idea-lab test on the development window (R86) \u2014 proposals only.",
+  "state": "running",
+  "started_at": "2026-11-13T22:51:46Z",
+  "lease_expires_at": "2026-11-14T01:51:46Z",
   "input_commits": {
-    "tracker": "6479ed99a1916bdadf277a6510797a4ed1e14362",
-    "research-codex_read": "9aa269669121c22b9bb280af508d19ec02dc41bf",
-    "research-claude_base": "69b0b54ff7c457fa0d063caf3e236bf027c56bc1",
+    "tracker": "a882aacf2427fc75fbef2de4d413386bf363aac1",
+    "research-codex_read": "03ea37256849ec093f29f19ac6c1fe3079d93e89",
+    "research-claude_base": "a27c504dfe240fecf132123bcfc5c18cb2dd4091",
     "entry-all-20261107t2210": "e67833121f1da0dc992c28fa26c5236a855c151a",
     "entry-package-7nov": "0e3be03c71949e069a7a31b5951f332bb563f68f",
     "blind-eval-1.1": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b"
   },
-  "task_choice_note": "Queue run 12: F014 is READY and Claude's next task; C018 is Codex's. T for CL-L012 is fixed in PROTOCOL.md (committed before any retention-time count is read).",
-  "previous_run": "f013-20261113T145108Z",
-  "next_task": "Await the coordinator's R81 decision (window exhausted?) after C018; cross-review Codex C018 if queued; Idea-lab proposals (price drift at E, same-tape re-buyer share, arrival-regularity CV) held until ruled (REVIEW_REQUESTS 48)",
+  "task_choice_note": "Queue run 13: F015 is READY and Claude's next task; C018 IS published (03ea372, 21:26 UTC), so branch (a) applies and branch (b) does not. Idea-lab slots on the development window are closed (R86): proposals only, no test.",
+  "previous_run": "f014-20261113T185102Z",
+  "next_task": "to be set at completion",
   "blockers": [],
-  "artifacts": "reports/blind/autonomous/claude/runs/f014-20261113T185102Z/",
+  "artifacts": "reports/blind/autonomous/claude/runs/f015-20261113T225026Z/",
   "task_states": {
     "F001": "completed_agree_all_rows",
     "F006": "completed",
@@ -32,10 +32,7 @@
     "F011": "completed",
     "F012": "completed",
     "F013": "completed: (b) NOT TESTABLE, (c) done, (a) discharged by R78 + f014 counts-only confirmation",
-    "F014": "completed (weak; T = 60 only)"
-  },
-  "completed_at": "2026-11-13T19:05:13Z",
-  "protocol_commit": "934a86e",
-  "result": "F014 (a): Codex C017 precheck.py re-run unchanged @ 9aa2696 \u2014 PRECHECK.json 50/50 leaves identical, precheck_features.csv byte-identical (H2 10/296 = 3.38 %, H3 0/296, both NOT TESTABLE; lag medians 1.2905 / 0.7797 s; overlap 2); agree. (b): CL-L012 retention-speed veto on E, T = 60 s fixed in PROTOCOL @ 934a86e before any count; R54 pre-check @ 6a4fc23: 131/679 removed (19.3 %), TESTABLE. S2 (R4): control 679 / 419 / -10.011572 exact; kept (fast) 548 / 355 resolved / -8.053181 (-0.022685 per trade, 9.0 % > 50 % losses); removed (slow) 131 / 64 / -1.958391 (-0.030600, 23.4 %, 51 % unknown). Kept - removed per trade +0.007915 [-0.0269, +0.0393] (across zero); > 50 %-loss share -0.144 [-0.256, -0.038] (excludes zero); per-trade direction reverses in the late half and cell B. Verdict WEAK; not profitable; T = 60 only. S1 eval-1.1: 404 / 144 unknown / -8.868959, not scorable. R68 caution: slow side has fewer 5-min buyers (median 12 vs 31). (c): CK21 scoped; CK22-23 added.",
-  "precheck_commit": "6a4fc23"
+    "F014": "completed (weak; T = 60 only)",
+    "F015": "running (a): C018 cross-review"
+  }
 }
