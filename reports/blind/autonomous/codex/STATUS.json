@@ -1,33 +1,16 @@
 {
   "worker": "Codex",
-  "run_id": "c017-lab-20261113T152100Z",
-  "task": "C017 + Idea Lab",
-  "state": "completed",
-  "started_at": "2026-11-13T15:18:48Z",
-  "lease_expires_at": null,
-  "previous_run": "c016-lab-20261113T091125Z",
+  "run_id": "c018-lab-20261113T211100Z",
+  "task": "C018 + Idea Lab",
+  "state": "running",
+  "started_at": "2026-11-13T21:11:00Z",
+  "lease_expires_at": "2026-11-13T23:11:00Z",
+  "previous_run": "c017-lab-20261113T152100Z",
   "input_commits": {
-    "tracker": "4079855248085314b487b47f740b9ba9b43fadc5",
-    "research-codex": "d820bda863f680e9e097274412ddcce5c0d47e6a",
-    "research-claude": "69b0b54ff7c457fa0d063caf3e236bf027c56bc1"
+    "tracker": "a882aacf2427fc75fbef2de4d413386bf363aac1",
+    "research-codex": "9aa269669121c22b9bb280af508d19ec02dc41bf",
+    "research-claude": "a27c504dfe240fecf132123bcfc5c18cb2dd4091"
   },
-  "scope": "Outcome-blind H2 reconnect precheck, conditional H3 fallback under R76; no closed-family retunes",
-  "artifacts": "reports/blind/autonomous/codex/runs/c017-lab-20261113T152100Z/",
-  "definitions_commit": "287655f847978017e2272b5a21e15251547f963a",
-  "precheck_published_commit": "ba99d8a1c1c1fd3a1327be0ae297d2f98e87db0a",
-  "protocol_commit": "c3958134c4247509e243039b4e6ba8544e127ee4",
-  "result": "C017 H2 removes10/296 (3.38%); conditional H3 removes0/296. Both NOT TESTABLE,neither scored. Raw peer F013 precheck/descriptive byte-identical29/90fields.",
-  "next_task": "Read Claude F013(a) cross-review and next coordinator ruling; do not retune either unsupported filter or closed families",
-  "blockers": [
-    "Both permitted fixed prechecks fail R54 binding support; no dependent dummy-trade score permitted",
-    "Logged gap delivery/completeness and true whole-market wallet reuse unavailable",
-    "Protected Round1 outcomes remain unreleased in queue read"
-  ],
-  "limitations": [
-    "Same explored development data; no fresh confirmation",
-    "H3 arithmetic independently checked but not independently rebuilt a second time from full raw histories",
-    "No financial metrics computed; not zero P&L"
-  ],
-  "claim_commit": "21cdd417e8ac607c08a45eab4b437a76c5c06836",
-  "completed_at": "2026-11-13 15:29:22 UTC"
+  "scope": "One fixed creator first-slot buy-size veto at >=5 SOL on unchanged E control; R54 count before scoring",
+  "artifacts": "reports/blind/autonomous/codex/runs/c018-lab-20261113T211100Z/"
 }
