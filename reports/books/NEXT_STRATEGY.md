@@ -54,3 +54,15 @@ Sell at slot+2 and trail on sellable proceeds (branch next-strategy-v22 @ 0e501e
 - 14,455 was the number of coins with lifecycle checkpoints in snapshot3, not full trade histories; the broader approved trade export has 4,913 mints with histories out of 62,789 launches (Codex's figure). Newer pool capture can extend to 24 h, so "first two hours only" was too strong.
 - Not established: that on-chain information contains no edge, that winners and losers are indistinguishable, or that attention is the most likely source of profit. These are hypotheses.
 - Next: runner autopsy split between the workers (RESEARCH_QUEUE F006 / C009, then cross-reproduction F007 / C010; C011 inventory of attention and longer-history data before any new collection).
+
+## 13 Nov 2026 17:55 UK — cross-book pattern: run-based entries already in the pool vs still on the curve (EXPLORATORY, found after the fact)
+Closed paper trades to 13 Nov 12:45 UTC, 0.2 SOL after costs, venue = where the position was bought:
+| Book | Pool at entry | Curve at entry |
+|---|---|---|
+| M2 | 28: +42.8% mean, +11.7% median, without best 3 +6.2%, +2.40 SOL | 32: −16.9%, −21.3%, −1.08 SOL |
+| R3C | 36: +32.1%, +20.1%, without best 3 +6.7%, +2.31 SOL | 369: −12.3%, −27.0%, −9.05 SOL |
+| C2 | 83: +8.0%, −2.0%, without best 3 −1.3%, +1.32 SOL | 81: −12.8%, −2.8%, −2.08 SOL |
+| All three | **147: +20.5%, median +3.7%, without best 3 +11.0%, +6.03 SOL** | 482: −12.7%, −21.6%, −12.21 SOL |
+- The opposite holds for the fixed-time 100K books (100K1 pool −16.8%, curve −6.4%): the pattern is specific to buying a coin that is already running.
+- Venue is known at the buy (the reserve read), but this split was found by looking at results → hypothesis only; needs a frozen fresh test before any book.
+- Other books: G1 272 trades, win 56% but −4.2% a trade, no trade reached 2×; RB 60, −6.5%; SW5 2 trades; R3C 42 not filled (429 and a "Cannot access 'q' before initialization" error on 16).
