@@ -1,0 +1,72 @@
+{
+ "E_total": 679,
+ "census_total": 62789,
+ "census_removed_share": {
+  "C1_prev_not_retained": 0.6282151332239724,
+  "C2_serial20": 0.39470289381898105,
+  "C3_gap10": 0.5387090095398875
+ },
+ "E_no_in_window_predecessor": 478,
+ "E_n_prior_quantiles": {
+  "q1": 0.0,
+  "median": 0.0,
+  "q3": 2.0
+ },
+ "E_gap_s_quantiles_with_predecessor": {
+  "q1": 114.0,
+  "median": 600.0,
+  "q3": 3587.0
+ },
+ "conditions": {
+  "C1_prev_not_retained": {
+   "removed": 137,
+   "removed_share_of_E": 0.20176730486008837,
+   "kept": 542,
+   "removed_by_half": {
+    "early": 50,
+    "late": 87
+   },
+   "removed_by_cell": {
+    "C": 118,
+    "B": 17,
+    "A": 2
+   },
+   "testable_R54": true
+  },
+  "C2_serial20": {
+   "removed": 59,
+   "removed_share_of_E": 0.08689248895434462,
+   "kept": 620,
+   "removed_by_half": {
+    "early": 13,
+    "late": 46
+   },
+   "removed_by_cell": {
+    "C": 51,
+    "B": 8
+   },
+   "testable_R54": true
+  },
+  "C3_gap10": {
+   "removed": 101,
+   "removed_share_of_E": 0.1487481590574374,
+   "kept": 578,
+   "removed_by_half": {
+    "early": 41,
+    "late": 60
+   },
+   "removed_by_cell": {
+    "B": 14,
+    "C": 86,
+    "A": 1
+   },
+   "testable_R54": true
+  }
+ },
+ "overlap": {
+  "C1&C3": 78,
+  "C1&C2": 47,
+  "C2&C3": 44,
+  "any": 165
+ }
+}
