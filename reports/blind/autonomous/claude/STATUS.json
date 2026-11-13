@@ -2,9 +2,9 @@
   "worker": "Claude research worker",
   "run_id": "f012-20261113T105105Z",
   "task": "F012 cross-review of Codex C016 (dev_buy_sol provenance) and its Idea-lab L008 lag veto, published on research-codex @ d820bda (run c016-lab-20261113T091125Z): re-run its scripts from the allowlisted inputs, confirm or dispute every number in its SCOREBOARD row; plus one Idea-lab test (R69 breadth-conditioned RUN2, R54 pre-check first) if time allows.",
-  "state": "in_progress",
+  "state": "completed",
   "started_at": "2026-11-13T10:51:05Z",
-  "lease_expires_at": "2026-11-13T13:51:05Z",
+  "lease_expires_at": null,
   "input_commits": {
     "tracker": "aea952b9d1e8a8da02a64dde6cb10f246d9061d8",
     "research-codex_read": "d820bda863f680e9e097274412ddcce5c0d47e6a",
@@ -15,7 +15,7 @@
   },
   "task_choice_note": "Queue (coordinator run 10, R69/F012): C016 is published (d820bda 09:42 UTC), so F012 = cross-review of C016; the Idea-lab test is the breadth-conditioned RUN2 or the lag veto per R69/R54.",
   "previous_run": "f004-20261113T065047Z",
-  "next_task": null,
+  "next_task": "none READY (F005 blocked on the Round 1 release); next run: coordinator-added task if any, else verification of Codex's next publication (H2 reconnect pre-check if run) and one non-retune Idea-lab test (preference: the no-sell run, pending R41-style ruling; CL-L010 has no retune)",
   "blockers": [],
   "artifacts": "reports/blind/autonomous/claude/runs/f012-20261113T105105Z/",
   "task_states": {
@@ -30,9 +30,9 @@
     "F004": "completed",
     "F005": "blocked (Round 1 release)",
     "F011": "completed",
-    "F012": "in_progress"
+    "F012": "completed"
   },
-  "completed_at": null,
-  "protocol_commit": null,
-  "result": null
+  "completed_at": "2026-11-13T11:13:05Z",
+  "protocol_commit": "1b16297",
+  "result": "F012: Codex C016 (research-codex @ d820bda) reproduces exactly \u2014 all scripts re-run unchanged from the allowlisted inputs: 9/9 regenerable JSONs field-identical, 44/44 CSVs byte-identical; every count re-derived with independent code (51,221 shared fd_watch values unchanged; 6,572 current-watch zeros positive in the census, median 0.128167520 SOL); L008 lag veto figures re-derived exactly from its CSVs (168 / -4.504147; removed 27 resolved; inconclusive, verdict agreed). Addition: on 4,913 tape-covered census mints the census dev_buy_sol equals the creator's creation-slot buy on the tape within 1e-6 on 96.5 %, all 596 tape-covered watch-zero/census-positive mints show that buy, received a median 0.83 s after creation. Idea lab CL-L010 breadth-conditioned RUN2 (B = 10 fixed before any count; removes 168/568): kept 400 / 340 / -10.183154 vs removed 168 / 152 / -6.161587; per trade -0.0300 vs -0.0405 [-0.0100, +0.0313], > 50 % losses 16.8 % vs 26.3 % [-0.177, -0.016], direction in both halves, median hold 81-92 s vs 4.8 s; weak, not profitable, no retune. Control = F004-RUN2 exactly."
 }
