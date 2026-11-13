@@ -1,0 +1,224 @@
+{
+  "run": "f013-20261113T145108Z",
+  "task": "F013 parts (b) and (c); part (a) deferred (Codex C017 not published at run start; research-codex HEAD d820bda)",
+  "inputs": {
+    "entry-all-20261107t2210": "e67833121f1da0dc992c28fa26c5236a855c151a (16/16 SHA256 OK)",
+    "blind-eval-1.1": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b, evaluate.py sha256 f5686511fcae09c1c191ca5ffee167c6ad1421cddbb1be8b1c4f0f3eb4cc8a86 (imported unchanged)",
+    "tracker": "4079855248085314b487b47f740b9ba9b43fadc5",
+    "research-codex_read": "d820bda863f680e9e097274412ddcce5c0d47e6a",
+    "research-claude_base": "d34884229ee0590d842a32e4afa86fb48ef124a6",
+    "protocol_commit": "f8d7128"
+  },
+  "cl_l011": {
+    "condition": "sells == 0 in (created+60 s, trigger]",
+    "denominator": 3638,
+    "control_attempts_run2": 568,
+    "candidate_attempts_run2c": 18,
+    "removed": 550,
+    "removed_share_of_control": 0.9683098591549296,
+    "r54_testable_5_95": false,
+    "status": "NOT TESTABLE on this window (removes 96.8 % > 95 %); not scored; no exit, P&L or outcome category computed for either arm in this run; no threshold or alternative statistic tried (R75 closes the RUN2-trigger family after this test)",
+    "by_half_counts": {
+      "early": {
+        "control": 231,
+        "candidate": 4
+      },
+      "late": {
+        "control": 337,
+        "candidate": 14
+      }
+    },
+    "sells_at_trigger_quantiles_control": {
+      "min": 0,
+      "p10": 5,
+      "p25": 15,
+      "median": 48.0,
+      "p75": 116,
+      "p90": 236,
+      "max": 1069,
+      "share_zero": 0.03169014084507042,
+      "share_le_1": 0.04929577464788732,
+      "share_le_3": 0.08098591549295775
+    },
+    "control_known_from_f004_not_recomputed_here": {
+      "attempted": 568,
+      "resolved": 492,
+      "total_sol": -16.344741,
+      "source": "F004 / R65 / F012 (R71)"
+    },
+    "descriptive_counts_only": {
+      "control_attempts": 568,
+      "by_half": {
+        "early": {
+          "attempts": 231,
+          "zero_sell": 4,
+          "sells_quantiles": {
+            "n": 231,
+            "min": 0,
+            "p25": 20,
+            "median": 57,
+            "p75": 136,
+            "max": 1069
+          }
+        },
+        "late": {
+          "attempts": 337,
+          "zero_sell": 14,
+          "sells_quantiles": {
+            "n": 337,
+            "min": 0,
+            "p25": 13,
+            "median": 43,
+            "p75": 110,
+            "max": 893
+          }
+        }
+      },
+      "zero_sell": {
+        "n": 18,
+        "entry_age_s": {
+          "n": 18,
+          "min": 61.0699999332428,
+          "p25": 69.81399989128113,
+          "median": 122.5809999704361,
+          "p75": 238.08100008964539,
+          "max": 789.9790000915527
+        },
+        "breadth": {
+          "n": 18,
+          "min": 0,
+          "p25": 0,
+          "median": 1.0,
+          "p75": 1,
+          "max": 18
+        },
+        "buys": {
+          "n": 18,
+          "min": 0,
+          "p25": 0,
+          "median": 1.0,
+          "p75": 3,
+          "max": 18
+        },
+        "price_over_p60": {
+          "n": 18,
+          "min": 2.0036703802976135,
+          "p25": 2.091346903737894,
+          "median": 2.156840657917842,
+          "p75": 2.40028284794607,
+          "max": 246.3242166664106
+        },
+        "breadth_ge_10": 1
+      },
+      "positive_sell": {
+        "n": 550,
+        "entry_age_s": {
+          "n": 550,
+          "min": 60.759000062942505,
+          "p25": 91.625,
+          "median": 154.34899997711182,
+          "p75": 243.0130000114441,
+          "max": 877.5780000686646
+        },
+        "breadth": {
+          "n": 550,
+          "min": 0,
+          "p25": 8,
+          "median": 45.0,
+          "p75": 134,
+          "max": 552
+        },
+        "buys": {
+          "n": 550,
+          "min": 1,
+          "p25": 33,
+          "median": 81.5,
+          "p75": 198,
+          "max": 1134
+        },
+        "price_over_p60": {
+          "n": 550,
+          "min": 2.0000689655710637,
+          "p25": 2.014483553249346,
+          "median": 2.0552135244011174,
+          "p75": 2.2323271769626554,
+          "max": 61.535037473738434
+        },
+        "breadth_ge_10": 399,
+        "sell_share_of_curve_rows": {
+          "n": 550,
+          "min": 0.05405405405405406,
+          "p25": 0.3275862068965517,
+          "median": 0.38473671438971124,
+          "p75": 0.4326923076923077,
+          "max": 0.8407960199004975
+        },
+        "first_sell_minus_60_s": {
+          "n": 550,
+          "min": 0.003999948501586914,
+          "p25": 0.38700008392333984,
+          "median": 1.1770000457763672,
+          "p75": 4.569999933242798,
+          "max": 323.19799995422363
+        },
+        "trigger_row_is_sell": 14
+      },
+      "crosstab_zero_sell_x_breadth_ge_10": {
+        "sells0_breadth>=10": 1,
+        "sells0_breadth<10": 17,
+        "sells>0_breadth>=10": 399,
+        "sells>0_breadth<10": 151
+      },
+      "stream_stats": {
+        "mints_streamed": 4913,
+        "duplicates_removed": 1568880,
+        "non_contiguous": 0
+      },
+      "note": "counts and knowable-at-time features only; no exit, P&L or outcome category was computed or read"
+    },
+    "registered_direction": "not evaluated (not scored)",
+    "verdict": "NOT TESTABLE"
+  },
+  "part_c_r73_note": "recorded in KNOWLEDGE.md (CK18 corrected) and SCOREBOARD.md (f012 row) this run; no re-run",
+  "codex_l008_rederived_again": {
+    "source": "research-codex @ d820bda863f680e9e097274412ddcce5c0d47e6a, runs/c016-lab-20261113T091125Z published CSVs",
+    "identical_to_f012_rederivation": true,
+    "l008_all": {
+      "attempted": 245,
+      "filled": 244,
+      "fill_unavailable": 1,
+      "resolved": 168,
+      "uncertain_exits": 76,
+      "total_sol": -4.5041465723910985,
+      "mean_sol": -0.026810396264232726,
+      "median_sol": -0.0481469738037195,
+      "mean_return": -0.13405198132116364,
+      "median_return": -0.24073486901859753,
+      "win_rate": 0.20833333333333334,
+      "share_loss_gt50": 0.05952380952380952,
+      "without_best1": -4.827414218411116,
+      "without_best3": -5.4198584402147
+    },
+    "vetoed_all": {
+      "attempted": 51,
+      "filled": 47,
+      "fill_unavailable": 4,
+      "resolved": 27,
+      "uncertain_exits": 20,
+      "total_sol": -0.14122154242207804,
+      "mean_sol": -0.005230427497114001,
+      "median_sol": -0.015114563040658084,
+      "mean_return": -0.026152137485570007,
+      "median_return": -0.07557281520329041,
+      "win_rate": 0.37037037037037035,
+      "share_loss_gt50": 0.0,
+      "without_best1": -0.3091370772800835,
+      "without_best3": -0.5717834110455784
+    }
+  },
+  "limitations": [
+    "sells are counted on received curve rows only; pool sells are not counted (a launch that migrated before the trigger can carry pool sells this statistic does not see)",
+    "the statistic counts rows, not SOL; a SOL-weighted or ratio version is a different statistic and is not run (R75)",
+    "counts-only descriptives use knowable-at-time features; no outcome was read, so nothing here says how the 18 zero-sell triggers traded"
+  ]
+}
