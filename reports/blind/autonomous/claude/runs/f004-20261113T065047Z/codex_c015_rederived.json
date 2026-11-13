@@ -1,0 +1,80 @@
+{
+  "positions": 22,
+  "l004_arithmetic_reproduced": 22,
+  "marks_available": 22,
+  "above": 18,
+  "below": 2,
+  "equal": 2,
+  "l004_proceeds_sum": 4.5361816248695295,
+  "l004_net_sum": 0.13618162486952884,
+  "mark_proceeds_sum": 6.959468442066363,
+  "mark_pnl_sum": 2.5594684420663634,
+  "proxy_difference": 2.4232868171968343,
+  "by_half": {
+    "early": {
+      "n": 14,
+      "proxy_difference": 1.846990086752608
+    },
+    "late": {
+      "n": 8,
+      "proxy_difference": 0.5762967304442265
+    }
+  },
+  "obstruction_kinds": {
+    "final stale-state tail": 12,
+    "invalid received state": 5,
+    "logged main gap": 5
+  },
+  "baseline_reasons": {
+    "state older than 30s": 16,
+    "state invalid or pool evidence absent": 1,
+    "capture gap during hold": 5
+  },
+  "mark_strictly_before_obstruction": 22,
+  "max_mark_age_at_obstruction_s": 237.0,
+  "true_baseline_exit_empty": 22,
+  "in_peer_five": 5,
+  "peer_five": {
+    "rows": 5,
+    "columns": [
+      "first_gap_end",
+      "first_gap_start",
+      "l004_net_sol",
+      "mint",
+      "peer_arithmetic_reproduced",
+      "peer_exit_row_id",
+      "peer_modeled_exit_t",
+      "peer_reported_net_sol",
+      "peer_scenario_net_sol",
+      "pre_obstruction_mark_pnl_sol",
+      "true_baseline_exit_known"
+    ],
+    "l004_net_sol_sum": 0.038872688239695335,
+    "pre_obstruction_mark_pnl_sol_sum": 0.3480753441733343
+  },
+  "changed_pairs": {
+    "rows": 1,
+    "columns": [
+      "baseline_net_sol",
+      "baseline_trigger_t",
+      "candidate_net_sol",
+      "candidate_trigger_reason",
+      "candidate_trigger_t",
+      "difference_sol",
+      "half",
+      "mint"
+    ],
+    "rows_data": [
+      {
+        "baseline_net_sol": "0.29992285733085855",
+        "baseline_trigger_t": "1794081072.721",
+        "candidate_net_sol": "-0.00818177468329359",
+        "candidate_trigger_reason": "creator_cash_recovery_sell",
+        "candidate_trigger_t": "1794080225.805",
+        "difference_sol": "-0.3081046320141521",
+        "half": "late",
+        "mint": "6tqnuJMjHGhYVz7oiCL7gy5UsnhwoRZjJqWjW6b3pump"
+      }
+    ]
+  }
+}

@@ -1,0 +1,342 @@
+{
+ "version": "eval-1.1",
+ "DIAGNOSTIC_no_evidence_check": false,
+ "window": [
+  "2026-11-06T07:40:00",
+  "2026-11-07T20:00:00"
+ ],
+ "launches_in_window": 62789,
+ "N_common": 3638,
+ "duplicates_removed": 1568880,
+ "mints_streamed": 4913,
+ "non_contiguous_mints": 0,
+ "assumptions": {
+  "curve_fee_bps": 125,
+  "pool_fee_bps": 30,
+  "fixed_fee_sol": 0.0015,
+  "land_buy_s": 1.0,
+  "land_sell_s": 0.7
+ },
+ "rules": {
+  "F004-BASE60": {
+   "file": "/home/claude/top-coins-bot/reports/blind/autonomous/claude/runs/f004-20261113T065047Z/rule_base60.py",
+   "spec": {
+    "name": "F004-BASE60",
+    "decision_offsets": [
+     60
+    ],
+    "on_trade": false,
+    "horizon_s": 7200,
+    "sizes": [
+     0.2
+    ]
+   },
+   "event_time_hypothetical_entries": 0,
+   "by_size": {
+    "0.2": {
+     "N": 3638,
+     "scored": 1939,
+     "abstain": 698,
+     "unknown": 1001,
+     "point_sol_per_launch": -0.017529229019938242,
+     "lower_sol_per_launch": -0.0729721921865133,
+     "total_net_sol_scored": -63.77133517453533,
+     "unknown_share_of_attempts": 0.3404761904761905,
+     "mean_ret": -0.16444387615919373,
+     "median_ret": -0.23659130305526938,
+     "win_rate": 0.17173800928313562,
+     "share_loss_ge_50": 0.17173800928313562,
+     "mean_ret_without_best": -0.1711868322693105,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.07759171497336864,
+     "supported": false
+    }
+   },
+   "pool_fee_125bps_sensitivity": {
+    "0.2": {
+     "N": 3638,
+     "scored": 1939,
+     "abstain": 698,
+     "unknown": 1001,
+     "point_sol_per_launch": -0.017549188317857567,
+     "lower_sol_per_launch": -0.07299215148443261,
+     "total_net_sol_scored": -63.84394710036583,
+     "unknown_share_of_attempts": 0.3404761904761905,
+     "mean_ret": -0.16463111681373346,
+     "median_ret": -0.23659130305526938,
+     "win_rate": 0.17122227952552863,
+     "share_loss_ge_50": 0.17173800928313562,
+     "mean_ret_without_best": -0.17130577364045452,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.07761650100035049,
+     "supported": false
+    }
+   }
+  },
+  "F004-RUN2": {
+   "file": "/home/claude/top-coins-bot/reports/blind/autonomous/claude/runs/f004-20261113T065047Z/rule_run2.py",
+   "spec": {
+    "name": "F004-RUN2",
+    "decision_offsets": [],
+    "on_trade": true,
+    "horizon_s": 7200,
+    "sizes": [
+     0.2
+    ]
+   },
+   "event_time_hypothetical_entries": 0,
+   "by_size": {
+    "0.2": {
+     "N": 3638,
+     "scored": 507,
+     "abstain": 3070,
+     "unknown": 61,
+     "point_sol_per_launch": -0.00427896768132412,
+     "lower_sol_per_launch": -0.007657609792374147,
+     "total_net_sol_scored": -15.566884424657149,
+     "unknown_share_of_attempts": 0.1073943661971831,
+     "mean_ret": -0.15351957026289098,
+     "median_ret": -0.2598799222138451,
+     "win_rate": 0.23471400394477318,
+     "share_loss_ge_50": 0.1913214990138067,
+     "mean_ret_without_best": -0.166513710263458,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.009680542633378631,
+     "supported": false
+    }
+   },
+   "pool_fee_125bps_sensitivity": {
+    "0.2": {
+     "N": 3638,
+     "scored": 507,
+     "abstain": 3070,
+     "unknown": 61,
+     "point_sol_per_launch": -0.004309249891530955,
+     "lower_sol_per_launch": -0.007687892002580982,
+     "total_net_sol_scored": -15.677051105389616,
+     "unknown_share_of_attempts": 0.1073943661971831,
+     "mean_ret": -0.15460602668037096,
+     "median_ret": -0.2598799222138451,
+     "win_rate": 0.23076923076923078,
+     "share_loss_ge_50": 0.1913214990138067,
+     "mean_ret_without_best": -0.16746241657683708,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.009703302514385146,
+     "supported": false
+    }
+   }
+  },
+  "F004-RUN3": {
+   "file": "/home/claude/top-coins-bot/reports/blind/autonomous/claude/runs/f004-20261113T065047Z/rule_run3.py",
+   "spec": {
+    "name": "F004-RUN3",
+    "decision_offsets": [],
+    "on_trade": true,
+    "horizon_s": 7200,
+    "sizes": [
+     0.2
+    ]
+   },
+   "event_time_hypothetical_entries": 0,
+   "by_size": {
+    "0.2": {
+     "N": 3638,
+     "scored": 251,
+     "abstain": 3345,
+     "unknown": 42,
+     "point_sol_per_launch": -0.0011464949463355113,
+     "lower_sol_per_launch": -0.0034727731211568417,
+     "total_net_sol_scored": -4.17094861476859,
+     "unknown_share_of_attempts": 0.14334470989761092,
+     "mean_ret": -0.08308662579220298,
+     "median_ret": -0.25705292679529795,
+     "win_rate": 0.22310756972111553,
+     "share_loss_ge_50": 0.1593625498007968,
+     "mean_ret_without_best": -0.1345788874779845,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.005449578834330299,
+     "supported": false
+    }
+   },
+   "pool_fee_125bps_sensitivity": {
+    "0.2": {
+     "N": 3638,
+     "scored": 251,
+     "abstain": 3345,
+     "unknown": 42,
+     "point_sol_per_launch": -0.0011884268106219838,
+     "lower_sol_per_launch": -0.0035147049854433146,
+     "total_net_sol_scored": -4.3234967370427775,
+     "unknown_share_of_attempts": 0.14334470989761092,
+     "mean_ret": -0.08612543300882027,
+     "median_ret": -0.25705292679529795,
+     "win_rate": 0.21912350597609562,
+     "share_loss_ge_50": 0.1593625498007968,
+     "mean_ret_without_best": -0.1365871736501818,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.0054773753929831005,
+     "supported": false
+    }
+   }
+  },
+  "F004-RUN5": {
+   "file": "/home/claude/top-coins-bot/reports/blind/autonomous/claude/runs/f004-20261113T065047Z/rule_run5.py",
+   "spec": {
+    "name": "F004-RUN5",
+    "decision_offsets": [],
+    "on_trade": true,
+    "horizon_s": 7200,
+    "sizes": [
+     0.2
+    ]
+   },
+   "event_time_hypothetical_entries": 0,
+   "by_size": {
+    "0.2": {
+     "N": 3638,
+     "scored": 102,
+     "abstain": 3510,
+     "unknown": 26,
+     "point_sol_per_launch": -0.0006795089829896641,
+     "lower_sol_per_launch": -0.0021195859483552496,
+     "total_net_sol_scored": -2.4720536801163977,
+     "unknown_share_of_attempts": 0.203125,
+     "mean_ret": -0.12117910196649008,
+     "median_ret": -0.2420011648673652,
+     "win_rate": 0.2647058823529412,
+     "share_loss_ge_50": 0.21568627450980393,
+     "mean_ret_without_best": -0.17222162471898061,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.003192461612038631,
+     "supported": false
+    }
+   },
+   "pool_fee_125bps_sensitivity": {
+    "0.2": {
+     "N": 3638,
+     "scored": 102,
+     "abstain": 3510,
+     "unknown": 26,
+     "point_sol_per_launch": -0.0007048344195916976,
+     "lower_sol_per_launch": -0.0021449113849572833,
+     "total_net_sol_scored": -2.564187618474596,
+     "unknown_share_of_attempts": 0.203125,
+     "mean_ret": -0.12569547149385274,
+     "median_ret": -0.24764941878177696,
+     "win_rate": 0.2549019607843137,
+     "share_loss_ge_50": 0.21568627450980393,
+     "mean_ret_without_best": -0.17565043033273592,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.0032083454427073374,
+     "supported": false
+    }
+   }
+  },
+  "CL-L009-CONTROL": {
+   "file": "/home/claude/top-coins-bot/reports/blind/autonomous/claude/runs/f004-20261113T065047Z/rule_dipctl.py",
+   "spec": {
+    "name": "CL-L009-CONTROL",
+    "decision_offsets": [],
+    "on_trade": true,
+    "horizon_s": 7200,
+    "sizes": [
+     0.2
+    ]
+   },
+   "event_time_hypothetical_entries": 0,
+   "by_size": {
+    "0.2": {
+     "N": 3638,
+     "scored": 1509,
+     "abstain": 911,
+     "unknown": 1218,
+     "point_sol_per_launch": -0.012568678220528456,
+     "lower_sol_per_launch": -0.08003074529034704,
+     "total_net_sol_scored": -45.72485136628252,
+     "unknown_share_of_attempts": 0.44664466446644663,
+     "mean_ret": -0.15150712845024028,
+     "median_ret": -0.21183446286663077,
+     "win_rate": 0.1550695825049702,
+     "share_loss_ge_50": 0.11332007952286283,
+     "mean_ret_without_best": -0.15451145847689923,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.08415167091398947,
+     "supported": false
+    }
+   },
+   "pool_fee_125bps_sensitivity": {
+    "0.2": {
+     "N": 3638,
+     "scored": 1509,
+     "abstain": 911,
+     "unknown": 1218,
+     "point_sol_per_launch": -0.012640297565857142,
+     "lower_sol_per_launch": -0.08010236463567573,
+     "total_net_sol_scored": -45.98540254458828,
+     "unknown_share_of_attempts": 0.44664466446644663,
+     "mean_ret": -0.15237045243402347,
+     "median_ret": -0.2130019604504238,
+     "win_rate": 0.15440689198144467,
+     "share_loss_ge_50": 0.11332007952286283,
+     "mean_ret_without_best": -0.15534131918609087,
+     "scorable": false,
+     "bonferroni_lcb_lower": -0.08421850548349363,
+     "supported": false
+    }
+   }
+  },
+  "CL-L009-RECOVER": {
+   "file": "/home/claude/top-coins-bot/reports/blind/autonomous/claude/runs/f004-20261113T065047Z/rule_dipcand.py",
+   "spec": {
+    "name": "CL-L009-RECOVER",
+    "decision_offsets": [],
+    "on_trade": true,
+    "horizon_s": 7200,
+    "sizes": [
+     0.2
+    ]
+   },
+   "event_time_hypothetical_entries": 0,
+   "by_size": {
+    "0.2": {
+     "N": 3638,
+     "scored": 697,
+     "abstain": 2900,
+     "unknown": 41,
+     "point_sol_per_launch": -0.00661312716992411,
+     "lower_sol_per_launch": -0.008884017769154456,
+     "total_net_sol_scored": -24.058556644183913,
+     "unknown_share_of_attempts": 0.05555555555555555,
+     "mean_ret": -0.17258648955655603,
+     "median_ret": -0.2862344015033845,
+     "win_rate": 0.20803443328550933,
+     "share_loss_ge_50": 0.18507890961262555,
+     "mean_ret_without_best": -0.17918997080766744,
+     "scorable": true,
+     "bonferroni_lcb_lower": -0.010844066807066078,
+     "supported": false
+    }
+   },
+   "pool_fee_125bps_sensitivity": {
+    "0.2": {
+     "N": 3638,
+     "scored": 697,
+     "abstain": 2900,
+     "unknown": 41,
+     "point_sol_per_launch": -0.006643704870982768,
+     "lower_sol_per_launch": -0.008914595470213116,
+     "total_net_sol_scored": -24.16979832063531,
+     "unknown_share_of_attempts": 0.05555555555555555,
+     "mean_ret": -0.17338449297442832,
+     "median_ret": -0.2862344015033845,
+     "win_rate": 0.20803443328550933,
+     "share_loss_ge_50": 0.18651362984218078,
+     "mean_ret_without_best": -0.17998912078217463,
+     "scorable": true,
+     "bonferroni_lcb_lower": -0.010875817776510439,
+     "supported": false
+    }
+   }
+  }
+ }
+}

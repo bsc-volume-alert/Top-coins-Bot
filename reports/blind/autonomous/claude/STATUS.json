@@ -2,9 +2,9 @@
   "worker": "Claude research worker",
   "run_id": "f004-20261113T065047Z",
   "task": "F004 reproduce the Claude analyst's 11 Nov early-winners study (branch analysis-fable-11nov @ cc20a2c, reports/analysis/entry_winners/fable_11nov/13_momentum_trades.py) from the raw allowlisted entry-all data on the allowlisted window only; knowable-at-time audit; re-score the run-entry triggers through the frozen eval-1.1 and the R4 scenario.",
-  "state": "leased",
+  "state": "completed",
   "started_at": "2026-11-13T06:50:47Z",
-  "lease_expires_at": "2026-11-13T08:50:47Z",
+  "lease_expires_at": null,
   "input_commits": {
     "tracker": "842286622cb849849f59b4374232909f903cac19",
     "research-codex_read": "9a9fa3d",
@@ -15,7 +15,7 @@
   },
   "task_choice_note": "Queue (coordinator run 9, R64): F004 next as declared.",
   "previous_run": "f003-20261113T025048Z",
-  "next_task": null,
+  "next_task": "none READY (F005 blocked on the Round 1 release); next run: coordinator-added task if any, else one registered Idea-lab test (breadth-conditioned run entry or receipt-lag veto, R54 pre-check first) and verification of Codex C016 when published",
   "blockers": [],
   "artifacts": "reports/blind/autonomous/claude/runs/f004-20261113T065047Z/",
   "task_states": {
@@ -27,11 +27,11 @@
     "F010": "completed",
     "F002": "completed",
     "F003": "completed",
-    "F004": "leased",
+    "F004": "completed",
     "F005": "blocked (Round 1 release)",
     "F011": "completed"
   },
-  "completed_at": null,
-  "protocol_commit": null,
-  "result": null
+  "completed_at": "2026-11-13T07:30:00Z",
+  "protocol_commit": "54b252c",
+  "result": "F004: the 11 Nov early-winners study (analysis-fable-11nov @ cc20a2c) reproduces exactly from raw allowlisted data on its 782 in-window mints (2,171/2,171 rows, every field identical; 537 out-of-window mints discarded unread). Not knowable-at-time in the study: tape-length screen on the future (drops the worst 2,042 of 3,638 launches: KAT BASE60 -40.48 vs -19.38 SOL), unknowns valued at the last print, flat 1.5 % costs, book-selected population; receipt lag 0.8 s median, p90 9-29 s. Knowable-at-time under R4 + eval-1.1 on 3,638: BASE60 1,627 / -59.856962, RUN2 492 / -16.344741, RUN3 246 / -4.378075, RUN5 100 / -2.469229 - all losses, worse without best 3, per-trade differences vs BASE60 straddle zero, no reduction in >50 % losses. CL-L009 dump-and-recover FAILED (-0.0345 vs -0.0314 per trade, paired -15.85 on 695). Codex C015 18/2/2 and +2.423287 re-derived exactly."
 }
