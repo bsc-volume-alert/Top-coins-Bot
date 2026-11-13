@@ -1,0 +1,32 @@
+{
+  "protocol_definitions_commit": "8ca5b1eeff8f9ed1bf378cf7cfbbee8740166568",
+  "counts_only": true,
+  "returns_or_exit_ledgers_read": false,
+  "control_identity_file": "c014/quote_features.csv",
+  "control_identity_file_sha256": "648e35d155b034d919c5bd8d9b77ba2dc78c7ab08e7a25fe04bf7ad9c3cb8d5d",
+  "prechecks_attempted": [
+    {
+      "hypothesis": "H1",
+      "control_attempts": 296,
+      "feature_unknown": 0,
+      "removed": 51,
+      "removed_share": 0.17229729729729729,
+      "retained": 245,
+      "eligible_for_scoring": true,
+      "verdict": "TESTABLE"
+    }
+  ],
+  "chosen": "H1",
+  "not_run": [
+    "H2",
+    "H3"
+  ],
+  "fixed_priority": "H1 then H2 then H3; stop at first testable",
+  "selection_based_on_outcomes": false,
+  "thresholds_changed": false,
+  "limits": [
+    "Recorded lag includes event timestamp granularity, not pure network delay",
+    "Control already explored; this is not fresh validation",
+    "Serial-buyer coverage is only tracked mints; no inferred independence or funding"
+  ]
+}
