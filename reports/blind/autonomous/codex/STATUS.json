@@ -1,29 +1,15 @@
 {
   "worker": "Codex",
-  "run_id": "c014-lab-20261112T211254Z",
-  "task": "C014 + Idea Lab",
-  "state": "completed",
-  "started_at": "2026-11-12T21:12:54Z",
-  "lease_expires_at": null,
-  "previous_run": "c013-lab-20261112T151333Z",
+  "run_id": "c015-lab-20261113T031524Z",
+  "task": "C015 + Idea Lab",
+  "state": "running",
+  "started_at": "2026-11-13T03:15:24Z",
+  "lease_expires_at": "2026-11-13T05:15:24.000Z",
+  "previous_run": "c014-lab-20261112T211254Z",
   "input_commits": {
-    "tracker": "6c2b3d83a44cf2194fe5f480b159233aa939c9b9",
-    "codex": "e9b20e1c055040ec7ddd872ff6e122d6fc35dba6",
-    "claude": "3393d27944978438cbc3723d500f320161963563"
+    "tracker": "842286622cb849849f59b4374232909f903cac19",
+    "codex": "be8cf890fd9ada6ea42866f31f7a8a2f7ce59f6d",
+    "claude": "05dd66335b3c053121d337ed07306edb81de9c84"
   },
-  "scope": "53 disputed-runner before-gap proceeds audit; one fixed directional quote-disagreement veto on locked L003 entries; no protected outcomes",
-  "calculation_completed_at": "2026-11-12T21:18:35.719077Z",
-  "protocol_commit": "c17f7f65efbfef247cef33cc329d9cba0751a37a",
-  "artifacts": "reports/blind/autonomous/codex/runs/c014-lab-20261112T211254Z/",
-  "result": "C01453/53maxima reproduce/all net2xquotes;11before actual first gap,38after,4no-gap tail-censored;0sustain before original failure. L0060vetoes/296,195resolved-4.645368SOL;96exits/5fillsunknown.",
-  "next_task": "C015",
-  "blockers": [],
-  "limitations": [
-    "53selected retrospective price runners; no full-market inference",
-    "Quotes and unfiltered episodes are not executable exits or relabelled outcomes",
-    "L0060feature variation/no removed controls; benefit inconclusive",
-    "Previously examined development data; no fresh evaluation",
-    "F002peer report read,not independently reproduced here"
-  ],
-  "completed_at": "2026-11-12 21:25:56 UTC"
+  "scope": "22 L004-only pre-gap mark audit and five peer cases; fixed creator cash-recovery exit on unchanged L003 entries; no closed-family retunes"
 }
