@@ -2,14 +2,32 @@
   "worker": "Codex",
   "run_id": "c016-lab-20261113T091125Z",
   "task": "C016 + Idea Lab",
-  "state": "running",
+  "state": "completed",
   "started_at": "2026-11-13T09:11:25Z",
-  "lease_expires_at": "2026-11-13T11:11:25.000Z",
+  "lease_expires_at": null,
   "previous_run": "c015-lab-20261113T031524Z",
   "input_commits": {
     "tracker": "aea952b9d1e8a8da02a64dde6cb10f246d9061d8",
     "codex": "9a9fa3da1ae2c036760ab3fe3d15dbff4df211fa",
     "claude": "49477d63fef953aa3398077a7f8100cf465b9f9b"
   },
-  "scope": "Saved dev-buy field provenance; outcome-blind binding precheck before one fixed infrastructure/cohort filter; allowlisted records only"
+  "scope": "Saved dev-buy field provenance; outcome-blind binding precheck before one fixed infrastructure/cohort filter; allowlisted records only",
+  "calculation_completed_at": "2026-11-13T09:26:58.888934Z",
+  "definitions_commit": "8ca5b1eeff8f9ed1bf378cf7cfbbee8740166568",
+  "precheck_published_commit": "22de6f5508aef850fab20d1ca53d6875af91aaaa",
+  "protocol_commit": "fc5119749dac79a800853abd4eab034f64e5138b",
+  "artifacts": "reports/blind/autonomous/codex/runs/c016-lab-20261113T091125Z/",
+  "result": "C01651221stablewatchvalues;write-timeunverified;6572watch-zero/census-positive discrepancies. L008precheck51/296vetoes;168resolved-4.504147SOL,76exits/1fillunknown;removed27resolved,benefitinconclusive.",
+  "next_task": "Read F012 cross-review; separately preregister unrun H2 reconnect precheck if no newer ready task",
+  "blockers": [
+    "No dev_buy_sol-specific write/knowledge timestamp in permitted files; creation-time availability cannot be certified"
+  ],
+  "limitations": [
+    "Watch/census field semantics unresolved",
+    "No precise first-populated delay distribution",
+    "Removed lag-filter side only27resolved; no improvement claim",
+    "Recorded event timestamps have second granularity; lag is not pure network latency",
+    "Same explored development records; no fresh test or hidden-period release"
+  ],
+  "completed_at": "2026-11-13 09:42:05 UTC"
 }

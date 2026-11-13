@@ -1,0 +1,26 @@
+{
+  "task": "C016 cross-table provenance context",
+  "comparison": "current fd_watch versus later window tokens census",
+  "overlap": 48221,
+  "different_numeric_values": 6572,
+  "disagreement_kinds": {
+    "watch_zero / census_positive": 6572
+  },
+  "absolute_difference_sol": {
+    "min": "2E-9",
+    "median": "0.128167520",
+    "p95": "4",
+    "max": "85.005359057",
+    "gt1e_6": 6536,
+    "lt1e_9": 0
+  },
+  "differences_also_in_snapshot3": 5823,
+  "checks_column_inventory": {
+    "representation": "JSON arrays, not integer counts",
+    "nested_inspection": "nested_checks_audit.json",
+    "actual_dev_buy_sol_write_time_available": false
+  },
+  "meaning": "All differing current-watch values are numerically zero while the census is positive. Zero is syntactically populated, NOT a verified no-buy observation. Field definitions/update pathways may differ; these tables alone cannot distinguish later revision from different semantics.",
+  "first_write_delay_distribution": null,
+  "field_write_time_unavailable": true
+}

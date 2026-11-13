@@ -1,0 +1,101 @@
+{
+  "experiment": "CDEX-L008",
+  "definitions_commit": "8ca5b1eeff8f9ed1bf378cf7cfbbee8740166568",
+  "binding_counts_published_before_score_commit": "fc5119749dac79a800853abd4eab034f64e5138b",
+  "baseline_fields_reproduced": 5663,
+  "baseline_attempts": 296,
+  "chosen_hypothesis": "H1",
+  "hypotheses_proposed": 3,
+  "prechecks_run": 1,
+  "prechecks_not_run": [
+    "H2",
+    "H3"
+  ],
+  "thresholds_tried": 1,
+  "new_scored_candidates": 1,
+  "total_specs_with_baseline": 2,
+  "candidate_attempts": 245,
+  "removed": 51,
+  "removed_share": 0.17229729729729729,
+  "paired": {
+    "early": {
+      "both_resolved": 84,
+      "candidate_total_sol": -2.989970626535176,
+      "baseline_on_same_mints_sol": -2.989970626535176,
+      "difference_sol": 0.0,
+      "candidate_mean_sol": -0.03559488841113305,
+      "candidate_median_sol": -0.050585446793266486,
+      "all_shared_records_identical": true,
+      "candidate_only_resolved": 0,
+      "control_only_resolved": 11,
+      "R63_missing_baseline_sentence": "The true baseline exit on candidate-only resolved launches would be unknown; last usable marks do not identify its sign. Here there are zero candidate-only resolved launches."
+    },
+    "late": {
+      "both_resolved": 84,
+      "candidate_total_sol": -1.514175945855922,
+      "baseline_on_same_mints_sol": -1.514175945855922,
+      "difference_sol": 0.0,
+      "candidate_mean_sol": -0.018025904117332407,
+      "candidate_median_sol": -0.04610205061556903,
+      "all_shared_records_identical": true,
+      "candidate_only_resolved": 0,
+      "control_only_resolved": 16,
+      "R63_missing_baseline_sentence": "The true baseline exit on candidate-only resolved launches would be unknown; last usable marks do not identify its sign. Here there are zero candidate-only resolved launches."
+    },
+    "all": {
+      "both_resolved": 168,
+      "candidate_total_sol": -4.5041465723910985,
+      "baseline_on_same_mints_sol": -4.5041465723910985,
+      "difference_sol": 0.0,
+      "candidate_mean_sol": -0.026810396264232726,
+      "candidate_median_sol": -0.0481469738037195,
+      "all_shared_records_identical": true,
+      "candidate_only_resolved": 0,
+      "control_only_resolved": 27,
+      "R63_missing_baseline_sentence": "The true baseline exit on candidate-only resolved launches would be unknown; last usable marks do not identify its sign. Here there are zero candidate-only resolved launches."
+    }
+  },
+  "group_comparison": {
+    "early": {
+      "kept_resolved": 84,
+      "removed_resolved": 11,
+      "kept_mean_net_sol": -0.03559488841113305,
+      "removed_mean_net_sol": -0.009028563751371099,
+      "kept_minus_removed_mean_sol": -0.02656632465976195,
+      "comparison_has_30_resolved_each": false,
+      "uncertainty": "INCONCLUSIVE if either side has fewer30resolved; no inferential claim or bootstrap rescue",
+      "unknown_kept": 37,
+      "unknown_removed": 11
+    },
+    "late": {
+      "kept_resolved": 84,
+      "removed_resolved": 16,
+      "kept_mean_net_sol": -0.018025904117332407,
+      "removed_mean_net_sol": -0.002619208822312247,
+      "kept_minus_removed_mean_sol": -0.015406695295020159,
+      "comparison_has_30_resolved_each": false,
+      "uncertainty": "INCONCLUSIVE if either side has fewer30resolved; no inferential claim or bootstrap rescue",
+      "unknown_kept": 40,
+      "unknown_removed": 13
+    },
+    "all": {
+      "kept_resolved": 168,
+      "removed_resolved": 27,
+      "kept_mean_net_sol": -0.026810396264232726,
+      "removed_mean_net_sol": -0.005230427497114001,
+      "kept_minus_removed_mean_sol": -0.021579968767118724,
+      "comparison_has_30_resolved_each": false,
+      "uncertainty": "INCONCLUSIVE if either side has fewer30resolved; no inferential claim or bootstrap rescue",
+      "unknown_kept": 77,
+      "unknown_removed": 24
+    }
+  },
+  "verdict": "inconclusive: removed side only27resolved; negative retained point-total and predicted direction not observed",
+  "limits": [
+    "Recorded receipt-minus-event lag includes second-granularity timestamp effects, not pure transport delay",
+    "All trade outcomes on shared entries identical; an entry veto does not improve its shared trade returns",
+    "Unknown removed baseline outcomes are not known losses/zero returns",
+    "Existing exploratory control; no fresh confirmation",
+    "No threshold lowering or fallback selection after outcomes"
+  ]
+}

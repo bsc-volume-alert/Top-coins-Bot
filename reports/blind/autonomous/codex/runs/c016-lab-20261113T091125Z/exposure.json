@@ -1,0 +1,71 @@
+{
+  "L008": {
+    "early": {
+      "filled_positions": 120,
+      "modeled_peak_stake_sol": 3.0000000000000004,
+      "modeled_stake_seconds": 52791.339601039894,
+      "median_modeled_hold_sec": 135.73950004577637,
+      "limits": "Independent unlimited capital; unresolved positions may remain open longer."
+    },
+    "late": {
+      "filled_positions": 124,
+      "modeled_peak_stake_sol": 2.8000000000000003,
+      "modeled_stake_seconds": 43718.025201129916,
+      "median_modeled_hold_sec": 201.82249999046326,
+      "limits": "Independent unlimited capital; unresolved positions may remain open longer."
+    },
+    "all": {
+      "filled_positions": 244,
+      "modeled_peak_stake_sol": 3.0000000000000004,
+      "modeled_stake_seconds": 96509.36480216982,
+      "median_modeled_hold_sec": 166.19000005722046,
+      "limits": "Independent unlimited capital; unresolved positions may remain open longer."
+    }
+  },
+  "BASELINE": {
+    "early": {
+      "filled_positions": 139,
+      "modeled_peak_stake_sol": 3.600000000000001,
+      "modeled_stake_seconds": 64599.50980119706,
+      "median_modeled_hold_sec": 145.37800002098083,
+      "limits": "Independent unlimited capital; unresolved positions may remain open longer."
+    },
+    "late": {
+      "filled_positions": 152,
+      "modeled_peak_stake_sol": 3.400000000000001,
+      "modeled_stake_seconds": 58011.15540132523,
+      "median_modeled_hold_sec": 216.59450006484985,
+      "limits": "Independent unlimited capital; unresolved positions may remain open longer."
+    },
+    "all": {
+      "filled_positions": 291,
+      "modeled_peak_stake_sol": 3.600000000000001,
+      "modeled_stake_seconds": 122610.66520252229,
+      "median_modeled_hold_sec": 181.29800009727478,
+      "limits": "Independent unlimited capital; unresolved positions may remain open longer."
+    }
+  },
+  "VETOED": {
+    "early": {
+      "filled_positions": 19,
+      "modeled_peak_stake_sol": 0.8,
+      "modeled_stake_seconds": 11808.170200157167,
+      "median_modeled_hold_sec": 195.8730001449585,
+      "limits": "Independent unlimited capital; unresolved positions may remain open longer."
+    },
+    "late": {
+      "filled_positions": 28,
+      "modeled_peak_stake_sol": 0.8,
+      "modeled_stake_seconds": 14293.130200195314,
+      "median_modeled_hold_sec": 454.62600004673004,
+      "limits": "Independent unlimited capital; unresolved positions may remain open longer."
+    },
+    "all": {
+      "filled_positions": 47,
+      "modeled_peak_stake_sol": 0.8,
+      "modeled_stake_seconds": 26101.30040035248,
+      "median_modeled_hold_sec": 421.14400005340576,
+      "limits": "Independent unlimited capital; unresolved positions may remain open longer."
+    }
+  }
+}

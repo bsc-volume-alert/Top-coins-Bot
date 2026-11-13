@@ -1,0 +1,48 @@
+{
+  "input_commits": {
+    "tracker": "aea952b9d1e8a8da02a64dde6cb10f246d9061d8",
+    "codex": "9a9fa3da1ae2c036760ab3fe3d15dbff4df211fa",
+    "claude": "49477d63fef953aa3398077a7f8100cf465b9f9b",
+    "entry_package": "0e3be03c71949e069a7a31b5951f332bb563f68f",
+    "entry_all": "e67833121f1da0dc992c28fa26c5236a855c151a",
+    "evaluator": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b"
+  },
+  "local_input_sha256": {
+    "snapshot3_fd_watch": "248a5cef56bbdb64b936a6d59ba7110f3116a852d8fa05d9e0e3a813fe1ef4b2",
+    "current_fd_watch": "e55949b086c57a69d00462324a38d72a93473c65d7dd8ca51f4245ce1b0aa57e",
+    "window_tokens": "843d24ac1484b0b98a8fd2e5afe64d408665a05cafe6cd9c1394e23432d227ca",
+    "package_INDEX": "90f9523113fae4c83512195f536e5d654ce4819f5ed98adf989e27868c7b3e86",
+    "frozen_evaluator": "f5686511fcae09c1c191ca5ffee167c6ad1421cddbb1be8b1c4f0f3eb4cc8a86",
+    "control_identities_no_outcomes": "648e35d155b034d919c5bd8d9b77ba2dc78c7ab08e7a25fe04bf7ad9c3cb8d5d",
+    "baseline_source": "49021cb3a23a8210ea9cc2241d51a862888664930241a329a888ec0f32a38cf2",
+    "baseline_regenerable_ledger": "fc32a09a8204dd193871f65986c881c715e3c8891a875cc502f112c6b034dd8f"
+  },
+  "field_audit_files_verified": 3,
+  "trading_data_files_verified": 16,
+  "definitions_registered_commit": "8ca5b1eeff8f9ed1bf378cf7cfbbee8740166568",
+  "precheck_published_commit": "22de6f5508aef850fab20d1ca53d6875af91aaaa",
+  "counts_in_protocol_before_score_commit": "fc5119749dac79a800853abd4eab034f64e5138b",
+  "AGENTS_reads": {
+    "AGENTS.md": 404,
+    "reports/AGENTS.md": 404,
+    "reports/blind/AGENTS.md": 404,
+    "reports/blind/autonomous/AGENTS.md": 404,
+    "reports/blind/autonomous/codex/AGENTS.md": 404
+  },
+  "latest_artifacts_read": [
+    "c015/SUMMARY.txt",
+    "c015/marks_audit.json"
+  ],
+  "first_populated_write_delay_distribution": "unavailable; no explicit field knowledge clock",
+  "outcome_blind_precheck_proof": "precheck.py reads c014 quote_features.csv, asserts no net_sol/ret/status/sell_t columns, uses raw prefix receipt timestamps only; no return/exit ledger opened",
+  "field_schema_correction": "checks is JSON,not integer; nested audit persisted. Cross-table audit and timestamp inventory code updated to output exactly the reported representation; no financial parameter changed.",
+  "output_filesystem_mtimes_UTC": {
+    "provenance_results.json": "2026-11-13T09:24:18.341953+00:00",
+    "cross_table_audit.json": "2026-11-13T09:24:19.277817+00:00",
+    "nested_checks_audit.json": "2026-11-13T09:23:34.928723+00:00",
+    "lab_results.json": "2026-11-13T09:21:17.676037+00:00",
+    "filter_verification.json": "2026-11-13T09:26:58.879089+00:00",
+    "exposure.json": "2026-11-13T09:26:58.888934+00:00"
+  },
+  "network_note": "Default public GitHub metadata read failed inherited proxy connect; approved escalated public commit read succeeded. No data-provider,chain or model API calls; no keys or paid collection."
+}

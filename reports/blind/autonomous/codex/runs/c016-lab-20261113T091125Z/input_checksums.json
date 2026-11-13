@@ -1,0 +1,17 @@
+[
+  {
+    "path": "entry-package-7nov/snapshot3/fd_watch.csv.gz",
+    "sha256": "248a5cef56bbdb64b936a6d59ba7110f3116a852d8fa05d9e0e3a813fe1ef4b2",
+    "matches_manifest": true
+  },
+  {
+    "path": "entry-package-7nov/current/fd_watch.csv.gz",
+    "sha256": "e55949b086c57a69d00462324a38d72a93473c65d7dd8ca51f4245ce1b0aa57e",
+    "matches_manifest": true
+  },
+  {
+    "path": "c001-20261110T211226Z/data/tokens_window.csv.gz",
+    "sha256": "843d24ac1484b0b98a8fd2e5afe64d408665a05cafe6cd9c1394e23432d227ca",
+    "matches_manifest": true
+  }
+]

@@ -21,3 +21,4 @@ Report retained/vetoed/unknown decisions; attempted/filled/unavailable/exits unr
 
 ## Binding count recorded before trade scoring
 H1 median recorded lag >1.0s on last10known rows:296known/0unknown,51vetoed (17.22972972972973%),245retained. Meets registered5%–95%range; H1selected. H2andH3NOT RUN per fixed stop rule. No threshold, window, priority or eligibility change; no return/exit ledger read by precheck. PRECHECK.json and precheck_features.csv preserve counts and known-row cutoffs. Candidate+baseline scoring may now proceed; no fresh validation claim.
+
