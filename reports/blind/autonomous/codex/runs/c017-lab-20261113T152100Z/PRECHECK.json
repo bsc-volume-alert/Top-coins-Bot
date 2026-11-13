@@ -1,0 +1,81 @@
+{
+  "definitions_commit": "287655f847978017e2272b5a21e15251547f963a",
+  "counts_only": true,
+  "returns_or_exit_ledgers_read": false,
+  "prechecks_attempted": [
+    {
+      "hypothesis": "H2",
+      "control_attempts": 296,
+      "feature_unknown": 0,
+      "removed": 10,
+      "retained": 286,
+      "removed_share": 0.033783783783783786,
+      "eligible_for_scoring": false,
+      "verdict": "NOT TESTABLE; not scored",
+      "halves": {
+        "early": {
+          "control": 143,
+          "removed": 4
+        },
+        "late": {
+          "control": 153,
+          "removed": 6
+        }
+      }
+    },
+    {
+      "hypothesis": "H3",
+      "control_attempts": 296,
+      "feature_unknown": 0,
+      "removed": 0,
+      "retained": 296,
+      "removed_share": 0.0,
+      "eligible_for_scoring": false,
+      "verdict": "NOT TESTABLE; not scored",
+      "halves": {
+        "early": {
+          "control": 143,
+          "removed": 0
+        },
+        "late": {
+          "control": 153,
+          "removed": 0
+        }
+      }
+    }
+  ],
+  "chosen": null,
+  "lag_comparison": {
+    "H1": {
+      "n": 51,
+      "min": 1.0069999694824219,
+      "p25": 1.0805000066757202,
+      "median": 1.2905000448226929,
+      "p75": 1.7304999828338623,
+      "max": 123.38950002193451
+    },
+    "H2": {
+      "n": 10,
+      "min": 0.47049999237060547,
+      "p25": 0.6664999723434448,
+      "median": 0.7797499895095825,
+      "p75": 0.8400000333786011,
+      "max": 123.38950002193451
+    }
+  },
+  "H1_H2_removed_overlap": 2,
+  "logged_main_gap_count": 57,
+  "dedup_stats_H3_full_scan": {
+    "mints_streamed": 4913,
+    "duplicates_removed": 1568880,
+    "non_contiguous": 0
+  },
+  "not_run": [],
+  "new_thresholds_tried": 0,
+  "unchanged_registered_thresholds_checked": 2,
+  "limits": [
+    "Reopen log time used as knowledge-time proxy; gap log completeness unknown",
+    "H3 covers only tracked mints; missing history is not genuinely fresh wallets",
+    "Same explored development records; no fresh validation"
+  ]
+}
