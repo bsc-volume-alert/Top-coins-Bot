@@ -1,0 +1,23 @@
+{
+  "mints_with_trades_in_window": 4913,
+  "study_screen": {
+    "lt600": 2782,
+    "lt20": 163,
+    "ok": 1968
+  },
+  "entries_per_trigger": {
+    "BASE60": 1956,
+    "BURST": 730,
+    "ATH120": 707,
+    "RUN2": 421,
+    "GRAD": 245,
+    "RUN3": 208,
+    "RUN5": 82,
+    "RUN2_HOLD60": 25
+  },
+  "stream_stats": {
+    "mints_streamed": 4913,
+    "duplicates_removed": 1568880,
+    "non_contiguous": 0
+  }
+}

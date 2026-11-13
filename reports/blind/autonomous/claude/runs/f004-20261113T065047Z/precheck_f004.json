@@ -1,0 +1,39 @@
+{
+  "counts": {
+    "not_retained": 301,
+    "denominator_early": 1593,
+    "BASE60_early": 1393,
+    "L009_control_early": 1180,
+    "L009_recover_early": 267,
+    "RUN2_early": 231,
+    "RUN3_early": 105,
+    "RUN5_early": 48,
+    "outage_excluded": 974,
+    "denominator_late": 2045,
+    "BASE60_late": 1547,
+    "L009_control_late": 1547,
+    "L009_recover_late": 471,
+    "RUN2_late": 337,
+    "RUN3_late": 188,
+    "RUN5_late": 80
+  },
+  "denominator": 3638,
+  "BASE60": 2940,
+  "RUN2": 568,
+  "RUN3": 293,
+  "RUN5": 128,
+  "L009_control_attempts": 2727,
+  "L009_candidate_attempts": 738,
+  "L009_recovery_binds_share_of_control": 0.2706270627062706,
+  "L009_removed_share_of_control": 0.7293729372937294,
+  "run_trigger_receipt_lag_s_median": {
+    "2": 0.7950000762939453,
+    "3": 0.8029999732971191,
+    "5": 0.7880001068115234
+  },
+  "stream_stats": {
+    "mints_streamed": 4913,
+    "duplicates_removed": 1568880,
+    "non_contiguous": 0
+  }
+}

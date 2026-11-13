@@ -1,0 +1,22 @@
+{
+  "study_rows_total": 3728,
+  "study_mints_total": 1319,
+  "mints_in_allowlisted_window": 782,
+  "mints_outside_window_dropped_unread": 537,
+  "rows_kept": 2171,
+  "rows_dropped_unread": 1557,
+  "entries_per_trigger_window": {
+    "BASE60": 782,
+    "RUN2": 209,
+    "RUN3": 96,
+    "RUN2_HOLD60": 16,
+    "BURST": 388,
+    "ATH120": 436,
+    "GRAD": 210,
+    "RUN5": 34
+  },
+  "window_mints_by_half": {
+    "late": 450,
+    "early": 332
+  }
+}
