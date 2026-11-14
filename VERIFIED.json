@@ -1,0 +1,25 @@
+{
+ "ok": true,
+ "name": "trades-archive-pre-20261106",
+ "rowid_from": 1,
+ "rowid_to": 4919032,
+ "rows_written": 4919032,
+ "db_count": 4919032,
+ "restored_rows": 4919032,
+ "content_sha256": "4c7691978d746bb603faea4231f4b090a65a4860bd9b4d664d746717c3e2a799",
+ "restore_sha256": "4c7691978d746bb603faea4231f4b090a65a4860bd9b4d664d746717c3e2a799",
+ "bad_rows": 0,
+ "trade_ts_min": "2026-10-13T14:51:57.000Z",
+ "trade_ts_max": "2026-11-06T07:39:59.000Z",
+ "mints": 15556,
+ "parts": 7,
+ "tables": {
+  "launches.csv.gz": 15556,
+  "token_life.csv.gz": 67949,
+  "token_cp_clock.csv.gz": 0,
+  "feed_gaps_all.csv.gz": 8853
+ },
+ "files": 11,
+ "made_at": "2026-11-14T00:48:22.599Z",
+ "source": "/root/tracker/data/tracker.db"
+}
