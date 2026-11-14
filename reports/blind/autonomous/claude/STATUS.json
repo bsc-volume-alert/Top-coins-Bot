@@ -2,9 +2,9 @@
  "worker": "Claude research worker",
  "run_id": "notask-20261114T105130Z",
  "task": "NO READY TASK (queue run 16, R99 / R102): record-only run. Checks the queue for a released window or a new Claude row (none), reads Codex C020 @ 0aaa210 (counts only; the coordinator reviews it per R102), records three register-only proposals (R91: no count, no test), updates STATUS.json. No Idea-lab test, no outcome read.",
- "state": "leased",
+ "state": "completed_no_task",
  "started_at": "2026-11-14T10:52:55Z",
- "lease_expires_at": "2026-11-14T11:52:55Z",
+ "lease_expires_at": null,
  "input_commits": {
   "tracker": "b53915d",
   "research-codex_read": "0aaa2108",
@@ -15,8 +15,11 @@
  },
  "task_choice_note": "Queue run 16 (tracker b53915d): Claude row reads 'NO READY TASK (R99 / R102) — waiting for a released window (R4 / R5 / R6). Not a stall.' No branch on origin is a Round 1 export. Nothing to lease but the record itself; lease written to honour the contract.",
  "previous_run": "f017-20261114T065226Z",
- "next_task": "no task; waiting for a released window (R4 / R5 / R6) — R99: after F017 no development-window task remains for Claude; held proposals (R86 (1)-(2), CL-P1-P2, CL-P4-P9) wait for the coordinator's released-window PROTOCOLs; will cross-review Codex C020 only if the queue adds a row",
- "blockers": [],
+ "next_task": "no task; waiting for a released window (R4 / R5 / R6) — R99 / R102. Idle runs will update last_checked_at only unless the queue adds a Claude row or releases a window (REVIEW_REQUESTS 64).",
+ "blockers": [
+  "No READY development-window task for Claude after F017 (R99); Codex C020 does not create one (R102)",
+  "R91 closes Idea-lab tests on the development window; no other dataset is allowlisted (owner decisions R4 / R5 / R6 open)"
+ ],
  "artifacts": "reports/blind/autonomous/claude/runs/notask-20261114T105130Z/",
  "task_states": {
   "F001": "completed_agree_all_rows",
@@ -35,8 +38,12 @@
   "F014": "completed (weak; T = 60 only)",
   "F015": "completed (a): C018 cross-review, agree all numbers; (b) not applicable (C018 published before run start); (c) no test, 3 held proposals",
   "F016": "completed (counts only; 4 can bind, CL-P1 binds 88 %, R86 (3) unlikely to bind, CL-P3 premise not observed)",
-  "F017": "completed (agree all numbers; C019 reproduces byte for byte and independently 680/680; R86 (2) clock-insensitive 140 vs 147 of 679)"
+  "F017": "completed (agree all numbers; C019 reproduces byte for byte and independently 680/680; R86 (2) clock-insensitive 140 vs 147 of 679)",
+  "notask-20261114T105130Z": "completed_no_task (record only; C020 consistency read; CL-P10–P12 registered, no count)"
  },
- "completed_at": null,
- "result": null
+ "completed_at": "2026-11-14T10:58:43Z",
+ "result": "Record-only run. Counts-only consistency read of Codex C020 @ 0aaa210 against Claude f016 @ 253604d / f017 @ 1dbf1d1 from git objects: manifest 28/28; rebuilt results.json 481/481 leaves equal; independent feature table 18,333/18,333 shared cells equal (max diff 8.9e-16); six bind counts equal on all halves/cells; census clock 60/60 bins equal; receipt-clock veto flags 679/679 equal (147). Three register-only proposals CL-P10–P12 (no count). No pretend trade (R91). No outcome read.",
+ "last_checked_at": "2026-11-14T10:58:43Z",
+ "task_availability": "no task",
+ "ready_tasks": 0
 }

@@ -1,0 +1,754 @@
+{
+ "codex_commit": "0aaa2108f9b56a16fd0234ed2743c1d466a4422a",
+ "claude_f016_commit": "253604de64fc9b2b43effa44b245f1323c4f4201",
+ "f016_results_leaves": 481,
+ "rebuilt/results.json": {
+  "leaves": 481,
+  "differences": 0,
+  "differing_keys": []
+ },
+ "peer_f016/results.json": {
+  "leaves": 481,
+  "differences": 0,
+  "differing_keys": []
+ },
+ "features": {
+  "claude_bytes": 166975,
+  "claude_sha256": "bfee5fa64f9b58708b4a047c2b37e7773eb78cc5ed5fec9591e1d2890fd71408",
+  "codex_parts_bytes": [
+   40984,
+   41159,
+   40705,
+   40427,
+   21510
+  ],
+  "codex_joined_bytes": 183373,
+  "byte_identical_after_join": false,
+  "claude_rows": 680,
+  "codex_rows": 680,
+  "same_header": false,
+  "row_set_identical": false,
+  "rows_only_claude": 679,
+  "rows_only_codex": 679,
+  "claude_line_ending": "CRLF",
+  "codex_line_ending": "LF"
+ },
+ "c020_manifest": {
+  "entries": 28,
+  "verified": 28,
+  "failed": 0,
+  "failed_paths": []
+ },
+ "codex_independent_counts_keys": [
+  "adder_clock_cross_tab",
+  "bind_counts",
+  "clock_E",
+  "clock_census",
+  "clock_denominator",
+  "counts_only",
+  "create_ts_source",
+  "independent_raw_implementation",
+  "peer_helpers_imported",
+  "population",
+  "stats"
+ ],
+ "codex_independent_counts": {
+  "counts_only": true,
+  "independent_raw_implementation": true,
+  "peer_helpers_imported": false,
+  "population": 679,
+  "bind_counts": {
+   "p1_veto": {
+    "all": {
+     "n": 679,
+     "veto": 210
+    },
+    "by_half": {
+     "early": {
+      "n": 313,
+      "veto": 95
+     },
+     "late": {
+      "n": 366,
+      "veto": 115
+     }
+    },
+    "by_cell": {
+     "A": {
+      "n": 251,
+      "veto": 66
+     },
+     "B": {
+      "n": 122,
+      "veto": 27
+     },
+     "C": {
+      "n": 306,
+      "veto": 117
+     }
+    }
+   },
+   "p2_veto": {
+    "all": {
+     "n": 679,
+     "veto": 140
+    },
+    "by_half": {
+     "early": {
+      "n": 313,
+      "veto": 68
+     },
+     "late": {
+      "n": 366,
+      "veto": 72
+     }
+    },
+    "by_cell": {
+     "A": {
+      "n": 251,
+      "veto": 44
+     },
+     "B": {
+      "n": 122,
+      "veto": 44
+     },
+     "C": {
+      "n": 306,
+      "veto": 52
+     }
+    }
+   },
+   "p3_veto": {
+    "all": {
+     "n": 679,
+     "veto": 0
+    },
+    "by_half": {
+     "early": {
+      "n": 313,
+      "veto": 0
+     },
+     "late": {
+      "n": 366,
+      "veto": 0
+     }
+    },
+    "by_cell": {
+     "A": {
+      "n": 251,
+      "veto": 0
+     },
+     "B": {
+      "n": 122,
+      "veto": 0
+     },
+     "C": {
+      "n": 306,
+      "veto": 0
+     }
+    }
+   },
+   "clp1_veto": {
+    "all": {
+     "n": 679,
+     "veto": 600
+    },
+    "by_half": {
+     "early": {
+      "n": 313,
+      "veto": 279
+     },
+     "late": {
+      "n": 366,
+      "veto": 321
+     }
+    },
+    "by_cell": {
+     "A": {
+      "n": 251,
+      "veto": 217
+     },
+     "B": {
+      "n": 122,
+      "veto": 103
+     },
+     "C": {
+      "n": 306,
+      "veto": 280
+     }
+    }
+   },
+   "clp2_veto": {
+    "all": {
+     "n": 679,
+     "veto": 104
+    },
+    "by_half": {
+     "early": {
+      "n": 313,
+      "veto": 38
+     },
+     "late": {
+      "n": 366,
+      "veto": 66
+     }
+    },
+    "by_cell": {
+     "A": {
+      "n": 251,
+      "veto": 40
+     },
+     "B": {
+      "n": 122,
+      "veto": 18
+     },
+     "C": {
+      "n": 306,
+      "veto": 46
+     }
+    }
+   },
+   "clp3_veto": {
+    "all": {
+     "n": 679,
+     "veto": 68
+    },
+    "by_half": {
+     "early": {
+      "n": 313,
+      "veto": 28
+     },
+     "late": {
+      "n": 366,
+      "veto": 40
+     }
+    },
+    "by_cell": {
+     "A": {
+      "n": 251,
+      "veto": 20
+     },
+     "B": {
+      "n": 122,
+      "veto": 12
+     },
+     "C": {
+      "n": 306,
+      "veto": 36
+     }
+    }
+   },
+   "receipt_adder_veto": {
+    "all": {
+     "n": 679,
+     "veto": 147
+    },
+    "by_half": {
+     "early": {
+      "n": 313,
+      "veto": 73
+     },
+     "late": {
+      "n": 366,
+      "veto": 74
+     }
+    },
+    "by_cell": {
+     "A": {
+      "n": 251,
+      "veto": 46
+     },
+     "B": {
+      "n": 122,
+      "veto": 45
+     },
+     "C": {
+      "n": 306,
+      "veto": 56
+     }
+    }
+   }
+  },
+  "clock_census": {
+   "n": 62789,
+   "counts_mod60": [
+    1021,
+    1016,
+    1015,
+    1047,
+    1040,
+    1073,
+    1049,
+    1067,
+    1043,
+    1016,
+    1085,
+    1081,
+    1064,
+    1020,
+    1091,
+    1072,
+    1018,
+    1021,
+    1051,
+    1016,
+    984,
+    1029,
+    1096,
+    1046,
+    1093,
+    1046,
+    1059,
+    979,
+    1054,
+    1028,
+    1084,
+    1038,
+    1082,
+    1038,
+    1013,
+    1067,
+    1024,
+    994,
+    1067,
+    1042,
+    1017,
+    1157,
+    1069,
+    1075,
+    994,
+    1029,
+    1079,
+    1053,
+    1022,
+    1092,
+    1063,
+    1071,
+    1012,
+    1047,
+    1007,
+    1048,
+    1084,
+    1085,
+    998,
+    1018
+   ],
+   "chi2": 63.36745289780057,
+   "bin_58_2": 5068
+  },
+  "clock_E": {
+   "n": 679,
+   "counts_mod60": [
+    11,
+    19,
+    14,
+    14,
+    6,
+    10,
+    8,
+    3,
+    14,
+    7,
+    8,
+    11,
+    9,
+    17,
+    16,
+    15,
+    6,
+    11,
+    9,
+    9,
+    11,
+    15,
+    15,
+    12,
+    11,
+    6,
+    8,
+    12,
+    13,
+    7,
+    17,
+    11,
+    18,
+    11,
+    13,
+    12,
+    14,
+    7,
+    7,
+    12,
+    12,
+    12,
+    10,
+    14,
+    9,
+    14,
+    7,
+    15,
+    12,
+    14,
+    13,
+    7,
+    14,
+    15,
+    5,
+    11,
+    8,
+    14,
+    10,
+    14
+   ],
+   "chi2": 63.533136966126655,
+   "bin_58_2": 68
+  },
+  "clock_denominator": {
+   "n": 3638,
+   "counts_mod60": [
+    51,
+    65,
+    59,
+    62,
+    60,
+    54,
+    48,
+    45,
+    56,
+    57,
+    63,
+    61,
+    56,
+    61,
+    63,
+    68,
+    60,
+    67,
+    56,
+    67,
+    49,
+    71,
+    70,
+    69,
+    57,
+    61,
+    61,
+    48,
+    69,
+    61,
+    67,
+    61,
+    67,
+    64,
+    48,
+    50,
+    72,
+    54,
+    71,
+    71,
+    51,
+    58,
+    58,
+    74,
+    44,
+    74,
+    52,
+    72,
+    51,
+    68,
+    72,
+    74,
+    56,
+    61,
+    52,
+    47,
+    72,
+    64,
+    59,
+    59
+   ],
+   "chi2": 66.20010995052226,
+   "bin_58_2": 293
+  },
+  "create_ts_source": {
+   "has_creation_slot_row": 3630,
+   "create_ts_equals_block_ts": 3630,
+   "no_creation_slot_row": 8
+  },
+  "adder_clock_cross_tab": {
+   "neither": 529,
+   "both": 137,
+   "receipt_only": 10,
+   "block_only": 3
+  },
+  "stats": {
+   "mints_streamed": 4913,
+   "duplicates_removed": 1568880,
+   "non_contiguous": 0
+  }
+ },
+ "features_common_columns": {
+  "f016_columns": 27,
+  "codex_columns": 30,
+  "codex_extra_columns": [
+   "receipt_adder_share",
+   "receipt_adder_veto",
+   "receipt_buyers"
+  ],
+  "mints_common": 679,
+  "cells_compared": 18333,
+  "cell_differences_beyond_1e-12": 0,
+  "max_abs_numeric_difference": 8.881784197001252e-16,
+  "examples": []
+ },
+ "bind_counts_f016_vs_c020": {
+  "p1_veto": {
+   "all": [
+    210,
+    210
+   ],
+   "early": [
+    95,
+    95
+   ],
+   "late": [
+    115,
+    115
+   ],
+   "A": [
+    66,
+    66
+   ],
+   "B": [
+    27,
+    27
+   ],
+   "C": [
+    117,
+    117
+   ],
+   "all_equal": true
+  },
+  "p2_veto": {
+   "all": [
+    140,
+    140
+   ],
+   "early": [
+    68,
+    68
+   ],
+   "late": [
+    72,
+    72
+   ],
+   "A": [
+    44,
+    44
+   ],
+   "B": [
+    44,
+    44
+   ],
+   "C": [
+    52,
+    52
+   ],
+   "all_equal": true
+  },
+  "p3_veto": {
+   "all": [
+    0,
+    0
+   ],
+   "early": [
+    0,
+    0
+   ],
+   "late": [
+    0,
+    0
+   ],
+   "A": [
+    0,
+    0
+   ],
+   "B": [
+    0,
+    0
+   ],
+   "C": [
+    0,
+    0
+   ],
+   "all_equal": true
+  },
+  "clp1_veto": {
+   "all": [
+    600,
+    600
+   ],
+   "early": [
+    279,
+    279
+   ],
+   "late": [
+    321,
+    321
+   ],
+   "A": [
+    217,
+    217
+   ],
+   "B": [
+    103,
+    103
+   ],
+   "C": [
+    280,
+    280
+   ],
+   "all_equal": true
+  },
+  "clp2_veto": {
+   "all": [
+    104,
+    104
+   ],
+   "early": [
+    38,
+    38
+   ],
+   "late": [
+    66,
+    66
+   ],
+   "A": [
+    40,
+    40
+   ],
+   "B": [
+    18,
+    18
+   ],
+   "C": [
+    46,
+    46
+   ],
+   "all_equal": true
+  },
+  "clp3_veto": {
+   "all": [
+    68,
+    68
+   ],
+   "early": [
+    28,
+    28
+   ],
+   "late": [
+    40,
+    40
+   ],
+   "A": [
+    20,
+    20
+   ],
+   "B": [
+    12,
+    12
+   ],
+   "C": [
+    36,
+    36
+   ],
+   "all_equal": true
+  }
+ },
+ "census_clock": {
+  "f016_counts_mod60_equal": true,
+  "f016_chi2": null,
+  "c020_chi2": 63.36745289780057,
+  "f016_bin": null,
+  "c020_bin": 5068,
+  "f016_census_keys": [
+   "bin_58_2_count",
+   "bin_58_2_share",
+   "chi2_99.9pct_critical_59df",
+   "chi2_vs_uniform_59df",
+   "counts_mod60",
+   "max_bin",
+   "max_bin_count",
+   "min_bin_count",
+   "n",
+   "uniform_expectation"
+  ],
+  "f016_census_values": {
+   "n": 62789,
+   "chi2_vs_uniform_59df": 63.36745289780057,
+   "chi2_99.9pct_critical_59df": 98.3,
+   "max_bin": 41,
+   "max_bin_count": 1157,
+   "min_bin_count": 979,
+   "bin_58_2_count": 5068,
+   "bin_58_2_share": 0.08071477488095048,
+   "uniform_expectation": 0.08333333333333333
+  }
+ },
+ "receipt_clock_vs_f017": {
+  "f017_partB_keys": [
+   "W_receipt_empty",
+   "W_sets_identical_under_both_clocks",
+   "block_clock_f016",
+   "receipt_clock_R96b",
+   "share_abs_diff_quartiles",
+   "veto_agreement_2x2"
+  ],
+  "c020_receipt_veto_all": 147,
+  "c020_receipt_by_half": {
+   "early": 73,
+   "late": 74
+  },
+  "c020_receipt_by_cell": {
+   "A": 46,
+   "B": 45,
+   "C": 56
+  },
+  "c020_cross_tab": {
+   "neither": 529,
+   "both": 137,
+   "receipt_only": 10,
+   "block_only": 3
+  },
+  "f017_clock_csv_columns": [
+   "mint",
+   "half",
+   "cell",
+   "n_W_block",
+   "adders_block",
+   "share_block",
+   "veto_block",
+   "n_W_receipt",
+   "adders_receipt",
+   "share_receipt",
+   "veto_receipt",
+   "W_receipt_defined",
+   "W_sets_equal\r"
+  ],
+  "f017_candidate_columns": [
+   "n_W_receipt",
+   "adders_receipt",
+   "share_receipt",
+   "veto_receipt",
+   "W_receipt_defined"
+  ],
+  "launches_joined": 679,
+  "veto_flag_agree": 679,
+  "veto_flag_differ": 0,
+  "n_W_receipt_agree": 679,
+  "share_agree_1e-12": 679,
+  "differing_mints": [],
+  "f017_receipt_veto_total": 147,
+  "c020_receipt_veto_total": 147
+ }
+}

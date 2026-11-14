@@ -1,0 +1,24 @@
+# notask-20261114T105130Z — three NEW proposals (register only; no count taken, R91)
+
+The development window (6 Nov 07:40 → 7 Nov 20:00) is closed to Idea-lab vetoes, exits, triggers and thresholds for both workers (R86, R91). The scheduled-task prompt asks for one pretend-trade test per run; the queue forbids it on the only allowlisted data, and the queue governs. So this run records ideas with their thresholds and NO count, exactly as f015 / f016 / f017 did for CL-P1–P9. Nothing below has been counted, scored or looked at on any data. Each was checked for duplication against N1–N12, R86 (1)–(3), CL-P1–P9, CL-L001–L012, F003-C1, L004-SC, L005-E, F006-T1, C018, F009 A/B/C, L006–L008, H1–H3. Shares and directions are priors, not fitted values.
+
+## CL-P10 — Single-print share of the pre-decision price rise (receipt-knowable)
+
+Hypothesis: when most of the price rise from creation to the E decision was produced by ONE received buy, the level the rule enters at is a single wallet's print rather than a path many wallets paid for; such launches fall back more often after a 5-min entry. Veto when the share is high.
+Why it might work: it is about WHICH trades made the price, not who holds (F006 concentration), not how uniform sizes are (CL-L002), not whether sizes trend (CL-P2), not the entropy of buyers (CL-P5), and not the per-SOL impact of sells vs buys (CL-P7). Two tapes with the same buyer count and the same drift can differ entirely on this: one price built by 40 small buys, one by a single 8-SOL buy plus noise.
+Statistic: over received usable curve buy rows in (created, t] with a valid preceding state, Δp_i = price_after_i − price_before_i; q = max_i Δp_i / Σ_i max(Δp_i, 0). Unknown if fewer than 5 qualifying buys or Σ ≤ 0. Veto when q ≥ 0.5. Both halves and F009 cells reported; expected to bind on a minority of E.
+
+## CL-P11 — Reaction to the retention crossing: buy SOL in the 10 s after the 15-SOL receipt vs the 10 s before (unconventional)
+
+Hypothesis: the tracker's own 15-SOL retention receipt is also the moment a coin becomes visible to every screen-following bot; a tape whose inflow jumps right after that receipt is being bought by screen-followers whose demand is shallow and leaves together. Veto when the post/pre ratio is large.
+Why it might work: it uses an observation event of the infrastructure itself (the retention receipt, which is at or before the E decision for every E launch — R85) as a natural experiment on who is buying. It is not retention SPEED (CL-L012, closed), not drift (R86 (1)), not breadth (CL-L010, closed) and not any activity level: it is a ratio of two short windows around a fixed event. CK21 caution applies: a tape with zero buys before the receipt makes the ratio undefined, so the pre-window SOL must be ≥ 0.5 for the statistic to be defined (unknown otherwise, counted and reported).
+Statistic: B_pre = curve buy SOL received in [R − 10, R), B_post = curve buy SOL received in (R, R + 10], R = receipt time of the retention row (evaluator fingerprint dedup); k = B_post / B_pre. Defined when B_pre ≥ 0.5 SOL and R + 10 ≤ t. Veto when k ≥ 3.0. Minimum defined n per cell 20.
+
+## CL-P12 — Round-tripper share of the last-60-s buyers (own sell then own buy on the same tape)
+
+Hypothesis: a wallet that sold its whole position and then bought back on the same tape within five minutes is churning (wash-like or scalping) rather than accumulating; a buyer set with many round-trippers is a thin crowd that will leave again. Veto when the share is high.
+Why it might work: R86 (2) counts wallets that bought before AND bought again (adders, no sell required); CL-P8 counts wallets that bought right after SOMEONE ELSE's sell. Neither identifies a wallet that exited fully and re-entered. The round trip is the cheapest observable signature of churn on a tape where holder balances are not available (no holder tables; received rows only).
+Statistic: W = buyers_last_60s (receipt clock operative per R101, block clock beside it); a wallet in W is a ROUND-TRIPPER if, on received curve rows, its cumulative tokens bought minus sold reached ≤ 0 at some receipt time u < t after at least one buy, and it has a buy received in (u, t]. r = |round-trippers| / |W|. Defined on all E (|W| ≥ 5). Veto when r ≥ 0.15.
+
+## What is NOT proposed
+No re-threshold of anything registered, no combination of registered proposals, no exit rule, no entry trigger, no cell rule, no pretend trade on the development window. If any of the three is taken up, its threshold is the one written here and goes into a PROTOCOL before the first count on a released window; an R54 bind-share pre-check comes first (5–95 %); evaluate.py unchanged; both OUTAGE_LEDGER ledgers; R11 paired view with the R63 candidate-only count. These take no released-window slot before the testable proposals already registered (N1; R86 (1), R86 (2), CL-P2; CL-P1 with its caveat).
