@@ -2,9 +2,9 @@
  "worker": "Claude research worker",
  "run_id": "f016-20261114T025106Z",
  "task": "F016 (queue run 14, R92): counts-only, outcome-free testability record for the six held proposals R86 (1)-(3) and CL-P1-P3 on the 679 E launches — thresholds fixed in PROTOCOL.md before any count; report only R54 bind share (both halves, F009 cells) and quartiles; CL-P3 create_ts mod 60 distribution with chi-square vs uniform. No Idea-lab test (R91: window exhausted) — proposals only.",
- "state": "running",
+ "state": "completed",
  "started_at": "2026-11-14T02:51:06Z",
- "lease_expires_at": "2026-11-14T04:51:06Z",
+ "lease_expires_at": null,
  "input_commits": {
   "tracker": "b3e374d",
   "research-codex_read": "03ea37256849ec093f29f19ac6c1fe3079d93e89",
@@ -15,7 +15,7 @@
  },
  "task_choice_note": "Queue run 14: F016 is READY and Claude's next task (R92). Codex C019 not yet published (research-codex HEAD still 03ea372), so no cross-review this run. R91 closes both workers' Idea-lab slots on the development window: no test, 3 new proposals only.",
  "previous_run": "f015-20261113T225026Z",
- "next_task": null,
+ "next_task": "Cross-review Codex C019 (counts only, R92) when it is published on research-codex; otherwise register work only — no Idea-lab test on the development window (R91); held proposals R86 (1)-(3), CL-P1-P6 wait for a released window and the coordinator's register decisions (REVIEW_REQUESTS 56-57)",
  "blockers": [],
  "artifacts": "reports/blind/autonomous/claude/runs/f016-20261114T025106Z/",
  "task_states": {
@@ -34,6 +34,8 @@
   "F013": "completed: (b) NOT TESTABLE, (c) done, (a) discharged by R78 + f014 counts-only confirmation",
   "F014": "completed (weak; T = 60 only)",
   "F015": "completed (a): C018 cross-review, agree all numbers; (b) not applicable (C018 published before run start); (c) no test, 3 held proposals",
-  "F016": "running"
- }
+  "F016": "completed (counts only; 4 can bind, CL-P1 binds 88 %, R86 (3) unlikely to bind, CL-P3 premise not observed)"
+ },
+ "completed_at": "2026-11-14T03:06:00Z",
+ "result": "F016: testability record, no outcome read. Population = f014 exactly (679 = 313/366; A 251 / B 122 / C 306). Can bind as registered: R86 (1) price drift < 1 — 210/679 (31.1 % of 675 defined; early 30.4 / late 31.7; A 26.3 / B 22.5 / C 38.5; ratio median 1.403); R86 (2) adder share < 0.25 — 140/679 (20.6 %; A 17.5 / B 36.1 / C 17.0; median 0.409); CL-P2 rho <= -0.5 — 104/679 (15.3 %; median -0.067); CL-P3 clock bin — 68/679 (10.0 %). CL-P1 s >= 0.5 — 600/679 (88.4 %; s median 1.026; kept side 79). R86 (3) CV < 0.5 — 0/596 defined (83 n<10; CV min 0.564, median 1.464): unlikely to bind. create_ts = chain block time 3,630/3,630; census clock flat (chi2 63.37/59 df, p 0.33; :00+-2 s bin 8.07 % vs 8.33 %). Codex C018 '254 = 251 A + 3 C' reproduced from its feature CSVs. Three new proposals CL-P4-P6 (no count)."
 }
