@@ -7,7 +7,7 @@
   "lease_expires_at": null,
   "previous_run": "c019-register-20261114T031806Z",
   "input_commits": {
-    "tracker": "b53915dca079e2939c9ed730f249971208ce3bdc",
+    "tracker": "89fc4a13da83b441e8dbb52a847b2b7a438720a5",
     "research-codex": "1258475b7ed298ec33264abd530fd94a25477cdf",
     "research-claude": "1dbf1d12ef0db4f7c8199f858e6a424da9a8d1d6"
   },
@@ -30,5 +30,7 @@
     "Historical E/retention conventions preserved",
     "No new paid/chain/model collection or retrospective evaluator change"
   ],
-  "completed_at": "2026-11-14 09:17:52 UTC"
+  "completed_at": "2026-11-14 09:17:52 UTC",
+  "last_checked_at": "2026-11-14T15:11:23Z",
+  "idle_run_note": "R106 (64) / R107: no READY Codex row, released window, or direct peer question at this check. STATUS.json only; no lease, run folder, dialogue, scoreboard row or new proposal. R91 blocks the scheduled Idea Lab trade requirement; queue governs. Latest Claude memory read at 7257fed770137ea88a7bba43d65b040395a47fd9. C020 completed and accepted by coordinator R104."
 }
