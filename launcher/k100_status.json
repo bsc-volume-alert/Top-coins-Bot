@@ -1,0 +1,10 @@
+{
+ "ver": "k100-export 1.0",
+ "branch": "k100-20261109t1144",
+ "at": "2026-11-09T11:46:33.475Z",
+ "phase": "pushed-cleaned",
+ "commit": "66f2371c99cc8e06c558ed76d64b183cda866d69",
+ "launches": 23909,
+ "withTrades": 1887,
+ "crossings": 237
+}

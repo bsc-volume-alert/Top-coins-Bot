@@ -1,0 +1,15 @@
+{
+ "ver": "trim-trades 1.0",
+ "r0": 1,
+ "r1": 4919032,
+ "archive": "/mnt/volume_1794164707392/archive/trades-archive-pre-20261106",
+ "at": "2026-11-14T00:59:35.334Z",
+ "secs": 89,
+ "phase": "DONE",
+ "deleted": 4919032,
+ "left": 0,
+ "freelist_pages": 356667,
+ "page_size": 4096,
+ "freeGb": 1.17,
+ "walMb": 64
+}

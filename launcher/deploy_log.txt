@@ -1,0 +1,44 @@
+r--r-- 1 root root 992944752 Nov 14 00:04 /root/tracker/data/tracker.db-wal
+[deploy] [wal] checkpoint [{"busy":0,"log":0,"checkpointed":0}] 45 ms
+[deploy] [wal] after -rw-r--r-- 1 root root 41232 Nov 14 00:04 /root/tracker/data/tracker.db-wal
+[deploy] [wal] /dev/vda1        48G   47G  1.2G  98% /
+[deploy] 2026-11-14T00:09:34Z updating 39b391be97a04984c0f65c5f107b108f6b08a06a -> cab6e750bb2b7f2453197d63bedc053cd47e64cc
+up to date in 567ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] one-off job: archive-pre6nov
+[deploy] 2026-11-14T00:10:36Z updating cab6e750bb2b7f2453197d63bedc053cd47e64cc -> 2ffccadcef47e99992c3bab2a982caabe8df73a9
+up to date in 440ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-14T00:26:13Z updating 2ffccadcef47e99992c3bab2a982caabe8df73a9 -> 03bc23dc17b22fc8e5a01e0af71aa9d614ae4ecc
+up to date in 583ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] one-off job: archive-pre6nov
+[deploy] 2026-11-14T00:42:22Z updating 03bc23dc17b22fc8e5a01e0af71aa9d614ae4ecc -> 6597514f5b8f514d846035283889907353225174
+up to date in 1s
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-14T00:43:55Z updating 6597514f5b8f514d846035283889907353225174 -> d18c7a8e065ff15171ac44bab853a9829e75b0ba
+up to date in 578ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] one-off job: archive-pre6nov
+[deploy] 2026-11-14T00:50:00Z updating d18c7a8e065ff15171ac44bab853a9829e75b0ba -> 15b3a4ae9fbccbc92d7ec1d1a2d8e174d5e4fe9d
+up to date in 628ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-14T00:58:05Z updating 15b3a4ae9fbccbc92d7ec1d1a2d8e174d5e4fe9d -> c97bcca6220c3213e7c7fcbedce07f852e9c94bb
+up to date in 560ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] one-off job: trim-pre6nov
+[deploy] 2026-11-14T01:00:38Z updating c97bcca6220c3213e7c7fcbedce07f852e9c94bb -> b3e374df28bcfbe65b8d24b59f9b3bbac563931a
+up to date in 652ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-14T04:48:01Z updating b3e374df28bcfbe65b8d24b59f9b3bbac563931a -> 7f937f58bcbcf88c07a6f31fd0594bb69a2cf1fc
+up to date in 660ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-14T08:54:00Z updating 7f937f58bcbcf88c07a6f31fd0594bb69a2cf1fc -> b53915dca079e2939c9ed730f249971208ce3bdc
+up to date in 734ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-14T12:46:51Z updating b53915dca079e2939c9ed730f249971208ce3bdc -> 89fc4a13da83b441e8dbb52a847b2b7a438720a5
+up to date in 603ms
+[deploy] tracker untouched — executor / reports / data-script push
+[deploy] 2026-11-14T16:38:28Z updating 89fc4a13da83b441e8dbb52a847b2b7a438720a5 -> 0ec1a7fd866dae5760c90f0c80ebfa6c312087ae
+up to date in 735ms
+[deploy] tracker untouched — executor / reports / data-script push

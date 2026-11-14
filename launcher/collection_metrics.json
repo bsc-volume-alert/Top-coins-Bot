@@ -1,0 +1,6 @@
+{
+ "ver": "collection-metrics 1.0",
+ "at": "2026-11-14T18:36:52.184Z",
+ "note": "coverage = clock 5-min rows ÷ launches created that hour (launches with no trade in their first 420 s never get a row, by design); C5-2R = restart-recovered (post-restart trades only, incomplete activity buffers); tracker versions: 0.19.13 10:44, 0.19.14 12:15, 0.19.15 12:24 UTC on 11 Nov",
+ "hours": 112
+}

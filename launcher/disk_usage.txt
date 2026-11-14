@@ -1,0 +1,21 @@
+/dev/vda1        48G   47G 1009M  98% /
+2026-11-14T18:23:51Z
+/dev/vda1        48G   47G  874M  99% /
+738M	/root/tracker-launcher-data
+37G	/root/tracker/data
+2.1G	/root/tracker-data
+1.3G	/root/launcher
+57M	/root/.pm2/logs
+274M	/var/log
+37G	/root/tracker/data/tracker.db
+376M	/root/tracker/data/launcher_out
+181M	/root/tracker/data/export
+143M	/root/tracker/data/tracker.db-wal
+26M	/root/tracker/data/radar_out
+20M	/root/tracker/data/momentum-state.json
+8.2M	/root/tracker/data/revival_klines.jsonl.gz.tmp
+5.0M	/root/tracker/data/revival_klines.jsonl.gz
+4.0M	/root/tracker/data/smoke.db-wal
+4.0M	/root/tracker/data/fomo-smoke.db-wal
+380K	/root/tracker/data/smoke.db
+356K	/root/tracker/data/scope_last
