@@ -1,0 +1,881 @@
+{
+ "runs": [
+  {
+   "at": "2026-10-21T16:46:36.873Z",
+   "results": [
+    {
+     "line": "Rowdy | pill | buy | 9995.5 | 17h | 2026-10-21T17:25+01:00",
+     "label": "Rowdy",
+     "coin": "pill",
+     "side": "buy",
+     "usd": "9995.5",
+     "ago": "17h",
+     "note": "Solana: 4 pool(s) for pill (also on robinhood, bsc, arc) · stopped at 263 transactions (credit cap) · no fomo buy of ~$9995.5 found in 263 transactions (6175 in the window); try a tighter \"when\" or another trade",
+     "credits": 300,
+     "scanned": 263,
+     "chains": {
+      "solana": 19,
+      "robinhood": 9,
+      "bsc": 1,
+      "arc": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "Rowdy | bibi | buy | 2214.31 | 17h | 2026-10-21T17:25+01:00",
+     "label": "Rowdy",
+     "coin": "bibi",
+     "side": "buy",
+     "usd": "2214.31",
+     "ago": "17h",
+     "note": "Solana: 4 pool(s) for Bibi (also on bsc, ethereum) · no fomo buy of ~$2214.31 found in 0 transactions (0 in the window); try a tighter \"when\" or another trade",
+     "credits": 7,
+     "scanned": 0,
+     "chains": {
+      "bsc": 24,
+      "solana": 5,
+      "ethereum": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "rasmr | Dacity | sell | 11016.57 | 7h | 2026-10-21T17:41+01:00",
+     "label": "rasmr",
+     "coin": "Dacity",
+     "side": "sell",
+     "usd": "11016.57",
+     "ago": "7h",
+     "note": "Solana: 4 pool(s) for Dacity (also on robinhood, ethereum) · no fomo buy of ~$11016.57 found in 0 transactions (0 in the window); try a tighter \"when\" or another trade",
+     "credits": 8,
+     "scanned": 0,
+     "chains": {
+      "solana": 21,
+      "robinhood": 6,
+      "ethereum": 2
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "rasmr | CARDS | sell | 47265.48 | 16h | 2026-10-21T17:41+01:00",
+     "label": "rasmr",
+     "coin": "CARDS",
+     "side": "sell",
+     "usd": "47265.48",
+     "ago": "16h",
+     "note": "Solana: 4 pool(s) for CARDS (also on ethereum) · stopped at 265 transactions (credit cap) · no fomo buy of ~$47265.48 found in 265 transactions (517 in the window); try a tighter \"when\" or another trade",
+     "credits": 300,
+     "scanned": 265,
+     "chains": {
+      "solana": 28,
+      "ethereum": 2
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "TheSOLstice | BOOMER | buy | 51.08 | 1h | 2026-10-21T17:41+01:00",
+     "label": "TheSOLstice",
+     "coin": "BOOMER",
+     "side": "buy",
+     "usd": "51.08",
+     "ago": "1h",
+     "note": "Solana: 4 pool(s) for BOOMER (also on robinhood, base, ethereum, pulsechain, bsc) · no fomo buy of ~$51.08 found in 0 transactions (0 in the window); try a tighter \"when\" or another trade",
+     "credits": 4,
+     "scanned": 0,
+     "chains": {
+      "robinhood": 12,
+      "base": 3,
+      "ethereum": 1,
+      "solana": 6,
+      "pulsechain": 6,
+      "bsc": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "TheSOLstice | BOOMER | buy | 241.72 | 11h | 2026-10-21T17:41+01:00",
+     "label": "TheSOLstice",
+     "coin": "BOOMER",
+     "side": "buy",
+     "usd": "241.72",
+     "ago": "11h",
+     "note": "Solana: 4 pool(s) for BOOMER (also on robinhood, base, ethereum, pulsechain, bsc) · no fomo buy of ~$241.72 found in 0 transactions (0 in the window); try a tighter \"when\" or another trade",
+     "credits": 4,
+     "scanned": 0,
+     "chains": {
+      "robinhood": 12,
+      "base": 3,
+      "ethereum": 1,
+      "solana": 6,
+      "pulsechain": 6,
+      "bsc": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "orangie | Dacity | buy | 99.05 | 15h | 2026-10-21T17:41+01:00",
+     "label": "orangie",
+     "coin": "Dacity",
+     "side": "buy",
+     "usd": "99.05",
+     "ago": "15h",
+     "note": "Solana: 4 pool(s) for Dacity (also on robinhood, ethereum) · no fomo buy of ~$99.05 found in 0 transactions (0 in the window); try a tighter \"when\" or another trade",
+     "credits": 8,
+     "scanned": 0,
+     "chains": {
+      "solana": 21,
+      "robinhood": 6,
+      "ethereum": 2
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "orangie | Dacity | buy | 4998.38 | 1d | 2026-10-21T17:41+01:00",
+     "label": "orangie",
+     "coin": "Dacity",
+     "side": "buy",
+     "usd": "4998.38",
+     "ago": "1d",
+     "note": "Solana: 4 pool(s) for Dacity (also on robinhood, ethereum) · no fomo buy of ~$4998.38 found in 0 transactions (0 in the window); try a tighter \"when\" or another trade",
+     "credits": 8,
+     "scanned": 0,
+     "chains": {
+      "solana": 21,
+      "robinhood": 6,
+      "ethereum": 2
+     },
+     "candidates": [],
+     "ambiguous": 0
+    }
+   ]
+  },
+  {
+   "at": "2026-10-21T17:21:35.755Z",
+   "results": [
+    {
+     "line": "Rowdy | pill | buy | 9995.5 | 17h | 2026-10-21T17:25+01:00",
+     "label": "Rowdy",
+     "coin": "pill",
+     "side": "buy",
+     "usd": "9995.5",
+     "ago": "17h",
+     "state": "done",
+     "note": "Solana: 4 pool(s) for pill (also on robinhood, bsc, arc) · stopped at 264 transactions (credit cap) · no fomo buy of ~$9995.5 found in 264 transactions (6025 in the window); try a tighter \"when\" or another trade",
+     "credits": 301,
+     "scanned": 264,
+     "inWindow": 6025,
+     "chains": {
+      "solana": 19,
+      "robinhood": 9,
+      "bsc": 1,
+      "arc": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "Rowdy | bibi | buy | 2214.31 | 17h | 2026-10-21T17:25+01:00",
+     "label": "Rowdy",
+     "coin": "bibi",
+     "side": "buy",
+     "usd": "2214.31",
+     "ago": "17h",
+     "state": "done",
+     "note": "Solana: 4 pool(s) for Bibi (also on bsc, ethereum) · no fomo buy of ~$2214.31 found in 0 transactions (0 in the window); try a tighter \"when\" or another trade",
+     "credits": 7,
+     "scanned": 0,
+     "inWindow": 0,
+     "chains": {
+      "bsc": 24,
+      "solana": 5,
+      "ethereum": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "rasmr | Dacity | sell | 11016.57 | 7h | 2026-10-21T17:41+01:00",
+     "label": "rasmr",
+     "coin": "Dacity",
+     "side": "sell",
+     "usd": "11016.57",
+     "ago": "7h",
+     "state": "done",
+     "note": "Solana: 4 pool(s) for Dacity (also on robinhood, ethereum) · no fomo buy of ~$11016.57 found in 0 transactions (0 in the window); try a tighter \"when\" or another trade",
+     "credits": 8,
+     "scanned": 0,
+     "inWindow": 0,
+     "chains": {
+      "solana": 22,
+      "robinhood": 6,
+      "ethereum": 2
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "rasmr | CARDS | sell | 47265.48 | 16h | 2026-10-21T17:41+01:00",
+     "label": "rasmr",
+     "coin": "CARDS",
+     "side": "sell",
+     "usd": "47265.48",
+     "ago": "16h",
+     "state": "done",
+     "note": "Solana: 4 pool(s) for CARDS (also on ethereum) · stopped at 268 transactions (credit cap) · no fomo buy of ~$47265.48 found in 268 transactions (517 in the window); try a tighter \"when\" or another trade",
+     "credits": 303,
+     "scanned": 268,
+     "inWindow": 517,
+     "chains": {
+      "solana": 28,
+      "ethereum": 2
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "TheSOLstice | BOOMER | buy | 51.08 | 1h | 2026-10-21T17:41+01:00",
+     "label": "TheSOLstice",
+     "coin": "BOOMER",
+     "side": "buy",
+     "usd": "51.08",
+     "ago": "1h",
+     "state": "done",
+     "note": "Solana: 4 pool(s) for BOOMER (also on robinhood, base, ethereum, pulsechain, bsc) · no fomo buy of ~$51.08 found in 0 transactions (0 in the window); try a tighter \"when\" or another trade",
+     "credits": 4,
+     "scanned": 0,
+     "inWindow": 0,
+     "chains": {
+      "robinhood": 12,
+      "base": 3,
+      "ethereum": 1,
+      "solana": 6,
+      "pulsechain": 6,
+      "bsc": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "TheSOLstice | BOOMER | buy | 241.72 | 11h | 2026-10-21T17:41+01:00",
+     "label": "TheSOLstice",
+     "coin": "BOOMER",
+     "side": "buy",
+     "usd": "241.72",
+     "ago": "11h",
+     "state": "done",
+     "note": "Solana: 4 pool(s) for BOOMER (also on robinhood, base, ethereum, pulsechain, bsc) · no fomo buy of ~$241.72 found in 0 transactions (0 in the window); try a tighter \"when\" or another trade",
+     "credits": 4,
+     "scanned": 0,
+     "inWindow": 0,
+     "chains": {
+      "robinhood": 12,
+      "base": 3,
+      "ethereum": 1,
+      "solana": 6,
+      "pulsechain": 6,
+      "bsc": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "orangie | Dacity | buy | 99.05 | 15h | 2026-10-21T17:41+01:00",
+     "label": "orangie",
+     "coin": "Dacity",
+     "side": "buy",
+     "usd": "99.05",
+     "ago": "15h",
+     "state": "done",
+     "note": "Solana: 4 pool(s) for Dacity (also on robinhood, ethereum) · no fomo buy of ~$99.05 found in 0 transactions (0 in the window); try a tighter \"when\" or another trade",
+     "credits": 8,
+     "scanned": 0,
+     "inWindow": 0,
+     "chains": {
+      "solana": 22,
+      "robinhood": 6,
+      "ethereum": 2
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "orangie | Dacity | buy | 4998.38 | 1d | 2026-10-21T17:41+01:00",
+     "label": "orangie",
+     "coin": "Dacity",
+     "side": "buy",
+     "usd": "4998.38",
+     "ago": "1d",
+     "state": "done",
+     "note": "Solana: 4 pool(s) for Dacity (also on robinhood, ethereum) · no fomo buy of ~$4998.38 found in 0 transactions (0 in the window); try a tighter \"when\" or another trade",
+     "credits": 8,
+     "scanned": 0,
+     "inWindow": 0,
+     "chains": {
+      "solana": 22,
+      "robinhood": 6,
+      "ethereum": 2
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "SmokEy | FTR | sell | 9148.22 | 1d | 2026-10-21T17:46+01:00",
+     "label": "SmokEy",
+     "coin": "FTR",
+     "side": "sell",
+     "usd": "9148.22",
+     "ago": "1d",
+     "state": "done",
+     "note": "Solana: 4 pool(s) for FTR (also on robinhood, bsc, ethereum) · stopped at 276 transactions (credit cap) · no fomo buy of ~$9148.22 found in 276 transactions (1306 in the window); try a tighter \"when\" or another trade",
+     "credits": 300,
+     "scanned": 276,
+     "inWindow": 1306,
+     "chains": {
+      "solana": 12,
+      "robinhood": 10,
+      "bsc": 4,
+      "ethereum": 4
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "SmokEy | Froggie | buy | 7220.38 | 4d | 2026-10-21T17:46+01:00",
+     "label": "SmokEy",
+     "coin": "Froggie",
+     "side": "buy",
+     "usd": "7220.38",
+     "ago": "4d",
+     "state": "done",
+     "note": "Solana: 2 pool(s) for Froggie (also on bsc, robinhood) · no fomo buy of ~$7220.38 found in 1 transactions (1 in the window); try a tighter \"when\" or another trade",
+     "credits": 4,
+     "scanned": 1,
+     "inWindow": 1,
+     "chains": {
+      "bsc": 6,
+      "robinhood": 1,
+      "solana": 2
+     },
+     "candidates": [],
+     "ambiguous": 0
+    }
+   ]
+  },
+  {
+   "at": "2026-10-21T17:26:24.400Z",
+   "results": [
+    {
+     "line": "Rowdy | pill | buy | 9995.5 | 17h | 2026-10-21T17:25+01:00",
+     "label": "Rowdy",
+     "coin": "pill",
+     "side": "buy",
+     "usd": "9995.5",
+     "ago": "17h",
+     "state": "done",
+     "note": "Solana: 8 pool(s) for pill (also on robinhood, bsc, arc) · 61805 coin trades in the window, 2147 of them fomo's · stopped at 304 transactions (credit cap) · no fomo buy of ~$9995.5 among them; try another trade of theirs",
+     "credits": 1201,
+     "scanned": 304,
+     "inWindow": 2147,
+     "chains": {
+      "solana": 19,
+      "robinhood": 9,
+      "bsc": 1,
+      "arc": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "Rowdy | bibi | buy | 2214.31 | 17h | 2026-10-21T17:25+01:00",
+     "label": "Rowdy",
+     "coin": "bibi",
+     "side": "buy",
+     "usd": "2214.31",
+     "ago": "17h",
+     "state": "done",
+     "note": "Solana: 3 pool(s) for BIBI (also on bsc, ethereum) · the coin's pools show no trades in the window (22:13–00:36 UTC) — wrong coin/pool, or the trade was on another chain",
+     "credits": 8,
+     "scanned": 0,
+     "chains": {
+      "bsc": 24,
+      "solana": 5,
+      "ethereum": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "rasmr | Dacity | sell | 11016.57 | 7h | 2026-10-21T17:41+01:00",
+     "label": "rasmr",
+     "coin": "Dacity",
+     "side": "sell",
+     "usd": "11016.57",
+     "ago": "7h",
+     "state": "done",
+     "note": "Solana: 8 pool(s) for Dacity (also on robinhood, ethereum) · 577 coin trades in the window, 73 of them fomo's · no fomo sell of ~$11016.57 among them; try another trade of theirs",
+     "credits": 505,
+     "scanned": 73,
+     "inWindow": 73,
+     "chains": {
+      "solana": 22,
+      "robinhood": 6,
+      "ethereum": 2
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "rasmr | CARDS | sell | 47265.48 | 16h | 2026-10-21T17:41+01:00",
+     "label": "rasmr",
+     "coin": "CARDS",
+     "side": "sell",
+     "usd": "47265.48",
+     "ago": "16h",
+     "state": "done",
+     "note": "Solana: 8 pool(s) for CARDS (also on ethereum) · 1017 coin trades in the window, 27 of them fomo's · no fomo sell of ~$47265.48 among them; try another trade of theirs",
+     "credits": 868,
+     "scanned": 27,
+     "inWindow": 27,
+     "chains": {
+      "solana": 28,
+      "ethereum": 2
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "TheSOLstice | BOOMER | buy | 51.08 | 1h | 2026-10-21T17:41+01:00",
+     "label": "TheSOLstice",
+     "coin": "BOOMER",
+     "side": "buy",
+     "usd": "51.08",
+     "ago": "1h",
+     "state": "done",
+     "note": "Solana: 3 pool(s) for BOOMER (also on robinhood, base, ethereum, pulsechain, bsc) · the coin's pools show no trades in the window (15:21–16:01 UTC) — wrong coin/pool, or the trade was on another chain",
+     "credits": 3,
+     "scanned": 0,
+     "chains": {
+      "robinhood": 12,
+      "base": 3,
+      "ethereum": 1,
+      "solana": 6,
+      "pulsechain": 6,
+      "bsc": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "TheSOLstice | BOOMER | buy | 241.72 | 11h | 2026-10-21T17:41+01:00",
+     "label": "TheSOLstice",
+     "coin": "BOOMER",
+     "side": "buy",
+     "usd": "241.72",
+     "ago": "11h",
+     "state": "done",
+     "note": "Solana: 3 pool(s) for BOOMER (also on robinhood, base, ethereum, pulsechain, bsc) · the coin's pools show no trades in the window (04:54–06:27 UTC) — wrong coin/pool, or the trade was on another chain",
+     "credits": 4,
+     "scanned": 0,
+     "chains": {
+      "robinhood": 12,
+      "base": 3,
+      "ethereum": 1,
+      "solana": 6,
+      "pulsechain": 6,
+      "bsc": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "orangie | Dacity | buy | 99.05 | 15h | 2026-10-21T17:41+01:00",
+     "label": "orangie",
+     "coin": "Dacity",
+     "side": "buy",
+     "usd": "99.05",
+     "ago": "15h",
+     "state": "done",
+     "note": "Solana: 8 pool(s) for Dacity (also on robinhood, ethereum) · 1837 coin trades in the window, 218 of them fomo's · no fomo buy of ~$99.05 among them; try another trade of theirs",
+     "credits": 916,
+     "scanned": 218,
+     "inWindow": 218,
+     "chains": {
+      "solana": 22,
+      "robinhood": 6,
+      "ethereum": 2
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "orangie | Dacity | buy | 4998.38 | 1d | 2026-10-21T17:41+01:00",
+     "label": "orangie",
+     "coin": "Dacity",
+     "side": "buy",
+     "usd": "4998.38",
+     "ago": "1d",
+     "state": "done",
+     "note": "Solana: 8 pool(s) for Dacity (also on robinhood, ethereum) · signer walk stopped before the window (700 pages, credit cap 1200) · 6654 coin trades in the window, 0 of them fomo's · no fomo buy of ~$4998.38 among them; try another trade of theirs",
+     "credits": 967,
+     "scanned": 0,
+     "inWindow": 0,
+     "chains": {
+      "solana": 22,
+      "robinhood": 6,
+      "ethereum": 2
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "SmokEy | FTR | sell | 9148.22 | 1d | 2026-10-21T17:46+01:00",
+     "label": "SmokEy",
+     "coin": "FTR",
+     "side": "sell",
+     "usd": "9148.22",
+     "ago": "1d",
+     "state": "done",
+     "note": "Solana: 8 pool(s) for FTR (also on robinhood, bsc, ethereum) · signer walk stopped before the window (700 pages, credit cap 1200) · 2310 coin trades in the window, 0 of them fomo's · no fomo sell of ~$9148.22 among them; try another trade of theirs",
+     "credits": 844,
+     "scanned": 0,
+     "inWindow": 0,
+     "chains": {
+      "solana": 11,
+      "robinhood": 10,
+      "bsc": 4,
+      "ethereum": 5
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "SmokEy | Froggie | buy | 7220.38 | 4d | 2026-10-21T17:46+01:00",
+     "label": "SmokEy",
+     "coin": "Froggie",
+     "side": "buy",
+     "usd": "7220.38",
+     "ago": "4d",
+     "state": "done",
+     "note": "Solana: 3 pool(s) for Froggie (also on bsc, robinhood) · signer walk stopped before the window (700 pages, credit cap 1200) · 1 coin trades in the window, 0 of them fomo's · no fomo buy of ~$7220.38 among them; try another trade of theirs",
+     "credits": 704,
+     "scanned": 0,
+     "inWindow": 0,
+     "chains": {
+      "bsc": 6,
+      "robinhood": 1,
+      "solana": 3
+     },
+     "candidates": [],
+     "ambiguous": 0
+    }
+   ]
+  },
+  {
+   "at": "2026-10-21T17:45:54.146Z",
+   "results": [
+    {
+     "line": "Rowdy | pill | buy | 9995.5 | 17h | 2026-10-21T17:25+01:00",
+     "label": "Rowdy",
+     "coin": "pill",
+     "side": "buy",
+     "usd": "9995.5",
+     "ago": "17h",
+     "state": "done",
+     "note": "Solana: 8 pool(s) for pill (also on robinhood, bsc, arc) · 33075 coin trades in the window, 948 of them fomo's · no fomo buy of ~$9995.5 among them; try another trade of theirs",
+     "credits": 1855,
+     "scanned": 948,
+     "inWindow": 948,
+     "chains": {
+      "solana": 19,
+      "robinhood": 9,
+      "bsc": 1,
+      "arc": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "Rowdy | bibi | buy | 2214.31 | 17h | 2026-10-21T17:25+01:00",
+     "label": "Rowdy",
+     "coin": "bibi",
+     "side": "buy",
+     "usd": "2214.31",
+     "ago": "17h",
+     "state": "done",
+     "note": "Solana: 3 pool(s) for BIBI (also on bsc, ethereum) · BIBI: all RPC providers paused · BIBI: all RPC providers paused · BIBI: all RPC providers paused · the coin's pools show no trades in the window (22:20–23:30 UTC) — wrong coin/pool, or the trade was on another chain",
+     "credits": 3,
+     "scanned": 0,
+     "chains": {
+      "bsc": 24,
+      "solana": 5,
+      "ethereum": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "rasmr | Dacity | sell | 11016.57 | 7h | 2026-10-21T17:41+01:00",
+     "label": "rasmr",
+     "coin": "Dacity",
+     "side": "sell",
+     "usd": "11016.57",
+     "ago": "7h",
+     "state": "done",
+     "note": "Solana: 8 pool(s) for Dacity (also on robinhood, ethereum) · Dacity: all RPC providers paused · Dacity: all RPC providers paused · DACITY: all RPC providers paused · DACITY: all RPC providers paused · Dacity: all RPC providers paused · Dacity: all RPC providers paused · Dacity: all RPC providers paused · Dacity: all RPC providers paused · the coin's pools show no trades in the window (08:36–09:46 UTC) — wrong coin/pool, or the trade was on another chain",
+     "credits": 8,
+     "scanned": 0,
+     "chains": {
+      "solana": 22,
+      "robinhood": 6,
+      "ethereum": 2
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "rasmr | CARDS | sell | 47265.48 | 16h | 2026-10-21T17:41+01:00",
+     "label": "rasmr",
+     "coin": "CARDS",
+     "side": "sell",
+     "usd": "47265.48",
+     "ago": "16h",
+     "state": "done",
+     "note": "Solana: 8 pool(s) for CARDS (also on ethereum) · CARDS: all RPC providers paused · CARDS: all RPC providers paused · CARDS: all RPC providers paused · CARDS: all RPC providers paused · CARDS: all RPC providers paused · CARDS: all RPC providers paused · CARDS: all RPC providers paused · CARDS: all RPC providers paused · the coin's pools show no trades in the window (23:36–00:46 UTC) — wrong coin/pool, or the trade was on another chain",
+     "credits": 8,
+     "scanned": 0,
+     "chains": {
+      "solana": 28,
+      "ethereum": 2
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "TheSOLstice | BOOMER | buy | 51.08 | 1h | 2026-10-21T17:41+01:00",
+     "label": "TheSOLstice",
+     "coin": "BOOMER",
+     "side": "buy",
+     "usd": "51.08",
+     "ago": "1h",
+     "state": "done",
+     "note": "Solana: 3 pool(s) for BOOMER (also on robinhood, base, ethereum, pulsechain, bsc) · Boomer: all RPC providers paused · BOOMER: all RPC providers paused · BOOMER: all RPC providers paused · the coin's pools show no trades in the window (14:36–15:46 UTC) — wrong coin/pool, or the trade was on another chain",
+     "credits": 3,
+     "scanned": 0,
+     "chains": {
+      "robinhood": 12,
+      "base": 2,
+      "ethereum": 1,
+      "solana": 6,
+      "pulsechain": 7,
+      "bsc": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "TheSOLstice | BOOMER | buy | 241.72 | 11h | 2026-10-21T17:41+01:00",
+     "label": "TheSOLstice",
+     "coin": "BOOMER",
+     "side": "buy",
+     "usd": "241.72",
+     "ago": "11h",
+     "state": "done",
+     "note": "Solana: 3 pool(s) for BOOMER (also on robinhood, base, ethereum, pulsechain, bsc) · Boomer: all RPC providers paused · BOOMER: all RPC providers paused · BOOMER: all RPC providers paused · the coin's pools show no trades in the window (04:36–05:46 UTC) — wrong coin/pool, or the trade was on another chain",
+     "credits": 3,
+     "scanned": 0,
+     "chains": {
+      "robinhood": 12,
+      "base": 2,
+      "ethereum": 1,
+      "solana": 6,
+      "pulsechain": 7,
+      "bsc": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "orangie | Dacity | buy | 99.05 | 15h | 2026-10-21T17:41+01:00",
+     "label": "orangie",
+     "coin": "Dacity",
+     "side": "buy",
+     "usd": "99.05",
+     "ago": "15h",
+     "state": "done",
+     "note": "Solana: 8 pool(s) for Dacity (also on robinhood, ethereum) · Dacity: all RPC providers paused · Dacity: all RPC providers paused · DACITY: all RPC providers paused · DACITY: all RPC providers paused · Dacity: all RPC providers paused · Dacity: all RPC providers paused · Dacity: all RPC providers paused · Dacity: all RPC providers paused · the coin's pools show no trades in the window (00:36–01:46 UTC) — wrong coin/pool, or the trade was on another chain",
+     "credits": 8,
+     "scanned": 0,
+     "chains": {
+      "solana": 22,
+      "robinhood": 6,
+      "ethereum": 2
+     },
+     "candidates": [],
+     "ambiguous": 0
+    }
+   ]
+  },
+  {
+   "at": "2026-10-21T17:55:54.455Z",
+   "results": [
+    {
+     "line": "Rowdy | pill | buy | 9995.5 | 17h | 2026-10-21T17:25+01:00",
+     "label": "Rowdy",
+     "coin": "pill",
+     "side": "buy",
+     "usd": "9995.5",
+     "ago": "17h",
+     "state": "done",
+     "note": "Solana: 8 pool(s) for pill (also on robinhood, bsc, arc) · 33053 coin trades in the window, 946 of them fomo's · no fomo buy of ~$9995.5 among them; try another trade of theirs",
+     "seen": [],
+     "credits": 1859,
+     "scanned": 946,
+     "inWindow": 946,
+     "chains": {
+      "solana": 19,
+      "robinhood": 9,
+      "bsc": 1,
+      "arc": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "Rowdy | bibi | buy | 2214.31 | 17h | 2026-10-21T17:25+01:00",
+     "label": "Rowdy",
+     "coin": "bibi",
+     "side": "buy",
+     "usd": "2214.31",
+     "ago": "17h",
+     "state": "done",
+     "note": "Solana: 3 pool(s) for BIBI (also on bsc, ethereum) · the coin's pools show no trades in the window (22:20–23:30 UTC) — wrong coin/pool, or the trade was on another chain",
+     "seen": [],
+     "credits": 8,
+     "scanned": 0,
+     "chains": {
+      "bsc": 24,
+      "solana": 5,
+      "ethereum": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "rasmr | Dacity | sell | 11016.57 | 7h | 2026-10-21T17:41+01:00",
+     "label": "rasmr",
+     "coin": "Dacity",
+     "side": "sell",
+     "usd": "11016.57",
+     "ago": "7h",
+     "state": "done",
+     "note": "Solana: 8 pool(s) for Dacity (also on robinhood, ethereum) · 1584 coin trades in the window, 62 of them fomo's · no fomo sell of ~$11016.57 among them; try another trade of theirs",
+     "seen": [],
+     "credits": 557,
+     "scanned": 62,
+     "inWindow": 62,
+     "chains": {
+      "solana": 24,
+      "robinhood": 5,
+      "ethereum": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "rasmr | CARDS | sell | 47265.48 | 16h | 2026-10-21T17:41+01:00",
+     "label": "rasmr",
+     "coin": "CARDS",
+     "side": "sell",
+     "usd": "47265.48",
+     "ago": "16h",
+     "state": "done",
+     "note": "Solana: 8 pool(s) for CARDS (also on ethereum) · 935 coin trades in the window, 19 of them fomo's · no fomo sell of ~$47265.48 among them; try another trade of theirs",
+     "seen": [],
+     "credits": 902,
+     "scanned": 19,
+     "inWindow": 19,
+     "chains": {
+      "solana": 28,
+      "ethereum": 2
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "TheSOLstice | BOOMER | buy | 51.08 | 1h | 2026-10-21T17:41+01:00",
+     "label": "TheSOLstice",
+     "coin": "BOOMER",
+     "side": "buy",
+     "usd": "51.08",
+     "ago": "1h",
+     "state": "done",
+     "note": "Solana: 3 pool(s) for BOOMER (also on robinhood, base, ethereum, pulsechain, bsc) · 2 coin trades in the window, 0 of them fomo's · no fomo buy of ~$51.08 among them; try another trade of theirs",
+     "seen": [],
+     "credits": 161,
+     "scanned": 0,
+     "inWindow": 0,
+     "chains": {
+      "robinhood": 12,
+      "base": 2,
+      "ethereum": 1,
+      "solana": 6,
+      "pulsechain": 7,
+      "bsc": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "TheSOLstice | BOOMER | buy | 241.72 | 11h | 2026-10-21T17:41+01:00",
+     "label": "TheSOLstice",
+     "coin": "BOOMER",
+     "side": "buy",
+     "usd": "241.72",
+     "ago": "11h",
+     "state": "done",
+     "note": "Solana: 3 pool(s) for BOOMER (also on robinhood, base, ethereum, pulsechain, bsc) · the coin's pools show no trades in the window (04:36–05:46 UTC) — wrong coin/pool, or the trade was on another chain",
+     "seen": [],
+     "credits": 4,
+     "scanned": 0,
+     "chains": {
+      "robinhood": 12,
+      "base": 2,
+      "ethereum": 1,
+      "solana": 6,
+      "pulsechain": 7,
+      "bsc": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    },
+    {
+     "line": "orangie | Dacity | buy | 99.05 | 15h | 2026-10-21T17:41+01:00",
+     "label": "orangie",
+     "coin": "Dacity",
+     "side": "buy",
+     "usd": "99.05",
+     "ago": "15h",
+     "state": "done",
+     "note": "Solana: 8 pool(s) for Dacity (also on robinhood, ethereum) · 1180 coin trades in the window, 146 of them fomo's · no fomo buy of ~$99.05 among them; try another trade of theirs",
+     "seen": [],
+     "credits": 898,
+     "scanned": 146,
+     "inWindow": 146,
+     "chains": {
+      "solana": 24,
+      "robinhood": 5,
+      "ethereum": 1
+     },
+     "candidates": [],
+     "ambiguous": 0
+    }
+   ]
+  }
+ ]
+}

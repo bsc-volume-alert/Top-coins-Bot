@@ -1,0 +1,65 @@
+[
+ {
+  "name": "pm2-logrotate",
+  "status": "online",
+  "restarts": 0,
+  "up": 1794636511207,
+  "mem": 28868608
+ },
+ {
+  "name": "tracker",
+  "status": "online",
+  "restarts": 0,
+  "up": 1794636511257,
+  "mem": 1104490496
+ },
+ {
+  "name": "deployer",
+  "status": "online",
+  "restarts": 0,
+  "up": 1794636511258,
+  "mem": 2490368
+ },
+ {
+  "name": "executor",
+  "status": "stopped",
+  "restarts": 55,
+  "up": 1792623975387,
+  "mem": 0
+ },
+ {
+  "name": "fomo",
+  "status": "stopped",
+  "restarts": 46,
+  "up": 1792743811996,
+  "mem": 0
+ },
+ {
+  "name": "scope",
+  "status": "online",
+  "restarts": 0,
+  "up": 1794636511289,
+  "mem": 26271744
+ },
+ {
+  "name": "radar",
+  "status": "stopped",
+  "restarts": 3486,
+  "up": 1793399905179,
+  "mem": 0
+ },
+ {
+  "name": "launcher",
+  "status": "online",
+  "restarts": 0,
+  "up": 1794636511293,
+  "mem": 219787264
+ },
+ {
+  "name": "agents",
+  "status": "online",
+  "restarts": 0,
+  "up": 1794636511309,
+  "mem": 38658048
+ }
+]

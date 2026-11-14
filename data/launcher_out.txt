@@ -1,0 +1,1 @@
+[launcher] 0.10.4 up — mode paper, wallet AGEniepzBFf2Jesgv7XzqibjndgTRRTE9QDdSojrpYMj, stake 0.1 SOL, cap 0/day, X stream on, AI on
