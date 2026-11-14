@@ -1,23 +1,23 @@
 {
  "worker": "Claude research worker",
- "run_id": "f017-20261114T065226Z",
- "task": "F017 (queue run 15, R99): counts-only cross-review of Codex C019 @ 1258475 \u2014 re-run register.py/validate.py unchanged on pinned sources, compare COUNTS.json / SUPPORT_AUDIT.json / features_01-05.csv, re-derive N1/N3/N4/N5 on E and L003 independently, check N1 strict-after and N5 5-s window vs PROTOCOL 122657f; plus R96 (b) receipt-clock variant of the R86 (2) count beside the block-time count. No Idea-lab test (R91) \u2014 3 proposals only.",
- "state": "completed",
- "started_at": "2026-11-14T06:52:27Z",
- "lease_expires_at": null,
+ "run_id": "notask-20261114T105130Z",
+ "task": "NO READY TASK (queue run 16, R99 / R102): record-only run. Checks the queue for a released window or a new Claude row (none), reads Codex C020 @ 0aaa210 (counts only; the coordinator reviews it per R102), records three register-only proposals (R91: no count, no test), updates STATUS.json. No Idea-lab test, no outcome read.",
+ "state": "leased",
+ "started_at": "2026-11-14T10:52:55Z",
+ "lease_expires_at": "2026-11-14T11:52:55Z",
  "input_commits": {
-  "tracker": "7f937f5",
-  "research-codex_read": "1258475c",
-  "research-claude_base": "253604d",
+  "tracker": "b53915d",
+  "research-codex_read": "0aaa2108",
+  "research-claude_base": "1dbf1d1",
   "entry-all-20261107t2210": "e67833121f1da0dc992c28fa26c5236a855c151a",
   "entry-package-7nov": "0e3be03c71949e069a7a31b5951f332bb563f68f",
   "blind-eval-1.1": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b"
  },
- "task_choice_note": "Queue run 15: F017 is READY and Claude's only task (R99). After it, no development-window task remains; STATUS.json will record 'no task' per R99.",
- "previous_run": "f016-20261114T025106Z",
- "next_task": "no task; waiting for a released window (R4 / R5 / R6) \u2014 R99: after F017 no development-window task remains for Claude; held proposals (R86 (1)-(2), CL-P1-P2, CL-P4-P9) wait for the coordinator's released-window PROTOCOLs; will cross-review Codex C020 only if the queue adds a row",
+ "task_choice_note": "Queue run 16 (tracker b53915d): Claude row reads 'NO READY TASK (R99 / R102) — waiting for a released window (R4 / R5 / R6). Not a stall.' No branch on origin is a Round 1 export. Nothing to lease but the record itself; lease written to honour the contract.",
+ "previous_run": "f017-20261114T065226Z",
+ "next_task": "no task; waiting for a released window (R4 / R5 / R6) — R99: after F017 no development-window task remains for Claude; held proposals (R86 (1)-(2), CL-P1-P2, CL-P4-P9) wait for the coordinator's released-window PROTOCOLs; will cross-review Codex C020 only if the queue adds a row",
  "blockers": [],
- "artifacts": "reports/blind/autonomous/claude/runs/f017-20261114T065226Z/",
+ "artifacts": "reports/blind/autonomous/claude/runs/notask-20261114T105130Z/",
  "task_states": {
   "F001": "completed_agree_all_rows",
   "F006": "completed",
@@ -37,6 +37,6 @@
   "F016": "completed (counts only; 4 can bind, CL-P1 binds 88 %, R86 (3) unlikely to bind, CL-P3 premise not observed)",
   "F017": "completed (agree all numbers; C019 reproduces byte for byte and independently 680/680; R86 (2) clock-insensitive 140 vs 147 of 679)"
  },
- "completed_at": "2026-11-14T07:16:44Z",
- "result": "F017: C019 @ 1258475 reproduces byte for byte (COUNTS.json, SUPPORT_AUDIT.json, input_checksums.json, features_01-05.csv, both logs) and an independent implementation of N1/N3/N4/N5 from PROTOCOL 122657f agrees on 680/680 launches with 0 differences: E N1 678/301/377 (55.60 %), N3 531/2/529 (99.62 %), N4 357/1/1 (0.28 %), N5 653/11/11 (1.68 %); L003 N1 137/296, N3 247/247 (49 unknown), N4 0/161 (135 unknown), N5 7/287 (9 unknown). N1 tie clause: 15 candidates, 0 signal changes. N5 window: 11 signals under all three boundary conventions; one sell exactly at D-5 (excluded). Reading note: register.py marks launches N5-unknown on any unproven pool row (12 E) where the protocol text says rows are excluded; 11 signals either way. R96 (b): R86 (2) binds 140/679 (20.6 %) block clock vs 147/679 (21.6 %) receipt clock; 666/679 agree; both inside 5-95 % in every half and cell. No outcome read; no Idea-lab test (R91); three new proposals CL-P7-P9."
+ "completed_at": null,
+ "result": null
 }
