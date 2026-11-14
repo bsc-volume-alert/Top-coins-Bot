@@ -1,0 +1,24 @@
+# f017 — three NEW proposals (register only; no count taken on the development window, R91)
+
+Each is stated with its hypothesis, the mechanism that could make it work, the exact statistic computable from information received before the decision, and the threshold that would go into a PROTOCOL before any count on a released window. None has been counted, scored or looked at on any data. None duplicates a registered or tested item (checked against N1–N9, R86 (1)–(3), CL-P1–P6, CL-L001–L012, F003-C1, L004-SC, L005-E, F006-T1, C018). Shares and directions below are priors, not fitted values.
+
+## CL-P7 — Sell-side price-impact asymmetry at E (receipt-knowable)
+
+Hypothesis: on a tape where sells move the price much more per SOL than buys do, the visible buy pressure is thin relative to the inventory waiting to leave; such launches are more often sold into after a 5-min entry. Veto when the asymmetry is large.
+Why it might work: the curve is deterministic, so per-SOL impact at a given reserve level is the same for a buy and a sell of equal size; an observed asymmetry therefore comes from WHEN sells arrive (at lower reserves, i.e. after price has already fallen) and how large they are relative to buys. It is a path statistic that neither R86 (1) (drift) nor CL-P1 (sell/buy SOL share) nor N3 (one wallet's absorption) captures. Distinct from CL-P1 because two tapes with the same sell share can have very different impact profiles.
+Statistic: over received usable curve rows in (t − 120, t], mean of |Δprice/price| ÷ sol for sells (a_s) and for buys (a_b), each over rows with sol ≥ 0.05 and a valid preceding state; A = a_s / a_b. Unknown if fewer than 3 sells or 3 buys qualify. Veto when A ≥ 2.0. Expected to bind on a minority of E; minimum defined n per cell 20.
+
+## CL-P8 — Buyer-return latency: share of last-60-s buyers who bought earlier on the same tape within 30 s of a sell by someone else (unconventional)
+
+Hypothesis: a tape where buyers come back to buy right after other wallets sell (buying the dip) is one where the holders are price-sensitive on the way down, not on the way out; the launch is more likely to hold after a 5-min entry. Veto when the "dip-buyer" share is low.
+Why it might work: R86 (2) asks whether a wallet added at all; this asks WHEN it added relative to someone else's sell. It is the cheapest observable proxy for demand that absorbs supply rather than demand that only arrives on upticks (CL-P6 looks at the price path only, not at who reacts to it). It also differs from CL-L001 (an entry trigger built on a single absorbed ≥ 1 SOL sell) because it is a share over the buyer set at a fixed decision time with no event trigger.
+Statistic: W = buyers_last_60s (block clock, the operative E definition); a wallet in W is a DIP-BUYER if it has a curve buy received at time u with some other wallet's curve sell received in [u − 30, u). d = |dip-buyers| / |W|. Defined on all E (|W| ≥ 5). Veto when d < 0.2. Both clocks reported as in f017 §5.
+
+## CL-P9 — Receipt-lag stress at the decision: median (receipt − block time) of the last 20 received rows
+
+Hypothesis (execution, not demand): when the collector's receipt lags block time by more than a few seconds at the decision, the state the rule acts on is stale in a way the 30-s staleness post-check does not catch, and fills land further from the decided price; veto when the lag is high. This is an availability/execution statistic in the spirit of Codex N9 (leader-boundary risk) but computable from the allowlisted files alone — no leader schedule needed.
+Why it might work: the brief's fill rule lands the buy 1 s after decision on the receipt clock; if receipts are already 5 s behind the chain, the decision is made on a 5-s-old picture and the 1-s landing is optimistic. This cannot be tested as a trading rule on the development window (R91) but its distribution on a released window tells the coordinator whether the R4 landing assumption is uniform across launches. It is unlike R86 (3) (regularity of inter-receipt intervals) and unlike CL-P3 (block clock alignment).
+Statistic: lag_i = recv_ms/1000 − ts for each of the last 20 received curve rows with both fields; λ = median lag_i. Unknown if fewer than 20 rows have both fields. Veto when λ ≥ 3 s. Expected to bind rarely in normal operation and in clusters during outages — report the share by half and the time clustering (counts only).
+
+## What is NOT proposed
+No re-threshold of anything already registered, no combination of registered proposals, no exit rule, no entry trigger, no cell rule. If any of the three is taken up, its threshold is the one written here and goes into a PROTOCOL before the first count on a released window; an R54 bind-share pre-check comes first; evaluate.py unchanged; both OUTAGE_LEDGER ledgers; R11 paired view.

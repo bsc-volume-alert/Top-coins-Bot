@@ -2,9 +2,9 @@
  "worker": "Claude research worker",
  "run_id": "f017-20261114T065226Z",
  "task": "F017 (queue run 15, R99): counts-only cross-review of Codex C019 @ 1258475 \u2014 re-run register.py/validate.py unchanged on pinned sources, compare COUNTS.json / SUPPORT_AUDIT.json / features_01-05.csv, re-derive N1/N3/N4/N5 on E and L003 independently, check N1 strict-after and N5 5-s window vs PROTOCOL 122657f; plus R96 (b) receipt-clock variant of the R86 (2) count beside the block-time count. No Idea-lab test (R91) \u2014 3 proposals only.",
- "state": "leased",
+ "state": "completed",
  "started_at": "2026-11-14T06:52:27Z",
- "lease_expires_at": "2026-11-14T08:52:27Z",
+ "lease_expires_at": null,
  "input_commits": {
   "tracker": "7f937f5",
   "research-codex_read": "1258475c",
@@ -15,7 +15,7 @@
  },
  "task_choice_note": "Queue run 15: F017 is READY and Claude's only task (R99). After it, no development-window task remains; STATUS.json will record 'no task' per R99.",
  "previous_run": "f016-20261114T025106Z",
- "next_task": null,
+ "next_task": "no task; waiting for a released window (R4 / R5 / R6) \u2014 R99: after F017 no development-window task remains for Claude; held proposals (R86 (1)-(2), CL-P1-P2, CL-P4-P9) wait for the coordinator's released-window PROTOCOLs; will cross-review Codex C020 only if the queue adds a row",
  "blockers": [],
  "artifacts": "reports/blind/autonomous/claude/runs/f017-20261114T065226Z/",
  "task_states": {
@@ -34,8 +34,9 @@
   "F013": "completed: (b) NOT TESTABLE, (c) done, (a) discharged by R78 + f014 counts-only confirmation",
   "F014": "completed (weak; T = 60 only)",
   "F015": "completed (a): C018 cross-review, agree all numbers; (b) not applicable (C018 published before run start); (c) no test, 3 held proposals",
-  "F016": "completed (counts only; 4 can bind, CL-P1 binds 88 %, R86 (3) unlikely to bind, CL-P3 premise not observed)"
+  "F016": "completed (counts only; 4 can bind, CL-P1 binds 88 %, R86 (3) unlikely to bind, CL-P3 premise not observed)",
+  "F017": "completed (agree all numbers; C019 reproduces byte for byte and independently 680/680; R86 (2) clock-insensitive 140 vs 147 of 679)"
  },
- "completed_at": null,
- "result": null
+ "completed_at": "2026-11-14T07:16:44Z",
+ "result": "F017: C019 @ 1258475 reproduces byte for byte (COUNTS.json, SUPPORT_AUDIT.json, input_checksums.json, features_01-05.csv, both logs) and an independent implementation of N1/N3/N4/N5 from PROTOCOL 122657f agrees on 680/680 launches with 0 differences: E N1 678/301/377 (55.60 %), N3 531/2/529 (99.62 %), N4 357/1/1 (0.28 %), N5 653/11/11 (1.68 %); L003 N1 137/296, N3 247/247 (49 unknown), N4 0/161 (135 unknown), N5 7/287 (9 unknown). N1 tie clause: 15 candidates, 0 signal changes. N5 window: 11 signals under all three boundary conventions; one sell exactly at D-5 (excluded). Reading note: register.py marks launches N5-unknown on any unproven pool row (12 E) where the protocol text says rows are excluded; 11 signals either way. R96 (b): R86 (2) binds 140/679 (20.6 %) block clock vs 147/679 (21.6 %) receipt clock; 666/679 agree; both inside 5-95 % in every half and cell. No outcome read; no Idea-lab test (R91); three new proposals CL-P7-P9."
 }
