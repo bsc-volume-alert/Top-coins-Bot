@@ -1,0 +1,66 @@
+[
+  {
+    "path": "trades_part_001.csv.gz",
+    "sha256": "9b30ebe2871d14a698eeb5ea6d6f53e6ee7e4deeb737dbbb686eb8a922e7c5de"
+  },
+  {
+    "path": "trades_part_002.csv.gz",
+    "sha256": "cf38217809345109d2c5682a659a6212dcf40a0e841c5fcdc5a8434ab56f4dd4"
+  },
+  {
+    "path": "trades_part_003.csv.gz",
+    "sha256": "0566705d7b65fb54675371e201122f47eddf49af3d5025874190de5db95ed86d"
+  },
+  {
+    "path": "trades_part_004.csv.gz",
+    "sha256": "a01aca9e32cdb6d1fab26d7da970010550610e2ea86cc8a80add582fd572fe73"
+  },
+  {
+    "path": "trades_part_005.csv.gz",
+    "sha256": "76e7ee678fa1ac822573dfc1b2e0a57537f73810d06eac7dd39b0db6f5004022"
+  },
+  {
+    "path": "trades_part_006.csv.gz",
+    "sha256": "29780dc006c3aaebd3c0d05d9cc0a3021bbf48b3f6db6deb9a87ef879f8dc24a"
+  },
+  {
+    "path": "trades_part_007.csv.gz",
+    "sha256": "c487257b6c3834969fd460a46be13e401a37511aa09e1fe415b52666015e4b99"
+  },
+  {
+    "path": "trades_part_008.csv.gz",
+    "sha256": "61e10d0ffaddaec8e8162bdf19da6de930f94675da65686ba7f76462dff5ebb6"
+  },
+  {
+    "path": "trades_part_009.csv.gz",
+    "sha256": "f69047629fa04d538a26f239edcf50cae08104f3db5df5f3533072bff349e9e0"
+  },
+  {
+    "path": "trades_part_010.csv.gz",
+    "sha256": "ec9fe6372a3a59ef08e70848b7240817f0a422f89d563340034d9afa07725f29"
+  },
+  {
+    "path": "trades_part_011.csv.gz",
+    "sha256": "972f973a7654ed76a45fff82e3c1fafea77568fbeb28eecf6d54c545910ee696"
+  },
+  {
+    "path": "trades_part_012.csv.gz",
+    "sha256": "6d18994bbbde4fbda8bcd213087356d82e0475138cf3deae16ecec624f55a64f"
+  },
+  {
+    "path": "coverage_per_mint.csv.gz",
+    "sha256": "f28adc7549e8dd053cf85f071c28a8d73b56766621ec109886fdca98d74b17f1"
+  },
+  {
+    "path": "feed_gaps_all.csv.gz",
+    "sha256": "d1163fd4b2813560920330a2708a5d3397d4d1f11dafcaa85db49f174e4575f8"
+  },
+  {
+    "path": "tokens_window.csv.gz",
+    "sha256": "843d24ac1484b0b98a8fd2e5afe64d408665a05cafe6cd9c1394e23432d227ca"
+  },
+  {
+    "path": "MANIFEST.md",
+    "sha256": "b3142c4932f81193949a7f655ebbd343f5198ecfffafe47d51870b8a9490db9b"
+  }
+]

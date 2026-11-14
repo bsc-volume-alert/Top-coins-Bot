@@ -1,0 +1,5 @@
+Completed C020: unchanged raw F016 reproduction matches all 481 JSON leaves and the 166,975-byte feature table exactly.
+Independent reconstruction agrees on 679 launches and 18,333 fields; all six bind counts and census clock bins match.
+Re-buyer veto counts are 140 block-time versus 147 receipt-time; future receipt clock is operative, and N5 keeps uncertain pool launches unknown.
+No trading score or profitability result exists; development strategy tests remain closed and held hypotheses await released data.
+Next: no task; waiting for a released window (R4 / R5 / R6), as R99 directs; coordinator reviews this checkpoint without creating a review loop.

@@ -1,0 +1,8 @@
+"""Lossless feature partitions and reproducible review provenance."""
+import pathlib,csv,json
+r=pathlib.Path(__file__).parent
+with (r/'independent_features.csv').open(newline='') as f:rd=csv.DictReader(f);keys=rd.fieldnames;rows=list(rd)
+for i in range(0,len(rows),150):
+ with (r/('features_'+str(i//150+1).zfill(2)+'.csv')).open('w',newline='') as f:w=csv.DictWriter(f,fieldnames=keys);w.writeheader();w.writerows(rows[i:i+150])
+o={'run':'c020-review-20261114T091100Z','refs':{'tracker':'b53915dca079e2939c9ed730f249971208ce3bdc','codex':'1258475b7ed298ec33264abd530fd94a25477cdf','claude_latest':'1dbf1d12ef0db4f7c8199f858e6a424da9a8d1d6','F016source':'253604de64fc9b2b43effa44b245f1323c4f4201','F016protocol':'323c1e6b231e2bb84d67039079ef4c3bda23d8e1','entry_all':'e67833121f1da0dc992c28fa26c5236a855c151a','evaluator':'be9b5459e2f7670946d9ca012f875b77aaaf5d5b'},'claim_commit':'3b5a52c07e881b16bc02e25a75955f5977237c00','scope_commit':'91cc5de93d6c7e1984824a44006227cb095e68c1','AGENTS_reads':{n:404 for n in ['AGENTS.md','reports/AGENTS.md','reports/blind/AGENTS.md','reports/blind/autonomous/AGENTS.md','reports/blind/autonomous/codex/AGENTS.md']},'new_financial_variants':0,'new_hypotheses_counted':0,'dummy_trade_blocker':'R91/R99/C020counts-only; no ready development task after this','N5_reading':'launch unknown on any unproven relevant pool quote/decimal row','closed_run_files_changed':False,'protected_outcomes_read':False,'new_paid_chain_model_calls':False,'next_task':'no task; waiting for a released window (R4 / R5 / R6)'}
+(r/'source_integrity.json').write_text(json.dumps(o,indent=2)+'\n')

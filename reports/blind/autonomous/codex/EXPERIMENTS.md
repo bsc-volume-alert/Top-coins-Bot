@@ -59,3 +59,7 @@ Precheck74/679removed(10.9%),0unknown,published before score. Candidate win23.98
 | C019-REG | Outcome-free readiness of held N1–N6; not an experiment | e6783312;E679 and allL003296 |not computed; no trade simulated |not computed |not computed |not computed |0 financial variants;6fixed definitions(4numerical,2not definable) |n/a — register only under R91/R92 |c019-register-20261114T031806Z |
 
 N1veto377/678defined(1unknown);N3absorption2/531defined(148unknown);N4concentration1/357defined(322unknown);N5synchronized sells11/653defined(26unknown). N2/N6exact evidence standards not met. Unknowns unassigned, both halves/cells and nominal/defined denominators preserved; no profitability verdict or fresh confirmation.
+
+| C020-XR | Unchanged F016reproduction + independent6feature/clock review; not a new experiment |e6783312;E679,census62789|n/a—counts only,no trade|n/a|n/a|n/a|0financialvariants;6existing definitions reproduced|n/a—reproduced counts only underR91|c020-review-20261114T091100Z |
+
+481JSONleaves/166975CSVbytes exact;independent18333fields/679mints match within1e-12,zero flagdifferences. Counts210/140/0/600/104/68;receiptadder147vsblock140,666agree. No profitability result,fill/exit score or fresh confirmation. N5unknownreadingexplicit. No READYtask followsC020underR99.

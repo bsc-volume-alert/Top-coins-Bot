@@ -1,0 +1,117 @@
+{
+  "counts_only": true,
+  "peer_F016_commit": "253604de64fc9b2b43effa44b245f1323c4f4201",
+  "frozen_evaluator_unchanged": true,
+  "peer_hashes_verified": {
+    "testability_f016.py": "df1ee23c73ad31283402edf91e851a0e8714724b0fa0c1d40cf2c74869ca4a7e",
+    "rules_common.py": "cde173903abc9ed3651386dbe4adf42a50c2c946bd6b2e1013956112ebec5248",
+    "commands.sh": "ec94af7ef2b867493d10c99f335ab640d8a2a3c5b857520b3fcdd5e23380af78",
+    "PROTOCOL.md": "f3dd356f7929c94a4b51c1796c8b0a3d91264697c2eeea779f21080157a4ef91",
+    "results.json": "3736cd31e99940145ad4e6397be66b7423ce04d783a9fa4d6af08289e060d73c",
+    "f016_features.csv.gz": "3f13ab7f68cdc292df677a2f9dcae8c4c7c7215c878c451007aa4329ce515020"
+  },
+  "unchanged_reproduction": {
+    "results_JSON_leaves_equal": 481,
+    "results_JSON_exact": true,
+    "feature_CSV_bytes_equal": true,
+    "feature_CSV_bytes": 166975,
+    "feature_CSV_sha256": "bfee5fa64f9b58708b4a047c2b37e7773eb78cc5ed5fec9591e1d2890fd71408",
+    "rows": 679,
+    "columns": 27
+  },
+  "independent_comparison": {
+    "rows": 679,
+    "fields_compared": 18333,
+    "numeric_fields": 11455,
+    "exact_fields": 6878,
+    "tolerance": 1e-12,
+    "max_numeric_abs_difference": 8.881784197001252e-16,
+    "fields_over_tolerance": 0,
+    "all_differences_count": 0,
+    "veto_flag_differences": 0,
+    "all_six_bind_counts_and_half_cell_counts_equal": true
+  },
+  "independent_clock_comparison": {
+    "census": {
+      "all60bins_equal": true,
+      "n": 62789,
+      "bin58_2": 5068,
+      "chi2": 63.36745289780057,
+      "absolute_difference": 0.0
+    },
+    "E": {
+      "all60bins_equal": true,
+      "n": 679,
+      "bin58_2": 68,
+      "chi2": 63.533136966126655,
+      "absolute_difference": 0.0
+    },
+    "denominator_3638": {
+      "all60bins_equal": true,
+      "n": 3638,
+      "bin58_2": 293,
+      "chi2": 66.20010995052226,
+      "absolute_difference": 0.0
+    }
+  },
+  "protocol_directions_verified": {
+    "R86_1": {
+      "comparison": "<",
+      "threshold": 1,
+      "min_n": null
+    },
+    "R86_2": {
+      "comparison": "<",
+      "threshold": 0.25,
+      "min_n": null
+    },
+    "R86_3": {
+      "comparison": "<",
+      "threshold": 0.5,
+      "min_n": 10
+    },
+    "CLP1": {
+      "comparison": ">=",
+      "threshold": 0.5,
+      "min_n": null
+    },
+    "CLP2": {
+      "comparison": "<=",
+      "threshold": -0.5,
+      "min_n": 10
+    },
+    "CLP3": {
+      "comparison": "in",
+      "threshold": [
+        58,
+        59,
+        0,
+        1,
+        2
+      ],
+      "min_n": null
+    }
+  },
+  "R86_2_clock_reading": {
+    "historical_F016": "block ts within already-received prefix, clarified by R96; no source changed",
+    "future_R101": "receipt time operative, original block count beside it; E itself unchanged",
+    "block_veto": 140,
+    "receipt_veto": 147,
+    "cross_tab": {
+      "neither": 529,
+      "both": 137,
+      "receipt_only": 10,
+      "block_only": 3
+    }
+  },
+  "N5_future_wording_R102": "Conservative launch-unknown if any relevant-window foreign pool sell has unproven quote/decimal evidence; do not merely drop row and call the launch defined. C019historical results unchanged.",
+  "financial_variants_scored": 0,
+  "outcome_files_read": false,
+  "next_task": "no task; waiting for a released window (R4 / R5 / R6)",
+  "limits": [
+    "Exact reproduction is not statistical confirmation or strategy profitability",
+    "Historical E and retention conventions preserved",
+    "Six held counts are not a new trading experiment",
+    "No tests on unreleased/protected records"
+  ]
+}

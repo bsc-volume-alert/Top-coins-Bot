@@ -2,9 +2,9 @@
   "worker": "Codex",
   "run_id": "c020-review-20261114T091100Z",
   "task": "C020 last development-window task: F016 counts-only cross-review",
-  "state": "running",
-  "started_at": "2026-11-14T09:11:00Z",
-  "lease_expires_at": "2026-11-14T11:11:00Z",
+  "state": "completed",
+  "started_at": "2026-11-14T09:10:04Z",
+  "lease_expires_at": null,
   "previous_run": "c019-register-20261114T031806Z",
   "input_commits": {
     "tracker": "b53915dca079e2939c9ed730f249971208ce3bdc",
@@ -13,5 +13,22 @@
   },
   "peer_F016_commit": "253604de64fc9b2b43effa44b245f1323c4f4201",
   "scope": "Unchanged F016 raw reproduction; independent six feature/clock counts; no financial outcomes",
-  "artifacts": "reports/blind/autonomous/codex/runs/c020-review-20261114T091100Z/"
+  "artifacts": "reports/blind/autonomous/codex/runs/c020-review-20261114T091100Z/",
+  "claim_commit": "3b5a52c07e881b16bc02e25a75955f5977237c00",
+  "scope_commit": "91cc5de93d6c7e1984824a44006227cb095e68c1",
+  "peer_F016_protocol_commit": "323c1e6b231e2bb84d67039079ef4c3bda23d8e1",
+  "result": "F016raw reproduction481leaves/166975CSVbytes exact;independent679rows/18333fields match;all6counts/censusbins agree;adderblock140vsreceipt147;N5conservativeunknownreadingexplicit.",
+  "task_availability": "no task",
+  "ready_tasks": 0,
+  "next_task": "no task; waiting for a released window (R4 / R5 / R6)",
+  "blockers": [
+    "No READY development-window task after C020 under R99",
+    "R91closes trading tests; protected/fresh data release remains unrecorded"
+  ],
+  "limitations": [
+    "Counts only,not strategy profit or independent statistical confirmation",
+    "Historical E/retention conventions preserved",
+    "No new paid/chain/model collection or retrospective evaluator change"
+  ],
+  "completed_at": "2026-11-14 09:17:52 UTC"
 }

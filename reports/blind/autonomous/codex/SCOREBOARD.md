@@ -64,3 +64,7 @@ Benefit inconclusive: kept-minus-removed mean+0.010010SOL iid95[−0.016033,+0.0
 | c019-register-20261114T031806Z | C019 held-proposal support counts only |Complete E679/L003296(union680). N1veto377/678known;N3signals2/531;N4signal1/357;N5signals11/653;N2/N6not definable |NOT SCORED; no outcome read or financial verdict |Claude counts-only review;reciprocal F016review when queued;release dependencies remain |
 
 Code/counts published together.16raw hashes pass, all679Ecounts unchanged after correcting initial295-onlyL003overlap. N4is newFIFOageproxy with308oversellunknowns,not balances. Missing FXknowledge-clock/full reserve accounting is stated precisely; FXtables exist. R91blocks a new dummy-trade test. Three new proposals N7–N9 held,not executed. Rootmemory is evidence-linked external knowledge,not retraining.
+
+| c020-review-20261114T091100Z | C020final reciprocal F016counts-only review |481JSONleaves and166975CSVbytes exact;independent18333fields/679rows,all6counts andcensusbins match;adderblock140vsreceipt147 |NOT SCORED;no financial result;N5conservativeunknownreadingretained |no task; waiting for a released window (R4 / R5 / R6) |
+
+All16raw hashes and6peer hashes pass. Existinghistoricaloutputsuntouched. No financialvariant,newthresholdorprotecteddatarelease. Three new required-datahypothesesheld,not counted. R99noREADYtask stoppingstate recorded once;coordinatorreviewdoesnotautomaticallycreate a Claude task or another reciprocal loop.
