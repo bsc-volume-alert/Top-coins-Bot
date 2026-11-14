@@ -1,0 +1,143 @@
+{
+  "N1": {
+    "nominal_population": 679,
+    "feature_known": 678,
+    "feature_unknown": 1,
+    "unknown_share": 0.0014727540500736377,
+    "signal_count": 301,
+    "proposed_veto_count": 377,
+    "veto_share_nominal": 0.5552282768777614,
+    "veto_share_defined": 0.556047197640118,
+    "known_no_opportunity": 339,
+    "statistic_quartiles": {
+      "n": 678,
+      "min": 0,
+      "q1": 0,
+      "median": 0.0,
+      "q3": 18,
+      "max": 113
+    },
+    "unknown_reasons": {
+      "R+10 later than E": 1
+    },
+    "R54_shape_only": "inside5\u201395% on defined subset; held only"
+  },
+  "N2": {
+    "nominal_population": 679,
+    "feature_known": 0,
+    "feature_unknown": 679,
+    "unknown_share": 1.0,
+    "signal_count": 0,
+    "proposed_veto_count": 0,
+    "veto_share_nominal": 0.0,
+    "veto_share_defined": null,
+    "known_no_opportunity": 0,
+    "statistic_quartiles": {
+      "n": 0,
+      "min": null,
+      "q1": null,
+      "median": null,
+      "q3": null,
+      "max": null
+    },
+    "unknown_reasons": {
+      "no complete non-trade LP/reserve-movement and exact initial pool-state ledger": 679
+    },
+    "R54_shape_only": "NOT DEFINABLE here"
+  },
+  "N3": {
+    "nominal_population": 679,
+    "feature_known": 531,
+    "feature_unknown": 148,
+    "unknown_share": 0.21796759941089838,
+    "signal_count": 2,
+    "proposed_veto_count": 529,
+    "veto_share_nominal": 0.7790868924889544,
+    "veto_share_defined": 0.9962335216572504,
+    "known_no_opportunity": 145,
+    "statistic_quartiles": {
+      "n": 386,
+      "min": 0.2920538780405029,
+      "q1": 0.8860091313529846,
+      "median": 0.9971650584634024,
+      "q3": 1.0531713165190681,
+      "max": 7.576136352537017
+    },
+    "unknown_reasons": {
+      "fewer2sales": 147,
+      "event+5 later than E": 1
+    },
+    "R54_shape_only": "unlikely to bind"
+  },
+  "N4": {
+    "nominal_population": 679,
+    "feature_known": 357,
+    "feature_unknown": 322,
+    "unknown_share": 0.4742268041237113,
+    "signal_count": 1,
+    "proposed_veto_count": 1,
+    "veto_share_nominal": 0.0014727540500736377,
+    "veto_share_defined": 0.0028011204481792717,
+    "known_no_opportunity": 0,
+    "statistic_quartiles": {
+      "n": 357,
+      "min": 0.0,
+      "q1": 0.009351863675672749,
+      "median": 0.07695479744841968,
+      "q3": 0.1629231191211832,
+      "max": 0.9171529764005437
+    },
+    "unknown_reasons": {
+      "oversell: transfers or missing inventory": 308,
+      "R+60 later than E": 14
+    },
+    "R54_shape_only": "unlikely to bind"
+  },
+  "N5": {
+    "nominal_population": 679,
+    "feature_known": 653,
+    "feature_unknown": 26,
+    "unknown_share": 0.03829160530191458,
+    "signal_count": 11,
+    "proposed_veto_count": 11,
+    "veto_share_nominal": 0.016200294550810016,
+    "veto_share_defined": 0.016845329249617153,
+    "known_no_opportunity": 5,
+    "statistic_quartiles": {
+      "n": 653,
+      "min": 0,
+      "q1": 0,
+      "median": 0,
+      "q3": 0,
+      "max": 5
+    },
+    "unknown_reasons": {
+      "R+60 later than E": 14,
+      "unproven pool quote in relevant liquidation prefix": 12
+    },
+    "R54_shape_only": "unlikely to bind"
+  },
+  "N6": {
+    "nominal_population": 679,
+    "feature_known": 0,
+    "feature_unknown": 679,
+    "unknown_share": 1.0,
+    "signal_count": 0,
+    "proposed_veto_count": 0,
+    "veto_share_nominal": 0.0,
+    "veto_share_defined": null,
+    "known_no_opportunity": 0,
+    "statistic_quartiles": {
+      "n": 0,
+      "min": null,
+      "q1": null,
+      "median": null,
+      "q3": null,
+      "max": null
+    },
+    "unknown_reasons": {
+      "SOL/USD ts/usd has no receipt clock; no complete causal universe crossing/supply evidence": 679
+    },
+    "R54_shape_only": "NOT DEFINABLE here"
+  }
+}

@@ -1,0 +1,5 @@
+Completed C019: outcome-free testability counts for six held proposals on all 679 E and 296 L003 entries.
+N1 follow-through selects a substantial defined group; N3/N4/N5 signals are rare on defined subsets, with missing evidence kept separate.
+N2 full pool reconciliation and N6 causal $100K crowding lack the required evidence; existing FX data is acknowledged, not treated as absent.
+No trading score or profitability result exists; all E counts survived correction of the initially omitted non-E L003 record.
+Next: Claude counts-only cross-review, reciprocal F016 review when queued, and coordinator/owner release decisions; development strategy testing stays closed.

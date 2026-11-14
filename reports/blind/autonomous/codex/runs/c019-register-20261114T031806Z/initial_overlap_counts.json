@@ -1,0 +1,1820 @@
+{
+  "counts_only": true,
+  "outcomes_read": false,
+  "financial_specs_scored": 0,
+  "population_E": 679,
+  "L003_in_E": 295,
+  "L003_outside_E": 1,
+  "proposals": {
+    "N1": {
+      "E679": {
+        "all": {
+          "nominal_population": 679,
+          "feature_known": 678,
+          "feature_unknown": 1,
+          "unknown_share": 0.0014727540500736377,
+          "signal_count": 301,
+          "proposed_veto_count": 377,
+          "veto_share_nominal": 0.5552282768777614,
+          "veto_share_defined": 0.556047197640118,
+          "known_no_opportunity": 339,
+          "statistic_quartiles": {
+            "n": 678,
+            "min": 0,
+            "q1": 0,
+            "median": 0.0,
+            "q3": 18,
+            "max": 113
+          },
+          "unknown_reasons": {
+            "R+10 later than E": 1
+          },
+          "R54_shape_only": "inside5\u201395% on defined subset; held only"
+        },
+        "by_half": {
+          "early": {
+            "nominal_population": 313,
+            "feature_known": 313,
+            "feature_unknown": 0,
+            "unknown_share": 0.0,
+            "signal_count": 144,
+            "proposed_veto_count": 169,
+            "veto_share_nominal": 0.5399361022364217,
+            "veto_share_defined": 0.5399361022364217,
+            "known_no_opportunity": 152,
+            "statistic_quartiles": {
+              "n": 313,
+              "min": 0,
+              "q1": 0,
+              "median": 0,
+              "q3": 19,
+              "max": 113
+            },
+            "unknown_reasons": {},
+            "R54_shape_only": "inside5\u201395% on defined subset; held only"
+          },
+          "late": {
+            "nominal_population": 366,
+            "feature_known": 365,
+            "feature_unknown": 1,
+            "unknown_share": 0.00273224043715847,
+            "signal_count": 157,
+            "proposed_veto_count": 208,
+            "veto_share_nominal": 0.5683060109289617,
+            "veto_share_defined": 0.5698630136986301,
+            "known_no_opportunity": 187,
+            "statistic_quartiles": {
+              "n": 365,
+              "min": 0,
+              "q1": 0,
+              "median": 0,
+              "q3": 18,
+              "max": 96
+            },
+            "unknown_reasons": {
+              "R+10 later than E": 1
+            },
+            "R54_shape_only": "inside5\u201395% on defined subset; held only"
+          }
+        },
+        "by_cell": {
+          "A": {
+            "nominal_population": 251,
+            "feature_known": 251,
+            "feature_unknown": 0,
+            "unknown_share": 0.0,
+            "signal_count": 125,
+            "proposed_veto_count": 126,
+            "veto_share_nominal": 0.50199203187251,
+            "veto_share_defined": 0.50199203187251,
+            "known_no_opportunity": 120,
+            "statistic_quartiles": {
+              "n": 251,
+              "min": 0,
+              "q1": 0,
+              "median": 2,
+              "q3": 26,
+              "max": 112
+            },
+            "unknown_reasons": {},
+            "R54_shape_only": "inside5\u201395% on defined subset; held only"
+          },
+          "B": {
+            "nominal_population": 122,
+            "feature_known": 122,
+            "feature_unknown": 0,
+            "unknown_share": 0.0,
+            "signal_count": 48,
+            "proposed_veto_count": 74,
+            "veto_share_nominal": 0.6065573770491803,
+            "veto_share_defined": 0.6065573770491803,
+            "known_no_opportunity": 61,
+            "statistic_quartiles": {
+              "n": 122,
+              "min": 0,
+              "q1": 0,
+              "median": 0.0,
+              "q3": 11,
+              "max": 59
+            },
+            "unknown_reasons": {},
+            "R54_shape_only": "inside5\u201395% on defined subset; held only"
+          },
+          "C": {
+            "nominal_population": 306,
+            "feature_known": 305,
+            "feature_unknown": 1,
+            "unknown_share": 0.0032679738562091504,
+            "signal_count": 128,
+            "proposed_veto_count": 177,
+            "veto_share_nominal": 0.5784313725490197,
+            "veto_share_defined": 0.580327868852459,
+            "known_no_opportunity": 158,
+            "statistic_quartiles": {
+              "n": 305,
+              "min": 0,
+              "q1": 0,
+              "median": 0,
+              "q3": 15,
+              "max": 113
+            },
+            "unknown_reasons": {
+              "R+10 later than E": 1
+            },
+            "R54_shape_only": "inside5\u201395% on defined subset; held only"
+          }
+        }
+      },
+      "L003_overlap": {
+        "all": {
+          "nominal_population": 295,
+          "feature_known": 295,
+          "feature_unknown": 0,
+          "unknown_share": 0.0,
+          "signal_count": 158,
+          "proposed_veto_count": 137,
+          "veto_share_nominal": 0.46440677966101696,
+          "veto_share_defined": 0.46440677966101696,
+          "known_no_opportunity": 121,
+          "statistic_quartiles": {
+            "n": 295,
+            "min": 0,
+            "q1": 0,
+            "median": 5,
+            "q3": 24,
+            "max": 113
+          },
+          "unknown_reasons": {},
+          "R54_shape_only": "inside5\u201395% on defined subset; held only"
+        },
+        "by_half": {
+          "early": {
+            "nominal_population": 143,
+            "feature_known": 143,
+            "feature_unknown": 0,
+            "unknown_share": 0.0,
+            "signal_count": 78,
+            "proposed_veto_count": 65,
+            "veto_share_nominal": 0.45454545454545453,
+            "veto_share_defined": 0.45454545454545453,
+            "known_no_opportunity": 55,
+            "statistic_quartiles": {
+              "n": 143,
+              "min": 0,
+              "q1": 0,
+              "median": 5,
+              "q3": 21,
+              "max": 113
+            },
+            "unknown_reasons": {},
+            "R54_shape_only": "inside5\u201395% on defined subset; held only"
+          },
+          "late": {
+            "nominal_population": 152,
+            "feature_known": 152,
+            "feature_unknown": 0,
+            "unknown_share": 0.0,
+            "signal_count": 80,
+            "proposed_veto_count": 72,
+            "veto_share_nominal": 0.47368421052631576,
+            "veto_share_defined": 0.47368421052631576,
+            "known_no_opportunity": 66,
+            "statistic_quartiles": {
+              "n": 152,
+              "min": 0,
+              "q1": 0,
+              "median": 4.0,
+              "q3": 24,
+              "max": 96
+            },
+            "unknown_reasons": {},
+            "R54_shape_only": "inside5\u201395% on defined subset; held only"
+          }
+        },
+        "by_cell": {
+          "A": {
+            "nominal_population": 120,
+            "feature_known": 120,
+            "feature_unknown": 0,
+            "unknown_share": 0.0,
+            "signal_count": 65,
+            "proposed_veto_count": 55,
+            "veto_share_nominal": 0.4583333333333333,
+            "veto_share_defined": 0.4583333333333333,
+            "known_no_opportunity": 53,
+            "statistic_quartiles": {
+              "n": 120,
+              "min": 0,
+              "q1": 0,
+              "median": 6.5,
+              "q3": 32,
+              "max": 112
+            },
+            "unknown_reasons": {},
+            "R54_shape_only": "inside5\u201395% on defined subset; held only"
+          },
+          "B": {
+            "nominal_population": 56,
+            "feature_known": 56,
+            "feature_unknown": 0,
+            "unknown_share": 0.0,
+            "signal_count": 33,
+            "proposed_veto_count": 23,
+            "veto_share_nominal": 0.4107142857142857,
+            "veto_share_defined": 0.4107142857142857,
+            "known_no_opportunity": 17,
+            "statistic_quartiles": {
+              "n": 56,
+              "min": 0,
+              "q1": 0,
+              "median": 4.0,
+              "q3": 14,
+              "max": 59
+            },
+            "unknown_reasons": {},
+            "R54_shape_only": "inside5\u201395% on defined subset; held only"
+          },
+          "C": {
+            "nominal_population": 119,
+            "feature_known": 119,
+            "feature_unknown": 0,
+            "unknown_share": 0.0,
+            "signal_count": 60,
+            "proposed_veto_count": 59,
+            "veto_share_nominal": 0.4957983193277311,
+            "veto_share_defined": 0.4957983193277311,
+            "known_no_opportunity": 51,
+            "statistic_quartiles": {
+              "n": 119,
+              "min": 0,
+              "q1": 0,
+              "median": 3,
+              "q3": 19,
+              "max": 113
+            },
+            "unknown_reasons": {},
+            "R54_shape_only": "inside5\u201395% on defined subset; held only"
+          }
+        }
+      }
+    },
+    "N2": {
+      "E679": {
+        "all": {
+          "nominal_population": 679,
+          "feature_known": 0,
+          "feature_unknown": 679,
+          "unknown_share": 1.0,
+          "signal_count": 0,
+          "proposed_veto_count": 0,
+          "veto_share_nominal": 0.0,
+          "veto_share_defined": null,
+          "known_no_opportunity": 0,
+          "statistic_quartiles": {
+            "n": 0,
+            "min": null,
+            "q1": null,
+            "median": null,
+            "q3": null,
+            "max": null
+          },
+          "unknown_reasons": {
+            "no complete non-trade LP/reserve-movement and exact initial pool-state ledger": 679
+          },
+          "R54_shape_only": "NOT DEFINABLE here"
+        },
+        "by_half": {
+          "early": {
+            "nominal_population": 313,
+            "feature_known": 0,
+            "feature_unknown": 313,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "no complete non-trade LP/reserve-movement and exact initial pool-state ledger": 313
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          },
+          "late": {
+            "nominal_population": 366,
+            "feature_known": 0,
+            "feature_unknown": 366,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "no complete non-trade LP/reserve-movement and exact initial pool-state ledger": 366
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          }
+        },
+        "by_cell": {
+          "A": {
+            "nominal_population": 251,
+            "feature_known": 0,
+            "feature_unknown": 251,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "no complete non-trade LP/reserve-movement and exact initial pool-state ledger": 251
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          },
+          "B": {
+            "nominal_population": 122,
+            "feature_known": 0,
+            "feature_unknown": 122,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "no complete non-trade LP/reserve-movement and exact initial pool-state ledger": 122
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          },
+          "C": {
+            "nominal_population": 306,
+            "feature_known": 0,
+            "feature_unknown": 306,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "no complete non-trade LP/reserve-movement and exact initial pool-state ledger": 306
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          }
+        }
+      },
+      "L003_overlap": {
+        "all": {
+          "nominal_population": 295,
+          "feature_known": 0,
+          "feature_unknown": 295,
+          "unknown_share": 1.0,
+          "signal_count": 0,
+          "proposed_veto_count": 0,
+          "veto_share_nominal": 0.0,
+          "veto_share_defined": null,
+          "known_no_opportunity": 0,
+          "statistic_quartiles": {
+            "n": 0,
+            "min": null,
+            "q1": null,
+            "median": null,
+            "q3": null,
+            "max": null
+          },
+          "unknown_reasons": {
+            "no complete non-trade LP/reserve-movement and exact initial pool-state ledger": 295
+          },
+          "R54_shape_only": "NOT DEFINABLE here"
+        },
+        "by_half": {
+          "early": {
+            "nominal_population": 143,
+            "feature_known": 0,
+            "feature_unknown": 143,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "no complete non-trade LP/reserve-movement and exact initial pool-state ledger": 143
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          },
+          "late": {
+            "nominal_population": 152,
+            "feature_known": 0,
+            "feature_unknown": 152,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "no complete non-trade LP/reserve-movement and exact initial pool-state ledger": 152
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          }
+        },
+        "by_cell": {
+          "A": {
+            "nominal_population": 120,
+            "feature_known": 0,
+            "feature_unknown": 120,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "no complete non-trade LP/reserve-movement and exact initial pool-state ledger": 120
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          },
+          "B": {
+            "nominal_population": 56,
+            "feature_known": 0,
+            "feature_unknown": 56,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "no complete non-trade LP/reserve-movement and exact initial pool-state ledger": 56
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          },
+          "C": {
+            "nominal_population": 119,
+            "feature_known": 0,
+            "feature_unknown": 119,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "no complete non-trade LP/reserve-movement and exact initial pool-state ledger": 119
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          }
+        }
+      }
+    },
+    "N3": {
+      "E679": {
+        "all": {
+          "nominal_population": 679,
+          "feature_known": 531,
+          "feature_unknown": 148,
+          "unknown_share": 0.21796759941089838,
+          "signal_count": 2,
+          "proposed_veto_count": 529,
+          "veto_share_nominal": 0.7790868924889544,
+          "veto_share_defined": 0.9962335216572504,
+          "known_no_opportunity": 145,
+          "statistic_quartiles": {
+            "n": 386,
+            "min": 0.2920538780405029,
+            "q1": 0.8860091313529846,
+            "median": 0.9971650584634024,
+            "q3": 1.0531713165190681,
+            "max": 7.576136352537017
+          },
+          "unknown_reasons": {
+            "fewer2sales": 147,
+            "event+5 later than E": 1
+          },
+          "R54_shape_only": "unlikely to bind"
+        },
+        "by_half": {
+          "early": {
+            "nominal_population": 313,
+            "feature_known": 254,
+            "feature_unknown": 59,
+            "unknown_share": 0.18849840255591055,
+            "signal_count": 2,
+            "proposed_veto_count": 252,
+            "veto_share_nominal": 0.805111821086262,
+            "veto_share_defined": 0.9921259842519685,
+            "known_no_opportunity": 72,
+            "statistic_quartiles": {
+              "n": 182,
+              "min": 0.2920538780405029,
+              "q1": 0.8635258335982011,
+              "median": 0.9785824146745115,
+              "q3": 1.0528493003411035,
+              "max": 4.600921823090545
+            },
+            "unknown_reasons": {
+              "fewer2sales": 59
+            },
+            "R54_shape_only": "unlikely to bind"
+          },
+          "late": {
+            "nominal_population": 366,
+            "feature_known": 277,
+            "feature_unknown": 89,
+            "unknown_share": 0.24316939890710382,
+            "signal_count": 0,
+            "proposed_veto_count": 277,
+            "veto_share_nominal": 0.7568306010928961,
+            "veto_share_defined": 1.0,
+            "known_no_opportunity": 73,
+            "statistic_quartiles": {
+              "n": 204,
+              "min": 0.4077093692401689,
+              "q1": 0.901751124675432,
+              "median": 1.0021231643907296,
+              "q3": 1.055817448492384,
+              "max": 7.576136352537017
+            },
+            "unknown_reasons": {
+              "fewer2sales": 88,
+              "event+5 later than E": 1
+            },
+            "R54_shape_only": "unlikely to bind"
+          }
+        },
+        "by_cell": {
+          "A": {
+            "nominal_population": 251,
+            "feature_known": 209,
+            "feature_unknown": 42,
+            "unknown_share": 0.16733067729083664,
+            "signal_count": 0,
+            "proposed_veto_count": 209,
+            "veto_share_nominal": 0.8326693227091634,
+            "veto_share_defined": 1.0,
+            "known_no_opportunity": 26,
+            "statistic_quartiles": {
+              "n": 183,
+              "min": 0.6090948147822037,
+              "q1": 0.8889893871286875,
+              "median": 1.0053022612256794,
+              "q3": 1.0542340994342627,
+              "max": 1.3715240744624186
+            },
+            "unknown_reasons": {
+              "fewer2sales": 42
+            },
+            "R54_shape_only": "unlikely to bind"
+          },
+          "B": {
+            "nominal_population": 122,
+            "feature_known": 106,
+            "feature_unknown": 16,
+            "unknown_share": 0.13114754098360656,
+            "signal_count": 0,
+            "proposed_veto_count": 106,
+            "veto_share_nominal": 0.8688524590163934,
+            "veto_share_defined": 1.0,
+            "known_no_opportunity": 82,
+            "statistic_quartiles": {
+              "n": 24,
+              "min": 0.613911127315771,
+              "q1": 0.7592337263220991,
+              "median": 0.9525155179176626,
+              "q3": 1.0024109781813093,
+              "max": 1.0725721406450135
+            },
+            "unknown_reasons": {
+              "fewer2sales": 16
+            },
+            "R54_shape_only": "unlikely to bind"
+          },
+          "C": {
+            "nominal_population": 306,
+            "feature_known": 216,
+            "feature_unknown": 90,
+            "unknown_share": 0.29411764705882354,
+            "signal_count": 2,
+            "proposed_veto_count": 214,
+            "veto_share_nominal": 0.6993464052287581,
+            "veto_share_defined": 0.9907407407407407,
+            "known_no_opportunity": 37,
+            "statistic_quartiles": {
+              "n": 179,
+              "min": 0.2920538780405029,
+              "q1": 0.8925976629469281,
+              "median": 0.9913445108698258,
+              "q3": 1.0533948027392153,
+              "max": 7.576136352537017
+            },
+            "unknown_reasons": {
+              "fewer2sales": 89,
+              "event+5 later than E": 1
+            },
+            "R54_shape_only": "unlikely to bind"
+          }
+        }
+      },
+      "L003_overlap": {
+        "all": {
+          "nominal_population": 295,
+          "feature_known": 246,
+          "feature_unknown": 49,
+          "unknown_share": 0.16610169491525423,
+          "signal_count": 0,
+          "proposed_veto_count": 246,
+          "veto_share_nominal": 0.8338983050847457,
+          "veto_share_defined": 1.0,
+          "known_no_opportunity": 56,
+          "statistic_quartiles": {
+            "n": 190,
+            "min": 0.6027213071125277,
+            "q1": 0.885972064111745,
+            "median": 0.9952677684391427,
+            "q3": 1.0506330653888298,
+            "max": 1.3423357734043744
+          },
+          "unknown_reasons": {
+            "fewer2sales": 49
+          },
+          "R54_shape_only": "unlikely to bind"
+        },
+        "by_half": {
+          "early": {
+            "nominal_population": 143,
+            "feature_known": 121,
+            "feature_unknown": 22,
+            "unknown_share": 0.15384615384615385,
+            "signal_count": 0,
+            "proposed_veto_count": 121,
+            "veto_share_nominal": 0.8461538461538461,
+            "veto_share_defined": 1.0,
+            "known_no_opportunity": 31,
+            "statistic_quartiles": {
+              "n": 90,
+              "min": 0.6090948147822037,
+              "q1": 0.8551530739190121,
+              "median": 0.9686197980895423,
+              "q3": 1.0542340994342627,
+              "max": 1.3423357734043744
+            },
+            "unknown_reasons": {
+              "fewer2sales": 22
+            },
+            "R54_shape_only": "unlikely to bind"
+          },
+          "late": {
+            "nominal_population": 152,
+            "feature_known": 125,
+            "feature_unknown": 27,
+            "unknown_share": 0.17763157894736842,
+            "signal_count": 0,
+            "proposed_veto_count": 125,
+            "veto_share_nominal": 0.8223684210526315,
+            "veto_share_defined": 1.0,
+            "known_no_opportunity": 25,
+            "statistic_quartiles": {
+              "n": 100,
+              "min": 0.6027213071125277,
+              "q1": 0.8962936130476045,
+              "median": 0.997843741313152,
+              "q3": 1.0384260029743835,
+              "max": 1.2559301493780883
+            },
+            "unknown_reasons": {
+              "fewer2sales": 27
+            },
+            "R54_shape_only": "unlikely to bind"
+          }
+        },
+        "by_cell": {
+          "A": {
+            "nominal_population": 120,
+            "feature_known": 102,
+            "feature_unknown": 18,
+            "unknown_share": 0.15,
+            "signal_count": 0,
+            "proposed_veto_count": 102,
+            "veto_share_nominal": 0.85,
+            "veto_share_defined": 1.0,
+            "known_no_opportunity": 11,
+            "statistic_quartiles": {
+              "n": 91,
+              "min": 0.6090948147822037,
+              "q1": 0.8860091313529846,
+              "median": 1.009292145390472,
+              "q3": 1.0542340994342627,
+              "max": 1.2795978668620567
+            },
+            "unknown_reasons": {
+              "fewer2sales": 18
+            },
+            "R54_shape_only": "unlikely to bind"
+          },
+          "B": {
+            "nominal_population": 56,
+            "feature_known": 50,
+            "feature_unknown": 6,
+            "unknown_share": 0.10714285714285714,
+            "signal_count": 0,
+            "proposed_veto_count": 50,
+            "veto_share_nominal": 0.8928571428571429,
+            "veto_share_defined": 1.0,
+            "known_no_opportunity": 32,
+            "statistic_quartiles": {
+              "n": 18,
+              "min": 0.613911127315771,
+              "q1": 0.7365941571563805,
+              "median": 0.9565438736260711,
+              "q3": 0.9966906611720656,
+              "max": 1.0725721406450135
+            },
+            "unknown_reasons": {
+              "fewer2sales": 6
+            },
+            "R54_shape_only": "unlikely to bind"
+          },
+          "C": {
+            "nominal_population": 119,
+            "feature_known": 94,
+            "feature_unknown": 25,
+            "unknown_share": 0.21008403361344538,
+            "signal_count": 0,
+            "proposed_veto_count": 94,
+            "veto_share_nominal": 0.7899159663865546,
+            "veto_share_defined": 1.0,
+            "known_no_opportunity": 13,
+            "statistic_quartiles": {
+              "n": 81,
+              "min": 0.6027213071125277,
+              "q1": 0.8925976629469281,
+              "median": 0.9658690061712143,
+              "q3": 1.0505490271462612,
+              "max": 1.3423357734043744
+            },
+            "unknown_reasons": {
+              "fewer2sales": 25
+            },
+            "R54_shape_only": "unlikely to bind"
+          }
+        }
+      }
+    },
+    "N4": {
+      "E679": {
+        "all": {
+          "nominal_population": 679,
+          "feature_known": 357,
+          "feature_unknown": 322,
+          "unknown_share": 0.4742268041237113,
+          "signal_count": 1,
+          "proposed_veto_count": 1,
+          "veto_share_nominal": 0.0014727540500736377,
+          "veto_share_defined": 0.0028011204481792717,
+          "known_no_opportunity": 0,
+          "statistic_quartiles": {
+            "n": 357,
+            "min": 0.0,
+            "q1": 0.009351863675672749,
+            "median": 0.07695479744841968,
+            "q3": 0.1629231191211832,
+            "max": 0.9171529764005437
+          },
+          "unknown_reasons": {
+            "oversell: transfers or missing inventory": 308,
+            "R+60 later than E": 14
+          },
+          "R54_shape_only": "unlikely to bind"
+        },
+        "by_half": {
+          "early": {
+            "nominal_population": 313,
+            "feature_known": 160,
+            "feature_unknown": 153,
+            "unknown_share": 0.48881789137380194,
+            "signal_count": 1,
+            "proposed_veto_count": 1,
+            "veto_share_nominal": 0.003194888178913738,
+            "veto_share_defined": 0.00625,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 160,
+              "min": 0.0,
+              "q1": 0.006080422000852415,
+              "median": 0.07750980505850608,
+              "q3": 0.15541910573173165,
+              "max": 0.9171529764005437
+            },
+            "unknown_reasons": {
+              "oversell: transfers or missing inventory": 147,
+              "R+60 later than E": 6
+            },
+            "R54_shape_only": "unlikely to bind"
+          },
+          "late": {
+            "nominal_population": 366,
+            "feature_known": 197,
+            "feature_unknown": 169,
+            "unknown_share": 0.46174863387978143,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": 0.0,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 197,
+              "min": 0.0,
+              "q1": 0.011413567826394421,
+              "median": 0.0732258181869186,
+              "q3": 0.16712145378379764,
+              "max": 0.7453056868614427
+            },
+            "unknown_reasons": {
+              "oversell: transfers or missing inventory": 161,
+              "R+60 later than E": 8
+            },
+            "R54_shape_only": "unlikely to bind"
+          }
+        },
+        "by_cell": {
+          "A": {
+            "nominal_population": 251,
+            "feature_known": 131,
+            "feature_unknown": 120,
+            "unknown_share": 0.47808764940239046,
+            "signal_count": 1,
+            "proposed_veto_count": 1,
+            "veto_share_nominal": 0.00398406374501992,
+            "veto_share_defined": 0.007633587786259542,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 131,
+              "min": 0.0,
+              "q1": 0.005447873676254124,
+              "median": 0.0907597141802564,
+              "q3": 0.1757597995155404,
+              "max": 0.9171529764005437
+            },
+            "unknown_reasons": {
+              "oversell: transfers or missing inventory": 116,
+              "R+60 later than E": 4
+            },
+            "R54_shape_only": "unlikely to bind"
+          },
+          "B": {
+            "nominal_population": 122,
+            "feature_known": 71,
+            "feature_unknown": 51,
+            "unknown_share": 0.4180327868852459,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": 0.0,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 71,
+              "min": 0.0,
+              "q1": 0.007191042339155218,
+              "median": 0.04243918813119071,
+              "q3": 0.10386274155322614,
+              "max": 0.2586351356319601
+            },
+            "unknown_reasons": {
+              "oversell: transfers or missing inventory": 49,
+              "R+60 later than E": 2
+            },
+            "R54_shape_only": "unlikely to bind"
+          },
+          "C": {
+            "nominal_population": 306,
+            "feature_known": 155,
+            "feature_unknown": 151,
+            "unknown_share": 0.4934640522875817,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": 0.0,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 155,
+              "min": 0.0,
+              "q1": 0.010391738739162854,
+              "median": 0.0823803260801437,
+              "q3": 0.1743098577004186,
+              "max": 0.7453056868614427
+            },
+            "unknown_reasons": {
+              "oversell: transfers or missing inventory": 143,
+              "R+60 later than E": 8
+            },
+            "R54_shape_only": "unlikely to bind"
+          }
+        }
+      },
+      "L003_overlap": {
+        "all": {
+          "nominal_population": 295,
+          "feature_known": 161,
+          "feature_unknown": 134,
+          "unknown_share": 0.4542372881355932,
+          "signal_count": 0,
+          "proposed_veto_count": 0,
+          "veto_share_nominal": 0.0,
+          "veto_share_defined": 0.0,
+          "known_no_opportunity": 0,
+          "statistic_quartiles": {
+            "n": 161,
+            "min": 0.0,
+            "q1": 0.04342641828685785,
+            "median": 0.09374593020135957,
+            "q3": 0.16712145378379764,
+            "max": 0.7047168548360171
+          },
+          "unknown_reasons": {
+            "oversell: transfers or missing inventory": 134
+          },
+          "R54_shape_only": "unlikely to bind"
+        },
+        "by_half": {
+          "early": {
+            "nominal_population": 143,
+            "feature_known": 73,
+            "feature_unknown": 70,
+            "unknown_share": 0.48951048951048953,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": 0.0,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 73,
+              "min": 0.0,
+              "q1": 0.023335029426925533,
+              "median": 0.08144329076835845,
+              "q3": 0.16520843437963917,
+              "max": 0.5562766820000095
+            },
+            "unknown_reasons": {
+              "oversell: transfers or missing inventory": 70
+            },
+            "R54_shape_only": "unlikely to bind"
+          },
+          "late": {
+            "nominal_population": 152,
+            "feature_known": 88,
+            "feature_unknown": 64,
+            "unknown_share": 0.42105263157894735,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": 0.0,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 88,
+              "min": 0.0,
+              "q1": 0.04795165660232471,
+              "median": 0.10093320095219899,
+              "q3": 0.17544736802346803,
+              "max": 0.7047168548360171
+            },
+            "unknown_reasons": {
+              "oversell: transfers or missing inventory": 64
+            },
+            "R54_shape_only": "unlikely to bind"
+          }
+        },
+        "by_cell": {
+          "A": {
+            "nominal_population": 120,
+            "feature_known": 60,
+            "feature_unknown": 60,
+            "unknown_share": 0.5,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": 0.0,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 60,
+              "min": 0.0,
+              "q1": 0.026742075342420565,
+              "median": 0.11126214973115667,
+              "q3": 0.1757597995155404,
+              "max": 0.7047168548360171
+            },
+            "unknown_reasons": {
+              "oversell: transfers or missing inventory": 60
+            },
+            "R54_shape_only": "unlikely to bind"
+          },
+          "B": {
+            "nominal_population": 56,
+            "feature_known": 35,
+            "feature_unknown": 21,
+            "unknown_share": 0.375,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": 0.0,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 35,
+              "min": 0.0,
+              "q1": 0.02731137128418264,
+              "median": 0.05981111158902062,
+              "q3": 0.10680693688154912,
+              "max": 0.2586351356319601
+            },
+            "unknown_reasons": {
+              "oversell: transfers or missing inventory": 21
+            },
+            "R54_shape_only": "unlikely to bind"
+          },
+          "C": {
+            "nominal_population": 119,
+            "feature_known": 66,
+            "feature_unknown": 53,
+            "unknown_share": 0.44537815126050423,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": 0.0,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 66,
+              "min": 0.0,
+              "q1": 0.05295713242288594,
+              "median": 0.1035029018435894,
+              "q3": 0.18139598640931248,
+              "max": 0.5562766820000095
+            },
+            "unknown_reasons": {
+              "oversell: transfers or missing inventory": 53
+            },
+            "R54_shape_only": "unlikely to bind"
+          }
+        }
+      }
+    },
+    "N5": {
+      "E679": {
+        "all": {
+          "nominal_population": 679,
+          "feature_known": 653,
+          "feature_unknown": 26,
+          "unknown_share": 0.03829160530191458,
+          "signal_count": 11,
+          "proposed_veto_count": 11,
+          "veto_share_nominal": 0.016200294550810016,
+          "veto_share_defined": 0.016845329249617153,
+          "known_no_opportunity": 5,
+          "statistic_quartiles": {
+            "n": 653,
+            "min": 0,
+            "q1": 0,
+            "median": 0,
+            "q3": 0,
+            "max": 5
+          },
+          "unknown_reasons": {
+            "R+60 later than E": 14,
+            "unproven pool quote in relevant liquidation prefix": 12
+          },
+          "R54_shape_only": "unlikely to bind"
+        },
+        "by_half": {
+          "early": {
+            "nominal_population": 313,
+            "feature_known": 302,
+            "feature_unknown": 11,
+            "unknown_share": 0.03514376996805112,
+            "signal_count": 2,
+            "proposed_veto_count": 2,
+            "veto_share_nominal": 0.006389776357827476,
+            "veto_share_defined": 0.006622516556291391,
+            "known_no_opportunity": 1,
+            "statistic_quartiles": {
+              "n": 302,
+              "min": 0,
+              "q1": 0,
+              "median": 0.0,
+              "q3": 0,
+              "max": 4
+            },
+            "unknown_reasons": {
+              "R+60 later than E": 6,
+              "unproven pool quote in relevant liquidation prefix": 5
+            },
+            "R54_shape_only": "unlikely to bind"
+          },
+          "late": {
+            "nominal_population": 366,
+            "feature_known": 351,
+            "feature_unknown": 15,
+            "unknown_share": 0.040983606557377046,
+            "signal_count": 9,
+            "proposed_veto_count": 9,
+            "veto_share_nominal": 0.02459016393442623,
+            "veto_share_defined": 0.02564102564102564,
+            "known_no_opportunity": 4,
+            "statistic_quartiles": {
+              "n": 351,
+              "min": 0,
+              "q1": 0,
+              "median": 0,
+              "q3": 0,
+              "max": 5
+            },
+            "unknown_reasons": {
+              "unproven pool quote in relevant liquidation prefix": 7,
+              "R+60 later than E": 8
+            },
+            "R54_shape_only": "unlikely to bind"
+          }
+        },
+        "by_cell": {
+          "A": {
+            "nominal_population": 251,
+            "feature_known": 242,
+            "feature_unknown": 9,
+            "unknown_share": 0.035856573705179286,
+            "signal_count": 6,
+            "proposed_veto_count": 6,
+            "veto_share_nominal": 0.02390438247011952,
+            "veto_share_defined": 0.024793388429752067,
+            "known_no_opportunity": 1,
+            "statistic_quartiles": {
+              "n": 242,
+              "min": 0,
+              "q1": 0,
+              "median": 0.0,
+              "q3": 0,
+              "max": 4
+            },
+            "unknown_reasons": {
+              "R+60 later than E": 4,
+              "unproven pool quote in relevant liquidation prefix": 5
+            },
+            "R54_shape_only": "unlikely to bind"
+          },
+          "B": {
+            "nominal_population": 122,
+            "feature_known": 120,
+            "feature_unknown": 2,
+            "unknown_share": 0.01639344262295082,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": 0.0,
+            "known_no_opportunity": 3,
+            "statistic_quartiles": {
+              "n": 120,
+              "min": 0,
+              "q1": 0,
+              "median": 0.0,
+              "q3": 0,
+              "max": 2
+            },
+            "unknown_reasons": {
+              "R+60 later than E": 2
+            },
+            "R54_shape_only": "unlikely to bind"
+          },
+          "C": {
+            "nominal_population": 306,
+            "feature_known": 291,
+            "feature_unknown": 15,
+            "unknown_share": 0.049019607843137254,
+            "signal_count": 5,
+            "proposed_veto_count": 5,
+            "veto_share_nominal": 0.016339869281045753,
+            "veto_share_defined": 0.01718213058419244,
+            "known_no_opportunity": 1,
+            "statistic_quartiles": {
+              "n": 291,
+              "min": 0,
+              "q1": 0,
+              "median": 0,
+              "q3": 0,
+              "max": 5
+            },
+            "unknown_reasons": {
+              "R+60 later than E": 8,
+              "unproven pool quote in relevant liquidation prefix": 7
+            },
+            "R54_shape_only": "unlikely to bind"
+          }
+        }
+      },
+      "L003_overlap": {
+        "all": {
+          "nominal_population": 295,
+          "feature_known": 286,
+          "feature_unknown": 9,
+          "unknown_share": 0.030508474576271188,
+          "signal_count": 7,
+          "proposed_veto_count": 7,
+          "veto_share_nominal": 0.023728813559322035,
+          "veto_share_defined": 0.024475524475524476,
+          "known_no_opportunity": 0,
+          "statistic_quartiles": {
+            "n": 286,
+            "min": 0,
+            "q1": 0,
+            "median": 0.0,
+            "q3": 0,
+            "max": 5
+          },
+          "unknown_reasons": {
+            "unproven pool quote in relevant liquidation prefix": 9
+          },
+          "R54_shape_only": "unlikely to bind"
+        },
+        "by_half": {
+          "early": {
+            "nominal_population": 143,
+            "feature_known": 140,
+            "feature_unknown": 3,
+            "unknown_share": 0.02097902097902098,
+            "signal_count": 1,
+            "proposed_veto_count": 1,
+            "veto_share_nominal": 0.006993006993006993,
+            "veto_share_defined": 0.007142857142857143,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 140,
+              "min": 0,
+              "q1": 0,
+              "median": 0.0,
+              "q3": 0,
+              "max": 4
+            },
+            "unknown_reasons": {
+              "unproven pool quote in relevant liquidation prefix": 3
+            },
+            "R54_shape_only": "unlikely to bind"
+          },
+          "late": {
+            "nominal_population": 152,
+            "feature_known": 146,
+            "feature_unknown": 6,
+            "unknown_share": 0.039473684210526314,
+            "signal_count": 6,
+            "proposed_veto_count": 6,
+            "veto_share_nominal": 0.039473684210526314,
+            "veto_share_defined": 0.0410958904109589,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 146,
+              "min": 0,
+              "q1": 0,
+              "median": 0.0,
+              "q3": 0,
+              "max": 5
+            },
+            "unknown_reasons": {
+              "unproven pool quote in relevant liquidation prefix": 6
+            },
+            "R54_shape_only": "unlikely to bind"
+          }
+        },
+        "by_cell": {
+          "A": {
+            "nominal_population": 120,
+            "feature_known": 115,
+            "feature_unknown": 5,
+            "unknown_share": 0.041666666666666664,
+            "signal_count": 3,
+            "proposed_veto_count": 3,
+            "veto_share_nominal": 0.025,
+            "veto_share_defined": 0.02608695652173913,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 115,
+              "min": 0,
+              "q1": 0,
+              "median": 0,
+              "q3": 0,
+              "max": 4
+            },
+            "unknown_reasons": {
+              "unproven pool quote in relevant liquidation prefix": 5
+            },
+            "R54_shape_only": "unlikely to bind"
+          },
+          "B": {
+            "nominal_population": 56,
+            "feature_known": 56,
+            "feature_unknown": 0,
+            "unknown_share": 0.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": 0.0,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 56,
+              "min": 0,
+              "q1": 0,
+              "median": 0.0,
+              "q3": 0,
+              "max": 1
+            },
+            "unknown_reasons": {},
+            "R54_shape_only": "unlikely to bind"
+          },
+          "C": {
+            "nominal_population": 119,
+            "feature_known": 115,
+            "feature_unknown": 4,
+            "unknown_share": 0.03361344537815126,
+            "signal_count": 4,
+            "proposed_veto_count": 4,
+            "veto_share_nominal": 0.03361344537815126,
+            "veto_share_defined": 0.034782608695652174,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 115,
+              "min": 0,
+              "q1": 0,
+              "median": 0,
+              "q3": 0,
+              "max": 5
+            },
+            "unknown_reasons": {
+              "unproven pool quote in relevant liquidation prefix": 4
+            },
+            "R54_shape_only": "unlikely to bind"
+          }
+        }
+      }
+    },
+    "N6": {
+      "E679": {
+        "all": {
+          "nominal_population": 679,
+          "feature_known": 0,
+          "feature_unknown": 679,
+          "unknown_share": 1.0,
+          "signal_count": 0,
+          "proposed_veto_count": 0,
+          "veto_share_nominal": 0.0,
+          "veto_share_defined": null,
+          "known_no_opportunity": 0,
+          "statistic_quartiles": {
+            "n": 0,
+            "min": null,
+            "q1": null,
+            "median": null,
+            "q3": null,
+            "max": null
+          },
+          "unknown_reasons": {
+            "SOL/USD ts/usd has no receipt clock; no complete causal universe crossing/supply evidence": 679
+          },
+          "R54_shape_only": "NOT DEFINABLE here"
+        },
+        "by_half": {
+          "early": {
+            "nominal_population": 313,
+            "feature_known": 0,
+            "feature_unknown": 313,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "SOL/USD ts/usd has no receipt clock; no complete causal universe crossing/supply evidence": 313
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          },
+          "late": {
+            "nominal_population": 366,
+            "feature_known": 0,
+            "feature_unknown": 366,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "SOL/USD ts/usd has no receipt clock; no complete causal universe crossing/supply evidence": 366
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          }
+        },
+        "by_cell": {
+          "A": {
+            "nominal_population": 251,
+            "feature_known": 0,
+            "feature_unknown": 251,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "SOL/USD ts/usd has no receipt clock; no complete causal universe crossing/supply evidence": 251
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          },
+          "B": {
+            "nominal_population": 122,
+            "feature_known": 0,
+            "feature_unknown": 122,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "SOL/USD ts/usd has no receipt clock; no complete causal universe crossing/supply evidence": 122
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          },
+          "C": {
+            "nominal_population": 306,
+            "feature_known": 0,
+            "feature_unknown": 306,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "SOL/USD ts/usd has no receipt clock; no complete causal universe crossing/supply evidence": 306
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          }
+        }
+      },
+      "L003_overlap": {
+        "all": {
+          "nominal_population": 295,
+          "feature_known": 0,
+          "feature_unknown": 295,
+          "unknown_share": 1.0,
+          "signal_count": 0,
+          "proposed_veto_count": 0,
+          "veto_share_nominal": 0.0,
+          "veto_share_defined": null,
+          "known_no_opportunity": 0,
+          "statistic_quartiles": {
+            "n": 0,
+            "min": null,
+            "q1": null,
+            "median": null,
+            "q3": null,
+            "max": null
+          },
+          "unknown_reasons": {
+            "SOL/USD ts/usd has no receipt clock; no complete causal universe crossing/supply evidence": 295
+          },
+          "R54_shape_only": "NOT DEFINABLE here"
+        },
+        "by_half": {
+          "early": {
+            "nominal_population": 143,
+            "feature_known": 0,
+            "feature_unknown": 143,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "SOL/USD ts/usd has no receipt clock; no complete causal universe crossing/supply evidence": 143
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          },
+          "late": {
+            "nominal_population": 152,
+            "feature_known": 0,
+            "feature_unknown": 152,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "SOL/USD ts/usd has no receipt clock; no complete causal universe crossing/supply evidence": 152
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          }
+        },
+        "by_cell": {
+          "A": {
+            "nominal_population": 120,
+            "feature_known": 0,
+            "feature_unknown": 120,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "SOL/USD ts/usd has no receipt clock; no complete causal universe crossing/supply evidence": 120
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          },
+          "B": {
+            "nominal_population": 56,
+            "feature_known": 0,
+            "feature_unknown": 56,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "SOL/USD ts/usd has no receipt clock; no complete causal universe crossing/supply evidence": 56
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          },
+          "C": {
+            "nominal_population": 119,
+            "feature_known": 0,
+            "feature_unknown": 119,
+            "unknown_share": 1.0,
+            "signal_count": 0,
+            "proposed_veto_count": 0,
+            "veto_share_nominal": 0.0,
+            "veto_share_defined": null,
+            "known_no_opportunity": 0,
+            "statistic_quartiles": {
+              "n": 0,
+              "min": null,
+              "q1": null,
+              "median": null,
+              "q3": null,
+              "max": null
+            },
+            "unknown_reasons": {
+              "SOL/USD ts/usd has no receipt clock; no complete causal universe crossing/supply evidence": 119
+            },
+            "R54_shape_only": "NOT DEFINABLE here"
+          }
+        }
+      }
+    }
+  },
+  "schema_evidence": {
+    "c001-20261110T211226Z/data/trades_part_001.csv.gz": [
+      "row_id",
+      "mint",
+      "sig",
+      "slot",
+      "ts",
+      "wallet",
+      "is_buy",
+      "sol",
+      "tokens",
+      "price_sol",
+      "recv_ms",
+      "vsol",
+      "vtok",
+      "venue",
+      "pool",
+      "ev_idx",
+      "base_raw",
+      "quote_raw",
+      "pool_base_raw",
+      "pool_quote_raw",
+      "base_mint",
+      "quote_mint",
+      "base_dec",
+      "quote_dec",
+      "dec_ver",
+      "px_adj"
+    ],
+    "entry-package-7nov/current/sol_usd.csv.gz": [
+      "ts",
+      "usd"
+    ],
+    "entry-package-7nov/snapshot3/sol_usd.csv.gz": [
+      "ts",
+      "usd"
+    ],
+    "entry-package-7nov/current/coverage_crossings.csv.gz": [
+      "mint",
+      "venue",
+      "slot",
+      "ts",
+      "sig",
+      "price_sol",
+      "sol_usd",
+      "sol_usd_ts",
+      "sol_usd_age_s",
+      "mc_usd",
+      "pricing",
+      "prev_venue",
+      "prev_slot",
+      "prev_ts",
+      "prev_price_sol",
+      "suspect_jump",
+      "n_trades_ge_100k",
+      "max_mc_usd_ge_100k"
+    ]
+  },
+  "raw_files_verified": 16,
+  "stats": {
+    "mints_streamed": 4913,
+    "duplicates_removed": 1568880,
+    "non_contiguous": 0
+  },
+  "cross_mint_scan_stats": {
+    "mints_streamed": 4913,
+    "duplicates_removed": 1568880,
+    "non_contiguous": 0
+  },
+  "missing_receipt_sales_in_observed_wallet_history": 0,
+  "scope": [
+    "Future E-selection relative to early proposal times; diagnostic shape,not causal trading population",
+    "Binding here does not predict binding or profitability on released window",
+    "N4 is newFIFOageproxy,not F006verifiedbalances",
+    "No P&L,ledger,paired figure or strategy verdict computed"
+  ]
+}

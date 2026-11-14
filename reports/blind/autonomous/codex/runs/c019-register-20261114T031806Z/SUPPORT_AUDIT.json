@@ -1,0 +1,239 @@
+{
+  "counts_only": true,
+  "no_outcome_columns": true,
+  "all_680_records_unique": true,
+  "E679_and_L003296_complete": true,
+  "initial_295_overlap_omission_corrected": true,
+  "all_E_counts_unchanged_after_population_fix": true,
+  "support_bounds": {
+    "N1": {
+      "E679": {
+        "population": 679,
+        "known": 678,
+        "unknown": 1,
+        "signal": 301,
+        "proposed_veto": 377,
+        "possible_veto_share_over_full_population": [
+          0.5552282768777614,
+          0.5567010309278351
+        ],
+        "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+      },
+      "L003_296": {
+        "population": 296,
+        "known": 296,
+        "unknown": 0,
+        "signal": 159,
+        "proposed_veto": 137,
+        "possible_veto_share_over_full_population": [
+          0.46283783783783783,
+          0.46283783783783783
+        ],
+        "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+      }
+    },
+    "N2": {
+      "E679": {
+        "population": 679,
+        "known": 0,
+        "unknown": 679,
+        "signal": 0,
+        "proposed_veto": 0,
+        "possible_veto_share_over_full_population": [
+          0.0,
+          1.0
+        ],
+        "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+      },
+      "L003_296": {
+        "population": 296,
+        "known": 0,
+        "unknown": 296,
+        "signal": 0,
+        "proposed_veto": 0,
+        "possible_veto_share_over_full_population": [
+          0.0,
+          1.0
+        ],
+        "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+      }
+    },
+    "N3": {
+      "E679": {
+        "population": 679,
+        "known": 531,
+        "unknown": 148,
+        "signal": 2,
+        "proposed_veto": 529,
+        "possible_veto_share_over_full_population": [
+          0.7790868924889544,
+          0.9970544918998527
+        ],
+        "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+      },
+      "L003_296": {
+        "population": 296,
+        "known": 247,
+        "unknown": 49,
+        "signal": 0,
+        "proposed_veto": 247,
+        "possible_veto_share_over_full_population": [
+          0.8344594594594594,
+          1.0
+        ],
+        "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+      }
+    },
+    "N4": {
+      "E679": {
+        "population": 679,
+        "known": 357,
+        "unknown": 322,
+        "signal": 1,
+        "proposed_veto": 1,
+        "possible_veto_share_over_full_population": [
+          0.0014727540500736377,
+          0.47569955817378495
+        ],
+        "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+      },
+      "L003_296": {
+        "population": 296,
+        "known": 161,
+        "unknown": 135,
+        "signal": 0,
+        "proposed_veto": 0,
+        "possible_veto_share_over_full_population": [
+          0.0,
+          0.4560810810810811
+        ],
+        "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+      }
+    },
+    "N5": {
+      "E679": {
+        "population": 679,
+        "known": 653,
+        "unknown": 26,
+        "signal": 11,
+        "proposed_veto": 11,
+        "possible_veto_share_over_full_population": [
+          0.016200294550810016,
+          0.054491899852724596
+        ],
+        "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+      },
+      "L003_296": {
+        "population": 296,
+        "known": 287,
+        "unknown": 9,
+        "signal": 7,
+        "proposed_veto": 7,
+        "possible_veto_share_over_full_population": [
+          0.02364864864864865,
+          0.05405405405405406
+        ],
+        "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+      }
+    },
+    "N6": {
+      "E679": {
+        "population": 679,
+        "known": 0,
+        "unknown": 679,
+        "signal": 0,
+        "proposed_veto": 0,
+        "possible_veto_share_over_full_population": [
+          0.0,
+          1.0
+        ],
+        "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+      },
+      "L003_296": {
+        "population": 296,
+        "known": 0,
+        "unknown": 296,
+        "signal": 0,
+        "proposed_veto": 0,
+        "possible_veto_share_over_full_population": [
+          0.0,
+          1.0
+        ],
+        "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+      }
+    }
+  },
+  "schema_hash_evidence": {
+    "current/sol_usd.csv.gz": {
+      "sha256": "93cb758f122d26762be56f78e4677760bd87fc082d8df00124a4df16fbaa615d",
+      "manifest_match": true,
+      "header_only_read": true,
+      "columns": [
+        "ts",
+        "usd"
+      ]
+    },
+    "current/coverage_crossings.csv.gz": {
+      "sha256": "ea365f854b8c021f47e86ac9c5edea4e34083eac7ac6593c7be394c82f2e78cd",
+      "manifest_match": true,
+      "header_only_read": true,
+      "columns": [
+        "mint",
+        "venue",
+        "slot",
+        "ts",
+        "sig",
+        "price_sol",
+        "sol_usd",
+        "sol_usd_ts",
+        "sol_usd_age_s",
+        "mc_usd",
+        "pricing",
+        "prev_venue",
+        "prev_slot",
+        "prev_ts",
+        "prev_price_sol",
+        "suspect_jump",
+        "n_trades_ge_100k",
+        "max_mc_usd_ge_100k"
+      ]
+    },
+    "snapshot3/sol_usd.csv.gz": {
+      "sha256": "3ee379074a708e105c333ab07728f46e13099c18080e66eeb4bde2b81186a307",
+      "manifest_match": true,
+      "header_only_read": true,
+      "columns": [
+        "ts",
+        "usd"
+      ]
+    },
+    "snapshot3/coverage_crossings.csv.gz": {
+      "sha256": "4cffa7cdd068b1725ad6ac36cc61545b71a06dc8aee5ad6b6361d47968297d02",
+      "manifest_match": true,
+      "header_only_read": true,
+      "columns": [
+        "mint",
+        "venue",
+        "slot",
+        "ts",
+        "sig",
+        "price_sol",
+        "sol_usd",
+        "sol_usd_ts",
+        "sol_usd_age_s",
+        "mc_usd",
+        "pricing",
+        "prev_venue",
+        "prev_slot",
+        "prev_ts",
+        "prev_price_sol",
+        "suspect_jump",
+        "n_trades_ge_100k",
+        "max_mc_usd_ge_100k"
+      ]
+    }
+  },
+  "N2_note": "Some trade raw amounts/reserves and quote/decimal/version fields exist; complete non-trade LP/asset movements and poolinitial-state proof do not. This full reconciliation definition is not supported,not proof that all reserve proxies are impossible.",
+  "N6_note": "SOL/USD tables EXIST. ts/usd lacks a separately documented knowledge/receipt clock in inspected evidence; historical coverage and causal supply/FX join for all first pool crossings are uncertified. NOT DEFINABLE means this exact proof requirement,not that no FX observations exist.",
+  "runtime_failure": "First local calculation used only295L003overlap; recomputed complete296as protocol required before publication; all679Ecounts identical. No threshold/statistic/outcome change."
+}

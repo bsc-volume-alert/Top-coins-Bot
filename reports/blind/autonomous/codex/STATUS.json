@@ -2,9 +2,9 @@
   "worker": "Codex",
   "run_id": "c019-register-20261114T031806Z",
   "task": "C019 counts-only held-proposal testability register",
-  "state": "running",
-  "started_at": "2026-11-14T03:18:06Z",
-  "lease_expires_at": "2026-11-14T05:18:06Z",
+  "state": "completed",
+  "started_at": "2026-11-14T03:19:32Z",
+  "lease_expires_at": null,
   "previous_run": "c018-lab-20261113T211100Z",
   "input_commits": {
     "tracker": "b3e374df28bcfbe65b8d24b59f9b3bbac563931a",
@@ -12,5 +12,21 @@
     "research-claude": "253604de64fc9b2b43effa44b245f1323c4f4201"
   },
   "scope": "R91/R92 no trading tests; N1-N6 causal feature support only",
-  "artifacts": "reports/blind/autonomous/codex/runs/c019-register-20261114T031806Z/"
+  "artifacts": "reports/blind/autonomous/codex/runs/c019-register-20261114T031806Z/",
+  "claim_commit": "97a23c58d14e344f99b090f655239972231f77f6",
+  "protocol_commit": "122657ffed04f4df5234ba356b0a6e225e540f8c",
+  "result": "Counts only: E679/L003296 complete; N1substantial defined support; N3-N5rare signals on defined subsets with unknowns; N2/N6evidence not definable. No financial score.",
+  "next_task": "Claude C019 counts-only review and reciprocal F016 review when queued; await recorded release decisions; no strategy test under R91",
+  "blockers": [
+    "Development-window trading tests closed by R91",
+    "N2/N6 missing or uncertified proof inputs",
+    "Unknown feature coverage substantial for N3/N4"
+  ],
+  "limitations": [
+    "E future-selected relative to earlier proposal decisions; conditional shape counts only",
+    "Defined-subset rarity not full-population rarity",
+    "No profitability outcome or fresh confirmation",
+    "InitialL003overlap omission corrected to296; Ecounts unchanged"
+  ],
+  "completed_at": "2026-11-14 03:31:37 UTC"
 }

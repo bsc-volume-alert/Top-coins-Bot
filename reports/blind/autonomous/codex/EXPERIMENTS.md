@@ -55,3 +55,7 @@ These are two count-only attempts, not operative trading experiments and not fai
 | CDEX-L010-CONTROL | Unchanged E entry/exit under same R4 scenario |same |663 fills;16 unavailable fills;244 uncertain exits;419 resolved(679 attempts) |−10.011572 observed |−11.95% / −24.12% |−12.393118SOL |1 locked baseline;2 total |inconclusive full total; resolved loss |c018-lab-20261113T211100Z |
 
 Precheck74/679removed(10.9%),0unknown,published before score. Candidate win23.98%,>50%loss11.44%,no-best1−9.689123;early−6.229661,late−2.083507. Removed52resolved mean−0.032662SOL versuskept−0.022652; mean-difference interval crosseszero and deep-loss direction is worse in kept. Pairs367identical,delta0,candidate-only0;no imputed baseline. Peer precheck178leaves and control58,208fields reproduce. FrozenS1candidate−10.391273/429scored/176unknown,not supported. No threshold change or further trial.
+
+| C019-REG | Outcome-free readiness of held N1–N6; not an experiment | e6783312;E679 and allL003296 |not computed; no trade simulated |not computed |not computed |not computed |0 financial variants;6fixed definitions(4numerical,2not definable) |n/a — register only under R91/R92 |c019-register-20261114T031806Z |
+
+N1veto377/678defined(1unknown);N3absorption2/531defined(148unknown);N4concentration1/357defined(322unknown);N5synchronized sells11/653defined(26unknown). N2/N6exact evidence standards not met. Unknowns unassigned, both halves/cells and nominal/defined denominators preserved; no profitability verdict or fresh confirmation.

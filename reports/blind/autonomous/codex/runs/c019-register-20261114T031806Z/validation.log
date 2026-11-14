@@ -1,0 +1,77 @@
+{
+  "E_support": {
+    "N1": {
+      "population": 679,
+      "known": 678,
+      "unknown": 1,
+      "signal": 301,
+      "proposed_veto": 377,
+      "possible_veto_share_over_full_population": [
+        0.5552282768777614,
+        0.5567010309278351
+      ],
+      "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+    },
+    "N2": {
+      "population": 679,
+      "known": 0,
+      "unknown": 679,
+      "signal": 0,
+      "proposed_veto": 0,
+      "possible_veto_share_over_full_population": [
+        0.0,
+        1.0
+      ],
+      "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+    },
+    "N3": {
+      "population": 679,
+      "known": 531,
+      "unknown": 148,
+      "signal": 2,
+      "proposed_veto": 529,
+      "possible_veto_share_over_full_population": [
+        0.7790868924889544,
+        0.9970544918998527
+      ],
+      "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+    },
+    "N4": {
+      "population": 679,
+      "known": 357,
+      "unknown": 322,
+      "signal": 1,
+      "proposed_veto": 1,
+      "possible_veto_share_over_full_population": [
+        0.0014727540500736377,
+        0.47569955817378495
+      ],
+      "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+    },
+    "N5": {
+      "population": 679,
+      "known": 653,
+      "unknown": 26,
+      "signal": 11,
+      "proposed_veto": 11,
+      "possible_veto_share_over_full_population": [
+        0.016200294550810016,
+        0.054491899852724596
+      ],
+      "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+    },
+    "N6": {
+      "population": 679,
+      "known": 0,
+      "unknown": 679,
+      "signal": 0,
+      "proposed_veto": 0,
+      "possible_veto_share_over_full_population": [
+        0.0,
+        1.0
+      ],
+      "note": "Feature-support bounds only; not return/loss bounds. Defined-subset rarity is not proven whole-population rarity when unknowns exist."
+    }
+  },
+  "all_E_counts_unchanged": true
+}
