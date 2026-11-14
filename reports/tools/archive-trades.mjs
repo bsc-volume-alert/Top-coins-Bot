@@ -1,3 +1,4 @@
+// archive-trades 1.1 (14 Nov 00:45 UK: restore check streamed — 1.0 ran out of memory on an 80 MB part; nothing was deleted)
 // archive-trades 1.0 (14 Nov 2026 00:15 UK; owner + Codex 13 Nov 23:32/23:37 UK: archive, verify and restore-check BEFORE any deletion).
 // READ-ONLY on the tracker database. Archives trades rows with rowid in [R0, R1] (a fixed, documented cutoff: old rows are never rewritten by
 // the tracker) to gzipped CSV parts (~80 MB each) on the storage volume, plus small readable tables for the same coins, then verifies:
@@ -8,8 +9,9 @@
 // Each batch is its own short read (no long read transaction → the WAL can keep checkpointing).
 // Usage: node archive-trades.mjs R0 R1 [label]   env: ARCH_ROOT (default <volume>/archive), ARCH_PUBLISH=1, ARCH_REMOTE
 import Database from "better-sqlite3";
-import { createGzip, gunzipSync } from "node:zlib";
-import { createWriteStream, mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, statSync, rmSync } from "node:fs";
+import { createGzip, createGunzip } from "node:zlib";
+import { StringDecoder } from "node:string_decoder";
+import { createWriteStream, createReadStream, mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, statSync, rmSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
@@ -22,7 +24,7 @@ if (!ROOT) { console.log("[archive] ABORT: no storage volume"); process.exit(1);
 const NAME = `trades-archive-${LABEL}`, OUT = join(ROOT, NAME), LOUT = "/root/tracker/data/launcher_out";
 const TDB = process.env.DB_PATH || "/root/tracker/data/tracker.db", PART_MAX = 80 * 1048576, BATCH = 50000;
 const t0 = Date.now();
-const status = (o) => { const s = { ver: "archive-trades 1.0", name: NAME, out: OUT, r0: R0, r1: R1, at: new Date().toISOString(), secs: Math.round((Date.now() - t0) / 1000), ...o };
+const status = (o) => { const s = { ver: "archive-trades 1.1", name: NAME, out: OUT, r0: R0, r1: R1, at: new Date().toISOString(), secs: Math.round((Date.now() - t0) / 1000), ...o };
   try { writeFileSync(join(LOUT, "archive_status.json"), JSON.stringify(s, null, 1)); } catch {} console.log("[archive]", JSON.stringify(s)); };
 const esc = (v) => (v == null ? "" : /[",\n\r]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
 const parseCsv = (text) => { // RFC-4180 parser (quoted fields, doubled quotes, embedded newlines)
@@ -75,11 +77,24 @@ status({ phase: "tables-written", tables });
 // ---- 3. verification: database recount + restore check (decompress, parse, re-serialise, hash) + checksums
 const dbCount = db.prepare("SELECT COUNT(*) n FROM trades WHERE rowid >= ? AND rowid <= ?").get(R0, R1).n;
 const back = createHash("sha256"); let backRows = 0, badCols = 0;
+// streamed restore check (1.1): decompress and parse each part piece by piece — never the whole part in memory
 for (const f of parts) {
-  const rowsP = parseCsv(gunzipSync(readFileSync(join(OUT, f))).toString("utf8"));
-  if (rowsP.length && rowsP[0].join(",") + "\n" !== header) badCols++;
-  let chunk = ""; for (const r of rowsP.slice(1)) { if (r.length !== cols.length + 1) badCols++; chunk += r.map((v) => (v === "" ? "" : esc(v))).join(",") + "\n"; backRows++; }
-  back.update(chunk);
+  let row = [], fld = "", q = false, pendQ = false, first = true, out = "";
+  const emit = () => { row.push(fld); fld = "";
+    if (first) { if (row.join(",") + "\n" !== header) badCols++; first = false; }
+    else { if (row.length !== cols.length + 1) badCols++; out += row.map((v) => (v === "" ? "" : esc(v))).join(",") + "\n"; backRows++; if (out.length > 4194304) { back.update(out); out = ""; } }
+    row = []; };
+  const dec = new StringDecoder("utf8");
+  for await (const buf of createReadStream(join(OUT, f)).pipe(createGunzip())) {
+    const t = dec.write(buf);
+    for (let k = 0; k < t.length; k++) { const c = t[k];
+      if (pendQ) { pendQ = false; if (c === '"') { fld += '"'; continue; } q = false; }
+      if (q) { if (c === '"') pendQ = true; else fld += c; continue; }
+      if (c === '"') q = true; else if (c === ",") { row.push(fld); fld = ""; } else if (c === "\n") emit(); else if (c !== "\r") fld += c; }
+  }
+  if (pendQ) q = false;
+  if (fld !== "" || row.length) emit();
+  back.update(out);
 }
 const restoreHash = back.digest("hex");
 const sums = readdirSync(OUT).filter((f) => f.endsWith(".gz")).sort().map((f) => `${createHash("sha256").update(readFileSync(join(OUT, f))).digest("hex")}  ${f}`);
