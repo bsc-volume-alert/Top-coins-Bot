@@ -6,7 +6,7 @@
  "started_at": "2026-11-14T10:52:55Z",
  "lease_expires_at": null,
  "input_commits": {
-  "tracker": "921c97b",
+  "tracker": "b83a4a4",
   "research-codex_read": "f92c94a",
   "research-claude_base": "1dbf1d1",
   "entry-all-20261107t2210": "e67833121f1da0dc992c28fa26c5236a855c151a",
@@ -43,10 +43,10 @@
  },
  "completed_at": "2026-11-14T10:58:43Z",
  "result": "Record-only run. Counts-only consistency read of Codex C020 @ 0aaa210 against Claude f016 @ 253604d / f017 @ 1dbf1d1 from git objects: manifest 28/28; rebuilt results.json 481/481 leaves equal; independent feature table 18,333/18,333 shared cells equal (max diff 8.9e-16); six bind counts equal on all halves/cells; census clock 60/60 bins equal; receipt-clock veto flags 679/679 equal (147). Three register-only proposals CL-P10–P12 (no count). No pretend trade (R91). No outcome read.",
- "last_checked_at": "2026-11-15T10:52:05Z",
+ "last_checked_at": "2026-11-15T14:52:20Z",
  "task_availability": "no task",
  "ready_tasks": 0,
- "idle_run_note": "Idle run per R106 (64) / R107 / R112: queue run 22 (tracker 921c97b, 08:38 UTC 15 Nov) lists no READY Claude row and no released window; Codex research-codex at f92c94a (09:13 UTC 15 Nov, STATUS.json-only idle commit; DIALOGUE.md and REVIEW_REQUESTS.md unchanged since C020 @ 0aaa210, already read; no direct question to Claude); origin still 57 branches, same names, no Round 1 export (no MANIFEST for launches created 8 Nov 00:00 -> 10 Nov 00:00); owner decisions R4 / R5 / R6 and item 6 (FX clock) still open. STATUS.json updated only: no run folder, lease, DIALOGUE post, SCOREBOARD row or new proposal. The scheduled prompt's 'test at least one idea' is overridden by R91; the queue governs.",
+ "idle_run_note": "Idle run per R106 (64) / R107 / R113: queue run 23 (tracker b83a4a4, 12:38 UTC 15 Nov) lists no READY Claude row and no released window; Codex research-codex still at f92c94a (09:13 UTC 15 Nov, STATUS.json-only idle commit, already read last run; DIALOGUE.md and REVIEW_REQUESTS.md unchanged; no direct question to Claude); origin still 57 branches, same names, no Round 1 export (no MANIFEST for launches created 8 Nov 00:00 -> 10 Nov 00:00); owner decisions R4 / R5 / R6 and item 6 (FX clock) still open. STATUS.json updated only: no run folder, lease, DIALOGUE post, SCOREBOARD row or new proposal. The scheduled prompt's 'test at least one idea' is overridden by R91; the queue governs.",
  "idle_checks": [
   {
    "checked_at": "2026-11-14T14:51:37Z",
@@ -86,6 +86,13 @@
   {
    "checked_at": "2026-11-15T10:52:05Z",
    "tracker": "921c97b",
+   "research-codex": "f92c94a",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-15T14:52:20Z",
+   "tracker": "b83a4a4",
    "research-codex": "f92c94a",
    "branches": 57,
    "ready_tasks": 0
