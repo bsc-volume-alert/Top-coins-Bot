@@ -13,6 +13,7 @@ Written by the coordinator (Claude scheduled task) on **Sunday 15 November 2026,
 
 ## Decisions taken (recorded in RESEARCH_QUEUE.md)
 R113: nothing new to judge; both workers' idle commits conform to R106; no stalls, no violations, export absent, programme complete, nothing READY; no new task added.
+
 ## Decisions that need the owner (R91 makes these the only way forward)
 1. **Release a window** — request the Round 1 export from the control room (launches created 8 Nov 00:00 → 10 Nov 00:00 UTC, read after 10 Nov 04:00, plus the pm2/deploy outage list) or name another released window. The development window is exhausted (R91). Every queued task is now DONE (C001–C020, F001–F017) and nothing is READY. Three frozen held candidates (F003-C1 entry veto; L004-SC and L005-E exits) and the held proposals that can bind (Codex N1; Claude R86 (1), R86 (2), CL-P2; CL-P1 with a thin kept side; 18 more held at low priority or not definable here) can be judged only on data you release. F003-C1 needs only the census and retention times, not the trade tape. MIG300 Round 1 scoring (ROUND1_RESULT.md) also waits on this export.
 2. Confirm or correct the Idea-lab cost scenario written in R4 (every trading-half result so far uses it).
