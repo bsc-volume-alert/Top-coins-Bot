@@ -1,0 +1,31 @@
+[revival] 16367 graduated coins since 2026-10-18T00:00:00.000Z
+[revival] debug s HTTP 200: {"code":0,"data":{"list":[]},"message":"success","reason":""}
+
+[revival] debug ms HTTP 200: {"code":0,"data":{"list":[{"time":1794582600000,"open":"0.00019624094","close":"0.00019463742","high":"0.00019624094","low":"0.00019463742","volume":"25.24787023","source":"","amount":"129360.326565"},{"time":1794582900000,"open":"0.00019463742","close":"0.00019742069","high":"0.00019742069","low":"0.00019463742","volume":"24.7929625","source":"","amount":"125584.41805"},{"time":1794583200000,"open":"0.00019742069","close":"0.00019683993","high":"0.00019742069","low":"0.00019683993","volume":"0.2092947","source":"","amount":"1063.273559"},{"time":1794583500000,"open":"0.00019683993","close":"0.00019317271","high":"0.00019731358","low":"0.00019317271","volume":"202.44599371","source":"","amou
+[revival] probe: seconds 0 · ms 100
+[revival] debug ms HTTP 200: {"code":0,"data":{"list":[]},"message":"success","reason":""}
+
+[revival] debug ms HTTP 200: {"code":0,"data":{"list":[]},"message":"success","reason":""}
+
+[revival] 0/16367 · ok 1 · failed 0 · candles 18
+[revival] 50/16367 · ok 51 · failed 0 · candles 9792
+[revival] 100/16367 · ok 101 · failed 0 · candles 18805
+[revival] 150/16367 · ok 151 · failed 0 · candles 30870
+[revival] 200/16367 · ok 201 · failed 0 · candles 38090
+[revival] 250/16367 · ok 251 · failed 0 · candles 45886
+[revival] 300/16367 · ok 301 · failed 0 · candles 51121
+[revival] 350/16367 · ok 351 · failed 0 · candles 72762
+[revival] 400/16367 · ok 401 · failed 0 · candles 81821
+[revival] 450/16367 · ok 451 · failed 0 · candles 89137
+[revival] 500/16367 · ok 501 · failed 0 · candles 100722
+[revival] 550/16367 · ok 551 · failed 0 · candles 115850
+[revival] 600/16367 · ok 601 · failed 0 · candles 124223
+[revival] 650/16367 · ok 651 · failed 0 · candles 132992
+[revival] 700/16367 · ok 701 · failed 0 · candles 146765
+[revival] 750/16367 · ok 751 · failed 0 · candles 154743
+[revival] 800/16367 · ok 801 · failed 0 · candles 164247
+[revival] 850/16367 · ok 851 · failed 0 · candles 173627
+[revival] 900/16367 · ok 901 · failed 0 · candles 184491
+[revival] 950/16367 · ok 951 · failed 0 · candles 206001
+[revival] 1000/16367 · ok 1001 · failed 0 · candles 211819
+[revival] 1050/16367 · ok 1051 · failed 0 · candles 224977

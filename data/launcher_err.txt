@@ -1,0 +1,3 @@
+[launcher] memory rss=278M heap=81M ext=4M
+[launcher] memory rss=248M heap=37M ext=4M
+[launcher] memory rss=266M heap=39M ext=5M
