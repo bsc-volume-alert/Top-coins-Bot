@@ -1,0 +1,9 @@
+{
+ "ver": "supp-export 1.3",
+ "branch": "entry-all-20261108t2002",
+ "at": "2026-11-08T20:12:09.670Z",
+ "secs": 566,
+ "phase": "pushed-cleaned",
+ "commit": "05f47f12293cc3653eb9f9bd8ec937e107a70b53",
+ "note": "local copy removed after the remote branch was verified at the same commit"
+}

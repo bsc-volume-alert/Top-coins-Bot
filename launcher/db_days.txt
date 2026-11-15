@@ -1,0 +1,36 @@
+[deploy] [dbdays] rowid 1 - 69810991 first 2026-10-13T14:51:57.000Z last 2026-11-13T23:57:43.897Z
+[deploy] [dbdays] day 2026-10-13 rowid 1 - 119004 rows≈ 119004
+[deploy] [dbdays] day 2026-10-14 rowid 119005 - 363908 rows≈ 244904
+[deploy] [dbdays] day 2026-10-15 rowid 363909 - 548395 rows≈ 184487
+[deploy] [dbdays] day 2026-10-16 rowid 548396 - 755907 rows≈ 207512
+[deploy] [dbdays] day 2026-10-17 rowid 755908 - 901132 rows≈ 145225
+[deploy] [dbdays] day 2026-10-18 rowid 901133 - 1033455 rows≈ 132323
+[deploy] [dbdays] day 2026-10-19 rowid 1033456 - 1239344 rows≈ 205889
+[deploy] [dbdays] day 2026-10-20 rowid 1239345 - 1425377 rows≈ 186033
+[deploy] [dbdays] day 2026-10-21 rowid 1425378 - 1583582 rows≈ 158205
+[deploy] [dbdays] day 2026-10-22 rowid 1583583 - 1734616 rows≈ 151034
+[deploy] [dbdays] day 2026-10-23 rowid 1734617 - 1950968 rows≈ 216352
+[deploy] [dbdays] day 2026-10-24 rowid 1950969 - 2084771 rows≈ 133803
+[deploy] [dbdays] day 2026-10-25 rowid 2084772 - 2206220 rows≈ 121449
+[deploy] [dbdays] day 2026-10-26 rowid 2206221 - 2366555 rows≈ 160335
+[deploy] [dbdays] day 2026-10-27 rowid 2366556 - 2571819 rows≈ 205264
+[deploy] [dbdays] day 2026-10-28 rowid 2571820 - 2954895 rows≈ 383076
+[deploy] [dbdays] day 2026-10-29 rowid 2954896 - 3257043 rows≈ 302148
+[deploy] [dbdays] day 2026-10-30 rowid 3257044 - 3620375 rows≈ 363332
+[deploy] [dbdays] day 2026-10-31 rowid 3620376 - 3620375 rows≈ 0
+[deploy] [dbdays] day 2026-11-01 rowid 3620376 - 3620375 rows≈ 0
+[deploy] [dbdays] day 2026-11-02 rowid 3620376 - 3620375 rows≈ 0
+[deploy] [dbdays] day 2026-11-03 rowid 3620376 - 3741507 rows≈ 121132
+[deploy] [dbdays] day 2026-11-04 rowid 3741508 - 3934246 rows≈ 192739
+[deploy] [dbdays] day 2026-11-05 rowid 3934247 - 4467532 rows≈ 533286
+[deploy] [dbdays] day 2026-11-06 rowid 4467533 - 6457047 rows≈ 1989515
+[deploy] [dbdays] day 2026-11-07 rowid 6457048 - 14319403 rows≈ 7862356
+[deploy] [dbdays] day 2026-11-08 rowid 14319404 - 22321106 rows≈ 8001703
+[deploy] [dbdays] day 2026-11-09 rowid 22321107 - 31902962 rows≈ 9581856
+[deploy] [dbdays] day 2026-11-10 rowid 31902963 - 42254531 rows≈ 10351569
+[deploy] [dbdays] day 2026-11-11 rowid 42254532 - 51522672 rows≈ 9268141
+[deploy] [dbdays] day 2026-11-12 rowid 51522673 - 63639618 rows≈ 12116946
+[deploy] [dbdays] day 2026-11-13 rowid 63639619 - 69810991 rows≈ 6171373
+[deploy] [dbdays] cut 2026-11-06T07:40:00.000Z first rowid 4919033
+[deploy] [dbdays] cut 2026-11-08T15:00:00.000Z first rowid 19218697
+[deploy] [dbdays] cut 2026-11-13T00:00:00.000Z first rowid 63639619
