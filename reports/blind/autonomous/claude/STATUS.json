@@ -6,16 +6,16 @@
  "started_at": "2026-11-14T10:52:55Z",
  "lease_expires_at": null,
  "input_commits": {
-  "tracker": "36a0f5d",
+  "tracker": "309b315",
   "research-codex_read": "9359291",
   "research-claude_base": "1dbf1d1",
   "entry-all-20261107t2210": "e67833121f1da0dc992c28fa26c5236a855c151a",
   "entry-package-7nov": "0e3be03c71949e069a7a31b5951f332bb563f68f",
   "blind-eval-1.1": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b"
  },
- "task_choice_note": "Queue run 16 (tracker b53915d): Claude row reads 'NO READY TASK (R99 / R102) \u2014 waiting for a released window (R4 / R5 / R6). Not a stall.' No branch on origin is a Round 1 export. Nothing to lease but the record itself; lease written to honour the contract.",
+ "task_choice_note": "Queue run 16 (tracker b53915d): Claude row reads 'NO READY TASK (R99 / R102) — waiting for a released window (R4 / R5 / R6). Not a stall.' No branch on origin is a Round 1 export. Nothing to lease but the record itself; lease written to honour the contract.",
  "previous_run": "f017-20261114T065226Z",
- "next_task": "no task; waiting for a released window (R4 / R5 / R6) \u2014 R99 / R102. Idle runs will update last_checked_at only unless the queue adds a Claude row or releases a window (REVIEW_REQUESTS 64).",
+ "next_task": "no task; waiting for a released window (R4 / R5 / R6) — R99 / R102. Idle runs will update last_checked_at only unless the queue adds a Claude row or releases a window (REVIEW_REQUESTS 64).",
  "blockers": [
   "No READY development-window task for Claude after F017 (R99); Codex C020 does not create one (R102)",
   "R91 closes Idea-lab tests on the development window; no other dataset is allowlisted (owner decisions R4 / R5 / R6 open)"
@@ -39,14 +39,14 @@
   "F015": "completed (a): C018 cross-review, agree all numbers; (b) not applicable (C018 published before run start); (c) no test, 3 held proposals",
   "F016": "completed (counts only; 4 can bind, CL-P1 binds 88 %, R86 (3) unlikely to bind, CL-P3 premise not observed)",
   "F017": "completed (agree all numbers; C019 reproduces byte for byte and independently 680/680; R86 (2) clock-insensitive 140 vs 147 of 679)",
-  "notask-20261114T105130Z": "completed_no_task (record only; C020 consistency read; CL-P10\u2013P12 registered, no count)"
+  "notask-20261114T105130Z": "completed_no_task (record only; C020 consistency read; CL-P10–P12 registered, no count)"
  },
  "completed_at": "2026-11-14T10:58:43Z",
- "result": "Record-only run. Counts-only consistency read of Codex C020 @ 0aaa210 against Claude f016 @ 253604d / f017 @ 1dbf1d1 from git objects: manifest 28/28; rebuilt results.json 481/481 leaves equal; independent feature table 18,333/18,333 shared cells equal (max diff 8.9e-16); six bind counts equal on all halves/cells; census clock 60/60 bins equal; receipt-clock veto flags 679/679 equal (147). Three register-only proposals CL-P10\u2013P12 (no count). No pretend trade (R91). No outcome read.",
- "last_checked_at": "2026-11-16T18:51:41Z",
+ "result": "Record-only run. Counts-only consistency read of Codex C020 @ 0aaa210 against Claude f016 @ 253604d / f017 @ 1dbf1d1 from git objects: manifest 28/28; rebuilt results.json 481/481 leaves equal; independent feature table 18,333/18,333 shared cells equal (max diff 8.9e-16); six bind counts equal on all halves/cells; census clock 60/60 bins equal; receipt-clock veto flags 679/679 equal (147). Three register-only proposals CL-P10–P12 (no count). No pretend trade (R91). No outcome read.",
+ "last_checked_at": "2026-11-16T22:53:27Z",
  "task_availability": "no task",
  "ready_tasks": 0,
- "idle_run_note": "Idle run per R106 (64) / R107 / R120: queue run 30 (tracker 36a0f5d, 16:40 UK 16 Nov) lists no READY Claude row and no released window; Codex research-codex at 9359291 (15:22 UTC 16 Nov, STATUS.json-only idle commit; DIALOGUE.md, REVIEW_REQUESTS.md, EXPERIMENTS.md and KNOWLEDGE.md unchanged since 0aaa210 \u2014 verified by diff; no direct question to Claude); origin still 57 branches, same names, no Round 1 export (no MANIFEST for launches created 8 Nov 00:00 -> 10 Nov 00:00); owner decisions R4 / R5 / R6 and item 6 (FX clock) still open. STATUS.json updated only: no run folder, lease, DIALOGUE post, SCOREBOARD row or new proposal. The scheduled prompt's 'test at least one idea' is overridden by R91; the queue governs.",
+ "idle_run_note": "Idle run per R106 (64) / R107 / R121: queue run 31 (tracker 309b315, 20:40 UK 16 Nov) lists no READY Claude row and no released window; Codex research-codex at 9359291 (15:22 UTC 16 Nov, STATUS.json-only idle commit; DIALOGUE.md, REVIEW_REQUESTS.md, EXPERIMENTS.md and KNOWLEDGE.md unchanged since 0aaa210 — verified by git diff 0aaa210..9359291, only STATUS.json differs; no direct question to Claude); origin still 57 branches, same names, no Round 1 export (no MANIFEST for launches created 8 Nov 00:00 -> 10 Nov 00:00); owner decisions R4 / R5 / R6 and item 6 (FX clock) still open. STATUS.json updated only: no run folder, lease, DIALOGUE post, SCOREBOARD row or new proposal. The scheduled prompt's 'test at least one idea' is overridden by R91; the queue governs. Serialised with ensure_ascii=False so dashes are stored as characters (R121 note).",
  "idle_checks": [
   {
    "checked_at": "2026-11-14T14:51:37Z",
@@ -142,6 +142,13 @@
   {
    "checked_at": "2026-11-16T18:51:41Z",
    "tracker": "36a0f5d",
+   "research-codex": "9359291",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-16T22:53:27Z",
+   "tracker": "309b315",
    "research-codex": "9359291",
    "branches": 57,
    "ready_tasks": 0
