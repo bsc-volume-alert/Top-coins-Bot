@@ -1,206 +1,206 @@
 {
-  "worker": "Claude research worker",
-  "run_id": "notask-20261114T105130Z",
-  "task": "NO READY TASK (queue run 16, R99 / R102): record-only run. Checks the queue for a released window or a new Claude row (none), reads Codex C020 @ 0aaa210 (counts only; the coordinator reviews it per R102), records three register-only proposals (R91: no count, no test), updates STATUS.json. No Idea-lab test, no outcome read.",
-  "state": "completed_no_task",
-  "started_at": "2026-11-14T10:52:55Z",
-  "lease_expires_at": null,
-  "input_commits": {
-    "tracker": "a3432ae",
-    "research-codex_read": "73312cd",
-    "research-claude_base": "1dbf1d1",
-    "entry-all-20261107t2210": "e67833121f1da0dc992c28fa26c5236a855c151a",
-    "entry-package-7nov": "0e3be03c71949e069a7a31b5951f332bb563f68f",
-    "blind-eval-1.1": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b"
+ "worker": "Claude research worker",
+ "run_id": "notask-20261114T105130Z",
+ "task": "NO READY TASK (queue run 16, R99 / R102): record-only run. Checks the queue for a released window or a new Claude row (none), reads Codex C020 @ 0aaa210 (counts only; the coordinator reviews it per R102), records three register-only proposals (R91: no count, no test), updates STATUS.json. No Idea-lab test, no outcome read.",
+ "state": "completed_no_task",
+ "started_at": "2026-11-14T10:52:55Z",
+ "lease_expires_at": null,
+ "input_commits": {
+  "tracker": "a3432ae",
+  "research-codex_read": "73312cd",
+  "research-claude_base": "1dbf1d1",
+  "entry-all-20261107t2210": "e67833121f1da0dc992c28fa26c5236a855c151a",
+  "entry-package-7nov": "0e3be03c71949e069a7a31b5951f332bb563f68f",
+  "blind-eval-1.1": "be9b5459e2f7670946d9ca012f875b77aaaf5d5b"
+ },
+ "task_choice_note": "Queue run 16 (tracker b53915d): Claude row reads 'NO READY TASK (R99 / R102) — waiting for a released window (R4 / R5 / R6). Not a stall.' No branch on origin is a Round 1 export. Nothing to lease but the record itself; lease written to honour the contract.",
+ "previous_run": "f017-20261114T065226Z",
+ "next_task": "no task; waiting for a released window (R4 / R5 / R6) — R99 / R102. Idle runs will update last_checked_at only unless the queue adds a Claude row or releases a window (REVIEW_REQUESTS 64).",
+ "blockers": [
+  "No READY development-window task for Claude after F017 (R99); Codex C020 does not create one (R102)",
+  "R91 closes Idea-lab tests on the development window; no other dataset is allowlisted (owner decisions R4 / R5 / R6 open)"
+ ],
+ "artifacts": "reports/blind/autonomous/claude/runs/notask-20261114T105130Z/",
+ "task_states": {
+  "F001": "completed_agree_all_rows",
+  "F006": "completed",
+  "F007": "closed by F008 (R22)",
+  "F008": "completed",
+  "F009": "completed",
+  "F010": "completed",
+  "F002": "completed",
+  "F003": "completed",
+  "F004": "completed",
+  "F005": "blocked (Round 1 release)",
+  "F011": "completed",
+  "F012": "completed",
+  "F013": "completed: (b) NOT TESTABLE, (c) done, (a) discharged by R78 + f014 counts-only confirmation",
+  "F014": "completed (weak; T = 60 only)",
+  "F015": "completed (a): C018 cross-review, agree all numbers; (b) not applicable (C018 published before run start); (c) no test, 3 held proposals",
+  "F016": "completed (counts only; 4 can bind, CL-P1 binds 88 %, R86 (3) unlikely to bind, CL-P3 premise not observed)",
+  "F017": "completed (agree all numbers; C019 reproduces byte for byte and independently 680/680; R86 (2) clock-insensitive 140 vs 147 of 679)",
+  "notask-20261114T105130Z": "completed_no_task (record only; C020 consistency read; CL-P10–P12 registered, no count)"
+ },
+ "completed_at": "2026-11-14T10:58:43Z",
+ "result": "Record-only run. Counts-only consistency read of Codex C020 @ 0aaa210 against Claude f016 @ 253604d / f017 @ 1dbf1d1 from git objects: manifest 28/28; rebuilt results.json 481/481 leaves equal; independent feature table 18,333/18,333 shared cells equal (max diff 8.9e-16); six bind counts equal on all halves/cells; census clock 60/60 bins equal; receipt-clock veto flags 679/679 equal (147). Three register-only proposals CL-P10–P12 (no count). No pretend trade (R91). No outcome read.",
+ "last_checked_at": "2026-11-18T02:51:39Z",
+ "task_availability": "no task",
+ "ready_tasks": 0,
+ "idle_run_note": "Idle run per R106 (64) / R107 / R128: queue run 38 (tracker a3432ae, 00:39 UTC 18 Nov) lists no READY Claude row and no released window; Codex research-codex still at 73312cd (21:16 UTC 17 Nov; git diff 73312cd..origin/research-codex empty at this check), so its DIALOGUE.md, REVIEW_REQUESTS.md, EXPERIMENTS.md and KNOWLEDGE.md are unchanged since 0aaa210 and contain no direct question to Claude. Origin has 57 heads, the same names as before; no branch is a Round 1 export (no MANIFEST stating launches created 8 Nov 00:00 -> 10 Nov 00:00). Therefore: no run folder, no lease, no DIALOGUE post, no SCOREBOARD row, no new proposal, no Idea-lab test (the scheduled prompt's 'test at least one idea' is overridden by R91 per R106 (64)). STATUS.json only.",
+ "idle_checks": [
+  {
+   "checked_at": "2026-11-14T14:51:37Z",
+   "tracker": "89fc4a1",
+   "research-codex": "0aaa2108",
+   "branches": 57,
+   "ready_tasks": 0
   },
-  "task_choice_note": "Queue run 16 (tracker b53915d): Claude row reads 'NO READY TASK (R99 / R102) — waiting for a released window (R4 / R5 / R6). Not a stall.' No branch on origin is a Round 1 export. Nothing to lease but the record itself; lease written to honour the contract.",
-  "previous_run": "f017-20261114T065226Z",
-  "next_task": "no task; waiting for a released window (R4 / R5 / R6) — R99 / R102. Idle runs will update last_checked_at only unless the queue adds a Claude row or releases a window (REVIEW_REQUESTS 64).",
-  "blockers": [
-    "No READY development-window task for Claude after F017 (R99); Codex C020 does not create one (R102)",
-    "R91 closes Idea-lab tests on the development window; no other dataset is allowlisted (owner decisions R4 / R5 / R6 open)"
-  ],
-  "artifacts": "reports/blind/autonomous/claude/runs/notask-20261114T105130Z/",
-  "task_states": {
-    "F001": "completed_agree_all_rows",
-    "F006": "completed",
-    "F007": "closed by F008 (R22)",
-    "F008": "completed",
-    "F009": "completed",
-    "F010": "completed",
-    "F002": "completed",
-    "F003": "completed",
-    "F004": "completed",
-    "F005": "blocked (Round 1 release)",
-    "F011": "completed",
-    "F012": "completed",
-    "F013": "completed: (b) NOT TESTABLE, (c) done, (a) discharged by R78 + f014 counts-only confirmation",
-    "F014": "completed (weak; T = 60 only)",
-    "F015": "completed (a): C018 cross-review, agree all numbers; (b) not applicable (C018 published before run start); (c) no test, 3 held proposals",
-    "F016": "completed (counts only; 4 can bind, CL-P1 binds 88 %, R86 (3) unlikely to bind, CL-P3 premise not observed)",
-    "F017": "completed (agree all numbers; C019 reproduces byte for byte and independently 680/680; R86 (2) clock-insensitive 140 vs 147 of 679)",
-    "notask-20261114T105130Z": "completed_no_task (record only; C020 consistency read; CL-P10–P12 registered, no count)"
+  {
+   "checked_at": "2026-11-14T18:52:23Z",
+   "tracker": "0ec1a7f",
+   "research-codex": "56cf047",
+   "branches": 57,
+   "ready_tasks": 0
   },
-  "completed_at": "2026-11-14T10:58:43Z",
-  "result": "Record-only run. Counts-only consistency read of Codex C020 @ 0aaa210 against Claude f016 @ 253604d / f017 @ 1dbf1d1 from git objects: manifest 28/28; rebuilt results.json 481/481 leaves equal; independent feature table 18,333/18,333 shared cells equal (max diff 8.9e-16); six bind counts equal on all halves/cells; census clock 60/60 bins equal; receipt-clock veto flags 679/679 equal (147). Three register-only proposals CL-P10–P12 (no count). No pretend trade (R91). No outcome read.",
-  "last_checked_at": "2026-11-18T02:51:39Z",
-  "task_availability": "no task",
-  "ready_tasks": 0,
-  "idle_run_note": "Idle run per R106 (64) / R107 / R128: queue run 38 (tracker a3432ae, 00:39 UTC 18 Nov) lists no READY Claude row and no released window; Codex research-codex still at 73312cd (21:16 UTC 17 Nov; git diff 73312cd..origin/research-codex empty at this check), so its DIALOGUE.md, REVIEW_REQUESTS.md, EXPERIMENTS.md and KNOWLEDGE.md are unchanged since 0aaa210 and contain no direct question to Claude. Origin has 57 heads, the same names as before; no branch is a Round 1 export (no MANIFEST stating launches created 8 Nov 00:00 -> 10 Nov 00:00). Therefore: no run folder, no lease, no DIALOGUE post, no SCOREBOARD row, no new proposal, no Idea-lab test (the scheduled prompt's 'test at least one idea' is overridden by R91 per R106 (64)). STATUS.json only.",
-  "idle_checks": [
-    {
-      "checked_at": "2026-11-14T14:51:37Z",
-      "tracker": "89fc4a1",
-      "research-codex": "0aaa2108",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-14T18:52:23Z",
-      "tracker": "0ec1a7f",
-      "research-codex": "56cf047",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-14T22:51:33Z",
-      "tracker": "75d6e1a",
-      "research-codex": "280c361",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-15T02:52:38Z",
-      "tracker": "eb06564",
-      "research-codex": "280c361",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-15T06:52:09Z",
-      "tracker": "2456010",
-      "research-codex": "74de231",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-15T10:52:05Z",
-      "tracker": "921c97b",
-      "research-codex": "f92c94a",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-15T14:52:20Z",
-      "tracker": "b83a4a4",
-      "research-codex": "f92c94a",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-15T18:52:32Z",
-      "tracker": "5afdd58",
-      "research-codex": "bd56523",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-15T22:51:18Z",
-      "tracker": "7a401a2",
-      "research-codex": "4e81364",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-16T02:52:18Z",
-      "tracker": "2a43d47",
-      "research-codex": "4e81364",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-16T06:52:09Z",
-      "tracker": "b8470e2",
-      "research-codex": "89aa9b9",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-16T10:51:18Z",
-      "tracker": "70473c1",
-      "research-codex": "89aa9b9",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-16T14:51:37Z",
-      "tracker": "cd12464",
-      "research-codex": "f16b0e0",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-16T18:51:41Z",
-      "tracker": "36a0f5d",
-      "research-codex": "9359291",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-16T22:53:27Z",
-      "tracker": "309b315",
-      "research-codex": "9359291",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-17T02:52:40Z",
-      "tracker": "7cbe084",
-      "research-codex": "9359291",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-17T06:51:59Z",
-      "tracker": "a2d42a9",
-      "research-codex": "4d314b6",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-17T10:50:28Z",
-      "tracker": "a60511a",
-      "research-codex": "7ccb206",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-17T14:51:23Z",
-      "tracker": "49b3c11",
-      "research-codex": "7ccb206",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-17T18:51:17Z",
-      "tracker": "7047255",
-      "research-codex": "47f7653",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-17T22:51:59Z",
-      "tracker": "452e4e7",
-      "research-codex": "73312cd",
-      "branches": 57,
-      "ready_tasks": 0
-    },
-    {
-      "checked_at": "2026-11-18T02:51:39Z",
-      "tracker": "a3432ae",
-      "research-codex": "73312cd",
-      "branches": 57,
-      "ready_tasks": 0
-    }
-  ]
+  {
+   "checked_at": "2026-11-14T22:51:33Z",
+   "tracker": "75d6e1a",
+   "research-codex": "280c361",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-15T02:52:38Z",
+   "tracker": "eb06564",
+   "research-codex": "280c361",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-15T06:52:09Z",
+   "tracker": "2456010",
+   "research-codex": "74de231",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-15T10:52:05Z",
+   "tracker": "921c97b",
+   "research-codex": "f92c94a",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-15T14:52:20Z",
+   "tracker": "b83a4a4",
+   "research-codex": "f92c94a",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-15T18:52:32Z",
+   "tracker": "5afdd58",
+   "research-codex": "bd56523",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-15T22:51:18Z",
+   "tracker": "7a401a2",
+   "research-codex": "4e81364",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-16T02:52:18Z",
+   "tracker": "2a43d47",
+   "research-codex": "4e81364",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-16T06:52:09Z",
+   "tracker": "b8470e2",
+   "research-codex": "89aa9b9",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-16T10:51:18Z",
+   "tracker": "70473c1",
+   "research-codex": "89aa9b9",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-16T14:51:37Z",
+   "tracker": "cd12464",
+   "research-codex": "f16b0e0",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-16T18:51:41Z",
+   "tracker": "36a0f5d",
+   "research-codex": "9359291",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-16T22:53:27Z",
+   "tracker": "309b315",
+   "research-codex": "9359291",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-17T02:52:40Z",
+   "tracker": "7cbe084",
+   "research-codex": "9359291",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-17T06:51:59Z",
+   "tracker": "a2d42a9",
+   "research-codex": "4d314b6",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-17T10:50:28Z",
+   "tracker": "a60511a",
+   "research-codex": "7ccb206",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-17T14:51:23Z",
+   "tracker": "49b3c11",
+   "research-codex": "7ccb206",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-17T18:51:17Z",
+   "tracker": "7047255",
+   "research-codex": "47f7653",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-17T22:51:59Z",
+   "tracker": "452e4e7",
+   "research-codex": "73312cd",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-18T02:51:39Z",
+   "tracker": "a3432ae",
+   "research-codex": "73312cd",
+   "branches": 57,
+   "ready_tasks": 0
+  }
+ ]
 }
