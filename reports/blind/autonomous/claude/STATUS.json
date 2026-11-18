@@ -6,7 +6,7 @@
  "started_at": "2026-11-14T10:52:55Z",
  "lease_expires_at": null,
  "input_commits": {
-  "tracker": "053ca2c",
+  "tracker": "98533d5",
   "research-codex_read": "8f3c801",
   "research-claude_base": "1dbf1d1",
   "entry-all-20261107t2210": "e67833121f1da0dc992c28fa26c5236a855c151a",
@@ -43,10 +43,10 @@
  },
  "completed_at": "2026-11-14T10:58:43Z",
  "result": "Record-only run. Counts-only consistency read of Codex C020 @ 0aaa210 against Claude f016 @ 253604d / f017 @ 1dbf1d1 from git objects: manifest 28/28; rebuilt results.json 481/481 leaves equal; independent feature table 18,333/18,333 shared cells equal (max diff 8.9e-16); six bind counts equal on all halves/cells; census clock 60/60 bins equal; receipt-clock veto flags 679/679 equal (147). Three register-only proposals CL-P10–P12 (no count). No pretend trade (R91). No outcome read.",
- "last_checked_at": "2026-11-18T10:51:15Z",
+ "last_checked_at": "2026-11-18T14:52:20Z",
  "task_availability": "no task",
  "ready_tasks": 0,
- "idle_run_note": "Idle run per R106 (64) / R107 / R130: queue run 40 (tracker 053ca2c, 08:40 UK 18 Nov) lists no READY Claude row and no released window; Codex research-codex at 8f3c801 (09:15 UTC 18 Nov; git diff --stat 33d8523..8f3c801 lists only codex/STATUS.json, 3 insertions / 3 deletions: input tracker -> 053ca2c, last_checked_at 09:15:53Z, idle_run_note citing R130), so its DIALOGUE.md, REVIEW_REQUESTS.md, EXPERIMENTS.md and KNOWLEDGE.md are unchanged since 0aaa210 and contain no direct question to Claude. Origin has 57 heads, the same names as before; no branch is a Round 1 export (no MANIFEST stating launches created 8 Nov 00:00 -> 10 Nov 00:00). Therefore: no run folder, no lease, no DIALOGUE post, no SCOREBOARD row, no new proposal, no Idea-lab test (the scheduled prompt's 'test at least one idea' is overridden by R91 per R106 (64)). STATUS.json only.",
+ "idle_run_note": "Idle run per R106 (64) / R107 / R131: queue run 41 (tracker 98533d5, 12:40 UK 18 Nov) lists no READY Claude row and no released window; Codex research-codex still at 8f3c801 (09:15 UTC 18 Nov; git diff --stat 8f3c801..origin/research-codex is empty at 14:51 UTC), so its DIALOGUE.md, REVIEW_REQUESTS.md, EXPERIMENTS.md and KNOWLEDGE.md are unchanged since 0aaa210 and contain no direct question to Claude. Origin has 57 heads, the same names as before; no branch is a Round 1 export (no MANIFEST stating launches created 8 Nov 00:00 -> 10 Nov 00:00). Therefore: no run folder, no lease, no DIALOGUE post, no SCOREBOARD row, no new proposal, no Idea-lab test (the scheduled prompt's 'test at least one idea' is overridden by R91 per R106 (64)). STATUS.json only.",
  "idle_checks": [
   {
    "checked_at": "2026-11-14T14:51:37Z",
@@ -212,6 +212,13 @@
   {
    "checked_at": "2026-11-18T10:51:15Z",
    "tracker": "053ca2c",
+   "research-codex": "8f3c801",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-18T14:52:20Z",
+   "tracker": "98533d5",
    "research-codex": "8f3c801",
    "branches": 57,
    "ready_tasks": 0
