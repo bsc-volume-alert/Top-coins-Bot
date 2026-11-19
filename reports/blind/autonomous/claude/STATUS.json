@@ -6,8 +6,8 @@
  "started_at": "2026-11-14T10:52:55Z",
  "lease_expires_at": null,
  "input_commits": {
-  "tracker": "04ae2d2",
-  "research-codex_read": "aa1cb6d",
+  "tracker": "fe013e9",
+  "research-codex_read": "4ea7530",
   "research-claude_base": "1dbf1d1",
   "entry-all-20261107t2210": "e67833121f1da0dc992c28fa26c5236a855c151a",
   "entry-package-7nov": "0e3be03c71949e069a7a31b5951f332bb563f68f",
@@ -43,10 +43,10 @@
  },
  "completed_at": "2026-11-14T10:58:43Z",
  "result": "Record-only run. Counts-only consistency read of Codex C020 @ 0aaa210 against Claude f016 @ 253604d / f017 @ 1dbf1d1 from git objects: manifest 28/28; rebuilt results.json 481/481 leaves equal; independent feature table 18,333/18,333 shared cells equal (max diff 8.9e-16); six bind counts equal on all halves/cells; census clock 60/60 bins equal; receipt-clock veto flags 679/679 equal (147). Three register-only proposals CL-P10–P12 (no count). No pretend trade (R91). No outcome read.",
- "last_checked_at": "2026-11-19T14:53:34Z",
+ "last_checked_at": "2026-11-19T18:51:08Z",
  "task_availability": "no task",
  "ready_tasks": 0,
- "idle_run_note": "Idle run per R106 (64) / R107 / R137: queue run 47 (tracker 04ae2d2, 12:40 UK 19 Nov) lists no READY Claude row and no released window; research-codex has not moved since aa1cb6d (09:14 UTC 19 Nov, codex/STATUS.json alone, already read at the 10:50 check), so its DIALOGUE.md, REVIEW_REQUESTS.md, EXPERIMENTS.md and KNOWLEDGE.md are unchanged since 0aaa210 and contain no direct question to Claude. Origin has 57 heads, the same names as before; no branch is a Round 1 export (no MANIFEST stating launches created 8 Nov 00:00 -> 10 Nov 00:00). Therefore: no run folder, no lease, no DIALOGUE post, no SCOREBOARD row, no new proposal, no Idea-lab test (the scheduled prompt's 'test at least one idea' is overridden by R91 per R106 (64)). STATUS.json only.",
+ "idle_run_note": "Idle run per R106 (64) / R107 / R138: queue run 48 (tracker fe013e9, 16:40 UK 19 Nov) lists no READY Claude row and no released window (programme parked; F010 spot-check 17/17 OK). research-codex moved only by 4ea7530 (15:14 UTC 19 Nov; codex/STATUS.json alone, 3 insertions / 3 deletions, idle note citing R137), so its DIALOGUE.md, REVIEW_REQUESTS.md, EXPERIMENTS.md and KNOWLEDGE.md are unchanged since 0aaa210 and contain no direct question to Claude. Origin has 57 heads, the same names as before; no branch is a Round 1 export (no MANIFEST stating launches created 8 Nov 00:00 -> 10 Nov 00:00). Therefore: no run folder, no lease, no DIALOGUE post, no SCOREBOARD row, no new proposal, no Idea-lab test (the scheduled prompt's 'test at least one idea' is overridden by R91; the queue governs). Only this file changed.",
  "idle_checks": [
   {
    "checked_at": "2026-11-14T14:51:37Z",
@@ -262,6 +262,13 @@
    "checked_at": "2026-11-19T14:53:34Z",
    "tracker": "04ae2d2",
    "research-codex": "aa1cb6d",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-19T18:51:08Z",
+   "tracker": "fe013e9",
+   "research-codex": "4ea7530",
    "branches": 57,
    "ready_tasks": 0
   }
