@@ -154,6 +154,22 @@ Still open, labelled: true age of sampled tokens (first-pool age is a lower boun
 
 The seven-day run must use a **new database name** (`start.sh run7 7`); the shakedown database holds trades made by faulty code and is kept separately.
 
+## 6d. Third independent review, commit c5dda67 (ChatGPT, 20 Nov 2026 18:45 UK) — response
+
+Verdict received: **not ready; two correctness faults remain** (C1, C5, M1, G1 closed; C4's execution blocker closed). Both confirmed. Regression tests T1–T3 in `older/test/review2.test.mjs`. 87 tests pass.
+
+| # | Finding (confirmed) | Fix |
+|---|---|---|
+| T1a | Bars of a REJECTED back-fill stayed in memory (inserted before validation), and the previous fix let back-filled extremes inside the exact buffer reach FAST: a 22% move was bought as a double. | Validation comes first: a rejected reply, and bars outside the accepted run, are not kept at all. Accepted back-fill lives in its own map (`Series.bf`), apart from live bars. FAST takes its low from an **exact path** (`lowIn(x, t, true)`): exact observations inside the window plus the exact price standing at its start — no back-fill, no minute bar. |
+| T1b | At start-up FAST accepted back-filled history before its own exact window existed. | Strict coverage is now exact-observation coverage (`obsFrom`): a fresh crossing, FAST and SECOND-WAVE need exact observations continuous over the whole window. Back-fill never satisfies it. |
+| T1c | A returned newer close was discarded when an incomplete live candle occupied the same minute. | Live and back-filled bars of the same minute coexist; a completed back-filled minute that ends after the last exact observation supplies the newer close (hour-scale reads only). |
+| T2 | A deposit/withdrawal after a boost produced a state without the quarantine marker; a pending buy filled on it before any swap. | The marker is carried by every deposit/withdrawal state until the next swap (which carries its own virtual reserves and is chain-checked) releases it. |
+| left-and-labelled, done anyway | Compression at `RAW_CAP` lost buyers and was not flagged. | Merged observations keep every buyer with its own volume; any measurement window containing a merge is flagged `compressed` (transaction counts understated, volume and buyers complete). |
+| left-and-labelled, done anyway | Another quantity's quote reply made an older full-position valuation look current. | A quoted valuation's time is the time of its own quote. |
+| tightened | Patch end-point accepted bars ending 221 s before the outage ended. | Both ends of a repaired outage must be within 120 s. |
+
+Declared approximations that remain (accepted by the reviewer as labelled): the 5-minute back-fill tolerance for hour-scale windows (not proof of continuity; never used by exact decisions); the 0.1% quote-chain tolerance; the fee fallback (other side, else 0.3%, labelled on the fill); a quote-priced position's peak starting at cost; true age of sampled tokens; sustained memory; real API cadence.
+
 ## 7. What is ready, and what is not
 **Ready:** the PumpSwap live path; the Solana-wide sampled path (against a simulated provider); the 448-row dashboard with method filters; the one-command validation run.
 **Remaining, in order:**

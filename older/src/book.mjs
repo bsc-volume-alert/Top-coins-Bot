@@ -125,7 +125,7 @@ export function observe(e, st, t, cov) {
     if (v.status !== "open" && v.status !== "scaling") continue;
     const val = liqValue(st, v.tok); if (val == null) continue; // this state does not price this holding: no peak, no trigger
     if (val > v.peak) v.peak = val; if (full != null && full / COST > v.maxX) v.maxX = full / COST;
-    v.lastX = (v.got + val) / COST; v.lastT = t; // what this row would be worth if sold now (banked half included), for the open-positions view
+    v.lastX = (v.got + val) / COST; v.lastT = q ? (sellQuote(st, v.tok)?.t ?? t) : t; // what this row would be worth if sold now (banked half included); for a routed quote, the time of THAT quantity's own quote — another quantity's newer reply never makes it look current
     if (val <= v.peak * (1 - v.stop)) trigger(v, t, "trail", val); // also replaces a pending half-sale: one order, never two on the same tokens
     else if (v.status === "open" && v.policy === "scale" && !v.half && full != null && full >= S.SCALE_AT_X * COST) { v.status = "scaling"; v.trigT = t; v.trigValue = full; v.schedT = t + S.SELL_DELAY_MS / 1000; }
   }

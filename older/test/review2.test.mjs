@@ -75,7 +75,7 @@ test("C2 a newer back-filled close is used in preference to an older exact obser
   const bars = []; for (let m = 16; m <= 31; m++) bars.push({ m, o: 1.6, h: 1.6, l: 1.6, c: 1.6 }); // back-fill: the price was 1.60 during the outage
   assert.equal(sr.addBars(bars, { from: 1001, to: 1900, patchGap: true }).accepted, true);
   sr.add(2100, 2.0);
-  const p = sr.priceAt(2100 - 900); assert.equal(p.px, 1.6); assert.equal(p.src, "bar"); assert.ok(2.0 / p.px < 1.3, "the real 15-minute rise is 25%, not the 100% an old observation would suggest");
+  const p = sr.priceAt(2100 - 900); assert.equal(p.px, 1.6); assert.equal(p.src, "backfill"); assert.ok(2.0 / p.px < 1.3, "the real 15-minute rise is 25%, not the 100% an old observation would suggest");
   assert.equal(sr.priceAt(1005).px, 1.0, "before any back-filled minute has completed, the last exact print is still the answer");
   assert.equal(sr.highIn(1100, 1900).px, 1.6, "highs and lows inside a repaired outage come from its bars");
   const s2 = new Series("M", cov); s2.startLive(0); s2.add(1000, 1.0); s2.add(1100, 1.1); assert.equal(s2.priceAt(1200).src, "obs", "without back-fill nothing changes: the exact observation is the answer");
@@ -189,4 +189,68 @@ test("G1 a planned stop saves every open position at once; the regular save is a
   assert.equal(e.flush(), 1); assert.ok(Math.abs(st.allEntries().find((x) => x.id === mem.id).versions[0].peak - mem.versions[0].peak) < 1e-12);
   e.onSwap(ev(T0 + 710, 420_000)); e.tick(T0 + 710.2); e.tick(T0 + 711.3);              // 1 s later the regular checkpoint has it
   assert.ok(Math.abs(st.allEntries().find((x) => x.id === mem.id).versions[0].peak - mem.versions[0].peak) < 1e-12);
+});
+
+// ---- third review (ChatGPT on c5dda67, 20 Nov 2026 18:45 UK): T1 back-fill vs exact FAST decisions, T2 boost quarantine ----
+test("T1 a REJECTED back-fill leaves nothing behind, and FAST never reads back-fill or a minute bar: a 22% move is not bought as a double", () => {
+  // the reviewer's sequence: an outage, a sparse back-fill rejected for a 13-minute hole whose last bar holds a low of 0.00005
+  const e = mkEngine(); e.feedUp(T0); e.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 9 * H }); path(e, T0, T0 + 600, () => 90_000, 10);
+  e.feedDown(T0 + 601); const up = T0 + 2400; e.feedUp(up); const sr = e.coins.get("MintAAApump").series, m0 = Math.floor((T0 + 601) / 60), mEnd = Math.floor((up - 1) / 60);
+  const sparse = [{ m: m0, o: 9e-5, h: 9e-5, l: 9e-5, c: 9e-5 }, { m: mEnd - 13, o: 9e-5, h: 9e-5, l: 9e-5, c: 9e-5 }, { m: mEnd, o: 5e-5, h: 9e-5, l: 5e-5, c: 9e-5 }];
+  const r = sr.addBars(sparse, { from: T0 + 601, to: up, patchGap: true }); assert.equal(r.accepted, false); assert.equal(sr.bf.size, 0, "rejected bars are not kept anywhere");
+  for (let t = up + 1; t < up + 61; t += 5) e.onSwap(ev(t, 90_000)); e.onSwap(ev(up + 62, 110_000)); e.onSwap(ev(up + 64, 111_000));   // a complete exact minute, then +22%
+  assert.equal(e.entries.size, 0, "no FAST entry: the lowest exact price in the window is 0.00009");
+  // and even an ACCEPTED repair is invisible to the exact path
+  const full = []; for (let m = m0; m <= mEnd; m++) full.push({ m, o: 9e-5, h: 9e-5, l: 5e-5, c: 9e-5 }); assert.equal(sr.addBars(full, { from: T0 + 601, to: up, patchGap: true }).accepted, true); assert.ok(sr.bf.size > 0);
+  assert.ok(Math.abs(sr.lowIn(up + 5, up + 65, true).px - 9e-5) < 1e-12, "exact low ignores back-fill"); assert.equal(sr.priceAt(up - 30, true)?.src ?? "none", "obs", "the exact price standing before the window is the last real observation");
+  assert.ok(sr.lowIn(up - 1200, up + 65).px <= 5e-5 + 1e-12, "the hour-scale low does use the accepted bars");
+  e.onSwap(ev(up + 70, 112_000)); assert.equal([...e.entries.values()].filter((x) => x.families.some((f) => f.startsWith("FAST"))).length, 0);
+});
+
+test("T1 at start-up FAST waits for its own exact window: back-filled history before the live start does not make a seconds-scale window 'covered'", () => {
+  const cov = new Coverage(); cov.up(5000); const sr = new Series("M", cov); sr.startLive(5000);
+  const bars = []; for (let m = 20; m <= 83; m++) bars.push({ m, o: 1, h: 1, l: 0.4, c: 1 }); assert.equal(sr.addBars(bars, { from: 1200, to: 5000 }).accepted, true);
+  sr.add(5010, 1); sr.add(5030, 1.1);
+  assert.equal(sr.covered(5030 - 60, 5030), true, "hour-scale coverage: yes (history reaches back)"); assert.equal(sr.covered(5030 - 60, 5030, true), false, "exact coverage: not yet — exact observations began at 5000");
+  sr.add(5061, 1.2); assert.equal(sr.covered(5061 - 60, 5061, true), true); assert.equal(sr.lowIn(5001, 5061, true).px, 1, "and its low comes from exact observations only, not the back-filled 0.4");
+  const eng = mkEngine(); eng.feedUp(T0); eng.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 9 * H }); const s2 = eng.coins.get("MintAAApump").series;
+  const hb = []; for (let m = Math.floor((T0 - 3600) / 60); m < Math.floor(T0 / 60); m++) hb.push({ m, o: 5e-5, h: 5e-5, l: 5e-5, c: 5e-5 }); assert.equal(s2.addBars(hb, { from: T0 - 3600, to: T0 }).accepted, true);
+  eng.onSwap(ev(T0 + 5, 100_000)); eng.onSwap(ev(T0 + 8, 105_000)); // "doubled" against the back-filled 50K, 8 s after the live start
+  assert.equal([...eng.entries.values()].filter((x) => x.families.some((f) => f.startsWith("FAST"))).length, 0);
+});
+
+test("T1 boundary: a back-filled close is kept even when an incomplete live candle already occupies that minute", () => {
+  const cov = new Coverage(); cov.up(0); const sr = new Series("M", cov); sr.startLive(0);
+  sr.add(1000, 1.0); cov.drop(1001); cov.up(1900);                               // live bar of minute 16 (960–1019) holds only the 1.00 print
+  const bars = []; for (let m = 16; m <= 31; m++) bars.push({ m, o: 1.0, h: 1.6, l: 1.0, c: 1.6 }); assert.equal(sr.addBars(bars, { from: 1001, to: 1900, patchGap: true }).accepted, true);
+  assert.equal(sr.bars.get(16).c, 1.0, "the live candle is untouched"); assert.equal(sr.bf.get(16).c, 1.6, "and the back-filled minute is kept beside it");
+  const p = sr.priceAt(1025); assert.equal(p.px, 1.6, "minute 16 closed at 1.60 after the 1.00 print: the newer close is used"); assert.equal(p.src, "backfill"); assert.equal(sr.priceAt(1025, true).px, 1.0);
+});
+
+test("T2 a deposit or withdrawal after a boost does not release the quarantine: only the next swap does", () => {
+  const B = 200_000_000_000_000n, Q = 200_000_000_000n, b = 10n ** 12n, p = { vq: 0 }; const a = buyEv(B, Q, b); applyEvent(p, a.e);
+  const boost = applyEvent(p, { type: "boost", virtualQuote: 0n, realQuoteAfter: BigInt(Math.round(p.quote * 1e9)), baseAfter: BigInt(Math.round(p.base * 1e6)) }); assert.equal(boost.approx, "boost");
+  const dep = applyEvent(p, { type: "deposit", poolBase: BigInt(Math.round(p.base * 1e6)), poolQuote: BigInt(Math.round(p.quote * 1e9)), baseAmt: 1_000_000n, quoteAmt: 1_000n });
+  assert.ok(dep); assert.equal(dep.approx, "boost", "still unconfirmed");
+  const wd = applyEvent(p, { type: "withdraw", poolBase: BigInt(Math.round(p.base * 1e6)), poolQuote: BigInt(Math.round(p.quote * 1e9)), baseAmt: 1_000_000n, quoteAmt: 1_000n }); assert.equal(wd.approx, "boost");
+  const sw = buyEv(BigInt(Math.round(p.base * 1e6)), BigInt(Math.round(p.quote * 1e9)), b); const r = applyEvent(p, sw.e); assert.ok(r); assert.equal(r.approx, undefined, "a swap carries its own reserves: released");
+  const d2 = applyEvent(p, { type: "deposit", poolBase: BigInt(Math.round(p.base * 1e6)), poolQuote: BigInt(Math.round(p.quote * 1e9)), baseAmt: 1_000_000n, quoteAmt: 1_000n }); assert.equal(d2.approx, undefined, "after that swap a deposit is an ordinary state again");
+  // engine: the pending buy stays blocked through boost AND deposit, and fills on the swap
+  const e = mkEngine(); e.feedUp(T0); e.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 9 * H }); path(e, T0, T0 + 600, () => 100_000, 10);
+  e.onSwap(ev(T0 + 605, 210_000)); const en = [...e.entries.values()][0]; const st = (mc) => ({ base: BASE, quote: quoteFor(mc), feeBuy: 0.003, feeSell: 0.003, supply: 1e9, approx: "boost" });
+  e.onEvent({ t: T0 + 605.4, mint: "MintAAApump", pool: "PoolA", kind: "boost", state: st(400_000), sol: 0, isBuy: null });
+  e.onEvent({ t: T0 + 605.8, mint: "MintAAApump", pool: "PoolA", kind: "deposit", state: st(410_000), sol: 0, isBuy: null }); e.tick(T0 + 606.5);
+  assert.equal(en.status, "pending"); assert.equal(e.stats.approxStates, 2); e.onSwap(ev(T0 + 607, 230_000)); assert.equal(en.status, "filled"); assert.equal(en.fill.quote_sol, quoteFor(230_000));
+});
+
+test("T3 (left-and-labelled items) compression is flagged and keeps every buyer; a quoted valuation carries its own quote's time", async () => {
+  const { RAW_CAP } = await import("../src/spec.mjs"); const cov = new Coverage(); cov.up(0); const sr = new Series("M", cov); sr.startLive(0);
+  for (let k = 0; k < RAW_CAP; k++) sr.add(100 + k * 0.5, 1, 1, false);
+  const t = 100 + RAW_CAP * 0.5 + 10; sr.add(t, 1, 200, true, "walletA"); sr.add(t + 0.2, 1, 100, true, "walletB");          // same second, buffer full → merged
+  const w = sr.winStats(t - 1, t + 1); assert.equal(w.compressed, true); assert.equal(w.buyers, 2); assert.ok(Math.abs(w.top_buyer_share - 2 / 3) < 1e-3, "66.7%, not 100%"); assert.equal(w.vol_usd, 300);
+  assert.equal(sr.winStats(100, 200).compressed, undefined, "windows without a merge are not flagged");
+  const e = newEntry({ mint: "M", pool: null, ag: "A1", t: 1000, families: ["LOW4H"], features: {}, mc: 1e5, px: 1 }); e.exec = "routed-quote";
+  observe(e, { kind: "quote", reqT: 1001, t: 1001.3, buy: { sol: 0.2, tok: 1000, reqT: 1001, t: 1001.3 }, sells: [] }, 1001.3); const tok = e.fill.tok;
+  observe(e, { kind: "quote", reqT: 1500, t: 1500.3, buy: null, sells: [{ tok, sol: 0.25, reqT: 1100, t: 1100.3 }, { tok: tok / 2, sol: 0.12, reqT: 1500, t: 1500.3 }] }, 1500.3); // the half was re-quoted; the full holding's quote is 400 s old
+  assert.equal(e.versions[0].lastT, 1100.3, "the full position's valuation is dated by its own quote, not by the newest reply");
 });

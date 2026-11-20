@@ -150,7 +150,9 @@ export function applyEvent(p, e, baseDec = 6) {
     const B = Number(e.poolBase) + (RES_MODE === "pre" ? s * Number(e.baseAmt) : 0), Q = Number(e.poolQuote) + (RES_MODE === "pre" ? s * Number(e.quoteAmt) : 0) + vq;
     if (!(B > 0 && Q > 0)) return null;
     p.base = B / U; p.quote = Q / 1e9;
-    return { state: { base: p.base, quote: p.quote, feeBuy: p.feeBuy ?? null, feeSell: p.feeSell ?? null, supply: p.supply ?? null }, sol: 0, changed: true };
+    // a deposit/withdrawal reports the real vaults but adds the virtual reserves WE hold: after a boost those are unconfirmed, so the
+    // quarantine continues — only the next swap (which carries its own virtual reserves and is chain-checked) releases it
+    return { state: { base: p.base, quote: p.quote, feeBuy: p.feeBuy ?? null, feeSell: p.feeSell ?? null, supply: p.supply ?? null }, sol: 0, changed: true, ...(p.afterBoost ? { approx: "boost" } : {}) };
   }
   if (e.type === "boost") { // effective = real quote reserves + boost reserves; waiting fees are inside virtual with opposite sign, so real_after + virtual is exact up to unswept fees
     p.vq = Number(e.virtualQuote); const Q = Number(e.realQuoteAfter) + p.vq; if (e.baseAfter != null) p.base = Number(e.baseAfter) / U;

@@ -69,7 +69,8 @@ Owner's decision: collect more information without adding books. Nothing below i
 - **Reserve chain:** base side exact; quote side within 0.1% of effective reserves. A break restarts the coin's history and trust.
 - **Unknown virtual reserves are not zero:** no state until an event carries them.
 - **Boost events:** the rebuilt state is quarantined until the next swap.
-- **Back-filled bars:** continuous only where consecutive bars are ≤ 5 minutes apart; a newer back-filled close beats an older exact observation.
+- **Back-filled bars:** kept only when accepted, apart from live data; continuous only where consecutive bars are ≤ 5 minutes apart (a declared approximation for hour-scale windows). They are never read by a fresh crossing, FAST or SECOND-WAVE: those use exact observations only, continuous over the whole window. For hour-scale reads a newer back-filled close beats an older exact observation.
+- **Boost quarantine** lasts through deposits and withdrawals until the next swap.
 - **Sampled tokens:** no valuation without the provider's market cap or circulating supply; valid decimals required.
 - **Routed half-sale:** its quotes must be requested within 5 s of each other.
 - **Trade-window measurements:** only from exact observations covering the whole window.

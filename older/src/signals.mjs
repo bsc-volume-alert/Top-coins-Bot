@@ -76,7 +76,7 @@ export function evaluate(coin, o, opts = {}) {
           const elapsed = t - low.t, bars = sr.barsIn(Math.floor(low.t / 60), Math.floor(t / 60));
           const worst = bars.reduce((w, [m, b]) => { const gn = b.o > 0 ? b.c / b.o - 1 : 0; return gn > w.g ? { g: gn, m } : w; }, { g: -Infinity, m: null });
           // flag: the candle that contains the low may have OPENED before the low, so its full open→close gain is not all "climb after the low"
-          const lowBar = sr.bars.get(Math.floor(low.t / 60));
+          const lowBar = sr.barAt(Math.floor(low.t / 60));
           const sd = { ...d, elapsed_s: Math.round(elapsed), candles: bars.length, max_candle_gain: bars.length ? +worst.g.toFixed(4) : null, low_candle_opened_before_low: !!(lowBar && lowBar.o > low.px), worst_is_low_candle: worst.m === Math.floor(low.t / 60) };
           if (elapsed < S.SLOW_MIN_ELAPSED_S) note("SLOW-BUILD", "rejected: under 30 min from low", sd, false);
           else if (bars.length && worst.g > S.SLOW_MAX_CANDLE_GAIN + 1e-12) note("SLOW-BUILD", "rejected: a candle above +20%", { ...sd, at_minute: worst.m }, false);
@@ -133,7 +133,7 @@ export function evaluate(coin, o, opts = {}) {
   for (const [family, W, X] of S.FAST) {
     if (g.done[family] || skip.has(family)) continue;
     if (!sr.covered(t - W, t, true)) { note(family, "window not covered"); continue; }
-    const lo = sr.lowIn(t - W, t); if (!lo) continue;
+    const lo = sr.lowIn(t - W, t, true); if (!lo) continue; // EXACT: observations inside the window + the exact price standing at its start; never back-fill, never a minute bar
     if (!cross(X * lo.px)) continue;
     if (!inBand) { note(family, "crossing outside entry band", { mc: Math.round(o.mc) }, false); continue; }
     const obs = sr.raw.filter((r) => r[0] >= t - W && r[0] < t);
