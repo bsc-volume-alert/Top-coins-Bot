@@ -41,7 +41,7 @@ export function evaluate(coin, o, opts = {}) {
   const g = grp(coin, ag), inBand = o.mc >= S.BAND_LO_USD && o.mc <= S.BAND_HI_USD;
   const note = (family, reason, detail = {}, once = true) => { const k = family + "|" + reason; if (once && g.logged[k]) return; g.logged[k] = 1; out.notes.push({ family, ag, t, reason, detail }); };
   // the previous observation counts for a "fresh crossing" only if nothing between it and now is unknown
-  const prevOk = sr.prevT !== null && sr.prevT < t && sr.covered(sr.prevT, t);
+  const prevOk = sr.prevT !== null && sr.prevT < t && sr.covered(sr.prevT, t, true); // strict: never across an outage, even a repaired one
   const cross = (line) => prevOk && sr.prevPx < line && o.px >= line;
   const cand = (family, detail) => { g.done[family] = 1; out.cands.push({ family, ag, t, mc: o.mc, px: o.px, detail }); };
   const prevRec = sr.prevT !== null ? { t: sr.prevT, px: sr.prevPx, covered_to_now: prevOk } : null;
@@ -126,7 +126,7 @@ export function evaluate(coin, o, opts = {}) {
   let fastSeed = false;
   for (const [family, W, X] of S.FAST) {
     if (g.done[family] || skip.has(family)) continue;
-    if (!sr.covered(t - W, t)) { note(family, "window not covered"); continue; }
+    if (!sr.covered(t - W, t, true)) { note(family, "window not covered"); continue; }
     const lo = sr.lowIn(t - W, t); if (!lo) continue;
     if (!cross(X * lo.px)) continue;
     if (!inBand) { note(family, "crossing outside entry band", { mc: Math.round(o.mc) }, false); continue; }
@@ -146,7 +146,7 @@ export function evaluate(coin, o, opts = {}) {
   } else {
     const end = (reason, detail = {}) => { coin.sw = null; note("SECOND-WAVE", reason, { seed_t: w.seedT, seed_ag: w.seedAg, windows: w.windows, ...detail }, false); };
     if (t > w.seedT + S.SW_EXPIRE_S) end(w.frozen ? "expired: no reclaim within 60 min" : "expired: no 25% pullback within 60 min");
-    else if (!sr.covered(w.seedT, t)) end("abandoned: coverage broke during the setup");
+    else if (!sr.covered(w.seedT, t, true)) end("abandoned: coverage broke during the setup");
     else if (w.frozen === null) { if (o.px > w.H) { w.H = o.px; w.HT = t; } else if (o.px <= S.SW_PULLBACK * w.H) { w.frozen = w.H; w.pullT = t; w.pullPx = o.px; } }
     else if (o.px > w.frozen) {
       const d = { seed_t: w.seedT, seed_px: w.seedPx, seed_ag: w.seedAg, seed_age_s: w.seedAgeS, entry_ag: ag, seed_windows: w.windows, frozen_high: w.frozen, high_t: w.HT, pullback_t: w.pullT, pullback_px: w.pullPx, since_seed_s: Math.round(t - w.seedT) };

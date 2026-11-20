@@ -19,6 +19,11 @@ const now0 = Date.now() / 1000, firstStart = store.firstStart(now0), lastSlot = 
 const engine = new Engine({ store, solUsd, log, firstStart, onFill: (e, c) => { if (e.exec !== "routed-quote") verifyEntry(e, c, { store, lastSlotOf: (m) => lastSlot.get(m) ?? null }); } });
 const onEvent = engine.onEvent.bind(engine); engine.onEvent = (ev) => { if (ev.slot) lastSlot.set(ev.mint, ev.slot); const c = engine.coins.get(ev.mint); if (c) c.eventCount = (c.eventCount || 0) + 1; onEvent(ev); };
 store.restore(engine); engine.restartGap(store.lastAlive(), now0);
+// the entry window: OLDER_ENTRIES_UNTIL (unix seconds, or an ISO date) — after it nothing new is opened; open positions, their
+// exits and the 24-hour runner tracking carry on until every included position is complete
+if (process.env.OLDER_ENTRIES_UNTIL && process.env.OLDER_ENTRIES_UNTIL.trim()) { const v = process.env.OLDER_ENTRIES_UNTIL; engine.entriesUntil = /^\d+$/.test(v) ? Number(v) : Date.parse(v) / 1000; log(`[older] entry window closes ${new Date(engine.entriesUntil * 1000).toISOString()}`); }
+let COMMIT = process.env.OLDER_COMMIT || null; try { const { execSync } = await import("node:child_process"); COMMIT = COMMIT || execSync("git rev-parse HEAD", { cwd: new URL(".", import.meta.url).pathname, stdio: ["ignore", "pipe", "ignore"] }).toString().trim(); } catch {}
+store.db.prepare("INSERT INTO feed (t, ev, detail) VALUES (?,?,?)").run(now0, "start", `commit ${COMMIT || "unknown"}`);
 await startSolUsd();
 const J = await import("./jupiter.mjs");
 const backfill = startBackfill({ engine, store, jup: J, log });
@@ -49,6 +54,7 @@ const { Poller } = await import("./polled.mjs"); const { classifyMintAccount, TO
 let poller = null;
 if (process.env.OLDER_SOLANA_WIDE === "1") {
   poller = new Poller({ engine, jup: J, store, log, hotEvery: Number(process.env.OLDER_HOT_S || 10), coldEvery: Number(process.env.OLDER_COLD_S || 60), quoteFast: Number(process.env.OLDER_QUOTE_FAST_S || 2), quoteSlow: Number(process.env.OLDER_QUOTE_SLOW_S || 10) });
+  log(`[older] sampled coins restored to the watch list: ${poller.restore()}`);
   poller.start();
   // Token-2022 mints: read the extensions from the chain (1 call each) — until then their risk status is "missing", not clean
   (async () => { while (true) { await new Promise((r) => setTimeout(r, 1000)); const c = [...engine.coins.values()].find((x) => x.mode === "polled" && x.info.token_program === TOKEN_2022 && !x.riskRead); if (!c) continue; c.riskRead = true;
@@ -58,7 +64,7 @@ if (process.env.OLDER_SOLANA_WIDE === "1") {
 const inv = () => { try { return JSON.parse(store.db.prepare("SELECT v FROM meta WHERE k='inventory'").get()?.v || "null"); } catch { return null; } };
 // the reserve reading counts as validated only when the owner sets OLDER_RES_VALIDATED=1 after reviewing docs/tx-validation.json
 const valid = () => (process.env.OLDER_RES_VALIDATED === "1" ? { by: "OLDER_RES_VALIDATED" } : null);
-const web = startWeb({ port: Number(process.env.OLDER_PORT || 8793), store, engine, status: () => ({ started: now0, first_start: firstStart, idl: IDL_PIN,
+const web = startWeb({ port: Number(process.env.OLDER_PORT || 8793), store, engine, status: () => ({ started: now0, first_start: firstStart, commit: COMMIT, run: process.env.OLDER_RUN_NAME || null, entries_until: engine.entriesUntil, idl: IDL_PIN,
   feed: { ...fs, lag_ms_avg: fs.lagN ? Math.round(fs.lagMsSum / fs.lagN) : null }, engine: { ...engine.stats, coins: engine.coins.size, open: [...engine.byMint.values()].reduce((s, x) => s + x.size, 0), feed_gaps: engine.feedCov.gaps.length, usd_down: engine.usdDown },
   decoder: { ...dec }, tx_validation: valid(), verify: { ...vf }, sol: { ...sp }, gmgn: { calls: gm.calls, errors: gm.errors, limited: gm.limited, banned: gm.banned, lastErr: gm.lastErr, rate_headers: gm.headers }, backfill: { ...bf }, backfillQ: backfill.size(), jupiter: { ...J.ju, key: !!process.env.JUP_API_KEY, rps: Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0.5)) }, poller: poller ? { ...poller.stats, cadence_avg_s: poller.stats.cadence.n ? +(poller.stats.cadence.sum / poller.stats.cadence.n).toFixed(1) : null, hot_s: poller.hotEvery, cold_s: poller.coldEvery } : null, inventory: inv(), mem_mb: Math.round(process.memoryUsage().rss / 2 ** 20) }) });
 log(`[older] started, spec ${SPEC_VER}, paper only`);
@@ -76,7 +82,7 @@ if (process.env.OLDER_RUN_MINUTES) {
   const { writeFileSync } = await import("node:fs"); const N = Number(process.env.OLDER_RUN_MINUTES), outF = (process.env.OLDER_OUT || ".") + "/validation-run.json", snaps = [];
   let lagMax = 0, lastTick = Date.now(); setInterval(() => { const d = Date.now() - lastTick - 100; if (d > lagMax) lagMax = d; lastTick = Date.now(); }, 100); // event-loop backlog
   const snap = () => { const d = store.disk(), mb = fs.bytes / 1e6; snaps.push({ min: snaps.length, at: new Date().toISOString(), rss_mb: Math.round(process.memoryUsage().rss / 2 ** 20), heap_mb: Math.round(process.memoryUsage().heapUsed / 2 ** 20), db_mb: d.db_mb, wal_mb: d.wal_mb, free_gb: d.free_gb, bars: d.bars,
-    feed: { connected: fs.connected, msgs: fs.msgs, mb: +mb.toFixed(1), helius_stream_credits: Math.round((mb / 0.1) * 2), events: fs.events, emitted: fs.emitted, failed_tx: fs.failedTx, dupes: fs.dupes, held: fs.held, replayed: fs.replayed, rejected: fs.rejected, non_canonical: fs.nonCanonical, non_sol: fs.nonSol, non_sol_quote_mints: Object.entries(fs.nonSolQuotes).sort((a, b) => b[1] - a[1]).slice(0, 8), lookup_fail: fs.lookupFail, lookup_errs: fs.lookupErrs, last_lookup_err: fs.lastLookupErr, non_sol_base_is_sol: fs.baseIsSol, reconnects: fs.reconnects, lookup_calls: fs.lookupCalls, lag_ms_avg: fs.lagN ? Math.round(fs.lagMsSum / fs.lagN) : null },
+    feed: { connected: fs.connected, msgs: fs.msgs, mb: +mb.toFixed(1), helius_stream_credits: Math.round((mb / 0.1) * 2), events: fs.events, emitted: fs.emitted, failed_tx: fs.failedTx, dupes: fs.dupes, held: fs.held, replayed: fs.replayed, rejected: fs.rejected, non_canonical: fs.nonCanonical, non_sol: fs.nonSol, non_sol_quote_mints: Object.entries(fs.nonSolQuotes).sort((a, b) => b[1] - a[1]).slice(0, 8), lookup_fail: fs.lookupFail, lookup_errs: fs.lookupErrs, last_lookup_err: fs.lastLookupErr, non_sol_base_is_sol: fs.baseIsSol, discontinuities: fs.discontinuities, multi_event_tx: fs.multiEventTx, reconnects: fs.reconnects, lookup_calls: fs.lookupCalls, lag_ms_avg: fs.lagN ? Math.round(fs.lagMsSum / fs.lagN) : null },
     decoder: { ...dec }, engine: { ...engine.stats, coins: engine.coins.size, feed_gaps: engine.feedCov.gaps.length }, loop_lag_ms_max: lagMax, verify: { ...vf }, gmgn: { calls: gm.calls, limited: gm.limited }, backfill: { ...bf, queue: backfill.size() }, jupiter: { ...J.ju }, poller: poller?.stats ?? null, inventory: inv() }); lagMax = 0;
     writeFileSync(outF, JSON.stringify({ spec: SPEC_VER, minutes_planned: N, res_mode: dec.mode, note: "helius_stream_credits = 2 credits per 0.1 MB of WebSocket data received (Helius billing rule); RPC calls are extra and small", snaps }, null, 1)); };
   snap(); setInterval(snap, 60000); setTimeout(() => { snap(); log(`[older] validation run finished (${N} min) → ${outF}`); process.exit(0); }, N * 60000 + 500);

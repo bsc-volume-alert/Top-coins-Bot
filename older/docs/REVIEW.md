@@ -103,6 +103,29 @@ Raw results: `docs/validation/run2-20261120/`.
 
 **Standing rule:** the reserve reading is confirmed (two runs, 119 transactions). The dashboard tile stays UNVALIDATED until the shakedown run has produced entries whose account-read check agrees with the reconstructed pool state.
 
+## 6b. Independent code review of commit d88a250 (ChatGPT, 20 Nov 2026) — response
+All nine blockers were confirmed against the code and fixed. Each has a regression test in `test/review.test.mjs` (or the test named). 64 tests pass.
+
+| # | Blocker | Fix | Test |
+|---|---|---|---|
+| 1 | A state observed after the scheduled time could price it (back-dated fill, negative state age) | A pool state is trusted for time T only if it was observed at or before T. Otherwise the order waits for the first state within 5 s or is cancelled as a data timeout. | B1 |
+| 2 | Events of one transaction shared a timestamp: FAST crossings missed, intermediate states could create peaks and stops | All of a transaction's events on a pool are applied in order and only the committed state after the last is an observation (`reduceTx`). Observations of a coin are strictly ordered in time. | B2 |
+| 3 | Missing history could count as covered (empty back-fill, empty outage repair, first two omitted samples, boundary minute) | Coverage follows evidence: history extends only to the first bar actually returned; an empty reply extends and repairs nothing; a repaired outage counts at minute-bar resolution only and never for fresh crossings, FAST or SECOND-WAVE (`covered(…, strict)`); an omitted sample breaks coverage at once; boundary-minute bars are included in window lows/highs. | B3 (two tests) |
+| 4 | Peaks were saved only on status changes | Open positions are check-pointed to the database within 5 s of any change to peak, last value or runner high. | B4 |
+| 5 | A restart stranded sampled positions (restored as live, never quoted again) | Restore order is identity and observation mode first, then one-entry flags, then unfinished entries; the poller rebuilds its watch list from restored sampled coins; decimals and supply are stored. | B5 |
+| 6 | A coin could be processed by both adapters; a routed-quote entry could be filled from a pool state | One observation method per mint. Live events for a sampled coin are ignored while it has any pending/open entry; only with none does it move to live, with a fresh history. Each entry is only ever priced by the method it was opened with. | B6 |
+| 7 | `unresolved` was terminal: no more quotes, entry could leave tracking | Unresolved is a flag on a still-pending sale. Its inventory keeps being requested (every 10 minutes), the entry stays active, and it closes when a price returns (`was_unresolved_s` recorded). | exits test + B7 |
+| 8 | A detected reserve discontinuity still produced an ordinary usable state | A base-side break flags the result; the feed restarts the coin's history and state trust at that moment, so no order or crossing uses the unknown interval. Breaks are counted and the last 20 kept for classification. The quote side is now measured (`chainBadQuote`) and will be enforced once the shakedown run shows its derivation is reliable. | B8 |
+| 9 | Sequential quotes for different quantities were merged under one timestamp | Every quote is its own observation with its own request/response time, delivered as it arrives; an order uses only quotes requested at or after its scheduled time, for every quantity it needs; each used quote's times are stored. | B9 |
+
+Should-fix items: validator aligned with the decoder (was already in 68be658); realised proceeds no longer clipped at zero; a buy-and-burn reduces supply immediately; events are accepted only while the PumpSwap program is the one executing (`dec.foreign` counts the rest); the entry check is "suspect" only when the account snapshot is at a comparable slot, otherwise inconclusive; Jupiter pacing honours a monthly credit allowance (`JUP_CREDITS_MONTH`) as well as requests per second.
+
+Answers to the review's questions:
+- **Boost reconstruction:** still approximate and now labelled on the state and on any fill that uses it; the next swap's chain check tells us whether it was exact (`chainBadAfterBoost`). Not yet reconciled against transactions.
+- **90-day ceiling for sampled tokens:** not established. First-pool age guarantees the 8-hour minimum only. Every sampled entry now says so (`age_basis`). Establishing true age needs a per-entry on-chain lookup; proposed as a follow-up, not built.
+- **Run evidence pinned to a commit:** the running commit is recorded at every start (feed log, status, published data).
+- **Stopping entries after seven days:** `start.sh <name> 7` fixes the end of the entry window at the first start (never extended by a restart); exits and runner tracking continue.
+
 ## 7. What is ready, and what is not
 **Ready:** the PumpSwap live path; the Solana-wide sampled path (against a simulated provider); the 448-row dashboard with method filters; the one-command validation run.
 **Remaining, in order:**

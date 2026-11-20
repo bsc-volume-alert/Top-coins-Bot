@@ -30,15 +30,24 @@ export class Series {
     this.lastPx = null; this.lastT = null; this.prevPx = null; this.prevT = null;
   }
   startLive(t) { if (this.histFrom === null || this.histFrom > t) this.histFrom = t; }
-  /** back-fill minute bars (e.g. GMGN 1-minute kline): [{m, o, h, l, c, v}]; extends coverage back to the first bar if contiguous */
+  /** back-fill minute bars (e.g. GMGN 1-minute kline): [{m, o, h, l, c, v}] requested for [from, to).
+   *  Coverage follows the EVIDENCE, not the request: history is extended back only to the first bar actually returned, and an
+   *  empty reply extends nothing and repairs nothing (it cannot be told apart from "the provider has no data").
+   *  A repaired outage is recorded at minute-bar resolution: good enough for hour-scale windows, never for a fresh crossing
+   *  or a seconds-scale window (see covered(…, strict)). Returns what was accepted. */
   addBars(bars, { from, to, patchGap } = {}) {
     for (const b of bars) if (!this.bars.has(b.m)) this.bars.set(b.m, { o: b.o, h: b.h, l: b.l, c: b.c, v: b.v || 0, nb: b.nb || 0, ns: b.ns || 0, buyers: EMPTY, lowT: b.m * 60, bf: true });
-    if (from != null && to != null) {
-      if (patchGap) this.patched.push([from, to]);
-      else if (this.histFrom === null || (from < this.histFrom && to >= this.histFrom)) this.histFrom = from;
-      // the newest back-filled close before live data is the last known price
-      if (this.lastT === null) { const ms = [...this.bars.keys()].sort((a, b) => a - b); const m = ms[ms.length - 1]; if (m != null) { this.lastPx = this.bars.get(m).c; this.lastT = m * 60 + 59; } }
+    if (from == null || to == null) return { accepted: bars.length > 0, from: null };
+    if (!bars.length) return { accepted: false, from: null, why: "provider returned no bars" };
+    const first = Math.min(...bars.map((b) => b.m)) * 60, last = Math.max(...bars.map((b) => b.m)) * 60 + 59;
+    if (patchGap) {
+      if (first > from + 120) return { accepted: false, from: first, why: "bars do not reach back to the start of the outage" };
+      this.patched.push([from, to]); return { accepted: true, from, resolution: "1-minute bars" };
     }
+    const start = Math.max(from, first);
+    if (this.histFrom === null || (start < this.histFrom && to >= this.histFrom)) this.histFrom = start;
+    if (this.lastT === null) { this.lastPx = this.bars.get(Math.floor(last / 60)).c; this.lastT = last; }
+    return { accepted: true, from: start, resolution: "1-minute bars" };
   }
   add(t, px, volUsd = 0, isBuy = null, user = null) {
     if (!(px > 0)) return;
@@ -56,10 +65,11 @@ export class Series {
     const cut = now - RAW_KEEP_S; let i = 0; while (i < this.raw.length && this.raw[i][0] < cut) i++; if (i) this.raw.splice(0, i);
     const mc = Math.floor((now - BAR_KEEP_S) / 60); for (const m of this.bars.keys()) if (m < mc) this.bars.delete(m);
   }
-  /** is [x, t] fully known for this coin? */
-  covered(x, t) {
+  /** is [x, t] fully known for this coin? strict = at observation resolution: an outage repaired from minute bars does NOT count
+   *  (used for fresh crossings and the seconds-scale FAST / SECOND-WAVE windows). */
+  covered(x, t, strict = false) {
     if (this.histFrom === null || this.histFrom > x) return false;
-    for (const [a, b] of this.cov.gapsIn(x, t)) if (!this.patched.some(([pa, pb]) => pa <= a && pb >= b)) return false;
+    for (const [a, b] of this.cov.gapsIn(x, t)) if (strict || !this.patched.some(([pa, pb]) => pa <= a && pb >= b)) return false;
     return true;
   }
   /** last price at or before t (exact from raw; else the close of the last completed bar ending ≤ t; else the last known price if older) */
@@ -76,7 +86,10 @@ export class Series {
   _ext(x, t, better, k) {
     let best = null; const rawFrom = this.raw.length ? this.raw[0][0] : Infinity;
     const carried = this.priceAt(x); if (carried) best = { px: carried.px, t: x };
-    for (const [m, b] of this.bars) { const s = m * 60; if (s >= x && s + 60 <= Math.min(t, rawFrom)) { if (!best || better(b[k], best.px)) best = { px: b[k], t: k === "l" ? b.lowT : s }; } }
+    // minute bars for everything older than the exact observations — INCLUDING the boundary minutes (the one the exact buffer
+    // starts in, whose earlier prints were pruned, and the one the window starts in): leaving them out could drop a real low/high.
+    // At the old edge this can include up to 59 s before x, which only matters for hour-scale windows.
+    for (const [m, b] of this.bars) { const s = m * 60; if (s + 60 > x && s < Math.min(t, rawFrom)) { if (!best || better(b[k], best.px)) best = { px: b[k], t: k === "l" ? b.lowT : s }; } }
     for (const [ts, px] of this.raw) { if (ts < x) continue; if (ts >= t) break; if (!best || better(px, best.px)) best = { px, t: ts }; }
     return best;
   }

@@ -35,7 +35,7 @@ export class Store {
   saveBar(mint, m, b) { this.q.bar.run(mint, m, b.o, b.h, b.l, b.c, b.v, b.nb, b.ns, b.buyers?.size ?? 0, b.bf ? "backfill" : "live"); }
   saveDecision(mint, ag, family, t, entryId, detail) { this.q.dec.run(mint, ag, family, t, entryId, JSON.stringify(detail ?? null)); }
   saveNote(mint, n) { this.q.note.run(mint, n.ag, n.family, n.t, n.reason, JSON.stringify(n.detail ?? null)); if (n.family === "SLOW-BUILD" || n.family === "LOW4H-LIQ25K" || (n.family === "SECOND-WAVE" && n.reason !== "window not covered")) this.q.dec.run(mint, n.ag, n.family, n.t, null, JSON.stringify({ rejected: n.reason, ...n.detail })); }
-  saveEntry(e) { const done = e.status === "cancelled" || (e.status === "filled" && e.versions.every((v) => v.status === "closed" || v.status === "unresolved") && e.runner.horizonDone) ? 1 : 0; this.q.ent.run(e.id, e.mint, e.status, done, e.decisionT, JSON.stringify(e)); }
+  saveEntry(e) { const done = e.status === "cancelled" || (e.status === "filled" && e.versions.every((v) => v.status === "closed") && e.runner.horizonDone) ? 1 : 0; this.q.ent.run(e.id, e.mint, e.status, done, e.decisionT, JSON.stringify(e)); }
   /** `pumpOrigin` column = launchpad/origin label; `info` = the launchpad-neutral record (venues, token program, sources, mode, risk…) */
   saveCoin(mint, { pool = null, createTs = null, createSrc = null, pumpOrigin = null, firstSeen = null, info = null } = {}) { this.q.coin.run(mint, pool, createTs, createSrc, pumpOrigin, firstSeen, info ? JSON.stringify(info) : null); }
   savePool(pool, i) { this.db.prepare("INSERT OR IGNORE INTO pools VALUES (?,?,?,?)").run(pool, i.mint, i.quote, i.creator ?? null); }
@@ -44,11 +44,15 @@ export class Store {
   feedEvent(t, ev, detail = "") { this.q.feed.run(t, ev, String(detail).slice(0, 300)); }
   /** restart: reload the one-entry flags, unfinished entries and known coins into an engine */
   restore(engine) {
+    // 1) coins with their identity and OBSERVATION MODE first — a sampled coin must come back as sampled, or its positions
+    //    would be stranded without quotes (and the live adapter would wrongly claim it)
+    for (const r of this.db.prepare("SELECT mint, pool, create_ts, info FROM coins").iterate()) { const info = r.info ? JSON.parse(r.info) : null; engine.coin(r.mint, { pool: r.pool, createTs: r.create_ts, info, mode: info?.monitoring_mode === "polled" ? "polled" : null }); }
+    // 2) one-entry flags
     for (const r of this.db.prepare("SELECT mint, ag, family FROM decisions").iterate()) engine.restoreDone(r.mint, r.ag, r.family);
+    // 3) unfinished entries (pending, open, or with a sale still waiting for a price)
     let maxId = 0;
     for (const r of this.db.prepare("SELECT id, json, done FROM entries").iterate()) { maxId = Math.max(maxId, r.id); if (!r.done) engine.addEntry(JSON.parse(r.json)); }
     setNextId(maxId + 1);
-    for (const r of this.db.prepare("SELECT mint, pool, create_ts, info FROM coins").iterate()) { const info = r.info ? JSON.parse(r.info) : null; if (info?.monitoring_mode === "polled") continue; /* polled coins are re-registered by the poller with fresh metadata */ engine.coin(r.mint, { pool: r.pool, createTs: r.create_ts, info }); }
   }
   /** the project's first-ever start (for the 24 h "startup" tag); set once */
   firstStart(now) { this.db.prepare("INSERT OR IGNORE INTO meta VALUES ('first_start', ?)").run(String(now)); return Number(this.db.prepare("SELECT v FROM meta WHERE k='first_start'").get().v); }

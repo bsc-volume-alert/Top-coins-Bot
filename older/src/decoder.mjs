@@ -23,7 +23,7 @@ export const DISC = { // from the IDL's `events[].discriminator`
   BuyEvent: [103, 244, 82, 31, 44, 245, 119, 119], SellEvent: [62, 47, 55, 10, 165, 3, 220, 42], DepositEvent: [120, 248, 61, 83, 31, 142, 107, 144], WithdrawEvent: [22, 9, 133, 26, 160, 44, 71, 192],
   CreatePoolEvent: [177, 49, 12, 210, 160, 118, 167, 116], InitBoostEvent: [174, 124, 74, 249, 4, 81, 246, 17], BoostBuyAndBurnEvent: [63, 69, 28, 22, 48, 92, 194, 185], SweepPoolFeeEvent: [130, 164, 36, 97, 228, 130, 135, 165] };
 const DKEY = new Map(Object.entries(DISC).map(([k, v]) => [Buffer.from(v).toString("hex"), k]));
-export const dec = { buy: 0, sell: 0, deposit: 0, withdraw: 0, pool: 0, boost: 0, sweep: 0, short: 0, fitPre: 0, fitPost: 0, fitBoth: 0, fitNeither: 0, neitherBy: {}, feeOdd: 0, chainOk: 0, chainBad: 0, noVirtual: 0, negVirtual: 0, mode: RES_MODE };
+export const dec = { buy: 0, sell: 0, deposit: 0, withdraw: 0, pool: 0, boost: 0, sweep: 0, short: 0, fitPre: 0, fitPost: 0, fitBoth: 0, fitNeither: 0, neitherBy: {}, feeOdd: 0, chainOk: 0, chainBad: 0, chainBadQuote: 0, chainBadAfterBoost: 0, chainBadQuoteAfterBoost: 0, foreign: 0, noVirtual: 0, negVirtual: 0, mode: RES_MODE };
 class R {
   constructor(b) { this.b = b; this.o = 0; }
   u64() { const v = this.b.readBigUInt64LE(this.o); this.o += 8; return v; } i64() { const v = this.b.readBigInt64LE(this.o); this.o += 8; return v; }
@@ -70,7 +70,19 @@ export function decodeEvent(b64) {
   } catch { dec.short++; return null; }
   return null;
 }
-export const eventsFromLogs = (logs) => { const out = []; for (const l of logs || []) if (l.startsWith("Program data: ")) { const e = decodeEvent(l.slice(14)); if (e) out.push(e); } return out; };
+/** Events from a transaction's logs. PROVENANCE: a "Program data:" line is accepted only while the PumpSwap program itself is the
+ *  program executing (tracked through the "Program … invoke [n]" / "… success|failed" lines), so a foreign program that prints
+ *  look-alike bytes is ignored (counted in dec.foreign). */
+export function eventsFromLogs(logs, program = PUMPSWAP_PROGRAM) {
+  const out = [], stack = [];
+  for (const l of logs || []) {
+    if (l.startsWith("Program data: ")) { if (stack.length && stack[stack.length - 1] !== program) { if (decodeEventPeek(l.slice(14))) dec.foreign++; continue; } const e = decodeEvent(l.slice(14)); if (e) out.push(e); continue; }
+    const m = /^Program (\w+) invoke \[\d+\]/.exec(l); if (m) { stack.push(m[1]); continue; }
+    if (/^Program \w+ (success|failed)/.test(l)) stack.pop();
+  }
+  return out;
+}
+const decodeEventPeek = (b64) => { try { const b = Buffer.from(b64, "base64"); return b.length >= 8 && DKEY.has(b.subarray(0, 8).toString("hex")); } catch { return false; } };
 
 const TOL = 0.003; // relative tolerance of the constant-product check (integer rounding on tiny trades)
 /** Reconstructs one pool's state across its events. `p` = per-pool memory { base, quote (effective), vq (virtual, lamports), feeBuy, feeSell, supply }.
@@ -96,14 +108,25 @@ export function applyEvent(p, e, baseDec = 6) {
     if (!(RES_MODE === "pre" ? okPre : okPost)) return null;
     // chain evidence: under the pinned mode, this event's implied pre-state must equal the state we derived from the previous event
     const preBase = RES_MODE === "pre" ? B : e.isBuy ? B + b : B - b;
-    if (p.base != null) { if (Math.abs(preBase / U - p.base) / p.base < 1e-6) dec.chainOk++; else dec.chainBad++; }
+    // A break in the chain (this event does not start where the previous one ended) means something changed the pool that we
+    // did not see or mis-derived. The NEW state is still a real observation, but the interval before it is not known: the
+    // result is flagged `discontinuity` and the feed restarts the coin's history there, so no order or crossing uses that interval.
+    // The base side is enforced (38,240 of 38,250 chained in run 2). The quote side is measured first (chainBadQuote) because
+    // boosts and fee accounting make its derivation approximate; it is enforced once the shakedown run shows it is reliable.
+    let discontinuity = false;
+    if (p.base != null) {
+      if (Math.abs(preBase / U - p.base) / p.base < 1e-6) dec.chainOk++; else { dec.chainBad++; discontinuity = true; if (p.afterBoost) dec.chainBadAfterBoost++; }
+      const preQuote = RES_MODE === "pre" ? E : e.isBuy ? E - q - lp : E + q - lp;
+      if (p.quote != null && Math.abs(preQuote / 1e9 - p.quote) > Math.max(1e-6 * p.quote, 2e-8)) { dec.chainBadQuote++; if (p.afterBoost) dec.chainBadQuoteAfterBoost++; }
+    }
+    p.afterBoost = false;
     if (RES_MODE === "pre") { p.base = (e.isBuy ? B - b : B + b) / U; p.quote = (e.isBuy ? E + q + lp : E - q + lp) / 1e9; } // the LP fee stays in the pool as liquidity
     else { p.base = B / U; p.quote = E / 1e9; }
     // the observed rate is used AS OBSERVED — an unusual value (negative, or above 10%) is never clamped or replaced by a tidy
     // estimate: it is counted (dec.feeOdd), carried on the state as fee_odd, and every fill priced from it is flagged
     if (paid > 0) { const f = e.isBuy ? paid / q - 1 : 1 - paid / q; if (e.isBuy) p.feeBuy = f; else p.feeSell = f; const odd = !(f >= 0 && f <= 0.10); if (odd) dec.feeOdd++; if (e.isBuy) p.oddBuy = odd; else p.oddSell = odd; }
     if (e.baseSupply != null && e.baseSupply > 0n) p.supply = Number(e.baseSupply) / U;
-    return { state: { base: p.base, quote: p.quote, feeBuy: p.feeBuy ?? null, feeSell: p.feeSell ?? null, feeOdd: !!(p.oddBuy || p.oddSell), supply: p.supply ?? null }, sol: q / 1e9, changed: true };
+    return { state: { base: p.base, quote: p.quote, feeBuy: p.feeBuy ?? null, feeSell: p.feeSell ?? null, feeOdd: !!(p.oddBuy || p.oddSell), supply: p.supply ?? null }, sol: q / 1e9, changed: true, discontinuity };
   }
   if (e.type === "deposit" || e.type === "withdraw") {
     const s = e.type === "deposit" ? 1 : -1, vq = p.vq ?? 0;
@@ -114,11 +137,28 @@ export function applyEvent(p, e, baseDec = 6) {
   }
   if (e.type === "boost") { // effective = real quote reserves + boost reserves; waiting fees are inside virtual with opposite sign, so real_after + virtual is exact up to unswept fees
     p.vq = Number(e.virtualQuote); const Q = Number(e.realQuoteAfter) + p.vq; if (e.baseAfter != null) p.base = Number(e.baseAfter) / U;
+    if (e.baseBurned != null && p.supply != null) p.supply = Math.max(0, p.supply - Number(e.baseBurned) / U); // a buy-and-burn reduces supply now, not at the next swap
+    p.afterBoost = true; // the next swap's chain check tells us whether this boost state was exact
     if (!(p.base > 0 && Q > 0)) return null; p.quote = Q / 1e9;
     return { state: { base: p.base, quote: p.quote, feeBuy: p.feeBuy ?? null, feeSell: p.feeSell ?? null, supply: p.supply ?? null }, sol: 0, changed: true, approx: "boost" };
   }
   if (e.type === "sweep") { if (p.vq != null) p.vq += Number(e.amount); return { state: null, sol: 0, changed: false }; } // vault −amount, virtual +amount: effective reserves unchanged
   return null;
+}
+
+/** All of ONE transaction's events on ONE pool, applied in order → the single COMMITTED state after the last of them.
+ *  A transaction is atomic: nobody can trade against the pool between two of its events, so intermediate states are never
+ *  observations. Returns { last (applyEvent result or null), sol, buys, sells, user, blockTs, lost, breaks: [events] }. */
+export function reduceTx(p, evs, onReset = () => {}) {
+  const out = { last: null, sol: 0, buys: 0, sells: 0, user: null, blockTs: null, lost: false, rejected: 0, breaks: [] };
+  for (const e of evs) {
+    const r = applyEvent(p, e);
+    if (!r) { if (e.type !== "sweep") { out.rejected++; out.lost = true; for (const k of Object.keys(p)) delete p[k]; onReset(); out.last = null; } continue; }
+    if (r.discontinuity) { out.lost = true; out.breaks.push(e); }
+    if (!r.changed) continue;
+    out.last = r; out.sol += r.sol; if (e.type === "buy") { out.buys++; out.user = out.user || e.user; } else if (e.type === "sell") out.sells++; out.blockTs = e.ts || out.blockTs;
+  }
+  return out;
 }
 
 // ---- canonical pool check (pump-public-docs FEE_PROGRAM_README): pool.creator == PDA(["pool-authority", base_mint], PUMP_PROGRAM)

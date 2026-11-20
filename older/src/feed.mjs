@@ -8,9 +8,9 @@
 // if the hold overflows, or an event cannot be turned into a trustworthy state, the coin's history restarts there (engine.coinLost).
 // Feed health: a socket close/error, or 60 s without any message, is an outage → windows overlapping it are not covered.
 import WebSocket from "ws";
-import { PUMPSWAP_PROGRAM, WSOL, eventsFromLogs, applyEvent, bs58, isCanonical } from "./decoder.mjs";
+import { PUMPSWAP_PROGRAM, WSOL, eventsFromLogs, reduceTx, bs58, isCanonical } from "./decoder.mjs";
 
-export const fs = { msgs: 0, events: 0, emitted: 0, pools: 0, held: 0, replayed: 0, overflow: 0, nonSol: 0, nonCanonical: 0, rejected: 0, lookups: 0, lookupCalls: 0, lookupFail: 0, lookupErrs: 0, lastLookupErr: "", baseIsSol: 0, reconnects: 0, lastMsg: null, nonSolQuotes: {}, bytes: 0, failedTx: 0, dupes: 0, connected: false, lagMsSum: 0, lagN: 0 };
+export const fs = { msgs: 0, events: 0, emitted: 0, pools: 0, held: 0, replayed: 0, overflow: 0, nonSol: 0, nonCanonical: 0, rejected: 0, lookups: 0, lookupCalls: 0, lookupFail: 0, lookupErrs: 0, lastLookupErr: "", baseIsSol: 0, discontinuities: 0, lastBreaks: [], multiEventTx: 0, reconnects: 0, lastMsg: null, nonSolQuotes: {}, bytes: 0, failedTx: 0, dupes: 0, connected: false, lagMsSum: 0, lagN: 0 };
 const HOLD_PER_POOL = 300, HOLD_POOLS = 20000;
 
 export async function rpc(method, params) {
@@ -29,21 +29,26 @@ export function poolClass(info) { if (info.cls) return info.cls; info.cls = info
 export function startFeed({ engine, store, backfill = null, pools /* Map pool → {mint, quote, creator} */, log = console.log }) {
   const hold = new Map(), queue = new Set(), mem = new Map(); const seen = new Set(), seenQ = [];
   let ws = null, watchdog = null;
-  const emit = (e, info, t, meta, replay = false) => {
-    const cls = poolClass(info); if (cls === "non-sol") { fs.nonSol++; if (info.mint === WSOL) fs.baseIsSol++; const k = (info.mint === WSOL ? "SOL" : String(info.mint).slice(0, 6)) + "/" + String(info.quote).slice(0, 8); fs.nonSolQuotes[k] = (fs.nonSolQuotes[k] || 0) + 1; return; } if (cls === "non-canonical") { fs.nonCanonical++; return; }
-    let p = mem.get(e.pool); if (!p) mem.set(e.pool, (p = {}));
-    const r = applyEvent(p, e);
-    if (!r) { if (e.type !== "sweep") { fs.rejected++; engine.coinLost(info.mint, t); mem.set(e.pool, {}); } return; }
-    if (!r.changed) return;
-    fs.emitted++; if (e.ts && !replay) { fs.lagMsSum += Math.max(0, t - e.ts) * 1000; fs.lagN++; }
-    engine.onEvent({ t, mint: info.mint, pool: e.pool, kind: e.type, state: r.state, sol: r.sol, isBuy: e.type === "buy" ? true : e.type === "sell" ? false : null, user: e.user, sig: meta.sig, slot: meta.slot, blockTs: e.ts, replay });
+  // A transaction is atomic: nobody can trade against the pool BETWEEN two of its events. So all of a transaction's events on a
+  // pool are applied in order to reconstruct the state, and only the COMMITTED state after the last one is handed to the engine
+  // as an observation (volume summed). Intermediate states never create a price, a peak, a crossing or a stop.
+  const emitTx = (evs, info, t, meta, replay = false) => {
+    const cls = poolClass(info); if (cls === "non-sol") { fs.nonSol += evs.length; if (info.mint === WSOL) fs.baseIsSol += evs.length; const k = (info.mint === WSOL ? "SOL" : String(info.mint).slice(0, 6)) + "/" + String(info.quote).slice(0, 8); fs.nonSolQuotes[k] = (fs.nonSolQuotes[k] || 0) + evs.length; return; }
+    if (cls === "non-canonical") { fs.nonCanonical += evs.length; return; }
+    const pool = evs[0].pool; let p = mem.get(pool); if (!p) mem.set(pool, (p = {}));
+    const x = reduceTx(p, evs); fs.rejected += x.rejected;
+    for (const e of x.breaks) { fs.discontinuities++; if (fs.lastBreaks.length < 20) fs.lastBreaks.push({ t: Math.round(t), pool: pool.slice(0, 8), sig: meta.sig?.slice(0, 12), type: e.type, ix: e.ix ?? null }); }
+    if (x.lost) engine.coinLost(info.mint, t); // history and state trust restart here: nothing before this moment is used
+    if (!x.last) return;
+    fs.emitted++; if (evs.length > 1) fs.multiEventTx++; if (x.blockTs && !replay) { fs.lagMsSum += Math.max(0, t - x.blockTs) * 1000; fs.lagN++; }
+    engine.onEvent({ t, mint: info.mint, pool, kind: x.buys && !x.sells ? "buy" : x.sells && !x.buys ? "sell" : x.buys ? "mixed" : evs[evs.length - 1].type, state: { ...x.last.state, approx: x.last.approx ?? null }, sol: x.sol, isBuy: x.buys && !x.sells ? true : x.sells && !x.buys ? false : null, user: x.user, sig: meta.sig, slot: meta.slot, blockTs: x.blockTs, events: evs.length, replay });
   };
   const resolved = (pool, info) => {
     pools.set(pool, info); store?.savePool(pool, info);
     const h = hold.get(pool); hold.delete(pool); if (!h) return;
     if (poolClass(info) !== "canonical") return;
     if (h.overflow) engine.coinLost(info.mint, h.items[0][1]);
-    for (const [e, t, meta] of h.items) { fs.replayed++; emit(e, info, t, meta, true); }
+    for (const [evs, t, meta] of h.items) { fs.replayed += evs.length; emitTx(evs, info, t, meta, true); }
   };
   // Pool look-ups, batched. A failing batch is never retried whole for ever (run 2: one bad batch blocked all later look-ups):
   // it is split in half and retried; a single pool that fails 3 times is dropped and its coin's held events are released
@@ -74,13 +79,17 @@ export function startFeed({ engine, store, backfill = null, pools /* Map pool �
     const v = m?.params?.result?.value; if (!v) return; if (v.err) { fs.failedTx++; return; } // failed transactions change nothing: counted, not decoded
     if (seen.has(v.signature)) { fs.dupes++; return; } seen.add(v.signature); seenQ.push(v.signature); if (seenQ.length > 20000) for (const s of seenQ.splice(0, 10000)) seen.delete(s);
     const meta = { sig: v.signature, slot: m.params.result.context?.slot ?? null };
+    const byPool = new Map(); // this transaction's events, grouped per pool, in order
     for (const e of eventsFromLogs(v.logs)) {
       fs.events++;
-      if (e.type === "pool") { fs.pools++; const info = { mint: e.baseMint, quote: e.quoteMint, creator: e.creator }; resolved(e.pool, info); if (poolClass(info) === "canonical") { store?.saveCoin(e.baseMint, { pool: e.pool, firstSeen: Math.floor(t), pumpOrigin: "canonical-pool" }); engine.coin(e.baseMint, { pool: e.pool }); engine.historyFrom(e.baseMint, t); backfill?.want(e.baseMint); } continue; }
-      const info = pools.get(e.pool);
-      if (info) { emit(e, info, t, meta); continue; }
-      let h = hold.get(e.pool); if (!h) { if (hold.size >= HOLD_POOLS) { fs.overflow++; continue; } h = { items: [], overflow: false }; hold.set(e.pool, h); queue.add(e.pool); }
-      if (h.items.length < HOLD_PER_POOL) { h.items.push([e, t, meta]); fs.held++; } else { h.overflow = true; h.items.shift(); h.items.push([e, t, meta]); }
+      if (e.type === "pool") { fs.pools++; const info = { mint: e.baseMint, quote: e.quoteMint, creator: e.creator }; resolved(e.pool, info); if (poolClass(info) === "canonical") { store?.saveCoin(e.baseMint, { pool: e.pool, firstSeen: Math.floor(t), pumpOrigin: "pump.fun", info: { population: "pumpswap-canonical", origin: "pump.fun", origin_evidence: "canonical pool: creator = pump pool-authority PDA", venues: ["PumpSwap"], discovery_source: "pool-creation event", price_source: "pool events", monitoring_mode: "live" } }); engine.coin(e.baseMint, { pool: e.pool }); engine.historyFrom(e.baseMint, t); backfill?.want(e.baseMint); } continue; }
+      if (!e.pool) continue; let a = byPool.get(e.pool); if (!a) byPool.set(e.pool, (a = [])); a.push(e);
+    }
+    for (const [pool, evs] of byPool) {
+      const info = pools.get(pool);
+      if (info) { emitTx(evs, info, t, meta); continue; }
+      let h = hold.get(pool); if (!h) { if (hold.size >= HOLD_POOLS) { fs.overflow++; continue; } h = { items: [], overflow: false }; hold.set(pool, h); queue.add(pool); }
+      if (h.items.length < HOLD_PER_POOL) { h.items.push([evs, t, meta]); fs.held += evs.length; } else { h.overflow = true; h.items.shift(); h.items.push([evs, t, meta]); }
     }
   }
   function connect() {

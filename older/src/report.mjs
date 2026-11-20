@@ -19,8 +19,7 @@ export function bookRows(entries, noteCounts = []) {
     r.filled++; if (e.fill.fee_src !== "event") r.feeAssumed++; if (e.startup) r.startup++;
     if (e.runner.horizonDone) { r.runners.n++; if (e.runner.partial) r.runners.partial++; for (const k of S.RUNNER_X) if (e.runner.reached[k]) r.runners["x" + k]++; }
     if (v.half) r.halves++;
-    if (v.status === "open" || v.status === "selling" || v.status === "scaling") r.open++;
-    else if (v.status === "unresolved") r.unresolved++;
+    if (v.status === "open" || v.status === "selling" || v.status === "scaling" || v.status === "unresolved") { r.open++; if (v.unresolvedSince || v.status === "unresolved") r.unresolved++; }
     else if (v.status === "closed") { r.closed++; const net = v.exit.sol - COST; r.trades.push({ mint: e.mint, t: e.fill.t, ret: v.exit.ret, net, reason: v.reason }); r.holds.push(v.exit.hold_s); r.delays.push(v.exit.delay_s); if (v.exit.outage_during) r.outage++; if (e.startup) r.startupNet += net; }
   }
   const notes = {}; for (const n of noteCounts) (notes[n.family] ||= {})[n.reason] = n.n;

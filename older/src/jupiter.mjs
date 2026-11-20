@@ -16,9 +16,12 @@ let fetchImpl = (...a) => fetch(...a), next = 0, chain = Promise.resolve();
 export const setFetch = (f) => { fetchImpl = f; };
 const nap = (ms) => new Promise((r) => setTimeout(r, ms));
 const rps = () => Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0.5));
-function slot() { const p = chain.then(async () => { const d = next - Date.now(); if (d > 0) await nap(d); next = Math.max(Date.now(), next) + 1000 / rps(); }); chain = p.catch(() => {}); return p; }
+// Pacing respects BOTH limits: requests per second, and the plan's monthly credits (endpoints cost 1–50 credits each, so a
+// request cap alone does not protect the allowance). JUP_CREDITS_MONTH (e.g. 25000000 on Developer) spreads credits evenly.
+const creditsPerSec = () => (Number(process.env.JUP_CREDITS_MONTH || 0) > 0 ? Number(process.env.JUP_CREDITS_MONTH) / (30 * 86400) : Infinity);
+function slot(kind) { const p = chain.then(async () => { const d = next - Date.now(); if (d > 0) await nap(d); next = Math.max(Date.now(), next) + 1000 * Math.max(1 / rps(), (CREDITS[kind] ?? 1) / creditsPerSec()); }); chain = p.catch(() => {}); return p; }
 async function get(kind, path, { paced = true } = {}) {
-  if (paced) await slot();
+  if (paced) await slot(kind);
   ju.calls[kind] = (ju.calls[kind] || 0) + 1; ju.credits += CREDITS[kind] ?? 1;
   const req = Date.now() / 1000;
   let r; try { r = await fetchImpl(BASE() + path, { headers: process.env.JUP_API_KEY ? { "x-api-key": process.env.JUP_API_KEY } : {}, signal: AbortSignal.timeout(10000) }); } catch (e) { ju.errors++; ju.lastErr = `${kind}: ${e.message}`.slice(0, 160); throw e; }

@@ -33,7 +33,7 @@ export function startBackfill({ engine, store, jup = null, log = console.log }) 
     const sr = c.series, liveFrom = sr.histFrom ?? now;
     // history window needed now: 4 h 15 min (+5 min margin) before the live start, but not before creation
     const from = Math.max(c.createTs, Math.floor(liveFrom - (4 * 3600 + 20 * 60))), to = Math.floor(liveFrom);
-    if (to > from) { const bars = await minuteBars(mint, from, to); bf.bars += bars.length; sr.addBars(bars, { from, to }); for (const b of bars) store?.saveBar(mint, b.m, { ...b, bf: true }); }
+    if (to > from) { const bars = await minuteBars(mint, from, to); bf.bars += bars.length; const r = sr.addBars(bars, { from, to }); if (!r.accepted) bf.emptyHistory = (bf.emptyHistory || 0) + 1; for (const b of bars) store?.saveBar(mint, b.m, { ...b, bf: true }); }
     // AGE-DOUBLE reference for the coin's current group (and the next one if it starts before live coverage)
     const ag = S.ageGroupOf(now - c.createTs);
     if (ag) {
@@ -53,7 +53,7 @@ export function startBackfill({ engine, store, jup = null, log = console.log }) 
     }
   }
   /** after an outage: re-fill the gap from 1-minute bars for coins with open positions or near the band */
-  async function patchGap(a, b, mints) { for (const mint of mints) { try { const bars = await minuteBars(mint, Math.floor(a / 60) * 60, Math.ceil(b / 60) * 60); engine.coin(mint).series.addBars(bars, { from: a, to: b, patchGap: true }); bf.gapsPatched++; } catch (e) { bf.errors++; bf.lastErr = String(e.message).slice(0, 160); } } }
+  async function patchGap(a, b, mints) { for (const mint of mints) { try { const bars = await minuteBars(mint, Math.floor(a / 60) * 60, Math.ceil(b / 60) * 60); const r = engine.coin(mint).series.addBars(bars, { from: a, to: b, patchGap: true }); if (r.accepted) bf.gapsPatched++; else bf.gapsNotPatched = (bf.gapsNotPatched || 0) + 1; } catch (e) { bf.errors++; bf.lastErr = String(e.message).slice(0, 160); } } }
   if (jup) creationLoop();
   if (gmgnOn()) loop(); else log("[backfill] no GMGN key: creation times and history cannot be filled — coins stay not-covered");
   return { want, patchGap, size: () => q.length + needC.size };

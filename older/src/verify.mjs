@@ -19,7 +19,12 @@ export async function verifyEntry(e, c, { store, lastSlotOf = () => null } = {})
     const dBase = base / e.fill.base - 1, dQuote = quoteEff / e.fill.quote_sol - 1, moved = (c.eventCount ?? null) !== eventsAtFill;
     e.verify = { commitment: "confirmed", context_slot: r.context?.slot ?? null, last_event_slot: lastSlotOf(e.mint), req_t: req, resp_t: +resp.toFixed(3), fill_t: e.fill.t, account: { base, quote_vault: Number(vault) / 1e9, virtual_quote: Number(p.virtualQuote) / 1e9, quote_eff: quoteEff }, reconstructed: { base: e.fill.base, quote_eff: e.fill.quote_sol }, diff_base: +dBase.toFixed(5), diff_quote: +dQuote.toFixed(5), events_between: moved };
     const close = Math.abs(dBase) < 0.01 && Math.abs(dQuote) < 0.01; if (close) vf.within1pct++;
-    if (!close && !moved) { e.verify.suspect = true; e.flags.push("entry verification: account state differs from the reconstructed state with no event in between"); vf.suspect++; }
+    // comparable only when the account snapshot is at or after the last event we reconstructed from AND no event arrived for this
+    // coin while the read was in flight; otherwise a difference is expected and the check is recorded as inconclusive
+    const aligned = !moved && e.verify.context_slot != null && e.verify.last_event_slot != null && e.verify.context_slot >= e.verify.last_event_slot;
+    e.verify.comparable = aligned;
+    if (!close && aligned) { e.verify.suspect = true; e.flags.push("entry verification: account state differs from the reconstructed state at a comparable slot"); vf.suspect++; }
+    else if (!close) vf.inconclusive = (vf.inconclusive || 0) + 1;
     vf.done++;
   } catch (x) { vf.failed++; e.verify = { error: String(x.message).slice(0, 160), req_t: req }; }
   store?.saveEntry(e);

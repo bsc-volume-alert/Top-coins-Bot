@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { newEntry, advance, observe, versionsFor, COST } from "../src/book.mjs";
+import { newEntry, advance, observe, versionsFor, COST, inventories, entryDone, unresolvedCount } from "../src/book.mjs";
 import { liqValue, sellSol } from "../src/fills.mjs";
 
 const st = (quote, t, base = 2e8) => ({ base, quote, feeBuy: 0.003, feeSell: 0.003, t });
@@ -43,13 +43,17 @@ test("four trailing stops exit independently; the sale prices at trigger + 0.7 s
   assert.equal(trail(e, 0.4).status, "selling"); // the dump took the 40% version through its own stop
 });
 
-test("a triggered sell survives a data failure: it waits, records the real delay, and is never dropped", () => {
+test("a triggered sell survives a data failure: it waits, records the real delay, and is never dropped — even past 24 h", () => {
   const e = mk(), d = drv(e, st(200, 999)); d.tick(1001); d.ev(st(380, 1100)); d.ev(st(280, 1200));
   d.tick(1260, no); assert.equal(trail(e, 0.2).status, "selling");
   advance(e, 1300, d.cur, no); observe(e, st(100, 1300), 1300);              // first trustworthy state 99.3 s late, much lower
   const x = trail(e, 0.2); assert.equal(x.status, "closed"); assert.ok(Math.abs(x.exit.delay_s - 99.3) < 1e-6); assert.ok(x.exit.ret < -0.4);
+  // no price for more than 24 h: marked unresolved (visible exposure) but STILL pending, still asking, and it closes when a price returns
   const e2 = mk(), d2 = drv(e2, st(200, 999)); d2.tick(1001); d2.ev(st(380, 1100)); d2.ev(st(280, 1200)); d2.tick(1200.7 + 86401, no);
-  assert.equal(trail(e2, 0.2).status, "unresolved");
+  const y = trail(e2, 0.2); assert.equal(y.status, "selling"); assert.ok(y.unresolvedSince, "flagged unresolved"); assert.equal(unresolvedCount(e2), e2.versions.filter((v) => v.unresolvedSince).length);
+  assert.ok(inventories(e2).length > 0, "its inventory is still requested"); assert.equal(entryDone(e2), false);
+  const t3 = 1200.7 + 90000; advance(e2, t3, d2.cur, no); observe(e2, st(150, t3), t3);
+  assert.equal(y.status, "closed"); assert.ok(y.exit.was_unresolved_s > 3000); assert.ok(y.exit.delay_s > 86400);
 });
 
 test("CONT-STALL: at fill + 60 min, closes if after-cost value never reached 1.15× cost; plain CONT is unaffected", () => {
