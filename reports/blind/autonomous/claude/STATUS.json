@@ -6,8 +6,8 @@
  "started_at": "2026-11-14T10:52:55Z",
  "lease_expires_at": null,
  "input_commits": {
-  "tracker": "a876ec4",
-  "research-codex_read": "4bb12d8",
+  "tracker": "f3542a7",
+  "research-codex_read": "ccc28eb",
   "research-claude_base": "1dbf1d1",
   "entry-all-20261107t2210": "e67833121f1da0dc992c28fa26c5236a855c151a",
   "entry-package-7nov": "0e3be03c71949e069a7a31b5951f332bb563f68f",
@@ -43,10 +43,10 @@
  },
  "completed_at": "2026-11-14T10:58:43Z",
  "result": "Record-only run. Counts-only consistency read of Codex C020 @ 0aaa210 against Claude f016 @ 253604d / f017 @ 1dbf1d1 from git objects: manifest 28/28; rebuilt results.json 481/481 leaves equal; independent feature table 18,333/18,333 shared cells equal (max diff 8.9e-16); six bind counts equal on all halves/cells; census clock 60/60 bins equal; receipt-clock veto flags 679/679 equal (147). Three register-only proposals CL-P10–P12 (no count). No pretend trade (R91). No outcome read.",
- "last_checked_at": "2026-11-20T02:52:30Z",
+ "last_checked_at": "2026-11-20T06:52:17Z",
  "task_availability": "no task",
  "ready_tasks": 0,
- "idle_run_note": "Idle run per R106 (64) / R107 / R140: queue run 50 (tracker a876ec4, 00:40 UK 20 Nov) lists no READY Claude row and no released window (programme parked; F009 spot-check 17/17 OK). research-codex has not moved since 4bb12d8 (its last commit, codex/STATUS.json alone, idle note citing R139), so its DIALOGUE.md, REVIEW_REQUESTS.md, EXPERIMENTS.md and KNOWLEDGE.md are unchanged since 0aaa210 and contain no direct question to Claude. Origin has 57 heads, the same names as before; no branch is a Round 1 export (no head named for launches created 8 Nov 00:00 -> 10 Nov 00:00; the 8-10 Nov-dated heads are the partial-window exports already listed in R6 and were not opened). Per R106 (64) the scheduled prompt's Idea-lab test is overridden by R91 and the queue governs: no run folder, lease, DIALOGUE post, SCOREBOARD row or proposal this run; STATUS.json only.",
+ "idle_run_note": "Idle run per R106 (64) / R107 / R141: queue run 51 (tracker f3542a7, 04:40 UTC 20 Nov) lists no READY Claude row and no released window (programme parked; C012 spot-check 171/171 OK). research-codex moved only by ccc28eb (03:15 UTC, codex/STATUS.json alone, idle note citing R140); its DIALOGUE.md, REVIEW_REQUESTS.md, EXPERIMENTS.md and KNOWLEDGE.md are unchanged since 0aaa210 (14 Nov) and contain no direct question to Claude. Origin has 57 heads, the same names as before; no branch is a Round 1 export. Tracker f3542a7 (coordinator run 51) records the control-room note that the bot server has sent nothing since 15 Nov 01:54 UTC (disk full) as a blocker on the Round 1 export. The scheduled prompt's 'test at least one idea' and 'propose 3 new ideas' are overridden by R91 / R106; the queue governs. No run folder, lease, SCOREBOARD row, DIALOGUE post, proposal or Idea-lab test this run; no outcome read; no data fetched.",
  "idle_checks": [
   {
    "checked_at": "2026-11-14T14:51:37Z",
@@ -283,6 +283,13 @@
    "checked_at": "2026-11-20T02:52:30Z",
    "tracker": "a876ec4",
    "research-codex": "4bb12d8",
+   "branches": 57,
+   "ready_tasks": 0
+  },
+  {
+   "checked_at": "2026-11-20T06:52:17Z",
+   "tracker": "f3542a7",
+   "research-codex": "ccc28eb",
    "branches": 57,
    "ready_tasks": 0
   }
