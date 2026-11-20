@@ -10,7 +10,7 @@
 import WebSocket from "ws";
 import { PUMPSWAP_PROGRAM, WSOL, eventsFromLogs, applyEvent, bs58, isCanonical } from "./decoder.mjs";
 
-export const fs = { msgs: 0, events: 0, emitted: 0, pools: 0, held: 0, replayed: 0, overflow: 0, nonSol: 0, nonCanonical: 0, rejected: 0, lookups: 0, lookupCalls: 0, lookupFail: 0, reconnects: 0, lastMsg: null, dupes: 0, connected: false, lagMsSum: 0, lagN: 0 };
+export const fs = { msgs: 0, events: 0, emitted: 0, pools: 0, held: 0, replayed: 0, overflow: 0, nonSol: 0, nonCanonical: 0, rejected: 0, lookups: 0, lookupCalls: 0, lookupFail: 0, reconnects: 0, lastMsg: null, bytes: 0, failedTx: 0, dupes: 0, connected: false, lagMsSum: 0, lagN: 0 };
 const HOLD_PER_POOL = 300, HOLD_POOLS = 20000;
 
 export async function rpc(method, params) {
@@ -57,9 +57,9 @@ export function startFeed({ engine, store, backfill = null, pools /* Map pool â†
     }
   }
   function onMsg(raw) {
-    const t = Date.now() / 1000; fs.msgs++; fs.lastMsg = t;
+    const t = Date.now() / 1000; fs.msgs++; fs.lastMsg = t; fs.bytes += raw.length; // Helius bills streams by uncompressed data: 2 credits per 0.1 MB
     let m; try { m = JSON.parse(raw); } catch { return; }
-    const v = m?.params?.result?.value; if (!v || v.err) return;
+    const v = m?.params?.result?.value; if (!v) return; if (v.err) { fs.failedTx++; return; } // failed transactions change nothing: counted, not decoded
     if (seen.has(v.signature)) { fs.dupes++; return; } seen.add(v.signature); seenQ.push(v.signature); if (seenQ.length > 20000) for (const s of seenQ.splice(0, 10000)) seen.delete(s);
     const meta = { sig: v.signature, slot: m.params.result.context?.slot ?? null };
     for (const e of eventsFromLogs(v.logs)) {

@@ -4,7 +4,8 @@
 // Returns { cands: [...entry candidates], notes: [...rejections / missing-reference records] }.
 import * as S from "./spec.mjs";
 
-export function newCoin(mint, createTs, series, supply = 1e9) { return { mint, createTs, series, supply, groups: {} }; }
+const NONE = new Set();
+export function newCoin(mint, createTs, series, supply = 1e9) { return { mint, createTs, series, supply, groups: {}, sw: null }; }
 const grp = (c, ag) => (c.groups[ag] ||= { ref: null, done: {}, logged: {} });
 const median = (a) => { const s = [...a].sort((x, y) => x - y), n = s.length; return n === 0 ? 0 : n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; };
 
@@ -33,7 +34,8 @@ export function features(coin, o, low, hi1h, p15) {
   };
 }
 
-export function evaluate(coin, o) {
+export function evaluate(coin, o, opts = {}) {
+  const skip = opts.skip || NONE; // families the observation mode cannot support (recorded by the caller, never silently entered)
   const out = { cands: [], notes: [] }, sr = coin.series, t = o.t;
   const ag = S.ageGroupOf(t - coin.createTs); if (!ag) return out;
   const g = grp(coin, ag), inBand = o.mc >= S.BAND_LO_USD && o.mc <= S.BAND_HI_USD;
@@ -99,17 +101,20 @@ export function evaluate(coin, o) {
     }
   }
 
-  // 5. HH-BREAK — strictly above the preceding 60-min high, and 15-min volume ≥ 2 × median of the 16 completed 15-min windows before it
-  if (!g.done["HH-BREAK"]) {
-    const mEnd = Math.floor((t - S.HH_VOL_WIN_S) / 60); // the minute containing t−900 is in neither the signal window's benchmark nor the history
-    const histFrom = (mEnd - 15 * S.HH_BASE_WINDOWS) * 60;
+  // 5. HH-BREAK (amended in older-3) — price strictly above the preceding 60-min high, and volume of the last 15 COMPLETED minutes
+  // ≥ 2 × the median of the sixteen 15-minute buckets before them. B = the last completed minute boundary (floor(t / 60 s)).
+  //   signal volume : [B − 15 min, B)            baseline : 16 adjacent buckets covering [B − 255 min, B − 15 min)
+  // Half-open intervals; no overlap and no missing minute. Needs a volume source (not available from price polling alone).
+  if (!g.done["HH-BREAK"] && !skip.has("HH-BREAK")) {
+    const mB = Math.floor(t / 60), histFrom = (mB - 15 - 15 * S.HH_BASE_WINDOWS) * 60;
     if (!sr.covered(histFrom, t)) note("HH-BREAK", "insufficient 4 h 15 min history");
     else {
       const hi = hi1h ?? sr.highIn(t - S.HH_HI_WIN_S, t);
       if (hi && o.px > hi.px && inBand) {
-        const sums = []; for (let k = 1; k <= S.HH_BASE_WINDOWS; k++) { const a = mEnd - 15 * k; sums.push(sr.barsIn(a, a + 15).reduce((s, [, b]) => s + b.v, 0)); }
-        const base = median(sums), v15 = sr.volIn(t - S.HH_VOL_WIN_S, t);
-        const d = { hi1h: hi.px, vol15: Math.round(v15), base_median: Math.round(base), windows: sums.map(Math.round) };
+        const vsum = (m0) => sr.barsIn(m0, m0 + 15).reduce((x, [, b]) => x + b.v, 0);
+        const sums = []; for (let k = 1; k <= S.HH_BASE_WINDOWS; k++) sums.push(vsum(mB - 15 - 15 * k));
+        const base = median(sums), v15 = vsum(mB - 15);
+        const d = { hi1h: hi.px, B: mB * 60, signal_window: [(mB - 15) * 60, mB * 60], baseline_window: [(mB - 255) * 60, (mB - 15) * 60], vol15: Math.round(v15), base_median: Math.round(base), windows: sums.map(Math.round) };
         if (!(base > 0)) note("HH-BREAK", "zero volume baseline (not entered)", d, false);
         else if (v15 >= S.HH_VOL_X * base) cand("HH-BREAK", d);
       }
@@ -120,7 +125,7 @@ export function evaluate(coin, o) {
   // Window = exact observations on the receive clock, [t − W, t), including the price standing at the window's start.
   let fastSeed = false;
   for (const [family, W, X] of S.FAST) {
-    if (g.done[family]) continue;
+    if (g.done[family] || skip.has(family)) continue;
     if (!sr.covered(t - W, t)) { note(family, "window not covered"); continue; }
     const lo = sr.lowIn(t - W, t); if (!lo) continue;
     if (!cross(X * lo.px)) continue;
@@ -129,18 +134,25 @@ export function evaluate(coin, o) {
     cand(family, { window_s: W, x: X, low_px: lo.px, low_t: lo.t, threshold_px: X * lo.px, low_support: obs.filter((r) => r[1] <= lo.px * 1.02).length, window_obs: obs.length, low_carried_in: lo.t <= t - W });
     if (X === 2) fastSeed = true;
   }
-  // 14. SECOND-WAVE — seeded by the first 2× FAST trigger of the age group; one attempt per mint per age group
-  if (!g.done["SECOND-WAVE"]) {
-    if (!g.sw && fastSeed) { note("SECOND-WAVE", "seeded", { seed_t: t }, false); g.sw = { seedT: t, seedPx: o.px, windows: out.cands.filter((c) => /^FAST-/.test(c.family)).map((c) => c.family), H: o.px, HT: t, frozen: null, pullT: null }; }
-    else if (g.sw) {
-      const w = g.sw;
-      if (t > w.seedT + S.SW_EXPIRE_S) { g.done["SECOND-WAVE"] = 1; note("SECOND-WAVE", w.frozen ? "expired: no reclaim within 60 min" : "expired: no 25% pullback within 60 min", { seed_t: w.seedT, windows: w.windows }, false); }
-      else if (!sr.covered(w.seedT, t)) { g.done["SECOND-WAVE"] = 1; note("SECOND-WAVE", "abandoned: coverage broke during the setup", { seed_t: w.seedT }, false); }
-      else if (w.frozen === null) { if (o.px > w.H) { w.H = o.px; w.HT = t; } else if (o.px <= S.SW_PULLBACK * w.H) { w.frozen = w.H; w.pullT = t; w.pullPx = o.px; } }
-      else if (o.px > w.frozen) {
-        const d = { seed_t: w.seedT, seed_px: w.seedPx, seed_windows: w.windows, frozen_high: w.frozen, high_t: w.HT, pullback_t: w.pullT, pullback_px: w.pullPx, since_seed_s: Math.round(t - w.seedT) };
-        if (inBand) cand("SECOND-WAVE", d); else { g.done["SECOND-WAVE"] = 1; note("SECOND-WAVE", "reclaim outside entry band (attempt used)", { ...d, mc: Math.round(o.mc) }, false); }
-      }
+  // 14. SECOND-WAVE (amended in older-3) — seeded by the first 2× FAST trigger. ONE active setup per mint, kept alive until its
+  // own 60-minute expiry even across an age boundary. The seed uses up the SEED age group's attempt; the trade is classified by
+  // the age group AT ENTRY, whose slot must be free and is then used. Seed age is recorded separately.
+  const w = coin.sw;
+  if (!w) {
+    if (fastSeed && !g.done["SECOND-WAVE"]) {
+      g.done["SECOND-WAVE"] = 1; note("SECOND-WAVE", "seeded", { seed_t: t, seed_ag: ag }, false);
+      coin.sw = { seedT: t, seedPx: o.px, seedAg: ag, seedAgeS: Math.round(t - coin.createTs), windows: out.cands.filter((c) => /^FAST-/.test(c.family)).map((c) => c.family), H: o.px, HT: t, frozen: null, pullT: null };
+    }
+  } else {
+    const end = (reason, detail = {}) => { coin.sw = null; note("SECOND-WAVE", reason, { seed_t: w.seedT, seed_ag: w.seedAg, windows: w.windows, ...detail }, false); };
+    if (t > w.seedT + S.SW_EXPIRE_S) end(w.frozen ? "expired: no reclaim within 60 min" : "expired: no 25% pullback within 60 min");
+    else if (!sr.covered(w.seedT, t)) end("abandoned: coverage broke during the setup");
+    else if (w.frozen === null) { if (o.px > w.H) { w.H = o.px; w.HT = t; } else if (o.px <= S.SW_PULLBACK * w.H) { w.frozen = w.H; w.pullT = t; w.pullPx = o.px; } }
+    else if (o.px > w.frozen) {
+      const d = { seed_t: w.seedT, seed_px: w.seedPx, seed_ag: w.seedAg, seed_age_s: w.seedAgeS, entry_ag: ag, seed_windows: w.windows, frozen_high: w.frozen, high_t: w.HT, pullback_t: w.pullT, pullback_px: w.pullPx, since_seed_s: Math.round(t - w.seedT) };
+      if (ag !== w.seedAg && g.done["SECOND-WAVE"]) end("reclaim, but the entry-age group's SECOND-WAVE slot is already used", d);
+      else if (!inBand) { g.done["SECOND-WAVE"] = 1; end("reclaim outside entry band (attempt used)", { ...d, mc: Math.round(o.mc) }); }
+      else { coin.sw = null; cand("SECOND-WAVE", d); }
     }
   }
 

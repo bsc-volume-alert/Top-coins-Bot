@@ -8,14 +8,27 @@ import { TX_COST_SOL, STAKE_SOL } from "./spec.mjs";
 export const DEFAULT_FEE = 0.003; // used ONLY when the pool has not yet shown a fee on that side; such fills are flagged fee_src='assumed'
 export const feeBuy = (st) => st.feeBuy ?? st.feeSell ?? DEFAULT_FEE;
 export const feeSell = (st) => st.feeSell ?? st.feeBuy ?? DEFAULT_FEE;
-export const feeSrc = (st, side) => ((side === "buy" ? st.feeBuy : st.feeSell) != null ? "event" : (st.feeBuy ?? st.feeSell) != null ? "other-side" : "assumed");
+export const feeSrc = (st, side) => isQuote(st) ? "inside the routed quote" : (st.feeOdd ? "event (UNUSUAL rate, used as observed)" : _feeSrc(st, side));
+const _feeSrc = (st, side) => ((side === "buy" ? st.feeBuy : st.feeSell) != null ? "event" : (st.feeBuy ?? st.feeSell) != null ? "other-side" : "assumed");
 
-/** tokens received for spending `sol` in total (fees inside the spend) */
-export function buyTokens(st, sol) { const net = sol / (1 + feeBuy(st)); return (st.base * net) / (st.quote + net); }
-/** SOL received for selling `tok` (after pool fees, before the network cost) */
-export function sellSol(st, tok) { const gross = (st.quote * tok) / (st.base + tok); return gross * (1 - feeSell(st)); }
-/** after-cost liquidation value of `tok`: what selling it now would put in the wallet */
-export function liqValue(st, tok) { return tok > 0 ? Math.max(0, sellSol(st, tok) - TX_COST_SOL) : 0; }
+// A second kind of state, { kind: "quote", reqT, t, buy: { sol, tok } | null, sells: [{ tok, sol }], route, ... }, carries ROUTED QUOTES
+// for exact sizes (the 0.2 SOL buy; the position's actual full and remaining inventories) from a quote provider such as Jupiter.
+// Route and pool fees are already inside a quote's output, so nothing is charged twice; only the declared network cost is added.
+// A size the quote state does not hold is "not priced" (null) — never zero, never interpolated.
+const near = (a, b) => Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(a), Math.abs(b));
+export const isQuote = (st) => !!st && st.kind === "quote";
+/** tokens received for spending `sol` in total (fees inside the spend); null when this state cannot price that buy */
+export function buyTokens(st, sol) {
+  if (isQuote(st)) return st.buy && near(st.buy.sol, sol) ? st.buy.tok : null;
+  const net = sol / (1 + feeBuy(st)); return (st.base * net) / (st.quote + net);
+}
+/** SOL received for selling `tok` (after pool/route fees, before the network cost); null when not priced */
+export function sellSol(st, tok) {
+  if (isQuote(st)) { const q = (st.sells || []).find((x) => near(x.tok, tok)); return q ? q.sol : null; }
+  const gross = (st.quote * tok) / (st.base + tok); return gross * (1 - feeSell(st));
+}
+/** after-cost liquidation value of `tok`: what selling it now would put in the wallet; null when not priced */
+export function liqValue(st, tok) { if (!(tok > 0)) return 0; const s = sellSol(st, tok); return s == null ? null : Math.max(0, s - TX_COST_SOL); }
 
 /** pool liquidity in USD: both sides of a constant-product pool are worth the same at the mid price → 2 × effective SOL side */
 export const liquidityUsd = (st, solUsd) => 2 * st.quote * solUsd;

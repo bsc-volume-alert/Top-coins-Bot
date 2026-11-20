@@ -13,7 +13,7 @@ if (!process.env.RPC_HTTP && process.env.HELIUS_API_KEY) process.env.RPC_HTTP = 
 if (!process.env.RPC_HTTP) { console.error("RPC_HTTP is not set"); process.exit(1); }
 const { rpc, parsePool } = await import("./feed.mjs"); const { PUMPSWAP_PROGRAM, WSOL, eventsFromLogs, IDL_PIN } = await import("./decoder.mjs");
 const N = Number(process.argv[2] || 120), nap = (ms) => new Promise((r) => setTimeout(r, ms));
-const out = { at: new Date().toISOString(), idl: IDL_PIN, asked: N, scored: 0, skipped: {}, reserves: {}, curve: { pre: 0, post: 0, both: 0, neither: 0 }, curve_large_trades: { pre: 0, post: 0, both: 0, neither: 0 }, user_amount: { match: 0, differ: 0 }, virtual: { zero: 0, negative: 0, positive: 0, absent: 0 }, fee_rate: { buy: [], sell: [] }, samples: [] };
+const out = { at: new Date().toISOString(), idl: IDL_PIN, asked: N, scored: 0, skipped: {}, reserves: {}, curve: { pre: 0, post: 0, both: 0, neither: 0 }, curve_large_trades: { pre: 0, post: 0, both: 0, neither: 0 }, user_amount: { match: 0, differ: 0 }, multi_swap: { txs: 0, chain_pre_ok: 0, chain_post_ok: 0, chain_neither: 0 }, virtual: { zero: 0, negative: 0, positive: 0, absent: 0 }, fee_rate: { buy: [], sell: [] }, samples: [] };
 const skip = (k) => (out.skipped[k] = (out.skipped[k] || 0) + 1), near = (a, b, tol = 2) => Math.abs(Number(a) - Number(b)) <= tol;
 const sigs = await rpc("getSignaturesForAddress", [PUMPSWAP_PROGRAM, { limit: Math.min(1000, N * 4) }]);
 const poolCache = new Map();
@@ -23,8 +23,13 @@ for (const s of sigs) {
   await nap(120); if (!tx?.meta) { skip("no meta"); continue; }
   const evs = eventsFromLogs(tx.meta.logMessages).filter((e) => e.type === "buy" || e.type === "sell"); if (!evs.length) { skip("no swap event"); continue; }
   const byPool = new Map(); for (const e of evs) byPool.set(e.pool, (byPool.get(e.pool) || 0) + 1);
+  // several swaps on ONE pool inside one transaction: consecutive events must chain. Under the "pre" reading the next event's
+  // base reserve = this one's ∓ its amount; under "post" the PREVIOUS event's reserve ± this amount = this one's.
+  for (const [pool, n] of byPool) if (n > 1) { out.multi_swap.txs++; const seq = evs.filter((e) => e.pool === pool);
+    for (let k = 0; k + 1 < seq.length; k++) { const a = seq[k], b = seq[k + 1], d = (x) => (x.isBuy ? -x.baseAmt : x.baseAmt);
+      if (near(a.poolBase + d(a), b.poolBase)) out.multi_swap.chain_pre_ok++; else if (near(a.poolBase + d(b), b.poolBase)) out.multi_swap.chain_post_ok++; else out.multi_swap.chain_neither++; } }
   for (const e of evs) {
-    if (byPool.get(e.pool) !== 1) { skip("several swaps on one pool in the tx"); continue; }
+    if (byPool.get(e.pool) !== 1) { skip("several swaps on one pool in the tx (see multi_swap)"); continue; }
     let p = poolCache.get(e.pool); if (!p) { try { const r = await rpc("getAccountInfo", [e.pool, { encoding: "base64" }]); p = r?.value ? parsePool(r.value.data[0]) : null; poolCache.set(e.pool, p); await nap(120); } catch { skip("pool read error"); continue; } }
     if (!p) { skip("pool unreadable"); continue; } if (p.quoteMint !== WSOL) { skip("non-SOL pool"); continue; }
     const keys = tx.transaction.message.accountKeys.map((k) => k.pubkey ?? k), bi = keys.indexOf(p.poolBaseAta), qi = keys.indexOf(p.poolQuoteAta);

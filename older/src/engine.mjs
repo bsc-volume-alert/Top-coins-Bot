@@ -6,22 +6,32 @@
 import * as S from "./spec.mjs";
 import { Series, Coverage } from "./series.mjs";
 import { newCoin, evaluate } from "./signals.mjs";
-import { newEntry, advance, observe, entryDone } from "./book.mjs";
+import { newEntry, advance, observe, entryDone, inventories, dueAt } from "./book.mjs";
 import { liquidityUsd, staticImpact } from "./fills.mjs";
 
+const POLLED_UNSUPPORTED = new Set(["HH-BREAK"]);
 export class Engine {
   constructor({ store = null, solUsd = () => null, needCreation = () => {}, onFill = () => {}, log = () => {}, firstStart = null } = {}) {
     this.cov = new Coverage(); this.feedCov = new Coverage(); /* feed + restarts only: what pool-state trust and exit flags depend on */ this.coins = new Map(); this.entries = new Map(); this.byMint = new Map();
     this.store = store; this.solUsd = solUsd; this.needCreation = needCreation; this.onFill = onFill; this.log = log; this.firstStart = firstStart;
     this.stats = { events: 0, swaps: 0, otherPool: 0, noSolUsd: 0, noCreation: 0, evals: 0, cands: 0, entries: 0, notes: 0, replayed: 0, tooOld: 0, lastT: null, evalMsMax: 0 };
     this.dirtyBars = new Map(); this.usdDown = false;
+    this.pollCov = new Coverage(); // continuity of PRICE POLLING (the Solana-wide adapter); independent of the PumpSwap WebSocket
+    this.stats.prices = 0; this.stats.riskBlocked = 0; this.stats.quotes = 0;
   }
   restartGap(from, to) { if (from != null && to > from) { this.cov.gaps.push([from, to]); this.feedCov.gaps.push([from, to]); this.store?.feedEvent(to, "restart-gap", `${from}`); } }
   feedUp(t) { this.feedCov.up(t, "feed"); this.cov.up(t, "feed"); if (!this.cov.down) for (const c of this.coins.values()) c.series.startLive(t); this.store?.feedEvent(t, "up"); }
   feedDown(t, why = "") { this.feedCov.drop(t, "feed"); this.cov.drop(t, "feed"); this.store?.feedEvent(t, "down", why); }
-  coin(mint, { pool = null, createTs = null } = {}) {
+  /** a watched coin. mode "live" = decoded pool events (PumpSwap adapter); "polled" = sampled prices + routed quotes (Solana-wide adapter).
+   *  A mint is observed in ONE mode; `info` carries the launchpad-neutral record (origin, venues, token program, sources, risk…). */
+  coin(mint, { pool = null, createTs = null, mode = null, info = null, t = null } = {}) {
     let c = this.coins.get(mint);
-    if (!c) { const sr = new Series(mint, this.cov); if (!this.cov.down && this.cov.upSince !== null) sr.startLive(this.cov.upSince); c = newCoin(mint, createTs, sr); c.pool = pool; c.lostAt = null; this.coins.set(mint, c); }
+    if (!c) {
+      const polled = mode === "polled", cov = polled ? this.pollCov : this.cov, sr = new Series(mint, cov);
+      if (polled) { if (t != null) sr.startLive(t); } else if (!cov.down && cov.upSince !== null) sr.startLive(cov.upSince);
+      c = newCoin(mint, createTs, sr); c.pool = pool; c.lostAt = null; c.mode = polled ? "polled" : "live"; c.info = {}; this.coins.set(mint, c);
+    }
+    if (info) Object.assign(c.info, info);
     if (pool && !c.pool) c.pool = pool; if (createTs && !c.createTs) c.createTs = createTs;
     return c;
   }
@@ -68,20 +78,59 @@ export class Engine {
     const age = ev.t - c.createTs; if (age < S.MIN_AGE_S) return; if (!S.ageGroupOf(age)) { this.stats.tooOld++; return; }
     this.stats.evals++;
     const o = { t: ev.t, px, mc: px * c.supply, liqUsd: liquidityUsd(st, su), rtImpact: staticImpact(st) };
-    const r = evaluate(c, o);
-    for (const n of r.notes) { this.stats.notes++; this.store?.saveNote(ev.mint, n); }
-    if (r.cands.length) {
-      this.stats.cands += r.cands.length;
-      const evalT = Date.now() / 1000;
-      const evidence = { ...r.evidence, trigger: { t: ev.t, eval_t: evalT, block_ts: ev.blockTs ?? null, sig: ev.sig ?? null, slot: ev.slot ?? null, kind: ev.kind ?? null, px_usd: px, sol_usd: su, base: st.base, quote_eff: st.quote, fee_buy: st.feeBuy, fee_sell: st.feeSell, supply: c.supply, age_s: Math.round(age), coverage: "covered" } };
-      const e = newEntry({ mint: ev.mint, pool: c.pool, ag: r.cands[0].ag, t: ev.t, families: r.cands.map((x) => x.family), features: r.cands[0].features, mc: o.mc, px, evidence, startup: this.firstStart != null && ev.t < this.firstStart + S.STARTUP_TAG_S });
-      e.cands = r.cands.map((x) => ({ family: x.family, detail: x.detail }));
-      this.addEntry(e); this.stats.entries++;
-      this.store?.saveEntry(e); for (const x of r.cands) this.store?.saveDecision(ev.mint, x.ag, x.family, ev.t, e.id, x.detail);
-      this.log(`[entry ${e.id}] ${ev.mint.slice(0, 6)} ${e.ag} ${e.families.join("+")} mc $${Math.round(o.mc)}`);
-    }
+    this._decide(c, ev.mint, o, {}, { trigger: { t: ev.t, block_ts: ev.blockTs ?? null, sig: ev.sig ?? null, slot: ev.slot ?? null, kind: ev.kind ?? null, px_usd: px, sol_usd: su, base: st.base, quote_eff: st.quote, fee_buy: st.feeBuy, fee_sell: st.feeSell, supply: c.supply, age_s: Math.round(age), coverage: "covered" } },
+      { pop: c.info.population || "pumpswap-canonical", mode: "live", exec: "reconstructed-pool-state", valuation: "pool price × on-chain base supply (from the swap event)" });
     const ms = performance.now() - t0; if (ms > this.stats.evalMsMax) this.stats.evalMsMax = +ms.toFixed(1);
   }
+  /** shared: evaluate the families on one observation and open the (shared) entry */
+  _decide(c, mint, o, opts, evidenceExtra, tags) {
+    // risk checks only stop entries whose EXECUTION assumption is unsupported (known transfer restrictions); they are not a quality filter
+    if (c.info.risk?.status === "restricted") { if (!c.riskNoted) { c.riskNoted = true; this.stats.riskBlocked++; this.store?.saveNote(mint, { ag: null, family: "*", t: o.t, reason: "not evaluated for entry: token transfer restrictions make the execution assumption unsupported", detail: { risk: c.info.risk } }); } return null; }
+    const r = evaluate(c, o, opts);
+    for (const n of r.notes) { this.stats.notes++; this.store?.saveNote(mint, n); }
+    if (!r.cands.length) return null;
+    this.stats.cands += r.cands.length;
+    const evidence = { ...r.evidence, ...evidenceExtra }; evidence.trigger.eval_t = Date.now() / 1000;
+    const e = newEntry({ mint, pool: c.pool, ag: r.cands[0].ag, t: o.t, families: r.cands.map((x) => x.family), features: r.cands[0].features, mc: o.mc, px: o.px, evidence, startup: this.firstStart != null && o.t < this.firstStart + S.STARTUP_TAG_S });
+    e.cands = r.cands.map((x) => ({ family: x.family, detail: x.detail }));
+    Object.assign(e, tags); e.token = { origin: c.info.origin ?? null, origin_evidence: c.info.origin_evidence ?? null, venues: c.info.venues ?? null, token_program: c.info.token_program ?? null, risk_status: c.info.risk?.status ?? "missing", create_src: c.info.create_src ?? null, cadence_s: c.info.cadence_s ?? null };
+    this.addEntry(e); this.stats.entries++;
+    this.store?.saveEntry(e); for (const x of r.cands) this.store?.saveDecision(mint, x.ag, x.family, o.t, e.id, x.detail);
+    this.log(`[entry ${e.id}] ${mint.slice(0, 6)} ${e.ag} ${e.families.join("+")} mc $${Math.round(o.mc)} (${e.mode})`);
+    return e;
+  }
+
+  // ---------- Solana-wide adapter: sampled prices + routed quotes ----------
+  pollUp(t) { this.pollCov.up(t, "feed"); }
+  pollDown(t, why = "") { this.pollCov.drop(t, "feed"); this.store?.feedEvent(t, "poll-down", why); }
+  /** p: { t (response time), mint, px (USD), mc (USD, provider's stated definition), liqUsd, supply, src, cadence_s } */
+  onPrice(p) {
+    this.stats.prices++; const c = this.coins.get(p.mint); if (!c || c.mode !== "polled") return;
+    c.series.add(p.t, p.px, 0, null, null); if (p.supply) c.supply = p.supply; c.info.cadence_s = p.cadence_s ?? c.info.cadence_s;
+    (this.dirtyBars.get(p.mint) || this.dirtyBars.set(p.mint, new Set()).get(p.mint)).add(Math.floor(p.t / 60));
+    if (!c.createTs) { this.stats.noCreation++; return; }
+    const age = p.t - c.createTs; if (age < S.MIN_AGE_S) return; if (!S.ageGroupOf(age)) { this.stats.tooOld++; return; }
+    this.stats.evals++;
+    const o = { t: p.t, px: p.px, mc: p.mc ?? p.px * c.supply, liqUsd: p.liqUsd ?? null, rtImpact: null };
+    // sampled prices carry no volume: HH-BREAK cannot be evaluated here and is NOT claimed (counted as unsupported for this mode)
+    this._decide(c, p.mint, o, { skip: POLLED_UNSUPPORTED }, { trigger: { t: p.t, px_usd: p.px, src: p.src ?? null, supply: c.supply, age_s: Math.round(age), cadence_s: p.cadence_s ?? null, coverage: "sampled" } },
+      { pop: "solana-wide", mode: "polled", exec: "routed-quote", valuation: p.valuation || "provider market cap" });
+  }
+  /** what the quote provider must price now: [{ id, mint, buy_sol | null, sells: [tok…], due }] — one request per DISTINCT size, never per row */
+  quoteNeeds(now) {
+    const out = [];
+    for (const [mint, ids] of this.byMint) for (const id of ids) { const e = this.entries.get(id); if (e.exec !== "routed-quote") continue;
+      if (e.status === "pending") { if (now >= e.schedT) out.push({ id, mint, buy_sol: S.STAKE_SOL, sells: [], due: e.schedT }); }
+      else if (e.status === "filled") { const inv = inventories(e); if (inv.length) out.push({ id, mint, buy_sol: null, sells: inv, due: dueAt(e) }); } }
+    return out;
+  }
+  /** st: { kind: "quote", reqT, t, buy?, sells } — a routed quote that became available at st.t */
+  onQuote(id, st) {
+    const e = this.entries.get(id); if (!e) return; this.stats.quotes++;
+    const c = this.coins.get(e.mint), ids = this.byMint.get(e.mint), was = e.status, sig = e.versions.map((v) => v.status).join();
+    observe(e, st, st.t, this.pollCov); this._after(e, was, sig, ids, c);
+  }
+
   onSwap(ev) { this.onEvent({ ...ev, kind: ev.isBuy ? "buy" : "sell", state: ev.state ?? { base: ev.base, quote: ev.quote, feeBuy: ev.feeBuy ?? (ev.feeBps != null ? ev.feeBps / 1e4 : null), feeSell: ev.feeSell ?? (ev.feeBps != null ? ev.feeBps / 1e4 : null), supply: ev.supply ?? null } }); }
 
   tick(now) {

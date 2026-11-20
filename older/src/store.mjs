@@ -11,7 +11,7 @@ export class Store {
     this.path = path; const db = (this.db = new Database(path)); db.pragma("journal_mode = WAL"); db.pragma("synchronous = NORMAL"); db.pragma("busy_timeout = 5000");
     db.exec(`
       CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
-      CREATE TABLE IF NOT EXISTS coins (mint TEXT PRIMARY KEY, pool TEXT, create_ts INTEGER, create_src TEXT, pump_origin TEXT, first_seen INTEGER, last_px REAL, last_t REAL);
+      CREATE TABLE IF NOT EXISTS coins (mint TEXT PRIMARY KEY, pool TEXT, create_ts INTEGER, create_src TEXT, pump_origin TEXT, first_seen INTEGER, last_px REAL, last_t REAL, info TEXT);
       CREATE TABLE IF NOT EXISTS bars (mint TEXT, m INTEGER, o REAL, h REAL, l REAL, c REAL, v REAL, nb INTEGER, ns INTEGER, buyers INTEGER, src TEXT, PRIMARY KEY (mint, m)) WITHOUT ROWID;
       CREATE INDEX IF NOT EXISTS bars_m ON bars(m);
       CREATE TABLE IF NOT EXISTS decisions (mint TEXT, ag TEXT, family TEXT, t REAL, entry_id INTEGER, detail TEXT, PRIMARY KEY (mint, ag, family)) WITHOUT ROWID;
@@ -27,7 +27,7 @@ export class Store {
       note: db.prepare("INSERT INTO notes (mint, ag, family, t, reason, detail) VALUES (?,?,?,?,?,?)"),
       ent: db.prepare("INSERT OR REPLACE INTO entries (id, mint, status, done, decision_t, json) VALUES (?,?,?,?,?,?)"),
       feed: db.prepare("INSERT INTO feed (t, ev, detail) VALUES (?,?,?)"),
-      coin: db.prepare("INSERT INTO coins (mint, pool, create_ts, create_src, pump_origin, first_seen) VALUES (?,?,?,?,?,?) ON CONFLICT(mint) DO UPDATE SET pool=COALESCE(coins.pool, excluded.pool), create_ts=COALESCE(coins.create_ts, excluded.create_ts), create_src=COALESCE(coins.create_src, excluded.create_src), pump_origin=COALESCE(coins.pump_origin, excluded.pump_origin)"),
+      coin: db.prepare("INSERT INTO coins (mint, pool, create_ts, create_src, pump_origin, first_seen, info) VALUES (?,?,?,?,?,?,?) ON CONFLICT(mint) DO UPDATE SET pool=COALESCE(coins.pool, excluded.pool), create_ts=COALESCE(coins.create_ts, excluded.create_ts), create_src=COALESCE(coins.create_src, excluded.create_src), pump_origin=COALESCE(coins.pump_origin, excluded.pump_origin), info=COALESCE(excluded.info, coins.info)"),
       last: db.prepare("UPDATE coins SET last_px=?, last_t=? WHERE mint=?"),
     };
     this.tx = db.transaction((fn) => fn());
@@ -36,7 +36,8 @@ export class Store {
   saveDecision(mint, ag, family, t, entryId, detail) { this.q.dec.run(mint, ag, family, t, entryId, JSON.stringify(detail ?? null)); }
   saveNote(mint, n) { this.q.note.run(mint, n.ag, n.family, n.t, n.reason, JSON.stringify(n.detail ?? null)); if (n.family === "SLOW-BUILD" || n.family === "LOW4H-LIQ25K" || (n.family === "SECOND-WAVE" && n.reason !== "window not covered")) this.q.dec.run(mint, n.ag, n.family, n.t, null, JSON.stringify({ rejected: n.reason, ...n.detail })); }
   saveEntry(e) { const done = e.status === "cancelled" || (e.status === "filled" && e.versions.every((v) => v.status === "closed" || v.status === "unresolved") && e.runner.horizonDone) ? 1 : 0; this.q.ent.run(e.id, e.mint, e.status, done, e.decisionT, JSON.stringify(e)); }
-  saveCoin(mint, { pool = null, createTs = null, createSrc = null, pumpOrigin = null, firstSeen = null } = {}) { this.q.coin.run(mint, pool, createTs, createSrc, pumpOrigin, firstSeen); }
+  /** `pumpOrigin` column = launchpad/origin label; `info` = the launchpad-neutral record (venues, token program, sources, mode, risk…) */
+  saveCoin(mint, { pool = null, createTs = null, createSrc = null, pumpOrigin = null, firstSeen = null, info = null } = {}) { this.q.coin.run(mint, pool, createTs, createSrc, pumpOrigin, firstSeen, info ? JSON.stringify(info) : null); }
   savePool(pool, i) { this.db.prepare("INSERT OR IGNORE INTO pools VALUES (?,?,?,?)").run(pool, i.mint, i.quote, i.creator ?? null); }
   loadPools() { const m = new Map(); for (const r of this.db.prepare("SELECT pool, mint, quote, creator FROM pools").iterate()) m.set(r.pool, { mint: r.mint, quote: r.quote, creator: r.creator }); return m; }
   saveLast(mint, c) { this.q.last.run(c.series.lastPx, c.series.lastT, mint); }
@@ -47,7 +48,7 @@ export class Store {
     let maxId = 0;
     for (const r of this.db.prepare("SELECT id, json, done FROM entries").iterate()) { maxId = Math.max(maxId, r.id); if (!r.done) engine.addEntry(JSON.parse(r.json)); }
     setNextId(maxId + 1);
-    for (const r of this.db.prepare("SELECT mint, pool, create_ts FROM coins").iterate()) engine.coin(r.mint, { pool: r.pool, createTs: r.create_ts });
+    for (const r of this.db.prepare("SELECT mint, pool, create_ts, info FROM coins").iterate()) { const info = r.info ? JSON.parse(r.info) : null; if (info?.monitoring_mode === "polled") continue; /* polled coins are re-registered by the poller with fresh metadata */ engine.coin(r.mint, { pool: r.pool, createTs: r.create_ts, info }); }
   }
   /** the project's first-ever start (for the 24 h "startup" tag); set once */
   firstStart(now) { this.db.prepare("INSERT OR IGNORE INTO meta VALUES ('first_start', ?)").run(String(now)); return Number(this.db.prepare("SELECT v FROM meta WHERE k='first_start'").get().v); }

@@ -1,27 +1,34 @@
-# Older-coin paper project — frozen specification `older-2`
+# Older-coin paper project — frozen specification `older-3`
 _20 Nov 2026 (UK). Paper only. Every number below is a constant in `src/spec.mjs`; changing one is a new spec version._
-_Agreed between the owner, ChatGPT (reviewer) and Claude (implementer). Gemini's review is still to come._
+_Agreed between the owner, ChatGPT (reviewer) and Claude (implementer). older-3 (20 Nov, afternoon) widens the scope to Solana-wide and records three rule amendments; the strategy definitions are otherwise those of older-2._
 
 ## Shared rules
-- **Population:** pump.fun coins on their **canonical, SOL-quoted PumpSwap pool** (pool.creator = the pump pool-authority PDA of the mint). Other pools and venues are not covered and are counted.
-- **Age at entry:** 8 hours to 90 days since **token creation**. Crossing 90 days never closes an open position.
+- **Population: Solana-wide, launchpad- and exchange-neutral** — any token of eligible age and valuation that our providers can observe and quote. Two observation methods, always labelled and never merged silently:
+  - **PumpSwap · live:** pump.fun coins on their canonical SOL-quoted PumpSwap pool, observed from every decoded pool event; fills from the reconstructed pool state.
+  - **Solana-wide · sampled:** every other token (Raydium, Meteora, Orca, other launchpads, non-SOL pools reachable by a route from SOL), observed by **sampled** prices at a recorded cadence; fills from **routed quotes** for the exact size. A mint is observed by one method only (live wins).
+  - "Solana-wide" is broad coverage, not every mint. Unsupported, unpriced and unroutable tokens are counted.
+- **Age at entry:** 8 hours to 90 days since token creation. Sources are labelled: on-chain/back-filled creation for the live method; for the sampled method the provider's **first-pool creation time, a lower bound on token age** (it can understate age, never overstate it — the 8-hour minimum cannot be broken by it; the age group may be understated). Crossing 90 days never closes an open position.
 - **Age groups:** A1 8–16 h · A2 16–24 h · A3 24–36 h · A4 36 h–90 d.
-- **Entry market cap:** $40,000–$1,000,000 at the signal. Coins are observed outside the band (signals need earlier prices; positions are followed anywhere).
-- **Stake:** 0.2 SOL. Cost of an entry = 0.2 SOL + 0.0005 SOL (declared transaction-cost assumption, charged on every transaction side).
-- **One entry per mint, family and age group.** Families whose signals fire on the **same update** share one simulated entry; different decision times are different entries.
-- **Price:** pool spot price from **effective reserves** (quote vault + signed `virtual_quote_reserves`) after each reserve-changing event (buy, sell, deposit, withdraw, boost). USD via SOL/USD spot, at most 5 minutes old; if stale, **new entries are suspended and open positions are still managed in SOL**.
-- **Clock:** our receive time. A signal exists when our engine can use it; block time is stored alongside, never used to back-date. Held/replayed events update history but never create signals.
-- **Coverage:** a rule is evaluated only when its whole window is known (continuous feed, or back-filled). Feed outages, restarts, a stale SOL/USD reference and a coin's own lost data all break coverage. "Fresh crossing" = the previous observation was below the line, this one is at or above it, and nothing between them is unknown.
+- **Entry valuation:** $40,000–$1,000,000 at the signal. Definition is recorded on every entry: live = pool price × on-chain base supply; sampled = provider market cap (circulating supply × price). Fully diluted value is never mixed in.
+- **Stake:** 0.2 SOL. Cost of an entry = 0.2 SOL + 0.0005 SOL (declared transaction-cost assumption, charged on every execution leg of every simulated book).
+- **One entry per mint, family and entry-age group.** Families whose signals fire on the **same update** share one simulated entry.
+- **Price (live method):** pool spot price from **effective reserves** (quote vault + signed `virtual_quote_reserves`) after each reserve-changing event (buy, sell, deposit, withdraw, boost).
+- **USD:** every observation is converted at the SOL/USD of its own moment (never re-priced later). Costs, exits, trails, stall thresholds and P&L are in SOL. A stale USD reference suspends new entries; positions are still managed.
+- **Clock:** our receive time (for a quote: when the response became available). Block time is stored alongside, never used to back-date. Held/replayed events never create signals.
+- **Coverage:** a rule is evaluated only when its whole window is known. Feed outages, restarts, a stale USD reference, a hole in a token's samples (more than 3× its cadence) or a token omitted by the price provider all break coverage.
+- **Risk evidence** (mint/freeze authority, Token-2022 extensions, provider markers) is recorded on every token. Only a known transfer restriction (transfer hook, non-transferable, permanent delegate, default-frozen accounts, a non-zero transfer fee, pausable/confidential) stops entries, because the paper book's plain buy-and-sell assumption would not hold. Missing risk data is recorded as missing, not as clean. No other filter is added.
 
 ## Execution model (declared assumptions, identical for every family)
 - **Buy:** scheduled at signal + 1 s. Priced from the pool state **in force at that moment** (the latest reconstructed state — no other trader has to trade). If that state is not trustworthy, the first trustworthy state within 5 s is used and the delay recorded; otherwise the entry is cancelled as a **pricing/data timeout** (not "untradeable").
 - **Sell:** scheduled at trigger + 0.7 s, priced the same way. A triggered sell is never dropped: it waits for a trustworthy state, records the real delay, and is shown as unresolved exposure after 24 h.
 - **Fill maths:** constant product on effective reserves. Pool fees per side are measured from the pool's own latest buy/sell as the user's net debit/credit against the amount that moved on the curve (overlapping fee fields are never added together).
-- **Entry check (diagnostic):** one batched account read (pool + two vaults) per unique entry; recorded with slots and times; never replaces the simulated fill.
+- **Entry check (diagnostic, live method):** one batched account read (pool + two vaults) per unique entry; recorded with slots and times; never replaces the simulated fill.
+- **Routed-quote adapter (sampled method):** the quote is **requested at or after the scheduled time**; the fill time is when the response became available (never back-dated); route, router, fee fields and both timestamps are stored. Fees inside a quote are not charged again; only the declared transaction cost is added. One quote per distinct size (the 0.2 SOL buy; the position's full and remaining inventory) — never one per result row. No route: the buy is cancelled as a pricing/data timeout; an exit stays triggered and visible as unresolved exposure. A quote is an expected output, not a confirmed on-chain fill.
 
 ## Exit policies (every entry carries both)
 - **trail:** trailing stop of 20 / 25 / 30 / 40 % on the after-cost liquidation value of the position; 24-hour maximum hold from the fill.
-- **scale:** the same trail, plus: when the full position's after-cost value reaches 2× cost (and no full exit has triggered), sell **half the original tokens** 0.7 s later; trail the rest with the same percentage on a high-water mark rescaled to the remaining tokens. Same 24-hour deadline. A trail trigger during the pending half-sale becomes one full sale.
+- **scale:** the same trail, plus: when the full position's after-cost value reaches 2× cost (and no full exit has triggered), sell **half the original tokens** 0.7 s later; trail the rest with the same percentage. Same 24-hour deadline. A trail trigger during the pending half-sale becomes one full sale (the same tokens are never sold twice).
+  - **Formula.** `part` = ½ × original tokens. Half-sale proceeds = `sell(part) − 0.0005` (one leg, one cost). High-water mark: `peak_new = peak_old × value(remaining) ÷ value(held before)`, both valued on the state that prices the sale. So the position's drawdown from its high is **identical before and after** the half-sale: selling half neither looks like a 50% fall nor resets the trail. Final return = (half-sale proceeds + final-sale proceeds) ÷ cost − 1; the final sale pays its own 0.0005. A reset-the-trail variant would be a separate future experiment.
 
 ## Entry families (14)
 | # | Family | Rule |
@@ -30,14 +37,16 @@ _Agreed between the owner, ChatGPT (reviewer) and Claude (implementer). Gemini's
 | 2 | LOW4H | Fresh crossing of 2× the lowest price of the preceding 4 hours. No pullback needed. |
 | 3 | CONT | First eligible observation with price ≥ 1.30× the price 15 minutes earlier **and** ≥ 0.95× the preceding 1-hour high. Not a crossing. |
 | 4 | SLOW-BUILD | LOW4H's first eligible candidate, accepted only if ≥ 30 min passed since the low and no completed 1-minute candle from the low's minute up to the trigger's minute gained more than 20% (exactly 20% allowed). Rejections recorded; no later attempt in that age group. Shares LOW4H's entry. |
-| 5 | HH-BREAK | Price strictly above the preceding 60-minute high, and volume of the last 15 minutes ≥ 2× the median of the sixteen completed 15-minute windows before it (the minute containing t−15 min is in neither side). Zero baseline: recorded, not entered. |
+| 5 | HH-BREAK | Price strictly above the preceding 60-minute high, and volume over **[B − 15 min, B)** ≥ 2× the median of sixteen adjacent 15-minute buckets covering **[B − 255 min, B − 15 min)**, where B is the last completed minute boundary (**amended in older-3**: half-open intervals, no overlap, no missing minute; the unfinished minute counts on neither side). Zero baseline: recorded, not entered. Needs a volume source: **not evaluated in the sampled method**. |
 | 6 | CONT-STALL | CONT's exact entries; at fill + 60 min a surviving position is closed if its after-cost value never reached 1.15× cost. |
 | 7 | LOW4H-LIQ25K | LOW4H's first eligible candidate, accepted only if pool liquidity ≥ $25,000 and the 0.2 SOL static price-impact diagnostic ≤ 5% (each test recorded separately). Shares LOW4H's entry. |
 | 8–10 | FAST-1M / 3M / 5M | Fresh crossing of 2× the lowest pool spot price of the preceding 60 / 180 / 300 seconds (exact observations; the price standing at the window's start counts). |
 | 11–13 | FAST150-1M / 3M / 5M | The same at 1.5×. |
-| 14 | SECOND-WAVE | Seeded by the first 2× FAST trigger of the age group. Track the running high; the first fall to ≤ 0.75× it freezes that high; buy on the first observation strictly above the frozen high. Expires 60 minutes after the seed; one attempt per mint per age group; eligibility re-checked at the buy. |
+| 14 | SECOND-WAVE | Seeded by the first 2× FAST trigger. Track the running high; the first fall to ≤ 0.75× it freezes that high; buy on the first observation strictly above the frozen high. Expires 60 minutes after the seed. **Amended in older-3:** one active setup per mint, kept alive to its own expiry even across an age boundary; the seed uses the seed age group's attempt; the trade is classified by the age group **at entry**, whose slot must be free and is then used; seed age is recorded. Eligibility re-checked at the buy. |
 
-14 families × 4 ages × 4 stops = **224 rows**, × 2 exit policies = **448 comparisons**. They share coins, entries and stops: correlated comparisons, not independent results.
+14 families × 4 ages × 4 stops = **224 rows**, × 2 exit policies = **448 comparisons**, viewable per population/method. They share coins, entries and stops: correlated comparisons, not independent results, and their sum is not a funded portfolio's return.
+
+**What the sampled method can miss** (stated on the dashboard): FAST triggers, fresh crossings, trailing highs, stop crossings and SECOND-WAVE seeds/pullbacks/reclaims that happen between samples. FAST-1M on sampled tokens is evaluated on the samples that exist and is labelled sampled; it is not equivalent to the live books.
 
 ## Recorded with each entry (never used as filters)
 Exact age, market-cap band, 15-minute rise, largest 1-minute candle of the last hour, 15-minute volume, buys/sells/unique and repeat buyers (15 min), liquidity, static impact, distance from the 1-hour high, 4-hour drawdown and recovery; the previous observation and threshold that made the crossing; for FAST/SECOND-WAVE every observation of the window; the trigger's signature, slot, block time, receive and evaluation times, reserves, fees, supply and SOL/USD; fill and exit delays; the entry check.

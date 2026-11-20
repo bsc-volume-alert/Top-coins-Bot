@@ -23,7 +23,7 @@ export const DISC = { // from the IDL's `events[].discriminator`
   BuyEvent: [103, 244, 82, 31, 44, 245, 119, 119], SellEvent: [62, 47, 55, 10, 165, 3, 220, 42], DepositEvent: [120, 248, 61, 83, 31, 142, 107, 144], WithdrawEvent: [22, 9, 133, 26, 160, 44, 71, 192],
   CreatePoolEvent: [177, 49, 12, 210, 160, 118, 167, 116], InitBoostEvent: [174, 124, 74, 249, 4, 81, 246, 17], BoostBuyAndBurnEvent: [63, 69, 28, 22, 48, 92, 194, 185], SweepPoolFeeEvent: [130, 164, 36, 97, 228, 130, 135, 165] };
 const DKEY = new Map(Object.entries(DISC).map(([k, v]) => [Buffer.from(v).toString("hex"), k]));
-export const dec = { buy: 0, sell: 0, deposit: 0, withdraw: 0, pool: 0, boost: 0, sweep: 0, short: 0, fitPre: 0, fitPost: 0, fitBoth: 0, fitNeither: 0, chainOk: 0, chainBad: 0, noVirtual: 0, negVirtual: 0, mode: RES_MODE };
+export const dec = { buy: 0, sell: 0, deposit: 0, withdraw: 0, pool: 0, boost: 0, sweep: 0, short: 0, fitPre: 0, fitPost: 0, fitBoth: 0, fitNeither: 0, feeOdd: 0, chainOk: 0, chainBad: 0, noVirtual: 0, negVirtual: 0, mode: RES_MODE };
 class R {
   constructor(b) { this.b = b; this.o = 0; }
   u64() { const v = this.b.readBigUInt64LE(this.o); this.o += 8; return v; } i64() { const v = this.b.readBigInt64LE(this.o); this.o += 8; return v; }
@@ -93,9 +93,11 @@ export function applyEvent(p, e, baseDec = 6) {
     if (RES_MODE === "pre") { p.base = (e.isBuy ? B - b : B + b) / U; p.quote = (e.isBuy ? E + q + lp : E - q + lp) / 1e9; } // the LP fee stays in the pool as liquidity
     else { p.base = B / U; p.quote = E / 1e9; }
     const uq = Number(e.userQuote);
-    if (uq > 0) { const f = e.isBuy ? uq / q - 1 : 1 - uq / q; if (f >= 0 && f < 0.25) { if (e.isBuy) p.feeBuy = f; else p.feeSell = f; } }
+    // the observed rate is used AS OBSERVED — an unusual value (negative, or above 10%) is never clamped or replaced by a tidy
+    // estimate: it is counted (dec.feeOdd), carried on the state as fee_odd, and every fill priced from it is flagged
+    if (uq > 0) { const f = e.isBuy ? uq / q - 1 : 1 - uq / q; if (e.isBuy) p.feeBuy = f; else p.feeSell = f; const odd = !(f >= 0 && f <= 0.10); if (odd) dec.feeOdd++; if (e.isBuy) p.oddBuy = odd; else p.oddSell = odd; }
     if (e.baseSupply != null && e.baseSupply > 0n) p.supply = Number(e.baseSupply) / U;
-    return { state: { base: p.base, quote: p.quote, feeBuy: p.feeBuy ?? null, feeSell: p.feeSell ?? null, supply: p.supply ?? null }, sol: q / 1e9, changed: true };
+    return { state: { base: p.base, quote: p.quote, feeBuy: p.feeBuy ?? null, feeSell: p.feeSell ?? null, feeOdd: !!(p.oddBuy || p.oddSell), supply: p.supply ?? null }, sol: q / 1e9, changed: true };
   }
   if (e.type === "deposit" || e.type === "withdraw") {
     const s = e.type === "deposit" ? 1 : -1, vq = p.vq ?? 0;
