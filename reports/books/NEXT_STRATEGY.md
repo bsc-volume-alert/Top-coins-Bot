@@ -66,3 +66,7 @@ Closed paper trades to 13 Nov 12:45 UTC, 0.2 SOL after costs, venue = where the 
 - The opposite holds for the fixed-time 100K books (100K1 pool −16.8%, curve −6.4%): the pattern is specific to buying a coin that is already running.
 - Venue is known at the buy (the reserve read), but this split was found by looking at results → hypothesis only; needs a frozen fresh test before any book.
 - Other books: G1 272 trades, win 56% but −4.2% a trade, no trade reached 2×; RB 60, −6.5%; SW5 2 trades; R3C 42 not filled (429 and a "Cannot access 'q' before initialization" error on 16).
+
+## 20 Nov 2026 03:01 UK — C1-2 fresh-data evaluation: due, BLOCKED (not run)
+- The scheduled evaluation (launches 13 Nov 00:00 → 20 Nov 00:00 UTC, c1_v2.py unchanged) cannot run: the bot server has sent nothing since 15 Nov 01:54 UTC, when the main disk was full (0.03 GB free). The archive of 6–8 Nov and its trim, planned to keep the disk clear, never ran after 14 Nov 01:00.
+- The window's data can only exist for about 13 Nov 00:00 → 15 Nov ~02:00 UTC (≈ 2 of the 7 days); whatever was recorded after the disk filled is incomplete. When the server is back, export that part read-only and run c1_v2.py unchanged; by the pre-fixed rules it is very likely INSUFFICIENT EVIDENCE (< 80 fills). Any extension of the window is a change and must be recorded as such before any result is seen.
