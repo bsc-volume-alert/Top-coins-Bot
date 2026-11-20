@@ -1,0 +1,61 @@
+// web.mjs — the project's page (visual reference: the old books page). GET / (page), GET /api/state (JSON).
+// Optional key: if OLDER_SITE_KEY is set, every request needs ?k=<key>. Read-only.
+import http from "node:http";
+import { bookRows, overlap } from "./report.mjs";
+import * as S from "./spec.mjs";
+
+export function startWeb({ port, store, engine, status }) {
+  const KEY = process.env.OLDER_SITE_KEY || "";
+  let cache = null, cacheAt = 0;
+  const state = () => {
+    if (cache && Date.now() - cacheAt < 15000) return cache;
+    const entries = store.allEntries();
+    const costs = { server: Number(process.env.OLDER_COST_SERVER_USD_MO || 0), gmgn: Number(process.env.OLDER_COST_GMGN_USD_MO || 30), rpc: Number(process.env.OLDER_COST_RPC_USD_MO || 0) };
+    cache = { at: Date.now(), spec: S.SPEC_VER, rows: bookRows(entries, store.noteCounts()), overlap: overlap(entries), notes: store.noteCounts(), status: status(), disk: store.disk(), costs,
+      recent: entries.slice(-40).reverse().map((e) => ({ id: e.id, mint: e.mint, ag: e.ag, families: e.families, t: e.decisionT, mc: Math.round(e.signalMc), status: e.status, fill_delay: e.fill?.delay_s ?? null, versions: e.versions.map((v) => ({ stop: v.stop, stall: v.stall, status: v.status, reason: v.reason, ret: v.exit ? +v.exit.ret.toFixed(3) : null })), runner_max: e.runner.maxX ? +e.runner.maxX.toFixed(2) : null, flags: e.flags })) };
+    cacheAt = Date.now(); return cache;
+  };
+  http.createServer((req, res) => {
+    const u = new URL(req.url, "http://x");
+    if (KEY && u.searchParams.get("k") !== KEY) { res.writeHead(403); return res.end("key required"); }
+    if (u.pathname === "/api/state") { res.writeHead(200, { "content-type": "application/json" }); return res.end(JSON.stringify(state())); }
+    if (u.pathname === "/") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(PAGE); }
+    res.writeHead(404); res.end();
+  }).listen(port, () => console.log(`[web] :${port}`));
+}
+
+const PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Older Coins Books</title>
+<style>
+:root{color-scheme:dark}body{margin:0;background:#0b0d12;color:#e6e8ef;font:14px/1.45 -apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1500px;margin:0 auto;padding:14px}h1{font-size:19px;margin:0 0 4px}h2{font-size:15px;margin:0 0 8px}.sub{color:#9aa3b5;font-size:12.5px}
+.card{background:#141825;border:1px solid #232a3b;border-radius:10px;padding:12px;margin:12px 0}
+.kpis{display:flex;flex-wrap:wrap;gap:8px}.k{background:#0f1320;border:1px solid #232a3b;border-radius:8px;padding:8px 10px;min-width:130px}.k b{display:block;font-size:17px}.k span{color:#9aa3b5;font-size:11.5px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}th,td{padding:5px 7px;border-bottom:1px solid #1f2535;text-align:right;white-space:nowrap}th{color:#9aa3b5;font-weight:600;position:sticky;top:0;background:#141825}
+th.l,td.l{text-align:left}.tw{overflow:auto;max-height:70vh}.pos{color:#4ade80}.neg{color:#f87171}.mut{color:#6b7280}.open{color:#fbbf24}
+select{background:#0f1320;color:#e6e8ef;border:1px solid #232a3b;border-radius:6px;padding:4px}
+</style></head><body><div class="wrap">
+<h1>Older coins — paper books <span class="sub" id="hd">loading…</span></h1>
+<div class="sub">PAPER ONLY. Pump.fun-origin coins on <b>PumpSwap pools only</b> (other venues are not covered — see Coverage), 8 h+ old, entry market cap $40K–$1M, 0.2 SOL a entry, 7 families × 4 age groups × 4 trailing stops = 112 rows. Returns are after pool fees, price impact and a declared 0.0005 SOL per transaction; fills use the first pool state at/after signal + 1 s (buy) and trigger + 0.7 s (sell). Rows sharing coins or entries are <b>correlated</b> (Overlap table) — not 112 independent results. Small samples are provisional.</div>
+<div class="card"><div class="kpis" id="kpis"></div></div>
+<div class="card"><h2>Books</h2>Family <select id="ff"><option value="">all</option></select> Age <select id="fa"><option value="">all</option><option>A1</option><option>A2</option><option>A3</option><option>A4</option></select>
+<div class="tw"><table id="bt"></table></div><div class="sub">avg / quantiles = after-cost return per entry. −40% is the project's severe-loss measure; −50% / −60% shown too. "ex top 3" removes the three best coins. H1 / H2 = first / second half of closed trades by fill time. Runners = entries whose after-cost value reached 2×/3×/5×/10× of cost within 24 h of the fill (counted even after an exit; separate from profit).</div></div>
+<div class="card"><h2>Overlap between families</h2><div class="tw"><table id="ov"></table></div></div>
+<div class="card"><h2>Coverage, rejections and missing data</h2><div class="tw"><table id="nt"></table></div></div>
+<div class="card"><h2>Latest entries</h2><div class="tw"><table id="re"></table></div></div>
+</div><script>
+const $=(i)=>document.getElementById(i),k=new URLSearchParams(location.search).get("k"),pc=(x)=>x==null?'<span class=mut>–</span>':'<span class='+(x>0?'pos':x<0?'neg':'')+'>'+(x*100).toFixed(1)+'%</span>',sol=(x)=>x==null?'–':'<span class='+(x>0?'pos':x<0?'neg':'')+'>'+x.toFixed(3)+'</span>',ago=(t)=>t?Math.round(Date.now()/1000-t)+' s ago':'–';
+let S=null;
+async function load(){S=await (await fetch('/api/state'+(k?'?k='+k:''))).json();draw();}
+function draw(){const st=S.status,d=S.disk,c=S.costs;
+$('hd').textContent='spec '+S.spec+' · '+new Date(S.at).toLocaleString('en-GB',{timeZone:'Europe/London'})+' UK';
+const net=S.rows.filter(r=>r.stop===0.2).reduce((s,r)=>s+(r.net_sol||0),0);
+const kp=[['Feed',st.feed.connected?'up':'DOWN','last message '+ago(st.feed.lastMsg)],['Swaps',st.feed.swaps,'held '+st.feed.held+' / replayed '+st.feed.replayed],['Coins in memory',st.engine.coins,'creation unknown: '+st.engine.noCreation],['Entries',st.engine.entries,'candidates '+st.engine.cands],['Reserve mismatches',st.decoder.reserveMismatch,'swaps whose reserves did not reproduce the trade'],['SOL/USD',st.sol.px?'$'+st.sol.px.toFixed(2):'none',st.sol.src||''],['GMGN',st.gmgn.calls+' calls',st.gmgn.limited+' rate-limited · '+(st.gmgn.lastErr||'ok')],['Back-fill',st.backfill.done+' done','queue '+st.backfillQ+' · refs ok '+st.backfill.refsOk+' / missing '+st.backfill.refsMissing],['Disk',d.db_mb+' MB db','WAL '+d.wal_mb+' MB · free '+d.free_gb+' GB · bars '+d.bars],['Running costs','$'+(c.server+c.gmgn+c.rpc)+'/month','server $'+c.server+' · GMGN $'+c.gmgn+' · RPC $'+c.rpc+' — separate from paper returns']];
+$('kpis').innerHTML=kp.map(x=>'<div class=k><b>'+x[1]+'</b><span>'+x[0]+' · '+x[2]+'</span></div>').join('');
+const ff=$('ff');if(ff.options.length<2)[...new Set(S.rows.map(r=>r.family))].forEach(f=>ff.add(new Option(f,f)));
+const rows=S.rows.filter(r=>(!ff.value||r.family===ff.value)&&(!$('fa').value||r.ag===$('fa').value));
+$('bt').innerHTML='<tr><th class=l>Book</th><th>coins</th><th>filled</th><th>open</th><th>closed</th><th>failed</th><th>unres.</th><th>net SOL</th><th>avg</th><th>win</th><th>q10</th><th>median</th><th>q90</th><th>≤−40%</th><th>≤−50%</th><th>≤−60%</th><th>ex top 3 net</th><th>ex top 3 avg</th><th>H1 avg</th><th>H2 avg</th><th>hold min</th><th>stake SOL</th><th>2×/3×/5×/10×</th><th class=l>exits</th></tr>'+rows.map(r=>'<tr><td class=l>'+r.book+'</td><td>'+r.mints+'</td><td>'+r.filled+'</td><td class=open>'+r.open+'</td><td>'+r.closed+'</td><td>'+r.failed+'</td><td>'+r.unresolved+'</td><td>'+sol(r.net_sol)+'</td><td>'+pc(r.avg_ret)+'</td><td>'+(r.win_rate==null?'–':(r.win_rate*100).toFixed(0)+'%')+'</td><td>'+pc(r.q10)+'</td><td>'+pc(r.median)+'</td><td>'+pc(r.q90)+'</td><td>'+r.loss40+'</td><td>'+r.loss50+'</td><td>'+r.loss60+'</td><td>'+sol(r.ex_top3_net)+'</td><td>'+pc(r.ex_top3_avg)+'</td><td>'+pc(r.h1_avg)+'</td><td>'+pc(r.h2_avg)+'</td><td>'+(r.hold_median_min??'–')+'</td><td>'+(r.stake_committed_sol??0)+'</td><td>'+r.runners.x2+'/'+r.runners.x3+'/'+r.runners.x5+'/'+r.runners.x10+' of '+r.runners.n+(r.runners.partial?' ('+r.runners.partial+' partial)':'')+'</td><td class=l>'+Object.entries(r.exit_reasons).map(e=>e[0]+' '+e[1]).join(', ')+'</td></tr>').join('');
+$('ov').innerHTML='<tr><th class=l>Family A</th><th class=l>Family B</th><th>shared coin·age</th><th>shared entries</th><th>A total</th><th>B total</th></tr>'+S.overlap.filter(o=>o.shared_mint_ages).map(o=>'<tr><td class=l>'+o.a+'</td><td class=l>'+o.b+'</td><td>'+o.shared_mint_ages+'</td><td>'+o.shared_entries+'</td><td>'+o.a_n+'</td><td>'+o.b_n+'</td></tr>').join('');
+const inv=st.inventory;$('nt').innerHTML='<tr><th class=l>What</th><th class=l>Reason</th><th>count</th></tr>'+(inv?'<tr><td class=l>Inventory</td><td class=l>PumpSwap SOL pools '+inv.solPools+' · priced '+inv.priced+' · ≥ $'+inv.minMc+' '+inv.aboveMin+' · in band '+inv.inBand+' · pump suffix '+inv.pumpSuffix+'</td><td></td></tr>':'')+'<tr><td class=l>Feed</td><td class=l>swaps on other pools of a watched coin (not priced) · non-SOL pools · lost-history coins</td><td>'+st.engine.otherPool+' · '+st.feed.nonSol+' · '+(st.engine.coinLost||0)+'</td></tr><tr><td class=l>Not covered</td><td class=l>Meteora, Raydium, Orca and other venues; pump.fun bonding curve (pre-pool) only via GMGN back-fill</td><td></td></tr>'+S.notes.map(n=>'<tr><td class=l>'+n.family+'</td><td class=l>'+n.reason+'</td><td>'+n.n+'</td></tr>').join('');
+$('re').innerHTML='<tr><th>#</th><th class=l>coin</th><th>age</th><th class=l>families</th><th>mc</th><th class=l>status</th><th>fill delay s</th><th class=l>exits (stop: return)</th><th>best ×</th></tr>'+S.recent.map(e=>'<tr><td>'+e.id+'</td><td class=l><a href="https://gmgn.ai/sol/token/'+e.mint+'" target=_blank>'+e.mint.slice(0,6)+'</a></td><td>'+e.ag+'</td><td class=l>'+e.families.join(', ')+'</td><td>$'+e.mc.toLocaleString()+'</td><td class=l>'+e.status+(e.flags.length?' ('+e.flags.join('; ')+')':'')+'</td><td>'+(e.fill_delay??'–')+'</td><td class=l>'+e.versions.map(v=>(v.stop*100)+(v.stall?'s':'')+': '+(v.ret==null?v.status:(v.ret*100).toFixed(0)+'% '+v.reason)).join(' · ')+'</td><td>'+(e.runner_max??'–')+'</td></tr>').join('');}
+$('ff').onchange=draw;$('fa').onchange=draw;load();setInterval(load,30000);
+</script></body></html>`;

@@ -1,0 +1,64 @@
+// store.mjs — the project's own SQLite database (separate from the old tracker.db). Compact by design:
+// minute bars (retained BAR_RETAIN_DAYS), decisions/rejections, entries with their exits, feed events. No raw trade copy.
+import Database from "better-sqlite3";
+import { statSync, statfsSync } from "node:fs";
+import { dirname } from "node:path";
+import { BAR_RETAIN_DAYS, SPEC_VER } from "./spec.mjs";
+import { setNextId } from "./book.mjs";
+
+export class Store {
+  constructor(path) {
+    this.path = path; const db = (this.db = new Database(path)); db.pragma("journal_mode = WAL"); db.pragma("synchronous = NORMAL"); db.pragma("busy_timeout = 5000");
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
+      CREATE TABLE IF NOT EXISTS coins (mint TEXT PRIMARY KEY, pool TEXT, create_ts INTEGER, create_src TEXT, pump_origin TEXT, first_seen INTEGER, last_px REAL, last_t REAL);
+      CREATE TABLE IF NOT EXISTS bars (mint TEXT, m INTEGER, o REAL, h REAL, l REAL, c REAL, v REAL, nb INTEGER, ns INTEGER, buyers INTEGER, src TEXT, PRIMARY KEY (mint, m)) WITHOUT ROWID;
+      CREATE INDEX IF NOT EXISTS bars_m ON bars(m);
+      CREATE TABLE IF NOT EXISTS decisions (mint TEXT, ag TEXT, family TEXT, t REAL, entry_id INTEGER, detail TEXT, PRIMARY KEY (mint, ag, family)) WITHOUT ROWID;
+      CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY, mint TEXT, ag TEXT, family TEXT, t REAL, reason TEXT, detail TEXT);
+      CREATE INDEX IF NOT EXISTS notes_f ON notes(family, reason);
+      CREATE TABLE IF NOT EXISTS entries (id INTEGER PRIMARY KEY, mint TEXT, status TEXT, done INTEGER DEFAULT 0, decision_t REAL, json TEXT);
+      CREATE TABLE IF NOT EXISTS pools (pool TEXT PRIMARY KEY, mint TEXT, quote TEXT, creator TEXT) WITHOUT ROWID;
+      CREATE TABLE IF NOT EXISTS feed (id INTEGER PRIMARY KEY, t REAL, ev TEXT, detail TEXT);`);
+    db.prepare("INSERT OR IGNORE INTO meta VALUES ('spec', ?)").run(SPEC_VER);
+    this.q = {
+      bar: db.prepare("INSERT OR REPLACE INTO bars VALUES (?,?,?,?,?,?,?,?,?,?,?)"),
+      dec: db.prepare("INSERT OR IGNORE INTO decisions VALUES (?,?,?,?,?,?)"),
+      note: db.prepare("INSERT INTO notes (mint, ag, family, t, reason, detail) VALUES (?,?,?,?,?,?)"),
+      ent: db.prepare("INSERT OR REPLACE INTO entries (id, mint, status, done, decision_t, json) VALUES (?,?,?,?,?,?)"),
+      feed: db.prepare("INSERT INTO feed (t, ev, detail) VALUES (?,?,?)"),
+      coin: db.prepare("INSERT INTO coins (mint, pool, create_ts, create_src, pump_origin, first_seen) VALUES (?,?,?,?,?,?) ON CONFLICT(mint) DO UPDATE SET pool=COALESCE(coins.pool, excluded.pool), create_ts=COALESCE(coins.create_ts, excluded.create_ts), create_src=COALESCE(coins.create_src, excluded.create_src), pump_origin=COALESCE(coins.pump_origin, excluded.pump_origin)"),
+      last: db.prepare("UPDATE coins SET last_px=?, last_t=? WHERE mint=?"),
+    };
+    this.tx = db.transaction((fn) => fn());
+  }
+  saveBar(mint, m, b) { this.q.bar.run(mint, m, b.o, b.h, b.l, b.c, b.v, b.nb, b.ns, b.buyers?.size ?? 0, b.bf ? "backfill" : "live"); }
+  saveDecision(mint, ag, family, t, entryId, detail) { this.q.dec.run(mint, ag, family, t, entryId, JSON.stringify(detail ?? null)); }
+  saveNote(mint, n) { this.q.note.run(mint, n.ag, n.family, n.t, n.reason, JSON.stringify(n.detail ?? null)); if (n.family === "SLOW-BUILD" || n.family === "LOW4H-LIQ25K") this.q.dec.run(mint, n.ag, n.family, n.t, null, JSON.stringify({ rejected: n.reason, ...n.detail })); }
+  saveEntry(e) { const done = e.status === "failed" || (e.versions.every((v) => v.status === "closed" || v.status === "unresolved") && e.runner.horizonDone) ? 1 : 0; this.q.ent.run(e.id, e.mint, e.status, done, e.decisionT, JSON.stringify(e)); }
+  saveCoin(mint, { pool = null, createTs = null, createSrc = null, pumpOrigin = null, firstSeen = null } = {}) { this.q.coin.run(mint, pool, createTs, createSrc, pumpOrigin, firstSeen); }
+  savePool(pool, i) { this.db.prepare("INSERT OR IGNORE INTO pools VALUES (?,?,?,?)").run(pool, i.mint, i.quote, i.creator ?? null); }
+  loadPools() { const m = new Map(); for (const r of this.db.prepare("SELECT pool, mint, quote, creator FROM pools").iterate()) m.set(r.pool, { mint: r.mint, quote: r.quote, creator: r.creator }); return m; }
+  saveLast(mint, c) { this.q.last.run(c.series.lastPx, c.series.lastT, mint); }
+  feedEvent(t, ev, detail = "") { this.q.feed.run(t, ev, String(detail).slice(0, 300)); }
+  /** restart: reload the one-entry flags, unfinished entries and known coins into an engine */
+  restore(engine) {
+    for (const r of this.db.prepare("SELECT mint, ag, family FROM decisions").iterate()) engine.restoreDone(r.mint, r.ag, r.family);
+    let maxId = 0;
+    for (const r of this.db.prepare("SELECT id, json, done FROM entries").iterate()) { maxId = Math.max(maxId, r.id); if (!r.done) engine.addEntry(JSON.parse(r.json)); }
+    setNextId(maxId + 1);
+    for (const r of this.db.prepare("SELECT mint, pool, create_ts FROM coins").iterate()) engine.coin(r.mint, { pool: r.pool, createTs: r.create_ts });
+  }
+  heartbeat(t) { this.db.prepare("INSERT OR REPLACE INTO meta VALUES ('alive', ?)").run(String(t)); }
+  /** the time the previous run was last known alive: the restart gap starts there (null on a first run) */
+  lastAlive() { const r = this.db.prepare("SELECT v FROM meta WHERE k='alive'").get(); return r ? Number(r.v) : null; }
+  allEntries() { return this.db.prepare("SELECT json FROM entries").all().map((r) => JSON.parse(r.json)); }
+  noteCounts() { return this.db.prepare("SELECT family, reason, COUNT(*) n FROM notes GROUP BY family, reason ORDER BY family, n DESC").all(); }
+  retention(now) { const cut = Math.floor(now / 60) - BAR_RETAIN_DAYS * 1440; return this.db.prepare("DELETE FROM bars WHERE m < ?").run(cut).changes; }
+  disk() {
+    let db = 0, wal = 0; try { db = statSync(this.path).size; } catch {} try { wal = statSync(this.path + "-wal").size; } catch {}
+    let freeGb = null; try { const s = statfsSync(dirname(this.path)); freeGb = +((s.bavail * s.bsize) / 2 ** 30).toFixed(2); } catch {}
+    const n = (sql) => { try { return this.db.prepare(sql).get().n; } catch { return null; } };
+    return { db_mb: +(db / 2 ** 20).toFixed(1), wal_mb: +(wal / 2 ** 20).toFixed(1), free_gb: freeGb, bars: n("SELECT COUNT(*) n FROM bars"), coins: n("SELECT COUNT(*) n FROM coins"), notes: n("SELECT COUNT(*) n FROM notes"), entries: n("SELECT COUNT(*) n FROM entries") };
+  }
+}
