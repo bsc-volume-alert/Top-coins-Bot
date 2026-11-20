@@ -38,7 +38,7 @@ function fillBuy(e, st, at, delay) {
   // the position's first valuation: from the same state when it can price the sale (pool state); a quote-priced entry starts at
   // cost and takes its first real valuation from its first sell quote — a missing valuation is never treated as a fall
   const v0 = liqValue(st, tok) ?? COST; e.runner.maxX = v0 / COST;
-  for (const v of e.versions) { v.tok = tok; v.peak = v0; v.maxX = v0 / COST; }
+  for (const v of e.versions) { v.tok = tok; v.peak = v0; v.maxX = v0 / COST; v.lastX = v0 / COST; v.lastT = at; }
   return true;
 }
 function trigger(v, t, reason, value) { v.status = "selling"; v.trigT = t; v.reason = reason; v.trigValue = value; v.schedT = t + S.SELL_DELAY_MS / 1000; }
@@ -109,6 +109,7 @@ export function observe(e, st, t, cov) {
     if (v.status !== "open" && v.status !== "scaling") continue;
     const val = liqValue(st, v.tok); if (val == null) continue; // this state does not price this holding: no peak, no trigger
     if (val > v.peak) v.peak = val; if (full != null && full / COST > v.maxX) v.maxX = full / COST;
+    v.lastX = (v.got + val) / COST; v.lastT = t; // what this row would be worth if sold now (banked half included), for the open-positions view
     if (val <= v.peak * (1 - v.stop)) trigger(v, t, "trail", val); // also replaces a pending half-sale: one order, never two on the same tokens
     else if (v.status === "open" && v.policy === "scale" && !v.half && full != null && full >= S.SCALE_AT_X * COST) { v.status = "scaling"; v.trigT = t; v.trigValue = full; v.schedT = t + S.SELL_DELAY_MS / 1000; }
   }

@@ -3,6 +3,7 @@
 import http from "node:http";
 import { bookRows, overlap } from "./report.mjs";
 import * as S from "./spec.mjs";
+import { BOOKS_PAGE, booksApi } from "./page.mjs";
 
 export function startWeb({ port, store, engine, status }) {
   const KEY = process.env.OLDER_SITE_KEY || "";
@@ -18,9 +19,14 @@ export function startWeb({ port, store, engine, status }) {
   };
   http.createServer((req, res) => {
     const u = new URL(req.url, "http://x");
-    if (KEY && u.searchParams.get("k") !== KEY) { res.writeHead(403); return res.end("key required"); }
+    if (KEY && (u.searchParams.get("k") || u.searchParams.get("key")) !== KEY) { res.writeHead(403); return res.end("key required"); }
+    if (u.pathname === "/api/books") { // one stop / exit policy / age group / population at a time; cached 8 s per selection
+      const sel = { stop: Number(u.searchParams.get("stop") || 0.25), policy: u.searchParams.get("policy") === "scale" ? "scale" : "trail", ag: u.searchParams.get("ag") || "", pop: u.searchParams.get("pop") || "" }, ck = "b|" + JSON.stringify(sel);
+      let hit = cache.get(ck); if (!hit || Date.now() - hit.atMs > 8000) { hit = { atMs: Date.now(), body: JSON.stringify(booksApi(store.allEntries(), sel)) }; cache.set(ck, hit); }
+      res.writeHead(200, { "content-type": "application/json" }); return res.end(hit.body); }
+    if (u.pathname === "/table") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(PAGE); }
     if (u.pathname === "/api/state") { res.writeHead(200, { "content-type": "application/json" }); return res.end(JSON.stringify(state(u.searchParams.get("pop") || ""))); }
-    if (u.pathname === "/") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(PAGE); }
+    if (u.pathname === "/") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(BOOKS_PAGE); }
     res.writeHead(404); res.end();
   }).listen(port, () => console.log(`[web] :${port}`));
   return { state };

@@ -19,7 +19,8 @@ export function startBackfill({ engine, store, jup = null, log = console.log }) 
       let got = []; try { got = await jup.tokens(batch); } catch (e) { bf.errors++; bf.lastErr = "jupiter creation: " + String(e.message).slice(0, 120); for (const m of batch) askedC.delete(m); await new Promise((r) => setTimeout(r, 3000)); continue; }
       const by = new Map(got.map((t) => [t.mint, t]));
       for (const m of batch) { const t = by.get(m), c = engine.coin(m);
-        if (t && t.launchpad === "pump.fun" && t.first_pool?.id === m && t.first_pool.created) { if (!c.createTs) { c.createTs = t.first_pool.created; c.info.create_src = "jupiter firstPool = pump.fun bonding curve (token creation)"; c.info.token_program = t.token_program; bf.created++; bf.createdJup = (bf.createdJup || 0) + 1; store?.saveCoin(m, { createTs: c.createTs, createSrc: "jupiter curve" }); } if (t.mcap >= 20000 && t.mcap <= 2e6) wantBars(m, 1); }
+        if (t?.symbol && !c.info.symbol) c.info.symbol = t.symbol;
+        if (t && t.launchpad === "pump.fun" && t.first_pool?.id === m && t.first_pool.created) { if (!c.createTs) { c.createTs = t.first_pool.created; c.info.create_src = "jupiter firstPool = pump.fun bonding curve (token creation)"; c.info.token_program = t.token_program; c.info.symbol = t.symbol; bf.created++; bf.createdJup = (bf.createdJup || 0) + 1; store?.saveCoin(m, { createTs: c.createTs, createSrc: "jupiter curve" }); } if (t.mcap >= 20000 && t.mcap <= 2e6) wantBars(m, 1); }
         else { bf.jupNoCreation = (bf.jupNoCreation || 0) + 1; wantBars(m, 2); } }
     }
   }

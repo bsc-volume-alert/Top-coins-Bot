@@ -93,7 +93,7 @@ export class Engine {
     const evidence = { ...r.evidence, ...evidenceExtra }; evidence.trigger.eval_t = Date.now() / 1000;
     const e = newEntry({ mint, pool: c.pool, ag: r.cands[0].ag, t: o.t, families: r.cands.map((x) => x.family), features: r.cands[0].features, mc: o.mc, px: o.px, evidence, startup: this.firstStart != null && o.t < this.firstStart + S.STARTUP_TAG_S });
     e.cands = r.cands.map((x) => ({ family: x.family, detail: x.detail }));
-    Object.assign(e, tags); e.token = { origin: c.info.origin ?? null, origin_evidence: c.info.origin_evidence ?? null, venues: c.info.venues ?? null, token_program: c.info.token_program ?? null, risk_status: c.info.risk?.status ?? "missing", create_src: c.info.create_src ?? null, cadence_s: c.info.cadence_s ?? null };
+    Object.assign(e, tags); e.token = { symbol: c.info.symbol ?? null, origin: c.info.origin ?? null, origin_evidence: c.info.origin_evidence ?? null, venues: c.info.venues ?? null, token_program: c.info.token_program ?? null, risk_status: c.info.risk?.status ?? "missing", create_src: c.info.create_src ?? null, cadence_s: c.info.cadence_s ?? null };
     this.addEntry(e); this.stats.entries++;
     this.store?.saveEntry(e); for (const x of r.cands) this.store?.saveDecision(mint, x.ag, x.family, o.t, e.id, x.detail);
     this.log(`[entry ${e.id}] ${mint.slice(0, 6)} ${e.ag} ${e.families.join("+")} mc $${Math.round(o.mc)} (${e.mode})`);
