@@ -184,6 +184,9 @@ Verdict received: T1 and T2 closed; **one blocker left** — the candle readers.
 | F3 (non-blocking) | After a quiet coin's history aged out, the wake-up trade had no standing price to be measured against, so a wake-up double was silently missed. | The newest exact observation leaving the buffer is kept as an anchor; the exact price path falls back to it. A loss of the coin's data clears it. This is the rule as written ("including the price standing at the window's start"), now also true after more than 4 h 30 min of silence — it will ADD entries on coins that wake from a long sleep. |
 | F4 (non-blocking) | Rejected back-fill bars were saved to SQLite unlabelled. | Audit rows are labelled `backfill` (accepted into decision history) or `backfill-rejected`, and never overwrite a live row. Nothing reads them back into decisions. |
 
+### Addendum to 6e — second regression found by our own monitoring (20 Nov 2026, 20:45 UK), fixed in the commit after 938198b
+After 07dd68e put routine valuations in the second Jupiter lane, a full valuation pass on the free key takes tens of seconds, and the poller ran due orders and valuations in ONE sequential pass. A buy that became due while a pass was running was not requested until the pass ended: all three sampled buys between 20:20 and 20:35 UK (entries 49, 50, 53) were cancelled at the 5-second limit. Fix: two independent passes — due orders and routine valuations — so a due order is requested within a quarter of a second and takes the first lane. Test: "a buy that becomes due is quoted at once even while a slow valuation pass is running". No trading rule changed.
+
 ## 7. What is ready, and what is not
 **Ready:** the PumpSwap live path; the Solana-wide sampled path (against a simulated provider); the 448-row dashboard with method filters; the one-command validation run.
 **Remaining, in order:**

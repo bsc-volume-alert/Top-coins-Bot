@@ -335,3 +335,15 @@ test("F4 audit rows: a rejected back-fill is stored with its label and never ove
   const rows = Object.fromEntries(st.db.prepare("SELECT m, c, src FROM bars WHERE mint='M' ORDER BY m").all().map((r) => [r.m, r]));
   assert.equal(rows[10].src, "live"); assert.equal(rows[10].c, 1); assert.equal(rows[11].src, "backfill-rejected"); assert.equal(rows[12].src, "backfill");
 });
+
+test("a buy that becomes due is quoted at once even while a slow valuation pass is running (urgent and routine passes are independent)", async () => {
+  const w = world(), eng = mkEngine(), po = new Poller({ engine: eng, jup: w.jup, now: () => w.t }); const A = "HeldCoinA", Bc = "NewCoinB";
+  const a = await sampledEntry2(w, eng, po, A); assert.equal(a.status, "filled");
+  w.px.set(Bc, 1e-4); po.add(w.tok(Bc), "t"); for (let i = 0; i < 31; i++) { w.t += 10; await po.sweep(); }
+  // a routine valuation of coin A hangs in the queue (as it does behind price samples on a slow key)
+  let release; const gate = new Promise((r) => (release = r)); const fast = w.jup.quote; w.jup.quote = async (m, side, raw, o = {}) => { if (!o.urgent) await gate; return fast(m, side, raw, o); };
+  const routine = po.quotes("routine"); await new Promise((r) => setTimeout(r, 5));
+  w.px.set(Bc, 2.05e-4); w.t += 10; await po.sweep(); const b = [...eng.entries.values()].find((x) => x.mint === Bc); assert.equal(b.status, "pending");
+  w.t += 1.1; await po.quotes("urgent"); assert.equal(b.status, "filled", "filled while the valuation pass is still waiting"); assert.ok(b.fill.delay_s < 5);
+  release(); await routine;
+});

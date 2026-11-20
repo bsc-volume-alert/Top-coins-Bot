@@ -107,9 +107,12 @@ export class Poller {
    *  Every quote is its OWN observation: it keeps the time it was requested and answered, is handed to the engine as soon as it
    *  arrives, and quotes for different quantities are never merged under one timestamp. The engine is given the latest quote
    *  held for each quantity, each with its own times; an order may only use quotes requested at or after its scheduled time. */
-  async quotes() {
-    const now = this.now(), needs = this.engine.quoteNeeds(now);
-    const pri = (n) => (n.due != null && n.due <= now ? 0 : 1);
+  async quotes(which = "all") {
+    const now = this.now(), pri = (n) => (n.due != null && n.due <= now ? 0 : 1);
+    // TWO independent passes (see start): "urgent" = orders that are DUE, "routine" = position valuations. A routine pass can take
+    // many seconds on a slow key (each valuation waits its turn behind price samples); a buy that became due meanwhile must not
+    // wait for it — measured live 20 Nov 20:20–20:35 UK: three sampled buys were cancelled at the 5 s limit for exactly that reason.
+    const needs = this.engine.quoteNeeds(now).filter((n) => which === "all" || (which === "urgent") === (pri(n) === 0));
     needs.sort((a, b) => pri(a) - pri(b) || (this.quoted.get(a.id) || 0) - (this.quoted.get(b.id) || 0));
     let n = 0;
     for (const need of needs) {
@@ -136,6 +139,6 @@ export class Poller {
   start({ categories = [["toptraded", "1h"], ["toptrending", "1h"]], discoverEvery = 30 } = {}) {
     const loop = async (fn, every) => { while (!this.stopped) { const t0 = Date.now(); try { await fn(); } catch (e) { this.log("[poller] " + e.message); } await new Promise((r) => setTimeout(r, Math.max(50, every * 1000 - (Date.now() - t0)))); } };
     this.repair().catch((e) => this.log("[poller] repair: " + e.message));
-    loop(() => this.sweep(), 1); loop(() => this.quotes(), 0.25); loop(() => this.discover({ categories: (this._d = (this._d || 0) + 1) % 20 === 1 ? categories : [] }), discoverEvery);
+    loop(() => this.sweep(), 1); loop(() => this.quotes("urgent"), 0.25); loop(() => this.quotes("routine"), 0.25); loop(() => this.discover({ categories: (this._d = (this._d || 0) + 1) % 20 === 1 ? categories : [] }), discoverEvery);
   }
 }
