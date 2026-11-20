@@ -170,6 +170,9 @@ Verdict received: **not ready; two correctness faults remain** (C1, C5, M1, G1 c
 
 Declared approximations that remain (accepted by the reviewer as labelled): the 5-minute back-fill tolerance for hour-scale windows (not proof of continuity; never used by exact decisions); the 0.1% quote-chain tolerance; the fee fallback (other side, else 0.3%, labelled on the fill); a quote-priced position's peak starting at cost; true age of sampled tokens; sustained memory; real API cadence.
 
+### Addendum to 6d — a regression found by our own monitoring (20 Nov 2026, 19:02 UK), fixed in the commit after e511f2f
+The M1 priority lanes put ALL routed quotes in the first lane. On the free Jupiter key (1 request/s) four open sampled positions need about 1.2 valuation quotes a second, so valuations took the whole allowance: 269 quotes against 11 price requests in five minutes, and price sampling of ~1,700 watched tokens stalled (the sampled side opened no entries). Fix: the first lane is only for an order that is DUE; routine valuations share the second lane with price samples, first come first served (test M1b). No trading rule changed. On the free key both are still slower than their targets; the Developer plan (10 requests/s) removes the contention.
+
 ## 7. What is ready, and what is not
 **Ready:** the PumpSwap live path; the Solana-wide sampled path (against a simulated provider); the 448-row dashboard with method filters; the one-command validation run.
 **Remaining, in order:**

@@ -254,3 +254,12 @@ test("T3 (left-and-labelled items) compression is flagged and keeps every buyer;
   observe(e, { kind: "quote", reqT: 1500, t: 1500.3, buy: null, sells: [{ tok, sol: 0.25, reqT: 1100, t: 1100.3 }, { tok: tok / 2, sol: 0.12, reqT: 1500, t: 1500.3 }] }, 1500.3); // the half was re-quoted; the full holding's quote is 400 s old
   assert.equal(e.versions[0].lastT, 1100.3, "the full position's valuation is dated by its own quote, not by the newest reply");
 });
+
+test("M1b routine position valuations do not starve price sampling: only an order that is DUE takes the first lane", async () => {
+  const J = await import("../src/jupiter.mjs"); const order = []; process.env.JUP_RPS = "50";
+  J.setFetch(async (url) => { order.push(/order/.test(url) ? (/amount=7\b/.test(url) ? "due" : "valuation") : /price/.test(url) ? "price" : "background"); return { status: 200, headers: [], json: async () => (/order/.test(url) ? { outAmount: "5", inAmount: "1" } : /price/.test(url) ? {} : []) }; });
+  const first = J.prices(["warm-up"]);                                    // occupies the in-flight slot
+  const jobs = [J.quote("M", "sell", 1, { urgent: false }), J.prices(["A"]), J.quote("M", "sell", 2, { urgent: false }), J.prices(["B"]), J.quote("M", "sell", 7, { urgent: true })];
+  await Promise.all([first, ...jobs]); delete process.env.JUP_RPS;
+  const rest = order.slice(1); assert.equal(rest[0], "due", "the due order goes first: " + order.join()); assert.deepEqual(rest.slice(1), ["valuation", "price", "valuation", "price"], "valuations and price samples keep their arrival order");
+});

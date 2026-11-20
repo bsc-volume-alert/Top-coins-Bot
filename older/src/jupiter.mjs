@@ -20,7 +20,10 @@ const rps = () => Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0
 // request cap alone does not protect the allowance). JUP_CREDITS_MONTH (e.g. 25000000 on Developer) spreads credits evenly.
 const creditsPerSec = () => (Number(process.env.JUP_CREDITS_MONTH || 0) > 0 ? Number(process.env.JUP_CREDITS_MONTH) / (30 * 86400) : Infinity);
 // PRIORITY LANES on the one rate bucket: an executable quote for a scheduled order is never queued behind background work.
-//   0 = routed quotes for orders and position valuations · 1 = price samples · 2 = discovery / metadata · 3 = background measurements
+//   0 = routed quotes for orders that are DUE (a scheduled buy or sale waiting for its price)
+//   1 = price samples AND routine position valuations, first come first served — measured live on the free key (20 Nov, 19:02 UK):
+//       with valuations in lane 0 they took the whole allowance (269 quotes against 11 price requests in 5 minutes) and price sampling stalled
+//   2 = discovery / metadata · 3 = background measurements
 // A request that has waited is promoted one lane per 10 s (so background work is delayed, never starved) but nothing is ever
 // promoted into lane 0.
 const PRIO = { order: 0, price: 1, recent: 2, category: 2, search: 2 }; const waiting = []; let pumping = false, seq = 0;
@@ -79,10 +82,10 @@ export function normToken(x) {
 }
 /** a routed quote, exact size. side "buy": spend `amount` lamports of SOL for the token; "sell": sell `amount` raw token units for SOL.
  *  Returns { ok, req, t, in, out (raw units), router, route: [labels], feeBps, impact, keys } or { ok: false, why } — a missing route stays visible. */
-export async function quote(mint, side, amountRaw) {
+export async function quote(mint, side, amountRaw, { urgent = true } = {}) {
   const [i, o] = side === "buy" ? [WSOL, mint] : [mint, WSOL];
   try {
-    const { j, req, resp } = await get("order", `/swap/v2/order?inputMint=${i}&outputMint=${o}&amount=${BigInt(Math.floor(amountRaw))}`, { paced: true });
+    const { j, req, resp } = await get("order", `/swap/v2/order?inputMint=${i}&outputMint=${o}&amount=${BigInt(Math.floor(amountRaw))}`, { paced: true, prio: urgent ? 0 : 1 }); // lane 0 only for an order that is DUE; a routine valuation shares lane 1 with price samples
     const out = num(j?.outAmount), inn = num(j?.inAmount) ?? Number(amountRaw);
     if (!(out > 0)) return { ok: false, req, t: resp, why: (j?.errorMessage || j?.error || "no route / no output amount").toString().slice(0, 160), keys: Object.keys(j || {}) };
     const route = Array.isArray(j.routePlan) ? j.routePlan.map((r) => r?.swapInfo?.label ?? r?.label ?? "?") : null;

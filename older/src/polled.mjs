@@ -112,9 +112,9 @@ export class Poller {
       if (this.now() - last < every) continue;
       const w = this.watch.get(need.mint); if (!w || !validDec(w.decimals)) { this.stats.quoteNoWatch = (this.stats.quoteNoWatch || 0) + 1; continue; } const dec = w.decimals; this.quoted.set(need.id, this.now());
       let held = this.held.get(need.id); if (!held) this.held.set(need.id, (held = new Map()));
-      if (need.buy_sol) { const q = await this.jup.quote(need.mint, "buy", need.buy_sol * 1e9); if (q.ok) { this.stats.quotesOk++; this.engine.onQuote(need.id, { kind: "quote", reqT: q.req, t: q.t, buy: { sol: need.buy_sol, tok: q.out / 10 ** dec, reqT: q.req, t: q.t, route: q.route, router: q.router, feeBps: q.feeBps, impact: q.impact }, sells: [] }); n++; } else this._fail(need, q); }
+      if (need.buy_sol) { const q = await this.jup.quote(need.mint, "buy", need.buy_sol * 1e9, { urgent: true }); if (q.ok) { this.stats.quotesOk++; this.engine.onQuote(need.id, { kind: "quote", reqT: q.req, t: q.t, buy: { sol: need.buy_sol, tok: q.out / 10 ** dec, reqT: q.req, t: q.t, route: q.route, router: q.router, feeBps: q.feeBps, impact: q.impact }, sells: [] }); n++; } else this._fail(need, q); }
       for (const tok of need.sells) {
-        const q = await this.jup.quote(need.mint, "sell", tok * 10 ** dec);
+        const q = await this.jup.quote(need.mint, "sell", tok * 10 ** dec, { urgent });
         if (!q.ok) { this._fail(need, q); for (const k of held.keys()) if (Math.abs(tok - k) <= 1e-9 * Math.max(1, tok)) held.delete(k); continue; } // a size whose quote failed has NO current quote: the old one is dropped, never carried forward
         this.stats.quotesOk++; held.set(tok, { tok, sol: q.out / 1e9, reqT: q.req, t: q.t, route: q.route, router: q.router });
         for (const k of held.keys()) if (!need.sells.some((x) => Math.abs(x - k) <= 1e-9 * Math.max(1, x))) held.delete(k); // sizes no longer held
