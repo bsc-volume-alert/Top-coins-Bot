@@ -50,6 +50,16 @@ export async function tokens(mints) {
   const { j } = await get("search", `/tokens/v2/search?query=${mints.join(",")}`);
   return (Array.isArray(j) ? j : []).map(normToken);
 }
+const numsOf = (o) => { if (!o || typeof o !== "object") return null; const out = {}; for (const [k, v] of Object.entries(o)) if (typeof v !== "boolean" && num(v) != null) out[k] = num(v); return out; };
+/** RECORDED MEASUREMENT for one token at an entry: holder count and the provider's own 5-minute and 1-hour statistics, kept
+ *  with the request and reply times. The statistics objects are stored as returned (numeric fields only): their field names
+ *  are the provider's, not ours, and nothing here is used as a filter. */
+export async function tokenStats(mint) {
+  const { j, req, resp } = await get("search", `/tokens/v2/search?query=${mint}`);
+  const x = (Array.isArray(j) ? j : []).find((y) => y.id === mint);
+  if (!x) return { ok: false, req, t: resp, why: "token not returned" };
+  return { ok: true, req, t: resp, holders: num(x.holderCount), top_holders_pct: num(x.audit?.topHoldersPercentage), organic: num(x.organicScore), liq_usd: num(x.liquidity), mcap: num(x.mcap), stats5m: numsOf(x.stats5m), stats1h: numsOf(x.stats1h), updated: x.updatedAt ?? null };
+}
 export async function recent() { const { j } = await get("recent", "/tokens/v2/recent"); return (Array.isArray(j) ? j : []).map(normToken); }
 export async function category(cat, interval, limit = 100) { const { j } = await get("category", `/tokens/v2/${cat}/${interval}?limit=${limit}`); return (Array.isArray(j) ? j : []).map(normToken); }
 export function normToken(x) {

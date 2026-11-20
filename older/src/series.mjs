@@ -5,7 +5,7 @@
 //   stale (the coin's own data stops but the feed was up)     → same as quiet, reported with its age;
 //   feed outage (a global gap overlapping the window)         → window NOT covered unless that gap was back-filled for this coin;
 //   missing history (window starts before the coin's history) → NOT covered.
-import { RAW_KEEP_S, RAW_CAP, BAR_KEEP_S, BUYERS_KEEP_S, BUYERS_PER_BAR_CAP } from "./spec.mjs";
+import { RAW_KEEP_S, RAW_CAP, BAR_KEEP_S, BUYERS_KEEP_S, BUYER_RAW_KEEP_S, BUYERS_PER_BAR_CAP } from "./spec.mjs";
 
 const EMPTY = new Set(); // shared: most minute bars never record a buyer wallet
 export class Coverage { // global data-quality state, shared by all coins. Down while ANY reason is active (feed outage, SOL/USD stale…).
@@ -55,7 +55,7 @@ export class Series {
     this.lastPx = px; this.lastT = t;
     const r = this.raw;
     if (r.length >= RAW_CAP && r.length && Math.floor(r[r.length - 1][0]) === Math.floor(t)) { const z = r[r.length - 1]; z[1] = px; z[2] += volUsd; }
-    else r.push([t, px, volUsd, isBuy]);
+    else r.push(isBuy === true && user ? [t, px, volUsd, isBuy, user] : [t, px, volUsd, isBuy]);
     const m = Math.floor(t / 60); let b = this.bars.get(m);
     if (!b || b.bf) { b = { o: px, h: px, l: px, c: px, v: 0, nb: 0, ns: 0, buyers: EMPTY, lowT: t }; this.bars.set(m, b); }
     if (px > b.h) b.h = px; if (px < b.l) { b.l = px; b.lowT = t; } b.c = px; b.v += volUsd;
@@ -63,6 +63,7 @@ export class Series {
   }
   prune(now) {
     const cut = now - RAW_KEEP_S; let i = 0; while (i < this.raw.length && this.raw[i][0] < cut) i++; if (i) this.raw.splice(0, i);
+    const ucut = now - BUYER_RAW_KEEP_S; for (const o of this.raw) { if (o[0] >= ucut) break; if (o.length > 4) o.length = 4; } // buyer wallets are only read for the last 5 minutes
     const mc = Math.floor((now - BAR_KEEP_S) / 60), bc = Math.floor((now - BUYERS_KEEP_S) / 60);
     // buyer wallets are only read for the last 15 minutes (features): older bars keep the COUNT and release the wallet list (memory)
     for (const [m, b] of this.bars) { if (m < mc) this.bars.delete(m); else if (m < bc && b.buyers !== EMPTY) { b.nbuyers = b.buyers.size; b.buyers = EMPTY; } }
@@ -94,6 +95,15 @@ export class Series {
     for (const [m, b] of this.bars) { const s = m * 60; if (s + 60 > x && s < Math.min(t, rawFrom)) { if (!best || better(b[k], best.px)) best = { px: b[k], t: k === "l" ? b.lowT : s }; } }
     for (const [ts, px] of this.raw) { if (ts < x) continue; if (ts >= t) break; if (!best || better(px, best.px)) best = { px, t: ts }; }
     return best;
+  }
+  /** RECORDED MEASUREMENTS (never filters): trading in (x, t] from the exact observations — USD volume, buy and sell
+   *  transactions, different buying wallets, and the largest single buyer's share of the buy volume.
+   *  One observation is one transaction's committed state; a transaction with both buys and sells counts as neither. */
+  winStats(x, t) {
+    let vol = 0, buys = 0, sells = 0, buyVol = 0; const by = new Map();
+    for (const o of this.raw) { const ts = o[0]; if (ts <= x) continue; if (ts > t) break; vol += o[2]; if (o[3] === true) { buys++; buyVol += o[2]; if (o[4]) by.set(o[4], (by.get(o[4]) || 0) + o[2]); } else if (o[3] === false) sells++; }
+    let top = 0; for (const v of by.values()) if (v > top) top = v;
+    return { vol_usd: Math.round(vol), buys, sells, buyers: by.size, top_buyer_share: buyVol > 0 && by.size ? +(top / buyVol).toFixed(4) : null };
   }
   /** exact USD volume in (x, t] from raw observations */
   volIn(x, t) { let v = 0; for (const [ts, , vol] of this.raw) if (ts > x && ts <= t) v += vol; return v; }

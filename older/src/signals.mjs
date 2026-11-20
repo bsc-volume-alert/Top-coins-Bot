@@ -24,7 +24,12 @@ export function features(coin, o, low, hi1h, p15) {
   const last60 = sr.barsIn(m - 60, m); let bigCandle = 0; for (const [, b] of last60) if (b.o > 0) bigCandle = Math.max(bigCandle, b.c / b.o - 1);
   const last15 = sr.barsIn(m - 15, m); let nb = 0, ns = 0; const seen = new Map(); for (const [, b] of last15) { nb += b.nb; ns += b.ns; for (const u of b.buyers) seen.set(u, (seen.get(u) || 0) + 1); }
   const hi4 = sr.highIn(t - 4 * 3600, t);
+  // short-window trading at the decision, from decoded trades (live method). Sampled coins have prices only → null; their
+  // 5-minute figures come from the provider snapshot recorded on the entry (entry.snap).
+  const live = coin.mode !== "polled", w1 = live ? sr.winStats(t - 60, t) : null, w3 = live ? sr.winStats(t - 180, t) : null, w5 = live ? sr.winStats(t - 300, t) : null;
+  const full60 = live && sr.histFrom != null && sr.histFrom <= t - 3600, vol60 = full60 ? sr.volIn(t - 3600, t) : null, prior = full60 ? (vol60 - w5.vol_usd) / 11 : null;
   return {
+    w1, w3, w5, vol60_usd: vol60 != null ? Math.round(vol60) : null, vol_surge5: prior > 0 ? +(w5.vol_usd / prior).toFixed(2) : null, // last 5 min ÷ the average 5 min of the 55 min before
     age_s: Math.round(t - coin.createTs), mc: Math.round(o.mc), band: o.mc < 100e3 ? "40-100K" : o.mc < 250e3 ? "100-250K" : o.mc < 500e3 ? "250-500K" : "500K-1M",
     rise15: p15 ? +(o.px / p15.px).toFixed(4) : null, big_candle_60m: +bigCandle.toFixed(4),
     vol15_usd: Math.round(sr.volIn(t - 900, t)), buys15: nb, sells15: ns, buyers15: seen.size, repeat_buyers15: [...seen.values()].filter((n) => n > 1).length,

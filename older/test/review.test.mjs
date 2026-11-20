@@ -145,3 +145,31 @@ test("memory: buyer wallet lists are released after 20 minutes, the count is kep
   assert.equal(old.buyers.size, 0); assert.equal(old.nbuyers, 2); assert.equal(old.nb, 2);
   assert.equal(recent.buyers.size, 2); assert.equal(recent.nbuyers, undefined);
 });
+
+test("measurements: 1/3/5-minute volume, buys, sells, different buyers and top-buyer share are recorded on the entry and never change the decision", async () => {
+  const eng = mkEngine(); const t = T0 + 30 * 24 * H; eng.feedUp(t - 3 * H); eng.coin("MintAAApump", { pool: "PoolA", createTs: t - 20 * 24 * H });
+  path(eng, t - 2 * H, t - 400, () => 60e3, 60, (x) => ({ user: "old" + (x % 3), sol: 0.5 }));
+  swap(eng, t - 250, 60e3, { user: "a", sol: 1 }); swap(eng, t - 150, 62e3, { user: "b", sol: 1 }); swap(eng, t - 100, 61e3, { user: "s", sol: 1, isBuy: false });
+  swap(eng, t - 40, 70e3, { user: "a", sol: 6 }); swap(eng, t - 20, 90e3, { user: "c", sol: 1 }); swap(eng, t, 125e3, { user: "d", sol: 1 });
+  const e = [...eng.entries.values()].find((x) => x.families.includes("FAST-5M"));
+  assert.ok(e, "a fast-doubling entry was created"); const f = e.features;
+  assert.equal(f.w1.buys, 3); assert.equal(f.w1.buyers, 3); assert.equal(f.w1.sells, 0);
+  assert.equal(f.w3.buys, 4); assert.equal(f.w3.sells, 1); assert.equal(f.w3.buyers, 4);
+  assert.equal(f.w5.buys, 5); assert.equal(f.w5.buyers, 4); assert.equal(f.w5.top_buyer_share, 0.7); // wallet "a": 7 of 10 SOL bought
+  assert.equal(f.w5.vol_usd, 1100); assert.ok(f.vol60_usd > f.w5.vol_usd); assert.ok(f.vol_surge5 > 1);
+});
+
+test("measurements: buyer wallets on exact observations are released after 6 minutes; sampled coins record no trade windows", async () => {
+  const sr = new Series("M", new Coverage()); sr.add(T0, 1, 10, true, "w"); sr.add(T0 + 400, 1, 10, true, "v"); sr.prune(T0 + 420);
+  assert.equal(sr.raw[0].length, 4); assert.equal(sr.raw[1][4], "v"); assert.deepEqual(sr.winStats(T0 + 300, T0 + 420), { vol_usd: 10, buys: 1, sells: 0, buyers: 1, top_buyer_share: 1 });
+  const { features } = await import("../src/signals.mjs"); const f = features({ series: sr, mode: "polled", createTs: T0 - 9 * H }, { t: T0 + 420, mc: 50e3, px: 1 }, null, null, null);
+  assert.equal(f.w1, null); assert.equal(f.w5, null); assert.equal(f.vol_surge5, null);
+});
+
+test("measurements: the holder snapshot keeps the provider's numbers as returned, with request and reply times; a missing token is recorded as missing", async () => {
+  const J = await import("../src/jupiter.mjs"); const urls = [];
+  J.setFetch(async (url) => { urls.push(url); return { status: 200, headers: [], json: async () => [{ id: "MintX", holderCount: 1234, liquidity: "45000", mcap: 90000, organicScore: 12.5, audit: { topHoldersPercentage: 21.4 }, stats5m: { holderChange: 3.1, numTraders: 41, buyVolume: 9000.5, flag: true, note: "x" }, stats1h: { holderChange: 12 } }] }; });
+  const r = await J.tokenStats("MintX");
+  assert.equal(r.ok, true); assert.equal(r.holders, 1234); assert.equal(r.top_holders_pct, 21.4); assert.deepEqual(r.stats5m, { holderChange: 3.1, numTraders: 41, buyVolume: 9000.5 }); assert.ok(r.t >= r.req); assert.match(urls[0], /tokens\/v2\/search\?query=MintX$/);
+  const m = await J.tokenStats("Other"); assert.equal(m.ok, false);
+});

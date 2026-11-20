@@ -54,3 +54,12 @@ Exact age, market-cap band, 15-minute rise, largest 1-minute candle of the last 
 
 ## Reporting
 Per row: coins, filled/open/closed/cancelled/unresolved, net SOL, average and quantiles of after-cost return, win rate, losses of ≥ 40% (the project's severe-loss measure), ≥ 50% and ≥ 60%, result without the top three coins, first/second half, holding time, stake committed, runner outcomes (after-cost value reaching 2×/3×/5×/10× of cost within 24 h of the fill, including after an exit), startup entries (first 24 h after the first start; kept in the totals). Plus overlap between families, rejections and missing data, watched coins, feed freshness, disk, and running costs kept separate from paper returns. First review after seven days of entries.
+
+## Recorded measurements at each entry (added 20 Nov 2026, 17:50 UK — background data only, NOT entry rules)
+Owner's decision: collect more information without adding books. Nothing below is used to accept or reject an entry; the 448 books are unchanged.
+- **From decoded trades (live method only)**, for the last 1, 3 and 5 minutes before the decision (`features.w1 / w3 / w5`): USD volume, number of buy and sell transactions, number of different buying wallets; for 5 minutes also the largest single buyer's share of the buy volume (`top_buyer_share`: near 1 = one wallet did the buying, low = many wallets).
+- `vol60_usd` and `vol_surge5` = last 5 minutes ÷ the average 5 minutes of the 55 minutes before (only when a full hour of history exists).
+- Already recorded before: 15-minute volume, buys, sells, different buyers, repeat buyers; liquidity; round-trip impact; rise over 15 minutes.
+- **From Jupiter's token data, for every entry of either method** (`entry.snap`): holder count, top-holder percentage, and Jupiter's own 5-minute and 1-hour statistics exactly as returned (numeric fields), with request and reply times and the delay after the decision. Jupiter's field names are not verified from this workspace; they are stored as received. A token Jupiter does not return is recorded as missing.
+- Sampled coins have no decoded trades, so their `w1 / w3 / w5` are empty; their 5-minute figures are Jupiter's.
+- Use after the run: compare winners and losers on these numbers (for example holder rise of 10–15% in 5 minutes, or volume surge), and only then decide whether any becomes a rule.

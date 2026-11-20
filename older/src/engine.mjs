@@ -11,9 +11,9 @@ import { liquidityUsd, staticImpact } from "./fills.mjs";
 
 const POLLED_UNSUPPORTED = new Set(["HH-BREAK"]), NEVER = () => false;
 export class Engine {
-  constructor({ store = null, solUsd = () => null, needCreation = () => {}, onFill = () => {}, log = () => {}, firstStart = null } = {}) {
+  constructor({ store = null, solUsd = () => null, needCreation = () => {}, onFill = () => {}, onEntry = () => {}, log = () => {}, firstStart = null } = {}) {
     this.cov = new Coverage(); this.feedCov = new Coverage(); /* feed + restarts only: what pool-state trust and exit flags depend on */ this.coins = new Map(); this.entries = new Map(); this.byMint = new Map();
-    this.store = store; this.solUsd = solUsd; this.needCreation = needCreation; this.onFill = onFill; this.log = log; this.firstStart = firstStart;
+    this.store = store; this.solUsd = solUsd; this.needCreation = needCreation; this.onFill = onFill; this.onEntry = onEntry; this.log = log; this.firstStart = firstStart;
     this.stats = { events: 0, swaps: 0, otherPool: 0, noSolUsd: 0, noCreation: 0, evals: 0, cands: 0, entries: 0, notes: 0, replayed: 0, tooOld: 0, lastT: null, evalMsMax: 0 };
     this.dirtyBars = new Map(); this.usdDown = false; this.dirty = new Set(); this.lastCkpt = 0; this.entriesUntil = null; this.onOwnership = () => {};
     this.pollCov = new Coverage(); // continuity of PRICE POLLING (the Solana-wide adapter); independent of the PumpSwap WebSocket
@@ -112,6 +112,7 @@ export class Engine {
     this.addEntry(e); this.stats.entries++;
     this.store?.saveEntry(e); for (const x of r.cands) this.store?.saveDecision(mint, x.ag, x.family, o.t, e.id, x.detail);
     this.log(`[entry ${e.id}] ${mint.slice(0, 6)} ${e.ag} ${e.families.join("+")} mc $${Math.round(o.mc)} (${e.mode})`);
+    try { this.onEntry(e, c); } catch {} // background measurements only: never part of the decision
     return e;
   }
 
