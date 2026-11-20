@@ -9,7 +9,8 @@ OUT="${OLDER_OUT:-/mnt/volume_1794164707392/older}"; mkdir -p "$OUT"; export OLD
 command -v node >/dev/null || { echo "node not found"; exit 1; }
 [ -d node_modules ] || npm install --omit=dev --no-audit --no-fund >/dev/null 2>&1
 echo "[validate] 1/4 live feed for ${MIN} min (own database on the volume; port 8793)"
-OLDER_DB="$OUT/older-validation.db" OLDER_RUN_MINUTES="$MIN" node --max-old-space-size=900 src/main.mjs > "$OUT/run.log" 2>&1 || echo "[validate] run ended with an error — see run.log"
+rm -f "$OUT"/older-validation.db*
+OLDER_DB="$OUT/older-validation.db" INV_MAX_POOLS="${INV_MAX_POOLS:-60000}" OLDER_RUN_MINUTES="$MIN" node --max-old-space-size=900 src/main.mjs > "$OUT/run.log" 2>&1 || echo "[validate] run ended with an error — see run.log"
 echo "[validate] 2/4 transaction evidence (120 recent PumpSwap transactions)"
 node src/validate-tx.mjs 120 > "$OUT/tx-validation.json" 2> "$OUT/tx-validation.err" || true
 echo "[validate] 3/4 GMGN (paced) and 4/4 Jupiter (keyless unless a key is set)"
