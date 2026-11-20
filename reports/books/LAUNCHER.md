@@ -435,3 +435,7 @@ _Created 31 Oct 2026 19:10 UK. Data: launcher-data branch (launches.csv, copy_pe
 - Archive 1: trades rowid 1–4,919,032 (13 Oct 14:51 → 6 Nov 07:39 UTC, 15,556 coins) → branch trades-archive-pre-20261106 @ 5220df4. Independently re-downloaded (42 s), 11/11 checksums OK, manifest restore = 4,919,032 rows, row ids unique. Only 716,635 of those rows have recv_ms (the column did not exist earlier).
 - trim-trades 1.0: deleted exactly those 4,919,032 rows in 10k-row IMMEDIATE batches (WAL ≤ 64 MB at the end, bot online, no restarts). Free list 356,667 pages (1.46 GB) inside tracker.db for new trades to reuse; the file does not shrink. Main disk 1.17 GB free.
 - Next: same process for 6 Nov 07:40 → 8 Nov 15:00 (rowid 4,919,033–19,218,696) and 8 → 12 Nov; 13 Nov onwards kept untouched for the frozen C1 test. Nightly retention proposed only after the process has run reliably.
+
+## 20 Nov 2026 08:52 UK — owner: "stop everything and start again"
+- Disabled (not deleted) the scheduled tasks: Research coordinator, Research worker (Claude), Bot health watch. History kept; they can be re-enabled.
+- Server state: silent since 15 Nov 01:54 UTC (main disk full). Owner to stop the processes himself (pm2 stop all; pm2 save) and pause Codex's own scheduler in ChatGPT. Nothing on the server or in the data was deleted.
