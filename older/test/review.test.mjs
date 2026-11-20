@@ -132,3 +132,16 @@ test("B9 each quoted quantity keeps its own request/response time; an order only
   assert.equal(v.status, "open"); assert.ok(v.half); assert.equal(v.half.t, 1102.0); assert.deepEqual(v.half.quotes.map((q) => q.resp_t).sort(), [1101.5, 1102.0], "each quote's own times are recorded, not one merged timestamp");
   assert.ok(Math.abs(v.half.sol - (0.20 - 0.0005)) < 1e-12);
 });
+
+test("memory: buyer wallet lists are released after 20 minutes, the count is kept, and the 15-minute features are unchanged", async () => {
+  const { Series, Coverage } = await import("../src/series.mjs");
+  const sr = new Series("M", new Coverage()); const t0 = 1_800_000_000;
+  for (let i = 0; i < 40; i++) sr.add(t0 + i * 60, 1 + i / 100, 10, true, "w" + (i % 7)), sr.add(t0 + i * 60 + 5, 1 + i / 100, 10, true, "x" + i);
+  const now = t0 + 40 * 60, m = Math.floor(now / 60);
+  const before = sr.buyersIn(m - 15, m);
+  sr.prune(now);
+  assert.equal(sr.buyersIn(m - 15, m), before);
+  const old = sr.bars.get(Math.floor(t0 / 60)), recent = sr.bars.get(m - 5);
+  assert.equal(old.buyers.size, 0); assert.equal(old.nbuyers, 2); assert.equal(old.nb, 2);
+  assert.equal(recent.buyers.size, 2); assert.equal(recent.nbuyers, undefined);
+});

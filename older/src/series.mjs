@@ -5,7 +5,7 @@
 //   stale (the coin's own data stops but the feed was up)     → same as quiet, reported with its age;
 //   feed outage (a global gap overlapping the window)         → window NOT covered unless that gap was back-filled for this coin;
 //   missing history (window starts before the coin's history) → NOT covered.
-import { RAW_KEEP_S, RAW_CAP, BAR_KEEP_S, BUYERS_PER_BAR_CAP } from "./spec.mjs";
+import { RAW_KEEP_S, RAW_CAP, BAR_KEEP_S, BUYERS_KEEP_S, BUYERS_PER_BAR_CAP } from "./spec.mjs";
 
 const EMPTY = new Set(); // shared: most minute bars never record a buyer wallet
 export class Coverage { // global data-quality state, shared by all coins. Down while ANY reason is active (feed outage, SOL/USD stale…).
@@ -63,7 +63,9 @@ export class Series {
   }
   prune(now) {
     const cut = now - RAW_KEEP_S; let i = 0; while (i < this.raw.length && this.raw[i][0] < cut) i++; if (i) this.raw.splice(0, i);
-    const mc = Math.floor((now - BAR_KEEP_S) / 60); for (const m of this.bars.keys()) if (m < mc) this.bars.delete(m);
+    const mc = Math.floor((now - BAR_KEEP_S) / 60), bc = Math.floor((now - BUYERS_KEEP_S) / 60);
+    // buyer wallets are only read for the last 15 minutes (features): older bars keep the COUNT and release the wallet list (memory)
+    for (const [m, b] of this.bars) { if (m < mc) this.bars.delete(m); else if (m < bc && b.buyers !== EMPTY) { b.nbuyers = b.buyers.size; b.buyers = EMPTY; } }
   }
   /** is [x, t] fully known for this coin? strict = at observation resolution: an outage repaired from minute bars does NOT count
    *  (used for fresh crossings and the seconds-scale FAST / SECOND-WAVE windows). */

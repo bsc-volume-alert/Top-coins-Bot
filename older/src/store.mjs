@@ -32,7 +32,7 @@ export class Store {
     };
     this.tx = db.transaction((fn) => fn());
   }
-  saveBar(mint, m, b) { this.q.bar.run(mint, m, b.o, b.h, b.l, b.c, b.v, b.nb, b.ns, b.buyers?.size ?? 0, b.bf ? "backfill" : "live"); }
+  saveBar(mint, m, b) { this.q.bar.run(mint, m, b.o, b.h, b.l, b.c, b.v, b.nb, b.ns, b.nbuyers ?? b.buyers?.size ?? 0, b.bf ? "backfill" : "live"); }
   saveDecision(mint, ag, family, t, entryId, detail) { this.q.dec.run(mint, ag, family, t, entryId, JSON.stringify(detail ?? null)); }
   saveNote(mint, n) { this.q.note.run(mint, n.ag, n.family, n.t, n.reason, JSON.stringify(n.detail ?? null)); if (n.family === "SLOW-BUILD" || n.family === "LOW4H-LIQ25K" || (n.family === "SECOND-WAVE" && n.reason !== "window not covered")) this.q.dec.run(mint, n.ag, n.family, n.t, null, JSON.stringify({ rejected: n.reason, ...n.detail })); }
   saveEntry(e) { const done = e.status === "cancelled" || (e.status === "filled" && e.versions.every((v) => v.status === "closed") && e.runner.horizonDone) ? 1 : 0; this.q.ent.run(e.id, e.mint, e.status, done, e.decisionT, JSON.stringify(e)); }
