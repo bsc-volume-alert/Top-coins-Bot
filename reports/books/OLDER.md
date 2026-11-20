@@ -22,3 +22,13 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 - Server after: main disk 11% used (43 GB free), volume 1% used (95 GB free), no processes.
 - Setting names seen (values never shown): the tracker settings include a Birdeye key — worth checking what plan it is on, for the broad-live option.
 - Leftover: a cron entry for the deleted `push-data.sh` (to be removed), `/root/p5dump.cjs`, `/root/gmgn`.
+
+## 20 Nov 2026, 15:29 UK — shakedown check (run started 14:58:56, still on OLD code bd9b7b3)
+- Healthy: feed connected, 0 reconnects, memory 318 MB, database 83 MB, 93.9 GB free.
+- Start-up scan complete (~13.5 min, 1,150 pages): 383,715 SOL-quoted PumpSwap pools; 230,455 canonical pump.fun, 153,260 non-canonical; 4,382 above $5K; **680 inside the $40K–$1M band**.
+- Trade reader, 30 minutes: 374,690 swaps decoded, 33 unreadable (20 `multi_hop_swap` buys, 13 sells); chain check 145,587 ok / 38 broken; 440 unusual fee readings; 139 look-up errors (`WrongSize`, fixed in c09053a, not yet loaded on the server).
+- Five paper buys, all FAST150 family: 44DZsP (A1, 1M and 3M) closed −11% to −44%; i6Aop7 (A4, 5M and 3M, live method) pool check 0.00% difference, 20% stop closed −23.6%, wider stops open; 8nq3Jm (A4, 5M) = first sampled-method buy, filled from a Jupiter routed quote 1.17 s after its scheduled time. Account checks 4 of 4 within 1%. Five trades is far too few to say anything about the strategy.
+- Sampled side on the FREE Jupiter key: 343 coins watched, average sample gap 19.8 s (target 10 s), 11% of price requests omitted (2,256 of 20,507), 90 history restarts, 6,310 credits in 30 min.
+- Helius: 2.82 GB in 30 min ≈ 56,000 credits ≈ **2.7 million credits a day** (earlier estimate was 1.8–2.1 million).
+- Why most books are empty so far: AGE-DOUBLE reference price missing for 705 coin-groups; CONT / LOW4H need 1 h / 4 h of history; GMGN history queue 1,342 and rate-limited.
+- About two-thirds of PumpSwap traffic is pools with SOL on the base side (186,274 of 224,641 "non-SOL" events) — only reachable through the sampled method today.
