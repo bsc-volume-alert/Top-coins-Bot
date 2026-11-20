@@ -24,12 +24,14 @@ export const DISC = { // from the IDL's `events[].discriminator`
   CreatePoolEvent: [177, 49, 12, 210, 160, 118, 167, 116], InitBoostEvent: [174, 124, 74, 249, 4, 81, 246, 17], BoostBuyAndBurnEvent: [63, 69, 28, 22, 48, 92, 194, 185], SweepPoolFeeEvent: [130, 164, 36, 97, 228, 130, 135, 165] };
 const DKEY = new Map(Object.entries(DISC).map(([k, v]) => [Buffer.from(v).toString("hex"), k]));
 export const dec = { buy: 0, sell: 0, deposit: 0, withdraw: 0, pool: 0, boost: 0, sweep: 0, short: 0, fitPre: 0, fitPost: 0, fitBoth: 0, fitNeither: 0, neitherBy: {}, feeOdd: 0, feeOddBy: {}, chainOk: 0, chainBad: 0, chainBadQuote: 0, chainBadAfterBoost: 0, chainBadQuoteAfterBoost: 0, foreign: 0, noVirtual: 0, negVirtual: 0, mode: RES_MODE };
+// A truncated event must FAIL to decode (pk() throws) rather than yield a short, invalid address — the live run showed
+// 'Invalid param: WrongSize' on pool look-ups from exactly that.
 class R {
   constructor(b) { this.b = b; this.o = 0; }
   u64() { const v = this.b.readBigUInt64LE(this.o); this.o += 8; return v; } i64() { const v = this.b.readBigInt64LE(this.o); this.o += 8; return v; }
   i128() { const lo = this.b.readBigUInt64LE(this.o), hi = this.b.readBigInt64LE(this.o + 8); this.o += 16; return (hi << 64n) + lo; }
   u16() { const v = this.b.readUInt16LE(this.o); this.o += 2; return v; } u8() { return this.b[this.o++]; } bool() { return this.b[this.o++] !== 0; }
-  pk() { if (this.o + 32 > this.b.length) throw new RangeError("event too short for a public key"); const v = bs58(this.b.subarray(this.o, this.o + 32)); this.o += 32; return v; } // a truncated event must fail to decode, not yield a short (invalid) address — live run: 'Invalid param: WrongSize' on pool look-ups str() { const n = this.b.readUInt32LE(this.o); this.o += 4; const s = this.b.subarray(this.o, this.o + n).toString("utf8"); this.o += n; return s; }
+  pk() { if (this.o + 32 > this.b.length) throw new RangeError("event too short for a public key"); const v = bs58(this.b.subarray(this.o, this.o + 32)); this.o += 32; return v; } str() { const n = this.b.readUInt32LE(this.o); this.o += 4; const s = this.b.subarray(this.o, this.o + n).toString("utf8"); this.o += n; return s; }
   left() { return this.b.length - this.o; }
 }
 
