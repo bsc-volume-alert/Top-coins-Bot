@@ -42,6 +42,7 @@ export function evaluate(coin, o) {
   const prevOk = sr.prevT !== null && sr.prevT < t && sr.covered(sr.prevT, t);
   const cross = (line) => prevOk && sr.prevPx < line && o.px >= line;
   const cand = (family, detail) => { g.done[family] = 1; out.cands.push({ family, ag, t, mc: o.mc, px: o.px, detail }); };
+  const prevRec = sr.prevT !== null ? { t: sr.prevT, px: sr.prevPx, covered_to_now: prevOk } : null;
 
   // 1. AGE-DOUBLE — first fresh crossing of 2 × the market cap at the age-group start
   if (!g.done["AGE-DOUBLE"]) {
@@ -66,16 +67,20 @@ export function evaluate(coin, o) {
           // SLOW-BUILD: ≥ 30 min from the low, and no completed 1-min candle from the low's minute up to (not incl.) the trigger's minute gains > 20%
           const elapsed = t - low.t, bars = sr.barsIn(Math.floor(low.t / 60), Math.floor(t / 60));
           const worst = bars.reduce((w, [m, b]) => { const gn = b.o > 0 ? b.c / b.o - 1 : 0; return gn > w.g ? { g: gn, m } : w; }, { g: -Infinity, m: null });
-          const sd = { ...d, elapsed_s: Math.round(elapsed), candles: bars.length, max_candle_gain: bars.length ? +worst.g.toFixed(4) : null };
+          // flag: the candle that contains the low may have OPENED before the low, so its full open→close gain is not all "climb after the low"
+          const lowBar = sr.bars.get(Math.floor(low.t / 60));
+          const sd = { ...d, elapsed_s: Math.round(elapsed), candles: bars.length, max_candle_gain: bars.length ? +worst.g.toFixed(4) : null, low_candle_opened_before_low: !!(lowBar && lowBar.o > low.px), worst_is_low_candle: worst.m === Math.floor(low.t / 60) };
           if (elapsed < S.SLOW_MIN_ELAPSED_S) note("SLOW-BUILD", "rejected: under 30 min from low", sd, false);
           else if (bars.length && worst.g > S.SLOW_MAX_CANDLE_GAIN + 1e-12) note("SLOW-BUILD", "rejected: a candle above +20%", { ...sd, at_minute: worst.m }, false);
           else cand("SLOW-BUILD", sd);
           g.done["SLOW-BUILD"] = 1;
           // LOW4H-LIQ25K: liquidity ≥ $25K and 0.2 SOL round-trip price impact ≤ 5% (fees excluded)
-          if (o.liqUsd == null || o.rtImpact == null) note("LOW4H-LIQ25K", "rejected: liquidity/impact evidence missing", d, false);
-          else if (o.liqUsd < S.LIQ_MIN_USD) note("LOW4H-LIQ25K", "rejected: liquidity under $25K", { ...d, liq_usd: Math.round(o.liqUsd) }, false);
-          else if (o.rtImpact > S.LIQ_MAX_RT_IMPACT) note("LOW4H-LIQ25K", "rejected: round-trip impact over 5%", { ...d, rt_impact: o.rtImpact }, false);
-          else cand("LOW4H-LIQ25K", { ...d, liq_usd: Math.round(o.liqUsd), rt_impact: o.rtImpact });
+          // the two tests are recorded separately so we can see whether the impact test ever binds on its own
+          const lq = { ...d, liq_usd: o.liqUsd == null ? null : Math.round(o.liqUsd), static_impact: o.rtImpact ?? null, liq_pass: o.liqUsd != null && o.liqUsd >= S.LIQ_MIN_USD, impact_pass: o.rtImpact != null && o.rtImpact <= S.LIQ_MAX_RT_IMPACT };
+          if (o.liqUsd == null || o.rtImpact == null) note("LOW4H-LIQ25K", "rejected: liquidity/impact evidence missing", lq, false);
+          else if (!lq.liq_pass) note("LOW4H-LIQ25K", lq.impact_pass ? "rejected: liquidity under $25K" : "rejected: liquidity under $25K and static impact over 5%", lq, false);
+          else if (!lq.impact_pass) note("LOW4H-LIQ25K", "rejected: static impact over 5% (liquidity passed)", lq, false);
+          else cand("LOW4H-LIQ25K", lq);
           g.done["LOW4H-LIQ25K"] = 1;
         }
       }
@@ -111,6 +116,40 @@ export function evaluate(coin, o) {
     }
   }
 
+  // 8–13. FAST / FAST150 — fresh crossing of X × the lowest pool spot price in the preceding 60 / 180 / 300 s.
+  // Window = exact observations on the receive clock, [t − W, t), including the price standing at the window's start.
+  let fastSeed = false;
+  for (const [family, W, X] of S.FAST) {
+    if (g.done[family]) continue;
+    if (!sr.covered(t - W, t)) { note(family, "window not covered"); continue; }
+    const lo = sr.lowIn(t - W, t); if (!lo) continue;
+    if (!cross(X * lo.px)) continue;
+    if (!inBand) { note(family, "crossing outside entry band", { mc: Math.round(o.mc) }, false); continue; }
+    const obs = sr.raw.filter((r) => r[0] >= t - W && r[0] < t);
+    cand(family, { window_s: W, x: X, low_px: lo.px, low_t: lo.t, threshold_px: X * lo.px, low_support: obs.filter((r) => r[1] <= lo.px * 1.02).length, window_obs: obs.length, low_carried_in: lo.t <= t - W });
+    if (X === 2) fastSeed = true;
+  }
+  // 14. SECOND-WAVE — seeded by the first 2× FAST trigger of the age group; one attempt per mint per age group
+  if (!g.done["SECOND-WAVE"]) {
+    if (!g.sw && fastSeed) { note("SECOND-WAVE", "seeded", { seed_t: t }, false); g.sw = { seedT: t, seedPx: o.px, windows: out.cands.filter((c) => /^FAST-/.test(c.family)).map((c) => c.family), H: o.px, HT: t, frozen: null, pullT: null }; }
+    else if (g.sw) {
+      const w = g.sw;
+      if (t > w.seedT + S.SW_EXPIRE_S) { g.done["SECOND-WAVE"] = 1; note("SECOND-WAVE", w.frozen ? "expired: no reclaim within 60 min" : "expired: no 25% pullback within 60 min", { seed_t: w.seedT, windows: w.windows }, false); }
+      else if (!sr.covered(w.seedT, t)) { g.done["SECOND-WAVE"] = 1; note("SECOND-WAVE", "abandoned: coverage broke during the setup", { seed_t: w.seedT }, false); }
+      else if (w.frozen === null) { if (o.px > w.H) { w.H = o.px; w.HT = t; } else if (o.px <= S.SW_PULLBACK * w.H) { w.frozen = w.H; w.pullT = t; w.pullPx = o.px; } }
+      else if (o.px > w.frozen) {
+        const d = { seed_t: w.seedT, seed_px: w.seedPx, seed_windows: w.windows, frozen_high: w.frozen, high_t: w.HT, pullback_t: w.pullT, pullback_px: w.pullPx, since_seed_s: Math.round(t - w.seedT) };
+        if (inBand) cand("SECOND-WAVE", d); else { g.done["SECOND-WAVE"] = 1; note("SECOND-WAVE", "reclaim outside entry band (attempt used)", { ...d, mc: Math.round(o.mc) }, false); }
+      }
+    }
+  }
+
+  if (out.cands.length) {
+    // evidence stored ONCE per entry: the previous observation that established the fresh crossing, and — for the short-window
+    // families — every observation of the longest window involved
+    const W = Math.max(0, ...out.cands.map((c) => c.detail.window_s || (c.family === "SECOND-WAVE" ? t - c.detail.seed_t : 0)));
+    out.evidence = { prev: prevRec, window_s: W || null, obs: W ? sr.raw.filter((r) => r[0] >= t - W && r[0] <= t).slice(-S.EVIDENCE_OBS_CAP).map((r) => [+r[0].toFixed(3), r[1], Math.round(r[2]), r[3]]) : null };
+  }
   if (out.cands.length) { low ??= sr.covered(t - S.LOW4H_WIN_S, t) ? sr.lowIn(t - S.LOW4H_WIN_S, t) : null; hi1h ??= sr.highIn(t - 3600, t); p15 ??= sr.priceAt(t - 900); const f = features(coin, o, low, hi1h, p15); for (const c of out.cands) c.features = f; }
   return out;
 }

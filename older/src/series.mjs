@@ -7,10 +7,15 @@
 //   missing history (window starts before the coin's history) → NOT covered.
 import { RAW_KEEP_S, RAW_CAP, BAR_KEEP_S, BUYERS_PER_BAR_CAP } from "./spec.mjs";
 
-export class Coverage { // global feed state, shared by all coins
-  constructor() { this.gaps = []; this.upSince = null; this.down = true; }
-  up(t) { if (this.down) { if (this.upSince !== null && this.lastDown != null) this.gaps.push([this.lastDown, t]); this.upSince = this.upSince ?? t; this.down = false; } }
-  drop(t) { if (!this.down) { this.down = true; this.lastDown = t; } }
+const EMPTY = new Set(); // shared: most minute bars never record a buyer wallet
+export class Coverage { // global data-quality state, shared by all coins. Down while ANY reason is active (feed outage, SOL/USD stale…).
+  constructor() { this.gaps = []; this.upSince = null; this.down = true; this.reasons = new Set(["feed"]); this.lastDown = null; }
+  up(t, reason = "feed") {
+    this.reasons.delete(reason); if (this.reasons.size || !this.down) return;
+    if (this.lastDown != null) this.gaps.push([this.lastDown, t]);
+    this.upSince = this.upSince ?? t; this.down = false; this.lastDown = null;
+  }
+  drop(t, reason = "feed") { this.reasons.add(reason); if (!this.down) { this.down = true; this.lastDown = t; } }
   /** gaps overlapping [x, t] (an outage still in progress counts up to t) */
   gapsIn(x, t) { const g = this.gaps.filter(([a, b]) => b > x && a < t); if (this.down && this.lastDown != null && this.lastDown < t) g.push([this.lastDown, t]); return g; }
 }
@@ -27,7 +32,7 @@ export class Series {
   startLive(t) { if (this.histFrom === null || this.histFrom > t) this.histFrom = t; }
   /** back-fill minute bars (e.g. GMGN 1-minute kline): [{m, o, h, l, c, v}]; extends coverage back to the first bar if contiguous */
   addBars(bars, { from, to, patchGap } = {}) {
-    for (const b of bars) if (!this.bars.has(b.m)) this.bars.set(b.m, { o: b.o, h: b.h, l: b.l, c: b.c, v: b.v || 0, nb: b.nb || 0, ns: b.ns || 0, buyers: new Set(), lowT: b.m * 60, bf: true });
+    for (const b of bars) if (!this.bars.has(b.m)) this.bars.set(b.m, { o: b.o, h: b.h, l: b.l, c: b.c, v: b.v || 0, nb: b.nb || 0, ns: b.ns || 0, buyers: EMPTY, lowT: b.m * 60, bf: true });
     if (from != null && to != null) {
       if (patchGap) this.patched.push([from, to]);
       else if (this.histFrom === null || (from < this.histFrom && to >= this.histFrom)) this.histFrom = from;
@@ -43,9 +48,9 @@ export class Series {
     if (r.length >= RAW_CAP && r.length && Math.floor(r[r.length - 1][0]) === Math.floor(t)) { const z = r[r.length - 1]; z[1] = px; z[2] += volUsd; }
     else r.push([t, px, volUsd, isBuy]);
     const m = Math.floor(t / 60); let b = this.bars.get(m);
-    if (!b || b.bf) { b = { o: px, h: px, l: px, c: px, v: 0, nb: 0, ns: 0, buyers: new Set(), lowT: t }; this.bars.set(m, b); }
+    if (!b || b.bf) { b = { o: px, h: px, l: px, c: px, v: 0, nb: 0, ns: 0, buyers: EMPTY, lowT: t }; this.bars.set(m, b); }
     if (px > b.h) b.h = px; if (px < b.l) { b.l = px; b.lowT = t; } b.c = px; b.v += volUsd;
-    if (isBuy === true) { b.nb++; if (user && b.buyers.size < BUYERS_PER_BAR_CAP) b.buyers.add(user); } else if (isBuy === false) b.ns++;
+    if (isBuy === true) { b.nb++; if (user && b.buyers.size < BUYERS_PER_BAR_CAP) { if (b.buyers === EMPTY) b.buyers = new Set(); b.buyers.add(user); } } else if (isBuy === false) b.ns++;
   }
   prune(now) {
     const cut = now - RAW_KEEP_S; let i = 0; while (i < this.raw.length && this.raw[i][0] < cut) i++; if (i) this.raw.splice(0, i);

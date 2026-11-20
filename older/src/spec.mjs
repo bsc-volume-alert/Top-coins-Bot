@@ -1,15 +1,15 @@
 // spec.mjs — the FROZEN rule constants for the older-coin paper project (older-1, 20 Nov 2026 UK).
 // Every number a rule depends on lives here and nowhere else. Changing one is a new spec version (SPEC_VER), never a silent edit.
 // The written specification that matches this code: older/docs/SPEC.md.
-export const SPEC_VER = "older-1";
+export const SPEC_VER = "older-2"; // 20 Nov 2026: + FAST, FAST150, SECOND-WAVE, scale-out policy, 90-day ceiling, scheduled-time fills (owner + ChatGPT consensus round)
 
 export const STAKE_SOL = 0.2;                 // paper stake per entry
 export const TX_COST_SOL = 0.0005;            // declared network/priority cost per transaction side (assumption, not measured for this project)
 export const BAND_LO_USD = 40_000, BAND_HI_USD = 1_000_000; // entry market-cap band, inclusive lo, inclusive hi
 export const MIN_AGE_S = 8 * 3600;            // since TOKEN creation (not pool creation)
 
-// Age groups: [id, from (incl), to (excl)] in seconds of token age. A4 has no upper limit.
-export const AGES = [["A1", 8 * 3600, 16 * 3600], ["A2", 16 * 3600, 24 * 3600], ["A3", 24 * 3600, 36 * 3600], ["A4", 36 * 3600, Infinity]];
+// Age groups: [id, from (incl), to (excl)] in seconds of token age. A4 ends at 90 days (entry ceiling; open positions are not closed by it).
+export const AGES = [["A1", 8 * 3600, 16 * 3600], ["A2", 16 * 3600, 24 * 3600], ["A3", 24 * 3600, 36 * 3600], ["A4", 36 * 3600, 90 * 86400]];
 export const ageGroupOf = (ageS) => { for (const [id, a, b] of AGES) if (ageS >= a && ageS < b) return id; return null; };
 export const ageStartOf = (id) => AGES.find((g) => g[0] === id)[1];
 
@@ -17,10 +17,20 @@ export const STOPS = [0.20, 0.25, 0.30, 0.40]; // trailing stops on after-cost l
 export const MAX_HOLD_S = 24 * 3600;          // from the simulated FILL
 export const BUY_DELAY_MS = 1000;             // buy scheduled 1 s after the signal
 export const SELL_DELAY_MS = 700;             // sell scheduled 0.7 s after an exit trigger
-export const ENTRY_STATE_MAX_WAIT_S = 600;    // no executable pool state within 10 min of the scheduled buy → failed fill (recorded)
+export const BUY_PRICING_TIMEOUT_S = 5;       // no trustworthy pool state within 5 s after the scheduled buy → pricing/data timeout, entry cancelled (NOT "untradeable")
+export const SELL_UNRESOLVED_S = 24 * 3600;   // a triggered sale that cannot be priced for 24 h is shown as unresolved exposure (never silently closed)
 
-// Families. Seven families × four ages × four stops = 112 result rows.
-export const FAMILIES = ["AGE-DOUBLE", "LOW4H", "CONT", "SLOW-BUILD", "HH-BREAK", "CONT-STALL", "LOW4H-LIQ25K"];
+// Families. 14 families × 4 ages × 4 stops = 224 pure-trailing rows; × 2 exit policies = 448 comparisons.
+export const FAMILIES = ["AGE-DOUBLE", "LOW4H", "CONT", "SLOW-BUILD", "HH-BREAK", "CONT-STALL", "LOW4H-LIQ25K",
+  "FAST-1M", "FAST-3M", "FAST-5M", "FAST150-1M", "FAST150-3M", "FAST150-5M", "SECOND-WAVE"];
+export const POLICIES = ["trail", "scale"];   // trail = the original pure trailing stop; scale = sell half at 2× cost, trail the rest
+export const SCALE_AT_X = 2, SCALE_FRACTION = 0.5;
+// FAST: fresh crossing of X × the lowest pool spot price in the preceding window (receive-time clock, exact observations)
+export const FAST = [["FAST-1M", 60, 2], ["FAST-3M", 180, 2], ["FAST-5M", 300, 2], ["FAST150-1M", 60, 1.5], ["FAST150-3M", 180, 1.5], ["FAST150-5M", 300, 1.5]];
+// SECOND-WAVE: seeded by the first 2× FAST trigger in the age group; pullback to ≤ 0.75 × running high freezes that high; buy strictly above it; expires 60 min after the seed
+export const SW_PULLBACK = 0.75, SW_EXPIRE_S = 3600;
+export const STARTUP_TAG_S = 24 * 3600;       // entries in the first 24 h after the project's first start are tagged "startup" (kept in totals, shown separately)
+export const EVIDENCE_OBS_CAP = 1500;         // observations saved with a FAST / SECOND-WAVE trigger (stored once per entry)
 export const AGE_DOUBLE_X = 2;
 export const LOW4H_WIN_S = 4 * 3600, LOW4H_X = 2;
 export const CONT_LOOKBACK_S = 15 * 60, CONT_RISE = 1.30, CONT_HI_WIN_S = 3600, CONT_NEAR_HI = 0.95;

@@ -34,8 +34,8 @@ export class Store {
   }
   saveBar(mint, m, b) { this.q.bar.run(mint, m, b.o, b.h, b.l, b.c, b.v, b.nb, b.ns, b.buyers?.size ?? 0, b.bf ? "backfill" : "live"); }
   saveDecision(mint, ag, family, t, entryId, detail) { this.q.dec.run(mint, ag, family, t, entryId, JSON.stringify(detail ?? null)); }
-  saveNote(mint, n) { this.q.note.run(mint, n.ag, n.family, n.t, n.reason, JSON.stringify(n.detail ?? null)); if (n.family === "SLOW-BUILD" || n.family === "LOW4H-LIQ25K") this.q.dec.run(mint, n.ag, n.family, n.t, null, JSON.stringify({ rejected: n.reason, ...n.detail })); }
-  saveEntry(e) { const done = e.status === "failed" || (e.versions.every((v) => v.status === "closed" || v.status === "unresolved") && e.runner.horizonDone) ? 1 : 0; this.q.ent.run(e.id, e.mint, e.status, done, e.decisionT, JSON.stringify(e)); }
+  saveNote(mint, n) { this.q.note.run(mint, n.ag, n.family, n.t, n.reason, JSON.stringify(n.detail ?? null)); if (n.family === "SLOW-BUILD" || n.family === "LOW4H-LIQ25K" || (n.family === "SECOND-WAVE" && n.reason !== "window not covered")) this.q.dec.run(mint, n.ag, n.family, n.t, null, JSON.stringify({ rejected: n.reason, ...n.detail })); }
+  saveEntry(e) { const done = e.status === "cancelled" || (e.status === "filled" && e.versions.every((v) => v.status === "closed" || v.status === "unresolved") && e.runner.horizonDone) ? 1 : 0; this.q.ent.run(e.id, e.mint, e.status, done, e.decisionT, JSON.stringify(e)); }
   saveCoin(mint, { pool = null, createTs = null, createSrc = null, pumpOrigin = null, firstSeen = null } = {}) { this.q.coin.run(mint, pool, createTs, createSrc, pumpOrigin, firstSeen); }
   savePool(pool, i) { this.db.prepare("INSERT OR IGNORE INTO pools VALUES (?,?,?,?)").run(pool, i.mint, i.quote, i.creator ?? null); }
   loadPools() { const m = new Map(); for (const r of this.db.prepare("SELECT pool, mint, quote, creator FROM pools").iterate()) m.set(r.pool, { mint: r.mint, quote: r.quote, creator: r.creator }); return m; }
@@ -49,6 +49,8 @@ export class Store {
     setNextId(maxId + 1);
     for (const r of this.db.prepare("SELECT mint, pool, create_ts FROM coins").iterate()) engine.coin(r.mint, { pool: r.pool, createTs: r.create_ts });
   }
+  /** the project's first-ever start (for the 24 h "startup" tag); set once */
+  firstStart(now) { this.db.prepare("INSERT OR IGNORE INTO meta VALUES ('first_start', ?)").run(String(now)); return Number(this.db.prepare("SELECT v FROM meta WHERE k='first_start'").get().v); }
   heartbeat(t) { this.db.prepare("INSERT OR REPLACE INTO meta VALUES ('alive', ?)").run(String(t)); }
   /** the time the previous run was last known alive: the restart gap starts there (null on a first run) */
   lastAlive() { const r = this.db.prepare("SELECT v FROM meta WHERE k='alive'").get(); return r ? Number(r.v) : null; }

@@ -70,7 +70,7 @@ test("CONT: +30% over 15 min and within 5% of the 1 h high; CONT-STALL shares th
   const es = [...e.entries.values()]; assert.ok(es.length >= 1);
   const c = es.find((x) => x.families.includes("CONT")); assert.ok(c && c.families.includes("CONT-STALL"));
   assert.ok(c.signalMc >= 130_000 && c.signalMc < 136_000, String(c.signalMc));
-  assert.equal(c.versions.length, 8); // 4 plain + 4 stall
+  assert.equal(c.versions.length, 16); // (plain + stall) × (trail + scale) × 4 stops
 });
 
 test("CONT: can qualify immediately at 8 h old when history exists", () => {

@@ -1,12 +1,11 @@
 // gmgn.mjs — GMGN OpenAPI client for this project (read-only). Auth as in the tracker's client: header X-APIKEY + query
 // timestamp + client_id. The key is read from the environment (GMGN_API_KEY) and is never logged or stored.
-// Pacing: a leaky bucket in "weight per second" (GMGN_WPS, default 10 = half of the documented 20/s shared market limit, so
-// another process on the same key keeps headroom). The real limit of OUR subscription is read from the response headers
-// (X-RateLimit-*) and shown on the status page — the documented figure is not assumed to be ours.
+// Pacing: a leaky bucket in "weight per second" (GMGN_WPS). The limit of OUR key is read from the response headers
+// (X-RateLimit-*) and shown on the status page. Plan weights (GMGN plan page, 20 Nov 2026): Free 5, Plus 20, Pro 50.
 import { randomUUID } from "node:crypto";
 const HOST = process.env.GMGN_HOST || "https://openapi.gmgn.ai", KEY = () => process.env.GMGN_API_KEY || "";
-const WPS = Number(process.env.GMGN_WPS || 10);
-export const WEIGHT = { "/v1/market/token_kline": 2, "/v1/market/rank": 1, "/v1/trenches": 3, "/v1/token/info": 1, "/v1/token/security": 1 }; // documented weights
+const WPS = Number(process.env.GMGN_WPS || 4); // our key is on the FREE plan: 5 weight/s (verified 20 Nov 2026, x-ratelimit-limit: 5); 4 leaves headroom
+export const WEIGHT = { "/v1/market/token_kline": 2, "/v1/market/rank": 3, "/v1/trenches": 2, "/v1/token/info": 1, "/v1/token/security": 1 }; // documented weights
 export const gm = { calls: 0, errors: 0, limited: 0, banned: 0, lastErr: "", headers: {}, lastOk: null };
 let next = 0, pausedUntil = 0; const nap = (ms) => new Promise((r) => setTimeout(r, ms));
 let chain = Promise.resolve();
@@ -30,7 +29,7 @@ const N = (v) => (v == null || v === "" || isNaN(Number(v)) ? null : Number(v));
 export async function creationTime(mint) {
   const i = await gcall("/v1/token/info", { chain: "sol", address: mint });
   let v = N(i?.creation_timestamp ?? i?.open_timestamp ?? i?.created_at); if (v > 1e12) v = Math.floor(v / 1000);
-  return v ? { t: v, src: i?.creation_timestamp != null ? "gmgn.creation_timestamp" : "gmgn.open_timestamp" } : null;
+  return v ? { t: v, src: i?.creation_timestamp != null ? "gmgn.creation_timestamp" : "gmgn.open_timestamp (UNVERIFIED: must be shown to mean token creation, not pool opening)" } : null;
 }
 /** 1-minute USD bars in [from, to) (unix s); GMGN returns ≤ 100 candles a call, so this walks in 100-minute steps */
 export async function minuteBars(mint, from, to) {
