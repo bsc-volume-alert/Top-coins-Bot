@@ -10,7 +10,7 @@
 import WebSocket from "ws";
 import { PUMPSWAP_PROGRAM, WSOL, eventsFromLogs, applyEvent, bs58, isCanonical } from "./decoder.mjs";
 
-export const fs = { msgs: 0, events: 0, emitted: 0, pools: 0, held: 0, replayed: 0, overflow: 0, nonSol: 0, nonCanonical: 0, rejected: 0, lookups: 0, lookupCalls: 0, lookupFail: 0, reconnects: 0, lastMsg: null, bytes: 0, failedTx: 0, dupes: 0, connected: false, lagMsSum: 0, lagN: 0 };
+export const fs = { msgs: 0, events: 0, emitted: 0, pools: 0, held: 0, replayed: 0, overflow: 0, nonSol: 0, nonCanonical: 0, rejected: 0, lookups: 0, lookupCalls: 0, lookupFail: 0, reconnects: 0, lastMsg: null, nonSolQuotes: {}, bytes: 0, failedTx: 0, dupes: 0, connected: false, lagMsSum: 0, lagN: 0 };
 const HOLD_PER_POOL = 300, HOLD_POOLS = 20000;
 
 export async function rpc(method, params) {
@@ -30,7 +30,7 @@ export function startFeed({ engine, store, backfill = null, pools /* Map pool â†
   const hold = new Map(), queue = new Set(), mem = new Map(); const seen = new Set(), seenQ = [];
   let ws = null, watchdog = null;
   const emit = (e, info, t, meta, replay = false) => {
-    const cls = poolClass(info); if (cls === "non-sol") { fs.nonSol++; return; } if (cls === "non-canonical") { fs.nonCanonical++; return; }
+    const cls = poolClass(info); if (cls === "non-sol") { fs.nonSol++; fs.nonSolQuotes[info.quote] = (fs.nonSolQuotes[info.quote] || 0) + 1; return; } if (cls === "non-canonical") { fs.nonCanonical++; return; }
     let p = mem.get(e.pool); if (!p) mem.set(e.pool, (p = {}));
     const r = applyEvent(p, e);
     if (!r) { if (e.type !== "sweep") { fs.rejected++; engine.coinLost(info.mint, t); mem.set(e.pool, {}); } return; }

@@ -23,6 +23,9 @@ export class Poller {
     if (this.watch.has(tok.mint)) return true;
     const live = this.engine.coins.get(tok.mint); if (live && live.mode === "live") { this.stats.skippedLive++; return false; }
     if (!(tok.decimals >= 0)) { this.stats.noMeta++; return false; }
+    // a pump.fun coin still on its bonding curve (first pool = the curve, i.e. the mint itself) is not polled: the moment it
+    // graduates, its canonical PumpSwap pool is observed live. Counted, so the gap (curve-stage coins over $40K) is visible.
+    if (tok.launchpad === "pump.fun" && tok.first_pool?.id === tok.mint && !(tok.mcap >= S.BAND_LO_USD)) { this.stats.skippedCurve = (this.stats.skippedCurve || 0) + 1; return false; }
     const risk = classifyJupToken(tok), origin = tok.launchpad || "unknown";
     // AGE: the provider gives the FIRST POOL's creation, which is a LOWER BOUND on token age (the token existed before its pool).
     // It can only make a coin look younger than it is, so the 8-hour minimum is never broken; the age group may be understated.
@@ -48,6 +51,9 @@ export class Poller {
   /** one observation pass: every coin that is due, in batches of 50 */
   async sweep() {
     const now = this.now(), due = [];
+    // keep the watch list bounded: a token that has stayed under a quarter of the band's floor for 2 hours, with no position and no
+    // active setup, is dropped (counted; discovery can bring it back if it starts trading again)
+    for (const [mint, w] of this.watch) { if (w.mc != null && w.mc >= S.BAND_LO_USD / 4) w.lowSince = null; else if (w.lowSince == null) w.lowSince = now; else if (now - w.lowSince > 7200 && !this.engine.byMint.get(mint)?.size && !this.engine.coins.get(mint)?.sw) { this.watch.delete(mint); this.seen.delete(mint); /* the engine keeps the coin's one-entry flags */ this.stats.pruned = (this.stats.pruned || 0) + 1; } }
     for (const [mint, w] of this.watch) { const c = this.engine.coins.get(mint); w.hot = (w.mc != null && w.mc >= S.BAND_LO_USD / 2 && w.mc <= S.BAND_HI_USD * 2) || !!this.engine.byMint.get(mint)?.size; if (now - w.lastReq >= (w.hot ? this.hotEvery : this.coldEvery) - 0.01 && c) due.push(mint); }
     this.stats.watched = this.watch.size; this.stats.hot = [...this.watch.values()].filter((w) => w.hot).length;
     due.sort((a, b) => (this.watch.get(b).hot - this.watch.get(a).hot) || this.watch.get(a).lastReq - this.watch.get(b).lastReq);

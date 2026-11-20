@@ -14,7 +14,7 @@ export const gmgnOn = () => !!KEY();
 export async function gcall(path, params = {}, { method = "GET", body = null } = {}) {
   if (!KEY()) throw new Error("no GMGN key configured");
   await slot(path); gm.calls++;
-  const q = new URLSearchParams({ ...(method === "GET" ? params : {}), timestamp: String(Math.floor(Date.now() / 1000)), client_id: randomUUID() });
+  const q = new URLSearchParams({ ...(method === "GET" ? params : params.chain ? { chain: params.chain } : {}), timestamp: String(Math.floor(Date.now() / 1000)), client_id: randomUUID() });
   const r = await fetch(`${HOST}${path}?${q}`, { method, headers: { "X-APIKEY": KEY(), "Content-Type": "application/json" }, body: method === "POST" ? JSON.stringify(body ?? params) : undefined, signal: AbortSignal.timeout(15000) });
   for (const [k, v] of r.headers) if (/ratelimit|quota|plan|tier/i.test(k)) gm.headers[k] = v; // limit evidence only — never auth headers
   const text = await r.text(); let j; try { j = JSON.parse(text); } catch { gm.errors++; throw new Error(`GMGN HTTP ${r.status}`); }

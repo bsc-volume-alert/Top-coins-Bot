@@ -58,26 +58,33 @@ Event-level observation across Raydium, Meteora, Orca and PumpSwap, with Jupiter
 ## 5. Recommended Jupiter tier
 **Developer, $25/month, paced at 9 req/s.** Measure the real workload during validation (keyless is enough for the probe); move to Launch ($100) only if open inventories or the hot set exceed the limits in §4A. The published plans page gives no per-credit overage price, so pacing is set to make overage impossible rather than relying on an unknown rate. The only step that needs the owner: create the Jupiter developer account, choose the plan, and put the key in `/root/older/.env` as `JUP_API_KEY`.
 
-## 6. Validation status
-| Assumption | Status | How it is settled |
-|---|---|---|
-| Event decoding matches the published IDL | **UNRESOLVED** (synthetic only) | `validation-run.json`: decoded vs short/rejected counts |
-| Failed and duplicate transactions are ignored | **UNRESOLVED** | `failed_tx`, `dupes` counters |
-| Event reserves are pre-swap (pinned reading) | **UNRESOLVED** | `tx-validation.json`: vault balances before/after each swap, by instruction and side; large trades separately |
-| Several swaps on one pool in one transaction chain correctly | **UNRESOLVED** | `multi_swap` block |
-| Effective reserves (vault + virtual) reproduce traded amounts | **UNRESOLVED** | `curve` / `curve_large_trades` |
-| Fee per side = user's net debit/credit; rounding | **UNRESOLVED** | `user_amount`, `fee_rate` ranges; `feeOdd` counter |
-| Reconstructed state matches account reads | **UNRESOLVED** | per-entry check: slots, times, differences, `suspect` count |
-| Feed latency, gaps, backlog | **UNRESOLVED** | `lag_ms_avg`, `reconnects`, `feed_gaps`, `loop_lag_ms_max` |
-| Helius credits | **UNRESOLVED** | `helius_stream_credits` (bytes × billing rule) per minute |
-| Memory and disk growth | **UNRESOLVED** | `rss_mb`, `db_mb`, `bars` per minute |
-| GMGN history depth; `open_timestamp` meaning | **UNRESOLVED** | `gmgn-probe.json` (7/30/60/90 days; open vs migration time) |
-| Jupiter price coverage, quote fields, timing | **UNRESOLVED** | `jupiter-probe.json`. The `/order` response schema beyond `inAmount`/`outAmount`/`feeBps`/`router` was not retrievable from this workspace; the client records the keys actually returned. |
-| Jupiter `firstPool.createdAt` vs token creation | **UNRESOLVED** | treated as a lower bound on age and labelled on every entry |
-| GMGN key is on the Free plan (5 weight/s) | **PASS** | plan page + `x-ratelimit-limit: 5` (owner's key, 20 Nov) |
-| Canonical-pool derivation | **PASS** | 2,900 comparisons against the standard Solana library, 0 mismatches |
+## 6. Validation — run 1, 20 Nov 2026 13:55–14:07 UTC (10 minutes, live, read-only)
+Raw results: `docs/validation/run1-20261120/`. Server: 1 vCPU / 2 GB, Node 22, nothing else running.
 
-Until the reserve rows pass, the dashboard tile reads **UNVALIDATED** and no result should be called verified.
+| Assumption | Result | Evidence |
+|---|---|---|
+| Event reserves are the reserves **before** the swap | **PASS** | 52 of 52 scored transactions: event reserves = vault balances before the transaction, for `buy`, `buy_exact_quote_in`, `buy_exact_quote_in_v2` and sells (0 "after", 0 "neither"). Live: 5,125 swaps fit only "before", 0 fit only "after". |
+| Several swaps on one pool in one transaction chain | **PASS** | 25 of 25 transactions chain under the "before" reading |
+| Derived post-swap state (reserves ± amounts, LP fee stays) | **PASS** | consecutive events on a pool: 15,334 chained, 6 did not |
+| Effective reserves (vault + virtual) are required | **PASS** | virtual reserves non-zero on 52 of 52 (≈ +17.6 SOL on most pools, negative on 2). Ignoring them would misprice badly. |
+| Field meaning for `buy_exact_quote_in[_v2]` | **FAIL → FIXED** | the two quote fields are the other way round for these instructions (total paid in `quote_amount_in`, curve amount in `user_quote_amount_in`). Run 1 rejected 8,398 valid swaps (30% of SOL-pool swaps) and restarted those coins' histories each time, so no signal could form. Fixed in the decoder; a real transaction from this run is now a test fixture (derived reserves = the vault balance after the transaction). |
+| Fee per side = user's net amount vs curve amount | **PASS after the fix** | buys 0.30%–1.25%, sells 0.85%–1.25%, matching the events' own LP + protocol + creator rates (creator rate varies 5–95 bps by coin). The negative rates in run 1 were the field mix-up above. Not yet re-measured. |
+| Failed and duplicate transactions ignored | **PASS** | 74,776 failed transactions received and skipped; 0 duplicates |
+| Feed stability, latency, backlog | **PASS** | 0 reconnects, 0 gaps; receive time ≈ 1.1 s after block time (block time has 1 s resolution); event-loop delay under 0.1 s after start-up |
+| Memory and disk | **PASS** | 167 MB after 10 min, flat; database 13.7 MB |
+| Paginated pool inventory | **PASS** | 181 pages, 60,172 SOL pools (capped for the test), 36,122 canonical, 24,050 non-canonical; 673 above $5K, 103 inside the band; 1 min 49 s |
+| GMGN 1-minute history depth | **PASS** | 100 candles returned at 7, 30, 60 and 90 days back (tested on SOL; small coins not yet checked). `creation_timestamp` exists in token info. |
+| GMGN back-fill speed | **FAIL → REDESIGNED** | 38 coins in 10 minutes on the free plan (16 rate-limit hits). Creation times now come from Jupiter in bulk (100 mints a call; for pump.fun coins the first pool is the bonding curve, i.e. token creation). GMGN is kept for history bars of in-band coins only. |
+| Jupiter prices | **PASS** | 41 of 41 mints priced, 17 ms |
+| Jupiter routed quote without `taker` | **PASS** | 0.2 SOL buy routed through Raydium CLMM in 0.11 s; sell and half-sell quotes returned; round trip −0.53%; invalid mint → explicit error. Response carries `priceImpactPct`, `routePlan`, `feeBps` (10 bps platform fee, inside the quoted output). |
+| Jupiter discovery lists | **PASS** | top-traded 1 h: 100 tokens, 21 in the band; origins: 65 no launchpad, 27 pump.fun, 4 stonkfun, 2 met-dbc, 1 letsbonk, 1 raydium-launchlab — most active tokens are **not** pump.fun |
+| **Helius cost of the PumpSwap firehose** | **MEASURED — a decision is needed** | 635.8 MB in 10 minutes = 12,716 credits → ≈ 76,000 an hour, **≈ 1.83 M a day, ≈ 55 M a month**. A seven-day run ≈ 12.8 M credits. At the published overage price ($5 per million) that is ≈ $275 a month beyond a plan's allowance. 28% of messages were failed transactions and 66% of decoded events were on pools not quoted in SOL — traffic we pay for and do not use. |
+| What the non-SOL pools are | **UNRESOLVED** | 61,196 of 92,293 events. Run 2 tallies the quote tokens. If they are pump.fun coins quoted in a stablecoin, they belong in scope and need pricing support. |
+| Reconstructed state vs account reads at entry | **UNRESOLVED** | no entry occurred in 10 minutes (the decoder fault above prevented any coverage) |
+| GMGN `creation_timestamp` meaning for pump coins; Jupiter `firstPool` for non-pump tokens | **UNRESOLVED** | graduated-list call was malformed (fixed); non-pump age remains a labelled lower bound |
+| GMGN key is on the Free plan; canonical-pool derivation | **PASS** | as before |
+
+**Standing rule:** the dashboard tile stays UNVALIDATED until run 2 confirms the decoder fix on live data.
 
 ## 7. What is ready, and what is not
 **Ready:** the PumpSwap live path; the Solana-wide sampled path (against a simulated provider); the 448-row dashboard with method filters; the one-command validation run.

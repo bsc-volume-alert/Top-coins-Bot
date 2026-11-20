@@ -23,7 +23,7 @@ export const DISC = { // from the IDL's `events[].discriminator`
   BuyEvent: [103, 244, 82, 31, 44, 245, 119, 119], SellEvent: [62, 47, 55, 10, 165, 3, 220, 42], DepositEvent: [120, 248, 61, 83, 31, 142, 107, 144], WithdrawEvent: [22, 9, 133, 26, 160, 44, 71, 192],
   CreatePoolEvent: [177, 49, 12, 210, 160, 118, 167, 116], InitBoostEvent: [174, 124, 74, 249, 4, 81, 246, 17], BoostBuyAndBurnEvent: [63, 69, 28, 22, 48, 92, 194, 185], SweepPoolFeeEvent: [130, 164, 36, 97, 228, 130, 135, 165] };
 const DKEY = new Map(Object.entries(DISC).map(([k, v]) => [Buffer.from(v).toString("hex"), k]));
-export const dec = { buy: 0, sell: 0, deposit: 0, withdraw: 0, pool: 0, boost: 0, sweep: 0, short: 0, fitPre: 0, fitPost: 0, fitBoth: 0, fitNeither: 0, feeOdd: 0, chainOk: 0, chainBad: 0, noVirtual: 0, negVirtual: 0, mode: RES_MODE };
+export const dec = { buy: 0, sell: 0, deposit: 0, withdraw: 0, pool: 0, boost: 0, sweep: 0, short: 0, fitPre: 0, fitPost: 0, fitBoth: 0, fitNeither: 0, neitherBy: {}, feeOdd: 0, chainOk: 0, chainBad: 0, noVirtual: 0, negVirtual: 0, mode: RES_MODE };
 class R {
   constructor(b) { this.b = b; this.o = 0; }
   u64() { const v = this.b.readBigUInt64LE(this.o); this.o += 8; return v; } i64() { const v = this.b.readBigInt64LE(this.o); this.o += 8; return v; }
@@ -80,22 +80,28 @@ export function applyEvent(p, e, baseDec = 6) {
   if (e.type === "buy" || e.type === "sell") {
     if (e.virtualQuote == null) dec.noVirtual++; else if (e.virtualQuote < 0n) dec.negVirtual++;
     const vq = e.virtualQuote ?? BigInt(Math.round((p.vq ?? 0))); p.vq = Number(vq);
-    const B = Number(e.poolBase), E = Number(e.poolQuote + vq), b = Number(e.baseAmt), q = Number(e.quoteAmt), lp = Number(e.lpFee);
+    // Which field is the amount that moved on the curve? VALIDATED on real transactions (20 Nov 2026, tx-validation.json):
+    //   buy (exact base out) and sell : quote_amount_in/out is the curve amount; user_quote_amount_* is what the user paid/received.
+    //   buy_exact_quote_in[_v2]      : the two are the other way round — quote_amount_in is the user's total spend (fees inside),
+    //                                  user_quote_amount_in is the part that reached the curve.
+    const exactIn = e.isBuy && typeof e.ix === "string" && e.ix.startsWith("buy_exact_quote_in");
+    const B = Number(e.poolBase), E = Number(e.poolQuote + vq), b = Number(e.baseAmt), lp = Number(e.lpFee);
+    const q = Number(exactIn ? e.userQuote : e.quoteAmt), paid = Number(exactIn ? e.quoteAmt : e.userQuote);
     if (!(B > 0 && E > 0 && b > 0 && q > 0)) return null;
     // which interpretation reproduces the traded amount on the curve?  pre: reported reserves are before the swap; post: after it
     const preQ = e.isBuy ? (E * b) / (B - b) : (E * b) / (B + b), postQ = e.isBuy ? (E * b) / (B + b) : (E * b) / (B - b);
-    const okPre = B > b && Math.abs(preQ - q) / q <= TOL, okPost = Math.abs(postQ - q) / q <= TOL;
-    if (okPre && okPost) dec.fitBoth++; else if (okPre) dec.fitPre++; else if (okPost) dec.fitPost++; else dec.fitNeither++;
+    const tol = Math.max(TOL, 3 / q); // integer rounding matters on very small trades
+    const okPre = B > b && Math.abs(preQ - q) / q <= tol, okPost = Math.abs(postQ - q) / q <= tol;
+    if (okPre && okPost) dec.fitBoth++; else if (okPre) dec.fitPre++; else if (okPost) dec.fitPost++; else { dec.fitNeither++; const k = (e.ix || "no-ix") + "|" + e.type; dec.neitherBy[k] = (dec.neitherBy[k] || 0) + 1; }
     if (!(RES_MODE === "pre" ? okPre : okPost)) return null;
     // chain evidence: under the pinned mode, this event's implied pre-state must equal the state we derived from the previous event
     const preBase = RES_MODE === "pre" ? B : e.isBuy ? B + b : B - b;
     if (p.base != null) { if (Math.abs(preBase / U - p.base) / p.base < 1e-6) dec.chainOk++; else dec.chainBad++; }
     if (RES_MODE === "pre") { p.base = (e.isBuy ? B - b : B + b) / U; p.quote = (e.isBuy ? E + q + lp : E - q + lp) / 1e9; } // the LP fee stays in the pool as liquidity
     else { p.base = B / U; p.quote = E / 1e9; }
-    const uq = Number(e.userQuote);
     // the observed rate is used AS OBSERVED — an unusual value (negative, or above 10%) is never clamped or replaced by a tidy
     // estimate: it is counted (dec.feeOdd), carried on the state as fee_odd, and every fill priced from it is flagged
-    if (uq > 0) { const f = e.isBuy ? uq / q - 1 : 1 - uq / q; if (e.isBuy) p.feeBuy = f; else p.feeSell = f; const odd = !(f >= 0 && f <= 0.10); if (odd) dec.feeOdd++; if (e.isBuy) p.oddBuy = odd; else p.oddSell = odd; }
+    if (paid > 0) { const f = e.isBuy ? paid / q - 1 : 1 - paid / q; if (e.isBuy) p.feeBuy = f; else p.feeSell = f; const odd = !(f >= 0 && f <= 0.10); if (odd) dec.feeOdd++; if (e.isBuy) p.oddBuy = odd; else p.oddSell = odd; }
     if (e.baseSupply != null && e.baseSupply > 0n) p.supply = Number(e.baseSupply) / U;
     return { state: { base: p.base, quote: p.quote, feeBuy: p.feeBuy ?? null, feeSell: p.feeSell ?? null, feeOdd: !!(p.oddBuy || p.oddSell), supply: p.supply ?? null }, sol: q / 1e9, changed: true };
   }
