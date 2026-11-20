@@ -30,12 +30,13 @@ export class Series {
     this.obsFrom = null;    // earliest second from which EXACT observations are continuous (live only: back-fill never moves it)
     this.lastIsBf = false;  // lastPx/lastT came from back-fill (no exact observation yet)
     this.compT = null;      // last time exact observations were merged within a second (RAW_CAP reached): measurements over it are flagged
+    this.anchor = null;     // [t, px] the last exact observation that aged out of `raw`: the price still standing for a coin that went quiet
     this.patched = [];      // global gaps re-filled for this coin from back-fill bars: [a, b]
     this.lastPx = null; this.lastT = null; this.prevPx = null; this.prevT = null;
   }
   startLive(t) { if (this.histFrom === null || this.histFrom > t) this.histFrom = t; if (this.obsFrom === null || this.obsFrom > t) this.obsFrom = t; }
   /** this coin's own data restarts at t (lost events, a hole in the samples, a new pool): nothing before t is continuous */
-  restartAt(t) { this.histFrom = t; this.obsFrom = t; }
+  restartAt(t) { this.histFrom = t; this.obsFrom = t; this.anchor = null; }
   /** are EXACT observations continuous over [x, t]? (no back-fill, no repaired outage) — what the trade-window measurements need */
   obsCovered(x, t) { return this.obsFrom !== null && this.obsFrom <= x && this.cov.gapsIn(x, t).length === 0; }
   /** back-fill minute bars (e.g. GMGN 1-minute kline): [{m, o, h, l, c, v}] requested for [from, to).
@@ -76,9 +77,9 @@ export class Series {
     const r = this.raw;
     if (r.length >= RAW_CAP && r.length && Math.floor(r[r.length - 1][0]) === Math.floor(t)) {
       // COMPRESSION (RAW_CAP reached): this observation is merged into the previous one of the same second — last price, summed
-      // volume, every buyer kept with its own volume. Transaction counts and sides inside that second are no longer exact, so the
-      // moment is recorded and any measurement window containing it is flagged `compressed`.
-      const z = r[r.length - 1], zb = z[3] === true ? (typeof z[4] === "string" ? [[z[4], z[2]]] : z[4] || []) : [];
+      // volume, every buyer kept with its own volume (also through a buy → sell → buy second). Transaction counts and sides inside
+      // that second are no longer exact, so the moment is recorded and any measurement window containing it is flagged `compressed`.
+      const z = r[r.length - 1], zb = Array.isArray(z[4]) ? z[4] : (z[3] === true && typeof z[4] === "string" ? [[z[4], z[2]]] : []); // buyers already merged stay, whatever sides followed
       const nb = isBuy === true && user ? (typeof user === "string" ? [[user, volUsd]] : user) : [];
       z[1] = px; z[2] += volUsd; if (z[3] !== isBuy) z[3] = null; const all = [...zb, ...nb]; if (all.length) { z[4] = all; z[5] = true; } this.compT = t;
     } else r.push(isBuy === true && user ? [t, px, volUsd, isBuy, user] : [t, px, volUsd, isBuy]); // user: one wallet, or [[wallet, usd]…] when a transaction has several buyers
@@ -88,7 +89,10 @@ export class Series {
     if (isBuy === true) { b.nb++; if (user) for (const u of typeof user === "string" ? [user] : user.map((x) => x[0])) { if (b.buyers.size >= BUYERS_PER_BAR_CAP) break; if (b.buyers === EMPTY) b.buyers = new Set(); b.buyers.add(u); } } else if (isBuy === false) b.ns++;
   }
   prune(now) {
-    const cut = now - RAW_KEEP_S; let i = 0; while (i < this.raw.length && this.raw[i][0] < cut) i++; if (i) this.raw.splice(0, i);
+    const cut = now - RAW_KEEP_S; let i = 0; while (i < this.raw.length && this.raw[i][0] < cut) i++;
+    // the newest observation leaving the buffer is kept as the ANCHOR: for a coin that then goes quiet for hours (its bars pruned
+    // too) it is still the exact price standing, so the wake-up trade is measured against it and not against nothing
+    if (i) { this.anchor = [this.raw[i - 1][0], this.raw[i - 1][1]]; this.raw.splice(0, i); }
     const ucut = now - BUYER_RAW_KEEP_S; for (const o of this.raw) { if (o[0] >= ucut) break; if (o.length > 4) o.length = 4; } // buyer wallets are only read for the last 5 minutes
     const mc = Math.floor((now - BAR_KEEP_S) / 60), bc = Math.floor((now - BUYERS_KEEP_S) / 60);
     // buyer wallets are only read for the last 15 minutes (features): older bars keep the COUNT and release the wallet list (memory)
@@ -105,13 +109,14 @@ export class Series {
     for (const [a, b] of this.cov.gapsIn(x, t)) if (!this.patched.some(([pa, pb]) => pa <= a && pb >= b)) return false;
     return true;
   }
-  /** last price at or before t. Exact sources first: an exact observation; else the close of the last completed LIVE bar; else the
-   *  last exact price if older. exact = false (hour-scale use) also considers accepted back-fill: a back-filled close of a later
+  /** last price at or before t. Exact sources first: an exact observation; else the later of the last completed LIVE bar's close
+   *  and the anchor (the last exact observation that aged out of the buffer); else the last exact price if older. exact = false (hour-scale use) also considers accepted back-fill: a back-filled close of a later
    *  minute is newer information (a repaired outage, or history before the live start) and wins — an older observation is never
    *  preferred over a newer known close. exact = true never returns anything that came from back-fill. */
   priceAt(t, exact = false) {
     let r = null; for (let i = this.raw.length - 1; i >= 0; i--) if (this.raw[i][0] <= t) { r = { px: this.raw[i][1], t: this.raw[i][0], src: "obs" }; break; }
-    if (!r) { let best = null; for (const m of this.bars.keys()) if ((m + 1) * 60 <= t && (best === null || m > best)) best = m; if (best !== null) r = { px: this.bars.get(best).c, t: best * 60 + 59, src: "bar" }; }
+    if (!r) { let best = null; for (const m of this.bars.keys()) if ((m + 1) * 60 <= t && (best === null || m > best)) best = m; if (best !== null) r = { px: this.bars.get(best).c, t: best * 60 + 59, src: "bar" };
+      if (this.anchor && this.anchor[0] <= t && (!r || this.anchor[0] > r.t)) r = { px: this.anchor[1], t: this.anchor[0], src: "anchor" }; }
     if (!r && this.lastT !== null && this.lastT <= t && !this.lastIsBf) r = { px: this.lastPx, t: this.lastT, src: "last" };
     if (exact || !this.bf.size) return r;
     let bb = null; for (const m of this.bf.keys()) if ((m + 1) * 60 <= t && (bb === null || m > bb)) bb = m;
@@ -152,9 +157,17 @@ export class Series {
   }
   /** exact USD volume in (x, t] from raw observations */
   volIn(x, t) { let v = 0; for (const [ts, , vol] of this.raw) if (ts > x && ts <= t) v += vol; return v; }
-  /** the minute bar of minute m: live if one exists, else accepted back-fill */
-  barAt(m) { return this.bars.get(m) ?? this.bf.get(m) ?? null; }
-  /** completed minute bars with minute index in [m0, m1): live bars, and accepted back-fill for minutes with no live bar (hour-scale use only) */
-  barsIn(m0, m1) { const out = []; for (const [m, b] of this.bars) if (m >= m0 && m < m1) out.push([m, b]); for (const [m, b] of this.bf) if (m >= m0 && m < m1 && !this.bars.has(m)) out.push([m, b]); return out.sort((a, b) => a[0] - b[0]); }
+  /** was the WHOLE of minute m observed exactly? (exact observations already running at its start, and no outage inside it) */
+  liveComplete(m) { return this.obsFrom !== null && this.obsFrom <= m * 60 && this.cov.gapsIn(m * 60, m * 60 + 60).length === 0; }
+  /** THE authoritative candle of minute m, chosen by coverage — one rule for every candle reader (hour-scale use only):
+   *    a fully observed live minute            → the live candle (back-fill never replaces complete live data)
+   *    a PARTIAL live minute (cut by an outage, or begun before exact observation started) with an accepted back-filled candle
+   *                                            → the back-filled candle: it covers the whole minute
+   *    a partial live minute with no back-fill → the live fragment (all that is known)
+   *    no live candle                          → the accepted back-filled candle, if any
+   *  The two are never added together: a repaired whole-minute candle already contains the trades of the live fragment. */
+  barAt(m) { const lv = this.bars.get(m), bf = this.bf.get(m); if (!lv) return bf ?? null; if (!bf) return lv; return this.liveComplete(m) ? lv : bf; }
+  /** authoritative candles with minute index in [m0, m1), in time order */
+  barsIn(m0, m1) { const out = [], seen = new Set(); for (const m of this.bars.keys()) if (m >= m0 && m < m1) { out.push([m, this.barAt(m)]); seen.add(m); } for (const [m, b] of this.bf) if (m >= m0 && m < m1 && !seen.has(m)) out.push([m, b]); return out.sort((a, b) => a[0] - b[0]); }
   buyersIn(m0, m1) { const s = new Set(); for (const [, b] of this.barsIn(m0, m1)) for (const u of b.buyers) s.add(u); return s.size; }
 }

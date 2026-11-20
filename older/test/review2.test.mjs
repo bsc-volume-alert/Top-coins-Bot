@@ -275,3 +275,63 @@ test("watch list: a token the provider stops pricing is dropped after 10 misses 
   w.px.set(D, 2e-5); assert.equal(po2.add(w.tok(D), "rediscovery"), true, "discovery brings it back when it trades again"); assert.equal(eng2.coins.get(D).info.unpriced, null);
 });
 async function sampledEntry2(w, eng, po, M) { w.px.set(M, 1e-4); po.add(w.tok(M), "t"); for (let i = 0; i < 31; i++) { w.t += 10; await po.sweep(); } w.px.set(M, 2.05e-4); w.t += 10; await po.sweep(); w.t += 1.1; await po.quotes(); return [...eng.entries.values()].find((x) => x.mint === M); }
+
+// ---- fourth review (ChatGPT on e511f2f, 20 Nov 2026 19:51 UK): F1 the authoritative candle; F2–F4 its three non-blocking points ----
+test("F1 one rule for the authoritative candle: a live minute cut by an outage yields to an accepted repair; a fully observed live minute is kept; never both added", () => {
+  const cov = new Coverage(); cov.up(0); const sr = new Series("M", cov); sr.startLive(0);
+  sr.add(960, 1.0, 5, true, "a"); sr.add(1000, 1.0, 5, true, "b");                 // minute 16: two prints, then the feed drops
+  cov.drop(1001); cov.up(1200);
+  const bars = [16, 17, 18, 19].map((m) => ({ m, o: 1.0, h: 1.5, l: 1.0, c: 1.5, v: 38 })); assert.equal(sr.addBars(bars, { from: 1001, to: 1200, patchGap: true }).accepted, true);
+  sr.add(1200, 1.5, 7, true, "c"); sr.add(1230, 1.5, 7, true, "d");                 // minute 20: fully observed after the outage
+  sr.bf.set(20, { o: 9, h: 9, l: 9, c: 9, v: 999, nb: 0, ns: 0, buyers: new Set(), lowT: 1200, bf: true }); // even if a back-filled candle existed for it
+  assert.equal(sr.liveComplete(16), false); assert.equal(sr.liveComplete(20), true);
+  assert.equal(sr.barAt(16).c, 1.5, "minute 16: the repaired whole-minute candle (+50%), not the live fragment (0%)"); assert.equal(sr.barAt(16).v, 38, "its volume is the repair's, not repair + fragment");
+  assert.equal(sr.barAt(20).v, 14, "minute 20: complete live data is never replaced by back-fill"); assert.equal(sr.barAt(20).c, 1.5);
+  const all = sr.barsIn(16, 21); assert.deepEqual(all.map(([m]) => m), [16, 17, 18, 19, 20]); assert.equal(all.reduce((x, [, b]) => x + b.v, 0), 38 * 4 + 14, "no double counting");
+  const s2 = new Series("M", cov); s2.startLive(0); s2.add(1000, 1.0, 5, true, "b"); assert.equal(s2.barAt(16).v, 5, "a partial minute with no repair: the fragment is all that is known");
+});
+
+test("F1 SLOW-BUILD: a +50% candle hidden behind a partial live candle is seen after the repair, and the entry is refused", () => {
+  const e = mkEngine(); e.feedUp(T0); e.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 4 * H }); const notes = []; e.store = { saveNote: (m, n) => notes.push(n), saveEntry() {}, saveDecision() {}, saveBar() {}, feedEvent() {}, setCoinMode() {} };
+  path(e, T0, T0 + 4 * H + 60, () => 50_000); const t1 = T0 + 4 * H + 60; path(e, t1, t1 + 35 * 60, (t) => 50_000 + (t - t1) / 60 * 300);
+  const tm = t1 + 35 * 60, M = Math.floor(tm / 60); swap(e, tm + 1, 61_000);                               // the live fragment of minute M: open = close = 61K
+  e.feedDown(tm + 2); e.feedUp(tm + 120);
+  const sr = e.coins.get("MintAAApump").series; assert.equal(sr.addBars([{ m: M, o: 6.1e-5, h: 9.15e-5, l: 6.1e-5, c: 9.15e-5, v: 100 }, { m: M + 1, o: 9.15e-5, h: 9.15e-5, l: 9.15e-5, c: 9.15e-5, v: 50 }], { from: tm + 2, to: tm + 120, patchGap: true }).accepted, true);
+  path(e, tm + 120, tm + 120 + 20 * 60, (t) => 92_000 + (t - tm - 120) / 60 * 1_000);
+  const low = [...e.entries.values()].filter((x) => x.families.includes("LOW4H")); assert.equal(low.length, 1, "LOW4H itself still enters (the outage was repaired for hour-scale windows)");
+  assert.ok(!low[0].families.includes("SLOW-BUILD"), "SLOW-BUILD refused: " + low[0].families.join()); assert.ok(notes.some((n) => n.family === "SLOW-BUILD" && /above \+20%/.test(n.reason) && n.detail.max_candle_gain >= 0.49));
+});
+
+test("F1 HH-BREAK: volume of repaired minutes counts in the signal window, so a qualifying break is not missed", () => {
+  const run = (repair) => { const e = mkEngine(); e.feedUp(T0); e.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 3.5 * H }); path(e, T0, T0 + 4.5 * H, () => 100_000, 60, { sol: 1 }); // $100 a minute baseline → 15-min buckets of $1,500, threshold $3,000
+    const t1 = T0 + 4.5 * H, sr = e.coins.get("MintAAApump").series;
+    for (let k = 0; k < 14; k++) { const a = t1 + k * 60; swap(e, a, 100_000, { sol: 0.1 }); e.feedDown(a + 1); e.feedUp(a + 50);      // each minute: one $10 print, then 49 s unseen
+      if (repair) assert.equal(sr.addBars([{ m: Math.floor(a / 60), o: 1e-4, h: 1e-4, l: 1e-4, c: 1e-4, v: 300 }], { from: a + 1, to: a + 50, patchGap: true }).accepted, true); }
+    swap(e, t1 + 14 * 60 + 5, 101_000, { sol: 3 }); return [...e.entries.values()].find((x) => x.families.includes("HH-BREAK")); };
+  const h = run(true); assert.ok(h, "entered: the repaired minutes carry $300 each"); const d = h.cands.find((c) => c.family === "HH-BREAK").detail; assert.equal(d.vol15, 100 + 14 * 300, "repaired volume, not the $10 fragments and not both"); assert.ok(d.vol15 >= 2 * d.base_median);
+  assert.equal(run(false), undefined, "control: without a repair those windows are not covered and nothing is claimed");
+});
+
+test("F2 compression keeps the first buyer through buy → sell → buy in one second", async () => {
+  const { RAW_CAP } = await import("../src/spec.mjs"); const cov = new Coverage(); cov.up(0); const sr = new Series("M", cov); sr.startLive(0);
+  for (let k = 0; k < RAW_CAP; k++) sr.add(100 + k * 0.5, 1, 1, false); const t = 100 + RAW_CAP * 0.5 + 10;
+  sr.add(t, 1, 200, true, "walletA"); sr.add(t + 0.1, 1, 50, false); sr.add(t + 0.2, 1, 100, true, "walletB");
+  const w = sr.winStats(t - 1, t + 1); assert.equal(w.buyers, 2, "walletA survives the sell in between"); assert.equal(w.compressed, true); assert.ok(Math.abs(w.top_buyer_share - 2 / 3) < 1e-3); assert.equal(w.vol_usd, 350);
+});
+
+test("F3 a coin that goes quiet for hours keeps its standing price: the wake-up trade is measured against it", () => {
+  const e = mkEngine(); e.feedUp(T0); e.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 30 * 24 * H }); path(e, T0, T0 + 600, () => 60_000, 10);
+  const sr = e.coins.get("MintAAApump").series; for (let t = T0 + 660; t <= T0 + 6 * H; t += 60) { e.tick(t); e.prune(t); }       // six silent hours: observations and bars age out
+  assert.equal(sr.raw.length, 0); assert.equal(sr.bars.size, 0); assert.ok(sr.anchor && Math.abs(sr.anchor[1] - 6e-5) < 1e-12, "the last exact price is kept as the anchor");
+  const p = sr.priceAt(T0 + 6 * H, true); assert.equal(p.src, "anchor"); assert.ok(Math.abs(p.px - 6e-5) < 1e-12);
+  e.onSwap(ev(T0 + 6 * H + 5, 125_000));                                                                        // the wake-up trade: 2.08× the standing price
+  const f = [...e.entries.values()].find((x) => x.families.includes("FAST-1M")); assert.ok(f, "the wake-up double is seen"); const d = f.cands.find((c) => c.family === "FAST-1M").detail; assert.equal(d.low_carried_in, true); assert.ok(Math.abs(d.low_px - 6e-5) < 1e-12);
+  e.coinLost("MintAAApump", T0 + 6 * H + 6); assert.equal(sr.anchor, null, "a loss of the coin's data clears the anchor: nothing before it is continuous");
+});
+
+test("F4 audit rows: a rejected back-fill is stored with its label and never overwrites a live row", () => {
+  const st = new Store(tmpDb()); st.saveBar("M", 10, { o: 1, h: 1, l: 1, c: 1, v: 5, nb: 1, ns: 0, buyers: new Set(["a"]) });
+  st.saveBackfillBar("M", 10, { o: 9, h: 9, l: 9, c: 9, v: 9 }, true); st.saveBackfillBar("M", 11, { o: 2, h: 2, l: 2, c: 2, v: 2 }, false); st.saveBackfillBar("M", 12, { o: 3, h: 3, l: 3, c: 3, v: 3 }, true);
+  const rows = Object.fromEntries(st.db.prepare("SELECT m, c, src FROM bars WHERE mint='M' ORDER BY m").all().map((r) => [r.m, r]));
+  assert.equal(rows[10].src, "live"); assert.equal(rows[10].c, 1); assert.equal(rows[11].src, "backfill-rejected"); assert.equal(rows[12].src, "backfill");
+});

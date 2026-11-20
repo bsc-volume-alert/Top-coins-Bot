@@ -33,7 +33,7 @@ export function startBackfill({ engine, store, jup = null, log = console.log }) 
     const sr = c.series, liveFrom = sr.histFrom ?? now;
     // history window needed now: 4 h 15 min (+5 min margin) before the live start, but not before creation
     const from = Math.max(c.createTs, Math.floor(liveFrom - (4 * 3600 + 20 * 60))), to = Math.floor(liveFrom);
-    if (to > from) { const bars = await minuteBars(mint, from, to); bf.bars += bars.length; const r = sr.addBars(bars, { from, to }); if (!r.accepted) bf.emptyHistory = (bf.emptyHistory || 0) + 1; for (const b of bars) store?.saveBar(mint, b.m, { ...b, bf: true }); }
+    if (to > from) { const bars = await minuteBars(mint, from, to); bf.bars += bars.length; const r = sr.addBars(bars, { from, to }); if (!r.accepted) bf.emptyHistory = (bf.emptyHistory || 0) + 1; for (const b of bars) store?.saveBackfillBar(mint, b.m, b, r.accepted && sr.bf.has(b.m)); }
     // AGE-DOUBLE reference for the coin's current group (and the next one if it starts before live coverage)
     const ag = S.ageGroupOf(now - c.createTs);
     if (ag) {

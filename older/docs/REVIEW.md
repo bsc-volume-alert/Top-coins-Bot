@@ -173,6 +173,17 @@ Declared approximations that remain (accepted by the reviewer as labelled): the 
 ### Addendum to 6d — a regression found by our own monitoring (20 Nov 2026, 19:02 UK), fixed in the commit after e511f2f
 The M1 priority lanes put ALL routed quotes in the first lane. On the free Jupiter key (1 request/s) four open sampled positions need about 1.2 valuation quotes a second, so valuations took the whole allowance: 269 quotes against 11 price requests in five minutes, and price sampling of ~1,700 watched tokens stalled (the sampled side opened no entries). Fix: the first lane is only for an order that is DUE; routine valuations share the second lane with price samples, first come first served (test M1b). No trading rule changed. On the free key both are still slower than their targets; the Developer plan (10 requests/s) removes the contention.
 
+## 6e. Fourth independent review, commit e511f2f (ChatGPT, 20 Nov 2026 19:51 UK) — response
+
+Verdict received: T1 and T2 closed; **one blocker left** — the candle readers. Confirmed. Tests F1–F4 in `older/test/review2.test.mjs` (the three F1 tests were checked to FAIL on the old reader). 95 tests pass.
+
+| # | Finding (confirmed) | Fix |
+|---|---|---|
+| F1 | `barAt()` / `barsIn()` always preferred a live candle, even a fragment cut by an outage that an accepted back-fill had repaired. SLOW-BUILD entered past a hidden +50% candle; HH-BREAK missed a qualifying break (volume 15 against a real 114). | One rule, in one place (`Series.barAt`, used by `barsIn`): a fully observed live minute → the live candle; a PARTIAL live minute with an accepted back-filled candle → the back-filled candle; partial with no repair → the fragment; no live candle → the back-filled one. A minute is fully observed when exact observation was already running at its start and no outage touches it (`liveComplete`). The two are never added together. |
+| F2 (non-blocking) | buy → sell → buy inside a compressed second lost the first buyer. | Buyers already merged are kept whatever sides follow. |
+| F3 (non-blocking) | After a quiet coin's history aged out, the wake-up trade had no standing price to be measured against, so a wake-up double was silently missed. | The newest exact observation leaving the buffer is kept as an anchor; the exact price path falls back to it. A loss of the coin's data clears it. This is the rule as written ("including the price standing at the window's start"), now also true after more than 4 h 30 min of silence — it will ADD entries on coins that wake from a long sleep. |
+| F4 (non-blocking) | Rejected back-fill bars were saved to SQLite unlabelled. | Audit rows are labelled `backfill` (accepted into decision history) or `backfill-rejected`, and never overwrite a live row. Nothing reads them back into decisions. |
+
 ## 7. What is ready, and what is not
 **Ready:** the PumpSwap live path; the Solana-wide sampled path (against a simulated provider); the 448-row dashboard with method filters; the one-command validation run.
 **Remaining, in order:**

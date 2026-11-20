@@ -23,6 +23,7 @@ export class Store {
     db.prepare("INSERT OR IGNORE INTO meta VALUES ('spec', ?)").run(SPEC_VER);
     this.q = {
       bar: db.prepare("INSERT OR REPLACE INTO bars VALUES (?,?,?,?,?,?,?,?,?,?,?)"),
+      barBf: db.prepare("INSERT INTO bars VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(mint, m) DO UPDATE SET o=excluded.o, h=excluded.h, l=excluded.l, c=excluded.c, v=excluded.v, nb=excluded.nb, ns=excluded.ns, buyers=excluded.buyers, src=excluded.src WHERE bars.src <> 'live'"),
       dec: db.prepare("INSERT OR IGNORE INTO decisions VALUES (?,?,?,?,?,?)"),
       note: db.prepare("INSERT INTO notes (mint, ag, family, t, reason, detail) VALUES (?,?,?,?,?,?)"),
       ent: db.prepare("INSERT OR REPLACE INTO entries (id, mint, status, done, decision_t, json) VALUES (?,?,?,?,?,?)"),
@@ -34,6 +35,9 @@ export class Store {
     this.tx = db.transaction((fn) => fn());
   }
   saveBar(mint, m, b) { this.q.bar.run(mint, m, b.o, b.h, b.l, b.c, b.v, b.nb, b.ns, b.nbuyers ?? b.buyers?.size ?? 0, b.bf ? "backfill" : "live"); }
+  /** AUDIT copy of a back-filled bar with its acceptance label ('backfill' = accepted into decision history, 'backfill-rejected' =
+   *  returned by the provider but NOT used). It never overwrites a live row. Nothing reads these rows back into decisions. */
+  saveBackfillBar(mint, m, b, accepted) { this.q.barBf.run(mint, m, b.o, b.h, b.l, b.c, b.v || 0, b.nb || 0, b.ns || 0, 0, accepted ? "backfill" : "backfill-rejected"); }
   saveDecision(mint, ag, family, t, entryId, detail) { this.q.dec.run(mint, ag, family, t, entryId, JSON.stringify(detail ?? null)); }
   saveNote(mint, n) { this.q.note.run(mint, n.ag, n.family, n.t, n.reason, JSON.stringify(n.detail ?? null)); if (n.family === "SLOW-BUILD" || n.family === "LOW4H-LIQ25K" || (n.family === "SECOND-WAVE" && n.reason !== "window not covered")) this.q.dec.run(mint, n.ag, n.family, n.t, null, JSON.stringify({ rejected: n.reason, ...n.detail })); }
   saveEntry(e) { const done = e.status === "cancelled" || (e.status === "filled" && e.versions.every((v) => v.status === "closed") && e.runner.horizonDone) ? 1 : 0; this.q.ent.run(e.id, e.mint, e.status, done, e.decisionT, JSON.stringify(e)); }
