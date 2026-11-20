@@ -24,7 +24,11 @@ export class Poller {
   }
   /** after a restart: every sampled coin the engine restored goes back on the watch list (positions first), so open and pending
    *  entries keep receiving prices and quotes */
-  restore() { let n = 0; this.needMeta = []; for (const [mint, c] of this.engine.coins) { if (c.mode !== "polled" || this.watch.has(mint)) continue; if (!validDec(c.info.decimals)) { this.needMeta.push(mint); continue; } this.watch.set(mint, { decimals: c.info.decimals, circ: c.info.circ_supply ?? null, hot: !!this.engine.byMint.get(mint)?.size, lastT: null, lastReq: 0, miss: 0, mc: null }); this.seen.add(mint); c.series.histFrom = null; c.series.obsFrom = null; n++; } this.stats.restored = n; this.stats.restoreNoMeta = this.needMeta.length; return n; }
+  restore() { let n = 0; this.needMeta = []; for (const [mint, c] of this.engine.coins) { if (c.mode !== "polled" || this.watch.has(mint)) continue;
+      // a token the provider had stopped pricing is not put back on the list (it would only use up the sampling allowance);
+      // discovery brings it back if it trades again. A token with a position is ALWAYS restored.
+      if (c.info.unpriced && !this.engine.byMint.get(mint)?.size) { this.stats.restoreSkippedUnpriced = (this.stats.restoreSkippedUnpriced || 0) + 1; continue; }
+      if (!validDec(c.info.decimals)) { if (this.engine.byMint.get(mint)?.size) this.needMeta.push(mint); else this.stats.restoreSkippedNoMeta = (this.stats.restoreSkippedNoMeta || 0) + 1; continue; } this.watch.set(mint, { decimals: c.info.decimals, circ: c.info.circ_supply ?? null, hot: !!this.engine.byMint.get(mint)?.size, lastT: null, lastReq: 0, miss: 0, mc: null }); this.seen.add(mint); c.series.histFrom = null; c.series.obsFrom = null; n++; } this.stats.restored = n; this.stats.restoreNoMeta = this.needMeta.length; return n; }
   /** restored sampled coins whose stored record lacks token metadata (written by an earlier version) are NOT skipped silently:
    *  their metadata is fetched again, positions first. A coin that still has none keeps its positions visible and flagged. */
   async repair() {
@@ -49,7 +53,7 @@ export class Poller {
     // AGE: the provider gives the FIRST POOL's creation, which is a LOWER BOUND on token age (the token existed before its pool).
     // It can only make a coin look younger than it is, so the 8-hour minimum is never broken; the age group may be understated.
     const createTs = tok.first_pool?.created ?? null;
-    this.engine.coin(tok.mint, { mode: "polled", createTs, t: this.now(), info: { population: "solana-wide", symbol: tok.symbol, decimals: tok.decimals, circ_supply: tok.circ_supply ?? null, origin, origin_evidence: tok.launchpad ? "provider launchpad field" : "none", venues: null, token_program: tok.token_program, discovery_source: source, price_source: "jupiter price v3", monitoring_mode: "polled", risk, create_src: createTs ? "jupiter firstPool.createdAt (pool creation: lower bound on token age, UNVERIFIED as token creation)" : null, valuation_def: this.valuation } });
+    this.engine.coin(tok.mint, { mode: "polled", createTs, t: this.now(), info: { unpriced: null, population: "solana-wide", symbol: tok.symbol, decimals: tok.decimals, circ_supply: tok.circ_supply ?? null, origin, origin_evidence: tok.launchpad ? "provider launchpad field" : "none", venues: null, token_program: tok.token_program, discovery_source: source, price_source: "jupiter price v3", monitoring_mode: "polled", risk, create_src: createTs ? "jupiter firstPool.createdAt (pool creation: lower bound on token age, UNVERIFIED as token creation)" : null, valuation_def: this.valuation } });
     const c = this.engine.coins.get(tok.mint); if (tok.circ_supply > 0) c.supply = tok.circ_supply;
     this.watch.set(tok.mint, { decimals: tok.decimals, circ: tok.circ_supply ?? null, hot: false, lastT: null, lastReq: 0, miss: 0, mc: tok.mcap ?? null });
     this.stats.by_origin[origin] = (this.stats.by_origin[origin] || 0) + 1; this.stats.risk[risk.status] = (this.stats.risk[risk.status] || 0) + 1; this.stats.discovered++;
@@ -91,7 +95,10 @@ export class Poller {
       }
       // an omitted token has NO observation for this sample: its coverage breaks at once (its history restarts when a price
       // returns) — a missing sample is never bridged
-      for (const mint of r.omitted) { const w = this.watch.get(mint); w.miss++; this.stats.omitted++; if (w.lastT != null || w.miss === 1) { this.engine.coinLost(mint, r.t); this.stats.lost++; w.lastT = null; } if (w.miss === 1) this.store?.saveNote(mint, { ag: null, family: "*", t: r.t, reason: "price provider omitted this token (missing coverage)", detail: {} }); }
+      for (const mint of r.omitted) { const w = this.watch.get(mint); w.miss++; this.stats.omitted++; if (w.lastT != null || w.miss === 1) { this.engine.coinLost(mint, r.t); this.stats.lost++; w.lastT = null; } if (w.miss === 1) this.store?.saveNote(mint, { ag: null, family: "*", t: r.t, reason: "price provider omitted this token (missing coverage)", detail: {} });
+        // a token omitted OMIT_DROP_AFTER times in a row, with no position and no active setup, leaves the watch list (recorded on the
+        // coin so a restart does not bring it back): it cannot be observed, and asking for it costs the others their samples
+        if (w.miss >= S.OMIT_DROP_AFTER && !this.engine.byMint.get(mint)?.size && !this.engine.coins.get(mint)?.sw) { this.watch.delete(mint); this.seen.delete(mint); this.stats.droppedUnpriced = (this.stats.droppedUnpriced || 0) + 1; const c = this.engine.coins.get(mint); if (c) { c.info.unpriced = Math.floor(r.t); this.store?.saveCoin(mint, { info: c.info }); } } }
     }
     return due.length;
   }

@@ -53,6 +53,7 @@ export const BUYERS_PER_BAR_CAP = 300;
 export const QUOTE_CHAIN_TOL = 1e-3;           // quote-side chain check: a mismatch above 0.1% of effective reserves is a discontinuity (smaller = fee dust, counted)
 export const FEE_MAX = 0.10;                  // a measured pool fee outside 0–10% is a failed measurement: counted, NOT installed
 export const BACKFILL_MAX_HOLE_S = 300;       // back-filled minute bars prove a window only where consecutive bars are ≤ 5 min apart
+export const OMIT_DROP_AFTER = 10;             // a sampled token the price provider omits this many times in a row (no position, no setup) leaves the watch list
 export const SCALE_QUOTE_MAX_SPREAD_S = 5;    // the routed quotes of one half-sale must have been requested within 5 s of each other
 export const CHECKPOINT_S = 1;                // open positions' peaks are saved at most this long after they change
 export const BUYER_RAW_KEEP_S = 6 * 60;       // exact per-trade buyer wallets kept this long (the 1/3/5-minute entry measurements)

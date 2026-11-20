@@ -263,3 +263,15 @@ test("M1b routine position valuations do not starve price sampling: only an orde
   await Promise.all([first, ...jobs]); delete process.env.JUP_RPS;
   const rest = order.slice(1); assert.equal(rest[0], "due", "the due order goes first: " + order.join()); assert.deepEqual(rest.slice(1), ["valuation", "price", "valuation", "price"], "valuations and price samples keep their arrival order");
 });
+
+test("watch list: a token the provider stops pricing is dropped after 10 misses and not restored; a token with a position always is", async () => {
+  const db = tmpDb(), w = world(); let st = new Store(db), eng = mkEngine({ store: st }), po = new Poller({ engine: eng, jup: w.jup, store: st, now: () => w.t });
+  const M = "HeldCoin1", D = "DeadCoin1"; w.px.set(D, 1e-5); po.add(w.tok(D), "t"); const en = await sampledEntry2(w, eng, po, M); assert.equal(en.status, "filled");
+  w.px.delete(D); for (let k = 0; k < 11; k++) { w.t += 61; await po.sweep(); }
+  assert.ok(!po.watch.has(D)); assert.equal(po.stats.droppedUnpriced, 1); assert.ok(eng.coins.get(D).info.unpriced > 0);
+  w.px.delete(M); for (let k = 0; k < 12; k++) { w.t += 61; await po.sweep(); } assert.ok(po.watch.has(M), "a token with an open position is never dropped");
+  eng.tick(w.t + 2); st.db.close(); st = new Store(db); const eng2 = mkEngine({ store: st }); st.restore(eng2); const po2 = new Poller({ engine: eng2, jup: w.jup, store: st, now: () => w.t });
+  assert.equal(po2.restore(), 1); assert.ok(po2.watch.has(M) && !po2.watch.has(D)); assert.equal(po2.stats.restoreSkippedUnpriced, 1);
+  w.px.set(D, 2e-5); assert.equal(po2.add(w.tok(D), "rediscovery"), true, "discovery brings it back when it trades again"); assert.equal(eng2.coins.get(D).info.unpriced, null);
+});
+async function sampledEntry2(w, eng, po, M) { w.px.set(M, 1e-4); po.add(w.tok(M), "t"); for (let i = 0; i < 31; i++) { w.t += 10; await po.sweep(); } w.px.set(M, 2.05e-4); w.t += 10; await po.sweep(); w.t += 1.1; await po.quotes(); return [...eng.entries.values()].find((x) => x.mint === M); }
