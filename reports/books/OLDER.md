@@ -14,3 +14,11 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 - Helius streams are billed 2 credits per 0.1 MB; the validation run measures bytes. Broad LIVE monitoring is costed at roughly $250–500/month of credits and is not built.
 - Five corrections applied and tested (scale-out formula, USD at each observation's rate, SECOND-WAVE across age boundaries, HH-BREAK completed-minute windows, unusual fees flagged not clamped). 53 tests pass.
 - Still UNRESOLVED until the live run: reserve reading, fees against real transactions, Helius usage, memory, GMGN history depth, Jupiter coverage. See `older/docs/REVIEW.md` §6.
+
+## 20 Nov 2026, 13:44 UK — old bot removed from the server (owner's decision)
+- Owner: "we don't need the old data… start fresh". All eight old processes stopped and removed from pm2 (tracker, deployer, executor, fomo, scope, radar, launcher, agents).
+- Deleted permanently, on his instruction and by his own hand in Termius: `/root/tracker` (39 GB), `/root/launcher`, `/root/executor`, the four data-branch clones, `/root/research-mirror`; on the volume `tracker-db` (38 GB), `backups` (35 GB), `idle-dbs`, `archive`, `k100audit`. This includes the raw trades of 6–15 Nov, which were never archived. Results already pushed to GitHub (data branches, book notes, `trades-archive-pre-20261106`) are untouched.
+- Kept, verified byte-identical before anything was deleted: three settings files and two wallet key files, in `/root/keys-backup` and on the volume (`keys-backup`). Two different wallets. The paper project never reads the wallet files.
+- Server after: main disk 11% used (43 GB free), volume 1% used (95 GB free), no processes.
+- Setting names seen (values never shown): the tracker settings include a Birdeye key — worth checking what plan it is on, for the broad-live option.
+- Leftover: a cron entry for the deleted `push-data.sh` (to be removed), `/root/p5dump.cjs`, `/root/gmgn`.
