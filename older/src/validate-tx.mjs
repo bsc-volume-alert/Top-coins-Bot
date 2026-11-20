@@ -40,13 +40,14 @@ for (const s of sigs) {
     const bm = near(e.poolBase, b0) ? "pre" : near(e.poolBase, b1) ? "post" : "neither", qm = near(e.poolQuote, q0) ? "pre" : near(e.poolQuote, q1) ? "post" : "neither";
     R["base_" + bm]++; R["quote_" + qm]++;
     const vq = e.virtualQuote; if (vq == null) out.virtual.absent++; else if (vq === 0n) out.virtual.zero++; else if (vq < 0n) out.virtual.negative++; else out.virtual.positive++;
-    const B = Number(e.poolBase), E = Number(e.poolQuote + (vq ?? 0n)), b = Number(e.baseAmt), q = Number(e.quoteAmt);
+    const exactIn = e.isBuy && typeof e.ix === "string" && e.ix.startsWith("buy_exact_quote_in"); // same field rule as the decoder
+    const B = Number(e.poolBase), E = Number(e.poolQuote + (vq ?? 0n)), b = Number(e.baseAmt), q = Number(exactIn ? e.userQuote : e.quoteAmt), paidAmt = Number(exactIn ? e.quoteAmt : e.userQuote);
     const preQ = e.isBuy ? (E * b) / (B - b) : (E * b) / (B + b), postQ = e.isBuy ? (E * b) / (B + b) : (E * b) / (B - b), okPre = Math.abs(preQ - q) / q < 0.003, okPost = Math.abs(postQ - q) / q < 0.003;
     const c = okPre && okPost ? "both" : okPre ? "pre" : okPost ? "post" : "neither"; out.curve[c]++; if (b / B > 0.005) out.curve_large_trades[c]++;
     // the user's own SOL movement (fee payer, native balance, net of the transaction fee) vs the event's user amount
     const ui = keys.indexOf(e.user); let userOk = null;
-    if (ui >= 0) { const dl = tx.meta.postBalances[ui] - tx.meta.preBalances[ui] + (ui === 0 ? tx.meta.fee : 0); userOk = Math.abs(Math.abs(dl) - Number(e.userQuote)) / Number(e.userQuote) < 0.02; out.user_amount[userOk ? "match" : "differ"]++; }
-    const fr = e.isBuy ? Number(e.userQuote) / q - 1 : 1 - Number(e.userQuote) / q; out.fee_rate[e.isBuy ? "buy" : "sell"].push(+fr.toFixed(5));
+    if (ui >= 0) { const dl = tx.meta.postBalances[ui] - tx.meta.preBalances[ui] + (ui === 0 ? tx.meta.fee : 0); userOk = Math.abs(Math.abs(dl) - paidAmt) / paidAmt < 0.02; out.user_amount[userOk ? "match" : "differ"]++; }
+    const fr = e.isBuy ? paidAmt / q - 1 : 1 - paidAmt / q; out.fee_rate[e.isBuy ? "buy" : "sell"].push(+fr.toFixed(5));
     out.scored++;
     if (out.samples.length < 12) out.samples.push({ sig: s.signature, slot: tx.slot, ix: e.ix, type: e.type, event: { pool_base: String(e.poolBase), pool_quote: String(e.poolQuote), virtual_quote: vq == null ? null : String(vq), base_amt: String(e.baseAmt), quote_amt: String(e.quoteAmt), user_quote: String(e.userQuote), lp_bps: e.lpBps, protocol_bps: e.protoBps, creator_bps: e.creatorBps, cashback_bps: e.cashbackBps, buyback_bps: e.buybackBps, holder_bps: e.holderBps }, vault: { base_pre: b0, base_post: b1, quote_pre: q0, quote_post: q1 }, reserves_are: { base: bm, quote: qm }, curve_fit: c, user_amount_matches: userOk, fee_rate: +fr.toFixed(5) });
   }

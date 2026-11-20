@@ -1,0 +1,181 @@
+{
+ "at": "2026-11-20T14:44:03.131Z",
+ "key_present": true,
+ "checks": [
+  {
+   "name": "token_info (open_timestamp vs migrated_timestamp vs creation fields)",
+   "ok": true,
+   "ms": 189,
+   "items": null,
+   "shape": [
+    "address",
+    "symbol",
+    "name",
+    "decimals",
+    "logo",
+    "banner",
+    "biggest_pool_address",
+    "open_timestamp",
+    "migrated_timestamp",
+    "holder_count",
+    "circulating_supply",
+    "total_supply",
+    "max_supply",
+    "liquidity",
+    "creation_timestamp",
+    "standard",
+    "trade_fee",
+    "total_fee",
+    "og",
+    "image_dup_count",
+    "visiting_count",
+    "launchpad",
+    "launchpad_status",
+    "launchpad_progress",
+    "launchpad_platform",
+    "migrated_pool",
+    "migration_market_cap",
+    "migration_market_cap_quote",
+    "ath_price",
+    "locked_ratio",
+    "price",
+    "pool",
+    "dev",
+    "link",
+    "stat",
+    "wallet_tags_stat",
+    "fee_distribution"
+   ],
+   "sample": "{\"open_timestamp\":0,\"migrated_timestamp\":0,\"creation_timestamp\":1754893539,\"launchpad\":\"\",\"biggest_pool_address\":\"58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2\",\"total_supply\":\"637310991\",\"circulating_supply\":\"637310991\"}"
+  },
+  {
+   "name": "kline_1m_0.07d_ago",
+   "ok": true,
+   "ms": 1592,
+   "items": 100,
+   "shape": [
+    "list"
+   ],
+   "sample": "[{\"time\":1795179840000,\"open\":\"70.97412288\",\"close\":\"71.0023216846\",\"high\":\"71.3624761\",\"low\":\"70.81775095\",\"volume\":\"325455.18956799\",\"source\":\"\",\"amount\":\"4583.89918229\"},{\"time\":1795179900000,\"open\":\"71.0023216846\",\"close\":\"70.89817946\",\"high\":\"71.32580378\",\"low\":\"70.78652274\",\"volume\":\"325407.449179\",\"source\":\"\",\"amount\":\"4585.44969074\"}]"
+  },
+  {
+   "name": "kline_1m_7d_ago",
+   "ok": true,
+   "ms": 3315,
+   "items": 100,
+   "shape": [
+    "list"
+   ],
+   "sample": "[{\"time\":1794581100000,\"open\":\"81.14354939\",\"close\":\"81.1108074\",\"high\":\"81.50981759\",\"low\":\"80.94482835\",\"volume\":\"490044.602784\",\"source\":\"\",\"amount\":\"6041.31668481\"},{\"time\":1794581160000,\"open\":\"81.1108074\",\"close\":\"81.19164156\",\"high\":\"81.43303472\",\"low\":\"81.011356354\",\"volume\":\"346778.14691799\",\"source\":\"\",\"amount\":\"4272.38954342\"}]"
+  },
+  {
+   "name": "kline_1m_30d_ago",
+   "ok": true,
+   "ms": 3351,
+   "items": 100,
+   "shape": [
+    "list"
+   ],
+   "sample": "[{\"time\":1792593900000,\"open\":\"107.35763682\",\"close\":\"107.35936647\",\"high\":\"107.51622394\",\"low\":\"106.822\",\"volume\":\"282996.78303399\",\"source\":\"\",\"amount\":\"2638.7768165\"},{\"time\":1792593960000,\"open\":\"107.35936647\",\"close\":\"107.20906124\",\"high\":\"107.51824982\",\"low\":\"106.7969\",\"volume\":\"262670.962476\",\"source\":\"\",\"amount\":\"2450.4696793\"}]"
+  },
+  {
+   "name": "kline_1m_60d_ago",
+   "ok": true,
+   "ms": 3361,
+   "items": 100,
+   "shape": [
+    "list"
+   ],
+   "sample": "[{\"time\":1790001900000,\"open\":\"117.90312422\",\"close\":\"118.32036941\",\"high\":\"119.33174224\",\"low\":\"116.79644048\",\"volume\":\"1069907.691403\",\"source\":\"\",\"amount\":\"9079.223116287998\"},{\"time\":1790001960000,\"open\":\"118.32036941\",\"close\":\"117.91583308\",\"high\":\"119.089316987\",\"low\":\"117.44874371\",\"volume\":\"1145003.701757\",\"source\":\"\",\"amount\":\"9709.094403799\"}]"
+  },
+  {
+   "name": "kline_1m_90d_ago",
+   "ok": true,
+   "ms": 3312,
+   "items": 100,
+   "shape": [
+    "list"
+   ],
+   "sample": "[{\"time\":1787409900000,\"open\":\"93.35186873\",\"close\":\"93.73352706\",\"high\":\"93.77092115\",\"low\":\"93.2\",\"volume\":\"413004.86331\",\"source\":\"\",\"amount\":\"4422.66841429\"},{\"time\":1787409960000,\"open\":\"93.73352706\",\"close\":\"93.37554429\",\"high\":\"93.75150445\",\"low\":\"93.24093799\",\"volume\":\"196426.587776\",\"source\":\"\",\"amount\":\"2104.086556876999\"}]"
+  },
+  {
+   "name": "rank_1h",
+   "ok": true,
+   "ms": 3403,
+   "items": 100,
+   "shape": [
+    "rank"
+   ],
+   "sample": "[{\"id\":0,\"chain\":\"sol\",\"address\":\"J6vWYq5UDTNrv5ufPPes2iD8kRAtMRBqwiJdYFQZpump\",\"name\":\"Huss\",\"symbol\":\"Huss\",\"logo\":\"https://gmgn.ai/external-res/bedb051984a3bfebc27c1020e4221eb0_v2.webp\",\"price\":0.0000139204,\"price_change_percent\":524.201,\"price_change_percent1m\":-48.7627,\"price_change_percent5m\":-33.5137,\"price_change_percent1h\":524.201,\"volume\":161680,\"liquidity\":6543.1,\"market_cap\":13188.2,\"total_supply\":947403823,\"initial_liquidity\":12287,\"history_highest_market_cap\":35208,\"swaps\":5132,\"bu"
+  },
+  {
+   "name": "trenches_completed (graduated list)",
+   "ok": true,
+   "ms": 5234,
+   "items": 60,
+   "shape": [
+    "completed",
+    "near_completion",
+    "new_creation"
+   ],
+   "sample": "[{\"address\":\"J2AMnMpJV971vzGnTMZiKFARCkE8cPWS6i7karMpzu5F\",\"bot_degen_count\":1,\"bot_degen_rate\":0,\"bundler_mhr\":0,\"bundler_trader_amount_rate\":0,\"burn_status\":\"unknown\",\"buy_tax\":0,\"buys_24h\":4,\"callout_count\":0,\"chain\":\"sol\",\"co_d\":false,\"complete_timestamp\":1795185864,\"created_timestamp\":1795185864,\"creator\":\"GwM8npMmB5WLv3H3HA5N61zvYqpAuMAUurFFjzqPT2Ua\",\"creator_balance_rate\":0.1995,\"creator_created_count\":4,\"creator_created_inner_count\":0,\"creator_created_open_count\":4,\"creator_created_open_"
+  },
+  {
+   "name": "token_info of a graduated coin (does open_timestamp precede migration?)",
+   "ok": true,
+   "ms": 3015,
+   "items": null,
+   "shape": [
+    "address",
+    "symbol",
+    "name",
+    "decimals",
+    "logo",
+    "banner",
+    "biggest_pool_address",
+    "open_timestamp",
+    "migrated_timestamp",
+    "holder_count",
+    "circulating_supply",
+    "total_supply",
+    "max_supply",
+    "liquidity",
+    "creation_timestamp",
+    "standard",
+    "trade_fee",
+    "total_fee",
+    "og",
+    "image_dup_count",
+    "visiting_count",
+    "launchpad",
+    "launchpad_status",
+    "launchpad_progress",
+    "launchpad_platform",
+    "migrated_pool",
+    "migration_market_cap",
+    "migration_market_cap_quote",
+    "ath_price",
+    "locked_ratio",
+    "price",
+    "pool",
+    "dev",
+    "link",
+    "stat",
+    "wallet_tags_stat",
+    "fee_distribution"
+   ],
+   "sample": "{\"address\":\"J2AMnMpJV971vzGnTMZiKFARCkE8cPWS6i7karMpzu5F\",\"open_timestamp\":1795185864,\"migrated_timestamp\":1795185864,\"open_before_migration\":false}"
+  }
+ ],
+ "rate_headers": {
+  "x-ratelimit-limit": "5",
+  "x-ratelimit-remaining": "3"
+ },
+ "counters": {
+  "calls": 9,
+  "errors": 0,
+  "limited": 0,
+  "banned": 0,
+  "lastErr": ""
+ }
+}

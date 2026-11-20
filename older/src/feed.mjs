@@ -10,7 +10,7 @@
 import WebSocket from "ws";
 import { PUMPSWAP_PROGRAM, WSOL, eventsFromLogs, applyEvent, bs58, isCanonical } from "./decoder.mjs";
 
-export const fs = { msgs: 0, events: 0, emitted: 0, pools: 0, held: 0, replayed: 0, overflow: 0, nonSol: 0, nonCanonical: 0, rejected: 0, lookups: 0, lookupCalls: 0, lookupFail: 0, reconnects: 0, lastMsg: null, nonSolQuotes: {}, bytes: 0, failedTx: 0, dupes: 0, connected: false, lagMsSum: 0, lagN: 0 };
+export const fs = { msgs: 0, events: 0, emitted: 0, pools: 0, held: 0, replayed: 0, overflow: 0, nonSol: 0, nonCanonical: 0, rejected: 0, lookups: 0, lookupCalls: 0, lookupFail: 0, lookupErrs: 0, lastLookupErr: "", baseIsSol: 0, reconnects: 0, lastMsg: null, nonSolQuotes: {}, bytes: 0, failedTx: 0, dupes: 0, connected: false, lagMsSum: 0, lagN: 0 };
 const HOLD_PER_POOL = 300, HOLD_POOLS = 20000;
 
 export async function rpc(method, params) {
@@ -30,7 +30,7 @@ export function startFeed({ engine, store, backfill = null, pools /* Map pool â†
   const hold = new Map(), queue = new Set(), mem = new Map(); const seen = new Set(), seenQ = [];
   let ws = null, watchdog = null;
   const emit = (e, info, t, meta, replay = false) => {
-    const cls = poolClass(info); if (cls === "non-sol") { fs.nonSol++; fs.nonSolQuotes[info.quote] = (fs.nonSolQuotes[info.quote] || 0) + 1; return; } if (cls === "non-canonical") { fs.nonCanonical++; return; }
+    const cls = poolClass(info); if (cls === "non-sol") { fs.nonSol++; if (info.mint === WSOL) fs.baseIsSol++; const k = (info.mint === WSOL ? "SOL" : String(info.mint).slice(0, 6)) + "/" + String(info.quote).slice(0, 8); fs.nonSolQuotes[k] = (fs.nonSolQuotes[k] || 0) + 1; return; } if (cls === "non-canonical") { fs.nonCanonical++; return; }
     let p = mem.get(e.pool); if (!p) mem.set(e.pool, (p = {}));
     const r = applyEvent(p, e);
     if (!r) { if (e.type !== "sweep") { fs.rejected++; engine.coinLost(info.mint, t); mem.set(e.pool, {}); } return; }
@@ -45,15 +45,27 @@ export function startFeed({ engine, store, backfill = null, pools /* Map pool â†
     if (h.overflow) engine.coinLost(info.mint, h.items[0][1]);
     for (const [e, t, meta] of h.items) { fs.replayed++; emit(e, info, t, meta, true); }
   };
+  // Pool look-ups, batched. A failing batch is never retried whole for ever (run 2: one bad batch blocked all later look-ups):
+  // it is split in half and retried; a single pool that fails 3 times is dropped and its coin's held events are released
+  // as lost history. The last error text is kept for the status page.
+  const tries = new Map();
+  async function lookup(batch) {
+    try {
+      fs.lookupCalls++; const res = await rpc("getMultipleAccounts", [batch, { encoding: "base64", dataSlice: { offset: 0, length: 203 } }]);
+      res.value.forEach((acc, i) => { fs.lookups++; const p = acc ? parsePool(acc.data[0]) : null; if (!p) { fs.lookupFail++; hold.delete(batch[i]); pools.set(batch[i], { mint: null, quote: null, creator: null, cls: "non-sol", unreadable: true }); return; } resolved(batch[i], { mint: p.baseMint, quote: p.quoteMint, creator: p.creator }); });
+    } catch (e) {
+      fs.lookupErrs++; fs.lastLookupErr = String(e.message).slice(0, 140);
+      if (batch.length > 1) { const h = Math.ceil(batch.length / 2); await new Promise((r) => setTimeout(r, 400)); await lookup(batch.slice(0, h)); await lookup(batch.slice(h)); return; }
+      const n = (tries.get(batch[0]) || 0) + 1; tries.set(batch[0], n);
+      if (n < 3) queue.add(batch[0]); else { tries.delete(batch[0]); fs.lookupFail++; hold.delete(batch[0]); }
+    }
+  }
   async function lookupLoop() {
     while (true) {
       await new Promise((r) => setTimeout(r, 1000));
       if (!queue.size) continue;
       const batch = [...queue].slice(0, 100); for (const p of batch) queue.delete(p);
-      try {
-        fs.lookupCalls++; const res = await rpc("getMultipleAccounts", [batch, { encoding: "base64", dataSlice: { offset: 0, length: 203 } }]);
-        res.value.forEach((acc, i) => { fs.lookups++; const p = acc ? parsePool(acc.data[0]) : null; if (!p) { fs.lookupFail++; hold.delete(batch[i]); return; } resolved(batch[i], { mint: p.baseMint, quote: p.quoteMint, creator: p.creator }); });
-      } catch (e) { fs.lookupFail += batch.length; for (const p of batch) queue.add(p); await new Promise((r) => setTimeout(r, 5000)); }
+      await lookup(batch);
     }
   }
   function onMsg(raw) {

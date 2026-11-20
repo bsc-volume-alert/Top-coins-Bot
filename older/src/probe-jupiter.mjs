@@ -2,7 +2,9 @@
 //   node src/probe-jupiter.mjs [mint …] > jupiter-probe.json
 // Measures: price coverage (requested vs returned), fields actually present, a 0.2 SOL buy quote and the matching sell quote
 // (route, fee fields, response time), what /tokens/v2/recent and a category list return, and what `createdAt` means.
-import * as J from "./jupiter.mjs";
+import { readFileSync, existsSync } from "node:fs";
+for (const f of [process.env.OLDER_ENV || "/root/older/.env"]) if (existsSync(f)) for (const l of readFileSync(f, "utf8").split("\n")) { const m = l.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/); if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2].replace(/^["']|["']$/g, ""); }
+const J = await import("./jupiter.mjs");
 const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", out = { at: new Date().toISOString(), key: !!process.env.JUP_API_KEY, rps: Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0.5)), steps: [] };
 const step = async (name, fn) => { const t = Date.now(); try { out.steps.push({ name, ok: true, ms: Date.now() - t, ...(await fn()) }); } catch (e) { out.steps.push({ name, ok: false, ms: Date.now() - t, err: String(e.message).slice(0, 200) }); } };
 let sample = process.argv.slice(2);

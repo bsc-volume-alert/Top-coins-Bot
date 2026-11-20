@@ -58,17 +58,25 @@ if (process.env.OLDER_SOLANA_WIDE === "1") {
 const inv = () => { try { return JSON.parse(store.db.prepare("SELECT v FROM meta WHERE k='inventory'").get()?.v || "null"); } catch { return null; } };
 // the reserve reading counts as validated only when the owner sets OLDER_RES_VALIDATED=1 after reviewing docs/tx-validation.json
 const valid = () => (process.env.OLDER_RES_VALIDATED === "1" ? { by: "OLDER_RES_VALIDATED" } : null);
-startWeb({ port: Number(process.env.OLDER_PORT || 8793), store, engine, status: () => ({ started: now0, first_start: firstStart, idl: IDL_PIN,
+const web = startWeb({ port: Number(process.env.OLDER_PORT || 8793), store, engine, status: () => ({ started: now0, first_start: firstStart, idl: IDL_PIN,
   feed: { ...fs, lag_ms_avg: fs.lagN ? Math.round(fs.lagMsSum / fs.lagN) : null }, engine: { ...engine.stats, coins: engine.coins.size, open: [...engine.byMint.values()].reduce((s, x) => s + x.size, 0), feed_gaps: engine.feedCov.gaps.length, usd_down: engine.usdDown },
   decoder: { ...dec }, tx_validation: valid(), verify: { ...vf }, sol: { ...sp }, gmgn: { calls: gm.calls, errors: gm.errors, limited: gm.limited, banned: gm.banned, lastErr: gm.lastErr, rate_headers: gm.headers }, backfill: { ...bf }, backfillQ: backfill.size(), jupiter: { ...J.ju, key: !!process.env.JUP_API_KEY, rps: Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0.5)) }, poller: poller ? { ...poller.stats, cadence_avg_s: poller.stats.cadence.n ? +(poller.stats.cadence.sum / poller.stats.cadence.n).toFixed(1) : null, hot_s: poller.hotEvery, cold_s: poller.coldEvery } : null, inventory: inv(), mem_mb: Math.round(process.memoryUsage().rss / 2 ** 20) }) });
 log(`[older] started, spec ${SPEC_VER}, paper only`);
+
+// ---- monitoring copy: every 5 minutes the dashboard's own data is written to $OLDER_OUT/pub/state.json (no keys in it);
+// scripts/publish.sh pushes that folder to the GitHub branch "older-data" so the run can be watched and reviewed remotely
+if (process.env.OLDER_OUT && !process.env.OLDER_RUN_MINUTES) {
+  const { writeFileSync, mkdirSync } = await import("node:fs"); const dir = process.env.OLDER_OUT + "/pub"; mkdirSync(dir, { recursive: true });
+  const dump = () => { try { for (const pop of ["", "pumpswap-canonical", "solana-wide"]) writeFileSync(`${dir}/state${pop ? "-" + pop : ""}.json`, JSON.stringify(web.state(pop))); } catch (e) { log("[pub] " + e.message); } };
+  setTimeout(dump, 60000); setInterval(dump, 300000);
+}
 
 // ---- bounded validation run: OLDER_RUN_MINUTES=N writes a snapshot every minute to $OLDER_OUT/validation-run.json and exits after N minutes
 if (process.env.OLDER_RUN_MINUTES) {
   const { writeFileSync } = await import("node:fs"); const N = Number(process.env.OLDER_RUN_MINUTES), outF = (process.env.OLDER_OUT || ".") + "/validation-run.json", snaps = [];
   let lagMax = 0, lastTick = Date.now(); setInterval(() => { const d = Date.now() - lastTick - 100; if (d > lagMax) lagMax = d; lastTick = Date.now(); }, 100); // event-loop backlog
   const snap = () => { const d = store.disk(), mb = fs.bytes / 1e6; snaps.push({ min: snaps.length, at: new Date().toISOString(), rss_mb: Math.round(process.memoryUsage().rss / 2 ** 20), heap_mb: Math.round(process.memoryUsage().heapUsed / 2 ** 20), db_mb: d.db_mb, wal_mb: d.wal_mb, free_gb: d.free_gb, bars: d.bars,
-    feed: { connected: fs.connected, msgs: fs.msgs, mb: +mb.toFixed(1), helius_stream_credits: Math.round((mb / 0.1) * 2), events: fs.events, emitted: fs.emitted, failed_tx: fs.failedTx, dupes: fs.dupes, held: fs.held, replayed: fs.replayed, rejected: fs.rejected, non_canonical: fs.nonCanonical, non_sol: fs.nonSol, non_sol_quote_mints: Object.entries(fs.nonSolQuotes).sort((a, b) => b[1] - a[1]).slice(0, 8), lookup_fail: fs.lookupFail, reconnects: fs.reconnects, lookup_calls: fs.lookupCalls, lag_ms_avg: fs.lagN ? Math.round(fs.lagMsSum / fs.lagN) : null },
+    feed: { connected: fs.connected, msgs: fs.msgs, mb: +mb.toFixed(1), helius_stream_credits: Math.round((mb / 0.1) * 2), events: fs.events, emitted: fs.emitted, failed_tx: fs.failedTx, dupes: fs.dupes, held: fs.held, replayed: fs.replayed, rejected: fs.rejected, non_canonical: fs.nonCanonical, non_sol: fs.nonSol, non_sol_quote_mints: Object.entries(fs.nonSolQuotes).sort((a, b) => b[1] - a[1]).slice(0, 8), lookup_fail: fs.lookupFail, lookup_errs: fs.lookupErrs, last_lookup_err: fs.lastLookupErr, non_sol_base_is_sol: fs.baseIsSol, reconnects: fs.reconnects, lookup_calls: fs.lookupCalls, lag_ms_avg: fs.lagN ? Math.round(fs.lagMsSum / fs.lagN) : null },
     decoder: { ...dec }, engine: { ...engine.stats, coins: engine.coins.size, feed_gaps: engine.feedCov.gaps.length }, loop_lag_ms_max: lagMax, verify: { ...vf }, gmgn: { calls: gm.calls, limited: gm.limited }, backfill: { ...bf, queue: backfill.size() }, jupiter: { ...J.ju }, poller: poller?.stats ?? null, inventory: inv() }); lagMax = 0;
     writeFileSync(outF, JSON.stringify({ spec: SPEC_VER, minutes_planned: N, res_mode: dec.mode, note: "helius_stream_credits = 2 credits per 0.1 MB of WebSocket data received (Helius billing rule); RPC calls are extra and small", snaps }, null, 1)); };
   snap(); setInterval(snap, 60000); setTimeout(() => { snap(); log(`[older] validation run finished (${N} min) → ${outF}`); process.exit(0); }, N * 60000 + 500);

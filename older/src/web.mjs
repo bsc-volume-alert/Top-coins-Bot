@@ -23,6 +23,7 @@ export function startWeb({ port, store, engine, status }) {
     if (u.pathname === "/") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(PAGE); }
     res.writeHead(404); res.end();
   }).listen(port, () => console.log(`[web] :${port}`));
+  return { state };
 }
 
 const PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Older Coins Books</title>

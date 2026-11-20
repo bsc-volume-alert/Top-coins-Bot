@@ -84,7 +84,24 @@ Raw results: `docs/validation/run1-20261120/`. Server: 1 vCPU / 2 GB, Node 22, n
 | GMGN `creation_timestamp` meaning for pump coins; Jupiter `firstPool` for non-pump tokens | **UNRESOLVED** | graduated-list call was malformed (fixed); non-pump age remains a labelled lower bound |
 | GMGN key is on the Free plan; canonical-pool derivation | **PASS** | as before |
 
-**Standing rule:** the dashboard tile stays UNVALIDATED until run 2 confirms the decoder fix on live data.
+### Run 2, 20 Nov 2026 14:32–14:44 UTC (10 minutes; decoder fix + Solana-wide adapter on, Jupiter Free key)
+Raw results: `docs/validation/run2-20261120/`.
+
+| Check | Result | Evidence |
+|---|---|---|
+| `buy_exact_quote_in` fix on live data | **PASS** | swaps that fit neither reading: **6** of 39,056 (run 1: 8,398). The 6: 2 `multi_hop_swap` buys, 4 sells. 7,426 fit only "before", 0 only "after". Chains: 38,240 ok, 10 not. |
+| Reserve reading against transactions (second sample) | **PASS** | 67 of 67 "before"; multi-swap 30 of 30 |
+| Coins losing history through decoder rejects | **PASS** | 6 (run 1: 8,398) |
+| Creation times in bulk from Jupiter | **PASS** | 974 pump.fun coins dated in 10 minutes (GMGN alone: 38); 49 not found |
+| Solana-wide adapter, first live contact | **PASS (mechanics)** | 186 tokens registered (120 no launchpad, 34 pump.fun, 12 met-dbc, 10 stonkfun, 7 raydium-launchlab, others); 287 price requests, 4,568 prices, 149 omitted (3.2%), 0 errors, 0 rate limits; average sample gap 20 s on the Free key (target 10 s — needs the Developer plan); 338 curve-stage pump.fun coins skipped by design; 25 tokens blocked for transfer restrictions. No quote was needed (no entry). |
+| Pool look-ups | **FAIL → FIXED** | from minute 5 one failing batch was retried whole for ever, blocking later look-ups. Now split and retried, with the error text kept. |
+| Unusual fee readings | **OPEN** | 186 swaps with a fee outside 0–10% (0.5%). To be broken down by instruction in the shakedown run. |
+| Non-SOL pools | **NARROWED** | 67,211 events; the quote sides are many different tokens, not a stablecoin (top eight each 2,700–6,000 events). Most likely pools with SOL on the base side or token-to-token pools. The next run tallies base/quote pairs. These tokens are reachable through the Solana-wide adapter. |
+| Entries, fills, account-read check, routed quotes on live data | **UNRESOLVED** | no family fired in either 10-minute window (FAST needs 5 minutes of coverage, CONT 1 hour, LOW4H 4 hours). Needs the continuous shakedown run. |
+| Helius usage | measured again | 734 MB = 14,685 credits in 10 minutes (≈ 2.1 M a day) |
+| Memory | **PASS** | 177 MB after 10 minutes with both adapters on |
+
+**Standing rule:** the reserve reading is confirmed (two runs, 119 transactions). The dashboard tile stays UNVALIDATED until the shakedown run has produced entries whose account-read check agrees with the reconstructed pool state.
 
 ## 7. What is ready, and what is not
 **Ready:** the PumpSwap live path; the Solana-wide sampled path (against a simulated provider); the 448-row dashboard with method filters; the one-command validation run.
