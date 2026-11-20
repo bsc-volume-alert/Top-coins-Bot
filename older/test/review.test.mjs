@@ -30,7 +30,7 @@ test("B2 events of one transaction give ONE committed state; equal receive times
   const u = (v) => { const x = Buffer.alloc(8); x.writeBigUInt64LE(BigInt(v)); return x; }, i = (v) => { const x = Buffer.alloc(8); x.writeBigInt64LE(BigInt(v)); return x; }, pk = (n) => Buffer.alloc(32, n);
   const mk = (buy, B, Q, b) => { const q = buy ? (Q * b) / (B - b) : (Q * b) / (B + b); return decodeEvent(Buffer.concat([Buffer.from(buy ? DISC.BuyEvent : DISC.SellEvent), i(1), u(b), u(0), u(0), u(0), u(B), u(Q), u(q), u(0), u(0), u(0), u(0), u(q), u(q), pk(9), pk(2)]).toString("base64")); };
   const B = 200_000_000_000_000n, Q = 200_000_000_000n, b = 20_000_000_000_000n, q1 = (Q * b) / (B - b);
-  const p = {}, x = reduceTx(p, [mk(true, B, Q, b), mk(false, B - b, Q + q1, b)]);
+  const p = { vq: 0 }, x = reduceTx(p, [mk(true, B, Q, b), mk(false, B - b, Q + q1, b)]);
   assert.equal(x.buys, 1); assert.equal(x.sells, 1); assert.ok(Math.abs(x.last.state.base - 200_000_000) < 1e-3 && Math.abs(x.last.state.quote - 200) < 1e-6, "committed state = back where it started; the +23% intermediate price is never exposed");
 });
 
@@ -40,7 +40,8 @@ test("B3 coverage follows evidence: an empty back-fill extends nothing and repai
   cov.drop(2000); cov.up(2300); assert.equal(sr.addBars([], { from: 2000, to: 2300, patchGap: true }).accepted, false); assert.equal(sr.covered(1900, 2400), false, "empty reply: outage NOT repaired");
   const r = sr.addBars([{ m: Math.floor(2000 / 60), o: 1, h: 1, l: 1, c: 1 }, { m: Math.floor(2240 / 60), o: 1, h: 1, l: 1, c: 1 }], { from: 2000, to: 2300, patchGap: true });
   assert.equal(r.accepted, true); assert.equal(sr.covered(1900, 2400), true, "repaired at bar resolution for hour-scale windows"); assert.equal(sr.covered(1900, 2400, true), false, "but never for a fresh crossing or a seconds-scale window");
-  const part = sr.addBars([{ m: 10, o: 1, h: 1, l: 1, c: 1 }], { from: 0, to: 1000 }); assert.equal(part.from, 600); assert.equal(sr.histFrom, 600, "history reaches back only to the first bar actually returned");
+  const far = sr.addBars([{ m: 10, o: 1, h: 1, l: 1, c: 1 }], { from: 0, to: 1000 }); assert.equal(far.accepted, false, "a bar ending 5+ minutes before the known history does not connect to it"); assert.equal(sr.histFrom, 1000);
+  const part = sr.addBars([{ m: 12, o: 1, h: 1, l: 1, c: 1 }], { from: 0, to: 1000 }); assert.equal(part.from, 720); assert.equal(sr.histFrom, 720, "history reaches back only to the first bar actually returned");
   // engine level: FAST never fires across an outage that was 'repaired'
   const e = mkEngine(); fastSetup(e); e.feedDown(T0 + 601); e.feedUp(T0 + 620); e.coins.get("MintAAApump").series.addBars([{ m: Math.floor((T0 + 601) / 60), o: 1e-4, h: 1e-4, l: 1e-4, c: 1e-4 }], { from: T0 + 601, to: T0 + 620, patchGap: true });
   e.onSwap(ev(T0 + 621, 210_000)); e.onSwap(ev(T0 + 630, 215_000)); assert.equal(e.entries.size, 0);
@@ -111,9 +112,9 @@ test("B7 see exits.test 'a triggered sell survives a data failure': unresolved i
 test("B8 a break in the reserve chain is reported as a discontinuity and resets trust: the stale state cannot fill a pending order", () => {
   const u = (v) => { const x = Buffer.alloc(8); x.writeBigUInt64LE(BigInt(v)); return x; }, i = (v) => { const x = Buffer.alloc(8); x.writeBigInt64LE(BigInt(v)); return x; }, pk = (n) => Buffer.alloc(32, n);
   const buy = (B, Q, b) => { const q = (Q * b) / (B - b); return decodeEvent(Buffer.concat([Buffer.from(DISC.BuyEvent), i(1), u(b), u(0), u(0), u(0), u(B), u(Q), u(q), u(0), u(0), u(0), u(0), u(q), u(q), pk(9), pk(2)]).toString("base64")); };
-  const p = {}; assert.equal(applyEvent(p, buy(200_000_000_000_000n, 200_000_000_000n, 10n ** 12n)).discontinuity, false);
+  const p = { vq: 0 }; assert.equal(applyEvent(p, buy(200_000_000_000_000n, 200_000_000_000n, 10n ** 12n)).discontinuity, false);
   const r = applyEvent(p, buy(150_000_000_000_000n, 260_000_000_000n, 10n ** 12n)); assert.equal(r.discontinuity, true, "reserves jumped between two events: flagged, not silently accepted");
-  assert.equal(reduceTx({ base: 1, quote: 1 }, [buy(150_000_000_000_000n, 260_000_000_000n, 10n ** 12n)]).lost, true);
+  assert.equal(reduceTx({ base: 1, quote: 1, vq: 0 }, [buy(150_000_000_000_000n, 260_000_000_000n, 10n ** 12n)]).lost, true);
   // engine: after the feed marks the coin lost, the old state is not trusted for an order scheduled before the break
   const e = mkEngine(); fastSetup(e); e.onSwap(ev(T0 + 605, 210_000)); const en = [...e.entries.values()][0];
   e.coinLost("MintAAApump", T0 + 605.5); e.tick(T0 + 606.2); assert.equal(en.status, "pending", "not filled from the pre-break state");
@@ -129,7 +130,7 @@ test("B9 each quoted quantity keeps its own request/response time; an order only
   observe(e, Qs(0.42, 0.21, 1101.0, 1101.5), 1101.5);                     // half-quote requested at 1101.2 (after 1101.1) but the full quote was requested at 1100.7 (before): not eligible yet
   assert.equal(v.status, "scaling", "an older quote for another quantity cannot be borrowed");
   observe(e, Qs(0.40, 0.20, 1102.0, 1101.5), 1102.0);                     // both quantities now quoted after the scheduled time
-  assert.equal(v.status, "open"); assert.ok(v.half); assert.equal(v.half.t, 1102.0); assert.deepEqual(v.half.quotes.map((q) => q.resp_t).sort(), [1101.5, 1102.0], "each quote's own times are recorded, not one merged timestamp");
+  assert.equal(v.status, "open"); assert.ok(v.half); assert.equal(v.half.t, 1102.0); assert.deepEqual([v.half.quotes.half.resp_t, v.half.quotes.held_before.resp_t, v.half.quotes.remaining.resp_t], [1101.5, 1102.0, 1101.5], "each quote's own times are recorded, not one merged timestamp"); assert.ok(Math.abs(v.half.quote_spread_s - 0.5) < 1e-9);
   assert.ok(Math.abs(v.half.sol - (0.20 - 0.0005)) < 1e-12);
 });
 

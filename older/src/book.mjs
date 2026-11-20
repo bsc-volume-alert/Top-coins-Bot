@@ -34,9 +34,10 @@ function fillBuy(e, st, at, delay, minReq = null) {
   e.fill = { t: at, tok, cost: COST, delay_s: +delay.toFixed(3), state_age_s: q ? null : +(at - st.t).toFixed(3), fee_buy: q ? null : feeBuy(st), fee_src: feeSrc(st, "buy"),
     quote_sol: q ? null : st.quote, base: q ? null : st.base, px_sol: q ? S.STAKE_SOL / tok : (S.STAKE_SOL / (1 + feeBuy(st))) / tok,
     exec: q ? "routed-quote" : "reconstructed-pool-state", ...(q ? { quote: { req_t: st.buy.reqT ?? st.reqT, resp_t: st.buy.t ?? st.t, route: st.buy.route ?? null, router: st.buy.router ?? null, fee_bps: st.buy.feeBps ?? null, impact: st.buy.impact ?? null } } : {}) };
-  if (st.feeOdd) e.flags.push("unusual pool fee rate observed; used as observed");
-  // the position's first valuation: from the same state when it can price the sale (pool state); a quote-priced entry starts at
-  // cost and takes its first real valuation from its first sell quote — a missing valuation is never treated as a fall
+  // the position's first valuation: from the same state when it can price the sale (pool state). A quote-priced entry starts
+  // its high-water mark at COST and takes its first real valuation from its first sell quote. This is deliberate: if the price
+  // falls between the buy and the first sell quote, the stop must still be measured from what was paid — starting the peak at
+  // the first (already fallen) valuation would leave such a position without a stop. A missing valuation is never treated as a fall.
   const v0 = liqValue(st, tok) ?? COST; e.runner.maxX = v0 / COST;
   for (const v of e.versions) { v.tok = tok; v.peak = v0; v.maxX = v0 / COST; v.lastX = v0 / COST; v.lastT = at; }
   return true;
@@ -54,10 +55,16 @@ function execSell(e, v, st, at, delay, cov, minReq = null) {
     const part = e.fill.tok * S.SCALE_FRACTION, qp = sellQuote(st, part, minReq), qb = sellQuote(st, v.tok, minReq), qa = sellQuote(st, v.tok - part, minReq);
     if (!qp || !qb || !qa) return false;
     const val = (x) => Math.max(0, x.sol - S.TX_COST_SOL), before = val(qb), after = val(qa), sol = qp.sol - S.TX_COST_SOL;
-    if (q) { at = Math.max(qp.t, qb.t, qa.t); delay = at - v.schedT; }
+    // ROUTED QUOTES: the half, the full holding and the remainder are separate requests. They are one pricing state only if
+    // they were requested close together; otherwise the banked proceeds and the rescaled peak would mix different market
+    // moments. Too far apart → this order is NOT executed on them: it waits for a fresh, coherent set.
+    let spread = null;
+    if (q) { const rs = [qp.reqT, qb.reqT, qa.reqT]; spread = Math.max(...rs) - Math.min(...rs);
+      if (!(spread <= S.SCALE_QUOTE_MAX_SPREAD_S)) { v.scaleWaits = (v.scaleWaits || 0) + 1; return false; }
+      at = Math.max(qp.t, qb.t, qa.t); delay = at - v.schedT; }
     v.got += sol; v.tok -= part; if (before > v.peak) v.peak = before; // a new high seen at execution counts before rescaling
     v.peak = before > 0 ? v.peak * (after / before) : after;
-    v.half = { t: at, sol, delay_s: +delay.toFixed(3), trigger_value: v.trigValue, exec: q ? "routed-quote" : "reconstructed-pool-state", ...(q ? { quotes: [qp, qb].map((x) => ({ req_t: x.reqT, resp_t: x.t })) } : { state_age_s: +(at - st.t).toFixed(3) }) };
+    v.half = { t: at, sol, delay_s: +delay.toFixed(3), trigger_value: v.trigValue, exec: q ? "routed-quote" : "reconstructed-pool-state", ...(q ? { quotes: { half: { req_t: qp.reqT, resp_t: qp.t }, held_before: { req_t: qb.reqT, resp_t: qb.t }, remaining: { req_t: qa.reqT, resp_t: qa.t } }, quote_spread_s: +spread.toFixed(3), waited_for_coherent_quotes: v.scaleWaits || 0 } : { state_age_s: +(at - st.t).toFixed(3) }) };
     v.status = "open"; v.schedT = null; return true;
   }
   let sol = 0, used = null; if (v.tok > 0) { used = sellQuote(st, v.tok, minReq); if (!used) return false; sol = used.sol - S.TX_COST_SOL; }

@@ -60,12 +60,17 @@ test("4. HH-BREAK windows: signal [B−15 min, B), baseline sixteen buckets over
   assert.ok(d.windows.every((w) => w === 1500), "each baseline bucket = 15 completed minutes × 1 SOL × $100");
 });
 
-test("5. an unusual observed fee rate is used as observed, counted and flagged — never clamped into a tidy estimate", () => {
+test("5. an unusual observed fee rate is a FAILED measurement: counted, never installed, never clamped — the pool keeps the last rate it really showed", () => {
   const u = (v) => { const x = Buffer.alloc(8); x.writeBigUInt64LE(BigInt(v)); return x; }, i = (v) => { const x = Buffer.alloc(8); x.writeBigInt64LE(BigInt(v)); return x; }, pk = (n) => Buffer.alloc(32, n);
-  const B = 200_000_000_000_000n, Q = 200_000_000_000n, b = 2_000_000_000_000n, q = (Q * b) / (B - b), user = q + (q * 30n) / 100n; // the user paid 30% over the curve amount
-  const ev = Buffer.concat([Buffer.from(DISC.BuyEvent), i(1), u(b), u(0), u(0), u(0), u(B), u(Q), u(q), u(20), u(0), u(5), u(0), u(q), u(user), pk(9), pk(2)]).toString("base64");
-  const p = {}, n0 = dec.feeOdd, r = applyEvent(p, decodeEvent(ev));
-  assert.ok(Math.abs(p.feeBuy - 0.3) < 1e-6); assert.equal(dec.feeOdd, n0 + 1); assert.equal(r.state.feeOdd, true);
+  const B = 200_000_000_000_000n, Q = 200_000_000_000n, b = 2_000_000_000_000n, q = (Q * b) / (B - b);
+  const mk = (pct) => Buffer.concat([Buffer.from(DISC.BuyEvent), i(1), u(b), u(0), u(0), u(0), u(B), u(Q), u(q), u(20), u(0), u(5), u(0), u(q), u(q + (q * BigInt(pct)) / 1000n), pk(9), pk(2)]).toString("base64");
+  // no earlier rate: the 30% reading is not installed → the fill says the fee was assumed
+  const p = { vq: 0 }, n0 = dec.feeOdd, m0 = dec.feeNotMeasured, r = applyEvent(p, decodeEvent(mk(300)));
+  assert.equal(p.feeBuy, undefined); assert.equal(dec.feeOdd, n0 + 1); assert.equal(dec.feeNotMeasured, m0 + 1); assert.equal(r.state.feeBuy, null);
   const e = newEntry({ mint: "M", pool: "P", ag: "A1", t: 1000, families: ["LOW4H"], features: {}, mc: 1e5, px: 1 }); advance(e, 1001, { ...r.state, t: 999 }, yes);
-  assert.match(e.fill.fee_src, /UNUSUAL/); assert.ok(e.flags.some((f) => /unusual pool fee/.test(f))); assert.ok(Math.abs(e.fill.fee_buy - 0.3) < 1e-6);
+  assert.equal(e.fill.fee_src, "assumed"); assert.ok(Math.abs(e.fill.fee_buy - 0.003) < 1e-12);
+  // a real 1% reading is installed; a later nonsense reading (negative) does not replace it
+  const p2 = { vq: 0 }; applyEvent(p2, decodeEvent(mk(10))); assert.ok(Math.abs(p2.feeBuy - 0.01) < 1e-9);
+  const neg = Buffer.concat([Buffer.from(DISC.BuyEvent), i(1), u(b), u(0), u(0), u(0), u(B - b), u(Q + q), u((((Q + q) * b) / (B - b - b))), u(0), u(0), u(0), u(0), u((((Q + q) * b) / (B - b - b))), u((((Q + q) * b) / (B - b - b)) / 2n), pk(9), pk(2)]).toString("base64");
+  const r2 = applyEvent(p2, decodeEvent(neg)); assert.ok(r2, "the reserves of that event are still a valid observation"); assert.ok(Math.abs(r2.state.feeBuy - 0.01) < 1e-9, "−50% was not installed");
 });

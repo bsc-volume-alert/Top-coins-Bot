@@ -29,6 +29,7 @@ export class Store {
       feed: db.prepare("INSERT INTO feed (t, ev, detail) VALUES (?,?,?)"),
       coin: db.prepare("INSERT INTO coins (mint, pool, create_ts, create_src, pump_origin, first_seen, info) VALUES (?,?,?,?,?,?,?) ON CONFLICT(mint) DO UPDATE SET pool=COALESCE(coins.pool, excluded.pool), create_ts=COALESCE(coins.create_ts, excluded.create_ts), create_src=COALESCE(coins.create_src, excluded.create_src), pump_origin=COALESCE(coins.pump_origin, excluded.pump_origin), info=COALESCE(excluded.info, coins.info)"),
       last: db.prepare("UPDATE coins SET last_px=?, last_t=? WHERE mint=?"),
+      mode: db.prepare("UPDATE coins SET pool=COALESCE(?, pool), info=? WHERE mint=?"),
     };
     this.tx = db.transaction((fn) => fn());
   }
@@ -38,6 +39,8 @@ export class Store {
   saveEntry(e) { const done = e.status === "cancelled" || (e.status === "filled" && e.versions.every((v) => v.status === "closed") && e.runner.horizonDone) ? 1 : 0; this.q.ent.run(e.id, e.mint, e.status, done, e.decisionT, JSON.stringify(e)); }
   /** `pumpOrigin` column = launchpad/origin label; `info` = the launchpad-neutral record (venues, token program, sources, mode, risk…) */
   saveCoin(mint, { pool = null, createTs = null, createSrc = null, pumpOrigin = null, firstSeen = null, info = null } = {}) { this.q.coin.run(mint, pool, createTs, createSrc, pumpOrigin, firstSeen, info ? JSON.stringify(info) : null); }
+  /** a coin changed observation method (sampled → live): pool and record are overwritten, not merged */
+  setCoinMode(mint, pool, info) { this.q.mode.run(pool ?? null, JSON.stringify(info ?? {}), mint); }
   savePool(pool, i) { this.db.prepare("INSERT OR IGNORE INTO pools VALUES (?,?,?,?)").run(pool, i.mint, i.quote, i.creator ?? null); }
   loadPools() { const m = new Map(); for (const r of this.db.prepare("SELECT pool, mint, quote, creator FROM pools").iterate()) m.set(r.pool, { mint: r.mint, quote: r.quote, creator: r.creator }); return m; }
   saveLast(mint, c) { this.q.last.run(c.series.lastPx, c.series.lastT, mint); }
@@ -50,8 +53,14 @@ export class Store {
     // 2) one-entry flags
     for (const r of this.db.prepare("SELECT mint, ag, family FROM decisions").iterate()) engine.restoreDone(r.mint, r.ag, r.family);
     // 3) unfinished entries (pending, open, or with a sale still waiting for a price)
-    let maxId = 0;
-    for (const r of this.db.prepare("SELECT id, json, done FROM entries").iterate()) { maxId = Math.max(maxId, r.id); if (!r.done) engine.addEntry(JSON.parse(r.json)); }
+    const maxId = this.db.prepare("SELECT MAX(id) m FROM entries").get().m || 0;
+    for (const r of this.db.prepare("SELECT id, json FROM entries WHERE done = 0 ORDER BY id").all()) { // .all(): corrections below write to the database
+      const e = JSON.parse(r.json), want = e.exec === "routed-quote" ? "polled" : "live", c = engine.coin(e.mint);
+      // 4) the entry's own execution method decides how its coin is observed (see engine.forceMode). Two unfinished entries of
+      //    different methods on one coin cannot both be served: the first keeps the coin, the other is flagged, never hidden.
+      if (c.mode !== want) { if (engine.byMint.get(e.mint)?.size) { const f = "observation-method conflict after restart: this position cannot be priced by the coin's current method"; if (!e.flags.includes(f)) e.flags.push(f); }
+        else if (engine.forceMode(e.mint, want, e.pool)) { this.setCoinMode(e.mint, e.pool ?? null, c.info); this.feedEvent(Date.now() / 1000, "restore: coin mode corrected", `${e.mint} → ${want} (entry ${e.id})`); } }
+      engine.addEntry(e); }
     setNextId(maxId + 1);
   }
   /** the project's first-ever start (for the 24 h "startup" tag); set once */

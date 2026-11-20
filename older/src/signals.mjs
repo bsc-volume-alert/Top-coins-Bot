@@ -26,8 +26,9 @@ export function features(coin, o, low, hi1h, p15) {
   const hi4 = sr.highIn(t - 4 * 3600, t);
   // short-window trading at the decision, from decoded trades (live method). Sampled coins have prices only → null; their
   // 5-minute figures come from the provider snapshot recorded on the entry (entry.snap).
-  const live = coin.mode !== "polled", w1 = live ? sr.winStats(t - 60, t) : null, w3 = live ? sr.winStats(t - 180, t) : null, w5 = live ? sr.winStats(t - 300, t) : null;
-  const full60 = live && sr.histFrom != null && sr.histFrom <= t - 3600, vol60 = full60 ? sr.volIn(t - 3600, t) : null, prior = full60 ? (vol60 - w5.vol_usd) / 11 : null;
+  // A window is reported only when EXACT observations cover all of it (no back-fill, no outage): otherwise it is empty, never a partial count.
+  const live = coin.mode !== "polled", win = (s) => (live && sr.obsCovered(t - s, t) ? sr.winStats(t - s, t) : null), w1 = win(60), w3 = win(180), w5 = win(300);
+  const full60 = live && sr.obsCovered(t - 3600, t), vol60 = full60 ? sr.volIn(t - 3600, t) : null, prior = full60 && w5 ? (vol60 - w5.vol_usd) / 11 : null;
   return {
     w1, w3, w5, vol60_usd: vol60 != null ? Math.round(vol60) : null, vol_surge5: prior > 0 ? +(w5.vol_usd / prior).toFixed(2) : null, // last 5 min ÷ the average 5 min of the 55 min before
     age_s: Math.round(t - coin.createTs), mc: Math.round(o.mc), band: o.mc < 100e3 ? "40-100K" : o.mc < 250e3 ? "100-250K" : o.mc < 500e3 ? "250-500K" : "500K-1M",

@@ -52,9 +52,11 @@ test("pre/post evidence: each swap is scored against both hypotheses, consecutiv
   const f0 = dec.fitPost; assert.equal(applyEvent({}, decodeEvent(bad.toString("base64"))), null); assert.equal(dec.fitPost, f0 + 1);
 });
 
-test("older, shorter events still decode (no virtual reserves → counted, treated as 0)", () => {
+test("older, shorter events still decode; virtual reserves that were never seen are UNKNOWN, not zero → no state", () => {
   const e = decodeEvent(swap({ buy: false, B: B0, Q: Q0, b: 1_000_000_000n, truncate: 24 })); assert.equal(e.virtualQuote, null); assert.equal(e.creatorBps, 30);
-  const n = dec.noVirtual; assert.ok(applyEvent({}, e)); assert.equal(dec.noVirtual, n + 1);
+  const n = dec.noVirtual, k = dec.unknownVirtual; assert.equal(applyEvent({}, e), null, "unknown virtual reserves: not a trustworthy state"); assert.equal(dec.unknownVirtual, k + 1);
+  assert.ok(applyEvent({ vq: 0 }, e), "with the pool's virtual reserves known, the event is used"); assert.equal(dec.noVirtual, n + 2);
+  const dep = { type: "deposit", poolBase: 1000n, poolQuote: 1000n, baseAmt: 1n, quoteAmt: 1n }; assert.equal(applyEvent({}, dep), null, "a deposit on a pool whose virtual reserves are unknown gives no state"); assert.ok(applyEvent({ vq: 5 }, dep));
 });
 
 test("deposit / withdraw change reserves without a swap; a fee sweep is price-neutral", () => {
@@ -78,5 +80,5 @@ test("REAL transaction (20 Nov 2026 validation): buy_exact_quote_in carries the 
   const p = {}, r = applyEvent(p, ev("buy_exact_quote_in")); assert.ok(r, "read with the exact-quote-in field meaning, it fits");
   assert.ok(Math.abs(r.sol - 1536670 / 1e9) < 1e-12, "trade size = the curve amount");
   assert.ok(Math.abs(r.state.quote - Number(vaultPost + vq) / 1e9) < 2e-9, "derived post-swap effective reserves = the vault balance after the transaction + virtual reserves");
-  assert.ok(Math.abs(p.feeBuy - (1550502 / 1536670 - 1)) < 1e-12 && Math.abs(p.feeBuy - 0.0090) < 2e-4, "fee = 20 + 5 + 65 bps, exactly what the user paid over the curve amount"); assert.equal(r.state.feeOdd, false);
+  assert.ok(Math.abs(p.feeBuy - (1550502 / 1536670 - 1)) < 1e-12 && Math.abs(p.feeBuy - 0.0090) < 2e-4, "fee = 20 + 5 + 65 bps, exactly what the user paid over the curve amount"); assert.equal(r.state.feeOdd, undefined);
 });

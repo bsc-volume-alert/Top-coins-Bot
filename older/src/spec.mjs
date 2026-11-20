@@ -50,5 +50,10 @@ export const RAW_CAP = 6000;                  // per coin; beyond it, observatio
 export const BAR_KEEP_S = 4 * 3600 + 30 * 60; // in-memory minute bars (covers LOW4H's 4 h and HH-BREAK's 4 h 15 min)
 export const BAR_RETAIN_DAYS = 10;            // minute bars kept in the database
 export const BUYERS_PER_BAR_CAP = 300;
+export const QUOTE_CHAIN_TOL = 1e-3;           // quote-side chain check: a mismatch above 0.1% of effective reserves is a discontinuity (smaller = fee dust, counted)
+export const FEE_MAX = 0.10;                  // a measured pool fee outside 0–10% is a failed measurement: counted, NOT installed
+export const BACKFILL_MAX_HOLE_S = 300;       // back-filled minute bars prove a window only where consecutive bars are ≤ 5 min apart
+export const SCALE_QUOTE_MAX_SPREAD_S = 5;    // the routed quotes of one half-sale must have been requested within 5 s of each other
+export const CHECKPOINT_S = 1;                // open positions' peaks are saved at most this long after they change
 export const BUYER_RAW_KEEP_S = 6 * 60;       // exact per-trade buyer wallets kept this long (the 1/3/5-minute entry measurements)
 export const BUYERS_KEEP_S = 20 * 60;          // per-bar buyer wallet lists kept this long (the features read 15 minutes); older bars keep the count only

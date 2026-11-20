@@ -8,7 +8,7 @@ import { TX_COST_SOL, STAKE_SOL } from "./spec.mjs";
 export const DEFAULT_FEE = 0.003; // used ONLY when the pool has not yet shown a fee on that side; such fills are flagged fee_src='assumed'
 export const feeBuy = (st) => st.feeBuy ?? st.feeSell ?? DEFAULT_FEE;
 export const feeSell = (st) => st.feeSell ?? st.feeBuy ?? DEFAULT_FEE;
-export const feeSrc = (st, side) => isQuote(st) ? "inside the routed quote" : (st.feeOdd ? "event (UNUSUAL rate, used as observed)" : _feeSrc(st, side));
+export const feeSrc = (st, side) => isQuote(st) ? "inside the routed quote" : _feeSrc(st, side);
 const _feeSrc = (st, side) => ((side === "buy" ? st.feeBuy : st.feeSell) != null ? "event" : (st.feeBuy ?? st.feeSell) != null ? "other-side" : "assumed");
 
 // A second kind of state, { kind: "quote", reqT, t, buy: { sol, tok } | null, sells: [{ tok, sol }], route, ... }, carries ROUTED QUOTES

@@ -36,16 +36,23 @@ export class Engine {
     return c;
   }
   /** this coin's own data was lost from t (held swaps overflowed, state rejected…): its history and state restart at t */
-  coinLost(mint, t) { const c = this.coin(mint); c.series.histFrom = t; c.series.raw = []; c.series.prevT = null; c.lostAt = t; this.stats.coinLost = (this.stats.coinLost || 0) + 1; }
+  coinLost(mint, t) { const c = this.coin(mint); c.series.restartAt(t); c.series.raw = []; c.series.prevT = null; c.lostAt = t; this.stats.coinLost = (this.stats.coinLost || 0) + 1; }
   /** a pool created after the feed started: before it, the coin traded on the bonding curve, which this feed does not see */
-  historyFrom(mint, t) { const c = this.coin(mint); if (c.series.histFrom === null || c.series.histFrom < t) c.series.histFrom = t; }
+  historyFrom(mint, t) { const c = this.coin(mint); if (c.series.histFrom === null || c.series.histFrom < t) c.series.restartAt(t); }
+  /** RESTART SAFETY: a coin is observed by the method its unfinished entries were opened with. If the stored mode disagrees
+   *  (it was not saved when the coin moved to live observation), the entry's method wins — otherwise the position would be
+   *  stranded: ignored by the live adapter and never quoted by the sampled one. */
+  forceMode(mint, mode, pool = null) { const c = this.coin(mint); if (c.mode === mode) return false; c.series = new Series(mint, mode === "polled" ? this.pollCov : this.cov); c.mode = mode; c.state = null; c.sw = null; c.lostAt = null; c.info.monitoring_mode = mode; if (mode === "live") { Object.assign(c.info, { population: "pumpswap-canonical", price_source: "pool events" }); if (pool) c.pool = pool; } this.stats.modeForced = (this.stats.modeForced || 0) + 1; return true; }
+  /** save every open position now (called on shutdown): a planned restart loses no peak */
+  flush() { let n = 0; if (this.store) for (const e of this.entries.values()) { this.store.saveEntry(e); n++; } this.dirty.clear(); return n; }
   setRef(mint, ag, ref) { const c = this.coin(mint); const g = (c.groups[ag] ||= { ref: null, done: {}, logged: {} }); if (!g.ref || g.ref.status !== "OK") g.ref = ref; }
   restoreDone(mint, ag, family) { const c = this.coin(mint); (c.groups[ag] ||= { ref: null, done: {}, logged: {} }).done[family] = 1; }
   addEntry(e) { this.entries.set(e.id, e); let s = this.byMint.get(e.mint); if (!s) this.byMint.set(e.mint, (s = new Set())); s.add(e.id); }
   /** is the coin's current state known-good at time `at`? (observed, and nothing unknown between its observation and `at`) */
   /** is the coin's current state the one IN FORCE and known-good at time `at`? It must have been observed at or before `at`
-   *  (a state that arrived later can never price an earlier moment), after any loss of the coin's data, with no feed gap in between. */
-  trustedAt(c, at) { return !!c.state && c.state.t <= at && (c.lostAt === null || c.state.t >= c.lostAt) && this.feedCov.gapsIn(c.state.t, at).length === 0; }
+   *  (a state that arrived later can never price an earlier moment), after any loss of the coin's data, with no feed gap in between.
+   *  A state reconstructed from a boost event is NOT trusted for fills: it is only confirmed (or contradicted) by the next swap. */
+  trustedAt(c, at) { return !!c.state && !c.state.approx && c.state.t <= at && (c.lostAt === null || c.state.t >= c.lostAt) && this.feedCov.gapsIn(c.state.t, at).length === 0; }
   _run(mint, upTo, c) {
     const ids = this.byMint.get(mint); if (!ids) return;
     // each entry keeps the execution method it was opened with: a routed-quote entry is NEVER priced from a pool state
@@ -69,6 +76,7 @@ export class Engine {
       if (this.byMint.get(ev.mint)?.size) { this.stats.liveIgnoredSampled = (this.stats.liveIgnoredSampled || 0) + 1; return; }
       const sr = new Series(ev.mint, this.cov); sr.startLive(ev.t); c.series = sr; c.mode = "live"; c.state = null; c.sw = null; c.lostAt = null; c.pool = ev.pool;
       Object.assign(c.info, { population: "pumpswap-canonical", monitoring_mode: "live", price_source: "pool events" }); this.stats.movedToLive = (this.stats.movedToLive || 0) + 1; this.onOwnership(ev.mint, "live");
+      this.store?.setCoinMode(ev.mint, c.pool, c.info); // PERSISTED: after a restart this coin must come back as live, or a live position on it would be stranded
     }
     c = this.coin(ev.mint, { pool: ev.pool });
     if (c.pool && ev.pool !== c.pool) { this.stats.otherPool++; return; } // price and fills come from the canonical pool only
@@ -78,6 +86,9 @@ export class Engine {
     // 2) the new state
     const prev = c.state; const st = { ...ev.state, feeBuy: ev.state.feeBuy ?? prev?.feeBuy ?? null, feeSell: ev.state.feeSell ?? prev?.feeSell ?? null, supply: ev.state.supply ?? prev?.supply ?? null, t: ev.t };
     c.state = st; if (st.supply) c.supply = st.supply;
+    // QUARANTINE: a state rebuilt from a boost event is an estimate until the next swap confirms it — it prices no fill (trustedAt),
+    // moves no peak or stop, and creates no price observation or signal. Counted.
+    if (st.approx) { this.stats.approxStates = (this.stats.approxStates || 0) + 1; return; }
     // 3) open positions see it (value, peaks, triggers) — in SOL, independent of the USD reference
     if (!ev.replay) { const ids = this.byMint.get(ev.mint); if (ids) for (const id of ids) { const e = this.entries.get(id); if (e.exec === "routed-quote") continue; const was = e.status, sig = e.versions.map((v) => v.status).join(); observe(e, st, ev.t, this.feedCov); this._after(e, was, sig, ids, c); } }
     // 4) USD history and signals
@@ -85,7 +96,7 @@ export class Engine {
     if (!su) { this.stats.noSolUsd++; if (!this.usdDown) { this.usdDown = true; this.cov.drop(ev.t, "sol-usd"); this.store?.feedEvent(ev.t, "sol-usd stale: new entries suspended, positions still managed in SOL"); } return; }
     if (this.usdDown) { this.usdDown = false; this.cov.up(ev.t, "sol-usd"); this.store?.feedEvent(ev.t, "sol-usd back"); }
     const px = (st.quote / st.base) * su; // USD per token: pool spot price from effective reserves after this event
-    c.series.add(ev.t, px, (ev.sol || 0) * su, ev.isBuy ?? null, ev.user ?? null);
+    c.series.add(ev.t, px, (ev.sol || 0) * su, ev.isBuy ?? null, ev.buyers?.length > 1 ? ev.buyers.map(([w, sol]) => [w, sol * su]) : (ev.buyers?.[0]?.[0] ?? ev.user ?? null)); // every buyer of the transaction, each with its own volume
     (this.dirtyBars.get(ev.mint) || this.dirtyBars.set(ev.mint, new Set()).get(ev.mint)).add(Math.floor(ev.t / 60));
     if (ev.replay) { this.stats.replayed++; return; }
     if (!c.createTs) { this.stats.noCreation++; this.needCreation(ev.mint); return; }
@@ -126,8 +137,11 @@ export class Engine {
     (this.dirtyBars.get(p.mint) || this.dirtyBars.set(p.mint, new Set()).get(p.mint)).add(Math.floor(p.t / 60));
     if (!c.createTs) { this.stats.noCreation++; return; }
     const age = p.t - c.createTs; if (age < S.MIN_AGE_S) return; if (!S.ageGroupOf(age)) { this.stats.tooOld++; return; }
+    // VALUATION needs a real supply: without the provider's market cap or circulating supply the coin is NOT evaluated — the
+    // default supply of a pump.fun coin is never assumed for a token found by sampling
+    if (!(p.mc > 0)) { this.stats.noValuation = (this.stats.noValuation || 0) + 1; if (!c.noValNoted) { c.noValNoted = true; this.store?.saveNote(p.mint, { ag: null, family: "*", t: p.t, reason: "not evaluated: no market cap or circulating supply from the provider", detail: {} }); } return; }
     this.stats.evals++;
-    const o = { t: p.t, px: p.px, mc: p.mc ?? p.px * c.supply, liqUsd: p.liqUsd ?? null, rtImpact: null };
+    const o = { t: p.t, px: p.px, mc: p.mc, liqUsd: p.liqUsd ?? null, rtImpact: null };
     // sampled prices carry no volume: HH-BREAK cannot be evaluated here and is NOT claimed (counted as unsupported for this mode)
     this._decide(c, p.mint, o, { skip: POLLED_UNSUPPORTED }, { trigger: { t: p.t, px_usd: p.px, src: p.src ?? null, supply: c.supply, age_s: Math.round(age), cadence_s: p.cadence_s ?? null, coverage: "sampled" } },
       { pop: "solana-wide", mode: "polled", exec: "routed-quote", valuation: p.valuation || "provider market cap", age_basis: "first-pool creation: a lower bound on token age — the 8-hour minimum holds, the 90-day ceiling is NOT verified for this token" });
@@ -151,9 +165,9 @@ export class Engine {
 
   tick(now) {
     for (const [mint, ids] of this.byMint) if (ids.size) this._run(mint, now, this.coins.get(mint));
-    // CHECKPOINT: an open position's decision state (peak, last value, runner high) is saved at most 5 s after it changes, so a
+    // CHECKPOINT: an open position's decision state (peak, last value, runner high) is saved at most 1 s after it changes, so a
     // restart resumes with the same high-water marks the uninterrupted run would have had
-    if (this.store && this.dirty.size && now - this.lastCkpt >= 5) { for (const id of this.dirty) { const e = this.entries.get(id); if (e) this.store.saveEntry(e); } this.dirty.clear(); this.lastCkpt = now; }
+    if (this.store && this.dirty.size && now - this.lastCkpt >= S.CHECKPOINT_S) { for (const id of this.dirty) { const e = this.entries.get(id); if (e) this.store.saveEntry(e); } this.dirty.clear(); this.lastCkpt = now; }
     const curM = Math.floor(now / 60);
     if (this.store) for (const [mint, ms] of this.dirtyBars) { const c = this.coins.get(mint); for (const m of ms) if (m < curM) { const b = c.series.bars.get(m); if (b) this.store.saveBar(mint, m, b); ms.delete(m); } if (!ms.size) this.dirtyBars.delete(mint); }
   }

@@ -10,6 +10,8 @@
 import * as S from "./spec.mjs";
 import { classifyJupToken } from "./risk.mjs";
 
+/** token decimals are needed to convert quote sizes: null, undefined or a non-integer is NOT valid (note: `null >= 0` is true in JavaScript) */
+export const validDec = (d) => Number.isInteger(d) && d >= 0 && d <= 18;
 export class Poller {
   constructor({ engine, jup, store = null, now = () => Date.now() / 1000, log = () => {}, hotEvery = 10, coldEvery = 60, quoteFast = 2, quoteSlow = 10, valuation = "jupiter mcap (circulating supply × price)" }) {
     Object.assign(this, { engine, jup, store, now, log, hotEvery, coldEvery, quoteFast, quoteSlow, valuation });
@@ -22,12 +24,24 @@ export class Poller {
   }
   /** after a restart: every sampled coin the engine restored goes back on the watch list (positions first), so open and pending
    *  entries keep receiving prices and quotes */
-  restore() { let n = 0; for (const [mint, c] of this.engine.coins) { if (c.mode !== "polled" || this.watch.has(mint) || !(c.info.decimals >= 0)) continue; this.watch.set(mint, { decimals: c.info.decimals, circ: c.info.circ_supply ?? null, hot: !!this.engine.byMint.get(mint)?.size, lastT: null, lastReq: 0, miss: 0, mc: null }); this.seen.add(mint); c.series.histFrom = null; n++; } this.stats.restored = n; return n; }
+  restore() { let n = 0; this.needMeta = []; for (const [mint, c] of this.engine.coins) { if (c.mode !== "polled" || this.watch.has(mint)) continue; if (!validDec(c.info.decimals)) { this.needMeta.push(mint); continue; } this.watch.set(mint, { decimals: c.info.decimals, circ: c.info.circ_supply ?? null, hot: !!this.engine.byMint.get(mint)?.size, lastT: null, lastReq: 0, miss: 0, mc: null }); this.seen.add(mint); c.series.histFrom = null; c.series.obsFrom = null; n++; } this.stats.restored = n; this.stats.restoreNoMeta = this.needMeta.length; return n; }
+  /** restored sampled coins whose stored record lacks token metadata (written by an earlier version) are NOT skipped silently:
+   *  their metadata is fetched again, positions first. A coin that still has none keeps its positions visible and flagged. */
+  async repair() {
+    const list = (this.needMeta || []).sort((a, b) => (this.engine.byMint.get(b)?.size || 0) - (this.engine.byMint.get(a)?.size || 0)); this.needMeta = []; let fixed = 0;
+    for (let i = 0; i < list.length; i += 100) { const batch = list.slice(i, i + 100); let got = []; try { got = await this.jup.tokens(batch); } catch (e) { this.stats.discErr = String(e.message).slice(0, 120); }
+      const by = new Map(got.map((t) => [t.mint, t]));
+      for (const mint of batch) { const t = by.get(mint), c = this.engine.coins.get(mint); if (!c || c.mode !== "polled") continue;
+        if (t && validDec(t.decimals)) { c.info.decimals = t.decimals; c.info.circ_supply = c.info.circ_supply ?? t.circ_supply ?? null; if (t.circ_supply > 0) c.supply = t.circ_supply; this.store?.saveCoin(mint, { info: c.info });
+          this.watch.set(mint, { decimals: t.decimals, circ: c.info.circ_supply, hot: !!this.engine.byMint.get(mint)?.size, lastT: null, lastReq: 0, miss: 0, mc: t.mcap ?? null }); this.seen.add(mint); c.series.histFrom = null; c.series.obsFrom = null; fixed++; }
+        else for (const id of this.engine.byMint.get(mint) || []) { const e = this.engine.entries.get(id), f = "sampled position restored without token metadata: it cannot be quoted until the provider returns it"; if (e && !e.flags.includes(f)) { e.flags.push(f); e.touched = true; this.store?.saveEntry(e); } } } }
+    this.stats.restoreRepaired = fixed; if (list.length) this.log(`[poller] restored without metadata: ${list.length}, repaired ${fixed}`); return fixed;
+  }
   /** register a token from provider metadata (launchpad-neutral). Returns false when it is already observed live. */
   add(tok, source) {
     if (this.watch.has(tok.mint)) return true;
     const live = this.engine.coins.get(tok.mint); if (live && live.mode === "live" && (live.state || live.pool)) { this.stats.skippedLive++; return false; } // observed (or observable) by the live adapter
-    if (!(tok.decimals >= 0)) { this.stats.noMeta++; return false; }
+    if (!validDec(tok.decimals)) { this.stats.noMeta++; return false; }
     // a pump.fun coin still on its bonding curve (first pool = the curve, i.e. the mint itself) is not polled: the moment it
     // graduates, its canonical PumpSwap pool is observed live. Counted, so the gap (curve-stage coins over $40K) is visible.
     if (tok.launchpad === "pump.fun" && tok.first_pool?.id === tok.mint && !(tok.mcap >= S.BAND_LO_USD)) { this.stats.skippedCurve = (this.stats.skippedCurve || 0) + 1; return false; }
@@ -70,7 +84,7 @@ export class Poller {
         const w = this.watch.get(mint), c = this.engine.coins.get(mint); const gap = w.lastT == null ? null : r.t - w.lastT;
         if (gap != null) { const k = this.stats.cadence; k.n++; k.sum += gap; if (gap > k.max) k.max = gap; if (gap > 3 * (w.hot ? this.hotEvery : this.coldEvery) + 5) { this.engine.coinLost(mint, r.t); this.stats.lost++; } } // a hole in the samples: the coin's history restarts
         if (c.series.histFrom === null) c.series.startLive(r.t); // sampled history starts at the first sample actually received
-        w.lastT = r.t; w.miss = 0; if (w.decimals == null && p.decimals != null) w.decimals = p.decimals;
+        w.lastT = r.t; w.miss = 0; if (!validDec(w.decimals) && validDec(p.decimals)) w.decimals = p.decimals;
         const mc = w.circ > 0 ? p.px * w.circ : null; w.mc = mc;
         this.stats.priced++;
         this.engine.onPrice({ t: r.t, mint, px: p.px, mc, liqUsd: p.liqUsd, supply: w.circ, src: "jupiter price v3", cadence_s: gap == null ? null : +gap.toFixed(1), valuation: this.valuation });
@@ -96,12 +110,12 @@ export class Poller {
       // a sale that has had no price for 24 h keeps asking, slowly (it is never abandoned): once every 10 minutes
       const every = need.unresolved ? 600 : urgent ? Math.min(1, this.quoteFast) : this.quoteSlow;
       if (this.now() - last < every) continue;
-      const w = this.watch.get(need.mint); if (!w) { this.stats.quoteNoWatch = (this.stats.quoteNoWatch || 0) + 1; continue; } const dec = w.decimals; this.quoted.set(need.id, this.now());
+      const w = this.watch.get(need.mint); if (!w || !validDec(w.decimals)) { this.stats.quoteNoWatch = (this.stats.quoteNoWatch || 0) + 1; continue; } const dec = w.decimals; this.quoted.set(need.id, this.now());
       let held = this.held.get(need.id); if (!held) this.held.set(need.id, (held = new Map()));
       if (need.buy_sol) { const q = await this.jup.quote(need.mint, "buy", need.buy_sol * 1e9); if (q.ok) { this.stats.quotesOk++; this.engine.onQuote(need.id, { kind: "quote", reqT: q.req, t: q.t, buy: { sol: need.buy_sol, tok: q.out / 10 ** dec, reqT: q.req, t: q.t, route: q.route, router: q.router, feeBps: q.feeBps, impact: q.impact }, sells: [] }); n++; } else this._fail(need, q); }
       for (const tok of need.sells) {
         const q = await this.jup.quote(need.mint, "sell", tok * 10 ** dec);
-        if (!q.ok) { this._fail(need, q); continue; }
+        if (!q.ok) { this._fail(need, q); for (const k of held.keys()) if (Math.abs(tok - k) <= 1e-9 * Math.max(1, tok)) held.delete(k); continue; } // a size whose quote failed has NO current quote: the old one is dropped, never carried forward
         this.stats.quotesOk++; held.set(tok, { tok, sol: q.out / 1e9, reqT: q.req, t: q.t, route: q.route, router: q.router });
         for (const k of held.keys()) if (!need.sells.some((x) => Math.abs(x - k) <= 1e-9 * Math.max(1, x))) held.delete(k); // sizes no longer held
         this.engine.onQuote(need.id, { kind: "quote", reqT: q.req, t: q.t, buy: null, sells: [...held.values()] }); n++;
@@ -114,6 +128,7 @@ export class Poller {
 
   start({ categories = [["toptraded", "1h"], ["toptrending", "1h"]], discoverEvery = 30 } = {}) {
     const loop = async (fn, every) => { while (!this.stopped) { const t0 = Date.now(); try { await fn(); } catch (e) { this.log("[poller] " + e.message); } await new Promise((r) => setTimeout(r, Math.max(50, every * 1000 - (Date.now() - t0)))); } };
+    this.repair().catch((e) => this.log("[poller] repair: " + e.message));
     loop(() => this.sweep(), 1); loop(() => this.quotes(), 0.25); loop(() => this.discover({ categories: (this._d = (this._d || 0) + 1) % 20 === 1 ? categories : [] }), discoverEvery);
   }
 }

@@ -23,7 +23,7 @@ export const DISC = { // from the IDL's `events[].discriminator`
   BuyEvent: [103, 244, 82, 31, 44, 245, 119, 119], SellEvent: [62, 47, 55, 10, 165, 3, 220, 42], DepositEvent: [120, 248, 61, 83, 31, 142, 107, 144], WithdrawEvent: [22, 9, 133, 26, 160, 44, 71, 192],
   CreatePoolEvent: [177, 49, 12, 210, 160, 118, 167, 116], InitBoostEvent: [174, 124, 74, 249, 4, 81, 246, 17], BoostBuyAndBurnEvent: [63, 69, 28, 22, 48, 92, 194, 185], SweepPoolFeeEvent: [130, 164, 36, 97, 228, 130, 135, 165] };
 const DKEY = new Map(Object.entries(DISC).map(([k, v]) => [Buffer.from(v).toString("hex"), k]));
-export const dec = { buy: 0, sell: 0, deposit: 0, withdraw: 0, pool: 0, boost: 0, sweep: 0, short: 0, fitPre: 0, fitPost: 0, fitBoth: 0, fitNeither: 0, neitherBy: {}, feeOdd: 0, feeOddBy: {}, chainOk: 0, chainBad: 0, chainBadQuote: 0, chainBadAfterBoost: 0, chainBadQuoteAfterBoost: 0, foreign: 0, noVirtual: 0, negVirtual: 0, mode: RES_MODE };
+export const dec = { buy: 0, sell: 0, deposit: 0, withdraw: 0, pool: 0, boost: 0, sweep: 0, short: 0, fitPre: 0, fitPost: 0, fitBoth: 0, fitNeither: 0, neitherBy: {}, feeOdd: 0, feeOddBy: {}, chainOk: 0, chainBad: 0, chainBadQuote: 0, chainBadAfterBoost: 0, chainBadQuoteAfterBoost: 0, chainQuoteMinor: 0, chainQuoteMaxRel: 0, foreign: 0, noVirtual: 0, negVirtual: 0, unknownVirtual: 0, feeNotMeasured: 0, feeNotMeasuredBy: {}, mode: RES_MODE };
 // A truncated event must FAIL to decode (pk() throws) rather than yield a short, invalid address — the live run showed
 // 'Invalid param: WrongSize' on pool look-ups from exactly that.
 class R {
@@ -86,6 +86,10 @@ export function eventsFromLogs(logs, program = PUMPSWAP_PROGRAM) {
 }
 const decodeEventPeek = (b64) => { try { const b = Buffer.from(b64, "base64"); return b.length >= 8 && DKEY.has(b.subarray(0, 8).toString("hex")); } catch { return false; } };
 
+import { QUOTE_CHAIN_TOL, FEE_MAX } from "./spec.mjs";
+// instructions whose user-amount fields were validated against real transactions (tx-validation.json, 20 Nov 2026). The fee of any
+// other instruction (multi_hop_swap: the user's amounts are in another token) is NOT measured from its event.
+const FEE_IX = new Set(["buy", "buy_v2", "buy_exact_quote_in", "buy_exact_quote_in_v2"]);
 const TOL = 0.003; // relative tolerance of the constant-product check (integer rounding on tiny trades)
 /** Reconstructs one pool's state across its events. `p` = per-pool memory { base, quote (effective), vq (virtual, lamports), feeBuy, feeSell, supply }.
  *  Returns { state, sol, changed } or null when the event cannot be turned into a trustworthy state (counted; caller marks the coin lost). */
@@ -93,7 +97,10 @@ export function applyEvent(p, e, baseDec = 6) {
   const U = 10 ** baseDec;
   if (e.type === "buy" || e.type === "sell") {
     if (e.virtualQuote == null) dec.noVirtual++; else if (e.virtualQuote < 0n) dec.negVirtual++;
-    const vq = e.virtualQuote ?? BigInt(Math.round((p.vq ?? 0))); p.vq = Number(vq);
+    // UNKNOWN virtual reserves are never replaced by zero: an event without the field, on a pool whose virtual reserves we have
+    // not yet seen, cannot be turned into a trustworthy state
+    if (e.virtualQuote == null && p.vq == null) { dec.unknownVirtual++; return null; }
+    const vq = e.virtualQuote ?? BigInt(Math.round(p.vq)); p.vq = Number(vq);
     // Which field is the amount that moved on the curve? VALIDATED on real transactions (20 Nov 2026, tx-validation.json):
     //   buy (exact base out) and sell : quote_amount_in/out is the curve amount; user_quote_amount_* is what the user paid/received.
     //   buy_exact_quote_in[_v2]      : the two are the other way round — quote_amount_in is the user's total spend (fees inside),
@@ -113,25 +120,33 @@ export function applyEvent(p, e, baseDec = 6) {
     // A break in the chain (this event does not start where the previous one ended) means something changed the pool that we
     // did not see or mis-derived. The NEW state is still a real observation, but the interval before it is not known: the
     // result is flagged `discontinuity` and the feed restarts the coin's history there, so no order or crossing uses that interval.
-    // The base side is enforced (38,240 of 38,250 chained in run 2). The quote side is measured first (chainBadQuote) because
-    // boosts and fee accounting make its derivation approximate; it is enforced once the shakedown run shows it is reliable.
+    // BOTH sides are enforced. Base: exact (1e-6). Quote: a mismatch above QUOTE_CHAIN_TOL (0.1% of effective reserves, i.e. a
+    // price error above 0.1%) is a discontinuity; a smaller one (fee/rounding dust) is counted (chainQuoteMinor, largest seen kept).
     let discontinuity = false;
     if (p.base != null) {
       if (Math.abs(preBase / U - p.base) / p.base < 1e-6) dec.chainOk++; else { dec.chainBad++; discontinuity = true; if (p.afterBoost) dec.chainBadAfterBoost++; }
       const preQuote = RES_MODE === "pre" ? E : e.isBuy ? E - q - lp : E + q - lp;
-      if (p.quote != null && Math.abs(preQuote / 1e9 - p.quote) > Math.max(1e-6 * p.quote, 2e-8)) { dec.chainBadQuote++; if (p.afterBoost) dec.chainBadQuoteAfterBoost++; }
+      if (p.quote != null) { const d = Math.abs(preQuote / 1e9 - p.quote), rel = p.quote > 0 ? d / p.quote : Infinity;
+        if (rel > QUOTE_CHAIN_TOL) { dec.chainBadQuote++; discontinuity = true; if (p.afterBoost) dec.chainBadQuoteAfterBoost++; }
+        else if (d > Math.max(1e-6 * p.quote, 2e-8)) { dec.chainQuoteMinor++; if (rel > dec.chainQuoteMaxRel) dec.chainQuoteMaxRel = +rel.toExponential(2); } }
     }
     p.afterBoost = false;
     if (RES_MODE === "pre") { p.base = (e.isBuy ? B - b : B + b) / U; p.quote = (e.isBuy ? E + q + lp : E - q + lp) / 1e9; } // the LP fee stays in the pool as liquidity
     else { p.base = B / U; p.quote = E / 1e9; }
-    // the observed rate is used AS OBSERVED — an unusual value (negative, or above 10%) is never clamped or replaced by a tidy
-    // estimate: it is counted (dec.feeOdd), carried on the state as fee_odd, and every fill priced from it is flagged
-    if (paid > 0) { const f = e.isBuy ? paid / q - 1 : 1 - paid / q; if (e.isBuy) p.feeBuy = f; else p.feeSell = f; const odd = !(f >= 0 && f <= 0.10); if (odd) { dec.feeOdd++; const k = (e.ix || "no-ix") + "|" + e.type + (f < 0 ? "|negative" : "|over10%"); dec.feeOddBy[k] = (dec.feeOddBy[k] || 0) + 1; } if (e.isBuy) p.oddBuy = odd; else p.oddSell = odd; }
+    // FEE MEASUREMENT. A rate is installed only when it is a real measurement: from an instruction whose amounts were validated
+    // (FEE_IX; sell events carry no instruction name) AND inside 0–10%. Anything else — a multi_hop_swap, a negative rate, a rate
+    // above 10% — is a FAILED measurement: counted, never installed, never clamped to a tidy number. The pool keeps the last
+    // rate it really showed on that side (or none: fills then say fee_src 'other-side' / 'assumed').
+    if (paid > 0) { const f = e.isBuy ? paid / q - 1 : 1 - paid / q, okIx = !e.isBuy || e.ix == null || FEE_IX.has(e.ix) /* an old-format buy event carries no instruction name */, odd = !(f >= 0 && f <= FEE_MAX);
+      if (odd) { dec.feeOdd++; const k = (e.ix || "no-ix") + "|" + e.type + (f < 0 ? "|negative" : "|over10%"); dec.feeOddBy[k] = (dec.feeOddBy[k] || 0) + 1; }
+      if (okIx && !odd) { if (e.isBuy) p.feeBuy = f; else p.feeSell = f; }
+      else { dec.feeNotMeasured++; const k = (e.ix || "no-ix") + "|" + e.type; dec.feeNotMeasuredBy[k] = (dec.feeNotMeasuredBy[k] || 0) + 1; } }
     if (e.baseSupply != null && e.baseSupply > 0n) p.supply = Number(e.baseSupply) / U;
-    return { state: { base: p.base, quote: p.quote, feeBuy: p.feeBuy ?? null, feeSell: p.feeSell ?? null, feeOdd: !!(p.oddBuy || p.oddSell), supply: p.supply ?? null }, sol: q / 1e9, changed: true, discontinuity };
+    return { state: { base: p.base, quote: p.quote, feeBuy: p.feeBuy ?? null, feeSell: p.feeSell ?? null, supply: p.supply ?? null }, sol: q / 1e9, changed: true, discontinuity };
   }
   if (e.type === "deposit" || e.type === "withdraw") {
-    const s = e.type === "deposit" ? 1 : -1, vq = p.vq ?? 0;
+    if (p.vq == null) { dec.unknownVirtual++; return null; } // deposit/withdraw events do not carry the virtual reserves: unknown is not zero
+    const s = e.type === "deposit" ? 1 : -1, vq = p.vq;
     const B = Number(e.poolBase) + (RES_MODE === "pre" ? s * Number(e.baseAmt) : 0), Q = Number(e.poolQuote) + (RES_MODE === "pre" ? s * Number(e.quoteAmt) : 0) + vq;
     if (!(B > 0 && Q > 0)) return null;
     p.base = B / U; p.quote = Q / 1e9;
@@ -150,15 +165,16 @@ export function applyEvent(p, e, baseDec = 6) {
 
 /** All of ONE transaction's events on ONE pool, applied in order → the single COMMITTED state after the last of them.
  *  A transaction is atomic: nobody can trade against the pool between two of its events, so intermediate states are never
- *  observations. Returns { last (applyEvent result or null), sol, buys, sells, user, blockTs, lost, breaks: [events] }. */
+ *  observations. Returns { last (applyEvent result or null), sol, buys, sells, user (first buyer), buyers: [[wallet, SOL bought]…]
+ *  (EVERY buyer in the transaction, each with its own volume), blockTs, lost, breaks: [events] }. */
 export function reduceTx(p, evs, onReset = () => {}) {
-  const out = { last: null, sol: 0, buys: 0, sells: 0, user: null, blockTs: null, lost: false, rejected: 0, breaks: [] };
+  const out = { last: null, sol: 0, buys: 0, sells: 0, user: null, buyers: [], blockTs: null, lost: false, rejected: 0, breaks: [] };
   for (const e of evs) {
     const r = applyEvent(p, e);
-    if (!r) { if (e.type !== "sweep") { out.rejected++; out.lost = true; for (const k of Object.keys(p)) delete p[k]; onReset(); out.last = null; } continue; }
+    if (!r) { if (e.type !== "sweep") { out.rejected++; out.lost = true; for (const k of Object.keys(p)) delete p[k]; onReset(); out.last = null; out.buyers = []; } continue; }
     if (r.discontinuity) { out.lost = true; out.breaks.push(e); }
     if (!r.changed) continue;
-    out.last = r; out.sol += r.sol; if (e.type === "buy") { out.buys++; out.user = out.user || e.user; } else if (e.type === "sell") out.sells++; out.blockTs = e.ts || out.blockTs;
+    out.last = r; out.sol += r.sol; if (e.type === "buy") { out.buys++; out.user = out.user || e.user; if (e.user) { const b = out.buyers.find((x) => x[0] === e.user); if (b) b[1] += r.sol; else out.buyers.push([e.user, r.sol]); } } else if (e.type === "sell") out.sells++; out.blockTs = e.ts || out.blockTs;
   }
   return out;
 }

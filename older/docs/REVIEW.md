@@ -126,6 +126,34 @@ Answers to the review's questions:
 - **Run evidence pinned to a commit:** the running commit is recorded at every start (feed log, status, published data).
 - **Stopping entries after seven days:** `start.sh <name> 7` fixes the end of the entry window at the first start (never extended by a restart); exits and runner tracking continue.
 
+## 6c. Second independent review, commit 5963512 (ChatGPT, 20 Nov 2026 18:08 UK) and Grok's review of the same commit — response
+
+Verdict received: **not ready for the seven-day run**. Every claim was checked against the source; all were confirmed. Fixes below, each with a regression test in `older/test/review2.test.mjs` (C1–C5, M1–M3, G1). 82 tests pass.
+
+| # | Finding (confirmed) | Fix |
+|---|---|---|
+| C1 | A coin moved from sampled to live was not saved as live. After a restart it came back as sampled: its live position was ignored by the live adapter and never quoted by the sampled one. | The move is saved (`store.setCoinMode`). On restore, each unfinished entry's own execution method decides how its coin is observed (`engine.forceMode`) — so a database written before this fix is corrected too, and the correction is saved. Two unfinished entries of different methods on one coin: the first keeps the coin, the other is flagged, never hidden. |
+| C2a | One back-filled minute could mark an hour-long outage as repaired; CONT then fired on it. | Back-filled bars are continuous evidence only where consecutive bars are ≤ 5 minutes apart (`BACKFILL_MAX_HOLE_S`). An outage is repaired only when bars reach both ends with no such hole. History before the live start is extended only over the unbroken run that reaches it. Cost, declared: a genuinely quiet coin (no trade for 5+ minutes) is treated as not covered for that stretch; after 4 h 30 min of live observation this no longer matters. |
+| C2b | `priceAt` preferred an older exact observation to a newer back-filled close (a 25% rise could read as more). | The later of the two wins; lows and highs inside a repaired outage now include its bars. |
+| C3a | A quote-side break in the reserve chain was only counted. | Enforced: a mismatch above 0.1% of effective reserves (`QUOTE_CHAIN_TOL`) is a discontinuity (history and trust restart). Smaller mismatches (fee/rounding dust; a price error under 0.1%) are counted, with the largest seen kept (`chainQuoteMinor`, `chainQuoteMaxRel`). |
+| C3b | Deposit/withdraw after a decoder-memory reset used zero virtual reserves. | Unknown virtual reserves give no state (`unknownVirtual`); the coin is lost until a swap carries them. Same for a swap event without the field on a pool never seen. |
+| C3c | A `multi_hop_swap` that fitted the curve installed a negative buy-fee rate and priced fills. **Live: 85–98 such readings every 5 minutes.** | A fee is installed only from an instruction whose amounts were validated (`buy`, `buy_v2`, `buy_exact_quote_in`, `buy_exact_quote_in_v2`; sells) and only inside 0–10%. Anything else is a failed measurement: counted (`feeNotMeasured`), never installed, never clamped. The pool keeps the last rate it really showed; with none, fills say `fee_src: other-side / assumed`. This replaces "unusual rate used as observed". |
+| C3d (item D) | Boost reconstruction not reconciled. | A state rebuilt from a boost event is quarantined until the next swap: it prices no fill, moves no peak or stop, creates no observation or signal (`approxStates`). Live evidence so far: 0 chain breaks after a boost (base or quote) in the runs measured. |
+| C4 | Routed half-sales combined quotes for different quantities taken up to minutes apart. | The quotes used for one half-sale must have been requested within 5 s of each other (`SCALE_QUOTE_MAX_SPREAD_S`), else the order waits for a fresh set (`waited_for_coherent_quotes`). All three request/reply times and the spread are stored. A size whose quote fails keeps no old quote. |
+| C5 | A sampled token with no supply or market cap was valued at a default billion tokens; `decimals: null` passed the check (`null >= 0`). | No provider market cap or circulating supply → not evaluated (counted, noted once). Decimals must be an integer 0–18 (`validDec`) at registration, restore and quoting. Restored sampled coins without stored decimals are no longer skipped silently: metadata is fetched again, positions first; if still missing, the position is flagged. |
+| M1 | Background holder snapshots shared the Jupiter queue with executable quotes. | Priority lanes on the one rate bucket: quotes first, price samples second, discovery third, background last; a waiting request is promoted one lane per 10 s but never into the quote lane. |
+| M2 | Several buyers in one transaction were attributed to the first. | Every buyer is carried with its own volume into the bars and the 1/3/5-minute measurements. |
+| M3 | `vol60_usd` could claim an hour of history that was back-fill. | Trade-window measurements (1/3/5 minutes, 60-minute volume, surge) are reported only when exact observations cover the whole window; otherwise empty. |
+| G1 (Grok) | Peaks could be up to 5 s stale after a restart. | Saved at most 1 s after a change, and all open positions are saved the moment the process is told to stop (SIGINT/SIGTERM), with the last-alive time. |
+
+Checked and **not** changed: Grok's suggestion to leave a sampled position's peak unset until its first sell quote. Tested: a position whose price falls before that first quote would then have no stop. The peak of a quote-priced entry stays at cost until a higher valuation is seen (declared in `book.mjs`).
+
+Question C (coin 8TiMkg, same exit on all four stops): the reviewer reproduced it legitimately on current code — one fall crosses every stop and the price lands at the same state 0.7 s later. The two old-code trades themselves remain unverified.
+
+Still open, labelled: true age of sampled tokens (first-pool age is a lower bound; the 90-day ceiling is not verified); `multi_hop_swap` buys that do not fit the curve are rejected and the coin's history restarts there; sustained memory over days is unmeasured.
+
+The seven-day run must use a **new database name** (`start.sh run7 7`); the shakedown database holds trades made by faulty code and is kept separately.
+
 ## 7. What is ready, and what is not
 **Ready:** the PumpSwap live path; the Solana-wide sampled path (against a simulated provider); the 448-row dashboard with method filters; the one-command validation run.
 **Remaining, in order:**

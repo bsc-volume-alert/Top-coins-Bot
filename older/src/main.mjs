@@ -22,6 +22,9 @@ const snapshot = async (e) => { const want = e.decisionT; try { Jx ??= await imp
 const engine = new Engine({ store, solUsd, log, firstStart, onEntry: (e) => { snapshot(e); }, onFill: (e, c) => { if (e.exec !== "routed-quote") verifyEntry(e, c, { store, lastSlotOf: (m) => lastSlot.get(m) ?? null }); } });
 const onEvent = engine.onEvent.bind(engine); engine.onEvent = (ev) => { if (ev.slot) lastSlot.set(ev.mint, ev.slot); const c = engine.coins.get(ev.mint); if (c) c.eventCount = (c.eventCount || 0) + 1; onEvent(ev); };
 store.restore(engine); engine.restartGap(store.lastAlive(), now0);
+// planned stop (pm2 restart/stop sends SIGINT): every open position's peak is saved and the last-alive time is written first,
+// so a planned restart loses nothing and its gap is measured from the real stop
+let stopping = false; for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => { if (stopping) return; stopping = true; try { const n = store.tx(() => engine.flush()); store.heartbeat(Date.now() / 1000); log(`[older] ${sig}: ${n} open positions saved, stopping`); } catch (e) { log("[older] save on stop failed: " + e.message); } process.exit(0); });
 // the entry window: OLDER_ENTRIES_UNTIL (unix seconds, or an ISO date) — after it nothing new is opened; open positions, their
 // exits and the 24-hour runner tracking carry on until every included position is complete
 if (process.env.OLDER_ENTRIES_UNTIL && process.env.OLDER_ENTRIES_UNTIL.trim()) { const v = process.env.OLDER_ENTRIES_UNTIL; engine.entriesUntil = /^\d+$/.test(v) ? Number(v) : Date.parse(v) / 1000; log(`[older] entry window closes ${new Date(engine.entriesUntil * 1000).toISOString()}`); }

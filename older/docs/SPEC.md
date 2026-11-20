@@ -63,3 +63,14 @@ Owner's decision: collect more information without adding books. Nothing below i
 - **From Jupiter's token data, for every entry of either method** (`entry.snap`): holder count, top-holder percentage, and Jupiter's own 5-minute and 1-hour statistics exactly as returned (numeric fields), with request and reply times and the delay after the decision. Jupiter's field names are not verified from this workspace; they are stored as received. A token Jupiter does not return is recorded as missing.
 - Sampled coins have no decoded trades, so their `w1 / w3 / w5` are empty; their 5-minute figures are Jupiter's.
 - Use after the run: compare winners and losers on these numbers (for example holder rise of 10–15% in 5 minutes, or volume surge), and only then decide whether any becomes a rule.
+
+## Data-trust rules added after the second independent review (20 Nov 2026, evening)
+- **Pool fee:** measured only from validated instructions and only inside 0–10%; a failed measurement is counted and never used.
+- **Reserve chain:** base side exact; quote side within 0.1% of effective reserves. A break restarts the coin's history and trust.
+- **Unknown virtual reserves are not zero:** no state until an event carries them.
+- **Boost events:** the rebuilt state is quarantined until the next swap.
+- **Back-filled bars:** continuous only where consecutive bars are ≤ 5 minutes apart; a newer back-filled close beats an older exact observation.
+- **Sampled tokens:** no valuation without the provider's market cap or circulating supply; valid decimals required.
+- **Routed half-sale:** its quotes must be requested within 5 s of each other.
+- **Trade-window measurements:** only from exact observations covering the whole window.
+- **Saving:** open positions at most 1 s behind, and all saved on a planned stop.

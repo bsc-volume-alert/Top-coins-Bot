@@ -12,16 +12,25 @@ export const WSOL = "So11111111111111111111111111111111111111112";
 const BASE = () => process.env.JUP_BASE || "https://api.jup.ag";
 export const CREDITS = { price: 1, search: 10, recent: 1, category: 5, order: 1 };
 export const ju = { calls: {}, credits: 0, errors: 0, limited: 0, lastErr: "", omitted: 0, requested: 0, lastOk: null, headers: {} };
-let fetchImpl = (...a) => fetch(...a), next = 0, chain = Promise.resolve();
+let fetchImpl = (...a) => fetch(...a), next = 0;
 export const setFetch = (f) => { fetchImpl = f; };
 const nap = (ms) => new Promise((r) => setTimeout(r, ms));
 const rps = () => Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0.5));
 // Pacing respects BOTH limits: requests per second, and the plan's monthly credits (endpoints cost 1–50 credits each, so a
 // request cap alone does not protect the allowance). JUP_CREDITS_MONTH (e.g. 25000000 on Developer) spreads credits evenly.
 const creditsPerSec = () => (Number(process.env.JUP_CREDITS_MONTH || 0) > 0 ? Number(process.env.JUP_CREDITS_MONTH) / (30 * 86400) : Infinity);
-function slot(kind) { const p = chain.then(async () => { const d = next - Date.now(); if (d > 0) await nap(d); next = Math.max(Date.now(), next) + 1000 * Math.max(1 / rps(), (CREDITS[kind] ?? 1) / creditsPerSec()); }); chain = p.catch(() => {}); return p; }
-async function get(kind, path, { paced = true } = {}) {
-  if (paced) await slot(kind);
+// PRIORITY LANES on the one rate bucket: an executable quote for a scheduled order is never queued behind background work.
+//   0 = routed quotes for orders and position valuations · 1 = price samples · 2 = discovery / metadata · 3 = background measurements
+// A request that has waited is promoted one lane per 10 s (so background work is delayed, never starved) but nothing is ever
+// promoted into lane 0.
+const PRIO = { order: 0, price: 1, recent: 2, category: 2, search: 2 }; const waiting = []; let pumping = false, seq = 0;
+async function pump() { if (pumping) return; pumping = true; try { while (waiting.length) { const d = next - Date.now(); if (d > 0) await nap(d);
+  const now = Date.now(), eff = (w) => (w.prio === 0 ? 0 : Math.max(1, w.prio - Math.floor((now - w.at) / 10000))); waiting.sort((a, b) => eff(a) - eff(b) || a.seq - b.seq);
+  const w = waiting.shift(); next = Math.max(Date.now(), next) + 1000 * Math.max(1 / rps(), (CREDITS[w.kind] ?? 1) / creditsPerSec()); w.go(); } } finally { pumping = false; } }
+function slot(kind, prio = PRIO[kind] ?? 2) { return new Promise((go) => { waiting.push({ kind, prio, seq: seq++, at: Date.now(), go }); pump(); }); }
+export const queueDepth = () => waiting.length;
+async function get(kind, path, { paced = true, prio } = {}) {
+  if (paced) await slot(kind, prio);
   ju.calls[kind] = (ju.calls[kind] || 0) + 1; ju.credits += CREDITS[kind] ?? 1;
   const req = Date.now() / 1000;
   let r; try { r = await fetchImpl(BASE() + path, { headers: process.env.JUP_API_KEY ? { "x-api-key": process.env.JUP_API_KEY } : {}, signal: AbortSignal.timeout(10000) }); } catch (e) { ju.errors++; ju.lastErr = `${kind}: ${e.message}`.slice(0, 160); throw e; }
@@ -55,7 +64,7 @@ const numsOf = (o) => { if (!o || typeof o !== "object") return null; const out 
  *  with the request and reply times. The statistics objects are stored as returned (numeric fields only): their field names
  *  are the provider's, not ours, and nothing here is used as a filter. */
 export async function tokenStats(mint) {
-  const { j, req, resp } = await get("search", `/tokens/v2/search?query=${mint}`);
+  const { j, req, resp } = await get("search", `/tokens/v2/search?query=${mint}`, { prio: 3 }); // background lane: never ahead of a quote or a price sample
   const x = (Array.isArray(j) ? j : []).find((y) => y.id === mint);
   if (!x) return { ok: false, req, t: resp, why: "token not returned" };
   return { ok: true, req, t: resp, holders: num(x.holderCount), top_holders_pct: num(x.audit?.topHoldersPercentage), organic: num(x.organicScore), liq_usd: num(x.liquidity), mcap: num(x.mcap), stats5m: numsOf(x.stats5m), stats1h: numsOf(x.stats1h), updated: x.updatedAt ?? null };

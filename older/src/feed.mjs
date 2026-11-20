@@ -41,7 +41,7 @@ export function startFeed({ engine, store, backfill = null, pools /* Map pool â†
     if (x.lost) engine.coinLost(info.mint, t); // history and state trust restart here: nothing before this moment is used
     if (!x.last) return;
     fs.emitted++; if (evs.length > 1) fs.multiEventTx++; if (x.blockTs && !replay) { fs.lagMsSum += Math.max(0, t - x.blockTs) * 1000; fs.lagN++; }
-    engine.onEvent({ t, mint: info.mint, pool, kind: x.buys && !x.sells ? "buy" : x.sells && !x.buys ? "sell" : x.buys ? "mixed" : evs[evs.length - 1].type, state: { ...x.last.state, approx: x.last.approx ?? null }, sol: x.sol, isBuy: x.buys && !x.sells ? true : x.sells && !x.buys ? false : null, user: x.user, sig: meta.sig, slot: meta.slot, blockTs: x.blockTs, events: evs.length, replay });
+    engine.onEvent({ t, mint: info.mint, pool, kind: x.buys && !x.sells ? "buy" : x.sells && !x.buys ? "sell" : x.buys ? "mixed" : evs[evs.length - 1].type, state: { ...x.last.state, approx: x.last.approx ?? null }, sol: x.sol, isBuy: x.buys && !x.sells ? true : x.sells && !x.buys ? false : null, user: x.user, buyers: x.buyers, sig: meta.sig, slot: meta.slot, blockTs: x.blockTs, events: evs.length, replay });
   };
   const resolved = (pool, info) => {
     pools.set(pool, info); store?.savePool(pool, info);
