@@ -209,6 +209,15 @@ Decision taken, declared: a coin's own break (quarantine) also makes HOUR-scale 
 
 Also since 938198b (commit a680362, not yet reviewed): due orders and routine valuations run as independent poller passes, so a buy that becomes due is not held behind a slow valuation pass (three sampled buys had been cancelled at the 5-second limit).
 
+## 6g. older-5 (21 Nov 2026, 13:30 UK) — owner's two additions, for the reviewer
+
+Not a response to a review; two things the owner asked for while the sixth pass was out.
+
+1. **60% trailing stop** — `STOPS = [0.20, 0.25, 0.30, 0.40, 0.60]`; 680 rows. No rule changed; three tests that used a ~43% fall to mean "every stop sold" now use a deeper fall, and a new test shows the 60% version staying open through a 45% fall and selling on a 65% fall.
+2. **Stake views (0.5 / 1 / 2 / 5 SOL) on the books page — display only.** `execSell` now stores the pool it priced on (`pool: { q, b, f }`) with each pool-state half-sale and exit, and `observe` keeps the latest valuation pool on the entry (`mark`). `atStake(e, v, stake)` re-prices buy, half-sale and exit on those reserves. Tests: 0.2 SOL reproduces the recorded result to 1e-12; return falls monotonically with stake; routed-quote trades and pre-change sales return null and are shown as "0.2 SOL only".
+
+**Question for the reviewer:** each leg is priced on the pool as observed, i.e. without the larger buy's own effect on the pool. For a buy of n SOL into effective reserves Q, held to an unchanged pool, that model returns n·Q/(Q+2n) before fees where a real round trip returns n — so on a flat price it is pessimistic by 2n/(Q+2n): about 0.5% at 0.2 SOL and about 11% at 5 SOL in an 80-SOL pool (arithmetic on an example pool, not a measurement). The other extreme — everyone else trades the same token amounts regardless of the larger buy — would return Q_exit·tokens/(B_exit − tokens), which is optimistic. The page shows the pessimistic figure and says so. Is that the right side to err on, or should both ends be shown as a range?
+
 ## 7. What is ready, and what is not
 **Ready:** the PumpSwap live path; the Solana-wide sampled path (against a simulated provider); the 448-row dashboard with method filters; the one-command validation run.
 **Remaining, in order:**

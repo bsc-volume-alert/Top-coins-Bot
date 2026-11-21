@@ -42,7 +42,7 @@ test("routed-quote exits: one quote per DISTINCT inventory (not per row); a sale
   await w.step(10, M, 205_000); w.t += 1.1; await w.poll.quotes(); const e = [...w.eng.entries.values()][0]; assert.equal(e.status, "filled");
   const q0 = w.reqs.quote; w.t += 11; await w.poll.quotes();
   assert.ok(w.reqs.quote - q0 <= 2, `2 sizes (full, half) for ${e.versions.length} result rows — got ${w.reqs.quote - q0} requests`);
-  w.px.set(M, 120_000 / 1e9); w.t += 11; await w.poll.quotes();              // −41%: every trail triggers on this valuation
+  w.px.set(M, 75_000 / 1e9); w.t += 11; await w.poll.quotes();               // −63%: every trail (20…60%) triggers on this valuation
   const trails = e.versions.filter((v) => v.policy === "trail"); assert.ok(trails.every((v) => v.status === "selling"));
   w.t += 0.8; await w.poll.quotes();                                          // the next quote is requested after trigger + 0.7 s → it prices the sale
   assert.ok(trails.every((v) => v.status === "closed")); assert.ok(trails[0].exit.quote.req_t >= trails[0].schedT - 1e-9); assert.equal(trails[0].exit.exec, "routed-quote");

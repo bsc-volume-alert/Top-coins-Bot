@@ -33,7 +33,7 @@ test("C1 a coin promoted from sampled to live keeps its live position after a re
   st = new Store(db); const eng2 = mkEngine({ store: st }); st.restore(eng2); eng2.restartGap(st.lastAlive(), T0 + 640); eng2.feedUp(T0 + 640);
   const po2 = new Poller({ engine: eng2, jup: w.jup, store: st, now: () => w.t }); po2.restore();
   assert.equal(eng2.coins.get(M).mode, "live", "restored as live, not as sampled"); assert.ok(!po2.watch.has(M));
-  eng2.onSwap(ev(T0 + 641, 120_000, M, "CanonPool")); eng2.onSwap(ev(T0 + 643, 119_000, M, "CanonPool")); // a 43% fall
+  eng2.onSwap(ev(T0 + 641, 75_000, M, "CanonPool")); eng2.onSwap(ev(T0 + 643, 74_000, M, "CanonPool")); // a 63% fall: through every stop, the 60% one included
   const r = [...eng2.entries.values()].find((x) => x.id === en.id) ?? st.allEntries().find((x) => x.id === en.id);
   assert.ok(r.versions.filter((v) => v.policy === "trail").every((v) => v.status === "closed"), "the fall was seen and every trailing stop sold"); assert.equal(eng2.stats.liveIgnoredSampled ?? 0, 0);
 });
@@ -425,4 +425,50 @@ test("watch list: a token pruned as far below the band is not restored after a r
   st.db.close(); st = new Store(db); const eng2 = mkEngine({ store: st }); st.restore(eng2); const po2 = new Poller({ engine: eng2, jup: w.jup, store: st, now: () => w.t });
   assert.equal(po2.restore(), 1); assert.ok(po2.watch.has(K) && !po2.watch.has(L)); assert.equal(po2.stats.restoreSkippedLow, 1);
   w.px.set(L, 9e-5); assert.equal(po2.add(w.tok(L), "rediscovery"), true); assert.equal(eng2.coins.get(L).info.pruned_low, null); assert.equal(eng2.coins.get(L).series.bars.size, 0);
+});
+
+// ---- older-5 (21 Nov 2026, owner's decision): a 60% trailing stop, and website-only stake views ----
+test("older-5: the 60% stop is its own row — a 45% fall sells the 20–40% versions and leaves the 60% version open; a 65% fall sells it", async () => {
+  const { newEntry, advance, observe } = await import("../src/book.mjs");
+  const st = (q, t) => ({ base: 2e8, quote: q, feeBuy: 0.003, feeSell: 0.003, t }), yes = () => true;
+  const e = newEntry({ mint: "M", pool: "P", ag: "A1", t: 0, families: ["LOW4H"], features: {}, mc: 1e5, px: 1 });
+  assert.deepEqual([...new Set(e.versions.map((v) => v.stop))], [0.2, 0.25, 0.3, 0.4, 0.6]);
+  advance(e, 1.5, st(100, 0), yes); assert.equal(e.status, "filled");
+  const T = (s) => e.versions.find((v) => v.policy === "trail" && v.stop === s);
+  observe(e, st(55, 50), 50); advance(e, 51, st(55, 50), yes);                 // pool SOL side 100 → 55: position value −45%
+  assert.equal(T(0.4).status, "closed"); assert.equal(T(0.6).status, "open", "a 45% fall is inside the 60% stop");
+  observe(e, st(35, 60), 60); advance(e, 61, st(35, 60), yes);                 // −65% from the peak
+  assert.equal(T(0.6).status, "closed"); assert.equal(T(0.6).reason, "trail"); assert.ok(T(0.6).exit.ret < -0.6 && T(0.6).exit.ret > -0.72);
+});
+test("stake view: at 0.2 SOL the re-priced trade equals the recorded one; bigger stakes pay more price impact and are never a plain multiple", async () => {
+  const { newEntry, advance, observe, atStake } = await import("../src/book.mjs");
+  const st = (q, t) => ({ base: 2e8, quote: q, feeBuy: 0.003, feeSell: 0.0025, t }), yes = () => true;
+  const e = newEntry({ mint: "M", pool: "P", ag: "A1", t: 0, families: ["LOW4H"], features: {}, mc: 1e5, px: 1 });
+  advance(e, 1.5, st(80, 0), yes);
+  observe(e, st(180, 100), 100); advance(e, 101, st(180, 100), yes);           // value 2.25× → the half-at-2× versions sell half
+  const open = e.versions.find((v) => v.policy === "trail" && v.stop === 0.25), o1 = atStake(e, open, 0.2), o5 = atStake(e, open, 5);
+  assert.ok(Math.abs(o1.now_x - open.lastX) < 1e-12, "an open position at 0.2 SOL shows its recorded value"); assert.ok(o5.now_x < o1.now_x && o5.closed === false);
+  observe(e, st(85, 200), 200); advance(e, 201, st(85, 200), yes);             // −50% from the peak: stops 20–40% sell
+  for (const policy of ["trail", "scale"]) {
+    const v = e.versions.find((x) => x.policy === policy && x.stop === 0.25); assert.equal(v.status, "closed"); assert.ok(v.exit.pool && v.exit.pool.q === 85 && v.exit.pool.f === 0.0025, "the pool at the sale is saved");
+    if (policy === "scale") assert.ok(v.half && v.half.pool.q === 180);
+    const a = atStake(e, v, 0.2); assert.ok(Math.abs(a.ret - v.exit.ret) < 1e-12 && Math.abs(a.sol - v.exit.sol) < 1e-12, policy + ": 0.2 SOL reproduces the recorded trade exactly");
+    const r = [0.2, 0.5, 1, 2, 5].map((s) => atStake(e, v, s));
+    for (let i = 1; i < r.length; i++) assert.ok(r[i].ret < r[i - 1].ret, policy + ": the return falls as the stake grows (price impact)");
+    assert.ok(r[4].net < 25 * r[0].net - 0.05, policy + ": 5 SOL is clearly less than 25 × the 0.2 SOL profit"); assert.equal(r[4].cost, 5.0005);
+  }
+});
+test("stake view: a trade that cannot be re-priced is shown as 0.2-only — routed-quote trades and sales recorded before pools were saved; the page keeps the row without a result", async () => {
+  const { newEntry, advance, observe, atStake } = await import("../src/book.mjs"); const { booksApi } = await import("../src/page.mjs");
+  const st = (q, t) => ({ base: 2e8, quote: q, feeBuy: 0.003, feeSell: 0.003, t }), yes = () => true;
+  const mk = (mint) => { const e = newEntry({ mint, pool: "P", ag: "A1", t: 0, families: ["LOW4H"], features: {}, mc: 1e5, px: 1 }); advance(e, 1.5, st(100, 0), yes); observe(e, st(50, 50), 50); advance(e, 51, st(50, 50), yes); return e; };
+  const a = mk("A"), old = mk("B"), rq = mk("C");
+  for (const v of old.versions) if (v.exit) delete v.exit.pool;                 // as stored by earlier versions of the program
+  rq.fill.exec = "routed-quote"; rq.fill.quote_sol = null; rq.fill.base = null; // a Jupiter-quoted trade
+  const v = (e) => e.versions.find((x) => x.policy === "trail" && x.stop === 0.25);
+  assert.ok(atStake(a, v(a), 2)); assert.equal(atStake(old, v(old), 2), null); assert.equal(atStake(rq, v(rq), 2), null);
+  const j1 = booksApi([a, old, rq], { stop: 0.25, policy: "trail" }), j2 = booksApi([a, old, rq], { stop: 0.25, policy: "trail", stake: 2 });
+  assert.equal(j1.books.LOW4H.filter((t) => t.ret != null).length, 3); assert.equal(j1.stake, 0.2); assert.equal(j1.rows_total, 680);
+  const b = j2.books.LOW4H; assert.equal(b.length, 3); assert.equal(b.filter((t) => t.nosize).length, 2); assert.ok(b.filter((t) => t.nosize).every((t) => t.ret == null && t.net == null));
+  const ra = b.find((t) => t.mint === "A"), r1 = j1.books.LOW4H.find((t) => t.mint === "A"); assert.ok(ra.ret < r1.ret && ra.net < 0 && Math.abs(ra.net) > 5 * Math.abs(r1.net)); assert.equal(j2.cost, 2.0005);
 });

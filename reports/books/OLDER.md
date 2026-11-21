@@ -170,3 +170,12 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 ## 21 Nov 2026, 13:00–13:10 UK
 - 13:00: server on 4a890e3 since 12:28:54 (owner's restart for the website change; 228 open positions saved and restored). No entries in its first 30 minutes: slow books rebuilding history, FAST crossings all outside the band (182–584 per book). Not yet on older-4.
 - Each restart restored ~1,935 sampled coins, about a thousand of them already pruned as far below the band; sample gap 88 s for the first two hours. Fixed on the owner's instruction ("just fix it"): a low-value prune is recorded on the coin and not restored; re-discovery brings it back with a clean history (104 tests). The flag only exists for prunes made from now on, so the next restart still starts with the long list once.
+
+## 21 Nov 2026, 13:13–13:30 UK — spec older-5: 60% stop and stake buttons (owner's request; built, HELD locally until his "go")
+- Owner asked for a 60% trailing stop button and stake buttons 0.2 / 0.5 / 1 / 2 / 5 SOL that recalculate every book.
+- 60% stop: fifth stop value, 680 rows. Counts only from buys made after it is switched on — an old trade's price path after its 40% exit was not kept.
+- Stake buttons are NOT a multiplication. Each trade is re-priced on the pool sizes saved at its buy, half-sale and exit, so price impact grows with the stake. The pool at the sale was not saved before this change → old trades cannot be re-priced; sampled (Jupiter-quoted) coins never can (quotes were for 0.2 SOL). Both are shown as "0.2 SOL only" and counted.
+- Limits told to the owner: same buy/sell moments as the 0.2 SOL trade (a bigger position would stop out slightly earlier); the pool is taken as observed, without the bigger buy's own effect, which errs on the pessimistic side (2n/(Q+2n) on a flat price: ~0.5% at 0.2 SOL, ~11% at 5 SOL in an 80-SOL pool — arithmetic on an example pool, not a measurement). Asked ChatGPT which side to err on (REVIEW.md 6g).
+- Reason to add it before the seven-day run: sale pools cannot be recovered afterwards.
+- 107 tests pass (three runs). Page rendered locally with made-up trades: buttons work, amber note shows, left-out trades counted.
+

@@ -1,6 +1,6 @@
 // book.mjs — shared entry inventory and independent exit versions (spec older-2).
 // One ENTRY per (mint, decision observation, age group): every family whose candidate came from that same observation shares it.
-// Each entry carries exit VERSIONS: stop (20/25/30/40%) × policy (trail | scale) and, when CONT-STALL is among its families,
+// Each entry carries exit VERSIONS: stop (20/25/30/40/60%) × policy (trail | scale) and, when CONT-STALL is among its families,
 // the same set again with the 60-minute stall rule. Versions never affect each other.
 //
 // EXECUTION MODEL (declared assumptions): buy at signal availability + 1 s, sell at trigger availability + 0.7 s, priced from
@@ -9,7 +9,7 @@
 //   buy  → the first trustworthy state within 5 s is used (delay recorded); otherwise a pricing/data timeout cancels the entry;
 //   sell → stays triggered and waits for the first trustworthy state (delay recorded); unresolved after 24 h. Never dropped.
 import * as S from "./spec.mjs";
-import { buyTokens, liqValue, sellSol, sellQuote, feeSrc, feeBuy, isQuote } from "./fills.mjs";
+import { buyTokens, liqValue, sellSol, sellQuote, feeSrc, feeBuy, feeSell, isQuote } from "./fills.mjs";
 
 let NEXT = 1;
 export const COST = S.STAKE_SOL + S.TX_COST_SOL; // acquisition cost: stake + buy transaction
@@ -42,6 +42,9 @@ function fillBuy(e, st, at, delay, minReq = null) {
   for (const v of e.versions) { v.tok = tok; v.peak = v0; v.maxX = v0 / COST; v.lastX = v0 / COST; v.lastT = at; }
   return true;
 }
+/** the pool a sale was priced on: effective SOL side, token side and the sell fee in force. Evidence only — kept so the same
+ *  trade can be re-priced at another stake (atStake). No decision reads it. */
+const poolOf = (st) => ({ q: st.quote, b: st.base, f: feeSell(st) });
 function trigger(v, t, reason, value) { v.status = "selling"; v.trigT = t; v.reason = reason; v.trigValue = value; v.schedT = t + S.SELL_DELAY_MS / 1000; }
 /** returns false when this state cannot price the order (it then stays pending — a sale is never dropped or priced at zero).
  *  minReq (routed quotes): every quote used must have been requested at or after the order's scheduled time. Realised proceeds are
@@ -64,14 +67,14 @@ function execSell(e, v, st, at, delay, cov, minReq = null) {
       at = Math.max(qp.t, qb.t, qa.t); delay = at - v.schedT; }
     v.got += sol; v.tok -= part; if (before > v.peak) v.peak = before; // a new high seen at execution counts before rescaling
     v.peak = before > 0 ? v.peak * (after / before) : after;
-    v.half = { t: at, sol, delay_s: +delay.toFixed(3), trigger_value: v.trigValue, exec: q ? "routed-quote" : "reconstructed-pool-state", ...(q ? { quotes: { half: { req_t: qp.reqT, resp_t: qp.t }, held_before: { req_t: qb.reqT, resp_t: qb.t }, remaining: { req_t: qa.reqT, resp_t: qa.t } }, quote_spread_s: +spread.toFixed(3), waited_for_coherent_quotes: v.scaleWaits || 0 } : { state_age_s: +(at - st.t).toFixed(3) }) };
+    v.half = { t: at, sol, delay_s: +delay.toFixed(3), trigger_value: v.trigValue, exec: q ? "routed-quote" : "reconstructed-pool-state", ...(q ? { quotes: { half: { req_t: qp.reqT, resp_t: qp.t }, held_before: { req_t: qb.reqT, resp_t: qb.t }, remaining: { req_t: qa.reqT, resp_t: qa.t } }, quote_spread_s: +spread.toFixed(3), waited_for_coherent_quotes: v.scaleWaits || 0 } : { state_age_s: +(at - st.t).toFixed(3), pool: poolOf(st) }) };
     v.status = "open"; v.schedT = null; return true;
   }
   let sol = 0, used = null; if (v.tok > 0) { used = sellQuote(st, v.tok, minReq); if (!used) return false; sol = used.sol - S.TX_COST_SOL; }
   if (q && used) { at = used.t; delay = at - v.schedT; }
   const total = v.got + sol;
   v.status = "closed"; v.tok = 0;
-  v.exit = { t: at, sol: total, last_sol: sol, ret: total / COST - 1, delay_s: +delay.toFixed(3), hold_s: Math.round(at - e.fill.t), trigger_value: v.trigValue ?? null, fee_src: feeSrc(st, "sell"), exec: q ? "routed-quote" : "reconstructed-pool-state", ...(q ? { quote: { req_t: used?.reqT ?? null, resp_t: used?.t ?? null, route: used?.route ?? null } } : { state_age_s: +(at - st.t).toFixed(3) }) };
+  v.exit = { t: at, sol: total, last_sol: sol, ret: total / COST - 1, delay_s: +delay.toFixed(3), hold_s: Math.round(at - e.fill.t), trigger_value: v.trigValue ?? null, fee_src: feeSrc(st, "sell"), exec: q ? "routed-quote" : "reconstructed-pool-state", ...(q ? { quote: { req_t: used?.reqT ?? null, resp_t: used?.t ?? null, route: used?.route ?? null } } : { state_age_s: +(at - st.t).toFixed(3), pool: poolOf(st) }) };
   if (v.unresolvedSince) v.exit.was_unresolved_s = Math.round(at - v.unresolvedSince);
   if (cov && cov.gapsIn(e.fill.t, at).length) v.exit.outage_during = true;
   return true;
@@ -118,6 +121,7 @@ export function observe(e, st, t, cov) {
     return;
   }
   if (e.status !== "filled") return;
+  if (!q) e.mark = { ...poolOf(st), t }; // the latest pool this position was valued on (stake views of open positions only)
   const full = liqValue(st, e.fill.tok), age = t - e.fill.t;
   if (full != null) { const x = full / COST; if (age <= S.RUNNER_HORIZON_S) { if (x > e.runner.maxX) e.runner.maxX = x; for (const k of S.RUNNER_X) if (x >= k && !e.runner.reached[k]) e.runner.reached[k] = Math.round(age); } }
   for (const v of e.versions) {
@@ -138,3 +142,24 @@ export function dueAt(e) { if (e.status === "pending") return e.schedT; let m = 
 export const unresolvedCount = (e) => (e.status === "filled" ? e.versions.filter((v) => live(v) && v.unresolvedSince).length : 0);
 export const entryDone = (e) => e.status === "cancelled" || (e.status === "filled" && e.runner.horizonDone && e.versions.every((v) => !live(v)));
 export const exposure = (e) => (e.status === "filled" ? e.versions.filter(live).length : 0);
+
+/** STAKE VIEW — website only, never a decision input. What this row's trade is worth at another stake, re-priced with the same
+ *  constant-product formulas on the pool reserves SAVED at the recorded trade's own buy, half-sale and exit (open rows: the latest
+ *  pool the position was valued on). Fees and price impact therefore scale with the stake; one transaction cost per leg, as in
+ *  the paper trade. At STAKE_SOL it reproduces the recorded result exactly.
+ *  DECLARED LIMITS: (1) the moments are those of the 0.2 SOL trade — a larger position loses more to impact, so its own stop
+ *  would trigger slightly earlier and its half-sale slightly later; (2) each leg is priced on the pool as it was observed, i.e.
+ *  WITHOUT the larger buy's own effect on that pool; (3) nobody can know how other traders would have reacted to a larger buy.
+ *  It is an estimate of size sensitivity, not a second simulation.
+ *  null = cannot be re-priced: a routed-quote trade (its quotes were for the 0.2 SOL size only) or a trade whose sale was
+ *  recorded before reserves were saved. Never interpolated, never scaled linearly. */
+export function atStake(e, v, stake) {
+  const f = e.fill; if (e.status !== "filled" || !f || f.exec !== "reconstructed-pool-state" || !(f.quote_sol > 0) || !(f.base > 0) || !(stake > 0)) return null;
+  const P = (p) => ({ quote: p.q, base: p.b, feeSell: p.f, feeBuy: p.f });
+  const tok = buyTokens({ quote: f.quote_sol, base: f.base, feeBuy: f.fee_buy, feeSell: f.fee_buy }, stake), cost = stake + S.TX_COST_SOL;
+  let got = 0, left = tok, half = null;
+  if (v.half) { if (!v.half.pool) return null; const part = tok * S.SCALE_FRACTION; half = sellSol(P(v.half.pool), part) - S.TX_COST_SOL; got += half; left -= part; }
+  if (v.exit) { if (!v.exit.pool) return null; const sol = got + sellSol(P(v.exit.pool), left) - S.TX_COST_SOL; return { stake, cost, closed: true, sol, net: sol - cost, ret: sol / cost - 1, half }; }
+  if (!e.mark) return null;
+  return { stake, cost, closed: false, now_x: (got + liqValue(P(e.mark), left)) / cost, half };
+}

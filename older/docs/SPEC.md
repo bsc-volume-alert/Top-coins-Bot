@@ -1,4 +1,4 @@
-# Older-coin paper project — frozen specification `older-3`
+# Older-coin paper project — frozen specification `older-5`
 _20 Nov 2026 (UK). Paper only. Every number below is a constant in `src/spec.mjs`; changing one is a new spec version._
 _Agreed between the owner, ChatGPT (reviewer) and Claude (implementer). older-3 (20 Nov, afternoon) widens the scope to Solana-wide and records three rule amendments; the strategy definitions are otherwise those of older-2._
 
@@ -46,7 +46,7 @@ _Agreed between the owner, ChatGPT (reviewer) and Claude (implementer). older-3 
 | 15–17 | FAST-10M / FAST-30M / FAST150-10M | **Added in older-4 (21 Nov 2026, owner's decision):** the same rule over 10 and 30 minutes at 2×, and over 10 minutes at 1.5× — to fill the gap between the 5-minute and the 4-hour books. Same exact-observation coverage over the whole window. They do not seed SECOND-WAVE. Every FAST entry also records `move_s`, the seconds from the window's low to the trigger, so results can be split by speed afterwards. |
 | 14 | SECOND-WAVE | Seeded by the first 2× FAST trigger of the 1-, 3- or 5-minute books. Track the running high; the first fall to ≤ 0.75× it freezes that high; buy on the first observation strictly above the frozen high. Expires 60 minutes after the seed. **Amended in older-3:** one active setup per mint, kept alive to its own expiry even across an age boundary; the seed uses the seed age group's attempt; the trade is classified by the age group **at entry**, whose slot must be free and is then used; seed age is recorded. Eligibility re-checked at the buy. |
 
-17 families × 4 ages × 4 stops = **272 rows**, × 2 exit policies = **544 comparisons** (older-4; 14 families and 448 comparisons up to older-3), viewable per population/method. They share coins, entries and stops: correlated comparisons, not independent results, and their sum is not a funded portfolio's return.
+17 families × 4 ages × 5 stops (20 / 25 / 30 / 40 / **60%**, the last added in older-5 on 21 Nov 2026 by the owner's decision) = **340 rows**, × 2 exit policies = **680 comparisons** (544 in older-4; 14 families and 448 comparisons up to older-3), viewable per population/method. They share coins, entries and stops: correlated comparisons, not independent results, and their sum is not a funded portfolio's return.
 
 **What the sampled method can miss** (stated on the dashboard): FAST triggers, fresh crossings, trailing highs, stop crossings and SECOND-WAVE seeds/pullbacks/reclaims that happen between samples. FAST-1M on sampled tokens is evaluated on the samples that exist and is labelled sampled; it is not equivalent to the live books.
 
@@ -77,3 +77,13 @@ Owner's decision: collect more information without adding books. Nothing below i
 - **Trade-window measurements:** only from exact observations covering the whole window.
 - **Saving:** open positions at most 1 s behind, and all saved on a planned stop.
 - **Carried prices:** a price is used at a later moment only if the whole stretch from its own time to that moment is known (exact use: unbroken exact observation; hour-scale use: covered history). A feed outage, a loss of the coin's data, a boost quarantine or a re-admission to the sampled list breaks the carry. Verified silence of any length does not.
+
+## older-5 (21 Nov 2026, 13:30 UK — owner's decisions)
+
+**1. A 60% trailing stop.** A fifth stop value beside 20 / 25 / 30 / 40%, under both exit policies, with exactly the same trigger and fill rules. 680 comparison rows. It exists only for entries made after the change (an earlier entry's price path after its 40% exit was not kept, so nothing is back-calculated).
+
+**2. Stake views — display only.** The paper trade is and stays 0.2 SOL; no decision, trigger or stored result reads a stake view. The books page can re-price each trade at 0.5 / 1 / 2 / 5 SOL (`book.mjs atStake`):
+- the pool reserves and sell fee are now saved with every pool-priced half-sale and exit (`half.pool`, `exit.pool`), as they already were with the buy; the latest pool an open position was valued on is kept as `mark`;
+- the buy, the half-sale and the exit are re-priced with the same constant-product formulas on those saved reserves, one transaction cost per leg; at 0.2 SOL the result equals the recorded trade exactly (tested);
+- declared limits: the moments are those of the 0.2 SOL trade (a larger position's stop would trigger slightly earlier); each leg is priced on the pool as observed, without the larger buy's own effect on it (the cautious side: on a flat price it understates the round trip by 2n/(Q+2n) for a buy of n SOL into effective reserves Q); other traders' reaction to a larger buy is unknowable. It is an estimate of size sensitivity, not a second simulation;
+- a trade that cannot be re-priced — a routed-quote (sampled) trade, whose quotes were for the 0.2 SOL size, or a sale recorded before reserves were saved — is shown as "0.2 SOL only" and counted, never scaled linearly.
