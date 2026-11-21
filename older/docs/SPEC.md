@@ -75,3 +75,4 @@ Owner's decision: collect more information without adding books. Nothing below i
 - **Routed half-sale:** its quotes must be requested within 5 s of each other.
 - **Trade-window measurements:** only from exact observations covering the whole window.
 - **Saving:** open positions at most 1 s behind, and all saved on a planned stop.
+- **Carried prices:** a price is used at a later moment only if the whole stretch from its own time to that moment is known (exact use: unbroken exact observation; hour-scale use: covered history). A feed outage, a loss of the coin's data, a boost quarantine or a re-admission to the sampled list breaks the carry. Verified silence of any length does not.

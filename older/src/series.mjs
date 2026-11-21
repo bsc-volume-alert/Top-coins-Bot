@@ -32,13 +32,23 @@ export class Series {
     this.compT = null;      // last time exact observations were merged within a second (RAW_CAP reached): measurements over it are flagged
     this.anchor = null;     // [t, px] the last exact observation that aged out of `raw`: the price still standing for a coin that went quiet
     this.patched = [];      // global gaps re-filled for this coin from back-fill bars: [a, b]
+    this.own = [];          // THIS coin's own unusable-price intervals [a, b|null]: e.g. a boost quarantine, from the estimated state to the confirming swap
     this.lastPx = null; this.lastT = null; this.prevPx = null; this.prevT = null;
   }
   startLive(t) { if (this.histFrom === null || this.histFrom > t) this.histFrom = t; if (this.obsFrom === null || this.obsFrom > t) this.obsFrom = t; }
   /** this coin's own data restarts at t (lost events, a hole in the samples, a new pool): nothing before t is continuous */
-  restartAt(t) { this.histFrom = t; this.obsFrom = t; this.anchor = null; }
-  /** are EXACT observations continuous over [x, t]? (no back-fill, no repaired outage) — what the trade-window measurements need */
-  obsCovered(x, t) { return this.obsFrom !== null && this.obsFrom <= x && this.cov.gapsIn(x, t).length === 0; }
+  restartAt(t) { this.histFrom = t; this.obsFrom = t; this.anchor = null; this.own = []; }
+  /** this coin's price is unusable from t (its state is an estimate — a boost not yet confirmed by a swap): recorded as a break */
+  breakOpen(t) { const g = this.own[this.own.length - 1]; if (g && g[1] === null) return false; this.own.push([t, null]); return true; }
+  /** …and usable again from t (the confirming swap). The interval stays on record: no window or carried price may span it. */
+  breakClose(t) { const g = this.own[this.own.length - 1]; if (!g || g[1] !== null) return false; g[1] = Math.max(t, g[0]); return true; }
+  ownGapsIn(x, t) { return this.own.filter(([a, b]) => (b === null ? Infinity : b) > x && a < t); }
+  /** THE continuity test for exact data: were this coin's exact observations unbroken over [a, b]? True only if exact observation
+   *  was already running at a, no feed or SOL/USD outage touches [a, b], and none of the coin's own breaks does. Everything that
+   *  needs exact data uses this one test: seconds-scale windows, fresh crossings, candle completeness, and — new — every price
+   *  CARRIED from an earlier moment to a later one (the carry must be continuous from the price's own time to where it is used). */
+  continuous(a, b) { return this.obsFrom !== null && this.obsFrom <= a && this.cov.gapsIn(a, b).length === 0 && this.ownGapsIn(a, b).length === 0; }
+  obsCovered(x, t) { return this.continuous(x, t); }
   /** back-fill minute bars (e.g. GMGN 1-minute kline): [{m, o, h, l, c, v}] requested for [from, to).
    *  Coverage follows the EVIDENCE, not the request: an empty reply extends nothing and repairs nothing (it cannot be told
    *  apart from "the provider has no data"). SPARSE replies prove nothing about the minutes they leave out (a missing minute
@@ -98,6 +108,7 @@ export class Series {
     // buyer wallets are only read for the last 15 minutes (features): older bars keep the COUNT and release the wallet list (memory)
     for (const [m, b] of this.bars) { if (m < mc) this.bars.delete(m); else if (m < bc && b.buyers !== EMPTY) { b.nbuyers = b.buyers.size; b.buyers = EMPTY; } }
     for (const m of this.bf.keys()) if (m < mc) this.bf.delete(m);
+    if (this.own.length && this.own[0][1] !== null && this.own[0][1] < now - BAR_KEEP_S - 3600) this.own = this.own.filter(([, b]) => b === null || b >= now - BAR_KEEP_S - 3600);
   }
   /** is [x, t] fully known for this coin?
    *  strict = EXACT observations only: continuous since before x (back-fill does not count, even at start-up) and no outage,
@@ -107,6 +118,7 @@ export class Series {
     if (strict) return this.obsCovered(x, t);
     if (this.histFrom === null || this.histFrom > x) return false;
     for (const [a, b] of this.cov.gapsIn(x, t)) if (!this.patched.some(([pa, pb]) => pa <= a && pb >= b)) return false;
+    if (this.ownGapsIn(x, t).length) return false; // the coin's own breaks are never repaired by back-fill
     return true;
   }
   /** last price at or before t. Exact sources first: an exact observation; else the later of the last completed LIVE bar's close
@@ -114,16 +126,24 @@ export class Series {
    *  minute is newer information (a repaired outage, or history before the live start) and wins — an older observation is never
    *  preferred over a newer known close. exact = true never returns anything that came from back-fill. */
   priceAt(t, exact = false) {
-    let r = null; for (let i = this.raw.length - 1; i >= 0; i--) if (this.raw[i][0] <= t) { r = { px: this.raw[i][1], t: this.raw[i][0], src: "obs" }; break; }
-    if (!r) { let best = null; for (const m of this.bars.keys()) if ((m + 1) * 60 <= t && (best === null || m > best)) best = m; if (best !== null) r = { px: this.bars.get(best).c, t: best * 60 + 59, src: "bar" };
-      if (this.anchor && this.anchor[0] <= t && (!r || this.anchor[0] > r.t)) r = { px: this.anchor[1], t: this.anchor[0], src: "anchor" }; }
-    if (!r && this.lastT !== null && this.lastT <= t && !this.lastIsBf) r = { px: this.lastPx, t: this.lastT, src: "last" };
-    if (exact || !this.bf.size) return r;
-    let bb = null; for (const m of this.bf.keys()) if ((m + 1) * 60 <= t && (bb === null || m > bb)) bb = m;
-    // a completed back-filled minute that ENDS after the exact observation holds that minute's last trade: newer or equal information
-    if (bb !== null && (!r || (bb + 1) * 60 > r.t)) return { px: this.bf.get(bb).c, t: bb * 60 + 59, src: "backfill" };
-    if (!r && this.lastT !== null && this.lastT <= t) return { px: this.lastPx, t: this.lastT, src: "last" };
-    return r;
+    // s0 = the earliest moment the candidate's price can date from (an observation: its own time; a bar: the START of its minute)
+    let r = null; for (let i = this.raw.length - 1; i >= 0; i--) if (this.raw[i][0] <= t) { r = { px: this.raw[i][1], t: this.raw[i][0], src: "obs", s0: this.raw[i][0] }; break; }
+    if (!r) { let best = null; for (const m of this.bars.keys()) if ((m + 1) * 60 <= t && (best === null || m > best)) best = m; if (best !== null) r = { px: this.bars.get(best).c, t: best * 60 + 59, src: "bar", s0: best * 60 };
+      if (this.anchor && this.anchor[0] <= t && (!r || this.anchor[0] > r.t)) r = { px: this.anchor[1], t: this.anchor[0], src: "anchor", s0: this.anchor[0] }; }
+    if (!r && this.lastT !== null && this.lastT <= t && !this.lastIsBf) r = { px: this.lastPx, t: this.lastT, src: "last", s0: this.lastT };
+    if (!exact && this.bf.size) {
+      let bb = null; for (const m of this.bf.keys()) if ((m + 1) * 60 <= t && (bb === null || m > bb)) bb = m;
+      // a completed back-filled minute that ENDS after the exact observation holds that minute's last trade: newer or equal information
+      if (bb !== null && (!r || (bb + 1) * 60 > r.t)) r = { px: this.bf.get(bb).c, t: bb * 60 + 59, src: "backfill", s0: bb * 60 };
+    }
+    if (!r && !exact && this.lastT !== null && this.lastT <= t) r = { px: this.lastPx, t: this.lastT, src: "last", s0: this.lastT };
+    if (!r) return null;
+    // PROVENANCE: a price is carried forward from its own time to t only across a stretch we really know — for exact use, an
+    // unbroken stretch of exact observation (no outage, no loss of the coin's data, no quarantine); for hour-scale use, covered
+    // history (an outage must have been repaired). An older candidate would span the same break, so there is no fallback: the
+    // answer is "not known". Age alone never disqualifies a price: verified silence can be arbitrarily long.
+    if (!(exact ? this.continuous(r.s0, t) : this.covered(r.s0, t))) return null;
+    return { px: r.px, t: r.t, src: r.src };
   }
   /** lowest / highest price in [x, t), plus the price carried in at x.
    *  exact = true (FAST, SECOND-WAVE): exact observations inside the window and the exact price standing at its start — nothing
@@ -158,7 +178,7 @@ export class Series {
   /** exact USD volume in (x, t] from raw observations */
   volIn(x, t) { let v = 0; for (const [ts, , vol] of this.raw) if (ts > x && ts <= t) v += vol; return v; }
   /** was the WHOLE of minute m observed exactly? (exact observations already running at its start, and no outage inside it) */
-  liveComplete(m) { return this.obsFrom !== null && this.obsFrom <= m * 60 && this.cov.gapsIn(m * 60, m * 60 + 60).length === 0; }
+  liveComplete(m) { return this.continuous(m * 60, m * 60 + 60); } // the same continuity test as everything else: outages, the coin's own breaks (quarantine), loss of its data
   /** THE authoritative candle of minute m, chosen by coverage — one rule for every candle reader (hour-scale use only):
    *    a fully observed live minute            → the live candle (back-fill never replaces complete live data)
    *    a PARTIAL live minute (cut by an outage, or begun before exact observation started) with an accepted back-filled candle

@@ -78,7 +78,7 @@ test("C2 a newer back-filled close is used in preference to an older exact obser
   const p = sr.priceAt(2100 - 900); assert.equal(p.px, 1.6); assert.equal(p.src, "backfill"); assert.ok(2.0 / p.px < 1.3, "the real 15-minute rise is 25%, not the 100% an old observation would suggest");
   assert.equal(sr.priceAt(1005).px, 1.0, "before any back-filled minute has completed, the last exact print is still the answer");
   assert.equal(sr.highIn(1100, 1900).px, 1.6, "highs and lows inside a repaired outage come from its bars");
-  const s2 = new Series("M", cov); s2.startLive(0); s2.add(1000, 1.0); s2.add(1100, 1.1); assert.equal(s2.priceAt(1200).src, "obs", "without back-fill nothing changes: the exact observation is the answer");
+  const c2 = new Coverage(); c2.up(0); const s2 = new Series("M", c2); s2.startLive(0); s2.add(1000, 1.0); s2.add(1100, 1.1); assert.equal(s2.priceAt(1200).src, "obs", "without back-fill nothing changes: the exact observation is the answer");
 });
 
 const u = (v) => { const x = Buffer.alloc(8); x.writeBigUInt64LE(BigInt(v)); return x; }, i64 = (v) => { const x = Buffer.alloc(8); x.writeBigInt64LE(BigInt(v)); return x; }, pk = (n) => Buffer.alloc(32, n);
@@ -202,7 +202,7 @@ test("T1 a REJECTED back-fill leaves nothing behind, and FAST never reads back-f
   assert.equal(e.entries.size, 0, "no FAST entry: the lowest exact price in the window is 0.00009");
   // and even an ACCEPTED repair is invisible to the exact path
   const full = []; for (let m = m0; m <= mEnd; m++) full.push({ m, o: 9e-5, h: 9e-5, l: 5e-5, c: 9e-5 }); assert.equal(sr.addBars(full, { from: T0 + 601, to: up, patchGap: true }).accepted, true); assert.ok(sr.bf.size > 0);
-  assert.ok(Math.abs(sr.lowIn(up + 5, up + 65, true).px - 9e-5) < 1e-12, "exact low ignores back-fill"); assert.equal(sr.priceAt(up - 30, true)?.src ?? "none", "obs", "the exact price standing before the window is the last real observation");
+  assert.ok(Math.abs(sr.lowIn(up + 5, up + 65, true).px - 9e-5) < 1e-12, "exact low ignores back-fill"); assert.equal(sr.priceAt(up - 30, true), null, "inside the outage the exact price is NOT KNOWN: the last real observation is from before it");
   assert.ok(sr.lowIn(up - 1200, up + 65).px <= 5e-5 + 1e-12, "the hour-scale low does use the accepted bars");
   e.onSwap(ev(up + 70, 112_000)); assert.equal([...e.entries.values()].filter((x) => x.families.some((f) => f.startsWith("FAST"))).length, 0);
 });
@@ -224,7 +224,7 @@ test("T1 boundary: a back-filled close is kept even when an incomplete live cand
   sr.add(1000, 1.0); cov.drop(1001); cov.up(1900);                               // live bar of minute 16 (960–1019) holds only the 1.00 print
   const bars = []; for (let m = 16; m <= 31; m++) bars.push({ m, o: 1.0, h: 1.6, l: 1.0, c: 1.6 }); assert.equal(sr.addBars(bars, { from: 1001, to: 1900, patchGap: true }).accepted, true);
   assert.equal(sr.bars.get(16).c, 1.0, "the live candle is untouched"); assert.equal(sr.bf.get(16).c, 1.6, "and the back-filled minute is kept beside it");
-  const p = sr.priceAt(1025); assert.equal(p.px, 1.6, "minute 16 closed at 1.60 after the 1.00 print: the newer close is used"); assert.equal(p.src, "backfill"); assert.equal(sr.priceAt(1025, true).px, 1.0);
+  const p = sr.priceAt(1025); assert.equal(p.px, 1.6, "minute 16 closed at 1.60 after the 1.00 print: the newer close is used"); assert.equal(p.src, "backfill"); assert.equal(sr.priceAt(1025, true), null, "exact use: nothing is known inside the outage"); assert.equal(sr.priceAt(1000.5, true).px, 1.0);
 });
 
 test("T2 a deposit or withdrawal after a boost does not release the quarantine: only the next swap does", () => {
@@ -261,7 +261,8 @@ test("M1b routine position valuations do not starve price sampling: only an orde
   const first = J.prices(["warm-up"]);                                    // occupies the in-flight slot
   const jobs = [J.quote("M", "sell", 1, { urgent: false }), J.prices(["A"]), J.quote("M", "sell", 2, { urgent: false }), J.prices(["B"]), J.quote("M", "sell", 7, { urgent: true })];
   await Promise.all([first, ...jobs]); delete process.env.JUP_RPS;
-  const rest = order.slice(1); assert.equal(rest[0], "due", "the due order goes first: " + order.join()); assert.deepEqual(rest.slice(1), ["valuation", "price", "valuation", "price"], "valuations and price samples keep their arrival order");
+  // the due order is sent first, or second if the warm-up request was already in flight (which depends on the clock, not on the rule)
+  assert.ok(order.indexOf("due") <= 1, "the due order goes first: " + order.join()); assert.deepEqual(order.filter((x) => x !== "due"), ["price", "valuation", "price", "valuation", "price"], "valuations and price samples keep their arrival order");
 });
 
 test("watch list: a token the provider stops pricing is dropped after 10 misses and not restored; a token with a position always is", async () => {
@@ -346,4 +347,53 @@ test("a buy that becomes due is quoted at once even while a slow valuation pass 
   w.px.set(Bc, 2.05e-4); w.t += 10; await po.sweep(); const b = [...eng.entries.values()].find((x) => x.mint === Bc); assert.equal(b.status, "pending");
   w.t += 1.1; await po.quotes("urgent"); assert.equal(b.status, "filled", "filled while the valuation pass is still waiting"); assert.ok(b.fill.delay_s < 5);
   release(); await routine;
+});
+
+// ---- fifth review (ChatGPT on 938198b, 21 Nov 2026 12:32 UK): P = price continuity (provenance of every carried price) ----
+test("P1 a price from before a feed gap is never the starting price of a later window (the reviewer's $50K → gap → $90K → $110K)", () => {
+  const e = mkEngine(); e.feedUp(T0); e.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 30 * 24 * H }); path(e, T0, T0 + 600, () => 50_000, 10);
+  e.feedDown(T0 + 601); const up = T0 + 3 * H; e.feedUp(up); const sr = e.coins.get("MintAAApump").series;
+  e.onSwap(ev(up + 100, 90_000)); e.onSwap(ev(up + 130, 110_000));          // window [up+70, up+130) has no gap in it; its carried-in price would be the pre-gap $50K
+  assert.equal(sr.priceAt(up + 70, true), null, "the price standing at the window start is not known"); assert.ok(Math.abs(sr.lowIn(up + 70, up + 130, true).px - 9e-5) < 1e-12);
+  assert.equal([...e.entries.values()].filter((x) => x.families.some((f) => f.startsWith("FAST"))).length, 0, "110 against 90 is not a double");
+  // …while VERIFIED silence of any length still carries the price (no age cut-off)
+  const g = mkEngine(); g.feedUp(T0); g.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 30 * 24 * H }); path(g, T0, T0 + 600, () => 50_000, 10);
+  g.onSwap(ev(T0 + 3 * H + 100, 110_000)); assert.ok([...g.entries.values()].some((x) => x.families.includes("FAST-1M")), "three quiet hours with the feed up: the $50K still stands and the double is real");
+});
+
+test("P2 after a loss of the coin's data neither the anchor nor an old live-bar close supplies the reference", () => {
+  const e = mkEngine(); e.feedUp(T0); e.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 30 * 24 * H }); path(e, T0, T0 + 600, () => 50_000, 10);
+  const sr = e.coins.get("MintAAApump").series; assert.ok(sr.bars.size > 5); e.coinLost("MintAAApump", T0 + 700);
+  assert.equal(sr.anchor, null); assert.ok(sr.bars.size > 5, "the old live bars are still in memory…"); assert.equal(sr.priceAt(T0 + 2000, true), null, "…but their closes are not carried across the loss"); assert.equal(sr.priceAt(T0 + 2000), null);
+  e.onSwap(ev(T0 + 2100, 90_000)); e.onSwap(ev(T0 + 2130, 110_000)); assert.equal(e.entries.size, 0);
+});
+
+test("P3 a sampled coin dropped from the watch list and re-admitted in the same process starts with an empty history", async () => {
+  const M = "DropBack1", w = world(), eng = mkEngine(), po = new Poller({ engine: eng, jup: w.jup, now: () => w.t });
+  w.px.set(M, 5e-5); po.add(w.tok(M), "t"); for (let k = 0; k < 20; k++) { w.t += 10; await po.sweep(); } const old = eng.coins.get(M).series; assert.ok(old.bars.size > 0);
+  w.px.delete(M); for (let k = 0; k < 11; k++) { w.t += 61; await po.sweep(); } assert.ok(!po.watch.has(M)); assert.equal(po.stats.droppedUnpriced, 1);
+  w.t += 3600; w.px.set(M, 9e-5); assert.equal(po.add(w.tok(M), "rediscovery"), true); const sr = eng.coins.get(M).series;
+  assert.notEqual(sr, old); assert.equal(sr.bars.size, 0); assert.equal(sr.obsFrom, null); assert.equal(po.stats.readmitted, 1);
+  w.t += 10; await po.sweep(); w.px.set(M, 1.1e-4); w.t += 10; await po.sweep(); w.t += 10; await po.sweep();
+  assert.equal(eng.entries.size, 0, "$110K against a first new sample of $90K — the old $50K bar is gone"); assert.ok(sr.obsFrom > w.t - 100);
+});
+
+test("P4 a boost quarantine is a recorded price break: it empties exact windows, makes its minute incomplete, and its candle yields to an accepted repair", () => {
+  const e = mkEngine(); e.feedUp(T0); e.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 9 * H }); path(e, T0, T0 + 600, () => 100_000, 10);
+  const sr = e.coins.get("MintAAApump").series, tq = T0 + 605, M = Math.floor(tq / 60);
+  e.onEvent({ t: tq, mint: "MintAAApump", pool: "PoolA", kind: "boost", state: { base: BASE, quote: quoteFor(150_000), feeBuy: 0.003, feeSell: 0.003, supply: 1e9, approx: "boost" }, sol: 0, isBuy: null });
+  assert.equal(e.stats.priceBreaks, 1); assert.deepEqual(sr.own, [[tq, null]]); assert.equal(sr.continuous(T0 + 590, tq + 30), false);
+  e.onSwap(ev(tq + 20, 150_000)); assert.deepEqual(sr.own, [[tq, tq + 20]], "closed by the confirming swap, kept on record");
+  assert.equal(sr.liveComplete(M), false, "the minute containing the quarantine is not fully observed"); assert.equal(sr.liveComplete(M - 2), true);
+  assert.equal(sr.covered(tq - 30, tq + 40, true), false); assert.equal(sr.covered(tq + 20, tq + 60, true), true, "from the confirming swap onward exact coverage holds again");
+  assert.equal(sr.priceAt(tq + 10, true), null, "inside the quarantine the price is not known"); assert.equal(sr.covered(T0, tq + 60), false, "and hour-scale windows spanning it are not covered either");
+  sr.bf.set(M, { o: 1e-4, h: 1.5e-4, l: 1e-4, c: 1.5e-4, v: 77, nb: 0, ns: 0, buyers: new Set(), lowT: M * 60, bf: true }); assert.equal(sr.barAt(M).v, 77, "the partial live candle no longer hides the +50% repair");
+  e.onSwap(ev(tq + 25, 205_000)); e.onSwap(ev(tq + 27, 206_000)); assert.equal([...e.entries.values()].filter((x) => x.families.some((f) => f.startsWith("FAST"))).length, 0, "no FAST entry measured from the pre-boost $100K");
+});
+
+test("P5 an order that becomes due while a pass is waiting is dispatched as urgent", async () => {
+  const w = world(), eng = mkEngine(), po = new Poller({ engine: eng, jup: w.jup, now: () => w.t }); const en = await sampledEntry2(w, eng, po, "UrgCoin1"); assert.equal(en.status, "filled");
+  const seen = []; const fast = w.jup.quote; w.jup.quote = async (m, side, raw, o = {}) => { seen.push(o.urgent); w.t += 2; return fast(m, side, raw, o); };
+  const real = eng.quoteNeeds.bind(eng); eng.quoteNeeds = (now) => real(now).map((n) => ({ ...n, due: w.t + 0.5 }));   // a sale due half a second into the pass
+  w.t += 11; await po.quotes("routine"); assert.equal(seen[0], false, "not yet due at the first request"); assert.ok(seen.slice(1).length > 0 && seen.slice(1).every((u) => u === true), "due by the later requests: first lane — " + seen.join());
 });

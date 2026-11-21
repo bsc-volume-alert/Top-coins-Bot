@@ -9,6 +9,7 @@
 // visibly unpriced. Mints already observed live by the PumpSwap adapter are not polled twice.
 import * as S from "./spec.mjs";
 import { classifyJupToken } from "./risk.mjs";
+import { Series } from "./series.mjs";
 
 /** token decimals are needed to convert quote sizes: null, undefined or a non-integer is NOT valid (note: `null >= 0` is true in JavaScript) */
 export const validDec = (d) => Number.isInteger(d) && d >= 0 && d <= 18;
@@ -52,9 +53,12 @@ export class Poller {
     const risk = classifyJupToken(tok), origin = tok.launchpad || "unknown";
     // AGE: the provider gives the FIRST POOL's creation, which is a LOWER BOUND on token age (the token existed before its pool).
     // It can only make a coin look younger than it is, so the 8-hour minimum is never broken; the age group may be understated.
-    const createTs = tok.first_pool?.created ?? null;
+    const createTs = tok.first_pool?.created ?? null, had = this.engine.coins.get(tok.mint);
     this.engine.coin(tok.mint, { mode: "polled", createTs, t: this.now(), info: { unpriced: null, population: "solana-wide", symbol: tok.symbol, decimals: tok.decimals, circ_supply: tok.circ_supply ?? null, origin, origin_evidence: tok.launchpad ? "provider launchpad field" : "none", venues: null, token_program: tok.token_program, discovery_source: source, price_source: "jupiter price v3", monitoring_mode: "polled", risk, create_src: createTs ? "jupiter firstPool.createdAt (pool creation: lower bound on token age, UNVERIFIED as token creation)" : null, valuation_def: this.valuation } });
     const c = this.engine.coins.get(tok.mint); if (tok.circ_supply > 0) c.supply = tok.circ_supply;
+    // RE-ADMISSION in the same process (the coin was dropped from the list earlier, or left the live adapter): its old history is
+    // not continuous with what we are about to sample. It starts again with an empty history; per-age-group entry records are kept.
+    if (had) { c.series = new Series(tok.mint, this.engine.pollCov); c.sw = null; c.state = null; c.lostAt = null; this.stats.readmitted = (this.stats.readmitted || 0) + 1; }
     this.watch.set(tok.mint, { decimals: tok.decimals, circ: tok.circ_supply ?? null, hot: false, lastT: null, lastReq: 0, miss: 0, mc: tok.mcap ?? null });
     this.stats.by_origin[origin] = (this.stats.by_origin[origin] || 0) + 1; this.stats.risk[risk.status] = (this.stats.risk[risk.status] || 0) + 1; this.stats.discovered++;
     this.store?.saveCoin(tok.mint, { createTs, createSrc: "jupiter firstPool", pumpOrigin: origin, firstSeen: Math.floor(this.now()), info: c.info });
@@ -124,7 +128,7 @@ export class Poller {
       let held = this.held.get(need.id); if (!held) this.held.set(need.id, (held = new Map()));
       if (need.buy_sol) { const q = await this.jup.quote(need.mint, "buy", need.buy_sol * 1e9, { urgent: true }); if (q.ok) { this.stats.quotesOk++; this.engine.onQuote(need.id, { kind: "quote", reqT: q.req, t: q.t, buy: { sol: need.buy_sol, tok: q.out / 10 ** dec, reqT: q.req, t: q.t, route: q.route, router: q.router, feeBps: q.feeBps, impact: q.impact }, sells: [] }); n++; } else this._fail(need, q); }
       for (const tok of need.sells) {
-        const q = await this.jup.quote(need.mint, "sell", tok * 10 ** dec, { urgent });
+        const q = await this.jup.quote(need.mint, "sell", tok * 10 ** dec, { urgent: urgent || (need.due != null && need.due <= this.now()) }); // urgency is decided at dispatch: an order that became due while this pass was waiting goes in the first lane
         if (!q.ok) { this._fail(need, q); for (const k of held.keys()) if (Math.abs(tok - k) <= 1e-9 * Math.max(1, tok)) held.delete(k); continue; } // a size whose quote failed has NO current quote: the old one is dropped, never carried forward
         this.stats.quotesOk++; held.set(tok, { tok, sol: q.out / 1e9, reqT: q.req, t: q.t, route: q.route, router: q.router });
         for (const k of held.keys()) if (!need.sells.some((x) => Math.abs(x - k) <= 1e-9 * Math.max(1, x))) held.delete(k); // sizes no longer held

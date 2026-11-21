@@ -88,7 +88,8 @@ export class Engine {
     c.state = st; if (st.supply) c.supply = st.supply;
     // QUARANTINE: a state rebuilt from a boost event is an estimate until the next swap confirms it — it prices no fill (trustedAt),
     // moves no peak or stop, and creates no price observation or signal. Counted.
-    if (st.approx) { this.stats.approxStates = (this.stats.approxStates || 0) + 1; return; }
+    if (st.approx) { this.stats.approxStates = (this.stats.approxStates || 0) + 1; if (c.series.breakOpen(ev.t)) this.stats.priceBreaks = (this.stats.priceBreaks || 0) + 1; return; } // recorded on the coin as a price-history break
+    c.series.breakClose(ev.t); // a confirmed state ends any quarantine; the interval itself stays unusable
     // 3) open positions see it (value, peaks, triggers) — in SOL, independent of the USD reference
     if (!ev.replay) { const ids = this.byMint.get(ev.mint); if (ids) for (const id of ids) { const e = this.entries.get(id); if (e.exec === "routed-quote") continue; const was = e.status, sig = e.versions.map((v) => v.status).join(); observe(e, st, ev.t, this.feedCov); this._after(e, was, sig, ids, c); } }
     // 4) USD history and signals

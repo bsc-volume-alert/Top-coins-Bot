@@ -187,6 +187,28 @@ Verdict received: T1 and T2 closed; **one blocker left** — the candle readers.
 ### Addendum to 6e — second regression found by our own monitoring (20 Nov 2026, 20:45 UK), fixed in the commit after 938198b
 After 07dd68e put routine valuations in the second Jupiter lane, a full valuation pass on the free key takes tens of seconds, and the poller ran due orders and valuations in ONE sequential pass. A buy that became due while a pass was running was not requested until the pass ended: all three sampled buys between 20:20 and 20:35 UK (entries 49, 50, 53) were cancelled at the 5-second limit. Fix: two independent passes — due orders and routine valuations — so a due order is requested within a quarter of a second and takes the first lane. Test: "a buy that becomes due is quoted at once even while a slow valuation pass is running". No trading rule changed.
 
+## 6f. Fifth independent review, commit 938198b (ChatGPT, 21 Nov 2026 12:32 UK) — response
+
+Verdict received: F1 closed; **one blocker — price-history continuity** (an old price could survive an interruption and be carried into a later window). Confirmed in all three forms shown (feed gap during a silence; old live-bar close after `coinLost`; same-process re-admission of a sampled coin), plus the quarantine not being recorded as a break. Tests P1–P5 in `older/test/review2.test.mjs`; P1 and P2 were checked to FAIL with the provenance check removed. 101 tests pass.
+
+One coherent correction, as requested:
+
+| Requirement | What was done |
+|---|---|
+| Validate every carried reference across the source-to-window interval | `Series.priceAt()` now returns a price only if the stretch from the price's OWN time to the time it is asked for is known: for exact use `continuous(s0, t)`, for hour-scale use `covered(s0, t)`. Applies to raw observations, live-bar closes (dated from the START of their minute), the anchor, last-price fallbacks and back-filled closes. No fallback to an older candidate (it would span the same break): the answer is "not known". |
+| Record unusable-price periods, including quarantine and per-coin losses | Each coin keeps its own breaks (`Series.own`): a boost quarantine opens one at the estimated state and the confirming swap closes it; the interval stays on record. Loss of a coin's data restarts its history (`restartAt`, which also clears the anchor and the break list). |
+| One continuity test | `Series.continuous(a, b)`: exact observation running at `a`, no feed / SOL-USD outage in `[a, b]`, none of the coin's own breaks in `[a, b]`. Used by seconds-scale windows, fresh crossings, trade-window measurements, carried prices and candle completeness (`liveComplete`). |
+| Re-establish coverage on recovery and re-admission | `Poller.add()` gives a coin that already existed a NEW empty Series (per-age-group entry records are kept). Recovery after a quarantine: exact coverage holds again from the confirming swap. |
+| Keep arbitrarily old anchors when silence is verified | Unchanged: no age cut-off. Test P1 shows three verified quiet hours still carrying the price and the wake-up double being taken. |
+| Non-blocking: urgency at dispatch | A sell quote's lane is decided when it is sent, not at the start of the pass. |
+| Non-blocking: search label | The search banner states that each book's total boxes still show the whole book. |
+
+Decision taken, declared: a coin's own break (quarantine) also makes HOUR-scale windows that span it uncovered, and back-fill does not repair it. This is the strict choice; its cost is counted (`engine.priceBreaks`, and `sizes.coins_with_price_breaks` in the status report).
+
+**Question for the reviewer (not implemented):** live evidence, 20–21 Nov: three feed reconnects of about 2 seconds each in 16 hours; each voids hour-scale coverage for every coin unless back-fill repairs it, and the free GMGN plan repaired 415 coin-gaps against 2,475 not repaired. Would a declared tolerance for hour-scale windows only — an unrepaired feed gap, or a coin's own quarantine, of at most 60 seconds does not break LOW4H / CONT / SLOW-BUILD / HH-BREAK / AGE-DOUBLE coverage; exact windows unchanged — be acceptable, in the same spirit as the 5-minute back-fill tolerance?
+
+Also since 938198b (commit a680362, not yet reviewed): due orders and routine valuations run as independent poller passes, so a buy that becomes due is not held behind a slow valuation pass (three sampled buys had been cancelled at the 5-second limit).
+
 ## 7. What is ready, and what is not
 **Ready:** the PumpSwap live path; the Solana-wide sampled path (against a simulated provider); the 448-row dashboard with method filters; the one-command validation run.
 **Remaining, in order:**
