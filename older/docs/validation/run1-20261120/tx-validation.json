@@ -1,0 +1,488 @@
+{
+ "at": "2026-11-20T14:05:30.359Z",
+ "idl": "pump-public-docs @ main, read 20 Nov 2026 (BuyEvent 40 fields, SellEvent 33, Pool 18)",
+ "asked": 120,
+ "scored": 52,
+ "skipped": {
+  "getTransaction error": 147,
+  "failed tx": 113,
+  "no swap event": 40,
+  "non-SOL pool": 103,
+  "several swaps on one pool in the tx (see multi_swap)": 50
+ },
+ "reserves": {
+  "buy_exact_quote_in|buy": {
+   "base_pre": 13,
+   "base_post": 0,
+   "base_neither": 0,
+   "quote_pre": 13,
+   "quote_post": 0,
+   "quote_neither": 0
+  },
+  "buy|buy": {
+   "base_pre": 23,
+   "base_post": 0,
+   "base_neither": 0,
+   "quote_pre": 23,
+   "quote_post": 0,
+   "quote_neither": 0
+  },
+  "legacy|sell": {
+   "base_pre": 14,
+   "base_post": 0,
+   "base_neither": 0,
+   "quote_pre": 14,
+   "quote_post": 0,
+   "quote_neither": 0
+  },
+  "buy_exact_quote_in_v2|buy": {
+   "base_pre": 2,
+   "base_post": 0,
+   "base_neither": 0,
+   "quote_pre": 2,
+   "quote_post": 0,
+   "quote_neither": 0
+  }
+ },
+ "curve": {
+  "pre": 15,
+  "post": 0,
+  "both": 25,
+  "neither": 12
+ },
+ "curve_large_trades": {
+  "pre": 1,
+  "post": 0,
+  "both": 0,
+  "neither": 0
+ },
+ "user_amount": {
+  "match": 44,
+  "differ": 8
+ },
+ "multi_swap": {
+  "txs": 25,
+  "chain_pre_ok": 25,
+  "chain_post_ok": 0,
+  "chain_neither": 0
+ },
+ "virtual": {
+  "zero": 0,
+  "negative": 2,
+  "positive": 50,
+  "absent": 0
+ },
+ "fee_rate": {
+  "buy": {
+   "n": 38,
+   "min": -0.01186,
+   "median": 0.003,
+   "max": 0.0125
+  },
+  "sell": {
+   "n": 14,
+   "min": 0.0085,
+   "median": 0.012,
+   "max": 0.0125
+  }
+ },
+ "samples": [
+  {
+   "sig": "5GfhSjKAa4nQ71SGmPX718YqSG3Db6x29sQ6aq5LNwoTVomntg34JBh4rTn77cL3zontC4kjJVQNSbJtoh7qMf8u",
+   "slot": 471764426,
+   "ix": "buy_exact_quote_in",
+   "type": "buy",
+   "event": {
+    "pool_base": "38399940021850",
+    "pool_quote": "619809195382",
+    "virtual_quote": "17581142980",
+    "base_amt": "92577266",
+    "quote_amt": "1550502",
+    "user_quote": "1536670",
+    "lp_bps": 20,
+    "protocol_bps": 5,
+    "creator_bps": 65,
+    "cashback_bps": 0,
+    "buyback_bps": 5000,
+    "holder_bps": 0
+   },
+   "vault": {
+    "base_pre": "38399940021850",
+    "base_post": "38399847444584",
+    "quote_pre": "619809195382",
+    "quote_post": "619810735126"
+   },
+   "reserves_are": {
+    "base": "pre",
+    "quote": "pre"
+   },
+   "curve_fit": "neither",
+   "user_amount_matches": true,
+   "fee_rate": -0.00892
+  },
+  {
+   "sig": "4F5mdG2MbmEwQ3fjj32MKEQty8EBy8M28TCTGKcNBStb2KWv3FpsMUGMXsNm1JVCv44D7qSEFPCzkhgXWAyinj8z",
+   "slot": 471764426,
+   "ix": "buy_exact_quote_in",
+   "type": "buy",
+   "event": {
+    "pool_base": "38400091985982",
+    "pool_quote": "619806667934",
+    "virtual_quote": "17581142980",
+    "base_amt": "151964132",
+    "quote_amt": "2545106",
+    "user_quote": "2522403",
+    "lp_bps": 20,
+    "protocol_bps": 5,
+    "creator_bps": 65,
+    "cashback_bps": 0,
+    "buyback_bps": 5000,
+    "holder_bps": 0
+   },
+   "vault": {
+    "base_pre": "38400091985982",
+    "base_post": "38399940021850",
+    "quote_pre": "619806667934",
+    "quote_post": "619809195382"
+   },
+   "reserves_are": {
+    "base": "pre",
+    "quote": "pre"
+   },
+   "curve_fit": "neither",
+   "user_amount_matches": true,
+   "fee_rate": -0.00892
+  },
+  {
+   "sig": "2ZbhAXDGDxZhEtEnLiUcfsj12XsBsMJSCN5Sbp4nFNXrVCiCrrxerfyRLYBfwXT8Wi2c47cw8n3vCWgiAgcv4DGA",
+   "slot": 471764426,
+   "ix": "buy",
+   "type": "buy",
+   "event": {
+    "pool_base": "14424077573322",
+    "pool_quote": "1204079468784",
+    "virtual_quote": "17583924681",
+    "base_amt": "774862318",
+    "quote_amt": "65631357",
+    "user_quote": "65880757",
+    "lp_bps": 20,
+    "protocol_bps": 5,
+    "creator_bps": 13,
+    "cashback_bps": 0,
+    "buyback_bps": 5000,
+    "holder_bps": 0
+   },
+   "vault": {
+    "base_pre": "14424077573322",
+    "base_post": "14423302711004",
+    "quote_pre": "1204079468784",
+    "quote_post": "1204145231404"
+   },
+   "reserves_are": {
+    "base": "pre",
+    "quote": "pre"
+   },
+   "curve_fit": "both",
+   "user_amount_matches": false,
+   "fee_rate": 0.0038
+  },
+  {
+   "sig": "4zkma79qY7tJ5vTQYeU8AsPjkxuHeK7ebbVEgGenu1JYJqG4nw2CbfQ8EfNAubaxVy1wgvMv8mQ5cAKAXsCSEXfx",
+   "slot": 471764426,
+   "ix": "buy",
+   "type": "buy",
+   "event": {
+    "pool_base": "6399393564002",
+    "pool_quote": "2735841266318",
+    "virtual_quote": "17584048135",
+    "base_amt": "88429963",
+    "quote_amt": "38048709",
+    "user_quote": "38162857",
+    "lp_bps": 20,
+    "protocol_bps": 5,
+    "creator_bps": 5,
+    "cashback_bps": 0,
+    "buyback_bps": 5000,
+    "holder_bps": 0
+   },
+   "vault": {
+    "base_pre": "6399393564002",
+    "base_post": "6399305134039",
+    "quote_pre": "2735841266318",
+    "quote_post": "2735879391125"
+   },
+   "reserves_are": {
+    "base": "pre",
+    "quote": "pre"
+   },
+   "curve_fit": "both",
+   "user_amount_matches": false,
+   "fee_rate": 0.003
+  },
+  {
+   "sig": "4wFMJVvmp5fYV5ivsrQcTy6RKh8CeGw7eBku88GK2RKeRxBddayRTTbKPuGjpKbAmH2Qy4C6E4qKLRKnzrsWh2bV",
+   "slot": 471764426,
+   "ix": null,
+   "type": "sell",
+   "event": {
+    "pool_base": "44913721879736",
+    "pool_quote": "1002546311671",
+    "virtual_quote": "17173415993",
+    "base_amt": "2980382237",
+    "quote_amt": "67662014",
+    "user_quote": "67086884",
+    "lp_bps": 20,
+    "protocol_bps": 5,
+    "creator_bps": 60,
+    "cashback_bps": 0,
+    "buyback_bps": 5000,
+    "holder_bps": 0
+   },
+   "vault": {
+    "base_pre": "44913721879736",
+    "base_post": "44916702261973",
+    "quote_pre": "1002546311671",
+    "quote_post": "1002479207871"
+   },
+   "reserves_are": {
+    "base": "pre",
+    "quote": "pre"
+   },
+   "curve_fit": "both",
+   "user_amount_matches": true,
+   "fee_rate": 0.0085
+  },
+  {
+   "sig": "37oauXSmFDpUNHuSz1ba3izSXhiz8giVuuVFndL6jEoevmbPSYhmhDGLLphmDYrKBmtDtLSqzWP7vzRotseeczYR",
+   "slot": 471764425,
+   "ix": null,
+   "type": "sell",
+   "event": {
+    "pool_base": "979711969413295",
+    "pool_quote": "5094797",
+    "virtual_quote": "-7116",
+    "base_amt": "182025834486294",
+    "quote_amt": "797158",
+    "user_quote": "787192",
+    "lp_bps": 2,
+    "protocol_bps": 93,
+    "creator_bps": 30,
+    "cashback_bps": 0,
+    "buyback_bps": 0,
+    "holder_bps": 0
+   },
+   "vault": {
+    "base_pre": "979711969413295",
+    "base_post": "1161737803899589",
+    "quote_pre": "5094797",
+    "quote_post": "4307605"
+   },
+   "reserves_are": {
+    "base": "pre",
+    "quote": "pre"
+   },
+   "curve_fit": "pre",
+   "user_amount_matches": true,
+   "fee_rate": 0.0125
+  },
+  {
+   "sig": "toDdRAHxHjrD9NXLfWseAcYU2XfYVLattd5QrhNvUuq79HiGe6FZR4jknWQbZmBnkuHxRAHUjm3dvg9pcaxjshB",
+   "slot": 471764425,
+   "ix": "buy",
+   "type": "buy",
+   "event": {
+    "pool_base": "10568903766071",
+    "pool_quote": "1655330356968",
+    "virtual_quote": "17582480000",
+    "base_amt": "909004264",
+    "quote_amt": "143895312",
+    "user_quote": "144326999",
+    "lp_bps": 20,
+    "protocol_bps": 5,
+    "creator_bps": 5,
+    "cashback_bps": 0,
+    "buyback_bps": 5000,
+    "holder_bps": 0
+   },
+   "vault": {
+    "base_pre": "10568903766071",
+    "base_post": "10567994761807",
+    "quote_pre": "1655330356968",
+    "quote_post": "1655474540071"
+   },
+   "reserves_are": {
+    "base": "pre",
+    "quote": "pre"
+   },
+   "curve_fit": "both",
+   "user_amount_matches": true,
+   "fee_rate": 0.003
+  },
+  {
+   "sig": "5dkiUDLf7APN1u9zHMyA59nDcdE4Lo6Hs1AP2WKVL8B8ZRfc9Suh3itkYzthhNKbfjRmYCRTrLzFmewXmWvq9Esy",
+   "slot": 471764425,
+   "ix": "buy",
+   "type": "buy",
+   "event": {
+    "pool_base": "179264061285055",
+    "pool_quote": "83227828680",
+    "virtual_quote": "16495782694",
+    "base_amt": "388344085530",
+    "quote_amt": "216502694",
+    "user_quote": "219100728",
+    "lp_bps": 20,
+    "protocol_bps": 5,
+    "creator_bps": 95,
+    "cashback_bps": 0,
+    "buyback_bps": 5000,
+    "holder_bps": 0
+   },
+   "vault": {
+    "base_pre": "179264061285055",
+    "base_post": "178875717199525",
+    "quote_pre": "83227828680",
+    "quote_post": "83444764380"
+   },
+   "reserves_are": {
+    "base": "pre",
+    "quote": "pre"
+   },
+   "curve_fit": "pre",
+   "user_amount_matches": true,
+   "fee_rate": 0.012
+  },
+  {
+   "sig": "67SXcQDvnCat1FUV1HTZEctjKzTJ9BRqwvYoWyXbuyh2Aw5Zs2hK5uLCukDMQXnU6ChtujLcn2jycTJQfy6Hjbt2",
+   "slot": 471764424,
+   "ix": "buy_exact_quote_in",
+   "type": "buy",
+   "event": {
+    "pool_base": "28626765275598",
+    "pool_quote": "665793375621",
+    "virtual_quote": "17583368493",
+    "base_amt": "1049485576",
+    "quote_amt": "25267151",
+    "user_quote": "25054188",
+    "lp_bps": 20,
+    "protocol_bps": 5,
+    "creator_bps": 60,
+    "cashback_bps": 0,
+    "buyback_bps": 5000,
+    "holder_bps": 0
+   },
+   "vault": {
+    "base_pre": "28626765275598",
+    "base_post": "28625715790022",
+    "quote_pre": "665793375621",
+    "quote_post": "665818479918"
+   },
+   "reserves_are": {
+    "base": "pre",
+    "quote": "pre"
+   },
+   "curve_fit": "neither",
+   "user_amount_matches": true,
+   "fee_rate": -0.00843
+  },
+  {
+   "sig": "YGa5UuKCMCB7Bo5xWeqfHSwuaNzqyi4CW3ZvZfn9DY3qHNF9hNkK19yNPEhP458KbXpgLFzHFBVsG1E3bwXp5qV",
+   "slot": 471764424,
+   "ix": "buy",
+   "type": "buy",
+   "event": {
+    "pool_base": "179609807656396",
+    "pool_quote": "83035478927",
+    "virtual_quote": "16495782694",
+    "base_amt": "345746371341",
+    "quote_amt": "191965821",
+    "user_quote": "194269412",
+    "lp_bps": 20,
+    "protocol_bps": 5,
+    "creator_bps": 95,
+    "cashback_bps": 0,
+    "buyback_bps": 5000,
+    "holder_bps": 0
+   },
+   "vault": {
+    "base_pre": "179609807656396",
+    "base_post": "179264061285055",
+    "quote_pre": "83035478927",
+    "quote_post": "83227828680"
+   },
+   "reserves_are": {
+    "base": "pre",
+    "quote": "pre"
+   },
+   "curve_fit": "pre",
+   "user_amount_matches": true,
+   "fee_rate": 0.012
+  },
+  {
+   "sig": "5Fdfses7X4k5YCrr94xQDS2vf3y6uM17bXL93atWg2ryG3HfT6oseyzXjV2XzUar2jcUP1Hw3rBTNHCF34XCQJ9K",
+   "slot": 471764424,
+   "ix": "buy_exact_quote_in",
+   "type": "buy",
+   "event": {
+    "pool_base": "18553002248428",
+    "pool_quote": "940343348425",
+    "virtual_quote": "9180878695",
+    "base_amt": "582934",
+    "quote_amt": "30000",
+    "user_quote": "29835",
+    "lp_bps": 20,
+    "protocol_bps": 5,
+    "creator_bps": 30,
+    "cashback_bps": 0,
+    "buyback_bps": 5000,
+    "holder_bps": 0
+   },
+   "vault": {
+    "base_pre": "18553002248428",
+    "base_post": "18553001665494",
+    "quote_pre": "940343348425",
+    "quote_post": "940343378320"
+   },
+   "reserves_are": {
+    "base": "pre",
+    "quote": "pre"
+   },
+   "curve_fit": "neither",
+   "user_amount_matches": false,
+   "fee_rate": -0.0055
+  },
+  {
+   "sig": "4WxiRHcFKYwpwv2vgF14ogrL2EbvWYUEr99PqLJqM5STATg1aJmGnHFNVrvrvuwmP7t4YEaFLT9o6LSSQu7XMYo7",
+   "slot": 471764423,
+   "ix": null,
+   "type": "sell",
+   "event": {
+    "pool_base": "179031972492254",
+    "pool_quote": "83355751744",
+    "virtual_quote": "16496012845",
+    "base_amt": "620442056371",
+    "quote_amt": "344844984",
+    "user_quote": "340706843",
+    "lp_bps": 20,
+    "protocol_bps": 5,
+    "creator_bps": 95,
+    "cashback_bps": 0,
+    "buyback_bps": 5000,
+    "holder_bps": 0
+   },
+   "vault": {
+    "base_pre": "179031972492254",
+    "base_post": "179652414548625",
+    "quote_pre": "83355751744",
+    "quote_post": "83011596450"
+   },
+   "reserves_are": {
+    "base": "pre",
+    "quote": "pre"
+   },
+   "curve_fit": "pre",
+   "user_amount_matches": true,
+   "fee_rate": 0.012
+  }
+ ],
+ "verdict": "reserves: see `reserves` (pre vs post per instruction and side); curve: `curve_large_trades` is the discriminating sample (small trades fit both)"
+}

@@ -1,0 +1,129 @@
+{
+ "at": "2026-11-20T14:06:56.458Z",
+ "key_present": true,
+ "checks": [
+  {
+   "name": "token_info (open_timestamp vs migrated_timestamp vs creation fields)",
+   "ok": true,
+   "ms": 199,
+   "items": null,
+   "shape": [
+    "address",
+    "symbol",
+    "name",
+    "decimals",
+    "logo",
+    "banner",
+    "biggest_pool_address",
+    "open_timestamp",
+    "migrated_timestamp",
+    "holder_count",
+    "circulating_supply",
+    "total_supply",
+    "max_supply",
+    "liquidity",
+    "creation_timestamp",
+    "standard",
+    "trade_fee",
+    "total_fee",
+    "og",
+    "image_dup_count",
+    "visiting_count",
+    "launchpad",
+    "launchpad_status",
+    "launchpad_progress",
+    "launchpad_platform",
+    "migrated_pool",
+    "migration_market_cap",
+    "migration_market_cap_quote",
+    "ath_price",
+    "locked_ratio",
+    "price",
+    "pool",
+    "dev",
+    "link",
+    "stat",
+    "wallet_tags_stat",
+    "fee_distribution"
+   ],
+   "sample": "{\"open_timestamp\":0,\"migrated_timestamp\":0,\"creation_timestamp\":1754893539,\"launchpad\":\"\",\"biggest_pool_address\":\"58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2\",\"total_supply\":\"637310991\",\"circulating_supply\":\"637310991\"}"
+  },
+  {
+   "name": "kline_1m_0.07d_ago",
+   "ok": true,
+   "ms": 1597,
+   "items": 100,
+   "shape": [
+    "list"
+   ],
+   "sample": "[{\"time\":1795177620000,\"open\":\"71.20193969\",\"close\":\"71.38441976\",\"high\":\"71.67235494\",\"low\":\"70.84470727\",\"volume\":\"367787.73227299\",\"source\":\"\",\"amount\":\"5158.9685171\"},{\"time\":1795177680000,\"open\":\"71.38441976\",\"close\":\"71.22688018\",\"high\":\"71.69682485\",\"low\":\"70.96242609\",\"volume\":\"559062.605473\",\"source\":\"\",\"amount\":\"7849.17163082\"}]"
+  },
+  {
+   "name": "kline_1m_7d_ago",
+   "ok": true,
+   "ms": 3315,
+   "items": 100,
+   "shape": [
+    "list"
+   ],
+   "sample": "[{\"time\":1794578820000,\"open\":\"81.3546137\",\"close\":\"81.30305665\",\"high\":\"81.78271267\",\"low\":\"81\",\"volume\":\"283391.20626699\",\"source\":\"\",\"amount\":\"3483.2769045\"},{\"time\":1794578880000,\"open\":\"81.30305665\",\"close\":\"81.25164521\",\"high\":\"81.78619825\",\"low\":\"81\",\"volume\":\"148775.23424\",\"source\":\"\",\"amount\":\"1830.36169409\"}]"
+  },
+  {
+   "name": "kline_1m_30d_ago",
+   "ok": true,
+   "ms": 3345,
+   "items": 100,
+   "shape": [
+    "list"
+   ],
+   "sample": "[{\"time\":1792591620000,\"open\":\"106.48162248\",\"close\":\"106.39288375\",\"high\":\"106.88169206\",\"low\":\"106\",\"volume\":\"627202.68934999\",\"source\":\"\",\"amount\":\"5899.2671382\"},{\"time\":1792591680000,\"open\":\"106.39288375\",\"close\":\"106.2879768\",\"high\":\"106.8323448\",\"low\":\"106.11429632\",\"volume\":\"1196700.28491799\",\"source\":\"\",\"amount\":\"11236.36588157997\"}]"
+  },
+  {
+   "name": "kline_1m_60d_ago",
+   "ok": true,
+   "ms": 3317,
+   "items": 100,
+   "shape": [
+    "list"
+   ],
+   "sample": "[{\"time\":1789999620000,\"open\":\"117.57506908\",\"close\":\"117.66936985\",\"high\":\"118.2584065\",\"low\":\"117.19029294\",\"volume\":\"1367747.24761899\",\"source\":\"\",\"amount\":\"11623.9506937\"},{\"time\":1789999680000,\"open\":\"117.66936985\",\"close\":\"117.73179904\",\"high\":\"118.23933703\",\"low\":\"116.8224299\",\"volume\":\"1336883.618335\",\"source\":\"\",\"amount\":\"11358.28050218\"}]"
+  },
+  {
+   "name": "kline_1m_90d_ago",
+   "ok": true,
+   "ms": 3370,
+   "items": 100,
+   "shape": [
+    "list"
+   ],
+   "sample": "[{\"time\":1787407620000,\"open\":\"93.74598025\",\"close\":\"93.72287166\",\"high\":\"94.21373772\",\"low\":\"93.59605911\",\"volume\":\"732867.012196\",\"source\":\"\",\"amount\":\"7820.49526287\"},{\"time\":1787407680000,\"open\":\"93.72287166\",\"close\":\"93.71223482\",\"high\":\"94.093199473\",\"low\":\"93.60915\",\"volume\":\"364918.0017950002\",\"source\":\"\",\"amount\":\"3893.79550242\"}]"
+  },
+  {
+   "name": "rank_1h",
+   "ok": true,
+   "ms": 3381,
+   "items": 100,
+   "shape": [
+    "rank"
+   ],
+   "sample": "[{\"id\":0,\"chain\":\"sol\",\"address\":\"7ycjv7RnffKDdLifHuRUDRhBbe3oQk9qp7EvViGshcMr\",\"name\":\"Raja\",\"symbol\":\"Raja\",\"logo\":\"https://gmgn.ai/external-res/60c05151da9f94ee1766fd2cb3c7985a_v2.webp\",\"price\":0.0000351405,\"price_change_percent\":1423.66,\"price_change_percent1m\":-22.6617,\"price_change_percent5m\":-49.8185,\"price_change_percent1h\":1423.66,\"volume\":394879,\"liquidity\":11479.8,\"market_cap\":33681.2,\"total_supply\":958471005,\"initial_liquidity\":12222.6,\"history_highest_market_cap\":105569,\"swaps\":1163"
+  },
+  {
+   "name": "trenches_completed (graduated list)",
+   "ok": false,
+   "ms": 4926,
+   "err": "/v1/trenches: BAD_REQUEST missing chain"
+  }
+ ],
+ "rate_headers": {
+  "x-ratelimit-limit": "5",
+  "x-ratelimit-remaining": "2"
+ },
+ "counters": {
+  "calls": 8,
+  "errors": 1,
+  "limited": 0,
+  "banned": 0,
+  "lastErr": "/v1/trenches: BAD_REQUEST missing chain"
+ }
+}

@@ -1,0 +1,291 @@
+# OLDER — the older-coin paper project
+_Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (LAUNCHER.md). Local build only; not deployed._
+- **Idea (owner):** coins 8 hours to 90 days old, $40K–$1M, bought when they double — including sudden 1/3/5-minute doubles on a new narrative — across many parallel paper books.
+- **Spec:** `older/docs/SPEC.md` (older-2): 14 entry families × 4 age groups × 4 trailing stops × 2 exit policies = 448 comparisons.
+- **Review package / open items:** `older/docs/REVIEW.md`.
+- **Verified 20 Nov:** GMGN key is on the Free plan (5 weight/s), not a paid one; GMGN has no stream → Helius is the live feed (owner's decision). PumpSwap prices on effective reserves (vault + signed virtual reserves) — the old tracker's decoder ignores this.
+- **Not yet verified:** reserve reading (before/after the swap), Helius cost, GMGN history depth, memory on real traffic. All need a short live run the owner has not yet authorised.
+- **Honest prior:** M2 (2× in 15 min on young coins) made +10.9% a trade and −6.8% without its top three coins. These books are exploratory; nothing here is evidence of an edge.
+
+## 20 Nov 2026, afternoon — scope widened to Solana-wide (spec older-3)
+- Owner's decision (via ChatGPT's GO): eligible older coins across launchpads and exchanges, not pump.fun only. 448 comparison rows kept.
+- Two methods, always labelled: **PumpSwap live** (decoded events, pool-state fills) and **Solana-wide sampled** (Jupiter prices at a recorded cadence + routed quotes). Sampling can miss fast moves; HH-BREAK is not evaluated on sampled tokens.
+- Jupiter published prices (20 Nov): Developer $25/month (10 req/s, 25 M credits), Launch $100 (50 req/s, 100 M). Recommended: Developer, paced at 9 req/s. Owner must create the account.
+- Helius streams are billed 2 credits per 0.1 MB; the validation run measures bytes. Broad LIVE monitoring is costed at roughly $250–500/month of credits and is not built.
+- Five corrections applied and tested (scale-out formula, USD at each observation's rate, SECOND-WAVE across age boundaries, HH-BREAK completed-minute windows, unusual fees flagged not clamped). 53 tests pass.
+- Still UNRESOLVED until the live run: reserve reading, fees against real transactions, Helius usage, memory, GMGN history depth, Jupiter coverage. See `older/docs/REVIEW.md` §6.
+
+## 20 Nov 2026, 13:44 UK — old bot removed from the server (owner's decision)
+- Owner: "we don't need the old data… start fresh". All eight old processes stopped and removed from pm2 (tracker, deployer, executor, fomo, scope, radar, launcher, agents).
+- Deleted permanently, on his instruction and by his own hand in Termius: `/root/tracker` (39 GB), `/root/launcher`, `/root/executor`, the four data-branch clones, `/root/research-mirror`; on the volume `tracker-db` (38 GB), `backups` (35 GB), `idle-dbs`, `archive`, `k100audit`. This includes the raw trades of 6–15 Nov, which were never archived. Results already pushed to GitHub (data branches, book notes, `trades-archive-pre-20261106`) are untouched.
+- Kept, verified byte-identical before anything was deleted: three settings files and two wallet key files, in `/root/keys-backup` and on the volume (`keys-backup`). Two different wallets. The paper project never reads the wallet files.
+- Server after: main disk 11% used (43 GB free), volume 1% used (95 GB free), no processes.
+- Setting names seen (values never shown): the tracker settings include a Birdeye key — worth checking what plan it is on, for the broad-live option.
+- Leftover: a cron entry for the deleted `push-data.sh` (to be removed), `/root/p5dump.cjs`, `/root/gmgn`.
+
+## 20 Nov 2026, 15:29 UK — shakedown check (run started 14:58:56, still on OLD code bd9b7b3)
+- Healthy: feed connected, 0 reconnects, memory 318 MB, database 83 MB, 93.9 GB free.
+- Start-up scan complete (~13.5 min, 1,150 pages): 383,715 SOL-quoted PumpSwap pools; 230,455 canonical pump.fun, 153,260 non-canonical; 4,382 above $5K; **680 inside the $40K–$1M band**.
+- Trade reader, 30 minutes: 374,690 swaps decoded, 33 unreadable (20 `multi_hop_swap` buys, 13 sells); chain check 145,587 ok / 38 broken; 440 unusual fee readings; 139 look-up errors (`WrongSize`, fixed in c09053a, not yet loaded on the server).
+- Five paper buys, all FAST150 family: 44DZsP (A1, 1M and 3M) closed −11% to −44%; i6Aop7 (A4, 5M and 3M, live method) pool check 0.00% difference, 20% stop closed −23.6%, wider stops open; 8nq3Jm (A4, 5M) = first sampled-method buy, filled from a Jupiter routed quote 1.17 s after its scheduled time. Account checks 4 of 4 within 1%. Five trades is far too few to say anything about the strategy.
+- Sampled side on the FREE Jupiter key: 343 coins watched, average sample gap 19.8 s (target 10 s), 11% of price requests omitted (2,256 of 20,507), 90 history restarts, 6,310 credits in 30 min.
+- Helius: 2.82 GB in 30 min ≈ 56,000 credits ≈ **2.7 million credits a day** (earlier estimate was 1.8–2.1 million).
+- Why most books are empty so far: AGE-DOUBLE reference price missing for 705 coin-groups; CONT / LOW4H need 1 h / 4 h of history; GMGN history queue 1,342 and rate-limited.
+- About two-thirds of PumpSwap traffic is pools with SOL on the base side (186,274 of 224,641 "non-SOL" events) — only reachable through the sampled method today.
+
+## 20 Nov 2026, 16:39 UK — shakedown check (1 h 40 min in; STILL the old code bd9b7b3, started 14:58:56)
+- Healthy: feed connected, 0 reconnects, 0 unresolved sales, database 92.5 MB, 93.9 GB free.
+- **Memory 494 MB (was 318 MB at 15:29) ≈ +150 MB an hour.** In-memory minute bars are kept 4 h 30 min, so growth should flatten about 19:30; straight-line forecast there ≈ 900 MB against a 1,100 MB process limit on a 2 GB server. Not a fault yet; too close for a 7-day run. Cause found: every minute bar keeps its list of buyer wallets for 4 h 30 min although only the last 15 minutes are ever read. Fix prepared locally (keep the count, release the list after 20 min; 65 tests pass) — NOT pushed, waiting for the owner's go.
+- Helius: 8.57 GB in 1.67 h ≈ **2.47 million credits a day** (≈ 17 million for 7 days). 889,537 of 3,010,969 messages (30%) are failed transactions: paid for, unusable, cannot be filtered on this subscription type.
+- Trade reader: 1,234,900 swaps; 153 unreadable (112 `multi_hop_swap` buys, 41 sells) = 0.012%; chain check 481,134 ok / 214 broken; 3,705 unusual fee readings; 298 look-up errors (old-code bug).
+- **24 paper buys on 12 coins.** By family (entries): FAST150-5M 7, CONT 7, FAST150-3M 6, FAST150-1M 5, FAST-1M/3M/5M 2 each, AGE-DOUBLE 1, SECOND-WAVE 1; LOW4H, HH-BREAK, SLOW-BUILD, LOW4H-LIQ25K none yet (need 4 h of history).
+- At the 25% stop, pure trail: 20 closed, 4 open. Sum of closed returns ≈ +128 points (≈ +0.26 SOL on 0.2 SOL stakes). **All of it is one coin**: 4eiNbS, bought 7 times in 40 seconds at 16:19 ($66K → $110K), peak 2.54× the first buy, +21% to +92% per entry. The other 13 closed entries: 12 lost, 1 gained 3%, average ≈ −20%. Sample far too small for any conclusion.
+- Entry checks: 20 done, 19 within 1% of the real pool, 1 flagged SUSPECT (#17, 4eiNbS during the spike). The old checker has the known alignment weakness fixed in c09053a, so this flag cannot be judged until the new code runs.
+- Not explainable on old code: entries #22/#23 (8TiMkg) closed at the same −27% / −32% on all four stops, including the 20% stop — either one >40% drop between two observations or the back-dated-fill fault (blocker 1). They are also labelled "solana-wide" while read live (blocker 6, mixed ownership). Re-check after restart.
+- Sampled side, free Jupiter key: 865 coins watched (317 hot), sample gap 20.5 s average (target 10 s), worst 516 s; **31% of price requests omitted** (39,893 of 127,390; 35% since the last check, up from 11%) — 600 of the 865 have unknown origin and 627 have no risk data, i.e. the discovery list is pulling in tokens Jupiter does not price reliably. 17,176 credits used; rate limit saturated at 1 request a second. 2 sampled buys, both filled from routed quotes (1.17 s and 2.13 s after schedule), 715 quotes ok, 1 error.
+- GMGN history queue 1,343 (not shrinking: 263 done, 165 calls rate-limited). AGE-DOUBLE reference found for 99 coin-groups, missing for 10 resolved, 1,315 evaluations skipped for a missing reference.
+
+## 20 Nov 2026, 18:10–18:30 UK — second independent review (ChatGPT on 5963512) + Grok; 18:13 check
+- Server history today: 14:58 old code → 17:31 decaa91 (nine fixes + memory) → 17:47 5963512 (background measurements) → 18:04 23c4657 (website: most profitable first). Each restart reloaded the open positions (41 open at 18:10) and the sampled watch list (360).
+- ChatGPT's verdict on 5963512: NOT ready. Five remaining faults + three measurement faults. All checked against the code and confirmed. Grok (after reading the real code): eight of nine earlier faults closed, peaks up to 5 s stale.
+- The one with clear live impact: `multi_hop_swap` buys that fit the curve installed a NEGATIVE buy-fee rate on the pool (85–98 readings every 5 minutes), so paper buys on those pools were priced too cheaply until the next ordinary buy.
+- Fixes prepared and tested locally (82 tests pass); see `older/docs/REVIEW.md` §6c for the full table. One of Grok's suggestions was tested and rejected (a sampled position's peak must start at cost, or a fall before its first quote leaves it without a stop).
+- The shakedown database holds trades made by faulty code: results there are not evidence. The seven-day run must start on a new database name.
+- 18:10 state (5 minutes after the 18:04 restart): feed up, memory 314 MB, look-up errors 0, database 107 MB, 93.9 GB free. Entries 40–43 were made 17:54–18:01 on the fixed code (three coins, FAST150 books). Holder/trade-window figures are saved with each entry but were not in the published summary (added in this batch), so what Jupiter returns for 5-minute holder change is still unconfirmed.
+- GMGN: 9 errors against 5 completed look-ups in 5 minutes on the free plan.
+
+## 20 Nov 2026, 18:31 UK — first report on the second-review fixes (c5dda67, restarted 18:26:04)
+- Up on c5dda67, one start, no crash-loop. 45 positions open. Memory 315 MB five minutes in.
+- Restore: **1 coin's mode corrected** (stored as sampled, position opened live — the C1 fault had really occurred in the shakedown database). 498 sampled coins restored; **1,025 more had no valid decimals in their stored record and were all repaired** from Jupiter (previously they would have been skipped silently). Watch list is therefore ~1,500: check the sampling cadence on the free key at the next check.
+- Fee rule: 137 fee readings refused in 5 minutes (135 `multi_hop_swap` buys with a negative rate, 2 `buy_v2` above 10%); none installed.
+- Reserve chain in 5 minutes: 33,649 ok; base breaks 7; quote breaks above 0.1%: 5 (now enforced); quote dust below 0.1%: 19, largest 0.093%. Unknown virtual reserves: 0. Boost states quarantined: 21. Coins lost 155 (was ~128 per 5 minutes before; most are omitted price samples) — the stricter rules are not wiping coins.
+- **Jupiter's 5-minute figures do include holder change.** Fields returned in `stats5m`: priceChange, holderChange, liquidityChange, volumeChange, buyVolume, sellVolume, buyOrganicVolume, sellOrganicVolume, numBuys, numSells, numTraders, numOrganicBuyers, numNetBuyers (all % changes or counts); plus holder count, top-holder %, organic score. Snapshot arrives 1.4–3.5 s after the decision.
+- Examples (entries 42–47, made on 5963512): 8mnJZn SECOND-WAVE 644 holders, +11.6% holders in 5 min, 155 different buying wallets in 5 min, top buyer 13% of 3-minute buy volume; 9msLfY FAST150-5M 351 holders, +4.2%; C9BWH3 FAST150-1M 397 holders, +973% (a coin that went from ~40 holders), 313 buying wallets in 1 minute.
+- **Caution, measured:** Jupiter's market-cap figure lags in fast moves. Entry 45 signalled at $128.5K from pool events; Jupiter said $67.5K 2.8 s later. Entry 47: $144.4K vs $106.6K. Slow entries agree (entry 44: $57.5K vs $57.7K). So Jupiter's 5-minute statistics describe the minutes just before a fast move, and the sampled (non-pump.fun) side will see fast doublings late.
+- Entry 42 (C9BWH3, 462 buys in the minute): account check differed by 4.2%, not comparable (events between the fill and the read).
+
+## 20 Nov 2026, 18:45–19:15 UK — third review (ChatGPT on c5dda67), fixes e511f2f, and a regression caught at the 19:10 check
+- ChatGPT third pass: NOT ready, two faults (was nine, then five). (1) Bars of a rejected back-fill stayed in memory and back-filled lows could reach the FAST books: a 22% move bought as a double. (2) A deposit/withdrawal after a boost released the quarantine. Both confirmed and fixed in e511f2f (87 tests): rejected back-fill is never kept; accepted back-fill is stored apart from live bars; FAST, SECOND-WAVE and fresh crossings use exact observations only, continuous over the whole window; quarantine lasts until the next swap. See `older/docs/REVIEW.md` §6d.
+- Consequence to expect: after every restart the FAST books are silent for the first 1–5 minutes (they wait for a full window of live trades).
+- Server restarted 18:57:09 on e511f2f. First use of the save-on-stop handler: "SIGINT: 45 open positions saved". 1,690 sampled coins restored. No crash-loop. Memory 315 MB at 5 minutes.
+- **Regression found at 19:02 (mine, from the priority lanes added in c5dda67):** position-valuation quotes took the whole free Jupiter allowance — 269 quotes against 11 price requests in 5 minutes — so price sampling of the non-pump.fun coins stalled from 18:26. Fixed in the next commit (only DUE orders take the first lane; test M1b; 88 tests). The pump.fun side was not affected.
+- Capacity fact: four open sampled positions need ~1.2 quotes/s for 10-second valuations; the free key allows 1 request/s in total for quotes, prices and discovery. The free key cannot serve the non-pump.fun side at its targets.
+- Helius at 19:00 UK (US afternoon): ~4.3 million credits/day pace over a 5-minute sample (2.47M at 16:39, 3.3M at 18:31). The daily figure will depend on the hour mix; a 24-hour total is needed before quoting a cost.
+- 5-minute counters on e511f2f: 32,572 chained ok, 5 base breaks, 1 quote break, 13 dust (largest 0.072%); 122 fee readings refused; 95 boost/deposit states quarantined; GMGN 7 errors against 4 completed.
+
+## 20 Nov 2026, 19:25 UK — check on 07dd68e (restarted 19:20:31)
+- Queue fix confirmed: 131 price requests and 131 quotes in 5 minutes (was 11 and 269). No rate-limit hits. "SIGINT: 46 open positions saved" on the stop. Memory 322 MB at 5 minutes; database 118 MB; 93.9 GB free; Helius pace ~2.7M credits/day (5-minute sample).
+- **New bottleneck on the sampled side: 60% of price requests are omitted** (3,713 of 6,172). The watch list is 1,782 coins, most of them the 1,025 old records repaired at 18:32 that Jupiter does not price. They use up the allowance: average sample gap 80 s (targets 10 s hot / 60 s cold). Fix prepared locally, not pushed: a token omitted 10 times in a row with no position leaves the list and is not restored; discovery brings it back if it trades (89 tests).
+- FAST books resumed after the warm-up: entry 48 (GD8Ghs, A4, FAST-5M + FAST150-1M) at 19:11, 14 minutes after the 18:57 restart.
+- Reserve chain, 5 minutes: 29,951 ok, 6 base breaks, 0 quote breaks, 134 dust (largest 0.058%). 393 fee readings refused. 23 boost/deposit states quarantined.
+- Book totals so far at the 25% stop, pure trail (entries / closed / net SOL) — all made on several code versions today, not evidence: CONT 13/9 +0.544 · CONT-STALL 13/12 +0.397 · FAST-5M 5/4 +0.253 · FAST150-5M 13/12 +0.230 · FAST-3M 4/4 +0.218 · FAST150-1M 11/10 +0.115 · FAST150-3M 13/13 +0.038 · FAST-1M 4/4 −0.092 · SECOND-WAVE 2/2 −0.111 · AGE-DOUBLE 3 open. LOW4H, LOW4H-LIQ25K, SLOW-BUILD, HH-BREAK: none.
+- **Why the 4-hour books have never fired: eight restarts since 17:31.** Each restart resets their 4-hour clock (and the 1-hour clock of CONT). They cannot start until the server runs untouched for four hours.
+- Coin 8mnJZn (owner's question, 19:26): bought three times — 17:54 at $50K (FAST150; peak 2.52×; 30% stop +73%, 40% +59%, 20%/25% stops −15%/−19%), 18:16 at $129K (FAST; −1% to −26%), 18:18 at $144K (SECOND-WAVE; −24% to −46%). The website lists coins by ticker, not address: a search box and the short address beside each name are prepared locally, not pushed.
+- GMGN: 4 of 6 history replies gave no usable coverage under the stricter back-fill rule.
+
+## 20 Nov 2026, 19:51–20:05 UK — fourth review (ChatGPT on e511f2f) and the server at d8eb842
+- Server restarted 19:44 on d8eb842 (website search box; sampler drops tokens Jupiter omits 10 times in a row). Agreed with the owner to leave it untouched overnight so the 1-hour and 4-hour books can finally start.
+- ChatGPT fourth pass: the two third-round faults are CLOSED; one blocker left — candle readers preferred a live fragment cut by an outage over the accepted repair of that minute (SLOW-BUILD could enter past a hidden +50% candle; HH-BREAK could miss a break). Fault count by round: 9 → 5 → 2 → 1.
+- Fix prepared locally (95 tests; the new tests fail on the old reader): one rule for the authoritative candle. Also the three non-blocking points: buyers kept through mixed-side compression; an anchor price so a coin waking after hours of silence is measured against its last real price (adds wake-up entries — the owner's core idea); rejected back-fill rows labelled in the database.
+- Owner's coin 8mnJZn: by 19:39 its "high" was 5.66× the 17:54 buy price (~$285K from $50K). 25% stop −19%, 30% stop +73%; nothing re-bought it after 18:18 (one entry per family per age group; CONT blocked by the restarts). Noted as the first rule to revisit after the seven-day run: re-entry on a coin that keeps running.
+- Owner asked whether real trading would make money: answered that the evidence does not support a yes — profit so far is one or two coins per book ("without top 3 coins" is negative on his screenshot), and fast runners are where real fills differ most from paper.
+
+## 20 Nov 2026, 20:45 UK — first check on an untouched hour (d8eb842, started 19:45:08)
+- Healthy: feed up, 0 reconnects, no look-up errors, 48 positions open, database 134 MB, 93.9 GB free. Helius 5.7 GB in the hour ≈ 2.73M credits/day.
+- **Memory 407 MB after 60 minutes** (316 MB at 4 minutes): about +90 MB an hour, down from +150 before the buyer-list fix. Bars are kept 4.5 h, so the level-off point is not reached yet; straight-line to 4.5 h ≈ 720 MB against the 1,100 MB limit.
+- Watch-list clean-up worked: 1,382 unpriced tokens dropped, list 1,873 → 828; omitted price requests 60% → 19%; average sample gap 80 s → 43 s; price requests and quotes balanced (1,572 / 1,574).
+- **CONT fired at exactly one hour of unbroken history**: entry 54 (9msLfY, A2, CONT + CONT-STALL) at 20:45:12. First proof the hour-scale books work when the server is left alone. 4-hour books due from about 23:45 if untouched.
+- **Fault found (mine, from 07dd68e): every sampled buy was cancelled** — entries 49, 50 (7DQQej, $369K / $402K) and 53 (DJBvW4, $51K), all "no price within 5 s of the scheduled buy". The due buy waited behind a slow valuation pass. Fixed in the next commit (independent urgent pass; 96 tests). Since 18:26 the sampled side has therefore produced no filled entry: first by price starvation, then by this.
+- Live entries in the hour: 51 and 52 (7bCidd, A3, FAST150-5M and -3M at ~$137K, 8,935 holders, holder change −0.2%): −35% on every stop (one fall through all of them, never above entry). Entry checks 2 of 2 within 1%. Holder snapshots 5 of 5 received.
+- Decoder, one hour: 309,118 chained ok; 126 base breaks; 27 quote breaks; 2,435 dust (largest 0.0997%, i.e. right under the 0.1% tolerance); 17,654 fee readings refused; 398 boost/deposit states quarantined; 1 unknown-virtual.
+- GMGN (free plan): 68 rate-limit errors against 50 completed; 71 history replies not accepted under the stricter back-fill rule; AGE-DOUBLE reference found for 12, missing for 5. The hour-scale books now depend almost entirely on live history.
+
+## 20 Nov 2026, 22:55 UK — 3 h 10 min untouched on d8eb842 (owner did not restart; a680362 with the urgent-quote fix and the candle fix is pushed but not loaded)
+- Healthy. **Memory is flat: 404 MB at 3.2 h (407 MB at 1 h).** Database 158 MB, 93.8 GB free. Helius 14.0 GB in 3.17 h ≈ 2.12M credits/day at evening rates.
+- One feed reconnect: 21:44:24 → 21:44:26 (2 seconds). **Consequence: the 4-hour clock restarted for every coin not repaired** — GMGN repaired 59 coin-gaps and failed 213 (rate limits on the free plan). So the 4-hour books (LOW4H, LOW4H-LIQ25K, SLOW-BUILD, HH-BREAK) cannot start before about 01:45, and any further reconnect resets them again. On this evidence the 4-hour books will rarely be covered over seven days unless (a) gap repair gets a faster source, or (b) very short feed gaps are tolerated for hour-scale windows as a declared approximation (the back-fill rule already tolerates 5-minute holes). To propose to the owner and ChatGPT; not changed.
+- **32 entries since 19:45 (ids 49–80); entry checks 28 of 28 within 1% (almost all 0.00%); holder snapshots 32 of 32.**
+- Result of those entries at entry level (each buy counted once): 25% stop — 24 closed, 6 winners, sum −170 points ≈ **−0.34 SOL**; 30% stop — 22 closed, 7 at or above zero, sum −224 points ≈ −0.45 SOL. Best: 9msLfY CONT +105% (peak 2.4×); i6Aop7 +25% / +16%; GpiQNU FAST-3M +24%. Worst: 7bCidd −35% ×2, GdPu5K −31% / −28%, Q8epAD −28%, GpiQNU FAST150-1M −27% (−49% at the 30% stop). This is the first batch made entirely on reviewed code; it is small (about 14 coins) and it is negative.
+- CONT: 8 entries since it became able to fire at 20:45 (1 big winner, 2 small gains, 3 losses, 2 open).
+- Sampled side on d8eb842: 3 buys cancelled at the 5 s limit, 1 filled (DJBvW4 at 22:03, 3.1 s after schedule, −21%). Watch list 846, sample gap 39 s, omitted 8%, 1,860 unpriced tokens dropped in total.
+- **`multi_hop_swap` buys that do not fit the curve: 5,264 in 3.17 h** (147 in the first hour — a burst after 20:45), against 21,810 multi-hop buys that did fit. Each one restarts that coin's history. Live-side history restarts ≈ 5,760 in 3.17 h, almost all from this. Likely the busiest coins, i.e. the ones the FAST books care about. This was a labelled open item; at this volume it needs fixing or at least measuring per coin (distinct coins affected, top offenders). Idea to validate against real transactions before changing anything: for this instruction try both amount interpretations and accept the one that fits the curve.
+- Reserve chain: 838,881 ok, 432 base breaks, 109 quote breaks, 3,206 dust (largest 0.0997%).
+- AGE-DOUBLE: no entries; reference missing in 9,152 evaluations (GMGN: 25 references found, 13 missing, 368 rate-limit errors in 1,613 calls).
+
+## 21 Nov 2026, 01:55 UK — overnight check, 6 h 10 min untouched on d8eb842
+- Up, no crash. Three feed reconnects in total (21:44, one more, and 01:42:18 → 01:42:20, each about 2 seconds). Database 191 MB, 93.8 GB free. Helius 22.7 GB in 6.17 h ≈ 1.77M credits/day at night rates. Jupiter 37,252 credits.
+- **Memory 486 MB** (407 MB at 1 h, 404 MB at 3.2 h): +82 MB over the last three hours while tracked coins rose 12,717 → 14,976. Bars reached their 4.5-hour ceiling around 00:15, so the next reading shows whether this is a level-off or a slow creep from coins never being removed. Not urgent (limit 1,100 MB); to watch.
+- **The slow books have started.** AGE-DOUBLE: entry 88 at 00:03 (DUZrwd, open). LOW4H: entry 95 at 00:44 (Q8epAD, −28%). HH-BREAK: entries 99 and 100 at 01:05–01:07 (open). SLOW-BUILD: evaluated once, refused (a candle above +20%). LOW4H-LIQ25K: none yet. Twelve of the fourteen families have now produced an entry.
+- 61 entries since 19:45 (ids 49–109). Entry checks 42 of 43 within 1%; one inconclusive (entry 90, 8mnJZn, −6.5% with trades between the fill and the read). Holder snapshots 61 of 61.
+- **Entry-level result since 19:45 at the 25% stop, each buy once: about −104 points over 36 closed (10 winners) ≈ −0.21 SOL**; four further entries closed out of view. Winners: ELbCDk +143% (CONT + FAST150, peak 3.94×), 9msLfY +105%, 9paKaZ +74% (sampled), i6Aop7 +25%, GpiQNU +24%. ELbCDk was first bought at 23:08 by the FAST books and stopped at −12% (25%) / −21% (30%) before running to 5.17× that price; CONT re-bought it at 00:33.
+- **Sampled side: 10 of the last 14 buys cancelled at the 5-second limit** (4 filled). This is the fault fixed in a680362, which is pushed but not loaded; it costs about 70% of sampled entries until the next restart.
+- `multi_hop_swap` unfit: 5,435 (5,264 at 22:55) — the burst between 20:45 and 22:55 has stopped (+171 in three hours).
+- Reserve chain: 1,456,242 ok; 1,043 base breaks; 193 quote breaks; 4,443 dust. Boost/deposit states quarantined: 2,481.
+- GMGN free plan: 940 of 3,481 calls rate-limited; outages repaired for 210 coin-gaps, not repaired for 1,016.
+- Book totals at the 25% stop since the first start (includes trades from the faulty versions): CONT 34 entries / 21 closed +0.87 SOL; CONT-STALL +0.73; FAST150-5M +0.26; FAST-5M +0.24; FAST150-1M +0.23; FAST-3M +0.13; FAST150-3M 0.00; LOW4H −0.06; AGE-DOUBLE −0.06; FAST-1M −0.12; SECOND-WAVE −0.13.
+
+## 21 Nov 2026, 05:55 UK — early-morning check, 10 h 10 min untouched on d8eb842
+- Up all night, no crash, no reconnect since 01:42 (three in total). 97 entries since 19:45 (ids 49–145), 129 book positions open.
+- **All fourteen families have now traded.** HH-BREAK 13 entries (3 closed), LOW4H 5, SLOW-BUILD 3, LOW4H-LIQ25K 1, AGE-DOUBLE 4.
+- **Entry-level result since 19:45 at the 25% stop, each buy once: about +107 points over 58 closed (18 winners) ≈ +0.21 SOL.** It was −104 points at 01:55; the swing is two coins: GKFSuS (FAST150-5M at 02:53 +187%, peak 8.93×; FAST150-1M/3M +109%; FAST-5M +13%; FAST-3M +5%) and uHMWNF (HH-BREAK +108%, LOW4H group +39%). Without those two coins the night is about −350 points. Since 01:55 alone: 25% stop 22 closed, 8 winners, +211 points; 30% stop 20 closed, 8 winners, +278 points.
+- Book totals at the 25% stop since the first start (old-code trades included): CONT 45 entries / 29 closed +0.56 SOL (was +0.87 at 01:55); CONT-STALL +0.44; FAST150-5M +0.43; FAST150-1M +0.34; FAST-5M +0.22; HH-BREAK +0.21; FAST-3M +0.09; LOW4H-LIQ25K +0.08; SLOW-BUILD +0.04; FAST150-3M +0.02; LOW4H −0.02; AGE-DOUBLE −0.11; SECOND-WAVE −0.13; FAST-1M −0.19.
+- Entry checks 76 of 78 within 1%, 2 inconclusive (trades between the fill and the read). Holder snapshots 97 of 97.
+- **Memory 538 MB** (407 → 404 → 486 → 538 at 1 / 3.2 / 6.2 / 10.2 h): a creep of about 13 MB an hour after the bar ceiling, while tracked coins rose 14,976 → 17,457. At that rate the 1,100 MB limit is about 43 hours away: a seven-day run would hit it on day 2–3. Cause not yet identified from the published figures; a diagnostics-only change (heap and structure sizes in the status report) is prepared locally to pinpoint it.
+- Sampled side: every sampled buy since 01:55 was cancelled at the 5-second limit (3 of 3); fix a680362 still not loaded.
+- Costs: Helius 37.4 GB in 10.17 h ≈ 1.77M credits/day overnight (2.1–2.7M in the evening) → roughly 15M credits for seven days. Jupiter 59,567 credits ≈ 140K/day. Database 240 MB, growing about 0.3 GB a day; 93.8 GB free.
+- GMGN free plan: 1,705 of 6,021 calls rate-limited; coin-gaps repaired 382, not repaired 2,088.
+- `multi_hop_swap` unfit 5,598 (+163 since 01:55). Reserve chain 2,580,914 ok, 1,409 base breaks, 271 quote breaks.
+
+## 21 Nov 2026, 08:55 UK — morning check, 13 h 10 min untouched on d8eb842
+- Up, no crash, no reconnect since 01:42. 159 entries since 19:45 (ids 49–207); 190 book positions open. Entry checks 135 of 139 within 1%, 4 inconclusive. Holder snapshots 159 of 159.
+- **Memory 518 MB** (538 MB at 05:55): not a steady creep after all — it has moved 486 → 538 → 518 over seven hours. Treat as hovering around 500–540 MB; keep watching. The diagnostics change stays useful but is not urgent.
+- **HH-BREAK is now by far the busiest book: 61 entries, 48 of them between 06:44 and 08:47** (19 in the first 22 minutes). Cause of the timing: all coins regained 4 h 15 min of coverage together at about 06:44 (a fourth coverage gap about 02:29 — three reconnects plus one other, probably a stale SOL/USD moment). Cause of the volume: the rule is "price above the previous 60-minute high AND the last 15 minutes' volume ≥ 2 × the median 15-minute bucket of the 4 hours before". On quiet coins that median is tiny, so a few hundred dollars of trading qualifies: the entries seen had $77–$1,183 of volume in the last 5 minutes and 1–14 buyers. Almost all are flat (best price 0.97–1.08× entry) and still open. It is the rule as written, not a code fault; an absolute volume floor is the obvious refinement to consider after the test. Note for plain wording: this book breaks the ONE-hour high; the four hours are its volume baseline.
+- Book totals at the 25% stop since the first start (old-code trades included; entries / closed / net SOL): CONT 47/33 +0.56 · CONT-STALL 47/39 +0.37 · FAST150-1M 31/25 +0.26 · HH-BREAK 61/5 +0.24 · FAST-5M 13/12 +0.22 · FAST150-5M 40/35 +0.22 · FAST-3M 13/12 +0.09 · LOW4H-LIQ25K 1/1 +0.08 · SLOW-BUILD 4/4 +0.02 · LOW4H 6/6 −0.10 · FAST150-3M 37/31 −0.12 · SECOND-WAVE 5/5 −0.17 · FAST-1M 11/10 −0.17 · AGE-DOUBLE 8/6 −0.22.
+- Latest 40 entries (06:44–08:47) at the 25% stop: 8 closed, 3 small winners, −58 points. The entry-level total for the whole night cannot be completed from the published file (it carries only the latest 40 entries): a compact list of every entry is added to the held diagnostics commit.
+- SOL/USD 67.3 (about 71 yesterday afternoon).
+- Sampled side: one more buy cancelled at the 5-second limit; none filled since 00:52. Fix a680362 still not loaded.
+- Helius 46.8 GB in 13.17 h ≈ 1.71M credits/day. Jupiter 75,420 credits. Database 275 MB. GMGN 2,162 of 8,019 calls rate-limited; coin-gaps repaired 415, not repaired 2,475; AGE-DOUBLE references found 57, missing 55.
+
+## 21 Nov 2026, 12:05 UK — midday check, 16 h 20 min untouched on d8eb842
+- Up, no crash, no reconnect since 01:42. 191 entries since 19:45 (ids 49–239), 222 book positions open. Entry checks 167 of 171 within 1%, 4 inconclusive.
+- Memory 545 MB (486 → 538 → 518 → 545 at 6.2 / 10.2 / 13.2 / 16.3 h): hovering with a slow upward drift of roughly 6 MB an hour; tracked coins 20,481. Limit 1,100 MB.
+- **The morning (09:00–12:00) was a losing period for most books.** At the 25% stop, 08:55 → 12:05: CONT +0.56 → +0.34 SOL; FAST150-5M +0.22 → +0.08; FAST150-1M +0.26 → +0.11; FAST150-3M −0.12 → −0.26; LOW4H −0.10 → −0.23; FAST-1M −0.17 → −0.24. HH-BREAK +0.24 → +0.30 (79 entries, only 10 closed).
+- Book totals at the 25% stop since the first start (entries / closed / net SOL): CONT 52/40 +0.34 · HH-BREAK 79/10 +0.30 · CONT-STALL 52/43 +0.24 · FAST-5M 14/13 +0.16 · FAST150-1M 33/28 +0.11 · FAST150-5M 43/39 +0.08 · FAST-3M 14/13 +0.03 · LOW4H-LIQ25K 5/3 −0.02 · SLOW-BUILD 8/6 −0.04 · AGE-DOUBLE 9/7 −0.12 · SECOND-WAVE 6/6 −0.22 · LOW4H 11/9 −0.23 · FAST-1M 12/11 −0.24 · FAST150-3M 40/35 −0.26.
+- At the 30% stop the order differs: FAST150-5M +0.47 · HH-BREAK +0.22 · FAST150-1M +0.21 · CONT +0.13 · SLOW-BUILD +0.06 · CONT-STALL +0.03 · FAST-5M +0.03 · … · FAST-1M −0.30 · AGE-DOUBLE −0.33. The ranking of books changes with the stop and with a few hours of data: none of it is stable yet.
+- Sampled side: nothing filled since 00:52 (fix a680362 not loaded). Helius 55.7 GB in 16.33 h ≈ 1.64M credits/day. Database 311 MB. SOL/USD 68.6.
+
+## 21 Nov 2026, 12:32–13:00 UK — fifth review (ChatGPT on 938198b)
+- Verdict: last round's candle fault is closed; one blocker remains — **price continuity**. After an interruption (feed gap, loss of a coin's data, a boost quarantine, or a sampled coin dropped and re-admitted) an old price could still be carried into a later window as its starting price, so a FAST book could "see" a double that was never observed. Fault count by round: 9 → 5 → 2 → 1 → 1.
+- Fix prepared locally (101 tests; the two key tests fail with the fix removed): one continuity test for everything exact, and every carried price must be continuous from its own time to where it is used. Quarantines are recorded as per-coin breaks. A re-admitted sampled coin starts with an empty history. Verified silence of any length still carries the price.
+- Owner's website request (12:21): trades and open positions newest first, bought-at market cap and time as leading columns — pushed as 4a890e3.
+- Strict choice made: a quarantine also breaks hour-scale coverage for that coin. Its cost will be visible in the status report (price breaks, coins affected).
+- Put to ChatGPT as a question, not implemented: tolerate unrepaired gaps of ≤ 60 s for the hour-scale books only.
+
+## 21 Nov 2026, 12:51–13:05 UK — spec older-4: three more fast books (owner's decision)
+- Owner asked for more windows (suggested 7 and 10 minutes). Evidence against 7: the windows nest and the data shows it — FAST 2×: 12 / 14 / 14 entries for 1 / 3 / 5 minutes; FAST150: 33 / 40 / 43. Going from 3 to 5 minutes added nothing at 2× and three entries at 1.5×.
+- The real gap is between 5 minutes and 4 hours, where no book requires a doubling. Agreed and built: **FAST-10M, FAST-30M (2×) and FAST150-10M (1.5×)** — 17 families, 544 comparison rows. Same exact-observation rules as the other FAST books. They do not seed SECOND-WAVE (unchanged).
+- Every FAST entry now records `move_s`: seconds from the window's low to the trigger, so results can be split by speed afterwards without more books.
+- The new books cannot be back-calculated: they need the tick-by-tick observations, which are kept in memory only (the database holds one-minute bars). They start counting from the restart. Existing books and their trades are untouched.
+- Caution recorded: 17 books with a few dozen trades each — the best one will always look good by chance. Judge by coin and with the top winners removed.
+
+## 21 Nov 2026, 13:00–13:10 UK
+- 13:00: server on 4a890e3 since 12:28:54 (owner's restart for the website change; 228 open positions saved and restored). No entries in its first 30 minutes: slow books rebuilding history, FAST crossings all outside the band (182–584 per book). Not yet on older-4.
+- Each restart restored ~1,935 sampled coins, about a thousand of them already pruned as far below the band; sample gap 88 s for the first two hours. Fixed on the owner's instruction ("just fix it"): a low-value prune is recorded on the coin and not restored; re-discovery brings it back with a clean history (104 tests). The flag only exists for prunes made from now on, so the next restart still starts with the long list once.
+
+## 21 Nov 2026, 13:13–13:30 UK — spec older-5: 60% stop and stake buttons (owner's request; built, HELD locally until his "go")
+- Owner asked for a 60% trailing stop button and stake buttons 0.2 / 0.5 / 1 / 2 / 5 SOL that recalculate every book.
+- 60% stop: fifth stop value, 680 rows. Counts only from buys made after it is switched on — an old trade's price path after its 40% exit was not kept.
+- Stake buttons are NOT a multiplication. Each trade is re-priced on the pool sizes saved at its buy, half-sale and exit, so price impact grows with the stake. The pool at the sale was not saved before this change → old trades cannot be re-priced; sampled (Jupiter-quoted) coins never can (quotes were for 0.2 SOL). Both are shown as "0.2 SOL only" and counted.
+- Limits told to the owner: same buy/sell moments as the 0.2 SOL trade (a bigger position would stop out slightly earlier); the pool is taken as observed, without the bigger buy's own effect, which errs on the pessimistic side (2n/(Q+2n) on a flat price: ~0.5% at 0.2 SOL, ~11% at 5 SOL in an 80-SOL pool — arithmetic on an example pool, not a measurement). Asked ChatGPT which side to err on (REVIEW.md 6g).
+- Reason to add it before the seven-day run: sale pools cannot be recovered afterwards.
+- 107 tests pass (three runs). Page rendered locally with made-up trades: buttons work, amber note shows, left-out trades counted.
+
+
+## 21 Nov 2026, 13:27 UK — check after the restart onto 8474066
+- Server on 8474066, spec older-4, 17 families / 544 rows, one start at 13:10:31, 228 open positions saved and restored, feed live with 0 reconnects, Jupiter and GMGN 0 errors, memory 340 MB. No new buys in the first 5 minutes (history rebuilding — expected). Latest publish available was 13:20 (state of 13:15).
+- **Fault found (mine, 762f65b): entries.json publishes every result as empty.** The list read `v.ret`; the result is stored at `v.exit.ret`. Diagnostics only — the bot, the database and the website are not affected. Fixed locally, held with the older-5 commit until the owner's "go".
+- Consequence: the promised whole-run entry-level result (since 19:45 on 20 Nov, 25% and 30% stops, by coin, with and without the top three) cannot be computed from the published file until that fix is running. 197 entries since 19:45: 182 filled, 15 cancelled; 177 live, 20 sampled.
+- 13:59 UK check (state of 13:50, 8474066 / older-4, one start): fine. 5 buys since the 13:10 restart, all live; the new older-4 books are firing (FAST150-10M at 13:29 and 13:39; entry 250 at 13:45 hit FAST-10M and FAST-30M with the 1/3/5-minute books). 233 open, feed 0 reconnects, Jupiter 0 errors, GMGN 10 rate-limited of 97 (known free-plan limit), memory 415 MB.
+
+## 21 Nov 2026, 14:15–14:30 UK — owner's "go" for older-5; database kept
+- Owner (14:15): a rough estimate is enough for the stake buttons; add the 60% stop without resetting anything — "we've got statistics now that we need to keep". He also pointed out that the 6-hour and 24-hour boxes will compare the 60% stop with the others on the same trades once that much time has passed. Correct: those boxes count by buy time, so 6 h after the restart the 6-hour box is like-for-like, and 24 h after it the 24-hour box is. The "total" box never will be on this database (60% has no old trades).
+- Remaining caveat on that comparison: a wider stop holds longer, so at any moment the 60% row has more trades still open than the 20% row. Closed-trade totals of different stops are never exactly the same set.
+- Because the database is kept, the stake buttons would have shown nothing for the ~250 existing trades. Added an estimate for them: the pool at an old sale is rebuilt from the sale itself using the buy pool's k. Exact at 0.2 SOL; rougher at bigger stakes (marked on the page with a count). Sampled trades still 0.2 SOL only.
+- Stake list stays 0.2 / 0.5 / 1 / 2 / 5 as first asked (his dictation said "2.5").
+- Pushed: older-5 + entries.json fix. 107 tests pass.
+
+## 21 Nov 2026, 14:25–14:35 UK — stake view: owner spotted totals that did not add up
+- Owner: FAST150-1M (A4, 40% trail) shows +0.397 SOL at 0.2 but +1.343 at 0.5 — more than 2.5×. He is right that this cannot come from price impact.
+- Cause: not the arithmetic. At 0.5 the book had 19 closed trades, at 0.2 it had 21 — the trades that cannot be re-priced were left out, and they were losers. Evidence from his two screenshots: every book with the SAME trade count is within about 1% of 2.5× (HH-BREAK 6 trades +0.329 → +0.816 vs 0.823; LOW4H 8 trades −0.319 → −0.797 vs −0.798; SECOND-WAVE 5 trades −0.248 → −0.618 vs −0.620); every book that jumped had lost trades (FAST150-1M 21→19, FAST150-3M 25→22, FAST150-5M 26→21, CONT 24→23, FAST-5M 13→12).
+- Fix (his suggestion, applied to those trades): a trade that cannot be re-priced keeps its 0.2 SOL percentage result on the larger stake and stays in the book, flagged and counted. Every stake button now shows the same trades.
+- Not done, and said so: making every trade a plain multiple of 0.2. At 0.5 SOL it makes ~1% difference; at 5 SOL it would overstate (example 80-SOL pool: ~11% of the stake per round trip).
+- Lesson: when a view filters trades, compare trade counts before comparing totals.
+
+## 21 Nov 2026, 14:28–14:50 UK — ChatGPT's sixth review (on 8474066): "No", two faults — both reproduced and fixed, HELD until the owner's "go"
+- A (real): after a coin's data was lost, the bot treated the blank stretch up to the first price back as "watched". A price of $90K followed ten seconds later by $210K could be bought as a "double inside 1 minute" although nobody knew the price a minute earlier. Fix: history restarts at the first price that comes back; a fast window must have a known price at its start. Same rule after a feed reconnection and at start-up.
+- C (real): on the very busiest coins (over 6,000 trades in 65 minutes) trades in the same second were squashed together and a dip inside that second was lost — the bot could think a doubling was fresh when it had already happened. Fix: squashed seconds keep their lowest and highest price; the newest trade is never squashed.
+- E: the empty results in entries.json — already fixed at 13:30 (d3403d1), live since the 14:20 restart.
+- D: ChatGPT's answer on the 60-second tolerance is "not as a blanket rule"; not built. Listed conditions recorded in REVIEW.md 6h for later.
+- Cost, stated to the owner: slightly fewer buys straight after a restart or a data loss (a coin's fast books start at its first seen trade). My own view recorded: A rarely produced a wrong buy in practice — two valid prices 90K→210K are a real double — but it could make a buy LATE (the real crossing happened in the blank stretch), and it broke the project's own stated rule, so the fix is right.
+- All five affected tests fail on the old code and pass on the new. 111 tests pass.
+
+
+## 21 Nov 2026, 14:40 UK — check after the restarts onto older-5, and the whole-run result by buy
+- Server on 2aa3eef (stake-view fix), spec older-5, 680 rows; restarted 14:19:40 (c3d3bcd) and 14:29:13 (2aa3eef), 234 open positions saved and restored each time; feed live, 0 reconnects, Jupiter 0 errors, memory 339 MB. entries.json now carries results.
+- **Whole run since 19:45 on 20 Nov, each buy counted once (not per book): 203 buys, 188 filled, 15 cancelled; 183 live, 20 sampled.** Closed trades only:
+
+| stop (pure trail) | closed | still open | net SOL | average | won | coins | coins in profit | without the top 3 coins |
+|---|---|---|---|---|---|---|---|---|
+| 20% | 126 | 62 | −1.837 | −7.3% | 22% | 61 | 12 | −2.466 |
+| 25% | 113 | 75 | −0.693 | −3.1% | 30% | 50 | 13 | −2.021 |
+| 30% | 106 | 82 | +0.002 | +0.0% | 34% | 46 | 13 | −1.561 |
+| 40% | 88 | 100 | +0.698 | +4.0% | 39% | 36 | 9 | −1.851 |
+
+- Half-at-2× is within 0.07 SOL of pure trailing at 25% and 30% (−0.748 and +0.066).
+- Reading: wider stops did better on closed trades; at every stop the result without the three best coins is negative (−1.6 to −2.5 SOL) — the profit is carried by a few runners (GKFSuS +0.80, 3umHFk +0.53 to +1.24, uHMWNF, ELbCDk, 4Ye6Y6).
+- Limits: (1) 40–53% of the wider-stop positions are still open and are not in these totals, so the 30% and 40% rows are incomplete, not final; (2) this database includes buys made by versions with faults since fixed (fourth to sixth reviews) — a rough guide, not evidence; (3) about 19 hours and one market day.
+- 15:10 UK check (state of 15:03): server on 4cef979 (sixth-review fixes), older-5, 680 rows, started 14:48:29 after the owner's "go" at 14:46; 235 open positions saved and restored; feed live, 0 reconnects, Jupiter 0 errors, memory 381 MB. Two buys since that restart (15:08, FAST150-10M and FAST150-1M, both live). Entry 252 (14:43) carries 10 exit versions — the 60% stop is recording. Three restarts between 14:19 and 14:48; the 4-hour books rebuild their history from 14:48.
+
+## 21 Nov 2026, 15:53 UK — owner's idea: a faster volume-breakout book (analysis only, nothing built)
+- Idea: new 30-minute high with the last 5 or 10 minutes' volume at 2× the 1- or 2-hour norm (HH-BREAK today: 60-minute high, last 15 minutes vs the 4-hour norm).
+- Data (entries.json, 15:48 publish): HH-BREAK 84 filled buys, all on their own (no shared entries), 18 closed at the 25% stop (+0.656 SOL, 10 won), 66 still open; median best price 1.06×. 31 of the 84 came in one hour (06:00 UTC) when 4-hour coverage returned for every coin at once.
+- Volume in the 5 minutes before the buy: min $0, quartile $59, **median $150**, upper quartile $660, max $8,867; median 2 buys in those 5 minutes.
+- Split by that volume: under $200 → 46 buys, 1 reached 1.5× (2%), median best 1.03×, 3 closed. $200 and over → 38 buys, 8 reached 1.5× (21%), 6 reached 2× (16%). ($200–1,000: 24 buys, 4 reached 1.5×; $1,000–5,000: 13, 3; over $5,000: 1, 1.)
+- Reading: the weakness is not the window lengths. "2× the norm" is relative, and on a quiet coin the norm is close to nothing, so a few dollars qualify. Shorter buckets make that worse (most 5-minute buckets of a quiet coin are empty, so their median is zero). What separates the buys is an absolute amount of volume.
+- A real advantage of his version: it needs 1–2 hours of unbroken history instead of 4 h 15 min, so it would be usable much sooner after a restart or reconnect — the 4-hour books keep being reset.
+- Proposed to the owner (his decision pending): keep his 30-minute-high idea but add a dollar floor — about $100 a minute ($500 in 5 minutes / $1,000 in 10) — and use a 2-hour baseline. The floor figure is a judgement on 84 buys from one morning, not an optimised number. Live pump.fun coins only (sampled coins have no volume).
+- Caution repeated: 17 books already; each new one raises the chance that the best book is best by luck.
+
+## 21 Nov 2026, 16:00–16:10 UK — spec older-6: HH30-5M, HH30-10M, HH15-5M (owner's decision; pushed, not yet running)
+- Owner decided: three faster volume-breakout books, and NO dollar floor ("I don't think that matters").
+  - HH30-5M: new 30-minute high, last 5 minutes' volume 2× the 2-hour norm.
+  - HH30-10M: new 30-minute high, last 10 minutes' volume 2× the 2-hour norm.
+  - HH15-5M: new 15-minute high, last 5 minutes' volume 2× the 1-hour norm.
+- Correction to what I told him at 15:53: I said shorter buckets make the quiet-coin problem worse because a zero norm lets any trade qualify. Wrong — the code refuses a zero norm (as HH-BREAK always has). With 5-minute buckets a coin must have traded in about half of them over the last 1–2 hours before the book can fire at all, which is a stricter activity test than HH-BREAK's. So the two 5-minute books are better protected than I said.
+- What remains true, and is now a test: with 10-minute buckets a coin with one $50 trade every 20 minutes has a non-zero norm ($25), and a new high on one more $50 trade is bought by HH30-10M. That is the cost of no floor. The volume before every buy is recorded, so the floor question can be answered from the data later without another book.
+- 20 books, 800 rows, 115 tests pass. Live pump.fun coins only. They start counting from the next restart and need 1 h 5 min (HH15-5M) or about 2 h 10 min (HH30) of unbroken history first.
+
+
+## 21 Nov 2026, 16:12–16:20 UK — older-6 running; "counting since" on the website
+- 16:12: owner restarted onto 7abc863 (older-6, 20 books, the top-of-page table of every book with its rule). Same database.
+- Owner asked whether the new books use earlier data: no. They start from the restart — the rules need the live trade-by-trade record, which is not kept. (An approximate replay from the stored 1-minute bars is possible as a separate study; it must not be mixed into the books.)
+- Owner asked for the time each book began, next to the book. Built: the database records once when each book was first evaluated and when each stop got its first buy; the page shows "counting since" in the top table and on each card, amber when later than the first start. On this database: the 14 original books 20 Nov; FAST-10M / FAST-30M / FAST150-10M 21 Nov 13:10; the 60% stop 21 Nov ~14:20; HH30-5M / HH30-10M / HH15-5M 21 Nov 16:12. On a fresh database every book starts together.
+- 116 tests pass.
+
+## 21 Nov 2026, 16:27–16:45 UK — HH-BREAK: should dead positions be sold on a clock? (study; nothing built)
+- Owner's question: HH-BREAK has many open positions; the runners seem to finish within 2–3 hours; should it sell automatically after about 4 hours?
+- Data: new read-only script `older/scripts/study-family.mjs` (price path of every filled buy from the stored minute bars; the owner ran it at 16:30, published as study-HH-BREAK.json). 84 filled buys, 4.1 to 15.4 hours old (median 9.6 h). On the 40% stop 74 are open, on the 25% stop 64.
+- **The runners were not quick.** Minutes from the buy to 2× (7 coins): 40, 56, 82, 144, 176, 287, 297. Minutes to the highest price for the 14 that reached 1.5× on the bars: 51, 92, 129, 164, 178, 251, 289, 369, 416, 443, 572, 595, 617, 629 — half of them after 4.5 hours. Several were flat for hours first: 8rjgC1 was 0.91× at 4 h and later 3.3×; CWKbSd 1.01× at 4 h, later 2.06×; 3umHFk 0.87× at 1 h, later 4.9×.
+- The open ones are not all dead: current value median 0.97× (20 below 0.9×, 39 between 0.9× and 1.1×, 15 above 1.1×); median $5,500 traded since the buy.
+- Replay of a clock sale (value at the bar close, 1% taken off for costs; positions already stopped keep their real result; open ones valued at their current price for "as it is"):
+
+| | 25% stop | 40% stop | positions sold by the clock (25% / 40%) | of those, later rose 50%+ from the sale price |
+|---|---|---|---|---|
+| as it is now | +0.71 SOL | +1.16 SOL | — | — |
+| sell at 1 h | −0.12 | −0.04 | 79 / 84 | 13 / 15 |
+| sell at 2 h | +0.34 | +0.41 | 76 / 82 | 7 / 9 |
+| sell at 3 h | +0.88 | +1.09 | 74 / 80 | 3 / 6 |
+| sell at 4 h | +0.99 | +1.03 | 71 / 78 | 1 / 3 |
+| sell at 6 h (9–11 buys not old enough) | +1.10 | +1.23 | 60 / 65 | 1 / 3 |
+| sell at 8 h (19–22 not old enough) | +1.17 | +1.41 | 48 / 54 | 0 / 1 |
+| sell at 4 h only if it never reached 1.15× | +1.06 | +1.02 | 60 / 64 | 1 / 3 |
+
+- Reading: a 1- or 2-hour clock would have destroyed the book (it sells the late runners before they move). From 3–4 hours on, the clock costs little or nothing on this sample and closes about 85% of the positions. Differences of ±0.2 SOL between rows are noise: 84 buys, one day, a handful of coins carrying the result; minute bars, not live fills.
+- Told the owner: his "under 2–3 hours" does not hold for this book; 4 hours is the earliest defensible clock; best tested as its own book beside HH-BREAK (like CONT-STALL beside CONT), not by changing HH-BREAK. Also: "we can come back in" is not how the bot works — one buy per book per coin per age group.
+- His separate question (why CONT-STALL has almost nothing open and HH-BREAK has 72): the 60-minute stall sale exists only on the CONT-STALL book; HH-BREAK has no clock at all except the 24-hour limit.
+- Note: at 16:30 he pasted old terminal output into the terminal by mistake ("command not found" lines). Nothing ran: the bot's start time is unchanged (16:23:59 on d07c49e).
+
+## 21 Nov 2026, 16:38–17:00 UK — spec older-7: HH-BREAK-4H (owner's decision), existing buys carried in
+- Owner: "add that new book", next to HH-BREAK, and add the current data to it.
+- Built: HH-BREAK-4H = HH-BREAK's buys, sold 4 hours after the buy if still open. HH-BREAK itself unchanged. 21 books, 840 rows.
+- The 84 existing HH-BREAK buys are carried into it at the next start. Positions that stopped out before 4 hours keep their real result. Every one is already older than 4 hours, so the rest get an estimated 4-hour sale from the one-minute prices — marked "est." on the page and counted on the book's card. Expected from the 16:35 replay: about +1.0 SOL at both the 25% and the 40% stop, with nothing left open, against HH-BREAK's +0.7 / +1.2 with 64 / 74 open.
+- My view, told to the owner: reasonable here because the buys are real and only the sale is estimated; the estimate is from a minute close, so single trades can be a few percent out (more when the coin was moving fast at that minute); the labels stay on. New buys from now on are sold by the live clock, not estimated. Asked ChatGPT whether estimated rows should sit inside a book at all (REVIEW.md 6j).
+- 119 tests pass.
+
+
+## 21 Nov 2026, 16:46–17:00 UK — older-7 running; HH-BREAK-4H against HH-BREAK
+- 16:46:33 restart onto 95b0a2d: migration log "84 existing HH-BREAK buys carried into the new book (88 versions unchanged, 584 clock sales estimated from minute bars, 0 still inside the clock)"; 840 rows; 235 positions saved, 233 open after; feed live, no errors, memory 356 MB.
+- All ages, pure trail (16:51): HH-BREAK 25% stop 21 closed / 63 open +0.558 SOL; 40% stop 11 closed / 73 open +1.038. HH-BREAK-4H 25% stop 84 closed +0.717; 40% stop 84 closed +0.713.
+- **My forecast of "about +1.0 SOL" for the new book was too high.** The 16:35 replay took 1% off for costs; the migration uses each pool's measured fee and price impact, and the real round trip is about 3% (a 0.97 factor reproduces the book: A4, 40% stop, replay +0.567 against the book's +0.576). The book's figure is the better one.
+- Owner asked why HH-BREAK-4H shows less than HH-BREAK (A4, 40% stop: +0.576 on 80 closed against +0.936 on 9 closed, 71 open) and whether the calculation is right. Checked: right. Two reasons. (1) Not like for like: HH-BREAK's total counts only its closed trades, which under a trailing stop are mostly coins that ran up first; its open positions are not in the total. (2) Valuing HH-BREAK's open positions at their current price it is about +1.04 SOL (16:30 data), so it is genuinely ahead by about 0.45 SOL — and that is one coin: 8rjgC1Gs was at 0.91× four hours after the buy (clock sale about −10%) and later reached 3.3× (open at 3.17× in HH-BREAK). Across the 76 clock-sold A4 positions the summed price at the 4-hour mark equals the summed value now (78.43 against 78.42 stakes); without that coin the clock is ahead by the same margin.
+- Reading: on this sample the 4-hour clock neither gained nor lost on price; it paid selling costs on 76 positions and missed one late runner. One coin decides the comparison either way — keep both books running.
+- 18:00 UK check (state of 17:56, 95b0a2d / older-7, one start since 16:46:33): fine. 31 buys since the restart, 252 open, feed 0 reconnects, Jupiter 0 errors, memory 459 MB. **HH15-5M started at 17:52 and made 12 buys in its first 4.5 minutes** (every coin regained 1 h 5 min of history at the same moment, as HH-BREAK did at 06:44). Volume in the 5 minutes before those buys: $14, $27, $84, $99, $180, $255, $404, $418, $424, $466, $1,723, $6,517 (median $330); buys in those 5 minutes: 1 to 9, one with 49. So the no-floor rule is buying thin coins as expected; to be judged on results, not changed.

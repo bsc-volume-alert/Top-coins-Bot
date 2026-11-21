@@ -1,0 +1,269 @@
+{
+ "at": "2026-11-20T14:44:29.963Z",
+ "key": false,
+ "rps": 0.5,
+ "steps": [
+  {
+   "name": "tokens/v2/recent",
+   "ok": true,
+   "ms": 0,
+   "n": 30,
+   "keys": [
+    "id",
+    "name",
+    "symbol",
+    "icon",
+    "decimals",
+    "dev",
+    "circSupply",
+    "totalSupply",
+    "tokenProgram",
+    "launchpad",
+    "holderCount",
+    "fdv",
+    "mcap",
+    "usdPrice",
+    "priceBlockId",
+    "stats5m",
+    "stats1h",
+    "stats6h",
+    "stats24h",
+    "firstPool",
+    "audit",
+    "organicScore",
+    "organicScoreLabel",
+    "tags",
+    "createdAt",
+    "updatedAt"
+   ],
+   "first": {
+    "mint": "HgFcQztUaHruWeRhna2Mn4zNMcFYjS2SWrpXSdC4pump",
+    "launchpad": "pump.fun",
+    "token_program": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+    "first_pool": {
+     "id": "HgFcQztUaHruWeRhna2Mn4zNMcFYjS2SWrpXSdC4pump",
+     "created": 1795185866
+    },
+    "mcap": 2084.589515603463,
+    "fdv": 4169.179031206926,
+    "circ_supply": 1000000000,
+    "total_supply": 2000000000
+   },
+   "launchpads": [
+    "pump.fun",
+    "stonkfun",
+    null,
+    "met-dbc"
+   ]
+  },
+  {
+   "name": "tokens/v2/toptraded/1h",
+   "ok": true,
+   "ms": 0,
+   "n": 100,
+   "in_band_40k_1m": 22,
+   "launchpads": [
+    [
+     "none",
+     69
+    ],
+    [
+     "pump.fun",
+     25
+    ],
+    [
+     "met-dbc",
+     1
+    ],
+    [
+     "metadao",
+     1
+    ],
+    [
+     "letsbonk.fun",
+     1
+    ],
+    [
+     "stonkfun",
+     3
+    ]
+   ],
+   "token_programs": [
+    "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+   ]
+  },
+  {
+   "name": "price/v3 coverage",
+   "ok": true,
+   "ms": 0,
+   "requested": 42,
+   "returned": 41,
+   "omitted": 1,
+   "ms_req_to_resp": 17,
+   "sample": {
+    "mint": "HgFcQztUaHruWeRhna2Mn4zNMcFYjS2SWrpXSdC4pump",
+    "px": 0.0000020845895156034632,
+    "liqUsd": null,
+    "createdAt": 1795185866,
+    "decimals": 6,
+    "blockId": 471775274
+   }
+  },
+  {
+   "name": "quote BUY 0.2 SOL → AMC1qw (?)",
+   "ok": true,
+   "ms": 111,
+   "quote": {
+    "ok": true,
+    "req": 1795185875.97,
+    "t": 1795185876.081,
+    "in": 200000000,
+    "out": 5128236,
+    "router": "metis",
+    "route": [
+     "Raydium CLMM"
+    ],
+    "feeBps": 10,
+    "platformFee": {
+     "feeBps": 10,
+     "feeMint": "So11111111111111111111111111111111111111112"
+    },
+    "impact": -0.0016553690802428938,
+    "keys": [
+     "swapType",
+     "inAmount",
+     "outAmount",
+     "otherAmountThreshold",
+     "swapMode",
+     "slippageBps",
+     "priceImpactPct",
+     "routePlan",
+     "feeMint",
+     "feeBps",
+     "platformFee",
+     "signatureFeeLamports",
+     "signatureFeePayer",
+     "prioritizationFeeLamports",
+     "prioritizationFeePayer",
+     "rentFeeLamports",
+     "rentFeePayer",
+     "transaction",
+     "gasless",
+     "jitOptimized",
+     "taker",
+     "inputMint",
+     "outputMint",
+     "router",
+     "guaranteedPrice",
+     "requestId",
+     "inUsdValue",
+     "outUsdValue",
+     "swapUsdValue",
+     "priceImpact",
+     "mode",
+     "totalTime"
+    ]
+   }
+  },
+  {
+   "name": "quote SELL the same tokens → SOL (round trip, shows total cost of fees + impact)",
+   "ok": true,
+   "ms": 0,
+   "quote": {
+    "ok": true,
+    "req": 1795185877.971,
+    "t": 1795185878.085,
+    "in": 5128236,
+    "out": 199380824,
+    "router": "metis",
+    "route": [
+     "Raydium CLMM",
+     "Deriverse",
+     "PancakeSwap",
+     "PancakeSwap"
+    ],
+    "feeBps": 10,
+    "platformFee": {
+     "feeBps": 10,
+     "feeMint": "So11111111111111111111111111111111111111112"
+    },
+    "impact": -0.0014428994508938475,
+    "keys": [
+     "swapType",
+     "inAmount",
+     "outAmount",
+     "otherAmountThreshold",
+     "swapMode",
+     "slippageBps",
+     "priceImpactPct",
+     "routePlan",
+     "feeMint",
+     "feeBps",
+     "platformFee",
+     "signatureFeeLamports",
+     "signatureFeePayer",
+     "prioritizationFeeLamports",
+     "prioritizationFeePayer",
+     "rentFeeLamports",
+     "rentFeePayer",
+     "transaction",
+     "gasless",
+     "jitOptimized",
+     "taker",
+     "inputMint",
+     "outputMint",
+     "router",
+     "guaranteedPrice",
+     "requestId",
+     "inUsdValue",
+     "outUsdValue",
+     "swapUsdValue",
+     "priceImpact",
+     "mode",
+     "totalTime"
+    ]
+   },
+   "round_trip_return": -0.0031
+  },
+  {
+   "name": "quote SELL half",
+   "ok": true,
+   "ms": 0,
+   "ok_route": true,
+   "out": 99672512,
+   "why": null
+  },
+  {
+   "name": "quote with no liquidity route (expect an explicit failure, not a zero)",
+   "ok": true,
+   "ms": 0,
+   "quote": {
+    "ok": false,
+    "t": 1795185882.001,
+    "why": "order: HTTP 400 inputMint or outputMint is not a valid token mint: 11111111111111111111111111111111",
+    "status": 400
+   }
+  }
+ ],
+ "counters": {
+  "calls": {
+   "recent": 1,
+   "category": 1,
+   "price": 1,
+   "order": 4
+  },
+  "credits": 11,
+  "errors": 1,
+  "limited": 0,
+  "lastErr": "order: HTTP 400 inputMint or outputMint is not a valid token mint: 11111111111111111111111111111111",
+  "omitted": 1,
+  "requested": 42,
+  "lastOk": 1795185880.084,
+  "headers": {
+   "x-ratelimit-current": "4",
+   "x-ratelimit-remaining": "16",
+   "x-ratelimit-reset": "1795185885"
+  }
+ }
+}

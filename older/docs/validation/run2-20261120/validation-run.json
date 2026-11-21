@@ -1,0 +1,2199 @@
+{
+ "spec": "older-3",
+ "minutes_planned": 10,
+ "res_mode": "pre",
+ "note": "helius_stream_credits = 2 credits per 0.1 MB of WebSocket data received (Helius billing rule); RPC calls are extra and small",
+ "snaps": [
+  {
+   "min": 0,
+   "at": "2026-11-20T14:32:15.636Z",
+   "rss_mb": 83,
+   "heap_mb": 9,
+   "db_mb": 0,
+   "wal_mb": 0.1,
+   "free_gb": 94.01,
+   "bars": 0,
+   "feed": {
+    "connected": false,
+    "msgs": 0,
+    "mb": 0,
+    "helius_stream_credits": 0,
+    "events": 0,
+    "emitted": 0,
+    "failed_tx": 0,
+    "dupes": 0,
+    "held": 0,
+    "replayed": 0,
+    "rejected": 0,
+    "non_canonical": 0,
+    "non_sol": 0,
+    "non_sol_quote_mints": [],
+    "lookup_fail": 0,
+    "reconnects": 0,
+    "lookup_calls": 0,
+    "lag_ms_avg": null
+   },
+   "decoder": {
+    "buy": 0,
+    "sell": 0,
+    "deposit": 0,
+    "withdraw": 0,
+    "pool": 0,
+    "boost": 0,
+    "sweep": 0,
+    "short": 0,
+    "fitPre": 0,
+    "fitPost": 0,
+    "fitBoth": 0,
+    "fitNeither": 0,
+    "neitherBy": {
+     "multi_hop_swap|buy": 2,
+     "no-ix|sell": 4
+    },
+    "feeOdd": 0,
+    "chainOk": 0,
+    "chainBad": 0,
+    "noVirtual": 0,
+    "negVirtual": 0,
+    "mode": "pre"
+   },
+   "engine": {
+    "events": 0,
+    "swaps": 0,
+    "otherPool": 0,
+    "noSolUsd": 0,
+    "noCreation": 0,
+    "evals": 0,
+    "cands": 0,
+    "entries": 0,
+    "notes": 0,
+    "replayed": 0,
+    "tooOld": 0,
+    "lastT": null,
+    "evalMsMax": 0,
+    "prices": 0,
+    "riskBlocked": 0,
+    "quotes": 0,
+    "coins": 0,
+    "feed_gaps": 0
+   },
+   "loop_lag_ms_max": 0,
+   "verify": {
+    "done": 0,
+    "failed": 0,
+    "within1pct": 0,
+    "suspect": 0,
+    "calls": 0
+   },
+   "gmgn": {
+    "calls": 0,
+    "limited": 0
+   },
+   "backfill": {
+    "queued": 0,
+    "done": 0,
+    "created": 0,
+    "noCreation": 0,
+    "bars": 0,
+    "refsOk": 0,
+    "refsMissing": 0,
+    "gapsPatched": 0,
+    "errors": 0,
+    "lastErr": "",
+    "queue": 0
+   },
+   "jupiter": {
+    "calls": {
+     "recent": 20,
+     "category": 2,
+     "search": 196,
+     "price": 287
+    },
+    "credits": 1,
+    "errors": 0,
+    "limited": 0,
+    "lastErr": "",
+    "omitted": 0,
+    "requested": 0,
+    "lastOk": null,
+    "headers": {
+     "x-ratelimit-current": "5",
+     "x-ratelimit-remaining": "5",
+     "x-ratelimit-reset": "1795185737"
+    }
+   },
+   "poller": {
+    "watched": 186,
+    "hot": 72,
+    "sweeps": 287,
+    "priced": 4568,
+    "omitted": 149,
+    "lost": 13,
+    "discovered": 186,
+    "skippedLive": 5,
+    "noMeta": 0,
+    "quotesOk": 0,
+    "noRoute": 0,
+    "quoteErr": 0,
+    "cadence": {
+     "n": 4386,
+     "sum": 88127.33799099922,
+     "max": 64.32300019264221
+    },
+    "by_origin": {
+     "unknown": 120,
+     "met-dbc": 12,
+     "raydium-launchlab": 7,
+     "pump.fun": 34,
+     "letsbonk.fun": 1,
+     "metadao": 1,
+     "stonkfun": 10,
+     "orynth": 1
+    },
+    "risk": {
+     "missing": 135,
+     "clean": 50,
+     "flagged": 1
+    },
+    "skippedCurve": 338
+   },
+   "inventory": null
+  },
+  {
+   "min": 1,
+   "at": "2026-11-20T14:33:16.075Z",
+   "rss_mb": 140,
+   "heap_mb": 24,
+   "db_mb": 6.6,
+   "wal_mb": 3.9,
+   "free_gb": 94,
+   "bars": 3340,
+   "feed": {
+    "connected": true,
+    "msgs": 24033,
+    "mb": 67.5,
+    "helius_stream_credits": 1351,
+    "events": 10575,
+    "emitted": 3524,
+    "failed_tx": 6543,
+    "dupes": 0,
+    "held": 862,
+    "replayed": 423,
+    "rejected": 0,
+    "non_canonical": 8,
+    "non_sol": 6478,
+    "non_sol_quote_mints": [
+     [
+      "5vkg8fyzC8pqbqqaZnDjsNWxE1Mx21fHKDRN7dMiXmAK",
+      570
+     ],
+     [
+      "EoB95BGYucu5G7qWrL59MySE9FC7dz3qwoKyWPMRZkui",
+      489
+     ],
+     [
+      "GhhcbT5ZdEu9XGCXmHA3ByXbBg6TVojLrcyUZcdfeE3t",
+      439
+     ],
+     [
+      "6KQeSEsBi5zSsvRNyjMpwcTtE5hXYTxNmLaWBduLk8V4",
+      386
+     ],
+     [
+      "BPsrXgyqVb4hbVqgHe5RBT1cXQq398wfx1kA9YMDcM7i",
+      298
+     ],
+     [
+      "CDeHa5WYPVuAgiJ5pfnXqfao8M56EH9aCZz23wjCiBCK",
+      278
+     ],
+     [
+      "CEF8Fe1rhfWeyeVPAAvjutnPAuzqRaqypEboXBFn5Hu",
+      266
+     ],
+     [
+      "BoqbQpJTx4wPhjXY2BvbJBUvc6QyKQsvVNjwSP851oYA",
+      239
+     ]
+    ],
+    "lookup_fail": 0,
+    "reconnects": 0,
+    "lookup_calls": 43,
+    "lag_ms_avg": 1220
+   },
+   "decoder": {
+    "buy": 4914,
+    "sell": 5350,
+    "deposit": 0,
+    "withdraw": 1,
+    "pool": 0,
+    "boost": 21,
+    "sweep": 289,
+    "short": 0,
+    "fitPre": 917,
+    "fitPost": 0,
+    "fitBoth": 2586,
+    "fitNeither": 0,
+    "neitherBy": {
+     "multi_hop_swap|buy": 2,
+     "no-ix|sell": 4
+    },
+    "feeOdd": 21,
+    "chainOk": 3265,
+    "chainBad": 1,
+    "noVirtual": 0,
+    "negVirtual": 190,
+    "mode": "pre"
+   },
+   "engine": {
+    "events": 3524,
+    "swaps": 3503,
+    "otherPool": 0,
+    "noSolUsd": 0,
+    "noCreation": 357,
+    "evals": 1797,
+    "cands": 0,
+    "entries": 0,
+    "notes": 1011,
+    "replayed": 309,
+    "tooOld": 172,
+    "lastT": 1795185195.302,
+    "evalMsMax": 33.1,
+    "prices": 425,
+    "riskBlocked": 4,
+    "quotes": 0,
+    "coins": 365,
+    "feed_gaps": 0
+   },
+   "loop_lag_ms_max": 538,
+   "verify": {
+    "done": 0,
+    "failed": 0,
+    "within1pct": 0,
+    "suspect": 0,
+    "calls": 0
+   },
+   "gmgn": {
+    "calls": 81,
+    "limited": 0
+   },
+   "backfill": {
+    "queued": 47,
+    "done": 22,
+    "created": 113,
+    "noCreation": 0,
+    "bars": 3017,
+    "refsOk": 11,
+    "refsMissing": 1,
+    "gapsPatched": 0,
+    "errors": 0,
+    "lastErr": "",
+    "createdJup": 113,
+    "jupNoCreation": 4,
+    "queue": 24
+   },
+   "jupiter": {
+    "calls": {
+     "recent": 20,
+     "category": 2,
+     "search": 196,
+     "price": 287
+    },
+    "credits": 327,
+    "errors": 0,
+    "limited": 0,
+    "lastErr": "",
+    "omitted": 2,
+    "requested": 427,
+    "lastOk": 1795185194.663,
+    "headers": {
+     "x-ratelimit-current": "5",
+     "x-ratelimit-remaining": "5",
+     "x-ratelimit-reset": "1795185737"
+    }
+   },
+   "poller": {
+    "watched": 186,
+    "hot": 72,
+    "sweeps": 287,
+    "priced": 4568,
+    "omitted": 149,
+    "lost": 13,
+    "discovered": 186,
+    "skippedLive": 5,
+    "noMeta": 0,
+    "quotesOk": 0,
+    "noRoute": 0,
+    "quoteErr": 0,
+    "cadence": {
+     "n": 4386,
+     "sum": 88127.33799099922,
+     "max": 64.32300019264221
+    },
+    "by_origin": {
+     "unknown": 120,
+     "met-dbc": 12,
+     "raydium-launchlab": 7,
+     "pump.fun": 34,
+     "letsbonk.fun": 1,
+     "metadao": 1,
+     "stonkfun": 10,
+     "orynth": 1
+    },
+    "risk": {
+     "missing": 135,
+     "clean": 50,
+     "flagged": 1
+    },
+    "skippedCurve": 338
+   },
+   "inventory": null
+  },
+  {
+   "min": 2,
+   "at": "2026-11-20T14:34:16.508Z",
+   "rss_mb": 158,
+   "heap_mb": 40,
+   "db_mb": 13.2,
+   "wal_mb": 4,
+   "free_gb": 94,
+   "bars": 6679,
+   "feed": {
+    "connected": true,
+    "msgs": 75752,
+    "mb": 168.7,
+    "helius_stream_credits": 3375,
+    "events": 22086,
+    "emitted": 8137,
+    "failed_tx": 21775,
+    "dupes": 0,
+    "held": 1372,
+    "replayed": 872,
+    "rejected": 0,
+    "non_canonical": 43,
+    "non_sol": 13271,
+    "non_sol_quote_mints": [
+     [
+      "5vkg8fyzC8pqbqqaZnDjsNWxE1Mx21fHKDRN7dMiXmAK",
+      1223
+     ],
+     [
+      "6KQeSEsBi5zSsvRNyjMpwcTtE5hXYTxNmLaWBduLk8V4",
+      843
+     ],
+     [
+      "EoB95BGYucu5G7qWrL59MySE9FC7dz3qwoKyWPMRZkui",
+      764
+     ],
+     [
+      "BPsrXgyqVb4hbVqgHe5RBT1cXQq398wfx1kA9YMDcM7i",
+      573
+     ],
+     [
+      "CDeHa5WYPVuAgiJ5pfnXqfao8M56EH9aCZz23wjCiBCK",
+      560
+     ],
+     [
+      "CEF8Fe1rhfWeyeVPAAvjutnPAuzqRaqypEboXBFn5Hu",
+      529
+     ],
+     [
+      "HJX76FF59BYh7w2xsNiCxGFaRamDtYt8CFs7FamGwfrs",
+      527
+     ],
+     [
+      "BoqbQpJTx4wPhjXY2BvbJBUvc6QyKQsvVNjwSP851oYA",
+      487
+     ]
+    ],
+    "lookup_fail": 0,
+    "reconnects": 0,
+    "lookup_calls": 86,
+    "lag_ms_avg": 1226
+   },
+   "decoder": {
+    "buy": 10281,
+    "sell": 11464,
+    "deposit": 0,
+    "withdraw": 3,
+    "pool": 1,
+    "boost": 40,
+    "sweep": 297,
+    "short": 0,
+    "fitPre": 2246,
+    "fitPost": 0,
+    "fitBoth": 5851,
+    "fitNeither": 0,
+    "neitherBy": {
+     "multi_hop_swap|buy": 2,
+     "no-ix|sell": 4
+    },
+    "feeOdd": 69,
+    "chainOk": 7586,
+    "chainBad": 1,
+    "noVirtual": 0,
+    "negVirtual": 701,
+    "mode": "pre"
+   },
+   "engine": {
+    "events": 8137,
+    "swaps": 8097,
+    "otherPool": 0,
+    "noSolUsd": 0,
+    "noCreation": 565,
+    "evals": 4489,
+    "cands": 0,
+    "entries": 0,
+    "notes": 1266,
+    "replayed": 756,
+    "tooOld": 395,
+    "lastT": 1795185255.96,
+    "evalMsMax": 33.1,
+    "prices": 810,
+    "riskBlocked": 21,
+    "quotes": 0,
+    "coins": 637,
+    "feed_gaps": 0
+   },
+   "loop_lag_ms_max": 525,
+   "verify": {
+    "done": 0,
+    "failed": 0,
+    "within1pct": 0,
+    "suspect": 0,
+    "calls": 0
+   },
+   "gmgn": {
+    "calls": 170,
+    "limited": 0
+   },
+   "backfill": {
+    "queued": 76,
+    "done": 42,
+    "created": 176,
+    "noCreation": 0,
+    "bars": 5846,
+    "refsOk": 24,
+    "refsMissing": 2,
+    "gapsPatched": 0,
+    "errors": 0,
+    "lastErr": "",
+    "createdJup": 176,
+    "jupNoCreation": 5,
+    "queue": 33
+   },
+   "jupiter": {
+    "calls": {
+     "recent": 20,
+     "category": 2,
+     "search": 196,
+     "price": 287
+    },
+    "credits": 578,
+    "errors": 0,
+    "limited": 0,
+    "lastErr": "",
+    "omitted": 4,
+    "requested": 814,
+    "lastOk": 1795185255.849,
+    "headers": {
+     "x-ratelimit-current": "5",
+     "x-ratelimit-remaining": "5",
+     "x-ratelimit-reset": "1795185737"
+    }
+   },
+   "poller": {
+    "watched": 186,
+    "hot": 72,
+    "sweeps": 287,
+    "priced": 4568,
+    "omitted": 149,
+    "lost": 13,
+    "discovered": 186,
+    "skippedLive": 5,
+    "noMeta": 0,
+    "quotesOk": 0,
+    "noRoute": 0,
+    "quoteErr": 0,
+    "cadence": {
+     "n": 4386,
+     "sum": 88127.33799099922,
+     "max": 64.32300019264221
+    },
+    "by_origin": {
+     "unknown": 120,
+     "met-dbc": 12,
+     "raydium-launchlab": 7,
+     "pump.fun": 34,
+     "letsbonk.fun": 1,
+     "metadao": 1,
+     "stonkfun": 10,
+     "orynth": 1
+    },
+    "risk": {
+     "missing": 135,
+     "clean": 50,
+     "flagged": 1
+    },
+    "skippedCurve": 338
+   },
+   "inventory": null
+  },
+  {
+   "min": 3,
+   "at": "2026-11-20T14:35:16.509Z",
+   "rss_mb": 161,
+   "heap_mb": 27,
+   "db_mb": 13.9,
+   "wal_mb": 4,
+   "free_gb": 94,
+   "bars": 7192,
+   "feed": {
+    "connected": true,
+    "msgs": 101169,
+    "mb": 243.4,
+    "helius_stream_credits": 4868,
+    "events": 34223,
+    "emitted": 12918,
+    "failed_tx": 25476,
+    "dupes": 0,
+    "held": 1526,
+    "replayed": 969,
+    "rejected": 1,
+    "non_canonical": 83,
+    "non_sol": 20522,
+    "non_sol_quote_mints": [
+     [
+      "5vkg8fyzC8pqbqqaZnDjsNWxE1Mx21fHKDRN7dMiXmAK",
+      1804
+     ],
+     [
+      "6KQeSEsBi5zSsvRNyjMpwcTtE5hXYTxNmLaWBduLk8V4",
+      1340
+     ],
+     [
+      "HJX76FF59BYh7w2xsNiCxGFaRamDtYt8CFs7FamGwfrs",
+      1266
+     ],
+     [
+      "EoB95BGYucu5G7qWrL59MySE9FC7dz3qwoKyWPMRZkui",
+      1088
+     ],
+     [
+      "BPsrXgyqVb4hbVqgHe5RBT1cXQq398wfx1kA9YMDcM7i",
+      905
+     ],
+     [
+      "CDeHa5WYPVuAgiJ5pfnXqfao8M56EH9aCZz23wjCiBCK",
+      851
+     ],
+     [
+      "CEF8Fe1rhfWeyeVPAAvjutnPAuzqRaqypEboXBFn5Hu",
+      797
+     ],
+     [
+      "BoqbQpJTx4wPhjXY2BvbJBUvc6QyKQsvVNjwSP851oYA",
+      776
+     ]
+    ],
+    "lookup_fail": 0,
+    "reconnects": 0,
+    "lookup_calls": 134,
+    "lag_ms_avg": 1146
+   },
+   "decoder": {
+    "buy": 16032,
+    "sell": 17826,
+    "deposit": 0,
+    "withdraw": 3,
+    "pool": 4,
+    "boost": 57,
+    "sweep": 301,
+    "short": 0,
+    "fitPre": 3299,
+    "fitPost": 0,
+    "fitBoth": 9562,
+    "fitNeither": 1,
+    "neitherBy": {
+     "multi_hop_swap|buy": 2,
+     "no-ix|sell": 4
+    },
+    "feeOdd": 86,
+    "chainOk": 12257,
+    "chainBad": 1,
+    "noVirtual": 0,
+    "negVirtual": 911,
+    "mode": "pre"
+   },
+   "engine": {
+    "events": 12918,
+    "swaps": 12861,
+    "otherPool": 0,
+    "noSolUsd": 0,
+    "noCreation": 759,
+    "evals": 6793,
+    "cands": 0,
+    "entries": 0,
+    "notes": 1474,
+    "replayed": 853,
+    "tooOld": 611,
+    "lastT": 1795185316.5,
+    "evalMsMax": 33.1,
+    "prices": 1255,
+    "riskBlocked": 25,
+    "quotes": 0,
+    "coinLost": 3,
+    "coins": 1367,
+    "feed_gaps": 0
+   },
+   "loop_lag_ms_max": 484,
+   "verify": {
+    "done": 0,
+    "failed": 0,
+    "within1pct": 0,
+    "suspect": 0,
+    "calls": 0
+   },
+   "gmgn": {
+    "calls": 188,
+    "limited": 2
+   },
+   "backfill": {
+    "queued": 303,
+    "done": 45,
+    "created": 845,
+    "noCreation": 0,
+    "bars": 6061,
+    "refsOk": 27,
+    "refsMissing": 2,
+    "gapsPatched": 0,
+    "errors": 2,
+    "lastErr": "GMGN rate limited",
+    "createdJup": 845,
+    "jupNoCreation": 44,
+    "queue": 258
+   },
+   "jupiter": {
+    "calls": {
+     "recent": 20,
+     "category": 2,
+     "search": 196,
+     "price": 287
+    },
+    "credits": 910,
+    "errors": 0,
+    "limited": 0,
+    "lastErr": "",
+    "omitted": 7,
+    "requested": 1262,
+    "lastOk": 1795185315.521,
+    "headers": {
+     "x-ratelimit-current": "5",
+     "x-ratelimit-remaining": "5",
+     "x-ratelimit-reset": "1795185737"
+    }
+   },
+   "poller": {
+    "watched": 186,
+    "hot": 72,
+    "sweeps": 287,
+    "priced": 4568,
+    "omitted": 149,
+    "lost": 13,
+    "discovered": 186,
+    "skippedLive": 5,
+    "noMeta": 0,
+    "quotesOk": 0,
+    "noRoute": 0,
+    "quoteErr": 0,
+    "cadence": {
+     "n": 4386,
+     "sum": 88127.33799099922,
+     "max": 64.32300019264221
+    },
+    "by_origin": {
+     "unknown": 120,
+     "met-dbc": 12,
+     "raydium-launchlab": 7,
+     "pump.fun": 34,
+     "letsbonk.fun": 1,
+     "metadao": 1,
+     "stonkfun": 10,
+     "orynth": 1
+    },
+    "risk": {
+     "missing": 135,
+     "clean": 50,
+     "flagged": 1
+    },
+    "skippedCurve": 338
+   },
+   "inventory": {
+    "at": "2026-11-20T14:32:15.607Z",
+    "method": "getProgramAccountsV2 (paginated)",
+    "pages": 181,
+    "pools": 60166,
+    "solPools": 60166,
+    "canonical": 36118,
+    "nonCanonical": 24048,
+    "pumpSuffix": 32857,
+    "priced": 36118,
+    "aboveMin": 677,
+    "inBand": 105,
+    "errors": 0,
+    "minMc": 5000,
+    "complete": false,
+    "stopped": "INV_MAX_POOLS=60000"
+   }
+  },
+  {
+   "min": 4,
+   "at": "2026-11-20T14:36:16.509Z",
+   "rss_mb": 163,
+   "heap_mb": 29,
+   "db_mb": 14.1,
+   "wal_mb": 4,
+   "free_gb": 93.99,
+   "bars": 7733,
+   "feed": {
+    "connected": true,
+    "msgs": 123764,
+    "mb": 314.1,
+    "helius_stream_credits": 6281,
+    "events": 45802,
+    "emitted": 17404,
+    "failed_tx": 29192,
+    "dupes": 0,
+    "held": 1617,
+    "replayed": 1017,
+    "rejected": 4,
+    "non_canonical": 98,
+    "non_sol": 27549,
+    "non_sol_quote_mints": [
+     [
+      "5vkg8fyzC8pqbqqaZnDjsNWxE1Mx21fHKDRN7dMiXmAK",
+      2224
+     ],
+     [
+      "HJX76FF59BYh7w2xsNiCxGFaRamDtYt8CFs7FamGwfrs",
+      1985
+     ],
+     [
+      "6KQeSEsBi5zSsvRNyjMpwcTtE5hXYTxNmLaWBduLk8V4",
+      1758
+     ],
+     [
+      "EoB95BGYucu5G7qWrL59MySE9FC7dz3qwoKyWPMRZkui",
+      1386
+     ],
+     [
+      "BPsrXgyqVb4hbVqgHe5RBT1cXQq398wfx1kA9YMDcM7i",
+      1155
+     ],
+     [
+      "CDeHa5WYPVuAgiJ5pfnXqfao8M56EH9aCZz23wjCiBCK",
+      1129
+     ],
+     [
+      "BoqbQpJTx4wPhjXY2BvbJBUvc6QyKQsvVNjwSP851oYA",
+      1067
+     ],
+     [
+      "CEF8Fe1rhfWeyeVPAAvjutnPAuzqRaqypEboXBFn5Hu",
+      1062
+     ]
+    ],
+    "lookup_fail": 0,
+    "reconnects": 0,
+    "lookup_calls": 183,
+    "lag_ms_avg": 1117
+   },
+   "decoder": {
+    "buy": 21602,
+    "sell": 23813,
+    "deposit": 0,
+    "withdraw": 5,
+    "pool": 6,
+    "boost": 72,
+    "sweep": 304,
+    "short": 0,
+    "fitPre": 4083,
+    "fitPost": 0,
+    "fitBoth": 13249,
+    "fitNeither": 4,
+    "neitherBy": {
+     "multi_hop_swap|buy": 2,
+     "no-ix|sell": 4
+    },
+    "feeOdd": 103,
+    "chainOk": 16677,
+    "chainBad": 1,
+    "noVirtual": 0,
+    "negVirtual": 1203,
+    "mode": "pre"
+   },
+   "engine": {
+    "events": 17404,
+    "swaps": 17332,
+    "otherPool": 0,
+    "noSolUsd": 0,
+    "noCreation": 900,
+    "evals": 9038,
+    "cands": 0,
+    "entries": 0,
+    "notes": 1622,
+    "replayed": 900,
+    "tooOld": 821,
+    "lastT": 1795185376.336,
+    "evalMsMax": 33.1,
+    "prices": 1708,
+    "riskBlocked": 25,
+    "quotes": 0,
+    "coinLost": 6,
+    "coins": 1410,
+    "feed_gaps": 0
+   },
+   "loop_lag_ms_max": 12,
+   "verify": {
+    "done": 0,
+    "failed": 0,
+    "within1pct": 0,
+    "suspect": 0,
+    "calls": 0
+   },
+   "gmgn": {
+    "calls": 198,
+    "limited": 4
+   },
+   "backfill": {
+    "queued": 319,
+    "done": 45,
+    "created": 877,
+    "noCreation": 0,
+    "bars": 6421,
+    "refsOk": 27,
+    "refsMissing": 2,
+    "gapsPatched": 0,
+    "errors": 4,
+    "lastErr": "GMGN rate limited",
+    "createdJup": 877,
+    "jupNoCreation": 45,
+    "queue": 274
+   },
+   "jupiter": {
+    "calls": {
+     "recent": 20,
+     "category": 2,
+     "search": 196,
+     "price": 287
+    },
+    "credits": 1180,
+    "errors": 0,
+    "limited": 0,
+    "lastErr": "",
+    "omitted": 11,
+    "requested": 1719,
+    "lastOk": 1795185375.739,
+    "headers": {
+     "x-ratelimit-current": "5",
+     "x-ratelimit-remaining": "5",
+     "x-ratelimit-reset": "1795185737"
+    }
+   },
+   "poller": {
+    "watched": 186,
+    "hot": 72,
+    "sweeps": 287,
+    "priced": 4568,
+    "omitted": 149,
+    "lost": 13,
+    "discovered": 186,
+    "skippedLive": 5,
+    "noMeta": 0,
+    "quotesOk": 0,
+    "noRoute": 0,
+    "quoteErr": 0,
+    "cadence": {
+     "n": 4386,
+     "sum": 88127.33799099922,
+     "max": 64.32300019264221
+    },
+    "by_origin": {
+     "unknown": 120,
+     "met-dbc": 12,
+     "raydium-launchlab": 7,
+     "pump.fun": 34,
+     "letsbonk.fun": 1,
+     "metadao": 1,
+     "stonkfun": 10,
+     "orynth": 1
+    },
+    "risk": {
+     "missing": 135,
+     "clean": 50,
+     "flagged": 1
+    },
+    "skippedCurve": 338
+   },
+   "inventory": {
+    "at": "2026-11-20T14:32:15.607Z",
+    "method": "getProgramAccountsV2 (paginated)",
+    "pages": 181,
+    "pools": 60166,
+    "solPools": 60166,
+    "canonical": 36118,
+    "nonCanonical": 24048,
+    "pumpSuffix": 32857,
+    "priced": 36118,
+    "aboveMin": 677,
+    "inBand": 105,
+    "errors": 0,
+    "minMc": 5000,
+    "complete": false,
+    "stopped": "INV_MAX_POOLS=60000"
+   }
+  },
+  {
+   "min": 5,
+   "at": "2026-11-20T14:37:16.509Z",
+   "rss_mb": 165,
+   "heap_mb": 33,
+   "db_mb": 14.2,
+   "wal_mb": 4,
+   "free_gb": 93.99,
+   "bars": 8099,
+   "feed": {
+    "connected": true,
+    "msgs": 149257,
+    "mb": 386.6,
+    "helius_stream_credits": 7732,
+    "events": 57540,
+    "emitted": 22205,
+    "failed_tx": 32579,
+    "dupes": 0,
+    "held": 1781,
+    "replayed": 1047,
+    "rejected": 5,
+    "non_canonical": 109,
+    "non_sol": 34332,
+    "non_sol_quote_mints": [
+     [
+      "HJX76FF59BYh7w2xsNiCxGFaRamDtYt8CFs7FamGwfrs",
+      2781
+     ],
+     [
+      "5vkg8fyzC8pqbqqaZnDjsNWxE1Mx21fHKDRN7dMiXmAK",
+      2669
+     ],
+     [
+      "6KQeSEsBi5zSsvRNyjMpwcTtE5hXYTxNmLaWBduLk8V4",
+      2196
+     ],
+     [
+      "EoB95BGYucu5G7qWrL59MySE9FC7dz3qwoKyWPMRZkui",
+      1648
+     ],
+     [
+      "BPsrXgyqVb4hbVqgHe5RBT1cXQq398wfx1kA9YMDcM7i",
+      1419
+     ],
+     [
+      "CDeHa5WYPVuAgiJ5pfnXqfao8M56EH9aCZz23wjCiBCK",
+      1399
+     ],
+     [
+      "CEF8Fe1rhfWeyeVPAAvjutnPAuzqRaqypEboXBFn5Hu",
+      1368
+     ],
+     [
+      "BoqbQpJTx4wPhjXY2BvbJBUvc6QyKQsvVNjwSP851oYA",
+      1367
+     ]
+    ],
+    "lookup_fail": 252,
+    "reconnects": 0,
+    "lookup_calls": 204,
+    "lag_ms_avg": 1099
+   },
+   "decoder": {
+    "buy": 26880,
+    "sell": 30251,
+    "deposit": 2,
+    "withdraw": 5,
+    "pool": 7,
+    "boost": 84,
+    "sweep": 311,
+    "short": 0,
+    "fitPre": 4971,
+    "fitPost": 0,
+    "fitBoth": 17150,
+    "fitNeither": 5,
+    "neitherBy": {
+     "multi_hop_swap|buy": 2,
+     "no-ix|sell": 4
+    },
+    "feeOdd": 117,
+    "chainOk": 21432,
+    "chainBad": 1,
+    "noVirtual": 0,
+    "negVirtual": 1330,
+    "mode": "pre"
+   },
+   "engine": {
+    "events": 22205,
+    "swaps": 22121,
+    "otherPool": 0,
+    "noSolUsd": 0,
+    "noCreation": 1002,
+    "evals": 11245,
+    "cands": 0,
+    "entries": 0,
+    "notes": 1711,
+    "replayed": 930,
+    "tooOld": 1047,
+    "lastT": 1795185436.309,
+    "evalMsMax": 33.1,
+    "prices": 2180,
+    "riskBlocked": 25,
+    "quotes": 0,
+    "coinLost": 8,
+    "coins": 1448,
+    "feed_gaps": 0
+   },
+   "loop_lag_ms_max": 38,
+   "verify": {
+    "done": 0,
+    "failed": 0,
+    "within1pct": 0,
+    "suspect": 0,
+    "calls": 0
+   },
+   "gmgn": {
+    "calls": 207,
+    "limited": 6
+   },
+   "backfill": {
+    "queued": 334,
+    "done": 45,
+    "created": 896,
+    "noCreation": 0,
+    "bars": 6781,
+    "refsOk": 27,
+    "refsMissing": 2,
+    "gapsPatched": 0,
+    "errors": 6,
+    "lastErr": "GMGN rate limited",
+    "createdJup": 896,
+    "jupNoCreation": 47,
+    "queue": 288
+   },
+   "jupiter": {
+    "calls": {
+     "recent": 20,
+     "category": 2,
+     "search": 196,
+     "price": 287
+    },
+    "credits": 1378,
+    "errors": 0,
+    "limited": 0,
+    "lastErr": "",
+    "omitted": 17,
+    "requested": 2197,
+    "lastOk": 1795185436.173,
+    "headers": {
+     "x-ratelimit-current": "5",
+     "x-ratelimit-remaining": "5",
+     "x-ratelimit-reset": "1795185737"
+    }
+   },
+   "poller": {
+    "watched": 186,
+    "hot": 72,
+    "sweeps": 287,
+    "priced": 4568,
+    "omitted": 149,
+    "lost": 13,
+    "discovered": 186,
+    "skippedLive": 5,
+    "noMeta": 0,
+    "quotesOk": 0,
+    "noRoute": 0,
+    "quoteErr": 0,
+    "cadence": {
+     "n": 4386,
+     "sum": 88127.33799099922,
+     "max": 64.32300019264221
+    },
+    "by_origin": {
+     "unknown": 120,
+     "met-dbc": 12,
+     "raydium-launchlab": 7,
+     "pump.fun": 34,
+     "letsbonk.fun": 1,
+     "metadao": 1,
+     "stonkfun": 10,
+     "orynth": 1
+    },
+    "risk": {
+     "missing": 135,
+     "clean": 50,
+     "flagged": 1
+    },
+    "skippedCurve": 338
+   },
+   "inventory": {
+    "at": "2026-11-20T14:32:15.607Z",
+    "method": "getProgramAccountsV2 (paginated)",
+    "pages": 181,
+    "pools": 60166,
+    "solPools": 60166,
+    "canonical": 36118,
+    "nonCanonical": 24048,
+    "pumpSuffix": 32857,
+    "priced": 36118,
+    "aboveMin": 677,
+    "inBand": 105,
+    "errors": 0,
+    "minMc": 5000,
+    "complete": false,
+    "stopped": "INV_MAX_POOLS=60000"
+   }
+  },
+  {
+   "min": 6,
+   "at": "2026-11-20T14:38:16.509Z",
+   "rss_mb": 167,
+   "heap_mb": 31,
+   "db_mb": 14.3,
+   "wal_mb": 4,
+   "free_gb": 93.99,
+   "bars": 8439,
+   "feed": {
+    "connected": true,
+    "msgs": 175773,
+    "mb": 457.2,
+    "helius_stream_credits": 9145,
+    "events": 68041,
+    "emitted": 25849,
+    "failed_tx": 37450,
+    "dupes": 0,
+    "held": 1920,
+    "replayed": 1047,
+    "rejected": 5,
+    "non_canonical": 138,
+    "non_sol": 41018,
+    "non_sol_quote_mints": [
+     [
+      "HJX76FF59BYh7w2xsNiCxGFaRamDtYt8CFs7FamGwfrs",
+      3452
+     ],
+     [
+      "5vkg8fyzC8pqbqqaZnDjsNWxE1Mx21fHKDRN7dMiXmAK",
+      3070
+     ],
+     [
+      "6KQeSEsBi5zSsvRNyjMpwcTtE5hXYTxNmLaWBduLk8V4",
+      2585
+     ],
+     [
+      "EoB95BGYucu5G7qWrL59MySE9FC7dz3qwoKyWPMRZkui",
+      1922
+     ],
+     [
+      "CDeHa5WYPVuAgiJ5pfnXqfao8M56EH9aCZz23wjCiBCK",
+      1688
+     ],
+     [
+      "CEF8Fe1rhfWeyeVPAAvjutnPAuzqRaqypEboXBFn5Hu",
+      1668
+     ],
+     [
+      "BoqbQpJTx4wPhjXY2BvbJBUvc6QyKQsvVNjwSP851oYA",
+      1664
+     ],
+     [
+      "BPsrXgyqVb4hbVqgHe5RBT1cXQq398wfx1kA9YMDcM7i",
+      1659
+     ]
+    ],
+    "lookup_fail": 1187,
+    "reconnects": 0,
+    "lookup_calls": 214,
+    "lag_ms_avg": 1094
+   },
+   "decoder": {
+    "buy": 31891,
+    "sell": 35731,
+    "deposit": 2,
+    "withdraw": 6,
+    "pool": 8,
+    "boost": 89,
+    "sweep": 314,
+    "short": 0,
+    "fitPre": 5440,
+    "fitPost": 0,
+    "fitBoth": 20320,
+    "fitNeither": 5,
+    "neitherBy": {
+     "multi_hop_swap|buy": 2,
+     "no-ix|sell": 4
+    },
+    "feeOdd": 131,
+    "chainOk": 25069,
+    "chainBad": 2,
+    "noVirtual": 0,
+    "negVirtual": 1384,
+    "mode": "pre"
+   },
+   "engine": {
+    "events": 25849,
+    "swaps": 25760,
+    "otherPool": 0,
+    "noSolUsd": 0,
+    "noCreation": 1093,
+    "evals": 13561,
+    "cands": 0,
+    "entries": 0,
+    "notes": 1779,
+    "replayed": 930,
+    "tooOld": 1269,
+    "lastT": 1795185496.217,
+    "evalMsMax": 33.1,
+    "prices": 2656,
+    "riskBlocked": 25,
+    "quotes": 0,
+    "coinLost": 11,
+    "coins": 1453,
+    "feed_gaps": 0
+   },
+   "loop_lag_ms_max": 21,
+   "verify": {
+    "done": 0,
+    "failed": 0,
+    "within1pct": 0,
+    "suspect": 0,
+    "calls": 0
+   },
+   "gmgn": {
+    "calls": 217,
+    "limited": 8
+   },
+   "backfill": {
+    "queued": 338,
+    "done": 45,
+    "created": 911,
+    "noCreation": 0,
+    "bars": 7141,
+    "refsOk": 27,
+    "refsMissing": 2,
+    "gapsPatched": 0,
+    "errors": 8,
+    "lastErr": "GMGN rate limited",
+    "createdJup": 911,
+    "jupNoCreation": 47,
+    "queue": 292
+   },
+   "jupiter": {
+    "calls": {
+     "recent": 20,
+     "category": 2,
+     "search": 196,
+     "price": 287
+    },
+    "credits": 1546,
+    "errors": 0,
+    "limited": 0,
+    "lastErr": "",
+    "omitted": 33,
+    "requested": 2689,
+    "lastOk": 1795185495.501,
+    "headers": {
+     "x-ratelimit-current": "5",
+     "x-ratelimit-remaining": "5",
+     "x-ratelimit-reset": "1795185737"
+    }
+   },
+   "poller": {
+    "watched": 186,
+    "hot": 72,
+    "sweeps": 287,
+    "priced": 4568,
+    "omitted": 149,
+    "lost": 13,
+    "discovered": 186,
+    "skippedLive": 5,
+    "noMeta": 0,
+    "quotesOk": 0,
+    "noRoute": 0,
+    "quoteErr": 0,
+    "cadence": {
+     "n": 4386,
+     "sum": 88127.33799099922,
+     "max": 64.32300019264221
+    },
+    "by_origin": {
+     "unknown": 120,
+     "met-dbc": 12,
+     "raydium-launchlab": 7,
+     "pump.fun": 34,
+     "letsbonk.fun": 1,
+     "metadao": 1,
+     "stonkfun": 10,
+     "orynth": 1
+    },
+    "risk": {
+     "missing": 135,
+     "clean": 50,
+     "flagged": 1
+    },
+    "skippedCurve": 338
+   },
+   "inventory": {
+    "at": "2026-11-20T14:32:15.607Z",
+    "method": "getProgramAccountsV2 (paginated)",
+    "pages": 181,
+    "pools": 60166,
+    "solPools": 60166,
+    "canonical": 36118,
+    "nonCanonical": 24048,
+    "pumpSuffix": 32857,
+    "priced": 36118,
+    "aboveMin": 677,
+    "inBand": 105,
+    "errors": 0,
+    "minMc": 5000,
+    "complete": false,
+    "stopped": "INV_MAX_POOLS=60000"
+   }
+  },
+  {
+   "min": 7,
+   "at": "2026-11-20T14:39:16.509Z",
+   "rss_mb": 170,
+   "heap_mb": 43,
+   "db_mb": 14.4,
+   "wal_mb": 4,
+   "free_gb": 93.99,
+   "bars": 8816,
+   "feed": {
+    "connected": true,
+    "msgs": 195317,
+    "mb": 517.8,
+    "helius_stream_credits": 10357,
+    "events": 78029,
+    "emitted": 29207,
+    "failed_tx": 40476,
+    "dupes": 0,
+    "held": 2021,
+    "replayed": 1166,
+    "rejected": 5,
+    "non_canonical": 153,
+    "non_sol": 47650,
+    "non_sol_quote_mints": [
+     [
+      "HJX76FF59BYh7w2xsNiCxGFaRamDtYt8CFs7FamGwfrs",
+      4157
+     ],
+     [
+      "5vkg8fyzC8pqbqqaZnDjsNWxE1Mx21fHKDRN7dMiXmAK",
+      3489
+     ],
+     [
+      "6KQeSEsBi5zSsvRNyjMpwcTtE5hXYTxNmLaWBduLk8V4",
+      3022
+     ],
+     [
+      "EoB95BGYucu5G7qWrL59MySE9FC7dz3qwoKyWPMRZkui",
+      2178
+     ],
+     [
+      "CDeHa5WYPVuAgiJ5pfnXqfao8M56EH9aCZz23wjCiBCK",
+      1984
+     ],
+     [
+      "BoqbQpJTx4wPhjXY2BvbJBUvc6QyKQsvVNjwSP851oYA",
+      1968
+     ],
+     [
+      "6qm61CFEuhy6eyZzVUd6pqTHi3LXJLqZW2tLJseEbwFt",
+      1936
+     ],
+     [
+      "CEF8Fe1rhfWeyeVPAAvjutnPAuzqRaqypEboXBFn5Hu",
+      1908
+     ]
+    ],
+    "lookup_fail": 1885,
+    "reconnects": 0,
+    "lookup_calls": 225,
+    "lag_ms_avg": 1093
+   },
+   "decoder": {
+    "buy": 36598,
+    "sell": 41005,
+    "deposit": 2,
+    "withdraw": 7,
+    "pool": 8,
+    "boost": 94,
+    "sweep": 315,
+    "short": 0,
+    "fitPre": 5913,
+    "fitPost": 0,
+    "fitBoth": 23200,
+    "fitNeither": 5,
+    "neitherBy": {
+     "multi_hop_swap|buy": 2,
+     "no-ix|sell": 4
+    },
+    "feeOdd": 138,
+    "chainOk": 28372,
+    "chainBad": 3,
+    "noVirtual": 0,
+    "negVirtual": 1418,
+    "mode": "pre"
+   },
+   "engine": {
+    "events": 29207,
+    "swaps": 29113,
+    "otherPool": 0,
+    "noSolUsd": 0,
+    "noCreation": 1198,
+    "evals": 15824,
+    "cands": 0,
+    "entries": 0,
+    "notes": 1808,
+    "replayed": 1049,
+    "tooOld": 1470,
+    "lastT": 1795185556.37,
+    "evalMsMax": 33.1,
+    "prices": 3126,
+    "riskBlocked": 25,
+    "quotes": 0,
+    "coinLost": 13,
+    "coins": 1506,
+    "feed_gaps": 0
+   },
+   "loop_lag_ms_max": 102,
+   "verify": {
+    "done": 0,
+    "failed": 0,
+    "within1pct": 0,
+    "suspect": 0,
+    "calls": 0
+   },
+   "gmgn": {
+    "calls": 227,
+    "limited": 10
+   },
+   "backfill": {
+    "queued": 345,
+    "done": 45,
+    "created": 929,
+    "noCreation": 0,
+    "bars": 7501,
+    "refsOk": 27,
+    "refsMissing": 2,
+    "gapsPatched": 0,
+    "errors": 10,
+    "lastErr": "GMGN rate limited",
+    "createdJup": 929,
+    "jupNoCreation": 48,
+    "queue": 300
+   },
+   "jupiter": {
+    "calls": {
+     "recent": 20,
+     "category": 2,
+     "search": 196,
+     "price": 287
+    },
+    "credits": 1762,
+    "errors": 0,
+    "limited": 0,
+    "lastErr": "",
+    "omitted": 58,
+    "requested": 3184,
+    "lastOk": 1795185556.372,
+    "headers": {
+     "x-ratelimit-current": "5",
+     "x-ratelimit-remaining": "5",
+     "x-ratelimit-reset": "1795185737"
+    }
+   },
+   "poller": {
+    "watched": 186,
+    "hot": 72,
+    "sweeps": 287,
+    "priced": 4568,
+    "omitted": 149,
+    "lost": 13,
+    "discovered": 186,
+    "skippedLive": 5,
+    "noMeta": 0,
+    "quotesOk": 0,
+    "noRoute": 0,
+    "quoteErr": 0,
+    "cadence": {
+     "n": 4386,
+     "sum": 88127.33799099922,
+     "max": 64.32300019264221
+    },
+    "by_origin": {
+     "unknown": 120,
+     "met-dbc": 12,
+     "raydium-launchlab": 7,
+     "pump.fun": 34,
+     "letsbonk.fun": 1,
+     "metadao": 1,
+     "stonkfun": 10,
+     "orynth": 1
+    },
+    "risk": {
+     "missing": 135,
+     "clean": 50,
+     "flagged": 1
+    },
+    "skippedCurve": 338
+   },
+   "inventory": {
+    "at": "2026-11-20T14:32:15.607Z",
+    "method": "getProgramAccountsV2 (paginated)",
+    "pages": 181,
+    "pools": 60166,
+    "solPools": 60166,
+    "canonical": 36118,
+    "nonCanonical": 24048,
+    "pumpSuffix": 32857,
+    "priced": 36118,
+    "aboveMin": 677,
+    "inBand": 105,
+    "errors": 0,
+    "minMc": 5000,
+    "complete": false,
+    "stopped": "INV_MAX_POOLS=60000"
+   }
+  },
+  {
+   "min": 8,
+   "at": "2026-11-20T14:40:16.510Z",
+   "rss_mb": 173,
+   "heap_mb": 39,
+   "db_mb": 14.5,
+   "wal_mb": 4,
+   "free_gb": 93.99,
+   "bars": 9209,
+   "feed": {
+    "connected": true,
+    "msgs": 224398,
+    "mb": 588.4,
+    "helius_stream_credits": 11768,
+    "events": 88261,
+    "emitted": 32597,
+    "failed_tx": 46015,
+    "dupes": 0,
+    "held": 2136,
+    "replayed": 1235,
+    "rejected": 6,
+    "non_canonical": 170,
+    "non_sol": 54423,
+    "non_sol_quote_mints": [
+     [
+      "HJX76FF59BYh7w2xsNiCxGFaRamDtYt8CFs7FamGwfrs",
+      4899
+     ],
+     [
+      "5vkg8fyzC8pqbqqaZnDjsNWxE1Mx21fHKDRN7dMiXmAK",
+      3937
+     ],
+     [
+      "6KQeSEsBi5zSsvRNyjMpwcTtE5hXYTxNmLaWBduLk8V4",
+      3464
+     ],
+     [
+      "EoB95BGYucu5G7qWrL59MySE9FC7dz3qwoKyWPMRZkui",
+      2436
+     ],
+     [
+      "CDeHa5WYPVuAgiJ5pfnXqfao8M56EH9aCZz23wjCiBCK",
+      2276
+     ],
+     [
+      "BoqbQpJTx4wPhjXY2BvbJBUvc6QyKQsvVNjwSP851oYA",
+      2267
+     ],
+     [
+      "6qm61CFEuhy6eyZzVUd6pqTHi3LXJLqZW2tLJseEbwFt",
+      2239
+     ],
+     [
+      "CEF8Fe1rhfWeyeVPAAvjutnPAuzqRaqypEboXBFn5Hu",
+      2181
+     ]
+    ],
+    "lookup_fail": 2610,
+    "reconnects": 0,
+    "lookup_calls": 235,
+    "lag_ms_avg": 1087
+   },
+   "decoder": {
+    "buy": 41340,
+    "sell": 46482,
+    "deposit": 4,
+    "withdraw": 8,
+    "pool": 9,
+    "boost": 97,
+    "sweep": 321,
+    "short": 0,
+    "fitPre": 6423,
+    "fitPost": 0,
+    "fitBoth": 26077,
+    "fitNeither": 6,
+    "neitherBy": {
+     "multi_hop_swap|buy": 2,
+     "no-ix|sell": 4
+    },
+    "feeOdd": 148,
+    "chainOk": 31700,
+    "chainBad": 4,
+    "noVirtual": 0,
+    "negVirtual": 1466,
+    "mode": "pre"
+   },
+   "engine": {
+    "events": 32597,
+    "swaps": 32500,
+    "otherPool": 0,
+    "noSolUsd": 0,
+    "noCreation": 1294,
+    "evals": 17970,
+    "cands": 0,
+    "entries": 0,
+    "notes": 1845,
+    "replayed": 1116,
+    "tooOld": 1662,
+    "lastT": 1795185616.27,
+    "evalMsMax": 33.1,
+    "prices": 3562,
+    "riskBlocked": 25,
+    "quotes": 0,
+    "coinLost": 14,
+    "coins": 1566,
+    "feed_gaps": 0
+   },
+   "loop_lag_ms_max": 34,
+   "verify": {
+    "done": 0,
+    "failed": 0,
+    "within1pct": 0,
+    "suspect": 0,
+    "calls": 0
+   },
+   "gmgn": {
+    "calls": 234,
+    "limited": 11
+   },
+   "backfill": {
+    "queued": 350,
+    "done": 45,
+    "created": 941,
+    "noCreation": 0,
+    "bars": 7681,
+    "refsOk": 27,
+    "refsMissing": 2,
+    "gapsPatched": 0,
+    "errors": 11,
+    "lastErr": "GMGN rate limited",
+    "createdJup": 941,
+    "jupNoCreation": 48,
+    "queue": 304
+   },
+   "jupiter": {
+    "calls": {
+     "recent": 20,
+     "category": 2,
+     "search": 196,
+     "price": 287
+    },
+    "credits": 1919,
+    "errors": 0,
+    "limited": 0,
+    "lastErr": "",
+    "omitted": 83,
+    "requested": 3645,
+    "lastOk": 1795185615.674,
+    "headers": {
+     "x-ratelimit-current": "5",
+     "x-ratelimit-remaining": "5",
+     "x-ratelimit-reset": "1795185737"
+    }
+   },
+   "poller": {
+    "watched": 186,
+    "hot": 72,
+    "sweeps": 287,
+    "priced": 4568,
+    "omitted": 149,
+    "lost": 13,
+    "discovered": 186,
+    "skippedLive": 5,
+    "noMeta": 0,
+    "quotesOk": 0,
+    "noRoute": 0,
+    "quoteErr": 0,
+    "cadence": {
+     "n": 4386,
+     "sum": 88127.33799099922,
+     "max": 64.32300019264221
+    },
+    "by_origin": {
+     "unknown": 120,
+     "met-dbc": 12,
+     "raydium-launchlab": 7,
+     "pump.fun": 34,
+     "letsbonk.fun": 1,
+     "metadao": 1,
+     "stonkfun": 10,
+     "orynth": 1
+    },
+    "risk": {
+     "missing": 135,
+     "clean": 50,
+     "flagged": 1
+    },
+    "skippedCurve": 338
+   },
+   "inventory": {
+    "at": "2026-11-20T14:32:15.607Z",
+    "method": "getProgramAccountsV2 (paginated)",
+    "pages": 181,
+    "pools": 60166,
+    "solPools": 60166,
+    "canonical": 36118,
+    "nonCanonical": 24048,
+    "pumpSuffix": 32857,
+    "priced": 36118,
+    "aboveMin": 677,
+    "inBand": 105,
+    "errors": 0,
+    "minMc": 5000,
+    "complete": false,
+    "stopped": "INV_MAX_POOLS=60000"
+   }
+  },
+  {
+   "min": 9,
+   "at": "2026-11-20T14:41:16.511Z",
+   "rss_mb": 175,
+   "heap_mb": 45,
+   "db_mb": 14.5,
+   "wal_mb": 4,
+   "free_gb": 93.99,
+   "bars": 9554,
+   "feed": {
+    "connected": true,
+    "msgs": 261549,
+    "mb": 671,
+    "helius_stream_credits": 13420,
+    "events": 98178,
+    "emitted": 35993,
+    "failed_tx": 54268,
+    "dupes": 0,
+    "held": 2258,
+    "replayed": 1235,
+    "rejected": 6,
+    "non_canonical": 218,
+    "non_sol": 60772,
+    "non_sol_quote_mints": [
+     [
+      "HJX76FF59BYh7w2xsNiCxGFaRamDtYt8CFs7FamGwfrs",
+      5529
+     ],
+     [
+      "5vkg8fyzC8pqbqqaZnDjsNWxE1Mx21fHKDRN7dMiXmAK",
+      4281
+     ],
+     [
+      "6KQeSEsBi5zSsvRNyjMpwcTtE5hXYTxNmLaWBduLk8V4",
+      3818
+     ],
+     [
+      "EoB95BGYucu5G7qWrL59MySE9FC7dz3qwoKyWPMRZkui",
+      2701
+     ],
+     [
+      "BoqbQpJTx4wPhjXY2BvbJBUvc6QyKQsvVNjwSP851oYA",
+      2567
+     ],
+     [
+      "6qm61CFEuhy6eyZzVUd6pqTHi3LXJLqZW2tLJseEbwFt",
+      2531
+     ],
+     [
+      "CDeHa5WYPVuAgiJ5pfnXqfao8M56EH9aCZz23wjCiBCK",
+      2514
+     ],
+     [
+      "CEF8Fe1rhfWeyeVPAAvjutnPAuzqRaqypEboXBFn5Hu",
+      2469
+     ]
+    ],
+    "lookup_fail": 3585,
+    "reconnects": 0,
+    "lookup_calls": 245,
+    "lag_ms_avg": 1084
+   },
+   "decoder": {
+    "buy": 46111,
+    "sell": 51623,
+    "deposit": 5,
+    "withdraw": 8,
+    "pool": 10,
+    "boost": 99,
+    "sweep": 322,
+    "short": 0,
+    "fitPre": 6952,
+    "fitPost": 0,
+    "fitBoth": 28944,
+    "fitNeither": 6,
+    "neitherBy": {
+     "multi_hop_swap|buy": 2,
+     "no-ix|sell": 4
+    },
+    "feeOdd": 162,
+    "chainOk": 35092,
+    "chainBad": 6,
+    "noVirtual": 0,
+    "negVirtual": 1504,
+    "mode": "pre"
+   },
+   "engine": {
+    "events": 35993,
+    "swaps": 35896,
+    "otherPool": 0,
+    "noSolUsd": 0,
+    "noCreation": 1399,
+    "evals": 20228,
+    "cands": 0,
+    "entries": 0,
+    "notes": 1897,
+    "replayed": 1116,
+    "tooOld": 1873,
+    "lastT": 1795185676.361,
+    "evalMsMax": 33.1,
+    "prices": 4061,
+    "riskBlocked": 25,
+    "quotes": 0,
+    "coinLost": 16,
+    "coins": 1571,
+    "feed_gaps": 0
+   },
+   "loop_lag_ms_max": 23,
+   "verify": {
+    "done": 0,
+    "failed": 0,
+    "within1pct": 0,
+    "suspect": 0,
+    "calls": 0
+   },
+   "gmgn": {
+    "calls": 242,
+    "limited": 13
+   },
+   "backfill": {
+    "queued": 363,
+    "done": 45,
+    "created": 961,
+    "noCreation": 0,
+    "bars": 8041,
+    "refsOk": 27,
+    "refsMissing": 2,
+    "gapsPatched": 0,
+    "errors": 13,
+    "lastErr": "GMGN rate limited",
+    "createdJup": 961,
+    "jupNoCreation": 49,
+    "queue": 317
+   },
+   "jupiter": {
+    "calls": {
+     "recent": 20,
+     "category": 2,
+     "search": 196,
+     "price": 287
+    },
+    "credits": 2133,
+    "errors": 0,
+    "limited": 0,
+    "lastErr": "",
+    "omitted": 114,
+    "requested": 4175,
+    "lastOk": 1795185675.509,
+    "headers": {
+     "x-ratelimit-current": "5",
+     "x-ratelimit-remaining": "5",
+     "x-ratelimit-reset": "1795185737"
+    }
+   },
+   "poller": {
+    "watched": 186,
+    "hot": 72,
+    "sweeps": 287,
+    "priced": 4568,
+    "omitted": 149,
+    "lost": 13,
+    "discovered": 186,
+    "skippedLive": 5,
+    "noMeta": 0,
+    "quotesOk": 0,
+    "noRoute": 0,
+    "quoteErr": 0,
+    "cadence": {
+     "n": 4386,
+     "sum": 88127.33799099922,
+     "max": 64.32300019264221
+    },
+    "by_origin": {
+     "unknown": 120,
+     "met-dbc": 12,
+     "raydium-launchlab": 7,
+     "pump.fun": 34,
+     "letsbonk.fun": 1,
+     "metadao": 1,
+     "stonkfun": 10,
+     "orynth": 1
+    },
+    "risk": {
+     "missing": 135,
+     "clean": 50,
+     "flagged": 1
+    },
+    "skippedCurve": 338
+   },
+   "inventory": {
+    "at": "2026-11-20T14:32:15.607Z",
+    "method": "getProgramAccountsV2 (paginated)",
+    "pages": 181,
+    "pools": 60166,
+    "solPools": 60166,
+    "canonical": 36118,
+    "nonCanonical": 24048,
+    "pumpSuffix": 32857,
+    "priced": 36118,
+    "aboveMin": 677,
+    "inBand": 105,
+    "errors": 0,
+    "minMc": 5000,
+    "complete": false,
+    "stopped": "INV_MAX_POOLS=60000"
+   }
+  },
+  {
+   "min": 10,
+   "at": "2026-11-20T14:42:16.138Z",
+   "rss_mb": 177,
+   "heap_mb": 55,
+   "db_mb": 14.6,
+   "wal_mb": 4,
+   "free_gb": 93.99,
+   "bars": 9894,
+   "feed": {
+    "connected": true,
+    "msgs": 284266,
+    "mb": 734.3,
+    "helius_stream_credits": 14685,
+    "events": 108023,
+    "emitted": 39147,
+    "failed_tx": 58026,
+    "dupes": 0,
+    "held": 2467,
+    "replayed": 1235,
+    "rejected": 6,
+    "non_canonical": 256,
+    "non_sol": 67211,
+    "non_sol_quote_mints": [
+     [
+      "HJX76FF59BYh7w2xsNiCxGFaRamDtYt8CFs7FamGwfrs",
+      6008
+     ],
+     [
+      "5vkg8fyzC8pqbqqaZnDjsNWxE1Mx21fHKDRN7dMiXmAK",
+      4686
+     ],
+     [
+      "6KQeSEsBi5zSsvRNyjMpwcTtE5hXYTxNmLaWBduLk8V4",
+      4208
+     ],
+     [
+      "EoB95BGYucu5G7qWrL59MySE9FC7dz3qwoKyWPMRZkui",
+      2949
+     ],
+     [
+      "BoqbQpJTx4wPhjXY2BvbJBUvc6QyKQsvVNjwSP851oYA",
+      2865
+     ],
+     [
+      "6qm61CFEuhy6eyZzVUd6pqTHi3LXJLqZW2tLJseEbwFt",
+      2819
+     ],
+     [
+      "CDeHa5WYPVuAgiJ5pfnXqfao8M56EH9aCZz23wjCiBCK",
+      2742
+     ],
+     [
+      "CEF8Fe1rhfWeyeVPAAvjutnPAuzqRaqypEboXBFn5Hu",
+      2726
+     ]
+    ],
+    "lookup_fail": 4585,
+    "reconnects": 0,
+    "lookup_calls": 255,
+    "lag_ms_avg": 1081
+   },
+   "decoder": {
+    "buy": 50858,
+    "sell": 56710,
+    "deposit": 5,
+    "withdraw": 8,
+    "pool": 12,
+    "boost": 104,
+    "sweep": 326,
+    "short": 0,
+    "fitPre": 7426,
+    "fitPost": 0,
+    "fitBoth": 31624,
+    "fitNeither": 6,
+    "neitherBy": {
+     "multi_hop_swap|buy": 2,
+     "no-ix|sell": 4
+    },
+    "feeOdd": 186,
+    "chainOk": 38240,
+    "chainBad": 10,
+    "noVirtual": 0,
+    "negVirtual": 1541,
+    "mode": "pre"
+   },
+   "engine": {
+    "events": 39147,
+    "swaps": 39050,
+    "otherPool": 0,
+    "noSolUsd": 0,
+    "noCreation": 1495,
+    "evals": 22244,
+    "cands": 0,
+    "entries": 0,
+    "notes": 1910,
+    "replayed": 1116,
+    "tooOld": 2094,
+    "lastT": 1795185735.756,
+    "evalMsMax": 33.1,
+    "prices": 4568,
+    "riskBlocked": 25,
+    "quotes": 0,
+    "coinLost": 19,
+    "coins": 1576,
+    "feed_gaps": 0
+   },
+   "loop_lag_ms_max": 21,
+   "verify": {
+    "done": 0,
+    "failed": 0,
+    "within1pct": 0,
+    "suspect": 0,
+    "calls": 0
+   },
+   "gmgn": {
+    "calls": 252,
+    "limited": 15
+   },
+   "backfill": {
+    "queued": 368,
+    "done": 45,
+    "created": 974,
+    "noCreation": 0,
+    "bars": 8401,
+    "refsOk": 27,
+    "refsMissing": 2,
+    "gapsPatched": 0,
+    "errors": 15,
+    "lastErr": "GMGN rate limited",
+    "createdJup": 974,
+    "jupNoCreation": 49,
+    "queue": 322
+   },
+   "jupiter": {
+    "calls": {
+     "recent": 20,
+     "category": 2,
+     "search": 196,
+     "price": 287
+    },
+    "credits": 2277,
+    "errors": 0,
+    "limited": 0,
+    "lastErr": "",
+    "omitted": 149,
+    "requested": 4717,
+    "lastOk": 1795185735.969,
+    "headers": {
+     "x-ratelimit-current": "5",
+     "x-ratelimit-remaining": "5",
+     "x-ratelimit-reset": "1795185737"
+    }
+   },
+   "poller": {
+    "watched": 186,
+    "hot": 72,
+    "sweeps": 287,
+    "priced": 4568,
+    "omitted": 149,
+    "lost": 13,
+    "discovered": 186,
+    "skippedLive": 5,
+    "noMeta": 0,
+    "quotesOk": 0,
+    "noRoute": 0,
+    "quoteErr": 0,
+    "cadence": {
+     "n": 4386,
+     "sum": 88127.33799099922,
+     "max": 64.32300019264221
+    },
+    "by_origin": {
+     "unknown": 120,
+     "met-dbc": 12,
+     "raydium-launchlab": 7,
+     "pump.fun": 34,
+     "letsbonk.fun": 1,
+     "metadao": 1,
+     "stonkfun": 10,
+     "orynth": 1
+    },
+    "risk": {
+     "missing": 135,
+     "clean": 50,
+     "flagged": 1
+    },
+    "skippedCurve": 338
+   },
+   "inventory": {
+    "at": "2026-11-20T14:32:15.607Z",
+    "method": "getProgramAccountsV2 (paginated)",
+    "pages": 181,
+    "pools": 60166,
+    "solPools": 60166,
+    "canonical": 36118,
+    "nonCanonical": 24048,
+    "pumpSuffix": 32857,
+    "priced": 36118,
+    "aboveMin": 677,
+    "inBand": 105,
+    "errors": 0,
+    "minMc": 5000,
+    "complete": false,
+    "stopped": "INV_MAX_POOLS=60000"
+   }
+  }
+ ]
+}

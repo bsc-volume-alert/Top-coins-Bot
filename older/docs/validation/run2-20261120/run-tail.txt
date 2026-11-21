@@ -1,0 +1,6 @@
+2026-11-20T14:32:15.619Z [older] Solana-wide adapter ON (Jupiter polling + routed quotes)
+2026-11-20T14:32:15.628Z [older] started, spec older-3, paper only
+[web] :8793
+2026-11-20T14:32:15.697Z [feed] up
+2026-11-20T14:34:21.399Z [inventory] {"at":"2026-11-20T14:32:15.607Z","method":"getProgramAccountsV2 (paginated)","pages":181,"pools":60166,"solPools":60166,"canonical":36118,"nonCanonical":24048,"pumpSuffix":32857,"priced":36118,"aboveMin":677,"inBand":105,"errors":0,"minMc":5000,"complete":false,"stopped":"INV_MAX_POOLS=60000"}
+2026-11-20T14:42:16.139Z [older] validation run finished (10 min) → /mnt/volume_1794164707392/older/validation-run.json
