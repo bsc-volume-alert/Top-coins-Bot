@@ -89,6 +89,9 @@ test("books page data: each trade carries the market cap at our buy and at our s
   advance(e, 1.5, st(200, 0), yes);                                            // bought on a pool worth $100K (the signal was seen at $95K)
   observe(e, st(100, 60), 60); advance(e, 61, st(100, 60), yes);               // −50%: every stop sells on a pool worth $50K
   const r = booksApi([e], { stop: 0.25 }).books.LOW4H[0]; assert.equal(r.mc, 95_000); assert.equal(r.mc_buy, 100_000); assert.equal(r.mc_sold, 50_000); assert.equal(r.mc_approx, undefined);
-  for (const v of e.versions) delete v.exit.pool;                              // a trade stored before sale pools were saved: rebuilt from the sale
-  const r2 = booksApi([e], { stop: 0.25 }).books.LOW4H[0]; assert.ok(Math.abs(r2.mc_sold - 50_000) <= 1);
+  // a trade stored before sale pools were saved: the sale pool is rebuilt from the sale, exact when the pool's k did not change
+  const sk = (q, t) => ({ base: 4e10 / q, quote: q, feeBuy: 0.003, feeSell: 0.003, t }), e2 = newEntry({ mint: "M2", pool: "P", ag: "A4", t: 0, families: ["LOW4H"], features: {}, mc: 95_000, px: 1 }); e2.evidence = { trigger: { sol_usd: 100, supply: 1e9 } };
+  advance(e2, 1.5, sk(200, 0), yes); const q50 = Math.sqrt(4e10 * 5e-7); observe(e2, sk(q50, 60), 60); advance(e2, 61, sk(q50, 60), yes);
+  const saved = booksApi([e2], { stop: 0.25 }).books.LOW4H[0].mc_sold; for (const v of e2.versions) if (v.exit) delete v.exit.pool;
+  const rebuilt = booksApi([e2], { stop: 0.25 }).books.LOW4H[0].mc_sold; assert.equal(saved, 50_000); assert.ok(Math.abs(rebuilt - 50_000) <= 5, "rebuilt from the sale: " + rebuilt);
 });
