@@ -301,3 +301,11 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 - Expectations stated: the VOL books will be rare ($300K in 5 minutes is far above anything the older-coin buys have shown; the largest was about $9K); the RUG books only know peaks observed from now on; buying at the level is catching a falling knife, hence the bounce twin; fresh coins are where his earlier projects lost on real fills (LESSONS, 11 Nov).
 - Also discussed, nothing built: the same project on Robinhood Chain (launchpads Pons, LONG, Noxa, pools.trade; Uniswap v4 pools; Alchemy as the Helius equivalent; free trial possible, about $60–75 a month per chain to run) and on BNB (four.meme → PancakeSwap). Advice given: finish the Solana test first, then a free one-hour probe on Robinhood Chain; BNB after. Open-position count (434 at 21:06) left as it is by the owner's choice ("let them run for now").
 
+
+## 21 Nov 2026, 21:23–21:45 UK — older-8 running; first look at the under-8-hour evaluation
+- Owner restarted 21:23:16 onto c780ef6 (older-8) and 21:32:03 onto bae3939 (period selector total / 24 h / 6 h for the summary box). 440 then 437 open positions saved and restored. 1,240 rows.
+- State at 21:37 (5 minutes after the restart): feed live, 0 reconnects, Jupiter 0 errors, longest evaluation 59 ms. **Evaluations 32,801 in 5 minutes, of which 21,006 (64%) are coins under 8 hours old** — my estimate of "about 17% of swaps" was wrong; the evaluation count has roughly tripled. No sign of strain yet.
+- **Memory 468 MB at 5 minutes, against about 340–360 MB at the same point after earlier restarts today.** One reading, with the start-up inventory still running; to be judged at the next checks (before this restart it had levelled at 638 MB after 4.5 h; limit 1,100 MB heap).
+- Buys continue (entries 515–516, FAST150 books). No VOL or RUG buy yet.
+- Owner asked for a full A-to-Z review by ChatGPT of everything since 8474066: REVIEW.md 6l added (commit map and eight points to attack first), head 534daad for the review; prompt given to him to paste.
+- Server size is uncertain in my notes (2 GB vs a 4 GB resize on 6 Nov); asked the owner for `free -m`.
