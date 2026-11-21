@@ -179,3 +179,8 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 - Reason to add it before the seven-day run: sale pools cannot be recovered afterwards.
 - 107 tests pass (three runs). Page rendered locally with made-up trades: buttons work, amber note shows, left-out trades counted.
 
+
+## 21 Nov 2026, 13:27 UK — check after the restart onto 8474066
+- Server on 8474066, spec older-4, 17 families / 544 rows, one start at 13:10:31, 228 open positions saved and restored, feed live with 0 reconnects, Jupiter and GMGN 0 errors, memory 340 MB. No new buys in the first 5 minutes (history rebuilding — expected). Latest publish available was 13:20 (state of 13:15).
+- **Fault found (mine, 762f65b): entries.json publishes every result as empty.** The list read `v.ret`; the result is stored at `v.exit.ret`. Diagnostics only — the bot, the database and the website are not affected. Fixed locally, held with the older-5 commit until the owner's "go".
+- Consequence: the promised whole-run entry-level result (since 19:45 on 20 Nov, 25% and 30% stops, by coin, with and without the top three) cannot be computed from the published file until that fix is running. 197 entries since 19:45: 182 filled, 15 cancelled; 177 live, 20 sampled.
