@@ -397,3 +397,22 @@ test("P5 an order that becomes due while a pass is waiting is dispatched as urge
   const real = eng.quoteNeeds.bind(eng); eng.quoteNeeds = (now) => real(now).map((n) => ({ ...n, due: w.t + 0.5 }));   // a sale due half a second into the pass
   w.t += 11; await po.quotes("routine"); assert.equal(seen[0], false, "not yet due at the first request"); assert.ok(seen.slice(1).length > 0 && seen.slice(1).every((u) => u === true), "due by the later requests: first lane — " + seen.join());
 });
+
+// ---- older-4 (21 Nov 2026, owner's decision): FAST-10M, FAST-30M, FAST150-10M ----
+test("older-4: a double that takes 8 minutes enters FAST-10M and FAST-30M (not the 1/3/5-minute books), records how long it took, and does not seed SECOND-WAVE", () => {
+  const e = mkEngine(); e.feedUp(T0); e.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 9 * H }); path(e, T0, T0 + 2400, () => 60_000, 10);
+  const t0 = T0 + 2400; for (let k = 1; k <= 48; k++) e.onSwap(ev(t0 + k * 10, 60_000 + k * 1_300));      // +$1,300 every 10 s: 2× after about 7.7 minutes
+  const fams = new Set([...e.entries.values()].flatMap((x) => x.families));
+  assert.ok(fams.has("FAST-10M") && fams.has("FAST-30M"), "the slower books see it: " + [...fams].join()); assert.ok(!fams.has("FAST-1M") && !fams.has("FAST-3M") && !fams.has("FAST-5M"), "it never doubled inside 5 minutes");
+  assert.ok(fams.has("FAST150-10M") || fams.has("FAST150-5M"));
+  const en = [...e.entries.values()].find((x) => x.families.includes("FAST-10M")), d = en.cands.find((c) => c.family === "FAST-10M").detail;
+  assert.equal(d.window_s, 600); assert.ok(d.move_s > 400 && d.move_s <= 600, "seconds from the low to the trigger: " + d.move_s);
+  assert.equal(e.coins.get("MintAAApump").sw, null, "a 10/30-minute double does not seed SECOND-WAVE"); assert.ok(!e.coins.get("MintAAApump").groups?.A1?.done?.["SECOND-WAVE"]);
+});
+
+test("older-4: the 30-minute book needs 30 minutes of unbroken exact observation, like every FAST book", () => {
+  const e = mkEngine(); e.feedUp(T0); e.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 9 * H }); path(e, T0, T0 + 900, () => 60_000, 10);
+  e.onSwap(ev(T0 + 905, 125_000)); e.onSwap(ev(T0 + 907, 126_000));                                         // a real double, 15 minutes after the feed came up
+  const fams = new Set([...e.entries.values()].flatMap((x) => x.families));
+  assert.ok(fams.has("FAST-1M") && fams.has("FAST-10M")); assert.ok(!fams.has("FAST-30M"), "only 15 minutes observed: the 30-minute window is not covered");
+});

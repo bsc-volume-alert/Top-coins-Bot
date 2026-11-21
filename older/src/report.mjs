@@ -1,5 +1,5 @@
 // report.mjs — result rows (family × age group × stop × exit policy) and the shared-entry overlap, from stored entries.
-// 14 families × 4 ages × 4 stops = 224 pure-trailing rows, and the same 224 under the scale-out policy = 448 comparisons.
+// families × 4 ages × 4 stops pure-trailing rows, and the same under the scale-out policy (17 families → 272 + 272 = 544 comparisons).
 // Results are after costs (pool fees, impact, declared transaction cost). Returns are per entry on COST (stake + buy transaction).
 import * as S from "./spec.mjs";
 import { versionsFor, COST } from "./book.mjs";

@@ -159,3 +159,10 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 - Owner's website request (12:21): trades and open positions newest first, bought-at market cap and time as leading columns — pushed as 4a890e3.
 - Strict choice made: a quarantine also breaks hour-scale coverage for that coin. Its cost will be visible in the status report (price breaks, coins affected).
 - Put to ChatGPT as a question, not implemented: tolerate unrepaired gaps of ≤ 60 s for the hour-scale books only.
+
+## 21 Nov 2026, 12:51–13:05 UK — spec older-4: three more fast books (owner's decision)
+- Owner asked for more windows (suggested 7 and 10 minutes). Evidence against 7: the windows nest and the data shows it — FAST 2×: 12 / 14 / 14 entries for 1 / 3 / 5 minutes; FAST150: 33 / 40 / 43. Going from 3 to 5 minutes added nothing at 2× and three entries at 1.5×.
+- The real gap is between 5 minutes and 4 hours, where no book requires a doubling. Agreed and built: **FAST-10M, FAST-30M (2×) and FAST150-10M (1.5×)** — 17 families, 544 comparison rows. Same exact-observation rules as the other FAST books. They do not seed SECOND-WAVE (unchanged).
+- Every FAST entry now records `move_s`: seconds from the window's low to the trigger, so results can be split by speed afterwards without more books.
+- The new books cannot be back-calculated: they need the tick-by-tick observations, which are kept in memory only (the database holds one-minute bars). They start counting from the restart. Existing books and their trades are untouched.
+- Caution recorded: 17 books with a few dozen trades each — the best one will always look good by chance. Judge by coin and with the top winners removed.

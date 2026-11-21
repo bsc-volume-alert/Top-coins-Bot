@@ -1,7 +1,7 @@
 // spec.mjs — the FROZEN rule constants for the older-coin paper project (older-1, 20 Nov 2026 UK).
 // Every number a rule depends on lives here and nowhere else. Changing one is a new spec version (SPEC_VER), never a silent edit.
 // The written specification that matches this code: older/docs/SPEC.md.
-export const SPEC_VER = "older-3"; // 20 Nov 2026 pm: Solana-wide scope (launchpad/exchange-neutral), HH-BREAK completed-minute windows, SECOND-WAVE across age boundaries. Previous: older-2 // 20 Nov 2026: + FAST, FAST150, SECOND-WAVE, scale-out policy, 90-day ceiling, scheduled-time fills (owner + ChatGPT consensus round)
+export const SPEC_VER = "older-4"; // 21 Nov 2026: + FAST-10M, FAST-30M, FAST150-10M (owner's decision: fill the gap between the 5-minute and the 4-hour books); SECOND-WAVE seeds unchanged (1/3/5-minute doubles only). Previous: older-3 // 20 Nov 2026 pm: Solana-wide scope (launchpad/exchange-neutral), HH-BREAK completed-minute windows, SECOND-WAVE across age boundaries. Previous: older-2 // 20 Nov 2026: + FAST, FAST150, SECOND-WAVE, scale-out policy, 90-day ceiling, scheduled-time fills (owner + ChatGPT consensus round)
 
 export const STAKE_SOL = 0.2;                 // paper stake per entry
 export const TX_COST_SOL = 0.0005;            // declared network/priority cost per transaction side (assumption, not measured for this project)
@@ -20,13 +20,16 @@ export const SELL_DELAY_MS = 700;             // sell scheduled 0.7 s after an e
 export const BUY_PRICING_TIMEOUT_S = 5;       // no trustworthy pool state within 5 s after the scheduled buy → pricing/data timeout, entry cancelled (NOT "untradeable")
 export const SELL_UNRESOLVED_S = 24 * 3600;   // a triggered sale that cannot be priced for 24 h is shown as unresolved exposure (never silently closed)
 
-// Families. 14 families × 4 ages × 4 stops = 224 pure-trailing rows; × 2 exit policies = 448 comparisons.
+// Families. 17 families × 4 ages × 4 stops = 272 pure-trailing rows; × 2 exit policies = 544 comparisons.
 export const FAMILIES = ["AGE-DOUBLE", "LOW4H", "CONT", "SLOW-BUILD", "HH-BREAK", "CONT-STALL", "LOW4H-LIQ25K",
-  "FAST-1M", "FAST-3M", "FAST-5M", "FAST150-1M", "FAST150-3M", "FAST150-5M", "SECOND-WAVE"];
+  "FAST-1M", "FAST-3M", "FAST-5M", "FAST-10M", "FAST-30M", "FAST150-1M", "FAST150-3M", "FAST150-5M", "FAST150-10M", "SECOND-WAVE"];
 export const POLICIES = ["trail", "scale"];   // trail = the original pure trailing stop; scale = sell half at 2× cost, trail the rest
 export const SCALE_AT_X = 2, SCALE_FRACTION = 0.5;
 // FAST: fresh crossing of X × the lowest pool spot price in the preceding window (receive-time clock, exact observations)
-export const FAST = [["FAST-1M", 60, 2], ["FAST-3M", 180, 2], ["FAST-5M", 300, 2], ["FAST150-1M", 60, 1.5], ["FAST150-3M", 180, 1.5], ["FAST150-5M", 300, 1.5]];
+// [family, window seconds, multiple, seeds SECOND-WAVE]. The 10- and 30-minute books (older-4) use the same exact-observation rules;
+// they do NOT seed SECOND-WAVE, which stays "after a 1/3/5-minute double" as in older-3. The longest window (30 min) is inside RAW_KEEP_S.
+export const FAST = [["FAST-1M", 60, 2, true], ["FAST-3M", 180, 2, true], ["FAST-5M", 300, 2, true], ["FAST-10M", 600, 2, false], ["FAST-30M", 1800, 2, false],
+  ["FAST150-1M", 60, 1.5, false], ["FAST150-3M", 180, 1.5, false], ["FAST150-5M", 300, 1.5, false], ["FAST150-10M", 600, 1.5, false]];
 // SECOND-WAVE: seeded by the first 2× FAST trigger in the age group; pullback to ≤ 0.75 × running high freezes that high; buy strictly above it; expires 60 min after the seed
 export const SW_PULLBACK = 0.75, SW_EXPIRE_S = 3600;
 export const STARTUP_TAG_S = 24 * 3600;       // entries in the first 24 h after the project's first start are tagged "startup" (kept in totals, shown separately)

@@ -2,7 +2,7 @@
 // format, it was perfect"): purple gradient, a ranked strip best-first, one card per book with today / last 6 h / last 24 h /
 // total, what is open now, and the latest trades with fill in → out, timing and the high. Refreshes every 10 s.
 // A "book" here is one entry family under the selected stop, exit policy, age group and population (selectors in the header);
-// the dense 448-row table is at /table.
+// the dense table (families × 4 ages × 4 stops × 2 exits) is at /table.
 import * as S from "./spec.mjs";
 import { versionsFor, COST } from "./book.mjs";
 
@@ -15,7 +15,8 @@ export const RULES = {
   "CONT-STALL": "CONT's buys, closed at 60 minutes if the position never reached 1.15× cost",
   "LOW4H-LIQ25K": "LOW4H's first doubling, only with $25K+ pool liquidity and small price impact",
   "FAST-1M": "price doubles inside 1 minute", "FAST-3M": "price doubles inside 3 minutes", "FAST-5M": "price doubles inside 5 minutes",
-  "FAST150-1M": "price up 1.5× inside 1 minute", "FAST150-3M": "price up 1.5× inside 3 minutes", "FAST150-5M": "price up 1.5× inside 5 minutes",
+  "FAST-10M": "price doubles inside 10 minutes", "FAST-30M": "price doubles inside 30 minutes",
+  "FAST150-1M": "price up 1.5× inside 1 minute", "FAST150-3M": "price up 1.5× inside 3 minutes", "FAST150-5M": "price up 1.5× inside 5 minutes", "FAST150-10M": "price up 1.5× inside 10 minutes",
   "SECOND-WAVE": "after a fast double: falls 25%+ from its high, then breaks above that high within 60 minutes",
 };
 
@@ -111,7 +112,7 @@ function draw(j){
   var nf=b.other.length?'<div class="small mut" style="margin-top:6px">not filled / unresolved: '+b.other.slice(-4).map(function(t){return esc(t.sym||t.mint.slice(0,6))+' ('+esc(t.status)+(t.why?': '+esc(t.why).slice(0,70):'')+')'}).join(' · ')+'</div>':'';
   h+='<div class="card">'+head+stats+open+recent+nf+'</div>'});
  document.getElementById('books').innerHTML=h;
- document.getElementById('foot').textContent='older-coins paper project · '+j.spec+' · full 448-row table at /table';
+ document.getElementById('foot').textContent='older-coins paper project · '+j.spec+' · full '+(j.order.length*32)+'-row table at /table';
 }
 function health(s){var st=s.status,f=st.feed,d=st.decoder,p=st.poller,age=f.lastMsg?Math.round(Date.now()/1000-f.lastMsg):null;
  document.getElementById('health').innerHTML='<div class="kp"><span>pump.fun feed <b class="'+(f.connected&&age<30?'up':'dn')+'">'+(f.connected?'live':'DOWN')+'</b> <span class="mut">last trade '+(age==null?'–':age+' s')+' ago · '+f.emitted.toLocaleString('en-GB')+' trades read</span></span><span>coins watched <b>'+st.engine.coins.toLocaleString('en-GB')+'</b> <span class="mut">live</span>'+(p?' + <b>'+p.watched+'</b> <span class="mut">rest of Solana, checked every ~'+(p.cadence_avg_s||'–')+' s</span>':'')+'</span><span>buys so far <b>'+st.engine.entries+'</b></span><span>pool reading <b class="'+(st.tx_validation?'up':'')+'" style="'+(st.tx_validation?'':'color:var(--amb)')+'">'+(st.tx_validation?'validated':'being validated')+'</b> <span class="mut">'+d.fitNeither+' unreadable of '+(d.buy+d.sell).toLocaleString('en-GB')+'</span></span><span>memory <b>'+st.mem_mb+' MB</b></span><span>disk <b>'+s.disk.db_mb+' MB</b> <span class="mut">'+s.disk.free_gb+' GB free</span></span></div>'}

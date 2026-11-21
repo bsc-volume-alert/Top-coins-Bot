@@ -127,18 +127,19 @@ export function evaluate(coin, o, opts = {}) {
     }
   }
 
-  // 8–13. FAST / FAST150 — fresh crossing of X × the lowest pool spot price in the preceding 60 / 180 / 300 s.
+  // FAST / FAST150 — fresh crossing of X × the lowest pool spot price in the preceding window (1, 3, 5, 10 or 30 minutes; see S.FAST).
   // Window = exact observations on the receive clock, [t − W, t), including the price standing at the window's start.
   let fastSeed = false;
-  for (const [family, W, X] of S.FAST) {
+  for (const [family, W, X, seeds] of S.FAST) {
     if (g.done[family] || skip.has(family)) continue;
     if (!sr.covered(t - W, t, true)) { note(family, "window not covered"); continue; }
     const lo = sr.lowIn(t - W, t, true); if (!lo) continue; // EXACT: observations inside the window + the exact price standing at its start; never back-fill, never a minute bar
     if (!cross(X * lo.px)) continue;
     if (!inBand) { note(family, "crossing outside entry band", { mc: Math.round(o.mc) }, false); continue; }
     const obs = sr.raw.filter((r) => r[0] >= t - W && r[0] < t);
-    cand(family, { window_s: W, x: X, low_px: lo.px, low_t: lo.t, threshold_px: X * lo.px, low_support: obs.filter((r) => r[1] <= lo.px * 1.02).length, window_obs: obs.length, low_carried_in: lo.t <= t - W });
-    if (X === 2) fastSeed = true;
+    cand(family, { window_s: W, x: X, low_px: lo.px, low_t: lo.t, threshold_px: X * lo.px, low_support: obs.filter((r) => r[1] <= lo.px * 1.02).length, window_obs: obs.length, low_carried_in: lo.t <= t - W,
+      move_s: +(t - Math.max(lo.t, t - W)).toFixed(1) }); // RECORDED: seconds from the window's low to this trigger (= the whole window when the low was the price standing at its start)
+    if (seeds) fastSeed = true;
   }
   // 14. SECOND-WAVE (amended in older-3) — seeded by the first 2× FAST trigger. ONE active setup per mint, kept alive until its
   // own 60-minute expiry even across an age boundary. The seed uses up the SEED age group's attempt; the trade is classified by
@@ -147,7 +148,7 @@ export function evaluate(coin, o, opts = {}) {
   if (!w) {
     if (fastSeed && !g.done["SECOND-WAVE"]) {
       g.done["SECOND-WAVE"] = 1; note("SECOND-WAVE", "seeded", { seed_t: t, seed_ag: ag }, false);
-      coin.sw = { seedT: t, seedPx: o.px, seedAg: ag, seedAgeS: Math.round(t - coin.createTs), windows: out.cands.filter((c) => /^FAST-/.test(c.family)).map((c) => c.family), H: o.px, HT: t, frozen: null, pullT: null };
+      coin.sw = { seedT: t, seedPx: o.px, seedAg: ag, seedAgeS: Math.round(t - coin.createTs), windows: out.cands.filter((c) => S.FAST.some(([f, , , sd]) => sd && f === c.family)).map((c) => c.family), H: o.px, HT: t, frozen: null, pullT: null };
     }
   } else {
     const end = (reason, detail = {}) => { coin.sw = null; note("SECOND-WAVE", reason, { seed_t: w.seedT, seed_ag: w.seedAg, windows: w.windows, ...detail }, false); };
