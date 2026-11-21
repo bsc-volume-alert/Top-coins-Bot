@@ -51,7 +51,7 @@ function saleMc(e, v) {
  *  from one stake button to the next (owner, 21 Nov 14:25 UK: the 0.5 SOL total was more than 2.5 × the 0.2 SOL total because
  *  two losing sampled trades had dropped out). It keeps its 0.2 SOL percentage result on the larger stake, with no extra price
  *  impact taken off, and is flagged `flat` and counted. Every stake button therefore shows the same set of trades. */
-export function booksApi(entries, { stop = 0.25, policy = "trail", ag = "", pop = "", stake = S.STAKE_SOL, since = null } = {}) {
+export function booksApi(entries, { stop = 0.25, policy = "trail", ag = "", pop = "", stake = S.STAKE_SOL, since = null, build = null } = {}) {
   const books = Object.fromEntries(S.FAMILIES.map((f) => [f, []])), view = stake !== S.STAKE_SOL, cost = view ? stake + S.TX_COST_SOL : COST;
   for (const e of entries) {
     if (ag && e.ag !== ag) continue; if (pop && (e.pop || "pumpswap-canonical") !== pop) continue;
@@ -71,7 +71,7 @@ export function booksApi(entries, { stop = 0.25, policy = "trail", ag = "", pop 
       }
     }
   }
-  return { at: Date.now() / 1000, spec: S.SPEC_VER, stop, policy, ag, pop, stake, since: since ? { first: since.first, families: since.families, stop: since.stops[stop] ?? since.first } : null, stakes: S.STAKE_VIEWS, cost, rows_total: S.FAMILIES.reduce((n, f) => n + S.agesOf(f).length, 0) * S.STOPS.length * S.POLICIES.length, rules: RULES, order: S.FAMILIES, books };
+  return { at: Date.now() / 1000, build, spec: S.SPEC_VER, stop, policy, ag, pop, stake, since: since ? { first: since.first, families: since.families, stop: since.stops[stop] ?? since.first } : null, stakes: S.STAKE_VIEWS, cost, rows_total: S.FAMILIES.reduce((n, f) => n + S.agesOf(f).length, 0) * S.STOPS.length * S.POLICIES.length, rules: RULES, order: S.FAMILIES, books };
 }
 
 export const BOOKS_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Older coins — paper books</title>
@@ -170,8 +170,9 @@ function health(s){var st=s.status,f=st.feed,d=st.decoder,p=st.poller,age=f.last
  document.getElementById('health').innerHTML='<div class="kp"><span>pump.fun feed <b class="'+(f.connected&&age<30?'up':'dn')+'">'+(f.connected?'live':'DOWN')+'</b> <span class="mut">last trade '+(age==null?'–':age+' s')+' ago · '+f.emitted.toLocaleString('en-GB')+' trades read</span></span><span>coins watched <b>'+st.engine.coins.toLocaleString('en-GB')+'</b> <span class="mut">live</span>'+(p?' + <b>'+p.watched+'</b> <span class="mut">rest of Solana, checked every ~'+(p.cadence_avg_s||'–')+' s</span>':'')+'</span><span>buys so far <b>'+st.engine.entries+'</b></span><span>pool reading <b class="'+(st.tx_validation?'up':'')+'" style="'+(st.tx_validation?'':'color:var(--amb)')+'">'+(st.tx_validation?'validated':'being validated')+'</b> <span class="mut">'+d.fitNeither+' unreadable of '+(d.buy+d.sell).toLocaleString('en-GB')+'</span></span><span>memory <b>'+st.mem_mb+' MB</b></span><span>disk <b>'+s.disk.db_mb+' MB</b> <span class="mut">'+s.disk.free_gb+' GB free</span></span></div>'}
 function seg(id){document.querySelectorAll('#'+id+' button').forEach(function(b){b.classList.toggle('on',b.dataset.v===SEL[id]);b.onclick=function(){SEL[id]=b.dataset.v;try{localStorage.setItem('olderSel',JSON.stringify(SEL))}catch(e){}seg(id);load()}})}
 ['stop','stake','win','policy','ag','pop'].forEach(seg);
-var qi=document.getElementById('q');qi.addEventListener('input',function(){FIND=qi.value.trim();if(LAST)draw(LAST)});
-function load(){var q=new URLSearchParams(SEL);if(key)q.set('k',key);fetch('/api/books?'+q).then(function(r){return r.json()}).then(function(j){LAST=j;draw(j)}).catch(function(e){document.getElementById('sub').textContent='error: '+e});
+var BUILD=null; // the server's version: when it changes (the bot was updated and restarted) the page reloads itself, so the layout is never older than the data
+var qi=document.getElementById('q');try{var sf=sessionStorage.getItem('olderFind');if(sf){qi.value=sf;FIND=sf;sessionStorage.removeItem('olderFind')}}catch(e){}qi.addEventListener('input',function(){FIND=qi.value.trim();if(LAST)draw(LAST)});
+function load(){var q=new URLSearchParams(SEL);if(key)q.set('k',key);fetch('/api/books?'+q).then(function(r){return r.json()}).then(function(j){if(j.build){if(BUILD&&BUILD!==j.build){try{sessionStorage.setItem('olderFind',FIND)}catch(e){}location.reload();return}BUILD=j.build}LAST=j;draw(j)}).catch(function(e){document.getElementById('sub').textContent='error: '+e});
  var q2=new URLSearchParams();if(key)q2.set('k',key);fetch('/api/state?'+q2).then(function(r){return r.json()}).then(health).catch(function(){})}
 var NEXT=10;load();setInterval(function(){load();NEXT=10},10000);setInterval(function(){NEXT=Math.max(0,NEXT-1);var e=document.getElementById('tick');if(e)e.textContent='refreshes in '+NEXT+' s'},1000);
 </script></body></html>`;

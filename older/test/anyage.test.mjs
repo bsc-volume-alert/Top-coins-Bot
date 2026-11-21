@@ -95,3 +95,8 @@ test("books page data: each trade carries the market cap at our buy and at our s
   const saved = booksApi([e2], { stop: 0.25 }).books.LOW4H[0].mc_sold; for (const v of e2.versions) if (v.exit) delete v.exit.pool;
   const rebuilt = booksApi([e2], { stop: 0.25 }).books.LOW4H[0].mc_sold; assert.equal(saved, 50_000); assert.ok(Math.abs(rebuilt - 50_000) <= 5, "rebuilt from the sale: " + rebuilt);
 });
+test("the books page reloads itself after an update: the data carries the server's build id and the page script compares it", async () => {
+  const { BOOKS_PAGE } = await import("../src/page.mjs");
+  assert.equal(booksApi([], { build: "abc123:1" }).build, "abc123:1"); assert.equal(booksApi([], {}).build, null);
+  assert.ok(/BUILD&&BUILD!==j\.build/.test(BOOKS_PAGE) && /location\.reload\(\)/.test(BOOKS_PAGE));
+});
