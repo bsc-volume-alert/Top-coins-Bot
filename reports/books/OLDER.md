@@ -309,3 +309,4 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 - Buys continue (entries 515–516, FAST150 books). No VOL or RUG buy yet.
 - Owner asked for a full A-to-Z review by ChatGPT of everything since 8474066: REVIEW.md 6l added (commit map and eight points to attack first), head 534daad for the review; prompt given to him to paste.
 - Server size is uncertain in my notes (2 GB vs a 4 GB resize on 6 Nov); asked the owner for `free -m`.
+- 22:15 UK check (state of 22:12, 40 minutes after the 21:32 restart on bae3939): fine. Memory 522 MB (heap used 306 of 1,100) against 435 MB at the same uptime on the previous run — about 90 MB more, rising slowly (468 at 5 minutes). Evaluations 217,530, of which 123,537 under 8 hours; longest 163 ms. 437 open, 4 buys since the restart (FAST books), feed 0 reconnects, Jupiter 0 errors. No VOL or RUG buy yet; no A0 entry yet.
