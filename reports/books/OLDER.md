@@ -273,3 +273,11 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 - Told the owner: his "under 2–3 hours" does not hold for this book; 4 hours is the earliest defensible clock; best tested as its own book beside HH-BREAK (like CONT-STALL beside CONT), not by changing HH-BREAK. Also: "we can come back in" is not how the bot works — one buy per book per coin per age group.
 - His separate question (why CONT-STALL has almost nothing open and HH-BREAK has 72): the 60-minute stall sale exists only on the CONT-STALL book; HH-BREAK has no clock at all except the 24-hour limit.
 - Note: at 16:30 he pasted old terminal output into the terminal by mistake ("command not found" lines). Nothing ran: the bot's start time is unchanged (16:23:59 on d07c49e).
+
+## 21 Nov 2026, 16:38–17:00 UK — spec older-7: HH-BREAK-4H (owner's decision), existing buys carried in
+- Owner: "add that new book", next to HH-BREAK, and add the current data to it.
+- Built: HH-BREAK-4H = HH-BREAK's buys, sold 4 hours after the buy if still open. HH-BREAK itself unchanged. 21 books, 840 rows.
+- The 84 existing HH-BREAK buys are carried into it at the next start. Positions that stopped out before 4 hours keep their real result. Every one is already older than 4 hours, so the rest get an estimated 4-hour sale from the one-minute prices — marked "est." on the page and counted on the book's card. Expected from the 16:35 replay: about +1.0 SOL at both the 25% and the 40% stop, with nothing left open, against HH-BREAK's +0.7 / +1.2 with 64 / 74 open.
+- My view, told to the owner: reasonable here because the buys are real and only the sale is estimated; the estimate is from a minute close, so single trades can be a few percent out (more when the coin was moving fast at that minute); the labels stay on. New buys from now on are sold by the live clock, not estimated. Asked ChatGPT whether estimated rows should sit inside a book at all (REVIEW.md 6j).
+- 119 tests pass.
+

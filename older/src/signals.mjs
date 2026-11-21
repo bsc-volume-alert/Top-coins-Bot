@@ -122,7 +122,7 @@ export function evaluate(coin, o, opts = {}) {
         const base = median(sums), v15 = vsum(mB - 15);
         const d = { hi1h: hi.px, B: mB * 60, signal_window: [(mB - 15) * 60, mB * 60], baseline_window: [(mB - 255) * 60, (mB - 15) * 60], vol15: Math.round(v15), base_median: Math.round(base), windows: sums.map(Math.round) };
         if (!(base > 0)) note("HH-BREAK", "zero volume baseline (not entered)", d, false);
-        else if (v15 >= S.HH_VOL_X * base) cand("HH-BREAK", d);
+        else if (v15 >= S.HH_VOL_X * base) { cand("HH-BREAK", d); cand("HH-BREAK-4H", d); } // the 4-hour clock book shares the buy (as CONT-STALL shares CONT's)
       }
     }
   }

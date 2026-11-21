@@ -222,6 +222,15 @@ Verdict received: **not ready**; two reproducible faults (A, C), one reporting d
 
 **Declared consequence of A(2):** after a restart, a reconnection or a loss, a coin's FAST windows begin at its first observed price, not at the moment the feed came up. A coin whose first observed trades are themselves the double is not entered by the seconds-scale books for that move.
 
+## 6j. older-7 (21 Nov 2026, 16:40 UK) — HH-BREAK-4H at the owner's request, for the reviewer
+
+- `spec.mjs CLOCK`: clock books declared in one place — `CONT-STALL` (base CONT, tag `true`, 60 min, minPeak 1.15, reason "stall": behaviour unchanged, existing tests untouched) and `HH-BREAK-4H` (base HH-BREAK, tag `"4h"`, 4 h, unconditional, reason "clock"). `v.stall` now carries the tag; `versionsFor` matches on `clockTag(family)`; `advance` reads the clock from the tag.
+- `signals.mjs`: an HH-BREAK candidate also raises HH-BREAK-4H on the same entry. Not evaluated for sampled tokens.
+- `migrate.mjs addClockBook`: one-off, idempotent, runs before restore. Carries stored HH-BREAK buys into the new book: exact copy where the plain version stopped before the 4-hour mark; live copy where the mark is in the future; otherwise an estimated sale from the last minute-bar close at or before the mark, flagged `exit.est` / `exec: "estimated-minute-bar"` and shown as "est." on the page. Inserts the one-buy decision rows so the new book cannot buy those coins again in that age group.
+- Tests (review2.test.mjs, "older-7 …"): clock sale at 4 h regardless of peak; stop before 4 h identical to the plain row; CONT-STALL unchanged; engine entry carries both families; migration cases (exact / estimated from the right bar / live copy then sold by the engine's clock / idempotent / done flag restored / page flag / same "counting since" as the base). 119 tests.
+
+**Question for the reviewer:** is an estimated exit acceptable inside a book when it is flagged per row and counted, or should carried-in buys be kept out of the book's totals until the seven-day run (fresh database, nothing estimated)?
+
 ## 6i. older-6 (21 Nov 2026, 16:00 UK) — three more books at the owner's request, for the reviewer
 
 `HH_FAST = [["HH30-5M", 1800, 5, 24], ["HH30-10M", 1800, 10, 12], ["HH15-5M", 900, 5, 12]]` — the HH-BREAK rule on shorter clocks (signals.mjs block 5b): strictly above the preceding W-second high (hour-scale `highIn`), volume of the last n completed minutes ≥ 2 × the median of the K adjacent n-minute buckets before them, same `covered` requirement over the whole baseline, same `barsIn` candle selection, same zero-baseline refusal. Not evaluated for sampled tokens (`POLLED_UNSUPPORTED`). No existing rule changed. Tests in signals.test.mjs (entry, shared entry across the three, not-2× refusal, zero-baseline refusal, and the known limit of having no dollar floor). 800 rows. 115 tests.

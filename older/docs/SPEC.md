@@ -1,4 +1,4 @@
-# Older-coin paper project — frozen specification `older-6`
+# Older-coin paper project — frozen specification `older-7`
 _20 Nov 2026 (UK). Paper only. Every number below is a constant in `src/spec.mjs`; changing one is a new spec version._
 _Agreed between the owner, ChatGPT (reviewer) and Claude (implementer). older-3 (20 Nov, afternoon) widens the scope to Solana-wide and records three rule amendments; the strategy definitions are otherwise those of older-2._
 
@@ -106,3 +106,11 @@ Owner's decision: collect more information without adding books. Nothing below i
 Rule, identical in form to HH-BREAK: price strictly above the high of the preceding window, in the band, and signal volume ≥ 2 × the median baseline bucket. Half-open windows on the last completed minute boundary; candle selection as in HH-BREAK. A zero baseline (the median bucket had no volume) is recorded and not entered. **No dollar floor (owner's decision).** Known limit, tested and on record: a coin with one small trade in at least half of its baseline buckets has a tiny non-zero norm, so a new high on one more small trade qualifies. The volume, buys and buyers in the 1 / 3 / 5 minutes before every entry are recorded, so the effect of any floor can be measured afterwards from the same buys. PumpSwap live only (price polling has no volume). One entry per family per coin per age group, as everywhere.
 
 20 families × 4 ages × 5 stops × 2 exit policies = **800 comparisons**.
+
+## older-7 (21 Nov 2026, 16:40 UK — owner's decision): HH-BREAK-4H, a clock book
+
+**HH-BREAK-4H** shares every HH-BREAK buy (one entry, as CONT-STALL shares CONT's) and carries its own exit versions: the same five trailing stops and two exit policies, plus one rule — **4 hours after the fill, a position still open is sold** (0.7 s later, on the pool state in force, like every sale; reason "clock"). A stop that triggers before 4 hours works exactly as in HH-BREAK. HH-BREAK itself is unchanged. Clock books are declared in `spec.mjs CLOCK` (CONT-STALL: 60 minutes, only if the position never reached 1.15×; HH-BREAK-4H: 4 hours, unconditional). 21 families, **840 comparisons**.
+
+Evidence behind it (84 HH-BREAK buys, minute-bar replay, 21 Nov 16:35 UK): 74 of 84 open on the 40% stop; time to 2× for the seven that got there: 40, 56, 82, 144, 176, 287, 297 minutes; a 1- or 2-hour clock would have cut the book's result to about −0.1 / +0.3 SOL against +0.7 to +1.2 as it stood, a 4-hour clock about +1.0. One day, a handful of coins: not a tuned number.
+
+**Existing buys are carried into the new book (owner's request), once, at start-up** (`migrate.mjs`): a version that had stopped out before its 4-hour mark keeps its real result; a position younger than 4 hours is copied live and the engine runs its clock; a position past its 4-hour mark gets an **estimated** clock sale — price from the last one-minute bar close at or before the mark (no bar since the buy = unchanged), sold on the constant-product pool with the buy pool's k at that price, fee and transaction cost charged. Estimated sales carry `exit.est = true`, `exec: "estimated-minute-bar"` and are marked "est." and counted on the page. Limits: a minute close is not the state 0.7 s after the mark; the bar ratio is in USD; k is assumed unchanged. On a fresh database nothing is estimated.

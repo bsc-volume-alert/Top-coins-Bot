@@ -3,7 +3,7 @@
 import Database from "better-sqlite3";
 import { statSync, statfsSync } from "node:fs";
 import { dirname } from "node:path";
-import { BAR_RETAIN_DAYS, SPEC_VER, FAMILIES, STOPS } from "./spec.mjs";
+import { BAR_RETAIN_DAYS, SPEC_VER, FAMILIES, STOPS, CLOCK } from "./spec.mjs";
 import { setNextId } from "./book.mjs";
 
 export class Store {
@@ -79,7 +79,8 @@ export class Store {
     if (this._since) return this._since;
     const get = (k) => { const r = this.db.prepare("SELECT v FROM meta WHERE k=?").get(k); return r ? Number(r.v) : null; }, put = (k, v) => this.db.prepare("INSERT OR IGNORE INTO meta VALUES (?, ?)").run(k, String(v));
     const first = get("first_start") ?? now, families = {}, stops = {};
-    for (const f of FAMILIES) { let t = get("since:" + f);
+    for (const f of FAMILIES) { if (CLOCK[f] && families[CLOCK[f].base] != null) { families[f] = families[CLOCK[f].base]; continue; } // a clock book shares its base book's buys: same start
+      let t = get("since:" + f);
       if (t === null) { const a = this.db.prepare("SELECT MIN(t) t FROM notes WHERE family=?").get(f)?.t, b = this.db.prepare("SELECT MIN(t) t FROM decisions WHERE family=?").get(f)?.t;
         const seen = [a, b].filter((x) => x != null); t = Math.max(first, seen.length ? Math.min(...seen) : now); put("since:" + f, t); }
       families[f] = t; }

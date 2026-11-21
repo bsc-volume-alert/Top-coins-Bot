@@ -9,7 +9,7 @@ import { newCoin, evaluate } from "./signals.mjs";
 import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount } from "./book.mjs";
 import { liquidityUsd, staticImpact } from "./fills.mjs";
 
-const POLLED_UNSUPPORTED = new Set(["HH-BREAK", ...S.HH_FAST.map((x) => x[0])]), NEVER = () => false;
+const POLLED_UNSUPPORTED = new Set(["HH-BREAK", "HH-BREAK-4H", ...S.HH_FAST.map((x) => x[0])]), NEVER = () => false;
 export class Engine {
   constructor({ store = null, solUsd = () => null, needCreation = () => {}, onFill = () => {}, onEntry = () => {}, log = () => {}, firstStart = null } = {}) {
     this.cov = new Coverage(); this.feedCov = new Coverage(); /* feed + restarts only: what pool-state trust and exit flags depend on */ this.coins = new Map(); this.entries = new Map(); this.byMint = new Map();

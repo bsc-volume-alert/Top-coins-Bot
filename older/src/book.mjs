@@ -14,14 +14,15 @@ import { buyTokens, liqValue, sellSol, sellQuote, feeSrc, feeBuy, feeSell, isQuo
 let NEXT = 1;
 export const COST = S.STAKE_SOL + S.TX_COST_SOL; // acquisition cost: stake + buy transaction
 
+export const newVersion = (stop, policy, stall) => ({ stop, policy, stall, status: "open", tok: 0, got: 0, peak: null, maxX: null, half: null, trigT: null, reason: null, schedT: null, exit: null, stallChecked: false });
 export function newEntry({ mint, pool, ag, t, families, features, mc, px, evidence = null, startup = false }) {
   const fam = [...new Set(families)], versions = [];
-  const sets = []; if (fam.some((f) => f !== "CONT-STALL")) sets.push(false); if (fam.includes("CONT-STALL")) sets.push(true);
-  for (const stall of sets) for (const policy of S.POLICIES) for (const stop of S.STOPS) versions.push({ stop, policy, stall, status: "open", tok: 0, got: 0, peak: null, maxX: null, half: null, trigT: null, reason: null, schedT: null, exit: null, stallChecked: false });
+  const sets = [...new Set(fam.map(S.clockTag))].sort((a, b) => (a === false ? -1 : b === false ? 1 : 0)); // plain versions first, then one set per clock book
+  for (const stall of sets) for (const policy of S.POLICIES) for (const stop of S.STOPS) versions.push(newVersion(stop, policy, stall));
   return { id: NEXT++, mint, pool, ag, decisionT: t, schedT: t + S.BUY_DELAY_MS / 1000, families: fam, features, signalMc: mc, signalPx: px, evidence, startup,
     status: "pending", fill: null, versions, runner: { maxX: null, horizonDone: false, partial: false, reached: {} }, flags: [] };
 }
-export const versionsFor = (e, family, policy = "trail") => e.versions.filter((v) => v.stall === (family === "CONT-STALL") && v.policy === policy);
+export const versionsFor = (e, family, policy = "trail") => e.versions.filter((v) => v.stall === S.clockTag(family) && v.policy === policy);
 export function setNextId(n) { NEXT = Math.max(NEXT, n); }
 const live = (v) => v.status === "open" || v.status === "scaling" || v.status === "selling";
 
@@ -94,8 +95,9 @@ export function advance(e, upTo, st, trusted, cov) {
     let changed = false;
     for (const v of e.versions) {
       if (v.status === "open" || v.status === "scaling") { // time-based triggers, in time order
-        const stallT = e.fill.t + S.STALL_AT_S, endT = e.fill.t + S.MAX_HOLD_S;
-        if (v.stall && !v.stallChecked && stallT <= upTo) { v.stallChecked = true; if (v.maxX < S.STALL_MIN_PEAK_X) { trigger(v, stallT, "stall", null); changed = true; continue; } }
+        const ck = v.stall ? S.clockOf(v.stall) : null, stallT = ck ? e.fill.t + ck.at : Infinity, endT = e.fill.t + S.MAX_HOLD_S;
+        // the clock book's timed sale: at its time, sold if the position never reached minPeak (CONT-STALL) or simply if still open (HH-BREAK-4H)
+        if (ck && !v.stallChecked && stallT <= upTo) { v.stallChecked = true; if (ck.minPeak == null || v.maxX < ck.minPeak) { trigger(v, stallT, ck.reason, null); changed = true; continue; } }
         if (endT <= upTo) { trigger(v, endT, "max-hold", null); changed = true; continue; }
       }
       if ((v.status === "selling" || v.status === "scaling") && v.schedT != null && v.schedT <= upTo) {
