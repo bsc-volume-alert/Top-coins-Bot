@@ -458,7 +458,7 @@ test("stake view: at 0.2 SOL the re-priced trade equals the recorded one; bigger
     assert.ok(r[4].net < 25 * r[0].net - 0.05, policy + ": 5 SOL is clearly less than 25 × the 0.2 SOL profit"); assert.equal(r[4].cost, 5.0005);
   }
 });
-test("stake view: a trade that cannot be re-priced is shown as 0.2-only — routed-quote trades and sales recorded before pools were saved; the page keeps the row without a result", async () => {
+test("stake view: a routed-quote trade cannot be re-priced and is shown as 0.2-only (row kept, no result); a sale recorded before pools were saved is re-priced on a pool rebuilt from the sale and marked as an estimate", async () => {
   const { newEntry, advance, observe, atStake } = await import("../src/book.mjs"); const { booksApi } = await import("../src/page.mjs");
   const st = (q, t) => ({ base: 2e8, quote: q, feeBuy: 0.003, feeSell: 0.003, t }), yes = () => true;
   const mk = (mint) => { const e = newEntry({ mint, pool: "P", ag: "A1", t: 0, families: ["LOW4H"], features: {}, mc: 1e5, px: 1 }); advance(e, 1.5, st(100, 0), yes); observe(e, st(50, 50), 50); advance(e, 51, st(50, 50), yes); return e; };
@@ -466,9 +466,15 @@ test("stake view: a trade that cannot be re-priced is shown as 0.2-only — rout
   for (const v of old.versions) if (v.exit) delete v.exit.pool;                 // as stored by earlier versions of the program
   rq.fill.exec = "routed-quote"; rq.fill.quote_sol = null; rq.fill.base = null; // a Jupiter-quoted trade
   const v = (e) => e.versions.find((x) => x.policy === "trail" && x.stop === 0.25);
-  assert.ok(atStake(a, v(a), 2)); assert.equal(atStake(old, v(old), 2), null); assert.equal(atStake(rq, v(rq), 2), null);
+  assert.ok(atStake(a, v(a), 2)); assert.equal(atStake(a, v(a), 2).est, false); assert.equal(atStake(rq, v(rq), 2), null);
+  const o02 = atStake(old, v(old), 0.2), o2 = atStake(old, v(old), 2); assert.equal(o2.est, true);
+  assert.ok(Math.abs(o02.ret - v(old).exit.ret) < 1e-9, "the rebuilt pool reproduces the recorded 0.2 SOL sale"); assert.ok(o2.ret < o02.ret, "and a bigger stake still pays more impact");
+  // when k really was unchanged between buy and sale, the rebuilt pool IS the pool: same answer as with saved reserves
+  const kk = newEntry({ mint: "K", pool: "P", ag: "A1", t: 0, families: ["LOW4H"], features: {}, mc: 1e5, px: 1 }); const sk = (q, t) => ({ base: 2e10 / q, quote: q, feeBuy: 0.003, feeSell: 0.003, t });
+  advance(kk, 1.5, sk(100, 0), yes); observe(kk, sk(60, 50), 50); advance(kk, 51, sk(60, 50), yes); const exact = atStake(kk, v(kk), 5); delete v(kk).exit.pool; const rebuilt = atStake(kk, v(kk), 5);
+  assert.equal(v(kk).status, "closed"); assert.ok(Math.abs(exact.ret - rebuilt.ret) < 1e-9 && rebuilt.est === true && exact.est === false);
   const j1 = booksApi([a, old, rq], { stop: 0.25, policy: "trail" }), j2 = booksApi([a, old, rq], { stop: 0.25, policy: "trail", stake: 2 });
   assert.equal(j1.books.LOW4H.filter((t) => t.ret != null).length, 3); assert.equal(j1.stake, 0.2); assert.equal(j1.rows_total, 680);
-  const b = j2.books.LOW4H; assert.equal(b.length, 3); assert.equal(b.filter((t) => t.nosize).length, 2); assert.ok(b.filter((t) => t.nosize).every((t) => t.ret == null && t.net == null));
+  const b = j2.books.LOW4H; assert.equal(b.length, 3); assert.equal(b.filter((t) => t.nosize).length, 1); assert.ok(b.filter((t) => t.nosize).every((t) => t.ret == null && t.net == null)); assert.equal(b.find((t) => t.mint === "B").est, true);
   const ra = b.find((t) => t.mint === "A"), r1 = j1.books.LOW4H.find((t) => t.mint === "A"); assert.ok(ra.ret < r1.ret && ra.net < 0 && Math.abs(ra.net) > 5 * Math.abs(r1.net)); assert.equal(j2.cost, 2.0005);
 });

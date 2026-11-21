@@ -185,3 +185,11 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 - **Fault found (mine, 762f65b): entries.json publishes every result as empty.** The list read `v.ret`; the result is stored at `v.exit.ret`. Diagnostics only — the bot, the database and the website are not affected. Fixed locally, held with the older-5 commit until the owner's "go".
 - Consequence: the promised whole-run entry-level result (since 19:45 on 20 Nov, 25% and 30% stops, by coin, with and without the top three) cannot be computed from the published file until that fix is running. 197 entries since 19:45: 182 filled, 15 cancelled; 177 live, 20 sampled.
 - 13:59 UK check (state of 13:50, 8474066 / older-4, one start): fine. 5 buys since the 13:10 restart, all live; the new older-4 books are firing (FAST150-10M at 13:29 and 13:39; entry 250 at 13:45 hit FAST-10M and FAST-30M with the 1/3/5-minute books). 233 open, feed 0 reconnects, Jupiter 0 errors, GMGN 10 rate-limited of 97 (known free-plan limit), memory 415 MB.
+
+## 21 Nov 2026, 14:15–14:30 UK — owner's "go" for older-5; database kept
+- Owner (14:15): a rough estimate is enough for the stake buttons; add the 60% stop without resetting anything — "we've got statistics now that we need to keep". He also pointed out that the 6-hour and 24-hour boxes will compare the 60% stop with the others on the same trades once that much time has passed. Correct: those boxes count by buy time, so 6 h after the restart the 6-hour box is like-for-like, and 24 h after it the 24-hour box is. The "total" box never will be on this database (60% has no old trades).
+- Remaining caveat on that comparison: a wider stop holds longer, so at any moment the 60% row has more trades still open than the 20% row. Closed-trade totals of different stops are never exactly the same set.
+- Because the database is kept, the stake buttons would have shown nothing for the ~250 existing trades. Added an estimate for them: the pool at an old sale is rebuilt from the sale itself using the buy pool's k. Exact at 0.2 SOL; rougher at bigger stakes (marked on the page with a count). Sampled trades still 0.2 SOL only.
+- Stake list stays 0.2 / 0.5 / 1 / 2 / 5 as first asked (his dictation said "2.5").
+- Pushed: older-5 + entries.json fix. 107 tests pass.
+

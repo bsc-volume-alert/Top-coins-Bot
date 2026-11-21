@@ -151,15 +151,25 @@ export const exposure = (e) => (e.status === "filled" ? e.versions.filter(live).
  *  would trigger slightly earlier and its half-sale slightly later; (2) each leg is priced on the pool as it was observed, i.e.
  *  WITHOUT the larger buy's own effect on that pool; (3) nobody can know how other traders would have reacted to a larger buy.
  *  It is an estimate of size sensitivity, not a second simulation.
- *  null = cannot be re-priced: a routed-quote trade (its quotes were for the 0.2 SOL size only) or a trade whose sale was
- *  recorded before reserves were saved. Never interpolated, never scaled linearly. */
+ *  SALES RECORDED BEFORE RESERVES WERE SAVED (owner, 21 Nov 2026: "just do an estimation … we've got statistics now that we
+ *  need to keep"): the pool at that sale is rebuilt from the sale itself — the unique constant-product pool with the BUY pool's
+ *  k (= quote × base at the buy) on which the recorded tokens fetch the recorded SOL. Exact at 0.2 SOL by construction; at other
+ *  stakes it is off by however much k changed between buy and sale (fees accruing to the pool, liquidity added or removed).
+ *  Such a result carries est: true.
+ *  null = cannot be re-priced: a routed-quote trade (its quotes were for the 0.2 SOL size only). Never scaled linearly. */
 export function atStake(e, v, stake) {
   const f = e.fill; if (e.status !== "filled" || !f || f.exec !== "reconstructed-pool-state" || !(f.quote_sol > 0) || !(f.base > 0) || !(stake > 0)) return null;
   const P = (p) => ({ quote: p.q, base: p.b, feeSell: p.f, feeBuy: p.f });
   const tok = buyTokens({ quote: f.quote_sol, base: f.base, feeBuy: f.fee_buy, feeSell: f.fee_buy }, stake), cost = stake + S.TX_COST_SOL;
-  let got = 0, left = tok, half = null;
-  if (v.half) { if (!v.half.pool) return null; const part = tok * S.SCALE_FRACTION; half = sellSol(P(v.half.pool), part) - S.TX_COST_SOL; got += half; left -= part; }
-  if (v.exit) { if (!v.exit.pool) return null; const sol = got + sellSol(P(v.exit.pool), left) - S.TX_COST_SOL; return { stake, cost, closed: true, sol, net: sol - cost, ret: sol / cost - 1, half }; }
+  let got = 0, left = tok, half = null, est = false;
+  // the pool of a sale: saved with it, or rebuilt from it (sold `t0` tokens for `net` SOL after fee and transaction cost)
+  const fee0 = f.fee_buy ?? 0.003, k = f.quote_sol * f.base;
+  const poolAt = (leg, t0, net) => { if (leg.pool) return P(leg.pool); if (leg.exec !== "reconstructed-pool-state") return null;
+    const g = (net + S.TX_COST_SOL) / (1 - fee0); if (!(g > 0) || !(t0 > 0)) return null; est = true;
+    const b = (-t0 + Math.sqrt(t0 * t0 + 4 * k * t0 / g)) / 2; return { quote: k / b, base: b, feeSell: fee0, feeBuy: fee0 }; };
+  const part0 = f.tok * S.SCALE_FRACTION;
+  if (v.half) { const p = poolAt(v.half, part0, v.half.sol); if (!p) return null; const part = tok * S.SCALE_FRACTION; half = sellSol(p, part) - S.TX_COST_SOL; got += half; left -= part; }
+  if (v.exit) { const p = poolAt(v.exit, v.half ? f.tok - part0 : f.tok, v.exit.last_sol); if (!p) return null; const sol = got + sellSol(p, left) - S.TX_COST_SOL; return { stake, cost, closed: true, sol, net: sol - cost, ret: sol / cost - 1, half, est }; }
   if (!e.mark) return null;
-  return { stake, cost, closed: false, now_x: (got + liqValue(P(e.mark), left)) / cost, half };
+  return { stake, cost, closed: false, now_x: (got + liqValue(P(e.mark), left)) / cost, half, est };
 }
