@@ -144,3 +144,11 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 - SOL/USD 67.3 (about 71 yesterday afternoon).
 - Sampled side: one more buy cancelled at the 5-second limit; none filled since 00:52. Fix a680362 still not loaded.
 - Helius 46.8 GB in 13.17 h ≈ 1.71M credits/day. Jupiter 75,420 credits. Database 275 MB. GMGN 2,162 of 8,019 calls rate-limited; coin-gaps repaired 415, not repaired 2,475; AGE-DOUBLE references found 57, missing 55.
+
+## 21 Nov 2026, 12:05 UK — midday check, 16 h 20 min untouched on d8eb842
+- Up, no crash, no reconnect since 01:42. 191 entries since 19:45 (ids 49–239), 222 book positions open. Entry checks 167 of 171 within 1%, 4 inconclusive.
+- Memory 545 MB (486 → 538 → 518 → 545 at 6.2 / 10.2 / 13.2 / 16.3 h): hovering with a slow upward drift of roughly 6 MB an hour; tracked coins 20,481. Limit 1,100 MB.
+- **The morning (09:00–12:00) was a losing period for most books.** At the 25% stop, 08:55 → 12:05: CONT +0.56 → +0.34 SOL; FAST150-5M +0.22 → +0.08; FAST150-1M +0.26 → +0.11; FAST150-3M −0.12 → −0.26; LOW4H −0.10 → −0.23; FAST-1M −0.17 → −0.24. HH-BREAK +0.24 → +0.30 (79 entries, only 10 closed).
+- Book totals at the 25% stop since the first start (entries / closed / net SOL): CONT 52/40 +0.34 · HH-BREAK 79/10 +0.30 · CONT-STALL 52/43 +0.24 · FAST-5M 14/13 +0.16 · FAST150-1M 33/28 +0.11 · FAST150-5M 43/39 +0.08 · FAST-3M 14/13 +0.03 · LOW4H-LIQ25K 5/3 −0.02 · SLOW-BUILD 8/6 −0.04 · AGE-DOUBLE 9/7 −0.12 · SECOND-WAVE 6/6 −0.22 · LOW4H 11/9 −0.23 · FAST-1M 12/11 −0.24 · FAST150-3M 40/35 −0.26.
+- At the 30% stop the order differs: FAST150-5M +0.47 · HH-BREAK +0.22 · FAST150-1M +0.21 · CONT +0.13 · SLOW-BUILD +0.06 · CONT-STALL +0.03 · FAST-5M +0.03 · … · FAST-1M −0.30 · AGE-DOUBLE −0.33. The ranking of books changes with the stop and with a few hours of data: none of it is stable yet.
+- Sampled side: nothing filled since 00:52 (fix a680362 not loaded). Helius 55.7 GB in 16.33 h ≈ 1.64M credits/day. Database 311 MB. SOL/USD 68.6.
