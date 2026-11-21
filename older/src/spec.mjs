@@ -1,7 +1,7 @@
 // spec.mjs — the FROZEN rule constants for the older-coin paper project (older-1, 20 Nov 2026 UK).
 // Every number a rule depends on lives here and nowhere else. Changing one is a new spec version (SPEC_VER), never a silent edit.
 // The written specification that matches this code: older/docs/SPEC.md.
-export const SPEC_VER = "older-5"; // 21 Nov 2026 (afternoon): + a 60% trailing stop (owner's decision; 5 stops, 680 comparison rows) and website-only stake views. Previous: older-4 // 21 Nov 2026: + FAST-10M, FAST-30M, FAST150-10M (owner's decision: fill the gap between the 5-minute and the 4-hour books); SECOND-WAVE seeds unchanged (1/3/5-minute doubles only). Previous: older-3 // 20 Nov 2026 pm: Solana-wide scope (launchpad/exchange-neutral), HH-BREAK completed-minute windows, SECOND-WAVE across age boundaries. Previous: older-2 // 20 Nov 2026: + FAST, FAST150, SECOND-WAVE, scale-out policy, 90-day ceiling, scheduled-time fills (owner + ChatGPT consensus round)
+export const SPEC_VER = "older-6"; // 21 Nov 2026 16:00 UK: + HH30-5M, HH30-10M, HH15-5M (owner's decision: faster volume breakouts, no dollar floor; 20 families, 800 comparison rows). Previous: older-5 // 21 Nov 2026 (afternoon): + a 60% trailing stop (owner's decision; 5 stops, 680 comparison rows) and website-only stake views. Previous: older-4 // 21 Nov 2026: + FAST-10M, FAST-30M, FAST150-10M (owner's decision: fill the gap between the 5-minute and the 4-hour books); SECOND-WAVE seeds unchanged (1/3/5-minute doubles only). Previous: older-3 // 20 Nov 2026 pm: Solana-wide scope (launchpad/exchange-neutral), HH-BREAK completed-minute windows, SECOND-WAVE across age boundaries. Previous: older-2 // 20 Nov 2026: + FAST, FAST150, SECOND-WAVE, scale-out policy, 90-day ceiling, scheduled-time fills (owner + ChatGPT consensus round)
 
 export const STAKE_SOL = 0.2;                 // paper stake per entry
 export const TX_COST_SOL = 0.0005;            // declared network/priority cost per transaction side (assumption, not measured for this project)
@@ -23,9 +23,9 @@ export const SELL_DELAY_MS = 700;             // sell scheduled 0.7 s after an e
 export const BUY_PRICING_TIMEOUT_S = 5;       // no trustworthy pool state within 5 s after the scheduled buy → pricing/data timeout, entry cancelled (NOT "untradeable")
 export const SELL_UNRESOLVED_S = 24 * 3600;   // a triggered sale that cannot be priced for 24 h is shown as unresolved exposure (never silently closed)
 
-// Families. 17 families × 4 ages × 5 stops = 340 pure-trailing rows; × 2 exit policies = 680 comparisons.
+// Families. 20 families × 4 ages × 5 stops = 400 pure-trailing rows; × 2 exit policies = 800 comparisons.
 export const FAMILIES = ["AGE-DOUBLE", "LOW4H", "CONT", "SLOW-BUILD", "HH-BREAK", "CONT-STALL", "LOW4H-LIQ25K",
-  "FAST-1M", "FAST-3M", "FAST-5M", "FAST-10M", "FAST-30M", "FAST150-1M", "FAST150-3M", "FAST150-5M", "FAST150-10M", "SECOND-WAVE"];
+  "FAST-1M", "FAST-3M", "FAST-5M", "FAST-10M", "FAST-30M", "FAST150-1M", "FAST150-3M", "FAST150-5M", "FAST150-10M", "SECOND-WAVE", "HH30-5M", "HH30-10M", "HH15-5M"];
 export const POLICIES = ["trail", "scale"];   // trail = the original pure trailing stop; scale = sell half at 2× cost, trail the rest
 export const SCALE_AT_X = 2, SCALE_FRACTION = 0.5;
 // FAST: fresh crossing of X × the lowest pool spot price in the preceding window (receive-time clock, exact observations)
@@ -42,6 +42,11 @@ export const LOW4H_WIN_S = 4 * 3600, LOW4H_X = 2;
 export const CONT_LOOKBACK_S = 15 * 60, CONT_RISE = 1.30, CONT_HI_WIN_S = 3600, CONT_NEAR_HI = 0.95;
 export const SLOW_MIN_ELAPSED_S = 30 * 60, SLOW_MAX_CANDLE_GAIN = 0.20; // gain ABOVE 0.20 rejects; exactly 0.20 allowed
 export const HH_HI_WIN_S = 3600, HH_VOL_WIN_S = 15 * 60, HH_BASE_WINDOWS = 16, HH_VOL_X = 2; // 16 × 15 min = the preceding 4 h
+// Faster volume breakouts (older-6, owner's decision 21 Nov 2026): the HH-BREAK rule on shorter clocks.
+// [family, high window seconds, signal minutes n, baseline buckets K]: price strictly above the preceding high-window high, and
+// the volume of the last n COMPLETED minutes ≥ HH_VOL_X × the median of the K adjacent n-minute buckets before them.
+// No dollar floor (owner's decision). As in HH-BREAK, a zero baseline (the median bucket had no volume) is recorded and not entered.
+export const HH_FAST = [["HH30-5M", 1800, 5, 24], ["HH30-10M", 1800, 10, 12], ["HH15-5M", 900, 5, 12]]; // baselines: 2 h, 2 h, 1 h
 export const STALL_AT_S = 3600, STALL_MIN_PEAK_X = 1.15;
 export const LIQ_MIN_USD = 25_000, LIQ_MAX_RT_IMPACT = 0.05;
 

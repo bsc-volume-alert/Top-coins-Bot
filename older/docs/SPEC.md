@@ -1,4 +1,4 @@
-# Older-coin paper project — frozen specification `older-5`
+# Older-coin paper project — frozen specification `older-6`
 _20 Nov 2026 (UK). Paper only. Every number below is a constant in `src/spec.mjs`; changing one is a new spec version._
 _Agreed between the owner, ChatGPT (reviewer) and Claude (implementer). older-3 (20 Nov, afternoon) widens the scope to Solana-wide and records three rule amendments; the strategy definitions are otherwise those of older-2._
 
@@ -94,3 +94,15 @@ Owner's decision: collect more information without adding books. Nothing below i
 - **Loss and recovery are different moments.** When a coin's data is lost, its history restarts at the first valid observation that arrives afterwards, not at the moment of the loss.
 - **An exact window needs a known starting price.** FAST, SECOND-WAVE and the fresh-crossing check require unbroken exact observation over the window and an exact price already standing at its start. Observations that only begin inside the window do not make it exact.
 - **Compression never changes a decision price.** Beyond `RAW_CAP`, merged same-second entries keep their lowest, highest, first and last price and their first and last time; the newest observation is never merged; an exact window cannot start inside a merged second.
+
+## older-6 (21 Nov 2026, 16:00 UK — owner's decision): three faster volume-breakout books
+
+| Family | High to break | Signal volume | Baseline (median bucket) | History needed |
+|---|---|---|---|---|
+| HH30-5M | preceding 30 minutes | last 5 completed minutes | 24 five-minute buckets = the 2 hours before | 2 h 5 min |
+| HH30-10M | preceding 30 minutes | last 10 completed minutes | 12 ten-minute buckets = the 2 hours before | 2 h 10 min |
+| HH15-5M | preceding 15 minutes | last 5 completed minutes | 12 five-minute buckets = the 1 hour before | 1 h 5 min |
+
+Rule, identical in form to HH-BREAK: price strictly above the high of the preceding window, in the band, and signal volume ≥ 2 × the median baseline bucket. Half-open windows on the last completed minute boundary; candle selection as in HH-BREAK. A zero baseline (the median bucket had no volume) is recorded and not entered. **No dollar floor (owner's decision).** Known limit, tested and on record: a coin with one small trade in at least half of its baseline buckets has a tiny non-zero norm, so a new high on one more small trade qualifies. The volume, buys and buyers in the 1 / 3 / 5 minutes before every entry are recorded, so the effect of any floor can be measured afterwards from the same buys. PumpSwap live only (price polling has no volume). One entry per family per coin per age group, as everywhere.
+
+20 families × 4 ages × 5 stops × 2 exit policies = **800 comparisons**.

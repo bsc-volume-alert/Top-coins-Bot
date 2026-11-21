@@ -222,6 +222,12 @@ Verdict received: **not ready**; two reproducible faults (A, C), one reporting d
 
 **Declared consequence of A(2):** after a restart, a reconnection or a loss, a coin's FAST windows begin at its first observed price, not at the moment the feed came up. A coin whose first observed trades are themselves the double is not entered by the seconds-scale books for that move.
 
+## 6i. older-6 (21 Nov 2026, 16:00 UK) — three more books at the owner's request, for the reviewer
+
+`HH_FAST = [["HH30-5M", 1800, 5, 24], ["HH30-10M", 1800, 10, 12], ["HH15-5M", 900, 5, 12]]` — the HH-BREAK rule on shorter clocks (signals.mjs block 5b): strictly above the preceding W-second high (hour-scale `highIn`), volume of the last n completed minutes ≥ 2 × the median of the K adjacent n-minute buckets before them, same `covered` requirement over the whole baseline, same `barsIn` candle selection, same zero-baseline refusal. Not evaluated for sampled tokens (`POLLED_UNSUPPORTED`). No existing rule changed. Tests in signals.test.mjs (entry, shared entry across the three, not-2× refusal, zero-baseline refusal, and the known limit of having no dollar floor). 800 rows. 115 tests.
+
+Evidence behind the request, and the owner's choice: HH-BREAK's 84 buys had a median of $150 traded in the 5 minutes before the buy; under $200 → 46 buys, 1 reached 1.5×; $200 and over → 38 buys, 8 reached 1.5×. A dollar floor was proposed and declined by the owner; the per-entry volume measurements allow the split afterwards.
+
 ## 6g. older-5 (21 Nov 2026, 13:30 UK) — owner's two additions, for the reviewer
 
 Not a response to a review; two things the owner asked for while the sixth pass was out.

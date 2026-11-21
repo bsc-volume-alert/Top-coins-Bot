@@ -127,6 +127,25 @@ export function evaluate(coin, o, opts = {}) {
     }
   }
 
+  // 5b. HH30-5M / HH30-10M / HH15-5M (older-6) — the same rule on shorter clocks: price strictly above the preceding W-second high,
+  // and volume of the last n COMPLETED minutes ≥ 2 × the median of the K adjacent n-minute buckets before them.
+  //   signal volume : [B − n min, B)            baseline : K buckets covering [B − (K + 1)·n min, B − n min)
+  // Same half-open windows, same completed-minute boundary B, same candle selection (barsIn) and the same zero-baseline refusal as
+  // HH-BREAK. No dollar floor. Needs a volume source, so it is not evaluated from price polling.
+  for (const [family, W, n, K] of S.HH_FAST) {
+    if (g.done[family] || skip.has(family)) continue;
+    const mB = Math.floor(t / 60), histFrom = Math.min((mB - n - n * K) * 60, t - W);
+    if (!sr.covered(histFrom, t)) { note(family, "insufficient history"); continue; }
+    const hi = sr.highIn(t - W, t);
+    if (!(hi && o.px > hi.px && inBand)) continue;
+    const vsum = (m0) => sr.barsIn(m0, m0 + n).reduce((x, [, b]) => x + b.v, 0);
+    const sums = []; for (let k = 1; k <= K; k++) sums.push(vsum(mB - n - n * k));
+    const base = median(sums), vn = vsum(mB - n);
+    const d = { high: hi.px, high_window_s: W, B: mB * 60, signal_window: [(mB - n) * 60, mB * 60], baseline_window: [(mB - n - n * K) * 60, (mB - n) * 60], vol: Math.round(vn), base_median: Math.round(base), windows: sums.map(Math.round) };
+    if (!(base > 0)) note(family, "zero volume baseline (not entered)", d, false);
+    else if (vn >= S.HH_VOL_X * base) cand(family, d);
+  }
+
   // FAST / FAST150 — fresh crossing of X × the lowest pool spot price in the preceding window (1, 3, 5, 10 or 30 minutes; see S.FAST).
   // Window = exact observations on the receive clock, [t − W, t), including the price standing at the window's start.
   let fastSeed = false;

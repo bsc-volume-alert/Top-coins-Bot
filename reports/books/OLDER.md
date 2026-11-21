@@ -234,3 +234,13 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 - A real advantage of his version: it needs 1–2 hours of unbroken history instead of 4 h 15 min, so it would be usable much sooner after a restart or reconnect — the 4-hour books keep being reset.
 - Proposed to the owner (his decision pending): keep his 30-minute-high idea but add a dollar floor — about $100 a minute ($500 in 5 minutes / $1,000 in 10) — and use a 2-hour baseline. The floor figure is a judgement on 84 buys from one morning, not an optimised number. Live pump.fun coins only (sampled coins have no volume).
 - Caution repeated: 17 books already; each new one raises the chance that the best book is best by luck.
+
+## 21 Nov 2026, 16:00–16:10 UK — spec older-6: HH30-5M, HH30-10M, HH15-5M (owner's decision; pushed, not yet running)
+- Owner decided: three faster volume-breakout books, and NO dollar floor ("I don't think that matters").
+  - HH30-5M: new 30-minute high, last 5 minutes' volume 2× the 2-hour norm.
+  - HH30-10M: new 30-minute high, last 10 minutes' volume 2× the 2-hour norm.
+  - HH15-5M: new 15-minute high, last 5 minutes' volume 2× the 1-hour norm.
+- Correction to what I told him at 15:53: I said shorter buckets make the quiet-coin problem worse because a zero norm lets any trade qualify. Wrong — the code refuses a zero norm (as HH-BREAK always has). With 5-minute buckets a coin must have traded in about half of them over the last 1–2 hours before the book can fire at all, which is a stricter activity test than HH-BREAK's. So the two 5-minute books are better protected than I said.
+- What remains true, and is now a test: with 10-minute buckets a coin with one $50 trade every 20 minutes has a non-zero norm ($25), and a new high on one more $50 trade is bought by HH30-10M. That is the cost of no floor. The volume before every buy is recorded, so the floor question can be answered from the data later without another book.
+- 20 books, 800 rows, 115 tests pass. Live pump.fun coins only. They start counting from the next restart and need 1 h 5 min (HH15-5M) or about 2 h 10 min (HH30) of unbroken history first.
+
