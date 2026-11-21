@@ -166,3 +166,7 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 - Every FAST entry now records `move_s`: seconds from the window's low to the trigger, so results can be split by speed afterwards without more books.
 - The new books cannot be back-calculated: they need the tick-by-tick observations, which are kept in memory only (the database holds one-minute bars). They start counting from the restart. Existing books and their trades are untouched.
 - Caution recorded: 17 books with a few dozen trades each — the best one will always look good by chance. Judge by coin and with the top winners removed.
+
+## 21 Nov 2026, 13:00–13:10 UK
+- 13:00: server on 4a890e3 since 12:28:54 (owner's restart for the website change; 228 open positions saved and restored). No entries in its first 30 minutes: slow books rebuilding history, FAST crossings all outside the band (182–584 per book). Not yet on older-4.
+- Each restart restored ~1,935 sampled coins, about a thousand of them already pruned as far below the band; sample gap 88 s for the first two hours. Fixed on the owner's instruction ("just fix it"): a low-value prune is recorded on the coin and not restored; re-discovery brings it back with a clean history (104 tests). The flag only exists for prunes made from now on, so the next restart still starts with the long list once.

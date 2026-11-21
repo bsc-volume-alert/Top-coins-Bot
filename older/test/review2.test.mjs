@@ -416,3 +416,13 @@ test("older-4: the 30-minute book needs 30 minutes of unbroken exact observation
   const fams = new Set([...e.entries.values()].flatMap((x) => x.families));
   assert.ok(fams.has("FAST-1M") && fams.has("FAST-10M")); assert.ok(!fams.has("FAST-30M"), "only 15 minutes observed: the 30-minute window is not covered");
 });
+
+test("watch list: a token pruned as far below the band is not restored after a restart; a re-discovery brings it back with a clean history", async () => {
+  const db = tmpDb(), w = world(); let st = new Store(db), eng = mkEngine({ store: st }), po = new Poller({ engine: eng, jup: w.jup, store: st, now: () => w.t });
+  const L = "LowCoin1", K = "KeptCoin1"; w.px.set(L, 2e-6); w.px.set(K, 1e-4); po.add(w.tok(L), "t"); po.add(w.tok(K), "t");       // L is worth $2K, far below the band
+  for (let k = 0; k < 125; k++) { w.t += 60; await po.sweep(); }
+  assert.ok(!po.watch.has(L) && po.watch.has(K)); assert.equal(po.stats.pruned, 1); assert.ok(eng.coins.get(L).info.pruned_low > 0);
+  st.db.close(); st = new Store(db); const eng2 = mkEngine({ store: st }); st.restore(eng2); const po2 = new Poller({ engine: eng2, jup: w.jup, store: st, now: () => w.t });
+  assert.equal(po2.restore(), 1); assert.ok(po2.watch.has(K) && !po2.watch.has(L)); assert.equal(po2.stats.restoreSkippedLow, 1);
+  w.px.set(L, 9e-5); assert.equal(po2.add(w.tok(L), "rediscovery"), true); assert.equal(eng2.coins.get(L).info.pruned_low, null); assert.equal(eng2.coins.get(L).series.bars.size, 0);
+});

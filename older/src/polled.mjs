@@ -29,6 +29,8 @@ export class Poller {
       // a token the provider had stopped pricing is not put back on the list (it would only use up the sampling allowance);
       // discovery brings it back if it trades again. A token with a position is ALWAYS restored.
       if (c.info.unpriced && !this.engine.byMint.get(mint)?.size) { this.stats.restoreSkippedUnpriced = (this.stats.restoreSkippedUnpriced || 0) + 1; continue; }
+      // the same for a token pruned as far below the entry band: not restored; discovery re-adds it if it comes back
+      if (c.info.pruned_low && !this.engine.byMint.get(mint)?.size) { this.stats.restoreSkippedLow = (this.stats.restoreSkippedLow || 0) + 1; continue; }
       if (!validDec(c.info.decimals)) { if (this.engine.byMint.get(mint)?.size) this.needMeta.push(mint); else this.stats.restoreSkippedNoMeta = (this.stats.restoreSkippedNoMeta || 0) + 1; continue; } this.watch.set(mint, { decimals: c.info.decimals, circ: c.info.circ_supply ?? null, hot: !!this.engine.byMint.get(mint)?.size, lastT: null, lastReq: 0, miss: 0, mc: null }); this.seen.add(mint); c.series.histFrom = null; c.series.obsFrom = null; n++; } this.stats.restored = n; this.stats.restoreNoMeta = this.needMeta.length; return n; }
   /** restored sampled coins whose stored record lacks token metadata (written by an earlier version) are NOT skipped silently:
    *  their metadata is fetched again, positions first. A coin that still has none keeps its positions visible and flagged. */
@@ -54,7 +56,7 @@ export class Poller {
     // AGE: the provider gives the FIRST POOL's creation, which is a LOWER BOUND on token age (the token existed before its pool).
     // It can only make a coin look younger than it is, so the 8-hour minimum is never broken; the age group may be understated.
     const createTs = tok.first_pool?.created ?? null, had = this.engine.coins.get(tok.mint);
-    this.engine.coin(tok.mint, { mode: "polled", createTs, t: this.now(), info: { unpriced: null, population: "solana-wide", symbol: tok.symbol, decimals: tok.decimals, circ_supply: tok.circ_supply ?? null, origin, origin_evidence: tok.launchpad ? "provider launchpad field" : "none", venues: null, token_program: tok.token_program, discovery_source: source, price_source: "jupiter price v3", monitoring_mode: "polled", risk, create_src: createTs ? "jupiter firstPool.createdAt (pool creation: lower bound on token age, UNVERIFIED as token creation)" : null, valuation_def: this.valuation } });
+    this.engine.coin(tok.mint, { mode: "polled", createTs, t: this.now(), info: { unpriced: null, pruned_low: null, population: "solana-wide", symbol: tok.symbol, decimals: tok.decimals, circ_supply: tok.circ_supply ?? null, origin, origin_evidence: tok.launchpad ? "provider launchpad field" : "none", venues: null, token_program: tok.token_program, discovery_source: source, price_source: "jupiter price v3", monitoring_mode: "polled", risk, create_src: createTs ? "jupiter firstPool.createdAt (pool creation: lower bound on token age, UNVERIFIED as token creation)" : null, valuation_def: this.valuation } });
     const c = this.engine.coins.get(tok.mint); if (tok.circ_supply > 0) c.supply = tok.circ_supply;
     // RE-ADMISSION in the same process (the coin was dropped from the list earlier, or left the live adapter): its old history is
     // not continuous with what we are about to sample. It starts again with an empty history; per-age-group entry records are kept.
@@ -80,7 +82,10 @@ export class Poller {
     const now = this.now(), due = [];
     // keep the watch list bounded: a token that has stayed under a quarter of the band's floor for 2 hours, with no position and no
     // active setup, is dropped (counted; discovery can bring it back if it starts trading again)
-    for (const [mint, w] of this.watch) { if (w.mc != null && w.mc >= S.BAND_LO_USD / 4) w.lowSince = null; else if (w.lowSince == null) w.lowSince = now; else if (now - w.lowSince > 7200 && !this.engine.byMint.get(mint)?.size && !this.engine.coins.get(mint)?.sw) { this.watch.delete(mint); this.seen.delete(mint); /* the engine keeps the coin's one-entry flags */ this.stats.pruned = (this.stats.pruned || 0) + 1; } }
+    for (const [mint, w] of this.watch) { if (w.mc != null && w.mc >= S.BAND_LO_USD / 4) w.lowSince = null; else if (w.lowSince == null) w.lowSince = now; else if (now - w.lowSince > 7200 && !this.engine.byMint.get(mint)?.size && !this.engine.coins.get(mint)?.sw) { this.watch.delete(mint); this.seen.delete(mint); /* the engine keeps the coin's one-entry flags */ this.stats.pruned = (this.stats.pruned || 0) + 1;
+      // recorded on the coin, so a restart does not put it back on the list (measured 21 Nov: a restart restored 1,935 coins, about a
+      // thousand of them already pruned as far below the band, and sampling slowed to one price per 88 s for two hours)
+      const c = this.engine.coins.get(mint); if (c) { c.info.pruned_low = Math.floor(now); this.store?.saveCoin(mint, { info: c.info }); } } }
     for (const [mint, w] of this.watch) { const c = this.engine.coins.get(mint); w.hot = (w.mc != null && w.mc >= S.BAND_LO_USD / 2 && w.mc <= S.BAND_HI_USD * 2) || !!this.engine.byMint.get(mint)?.size; if (now - w.lastReq >= (w.hot ? this.hotEvery : this.coldEvery) - 0.01 && c) due.push(mint); }
     this.stats.watched = this.watch.size; this.stats.hot = [...this.watch.values()].filter((w) => w.hot).length;
     due.sort((a, b) => (this.watch.get(b).hot - this.watch.get(a).hot) || this.watch.get(a).lastReq - this.watch.get(b).lastReq);
