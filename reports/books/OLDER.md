@@ -250,3 +250,26 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 - Owner asked whether the new books use earlier data: no. They start from the restart — the rules need the live trade-by-trade record, which is not kept. (An approximate replay from the stored 1-minute bars is possible as a separate study; it must not be mixed into the books.)
 - Owner asked for the time each book began, next to the book. Built: the database records once when each book was first evaluated and when each stop got its first buy; the page shows "counting since" in the top table and on each card, amber when later than the first start. On this database: the 14 original books 20 Nov; FAST-10M / FAST-30M / FAST150-10M 21 Nov 13:10; the 60% stop 21 Nov ~14:20; HH30-5M / HH30-10M / HH15-5M 21 Nov 16:12. On a fresh database every book starts together.
 - 116 tests pass.
+
+## 21 Nov 2026, 16:27–16:45 UK — HH-BREAK: should dead positions be sold on a clock? (study; nothing built)
+- Owner's question: HH-BREAK has many open positions; the runners seem to finish within 2–3 hours; should it sell automatically after about 4 hours?
+- Data: new read-only script `older/scripts/study-family.mjs` (price path of every filled buy from the stored minute bars; the owner ran it at 16:30, published as study-HH-BREAK.json). 84 filled buys, 4.1 to 15.4 hours old (median 9.6 h). On the 40% stop 74 are open, on the 25% stop 64.
+- **The runners were not quick.** Minutes from the buy to 2× (7 coins): 40, 56, 82, 144, 176, 287, 297. Minutes to the highest price for the 14 that reached 1.5× on the bars: 51, 92, 129, 164, 178, 251, 289, 369, 416, 443, 572, 595, 617, 629 — half of them after 4.5 hours. Several were flat for hours first: 8rjgC1 was 0.91× at 4 h and later 3.3×; CWKbSd 1.01× at 4 h, later 2.06×; 3umHFk 0.87× at 1 h, later 4.9×.
+- The open ones are not all dead: current value median 0.97× (20 below 0.9×, 39 between 0.9× and 1.1×, 15 above 1.1×); median $5,500 traded since the buy.
+- Replay of a clock sale (value at the bar close, 1% taken off for costs; positions already stopped keep their real result; open ones valued at their current price for "as it is"):
+
+| | 25% stop | 40% stop | positions sold by the clock (25% / 40%) | of those, later rose 50%+ from the sale price |
+|---|---|---|---|---|
+| as it is now | +0.71 SOL | +1.16 SOL | — | — |
+| sell at 1 h | −0.12 | −0.04 | 79 / 84 | 13 / 15 |
+| sell at 2 h | +0.34 | +0.41 | 76 / 82 | 7 / 9 |
+| sell at 3 h | +0.88 | +1.09 | 74 / 80 | 3 / 6 |
+| sell at 4 h | +0.99 | +1.03 | 71 / 78 | 1 / 3 |
+| sell at 6 h (9–11 buys not old enough) | +1.10 | +1.23 | 60 / 65 | 1 / 3 |
+| sell at 8 h (19–22 not old enough) | +1.17 | +1.41 | 48 / 54 | 0 / 1 |
+| sell at 4 h only if it never reached 1.15× | +1.06 | +1.02 | 60 / 64 | 1 / 3 |
+
+- Reading: a 1- or 2-hour clock would have destroyed the book (it sells the late runners before they move). From 3–4 hours on, the clock costs little or nothing on this sample and closes about 85% of the positions. Differences of ±0.2 SOL between rows are noise: 84 buys, one day, a handful of coins carrying the result; minute bars, not live fills.
+- Told the owner: his "under 2–3 hours" does not hold for this book; 4 hours is the earliest defensible clock; best tested as its own book beside HH-BREAK (like CONT-STALL beside CONT), not by changing HH-BREAK. Also: "we can come back in" is not how the bot works — one buy per book per coin per age group.
+- His separate question (why CONT-STALL has almost nothing open and HH-BREAK has 72): the 60-minute stall sale exists only on the CONT-STALL book; HH-BREAK has no clock at all except the 24-hour limit.
+- Note: at 16:30 he pasted old terminal output into the terminal by mistake ("command not found" lines). Nothing ran: the bot's start time is unchanged (16:23:59 on d07c49e).
