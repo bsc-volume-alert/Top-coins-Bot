@@ -212,7 +212,8 @@ test("T1 at start-up FAST waits for its own exact window: back-filled history be
   const bars = []; for (let m = 20; m <= 83; m++) bars.push({ m, o: 1, h: 1, l: 0.4, c: 1 }); assert.equal(sr.addBars(bars, { from: 1200, to: 5000 }).accepted, true);
   sr.add(5010, 1); sr.add(5030, 1.1);
   assert.equal(sr.covered(5030 - 60, 5030), true, "hour-scale coverage: yes (history reaches back)"); assert.equal(sr.covered(5030 - 60, 5030, true), false, "exact coverage: not yet — exact observations began at 5000");
-  sr.add(5061, 1.2); assert.equal(sr.covered(5061 - 60, 5061, true), true); assert.equal(sr.lowIn(5001, 5061, true).px, 1, "and its low comes from exact observations only, not the back-filled 0.4");
+  sr.add(5061, 1.2); assert.equal(sr.covered(5061 - 60, 5061, true), false, "sixth review A: the feed was up from 5000 but the first exact price came at 5010 — a window starting at 5001 has no known starting price");
+  sr.add(5071, 1.2); assert.equal(sr.covered(5071 - 60, 5071, true), true, "exact once the window starts at or after the first exact observation"); assert.equal(sr.lowIn(5011, 5071, true).px, 1, "and its low comes from exact observations only, not the back-filled 0.4");
   const eng = mkEngine(); eng.feedUp(T0); eng.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 9 * H }); const s2 = eng.coins.get("MintAAApump").series;
   const hb = []; for (let m = Math.floor((T0 - 3600) / 60); m < Math.floor(T0 / 60); m++) hb.push({ m, o: 5e-5, h: 5e-5, l: 5e-5, c: 5e-5 }); assert.equal(s2.addBars(hb, { from: T0 - 3600, to: T0 }).accepted, true);
   eng.onSwap(ev(T0 + 5, 100_000)); eng.onSwap(ev(T0 + 8, 105_000)); // "doubled" against the back-filled 50K, 8 s after the live start
@@ -246,8 +247,8 @@ test("T2 a deposit or withdrawal after a boost does not release the quarantine: 
 test("T3 (left-and-labelled items) compression is flagged and keeps every buyer; a quoted valuation carries its own quote's time", async () => {
   const { RAW_CAP } = await import("../src/spec.mjs"); const cov = new Coverage(); cov.up(0); const sr = new Series("M", cov); sr.startLive(0);
   for (let k = 0; k < RAW_CAP; k++) sr.add(100 + k * 0.5, 1, 1, false);
-  const t = 100 + RAW_CAP * 0.5 + 10; sr.add(t, 1, 200, true, "walletA"); sr.add(t + 0.2, 1, 100, true, "walletB");          // same second, buffer full → merged
-  const w = sr.winStats(t - 1, t + 1); assert.equal(w.compressed, true); assert.equal(w.buyers, 2); assert.ok(Math.abs(w.top_buyer_share - 2 / 3) < 1e-3, "66.7%, not 100%"); assert.equal(w.vol_usd, 300);
+  const t = 100 + RAW_CAP * 0.5 + 10; sr.add(t, 1, 200, true, "walletA"); sr.add(t + 0.2, 1, 100, true, "walletB"); sr.add(t + 0.4, 1, 50, false); // same second, buffer full → the two older ones are merged, the newest stays exact
+  const w = sr.winStats(t - 1, t + 1); assert.equal(w.compressed, true); assert.equal(w.buyers, 2); assert.ok(Math.abs(w.top_buyer_share - 2 / 3) < 1e-3, "66.7%, not 100%"); assert.equal(w.vol_usd, 350);
   assert.equal(sr.winStats(100, 200).compressed, undefined, "windows without a merge are not flagged");
   const e = newEntry({ mint: "M", pool: null, ag: "A1", t: 1000, families: ["LOW4H"], features: {}, mc: 1e5, px: 1 }); e.exec = "routed-quote";
   observe(e, { kind: "quote", reqT: 1001, t: 1001.3, buy: { sol: 0.2, tok: 1000, reqT: 1001, t: 1001.3 }, sells: [] }, 1001.3); const tok = e.fill.tok;
@@ -479,4 +480,48 @@ test("stake view: every stake shows the same trades — a routed-quote trade can
   const fl = b.find((t) => t.flat), f1 = j1.books.LOW4H.find((t) => t.mint === fl.mint); assert.equal(fl.mint, "C"); assert.equal(fl.ret, f1.ret, "same percentage as at 0.2 SOL"); assert.ok(Math.abs(fl.net - f1.ret * 2.0005) < 1e-12, "on the larger stake");
   assert.equal(b.filter((t) => t.ret != null).length, j1.books.LOW4H.filter((t) => t.ret != null).length, "no trade drops out when the stake changes");
   const ra = b.find((t) => t.mint === "A"), r1 = j1.books.LOW4H.find((t) => t.mint === "A"); assert.ok(ra.ret < r1.ret && ra.net < 0 && Math.abs(ra.net) > 5 * Math.abs(r1.net)); assert.equal(j2.cost, 2.0005);
+});
+
+// ---- sixth review (ChatGPT on 8474066, 21 Nov 2026 14:28 UK): A = loss vs recovery, C = compression keeps the price path ----
+test("A1 sampled: after an omitted sample, the first price back does not make the minute before it 'observed' — $90K then $210K ten seconds later is NOT a FAST-1M entry", () => {
+  const cov = new Coverage(); cov.up(0); const sr = new Series("M", cov); sr.startLive(0);
+  for (let t = 10; t <= 600; t += 10) sr.add(t, 100_000);
+  sr.restartAt(610); sr.raw = []; sr.prevT = null;                             // what engine.coinLost does when the provider omits the price at 610
+  assert.equal(sr.pend, true); sr.add(665, 90_000); assert.equal(sr.pend, false); assert.equal(sr.obsFrom, 665, "history restarts at the RECOVERY (665), not at the loss (610)"); assert.equal(sr.histFrom, 665);
+  sr.add(675, 210_000);
+  assert.equal(sr.covered(615, 675, true), false, "the 1-minute window [615, 675] starts after the loss but before the recovery: its starting price is unknown"); assert.equal(sr.covered(615, 675), false, "and so is any hour-scale window reaching back there");
+  assert.equal(sr.covered(665, 675, true), true, "from the recovery on, observation is exact again");
+  sr.add(727, 215_000); assert.equal(sr.covered(727 - 60, 727, true), true, "a window that starts after the recovery is exact"); assert.equal(sr.lowIn(667, 727, true).px, 90_000, "with the recovered price standing at its start");
+});
+test("A2 through the engine: a live coin whose data was lost, and a coin first seen after a reconnection, do not enter a FAST book on their first two prices", () => {
+  const has = (e, f) => [...e.entries.values()].filter((x) => x.families.includes(f));
+  const e = mkEngine(); e.feedUp(T0); e.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 9 * H });
+  path(e, T0, T0 + 600, () => 100_000, 10);
+  e.coinLost("MintAAApump", T0 + 610); swap(e, T0 + 665, 90_000); swap(e, T0 + 675, 210_000);
+  assert.equal(has(e, "FAST-1M").length, 0, "loss at +610, recovery at +665: the minute before +675 starts at +615, where no price is known"); assert.equal(has(e, "FAST150-1M").length, 0);
+  const e2 = mkEngine(); e2.feedUp(T0); e2.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 9 * H });
+  path(e2, T0, T0 + 600, () => 100_000, 10); e2.feedDown(T0 + 601); e2.feedUp(T0 + 610); swap(e2, T0 + 665, 90_000); swap(e2, T0 + 675, 210_000);
+  assert.equal(has(e2, "FAST-1M").length, 0, "reconnection at +610, first price at +665: the window [615, 675] has no outage in it, but no known starting price either");
+  const e3 = mkEngine(); e3.feedUp(T0); e3.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 9 * H });   // control: the same move with unbroken observation IS an entry
+  path(e3, T0, T0 + 650, () => 100_000, 10); swap(e3, T0 + 655, 90_000); swap(e3, T0 + 660, 210_000); assert.equal(has(e3, "FAST-1M").length, 1);
+});
+test("C1 compression keeps the price path: the low and high inside a merged second survive, the newest observation stays exact, and memory stays bounded", async () => {
+  const { RAW_CAP } = await import("../src/spec.mjs"); const cov = new Coverage(); cov.up(0); const a = new Series("M", cov), b = new Series("M", cov); a.startLive(0); b.startLive(0);
+  for (let k = 0; k < RAW_CAP; k++) a.add(100 + k * 0.25, 100);                // a: buffer full. b: the same later path, never compressed (control)
+  const t = 100 + RAW_CAP * 0.25 + 10; b.add(t - 5, 100);
+  for (const s of [a, b]) { s.add(t, 100); s.add(t + 0.1, 40); s.add(t + 0.2, 300); s.add(t + 0.3, 100); s.add(t + 0.4, 101); } // one second: dips to 40, spikes to 300, ends near 100
+  assert.ok(a.raw.length <= RAW_CAP + 2); assert.equal(a.raw[a.raw.length - 1][1], 101, "the newest observation is its own entry");
+  for (const s of [a, b]) { assert.equal(s.lowIn(t - 1, t + 5, true).px, 40); assert.equal(s.highIn(t - 1, t + 5, true).px, 300); assert.equal(s.priceAt(t + 2, true).px, 101); }
+  assert.equal(a.lowIn(t - 1, t + 0.4, true).px, 40, "the window before the newest observation still contains the dip (the overwrite used to lose it)");
+  assert.equal(a.priceAt(t + 0.15, true), null, "a moment inside the merged second: the exact price there is 'not known', never a later price");
+  assert.equal(a.covered(t + 0.15, t + 0.4, true), false, "so an exact window cannot start inside it"); assert.equal(a.covered(t, t + 0.4, true), true); assert.equal(a.covered(t - 1, t + 0.4, true), true);
+  for (let k = 0; k < 4000; k++) a.add(t + 1 + k * 0.01, 100 + (k % 7));       // 4,000 more trades in 40 seconds
+  assert.ok(a.raw.length <= RAW_CAP + 2 * 41 + 2, "at most two entries per second beyond the cap: " + a.raw.length);
+});
+test("C2 the decision ChatGPT reproduced: with the buffer full, a dip inside one busy second is still the window's low — FAST-30M does not fire against a low that compression used to erase… and a real fresh double still does", async () => {
+  const { RAW_CAP } = await import("../src/spec.mjs"); const run = (full) => { const cov = new Coverage(); cov.up(0); const s = new Series("M", cov); s.startLive(0);
+    if (full) for (let k = 0; k < RAW_CAP; k++) s.add(1000 + k * 0.1, 100); else s.add(1000, 100);
+    const t = 1000 + RAW_CAP * 0.1 + 5; s.add(t, 100); s.add(t + 0.1, 45); s.add(t + 0.2, 100); s.add(t + 0.3, 100); s.add(t + 60, 150); return { s, t }; };
+  for (const full of [false, true]) { const { s, t } = run(full); const lo = s.lowIn(t + 60 - 1800, t + 60, true);
+    assert.equal(lo.px, 45, (full ? "compressed" : "uncompressed") + ": the low of the window is the 45 dip"); assert.ok(150 >= 2 * lo.px, "so 150 is ALREADY above 2× the low — the crossing happened at the dip's recovery, not now"); }
 });

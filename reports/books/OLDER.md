@@ -200,3 +200,11 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 - Not done, and said so: making every trade a plain multiple of 0.2. At 0.5 SOL it makes ~1% difference; at 5 SOL it would overstate (example 80-SOL pool: ~11% of the stake per round trip).
 - Lesson: when a view filters trades, compare trade counts before comparing totals.
 
+## 21 Nov 2026, 14:28–14:50 UK — ChatGPT's sixth review (on 8474066): "No", two faults — both reproduced and fixed, HELD until the owner's "go"
+- A (real): after a coin's data was lost, the bot treated the blank stretch up to the first price back as "watched". A price of $90K followed ten seconds later by $210K could be bought as a "double inside 1 minute" although nobody knew the price a minute earlier. Fix: history restarts at the first price that comes back; a fast window must have a known price at its start. Same rule after a feed reconnection and at start-up.
+- C (real): on the very busiest coins (over 6,000 trades in 65 minutes) trades in the same second were squashed together and a dip inside that second was lost — the bot could think a doubling was fresh when it had already happened. Fix: squashed seconds keep their lowest and highest price; the newest trade is never squashed.
+- E: the empty results in entries.json — already fixed at 13:30 (d3403d1), live since the 14:20 restart.
+- D: ChatGPT's answer on the 60-second tolerance is "not as a blanket rule"; not built. Listed conditions recorded in REVIEW.md 6h for later.
+- Cost, stated to the owner: slightly fewer buys straight after a restart or a data loss (a coin's fast books start at its first seen trade). My own view recorded: A rarely produced a wrong buy in practice — two valid prices 90K→210K are a real double — but it could make a buy LATE (the real crossing happened in the blank stretch), and it broke the project's own stated rule, so the fix is right.
+- All five affected tests fail on the old code and pass on the new. 111 tests pass.
+

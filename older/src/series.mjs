@@ -32,12 +32,16 @@ export class Series {
     this.compT = null;      // last time exact observations were merged within a second (RAW_CAP reached): measurements over it are flagged
     this.anchor = null;     // [t, px] the last exact observation that aged out of `raw`: the price still standing for a coin that went quiet
     this.patched = [];      // global gaps re-filled for this coin from back-fill bars: [a, b]
+    this.pend = false;      // the coin's data was lost and no valid observation has arrived since: history restarts at the NEXT observation, not at the loss
+    this.mrg = new WeakMap(); // raw entry → { lo, hi, t1, p0 } (p0 = its own first price): an entry that absorbed later observations of its own second (RAW_CAP) keeps their extremes and the last time
     this.own = [];          // THIS coin's own unusable-price intervals [a, b|null]: e.g. a boost quarantine, from the estimated state to the confirming swap
     this.lastPx = null; this.lastT = null; this.prevPx = null; this.prevT = null;
   }
   startLive(t) { if (this.histFrom === null || this.histFrom > t) this.histFrom = t; if (this.obsFrom === null || this.obsFrom > t) this.obsFrom = t; }
-  /** this coin's own data restarts at t (lost events, a hole in the samples, a new pool): nothing before t is continuous */
-  restartAt(t) { this.histFrom = t; this.obsFrom = t; this.anchor = null; this.own = []; }
+  /** this coin's own data was lost at t (lost events, a hole in the samples, a new pool): nothing before t is continuous — and
+   *  nothing is known from t until the next valid observation either. LOSS and RECOVERY are different moments (sixth review, A):
+   *  history restarts provisionally at t and is moved to the first observation that actually arrives (see add). */
+  restartAt(t) { this.histFrom = t; this.obsFrom = t; this.anchor = null; this.own = []; this.pend = true; }
   /** this coin's price is unusable from t (its state is an estimate — a boost not yet confirmed by a swap): recorded as a break */
   breakOpen(t) { const g = this.own[this.own.length - 1]; if (g && g[1] === null) return false; this.own.push([t, null]); return true; }
   /** …and usable again from t (the confirming swap). The interval stays on record: no window or carried price may span it. */
@@ -49,6 +53,11 @@ export class Series {
    *  CARRIED from an earlier moment to a later one (the carry must be continuous from the price's own time to where it is used). */
   continuous(a, b) { return this.obsFrom !== null && this.obsFrom <= a && this.cov.gapsIn(a, b).length === 0 && this.ownGapsIn(a, b).length === 0; }
   obsCovered(x, t) { return this.continuous(x, t); }
+  /** an EXACT WINDOW [x, t] (FAST, SECOND-WAVE, fresh crossings): unbroken exact observation over it AND a price already standing
+   *  at x — an exact observation at or before x, carried to x without a break. Observations that only begin somewhere inside the
+   *  window (after a loss, a reconnection, a start-up) do not make it exact: its starting price, and so its low, would be unknown.
+   *  A start that falls inside a second whose observations were merged (RAW_CAP) is not exact either (priceAt answers "not known"). */
+  exactWindow(x, t) { return this.continuous(x, t) && this.priceAt(x, true) !== null; }
   /** back-fill minute bars (e.g. GMGN 1-minute kline): [{m, o, h, l, c, v}] requested for [from, to).
    *  Coverage follows the EVIDENCE, not the request: an empty reply extends nothing and repairs nothing (it cannot be told
    *  apart from "the provider has no data"). SPARSE replies prove nothing about the minutes they leave out (a missing minute
@@ -84,15 +93,22 @@ export class Series {
     if (!(px > 0)) return;
     this.prevPx = this.lastPx; this.prevT = this.lastT;
     this.lastPx = px; this.lastT = t; this.lastIsBf = false;
-    const r = this.raw;
-    if (r.length >= RAW_CAP && r.length && Math.floor(r[r.length - 1][0]) === Math.floor(t)) {
-      // COMPRESSION (RAW_CAP reached): this observation is merged into the previous one of the same second — last price, summed
-      // volume, every buyer kept with its own volume (also through a buy → sell → buy second). Transaction counts and sides inside
-      // that second are no longer exact, so the moment is recorded and any measurement window containing it is flagged `compressed`.
-      const z = r[r.length - 1], zb = Array.isArray(z[4]) ? z[4] : (z[3] === true && typeof z[4] === "string" ? [[z[4], z[2]]] : []); // buyers already merged stay, whatever sides followed
-      const nb = isBuy === true && user ? (typeof user === "string" ? [[user, volUsd]] : user) : [];
-      z[1] = px; z[2] += volUsd; if (z[3] !== isBuy) z[3] = null; const all = [...zb, ...nb]; if (all.length) { z[4] = all; z[5] = true; } this.compT = t;
-    } else r.push(isBuy === true && user ? [t, px, volUsd, isBuy, user] : [t, px, volUsd, isBuy]); // user: one wallet, or [[wallet, usd]…] when a transaction has several buyers
+    if (this.pend) { this.pend = false; if (t > this.histFrom) this.histFrom = t; if (t > this.obsFrom) this.obsFrom = t; } // recovery: history starts at the first observation after the loss
+    const r = this.raw, n = r.length, sec = Math.floor(t), fresh = isBuy === true && user ? [t, px, volUsd, isBuy, user] : [t, px, volUsd, isBuy]; // user: one wallet, or [[wallet, usd]…] when a transaction has several buyers
+    if (n >= RAW_CAP && n >= 2 && Math.floor(r[n - 1][0]) === sec && Math.floor(r[n - 2][0]) === sec) {
+      // COMPRESSION (RAW_CAP reached; sixth review, C). The NEWEST observation always stays its own exact entry. What is merged
+      // is the one before it, into the earlier entry of the same second — and that entry keeps the PRICE PATH a decision needs:
+      // the lowest and highest price it absorbed, its first time (entry[0]) and its last time (t1), with the last price as its
+      // price. Volume is summed and every buyer kept with its own volume (also through a buy → sell → buy second). What is lost
+      // is the order of prices inside that second and the exact transaction counts: measurement windows over it are flagged
+      // `compressed`, and an exact window that would START inside it is refused (exactWindow). At most two entries per second
+      // are kept beyond the cap, so memory stays bounded.
+      const y = r[n - 2], z = r[n - 1], m = this.mrg.get(y) || { lo: y[1], hi: y[1], t1: y[0], p0: y[1] };
+      const buyers = (o) => (Array.isArray(o[4]) ? o[4] : (o[3] === true && typeof o[4] === "string" ? [[o[4], o[2]]] : [])), all = [...buyers(y), ...buyers(z)]; // buyers already merged stay, whatever sides followed
+      if (z[1] < m.lo) m.lo = z[1]; if (z[1] > m.hi) m.hi = z[1]; m.t1 = z[0]; this.mrg.set(y, m);
+      y[1] = z[1]; y[2] += z[2]; if (y[3] !== z[3]) y[3] = null; y[4] = all.length ? all : null; y[5] = true; this.compT = t;
+      r[n - 1] = fresh;
+    } else r.push(fresh);
     const m = Math.floor(t / 60); let b = this.bars.get(m);
     if (!b) { b = { o: px, h: px, l: px, c: px, v: 0, nb: 0, ns: 0, buyers: EMPTY, lowT: t }; this.bars.set(m, b); }
     if (px > b.h) b.h = px; if (px < b.l) { b.l = px; b.lowT = t; } b.c = px; b.v += volUsd;
@@ -102,7 +118,7 @@ export class Series {
     const cut = now - RAW_KEEP_S; let i = 0; while (i < this.raw.length && this.raw[i][0] < cut) i++;
     // the newest observation leaving the buffer is kept as the ANCHOR: for a coin that then goes quiet for hours (its bars pruned
     // too) it is still the exact price standing, so the wake-up trade is measured against it and not against nothing
-    if (i) { this.anchor = [this.raw[i - 1][0], this.raw[i - 1][1]]; this.raw.splice(0, i); }
+    if (i) { const a = this.raw[i - 1]; this.anchor = [this.mrg.get(a)?.t1 ?? a[0], a[1]]; this.raw.splice(0, i); } // a merged entry's price is its LAST one: the anchor carries that time
     const ucut = now - BUYER_RAW_KEEP_S; for (const o of this.raw) { if (o[0] >= ucut) break; if (o.length > 4) o.length = 4; } // buyer wallets are only read for the last 5 minutes
     const mc = Math.floor((now - BAR_KEEP_S) / 60), bc = Math.floor((now - BUYERS_KEEP_S) / 60);
     // buyer wallets are only read for the last 15 minutes (features): older bars keep the COUNT and release the wallet list (memory)
@@ -115,7 +131,7 @@ export class Series {
    *  repaired or not. Used for fresh crossings and the seconds-scale FAST / SECOND-WAVE windows.
    *  non-strict = hour-scale: history (live or accepted back-fill) reaches back to x, and every outage inside was repaired. */
   covered(x, t, strict = false) {
-    if (strict) return this.obsCovered(x, t);
+    if (strict) return this.exactWindow(x, t);
     if (this.histFrom === null || this.histFrom > x) return false;
     for (const [a, b] of this.cov.gapsIn(x, t)) if (!this.patched.some(([pa, pb]) => pa <= a && pb >= b)) return false;
     if (this.ownGapsIn(x, t).length) return false; // the coin's own breaks are never repaired by back-fill
@@ -127,7 +143,12 @@ export class Series {
    *  preferred over a newer known close. exact = true never returns anything that came from back-fill. */
   priceAt(t, exact = false) {
     // s0 = the earliest moment the candidate's price can date from (an observation: its own time; a bar: the START of its minute)
-    let r = null; for (let i = this.raw.length - 1; i >= 0; i--) if (this.raw[i][0] <= t) { r = { px: this.raw[i][1], t: this.raw[i][0], src: "obs", s0: this.raw[i][0] }; break; }
+    let r = null; for (let i = this.raw.length - 1; i >= 0; i--) if (this.raw[i][0] <= t) { const o = this.raw[i], m = this.mrg.get(o);
+      // a merged entry holds prices from o[0] to m.t1; asked for a moment INSIDE it, its last price would be a price from later than t:
+      // exact use answers "not known"; hour-scale use accepts the sub-second imprecision
+      // exact use answers its FIRST price at exactly its first time, "not known" in between; hour-scale use accepts the sub-second imprecision
+      if (m && m.t1 > t && exact) { if (t !== o[0]) return null; r = { px: m.p0, t: o[0], src: "obs", s0: o[0] }; break; }
+      r = { px: o[1], t: m ? Math.min(m.t1, t) : o[0], src: "obs", s0: o[0] }; break; }
     if (!r) { let best = null; for (const m of this.bars.keys()) if ((m + 1) * 60 <= t && (best === null || m > best)) best = m; if (best !== null) r = { px: this.bars.get(best).c, t: best * 60 + 59, src: "bar", s0: best * 60 };
       if (this.anchor && this.anchor[0] <= t && (!r || this.anchor[0] > r.t)) r = { px: this.anchor[1], t: this.anchor[0], src: "anchor", s0: this.anchor[0] }; }
     if (!r && this.lastT !== null && this.lastT <= t && !this.lastIsBf) r = { px: this.lastPx, t: this.lastT, src: "last", s0: this.lastT };
@@ -159,7 +180,8 @@ export class Series {
       for (const [m, b] of this.bars) { const s = m * 60; if (s + 60 > x && s < Math.min(t, rawFrom)) { if (!best || better(b[k], best.px)) best = { px: b[k], t: k === "l" ? b.lowT : s }; } }
       for (const [m, b] of this.bf) { const s = m * 60; if (s >= x && s + 60 <= t) { if (!best || better(b[k], best.px)) best = { px: b[k], t: s }; } }
     }
-    for (const [ts, px] of this.raw) { if (ts < x) continue; if (ts >= t) break; if (!best || better(px, best.px)) best = { px, t: ts }; }
+    for (const o of this.raw) { const ts = o[0]; if (ts < x) continue; if (ts >= t) break; const m = this.mrg.get(o), px = m ? (k === "l" ? m.lo : m.hi) : o[1]; // a merged entry answers with the extreme it absorbed
+      if (!best || better(px, best.px)) best = { px, t: ts }; }
     return best;
   }
   /** RECORDED MEASUREMENTS (never filters): trading in (x, t] from the exact observations — USD volume, buy and sell

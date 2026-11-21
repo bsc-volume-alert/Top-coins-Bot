@@ -52,7 +52,7 @@ export const LOSS_X = [0.40, 0.50, 0.60];
 
 // Memory / storage bounds (not rules; operating limits).
 export const RAW_KEEP_S = 65 * 60;            // exact observations kept in memory per coin (covers the 15-min and 60-min windows)
-export const RAW_CAP = 6000;                  // per coin; beyond it, observations within the same second are merged (last price, summed volume)
+export const RAW_CAP = 6000;                  // per coin; beyond it, older observations within the same second are merged — the merged entry keeps their lowest, highest and last price and its first and last time; the newest observation always stays exact
 export const BAR_KEEP_S = 4 * 3600 + 30 * 60; // in-memory minute bars (covers LOW4H's 4 h and HH-BREAK's 4 h 15 min)
 export const BAR_RETAIN_DAYS = 10;            // minute bars kept in the database
 export const BUYERS_PER_BAR_CAP = 300;

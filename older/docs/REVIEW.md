@@ -209,6 +209,19 @@ Decision taken, declared: a coin's own break (quarantine) also makes HOUR-scale 
 
 Also since 938198b (commit a680362, not yet reviewed): due orders and routine valuations run as independent poller passes, so a buy that becomes due is not held behind a slow valuation pass (three sampled buys had been cancelled at the 5-second limit).
 
+## 6h. Sixth independent review, commit 8474066 (ChatGPT, 21 Nov 2026 14:28 UK) — response
+
+Verdict received: **not ready**; two reproducible faults (A, C), one reporting defect (E), guidance on the 60-second question (D). All three reproduced here on the old code before fixing (tests A1, A2, C1, C2 fail on 8474066's `series.mjs`, pass now). 111 tests.
+
+| Finding | Was it right? | Fix |
+|---|---|---|
+| **A. Loss ≠ recovery.** `coinLost` restarted history at the loss time, so the stretch between the loss and the first valid price counted as observed; a 1-minute window starting inside it was "continuous" with an unknown starting price ($90K, then $210K ten seconds later → FAST-1M). Same after a reconnection. | Yes. Reproduced through `Series` and through the engine (loss, and reconnection). | (1) `restartAt` marks the restart as pending; the first observation that actually arrives moves `histFrom` and `obsFrom` to its own time — for hour-scale and exact use alike. (2) `exactWindow(x, t)`: an exact window needs unbroken observation **and a price already standing at x** (an exact observation at or before x carried to x without a break). `covered(…, strict)` uses it, so FAST, SECOND-WAVE and the fresh-crossing check all do. This covers loss, reconnection and start-up with one rule. Measurements (`obsCovered`) are unchanged: on a live feed, volume in a covered stretch is complete whether or not a price was standing. |
+| **C. Compression changed decisions.** At `RAW_CAP` a later price overwrote the earlier observation of the same second: the low (or high) was lost and the entry kept the earlier time with a later price. | Yes. Reproduced: a dip inside a busy second vanished from `lowIn`. | The newest observation always stays its own entry. The one before it is merged into the earlier entry of the same second, which keeps the lowest, highest, first and last price and its first and last time (`mrg`). `lowIn`/`highIn` answer with the kept extreme. An exact price asked for a moment inside a merged second is "not known" (never a later price), so an exact window cannot start there. At most two entries per second beyond the cap: memory stays bounded. The anchor of a merged entry carries its last time. |
+| **E. `entries.json` exported `v.ret`.** | Yes — found independently at 13:27 the same day; fixed in d3403d1 (`v.exit.ret`). | Done. |
+| **D. 60-second tolerance.** | Accepted as guidance: not a blanket rule. | Not implemented. If taken up later it will be a declared approximation for hour-scale price windows only, on gaps closed and bounded by trustworthy states, with affected entries recorded separately, exact windows / fresh crossings / fill trust unchanged, missing candles and volume never treated as zero, unknown AGE-DOUBLE references left missing. |
+
+**Declared consequence of A(2):** after a restart, a reconnection or a loss, a coin's FAST windows begin at its first observed price, not at the moment the feed came up. A coin whose first observed trades are themselves the double is not entered by the seconds-scale books for that move.
+
 ## 6g. older-5 (21 Nov 2026, 13:30 UK) — owner's two additions, for the reviewer
 
 Not a response to a review; two things the owner asked for while the sixth pass was out.
