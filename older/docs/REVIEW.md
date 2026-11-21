@@ -237,6 +237,7 @@ The sixth review covered `8474066` (spec older-4, 17 families, 104 tests). The o
 | 3c62cfb | read-only study script (touches nothing the bot reads) | scripts/study-family.mjs | — |
 | 95b0a2d | HH-BREAK-4H clock book; `CLOCK` declaration; one-off migration of existing HH-BREAK buys with estimated 4-hour sales | spec `CLOCK`; book `advance`, `versionsFor`; migrate.mjs | 6j |
 | c780ef6 | eight any-age books (VOL ×4, RUG ×4); age group A0; evaluation from migration on | spec `VOL`, `RUG`, `ANY_AGE`, `ageGroupAny`; signals block 0; engine `onSwap` | 6k |
+| a72d1d3, 7bc6cd7, 2f8457e, 5864356 | website only: coin search lists each buy (books, market cap at our buy and at our sale); "sold at" column; page reloads itself on a new build; "high while held" apart from the later high; open positions' value | page.mjs `usdMc`, `saleMc`, `booksApi`; web.mjs `BUILD` | — |
 
 **Things the implementer is least sure of — please attack these first**
 1. `exactWindow` (6h): is "continuous and a price standing at the start" now sufficient for every exact use, and does it wrongly refuse any window that is in fact fully known (e.g. a live coin with a covered feed and no trade for hours — the anchor case)?
@@ -247,6 +248,7 @@ The sixth review covered `8474066` (spec older-4, 17 families, 104 tests). The o
 6. Clock books and the migration (6j): `v.stall` now carries a tag; restored entries written by earlier versions have `stall: true/false` only. Any path where an old stored version is misread? Are the estimated exits ever read by a decision?
 7. Stake views (6g): display only — confirm nothing in `engine`, `signals` or `book.advance/observe` reads `mark`, `exit.pool`, `est` or the stake.
 8. Restart safety across all of the above: `coins.info.rug`, decisions for new families, `since:*` meta rows, HH-BREAK-4H rows.
+9. **Observed on the live run, unexplained (21 Nov 22:38–23:18 UK):** the first six RUG buys (three coins, knife then bounce each) all came within ten minutes of a restart and none in the following half hour. The peak and an armed setup are restored from `coins.info.rug`; `prevOk` should stop a crossing being read across the restart gap. Is there any path by which a restart makes a stale fall look like a fresh crossing — e.g. a restored peak with a first post-restart pair of observations, `prevPx` surviving in a restored series, or the restart gap not covering the coin?
 
 ## 6k. older-8 (21 Nov 2026, 21:15 UK) — eight any-age books at the owner's request, for the reviewer
 
