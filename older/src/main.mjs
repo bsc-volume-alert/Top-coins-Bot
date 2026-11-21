@@ -35,7 +35,13 @@ const J = await import("./jupiter.mjs");
 const backfill = startBackfill({ engine, store, jup: J, log });
 engine.needCreation = (mint) => backfill.want(mint, 2);
 const pools = store.loadPools();
-startFeed({ engine, store, backfill, pools, log });
+const feed = startFeed({ engine, store, backfill, pools, log });
+// DIAGNOSTICS ONLY (no decision reads this): where the memory is. Recomputed at most once a minute.
+let sizesAt = 0, sizesV = null;
+const sizes = () => { const now = Date.now(); if (sizesV && now - sizesAt < 60000) return sizesV; sizesAt = now;
+  let raw = 0, bars = 0, bfb = 0, wallets = 0, withData = 0, anchors = 0, withBreaks = 0, ownGaps = 0; for (const c of engine.coins.values()) { const sr = c.series; raw += sr.raw.length; bars += sr.bars.size; bfb += sr.bf.size; if (sr.raw.length || sr.bars.size) withData++; if (sr.anchor) anchors++; if (sr.own.length) { withBreaks++; ownGaps += sr.own.length; } for (const b of sr.bars.values()) wallets += b.buyers.size; }
+  const m = process.memoryUsage(), mb = (x) => Math.round(x / 2 ** 20);
+  return (sizesV = { rss_mb: mb(m.rss), heap_used_mb: mb(m.heapUsed), heap_total_mb: mb(m.heapTotal), external_mb: mb(m.external), coins: engine.coins.size, coins_with_data: withData, raw_obs: raw, live_bars: bars, backfill_bars: bfb, buyer_wallets: wallets, anchors, coins_with_price_breaks: withBreaks, price_breaks_on_record: ownGaps, entries_in_memory: engine.entries.size, dirty_bars: engine.dirtyBars?.size ?? null, ...feed.sizes() }); };
 
 // initial discovery of existing pools: on first start, then once a day
 async function runInventory() {
@@ -72,14 +78,20 @@ const inv = () => { try { return JSON.parse(store.db.prepare("SELECT v FROM meta
 const valid = () => (process.env.OLDER_RES_VALIDATED === "1" ? { by: "OLDER_RES_VALIDATED" } : null);
 const web = startWeb({ port: Number(process.env.OLDER_PORT || 8793), store, engine, status: () => ({ started: now0, first_start: firstStart, commit: COMMIT, run: process.env.OLDER_RUN_NAME || null, entries_until: engine.entriesUntil, idl: IDL_PIN,
   feed: { ...fs, lag_ms_avg: fs.lagN ? Math.round(fs.lagMsSum / fs.lagN) : null }, engine: { ...engine.stats, coins: engine.coins.size, open: [...engine.byMint.values()].reduce((s, x) => s + x.size, 0), feed_gaps: engine.feedCov.gaps.length, usd_down: engine.usdDown },
-  decoder: { ...dec }, tx_validation: valid(), verify: { ...vf }, snapshots: { ...snapStats }, sol: { ...sp }, gmgn: { calls: gm.calls, errors: gm.errors, limited: gm.limited, banned: gm.banned, lastErr: gm.lastErr, rate_headers: gm.headers }, backfill: { ...bf }, backfillQ: backfill.size(), jupiter: { ...J.ju, key: !!process.env.JUP_API_KEY, rps: Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0.5)) }, poller: poller ? { ...poller.stats, cadence_avg_s: poller.stats.cadence.n ? +(poller.stats.cadence.sum / poller.stats.cadence.n).toFixed(1) : null, hot_s: poller.hotEvery, cold_s: poller.coldEvery } : null, inventory: inv(), mem_mb: Math.round(process.memoryUsage().rss / 2 ** 20) }) });
+  decoder: { ...dec }, tx_validation: valid(), verify: { ...vf }, snapshots: { ...snapStats }, sol: { ...sp }, gmgn: { calls: gm.calls, errors: gm.errors, limited: gm.limited, banned: gm.banned, lastErr: gm.lastErr, rate_headers: gm.headers }, backfill: { ...bf }, backfillQ: backfill.size(), jupiter: { ...J.ju, key: !!process.env.JUP_API_KEY, rps: Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0.5)) }, poller: poller ? { ...poller.stats, cadence_avg_s: poller.stats.cadence.n ? +(poller.stats.cadence.sum / poller.stats.cadence.n).toFixed(1) : null, hot_s: poller.hotEvery, cold_s: poller.coldEvery } : null, inventory: inv(), mem_mb: Math.round(process.memoryUsage().rss / 2 ** 20), sizes: sizes() }) });
 log(`[older] started, spec ${SPEC_VER}, paper only`);
 
 // ---- monitoring copy: every 5 minutes the dashboard's own data is written to $OLDER_OUT/pub/state.json (no keys in it);
 // scripts/publish.sh pushes that folder to the GitHub branch "older-data" so the run can be watched and reviewed remotely
 if (process.env.OLDER_OUT && !process.env.OLDER_RUN_MINUTES) {
   const { writeFileSync, mkdirSync } = await import("node:fs"); const dir = process.env.OLDER_OUT + "/pub"; mkdirSync(dir, { recursive: true });
-  const dump = () => { try { for (const pop of ["", "pumpswap-canonical", "solana-wide"]) writeFileSync(`${dir}/state${pop ? "-" + pop : ""}.json`, JSON.stringify(web.state(pop))); } catch (e) { log("[pub] " + e.message); } };
+  // entries.json: EVERY entry of this database in compact form (state.json only carries the latest 40), so results can be worked
+  // out per coin and per entry over the whole run. Returns are fractions of cost; null = not closed. Keys: t20…t40 = pure trail,
+  // h20…h40 = sell half at 2× then trail, and the same with an x suffix for the stall-exit versions (CONT-STALL).
+  const compact = () => store.allEntries().map((e) => { const r = {}; for (const v of e.versions || []) r[(v.policy === "trail" ? "t" : "h") + Math.round(v.stop * 100) + (v.stall ? "x" : "")] = v.ret == null ? null : +v.ret.toFixed(4);
+    const w5 = e.features?.w5, s5 = e.snap?.stats5m; return { id: e.id, mint: e.mint, sym: engine.coins.get(e.mint)?.info?.symbol ?? null, t: Math.round(e.decisionT), ag: e.ag, fam: e.families, mode: e.mode, pop: e.pop ?? null, status: e.status, mc: Math.round(e.signalMc || 0), delay: e.fill?.delay_s ?? null, max: e.runner?.maxX != null ? +e.runner.maxX.toFixed(3) : null, ret: r, chk: e.verify?.diff_quote != null ? +(e.verify.diff_quote * 100).toFixed(2) : null, flags: (e.flags || []).length,
+      holders: e.snap?.holders ?? null, hc5: s5?.holderChange ?? null, traders5: s5?.numTraders ?? null, b1: e.features?.w1?.buyers ?? null, b5: w5?.buyers ?? null, v5: w5?.vol_usd ?? null, top5: w5?.top_buyer_share ?? null, surge: e.features?.vol_surge5 ?? null }; });
+  const dump = () => { try { for (const pop of ["", "pumpswap-canonical", "solana-wide"]) writeFileSync(`${dir}/state${pop ? "-" + pop : ""}.json`, JSON.stringify(web.state(pop))); writeFileSync(`${dir}/entries.json`, JSON.stringify({ at: Date.now(), commit: COMMIT, run: process.env.OLDER_RUN_NAME || null, entries: compact() })); } catch (e) { log("[pub] " + e.message); } };
   setTimeout(dump, 60000); setInterval(dump, 300000);
 }
 

@@ -101,5 +101,5 @@ export function startFeed({ engine, store, backfill = null, pools /* Map pool â†
     clearInterval(watchdog); watchdog = setInterval(() => { if (fs.connected && fs.lastMsg && Date.now() / 1000 - fs.lastMsg > 60) down("no message for 60 s"); }, 5000);
   }
   connect(); lookupLoop();
-  return { stop: () => { clearInterval(watchdog); try { ws.terminate(); } catch {} } };
+  return { stop: () => { clearInterval(watchdog); try { ws.terminate(); } catch {} }, sizes: () => ({ pools_known: pools.size, pool_states: mem.size, held_pools: hold.size, lookup_queue: queue.size, seen_signatures: seen.size, non_sol_keys: Object.keys(fs.nonSolQuotes).length }) };
 }
