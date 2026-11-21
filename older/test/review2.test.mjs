@@ -458,7 +458,7 @@ test("stake view: at 0.2 SOL the re-priced trade equals the recorded one; bigger
     assert.ok(r[4].net < 25 * r[0].net - 0.05, policy + ": 5 SOL is clearly less than 25 × the 0.2 SOL profit"); assert.equal(r[4].cost, 5.0005);
   }
 });
-test("stake view: a routed-quote trade cannot be re-priced and is shown as 0.2-only (row kept, no result); a sale recorded before pools were saved is re-priced on a pool rebuilt from the sale and marked as an estimate", async () => {
+test("stake view: every stake shows the same trades — a routed-quote trade cannot be re-priced and keeps its 0.2 SOL percentage result (flagged); a sale recorded before pools were saved is re-priced on a pool rebuilt from the sale and marked as an estimate", async () => {
   const { newEntry, advance, observe, atStake } = await import("../src/book.mjs"); const { booksApi } = await import("../src/page.mjs");
   const st = (q, t) => ({ base: 2e8, quote: q, feeBuy: 0.003, feeSell: 0.003, t }), yes = () => true;
   const mk = (mint) => { const e = newEntry({ mint, pool: "P", ag: "A1", t: 0, families: ["LOW4H"], features: {}, mc: 1e5, px: 1 }); advance(e, 1.5, st(100, 0), yes); observe(e, st(50, 50), 50); advance(e, 51, st(50, 50), yes); return e; };
@@ -475,6 +475,8 @@ test("stake view: a routed-quote trade cannot be re-priced and is shown as 0.2-o
   assert.equal(v(kk).status, "closed"); assert.ok(Math.abs(exact.ret - rebuilt.ret) < 1e-9 && rebuilt.est === true && exact.est === false);
   const j1 = booksApi([a, old, rq], { stop: 0.25, policy: "trail" }), j2 = booksApi([a, old, rq], { stop: 0.25, policy: "trail", stake: 2 });
   assert.equal(j1.books.LOW4H.filter((t) => t.ret != null).length, 3); assert.equal(j1.stake, 0.2); assert.equal(j1.rows_total, 680);
-  const b = j2.books.LOW4H; assert.equal(b.length, 3); assert.equal(b.filter((t) => t.nosize).length, 1); assert.ok(b.filter((t) => t.nosize).every((t) => t.ret == null && t.net == null)); assert.equal(b.find((t) => t.mint === "B").est, true);
+  const b = j2.books.LOW4H; assert.equal(b.length, 3); assert.equal(b.filter((t) => t.flat).length, 1); assert.equal(b.find((t) => t.mint === "B").est, true);
+  const fl = b.find((t) => t.flat), f1 = j1.books.LOW4H.find((t) => t.mint === fl.mint); assert.equal(fl.mint, "C"); assert.equal(fl.ret, f1.ret, "same percentage as at 0.2 SOL"); assert.ok(Math.abs(fl.net - f1.ret * 2.0005) < 1e-12, "on the larger stake");
+  assert.equal(b.filter((t) => t.ret != null).length, j1.books.LOW4H.filter((t) => t.ret != null).length, "no trade drops out when the stake changes");
   const ra = b.find((t) => t.mint === "A"), r1 = j1.books.LOW4H.find((t) => t.mint === "A"); assert.ok(ra.ret < r1.ret && ra.net < 0 && Math.abs(ra.net) > 5 * Math.abs(r1.net)); assert.equal(j2.cost, 2.0005);
 });

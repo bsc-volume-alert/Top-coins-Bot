@@ -193,3 +193,10 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 - Stake list stays 0.2 / 0.5 / 1 / 2 / 5 as first asked (his dictation said "2.5").
 - Pushed: older-5 + entries.json fix. 107 tests pass.
 
+## 21 Nov 2026, 14:25–14:35 UK — stake view: owner spotted totals that did not add up
+- Owner: FAST150-1M (A4, 40% trail) shows +0.397 SOL at 0.2 but +1.343 at 0.5 — more than 2.5×. He is right that this cannot come from price impact.
+- Cause: not the arithmetic. At 0.5 the book had 19 closed trades, at 0.2 it had 21 — the trades that cannot be re-priced were left out, and they were losers. Evidence from his two screenshots: every book with the SAME trade count is within about 1% of 2.5× (HH-BREAK 6 trades +0.329 → +0.816 vs 0.823; LOW4H 8 trades −0.319 → −0.797 vs −0.798; SECOND-WAVE 5 trades −0.248 → −0.618 vs −0.620); every book that jumped had lost trades (FAST150-1M 21→19, FAST150-3M 25→22, FAST150-5M 26→21, CONT 24→23, FAST-5M 13→12).
+- Fix (his suggestion, applied to those trades): a trade that cannot be re-priced keeps its 0.2 SOL percentage result on the larger stake and stays in the book, flagged and counted. Every stake button now shows the same trades.
+- Not done, and said so: making every trade a plain multiple of 0.2. At 0.5 SOL it makes ~1% difference; at 5 SOL it would overstate (example 80-SOL pool: ~11% of the stake per round trip).
+- Lesson: when a view filters trades, compare trade counts before comparing totals.
+
