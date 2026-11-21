@@ -3,7 +3,7 @@
 import Database from "better-sqlite3";
 import { statSync, statfsSync } from "node:fs";
 import { dirname } from "node:path";
-import { BAR_RETAIN_DAYS, SPEC_VER } from "./spec.mjs";
+import { BAR_RETAIN_DAYS, SPEC_VER, FAMILIES, STOPS } from "./spec.mjs";
 import { setNextId } from "./book.mjs";
 
 export class Store {
@@ -69,6 +69,27 @@ export class Store {
   }
   /** the project's first-ever start (for the 24 h "startup" tag); set once */
   firstStart(now) { this.db.prepare("INSERT OR IGNORE INTO meta VALUES ('first_start', ?)").run(String(now)); return Number(this.db.prepare("SELECT v FROM meta WHERE k='first_start'").get().v); }
+  /** WHEN EACH BOOK AND EACH STOP BEGAN COUNTING on this database (display only). Books and stops added after the first start
+   *  have no earlier trades, so their totals cover a shorter period — the page shows the start next to each.
+   *  Set once per book / stop and then kept. A book's start is the earliest time it was evaluated on this database: its first
+   *  recorded refusal or decision (a book writes refusals from its first minute), never earlier than the first start; a book
+   *  with nothing on record yet starts now. A stop's start is the first buy that carries it; a stop every buy carries started
+   *  with the database. */
+  since(now) {
+    if (this._since) return this._since;
+    const get = (k) => { const r = this.db.prepare("SELECT v FROM meta WHERE k=?").get(k); return r ? Number(r.v) : null; }, put = (k, v) => this.db.prepare("INSERT OR IGNORE INTO meta VALUES (?, ?)").run(k, String(v));
+    const first = get("first_start") ?? now, families = {}, stops = {};
+    for (const f of FAMILIES) { let t = get("since:" + f);
+      if (t === null) { const a = this.db.prepare("SELECT MIN(t) t FROM notes WHERE family=?").get(f)?.t, b = this.db.prepare("SELECT MIN(t) t FROM decisions WHERE family=?").get(f)?.t;
+        const seen = [a, b].filter((x) => x != null); t = Math.max(first, seen.length ? Math.min(...seen) : now); put("since:" + f, t); }
+      families[f] = t; }
+    let all = null;
+    for (const s of STOPS) { let t = get("since:stop:" + s);
+      if (t === null) { all ??= this.allEntries(); const has = all.filter((e) => (e.versions || []).some((v) => v.stop === s)), lacks = all.some((e) => !(e.versions || []).some((v) => v.stop === s));
+        t = !lacks ? first : has.length ? Math.min(...has.map((e) => e.decisionT)) : now; put("since:stop:" + s, t); }
+      stops[s] = t; }
+    return (this._since = { first, families, stops });
+  }
   heartbeat(t) { this.db.prepare("INSERT OR REPLACE INTO meta VALUES ('alive', ?)").run(String(t)); }
   /** the time the previous run was last known alive: the restart gap starts there (null on a first run) */
   lastAlive() { const r = this.db.prepare("SELECT v FROM meta WHERE k='alive'").get(); return r ? Number(r.v) : null; }

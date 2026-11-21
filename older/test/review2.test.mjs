@@ -525,3 +525,16 @@ test("C2 the decision ChatGPT reproduced: with the buffer full, a dip inside one
   for (const full of [false, true]) { const { s, t } = run(full); const lo = s.lowIn(t + 60 - 1800, t + 60, true);
     assert.equal(lo.px, 45, (full ? "compressed" : "uncompressed") + ": the low of the window is the 45 dip"); assert.ok(150 >= 2 * lo.px, "so 150 is ALREADY above 2× the low — the crossing happened at the dip's recovery, not now"); }
 });
+
+// ---- "counting since" (owner, 21 Nov 2026 16:13 UK): when each book and each stop began on this database ----
+test("counting since: a book starts when it was first evaluated on this database (never before the first start), a stop with its first buy; both are set once and survive a restart; the page API carries them", async () => {
+  const { booksApi } = await import("../src/page.mjs"); const db = join(mkdtempSync(join(tmpdir(), "older-")), "since.db"); let st = new Store(db); st.firstStart(1000);
+  st.saveNote("M1", { ag: "A1", family: "LOW4H", t: 1005, reason: "insufficient 4 h history" }); st.saveNote("M1", { ag: "A1", family: "FAST-10M", t: 5000, reason: "window not covered" }); st.saveNote("M1", { ag: "A1", family: "FAST-10M", t: 5200, reason: "window not covered" });
+  const old = newEntry({ mint: "M1", pool: "P", ag: "A1", t: 1200, families: ["LOW4H"], features: {}, mc: 1e5, px: 1 }); old.versions = old.versions.filter((v) => v.stop !== 0.6); st.saveEntry(old); // a buy from before the 60% stop existed
+  const neu = newEntry({ mint: "M2", pool: "P", ag: "A1", t: 6000, families: ["LOW4H"], features: {}, mc: 1e5, px: 1 }); st.saveEntry(neu);
+  const s = st.since(9000);
+  assert.equal(s.first, 1000); assert.equal(s.families["LOW4H"], 1005); assert.equal(s.families["FAST-10M"], 5000, "added later: starts at its first evaluation"); assert.equal(s.families["HH15-5M"], 9000, "nothing on record yet: starts now");
+  assert.equal(s.stops[0.25], 1000, "every buy carries it: as old as the database"); assert.equal(s.stops[0.6], 6000, "the first buy that carries the 60% stop");
+  st = new Store(db); const s2 = st.since(20000); assert.deepEqual(s2, s, "fixed once: a later restart does not move any start");
+  assert.equal(booksApi([], { stop: 0.6, since: s }).since.stop, 6000); assert.equal(booksApi([], { stop: 0.25, since: s }).since.stop, 1000); assert.equal(booksApi([], {}).since, null);
+});

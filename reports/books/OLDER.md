@@ -244,3 +244,9 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 - What remains true, and is now a test: with 10-minute buckets a coin with one $50 trade every 20 minutes has a non-zero norm ($25), and a new high on one more $50 trade is bought by HH30-10M. That is the cost of no floor. The volume before every buy is recorded, so the floor question can be answered from the data later without another book.
 - 20 books, 800 rows, 115 tests pass. Live pump.fun coins only. They start counting from the next restart and need 1 h 5 min (HH15-5M) or about 2 h 10 min (HH30) of unbroken history first.
 
+
+## 21 Nov 2026, 16:12–16:20 UK — older-6 running; "counting since" on the website
+- 16:12: owner restarted onto 7abc863 (older-6, 20 books, the top-of-page table of every book with its rule). Same database.
+- Owner asked whether the new books use earlier data: no. They start from the restart — the rules need the live trade-by-trade record, which is not kept. (An approximate replay from the stored 1-minute bars is possible as a separate study; it must not be mixed into the books.)
+- Owner asked for the time each book began, next to the book. Built: the database records once when each book was first evaluated and when each stop got its first buy; the page shows "counting since" in the top table and on each card, amber when later than the first start. On this database: the 14 original books 20 Nov; FAST-10M / FAST-30M / FAST150-10M 21 Nov 13:10; the 60% stop 21 Nov ~14:20; HH30-5M / HH30-10M / HH15-5M 21 Nov 16:12. On a fresh database every book starts together.
+- 116 tests pass.
