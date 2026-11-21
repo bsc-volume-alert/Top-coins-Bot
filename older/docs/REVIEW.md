@@ -222,6 +222,32 @@ Verdict received: **not ready**; two reproducible faults (A, C), one reporting d
 
 **Declared consequence of A(2):** after a restart, a reconnection or a loss, a coin's FAST windows begin at its first observed price, not at the moment the feed came up. A coin whose first observed trades are themselves the double is not entered by the seconds-scale books for that move.
 
+## 6l. Full review requested by the owner (21 Nov 2026, 21:35 UK) — map of everything since the sixth review
+
+The sixth review covered `8474066` (spec older-4, 17 families, 104 tests). The owner asked for a complete A-to-Z review of the present head because much has been added since. Spec is now **older-8**: 29 families, 5 stops, 2 exit policies, 1,240 comparison rows, 124 tests.
+
+| Commit | What | Where to read | Section |
+|---|---|---|---|
+| c1b8fdc | 60% trailing stop; pools saved with every pool-priced sale; website stake views | spec `STOPS`, `STAKE_VIEWS`; book `poolOf`, `atStake` | 6g |
+| d3403d1 | entries.json exported `v.ret` (your finding E) | main.mjs `compact` | 6h |
+| c3d3bcd, 2aa3eef | stake views: pool rebuilt from the sale for older trades; no trade dropped when the stake changes | book `atStake`; page `booksApi` | 6g |
+| 2fe6eb5 | **your sixth-review faults A and C** | series `restartAt`, `add`, `exactWindow`, `mrg`, `priceAt`, `_ext` | 6h |
+| 95c042a | HH30-5M, HH30-10M, HH15-5M | spec `HH_FAST`; signals block 5b | 6i |
+| 7abc863, 37a5793, d07c49e, bae3939 | website only: book table with rules, "counting since", compact strip, period selector | page.mjs; store `since` | — |
+| 3c62cfb | read-only study script (touches nothing the bot reads) | scripts/study-family.mjs | — |
+| 95b0a2d | HH-BREAK-4H clock book; `CLOCK` declaration; one-off migration of existing HH-BREAK buys with estimated 4-hour sales | spec `CLOCK`; book `advance`, `versionsFor`; migrate.mjs | 6j |
+| c780ef6 | eight any-age books (VOL ×4, RUG ×4); age group A0; evaluation from migration on | spec `VOL`, `RUG`, `ANY_AGE`, `ageGroupAny`; signals block 0; engine `onSwap` | 6k |
+
+**Things the implementer is least sure of — please attack these first**
+1. `exactWindow` (6h): is "continuous and a price standing at the start" now sufficient for every exact use, and does it wrongly refuse any window that is in fact fully known (e.g. a live coin with a covered feed and no trade for hours — the anchor case)?
+2. Compression (6h): merged entries hold lo / hi / first / last; `priceAt` answers "not known" inside a merged second. Any decision path that still reads `o[1]` of a merged entry as if it were the price at `o[0]`?
+3. RUG books (6k): the peak is the highest observed market cap, set by a single observation; arming is a fresh crossing. Can a decoder artefact, a quarantined state, or a first observation after a loss set a false peak or a false crossing? Is `prevOk` enough?
+4. VOL books (6k): `obsCovered` + `volSince` — is the 5-minute volume complete under compression, under a coin's own price breaks (`own`), and right after a pending restart?
+5. A0 (6k): `evaluate` now runs for coins under 8 hours. Does any pre-existing book, note, feature or SECOND-WAVE seed leak into A0, or does A0 state leak into A1 at the 8-hour boundary (one-entry flags are per age group)?
+6. Clock books and the migration (6j): `v.stall` now carries a tag; restored entries written by earlier versions have `stall: true/false` only. Any path where an old stored version is misread? Are the estimated exits ever read by a decision?
+7. Stake views (6g): display only — confirm nothing in `engine`, `signals` or `book.advance/observe` reads `mark`, `exit.pool`, `est` or the stake.
+8. Restart safety across all of the above: `coins.info.rug`, decisions for new families, `since:*` meta rows, HH-BREAK-4H rows.
+
 ## 6k. older-8 (21 Nov 2026, 21:15 UK) — eight any-age books at the owner's request, for the reviewer
 
 - `spec.mjs`: `AGE_YOUNG` (A0, migration to 8 h), `ageGroupAny`, `VOL`, `RUG`, `ANY_AGE`, `agesOf(family)`. `engine.onSwap` no longer returns under 8 hours; `evaluate` runs block 0 (VOL, RUG) for every age and leaves through `break older` when the coin is under 8 hours, so no existing book is evaluated there (tested).
