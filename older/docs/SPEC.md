@@ -1,4 +1,4 @@
-# Older-coin paper project — frozen specification `older-7`
+# Older-coin paper project — frozen specification `older-8`
 _20 Nov 2026 (UK). Paper only. Every number below is a constant in `src/spec.mjs`; changing one is a new spec version._
 _Agreed between the owner, ChatGPT (reviewer) and Claude (implementer). older-3 (20 Nov, afternoon) widens the scope to Solana-wide and records three rule amendments; the strategy definitions are otherwise those of older-2._
 
@@ -114,3 +114,23 @@ Rule, identical in form to HH-BREAK: price strictly above the high of the preced
 Evidence behind it (84 HH-BREAK buys, minute-bar replay, 21 Nov 16:35 UK): 74 of 84 open on the 40% stop; time to 2× for the seven that got there: 40, 56, 82, 144, 176, 287, 297 minutes; a 1- or 2-hour clock would have cut the book's result to about −0.1 / +0.3 SOL against +0.7 to +1.2 as it stood, a 4-hour clock about +1.0. One day, a handful of coins: not a tuned number.
 
 **Existing buys are carried into the new book (owner's request), once, at start-up** (`migrate.mjs`): a version that had stopped out before its 4-hour mark keeps its real result; a position younger than 4 hours is copied live and the engine runs its clock; a position past its 4-hour mark gets an **estimated** clock sale — price from the last one-minute bar close at or before the mark (no bar since the buy = unchanged), sold on the constant-product pool with the buy pool's k at that price, fee and transaction cost charged. Estimated sales carry `exit.est = true`, `exec: "estimated-minute-bar"` and are marked "est." and counted on the page. Limits: a minute close is not the state 0.7 s after the mark; the bar ratio is in USD; k is assumed unchanged. On a fresh database nothing is estimated.
+
+## older-8 (21 Nov 2026, 21:15 UK — owner's decisions): eight any-age books
+
+These books are evaluated **from migration on** — including the first 8 hours of a coin's life, a new age group **A0** used only by them — and in the four existing age groups. Every other book still starts at 8 hours. Migrated coins only (the feed sees the canonical PumpSwap pool and nothing before it), live observation only. One entry per family per coin per age group. Same fills, stops, exit policies and 24-hour limit as every book.
+
+| Family | Rule |
+|---|---|
+| VOL300K | USD volume of the exact observations in the last 5 minutes ≥ $300,000 |
+| VOL300K-UP | the same, and the price above the exact price 5 minutes ago |
+| VOL500K / VOL500K-UP | the same at $500,000 |
+| RUG450 | highest observed market cap ≥ $450,000, and the market cap freshly crosses down to 20% of that peak (80% below it): bought at the crossing |
+| RUG450-BOUNCE | armed by that crossing; follows the low; bought at the first fresh crossing up through 1.30 × the low, within 24 hours of arming |
+| RUG950 / RUG950-BOUNCE | the same with a $950,000 peak (the books nest: such a coin also qualifies for the 450 books, on one shared entry) |
+
+- **VOL band:** $40K–$2M at the buy (the owner's limit for these four; all other books $40K–$1M). The 5-minute window must be fully observed (no feed outage, no loss of the coin's data inside it), otherwise nothing is decided.
+- **RUG band:** $40K–$1M at the buy. A crossing or a bounce outside the band is not bought; a bounce spends the setup either way.
+- **Peak:** the highest market cap this program has observed for the coin. Peaks from before the coin was watched are unknown, so a coin that crashed earlier is not armed. The peak (once ≥ $450K) and an armed setup with its low are stored with the coin and survive a restart.
+- No time limit between peak and fall (the owner asked for none); `fall_s` (peak to crossing) and `wait_s` (arming to bounce) are recorded on each entry so slow bleeds and fast collapses can be separated afterwards. VOL entries record the 5-minute volume and the 5-minute price change.
+
+29 families: 21 × 4 age groups + 8 × 5 age groups = 124 book-ages × 5 stops × 2 exit policies = **1,240 comparisons**.

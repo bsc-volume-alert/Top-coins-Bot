@@ -1,5 +1,5 @@
 // report.mjs — result rows (family × age group × stop × exit policy) and the shared-entry overlap, from stored entries.
-// families × 4 ages × 5 stops pure-trailing rows, and the same under the scale-out policy (21 families → 420 + 420 = 840 comparisons).
+// families × 4 ages × 5 stops pure-trailing rows, and the same under the scale-out policy (21 families × 4 ages + 8 any-age families × 5 ages → 620 + 620 = 1,240 comparisons).
 // Results are after costs (pool fees, impact, declared transaction cost). Returns are per entry on COST (stake + buy transaction).
 import * as S from "./spec.mjs";
 import { versionsFor, COST } from "./book.mjs";
@@ -10,7 +10,7 @@ const sum = (a) => a.reduce((s, x) => s + x, 0);
 
 export function bookRows(entries, noteCounts = []) {
   const rows = new Map();
-  for (const policy of S.POLICIES) for (const f of S.FAMILIES) for (const [ag] of S.AGES) for (const stop of S.STOPS)
+  for (const policy of S.POLICIES) for (const f of S.FAMILIES) for (const [ag] of S.agesOf(f)) for (const stop of S.STOPS)
     rows.set(`${f}|${ag}|${stop}|${policy}`, { family: f, ag, stop, policy, entries: 0, cancelled: 0, pending: 0, filled: 0, open: 0, closed: 0, unresolved: 0, mints: new Set(), trades: [], holds: [], delays: [], runners: { n: 0, partial: 0, x2: 0, x3: 0, x5: 0, x10: 0 }, outage: 0, feeAssumed: 0, halves: 0, startup: 0, startupNet: 0 });
   for (const e of entries) for (const f of e.families) for (const policy of S.POLICIES) for (const v of versionsFor(e, f, policy)) {
     const r = rows.get(`${f}|${e.ag}|${v.stop}|${policy}`); if (!r) continue;

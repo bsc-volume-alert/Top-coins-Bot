@@ -9,7 +9,7 @@ import { newCoin, evaluate } from "./signals.mjs";
 import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount } from "./book.mjs";
 import { liquidityUsd, staticImpact } from "./fills.mjs";
 
-const POLLED_UNSUPPORTED = new Set(["HH-BREAK", "HH-BREAK-4H", ...S.HH_FAST.map((x) => x[0])]), NEVER = () => false;
+const POLLED_UNSUPPORTED = new Set(["HH-BREAK", "HH-BREAK-4H", ...S.HH_FAST.map((x) => x[0]), ...S.ANY_AGE]), NEVER = () => false;
 export class Engine {
   constructor({ store = null, solUsd = () => null, needCreation = () => {}, onFill = () => {}, onEntry = () => {}, log = () => {}, firstStart = null } = {}) {
     this.cov = new Coverage(); this.feedCov = new Coverage(); /* feed + restarts only: what pool-state trust and exit flags depend on */ this.coins = new Map(); this.entries = new Map(); this.byMint = new Map();
@@ -101,8 +101,8 @@ export class Engine {
     (this.dirtyBars.get(ev.mint) || this.dirtyBars.set(ev.mint, new Set()).get(ev.mint)).add(Math.floor(ev.t / 60));
     if (ev.replay) { this.stats.replayed++; return; }
     if (!c.createTs) { this.stats.noCreation++; this.needCreation(ev.mint); return; }
-    const age = ev.t - c.createTs; if (age < S.MIN_AGE_S) return; if (!S.ageGroupOf(age)) { this.stats.tooOld++; return; }
-    this.stats.evals++;
+    const age = ev.t - c.createTs; if (!S.ageGroupAny(age)) { if (age >= S.MIN_AGE_S) this.stats.tooOld++; return; } // from migration on: the first 8 hours are evaluated for the any-age books only (signals.mjs)
+    this.stats.evals++; if (age < S.MIN_AGE_S) this.stats.evalsYoung = (this.stats.evalsYoung || 0) + 1;
     const o = { t: ev.t, px, mc: px * c.supply, liqUsd: liquidityUsd(st, su), rtImpact: staticImpact(st) };
     this._decide(c, ev.mint, o, {}, { trigger: { t: ev.t, block_ts: ev.blockTs ?? null, sig: ev.sig ?? null, slot: ev.slot ?? null, kind: ev.kind ?? null, px_usd: px, sol_usd: su, base: st.base, quote_eff: st.quote, fee_buy: st.feeBuy, fee_sell: st.feeSell, supply: c.supply, age_s: Math.round(age), coverage: "covered" } },
       { pop: c.info.population || "pumpswap-canonical", mode: "live", exec: "reconstructed-pool-state", valuation: "pool price × on-chain base supply (from the swap event)", age_basis: c.info.create_src || "token creation (source not recorded)", state_approx: st.approx ?? null });
@@ -114,6 +114,7 @@ export class Engine {
     // risk checks only stop entries whose EXECUTION assumption is unsupported (known transfer restrictions); they are not a quality filter
     if (c.info.risk?.status === "restricted") { if (!c.riskNoted) { c.riskNoted = true; this.stats.riskBlocked++; this.store?.saveNote(mint, { ag: null, family: "*", t: o.t, reason: "not evaluated for entry: token transfer restrictions make the execution assumption unsupported", detail: { risk: c.info.risk } }); } return null; }
     const r = evaluate(c, o, opts);
+    if (c.rug?.save) { c.rug.save = false; c.info.rug = { pk: c.rug.pk, arm: c.rug.arm }; this.store?.saveCoin(mint, { info: c.info }); } // the peak and an armed rug setup survive a restart
     for (const n of r.notes) { this.stats.notes++; this.store?.saveNote(mint, n); }
     if (!r.cands.length) return null;
     this.stats.cands += r.cands.length;

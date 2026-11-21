@@ -1,7 +1,7 @@
 // spec.mjs — the FROZEN rule constants for the older-coin paper project (older-1, 20 Nov 2026 UK).
 // Every number a rule depends on lives here and nowhere else. Changing one is a new spec version (SPEC_VER), never a silent edit.
 // The written specification that matches this code: older/docs/SPEC.md.
-export const SPEC_VER = "older-7"; // 21 Nov 2026 16:40 UK: + HH-BREAK-4H (owner's decision: HH-BREAK's buys, sold at 4 hours if still open; 21 families, 840 rows; the existing HH-BREAK buys are carried into it, sales past 4 h estimated from minute bars and marked). Previous: older-6 // 21 Nov 2026 16:00 UK: + HH30-5M, HH30-10M, HH15-5M (owner's decision: faster volume breakouts, no dollar floor; 20 families, 800 comparison rows). Previous: older-5 // 21 Nov 2026 (afternoon): + a 60% trailing stop (owner's decision; 5 stops, 680 comparison rows) and website-only stake views. Previous: older-4 // 21 Nov 2026: + FAST-10M, FAST-30M, FAST150-10M (owner's decision: fill the gap between the 5-minute and the 4-hour books); SECOND-WAVE seeds unchanged (1/3/5-minute doubles only). Previous: older-3 // 20 Nov 2026 pm: Solana-wide scope (launchpad/exchange-neutral), HH-BREAK completed-minute windows, SECOND-WAVE across age boundaries. Previous: older-2 // 20 Nov 2026: + FAST, FAST150, SECOND-WAVE, scale-out policy, 90-day ceiling, scheduled-time fills (owner + ChatGPT consensus round)
+export const SPEC_VER = "older-8"; // 21 Nov 2026 21:15 UK: + eight any-age books (owner's decision): VOL300K / VOL500K (5-minute volume, with and without a price-up condition, $40K–$2M) and RUG450 / RUG950 (80% below a peak, bought at the level and on a 30% bounce); evaluated from migration on, incl. the first 8 hours (age group A0). 29 families, 1,240 rows. Previous: older-7 // 21 Nov 2026 16:40 UK: + HH-BREAK-4H (owner's decision: HH-BREAK's buys, sold at 4 hours if still open; 21 families, 840 rows; the existing HH-BREAK buys are carried into it, sales past 4 h estimated from minute bars and marked). Previous: older-6 // 21 Nov 2026 16:00 UK: + HH30-5M, HH30-10M, HH15-5M (owner's decision: faster volume breakouts, no dollar floor; 20 families, 800 comparison rows). Previous: older-5 // 21 Nov 2026 (afternoon): + a 60% trailing stop (owner's decision; 5 stops, 680 comparison rows) and website-only stake views. Previous: older-4 // 21 Nov 2026: + FAST-10M, FAST-30M, FAST150-10M (owner's decision: fill the gap between the 5-minute and the 4-hour books); SECOND-WAVE seeds unchanged (1/3/5-minute doubles only). Previous: older-3 // 20 Nov 2026 pm: Solana-wide scope (launchpad/exchange-neutral), HH-BREAK completed-minute windows, SECOND-WAVE across age boundaries. Previous: older-2 // 20 Nov 2026: + FAST, FAST150, SECOND-WAVE, scale-out policy, 90-day ceiling, scheduled-time fills (owner + ChatGPT consensus round)
 
 export const STAKE_SOL = 0.2;                 // paper stake per entry
 export const TX_COST_SOL = 0.0005;            // declared network/priority cost per transaction side (assumption, not measured for this project)
@@ -12,6 +12,9 @@ export const MIN_AGE_S = 8 * 3600;            // since TOKEN creation (not pool 
 export const AGES = [["A1", 8 * 3600, 16 * 3600], ["A2", 16 * 3600, 24 * 3600], ["A3", 24 * 3600, 36 * 3600], ["A4", 36 * 3600, 90 * 86400]];
 export const ageGroupOf = (ageS) => { for (const [id, a, b] of AGES) if (ageS >= a && ageS < b) return id; return null; };
 export const ageStartOf = (id) => AGES.find((g) => g[0] === id)[1];
+// A0 = from migration to 8 hours old. Only the ANY-AGE books (older-8) are evaluated there; every other book still starts at 8 h.
+export const AGE_YOUNG = ["A0", 0, MIN_AGE_S], ALL_AGES = [AGE_YOUNG, ...AGES];
+export const ageGroupAny = (ageS) => (ageS >= 0 && ageS < MIN_AGE_S ? "A0" : ageGroupOf(ageS));
 
 export const STOPS = [0.20, 0.25, 0.30, 0.40, 0.60]; // trailing stops on after-cost liquidation value (60% added in older-5)
 // STAKE VIEWS (website only, never a decision input): the page can re-price every pool-priced trade at these stakes from the pool
@@ -23,9 +26,26 @@ export const SELL_DELAY_MS = 700;             // sell scheduled 0.7 s after an e
 export const BUY_PRICING_TIMEOUT_S = 5;       // no trustworthy pool state within 5 s after the scheduled buy → pricing/data timeout, entry cancelled (NOT "untradeable")
 export const SELL_UNRESOLVED_S = 24 * 3600;   // a triggered sale that cannot be priced for 24 h is shown as unresolved exposure (never silently closed)
 
-// Families. 21 families × 4 ages × 5 stops = 420 pure-trailing rows; × 2 exit policies = 840 comparisons.
+// Families. 21 families × 4 ages + 8 any-age families × 5 ages = 124 book-ages; × 5 stops × 2 exit policies = 1,240 comparisons.
 export const FAMILIES = ["AGE-DOUBLE", "LOW4H", "CONT", "SLOW-BUILD", "HH-BREAK", "CONT-STALL", "LOW4H-LIQ25K",
-  "FAST-1M", "FAST-3M", "FAST-5M", "FAST-10M", "FAST-30M", "FAST150-1M", "FAST150-3M", "FAST150-5M", "FAST150-10M", "SECOND-WAVE", "HH30-5M", "HH30-10M", "HH15-5M", "HH-BREAK-4H"];
+  "FAST-1M", "FAST-3M", "FAST-5M", "FAST-10M", "FAST-30M", "FAST150-1M", "FAST150-3M", "FAST150-5M", "FAST150-10M", "SECOND-WAVE", "HH30-5M", "HH30-10M", "HH15-5M", "HH-BREAK-4H",
+  "VOL300K", "VOL300K-UP", "VOL500K", "VOL500K-UP", "RUG450", "RUG450-BOUNCE", "RUG950", "RUG950-BOUNCE"];
+// ANY-AGE BOOKS (older-8, owner's decisions 21 Nov 2026 21:11 UK). Migrated coins only (this feed sees nothing else), any age after
+// migration: the first 8 hours (A0) and the four age groups. One entry per family per coin per age group, as everywhere.
+// VOL: USD volume over the last VOL_WIN_S seconds (exact observations, rolling) ≥ the threshold; the -UP version also needs the
+//      price above the exact price VOL_WIN_S ago. Market cap $40K–$2M at the buy (the owner's upper limit for these books).
+// [family, threshold USD, needs price up]
+export const VOL = [["VOL300K", 300_000, false], ["VOL300K-UP", 300_000, true], ["VOL500K", 500_000, false], ["VOL500K-UP", 500_000, true]];
+export const VOL_WIN_S = 300, VOL_BAND_HI_USD = 2_000_000;
+// RUG: the coin's highest observed market cap ≥ the peak threshold, and the market cap FRESHLY crosses down to (1 − RUG_FALL) × that
+//      peak. "knife" buys at that crossing. "bounce" is armed by it, follows the low, and buys at the first fresh crossing up
+//      through RUG_BOUNCE_X × the low within RUG_BOUNCE_EXPIRE_S. Usual band ($40K–$1M) at the buy. The books nest: a $950K peak
+//      also qualifies for the $450K books.
+// [family, peak threshold USD, kind]
+export const RUG = [["RUG450", 450_000, "knife"], ["RUG450-BOUNCE", 450_000, "bounce"], ["RUG950", 950_000, "knife"], ["RUG950-BOUNCE", 950_000, "bounce"]];
+export const RUG_FALL = 0.80, RUG_BOUNCE_X = 1.30, RUG_BOUNCE_EXPIRE_S = 24 * 3600, RUG_MIN_PEAK_USD = 450_000;
+export const ANY_AGE = new Set([...VOL.map((x) => x[0]), ...RUG.map((x) => x[0])]);
+export const agesOf = (family) => (ANY_AGE.has(family) ? ALL_AGES : AGES);
 export const POLICIES = ["trail", "scale"];   // trail = the original pure trailing stop; scale = sell half at 2× cost, trail the rest
 export const SCALE_AT_X = 2, SCALE_FRACTION = 0.5;
 // FAST: fresh crossing of X × the lowest pool spot price in the preceding window (receive-time clock, exact observations)

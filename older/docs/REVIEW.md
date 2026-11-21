@@ -222,6 +222,16 @@ Verdict received: **not ready**; two reproducible faults (A, C), one reporting d
 
 **Declared consequence of A(2):** after a restart, a reconnection or a loss, a coin's FAST windows begin at its first observed price, not at the moment the feed came up. A coin whose first observed trades are themselves the double is not entered by the seconds-scale books for that move.
 
+## 6k. older-8 (21 Nov 2026, 21:15 UK) — eight any-age books at the owner's request, for the reviewer
+
+- `spec.mjs`: `AGE_YOUNG` (A0, migration to 8 h), `ageGroupAny`, `VOL`, `RUG`, `ANY_AGE`, `agesOf(family)`. `engine.onSwap` no longer returns under 8 hours; `evaluate` runs block 0 (VOL, RUG) for every age and leaves through `break older` when the coin is under 8 hours, so no existing book is evaluated there (tested).
+- VOL (signals 0a): `obsCovered(t − 300, t)` required; volume = `Series.volSince` over exact observations (compression sums volume, so it is complete); `-UP` needs `priceAt(t − 300, exact)` and a higher price now; band $40K–$2M.
+- RUG (signals 0b): running peak of observed market cap; arming and knife entry on a fresh crossing (`prevOk`) down through 20% of the peak; bounce on a fresh crossing up through 1.3 × the low since arming, within 24 h; setup spent by the bounce. Peak (≥ $450K, on 10% steps) and armed setup persisted in `coins.info.rug` by the engine after `evaluate`.
+- Not evaluated for sampled tokens (`POLLED_UNSUPPORTED`). Report rows: `agesOf(family)`.
+- Tests: test/anyage.test.mjs (thresholds, -UP, band, feed gap inside the volume window, 8 h+ coin, knife, nesting, bounce, spent setup, gap during the fall, small peak, restart persistence, out-of-band, expiry, row counts). 124 tests.
+
+**Known limits, declared:** a single extreme print sets the peak (it is a real pool price, but one trade can arm a setup); there is no minimum time or volume between peak and fall; the VOL books have no direction condition unless the `-UP` variant is read.
+
 ## 6j. older-7 (21 Nov 2026, 16:40 UK) — HH-BREAK-4H at the owner's request, for the reviewer
 
 - `spec.mjs CLOCK`: clock books declared in one place — `CONT-STALL` (base CONT, tag `true`, 60 min, minPeak 1.15, reason "stall": behaviour unchanged, existing tests untouched) and `HH-BREAK-4H` (base HH-BREAK, tag `"4h"`, 4 h, unconditional, reason "clock"). `v.stall` now carries the tag; `versionsFor` matches on `clockTag(family)`; `advance` reads the clock from the tag.

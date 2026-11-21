@@ -198,6 +198,8 @@ export class Series {
     return { vol_usd: Math.round(vol), buys, sells, buyers: by.size, top_buyer_share: buyVol > 0 && by.size ? +(top / buyVol).toFixed(4) : null, ...(compressed ? { compressed: true } : {}) };
   }
   /** exact USD volume in (x, t] from raw observations */
+  /** USD volume of the exact observations after x (walks back from the newest: cheap on a busy coin) */
+  volSince(x) { let v = 0; for (let i = this.raw.length - 1; i >= 0 && this.raw[i][0] > x; i--) v += this.raw[i][2]; return v; }
   volIn(x, t) { let v = 0; for (const [ts, , vol] of this.raw) if (ts > x && ts <= t) v += vol; return v; }
   /** was the WHOLE of minute m observed exactly? (exact observations already running at its start, and no outage inside it) */
   liveComplete(m) { return this.continuous(m * 60, m * 60 + 60); } // the same continuity test as everything else: outages, the coin's own breaks (quarantine), loss of its data

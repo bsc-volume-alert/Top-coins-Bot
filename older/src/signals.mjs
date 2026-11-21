@@ -43,7 +43,8 @@ export function features(coin, o, low, hi1h, p15) {
 export function evaluate(coin, o, opts = {}) {
   const skip = opts.skip || NONE; // families the observation mode cannot support (recorded by the caller, never silently entered)
   const out = { cands: [], notes: [] }, sr = coin.series, t = o.t;
-  const ag = S.ageGroupOf(t - coin.createTs); if (!ag) return out;
+  const ag = S.ageGroupAny(t - coin.createTs); if (!ag) return out;
+  const young = ag === "A0"; // migration to 8 hours old: only the any-age books are evaluated
   const g = grp(coin, ag), inBand = o.mc >= S.BAND_LO_USD && o.mc <= S.BAND_HI_USD;
   const note = (family, reason, detail = {}, once = true) => { const k = family + "|" + reason; if (once && g.logged[k]) return; g.logged[k] = 1; out.notes.push({ family, ag, t, reason, detail }); };
   // the previous observation counts for a "fresh crossing" only if nothing between it and now is unknown
@@ -52,6 +53,41 @@ export function evaluate(coin, o, opts = {}) {
   const cand = (family, detail) => { g.done[family] = 1; out.cands.push({ family, ag, t, mc: o.mc, px: o.px, detail }); };
   const prevRec = sr.prevT !== null ? { t: sr.prevT, px: sr.prevPx, covered_to_now: prevOk } : null;
 
+  // 0. ANY-AGE BOOKS (older-8) — evaluated from migration on. See spec VOL / RUG.
+  // 0a. VOL300K / VOL500K (± price up): rolling 5-minute USD volume from exact observations. The window must be fully observed
+  //     (a feed outage or a loss of this coin's data inside it would understate the volume, so nothing is decided over one).
+  { const todo = S.VOL.filter(([f]) => !g.done[f] && !skip.has(f));
+    if (todo.length && o.mc >= S.BAND_LO_USD && o.mc <= S.VOL_BAND_HI_USD) {
+      if (!sr.obsCovered(t - S.VOL_WIN_S, t)) note(todo[0][0], "window not covered");
+      else { const v5 = sr.volSince(t - S.VOL_WIN_S);
+        if (v5 >= Math.min(...todo.map((x) => x[1]))) { const p5 = sr.priceAt(t - S.VOL_WIN_S, true);
+          for (const [family, X, up] of todo) { if (v5 < X) continue; if (up && !(p5 && o.px > p5.px)) continue;
+            cand(family, { vol5_usd: Math.round(v5), threshold_usd: X, vol_window_s: S.VOL_WIN_S, px_5m_ago: p5 ? p5.px : null, change_5m: p5 ? +(o.px / p5.px - 1).toFixed(4) : null }); } } } } }
+  // 0b. RUG450 / RUG950 (knife, bounce): the highest market cap this program has OBSERVED for the coin is its peak (kept across
+  //     restarts once it matters). Arming = a fresh crossing down to 20% of that peak. Peaks from before the coin was watched
+  //     are unknown, so a coin that crashed earlier is simply not armed.
+  { const rg = (coin.rug ??= coin.info?.rug ? { pk: coin.info.rug.pk ?? null, arm: coin.info.rug.arm ?? null, saved: coin.info.rug.pk?.mc ?? 0 } : { pk: null, arm: null, saved: 0 });
+    const prevMc = sr.prevPx != null ? sr.prevPx * coin.supply : null, inRug = (f) => !g.done[f] && !skip.has(f);
+    if (!rg.pk || o.mc > rg.pk.mc) { rg.pk = { mc: o.mc, t }; if (o.mc >= S.RUG_MIN_PEAK_USD && o.mc >= rg.saved * 1.1) { rg.saved = o.mc; rg.save = true; } }
+    else {
+      const line = rg.pk.mc * (1 - S.RUG_FALL);
+      if (rg.pk.mc >= S.RUG_MIN_PEAK_USD && prevOk && prevMc > line && o.mc <= line) { // armed (again): the bounce books follow the low from here
+        rg.arm = { t, peak: rg.pk.mc, peak_t: rg.pk.t, low: o.mc, low_t: t, saved_low: o.mc }; rg.save = true;
+        for (const [family, P, kind] of S.RUG) if (kind === "knife" && rg.arm.peak >= P && inRug(family) && inBand)
+          cand(family, { peak_mc: Math.round(rg.pk.mc), peak_t: rg.pk.t, line_mc: Math.round(line), fall: +(1 - o.mc / rg.pk.mc).toFixed(4), fall_s: Math.round(t - rg.pk.t) });
+      } else if (rg.arm) {
+        if (t - rg.arm.t > S.RUG_BOUNCE_EXPIRE_S) { rg.arm = null; rg.save = true; }
+        else if (o.mc < rg.arm.low) { rg.arm.low = o.mc; rg.arm.low_t = t; if (!(o.mc > (rg.arm.saved_low ?? Infinity) * 0.9)) { rg.arm.saved_low = o.mc; rg.save = true; } } // a new low is stored each time it is 10% under the last stored one
+        else { const up = rg.arm.low * S.RUG_BOUNCE_X;
+          if (prevOk && prevMc < up && o.mc >= up) { // the bounce happened: bought if in the band, and the setup is spent either way
+            for (const [family, P, kind] of S.RUG) if (kind === "bounce" && rg.arm.peak >= P && inRug(family) && inBand)
+              cand(family, { peak_mc: Math.round(rg.arm.peak), peak_t: rg.arm.peak_t, armed_t: rg.arm.t, low_mc: Math.round(rg.arm.low), low_t: rg.arm.low_t, bounce: +(o.mc / rg.arm.low - 1).toFixed(4), from_peak: +(1 - o.mc / rg.arm.peak).toFixed(4), fall_s: Math.round(rg.arm.t - rg.arm.peak_t), wait_s: Math.round(t - rg.arm.t) });
+            rg.arm = null; rg.save = true; } }
+      }
+    } }
+
+  let low = null, hi1h = null, p15 = null; // shared by the books below and by the measurements at the end
+  older: { if (young) break older; // every book below starts at 8 hours old
   // 1. AGE-DOUBLE — first fresh crossing of 2 × the market cap at the age-group start
   if (!g.done["AGE-DOUBLE"]) {
     if (!g.ref || g.ref.status !== "OK") { g.ref = ageRef(coin, ag); if (g.ref.status !== "OK") note("AGE-DOUBLE", "reference_status=MISSING", g.ref); } // re-tried while missing (a later back-fill may supply it); logged once
@@ -62,7 +98,6 @@ export function evaluate(coin, o, opts = {}) {
   }
 
   // 2. LOW4H (+ 4. SLOW-BUILD and 7. LOW4H-LIQ25K on LOW4H's first eligible candidate)
-  let low = null;
   if (!g.done["LOW4H"]) {
     if (!sr.covered(t - S.LOW4H_WIN_S, t)) note("LOW4H", "insufficient 4 h history");
     else {
@@ -96,7 +131,6 @@ export function evaluate(coin, o, opts = {}) {
   }
 
   // 3. CONT (+ 6. CONT-STALL shares its entry) — first eligible observation; not a crossing
-  let hi1h = null, p15 = null;
   if (!g.done["CONT"]) {
     if (!sr.covered(t - S.CONT_HI_WIN_S, t)) note("CONT", "insufficient 1 h history");
     else {
@@ -181,6 +215,8 @@ export function evaluate(coin, o, opts = {}) {
       else { coin.sw = null; cand("SECOND-WAVE", d); }
     }
   }
+
+  } // end of the 8-hours-and-older books
 
   if (out.cands.length) {
     // evidence stored ONCE per entry: the previous observation that established the fresh crossing, and — for the short-window
