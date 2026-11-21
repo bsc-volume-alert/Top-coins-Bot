@@ -8,20 +8,20 @@ import * as S from "./spec.mjs";
 import { versionsFor, atStake, COST } from "./book.mjs";
 
 export const RULES = {
-  "AGE-DOUBLE": "market cap freshly crosses 2× what it was at the start of the coin's age group (8 / 16 / 24 / 36 h)",
-  "LOW4H": "price freshly crosses 2× its lowest of the last 4 hours — no pullback needed",
+  "AGE-DOUBLE": "market cap crosses 2× what it was at the start of the coin's age group (8 / 16 / 24 / 36 hours old)",
+  "LOW4H": "price crosses 2× its lowest of the last 4 hours",
   "CONT": "price 30%+ above 15 minutes ago and within 5% of its 1-hour high",
-  "SLOW-BUILD": "LOW4H's first doubling, only if it took 30+ minutes from the low with no single 1-minute candle above +20%",
+  "SLOW-BUILD": "price crosses 2× its 4-hour low, only if the climb took 30+ minutes with no single 1-minute candle above +20%",
   "HH-BREAK": "new 60-minute high with the last 15 completed minutes' volume at 2× the 4-hour norm",
   "HH30-5M": "new 30-minute high with the last 5 completed minutes' volume at 2× the 2-hour norm",
   "HH30-10M": "new 30-minute high with the last 10 completed minutes' volume at 2× the 2-hour norm",
   "HH15-5M": "new 15-minute high with the last 5 completed minutes' volume at 2× the 1-hour norm",
-  "CONT-STALL": "CONT's buys, closed at 60 minutes if the position never reached 1.15× cost",
-  "LOW4H-LIQ25K": "LOW4H's first doubling, only with $25K+ pool liquidity and small price impact",
+  "CONT-STALL": "the same buys as CONT, but sold at 60 minutes if the position never reached 1.15×",
+  "LOW4H-LIQ25K": "price crosses 2× its 4-hour low, only with $25K+ pool liquidity and under 5% price impact in and out",
   "FAST-1M": "price doubles inside 1 minute", "FAST-3M": "price doubles inside 3 minutes", "FAST-5M": "price doubles inside 5 minutes",
   "FAST-10M": "price doubles inside 10 minutes", "FAST-30M": "price doubles inside 30 minutes",
   "FAST150-1M": "price up 1.5× inside 1 minute", "FAST150-3M": "price up 1.5× inside 3 minutes", "FAST150-5M": "price up 1.5× inside 5 minutes", "FAST150-10M": "price up 1.5× inside 10 minutes",
-  "SECOND-WAVE": "after a fast double: falls 25%+ from its high, then breaks above that high within 60 minutes",
+  "SECOND-WAVE": "after a 1, 3 or 5-minute double: price falls 25%+ from its high, then breaks above that high within 60 minutes",
 };
 
 /** every trade of every family under one stop / policy (+ optional age group and population) — the page computes the windows.
@@ -114,7 +114,8 @@ function draw(j){
  var keys=j.order.slice().sort(function(a,b){var pa=B[a].tot.n?B[a].tot.net:null,pb=B[b].tot.n?B[b].tot.net:null;if(pa==null&&pb==null)return B[b].all.length-B[a].all.length;if(pa==null)return 1;if(pb==null)return -1;return pb-pa});
  var pol=j.policy==='scale'?'half sold at 2×, rest trailed':'pure trailing stop';
  document.getElementById('sub').textContent='spec '+j.spec+' · '+Math.round(j.stop*100)+'% stop · '+pol+' · stake '+SK+(j.ag?' · age group '+j.ag:'')+(j.pop?' · '+(j.pop==='solana-wide'?'rest of Solana (sampled)':'pump.fun (live)'):'')+' · updated '+HM(j.at)+' UK';
- document.getElementById('rank').innerHTML='<div class="rank"><b>Every book · total profit so far · '+(VIEW?'re-priced at '+SK+' a trade':'simulated fills at 0.2 SOL')+' · most profitable first</b>'+keys.map(function(k,i){var b=B[k];return '<span>'+(i+1)+'. <b>'+k+'</b> <span class="'+(b.tot.net>0?'up':b.tot.net<0?'dn':'mut')+'">'+(b.tot.n?sl(b.tot.net):'—')+'</span> <span class="mut">('+b.tot.n+')</span>'+(b.h6.n?' <span class="mut">6h</span> <span class="'+(b.h6.net>0?'up':'dn')+'">'+sl(b.h6.net)+'</span>':'')+'</span>'}).join('')+'</div><div class="mut" style="font-size:12px;margin-top:4px">ranked by total profit in SOL on closed trades, most profitable book first · inside each book the newest trade is first · the same coin and buy can sit in several books</div>';
+ var num=function(o){return o.n?'<span class="'+(o.net>0?'up':o.net<0?'dn':'mut')+'">'+sl(o.net)+'</span> <span class="mut">('+o.n+')</span>':'<span class="mut">—</span>'};
+ document.getElementById('rank').innerHTML='<b>Every book and what it buys · '+(VIEW?'re-priced at '+SK+' a trade':'simulated fills at 0.2 SOL')+' · most profitable first</b><div class="tbl" style="margin-top:6px"><table><thead><tr><th>#</th><th>book</th><th>buys when</th><th>total</th><th>last 6 h</th><th>last 24 h</th><th>open</th></tr></thead><tbody>'+keys.map(function(k,i){var b=B[k];return '<tr><td class="mut">'+(i+1)+'</td><td><a class="coin" href="#bk-'+k+'"><b>'+k+'</b></a></td><td style="white-space:normal;min-width:260px">'+esc(j.rules[k]||'')+'</td><td>'+num(b.tot)+'</td><td>'+num(b.h6)+'</td><td>'+num(b.h24)+'</td><td class="mut">'+b.open.length+'</td></tr>'}).join('')+'</tbody></table></div><div class="mut" style="font-size:12px;margin-top:6px">every book also follows the shared rules: coins 8 hours to 90 days old, $40K–$1M market cap at the buy, bought 1 s after the rule fires, sold by the selected trailing stop (or at 24 hours), one buy per coin per age group · profit in SOL on closed trades, number of trades in brackets · tap a book to jump to its trades · the same coin and buy can sit in several books</div>';
  var sz=document.getElementById('size');
  if(VIEW){sz.style.display='';sz.innerHTML='<b style="color:var(--amb)">Stake view: '+SK+' a trade.</b> <span class="mut">Each trade is re-priced on the pool sizes saved at its own buy and sale, so the extra price impact of a bigger trade is included — the result is <b>not</b> the 0.2 SOL profit multiplied up. It uses the same buy and sell moments as the 0.2 SOL paper trade: a real '+SK+' position would hit its stop slightly earlier, and nobody can know how other traders would have reacted to a bigger buy. It is on the <b>cautious</b> side: it assumes the price falls straight back after your buy, as if you had never bought. Treat it as an estimate. The "high" column is still the 0.2 SOL multiple. <b>'+PRICED+'</b> closed book entries, the same ones at every stake'+(EST?' · <b>'+EST+'</b> are older trades whose pool size at the sale was not saved and is worked out from the sale itself (a rougher estimate)':'')+(UNS?' · <b>'+UNS+'</b> could not be re-priced (coins priced through Jupiter quotes): they keep their 0.2 SOL percentage result, with no extra price impact taken off, so they look slightly better than they would be':'')+'.</span>'}
  else sz.style.display='none';
@@ -130,7 +131,7 @@ function draw(j){
   var rows=b.done.filter(function(t){return FIND?hit(t):t.fill_t>=now-86400}).sort(function(x,y){return y.fill_t-x.fill_t}).slice(0,120);
   var recent=rows.length?'<div class="lab" style="margin-top:8px">'+(FIND?'this coin · all dates':'last 24 hours')+' · '+rows.length+' trades · newest first</div><div class="tbl scroll"><table><thead><tr><th>coin</th><th>bought → sold</th><th>bought at (market cap)</th><th>result</th><th>high</th><th>buy → sell</th><th>timing</th></tr></thead><tbody>'+rows.map(function(t){var x=1+t.ret;return '<tr><td>'+coin(t)+' '+how(t)+'</td><td style="white-space:nowrap">'+DT(t.fill_t)+(t.exit_t?' <span class="mut">→</span> '+HM(t.exit_t):'')+'</td><td style="white-space:nowrap"><b>$'+t.mc.toLocaleString('en-GB')+'</b></td><td style="white-space:nowrap"><span class="pill '+(t.ret>0?'win':'loss')+'">'+pc(t.ret)+'</span> <span class="mut">'+sl(t.net)+'</span></td><td class="'+((t.hi||1)>=1.5?'up':'')+'"><b>'+(t.hi!=null?t.hi.toFixed(2)+'x':'—')+'</b></td><td>1.000x <span class="mut">→</span> '+x.toFixed(3)+'x <span class="mut">'+esc(t.reason||'')+(t.half!=null?' · half at '+t.half.toFixed(2)+'x':'')+'</span></td><td class="mut">'+(t.buy_delay!=null?'buy +'+(1+t.buy_delay).toFixed(1)+' s':'')+(t.sell_delay!=null?' · sold '+(0.7+t.sell_delay).toFixed(1)+' s after trigger':'')+(t.hold_s!=null?' · held '+(t.hold_s<3600?Math.round(t.hold_s/60)+' min':(t.hold_s/3600).toFixed(1)+' h'):'')+'</td></tr>'}).join('')+'</tbody></table></div>':'<div class="small mut" style="margin-top:6px">no closed trades in the last 24 hours</div>';
   var nf=b.other.length?'<div class="small mut" style="margin-top:6px">not filled / unresolved: '+b.other.slice(-4).map(function(t){return esc(t.sym||t.mint.slice(0,6))+' ('+esc(t.status)+(t.why?': '+esc(t.why).slice(0,70):'')+')'}).join(' · ')+'</div>':'';
-  h+='<div class="card">'+head+stats+open+recent+nf+'</div>'});
+  h+='<div class="card" id="bk-'+k+'" style="scroll-margin-top:150px">'+head+stats+open+recent+nf+'</div>'});
  document.getElementById('books').innerHTML=h;
  document.getElementById('foot').textContent='older-coins paper project · '+j.spec+' · full '+(j.rows_total||j.order.length*40)+'-row table at /table';
 }
