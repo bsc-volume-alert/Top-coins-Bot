@@ -122,3 +122,15 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 - Reserve chain: 1,456,242 ok; 1,043 base breaks; 193 quote breaks; 4,443 dust. Boost/deposit states quarantined: 2,481.
 - GMGN free plan: 940 of 3,481 calls rate-limited; outages repaired for 210 coin-gaps, not repaired for 1,016.
 - Book totals at the 25% stop since the first start (includes trades from the faulty versions): CONT 34 entries / 21 closed +0.87 SOL; CONT-STALL +0.73; FAST150-5M +0.26; FAST-5M +0.24; FAST150-1M +0.23; FAST-3M +0.13; FAST150-3M 0.00; LOW4H −0.06; AGE-DOUBLE −0.06; FAST-1M −0.12; SECOND-WAVE −0.13.
+
+## 21 Nov 2026, 05:55 UK — early-morning check, 10 h 10 min untouched on d8eb842
+- Up all night, no crash, no reconnect since 01:42 (three in total). 97 entries since 19:45 (ids 49–145), 129 book positions open.
+- **All fourteen families have now traded.** HH-BREAK 13 entries (3 closed), LOW4H 5, SLOW-BUILD 3, LOW4H-LIQ25K 1, AGE-DOUBLE 4.
+- **Entry-level result since 19:45 at the 25% stop, each buy once: about +107 points over 58 closed (18 winners) ≈ +0.21 SOL.** It was −104 points at 01:55; the swing is two coins: GKFSuS (FAST150-5M at 02:53 +187%, peak 8.93×; FAST150-1M/3M +109%; FAST-5M +13%; FAST-3M +5%) and uHMWNF (HH-BREAK +108%, LOW4H group +39%). Without those two coins the night is about −350 points. Since 01:55 alone: 25% stop 22 closed, 8 winners, +211 points; 30% stop 20 closed, 8 winners, +278 points.
+- Book totals at the 25% stop since the first start (old-code trades included): CONT 45 entries / 29 closed +0.56 SOL (was +0.87 at 01:55); CONT-STALL +0.44; FAST150-5M +0.43; FAST150-1M +0.34; FAST-5M +0.22; HH-BREAK +0.21; FAST-3M +0.09; LOW4H-LIQ25K +0.08; SLOW-BUILD +0.04; FAST150-3M +0.02; LOW4H −0.02; AGE-DOUBLE −0.11; SECOND-WAVE −0.13; FAST-1M −0.19.
+- Entry checks 76 of 78 within 1%, 2 inconclusive (trades between the fill and the read). Holder snapshots 97 of 97.
+- **Memory 538 MB** (407 → 404 → 486 → 538 at 1 / 3.2 / 6.2 / 10.2 h): a creep of about 13 MB an hour after the bar ceiling, while tracked coins rose 14,976 → 17,457. At that rate the 1,100 MB limit is about 43 hours away: a seven-day run would hit it on day 2–3. Cause not yet identified from the published figures; a diagnostics-only change (heap and structure sizes in the status report) is prepared locally to pinpoint it.
+- Sampled side: every sampled buy since 01:55 was cancelled at the 5-second limit (3 of 3); fix a680362 still not loaded.
+- Costs: Helius 37.4 GB in 10.17 h ≈ 1.77M credits/day overnight (2.1–2.7M in the evening) → roughly 15M credits for seven days. Jupiter 59,567 credits ≈ 140K/day. Database 240 MB, growing about 0.3 GB a day; 93.8 GB free.
+- GMGN free plan: 1,705 of 6,021 calls rate-limited; coin-gaps repaired 382, not repaired 2,088.
+- `multi_hop_swap` unfit 5,598 (+163 since 01:55). Reserve chain 2,580,914 ok, 1,409 base breaks, 271 quote breaks.
