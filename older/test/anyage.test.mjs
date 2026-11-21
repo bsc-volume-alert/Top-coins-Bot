@@ -79,3 +79,16 @@ test("older-8 tables: 1,240 rows — the any-age books have an 'under 8h' row, t
   const e = young(); path(e, T0, T0 + 600, () => 100_000, 60, { sol: 100 }); for (let k = 0; k < 6; k++) swap(e, T0 + 600 + k * 20, 100_000, { sol: 900 });
   const j = booksApi([...e.entries.values()], { stop: 0.25, ag: "A0" }); assert.ok(j.books["VOL300K"].length >= 1); assert.equal(j.rows_total, 1240); assert.ok(j.rules["RUG950-BOUNCE"] && j.rules["VOL500K-UP"]);
 });
+test("the books page's own script parses (a quoting slip in the page text once left the site blank; unit tests on the data could not see it)", async () => {
+  const { BOOKS_PAGE } = await import("../src/page.mjs"); const m = BOOKS_PAGE.match(/<script>([\s\S]*?)<\/script>/); assert.ok(m && m[1].length > 2000);
+  assert.doesNotThrow(() => new Function(m[1]), "the page script must be valid JavaScript");
+});
+test("books page data: each trade carries the market cap at our buy and at our sale, from the pool it was priced on", async () => {
+  const { newEntry, advance, observe } = await import("../src/book.mjs"); const st = (q, t) => ({ base: 2e8, quote: q, feeBuy: 0.003, feeSell: 0.003, t }), yes = () => true;
+  const e = newEntry({ mint: "M", pool: "P", ag: "A4", t: 0, families: ["LOW4H"], features: {}, mc: 95_000, px: 1 }); e.evidence = { trigger: { sol_usd: 100, supply: 1e9 } };
+  advance(e, 1.5, st(200, 0), yes);                                            // bought on a pool worth $100K (the signal was seen at $95K)
+  observe(e, st(100, 60), 60); advance(e, 61, st(100, 60), yes);               // −50%: every stop sells on a pool worth $50K
+  const r = booksApi([e], { stop: 0.25 }).books.LOW4H[0]; assert.equal(r.mc, 95_000); assert.equal(r.mc_buy, 100_000); assert.equal(r.mc_sold, 50_000); assert.equal(r.mc_approx, undefined);
+  for (const v of e.versions) delete v.exit.pool;                              // a trade stored before sale pools were saved: rebuilt from the sale
+  const r2 = booksApi([e], { stop: 0.25 }).books.LOW4H[0]; assert.ok(Math.abs(r2.mc_sold - 50_000) <= 1);
+});
