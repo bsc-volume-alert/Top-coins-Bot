@@ -208,3 +208,18 @@ _Started 20 Nov 2026 (UK) after the owner's "stop everything and start again" (L
 - Cost, stated to the owner: slightly fewer buys straight after a restart or a data loss (a coin's fast books start at its first seen trade). My own view recorded: A rarely produced a wrong buy in practice — two valid prices 90K→210K are a real double — but it could make a buy LATE (the real crossing happened in the blank stretch), and it broke the project's own stated rule, so the fix is right.
 - All five affected tests fail on the old code and pass on the new. 111 tests pass.
 
+
+## 21 Nov 2026, 14:40 UK — check after the restarts onto older-5, and the whole-run result by buy
+- Server on 2aa3eef (stake-view fix), spec older-5, 680 rows; restarted 14:19:40 (c3d3bcd) and 14:29:13 (2aa3eef), 234 open positions saved and restored each time; feed live, 0 reconnects, Jupiter 0 errors, memory 339 MB. entries.json now carries results.
+- **Whole run since 19:45 on 20 Nov, each buy counted once (not per book): 203 buys, 188 filled, 15 cancelled; 183 live, 20 sampled.** Closed trades only:
+
+| stop (pure trail) | closed | still open | net SOL | average | won | coins | coins in profit | without the top 3 coins |
+|---|---|---|---|---|---|---|---|---|
+| 20% | 126 | 62 | −1.837 | −7.3% | 22% | 61 | 12 | −2.466 |
+| 25% | 113 | 75 | −0.693 | −3.1% | 30% | 50 | 13 | −2.021 |
+| 30% | 106 | 82 | +0.002 | +0.0% | 34% | 46 | 13 | −1.561 |
+| 40% | 88 | 100 | +0.698 | +4.0% | 39% | 36 | 9 | −1.851 |
+
+- Half-at-2× is within 0.07 SOL of pure trailing at 25% and 30% (−0.748 and +0.066).
+- Reading: wider stops did better on closed trades; at every stop the result without the three best coins is negative (−1.6 to −2.5 SOL) — the profit is carried by a few runners (GKFSuS +0.80, 3umHFk +0.53 to +1.24, uHMWNF, ELbCDk, 4Ye6Y6).
+- Limits: (1) 40–53% of the wider-stop positions are still open and are not in these totals, so the 30% and 40% rows are incomplete, not final; (2) this database includes buys made by versions with faults since fixed (fourth to sixth reviews) — a rough guide, not evidence; (3) about 19 hours and one market day.
