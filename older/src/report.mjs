@@ -12,7 +12,8 @@ export function bookRows(entries, noteCounts = []) {
   const rows = new Map();
   for (const policy of S.POLICIES) for (const f of S.FAMILIES) for (const [ag] of S.agesOf(f)) for (const stop of S.STOPS)
     rows.set(`${f}|${ag}|${stop}|${policy}`, { family: f, ag, stop, policy, entries: 0, cancelled: 0, pending: 0, filled: 0, open: 0, closed: 0, unresolved: 0, mints: new Set(), trades: [], holds: [], delays: [], runners: { n: 0, partial: 0, x2: 0, x3: 0, x5: 0, x10: 0 }, outage: 0, feeAssumed: 0, halves: 0, startup: 0, startupNet: 0 });
-  for (const e of entries) for (const f of e.families) for (const policy of S.POLICIES) for (const v of versionsFor(e, f, policy)) {
+  for (const e of entries) { if (e.token?.xfer_bps > 0) continue; // transfer-fee coins are reported in their own book (spec FEE_BOOK), not in the rule rows
+   for (const f of e.families) for (const policy of S.POLICIES) for (const v of versionsFor(e, f, policy)) {
     const r = rows.get(`${f}|${e.ag}|${v.stop}|${policy}`); if (!r) continue;
     r.entries++; r.mints.add(e.mint);
     if (e.status === "cancelled" || e.status === "failed") { r.cancelled++; continue; } if (e.status === "pending") { r.pending++; continue; }
@@ -21,7 +22,7 @@ export function bookRows(entries, noteCounts = []) {
     if (v.half) r.halves++;
     if (v.status === "open" || v.status === "selling" || v.status === "scaling" || v.status === "unresolved") { r.open++; if (v.unresolvedSince || v.status === "unresolved") r.unresolved++; }
     else if (v.status === "closed") { r.closed++; const net = v.exit.sol - COST; r.trades.push({ mint: e.mint, t: e.fill.t, ret: v.exit.ret, net, reason: v.reason }); r.holds.push(v.exit.hold_s); r.delays.push(v.exit.delay_s); if (v.exit.outage_during) r.outage++; if (e.startup) r.startupNet += net; }
-  }
+  } }
   const notes = {}; for (const n of noteCounts) (notes[n.family] ||= {})[n.reason] = n.n;
   return [...rows.values()].map((r) => {
     const t = r.trades.sort((a, b) => a.t - b.t), rets = t.map((x) => x.ret), n = t.length;

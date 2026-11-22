@@ -249,6 +249,8 @@ Verdict received: **not ready**; five blockers and five non-blocking defects. Ea
 
 Separate commit from 6m so it can be judged alone. Rule and declared assumption: SPEC "Transfer-fee coins". Code: `risk.mjs` (fee ≤ 500 bps is a warning with `fee_bps`, not a block), `polled.mjs` (fee taken off the bought tokens and off each sale's proceeds), `engine.mjs` (fee coin on the live method not entered; `token.xfer_bps`), `book.mjs` (`fill.quote.xfer_bps`), page asterisk. Test: `test/polled.test.mjs`, last test. 134 tests.
 
+Reporting (owner, 00:48): fee-coin buys appear in one separate book, FEE-COINS (`spec.FEE_BOOK`; `page.mjs booksApi`, `report.mjs bookRows`), one row per buy, and are excluded from the rule books and from the 1,240 rows — so the 1,240 comparisons are unchanged in meaning and contain no fee coins.
+
 **To attack:** (1) does Jupiter's quote `outAmount` already net a Token-2022 transfer fee on the input or output leg? Its API reference says only "after deducting AMM fees and platform fees". If it does, the deduction here is double (results too low). (2) Multiplying the sale proceeds by (1 − fee) instead of quoting the reduced token amount — the error is second order in trade size over pool depth; is that acceptable for 0.2 SOL? (3) The fee is read once per start; a fee raised by its authority mid-position is not seen until the next start. (4) Stored coins keep their old "restricted" status until the chain is re-read after the restart (one call per second): safe direction, but say if you see a path where a stale status is trusted the other way.
 
 ## 6l. Full review requested by the owner (21 Nov 2026, 21:35 UK) — map of everything since the sixth review

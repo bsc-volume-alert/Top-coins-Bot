@@ -105,3 +105,6 @@ export const BUYERS_KEEP_S = 20 * 60;          // per-bar buyer wallet lists kep
 // tokens received at the buy and off the proceeds of every sale — and every such trade is marked on the page. Sampled method
 // only (pool-state fills do not model the fee). Other transfer restrictions (hooks, freeze, permanent delegate…) stay blocked.
 export const XFER_FEE_MAX_BPS = 500;
+// Reporting only: every buy of a transfer-fee coin is shown in ONE separate book and left out of the rule books' own totals
+// and rows (owner, 22 Nov 2026: "a separate book so we can analyse those separately"). The entry still records the rule(s) that bought it.
+export const FEE_BOOK = "FEE-COINS";

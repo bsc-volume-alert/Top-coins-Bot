@@ -3,7 +3,7 @@
 import Database from "better-sqlite3";
 import { statSync, statfsSync } from "node:fs";
 import { dirname } from "node:path";
-import { BAR_RETAIN_DAYS, SPEC_VER, FAMILIES, STOPS, CLOCK } from "./spec.mjs";
+import { BAR_RETAIN_DAYS, SPEC_VER, FAMILIES, STOPS, CLOCK, FEE_BOOK } from "./spec.mjs";
 import { setNextId } from "./book.mjs";
 
 export class Store {
@@ -86,6 +86,7 @@ export class Store {
       if (t === null) { const a = this.db.prepare("SELECT MIN(t) t FROM notes WHERE family=?").get(f)?.t, b = this.db.prepare("SELECT MIN(t) t FROM decisions WHERE family=?").get(f)?.t;
         const seen = [a, b].filter((x) => x != null); t = Math.max(first, seen.length ? Math.min(...seen) : now); put("since:" + f, t); }
       families[f] = t; }
+    { let t = get("since:" + FEE_BOOK); if (t === null) { t = now; put("since:" + FEE_BOOK, t); } families[FEE_BOOK] = t; } // fee coins are bought only from the first start with that rule
     let all = null;
     for (const s of STOPS) { let t = get("since:stop:" + s);
       if (t === null) { all ??= this.allEntries(); const has = all.filter((e) => (e.versions || []).some((v) => v.stop === s)), lacks = all.some((e) => !(e.versions || []).some((v) => v.stop === s));

@@ -8,6 +8,7 @@ import * as S from "./spec.mjs";
 import { versionsFor, atStake, COST } from "./book.mjs";
 
 export const RULES = {
+  [S.FEE_BOOK]: "every buy of a coin that charges a transfer fee (5% at most), whichever rule bought it — kept out of the other books; the fee is already taken off, at the buy and at the sale",
   "AGE-DOUBLE": "market cap crosses 2× what it was at the start of the coin's age group (8 / 16 / 24 / 36 hours old)",
   "LOW4H": "price crosses 2× its lowest of the last 4 hours",
   "CONT": "price 30%+ above 15 minutes ago and within 5% of its 1-hour high",
@@ -53,18 +54,19 @@ function saleMc(e, v) {
  *  two losing sampled trades had dropped out). It keeps its 0.2 SOL percentage result on the larger stake, with no extra price
  *  impact taken off, and is flagged `flat` and counted. Every stake button therefore shows the same set of trades. */
 export function booksApi(entries, { stop = 0.25, policy = "trail", ag = "", pop = "", stake = S.STAKE_SOL, since = null, build = null } = {}) {
-  const books = Object.fromEntries(S.FAMILIES.map((f) => [f, []])), view = stake !== S.STAKE_SOL, cost = view ? stake + S.TX_COST_SOL : COST;
+  const books = Object.fromEntries([...S.FAMILIES, S.FEE_BOOK].map((f) => [f, []])), view = stake !== S.STAKE_SOL, cost = view ? stake + S.TX_COST_SOL : COST;
   for (const e of entries) {
     if (ag && e.ag !== ag) continue; if (pop && (e.pop || "pumpswap-canonical") !== pop) continue;
-    for (const f of e.families) {
-      const v = versionsFor(e, f, policy).find((x) => x.stop === stop); if (!v || !books[f]) continue;
+    const feeCoin = e.token?.xfer_bps > 0; let feeDone = false; // a transfer-fee coin: ONE row per buy, in the separate book only
+    for (const fam of e.families) {
+      const v = versionsFor(e, fam, policy).find((x) => x.stop === stop); if (!v || !books[fam] || feeDone) continue; const f = feeCoin ? S.FEE_BOOK : fam; feeDone = feeCoin;
       const live = v.status === "open" || v.status === "selling" || v.status === "scaling";
-      books[f].push({ id: e.id, mint: e.mint, sym: e.token?.symbol ?? null, fee: e.token?.xfer_bps || 0, ag: e.ag, mode: e.mode || "live", origin: e.token?.origin ?? (e.pop === "solana-wide" ? null : "pump.fun"), route: e.fill?.quote?.route ?? null,
+      books[f].push({ id: e.id, mint: e.mint, sym: e.token?.symbol ?? null, fee: e.token?.xfer_bps || 0, via: feeCoin ? e.families.join(" + ") : null, ag: e.ag, mode: e.mode || "live", origin: e.token?.origin ?? (e.pop === "solana-wide" ? null : "pump.fun"), route: e.fill?.quote?.route ?? null,
         t: e.decisionT, mc: Math.round(e.signalMc), status: e.status === "filled" ? (live ? "open" : v.status) : e.status, why: e.status === "cancelled" ? e.flags.join("; ") : null,
         fill_t: e.fill?.t ?? null, buy_delay: e.fill?.delay_s ?? null, hi: e.runner?.maxX ?? null, hi_held: v.maxEq ?? (v.half ? null : v.maxX ?? null), // what the row was really worth at its best; a half-sold row from before this was recorded shows none rather than the full-position figure
          now_x: live ? (v.lastX ?? null) : null, half: v.half ? +(v.half.sol / COST).toFixed(3) : null,
         exit_t: v.exit?.t ?? null, ret: v.exit?.ret ?? null, net: v.exit ? v.exit.sol - COST : null, reason: v.reason ?? null, sell_delay: v.exit?.delay_s ?? null, hold_s: v.exit?.hold_s ?? null,
-        startup: !!e.startup, shared: e.families.length > 1 ? e.families.filter((x) => x !== f) : null, check: e.verify ? (e.verify.error ? "error" : e.verify.suspect ? "SUSPECT" : +(e.verify.diff_quote * 100).toFixed(2)) : null, flags: e.flags?.length ? e.flags : null, est_exit: v.exit?.est ? true : undefined,
+        startup: !!e.startup, shared: e.families.length > 1 ? e.families.filter((x) => x !== fam) : null, check: e.verify ? (e.verify.error ? "error" : e.verify.suspect ? "SUSPECT" : +(e.verify.diff_quote * 100).toFixed(2)) : null, flags: e.flags?.length ? e.flags : null, est_exit: v.exit?.est ? true : undefined,
         mc_buy: e.fill ? Math.round(usdMc(e, e.fill.quote_sol, e.fill.base) ?? e.signalMc) : null, mc_sold: v.exit ? (() => { const m = saleMc(e, v); return Math.round(m ?? e.signalMc * (1 + v.exit.ret)); })() : null, mc_approx: e.fill && usdMc(e, e.fill.quote_sol, e.fill.base) == null ? true : undefined });
       if (view && e.status === "filled") { // the same trade at another stake; the high stays the 0.2 SOL multiple (labelled on the page)
         const r = books[f][books[f].length - 1], z = atStake(e, v, stake);
@@ -73,7 +75,7 @@ export function booksApi(entries, { stop = 0.25, policy = "trail", ag = "", pop 
       }
     }
   }
-  return { at: Date.now() / 1000, build, spec: S.SPEC_VER, stop, policy, ag, pop, stake, since: since ? { first: since.first, families: since.families, stop: since.stops[stop] ?? since.first } : null, stakes: S.STAKE_VIEWS, cost, rows_total: S.FAMILIES.reduce((n, f) => n + S.agesOf(f).length, 0) * S.STOPS.length * S.POLICIES.length, rules: RULES, order: S.FAMILIES, books };
+  return { at: Date.now() / 1000, build, spec: S.SPEC_VER, stop, policy, ag, pop, stake, since: since ? { first: since.first, families: since.families, stop: since.stops[stop] ?? since.first } : null, stakes: S.STAKE_VIEWS, cost, rows_total: S.FAMILIES.reduce((n, f) => n + S.agesOf(f).length, 0) * S.STOPS.length * S.POLICIES.length, rules: RULES, order: [...S.FAMILIES, S.FEE_BOOK], books };
 }
 
 export const BOOKS_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Older coins — paper books</title>
@@ -126,7 +128,7 @@ function ago(ts){var s=Math.floor(Date.now()/1000-ts);return s<60?s+' s':s<3600?
 function sl(v){return (v>=0?'+':'')+v.toFixed(3)+' SOL'}function pc(v){return (v>=0?'+':'')+(v*100).toFixed(0)+'%'}function esc(s){return String(s==null?'':s).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]})}
 function ukDayStart(){var d=new Date();var p=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).formatToParts(d);var o={};p.forEach(function(x){o[x.type]=x.value});return Math.floor(d.getTime()/1000)-((+o.hour)*3600+(+o.minute)*60+(+o.second))}
 function sumR(rows){var n=0,s=0,w=0;rows.forEach(function(t){n++;s+=t.net;if(t.ret>0)w++});return {n:n,net:s,won:w}}
-function coin(t){return '<a class="coin" href="https://gmgn.ai/sol/token/'+t.mint+'" target="_blank">'+esc(t.sym||t.mint.slice(0,8))+'</a>'+(t.fee?'<b style="color:var(--amb)" title="transfer fee '+(t.fee/100)+'% on the buy and on the sale, already taken off the result">*</b>':'')+(t.sym?' <span class="mut small" title="'+esc(t.mint)+'">'+esc(t.mint.slice(0,6))+'…</span>':'')}
+function coin(t){return '<a class="coin" href="https://gmgn.ai/sol/token/'+t.mint+'" target="_blank">'+esc(t.sym||t.mint.slice(0,8))+'</a>'+(t.fee?'<b style="color:var(--amb)" title="transfer fee '+(t.fee/100)+'% on the buy and on the sale, already taken off the result">*</b>':'')+(t.sym?' <span class="mut small" title="'+esc(t.mint)+'">'+esc(t.mint.slice(0,6))+'…</span>':'')+(t.via?' <span class="small" style="color:var(--amb)">'+(t.fee/100)+'% fee · bought by '+esc(t.via)+'</span>':'')}
 function HI(t){var h=t.hi_held!=null?t.hi_held:(t.status==='closed'?null:t.hi);if(h==null)return '<span class="mut">—</span>'+(t.hi!=null?' <span class="mut">24 h '+t.hi.toFixed(2)+'x</span>':'');var later=t.status==='closed'&&t.hi!=null&&t.hi>h*1.02;return '<b>'+h.toFixed(2)+'x</b>'+(later?' <span class="mut" title="highest value of the position in the 24 hours after the buy, including after this sale">later '+t.hi.toFixed(2)+'x</span>':'')}
 function openNet(rows,cost){var n=0,s=0;rows.forEach(function(t){if(t.now_x!=null){n++;s+=(t.now_x-1)*cost}});return {n:n,net:s}}
 function MC(v,ap){return v==null?'—':(ap?'≈ ':'')+'$'+Math.round(v).toLocaleString('en-GB')}

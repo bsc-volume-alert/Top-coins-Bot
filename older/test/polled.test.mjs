@@ -114,7 +114,10 @@ test("transfer-fee coins (owner, 22 Nov 2026): a 5% fee coin is bought on the sa
   assert.ok(Math.abs(fee.fill.tok / plain.fill.tok - 0.95) < 1e-9, "5% fewer tokens arrive at the buy");
   assert.equal(t(fee).status, "closed"); const gross = 1 + t(plain).exit.ret, net = 1 + t(fee).exit.ret;
   assert.ok(Math.abs(net / gross - 0.95 * 0.95) < 0.002, `the same trade is worth 0.95 × 0.95 of the fee-free one, less the fixed transaction cost (${(net / gross).toFixed(4)})`); assert.ok(net < gross * 0.9025, "never better than two full fees");
-  const { booksApi } = await import("../src/page.mjs"); const row = booksApi([fee], { stop: 0.2, policy: "trail" }).books["FAST-5M"][0]; assert.equal(row.fee, 500, "the page row carries the fee for the asterisk");
+  const { booksApi } = await import("../src/page.mjs"); const api = booksApi([fee, plain], { stop: 0.2, policy: "trail" }), row = api.books["FEE-COINS"][0];
+  assert.equal(api.books["FEE-COINS"].length, 1, "ONE row per fee-coin buy, in the separate book"); assert.equal(row.fee, 500); assert.equal(row.via, fee.families.join(" + "), "the row says which rule(s) bought it"); assert.equal(api.order.at(-1), "FEE-COINS");
+  for (const f of fee.families) assert.ok(api.books[f].every((r) => r.id !== fee.id), `the fee coin is not in ${f}`); assert.ok(api.books["FAST-5M"].some((r) => r.id === plain.id), "an ordinary coin stays in its rule book");
+  const { bookRows } = await import("../src/report.mjs"); const rr = bookRows([fee]), rp = bookRows([plain]); assert.equal(rr.reduce((n, r) => n + r.entries, 0), 0, "and it is not in the full table rows"); assert.ok(rp.reduce((n, r) => n + r.entries, 0) > 0);
   const { swap, path } = await import("./helpers.mjs"); const L = mkEngine(); L.feedUp(T0); const c = L.coin("LiveFeeCoin", { pool: "PoolL", createTs: T0 - 20 * H }); c.info.risk = { status: "flagged", blocking: [], fee_bps: 300 };
   for (let k = 0; k <= 30; k++) swap(L, T0 + k * 10, 100_000, { mint: "LiveFeeCoin", pool: "PoolL" }); swap(L, T0 + 320, 210_000, { mint: "LiveFeeCoin", pool: "PoolL" });
   assert.equal(L.entries.size, 0, "pool-state fills do not model the fee: not entered on the live method"); assert.equal(L.stats.riskBlocked, 1);

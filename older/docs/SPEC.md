@@ -153,7 +153,7 @@ Until now every Token-2022 coin with a transfer fee above zero was blocked. From
 - **The stop works on what the position is really worth.** A fee coin starts below its cost by about two fees, so its trailing stop has less room: on a 5% fee and a 20% stop, roughly an 11% fall from the buy price closes it.
 - **Sampled method only.** The fee is applied to the routed quotes. On the live (pool-state) method the fee is not modelled, so a fee coin there is not entered.
 - **Assumption, declared:** the routed quote is treated as NOT already including the transfer fee. If a router does net it, these results are too low by up to two fees — never too high. To be measured on the first fee-coin trades.
-- **Marked:** every such trade carries `token.xfer_bps` and an asterisk on the page with the fee; `entries.json` carries `fee`. They count in the totals, net of the fee.
+- **A separate book (owner, 22 Nov 00:48):** every buy of a fee coin is shown in one book, **FEE-COINS**, with the rule(s) that bought it, one row per buy, and is left out of the rule books' totals and out of the 1,240 report rows. FEE-COINS is a reporting group, not a rule: it adds no entry condition and no comparison row. Every such trade carries `token.xfer_bps`, an asterisk and its fee on the page; `entries.json` carries `fee`.
 - **Unchanged:** coins with a transfer hook, a permanent delegate, pausable or non-transferable tokens, confidential transfers or frozen default accounts stay blocked whatever their fee.
 - Claude advised a limit of 1–2%; the owner chose 5% "for now", to be revisited with data.
 
