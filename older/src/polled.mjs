@@ -22,6 +22,7 @@ export class Poller {
     engine.onOwnership = (mint, mode) => { if (mode === "live" && this.watch.delete(mint)) this.stats.movedToLive = (this.stats.movedToLive || 0) + 1; };
     this.stats = { watched: 0, hot: 0, sweeps: 0, priced: 0, omitted: 0, lost: 0, discovered: 0, skippedLive: 0, noMeta: 0, quotesOk: 0, noRoute: 0, quoteErr: 0, cadence: { n: 0, sum: 0, max: 0 }, by_origin: {}, risk: {} };
     this.seen = new Set();
+    this.feeInQuote = S.XFER_FEE_IN_QUOTE; // the inclusion assumption in force (spec); a test can run the other one
   }
   /** after a restart: every sampled coin the engine restored goes back on the watch list (positions first), so open and pending
    *  entries keep receiving prices and quotes */
@@ -135,16 +136,16 @@ export class Poller {
       const every = need.unresolved ? 600 : urgent ? Math.min(1, this.quoteFast) : this.quoteSlow;
       if (this.now() - last < every) continue;
       const w = this.watch.get(need.mint); if (!w || !validDec(w.decimals)) { this.stats.quoteNoWatch = (this.stats.quoteNoWatch || 0) + 1; continue; } const dec = w.decimals; this.quoted.set(need.id, this.now());
-      // TRANSFER FEE (spec XFER_FEE_MAX_BPS, XFER_FEE_IN_QUOTE): the coin keeps this share of every transfer. Under the current assumption the
-      // quote is treated as gross, so the fee is taken off the tokens received at the buy and off the proceeds of each sale. If a router
-      // already nets it this is a DOUBLE deduction — and not a harmless one: it also moves the stop (eighth review, B2). Unmeasured: see fee-probe.
-      const xfer = this.engine.coins.get(need.mint)?.info?.risk?.fee_bps || 0, keep = S.XFER_FEE_IN_QUOTE ? 1 : 1 - xfer / 10_000; // charged exactly once per transfer under either assumption; the raw quoted amount is kept beside the one used
+      // TRANSFER FEE (spec XFER_FEE_MAX_BPS, XFER_FEE_IN_QUOTE): the coin keeps this share of every transfer. Measured on 22 Nov 2026
+      // (fee-probe): the routed quote already includes it on both legs, so nothing more is taken off (keep = 1). Under the other
+      // assumption the fee would be taken off the tokens received at the buy and off the proceeds of each sale — exactly once each.
+      const xfer = this.engine.coins.get(need.mint)?.info?.risk?.fee_bps || 0, keep = this.feeInQuote ? 1 : 1 - xfer / 10_000; // charged exactly once per transfer under either assumption; the raw quoted amount is kept beside the one used
       let held = this.held.get(need.id); if (!held) this.held.set(need.id, (held = new Map()));
-      if (need.buy_sol) { const q = await this.jup.quote(need.mint, "buy", need.buy_sol * 1e9, { urgent: true }); if (q.ok) { this.stats.quotesOk++; this.engine.onQuote(need.id, { kind: "quote", reqT: q.req, t: q.t, buy: { sol: need.buy_sol, tok: (q.out / 10 ** dec) * keep, raw_tok: q.out / 10 ** dec, xfer_bps: xfer, xfer_in_quote: S.XFER_FEE_IN_QUOTE, reqT: q.req, t: q.t, route: q.route, router: q.router, feeBps: q.feeBps, impact: q.impact }, sells: [] }); n++; } else this._fail(need, q); }
+      if (need.buy_sol) { const q = await this.jup.quote(need.mint, "buy", need.buy_sol * 1e9, { urgent: true }); if (q.ok) { this.stats.quotesOk++; this.engine.onQuote(need.id, { kind: "quote", reqT: q.req, t: q.t, buy: { sol: need.buy_sol, tok: (q.out / 10 ** dec) * keep, raw_tok: q.out / 10 ** dec, xfer_bps: xfer, xfer_in_quote: this.feeInQuote, reqT: q.req, t: q.t, route: q.route, router: q.router, feeBps: q.feeBps, impact: q.impact }, sells: [] }); n++; } else this._fail(need, q); }
       for (const tok of need.sells) {
         const q = await this.jup.quote(need.mint, "sell", tok * 10 ** dec, { urgent: urgent || (need.due != null && need.due <= this.now()) }); // urgency is decided at dispatch: an order that became due while this pass was waiting goes in the first lane
         if (!q.ok) { this._fail(need, q); for (const k of held.keys()) if (Math.abs(tok - k) <= 1e-9 * Math.max(1, tok)) held.delete(k); continue; } // a size whose quote failed has NO current quote: the old one is dropped, never carried forward
-        this.stats.quotesOk++; held.set(tok, { tok, sol: (q.out / 1e9) * keep, raw_sol: q.out / 1e9, xfer_bps: xfer, xfer_in_quote: S.XFER_FEE_IN_QUOTE, reqT: q.req, t: q.t, route: q.route, router: q.router });
+        this.stats.quotesOk++; held.set(tok, { tok, sol: (q.out / 1e9) * keep, raw_sol: q.out / 1e9, xfer_bps: xfer, xfer_in_quote: this.feeInQuote, reqT: q.req, t: q.t, route: q.route, router: q.router });
         for (const k of held.keys()) if (!need.sells.some((x) => Math.abs(x - k) <= 1e-9 * Math.max(1, x))) held.delete(k); // sizes no longer held
         this.engine.onQuote(need.id, { kind: "quote", reqT: q.req, t: q.t, buy: null, sells: [...held.values()] }); n++;
       }

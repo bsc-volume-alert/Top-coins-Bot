@@ -203,3 +203,11 @@ Until now a book bought a coin once per age group, whether or not it had sold. T
 - **Unchanged:** a first buy in a new age group is still made even if the book's earlier buy on that coin is open (older-8 allowed it).
 - **Switch:** `OLDER_REBUY=0` runs a database without buying again (older-8 behaviour).
 
+## Fee inclusion measured (22 Nov 2026, 21:13 UK)
+
+`scripts/fee-probe.mjs` was run on the server (quotes only, 0.2 SOL in, sell the quoted tokens back). Fee coins quoted: BERN 4.2% (FluxBeam), BANKROLL, MEOWL, STWC, KNOTS, NEARKAT, FEELSGOO, CYPHERCA all 3% (Raydium CP, Raydium CLMM, Whirlpool, Meteora DLMM, BisonFi, Kipseli and mixed routes). Round-trip loss 7.88%–10.18%. Control coins without a fee: 0.20%, 1.84%, 2.40%, 2.76% (median 2.40%). Extra loss over the control median: 5.47%–7.78%, against 2 × fee of 6.00% (8.40% for BERN) — within about 1.6 points in every one of the 8 cases, and nowhere near zero. Five fee coins and three controls returned no quote (rate limited: the probe shares the bot's key).
+
+**Conclusion: the routed quotes already include the coin's transfer fee on both legs.** `XFER_FEE_IN_QUOTE = true`: the quoted amounts are used as they are and no further fee is deducted. The raw amounts, the fee and the assumption stay on every fill and sale. Fee-coin buys made while the assumption was `false` (between the 21:12 restart on cecc7a2 and the restart that loads this change) had the fee deducted twice; they are identifiable by `fill.quote.xfer_in_quote = false`.
+
+Limits of the measurement: one moment in time, 8 coins, fees of 3% and 4.2% only, 4 controls; pool fees differ by route, which is the noise of about ±1.5 points. A route that does not net the fee would have shown an extra loss near 0%; none did.
+

@@ -304,6 +304,12 @@ Rule: SPEC "older-9". Code: `signals.mjs` (`opts.again`, `can()`, `cand(…, re)
 6. The safety limit is in memory (`coin.rebuys`): lost at any restart, not written to the warm snapshot.
 7. Background measurements (`onEntry` → provider snapshot) are not repeated for an entry that consists only of re-buys.
 
+## 6r. Fee inclusion measured — answer to B2 (22 Nov 2026, 21:13 UK)
+
+Result and method: SPEC "Fee inclusion measured". 8 of 8 fee coins, on 8 different routes, lost about 2 × their fee more than the control coins on a quoted round trip: the quote is net of the transfer fee. `XFER_FEE_IN_QUOTE` is now `true` (no second deduction); `Poller.feeInQuote` lets the tests run both assumptions. The page no longer calls FEE-COINS "estimate only"; it states the measurement and that you have not confirmed it. Raw output: `fee-probe.json` on branch `older-data`.
+
+**To attack:** is a round trip against a control median a sound separation, given that the buy and the sale can take different routes with different pool fees? Would you want the per-leg figures (`buy_vs_price`, `sell_vs_price` in the JSON) used as well?
+
 ## 6l. Full review requested by the owner (21 Nov 2026, 21:35 UK) — map of everything since the sixth review
 
 The sixth review covered `8474066` (spec older-4, 17 families, 104 tests). The owner asked for a complete A-to-Z review of the present head because much has been added since. Spec is now **older-8**: 29 families, 5 stops, 2 exit policies, 1,240 comparison rows, 124 tests.

@@ -47,7 +47,7 @@ test("B1 the next mint to read: a coin with a position first, then unread coins 
 
 test("B2 the fee is charged exactly once and the evidence is kept: the raw quoted amounts, the fee and the inclusion assumption are on the fill and on the sale", async () => {
   const w = world(); await w.flat(); w.eng.coins.get(M).info.risk = { status: "flagged", blocking: [], fee_bps: 400, src: "rpc mint account" }; const e = await w.double(); w.t += 1.1; await w.poll.quotes();
-  const q = e.fill.quote; assert.equal(q.xfer_in_quote, S.XFER_FEE_IN_QUOTE); assert.ok(q.raw_tok > 0); assert.ok(Math.abs(e.fill.tok / q.raw_tok - (S.XFER_FEE_IN_QUOTE ? 1 : 0.96)) < 1e-9, "tokens used = raw quoted tokens, less the fee once (or untouched if the quote is taken as net)");
+  const q = e.fill.quote; assert.equal(q.xfer_in_quote, S.XFER_FEE_IN_QUOTE, "the assumption in force is written on the fill"); assert.ok(q.raw_tok > 0); assert.ok(Math.abs(e.fill.tok / q.raw_tok - (S.XFER_FEE_IN_QUOTE ? 1 : 0.96)) < 1e-9, "tokens used = raw quoted tokens, less the fee once (or untouched if the quote is taken as net)");
   w.px.set(M, 75_000 / 1e9); w.t += 11; await w.poll.quotes(); w.t += 0.8; await w.poll.quotes(); const v = e.versions.find((x) => x.policy === "trail" && x.stop === 0.2); assert.equal(v.status, "closed");
   assert.equal(v.exit.quote.xfer_bps, 400); assert.ok(v.exit.quote.raw_sol > 0); assert.ok(Math.abs((v.exit.last_sol + S.TX_COST_SOL) / v.exit.quote.raw_sol - (S.XFER_FEE_IN_QUOTE ? 1 : 0.96)) < 1e-6, "sale proceeds = raw quoted SOL, less the fee once");
 });

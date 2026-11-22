@@ -5,6 +5,7 @@ import { Poller } from "../src/polled.mjs";
 import { classifyMintAccount, classifyJupToken, TOKEN_2022, SPL_TOKEN } from "../src/risk.mjs";
 import { budget } from "../src/capacity.mjs";
 import * as J from "../src/jupiter.mjs";
+import * as S from "../src/spec.mjs";
 
 // a fake Jupiter: prices/quotes come from a table the test controls; time is a manual clock
 function world() {
@@ -105,8 +106,8 @@ test("Jupiter client: omitted mints are reported, not priced as zero; quotes ret
   const n = await J.quote("NOROUTE", "buy", 0.2e9); assert.equal(n.ok, false); assert.match(n.why, /No routes/);
 });
 
-test("transfer-fee coins (owner, 22 Nov 2026): a 5% fee coin is bought on the sampled method, the fee comes off the tokens at the buy and off the proceeds at the sale, and the trade is marked; on the live method it stays blocked", async () => {
-  const run = async (bps) => { const w = world(); w.px.set(M, 100_000 / 1e9); w.poll.add(w.tok(M), "t"); if (bps) w.eng.coins.get(M).info.risk = { status: "flagged", blocking: [], warnings: [], fee_bps: bps };
+test("transfer-fee coins (owner, 22 Nov 2026): a 5% fee coin is bought on the sampled method and marked; the fee is charged once — inside the quote as measured (nothing more deducted), or, under the other assumption, off the tokens at the buy and off the proceeds at the sale; on the live method it stays blocked", async () => {
+  const run = async (bps, feeInQuote = false) => { const w = world(); w.poll.feeInQuote = feeInQuote; w.px.set(M, 100_000 / 1e9); w.poll.add(w.tok(M), "t"); if (bps) w.eng.coins.get(M).info.risk = { status: "flagged", blocking: [], warnings: [], fee_bps: bps };
     for (let i = 0; i < 31; i++) await w.step(10, M, 100_000); await w.step(10, M, 205_000); w.t += 1.1; await w.poll.quotes(); const e = [...w.eng.entries.values()][0];
     w.px.set(M, 75_000 / 1e9); w.t += 11; await w.poll.quotes(); w.t += 0.8; await w.poll.quotes(); return e; };
   const plain = await run(0), fee = await run(500), t = (e) => e.versions.find((v) => v.policy === "trail" && v.stop === 0.2);
@@ -114,6 +115,10 @@ test("transfer-fee coins (owner, 22 Nov 2026): a 5% fee coin is bought on the sa
   assert.ok(Math.abs(fee.fill.tok / plain.fill.tok - 0.95) < 1e-9, "5% fewer tokens arrive at the buy");
   assert.equal(t(fee).status, "closed"); const gross = 1 + t(plain).exit.ret, net = 1 + t(fee).exit.ret;
   assert.ok(Math.abs(net / gross - 0.95 * 0.95) < 0.002, `the same trade is worth 0.95 × 0.95 of the fee-free one, less the fixed transaction cost (${(net / gross).toFixed(4)})`); assert.ok(net < gross * 0.9025, "never better than two full fees");
+  // THE MEASURED CASE (spec XFER_FEE_IN_QUOTE = true): the quote is already net of the coin's fee, so the amounts are used as quoted
+  assert.equal(S.XFER_FEE_IN_QUOTE, true, "22 Nov 2026 measurement: Jupiter quotes include the transfer fee"); assert.equal(world().poll.feeInQuote, true, "the poller runs the assumption in the spec");
+  const inq = await run(500, true); assert.equal(inq.token.xfer_bps, 500, "still a fee coin: marked, in FEE-COINS"); assert.equal(inq.fill.quote.xfer_in_quote, true); assert.ok(Math.abs(inq.fill.tok / plain.fill.tok - 1) < 1e-9, "tokens exactly as quoted"); assert.ok(Math.abs(inq.fill.tok - inq.fill.quote.raw_tok) < 1e-9);
+  assert.ok(Math.abs(t(inq).exit.ret - t(plain).exit.ret) < 1e-9, "and the result is the quoted result — the fee is not taken a second time"); assert.equal(t(inq).exit.quote.xfer_in_quote, true);
   const { booksApi } = await import("../src/page.mjs"); const api = booksApi([fee, plain], { stop: 0.2, policy: "trail" }), row = api.books["FEE-COINS"][0];
   assert.equal(api.books["FEE-COINS"].length, 1, "ONE row per fee-coin buy, in the separate book"); assert.equal(row.fee, 500); assert.equal(row.via, fee.families.join(" + "), "the row says which rule(s) bought it"); assert.equal(api.order.at(-1), "FEE-COINS");
   for (const f of fee.families) assert.ok(api.books[f].every((r) => r.id !== fee.id), `the fee coin is not in ${f}`); assert.ok(api.books["FAST-5M"].some((r) => r.id === plain.id), "an ordinary coin stays in its rule book");

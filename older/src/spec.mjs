@@ -107,11 +107,13 @@ export const BUYERS_KEEP_S = 20 * 60;          // per-bar buyer wallet lists kep
 // only (pool-state fills do not model the fee). Other transfer restrictions (hooks, freeze, permanent delegate…) stay blocked.
 export const XFER_FEE_MAX_BPS = 500;
 // THE INCLUSION ASSUMPTION (eighth review, B2): does a routed quote's output already have the coin's transfer fee taken off?
-// false = the quote is treated as gross and the fee is deducted here, once on the buy and once on each sale;
-// true  = the quote is treated as net and nothing more is deducted. Either way the fee is charged exactly once per transfer,
-// the raw quoted amounts are kept on every fill and sale, and this value is recorded with them. NOT YET MEASURED: until
-// scripts/fee-probe.mjs has been run and read, FEE-COINS is an accounting scenario, not scored after-cost performance.
-export const XFER_FEE_IN_QUOTE = false;
+// true  = the quote is net: nothing more is deducted here.  false = the quote is gross: the fee is deducted here, once per transfer.
+// MEASURED 22 Nov 2026 21:13 UK on the server (scripts/fee-probe.mjs, quotes only): 8 fee coins (3% and 4.2%) over 8 different
+// routes — FluxBeam, Raydium CP, Raydium CLMM, Whirlpool, Meteora DLMM, BisonFi, Kipseli and mixed routes. A 0.2 SOL round trip
+// lost 7.9%–10.2% against 0.2%–2.8% for 4 control coins (median 2.4%): the extra loss was 5.5%–7.8%, i.e. about 2 × the coin's fee
+// (6.0% / 8.4%) in every case. So Jupiter's quotes ALREADY INCLUDE the transfer fee on both the buy and the sale → true.
+// The raw quoted amounts, the fee and this value are still stored on every fill and sale, and the probe can be re-run at any time.
+export const XFER_FEE_IN_QUOTE = true;
 export const RISK_REFRESH_S = 600; // a sampled coin with a pending or open position has its transfer restrictions read again this often
 // Reporting only: every buy of a transfer-fee coin is shown in ONE separate book and left out of the rule books' own totals
 // and rows (owner, 22 Nov 2026: "a separate book so we can analyse those separately"). The entry still records the rule(s) that bought it.
