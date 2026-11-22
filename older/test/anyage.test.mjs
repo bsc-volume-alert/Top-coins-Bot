@@ -59,14 +59,15 @@ test("RUG450 / RUG950: bought at the fresh fall to 80% below the observed peak; 
   const e4 = young(); path(e4, T0, T0 + 300, (t) => 100_000 + (t - T0) * 600, 20); swap(e4, T0 + 300, 300_000); swap(e4, T0 + 320, 50_000);
   assert.equal(has(e4, "RUG450").length, 0, "a $300K peak is below $450K");
 });
-test("RUG: the peak and an armed setup survive a restart; a setup expires 24 hours after arming; a bounce outside the band is not bought", () => {
+test("RUG: nothing is carried across a restart — a fall measured against a peak from before the restart is not bought; a new peak and collapse watched in full is. A setup expires after 24 hours; a bounce outside the band is not bought", () => {
   const db = join(mkdtempSync(join(tmpdir(), "older-")), "rug.db"); let st = new Store(db); const e = young({ store: st }); st.saveCoin(M, { pool: "PoolA", createTs: T0 - 2 * H, info: {} });
-  path(e, T0, T0 + 300, (t) => 100_000 + (t - T0) * 1400, 20); swap(e, T0 + 300, 520_000); swap(e, T0 + 320, 200_000); swap(e, T0 + 340, 100_000); swap(e, T0 + 360, 60_000);
-  assert.equal(has(e, "RUG450").length, 1); e.flush();
-  st = new Store(db); const e2 = mkEngine({ store: st }); st.restore(e2); e2.restartGap(st.lastAlive(), T0 + 400); e2.feedUp(T0 + 400);
-  const c = e2.coins.get(M); assert.ok(c.info.rug && Math.round(c.info.rug.pk.mc) === 520_000 && c.info.rug.arm, "the peak and the armed setup were stored with the coin"); assert.equal(Math.round(c.info.rug.arm.low), 60_000, "with the low it had reached");
-  swap(e2, T0 + 410, 58_000); swap(e2, T0 + 430, 57_000); swap(e2, T0 + 450, 76_000);  // new low $57K after the restart, then +33%
-  assert.equal(has(e2, "RUG450-BOUNCE").length, 1, "the bounce is bought after the restart"); assert.equal(has(e2, "RUG450").length, 1, "and the knife book does not buy the same coin again");
+  path(e, T0, T0 + 300, (t) => 100_000 + (t - T0) * 1400, 20); swap(e, T0 + 300, 540_000); swap(e, T0 + 320, 300_000); swap(e, T0 + 340, 150_000); // peak $540K (line $108K), not yet 80% down
+  e.flush(); st = new Store(db); const e2 = mkEngine({ store: st }); st.restore(e2); e2.restartGap(st.lastAlive(), T0 + 400); e2.feedUp(T0 + 400);
+  assert.equal(e2.coins.get(M).rug ?? null, null, "no rug state is restored"); assert.equal(e2.coins.get(M).info.rug, undefined, "and none is stored with the coin");
+  swap(e2, T0 + 410, 105_000); swap(e2, T0 + 430, 99_000); swap(e2, T0 + 450, 60_000); swap(e2, T0 + 470, 90_000);
+  assert.equal(has(e2, "RUG450").length, 0, "the reviewer's case: $105K → $99K after a restart is not a fresh 80% fall — the peak was not watched without a break"); assert.equal(has(e2, "RUG450-BOUNCE").length, 0);
+  path(e2, T0 + 500, T0 + 800, (t) => 90_000 + (t - T0 - 500) * 1500, 20); swap(e2, T0 + 800, 540_000); swap(e2, T0 + 820, 200_000); swap(e2, T0 + 840, 100_000);
+  assert.equal(has(e2, "RUG450").length, 1, "a new peak and its collapse, both watched after the restart, is bought");
   const x = young(); path(x, T0, T0 + 300, (t) => 100_000 + (t - T0) * 1400, 20); swap(x, T0 + 300, 520_000); swap(x, T0 + 320, 110_000); swap(x, T0 + 340, 30_000); // armed at $30K: under the $40K floor, so no knife buy
   assert.equal(has(x, "RUG450").length, 0); swap(x, T0 + 360, 20_000); swap(x, T0 + 380, 27_000); assert.equal(has(x, "RUG450-BOUNCE").length, 0, "a bounce to $27K is under $40K: not bought");
   const y = young(); path(y, T0, T0 + 300, (t) => 100_000 + (t - T0) * 1400, 20); swap(y, T0 + 300, 520_000); swap(y, T0 + 320, 110_000); swap(y, T0 + 340, 100_000); swap(y, T0 + 360, 60_000);

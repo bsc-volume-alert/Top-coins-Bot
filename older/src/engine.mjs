@@ -42,7 +42,7 @@ export class Engine {
   /** RESTART SAFETY: a coin is observed by the method its unfinished entries were opened with. If the stored mode disagrees
    *  (it was not saved when the coin moved to live observation), the entry's method wins — otherwise the position would be
    *  stranded: ignored by the live adapter and never quoted by the sampled one. */
-  forceMode(mint, mode, pool = null) { const c = this.coin(mint); if (c.mode === mode) return false; c.series = new Series(mint, mode === "polled" ? this.pollCov : this.cov); c.mode = mode; c.state = null; c.sw = null; c.lostAt = null; c.info.monitoring_mode = mode; if (mode === "live") { Object.assign(c.info, { population: "pumpswap-canonical", price_source: "pool events" }); if (pool) c.pool = pool; } this.stats.modeForced = (this.stats.modeForced || 0) + 1; return true; }
+  forceMode(mint, mode, pool = null) { const c = this.coin(mint); if (c.mode === mode) return false; c.series = new Series(mint, mode === "polled" ? this.pollCov : this.cov); c.mode = mode; c.state = null; c.sw = null; c.rug = null; c.lostAt = null; c.info.monitoring_mode = mode; if (mode === "live") { Object.assign(c.info, { population: "pumpswap-canonical", price_source: "pool events" }); if (pool) c.pool = pool; } this.stats.modeForced = (this.stats.modeForced || 0) + 1; return true; }
   /** save every open position now (called on shutdown): a planned restart loses no peak */
   flush() { let n = 0; if (this.store) for (const e of this.entries.values()) { this.store.saveEntry(e); n++; } this.dirty.clear(); return n; }
   setRef(mint, ag, ref) { const c = this.coin(mint); const g = (c.groups[ag] ||= { ref: null, done: {}, logged: {} }); if (!g.ref || g.ref.status !== "OK") g.ref = ref; }
@@ -74,7 +74,7 @@ export class Engine {
     // pending or open entry; only when it has none does it move to live observation, with a fresh history (no mixed evidence).
     if (c && c.mode === "polled") {
       if (this.byMint.get(ev.mint)?.size) { this.stats.liveIgnoredSampled = (this.stats.liveIgnoredSampled || 0) + 1; return; }
-      const sr = new Series(ev.mint, this.cov); sr.startLive(ev.t); c.series = sr; c.mode = "live"; c.state = null; c.sw = null; c.lostAt = null; c.pool = ev.pool;
+      const sr = new Series(ev.mint, this.cov); sr.startLive(ev.t); c.series = sr; c.mode = "live"; c.state = null; c.sw = null; c.rug = null; c.lostAt = null; c.pool = ev.pool;
       Object.assign(c.info, { population: "pumpswap-canonical", monitoring_mode: "live", price_source: "pool events" }); this.stats.movedToLive = (this.stats.movedToLive || 0) + 1; this.onOwnership(ev.mint, "live");
       this.store?.setCoinMode(ev.mint, c.pool, c.info); // PERSISTED: after a restart this coin must come back as live, or a live position on it would be stranded
     }
@@ -114,7 +114,6 @@ export class Engine {
     // risk checks only stop entries whose EXECUTION assumption is unsupported (known transfer restrictions); they are not a quality filter
     if (c.info.risk?.status === "restricted") { if (!c.riskNoted) { c.riskNoted = true; this.stats.riskBlocked++; this.store?.saveNote(mint, { ag: null, family: "*", t: o.t, reason: "not evaluated for entry: token transfer restrictions make the execution assumption unsupported", detail: { risk: c.info.risk } }); } return null; }
     const r = evaluate(c, o, opts);
-    if (c.rug?.save) { c.rug.save = false; c.info.rug = { pk: c.rug.pk, arm: c.rug.arm }; this.store?.saveCoin(mint, { info: c.info }); } // the peak and an armed rug setup survive a restart
     for (const n of r.notes) { this.stats.notes++; this.store?.saveNote(mint, n); }
     if (!r.cands.length) return null;
     this.stats.cands += r.cands.length;
@@ -123,7 +122,9 @@ export class Engine {
     e.cands = r.cands.map((x) => ({ family: x.family, detail: x.detail }));
     Object.assign(e, tags); e.token = { symbol: c.info.symbol ?? null, origin: c.info.origin ?? null, origin_evidence: c.info.origin_evidence ?? null, venues: c.info.venues ?? null, token_program: c.info.token_program ?? null, risk_status: c.info.risk?.status ?? "missing", create_src: c.info.create_src ?? null, cadence_s: c.info.cadence_s ?? null };
     this.addEntry(e); this.stats.entries++;
-    this.store?.saveEntry(e); for (const x of r.cands) this.store?.saveDecision(mint, x.ag, x.family, o.t, e.id, x.detail);
+    // ONE COMMIT: the entry and its one-buy flags are written together. A stop between the two used to leave a stored entry
+    // without its flags, and the same coin could then be bought again by the same book (seventh review, 5).
+    if (this.store) { const write = () => { this.store.saveEntry(e); for (const x of r.cands) this.store.saveDecision(mint, x.ag, x.family, o.t, e.id, x.detail); }; this.store.tx ? this.store.tx(write) : write(); }
     this.log(`[entry ${e.id}] ${mint.slice(0, 6)} ${e.ag} ${e.families.join("+")} mc $${Math.round(o.mc)} (${e.mode})`);
     try { this.onEntry(e, c); } catch {} // background measurements only: never part of the decision
     return e;

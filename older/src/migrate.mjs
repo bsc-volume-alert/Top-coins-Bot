@@ -5,7 +5,7 @@
 //   • the plain version had already stopped out BEFORE the clock time  → the same real result (exact);
 //   • the clock time is still in the future                            → a copy of the live position; the engine runs its clock;
 //   • the clock time has passed and the plain version was still open then (or closed later) → the clock sale is ESTIMATED:
-//       price at the clock = the close of the last one-minute bar at or before it (no bar since the buy = no trade = unchanged),
+//       price at the clock = the close of the last one-minute bar COMPLETED before it (no such bar since the buy = unchanged),
 //       as a ratio to the signal price; the pool at the clock is the constant-product pool with the buy pool's k at that price;
 //       the tokens held then (half already banked if the half-sale happened before the clock) are sold on it, fee and
 //       transaction cost charged. Marked exit.est = true and exec "estimated-minute-bar"; shown as "est." on the page.
@@ -16,7 +16,7 @@ import { newVersion, COST } from "./book.mjs";
 
 export function addClockBook(store, family, now) {
   const ck = S.CLOCK[family], out = { base: ck?.base, added: 0, exact: 0, estimated: 0, live: 0 }; if (!ck) return out;
-  const db = store.db, lastBar = db.prepare("SELECT m, c, src FROM bars WHERE mint = ? AND m >= ? AND m <= ? ORDER BY m DESC LIMIT 1");
+  const db = store.db, lastBar = db.prepare("SELECT m, c, src FROM bars WHERE mint = ? AND m >= ? AND m < ? AND src != 'backfill-rejected' ORDER BY m DESC LIMIT 1"); // minutes COMPLETED before the clock (the minute containing it closes after it), and never a rejected back-fill row
   const dec = db.prepare("INSERT OR IGNORE INTO decisions VALUES (?,?,?,?,?,?)");
   for (const row of db.prepare("SELECT json FROM entries ORDER BY id").all()) {
     const e = JSON.parse(row.json); if (!e.families?.includes(ck.base) || e.families.includes(family)) continue;
@@ -40,7 +40,7 @@ export function addClockBook(store, family, now) {
       }
       e.versions.push(c);
     }
-    store.saveEntry(e); dec.run(e.mint, e.ag, family, e.decisionT, e.id, JSON.stringify(bc?.detail ?? null)); out.added++;
+    store.tx(() => { store.saveEntry(e); dec.run(e.mint, e.ag, family, e.decisionT, e.id, JSON.stringify(bc?.detail ?? null)); }); out.added++; // the entry and its one-buy flag in one commit
   }
   if (out.added) store.feedEvent?.(now, "migration: clock book added", `${family}: ${out.added} ${ck.base} buys carried in (${out.estimated} clock sales estimated)`);
   return out;

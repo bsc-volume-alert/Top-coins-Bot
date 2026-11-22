@@ -222,6 +222,29 @@ Verdict received: **not ready**; two reproducible faults (A, C), one reporting d
 
 **Declared consequence of A(2):** after a restart, a reconnection or a loss, a coin's FAST windows begin at its first observed price, not at the moment the feed came up. A coin whose first observed trades are themselves the double is not entered by the seconds-scale books for that move.
 
+## 6m. Seventh independent review — the full review of 4dd2897 (ChatGPT, 21 Nov 2026 23:50 UK) — response
+
+Verdict received: **not ready**; five blockers and five non-blocking defects. Each blocker was reproduced here before fixing: `test/review7.test.mjs` (six tests) fails on 4dd2897's source — every test, and test 3 also with its helper assertion removed — and passes now. 133 tests.
+
+| Finding | Was it right? | Fix |
+|---|---|---|
+| **1. RUG peaks and lows change across restarts** (stored in 10% steps: $540K came back as $500K; a $101K low as $110K; the inventory's metadata write could erase the stored state). | Yes. | **Not the fix proposed** (store the exact state and flush at shutdown). The exact state would still be wrong after a restart: the true peak and low during the outage are unknown, and a hard stop cannot flush. Instead the RUG state is **memory only and valid only over unbroken observation** (SPEC, seventh-review rule 1). Nothing is stored, so nothing can be rounded, go stale or be erased. The reviewer's two cases: $540K → restart → $105K → $99K is not bought; $101K low → restart → $140K → $145K is not bought. |
+| **2. Sampled observations arm a live-only strategy**, and the setup survives promotion. | Yes. | The RUG block runs only when at least one RUG book is supported by the coin's observation method, so sampled observations change nothing; the state is cleared on every change of method (`forceMode`, promotion, re-admission). |
+| **3. Hour-scale windows accept an unknown price prefix** (`covered()` true while `priceAt(windowStart)` is null: $90K → $210K after a long silence was a LOW4H buy). | Yes. | `Series.priced(x, t)` = covered **and** a known price at `x`. Used by LOW4H, CONT, HH-BREAK and the three faster HH books (for the high window; their volume windows keep `covered`) and by the recorded measurements. A watched quiet period still counts (test 3, last case). |
+| **4. Compression changes VOL eligibility** ($300,001 reported as $299,000). | Yes. | `volSince` returns "not known" when the cut-off falls inside a merged second; the VOL books record that and decide nothing. Chosen over keeping per-trade volume inside merged entries, which would undo the memory bound that compression exists for. Cost: a possible VOL entry is missed (never invented) at such a trade; the next trade is evaluated normally. |
+| **5. Entry and flags not atomic.** | Yes. | One transaction for the entry and its flags; restore re-creates missing flags from the stored entries before evaluating anything. |
+| Migration look-ahead; rejected back-fill rows admitted. | Yes, both. | Last minute **completed before** the clock time; `backfill-rejected` excluded. Applies to databases migrated from now on; the 21 Nov estimates already stored in the shakedown database were made by the old selection and are now outside every total (next row). |
+| Estimated clock exits mixed into totals (open question 6j). | Accepted. | Estimated sales are excluded from every total, ranking, win rate and period figure and shown on a separate line (SPEC rule 5). |
+| Scaled "high while held". | Yes. | `maxEq`: banked half + value of the rest, tracked while held (display only). |
+| Sale market caps not marked approximate. | Yes. | Always marked approximate. |
+| "Counting since" inferred from the first page query. | Yes. | Set at program start. |
+| Validation script deletes the previous validation database. | Yes. | Archived under `archive/` instead. |
+| Stake views (open question 6g). | Accepted as answered: kept as a labelled size-sensitivity scenario. | No change. |
+
+**Declared consequences.** (a) After every restart, feed drop or data loss the four RUG books start from nothing: a rug is bought only if this program watched the peak and the collapse without interruption. On the shakedown server, restarted many times a day, they will buy rarely; over an uninterrupted seven-day run this is the intended rule. (b) The six RUG buys of 21 Nov (22:39–22:48 UK, all within ten minutes of the 22:38 restart, none in the following hour) fit finding 1's mechanism but were not individually proven to be caused by it; they stay in the shakedown database, which is not the scored run. (c) LOW4H and CONT do not enter a coin whose first observed trade lies inside their window.
+
+**To attack:** a break that `continuous()` does not see (is there any path where observation is interrupted without a `feedDown`, a `restartAt` or a mode change?); `priced()` on a window whose start falls inside a merged second; whether excluding estimated sales anywhere changes a figure that is not labelled.
+
 ## 6l. Full review requested by the owner (21 Nov 2026, 21:35 UK) — map of everything since the sixth review
 
 The sixth review covered `8474066` (spec older-4, 17 families, 104 tests). The owner asked for a complete A-to-Z review of the present head because much has been added since. Spec is now **older-8**: 29 families, 5 stops, 2 exit policies, 1,240 comparison rows, 124 tests.

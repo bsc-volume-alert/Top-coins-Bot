@@ -40,7 +40,7 @@ function fillBuy(e, st, at, delay, minReq = null) {
   // falls between the buy and the first sell quote, the stop must still be measured from what was paid — starting the peak at
   // the first (already fallen) valuation would leave such a position without a stop. A missing valuation is never treated as a fall.
   const v0 = liqValue(st, tok) ?? COST; e.runner.maxX = v0 / COST;
-  for (const v of e.versions) { v.tok = tok; v.peak = v0; v.maxX = v0 / COST; v.lastX = v0 / COST; v.lastT = at; }
+  for (const v of e.versions) { v.tok = tok; v.peak = v0; v.maxX = v0 / COST; v.maxEq = v0 / COST; v.lastX = v0 / COST; v.lastT = at; }
   return true;
 }
 /** the pool a sale was priced on: effective SOL side, token side and the sell fee in force. Evidence only — kept so the same
@@ -131,6 +131,7 @@ export function observe(e, st, t, cov) {
     if (v.status !== "open" && v.status !== "scaling") continue;
     const val = liqValue(st, v.tok); if (val == null) continue; // this state does not price this holding: no peak, no trigger
     if (val > v.peak) v.peak = val; if (full != null && full / COST > v.maxX) v.maxX = full / COST;
+    if (!(v.maxEq >= (v.got + val) / COST)) v.maxEq = (v.got + val) / COST; // DISPLAY ONLY: the best the row was actually worth (banked half + what is still held); maxX is the full original position
     v.lastX = (v.got + val) / COST; v.lastT = q ? (sellQuote(st, v.tok)?.t ?? t) : t; // what this row would be worth if sold now (banked half included); for a routed quote, the time of THAT quantity's own quote — another quantity's newer reply never makes it look current
     if (val <= v.peak * (1 - v.stop)) trigger(v, t, "trail", val); // also replaces a pending half-sale: one order, never two on the same tokens
     else if (v.status === "open" && v.policy === "scale" && !v.half && full != null && full >= S.SCALE_AT_X * COST) { v.status = "scaling"; v.trigT = t; v.trigValue = full; v.schedT = t + S.SELL_DELAY_MS / 1000; }

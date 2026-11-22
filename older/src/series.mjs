@@ -137,6 +137,11 @@ export class Series {
     if (this.ownGapsIn(x, t).length) return false; // the coin's own breaks are never repaired by back-fill
     return true;
   }
+  /** a PRICE window [x, t] for hour-scale use (lows, highs, a price a while ago): covered history AND a price known at x.
+   *  Coverage alone says no trade was missed; it does not say what the price WAS before the first observation inside the
+   *  window (after a start-up, a reconnection or a long silence). Without a starting price the window's low and high are
+   *  unknown, so nothing is decided on it (seventh review, 3). Volume windows keep using covered(): no trade missed = volume known. */
+  priced(x, t) { return this.covered(x, t) && this.priceAt(x) !== null; }
   /** last price at or before t. Exact sources first: an exact observation; else the later of the last completed LIVE bar's close
    *  and the anchor (the last exact observation that aged out of the buffer); else the last exact price if older. exact = false (hour-scale use) also considers accepted back-fill: a back-filled close of a later
    *  minute is newer information (a repaired outage, or history before the live start) and wins — an older observation is never
@@ -198,8 +203,10 @@ export class Series {
     return { vol_usd: Math.round(vol), buys, sells, buyers: by.size, top_buyer_share: buyVol > 0 && by.size ? +(top / buyVol).toFixed(4) : null, ...(compressed ? { compressed: true } : {}) };
   }
   /** exact USD volume in (x, t] from raw observations */
-  /** USD volume of the exact observations after x (walks back from the newest: cheap on a busy coin) */
-  volSince(x) { let v = 0; for (let i = this.raw.length - 1; i >= 0 && this.raw[i][0] > x; i--) v += this.raw[i][2]; return v; }
+  /** USD volume of the exact observations after x (walks back from the newest: cheap on a busy coin).
+   *  null = NOT KNOWN: x falls inside a second whose observations were merged (RAW_CAP) — that entry's volume lies on both
+   *  sides of x and can no longer be split, so the caller must not decide on it (seventh review, 4). */
+  volSince(x) { let v = 0; for (let i = this.raw.length - 1; i >= 0; i--) { const o = this.raw[i]; if (o[0] > x) { v += o[2]; continue; } const m = this.mrg.get(o); return m && m.t1 > x ? null : v; } return v; }
   volIn(x, t) { let v = 0; for (const [ts, , vol] of this.raw) if (ts > x && ts <= t) v += vol; return v; }
   /** was the WHOLE of minute m observed exactly? (exact observations already running at its start, and no outage inside it) */
   liveComplete(m) { return this.continuous(m * 60, m * 60 + 60); } // the same continuity test as everything else: outages, the coin's own breaks (quarantine), loss of its data

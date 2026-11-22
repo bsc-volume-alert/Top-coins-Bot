@@ -38,7 +38,8 @@ export const FAMILIES = ["AGE-DOUBLE", "LOW4H", "CONT", "SLOW-BUILD", "HH-BREAK"
 export const VOL = [["VOL300K", 300_000, false], ["VOL300K-UP", 300_000, true], ["VOL500K", 500_000, false], ["VOL500K-UP", 500_000, true]];
 export const VOL_WIN_S = 300, VOL_BAND_HI_USD = 2_000_000;
 // RUG: the coin's highest observed market cap ≥ the peak threshold, and the market cap FRESHLY crosses down to (1 − RUG_FALL) × that
-//      peak. "knife" buys at that crossing. "bounce" is armed by it, follows the low, and buys at the first fresh crossing up
+//      peak, with observation unbroken from the peak to the crossing (the state is in memory only and starts again after any
+//      break or restart). "knife" buys at that crossing. "bounce" is armed by it, follows the low, and buys at the first fresh crossing up
 //      through RUG_BOUNCE_X × the low within RUG_BOUNCE_EXPIRE_S. Usual band ($40K–$1M) at the buy. The books nest: a $950K peak
 //      also qualifies for the $450K books.
 // [family, peak threshold USD, kind]

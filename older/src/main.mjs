@@ -22,6 +22,7 @@ const snapshot = async (e) => { const want = e.decisionT; try { Jx ??= await imp
 const engine = new Engine({ store, solUsd, log, firstStart, onEntry: (e) => { snapshot(e); }, onFill: (e, c) => { if (e.exec !== "routed-quote") verifyEntry(e, c, { store, lastSlotOf: (m) => lastSlot.get(m) ?? null }); } });
 const onEvent = engine.onEvent.bind(engine); engine.onEvent = (ev) => { if (ev.slot) lastSlot.set(ev.mint, ev.slot); const c = engine.coins.get(ev.mint); if (c) c.eventCount = (c.eventCount || 0) + 1; onEvent(ev); };
 { const { addClockBook } = await import("./migrate.mjs"); for (const f of ["HH-BREAK-4H"]) { const r = addClockBook(store, f, now0); if (r.added) log(`[older] ${f}: ${r.added} existing ${r.base} buys carried into the new book (${r.exact} versions unchanged, ${r.estimated} clock sales estimated from minute bars, ${r.live} still inside the clock)`); } }
+store.since(now0); // "counting since" is fixed at START-UP, when a book or stop first exists on this database — not at the first page view
 store.restore(engine); engine.restartGap(store.lastAlive(), now0);
 // planned stop (pm2 restart/stop sends SIGINT): every open position's peak is saved and the last-alive time is written first,
 // so a planned restart loses nothing and its gap is measured from the real stop

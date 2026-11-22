@@ -60,7 +60,7 @@ export class Poller {
     const c = this.engine.coins.get(tok.mint); if (tok.circ_supply > 0) c.supply = tok.circ_supply;
     // RE-ADMISSION in the same process (the coin was dropped from the list earlier, or left the live adapter): its old history is
     // not continuous with what we are about to sample. It starts again with an empty history; per-age-group entry records are kept.
-    if (had) { c.series = new Series(tok.mint, this.engine.pollCov); c.sw = null; c.state = null; c.lostAt = null; this.stats.readmitted = (this.stats.readmitted || 0) + 1; }
+    if (had) { c.series = new Series(tok.mint, this.engine.pollCov); c.sw = null; c.rug = null; c.state = null; c.lostAt = null; this.stats.readmitted = (this.stats.readmitted || 0) + 1; }
     this.watch.set(tok.mint, { decimals: tok.decimals, circ: tok.circ_supply ?? null, hot: false, lastT: null, lastReq: 0, miss: 0, mc: tok.mcap ?? null });
     this.stats.by_origin[origin] = (this.stats.by_origin[origin] || 0) + 1; this.stats.risk[risk.status] = (this.stats.risk[risk.status] || 0) + 1; this.stats.discovered++;
     this.store?.saveCoin(tok.mint, { createTs, createSrc: "jupiter firstPool", pumpOrigin: origin, firstSeen: Math.floor(this.now()), info: c.info });

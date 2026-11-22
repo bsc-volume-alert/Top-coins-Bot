@@ -60,31 +60,38 @@ export function evaluate(coin, o, opts = {}) {
     if (todo.length && o.mc >= S.BAND_LO_USD && o.mc <= S.VOL_BAND_HI_USD) {
       if (!sr.obsCovered(t - S.VOL_WIN_S, t)) note(todo[0][0], "window not covered");
       else { const v5 = sr.volSince(t - S.VOL_WIN_S);
-        if (v5 >= Math.min(...todo.map((x) => x[1]))) { const p5 = sr.priceAt(t - S.VOL_WIN_S, true);
+        if (v5 === null) note(todo[0][0], "5-minute boundary inside a merged second: volume not known, not decided");
+        else if (v5 >= Math.min(...todo.map((x) => x[1]))) { const p5 = sr.priceAt(t - S.VOL_WIN_S, true);
           for (const [family, X, up] of todo) { if (v5 < X) continue; if (up && !(p5 && o.px > p5.px)) continue;
             cand(family, { vol5_usd: Math.round(v5), threshold_usd: X, vol_window_s: S.VOL_WIN_S, px_5m_ago: p5 ? p5.px : null, change_5m: p5 ? +(o.px / p5.px - 1).toFixed(4) : null }); } } } } }
-  // 0b. RUG450 / RUG950 (knife, bounce): the highest market cap this program has OBSERVED for the coin is its peak (kept across
-  //     restarts once it matters). Arming = a fresh crossing down to 20% of that peak. Peaks from before the coin was watched
-  //     are unknown, so a coin that crashed earlier is simply not armed.
-  { const rg = (coin.rug ??= coin.info?.rug ? { pk: coin.info.rug.pk ?? null, arm: coin.info.rug.arm ?? null, saved: coin.info.rug.pk?.mc ?? 0 } : { pk: null, arm: null, saved: 0 });
+  // 0b. RUG450 / RUG950 (knife, bounce). The peak is the highest market cap OBSERVED WITHOUT A BREAK up to now: the state lives
+  //     in memory only and is dropped the moment observation between the peak and now is not continuous (a feed outage, a loss
+  //     of this coin's data, a quarantine, a change of observation method, a restart). After a break the true peak and the true
+  //     low are unknown, so a fall or a bounce measured against the old values could be late or false (seventh review, 1 and 2):
+  //     the coin starts again and is bought only if a new peak AND its collapse are both watched from start to finish.
+  //     Nothing is persisted. An observation mode that cannot support these books (price polling) builds no state at all.
+  if (S.RUG.some(([f]) => !skip.has(f))) {
+    const rg = (coin.rug ??= { pk: null, arm: null });
+    if (rg.pk && !sr.continuous(rg.pk.t, t)) { if (rg.arm) note("RUG450-BOUNCE", "abandoned: observation broke during the setup", { armed_t: rg.arm.t }, false); rg.pk = null; rg.arm = null; }
     const prevMc = sr.prevPx != null ? sr.prevPx * coin.supply : null, inRug = (f) => !g.done[f] && !skip.has(f);
-    if (!rg.pk || o.mc > rg.pk.mc) { rg.pk = { mc: o.mc, t }; if (o.mc >= S.RUG_MIN_PEAK_USD && o.mc >= rg.saved * 1.1) { rg.saved = o.mc; rg.save = true; } }
+    if (!rg.pk || o.mc > rg.pk.mc) rg.pk = { mc: o.mc, t };
     else {
       const line = rg.pk.mc * (1 - S.RUG_FALL);
       if (rg.pk.mc >= S.RUG_MIN_PEAK_USD && prevOk && prevMc > line && o.mc <= line) { // armed (again): the bounce books follow the low from here
-        rg.arm = { t, peak: rg.pk.mc, peak_t: rg.pk.t, low: o.mc, low_t: t, saved_low: o.mc }; rg.save = true;
+        rg.arm = { t, peak: rg.pk.mc, peak_t: rg.pk.t, low: o.mc, low_t: t };
         for (const [family, P, kind] of S.RUG) if (kind === "knife" && rg.arm.peak >= P && inRug(family) && inBand)
           cand(family, { peak_mc: Math.round(rg.pk.mc), peak_t: rg.pk.t, line_mc: Math.round(line), fall: +(1 - o.mc / rg.pk.mc).toFixed(4), fall_s: Math.round(t - rg.pk.t) });
       } else if (rg.arm) {
-        if (t - rg.arm.t > S.RUG_BOUNCE_EXPIRE_S) { rg.arm = null; rg.save = true; }
-        else if (o.mc < rg.arm.low) { rg.arm.low = o.mc; rg.arm.low_t = t; if (!(o.mc > (rg.arm.saved_low ?? Infinity) * 0.9)) { rg.arm.saved_low = o.mc; rg.save = true; } } // a new low is stored each time it is 10% under the last stored one
+        if (t - rg.arm.t > S.RUG_BOUNCE_EXPIRE_S) rg.arm = null;
+        else if (o.mc < rg.arm.low) { rg.arm.low = o.mc; rg.arm.low_t = t; }
         else { const up = rg.arm.low * S.RUG_BOUNCE_X;
           if (prevOk && prevMc < up && o.mc >= up) { // the bounce happened: bought if in the band, and the setup is spent either way
             for (const [family, P, kind] of S.RUG) if (kind === "bounce" && rg.arm.peak >= P && inRug(family) && inBand)
               cand(family, { peak_mc: Math.round(rg.arm.peak), peak_t: rg.arm.peak_t, armed_t: rg.arm.t, low_mc: Math.round(rg.arm.low), low_t: rg.arm.low_t, bounce: +(o.mc / rg.arm.low - 1).toFixed(4), from_peak: +(1 - o.mc / rg.arm.peak).toFixed(4), fall_s: Math.round(rg.arm.t - rg.arm.peak_t), wait_s: Math.round(t - rg.arm.t) });
-            rg.arm = null; rg.save = true; } }
+            rg.arm = null; } }
       }
-    } }
+    }
+  }
 
   let low = null, hi1h = null, p15 = null; // shared by the books below and by the measurements at the end
   older: { if (young) break older; // every book below starts at 8 hours old
@@ -99,7 +106,7 @@ export function evaluate(coin, o, opts = {}) {
 
   // 2. LOW4H (+ 4. SLOW-BUILD and 7. LOW4H-LIQ25K on LOW4H's first eligible candidate)
   if (!g.done["LOW4H"]) {
-    if (!sr.covered(t - S.LOW4H_WIN_S, t)) note("LOW4H", "insufficient 4 h history");
+    if (!sr.priced(t - S.LOW4H_WIN_S, t)) note("LOW4H", "insufficient 4 h history");
     else {
       low = sr.lowIn(t - S.LOW4H_WIN_S, t);
       if (low && cross(S.LOW4H_X * low.px)) {
@@ -132,7 +139,7 @@ export function evaluate(coin, o, opts = {}) {
 
   // 3. CONT (+ 6. CONT-STALL shares its entry) — first eligible observation; not a crossing
   if (!g.done["CONT"]) {
-    if (!sr.covered(t - S.CONT_HI_WIN_S, t)) note("CONT", "insufficient 1 h history");
+    if (!sr.priced(t - S.CONT_HI_WIN_S, t)) note("CONT", "insufficient 1 h history");
     else {
       p15 = sr.priceAt(t - S.CONT_LOOKBACK_S); hi1h = sr.highIn(t - S.CONT_HI_WIN_S, t);
       if (p15 && hi1h && o.px >= S.CONT_RISE * p15.px && o.px >= S.CONT_NEAR_HI * hi1h.px && inBand) {
@@ -147,7 +154,7 @@ export function evaluate(coin, o, opts = {}) {
   // Half-open intervals; no overlap and no missing minute. Needs a volume source (not available from price polling alone).
   if (!g.done["HH-BREAK"] && !skip.has("HH-BREAK")) {
     const mB = Math.floor(t / 60), histFrom = (mB - 15 - 15 * S.HH_BASE_WINDOWS) * 60;
-    if (!sr.covered(histFrom, t)) note("HH-BREAK", "insufficient 4 h 15 min history");
+    if (!sr.covered(histFrom, t) || !sr.priced(t - S.HH_HI_WIN_S, t)) note("HH-BREAK", "insufficient 4 h 15 min history"); // volume windows: no trade missed; the 60-minute high: a known starting price too
     else {
       const hi = hi1h ?? sr.highIn(t - S.HH_HI_WIN_S, t);
       if (hi && o.px > hi.px && inBand) {
@@ -169,7 +176,7 @@ export function evaluate(coin, o, opts = {}) {
   for (const [family, W, n, K] of S.HH_FAST) {
     if (g.done[family] || skip.has(family)) continue;
     const mB = Math.floor(t / 60), histFrom = Math.min((mB - n - n * K) * 60, t - W);
-    if (!sr.covered(histFrom, t)) { note(family, "insufficient history"); continue; }
+    if (!sr.covered(histFrom, t) || !sr.priced(t - W, t)) { note(family, "insufficient history"); continue; }
     const hi = sr.highIn(t - W, t);
     if (!(hi && o.px > hi.px && inBand)) continue;
     const vsum = (m0) => sr.barsIn(m0, m0 + n).reduce((x, [, b]) => x + b.v, 0);
@@ -224,6 +231,6 @@ export function evaluate(coin, o, opts = {}) {
     const W = Math.max(0, ...out.cands.map((c) => c.detail.window_s || (c.family === "SECOND-WAVE" ? t - c.detail.seed_t : 0)));
     out.evidence = { prev: prevRec, window_s: W || null, obs: W ? sr.raw.filter((r) => r[0] >= t - W && r[0] <= t).slice(-S.EVIDENCE_OBS_CAP).map((r) => [+r[0].toFixed(3), r[1], Math.round(r[2]), r[3]]) : null };
   }
-  if (out.cands.length) { low ??= sr.covered(t - S.LOW4H_WIN_S, t) ? sr.lowIn(t - S.LOW4H_WIN_S, t) : null; hi1h ??= sr.highIn(t - 3600, t); p15 ??= sr.priceAt(t - 900); const f = features(coin, o, low, hi1h, p15); for (const c of out.cands) c.features = f; }
+  if (out.cands.length) { low ??= sr.priced(t - S.LOW4H_WIN_S, t) ? sr.lowIn(t - S.LOW4H_WIN_S, t) : null; hi1h ??= sr.priced(t - 3600, t) ? sr.highIn(t - 3600, t) : null; p15 ??= sr.priceAt(t - 900); const f = features(coin, o, low, hi1h, p15); for (const c of out.cands) c.features = f; }
   return out;
 }

@@ -54,7 +54,9 @@ export class Store {
     // 1) coins with their identity and OBSERVATION MODE first — a sampled coin must come back as sampled, or its positions
     //    would be stranded without quotes (and the live adapter would wrongly claim it)
     for (const r of this.db.prepare("SELECT mint, pool, create_ts, info FROM coins").iterate()) { const info = r.info ? JSON.parse(r.info) : null; engine.coin(r.mint, { pool: r.pool, createTs: r.create_ts, info, mode: info?.monitoring_mode === "polled" ? "polled" : null }); }
-    // 2) one-entry flags
+    // 2) one-entry flags. First RECONCILE: every stored entry must have its flags (an entry written by a version that did not
+    //    commit the two together, or carried in by a migration, may lack them) — otherwise the same book could buy the coin again.
+    this.tx(() => { for (const r of this.db.prepare("SELECT id, json FROM entries").all()) { const e = JSON.parse(r.json); for (const f of e.families || []) this.q.dec.run(e.mint, e.ag, f, e.decisionT, e.id, JSON.stringify((e.cands || []).find((c) => c.family === f)?.detail ?? null)); } });
     for (const r of this.db.prepare("SELECT mint, ag, family FROM decisions").iterate()) engine.restoreDone(r.mint, r.ag, r.family);
     // 3) unfinished entries (pending, open, or with a sale still waiting for a price)
     const maxId = this.db.prepare("SELECT MAX(id) m FROM entries").get().m || 0;
