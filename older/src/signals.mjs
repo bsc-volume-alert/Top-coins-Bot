@@ -52,6 +52,9 @@ export function evaluate(coin, o, opts = {}) {
   const cross = (line) => prevOk && sr.prevPx < line && o.px >= line;
   // `from` = the start of the longest stretch this decision relied on. If a tolerated warm-restart gap lies inside it, the seconds
   // that were not observed are recorded on the decision (restart_gap_s) — exact windows pass no `from`: they can never span one.
+  // …and "the stretch it relied on" starts at the observation that SUPPLIED the price standing at the window's start, not at the
+  // window's nominal start: a quiet coin's reference can date from before a restart while its window begins after it (eighth review, C3)
+  const srcT = (x) => { const p = sr.priceAt(x); return p ? Math.min(x, p.src === "obs" || p.src === "anchor" || p.src === "last" ? p.t : p.t - 60) : x; };
   const cand = (family, detail, from = null) => { g.done[family] = 1; const w = from != null ? sr.warmIn(from, t) : 0; out.cands.push({ family, ag, t, mc: o.mc, px: o.px, detail: w ? { ...detail, restart_gap_s: w } : detail }); };
   const prevRec = sr.prevT !== null ? { t: sr.prevT, px: sr.prevPx, covered_to_now: prevOk } : null;
 
@@ -116,7 +119,7 @@ export function evaluate(coin, o, opts = {}) {
         if (!inBand) note("LOW4H", "crossing outside entry band", { mc: Math.round(o.mc) }, false);
         else {
           const d = { low_px: low.px, low_t: low.t, low_mc: Math.round(low.px * coin.supply) };
-          const w4 = t - S.LOW4H_WIN_S; cand("LOW4H", d, w4);
+          const w4 = srcT(t - S.LOW4H_WIN_S); cand("LOW4H", d, w4);
           // SLOW-BUILD: ≥ 30 min from the low, and no completed 1-min candle from the low's minute up to (not incl.) the trigger's minute gains > 20%
           const elapsed = t - low.t, bars = sr.barsIn(Math.floor(low.t / 60), Math.floor(t / 60));
           const worst = bars.reduce((w, [m, b]) => { const gn = b.o > 0 ? b.c / b.o - 1 : 0; return gn > w.g ? { g: gn, m } : w; }, { g: -Infinity, m: null });
@@ -146,7 +149,7 @@ export function evaluate(coin, o, opts = {}) {
     else {
       p15 = sr.priceAt(t - S.CONT_LOOKBACK_S); hi1h = sr.highIn(t - S.CONT_HI_WIN_S, t);
       if (p15 && hi1h && o.px >= S.CONT_RISE * p15.px && o.px >= S.CONT_NEAR_HI * hi1h.px && inBand) {
-        const d = { px15: p15.px, hi1h: hi1h.px }, w1 = t - S.CONT_HI_WIN_S; cand("CONT", d, w1); cand("CONT-STALL", d, w1);
+        const d = { px15: p15.px, hi1h: hi1h.px }, w1 = srcT(t - S.CONT_HI_WIN_S); cand("CONT", d, w1); cand("CONT-STALL", d, w1);
       }
     }
   }
@@ -166,7 +169,7 @@ export function evaluate(coin, o, opts = {}) {
         const base = median(sums), v15 = vsum(mB - 15);
         const d = { hi1h: hi.px, B: mB * 60, signal_window: [(mB - 15) * 60, mB * 60], baseline_window: [(mB - 255) * 60, (mB - 15) * 60], vol15: Math.round(v15), base_median: Math.round(base), windows: sums.map(Math.round) };
         if (!(base > 0)) note("HH-BREAK", "zero volume baseline (not entered)", d, false);
-        else if (v15 >= S.HH_VOL_X * base) { cand("HH-BREAK", d, histFrom); cand("HH-BREAK-4H", d, histFrom); } // the 4-hour clock book shares the buy (as CONT-STALL shares CONT's)
+        else if (v15 >= S.HH_VOL_X * base) { const f0 = Math.min(histFrom, srcT(t - S.HH_HI_WIN_S)); cand("HH-BREAK", d, f0); cand("HH-BREAK-4H", d, f0); } // the 4-hour clock book shares the buy (as CONT-STALL shares CONT's)
       }
     }
   }
@@ -187,7 +190,7 @@ export function evaluate(coin, o, opts = {}) {
     const base = median(sums), vn = vsum(mB - n);
     const d = { high: hi.px, high_window_s: W, B: mB * 60, signal_window: [(mB - n) * 60, mB * 60], baseline_window: [(mB - n - n * K) * 60, (mB - n) * 60], vol: Math.round(vn), base_median: Math.round(base), windows: sums.map(Math.round) };
     if (!(base > 0)) note(family, "zero volume baseline (not entered)", d, false);
-    else if (vn >= S.HH_VOL_X * base) cand(family, d, histFrom);
+    else if (vn >= S.HH_VOL_X * base) cand(family, d, Math.min(histFrom, srcT(t - W)));
   }
 
   // FAST / FAST150 — fresh crossing of X × the lowest pool spot price in the preceding window (1, 3, 5, 10 or 30 minutes; see S.FAST).

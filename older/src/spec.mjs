@@ -105,6 +105,13 @@ export const BUYERS_KEEP_S = 20 * 60;          // per-bar buyer wallet lists kep
 // tokens received at the buy and off the proceeds of every sale — and every such trade is marked on the page. Sampled method
 // only (pool-state fills do not model the fee). Other transfer restrictions (hooks, freeze, permanent delegate…) stay blocked.
 export const XFER_FEE_MAX_BPS = 500;
+// THE INCLUSION ASSUMPTION (eighth review, B2): does a routed quote's output already have the coin's transfer fee taken off?
+// false = the quote is treated as gross and the fee is deducted here, once on the buy and once on each sale;
+// true  = the quote is treated as net and nothing more is deducted. Either way the fee is charged exactly once per transfer,
+// the raw quoted amounts are kept on every fill and sale, and this value is recorded with them. NOT YET MEASURED: until
+// scripts/fee-probe.mjs has been run and read, FEE-COINS is an accounting scenario, not scored after-cost performance.
+export const XFER_FEE_IN_QUOTE = false;
+export const RISK_REFRESH_S = 600; // a sampled coin with a pending or open position has its transfer restrictions read again this often
 // Reporting only: every buy of a transfer-fee coin is shown in ONE separate book and left out of the rule books' own totals
 // and rows (owner, 22 Nov 2026: "a separate book so we can analyse those separately"). The entry still records the rule(s) that bought it.
 export const FEE_BOOK = "FEE-COINS";

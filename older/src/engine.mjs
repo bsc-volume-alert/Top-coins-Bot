@@ -8,6 +8,7 @@ import { Series, Coverage } from "./series.mjs";
 import { newCoin, evaluate } from "./signals.mjs";
 import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount } from "./book.mjs";
 import { liquidityUsd, staticImpact } from "./fills.mjs";
+import { feeKnown } from "./risk.mjs";
 
 const POLLED_UNSUPPORTED = new Set(["HH-BREAK", "HH-BREAK-4H", ...S.HH_FAST.map((x) => x[0]), ...S.ANY_AGE]), NEVER = () => false;
 export class Engine {
@@ -118,6 +119,8 @@ export class Engine {
     if (c.info.risk?.status === "restricted") { if (!c.riskNoted) { c.riskNoted = true; this.stats.riskBlocked++; this.store?.saveNote(mint, { ag: null, family: "*", t: o.t, reason: "not evaluated for entry: token transfer restrictions make the execution assumption unsupported", detail: { risk: c.info.risk } }); } return null; }
     // a transfer-fee coin is entered only where the fee is modelled: the sampled method (the fee is taken off its routed quotes)
     if (c.info.risk?.fee_bps > 0 && c.mode !== "polled") { if (!c.riskNoted) { c.riskNoted = true; this.stats.riskBlocked++; this.store?.saveNote(mint, { ag: null, family: "*", t: o.t, reason: "not evaluated for entry: transfer-fee coin on the live method, where the fee is not modelled", detail: { fee_bps: c.info.risk.fee_bps } }); } return null; }
+    // UNKNOWN IS NOT "NO FEE" (eighth review, B1): a sampled coin whose transfer fee is not known yet is not entered
+    if (c.mode === "polled" && !feeKnown(c.info)) { this.stats.feeUnknown = (this.stats.feeUnknown || 0) + 1; if (!c.feeNoted) { c.feeNoted = true; this.store?.saveNote(mint, { ag: null, family: "*", t: o.t, reason: "not evaluated for entry: the coin's transfer fee has not been read from the chain yet", detail: { token_program: c.info.token_program ?? null } }); } return null; }
     const r = evaluate(c, o, opts);
     for (const n of r.notes) { this.stats.notes++; this.store?.saveNote(mint, n); }
     if (!r.cands.length) return null;
@@ -171,6 +174,14 @@ export class Engine {
   onQuote(id, st) {
     const e = this.entries.get(id); if (!e || e.exec !== "routed-quote") return; this.stats.quotes++;
     const c = this.coins.get(e.mint), ids = this.byMint.get(e.mint), was = e.status, sig = e.versions.map((v) => v.status).join();
+    // ELIGIBILITY IS CHECKED AGAIN AT THE FILL (eighth review, B1): what was true at the decision may not be true a second later.
+    // A pending buy on a coin that is now restricted (a fee over the limit, any other restriction) or whose fee is no longer
+    // known is CANCELLED, never filled.
+    if (e.status === "pending" && st.buy) { const rk = c?.info?.risk, bad = rk?.status === "restricted" ? `restricted (${(rk.blocking || []).join(", ") || "transfer restriction"})` : !feeKnown(c?.info) ? "transfer fee not known" : null;
+      if (bad) { e.status = "cancelled"; e.flags.push(`cancelled before the buy: the coin's transfer restrictions changed between the decision and the fill — now ${bad}`); this.stats.cancelledAtFill = (this.stats.cancelledAtFill || 0) + 1; this._after(e, was, sig, ids, c); return; } }
+    // ONE CLASSIFICATION: the fee recorded on the entry is the highest fee actually applied to any of its quotes, so the stored
+    // tag, the accounting and the reports always agree (a buy tagged fee-free that is priced with a fee becomes a fee-coin buy)
+    { const ap = Math.max(st.buy?.xfer_bps || 0, ...(st.sells || []).map((x) => x.xfer_bps || 0)); if (e.token && ap > (e.token.xfer_bps || 0)) { e.token.xfer_bps = ap; e.touched = true; } }
     observe(e, st, st.t, this.pollCov); this._after(e, was, sig, ids, c);
   }
 

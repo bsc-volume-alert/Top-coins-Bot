@@ -28,7 +28,7 @@ export function sellSol(st, tok, minReq = null) { const q = sellQuote(st, tok, m
  *  requested and answered — quotes for different quantities are different market observations and are never merged under one
  *  timestamp), { sol } for a pool state. minReq: only a quote requested at or after this time may price an order. */
 export function sellQuote(st, tok, minReq = null) {
-  if (isQuote(st)) { const q = (st.sells || []).find((x) => near(x.tok, tok) && (minReq == null || (x.reqT ?? st.reqT) >= minReq)); return q ? { sol: q.sol, reqT: q.reqT ?? st.reqT, t: q.t ?? st.t, route: q.route ?? null } : null; }
+  if (isQuote(st)) { const q = (st.sells || []).find((x) => near(x.tok, tok) && (minReq == null || (x.reqT ?? st.reqT) >= minReq)); return q ? { sol: q.sol, reqT: q.reqT ?? st.reqT, t: q.t ?? st.t, route: q.route ?? null, xfer_bps: q.xfer_bps ?? 0, raw_sol: q.raw_sol ?? null, xfer_in_quote: q.xfer_in_quote ?? null } : null; } // the fee evidence travels with the quote that priced the sale
   const gross = (st.quote * tok) / (st.base + tok); return { sol: gross * (1 - feeSell(st)) };
 }
 /** after-cost liquidation value of `tok`: what selling it now would put in the wallet; null when not priced */

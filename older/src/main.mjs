@@ -78,9 +78,15 @@ if (process.env.OLDER_SOLANA_WIDE === "1") {
   poller = new Poller({ engine, jup: J, store, log, hotEvery: Number(process.env.OLDER_HOT_S || 10), coldEvery: Number(process.env.OLDER_COLD_S || 60), quoteFast: Number(process.env.OLDER_QUOTE_FAST_S || 2), quoteSlow: Number(process.env.OLDER_QUOTE_SLOW_S || 10) });
   log(`[older] sampled coins restored to the watch list: ${poller.restore()}`);
   poller.start();
-  // Token-2022 mints: read the extensions from the chain (1 call each) — until then their risk status is "missing", not clean
-  (async () => { while (true) { await new Promise((r) => setTimeout(r, 1000)); const c = [...engine.coins.values()].find((x) => x.mode === "polled" && x.info.token_program === TOKEN_2022 && !x.riskRead); if (!c) continue; c.riskRead = true;
-    try { const r = await rpc("getAccountInfo", [c.mint, { encoding: "jsonParsed" }]); c.info.risk = classifyMintAccount(r?.value); store.saveCoin(c.mint, { info: c.info }); } catch { c.info.risk = { status: "missing", why: "mint account read failed" }; } } })();
+  // TRANSFER RESTRICTIONS are read from the chain, one call each (risk.nextRiskRead): first a coin with a position whose fee is not
+  // known, then any coin whose fee is not known (most recently priced first), then — every RISK_REFRESH_S — coins we hold, because a
+  // fee can be raised while a position is open. Until a coin's fee is known it is not entered (engine._decide).
+  (async () => { const { nextRiskRead } = await import("./risk.mjs"); const { RISK_REFRESH_S } = await import("./spec.mjs");
+    while (true) { const c = nextRiskRead(engine, Date.now() / 1000, RISK_REFRESH_S); if (!c) { await new Promise((r) => setTimeout(r, 1000)); continue; }
+      const held = !!engine.byMint.get(c.mint)?.size; c.riskRead = true; c.riskAt = Date.now() / 1000;
+      try { const r = await rpc("getAccountInfo", [c.mint, { encoding: "jsonParsed" }]); const k = classifyMintAccount(r?.value); if (k.status !== "missing") { c.info.risk = k; if (k.program) c.info.token_program = k.program; store.saveCoin(c.mint, { info: c.info }); } else if (!c.info.risk) c.info.risk = k; }
+      catch { if (!c.info.risk) c.info.risk = { status: "missing", why: "mint account read failed" }; c.riskRead = false; c.riskRetryAt = Date.now() / 1000 + 60; } // a failed read is tried again; what was known before stays
+      await new Promise((r) => setTimeout(r, held ? 200 : 500)); } })();
   log("[older] Solana-wide adapter ON (Jupiter polling + routed quotes)");
 }
 const inv = () => { try { return JSON.parse(store.db.prepare("SELECT v FROM meta WHERE k='inventory'").get()?.v || "null"); } catch { return null; } };

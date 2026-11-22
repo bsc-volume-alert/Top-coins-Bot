@@ -38,6 +38,7 @@ export class Series {
     this.pend = false;      // the coin's data was lost and no valid observation has arrived since: history restarts at the NEXT observation, not at the loss
     this.mrg = new WeakMap(); // raw entry → { lo, hi, t1, p0 } (p0 = its own first price): an entry that absorbed later observations of its own second (RAW_CAP) keeps their extremes and the last time
     this.own = [];          // THIS coin's own unusable-price intervals [a, b|null]: e.g. a boost quarantine, from the estimated state to the confirming swap
+    this.ownCut = null;     // the end of the latest own break that was pruned from `own`: any stretch starting before it overlapped a break that is no longer on record
     this.lastPx = null; this.lastT = null; this.prevPx = null; this.prevT = null;
   }
   startLive(t) { if (this.histFrom === null || this.histFrom > t) this.histFrom = t; if (this.obsFrom === null || this.obsFrom > t) this.obsFrom = t; }
@@ -49,7 +50,7 @@ export class Series {
   breakOpen(t) { const g = this.own[this.own.length - 1]; if (g && g[1] === null) return false; this.own.push([t, null]); return true; }
   /** …and usable again from t (the confirming swap). The interval stays on record: no window or carried price may span it. */
   breakClose(t) { const g = this.own[this.own.length - 1]; if (!g || g[1] !== null) return false; g[1] = Math.max(t, g[0]); return true; }
-  ownGapsIn(x, t) { return this.own.filter(([a, b]) => (b === null ? Infinity : b) > x && a < t); }
+  ownGapsIn(x, t) { const g = this.own.filter(([a, b]) => (b === null ? Infinity : b) > x && a < t); if (this.ownCut !== null && x < this.ownCut) g.unshift([null, this.ownCut]); return g; } // a pruned break still counts: provenance that was discarded is not provenance
   /** THE continuity test for exact data: were this coin's exact observations unbroken over [a, b]? True only if exact observation
    *  was already running at a, no feed or SOL/USD outage touches [a, b], and none of the coin's own breaks does. Everything that
    *  needs exact data uses this one test: seconds-scale windows, fresh crossings, candle completeness, and — new — every price
@@ -132,7 +133,7 @@ export class Series {
     // buyer wallets are only read for the last 15 minutes (features): older bars keep the COUNT and release the wallet list (memory)
     for (const [m, b] of this.bars) { if (m < mc) this.bars.delete(m); else if (m < bc && b.buyers !== EMPTY) { b.nbuyers = b.buyers.size; b.buyers = EMPTY; } }
     for (const m of this.bf.keys()) if (m < mc) this.bf.delete(m);
-    if (this.own.length && this.own[0][1] !== null && this.own[0][1] < now - BAR_KEEP_S - 3600) this.own = this.own.filter(([, b]) => b === null || b >= now - BAR_KEEP_S - 3600);
+    if (this.own.length && this.own[0][1] !== null && this.own[0][1] < now - BAR_KEEP_S - 3600) { const cut = now - BAR_KEEP_S - 3600; for (const [, b] of this.own) if (b !== null && b < cut && (this.ownCut === null || b > this.ownCut)) this.ownCut = b; this.own = this.own.filter(([, b]) => b === null || b >= cut); }
   }
   /** is [x, t] fully known for this coin?
    *  strict = EXACT observations only: continuous since before x (back-fill does not count, even at start-up) and no outage,
@@ -234,13 +235,13 @@ export class Series {
     const bar = (b) => { const o = { o: b.o, h: b.h, l: b.l, c: b.c, v: b.v, nb: b.nb, ns: b.ns, lowT: b.lowT }; if (b.nbuyers != null) o.nbuyers = b.nbuyers; if (b.buyers && b.buyers.size) o.buyers = [...b.buyers]; return o; };
     const mrg = []; this.raw.forEach((o, i) => { const m = this.mrg.get(o); if (m) mrg.push([i, m]); });
     return { raw: this.raw, mrg, bars: [...this.bars].map(([m, b]) => [m, bar(b)]), bf: [...this.bf].map(([m, b]) => [m, bar(b)]), histFrom: this.histFrom, obsFrom: this.obsFrom, lastIsBf: this.lastIsBf, compT: this.compT,
-      anchor: this.anchor, patched: this.patched, pend: this.pend, own: this.own, lastPx: this.lastPx, lastT: this.lastT, prevPx: this.prevPx, prevT: this.prevT };
+      anchor: this.anchor, patched: this.patched, pend: this.pend, own: this.own, ownCut: this.ownCut, lastPx: this.lastPx, lastT: this.lastT, prevPx: this.prevPx, prevT: this.prevT };
   }
   static load(mint, cov, d) {
     const s = new Series(mint, cov); s.raw = d.raw || []; for (const [i, m] of d.mrg || []) if (s.raw[i]) s.mrg.set(s.raw[i], m);
     const bar = (b, bf) => ({ o: b.o, h: b.h, l: b.l, c: b.c, v: b.v || 0, nb: b.nb || 0, ns: b.ns || 0, buyers: b.buyers ? new Set(b.buyers) : EMPTY, lowT: b.lowT, ...(b.nbuyers != null ? { nbuyers: b.nbuyers } : {}), ...(bf ? { bf: true } : {}) });
     for (const [m, b] of d.bars || []) s.bars.set(m, bar(b, false)); for (const [m, b] of d.bf || []) s.bf.set(m, bar(b, true));
-    for (const k of ["histFrom", "obsFrom", "lastIsBf", "compT", "anchor", "pend", "lastPx", "lastT", "prevPx", "prevT"]) s[k] = d[k] ?? (k === "lastIsBf" || k === "pend" ? false : null);
+    for (const k of ["histFrom", "obsFrom", "lastIsBf", "compT", "anchor", "pend", "ownCut", "lastPx", "lastT", "prevPx", "prevT"]) s[k] = d[k] ?? (k === "lastIsBf" || k === "pend" ? false : null);
     s.patched = d.patched || []; s.own = d.own || []; return s;
   }
 }

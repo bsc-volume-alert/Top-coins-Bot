@@ -11,20 +11,25 @@
 // No key or secret is read or written here. The file holds prices, volumes and buyer wallet addresses already in memory.
 import { openSync, writeSync, closeSync, renameSync, readFileSync, existsSync, unlinkSync } from "node:fs";
 import { Series } from "./series.mjs";
-import { WARM_MAX_GAP_S, BAR_KEEP_S, SPEC_VER } from "./spec.mjs";
+import { WARM_MAX_GAP_S, SPEC_VER } from "./spec.mjs";
 
 const FORMAT = 1;
-const covOut = (c, keepFrom) => ({ gaps: c.gaps.filter((g) => g[1] >= keepFrom), upSince: c.upSince, down_since: c.down ? c.lastDown : null });
+// EVERY gap is kept, however old (eighth review, C1): state can depend on observation from hours or days back (a RUG peak has
+// no time limit), and a gap that is dropped would make a broken stretch look unbroken. They are a few numbers each.
+const covOut = (c) => ({ gaps: c.gaps, upSince: c.upSince, down_since: c.down ? c.lastDown : null });
 
 /** write the snapshot (synchronously: the process is stopping). Returns { coins, bytes, ms }. */
 export function saveWarm(file, engine, t = Date.now() / 1000) {
   const t0 = Date.now(), tmp = file + ".tmp", fd = openSync(tmp, "w"); let n = 0, bytes = 0;
   const line = (o) => { const s = JSON.stringify(o) + "\n"; bytes += s.length; writeSync(fd, s); };
   try {
-    line({ warm: FORMAT, t, spec: SPEC_VER, cov: covOut(engine.cov, t - BAR_KEEP_S - 3600), pollCov: covOut(engine.pollCov, t - BAR_KEEP_S - 3600) });
+    line({ warm: FORMAT, t, spec: SPEC_VER, cov: covOut(engine.cov), pollCov: covOut(engine.pollCov) });
     for (const [mint, c] of engine.coins) { const sr = c.series; if (sr.lastT === null && !sr.bf.size) continue; // never observed: nothing to keep
       const groups = {}; for (const [ag, g] of Object.entries(c.groups || {})) groups[ag] = { ref: g.ref ?? null, done: g.done || {}, logged: g.logged || {} };
-      line({ m: mint, mode: c.mode, pool: c.pool ?? null, createTs: c.createTs ?? null, supply: c.supply ?? null, lostAt: c.lostAt ?? null, sw: c.sw ?? null, rug: c.rug ?? null, groups, s: sr.dump() }); n++; }
+      // carried state is saved only while its own provenance holds AT THE STOP: a RUG peak / setup that is no longer steady up to
+      // now, or a SECOND-WAVE setup whose exact coverage has broken, is not written (it would be dropped at the next trade anyway)
+      const rug = c.rug?.pk && sr.steady(c.rug.pk.t, t) ? c.rug : null, sw = c.sw && sr.covered(c.sw.seedT, t, true) ? c.sw : null;
+      line({ m: mint, mode: c.mode, pool: c.pool ?? null, createTs: c.createTs ?? null, supply: c.supply ?? null, lostAt: c.lostAt ?? null, sw, rug, groups, s: sr.dump() }); n++; }
     line({ end: true, coins: n });
   } finally { closeSync(fd); }
   renameSync(tmp, file); // atomic: a file that exists is complete
@@ -45,8 +50,10 @@ export function loadWarm(file, engine, now = Date.now() / 1000) {
   if (age > WARM_MAX_GAP_S) return { loaded: false, why: `snapshot is ${Math.round(age)} s old (limit ${WARM_MAX_GAP_S} s)`, age_s: Math.round(age) };
   const rows = []; try { for (let i = 1; i < lines.length - 1; i++) rows.push(JSON.parse(lines[i])); } catch { return { loaded: false, why: "snapshot damaged" }; } // parsed in full before anything is applied
   // coverage: the earlier gaps come back as they were; the stop itself is closed by the next up() — "warm" only if it is short
-  engine.cov.gaps = h.cov.gaps || []; engine.cov.upSince = h.cov.upSince ?? null; engine.cov.resume(h.cov.down_since ?? h.t);
-  engine.pollCov.gaps = h.pollCov?.gaps || []; engine.pollCov.upSince = h.pollCov?.upSince ?? null; engine.pollCov.resume(h.pollCov?.down_since ?? h.t); // sampling: the same rule, closed by the first price reply
+  // An outage that was ALREADY under way at the stop is an ordinary outage up to the stop — its cause had nothing to do with the
+  // restart and it is never forgiven (eighth review, C2). Only the stretch from the stop itself can become a warm gap.
+  const back = (cov, s) => { cov.gaps = (s?.gaps || []).map((g) => g.slice()); cov.upSince = s?.upSince ?? null; if (s?.down_since != null && s.down_since < h.t) cov.gaps.push([s.down_since, h.t]); cov.resume(h.t); };
+  back(engine.cov, h.cov); back(engine.pollCov, h.pollCov); // sampling: the same rule, closed by the first price reply
   let n = 0, skipped = 0; const curM = Math.floor(now / 60);
   for (const d of rows) {
     const had = engine.coins.has(d.m), c = engine.coin(d.m, { pool: d.pool, createTs: d.createTs, mode: d.mode });

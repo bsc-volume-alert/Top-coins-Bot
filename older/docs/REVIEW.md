@@ -272,6 +272,23 @@ Two small corrections found on the way, both in the strict direction: `feedUp` n
 6. Sampled coins: first pause judged at the previous interval (`warmTol`). A coin that was "hot" before the stop and has no position is restored as "cold"; its first sample may come later than 35 s and the history then restarts (safe direction).
 7. `Series.load` trusts the file's contents (it is written and read by this program on the same disk, renamed atomically, used once). Anything that should be validated on read?
 
+## 6p. Eighth independent review — 0a3b8d3 (ChatGPT, 22 Nov 2026 01:34 UK) — response
+
+Verdict received: A closed (one reporting leftover), B not ready, C not ready. **Every finding was reproduced here before fixing** (on 4a56633 = 0a3b8d3 + the under-8-hours addition): B1 unknown→5% filled, tagged 0 bps, deducted 500 bps, shown in FAST-5M and not in FEE-COINS; B1 1%→8% filled; C1 RUG450 bought against the $600K peak; C2 gap `[T+395, T+410, "warm"]`; C3 CONT bought on a price from before the restart with `warm_gap_s = 0`; A ten report rows counting an estimated exit as closed. Tests: `test/review8.test.mjs` (9; the file imports helpers that do not exist on 0a3b8d3, so it fails there as a whole — the per-finding reproductions above were run separately). 152 tests.
+
+| Finding | Was it right? | Fix |
+|---|---|---|
+| **A leftover.** `report.mjs` rows count estimated exits. | Yes. | `estimated_exits` / `estimated_net_sol` per row, in no total, quantile or win rate; own column in `/table`. |
+| **B1. Fee status can change between decision and fill; unknown treated as fee-free.** | Yes, both cases. | (a) `risk.feeKnown`: a sampled coin is not entered until its fee is known. (b) `engine.onQuote`: a pending buy on a coin now restricted, or with an unknown fee, is cancelled. (c) the entry's `token.xfer_bps` is the highest fee applied to any of its quotes, so tag, accounting and reports agree. (d) `risk.nextRiskRead`: held coins first, then priced coins, then a 10-minute refresh for held coins. |
+| **B2. Quotes can already include the fee; a double deduction is not simply conservative.** | Accepted — and your stop-timing point is right: my "too low, never too high" was wrong as a statement about results. | Not resolved by assumption. The assumption is now explicit (`XFER_FEE_IN_QUOTE`), the fee is applied once under it, raw quoted amounts and the assumption are stored on every fill and sale, FEE-COINS is labelled an accounting scenario on the page, and `scripts/fee-probe.mjs` measures it read-only (round trip of a 0.2 SOL quote on fee coins against control coins). The assumption will be set from that measurement, per route if the routes differ. |
+| **C1. Old outages dropped from the snapshot while a RUG peak survives.** | Yes. | All gaps kept; carried state without provenance at the stop is not written; a pruned own-break still counts (`ownCut`) — the same class of fault inside one process. |
+| **C2. An outage under way at the stop becomes warm.** | Yes. | Plain gap `[down_since, stop]`, then the warm candidate from the stop. |
+| **C3. Label follows the nominal window.** | Yes. | `srcT`: the label's stretch starts at the source observation of the price standing at the window start (LOW4H, CONT, HH highs). |
+
+**Not changed and declared:** on the LIVE (PumpSwap pool-state) method no mint extensions are read; a transfer-fee coin there is entered only if no fee is known, i.e. the live method assumes canonical pump.fun mints carry no transfer fee. If that assumption needs evidence, say so.
+
+**To attack:** (1) any path where a sampled entry is created or filled with `feeKnown` false; (2) a fee raised while a position is open: sales are charged the fee current at the sale and the entry is re-classified — is charging the current fee right for a position opened under a lower one? (3) `fee-probe`: is a round-trip comparison against control coins a sound way to separate "included" from "not included", given different pool fees per route? (4) `ownCut` as a single high-water mark.
+
 ## 6l. Full review requested by the owner (21 Nov 2026, 21:35 UK) — map of everything since the sixth review
 
 The sixth review covered `8474066` (spec older-4, 17 families, 104 tests). The owner asked for a complete A-to-Z review of the present head because much has been added since. Spec is now **older-8**: 29 families, 5 stops, 2 exit policies, 1,240 comparison rows, 124 tests.

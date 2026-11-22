@@ -8,6 +8,22 @@
 // Risk flags are evidence, not proof a later sale succeeds.
 import { XFER_FEE_MAX_BPS } from "./spec.mjs";
 export const TOKEN_2022 = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb", SPL_TOKEN = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+/** IS THE COIN'S TRANSFER FEE KNOWN? (eighth review, B1: "unknown" must never silently mean "no fee".) Known = a classic SPL
+ *  token (the program has no transfer fee), or a mint whose extensions were read from the chain. Anything else — a Token-2022
+ *  mint not read yet, an unknown token program — is NOT known, and a sampled coin in that state is not entered. */
+export const feeKnown = (info) => info?.token_program === SPL_TOKEN || info?.risk?.src === "rpc mint account";
+/** which sampled coin's mint account to read next (one RPC call each), or null:
+ *    1. a coin with a pending or open position whose fee is not known        (a buy is waiting on it)
+ *    2. any other coin whose fee is not known, most recently priced first    (so a coin that is trading can be evaluated soon)
+ *    3. a coin with a pending or open position last read over RISK_REFRESH_S ago (a fee can be raised while we hold) */
+export function nextRiskRead(engine, now, refreshS = 600) {
+  let a = null, b = null, c = null;
+  for (const x of engine.coins.values()) { if (x.mode !== "polled" || x.info?.token_program === SPL_TOKEN || (x.riskRetryAt ?? 0) > now) continue; // a read that failed is retried after a minute, without holding up the others
+    const held = !!engine.byMint.get(x.mint)?.size;
+    if (!x.riskRead) { if (held) { a = x; break; } if (x.series.lastT != null && (!b || x.series.lastT > b.series.lastT)) b = x; } // only coins that are actually being priced: a coin off the watch list is read when it comes back
+    else if (held && now - (x.riskAt ?? 0) > refreshS && (!c || (x.riskAt ?? 0) < (c.riskAt ?? 0))) c = x; }
+  return a || b || c;
+}
 const BLOCKING = new Set(["transferHook", "nonTransferable", "permanentDelegate", "pausableConfig", "confidentialTransferMint"]);
 
 /** from an RPC getAccountInfo(mint, jsonParsed) value — the authoritative check for Token-2022 extensions */

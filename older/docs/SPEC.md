@@ -172,3 +172,20 @@ Until now every restart emptied the price memory, so LOW4H and HH-BREAK could no
 - **A crash, a kill or a power loss writes no file: cold start, as before.** A damaged, cut-short, too old or wrong-format file is ignored: cold start. A bounded validation run never uses it. `OLDER_WARM=0` switches it off.
 - **The scored seven-day run starts on a fresh database with no snapshot, and is not meant to be restarted.** If it is, the affected decisions are marked and can be left out.
 
+## Rules added after the eighth independent review (22 Nov 2026, 02:00 UK)
+
+**Fee coins**
+1. **Unknown is not "no fee".** A sampled coin is entered only when its transfer fee is known: a classic SPL token (the program has no transfer fee), or a mint whose extensions have been read from the chain. A Token-2022 mint not read yet, or a coin whose token program is not known, is not evaluated for entry (recorded once per coin). Mints are read in this order: a coin with a position, then coins being priced (most recent first), then — every 10 minutes — coins we hold again.
+2. **Eligibility is checked again at the fill.** A pending buy on a coin that has become restricted (fee over 5%, any other restriction) or whose fee is no longer known is cancelled, not filled.
+3. **One classification.** The fee recorded on an entry is the highest fee actually applied to any of its quotes; FEE-COINS and the exclusion from the rule books and the 1,240 rows follow that one value.
+4. **The fee is charged exactly once per transfer, under a stated assumption** (`XFER_FEE_IN_QUOTE`, currently `false`: the quote is treated as not including the fee, and the fee is deducted here). Every fill and every sale keeps the raw quoted amount, the fee, the route and the assumption. **Whether quotes include the fee is not yet measured** (`scripts/fee-probe.mjs`, read-only). Until it is, **FEE-COINS is an accounting scenario, not scored after-cost performance**, and says so on the page. A wrong assumption does not only shift the result by a constant: it moves the stops.
+
+**Warm restart**
+5. Every coverage gap is kept in the snapshot, however old. State whose provenance no longer holds at the stop (a RUG peak or setup that is not steady up to the stop, a SECOND-WAVE setup whose exact coverage broke) is not written.
+6. An outage already under way at the stop is an ordinary outage from its start to the stop; only the stretch from the stop to the feed coming back can be a warm gap.
+7. A coin's own price break that has aged out of the record still counts for any stretch that reaches back before its end (`Series.ownCut`).
+8. The restart mark follows the observation that supplied the price standing at a window's start, not the window's nominal start.
+
+**Reporting**
+9. Estimated sales are outside the full table's totals too: counted and summed in their own column.
+
