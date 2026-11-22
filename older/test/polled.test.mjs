@@ -122,3 +122,14 @@ test("transfer-fee coins (owner, 22 Nov 2026): a 5% fee coin is bought on the sa
   for (let k = 0; k <= 30; k++) swap(L, T0 + k * 10, 100_000, { mint: "LiveFeeCoin", pool: "PoolL" }); swap(L, T0 + 320, 210_000, { mint: "LiveFeeCoin", pool: "PoolL" });
   assert.equal(L.entries.size, 0, "pool-state fills do not model the fee: not entered on the live method"); assert.equal(L.stats.riskBlocked, 1);
 });
+
+test("fee coins in their first 8 hours (owner, 22 Nov 2026): a 2-hour-old fee coin is bought by the ordinary sampled rules, in age group A0 and in FEE-COINS; a 2-hour-old coin without a fee is still not evaluated; a 2-hour-old coin with a fee over 5% is blocked", async () => {
+  const run = async (risk) => { const w = world(); w.px.set(M, 100_000 / 1e9); w.poll.add(w.tok(M, { ageH: 2 }), "t"); if (risk) w.eng.coins.get(M).info.risk = risk;
+    for (let i = 0; i < 31; i++) await w.step(10, M, 100_000); await w.step(10, M, 205_000); w.t += 1.1; await w.poll.quotes(); return w; };
+  const fee = await run({ status: "flagged", blocking: [], warnings: [], fee_bps: 200 }), e = [...fee.eng.entries.values()][0];
+  assert.ok(e, "bought"); assert.equal(e.ag, "A0"); assert.ok(e.families.includes("FAST-5M")); assert.ok(!e.families.includes("AGE-DOUBLE"), "AGE-DOUBLE has no age-group start under 8 hours"); assert.equal(e.status, "filled"); assert.equal(e.token.xfer_bps, 200); assert.ok(fee.eng.stats.evalsFeeYoung > 0);
+  const { booksApi } = await import("../src/page.mjs"); const api = booksApi([e], { stop: 0.2, policy: "trail", ag: "A0" }); assert.equal(api.books["FEE-COINS"].length, 1, "shown under the page's 'under 8h' filter, in FEE-COINS"); assert.equal(api.books["FAST-5M"].length, 0);
+  const plain = await run(null); assert.equal(plain.eng.entries.size, 0, "no fee: the 8-hour rule stands"); assert.equal(plain.eng.stats.evals, 0);
+  const big = await run({ status: "restricted", blocking: ["transferFee 900 bps"], fee_bps: 900 }); assert.equal(big.eng.entries.size, 0, "9% fee: blocked at any age");
+});
+

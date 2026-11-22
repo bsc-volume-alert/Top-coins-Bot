@@ -8,7 +8,7 @@ import * as S from "./spec.mjs";
 import { versionsFor, atStake, COST } from "./book.mjs";
 
 export const RULES = {
-  [S.FEE_BOOK]: "every buy of a coin that charges a transfer fee (5% at most), whichever rule bought it — kept out of the other books; the fee is already taken off, at the buy and at the sale",
+  [S.FEE_BOOK]: "every buy of a coin that charges a transfer fee (5% at most), whichever rule bought it, from the coin's first hours on (the other books start at 8 hours) — kept out of the other books; the fee is already taken off, at the buy and at the sale",
   "AGE-DOUBLE": "market cap crosses 2× what it was at the start of the coin's age group (8 / 16 / 24 / 36 hours old)",
   "LOW4H": "price crosses 2× its lowest of the last 4 hours",
   "CONT": "price 30%+ above 15 minutes ago and within 5% of its 1-hour high",

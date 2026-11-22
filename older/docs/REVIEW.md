@@ -251,6 +251,8 @@ Separate commit from 6m so it can be judged alone. Rule and declared assumption:
 
 Reporting (owner, 00:48): fee-coin buys appear in one separate book, FEE-COINS (`spec.FEE_BOOK`; `page.mjs booksApi`, `report.mjs bookRows`), one row per buy, and are excluded from the rule books and from the 1,240 rows — so the 1,240 comparisons are unchanged in meaning and contain no fee coins.
 
+Added 01:25 (owner): fee coins are evaluated from their first pool on (age group A0) by the same sampled rules; AGE-DOUBLE excluded there (`engine.onPrice` `feeYoung`, `signals.evaluate` `opts.youngAll`). Reported in FEE-COINS only, so no rule book and no comparison row changes. Test: last test of `test/polled.test.mjs`.
+
 **To attack:** (1) does Jupiter's quote `outAmount` already net a Token-2022 transfer fee on the input or output leg? Its API reference says only "after deducting AMM fees and platform fees". If it does, the deduction here is double (results too low). (2) Multiplying the sale proceeds by (1 − fee) instead of quoting the reduced token amount — the error is second order in trade size over pool depth; is that acceptable for 0.2 SOL? (3) The fee is read once per start; a fee raised by its authority mid-position is not seen until the next start. (4) Stored coins keep their old "restricted" status until the chain is re-read after the restart (one call per second): safe direction, but say if you see a path where a stale status is trusted the other way.
 
 ## 6o. Warm restart (22 Nov 2026, 01:05 UK) — owner's decision, for the reviewer

@@ -146,14 +146,17 @@ export class Engine {
     c.series.add(p.t, p.px, 0, null, null); if (p.supply) c.supply = p.supply; c.info.cadence_s = p.cadence_s ?? c.info.cadence_s;
     (this.dirtyBars.get(p.mint) || this.dirtyBars.set(p.mint, new Set()).get(p.mint)).add(Math.floor(p.t / 60));
     if (!c.createTs) { this.stats.noCreation++; return; }
-    const age = p.t - c.createTs; if (age < S.MIN_AGE_S) return; if (!S.ageGroupOf(age)) { this.stats.tooOld++; return; }
+    // FEE COINS IN THEIR FIRST 8 HOURS (owner, 22 Nov 2026): a coin with a transfer fee of at most XFER_FEE_MAX_BPS is evaluated from
+    // its first pool on (age group A0) by the same sampled-method rules; every other sampled coin starts at 8 hours as before
+    const age = p.t - c.createTs, feeYoung = age >= 0 && age < S.MIN_AGE_S && c.info.risk?.fee_bps > 0 && c.info.risk.status !== "restricted";
+    if (age < S.MIN_AGE_S && !feeYoung) return; if (!S.ageGroupAny(age)) { this.stats.tooOld++; return; } if (feeYoung) this.stats.evalsFeeYoung = (this.stats.evalsFeeYoung || 0) + 1;
     // VALUATION needs a real supply: without the provider's market cap or circulating supply the coin is NOT evaluated — the
     // default supply of a pump.fun coin is never assumed for a token found by sampling
     if (!(p.mc > 0)) { this.stats.noValuation = (this.stats.noValuation || 0) + 1; if (!c.noValNoted) { c.noValNoted = true; this.store?.saveNote(p.mint, { ag: null, family: "*", t: p.t, reason: "not evaluated: no market cap or circulating supply from the provider", detail: {} }); } return; }
     this.stats.evals++;
     const o = { t: p.t, px: p.px, mc: p.mc, liqUsd: p.liqUsd ?? null, rtImpact: null };
     // sampled prices carry no volume: HH-BREAK cannot be evaluated here and is NOT claimed (counted as unsupported for this mode)
-    this._decide(c, p.mint, o, { skip: POLLED_UNSUPPORTED }, { trigger: { t: p.t, px_usd: p.px, src: p.src ?? null, supply: c.supply, age_s: Math.round(age), cadence_s: p.cadence_s ?? null, coverage: "sampled" } },
+    this._decide(c, p.mint, o, { skip: POLLED_UNSUPPORTED, youngAll: feeYoung }, { trigger: { t: p.t, px_usd: p.px, src: p.src ?? null, supply: c.supply, age_s: Math.round(age), cadence_s: p.cadence_s ?? null, coverage: "sampled" } },
       { pop: "solana-wide", mode: "polled", exec: "routed-quote", valuation: p.valuation || "provider market cap", age_basis: "first-pool creation: a lower bound on token age — the 8-hour minimum holds, the 90-day ceiling is NOT verified for this token" });
   }
   /** what the quote provider must price now: [{ id, mint, buy_sol | null, sells: [tok…], due }] — one request per DISTINCT size, never per row */

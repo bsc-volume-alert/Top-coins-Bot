@@ -97,9 +97,9 @@ export function evaluate(coin, o, opts = {}) {
   }
 
   let low = null, hi1h = null, p15 = null; // shared by the books below and by the measurements at the end
-  older: { if (young) break older; // every book below starts at 8 hours old
+  older: { if (young && !opts.youngAll) break older; // every book below starts at 8 hours old — except for a transfer-fee coin (owner, 22 Nov 2026: fee coins are bought in their first 8 hours too; they are reported in FEE-COINS only)
   // 1. AGE-DOUBLE — first fresh crossing of 2 × the market cap at the age-group start
-  if (!g.done["AGE-DOUBLE"]) {
+  if (!young && !g.done["AGE-DOUBLE"]) { // needs an age-group start: there is none under 8 hours
     if (!g.ref || g.ref.status !== "OK") { g.ref = ageRef(coin, ag); if (g.ref.status !== "OK") note("AGE-DOUBLE", "reference_status=MISSING", g.ref); } // re-tried while missing (a later back-fill may supply it); logged once
     if (g.ref.status === "OK") {
       const linePx = (S.AGE_DOUBLE_X * g.ref.mc) / coin.supply;
