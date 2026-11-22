@@ -108,16 +108,16 @@ test("AGE-DOUBLE: reference MISSING when history starts after the age-group star
   assert.equal(a.cands.find((c) => c.family === "AGE-DOUBLE").detail.ref_mc, 60_000);
 });
 
-test("one entry per mint, family and age group; a new age group allows a new entry", () => {
+test("one FIRST buy per mint, family and age group; a new age group allows a new first buy; a later buy in the same age group is a marked re-buy (older-9)", () => {
   const e = setup(); path(e, T0, T0 + 4 * H + 60, () => 50_000);
   path(e, T0 + 4 * H + 60, T0 + 5 * H, (t) => 50_000 * (1 + (t - T0 - 4 * H) / H * 1.5));
   const n1 = [...e.entries.values()].filter((x) => x.families.includes("LOW4H")).length; assert.equal(n1, 1);
   path(e, T0 + 5 * H, T0 + 11 * H, () => 40_000);                        // back down; still A1 until 16 h
-  path(e, T0 + 11 * H, T0 + 12 * H, (t) => 40_000 * (1 + (t - T0 - 11 * H) / H * 2)); // doubles again inside A1 → no new LOW4H
-  assert.equal([...e.entries.values()].filter((x) => x.families.includes("LOW4H")).length, 1);
+  path(e, T0 + 11 * H, T0 + 12 * H, (t) => 40_000 * (1 + (t - T0 - 11 * H) / H * 2)); // doubles again inside A1 → no new FIRST buy; the first position was sold on every row hours ago, so this is a re-buy
+  const a1 = [...e.entries.values()].filter((x) => x.families.includes("LOW4H")); assert.equal(a1.filter((x) => !x.again?.LOW4H).length, 1, "still one first buy in A1"); assert.equal(a1.filter((x) => x.again?.LOW4H).length, 1, "and one marked re-buy");
   path(e, T0 + 12 * H, T0 + 16 * H + 60, () => 40_000);                 // into A2
   path(e, T0 + 16 * H + 60, T0 + 17 * H, (t) => 40_000 * (1 + (t - T0 - 16 * H) / H * 3));
-  const l = [...e.entries.values()].filter((x) => x.families.includes("LOW4H")).map((x) => x.ag); assert.deepEqual(l, ["A1", "A2"]);
+  const l = [...e.entries.values()].filter((x) => x.families.includes("LOW4H") && !x.again?.LOW4H).map((x) => x.ag); assert.deepEqual(l, ["A1", "A2"], "first buys: one per age group, exactly as before");
 });
 
 // ---- older-6 (21 Nov 2026, owner's decision): HH30-5M, HH30-10M, HH15-5M — faster volume breakouts, no dollar floor ----

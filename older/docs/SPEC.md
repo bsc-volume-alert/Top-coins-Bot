@@ -189,3 +189,17 @@ Until now every restart emptied the price memory, so LOW4H and HH-BREAK could no
 **Reporting**
 9. Estimated sales are outside the full table's totals too: counted and summed in their own column.
 
+## older-9 (22 Nov 2026, 17:40 UK — owner's decision): buying again
+
+Until now a book bought a coin once per age group, whether or not it had sold. The owner: "if the coin is out, it can always be bought back in … whatever stop loss we've put on the token"; waiting time: "no wait".
+
+- **The first buy is unchanged.** One first buy per book, coin and age group, decided exactly as in older-8, carrying every row (5 stops × 2 exits, plus a clock book's own rows). A test replays random markets with buying-again on and off and requires identical first buys.
+- **After it, the book may buy the coin again** whenever its rule fires and it no longer holds the coin. **Each row is judged on its own**: a row is held while its buy is pending or the row has not sold. The 20% row can be back in while the 60% row still holds the first buy.
+- **A re-buy is a real new buy** — its own signal, its own fill 1 second later, its own price — and **carries only the rows that were free**. On the other rows it does not exist. Books that fire together and have the same free rows share one re-buy; a clock book (CONT-STALL, HH-BREAK-4H) can re-buy on its own rows while its base book still holds.
+- **No waiting time.** A rule that describes a state rather than a crossing (the VOL books, CONT) can therefore fire again at the next trade after a stop-out; in a fall on heavy volume the VOL books buy again repeatedly. That is the owner's choice and its cost is measured, not hidden.
+- **Marked and reported apart.** A re-buy carries `again` per book; the page marks it "re-buy", shows per book how much of its total comes from re-buys, and has a switch "buys: all | first only". **The 1,240 comparison rows remain first buys only**; re-buys are counted and summed beside each row (`rebuys_closed`, `rebuys_net_sol`, `rebuys_open`). `entries.json` carries `again`.
+- **SECOND-WAVE:** the first setup per age group is seeded only by a first FAST buy, as before. A setup seeded again is marked, never uses up a first slot, and gives way to a first setup.
+- **Safety limit (server protection, not strategy):** at most 50 re-buys of one coin by one book in 24 hours (`REBUY_MAX_PER_DAY`), recorded when it bites. Kept in memory: it starts again after a restart.
+- **Unchanged:** a first buy in a new age group is still made even if the book's earlier buy on that coin is open (older-8 allowed it).
+- **Switch:** `OLDER_REBUY=0` runs a database without buying again (older-8 behaviour).
+

@@ -77,10 +77,11 @@ test("a snapshot is used once and never trusted when damaged: second read, cut-s
   const d4 = dir(), st4 = new Store(join(d4, "w.db")), e4 = mkEngine({ store: st4 }); e4.feedUp(T0); const w4 = saveWarm(join(d4, "w.warm"), e4, T0 + 10); assert.equal(w4.coins, 0); assert.equal(loadWarm(join(d4, "w.warm"), mkEngine(), T0 + 12).loaded, true);
 });
 
-test("one-buy flags after a warm restart: a book that bought the coin before the stop does not buy it again; the database's observation method wins over the snapshot's", () => {
+test("one-buy flags after a warm restart: a book that bought the coin before the stop makes no second FIRST buy — only a marked re-buy on the rows it has sold; the database's observation method wins over the snapshot's", () => {
   const stop = T0 + 5 * H + 200, d = dir(); first(d, (e) => { path(e, T0, T0 + 2 * H, () => 100_000, 60); path(e, T0 + 2 * H, T0 + 5 * H, () => 60_000, 60); swap(e, T0 + 5 * H, 110_000); swap(e, T0 + 5 * H + 2, 125_000); assert.equal(has(e, "LOW4H").length, 1); path(e, T0 + 5 * H + 10, stop, () => 80_000, 10); }, stop);
   const e = second(d, stop); swap(e, stop + 12, 110_000); swap(e, stop + 14, 125_000); swap(e, stop + 16, 110_000); swap(e, stop + 18, 130_000); e.flush();
-  assert.equal(e.store.db.prepare("SELECT COUNT(*) n FROM entries WHERE json LIKE '%\"LOW4H\"%'").get().n, 1, "still one LOW4H buy for this coin and age group");
+  const ls = e.store.allEntries().filter((x) => x.families.includes("LOW4H")); assert.equal(ls.filter((x) => !x.again?.LOW4H).length, 1, "still one FIRST LOW4H buy for this coin and age group");
+  const re = ls.filter((x) => x.again?.LOW4H); assert.ok(re.length >= 1, "the crossing after the restart is a re-buy (older-9)"); assert.equal(re[0].versions.filter((v) => v.stall === false).length, 6, "carrying only the rows the first buy has already sold: it fell from $125K to $80K, so the 20–30% stops are out on both exits and the 40% and 60% stops still hold"); assert.ok(re[0].versions.every((v) => v.stop <= 0.3));
   const d2 = dir(); first(d2, (x) => path(x, T0, stop, () => 100_000, 60), stop); const st = new Store(join(d2, "w.db")), e2 = mkEngine({ store: st }); st.setCoinMode(M, null, { monitoring_mode: "polled", population: "solana-wide" }); st.restore(e2);
   const r = loadWarm(join(d2, "w.warm"), e2, stop + 5); assert.equal(e2.coins.get(M).mode, "polled"); assert.equal(r.skipped, 1, "a live snapshot is not put under a coin the database says is sampled"); assert.equal(e2.coins.get(M).series.lastT, null);
 });

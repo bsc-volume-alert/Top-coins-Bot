@@ -59,7 +59,8 @@ test("5 an entry and its one-buy flags are one commit; a stored entry without fl
   st = new Store(db); const e2 = mkEngine({ store: st }); st.restore(e2); e2.feedUp(T0 + 800);
   assert.equal(st.db.prepare("SELECT COUNT(*) n FROM decisions WHERE family='VOL300K'").get().n, 1, "restore puts the missing flag back"); assert.equal(e2.coins.get(M).groups.A0.done["VOL300K"], 1);
   path(e2, T0 + 800, T0 + 1200, () => 100_000, 20, { sol: 900 }); e2.flush();
-  assert.equal(st.db.prepare("SELECT COUNT(*) n FROM entries WHERE json LIKE '%VOL300K%'").get().n, 1, "the same heavy trading that bought it the first time does not buy it again: still one VOL300K entry for this coin and age group");
+  const vs = st.allEntries().filter((x) => x.families.includes("VOL300K")); assert.equal(vs.filter((x) => !x.again?.VOL300K).length, 1, "the same heavy trading does not produce a second FIRST buy: the flag is back");
+  assert.ok(vs.filter((x) => x.again?.VOL300K).length >= 1, "what it produces (older-9) is a marked re-buy, because the stored buy was never filled and the book holds nothing");
   const ctl = young(); path(ctl, T0 + 800, T0 + 1200, () => 100_000, 20, { sol: 900 }); assert.equal(has(ctl, "VOL300K").length, 1, "control: without the flag this trading IS a VOL300K buy");
 });
 test("defects fixed with the blockers: the clock estimate never uses the minute containing the deadline or a rejected back-fill row; a half-sold row's 'high while held' is what it was really worth; the sale market cap is always marked approximate", async () => {

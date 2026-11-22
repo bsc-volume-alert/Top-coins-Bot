@@ -9,6 +9,7 @@ import { newCoin, evaluate } from "./signals.mjs";
 import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount } from "./book.mjs";
 import { liquidityUsd, staticImpact } from "./fills.mjs";
 import { feeKnown } from "./risk.mjs";
+const ALL_ROWS = S.POLICIES.flatMap((p) => S.STOPS.map((s) => p + "|" + s)), ROWS = ALL_ROWS.length; // the rows of one book on one buy: exit policy × stop
 
 const POLLED_UNSUPPORTED = new Set(["HH-BREAK", "HH-BREAK-4H", ...S.HH_FAST.map((x) => x[0]), ...S.ANY_AGE]), NEVER = () => false;
 export class Engine {
@@ -17,7 +18,7 @@ export class Engine {
     this.store = store; this.solUsd = solUsd; this.needCreation = needCreation; this.onFill = onFill; this.onEntry = onEntry; this.log = log; this.firstStart = firstStart;
     this.stats = { events: 0, swaps: 0, otherPool: 0, noSolUsd: 0, noCreation: 0, evals: 0, cands: 0, entries: 0, notes: 0, replayed: 0, tooOld: 0, lastT: null, evalMsMax: 0 };
     this.dirtyBars = new Map(); this.usdDown = false; this.dirty = new Set(); this.lastCkpt = 0; this.entriesUntil = null; this.onOwnership = () => {};
-    this.pollCov = new Coverage(); // continuity of PRICE POLLING (the Solana-wide adapter); independent of the PumpSwap WebSocket
+    this.rebuy = true; /* spec REBUY: buying again after a sale; false = older-8 */ this.pollCov = new Coverage(); // continuity of PRICE POLLING (the Solana-wide adapter); independent of the PumpSwap WebSocket
     this.stats.prices = 0; this.stats.riskBlocked = 0; this.stats.quotes = 0;
   }
   /** the time the program was away. warm = the price memory was read back (warm.mjs): the signal coverage then closes the gap
@@ -121,26 +122,48 @@ export class Engine {
     if (c.info.risk?.fee_bps > 0 && c.mode !== "polled") { if (!c.riskNoted) { c.riskNoted = true; this.stats.riskBlocked++; this.store?.saveNote(mint, { ag: null, family: "*", t: o.t, reason: "not evaluated for entry: transfer-fee coin on the live method, where the fee is not modelled", detail: { fee_bps: c.info.risk.fee_bps } }); } return null; }
     // UNKNOWN IS NOT "NO FEE" (eighth review, B1): a sampled coin whose transfer fee is not known yet is not entered
     if (c.mode === "polled" && !feeKnown(c.info)) { this.stats.feeUnknown = (this.stats.feeUnknown || 0) + 1; if (!c.feeNoted) { c.feeNoted = true; this.store?.saveNote(mint, { ag: null, family: "*", t: o.t, reason: "not evaluated for entry: the coin's transfer fee has not been read from the chain yet", detail: { token_program: c.info.token_program ?? null } }); } return null; }
-    const r = evaluate(c, o, opts);
+    // BUYING AGAIN (spec REBUY): which rows each book still holds on this coin. A row is held while its entry is pending or the row is
+    // not closed. A book may buy again when at least one of its rows is free; the first buy per age group is decided as before.
+    const busy = this._busy(mint), tNow = o.t, log24 = (c.rebuys ||= {});
+    const again = this.rebuy === false ? null : (f) => { if (busy && (busy.get(f)?.size ?? 0) >= ROWS) return false; const L = log24[f]; if (L) { while (L.length && L[0] < tNow - 86400) L.shift(); if (L.length >= S.REBUY_MAX_PER_DAY) { if (!c.rebuyCapNoted?.[f]) { (c.rebuyCapNoted ||= {})[f] = 1; this.stats.rebuyCapped = (this.stats.rebuyCapped || 0) + 1; this.store?.saveNote(mint, { ag: null, family: f, t: tNow, reason: `safety limit: ${S.REBUY_MAX_PER_DAY} re-buys of this coin by this book in 24 hours — no further re-buy until one ages out`, detail: {} }); } return false; } } return true; };
+    const r = evaluate(c, o, again ? { ...opts, again } : opts); // engine.rebuy = false (OLDER_REBUY=0): older-8 behaviour, one buy per book, coin and age group
     for (const n of r.notes) { this.stats.notes++; this.store?.saveNote(mint, n); }
     if (!r.cands.length) return null;
     this.stats.cands += r.cands.length;
     const evidence = { ...r.evidence, ...evidenceExtra }; evidence.trigger.eval_t = Date.now() / 1000;
-    const e = newEntry({ mint, pool: c.pool, ag: r.cands[0].ag, t: o.t, families: r.cands.map((x) => x.family), features: r.cands[0].features, mc: o.mc, px: o.px, evidence, startup: this.firstStart != null && o.t < this.firstStart + S.STARTUP_TAG_S });
-    e.cands = r.cands.map((x) => ({ family: x.family, detail: x.detail }));
-    // WARM RESTART: a decision whose window contains a tolerated restart gap is marked, with the seconds that were not observed
-    { const w = Math.max(0, ...r.cands.map((x) => x.detail?.restart_gap_s || 0)); if (w > 0) { e.warm_gap_s = w; e.flags.push(`decision window includes a restart gap of ${w} s that was not observed (warm restart): ${r.cands.filter((x) => x.detail?.restart_gap_s).map((x) => x.family).join(", ")}`); } }
-    Object.assign(e, tags); e.token = { symbol: c.info.symbol ?? null, origin: c.info.origin ?? null, origin_evidence: c.info.origin_evidence ?? null, venues: c.info.venues ?? null, token_program: c.info.token_program ?? null, risk_status: c.info.risk?.status ?? "missing", xfer_bps: c.info.risk?.fee_bps || 0, create_src: c.info.create_src ?? null, cadence_s: c.info.cadence_s ?? null };
-    this.addEntry(e); this.stats.entries++;
-    // ONE COMMIT: the entry and its one-buy flags are written together. A stop between the two used to leave a stored entry
-    // without its flags, and the same coin could then be bought again by the same book (seventh review, 5).
-    if (this.store) { const write = () => { this.store.saveEntry(e); for (const x of r.cands) this.store.saveDecision(mint, x.ag, x.family, o.t, e.id, x.detail); }; this.store.tx ? this.store.tx(write) : write(); }
-    this.log(`[entry ${e.id}] ${mint.slice(0, 6)} ${e.ag} ${e.families.join("+")} mc $${Math.round(o.mc)} (${e.mode})`);
-    try { this.onEntry(e, c); } catch {} // background measurements only: never part of the decision
-    return e;
+    // ONE BUY PER SET OF ROWS. A first-attempt candidate takes every row (older-8). A re-buy takes only the rows its book does not
+    // hold. Books that fire together and take the same rows share one buy, as before; a clock book rides with its base book's buy
+    // on its own tagged rows.
+    const free = (x) => (x.again ? ALL_ROWS.filter((k) => !busy?.get(x.family)?.has(k)) : ALL_ROWS), groups = new Map(), clock = [];
+    for (const x of r.cands) { const rows = free(x); if (!rows.length) continue; x.rows = rows; if (S.clockTag(x.family) !== false) { clock.push(x); continue; } const k = rows.join(","); (groups.get(k) || groups.set(k, []).get(k)).push(x); }
+    for (const x of clock) { const base = S.CLOCK[x.family]?.base, g = [...groups.values()].find((G) => G.some((y) => y.family === base)) || [...groups.values()][0]; if (g) g.push(x); else groups.set("clock:" + x.family, [x]); }
+    let firstEntry = null;
+    for (const G of groups.values()) {
+      const plain = G.filter((x) => S.clockTag(x.family) === false), plainRows = plain.length ? new Set(plain[0].rows) : null, tagRows = new Map(G.filter((x) => S.clockTag(x.family) !== false).map((x) => [S.clockTag(x.family), new Set(x.rows)]));
+      const e = newEntry({ mint, pool: c.pool, ag: G[0].ag, t: o.t, families: G.map((x) => x.family), features: G[0].features, mc: o.mc, px: o.px, evidence, startup: this.firstStart != null && o.t < this.firstStart + S.STARTUP_TAG_S,
+        pick: (tag, policy, stop) => { const set = tag === false ? plainRows : tagRows.get(tag); return !!set && set.has(policy + "|" + stop); } });
+      e.cands = G.map((x) => ({ family: x.family, detail: x.detail }));
+      const ag2 = G.filter((x) => x.again).map((x) => x.family); if (ag2.length) { e.again = Object.fromEntries(ag2.map((f) => [f, true])); for (const f of ag2) (log24[f] ||= []).push(o.t); this.stats.rebuys = (this.stats.rebuys || 0) + 1; }
+      // WARM RESTART: a decision whose window contains a tolerated restart gap is marked, with the seconds that were not observed
+      { const w = Math.max(0, ...G.map((x) => x.detail?.restart_gap_s || 0)); if (w > 0) { e.warm_gap_s = w; e.flags.push(`decision window includes a restart gap of ${w} s that was not observed (warm restart): ${G.filter((x) => x.detail?.restart_gap_s).map((x) => x.family).join(", ")}`); } }
+      Object.assign(e, tags); e.token = { symbol: c.info.symbol ?? null, origin: c.info.origin ?? null, origin_evidence: c.info.origin_evidence ?? null, venues: c.info.venues ?? null, token_program: c.info.token_program ?? null, risk_status: c.info.risk?.status ?? "missing", xfer_bps: c.info.risk?.fee_bps || 0, create_src: c.info.create_src ?? null, cadence_s: c.info.cadence_s ?? null };
+      this.addEntry(e); this.stats.entries++;
+      // ONE COMMIT: the entry and its one-buy flags are written together. A stop between the two used to leave a stored entry
+      // without its flags, and the same coin could then be bought again by the same book (seventh review, 5).
+      if (this.store) { const write = () => { this.store.saveEntry(e); for (const x of G) this.store.saveDecision(mint, x.ag, x.family, o.t, e.id, x.detail); }; this.store.tx ? this.store.tx(write) : write(); }
+      this.log(`[entry ${e.id}] ${mint.slice(0, 6)} ${e.ag} ${e.families.join("+")}${e.again ? " (again: " + Object.keys(e.again).join("+") + (e.versions.length < ROWS ? ", " + e.versions.length + " rows" : "") + ")" : ""} mc $${Math.round(o.mc)} (${e.mode})`);
+      if (!e.again || Object.keys(e.again).length < e.families.length) { try { this.onEntry(e, c); } catch {} } // background measurements only: never part of the decision (not repeated for a pure re-buy)
+      firstEntry ??= e;
+    }
+    return firstEntry;
   }
-
-  // ---------- Solana-wide adapter: sampled prices + routed quotes ----------
+  /** rows (exit policy | stop) each book currently holds on this coin: Map(family → Set). null when the coin has no unfinished entry. */
+  _busy(mint) {
+    const ids = this.byMint.get(mint); if (!ids?.size) return null; const m = new Map();
+    for (const id of ids) { const e = this.entries.get(id); if (!e || e.status === "cancelled" || e.status === "failed") continue;
+      for (const f of e.families) { const tag = S.clockTag(f); for (const v of e.versions) { if (v.stall !== tag || (e.status !== "pending" && v.status === "closed")) continue; let s = m.get(f); if (!s) m.set(f, (s = new Set())); s.add(v.policy + "|" + v.stop); } } }
+    return m;
+  }
   pollUp(t) { this.pollCov.up(t, "feed"); }
   pollDown(t, why = "") { this.pollCov.drop(t, "feed"); this.store?.feedEvent(t, "poll-down", why); }
   /** p: { t (response time), mint, px (USD), mc (USD, provider's stated definition), liqUsd, supply, src, cadence_s } */

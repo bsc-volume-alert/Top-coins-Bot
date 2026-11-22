@@ -15,10 +15,12 @@ let NEXT = 1;
 export const COST = S.STAKE_SOL + S.TX_COST_SOL; // acquisition cost: stake + buy transaction
 
 export const newVersion = (stop, policy, stall) => ({ stop, policy, stall, status: "open", tok: 0, got: 0, peak: null, maxX: null, half: null, trigT: null, reason: null, schedT: null, exit: null, stallChecked: false });
-export function newEntry({ mint, pool, ag, t, families, features, mc, px, evidence = null, startup = false }) {
+/** pick(tag, policy, stop): which rows this buy carries (default: all). A first buy carries every row; a re-buy only the rows on
+ *  which its book no longer holds the coin (spec REBUY). */
+export function newEntry({ mint, pool, ag, t, families, features, mc, px, evidence = null, startup = false, pick = null }) {
   const fam = [...new Set(families)], versions = [];
   const sets = [...new Set(fam.map(S.clockTag))].sort((a, b) => (a === false ? -1 : b === false ? 1 : 0)); // plain versions first, then one set per clock book
-  for (const stall of sets) for (const policy of S.POLICIES) for (const stop of S.STOPS) versions.push(newVersion(stop, policy, stall));
+  for (const stall of sets) for (const policy of S.POLICIES) for (const stop of S.STOPS) if (!pick || pick(stall, policy, stop)) versions.push(newVersion(stop, policy, stall));
   return { id: NEXT++, mint, pool, ag, decisionT: t, schedT: t + S.BUY_DELAY_MS / 1000, families: fam, features, signalMc: mc, signalPx: px, evidence, startup,
     status: "pending", fill: null, versions, runner: { maxX: null, horizonDone: false, partial: false, reached: {} }, flags: [] };
 }

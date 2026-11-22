@@ -289,6 +289,21 @@ Verdict received: A closed (one reporting leftover), B not ready, C not ready. *
 
 **To attack:** (1) any path where a sampled entry is created or filled with `feeKnown` false; (2) a fee raised while a position is open: sales are charged the fee current at the sale and the entry is re-classified — is charging the current fee right for a position opened under a lower one? (3) `fee-probe`: is a round-trip comparison against control coins a sound way to separate "included" from "not included", given different pool fees per route? (4) `ownCut` as a single high-water mark.
 
+## 6q. older-9: buying again (22 Nov 2026, 17:40 UK) — owner's decision, for the reviewer
+
+Rule: SPEC "older-9". Code: `signals.mjs` (`opts.again`, `can()`, `cand(…, re)`; every `g.done` gate now reads `can(family)`; with `opts.again` absent each decision is the older-8 decision), `engine.mjs` (`_busy`, grouping candidates by free rows, `pick` → `book.newEntry`, `e.again`, the 24-hour safety limit, `engine.rebuy`), `page.mjs` / `web.mjs` (mark, per-book line, `buys=first`), `report.mjs` (rows stay first buys; re-buys beside). Tests: `test/rebuy.test.mjs` (7). 159 tests.
+
+**Measured cost:** on one continuously traded coin, evaluation per trade rose from 0.33 ms to 0.90 ms (a book that has bought is no longer skipped), entries from 33 to 83 over a simulated 58 hours, and unfinished entries in memory from 3 to 34.
+
+**To attack:**
+1. Is there any market on which the FIRST buys differ with buying-again on and off? (Property test: last test of `rebuy.test.mjs`. The known interactions were SECOND-WAVE's single setup, its seeding by a FAST re-buy, and its slot in another age group — handled in `signals.mjs` block 14.)
+2. `_busy`: a row is held while the entry is pending or the row is not closed; cancelled and failed entries hold nothing. Finished entries leave memory — can a row be live in an entry that is no longer in `byMint`?
+3. Entries that carry only some rows (down to one row, or only a clock book's rows): `entryDone`, `inventories`, the 24-hour runner record, quotes for sampled coins, stake views.
+4. No waiting time with state-type rules (VOL, CONT): the re-buy fires on the next observation after the sale. Is anything double-counted when the sale and the re-buy fall inside the same second?
+5. The one-buy flag table (`decisions`, key mint + age group + family) still records the first attempt only; a re-buy writes no row (`INSERT OR IGNORE`). Restore therefore marks `done` as before and re-buy eligibility comes from the unfinished entries alone.
+6. The safety limit is in memory (`coin.rebuys`): lost at any restart, not written to the warm snapshot.
+7. Background measurements (`onEntry` → provider snapshot) are not repeated for an entry that consists only of re-buys.
+
 ## 6l. Full review requested by the owner (21 Nov 2026, 21:35 UK) — map of everything since the sixth review
 
 The sixth review covered `8474066` (spec older-4, 17 families, 104 tests). The owner asked for a complete A-to-Z review of the present head because much has been added since. Spec is now **older-8**: 29 families, 5 stops, 2 exit policies, 1,240 comparison rows, 124 tests.
