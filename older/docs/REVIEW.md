@@ -253,6 +253,23 @@ Reporting (owner, 00:48): fee-coin buys appear in one separate book, FEE-COINS (
 
 **To attack:** (1) does Jupiter's quote `outAmount` already net a Token-2022 transfer fee on the input or output leg? Its API reference says only "after deducting AMM fees and platform fees". If it does, the deduction here is double (results too low). (2) Multiplying the sale proceeds by (1 − fee) instead of quoting the reduced token amount — the error is second order in trade size over pool depth; is that acceptable for 0.2 SOL? (3) The fee is read once per start; a fee raised by its authority mid-position is not seen until the next start. (4) Stored coins keep their old "restricted" status until the chain is re-read after the restart (one call per second): safe direction, but say if you see a path where a stale status is trusted the other way.
 
+## 6o. Warm restart (22 Nov 2026, 01:05 UK) — owner's decision, for the reviewer
+
+Rule and declared approximation: SPEC "Warm restart". This deliberately relaxes one rule you have insisted on — "a restart is an outage" — for hour-scale windows only, under your own guidance D of the sixth review (a declared approximation for hour-scale price windows, on a gap bounded by trustworthy states, with affected entries recorded separately; exact windows and fresh crossings untouched).
+
+Code: `warm.mjs` (save at SIGINT/SIGTERM, load after `store.restore`); `series.mjs` (`Coverage.resume`/`up` mark the gap "warm" only when observation resumes within 60 s; `covered` tolerates a warm gap, `continuous` does not; `steady`, `warmIn`, `dump`, `load`); `signals.mjs` (`cand(…, from)` records `restart_gap_s`; the RUG state uses `steady`); `engine.mjs` (`restartGap(…, { warm })`, entry flag); `polled.mjs` (history kept, first pause judged by the hole rule at the coin's previous interval); `scripts/start.sh` (`--kill-timeout 20000` so the save can finish). Tests: `test/warm.test.mjs` (8). 142 tests. Measured here on 5,000 coins / 306,000 observations / 198,000 bars: 66 MB file, 0.46 s to save, 0.63 s to load.
+
+Two small corrections found on the way, both in the strict direction: `feedUp` no longer starts the history of a SAMPLED coin at the PumpSwap feed's reconnection (it starts at the coin's own first sample); the minute loop compared the length of `feedCov.gaps` with a counter taken from `cov.gaps`.
+
+**To attack:**
+1. Is there any path by which an EXACT decision spans the gap? (`continuous`, `exactWindow`, `prevOk`, `liveComplete`, the SECOND-WAVE check.)
+2. HH books: the gap's missing volume sits in one bucket. In a baseline bucket it lowers the median slightly (easier trigger); in the signal bucket it makes the trigger harder. Is marking enough, or should a bucket that contains the gap be excluded?
+3. `priceAt` for hour-scale use now carries a price across a warm gap (provenance uses `covered`). AGE-DOUBLE's reference can therefore be a price from before a restart that falls between the last trade and the age-group start.
+4. The snapshot keeps `groups[ag].done` flags that the database does not hold (SLOW-BUILD / LOW4H-LIQ25K attempts used, a SECOND-WAVE seed used). After a cold start those are lost as before; after a warm start they are kept. Is the difference acceptable?
+5. The stop time written in the snapshot is taken when the signal handler starts. Events already received but not yet processed at that moment are lost inside the gap — is the gap's start early enough?
+6. Sampled coins: first pause judged at the previous interval (`warmTol`). A coin that was "hot" before the stop and has no position is restored as "cold"; its first sample may come later than 35 s and the history then restarts (safe direction).
+7. `Series.load` trusts the file's contents (it is written and read by this program on the same disk, renamed atomically, used once). Anything that should be validated on read?
+
 ## 6l. Full review requested by the owner (21 Nov 2026, 21:35 UK) — map of everything since the sixth review
 
 The sixth review covered `8474066` (spec older-4, 17 families, 104 tests). The owner asked for a complete A-to-Z review of the present head because much has been added since. Spec is now **older-8**: 29 families, 5 stops, 2 exit policies, 1,240 comparison rows, 124 tests.

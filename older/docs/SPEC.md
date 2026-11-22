@@ -157,3 +157,17 @@ Until now every Token-2022 coin with a transfer fee above zero was blocked. From
 - **Unchanged:** coins with a transfer hook, a permanent delegate, pausable or non-transferable tokens, confidential transfers or frozen default accounts stay blocked whatever their fee.
 - Claude advised a limit of 1–2%; the owner chose 5% "for now", to be revisited with data.
 
+## Warm restart (22 Nov 2026, 01:05 UK — owner's decision)
+
+Until now every restart emptied the price memory, so LOW4H and HH-BREAK could not buy for about 4 hours after one, the HH30 books for about 2 hours and HH15 for about 1 hour. On 21 Nov the program was restarted about ten times and LOW4H was able to buy for roughly 25 minutes between 14:20 and midnight. From this version:
+
+- **A planned stop saves the price memory** (`warm.mjs`): for every observed coin its exact observations, minute bars, anchor and coverage marks, and its in-memory signal state (age-group references, a SECOND-WAVE setup, the RUG peak and armed setup). Nothing is rounded or summarised. **The next start reads it back** if the file is complete and at most 60 seconds old (`WARM_MAX_GAP_S`). The file is used once.
+- **The time away is still not observed.** It stays in the coverage as a gap from the stop to the moment the feed is up again. If that is at most 60 seconds the gap is marked *warm*; if longer it is an ordinary outage and nothing may span it (the start is then as cold as before for every window that reaches back past it).
+- **A warm gap is tolerated by hour-scale windows only** — LOW4H / SLOW-BUILD / LOW4H-LIQ25K (4 hours), CONT / CONT-STALL (1 hour), HH-BREAK, HH-BREAK-4H and the three faster HH books (their high and volume windows), AGE-DOUBLE's reference, and the RUG books' peak-to-now stretch. This is a **declared approximation**: a low, a high or some volume inside those seconds is not known.
+- **Exact windows and fresh crossings never span it** (`Series.continuous` is unchanged): the FAST and FAST150 books, SECOND-WAVE, the VOL books, and the "previous price" of every crossing. So the first trade after a restart can never be a buy; the FAST books need their own window watched again (1 to 30 minutes); a SECOND-WAVE setup alive at the stop is abandoned.
+- **Every decision that relied on a window containing a warm gap is marked**: `restart_gap_s` on the decision, `warm_gap_s` and a flag on the entry, "restart N s" next to the coin on the page, `warm` in `entries.json`.
+- **RUG books:** the exact peak and armed setup come back (not a stored, rounded copy — the seventh review's fault). A collapse or a bounce that happens while the program is away is not bought: the crossing must be watched. Away for more than 60 seconds: the state is dropped as before.
+- **Sampled coins:** their history is read back and judged by the ordinary hole rule (a pause of more than 3 sampling intervals + 5 s restarts the history), using the interval the coin was actually sampled at before the stop; the gap itself is marked the same way.
+- **A crash, a kill or a power loss writes no file: cold start, as before.** A damaged, cut-short, too old or wrong-format file is ignored: cold start. A bounded validation run never uses it. `OLDER_WARM=0` switches it off.
+- **The scored seven-day run starts on a fresh database with no snapshot, and is not meant to be restarted.** If it is, the affected decisions are marked and can be left out.
+

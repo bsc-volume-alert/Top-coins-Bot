@@ -23,10 +23,18 @@ const engine = new Engine({ store, solUsd, log, firstStart, onEntry: (e) => { sn
 const onEvent = engine.onEvent.bind(engine); engine.onEvent = (ev) => { if (ev.slot) lastSlot.set(ev.mint, ev.slot); const c = engine.coins.get(ev.mint); if (c) c.eventCount = (c.eventCount || 0) + 1; onEvent(ev); };
 { const { addClockBook } = await import("./migrate.mjs"); for (const f of ["HH-BREAK-4H"]) { const r = addClockBook(store, f, now0); if (r.added) log(`[older] ${f}: ${r.added} existing ${r.base} buys carried into the new book (${r.exact} versions unchanged, ${r.estimated} clock sales estimated from minute bars, ${r.live} still inside the clock)`); } }
 store.since(now0); // "counting since" is fixed at START-UP, when a book or stop first exists on this database — not at the first page view
-store.restore(engine); engine.restartGap(store.lastAlive(), now0);
+store.restore(engine);
+// WARM RESTART (warm.mjs): after a planned stop the price memory is read back, so the hour-scale books do not start empty.
+// The time away stays an unobserved gap. Not used by a bounded validation run.
+const { saveWarm, loadWarm } = await import("./warm.mjs"); const WARM_FILE = (process.env.OLDER_DB || "/root/older/older.db") + ".warm";
+const warm = process.env.OLDER_RUN_MINUTES || process.env.OLDER_WARM === "0" ? { loaded: false, why: "switched off" } : loadWarm(WARM_FILE, engine);
+log(warm.loaded ? `[older] warm restart: price memory of ${warm.coins} coins read back, ${warm.age_s} s after the stop${warm.skipped ? ` (${warm.skipped} skipped: observation method changed)` : ""}` : `[older] cold start: ${warm.why}`);
+engine.restartGap(store.lastAlive(), now0, { warm: warm.loaded });
 // planned stop (pm2 restart/stop sends SIGINT): every open position's peak is saved and the last-alive time is written first,
 // so a planned restart loses nothing and its gap is measured from the real stop
-let stopping = false; for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => { if (stopping) return; stopping = true; try { const n = store.tx(() => engine.flush()); store.heartbeat(Date.now() / 1000); log(`[older] ${sig}: ${n} open positions saved, stopping`); } catch (e) { log("[older] save on stop failed: " + e.message); } process.exit(0); });
+let stopping = false; for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => { if (stopping) return; stopping = true; const tStop = Date.now() / 1000; try { const n = store.tx(() => engine.flush()); store.heartbeat(tStop); log(`[older] ${sig}: ${n} open positions saved, stopping`); } catch (e) { log("[older] save on stop failed: " + e.message); }
+  if (!process.env.OLDER_RUN_MINUTES && process.env.OLDER_WARM !== "0") try { const w = saveWarm(WARM_FILE, engine, tStop); log(`[older] price memory saved for the next start: ${w.coins} coins, ${(w.bytes / 1e6).toFixed(1)} MB, ${w.ms} ms`); } catch (e) { log("[older] price memory NOT saved (the next start will be cold): " + e.message); }
+  process.exit(0); });
 // the entry window: OLDER_ENTRIES_UNTIL (unix seconds, or an ISO date) — after it nothing new is opened; open positions, their
 // exits and the 24-hour runner tracking carry on until every included position is complete
 if (process.env.OLDER_ENTRIES_UNTIL && process.env.OLDER_ENTRIES_UNTIL.trim()) { const v = process.env.OLDER_ENTRIES_UNTIL; engine.entriesUntil = /^\d+$/.test(v) ? Number(v) : Date.parse(v) / 1000; log(`[older] entry window closes ${new Date(engine.entriesUntil * 1000).toISOString()}`); }
@@ -56,7 +64,7 @@ setInterval(runInventory, 86400e3);
 
 // clock: scheduled fills/exits every 100 ms (1 s and 0.7 s delays need a fine clock); bars, memory, heartbeat each minute
 setInterval(() => engine.tick(Date.now() / 1000), 100);
-let gapsSeen = engine.cov.gaps.length;
+let gapsSeen = engine.feedCov.gaps.length; // the list that is compared below (after a warm restart the two lists differ in length)
 setInterval(() => {
   const t = Date.now() / 1000; engine.prune(t); store.heartbeat(t);
   if (engine.feedCov.gaps.length > gapsSeen) { for (const [a, b] of engine.feedCov.gaps.slice(gapsSeen)) { const mints = [...engine.byMint.keys()].filter((m) => engine.byMint.get(m).size); for (const [m, c] of engine.coins) if (c.series.lastPx && c.series.lastPx * c.supply >= 20000 && c.series.lastPx * c.supply <= 1e6) mints.push(m); backfill.patchGap(a, b, [...new Set(mints)]); } gapsSeen = engine.feedCov.gaps.length; }
@@ -91,7 +99,7 @@ if (process.env.OLDER_OUT && !process.env.OLDER_RUN_MINUTES) {
   // out per coin and per entry over the whole run. Returns are fractions of cost; null = not closed. Keys: t20…t40 = pure trail,
   // h20…h40 = sell half at 2× then trail, and the same with an x suffix for the stall-exit versions (CONT-STALL) and a k suffix for the 4-hour clock versions (HH-BREAK-4H).
   const compact = () => store.allEntries().map((e) => { const r = {}; for (const v of e.versions || []) r[(v.policy === "trail" ? "t" : "h") + Math.round(v.stop * 100) + (v.stall === true ? "x" : v.stall ? "k" : "")] = v.exit?.ret == null ? null : +v.exit.ret.toFixed(4); /* the result lives on the exit record (v.exit.ret) — reading v.ret published every result as empty (fixed 21 Nov 13:30 UK) */
-    const w5 = e.features?.w5, s5 = e.snap?.stats5m, mv = {}; for (const c of e.cands || []) if (c.detail?.move_s != null) mv[c.family] = c.detail.move_s; return { id: e.id, mint: e.mint, sym: engine.coins.get(e.mint)?.info?.symbol ?? null, fee: e.token?.xfer_bps || 0, t: Math.round(e.decisionT), ag: e.ag, fam: e.families, mode: e.mode, pop: e.pop ?? null, status: e.status, mc: Math.round(e.signalMc || 0), delay: e.fill?.delay_s ?? null, max: e.runner?.maxX != null ? +e.runner.maxX.toFixed(3) : null, ret: r, chk: e.verify?.diff_quote != null ? +(e.verify.diff_quote * 100).toFixed(2) : null, flags: (e.flags || []).length,
+    const w5 = e.features?.w5, s5 = e.snap?.stats5m, mv = {}; for (const c of e.cands || []) if (c.detail?.move_s != null) mv[c.family] = c.detail.move_s; return { id: e.id, mint: e.mint, sym: engine.coins.get(e.mint)?.info?.symbol ?? null, fee: e.token?.xfer_bps || 0, warm: e.warm_gap_s || 0, t: Math.round(e.decisionT), ag: e.ag, fam: e.families, mode: e.mode, pop: e.pop ?? null, status: e.status, mc: Math.round(e.signalMc || 0), delay: e.fill?.delay_s ?? null, max: e.runner?.maxX != null ? +e.runner.maxX.toFixed(3) : null, ret: r, chk: e.verify?.diff_quote != null ? +(e.verify.diff_quote * 100).toFixed(2) : null, flags: (e.flags || []).length,
       holders: e.snap?.holders ?? null, hc5: s5?.holderChange ?? null, traders5: s5?.numTraders ?? null, b1: e.features?.w1?.buyers ?? null, b5: w5?.buyers ?? null, v5: w5?.vol_usd ?? null, top5: w5?.top_buyer_share ?? null, surge: e.features?.vol_surge5 ?? null, move_s: mv }; });
   const dump = () => { try { for (const pop of ["", "pumpswap-canonical", "solana-wide"]) writeFileSync(`${dir}/state${pop ? "-" + pop : ""}.json`, JSON.stringify(web.state(pop))); writeFileSync(`${dir}/entries.json`, JSON.stringify({ at: Date.now(), commit: COMMIT, run: process.env.OLDER_RUN_NAME || null, entries: compact() })); } catch (e) { log("[pub] " + e.message); } };
   setTimeout(dump, 60000); setInterval(dump, 300000);

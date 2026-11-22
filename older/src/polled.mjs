@@ -31,7 +31,12 @@ export class Poller {
       if (c.info.unpriced && !this.engine.byMint.get(mint)?.size) { this.stats.restoreSkippedUnpriced = (this.stats.restoreSkippedUnpriced || 0) + 1; continue; }
       // the same for a token pruned as far below the entry band: not restored; discovery re-adds it if it comes back
       if (c.info.pruned_low && !this.engine.byMint.get(mint)?.size) { this.stats.restoreSkippedLow = (this.stats.restoreSkippedLow || 0) + 1; continue; }
-      if (!validDec(c.info.decimals)) { if (this.engine.byMint.get(mint)?.size) this.needMeta.push(mint); else this.stats.restoreSkippedNoMeta = (this.stats.restoreSkippedNoMeta || 0) + 1; continue; } this.watch.set(mint, { decimals: c.info.decimals, circ: c.info.circ_supply ?? null, hot: !!this.engine.byMint.get(mint)?.size, lastT: null, lastReq: 0, miss: 0, mc: null }); this.seen.add(mint); c.series.histFrom = null; c.series.obsFrom = null; n++; } this.stats.restored = n; this.stats.restoreNoMeta = this.needMeta.length; return n; }
+      if (!validDec(c.info.decimals)) { if (this.engine.byMint.get(mint)?.size) this.needMeta.push(mint); else this.stats.restoreSkippedNoMeta = (this.stats.restoreSkippedNoMeta || 0) + 1; continue; } // WARM RESTART: a coin whose samples were read back keeps its history, and its last sample time — so the ordinary hole rule
+      // (a gap of more than 3 sampling intervals + 5 s restarts the history) judges the restart like any other pause in sampling
+      const keep = c.warm && c.series.lastT != null;
+      this.watch.set(mint, { decimals: c.info.decimals, circ: c.info.circ_supply ?? null, hot: !!this.engine.byMint.get(mint)?.size, lastT: keep ? c.series.lastT : null, lastReq: 0, miss: 0, mc: null,
+        // …judged ONCE with the interval the coin was actually sampled at before the stop (10 s coins get the 10 s rule, not the 60 s one)
+        warmTol: keep && c.series.prevT != null ? 3 * Math.min(this.coldEvery, Math.max(this.hotEvery, c.series.lastT - c.series.prevT)) + 5 : null }); this.seen.add(mint); if (!keep) { c.series.histFrom = null; c.series.obsFrom = null; } else this.stats.restoredWarm = (this.stats.restoredWarm || 0) + 1; n++; } this.stats.restored = n; this.stats.restoreNoMeta = this.needMeta.length; return n; }
   /** restored sampled coins whose stored record lacks token metadata (written by an earlier version) are NOT skipped silently:
    *  their metadata is fetched again, positions first. A coin that still has none keeps its positions visible and flagged. */
   async repair() {
@@ -95,7 +100,7 @@ export class Poller {
       this.engine.pollUp(r.t); this.stats.sweeps++;
       for (const [mint, p] of r.prices) {
         const w = this.watch.get(mint), c = this.engine.coins.get(mint); const gap = w.lastT == null ? null : r.t - w.lastT;
-        if (gap != null) { const k = this.stats.cadence; k.n++; k.sum += gap; if (gap > k.max) k.max = gap; if (gap > 3 * (w.hot ? this.hotEvery : this.coldEvery) + 5) { this.engine.coinLost(mint, r.t); this.stats.lost++; } } // a hole in the samples: the coin's history restarts
+        if (gap != null) { const k = this.stats.cadence; k.n++; k.sum += gap; if (gap > k.max) k.max = gap; const tol = w.warmTol ?? 3 * (w.hot ? this.hotEvery : this.coldEvery) + 5; if (gap > tol) { this.engine.coinLost(mint, r.t); this.stats.lost++; if (w.warmTol != null) this.stats.warmLost = (this.stats.warmLost || 0) + 1; } } w.warmTol = null; // a hole in the samples: the coin's history restarts
         if (c.series.histFrom === null) c.series.startLive(r.t); // sampled history starts at the first sample actually received
         w.lastT = r.t; w.miss = 0; if (!validDec(w.decimals) && validDec(p.decimals)) w.decimals = p.decimals;
         const mc = w.circ > 0 ? p.px * w.circ : null; w.mc = mc;

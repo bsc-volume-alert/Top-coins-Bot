@@ -50,7 +50,9 @@ export function evaluate(coin, o, opts = {}) {
   // the previous observation counts for a "fresh crossing" only if nothing between it and now is unknown
   const prevOk = sr.prevT !== null && sr.prevT < t && sr.covered(sr.prevT, t, true); // strict: never across an outage, even a repaired one
   const cross = (line) => prevOk && sr.prevPx < line && o.px >= line;
-  const cand = (family, detail) => { g.done[family] = 1; out.cands.push({ family, ag, t, mc: o.mc, px: o.px, detail }); };
+  // `from` = the start of the longest stretch this decision relied on. If a tolerated warm-restart gap lies inside it, the seconds
+  // that were not observed are recorded on the decision (restart_gap_s) — exact windows pass no `from`: they can never span one.
+  const cand = (family, detail, from = null) => { g.done[family] = 1; const w = from != null ? sr.warmIn(from, t) : 0; out.cands.push({ family, ag, t, mc: o.mc, px: o.px, detail: w ? { ...detail, restart_gap_s: w } : detail }); };
   const prevRec = sr.prevT !== null ? { t: sr.prevT, px: sr.prevPx, covered_to_now: prevOk } : null;
 
   // 0. ANY-AGE BOOKS (older-8) — evaluated from migration on. See spec VOL / RUG.
@@ -66,13 +68,14 @@ export function evaluate(coin, o, opts = {}) {
             cand(family, { vol5_usd: Math.round(v5), threshold_usd: X, vol_window_s: S.VOL_WIN_S, px_5m_ago: p5 ? p5.px : null, change_5m: p5 ? +(o.px / p5.px - 1).toFixed(4) : null }); } } } } }
   // 0b. RUG450 / RUG950 (knife, bounce). The peak is the highest market cap OBSERVED WITHOUT A BREAK up to now: the state lives
   //     in memory only and is dropped the moment observation between the peak and now is not continuous (a feed outage, a loss
-  //     of this coin's data, a quarantine, a change of observation method, a restart). After a break the true peak and the true
+  //     of this coin's data, a quarantine, a change of observation method, a restart — except a WARM restart of at most
+  //     WARM_MAX_GAP_S, where this exact state is read back and the unobserved seconds are recorded on the decision). After a break the true peak and the true
   //     low are unknown, so a fall or a bounce measured against the old values could be late or false (seventh review, 1 and 2):
   //     the coin starts again and is bought only if a new peak AND its collapse are both watched from start to finish.
   //     Nothing is persisted. An observation mode that cannot support these books (price polling) builds no state at all.
   if (S.RUG.some(([f]) => !skip.has(f))) {
     const rg = (coin.rug ??= { pk: null, arm: null });
-    if (rg.pk && !sr.continuous(rg.pk.t, t)) { if (rg.arm) note("RUG450-BOUNCE", "abandoned: observation broke during the setup", { armed_t: rg.arm.t }, false); rg.pk = null; rg.arm = null; }
+    if (rg.pk && !sr.steady(rg.pk.t, t)) { /* steady = unbroken, or broken only by a tolerated warm restart */ if (rg.arm) note("RUG450-BOUNCE", "abandoned: observation broke during the setup", { armed_t: rg.arm.t }, false); rg.pk = null; rg.arm = null; }
     const prevMc = sr.prevPx != null ? sr.prevPx * coin.supply : null, inRug = (f) => !g.done[f] && !skip.has(f);
     if (!rg.pk || o.mc > rg.pk.mc) rg.pk = { mc: o.mc, t };
     else {
@@ -80,14 +83,14 @@ export function evaluate(coin, o, opts = {}) {
       if (rg.pk.mc >= S.RUG_MIN_PEAK_USD && prevOk && prevMc > line && o.mc <= line) { // armed (again): the bounce books follow the low from here
         rg.arm = { t, peak: rg.pk.mc, peak_t: rg.pk.t, low: o.mc, low_t: t };
         for (const [family, P, kind] of S.RUG) if (kind === "knife" && rg.arm.peak >= P && inRug(family) && inBand)
-          cand(family, { peak_mc: Math.round(rg.pk.mc), peak_t: rg.pk.t, line_mc: Math.round(line), fall: +(1 - o.mc / rg.pk.mc).toFixed(4), fall_s: Math.round(t - rg.pk.t) });
+          cand(family, { peak_mc: Math.round(rg.pk.mc), peak_t: rg.pk.t, line_mc: Math.round(line), fall: +(1 - o.mc / rg.pk.mc).toFixed(4), fall_s: Math.round(t - rg.pk.t) }, rg.pk.t);
       } else if (rg.arm) {
         if (t - rg.arm.t > S.RUG_BOUNCE_EXPIRE_S) rg.arm = null;
         else if (o.mc < rg.arm.low) { rg.arm.low = o.mc; rg.arm.low_t = t; }
         else { const up = rg.arm.low * S.RUG_BOUNCE_X;
           if (prevOk && prevMc < up && o.mc >= up) { // the bounce happened: bought if in the band, and the setup is spent either way
             for (const [family, P, kind] of S.RUG) if (kind === "bounce" && rg.arm.peak >= P && inRug(family) && inBand)
-              cand(family, { peak_mc: Math.round(rg.arm.peak), peak_t: rg.arm.peak_t, armed_t: rg.arm.t, low_mc: Math.round(rg.arm.low), low_t: rg.arm.low_t, bounce: +(o.mc / rg.arm.low - 1).toFixed(4), from_peak: +(1 - o.mc / rg.arm.peak).toFixed(4), fall_s: Math.round(rg.arm.t - rg.arm.peak_t), wait_s: Math.round(t - rg.arm.t) });
+              cand(family, { peak_mc: Math.round(rg.arm.peak), peak_t: rg.arm.peak_t, armed_t: rg.arm.t, low_mc: Math.round(rg.arm.low), low_t: rg.arm.low_t, bounce: +(o.mc / rg.arm.low - 1).toFixed(4), from_peak: +(1 - o.mc / rg.arm.peak).toFixed(4), fall_s: Math.round(rg.arm.t - rg.arm.peak_t), wait_s: Math.round(t - rg.arm.t) }, rg.arm.peak_t);
             rg.arm = null; } }
       }
     }
@@ -100,7 +103,7 @@ export function evaluate(coin, o, opts = {}) {
     if (!g.ref || g.ref.status !== "OK") { g.ref = ageRef(coin, ag); if (g.ref.status !== "OK") note("AGE-DOUBLE", "reference_status=MISSING", g.ref); } // re-tried while missing (a later back-fill may supply it); logged once
     if (g.ref.status === "OK") {
       const linePx = (S.AGE_DOUBLE_X * g.ref.mc) / coin.supply;
-      if (cross(linePx)) { if (inBand) cand("AGE-DOUBLE", { ref_mc: Math.round(g.ref.mc), ref_t: g.ref.t, ref_quiet_s: g.ref.quietS, ref_src: g.ref.src }); else note("AGE-DOUBLE", "crossing outside entry band", { mc: Math.round(o.mc) }, false); }
+      if (cross(linePx)) { if (inBand) cand("AGE-DOUBLE", { ref_mc: Math.round(g.ref.mc), ref_t: g.ref.t, ref_quiet_s: g.ref.quietS, ref_src: g.ref.src }, g.ref.t); else note("AGE-DOUBLE", "crossing outside entry band", { mc: Math.round(o.mc) }, false); }
     }
   }
 
@@ -113,7 +116,7 @@ export function evaluate(coin, o, opts = {}) {
         if (!inBand) note("LOW4H", "crossing outside entry band", { mc: Math.round(o.mc) }, false);
         else {
           const d = { low_px: low.px, low_t: low.t, low_mc: Math.round(low.px * coin.supply) };
-          cand("LOW4H", d);
+          const w4 = t - S.LOW4H_WIN_S; cand("LOW4H", d, w4);
           // SLOW-BUILD: ≥ 30 min from the low, and no completed 1-min candle from the low's minute up to (not incl.) the trigger's minute gains > 20%
           const elapsed = t - low.t, bars = sr.barsIn(Math.floor(low.t / 60), Math.floor(t / 60));
           const worst = bars.reduce((w, [m, b]) => { const gn = b.o > 0 ? b.c / b.o - 1 : 0; return gn > w.g ? { g: gn, m } : w; }, { g: -Infinity, m: null });
@@ -122,7 +125,7 @@ export function evaluate(coin, o, opts = {}) {
           const sd = { ...d, elapsed_s: Math.round(elapsed), candles: bars.length, max_candle_gain: bars.length ? +worst.g.toFixed(4) : null, low_candle_opened_before_low: !!(lowBar && lowBar.o > low.px), worst_is_low_candle: worst.m === Math.floor(low.t / 60) };
           if (elapsed < S.SLOW_MIN_ELAPSED_S) note("SLOW-BUILD", "rejected: under 30 min from low", sd, false);
           else if (bars.length && worst.g > S.SLOW_MAX_CANDLE_GAIN + 1e-12) note("SLOW-BUILD", "rejected: a candle above +20%", { ...sd, at_minute: worst.m }, false);
-          else cand("SLOW-BUILD", sd);
+          else cand("SLOW-BUILD", sd, w4);
           g.done["SLOW-BUILD"] = 1;
           // LOW4H-LIQ25K: liquidity ≥ $25K and 0.2 SOL round-trip price impact ≤ 5% (fees excluded)
           // the two tests are recorded separately so we can see whether the impact test ever binds on its own
@@ -130,7 +133,7 @@ export function evaluate(coin, o, opts = {}) {
           if (o.liqUsd == null || o.rtImpact == null) note("LOW4H-LIQ25K", "rejected: liquidity/impact evidence missing", lq, false);
           else if (!lq.liq_pass) note("LOW4H-LIQ25K", lq.impact_pass ? "rejected: liquidity under $25K" : "rejected: liquidity under $25K and static impact over 5%", lq, false);
           else if (!lq.impact_pass) note("LOW4H-LIQ25K", "rejected: static impact over 5% (liquidity passed)", lq, false);
-          else cand("LOW4H-LIQ25K", lq);
+          else cand("LOW4H-LIQ25K", lq, w4);
           g.done["LOW4H-LIQ25K"] = 1;
         }
       }
@@ -143,7 +146,7 @@ export function evaluate(coin, o, opts = {}) {
     else {
       p15 = sr.priceAt(t - S.CONT_LOOKBACK_S); hi1h = sr.highIn(t - S.CONT_HI_WIN_S, t);
       if (p15 && hi1h && o.px >= S.CONT_RISE * p15.px && o.px >= S.CONT_NEAR_HI * hi1h.px && inBand) {
-        const d = { px15: p15.px, hi1h: hi1h.px }; cand("CONT", d); cand("CONT-STALL", d);
+        const d = { px15: p15.px, hi1h: hi1h.px }, w1 = t - S.CONT_HI_WIN_S; cand("CONT", d, w1); cand("CONT-STALL", d, w1);
       }
     }
   }
@@ -163,7 +166,7 @@ export function evaluate(coin, o, opts = {}) {
         const base = median(sums), v15 = vsum(mB - 15);
         const d = { hi1h: hi.px, B: mB * 60, signal_window: [(mB - 15) * 60, mB * 60], baseline_window: [(mB - 255) * 60, (mB - 15) * 60], vol15: Math.round(v15), base_median: Math.round(base), windows: sums.map(Math.round) };
         if (!(base > 0)) note("HH-BREAK", "zero volume baseline (not entered)", d, false);
-        else if (v15 >= S.HH_VOL_X * base) { cand("HH-BREAK", d); cand("HH-BREAK-4H", d); } // the 4-hour clock book shares the buy (as CONT-STALL shares CONT's)
+        else if (v15 >= S.HH_VOL_X * base) { cand("HH-BREAK", d, histFrom); cand("HH-BREAK-4H", d, histFrom); } // the 4-hour clock book shares the buy (as CONT-STALL shares CONT's)
       }
     }
   }
@@ -184,7 +187,7 @@ export function evaluate(coin, o, opts = {}) {
     const base = median(sums), vn = vsum(mB - n);
     const d = { high: hi.px, high_window_s: W, B: mB * 60, signal_window: [(mB - n) * 60, mB * 60], baseline_window: [(mB - n - n * K) * 60, (mB - n) * 60], vol: Math.round(vn), base_median: Math.round(base), windows: sums.map(Math.round) };
     if (!(base > 0)) note(family, "zero volume baseline (not entered)", d, false);
-    else if (vn >= S.HH_VOL_X * base) cand(family, d);
+    else if (vn >= S.HH_VOL_X * base) cand(family, d, histFrom);
   }
 
   // FAST / FAST150 — fresh crossing of X × the lowest pool spot price in the preceding window (1, 3, 5, 10 or 30 minutes; see S.FAST).

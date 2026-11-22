@@ -19,8 +19,11 @@ export class Engine {
     this.pollCov = new Coverage(); // continuity of PRICE POLLING (the Solana-wide adapter); independent of the PumpSwap WebSocket
     this.stats.prices = 0; this.stats.riskBlocked = 0; this.stats.quotes = 0;
   }
-  restartGap(from, to) { if (from != null && to > from) { this.cov.gaps.push([from, to]); this.feedCov.gaps.push([from, to]); this.store?.feedEvent(to, "restart-gap", `${from}`); } }
-  feedUp(t) { this.feedCov.up(t, "feed"); this.cov.up(t, "feed"); if (!this.cov.down) for (const c of this.coins.values()) c.series.startLive(t); this.store?.feedEvent(t, "up"); }
+  /** the time the program was away. warm = the price memory was read back (warm.mjs): the signal coverage then closes the gap
+   *  itself when the feed is up again (Coverage.resume / up), tolerated or not by its real length. Pool-state trust and exit
+   *  flags (feedCov) always treat a restart as a plain gap. */
+  restartGap(from, to, { warm = false } = {}) { if (from != null && to > from) { if (!warm) this.cov.gaps.push([from, to]); this.feedCov.gaps.push([from, to]); this.store?.feedEvent(to, warm ? "restart-gap (warm: price memory read back)" : "restart-gap", `${from}`); } }
+  feedUp(t) { this.feedCov.up(t, "feed"); this.cov.up(t, "feed"); if (!this.cov.down) for (const c of this.coins.values()) if (c.mode !== "polled") c.series.startLive(t); /* a sampled coin's history starts at its own first sample, never at the PumpSwap feed's */ this.store?.feedEvent(t, "up"); }
   feedDown(t, why = "") { this.feedCov.drop(t, "feed"); this.cov.drop(t, "feed"); this.store?.feedEvent(t, "down", why); }
   /** a watched coin. mode "live" = decoded pool events (PumpSwap adapter); "polled" = sampled prices + routed quotes (Solana-wide adapter).
    *  A mint is observed in ONE mode; `info` carries the launchpad-neutral record (origin, venues, token program, sources, risk…). */
@@ -122,6 +125,8 @@ export class Engine {
     const evidence = { ...r.evidence, ...evidenceExtra }; evidence.trigger.eval_t = Date.now() / 1000;
     const e = newEntry({ mint, pool: c.pool, ag: r.cands[0].ag, t: o.t, families: r.cands.map((x) => x.family), features: r.cands[0].features, mc: o.mc, px: o.px, evidence, startup: this.firstStart != null && o.t < this.firstStart + S.STARTUP_TAG_S });
     e.cands = r.cands.map((x) => ({ family: x.family, detail: x.detail }));
+    // WARM RESTART: a decision whose window contains a tolerated restart gap is marked, with the seconds that were not observed
+    { const w = Math.max(0, ...r.cands.map((x) => x.detail?.restart_gap_s || 0)); if (w > 0) { e.warm_gap_s = w; e.flags.push(`decision window includes a restart gap of ${w} s that was not observed (warm restart): ${r.cands.filter((x) => x.detail?.restart_gap_s).map((x) => x.family).join(", ")}`); } }
     Object.assign(e, tags); e.token = { symbol: c.info.symbol ?? null, origin: c.info.origin ?? null, origin_evidence: c.info.origin_evidence ?? null, venues: c.info.venues ?? null, token_program: c.info.token_program ?? null, risk_status: c.info.risk?.status ?? "missing", xfer_bps: c.info.risk?.fee_bps || 0, create_src: c.info.create_src ?? null, cadence_s: c.info.cadence_s ?? null };
     this.addEntry(e); this.stats.entries++;
     // ONE COMMIT: the entry and its one-buy flags are written together. A stop between the two used to leave a stored entry

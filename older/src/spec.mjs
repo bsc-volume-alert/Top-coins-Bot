@@ -108,3 +108,9 @@ export const XFER_FEE_MAX_BPS = 500;
 // Reporting only: every buy of a transfer-fee coin is shown in ONE separate book and left out of the rule books' own totals
 // and rows (owner, 22 Nov 2026: "a separate book so we can analyse those separately"). The entry still records the rule(s) that bought it.
 export const FEE_BOOK = "FEE-COINS";
+// WARM RESTART (owner's decision, 22 Nov 2026): a planned stop writes each coin's price memory to disk and the next start reads
+// it back, so a restart no longer empties the hour-scale windows. The time the program was away stays UNOBSERVED: it is kept
+// as a gap, and that gap is TOLERATED — for hour-scale windows only — when it is at most this long. Exact (seconds-scale)
+// windows and fresh crossings never span it. Longer away than this: the gap is an ordinary outage and nothing spans it.
+export const WARM_MAX_GAP_S = 60;
+

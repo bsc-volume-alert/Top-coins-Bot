@@ -5,14 +5,17 @@
 //   stale (the coin's own data stops but the feed was up)     → same as quiet, reported with its age;
 //   feed outage (a global gap overlapping the window)         → window NOT covered unless that gap was back-filled for this coin;
 //   missing history (window starts before the coin's history) → NOT covered.
-import { RAW_KEEP_S, RAW_CAP, BAR_KEEP_S, BUYERS_KEEP_S, BUYER_RAW_KEEP_S, BUYERS_PER_BAR_CAP, BACKFILL_MAX_HOLE_S } from "./spec.mjs";
+import { RAW_KEEP_S, RAW_CAP, BAR_KEEP_S, BUYERS_KEEP_S, BUYER_RAW_KEEP_S, BUYERS_PER_BAR_CAP, BACKFILL_MAX_HOLE_S, WARM_MAX_GAP_S } from "./spec.mjs";
 
 const EMPTY = new Set(); // shared: most minute bars never record a buyer wallet
 export class Coverage { // global data-quality state, shared by all coins. Down while ANY reason is active (feed outage, SOL/USD stale…).
-  constructor() { this.gaps = []; this.upSince = null; this.down = true; this.reasons = new Set(["feed"]); this.lastDown = null; }
+  constructor() { this.gaps = []; this.upSince = null; this.down = true; this.reasons = new Set(["feed"]); this.lastDown = null; this.warm = false; }
+  /** WARM RESTART: the previous run stopped observing at `from` and its history was read back. The gap is closed by the next up():
+   *  marked "warm" (tolerated by hour-scale windows) only if observation resumes within WARM_MAX_GAP_S — otherwise a plain outage. */
+  resume(from) { this.lastDown = from; this.warm = true; }
   up(t, reason = "feed") {
     this.reasons.delete(reason); if (this.reasons.size || !this.down) return;
-    if (this.lastDown != null) this.gaps.push([this.lastDown, t]);
+    if (this.lastDown != null) { const g = [this.lastDown, t]; if (this.warm && t - this.lastDown <= WARM_MAX_GAP_S) g[2] = "warm"; this.gaps.push(g); } this.warm = false;
     this.upSince = this.upSince ?? t; this.down = false; this.lastDown = null;
   }
   drop(t, reason = "feed") { this.reasons.add(reason); if (!this.down) { this.down = true; this.lastDown = t; } }
@@ -52,6 +55,11 @@ export class Series {
    *  needs exact data uses this one test: seconds-scale windows, fresh crossings, candle completeness, and — new — every price
    *  CARRIED from an earlier moment to a later one (the carry must be continuous from the price's own time to where it is used). */
   continuous(a, b) { return this.obsFrom !== null && this.obsFrom <= a && this.cov.gapsIn(a, b).length === 0 && this.ownGapsIn(a, b).length === 0; }
+  /** continuous EXCEPT for tolerated warm-restart gaps (spec WARM_MAX_GAP_S): the test for state that is carried for hours (the
+   *  RUG books' peak and armed setup). Fresh crossings and exact windows keep using continuous(): they never span a restart. */
+  steady(a, b) { return this.obsFrom !== null && this.obsFrom <= a && this.cov.gapsIn(a, b).every((g) => g[2] === "warm") && this.ownGapsIn(a, b).length === 0; }
+  /** seconds of tolerated warm-restart gap inside [x, t] (0 = none): recorded on every decision whose window contains one */
+  warmIn(x, t) { let s = 0; for (const [a, b, k] of this.cov.gapsIn(x, t)) if (k === "warm") s += Math.min(b, t) - Math.max(a, x); return +s.toFixed(1); }
   obsCovered(x, t) { return this.continuous(x, t); }
   /** an EXACT WINDOW [x, t] (FAST, SECOND-WAVE, fresh crossings): unbroken exact observation over it AND a price already standing
    *  at x — an exact observation at or before x, carried to x without a break. Observations that only begin somewhere inside the
@@ -133,7 +141,7 @@ export class Series {
   covered(x, t, strict = false) {
     if (strict) return this.exactWindow(x, t);
     if (this.histFrom === null || this.histFrom > x) return false;
-    for (const [a, b] of this.cov.gapsIn(x, t)) if (!this.patched.some(([pa, pb]) => pa <= a && pb >= b)) return false;
+    for (const [a, b, k] of this.cov.gapsIn(x, t)) if (k !== "warm" && !this.patched.some(([pa, pb]) => pa <= a && pb >= b)) return false; // a warm-restart gap (≤ WARM_MAX_GAP_S, history read back) is tolerated here and recorded on the decision (warmIn)
     if (this.ownGapsIn(x, t).length) return false; // the coin's own breaks are never repaired by back-fill
     return true;
   }
@@ -221,4 +229,18 @@ export class Series {
   /** authoritative candles with minute index in [m0, m1), in time order */
   barsIn(m0, m1) { const out = [], seen = new Set(); for (const m of this.bars.keys()) if (m >= m0 && m < m1) { out.push([m, this.barAt(m)]); seen.add(m); } for (const [m, b] of this.bf) if (m >= m0 && m < m1 && !seen.has(m)) out.push([m, b]); return out.sort((a, b) => a[0] - b[0]); }
   buyersIn(m0, m1) { const s = new Set(); for (const [, b] of this.barsIn(m0, m1)) for (const u of b.buyers) s.add(u); return s.size; }
+  /** WARM RESTART: everything a decision reads, as plain data (see warm.mjs). Nothing is rounded or summarised. */
+  dump() {
+    const bar = (b) => { const o = { o: b.o, h: b.h, l: b.l, c: b.c, v: b.v, nb: b.nb, ns: b.ns, lowT: b.lowT }; if (b.nbuyers != null) o.nbuyers = b.nbuyers; if (b.buyers && b.buyers.size) o.buyers = [...b.buyers]; return o; };
+    const mrg = []; this.raw.forEach((o, i) => { const m = this.mrg.get(o); if (m) mrg.push([i, m]); });
+    return { raw: this.raw, mrg, bars: [...this.bars].map(([m, b]) => [m, bar(b)]), bf: [...this.bf].map(([m, b]) => [m, bar(b)]), histFrom: this.histFrom, obsFrom: this.obsFrom, lastIsBf: this.lastIsBf, compT: this.compT,
+      anchor: this.anchor, patched: this.patched, pend: this.pend, own: this.own, lastPx: this.lastPx, lastT: this.lastT, prevPx: this.prevPx, prevT: this.prevT };
+  }
+  static load(mint, cov, d) {
+    const s = new Series(mint, cov); s.raw = d.raw || []; for (const [i, m] of d.mrg || []) if (s.raw[i]) s.mrg.set(s.raw[i], m);
+    const bar = (b, bf) => ({ o: b.o, h: b.h, l: b.l, c: b.c, v: b.v || 0, nb: b.nb || 0, ns: b.ns || 0, buyers: b.buyers ? new Set(b.buyers) : EMPTY, lowT: b.lowT, ...(b.nbuyers != null ? { nbuyers: b.nbuyers } : {}), ...(bf ? { bf: true } : {}) });
+    for (const [m, b] of d.bars || []) s.bars.set(m, bar(b, false)); for (const [m, b] of d.bf || []) s.bf.set(m, bar(b, true));
+    for (const k of ["histFrom", "obsFrom", "lastIsBf", "compT", "anchor", "pend", "lastPx", "lastT", "prevPx", "prevT"]) s[k] = d[k] ?? (k === "lastIsBf" || k === "pend" ? false : null);
+    s.patched = d.patched || []; s.own = d.own || []; return s;
+  }
 }
