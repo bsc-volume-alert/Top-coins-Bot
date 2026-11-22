@@ -245,6 +245,12 @@ Verdict received: **not ready**; five blockers and five non-blocking defects. Ea
 
 **To attack:** a break that `continuous()` does not see (is there any path where observation is interrupted without a `feedDown`, a `restartAt` or a mode change?); `priced()` on a window whose start falls inside a merged second; whether excluding estimated sales anywhere changes a figure that is not labelled.
 
+## 6n. Transfer-fee coins allowed up to 5% (22 Nov 2026, 00:40 UK) — owner's decision, for the reviewer
+
+Separate commit from 6m so it can be judged alone. Rule and declared assumption: SPEC "Transfer-fee coins". Code: `risk.mjs` (fee ≤ 500 bps is a warning with `fee_bps`, not a block), `polled.mjs` (fee taken off the bought tokens and off each sale's proceeds), `engine.mjs` (fee coin on the live method not entered; `token.xfer_bps`), `book.mjs` (`fill.quote.xfer_bps`), page asterisk. Test: `test/polled.test.mjs`, last test. 134 tests.
+
+**To attack:** (1) does Jupiter's quote `outAmount` already net a Token-2022 transfer fee on the input or output leg? Its API reference says only "after deducting AMM fees and platform fees". If it does, the deduction here is double (results too low). (2) Multiplying the sale proceeds by (1 − fee) instead of quoting the reduced token amount — the error is second order in trade size over pool depth; is that acceptable for 0.2 SOL? (3) The fee is read once per start; a fee raised by its authority mid-position is not seen until the next start. (4) Stored coins keep their old "restricted" status until the chain is re-read after the restart (one call per second): safe direction, but say if you see a path where a stale status is trusted the other way.
+
 ## 6l. Full review requested by the owner (21 Nov 2026, 21:35 UK) — map of everything since the sixth review
 
 The sixth review covered `8474066` (spec older-4, 17 families, 104 tests). The owner asked for a complete A-to-Z review of the present head because much has been added since. Spec is now **older-8**: 29 families, 5 stops, 2 exit policies, 1,240 comparison rows, 124 tests.

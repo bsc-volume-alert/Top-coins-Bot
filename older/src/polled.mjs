@@ -130,12 +130,15 @@ export class Poller {
       const every = need.unresolved ? 600 : urgent ? Math.min(1, this.quoteFast) : this.quoteSlow;
       if (this.now() - last < every) continue;
       const w = this.watch.get(need.mint); if (!w || !validDec(w.decimals)) { this.stats.quoteNoWatch = (this.stats.quoteNoWatch || 0) + 1; continue; } const dec = w.decimals; this.quoted.set(need.id, this.now());
+      // TRANSFER FEE (spec XFER_FEE_MAX_BPS): the coin keeps this share of every transfer. The quote is treated as NOT including it, so it is
+      // taken off the tokens received at the buy and off the proceeds of each sale. If a router already nets it, the result is too LOW, never too high.
+      const xfer = this.engine.coins.get(need.mint)?.info?.risk?.fee_bps || 0, keep = 1 - xfer / 10_000;
       let held = this.held.get(need.id); if (!held) this.held.set(need.id, (held = new Map()));
-      if (need.buy_sol) { const q = await this.jup.quote(need.mint, "buy", need.buy_sol * 1e9, { urgent: true }); if (q.ok) { this.stats.quotesOk++; this.engine.onQuote(need.id, { kind: "quote", reqT: q.req, t: q.t, buy: { sol: need.buy_sol, tok: q.out / 10 ** dec, reqT: q.req, t: q.t, route: q.route, router: q.router, feeBps: q.feeBps, impact: q.impact }, sells: [] }); n++; } else this._fail(need, q); }
+      if (need.buy_sol) { const q = await this.jup.quote(need.mint, "buy", need.buy_sol * 1e9, { urgent: true }); if (q.ok) { this.stats.quotesOk++; this.engine.onQuote(need.id, { kind: "quote", reqT: q.req, t: q.t, buy: { sol: need.buy_sol, tok: (q.out / 10 ** dec) * keep, xfer_bps: xfer, reqT: q.req, t: q.t, route: q.route, router: q.router, feeBps: q.feeBps, impact: q.impact }, sells: [] }); n++; } else this._fail(need, q); }
       for (const tok of need.sells) {
         const q = await this.jup.quote(need.mint, "sell", tok * 10 ** dec, { urgent: urgent || (need.due != null && need.due <= this.now()) }); // urgency is decided at dispatch: an order that became due while this pass was waiting goes in the first lane
         if (!q.ok) { this._fail(need, q); for (const k of held.keys()) if (Math.abs(tok - k) <= 1e-9 * Math.max(1, tok)) held.delete(k); continue; } // a size whose quote failed has NO current quote: the old one is dropped, never carried forward
-        this.stats.quotesOk++; held.set(tok, { tok, sol: q.out / 1e9, reqT: q.req, t: q.t, route: q.route, router: q.router });
+        this.stats.quotesOk++; held.set(tok, { tok, sol: (q.out / 1e9) * keep, xfer_bps: xfer, reqT: q.req, t: q.t, route: q.route, router: q.router });
         for (const k of held.keys()) if (!need.sells.some((x) => Math.abs(x - k) <= 1e-9 * Math.max(1, x))) held.delete(k); // sizes no longer held
         this.engine.onQuote(need.id, { kind: "quote", reqT: q.req, t: q.t, buy: null, sells: [...held.values()] }); n++;
       }

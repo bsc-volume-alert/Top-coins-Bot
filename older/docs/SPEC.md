@@ -144,3 +144,16 @@ These books are evaluated **from migration on** — including the first 8 hours 
 5. **Estimated sales are not results.** A sale that was estimated rather than observed (the older HH-BREAK-4H sales carried in on 21 Nov) is shown on its own line and is excluded from every total, ranking, win rate and period figure. The estimate uses the last minute bar completed before the clock time, never the minute containing it and never a rejected back-fill bar. A fresh database contains none.
 6. **Display:** a half-sold position's "high while held" is the best the position was actually worth (banked half + the rest), not the original position's high; a sale's market cap is always marked approximate (it uses the SOL price and supply recorded at the buy); a book's "counting since" is set when the program starts, not when the page is first opened.
 
+## Transfer-fee coins (22 Nov 2026, 00:40 UK — owner's decision)
+
+Until now every Token-2022 coin with a transfer fee above zero was blocked. From this version:
+
+- **Allowed when the fee is at most 5%** (`XFER_FEE_MAX_BPS = 500`); above 5% the coin stays blocked. The fee used is the higher of the fee in force and the fee already scheduled on the mint; the mint's per-transfer cap is ignored, so the fee is never understated.
+- **Deducted twice from the paper result:** off the tokens received at the buy, and off the proceeds of every sale (half sale and final sale). A 5% fee therefore costs about 9.75% of the trade on top of the ordinary costs.
+- **The stop works on what the position is really worth.** A fee coin starts below its cost by about two fees, so its trailing stop has less room: on a 5% fee and a 20% stop, roughly an 11% fall from the buy price closes it.
+- **Sampled method only.** The fee is applied to the routed quotes. On the live (pool-state) method the fee is not modelled, so a fee coin there is not entered.
+- **Assumption, declared:** the routed quote is treated as NOT already including the transfer fee. If a router does net it, these results are too low by up to two fees — never too high. To be measured on the first fee-coin trades.
+- **Marked:** every such trade carries `token.xfer_bps` and an asterisk on the page with the fee; `entries.json` carries `fee`. They count in the totals, net of the fee.
+- **Unchanged:** coins with a transfer hook, a permanent delegate, pausable or non-transferable tokens, confidential transfers or frozen default accounts stay blocked whatever their fee.
+- Claude advised a limit of 1–2%; the owner chose 5% "for now", to be revisited with data.
+

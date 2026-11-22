@@ -100,3 +100,8 @@ export const SCALE_QUOTE_MAX_SPREAD_S = 5;    // the routed quotes of one half-s
 export const CHECKPOINT_S = 1;                // open positions' peaks are saved at most this long after they change
 export const BUYER_RAW_KEEP_S = 6 * 60;       // exact per-trade buyer wallets kept this long (the 1/3/5-minute entry measurements)
 export const BUYERS_KEEP_S = 20 * 60;          // per-bar buyer wallet lists kept this long (the features read 15 minutes); older bars keep the count only
+// TRANSFER-FEE COINS (owner's decision, 22 Nov 2026): a Token-2022 coin whose creator takes a fee on every transfer may be entered
+// when that fee is at most this (5%); above it the coin stays blocked. The fee is taken off the paper result twice — off the
+// tokens received at the buy and off the proceeds of every sale — and every such trade is marked on the page. Sampled method
+// only (pool-state fills do not model the fee). Other transfer restrictions (hooks, freeze, permanent delegate…) stay blocked.
+export const XFER_FEE_MAX_BPS = 500;

@@ -34,7 +34,7 @@ function fillBuy(e, st, at, delay, minReq = null) {
   const q = isQuote(st);
   e.fill = { t: at, tok, cost: COST, delay_s: +delay.toFixed(3), state_age_s: q ? null : +(at - st.t).toFixed(3), fee_buy: q ? null : feeBuy(st), fee_src: feeSrc(st, "buy"),
     quote_sol: q ? null : st.quote, base: q ? null : st.base, px_sol: q ? S.STAKE_SOL / tok : (S.STAKE_SOL / (1 + feeBuy(st))) / tok,
-    exec: q ? "routed-quote" : "reconstructed-pool-state", ...(q ? { quote: { req_t: st.buy.reqT ?? st.reqT, resp_t: st.buy.t ?? st.t, route: st.buy.route ?? null, router: st.buy.router ?? null, fee_bps: st.buy.feeBps ?? null, impact: st.buy.impact ?? null } } : {}) };
+    exec: q ? "routed-quote" : "reconstructed-pool-state", ...(q ? { quote: { req_t: st.buy.reqT ?? st.reqT, resp_t: st.buy.t ?? st.t, route: st.buy.route ?? null, router: st.buy.router ?? null, fee_bps: st.buy.feeBps ?? null, xfer_bps: st.buy.xfer_bps ?? 0, impact: st.buy.impact ?? null } } : {}) };
   // the position's first valuation: from the same state when it can price the sale (pool state). A quote-priced entry starts
   // its high-water mark at COST and takes its first real valuation from its first sell quote. This is deliberate: if the price
   // falls between the buy and the first sell quote, the stop must still be measured from what was paid — starting the peak at

@@ -76,7 +76,10 @@ test("a mint already observed live by the PumpSwap adapter is not polled twice; 
 
 test("risk evidence: Token-2022 restrictions block the execution assumption; missing data is 'missing', not clean", () => {
   const mint = (ext, extra = {}) => ({ owner: TOKEN_2022, data: { parsed: { info: { decimals: 6, supply: "1000000000000", mintAuthority: null, freezeAuthority: null, extensions: ext, ...extra } } } });
-  assert.equal(classifyMintAccount(mint([{ extension: "transferFeeConfig", state: { newerTransferFee: { transferFeeBasisPoints: 300 }, olderTransferFee: { transferFeeBasisPoints: 0 } } }])).status, "restricted");
+  assert.equal(classifyMintAccount(mint([{ extension: "transferFeeConfig", state: { newerTransferFee: { transferFeeBasisPoints: 600 }, olderTransferFee: { transferFeeBasisPoints: 0 } } }])).status, "restricted"); // above 5%: still blocked (the higher of the fee in force and the scheduled one counts)
+  const f3 = classifyMintAccount(mint([{ extension: "transferFeeConfig", state: { newerTransferFee: { transferFeeBasisPoints: 300 }, olderTransferFee: { transferFeeBasisPoints: 100 } } }])); assert.equal(f3.status, "flagged"); assert.equal(f3.fee_bps, 300); assert.match(f3.warnings.join(), /transfer fee 300 bps/);
+  assert.equal(classifyMintAccount(mint([{ extension: "transferFeeConfig", state: { newerTransferFee: { transferFeeBasisPoints: 500 }, olderTransferFee: { transferFeeBasisPoints: 0 } } }])).status, "flagged", "exactly 5% is allowed");
+  assert.equal(classifyMintAccount(mint([{ extension: "transferFeeConfig", state: { newerTransferFee: { transferFeeBasisPoints: 100 }, olderTransferFee: { transferFeeBasisPoints: 0 } } }, { extension: "permanentDelegate", state: {} }])).status, "restricted", "a small fee does not unblock another restriction");
   assert.equal(classifyMintAccount(mint([{ extension: "transferHook", state: { programId: "Hook111" } }])).status, "restricted");
   assert.equal(classifyMintAccount(mint([{ extension: "metadataPointer", state: {} }, { extension: "transferFeeConfig", state: { newerTransferFee: { transferFeeBasisPoints: 0 }, olderTransferFee: { transferFeeBasisPoints: 0 } } }])).status, "clean");
   assert.equal(classifyMintAccount(mint([], { freezeAuthority: "X" })).status, "flagged"); assert.equal(classifyMintAccount(null).status, "missing");
@@ -100,4 +103,19 @@ test("Jupiter client: omitted mints are reported, not priced as zero; quotes ret
   const q = await J.quote("TOKEN", "buy", 0.2e9); assert.equal(q.ok, true); assert.equal(q.out, 123456789); assert.deepEqual(q.route, ["Raydium CLMM", "Orca Whirlpool"]); assert.ok(q.t >= q.req);
   assert.ok(!calls.some((c) => /taker|execute/.test(c)), "quote-only: no taker, no execute endpoint");
   const n = await J.quote("NOROUTE", "buy", 0.2e9); assert.equal(n.ok, false); assert.match(n.why, /No routes/);
+});
+
+test("transfer-fee coins (owner, 22 Nov 2026): a 5% fee coin is bought on the sampled method, the fee comes off the tokens at the buy and off the proceeds at the sale, and the trade is marked; on the live method it stays blocked", async () => {
+  const run = async (bps) => { const w = world(); w.px.set(M, 100_000 / 1e9); w.poll.add(w.tok(M), "t"); if (bps) w.eng.coins.get(M).info.risk = { status: "flagged", blocking: [], warnings: [], fee_bps: bps };
+    for (let i = 0; i < 31; i++) await w.step(10, M, 100_000); await w.step(10, M, 205_000); w.t += 1.1; await w.poll.quotes(); const e = [...w.eng.entries.values()][0];
+    w.px.set(M, 75_000 / 1e9); w.t += 11; await w.poll.quotes(); w.t += 0.8; await w.poll.quotes(); return e; };
+  const plain = await run(0), fee = await run(500), t = (e) => e.versions.find((v) => v.policy === "trail" && v.stop === 0.2);
+  assert.equal(fee.status, "filled"); assert.equal(fee.token.xfer_bps, 500); assert.equal(fee.fill.quote.xfer_bps, 500); assert.equal(plain.token.xfer_bps, 0);
+  assert.ok(Math.abs(fee.fill.tok / plain.fill.tok - 0.95) < 1e-9, "5% fewer tokens arrive at the buy");
+  assert.equal(t(fee).status, "closed"); const gross = 1 + t(plain).exit.ret, net = 1 + t(fee).exit.ret;
+  assert.ok(Math.abs(net / gross - 0.95 * 0.95) < 0.002, `the same trade is worth 0.95 × 0.95 of the fee-free one, less the fixed transaction cost (${(net / gross).toFixed(4)})`); assert.ok(net < gross * 0.9025, "never better than two full fees");
+  const { booksApi } = await import("../src/page.mjs"); const row = booksApi([fee], { stop: 0.2, policy: "trail" }).books["FAST-5M"][0]; assert.equal(row.fee, 500, "the page row carries the fee for the asterisk");
+  const { swap, path } = await import("./helpers.mjs"); const L = mkEngine(); L.feedUp(T0); const c = L.coin("LiveFeeCoin", { pool: "PoolL", createTs: T0 - 20 * H }); c.info.risk = { status: "flagged", blocking: [], fee_bps: 300 };
+  for (let k = 0; k <= 30; k++) swap(L, T0 + k * 10, 100_000, { mint: "LiveFeeCoin", pool: "PoolL" }); swap(L, T0 + 320, 210_000, { mint: "LiveFeeCoin", pool: "PoolL" });
+  assert.equal(L.entries.size, 0, "pool-state fills do not model the fee: not entered on the live method"); assert.equal(L.stats.riskBlocked, 1);
 });
