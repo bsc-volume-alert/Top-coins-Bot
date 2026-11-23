@@ -1,0 +1,158 @@
+t_utc,t,event,detail,duration_s
+2026-11-20T14:53:46Z,1795186426,up,,
+2026-11-20T14:58:56Z,1795186737,restart-gap,program not running from 2026-11-20T14:58:47Z to this time,9.91
+2026-11-20T14:58:57Z,1795186738,up,,
+2026-11-20T17:14:27Z,1795194868,poll-down,price request failed: jupiter rate limited,
+2026-11-20T17:20:18Z,1795195219,poll-down,price request failed: jupiter rate limited,
+2026-11-20T17:23:05Z,1795195385,poll-down,price request failed: jupiter rate limited,
+2026-11-20T17:27:40Z,1795195661,poll-down,price request failed: jupiter rate limited,
+2026-11-20T17:29:43Z,1795195783,restart-gap,program not running from 2026-11-20T17:29:00Z to this time,42.683
+2026-11-20T17:29:43Z,1795195783,start,commit 43f5ab2963e25afdcda5e92d51735cee54524276,
+2026-11-20T17:29:45Z,1795195785,up,,
+2026-11-20T17:31:44Z,1795195904,restart-gap,program not running from 2026-11-20T17:30:45Z to this time,59.02
+2026-11-20T17:31:44Z,1795195904,start,commit decaa914bf54e8654e21a03bba46660499652850,
+2026-11-20T17:31:46Z,1795195906,up,,
+2026-11-20T17:47:40Z,1795196861,restart-gap,program not running from 2026-11-20T17:46:46Z to this time,54.611
+2026-11-20T17:47:40Z,1795196861,start,commit 5963512de87b4b28d1cc01fd6a7848611d50dcd6,
+2026-11-20T17:47:42Z,1795196863,up,,
+2026-11-20T18:04:55Z,1795197896,restart-gap,program not running from 2026-11-20T18:04:42Z to this time,13.003
+2026-11-20T18:04:55Z,1795197896,start,commit 23c46571a8c906514f620e10452fed09d0b742e8,
+2026-11-20T18:04:57Z,1795197898,up,,
+2026-11-20T18:26:04Z,1795199164,restore: coin mode corrected,8TiMkgvsrat9tM2esko8zVTt99LZLpefUM4SnZaziXaQ → live (entry 22),
+2026-11-20T18:26:04Z,1795199164,restart-gap,program not running from 2026-11-20T18:25:57Z to this time,6.42
+2026-11-20T18:26:04Z,1795199164,start,commit c5dda67e3ea73c2129a7571c5e0d31c6386d4f24,
+2026-11-20T18:26:06Z,1795199166,up,,
+2026-11-20T18:57:09Z,1795201030,restart-gap,program not running from 2026-11-20T18:57:08Z to this time,0.937
+2026-11-20T18:57:09Z,1795201030,start,commit e511f2f5fd49a88085442193ef29ab770a626431,
+2026-11-20T18:57:11Z,1795201032,up,,
+2026-11-20T19:20:31Z,1795202431,restart-gap,program not running from 2026-11-20T19:20:30Z to this time,0.748
+2026-11-20T19:20:31Z,1795202431,start,commit 07dd68eb33c4539816bdc46896025f211dd3f292,
+2026-11-20T19:20:33Z,1795202433,up,,
+2026-11-20T19:29:13Z,1795202953,poll-down,price request failed: jupiter rate limited,
+2026-11-20T19:45:08Z,1795203909,restart-gap,program not running from 2026-11-20T19:45:07Z to this time,0.819
+2026-11-20T19:45:08Z,1795203909,start,commit d8eb84223ab38d4e7232935fa4c5d01e5a8c5e28,
+2026-11-20T19:45:10Z,1795203911,up,,
+2026-11-20T20:06:35Z,1795205196,poll-down,price request failed: jupiter rate limited,
+2026-11-20T21:44:24Z,1795211064,down,close,
+2026-11-20T21:44:26Z,1795211067,up,,2.537
+2026-11-20T23:00:54Z,1795215655,down,close,
+2026-11-20T23:00:57Z,1795215657,up,,2.841
+2026-11-20T23:38:18Z,1795217898,poll-down,price request failed: jupiter rate limited,
+2026-11-21T01:42:18Z,1795225338,down,close,
+2026-11-21T01:42:20Z,1795225341,up,,2.471
+2026-11-21T02:19:54Z,1795227595,poll-down,price request failed: jupiter rate limited,
+2026-11-21T03:19:49Z,1795231190,poll-down,price request failed: jupiter rate limited,
+2026-11-21T04:16:52Z,1795234612,poll-down,price request failed: jupiter rate limited,
+2026-11-21T09:23:01Z,1795252982,poll-down,price request failed: jupiter rate limited,
+2026-11-21T12:28:54Z,1795264134,restart-gap,program not running from 2026-11-21T12:28:53Z to this time,0.785
+2026-11-21T12:28:54Z,1795264134,start,commit 4a890e36cb5accd3c38200c95783e7aa99715cc3,
+2026-11-21T12:28:56Z,1795264137,up,,
+2026-11-21T13:10:31Z,1795266631,restart-gap,program not running from 2026-11-21T13:10:30Z to this time,0.765
+2026-11-21T13:10:31Z,1795266631,start,commit 8474066cb6ebf26187cac24272d0432907575a4b,
+2026-11-21T13:10:33Z,1795266633,up,,
+2026-11-21T14:19:37Z,1795270778,restart-gap,program not running from 2026-11-21T14:19:37Z to this time,0.727
+2026-11-21T14:19:37Z,1795270778,start,commit c3d3bcd822bea336e4e79192633cf2b8aad9ae5b,
+2026-11-21T14:19:40Z,1795270780,up,,
+2026-11-21T14:29:11Z,1795271352,restart-gap,program not running from 2026-11-21T14:29:11Z to this time,0.696
+2026-11-21T14:29:11Z,1795271352,start,commit 2aa3eef413db0730e1b17f177d6cdc7c191923d8,
+2026-11-21T14:29:14Z,1795271354,up,,
+2026-11-21T14:48:27Z,1795272508,restart-gap,program not running from 2026-11-21T14:48:27Z to this time,0.701
+2026-11-21T14:48:27Z,1795272508,start,commit 4cef9797ebbe58a5ca40db2c879ec4e77c5a3ab7,
+2026-11-21T14:48:29Z,1795272510,up,,
+2026-11-21T16:12:37Z,1795277557,restart-gap,program not running from 2026-11-21T16:12:36Z to this time,0.761
+2026-11-21T16:12:37Z,1795277557,start,commit 7abc863f3cee0d6d89c5919d45868faf978c64de,
+2026-11-21T16:12:39Z,1795277559,up,,
+2026-11-21T16:19:50Z,1795277991,restart-gap,program not running from 2026-11-21T16:19:49Z to this time,0.746
+2026-11-21T16:19:50Z,1795277991,start,commit 37a5793cc8758e50c46762ee99f05e205c7b823f,
+2026-11-21T16:19:52Z,1795277993,up,,
+2026-11-21T16:23:59Z,1795278240,restart-gap,program not running from 2026-11-21T16:23:58Z to this time,0.738
+2026-11-21T16:23:59Z,1795278240,start,commit d07c49ed5f81cf778c530298d6492797cb0e487c,
+2026-11-21T16:24:01Z,1795278242,up,,
+2026-11-21T16:46:33Z,1795279594,migration: clock book added,HH-BREAK-4H: 84 HH-BREAK buys carried in (584 clock sales estimated),
+2026-11-21T16:46:33Z,1795279594,restart-gap,program not running from 2026-11-21T16:46:32Z to this time,0.707
+2026-11-21T16:46:33Z,1795279594,start,commit 95b0a2ddee31aa4f37d234fea0f17e957620621b,
+2026-11-21T16:46:36Z,1795279596,up,,
+2026-11-21T17:56:46Z,1795283807,poll-down,price request failed: jupiter rate limited,
+2026-11-21T20:33:41Z,1795293221,poll-down,price request failed: jupiter rate limited,
+2026-11-21T21:23:14Z,1795296194,restart-gap,program not running from 2026-11-21T21:23:13Z to this time,0.8
+2026-11-21T21:23:14Z,1795296194,start,commit c780ef6c8f735ee6e16dadd7ae1f2bedb5d2626b,
+2026-11-21T21:23:16Z,1795296197,up,,
+2026-11-21T21:25:11Z,1795296312,poll-down,price request failed: jupiter rate limited,
+2026-11-21T21:32:01Z,1795296721,restart-gap,program not running from 2026-11-21T21:32:00Z to this time,0.837
+2026-11-21T21:32:01Z,1795296721,start,commit bae3939f9506df3a81868f07c43199450a0484dc,
+2026-11-21T21:32:04Z,1795296724,up,,
+2026-11-21T22:38:05Z,1795300685,restart-gap,program not running from 2026-11-21T22:38:04Z to this time,0.783
+2026-11-21T22:38:05Z,1795300685,start,commit 7bc6cd7944f8b4a1232f16cddb285773d817ce13,
+2026-11-21T22:38:07Z,1795300688,up,,
+2026-11-22T00:46:56Z,1795308416,poll-down,price request failed: jupiter rate limited,
+2026-11-22T00:48:19Z,1795308499,poll-down,price request failed: jupiter rate limited,
+2026-11-22T01:05:04Z,1795309505,poll-down,price request failed: jupiter rate limited,
+2026-11-22T01:16:35Z,1795310195,restart-gap,program not running from 2026-11-22T01:16:34Z to this time,0.803
+2026-11-22T01:16:35Z,1795310195,start,commit 0a3b8d3a8c5e5ae2e681884fd20ebb0a8275b703,
+2026-11-22T01:16:37Z,1795310198,up,,
+2026-11-22T01:16:48Z,1795310209,poll-down,price request failed: jupiter rate limited,
+2026-11-22T01:17:48Z,1795310269,poll-down,price request failed: jupiter rate limited,
+2026-11-22T01:25:49Z,1795310750,restart-gap (warm: price memory read back),program not running from 2026-11-22T01:25:48Z to this time,1.128
+2026-11-22T01:25:49Z,1795310750,start,commit 4a56633ca19d861b2b20642d05ec3f09c92cbc93,
+2026-11-22T01:25:52Z,1795310753,up,,
+2026-11-22T02:20:04Z,1795314005,poll-down,price request failed: jupiter rate limited,
+2026-11-22T02:23:04Z,1795314185,poll-down,price request failed: jupiter rate limited,
+2026-11-22T02:39:04Z,1795315145,poll-down,price request failed: jupiter rate limited,
+2026-11-22T03:12:09Z,1795317130,poll-down,price request failed: jupiter rate limited,
+2026-11-22T03:22:04Z,1795317725,poll-down,price request failed: jupiter rate limited,
+2026-11-22T03:37:09Z,1795318630,poll-down,price request failed: jupiter rate limited,
+2026-11-22T04:08:05Z,1795320485,poll-down,price request failed: jupiter rate limited,
+2026-11-22T04:44:04Z,1795322645,poll-down,price request failed: jupiter rate limited,
+2026-11-22T05:10:03Z,1795324204,down,close,
+2026-11-22T05:10:08Z,1795324208,up,,4.56
+2026-11-22T05:23:04Z,1795324985,poll-down,price request failed: jupiter rate limited,
+2026-11-22T05:51:06Z,1795326667,poll-down,price request failed: jupiter rate limited,
+2026-11-22T08:06:08Z,1795334769,poll-down,price request failed: jupiter rate limited,
+2026-11-22T10:26:12Z,1795343172,poll-down,price request failed: jupiter rate limited,
+2026-11-22T10:56:10Z,1795344971,poll-down,price request failed: jupiter rate limited,
+2026-11-22T21:12:19Z,1795381940,restart-gap (warm: price memory read back),program not running from 2026-11-22T21:12:18Z to this time,1.794
+2026-11-22T21:12:19Z,1795381940,start,commit cecc7a2b7b8dda83e84cbfd29e9b8b02e27f6797,
+2026-11-22T21:12:23Z,1795381944,up,,
+2026-11-22T21:12:58Z,1795381978,poll-down,price request failed: jupiter rate limited,
+2026-11-22T21:13:01Z,1795381981,poll-down,price request failed: jupiter rate limited,
+2026-11-22T21:13:08Z,1795381989,poll-down,price request failed: jupiter rate limited,
+2026-11-22T21:13:11Z,1795381992,poll-down,price request failed: jupiter rate limited,
+2026-11-22T21:13:16Z,1795381997,poll-down,price request failed: jupiter rate limited,
+2026-11-22T21:13:20Z,1795382000,poll-down,price request failed: jupiter rate limited,
+2026-11-22T21:13:31Z,1795382012,poll-down,price request failed: jupiter rate limited,
+2026-11-22T21:13:34Z,1795382015,poll-down,price request failed: jupiter rate limited,
+2026-11-22T21:24:00Z,1795382640,restart-gap (warm: price memory read back),program not running from 2026-11-22T21:23:58Z to this time,1.613
+2026-11-22T21:24:00Z,1795382640,start,commit 834ca7133d3e4d7b949a363f5c9b76c8b280b9ea,
+2026-11-22T21:24:04Z,1795382645,up,,
+2026-11-22T21:47:47Z,1795384068,poll-down,price request failed: jupiter rate limited,
+2026-11-22T21:54:47Z,1795384488,poll-down,price request failed: jupiter rate limited,
+2026-11-22T22:04:17Z,1795385058,poll-down,price request failed: jupiter rate limited,
+2026-11-22T22:09:17Z,1795385358,poll-down,price request failed: jupiter rate limited,
+2026-11-22T22:22:26Z,1795386147,poll-down,price request failed: jupiter rate limited,
+2026-11-22T22:47:12Z,1795387632,poll-down,price request failed: jupiter rate limited,
+2026-11-22T23:54:19Z,1795391660,poll-down,price request failed: jupiter rate limited,
+2026-11-23T00:10:10Z,1795392611,poll-down,price request failed: jupiter rate limited,
+2026-11-23T00:14:20Z,1795392861,poll-down,price request failed: jupiter rate limited,
+2026-11-23T00:39:21Z,1795394362,poll-down,price request failed: jupiter rate limited,
+2026-11-23T10:41:35Z,1795430495,down,close,
+2026-11-23T10:41:38Z,1795430498,up,,3.129
+2026-11-23T11:03:48Z,1795431829,down,close,
+2026-11-23T11:03:50Z,1795431831,up,,2.073
+2026-11-23T14:46:59Z,1795445220,down,close,
+2026-11-23T14:47:02Z,1795445222,up,,2.185
+2026-11-23T15:01:56Z,1795446116,down,close,
+2026-11-23T15:01:59Z,1795446119,up,,3.088
+2026-11-23T15:19:07Z,1795447147,down,close,
+2026-11-23T15:19:09Z,1795447149,up,,2.068
+2026-11-23T15:46:51Z,1795448812,down,close,
+2026-11-23T15:46:53Z,1795448814,up,,2.084
+2026-11-23T16:49:51Z,1795452591,down,close,
+2026-11-23T16:49:53Z,1795452593,up,,2.071
+2026-11-23T17:47:28Z,1795456049,down,close,
+2026-11-23T17:47:30Z,1795456051,up,,2.065
+2026-11-23T18:01:24Z,1795456885,down,close,
+2026-11-23T18:01:26Z,1795456887,up,,2.06
+2026-11-23T19:41:11Z,1795462871,down,close,
+2026-11-23T19:41:13Z,1795462874,up,,2.231
+2026-11-23T20:15:44Z,1795464945,down,close,
+2026-11-23T20:15:47Z,1795464948,up,,2.924

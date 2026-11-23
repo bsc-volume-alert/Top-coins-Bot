@@ -1,0 +1,593 @@
+book,buys,financial_outcome,price_path_class,rows,net_sol
+AGE-DOUBLE,first buy,flat,giveback,1,0
+AGE-DOUBLE,first buy,losing,giveback,1,-0.061
+AGE-DOUBLE,first buy,losing,ordinary decline,20,-1.073
+AGE-DOUBLE,first buy,losing,runner missed: sold before the run,4,-0.216
+AGE-DOUBLE,first buy,open,open,2,0
+AGE-DOUBLE,first buy,profitable,runner captured,2,0.277
+AGE-DOUBLE,first buy,profitable,runner missed: sold before the run,2,0.074
+AGE-DOUBLE,re-buy,losing,abrupt collapse,1,-0.1
+AGE-DOUBLE,re-buy,losing,giveback,1,-0.007
+AGE-DOUBLE,re-buy,losing,ordinary decline,14,-0.595
+AGE-DOUBLE,re-buy,open,open,4,0
+AGE-DOUBLE,re-buy,profitable,runner missed: sold before the run,1,0.034
+AGE-DOUBLE,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),31,-1.602
+AGE-DOUBLE,all,losing,LABEL: thin pool,26,-1.323
+AGE-DOUBLE,all,losing,LABEL: feed/quote quality flag,25,-1.277
+AGE-DOUBLE,all,losing,LABEL: no follow-through (never +5%),20,-1.226
+AGE-DOUBLE,all,losing,LABEL: one buyer >=40% of 5-min buying,17,-0.931
+AGE-DOUBLE,all,losing,LABEL: repeat buy (churn),16,-0.702
+AGE-DOUBLE,all,losing,LABEL: stopped within 3 minutes,3,-0.138
+AGE-DOUBLE,all,losing,LABEL: gave back a gain of 30%+,2,-0.067
+AGE-DOUBLE,all,losing,LABEL: sale well below trigger,1,-0.072
+LOW4H,first buy,losing,ordinary decline,19,-0.972
+LOW4H,first buy,losing,runner missed: sold before the run,5,-0.218
+LOW4H,first buy,open,open,2,0
+LOW4H,first buy,profitable,giveback,1,0.003
+LOW4H,first buy,profitable,ordinary gain,2,0.119
+LOW4H,first buy,profitable,runner captured,3,0.626
+LOW4H,first buy,profitable,runner missed: held through 2x and gave it back,2,0.166
+LOW4H,first buy,profitable,runner missed: sold before the run,2,0.067
+LOW4H,re-buy,losing,ordinary decline,7,-0.357
+LOW4H,re-buy,profitable,runner captured,1,0.181
+LOW4H,re-buy,profitable,runner missed: sold before the run,1,0.024
+LOW4H,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),20,-0.972
+LOW4H,all,losing,LABEL: one buyer >=40% of 5-min buying,19,-0.906
+LOW4H,all,losing,LABEL: no follow-through (never +5%),19,-1.142
+LOW4H,all,losing,LABEL: thin pool,18,-0.946
+LOW4H,all,losing,LABEL: feed/quote quality flag,12,-0.546
+LOW4H,all,losing,LABEL: repeat buy (churn),7,-0.357
+LOW4H,all,losing,LABEL: stopped within 3 minutes,3,-0.19
+LOW4H,all,losing,LABEL: gave back a gain of 30%+,1,-0.004
+CONT,first buy,flat,giveback,1,0
+CONT,first buy,losing,abrupt collapse,3,-0.276
+CONT,first buy,losing,giveback,11,-0.161
+CONT,first buy,losing,ordinary decline,80,-4.103
+CONT,first buy,losing,runner missed: sold before the run,18,-0.631
+CONT,first buy,losing,stagnation,1,-0.016
+CONT,first buy,open,open,7,0
+CONT,first buy,profitable,giveback,5,0.036
+CONT,first buy,profitable,ordinary gain,9,0.215
+CONT,first buy,profitable,runner captured,12,3.114
+CONT,first buy,profitable,runner missed: held through 2x and gave it back,1,0.094
+CONT,first buy,profitable,runner missed: sold before the run,10,0.223
+CONT,first buy,profitable,stagnation,3,0.096
+CONT,re-buy,losing,abrupt collapse,1,-0.085
+CONT,re-buy,losing,ordinary decline,28,-1.258
+CONT,re-buy,losing,runner missed: sold before the run,4,-0.173
+CONT,re-buy,open,open,10,0
+CONT,re-buy,profitable,ordinary gain,4,0.173
+CONT,re-buy,profitable,runner captured,2,0.307
+CONT,re-buy,profitable,runner missed: sold before the run,2,0.104
+CONT,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),133,-6.129
+CONT,all,losing,LABEL: thin pool,84,-4.028
+CONT,all,losing,LABEL: one buyer >=40% of 5-min buying,82,-3.818
+CONT,all,losing,LABEL: no follow-through (never +5%),61,-3.789
+CONT,all,losing,LABEL: feed/quote quality flag,58,-2.586
+CONT,all,losing,LABEL: repeat buy (churn),33,-1.515
+CONT,all,losing,LABEL: gave back a gain of 30%+,14,-0.193
+CONT,all,losing,LABEL: stopped within 3 minutes,14,-0.76
+CONT,all,losing,LABEL: no defensible explanation from recorded fields,3,-0.138
+CONT,all,losing,LABEL: sale well below trigger,1,-0.093
+SLOW-BUILD,first buy,losing,ordinary decline,9,-0.423
+SLOW-BUILD,first buy,losing,runner missed: sold before the run,3,-0.159
+SLOW-BUILD,first buy,open,open,1,0
+SLOW-BUILD,first buy,profitable,giveback,1,0.003
+SLOW-BUILD,first buy,profitable,ordinary gain,1,0.048
+SLOW-BUILD,first buy,profitable,runner captured,2,0.248
+SLOW-BUILD,first buy,profitable,runner missed: held through 2x and gave it back,1,0.091
+SLOW-BUILD,first buy,profitable,runner missed: sold before the run,2,0.067
+SLOW-BUILD,re-buy,losing,ordinary decline,2,-0.109
+SLOW-BUILD,all,losing,LABEL: one buyer >=40% of 5-min buying,11,-0.526
+SLOW-BUILD,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),11,-0.518
+SLOW-BUILD,all,losing,LABEL: no follow-through (never +5%),9,-0.527
+SLOW-BUILD,all,losing,LABEL: thin pool,8,-0.414
+SLOW-BUILD,all,losing,LABEL: feed/quote quality flag,5,-0.263
+SLOW-BUILD,all,losing,LABEL: repeat buy (churn),2,-0.109
+HH-BREAK,first buy,flat,runner missed: sold before the run,1,0.001
+HH-BREAK,first buy,losing,abrupt collapse,1,-0.101
+HH-BREAK,first buy,losing,giveback,9,-0.109
+HH-BREAK,first buy,losing,ordinary decline,46,-2.287
+HH-BREAK,first buy,losing,runner missed: sold before the run,12,-0.529
+HH-BREAK,first buy,losing,stagnation,30,-0.596
+HH-BREAK,first buy,open,open,10,0
+HH-BREAK,first buy,profitable,giveback,2,0.009
+HH-BREAK,first buy,profitable,ordinary gain,10,0.451
+HH-BREAK,first buy,profitable,runner captured,11,2.06
+HH-BREAK,first buy,profitable,runner missed: held through 2x and gave it back,5,0.416
+HH-BREAK,first buy,profitable,runner missed: sold before the run,4,0.107
+HH-BREAK,first buy,profitable,stagnation,31,0.949
+HH-BREAK,re-buy,losing,abrupt collapse,2,-0.184
+HH-BREAK,re-buy,losing,giveback,6,-0.104
+HH-BREAK,re-buy,losing,ordinary decline,39,-1.779
+HH-BREAK,re-buy,open,open,49,0
+HH-BREAK,re-buy,profitable,ordinary gain,4,0.1
+HH-BREAK,re-buy,profitable,runner captured,3,0.886
+HH-BREAK,re-buy,profitable,runner missed: sold before the run,1,0.016
+HH-BREAK,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),145,-5.69
+HH-BREAK,all,losing,LABEL: feed/quote quality flag,116,-4.123
+HH-BREAK,all,losing,LABEL: one buyer >=40% of 5-min buying,110,-4.096
+HH-BREAK,all,losing,LABEL: thin pool,86,-3.478
+HH-BREAK,all,losing,LABEL: no follow-through (never +5%),67,-3.285
+HH-BREAK,all,losing,LABEL: repeat buy (churn),47,-2.067
+HH-BREAK,all,losing,LABEL: gave back a gain of 30%+,16,-0.218
+HH-BREAK,all,losing,LABEL: stopped within 3 minutes,4,-0.28
+HH-BREAK,all,losing,LABEL: sale well below trigger,1,-0.093
+CONT-STALL,first buy,flat,giveback,1,0
+CONT-STALL,first buy,losing,giveback,8,-0.12
+CONT-STALL,first buy,losing,ordinary decline,43,-2.174
+CONT-STALL,first buy,losing,runner missed: sold before the run,23,-0.8
+CONT-STALL,first buy,losing,stagnation,55,-1.47
+CONT-STALL,first buy,open,open,2,0
+CONT-STALL,first buy,profitable,giveback,2,0.013
+CONT-STALL,first buy,profitable,ordinary gain,6,0.155
+CONT-STALL,first buy,profitable,runner captured,8,1.85
+CONT-STALL,first buy,profitable,runner missed: held through 2x and gave it back,1,0.094
+CONT-STALL,first buy,profitable,runner missed: sold before the run,9,0.154
+CONT-STALL,first buy,profitable,stagnation,3,0.031
+CONT-STALL,re-buy,losing,ordinary decline,21,-0.935
+CONT-STALL,re-buy,losing,runner missed: sold before the run,4,-0.156
+CONT-STALL,re-buy,losing,stagnation,14,-0.352
+CONT-STALL,re-buy,open,open,5,0
+CONT-STALL,re-buy,profitable,ordinary gain,3,0.116
+CONT-STALL,re-buy,profitable,runner captured,3,0.873
+CONT-STALL,re-buy,profitable,runner missed: sold before the run,2,0.104
+CONT-STALL,re-buy,profitable,stagnation,1,0.013
+CONT-STALL,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),153,-5.385
+CONT-STALL,all,losing,LABEL: one buyer >=40% of 5-min buying,98,-3.331
+CONT-STALL,all,losing,LABEL: thin pool,96,-3.687
+CONT-STALL,all,losing,LABEL: no follow-through (never +5%),96,-3.782
+CONT-STALL,all,losing,LABEL: feed/quote quality flag,93,-2.773
+CONT-STALL,all,losing,LABEL: repeat buy (churn),39,-1.443
+CONT-STALL,all,losing,LABEL: stopped within 3 minutes,14,-0.76
+CONT-STALL,all,losing,LABEL: gave back a gain of 30%+,10,-0.15
+CONT-STALL,all,losing,LABEL: no defensible explanation from recorded fields,3,-0.138
+CONT-STALL,all,losing,LABEL: sale well below trigger,1,-0.093
+LOW4H-LIQ25K,first buy,losing,ordinary decline,9,-0.451
+LOW4H-LIQ25K,first buy,losing,runner missed: sold before the run,3,-0.097
+LOW4H-LIQ25K,first buy,open,open,2,0
+LOW4H-LIQ25K,first buy,profitable,ordinary gain,1,0.048
+LOW4H-LIQ25K,first buy,profitable,runner missed: sold before the run,1,0.058
+LOW4H-LIQ25K,re-buy,losing,ordinary decline,1,-0.053
+LOW4H-LIQ25K,re-buy,profitable,runner captured,1,0.181
+LOW4H-LIQ25K,all,losing,LABEL: feed/quote quality flag,7,-0.312
+LOW4H-LIQ25K,all,losing,LABEL: one buyer >=40% of 5-min buying,7,-0.305
+LOW4H-LIQ25K,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),7,-0.305
+LOW4H-LIQ25K,all,losing,LABEL: no follow-through (never +5%),6,-0.371
+LOW4H-LIQ25K,all,losing,LABEL: stopped within 3 minutes,2,-0.123
+LOW4H-LIQ25K,all,losing,LABEL: gave back a gain of 30%+,1,-0.004
+LOW4H-LIQ25K,all,losing,LABEL: repeat buy (churn),1,-0.053
+FAST-1M,first buy,losing,abrupt collapse,1,-0.081
+FAST-1M,first buy,losing,ordinary decline,17,-0.817
+FAST-1M,first buy,losing,runner missed: sold before the run,7,-0.296
+FAST-1M,first buy,profitable,ordinary gain,3,0.145
+FAST-1M,first buy,profitable,runner captured,1,0.102
+FAST-1M,first buy,profitable,runner missed: sold before the run,2,0.033
+FAST-1M,re-buy,losing,ordinary decline,2,-0.068
+FAST-1M,re-buy,profitable,runner captured,1,0.14
+FAST-1M,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),23,-1.07
+FAST-1M,all,losing,LABEL: thin pool,13,-0.57
+FAST-1M,all,losing,LABEL: stopped within 3 minutes,11,-0.557
+FAST-1M,all,losing,LABEL: no follow-through (never +5%),6,-0.372
+FAST-1M,all,losing,LABEL: one buyer >=40% of 5-min buying,6,-0.245
+FAST-1M,all,losing,LABEL: feed/quote quality flag,2,-0.102
+FAST-1M,all,losing,LABEL: repeat buy (churn),2,-0.068
+FAST-1M,all,losing,LABEL: sale well below trigger,1,-0.081
+FAST-3M,first buy,losing,abrupt collapse,1,-0.089
+FAST-3M,first buy,losing,giveback,2,-0.027
+FAST-3M,first buy,losing,ordinary decline,18,-0.879
+FAST-3M,first buy,losing,runner missed: sold before the run,8,-0.32
+FAST-3M,first buy,profitable,ordinary gain,5,0.18
+FAST-3M,first buy,profitable,runner captured,3,0.482
+FAST-3M,first buy,profitable,runner missed: sold before the run,2,0.028
+FAST-3M,re-buy,losing,giveback,1,-0.014
+FAST-3M,re-buy,losing,ordinary decline,3,-0.11
+FAST-3M,re-buy,losing,runner missed: sold before the run,2,-0.075
+FAST-3M,re-buy,profitable,runner captured,1,0.12
+FAST-3M,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),32,-1.361
+FAST-3M,all,losing,LABEL: thin pool,19,-0.859
+FAST-3M,all,losing,LABEL: stopped within 3 minutes,11,-0.47
+FAST-3M,all,losing,LABEL: no follow-through (never +5%),10,-0.592
+FAST-3M,all,losing,LABEL: one buyer >=40% of 5-min buying,7,-0.263
+FAST-3M,all,losing,LABEL: repeat buy (churn),6,-0.199
+FAST-3M,all,losing,LABEL: gave back a gain of 30%+,3,-0.042
+FAST-3M,all,losing,LABEL: feed/quote quality flag,2,-0.097
+FAST-3M,all,losing,LABEL: sale well below trigger,1,-0.089
+FAST-5M,first buy,flat,giveback,1,0
+FAST-5M,first buy,losing,abrupt collapse,1,-0.042
+FAST-5M,first buy,losing,giveback,2,-0.029
+FAST-5M,first buy,losing,ordinary decline,22,-1.179
+FAST-5M,first buy,losing,runner missed: sold before the run,7,-0.231
+FAST-5M,first buy,profitable,ordinary gain,4,0.198
+FAST-5M,first buy,profitable,runner captured,2,0.332
+FAST-5M,first buy,profitable,runner missed: sold before the run,4,0.09
+FAST-5M,re-buy,losing,giveback,1,-0.014
+FAST-5M,re-buy,losing,ordinary decline,4,-0.165
+FAST-5M,re-buy,losing,runner missed: sold before the run,3,-0.085
+FAST-5M,re-buy,profitable,runner captured,1,0.12
+FAST-5M,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),37,-1.647
+FAST-5M,all,losing,LABEL: thin pool,22,-1.049
+FAST-5M,all,losing,LABEL: stopped within 3 minutes,14,-0.676
+FAST-5M,all,losing,LABEL: no follow-through (never +5%),12,-0.742
+FAST-5M,all,losing,LABEL: one buyer >=40% of 5-min buying,8,-0.303
+FAST-5M,all,losing,LABEL: repeat buy (churn),8,-0.264
+FAST-5M,all,losing,LABEL: gave back a gain of 30%+,4,-0.085
+FAST-5M,all,losing,LABEL: sale well below trigger,3,-0.121
+FAST-5M,all,losing,LABEL: feed/quote quality flag,2,-0.097
+FAST-10M,first buy,flat,giveback,1,0
+FAST-10M,first buy,losing,abrupt collapse,2,-0.174
+FAST-10M,first buy,losing,giveback,2,-0.042
+FAST-10M,first buy,losing,ordinary decline,21,-1.075
+FAST-10M,first buy,losing,runner missed: sold before the run,5,-0.19
+FAST-10M,first buy,profitable,ordinary gain,2,0.088
+FAST-10M,first buy,profitable,runner captured,2,0.399
+FAST-10M,first buy,profitable,runner missed: sold before the run,1,0.018
+FAST-10M,re-buy,losing,giveback,2,-0.019
+FAST-10M,re-buy,losing,ordinary decline,5,-0.189
+FAST-10M,re-buy,losing,runner missed: sold before the run,2,-0.037
+FAST-10M,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),37,-1.685
+FAST-10M,all,losing,LABEL: thin pool,21,-1.024
+FAST-10M,all,losing,LABEL: no follow-through (never +5%),14,-0.82
+FAST-10M,all,losing,LABEL: one buyer >=40% of 5-min buying,13,-0.577
+FAST-10M,all,losing,LABEL: repeat buy (churn),9,-0.245
+FAST-10M,all,losing,LABEL: stopped within 3 minutes,6,-0.264
+FAST-10M,all,losing,LABEL: gave back a gain of 30%+,5,-0.103
+FAST-10M,all,losing,LABEL: sale well below trigger,4,-0.257
+FAST-10M,all,losing,LABEL: feed/quote quality flag,2,-0.057
+FAST-30M,first buy,losing,abrupt collapse,2,-0.177
+FAST-30M,first buy,losing,giveback,1,-0.006
+FAST-30M,first buy,losing,ordinary decline,24,-1.192
+FAST-30M,first buy,losing,runner missed: sold before the run,7,-0.256
+FAST-30M,first buy,profitable,ordinary gain,1,0.028
+FAST-30M,first buy,profitable,runner captured,3,0.496
+FAST-30M,first buy,profitable,runner missed: sold before the run,2,0.033
+FAST-30M,re-buy,flat,giveback,1,-0.001
+FAST-30M,re-buy,losing,giveback,2,-0.013
+FAST-30M,re-buy,losing,ordinary decline,9,-0.411
+FAST-30M,re-buy,losing,runner missed: sold before the run,2,-0.05
+FAST-30M,re-buy,profitable,ordinary gain,1,0.07
+FAST-30M,re-buy,profitable,runner missed: held through 2x and gave it back,1,0.01
+FAST-30M,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),40,-1.859
+FAST-30M,all,losing,LABEL: thin pool,28,-1.272
+FAST-30M,all,losing,LABEL: one buyer >=40% of 5-min buying,23,-1.02
+FAST-30M,all,losing,LABEL: no follow-through (never +5%),17,-1.013
+FAST-30M,all,losing,LABEL: repeat buy (churn),13,-0.474
+FAST-30M,all,losing,LABEL: stopped within 3 minutes,5,-0.221
+FAST-30M,all,losing,LABEL: feed/quote quality flag,4,-0.173
+FAST-30M,all,losing,LABEL: gave back a gain of 30%+,4,-0.063
+FAST-30M,all,losing,LABEL: sale well below trigger,3,-0.183
+FAST150-1M,first buy,flat,giveback,1,0
+FAST150-1M,first buy,flat,runner missed: sold before the run,1,0
+FAST150-1M,first buy,losing,abrupt collapse,5,-0.489
+FAST150-1M,first buy,losing,giveback,7,-0.102
+FAST150-1M,first buy,losing,ordinary decline,46,-2.288
+FAST150-1M,first buy,losing,runner missed: sold before the run,11,-0.496
+FAST150-1M,first buy,profitable,giveback,1,0.003
+FAST150-1M,first buy,profitable,ordinary gain,7,0.32
+FAST150-1M,first buy,profitable,runner captured,7,1.438
+FAST150-1M,first buy,profitable,runner missed: sold before the run,6,0.165
+FAST150-1M,first buy,profitable,stagnation,1,0.019
+FAST150-1M,re-buy,losing,abrupt collapse,4,-0.476
+FAST150-1M,re-buy,losing,giveback,3,-0.045
+FAST150-1M,re-buy,losing,ordinary decline,11,-0.469
+FAST150-1M,re-buy,losing,runner missed: sold before the run,1,-0.047
+FAST150-1M,re-buy,open,open,2,0
+FAST150-1M,re-buy,profitable,ordinary gain,2,0.075
+FAST150-1M,re-buy,profitable,runner captured,3,0.532
+FAST150-1M,re-buy,profitable,runner missed: sold before the run,2,0.107
+FAST150-1M,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),81,-3.907
+FAST150-1M,all,losing,LABEL: thin pool,52,-2.673
+FAST150-1M,all,losing,LABEL: no follow-through (never +5%),40,-2.66
+FAST150-1M,all,losing,LABEL: one buyer >=40% of 5-min buying,35,-1.632
+FAST150-1M,all,losing,LABEL: stopped within 3 minutes,29,-1.501
+FAST150-1M,all,losing,LABEL: feed/quote quality flag,25,-1.579
+FAST150-1M,all,losing,LABEL: repeat buy (churn),19,-1.038
+FAST150-1M,all,losing,LABEL: gave back a gain of 30%+,12,-0.278
+FAST150-1M,all,losing,LABEL: sale well below trigger,5,-0.466
+FAST150-3M,first buy,flat,giveback,1,0
+FAST150-3M,first buy,flat,runner missed: sold before the run,1,0
+FAST150-3M,first buy,losing,abrupt collapse,5,-0.482
+FAST150-3M,first buy,losing,giveback,3,-0.055
+FAST150-3M,first buy,losing,ordinary decline,62,-3.098
+FAST150-3M,first buy,losing,runner missed: sold before the run,8,-0.386
+FAST150-3M,first buy,profitable,giveback,1,0.008
+FAST150-3M,first buy,profitable,ordinary gain,8,0.289
+FAST150-3M,first buy,profitable,runner captured,10,2.14
+FAST150-3M,first buy,profitable,runner missed: held through 2x and gave it back,1,0.068
+FAST150-3M,first buy,profitable,runner missed: sold before the run,6,0.166
+FAST150-3M,first buy,profitable,stagnation,1,0.019
+FAST150-3M,re-buy,losing,abrupt collapse,5,-0.595
+FAST150-3M,re-buy,losing,giveback,3,-0.045
+FAST150-3M,re-buy,losing,ordinary decline,17,-0.833
+FAST150-3M,re-buy,losing,runner missed: sold before the run,4,-0.178
+FAST150-3M,re-buy,open,open,2,0
+FAST150-3M,re-buy,profitable,ordinary gain,1,0.023
+FAST150-3M,re-buy,profitable,runner captured,1,0.704
+FAST150-3M,re-buy,profitable,runner missed: sold before the run,4,0.229
+FAST150-3M,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),94,-4.888
+FAST150-3M,all,losing,LABEL: thin pool,60,-3.314
+FAST150-3M,all,losing,LABEL: no follow-through (never +5%),53,-3.511
+FAST150-3M,all,losing,LABEL: one buyer >=40% of 5-min buying,40,-1.96
+FAST150-3M,all,losing,LABEL: repeat buy (churn),29,-1.652
+FAST150-3M,all,losing,LABEL: stopped within 3 minutes,25,-1.553
+FAST150-3M,all,losing,LABEL: feed/quote quality flag,25,-1.602
+FAST150-3M,all,losing,LABEL: gave back a gain of 30%+,7,-0.214
+FAST150-3M,all,losing,LABEL: sale well below trigger,6,-0.579
+FAST150-3M,all,losing,LABEL: no defensible explanation from recorded fields,1,-0.038
+FAST150-5M,first buy,flat,giveback,1,0
+FAST150-5M,first buy,flat,runner missed: sold before the run,1,0
+FAST150-5M,first buy,losing,abrupt collapse,4,-0.407
+FAST150-5M,first buy,losing,giveback,4,-0.058
+FAST150-5M,first buy,losing,ordinary decline,66,-3.403
+FAST150-5M,first buy,losing,runner missed: sold before the run,12,-0.554
+FAST150-5M,first buy,losing,stagnation,1,-0.044
+FAST150-5M,first buy,profitable,giveback,1,0.006
+FAST150-5M,first buy,profitable,ordinary gain,9,0.399
+FAST150-5M,first buy,profitable,runner captured,11,2.556
+FAST150-5M,first buy,profitable,runner missed: sold before the run,6,0.226
+FAST150-5M,first buy,profitable,stagnation,1,0.019
+FAST150-5M,re-buy,losing,abrupt collapse,5,-0.595
+FAST150-5M,re-buy,losing,giveback,3,-0.045
+FAST150-5M,re-buy,losing,ordinary decline,23,-1.066
+FAST150-5M,re-buy,losing,runner missed: sold before the run,4,-0.182
+FAST150-5M,re-buy,open,open,3,0
+FAST150-5M,re-buy,profitable,giveback,1,0.001
+FAST150-5M,re-buy,profitable,ordinary gain,1,0.023
+FAST150-5M,re-buy,profitable,runner captured,1,0.704
+FAST150-5M,re-buy,profitable,runner missed: sold before the run,4,0.229
+FAST150-5M,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),105,-5.4
+FAST150-5M,all,losing,LABEL: thin pool,68,-3.544
+FAST150-5M,all,losing,LABEL: no follow-through (never +5%),61,-3.957
+FAST150-5M,all,losing,LABEL: one buyer >=40% of 5-min buying,44,-2.207
+FAST150-5M,all,losing,LABEL: repeat buy (churn),35,-1.888
+FAST150-5M,all,losing,LABEL: feed/quote quality flag,29,-1.691
+FAST150-5M,all,losing,LABEL: stopped within 3 minutes,22,-1.398
+FAST150-5M,all,losing,LABEL: gave back a gain of 30%+,9,-0.231
+FAST150-5M,all,losing,LABEL: sale well below trigger,6,-0.572
+FAST150-5M,all,losing,LABEL: no defensible explanation from recorded fields,1,-0.038
+FAST150-10M,first buy,flat,giveback,1,0
+FAST150-10M,first buy,losing,abrupt collapse,4,-0.373
+FAST150-10M,first buy,losing,giveback,6,-0.054
+FAST150-10M,first buy,losing,ordinary decline,59,-3.006
+FAST150-10M,first buy,losing,runner missed: sold before the run,11,-0.354
+FAST150-10M,first buy,open,open,1,0
+FAST150-10M,first buy,profitable,giveback,1,0.001
+FAST150-10M,first buy,profitable,ordinary gain,7,0.297
+FAST150-10M,first buy,profitable,runner captured,7,1.458
+FAST150-10M,first buy,profitable,runner missed: sold before the run,5,0.159
+FAST150-10M,re-buy,losing,abrupt collapse,3,-0.416
+FAST150-10M,re-buy,losing,giveback,5,-0.061
+FAST150-10M,re-buy,losing,ordinary decline,23,-1.075
+FAST150-10M,re-buy,losing,runner missed: sold before the run,3,-0.079
+FAST150-10M,re-buy,open,open,3,0
+FAST150-10M,re-buy,profitable,giveback,1,0.001
+FAST150-10M,re-buy,profitable,ordinary gain,2,0.075
+FAST150-10M,re-buy,profitable,runner captured,1,0.704
+FAST150-10M,re-buy,profitable,runner missed: sold before the run,4,0.217
+FAST150-10M,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),94,-4.337
+FAST150-10M,all,losing,LABEL: thin pool,61,-3.025
+FAST150-10M,all,losing,LABEL: one buyer >=40% of 5-min buying,60,-2.788
+FAST150-10M,all,losing,LABEL: no follow-through (never +5%),45,-3.006
+FAST150-10M,all,losing,LABEL: repeat buy (churn),34,-1.631
+FAST150-10M,all,losing,LABEL: feed/quote quality flag,33,-1.741
+FAST150-10M,all,losing,LABEL: gave back a gain of 30%+,13,-0.147
+FAST150-10M,all,losing,LABEL: stopped within 3 minutes,13,-0.872
+FAST150-10M,all,losing,LABEL: sale well below trigger,3,-0.295
+FAST150-10M,all,losing,LABEL: no defensible explanation from recorded fields,1,-0.038
+SECOND-WAVE,first buy,losing,abrupt collapse,1,-0.091
+SECOND-WAVE,first buy,losing,giveback,2,-0.035
+SECOND-WAVE,first buy,losing,ordinary decline,9,-0.382
+SECOND-WAVE,first buy,losing,runner missed: sold before the run,2,-0.123
+SECOND-WAVE,first buy,profitable,ordinary gain,1,0.039
+SECOND-WAVE,first buy,profitable,runner captured,1,0.109
+SECOND-WAVE,re-buy,losing,ordinary decline,1,-0.061
+SECOND-WAVE,re-buy,profitable,ordinary gain,1,0.083
+SECOND-WAVE,re-buy,profitable,runner missed: sold before the run,1,0.047
+SECOND-WAVE,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),11,-0.4
+SECOND-WAVE,all,losing,LABEL: thin pool,7,-0.227
+SECOND-WAVE,all,losing,LABEL: no follow-through (never +5%),6,-0.414
+SECOND-WAVE,all,losing,LABEL: stopped within 3 minutes,4,-0.176
+SECOND-WAVE,all,losing,LABEL: one buyer >=40% of 5-min buying,3,-0.162
+SECOND-WAVE,all,losing,LABEL: feed/quote quality flag,2,-0.07
+SECOND-WAVE,all,losing,LABEL: gave back a gain of 30%+,2,-0.035
+SECOND-WAVE,all,losing,LABEL: sale well below trigger,1,-0.076
+SECOND-WAVE,all,losing,LABEL: repeat buy (churn),1,-0.061
+HH30-5M,first buy,flat,stagnation,1,0.001
+HH30-5M,first buy,losing,abrupt collapse,2,-0.281
+HH30-5M,first buy,losing,giveback,6,-0.079
+HH30-5M,first buy,losing,ordinary decline,89,-4.467
+HH30-5M,first buy,losing,runner missed: sold before the run,12,-0.471
+HH30-5M,first buy,losing,stagnation,29,-0.59
+HH30-5M,first buy,open,open,9,0
+HH30-5M,first buy,profitable,giveback,5,0.039
+HH30-5M,first buy,profitable,ordinary gain,9,0.371
+HH30-5M,first buy,profitable,runner captured,7,1.102
+HH30-5M,first buy,profitable,runner missed: held through 2x and gave it back,3,0.255
+HH30-5M,first buy,profitable,runner missed: sold before the run,6,0.178
+HH30-5M,first buy,profitable,stagnation,23,0.767
+HH30-5M,re-buy,losing,abrupt collapse,2,-0.201
+HH30-5M,re-buy,losing,giveback,12,-0.141
+HH30-5M,re-buy,losing,ordinary decline,67,-3.07
+HH30-5M,re-buy,open,open,51,0
+HH30-5M,re-buy,profitable,ordinary gain,7,0.275
+HH30-5M,re-buy,profitable,runner captured,4,0.963
+HH30-5M,re-buy,profitable,runner missed: held through 2x and gave it back,1,0.078
+HH30-5M,re-buy,profitable,runner missed: sold before the run,2,0.077
+HH30-5M,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),178,-7.61
+HH30-5M,all,losing,LABEL: feed/quote quality flag,152,-5.798
+HH30-5M,all,losing,LABEL: one buyer >=40% of 5-min buying,151,-6.139
+HH30-5M,all,losing,LABEL: thin pool,124,-5.426
+HH30-5M,all,losing,LABEL: no follow-through (never +5%),120,-6.2
+HH30-5M,all,losing,LABEL: repeat buy (churn),81,-3.411
+HH30-5M,all,losing,LABEL: gave back a gain of 30%+,20,-0.232
+HH30-5M,all,losing,LABEL: stopped within 3 minutes,5,-0.345
+HH30-5M,all,losing,LABEL: sale well below trigger,2,-0.281
+HH30-5M,all,losing,LABEL: no defensible explanation from recorded fields,2,-0.075
+HH30-10M,first buy,flat,giveback,1,0
+HH30-10M,first buy,flat,stagnation,1,0.001
+HH30-10M,first buy,losing,abrupt collapse,2,-0.284
+HH30-10M,first buy,losing,giveback,6,-0.082
+HH30-10M,first buy,losing,ordinary decline,86,-4.295
+HH30-10M,first buy,losing,runner missed: sold before the run,13,-0.533
+HH30-10M,first buy,losing,stagnation,36,-0.705
+HH30-10M,first buy,open,open,11,0
+HH30-10M,first buy,profitable,giveback,4,0.029
+HH30-10M,first buy,profitable,ordinary gain,5,0.24
+HH30-10M,first buy,profitable,runner captured,8,1.098
+HH30-10M,first buy,profitable,runner missed: held through 2x and gave it back,3,0.251
+HH30-10M,first buy,profitable,runner missed: sold before the run,5,0.19
+HH30-10M,first buy,profitable,stagnation,21,0.587
+HH30-10M,re-buy,losing,abrupt collapse,3,-0.285
+HH30-10M,re-buy,losing,giveback,10,-0.109
+HH30-10M,re-buy,losing,ordinary decline,61,-2.888
+HH30-10M,re-buy,open,open,58,0
+HH30-10M,re-buy,profitable,giveback,1,0.009
+HH30-10M,re-buy,profitable,ordinary gain,5,0.176
+HH30-10M,re-buy,profitable,runner captured,3,0.777
+HH30-10M,re-buy,profitable,runner missed: held through 2x and gave it back,1,0.088
+HH30-10M,re-buy,profitable,runner missed: sold before the run,2,0.069
+HH30-10M,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),194,-8.261
+HH30-10M,all,losing,LABEL: feed/quote quality flag,154,-5.917
+HH30-10M,all,losing,LABEL: one buyer >=40% of 5-min buying,151,-5.904
+HH30-10M,all,losing,LABEL: thin pool,124,-5.391
+HH30-10M,all,losing,LABEL: no follow-through (never +5%),115,-5.814
+HH30-10M,all,losing,LABEL: repeat buy (churn),74,-3.282
+HH30-10M,all,losing,LABEL: gave back a gain of 30%+,17,-0.196
+HH30-10M,all,losing,LABEL: stopped within 3 minutes,4,-0.288
+HH30-10M,all,losing,LABEL: sale well below trigger,2,-0.284
+HH30-10M,all,losing,LABEL: no defensible explanation from recorded fields,2,-0.075
+HH15-5M,first buy,flat,giveback,1,0
+HH15-5M,first buy,flat,stagnation,2,-0.001
+HH15-5M,first buy,losing,abrupt collapse,4,-0.457
+HH15-5M,first buy,losing,giveback,7,-0.056
+HH15-5M,first buy,losing,ordinary decline,91,-4.3
+HH15-5M,first buy,losing,runner missed: sold before the run,14,-0.535
+HH15-5M,first buy,losing,stagnation,40,-0.753
+HH15-5M,first buy,open,open,7,0
+HH15-5M,first buy,profitable,giveback,3,0.014
+HH15-5M,first buy,profitable,ordinary gain,11,0.45
+HH15-5M,first buy,profitable,runner captured,12,1.953
+HH15-5M,first buy,profitable,runner missed: held through 2x and gave it back,2,0.16
+HH15-5M,first buy,profitable,runner missed: sold before the run,7,0.196
+HH15-5M,first buy,profitable,stagnation,24,0.83
+HH15-5M,re-buy,flat,giveback,2,0
+HH15-5M,re-buy,losing,abrupt collapse,2,-0.201
+HH15-5M,re-buy,losing,giveback,14,-0.137
+HH15-5M,re-buy,losing,ordinary decline,94,-4.457
+HH15-5M,re-buy,losing,runner missed: sold before the run,3,-0.044
+HH15-5M,re-buy,open,open,84,0
+HH15-5M,re-buy,profitable,giveback,1,0.004
+HH15-5M,re-buy,profitable,ordinary gain,7,0.267
+HH15-5M,re-buy,profitable,runner captured,3,0.634
+HH15-5M,re-buy,profitable,runner missed: held through 2x and gave it back,2,0.175
+HH15-5M,re-buy,profitable,runner missed: sold before the run,4,0.195
+HH15-5M,all,losing,LABEL: one buyer >=40% of 5-min buying,178,-6.899
+HH15-5M,all,losing,LABEL: feed/quote quality flag,176,-6.6
+HH15-5M,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),170,-6.736
+HH15-5M,all,losing,LABEL: thin pool,159,-6.872
+HH15-5M,all,losing,LABEL: no follow-through (never +5%),126,-6.437
+HH15-5M,all,losing,LABEL: repeat buy (churn),113,-4.839
+HH15-5M,all,losing,LABEL: gave back a gain of 30%+,25,-0.223
+HH15-5M,all,losing,LABEL: stopped within 3 minutes,8,-0.396
+HH15-5M,all,losing,LABEL: no defensible explanation from recorded fields,4,-0.144
+HH15-5M,all,losing,LABEL: sale well below trigger,3,-0.364
+HH-BREAK-4H,first buy,estimated (not a measured result),giveback,3,0.002
+HH-BREAK-4H,first buy,estimated (not a measured result),runner missed: held through 2x and gave it back,2,0.04
+HH-BREAK-4H,first buy,estimated (not a measured result),runner missed: sold before the run,6,0.085
+HH-BREAK-4H,first buy,estimated (not a measured result),stagnation,63,-0.02
+HH-BREAK-4H,first buy,flat,stagnation,2,0.001
+HH-BREAK-4H,first buy,losing,abrupt collapse,1,-0.101
+HH-BREAK-4H,first buy,losing,giveback,2,-0.022
+HH-BREAK-4H,first buy,losing,ordinary decline,14,-0.719
+HH-BREAK-4H,first buy,losing,runner missed: sold before the run,13,-0.509
+HH-BREAK-4H,first buy,losing,stagnation,39,-0.595
+HH-BREAK-4H,first buy,profitable,giveback,1,0.005
+HH-BREAK-4H,first buy,profitable,ordinary gain,4,0.183
+HH-BREAK-4H,first buy,profitable,runner captured,7,1.332
+HH-BREAK-4H,first buy,profitable,runner missed: sold before the run,5,0.174
+HH-BREAK-4H,first buy,profitable,stagnation,10,0.143
+HH-BREAK-4H,re-buy,flat,stagnation,9,-0.001
+HH-BREAK-4H,re-buy,losing,abrupt collapse,1,-0.1
+HH-BREAK-4H,re-buy,losing,giveback,1,-0.003
+HH-BREAK-4H,re-buy,losing,ordinary decline,11,-0.498
+HH-BREAK-4H,re-buy,losing,stagnation,123,-1.811
+HH-BREAK-4H,re-buy,open,open,1,0
+HH-BREAK-4H,re-buy,profitable,runner captured,2,0.762
+HH-BREAK-4H,re-buy,profitable,runner missed: sold before the run,2,0.053
+HH-BREAK-4H,re-buy,profitable,stagnation,36,0.917
+HH-BREAK-4H,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),205,-4.358
+HH-BREAK-4H,all,losing,LABEL: feed/quote quality flag,182,-3.152
+HH-BREAK-4H,all,losing,LABEL: no follow-through (never +5%),162,-3.289
+HH-BREAK-4H,all,losing,LABEL: one buyer >=40% of 5-min buying,159,-3.014
+HH-BREAK-4H,all,losing,LABEL: repeat buy (churn),136,-2.412
+HH-BREAK-4H,all,losing,LABEL: thin pool,95,-2.53
+HH-BREAK-4H,all,losing,LABEL: stopped within 3 minutes,4,-0.28
+HH-BREAK-4H,all,losing,LABEL: gave back a gain of 30%+,4,-0.03
+HH-BREAK-4H,all,losing,LABEL: sale well below trigger,1,-0.093
+VOL300K,first buy,losing,abrupt collapse,3,-0.49
+VOL300K,first buy,losing,ordinary decline,2,-0.098
+VOL300K,re-buy,losing,abrupt collapse,1,-0.19
+VOL300K,re-buy,losing,ordinary decline,1,-0.049
+VOL300K,all,losing,LABEL: stopped within 3 minutes,7,-0.826
+VOL300K,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),6,-0.627
+VOL300K,all,losing,LABEL: no follow-through (never +5%),5,-0.724
+VOL300K,all,losing,LABEL: sale well below trigger,4,-0.53
+VOL300K,all,losing,LABEL: thin pool,2,-0.239
+VOL300K,all,losing,LABEL: repeat buy (churn),2,-0.239
+VOL300K-UP,first buy,losing,ordinary decline,2,-0.098
+VOL300K-UP,re-buy,losing,ordinary decline,1,-0.049
+VOL300K-UP,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),3,-0.147
+VOL300K-UP,all,losing,LABEL: stopped within 3 minutes,3,-0.147
+VOL300K-UP,all,losing,LABEL: sale well below trigger,1,-0.049
+VOL300K-UP,all,losing,LABEL: thin pool,1,-0.049
+VOL300K-UP,all,losing,LABEL: repeat buy (churn),1,-0.049
+VOL300K-UP,all,losing,LABEL: no follow-through (never +5%),1,-0.044
+VOL500K,first buy,losing,abrupt collapse,3,-0.49
+VOL500K,all,losing,LABEL: no follow-through (never +5%),3,-0.49
+VOL500K,all,losing,LABEL: stopped within 3 minutes,3,-0.49
+VOL500K,all,losing,LABEL: sale well below trigger,2,-0.291
+VOL500K,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),2,-0.291
+RUG450,first buy,losing,abrupt collapse,13,-1.691
+RUG450,first buy,losing,giveback,3,-0.045
+RUG450,first buy,losing,ordinary decline,3,-0.137
+RUG450,first buy,losing,runner missed: sold before the run,1,-0.052
+RUG450,first buy,open,open,2,0
+RUG450,first buy,profitable,ordinary gain,1,0.011
+RUG450,first buy,profitable,runner missed: held through 2x and gave it back,1,0.091
+RUG450,first buy,profitable,runner missed: sold before the run,1,0.025
+RUG450,all,losing,LABEL: stopped within 3 minutes,17,-1.614
+RUG450,all,losing,LABEL: no follow-through (never +5%),13,-1.664
+RUG450,all,losing,LABEL: sale well below trigger,11,-1.43
+RUG450,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),10,-1.073
+RUG450,all,losing,LABEL: thin pool,5,-0.497
+RUG450,all,losing,LABEL: gave back a gain of 30%+,4,-0.142
+RUG450,all,losing,LABEL: one buyer >=40% of 5-min buying,2,-0.264
+RUG450,all,losing,LABEL: feed/quote quality flag,1,-0.145
+RUG450-BOUNCE,first buy,losing,abrupt collapse,1,-0.182
+RUG450-BOUNCE,first buy,losing,ordinary decline,6,-0.307
+RUG450-BOUNCE,first buy,profitable,ordinary gain,1,0.024
+RUG450-BOUNCE,first buy,profitable,runner captured,1,0.252
+RUG450-BOUNCE,re-buy,losing,abrupt collapse,1,-0.197
+RUG450-BOUNCE,all,losing,LABEL: stopped within 3 minutes,7,-0.504
+RUG450-BOUNCE,all,losing,LABEL: feed/quote quality flag,3,-0.288
+RUG450-BOUNCE,all,losing,LABEL: no follow-through (never +5%),3,-0.307
+RUG450-BOUNCE,all,losing,LABEL: sale well below trigger,2,-0.235
+RUG450-BOUNCE,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),2,-0.221
+RUG450-BOUNCE,all,losing,LABEL: thin pool,2,-0.379
+RUG450-BOUNCE,all,losing,LABEL: one buyer >=40% of 5-min buying,1,-0.182
+RUG450-BOUNCE,all,losing,LABEL: repeat buy (churn),1,-0.197
+RUG950,first buy,losing,abrupt collapse,9,-1.042
+RUG950,first buy,losing,ordinary decline,2,-0.115
+RUG950,first buy,open,open,2,0
+RUG950,first buy,profitable,runner missed: held through 2x and gave it back,1,0.091
+RUG950,first buy,profitable,runner missed: sold before the run,1,0.025
+RUG950,all,losing,LABEL: no follow-through (never +5%),10,-1.112
+RUG950,all,losing,LABEL: stopped within 3 minutes,9,-1.029
+RUG950,all,losing,LABEL: bought extended (at the 1-h high or after +50% in 15 min),6,-0.61
+RUG950,all,losing,LABEL: sale well below trigger,6,-0.748
+RUG950,all,losing,LABEL: feed/quote quality flag,1,-0.145
+RUG950,all,losing,LABEL: one buyer >=40% of 5-min buying,1,-0.082
+RUG950-BOUNCE,first buy,losing,ordinary decline,1,-0.04
+RUG950-BOUNCE,first buy,profitable,ordinary gain,1,0.024
+RUG950-BOUNCE,all,losing,LABEL: feed/quote quality flag,1,-0.04
+RUG950-BOUNCE,all,losing,LABEL: stopped within 3 minutes,1,-0.04

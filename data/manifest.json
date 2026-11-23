@@ -1,0 +1,356 @@
+{
+ "package": "older-coins independent-review data package",
+ "export_cutoff_utc": "2026-11-23T20:19:05.585Z",
+ "database": {
+  "file": "older-shakedown.db (the shakedown run; never reset)",
+  "bytes": 920244224,
+  "first_start_utc": "2026-11-20T14:53:46Z",
+  "spec_in_db": "older-3"
+ },
+ "server_checkout_commit": "834ca7133d3e4d7b949a363f5c9b76c8b280b9ea",
+ "analysis_repo_commit": "1d079b42d956044c2e76059892a069045373cbc2",
+ "spec_in_code": "older-9",
+ "node": "v22.23.4",
+ "stake_sol": 0.2,
+ "cost_sol": 0.2005,
+ "raw_tables": {
+  "entries": {
+   "rows": 2300,
+   "sql": "SELECT * FROM entries",
+   "files": [
+    {
+     "f": "entries-0.ndjson.gz",
+     "bytes": 5221349,
+     "sha256": "c0e7d08d07655f22ab44b383cef189848f8baea586408d9db8d889409627809f"
+    }
+   ]
+  },
+  "decisions": {
+   "rows": 2187,
+   "sql": "SELECT * FROM decisions",
+   "files": [
+    {
+     "f": "decisions-0.ndjson.gz",
+     "bytes": 110934,
+     "sha256": "df5eabb246f9f88b8678bddf15722a43beaabb12f62c5efe10babc852ca52aaf"
+    }
+   ]
+  },
+  "feed": {
+   "rows": 157,
+   "sql": "SELECT * FROM feed",
+   "files": [
+    {
+     "f": "feed-0.ndjson.gz",
+     "bytes": 2388,
+     "sha256": "1339d0870902f9efc525bbf840231cbf775e8aa5058f75085ed367c1366c2fcd"
+    }
+   ]
+  },
+  "meta": {
+   "rows": 38,
+   "sql": "SELECT k,substr(v,1,4000) v FROM meta",
+   "files": [
+    {
+     "f": "meta-0.ndjson.gz",
+     "bytes": 571,
+     "sha256": "67f2434090aa7c7f795b5aa571f3724f1ff26c683922a59f12f64165ad96d771"
+    }
+   ]
+  },
+  "coins": {
+   "rows": 41647,
+   "sql": "SELECT * FROM coins",
+   "files": [
+    {
+     "f": "coins-0.ndjson.gz",
+     "bytes": 2369440,
+     "sha256": "5dbc405bd7e8b4f929039e466540481260d6492d53c822b2489b214d439fa541"
+    }
+   ]
+  },
+  "pools_bought": {
+   "rows": 281,
+   "sql": "SELECT * FROM pools WHERE mint IN (SELECT DISTINCT mint FROM entries)",
+   "files": [
+    {
+     "f": "pools_bought-0.ndjson.gz",
+     "bytes": 28741,
+     "sha256": "939fe1baae540cdbf9ba10020c29f0a8f6e6af746dff12340197c9c637f9232a"
+    }
+   ]
+  },
+  "pools_by_quote": {
+   "rows": 15081,
+   "sql": "SELECT quote,COUNT(*) n FROM pools GROUP BY 1",
+   "files": [
+    {
+     "f": "pools_by_quote-0.ndjson.gz",
+     "bytes": 499634,
+     "sha256": "db09fefda7dea96d117b120b91ed4225044cce8bb75232b66beabaeb5805cba3"
+    }
+   ]
+  },
+  "notes_hourly": {
+   "rows": 6851,
+   "sql": "SELECT family,ag,reason,CAST(t/3600 AS INT) hr,COUNT(*) n,COUNT(DISTINCT mint) mints FROM notes GROUP BY 1,2,3,4",
+   "files": [
+    {
+     "f": "notes_hourly-0.ndjson.gz",
+     "bytes": 34226,
+     "sha256": "3d65b4367d635cbbc72ee8819dfbe05a9669c5641ce543e7e1f4b9cd5beee622"
+    }
+   ]
+  },
+  "notes": {
+   "rows": 521011,
+   "sql": "SELECT id,mint,ag,family,t,reason,substr(detail,1,300) detail FROM notes",
+   "files": [
+    {
+     "f": "notes-0.ndjson.gz",
+     "bytes": 5318060,
+     "sha256": "1982b9fed3a37c08adfc22e34679c48bce73b178b1cfc0767913e7b77f0d45ee"
+    },
+    {
+     "f": "notes-1.ndjson.gz",
+     "bytes": 1875281,
+     "sha256": "3338a7b560753044fe294ef674a895ca4a7e218e414a2990812f9dbbdefdeec7"
+    }
+   ]
+  },
+  "bars_bought": {
+   "rows": 384846,
+   "sql": "SELECT * FROM bars WHERE mint IN (SELECT DISTINCT mint FROM entries)",
+   "files": [
+    {
+     "f": "bars_bought-0.ndjson.gz",
+     "bytes": 8810368,
+     "sha256": "913884687e93c7e82baece92542ad19bfff0edb0b2385059d509d5355fb05a3a"
+    },
+    {
+     "f": "bars_bought-1.ndjson.gz",
+     "bytes": 3190326,
+     "sha256": "3f68fdac7465634c1de25b422f827fbdf7ea85d49f0821b3cfe99c35862e906c"
+    }
+   ]
+  },
+  "bars_hourly": {
+   "rows": 243449,
+   "sql": "SELECT mint,m/60 hr,MAX(h) h,MIN(l) l,SUM(v) v,SUM(nb) nb,SUM(ns) ns,COUNT(*) n FROM bars GROUP BY 1,2",
+   "files": [
+    {
+     "f": "bars_hourly-0.ndjson.gz",
+     "bytes": 7955291,
+     "sha256": "32533a0c84effd44fd8616c121312f443f00303844c18f3e92ff9859b7406697"
+    }
+   ]
+  }
+ },
+ "files": {
+  "books.csv": {
+   "rows": 30,
+   "bytes": 10441,
+   "sha256": "933d8b44c8442346a0b7b5f5efbbe8454b17b2b03c5cf77d2f79fc160affda64"
+  },
+  "variants.csv": {
+   "rows": 1240,
+   "bytes": 82526,
+   "sha256": "240aca721696873aed3a1a2159bb82325bb8e3b4f8de84e2cb4995aacd034f0a"
+  },
+  "coverage_and_incidents.csv": {
+   "rows": 157,
+   "bytes": 11744,
+   "sha256": "bdd66e1ed4fa1b3b81d6bd7a6e41f0bc75c75aec8a9e9670c00ce6d7abf732b8"
+  },
+  "code_rule_periods.csv": {
+   "rows": 49,
+   "bytes": 13967,
+   "sha256": "6574ec99f08fbe4d1628ba0dfe8ecf6f61226d01575eb80e022c9f606bd9b0d2"
+  },
+  "entries.csv": {
+   "rows": 2300,
+   "bytes": 2084259,
+   "sha256": "16382b576d6b715ef86191c48f2dd010045521bfe812b318d69e324b2334cc46"
+  },
+  "entry_features.csv": {
+   "rows": 2300,
+   "bytes": 1251879,
+   "sha256": "8f89546106fc98a8bae6c5171d403252b5d7d12bb1696d76646e56c75abdf166"
+  },
+  "entry_candidates.csv": {
+   "rows": 3747,
+   "bytes": 1015616,
+   "sha256": "e3ed477e251ea49ccc55ec63cbaa9016d52ff6d00330106f7b9d08054a92ce76"
+  },
+  "fills.csv": {
+   "rows": 2283,
+   "bytes": 799728,
+   "sha256": "ebdfde30ce904916e46e541825f71387d1e797be6ce710d11a0f3380cf5c3ba2"
+  },
+  "sales.csv": {
+   "rows": 21418,
+   "bytes": 4840139,
+   "sha256": "6f1cfb528b9dbec83de77869e9cf4dc13890c00e81081e6204966da280d800fc"
+  },
+  "positions.csv": {
+   "rows": 31584,
+   "bytes": 12308944,
+   "sha256": "74fa2d8bd9ff77fa554e80a17337ead05e67fbe75d3485befe35ab002cfdbd63"
+  },
+  "decisions.csv": {
+   "rows": 2187,
+   "bytes": 634037,
+   "sha256": "3907084c0b7a2f412b87150a0aa7af7a9a079ea22e1f5f1e96091920dd7e442f"
+  },
+  "rejections.csv.gz": {
+   "rows": 521011,
+   "bytes": 6515087,
+   "sha256": "fd992f714bf08b658a0560f3a9a58e04d4c5927384496e205737ed354ed192cf"
+  },
+  "rejections_by_book.csv": {
+   "rows": 47,
+   "bytes": 4315,
+   "sha256": "187beb2d7682b256b0a600084e1e38a4b28eb0c925b41f993490db424cb10a7a"
+  },
+  "coin_outcomes.csv": {
+   "rows": 41647,
+   "bytes": 21077738,
+   "sha256": "4415d7bdbf6fcf1b5c2b1b592dba0249b6e0122c25c67e1a8b91585017f0f2e8"
+  },
+  "scoreboard.csv": {
+   "rows": 120,
+   "bytes": 40749,
+   "sha256": "29ccb9a9e837d94ade7fe44e4b2e986da9a733bf28c6b6d315ac9a427935d57b"
+  },
+  "scoreboard_variants.csv": {
+   "rows": 1173,
+   "bytes": 383660,
+   "sha256": "fa741b9c2233c3c3c0984117cd2c55007bde615f60255c742c3d1523b1e9cb73"
+  },
+  "chronology.csv": {
+   "rows": 269,
+   "bytes": 14908,
+   "sha256": "a03ef23e2e6f0f723247ddd91081233d4bcb64e5dbcc52c6e9f8b79801c969eb"
+  },
+  "coin_ledger.csv": {
+   "rows": 31584,
+   "bytes": 10413908,
+   "sha256": "298c7ac24d6dc4f9f0e3767924c4d336f210623958dc866031d57ad66ff2467a"
+  },
+  "book_overlap.csv": {
+   "rows": 812,
+   "bytes": 34002,
+   "sha256": "a2fcf5a519ee29867673c1cda3b7df8d69e64f9a56e6e84f33050f7634172b9a"
+  },
+  "candidate_tests.csv": {
+   "rows": 2831,
+   "bytes": 454894,
+   "sha256": "8a2ca7d3650558319cea226d94dec588e27e0dee5a32eb90d189d72a99dcaa6c"
+  },
+  "exit_comparison_identical_buys.csv": {
+   "rows": 280,
+   "bytes": 15775,
+   "sha256": "8b0b7f06ba3d5be3eabf761952613074343dcdb48779e48d970ea7b1af3e6c61"
+  },
+  "class_counts.csv": {
+   "rows": 592,
+   "bytes": 34769,
+   "sha256": "feee302132a3a15e36bf4641a61b1588a2be2ce9c8fc6cb209c471a66b7f7545"
+  }
+ },
+ "entry_json_keys_not_mapped_to_columns": {},
+ "published_files": {
+  "book_overlap.csv": {
+   "bytes": 34002,
+   "sha256": "a2fcf5a519ee29867673c1cda3b7df8d69e64f9a56e6e84f33050f7634172b9a"
+  },
+  "books.csv": {
+   "bytes": 10441,
+   "sha256": "933d8b44c8442346a0b7b5f5efbbe8454b17b2b03c5cf77d2f79fc160affda64"
+  },
+  "candidate_tests.csv": {
+   "bytes": 454894,
+   "sha256": "8a2ca7d3650558319cea226d94dec588e27e0dee5a32eb90d189d72a99dcaa6c"
+  },
+  "chronology.csv": {
+   "bytes": 14908,
+   "sha256": "a03ef23e2e6f0f723247ddd91081233d4bcb64e5dbcc52c6e9f8b79801c969eb"
+  },
+  "class_counts.csv": {
+   "bytes": 34769,
+   "sha256": "feee302132a3a15e36bf4641a61b1588a2be2ce9c8fc6cb209c471a66b7f7545"
+  },
+  "code_rule_periods.csv": {
+   "bytes": 13967,
+   "sha256": "6574ec99f08fbe4d1628ba0dfe8ecf6f61226d01575eb80e022c9f606bd9b0d2"
+  },
+  "coin_ledger.csv.gz": {
+   "bytes": 475923,
+   "sha256": "f7b49304f90804fc7c361d7f605fc1da62fa7cc3c59c6476c4884b2a1402d682"
+  },
+  "coin_outcomes.csv.gz": {
+   "bytes": 3614456,
+   "sha256": "40dd133a21d4954698e4aecadda48fa4d0e56476e8fb939dfd5b466046914ead"
+  },
+  "coverage_and_incidents.csv": {
+   "bytes": 11744,
+   "sha256": "bdd66e1ed4fa1b3b81d6bd7a6e41f0bc75c75aec8a9e9670c00ce6d7abf732b8"
+  },
+  "decisions.csv": {
+   "bytes": 634037,
+   "sha256": "3907084c0b7a2f412b87150a0aa7af7a9a079ea22e1f5f1e96091920dd7e442f"
+  },
+  "distinct_first_buys.csv": {
+   "bytes": 136761,
+   "sha256": "5bffbaccb96877fff94da8fb0eec7124c5bd3e013adc48eb83e3aaca19621a94"
+  },
+  "entries.csv": {
+   "bytes": 2084259,
+   "sha256": "16382b576d6b715ef86191c48f2dd010045521bfe812b318d69e324b2334cc46"
+  },
+  "entry_candidates.csv": {
+   "bytes": 1015616,
+   "sha256": "e3ed477e251ea49ccc55ec63cbaa9016d52ff6d00330106f7b9d08054a92ce76"
+  },
+  "entry_features.csv": {
+   "bytes": 1251879,
+   "sha256": "8f89546106fc98a8bae6c5171d403252b5d7d12bb1696d76646e56c75abdf166"
+  },
+  "exit_comparison_identical_buys.csv": {
+   "bytes": 15775,
+   "sha256": "8b0b7f06ba3d5be3eabf761952613074343dcdb48779e48d970ea7b1af3e6c61"
+  },
+  "fills.csv": {
+   "bytes": 799728,
+   "sha256": "ebdfde30ce904916e46e541825f71387d1e797be6ce710d11a0f3380cf5c3ba2"
+  },
+  "positions.csv.gz": {
+   "bytes": 793592,
+   "sha256": "86edf940790d89108b6539d6b653992945e52c3e4ab03470157724ad3fab09e6"
+  },
+  "rejections.csv.gz": {
+   "bytes": 6515087,
+   "sha256": "fd992f714bf08b658a0560f3a9a58e04d4c5927384496e205737ed354ed192cf"
+  },
+  "rejections_by_book.csv": {
+   "bytes": 4315,
+   "sha256": "187beb2d7682b256b0a600084e1e38a4b28eb0c925b41f993490db424cb10a7a"
+  },
+  "sales.csv.gz": {
+   "bytes": 439649,
+   "sha256": "dda2e7806c132123146d7477c71fe0813a5f52dfad85cea960e393e6d0425b7e"
+  },
+  "scoreboard.csv": {
+   "bytes": 40749,
+   "sha256": "29ccb9a9e837d94ade7fe44e4b2e986da9a733bf28c6b6d315ac9a427935d57b"
+  },
+  "scoreboard_variants.csv": {
+   "bytes": 383660,
+   "sha256": "fa741b9c2233c3c3c0984117cd2c55007bde615f60255c742c3d1523b1e9cb73"
+  },
+  "variants.csv": {
+   "bytes": 82526,
+   "sha256": "240aca721696873aed3a1a2159bb82325bb8e3b4f8de84e2cb4995aacd034f0a"
+  }
+ }
+}

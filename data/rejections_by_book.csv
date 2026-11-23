@@ -1,0 +1,48 @@
+family,reason,n,mints,first_utc,last_utc
+*,price provider omitted this token (missing coverage),16689,10656,2026-11-20T14:56:54Z,2026-11-23T00:39:17Z
+*,not evaluated for entry: token transfer restrictions make the execution assumption unsupported,4996,477,2026-11-20T14:53:53Z,2026-11-22T21:56:51Z
+*,not evaluated: no market cap or circulating supply from the provider,28,4,2026-11-21T12:29:27Z,2026-11-22T22:46:01Z
+*,not evaluated for entry: the coin's transfer fee has not been read from the chain yet,11,11,2026-11-22T21:35:15Z,2026-11-22T23:46:09Z
+*,creation time unavailable,2,2,2026-11-22T17:16:45Z,2026-11-23T13:23:33Z
+AGE-DOUBLE,reference_status=MISSING,40955,8914,2026-11-20T14:53:50Z,2026-11-23T20:18:51Z
+AGE-DOUBLE,crossing outside entry band,514,96,2026-11-20T15:57:34Z,2026-11-23T20:18:42Z
+CONT,insufficient # h history,39433,8716,2026-11-20T14:53:50Z,2026-11-23T20:18:51Z
+FAST-10M,window not covered,29230,8354,2026-11-21T13:10:33Z,2026-11-23T20:18:51Z
+FAST-10M,crossing outside entry band,570,178,2026-11-21T13:30:51Z,2026-11-23T20:15:29Z
+FAST-1M,window not covered,31727,8261,2026-11-20T14:53:50Z,2026-11-23T20:18:51Z
+FAST-1M,crossing outside entry band,724,237,2026-11-20T15:13:25Z,2026-11-23T20:14:25Z
+FAST-30M,window not covered,29930,8391,2026-11-21T13:10:33Z,2026-11-23T20:18:51Z
+FAST-30M,crossing outside entry band,537,175,2026-11-21T13:47:02Z,2026-11-23T19:20:55Z
+FAST-3M,window not covered,34393,8353,2026-11-20T14:53:50Z,2026-11-23T20:18:51Z
+FAST-3M,crossing outside entry band,787,254,2026-11-20T14:58:17Z,2026-11-23T20:15:29Z
+FAST-5M,window not covered,35517,8402,2026-11-20T14:53:50Z,2026-11-23T20:18:51Z
+FAST-5M,crossing outside entry band,803,261,2026-11-20T15:14:47Z,2026-11-23T20:15:29Z
+FAST150-10M,window not covered,29146,8354,2026-11-21T13:10:33Z,2026-11-23T20:18:51Z
+FAST150-10M,crossing outside entry band,1281,382,2026-11-21T13:20:55Z,2026-11-23T20:15:27Z
+FAST150-1M,window not covered,31483,8261,2026-11-20T14:53:50Z,2026-11-23T20:18:51Z
+FAST150-1M,crossing outside entry band,1773,506,2026-11-20T14:57:05Z,2026-11-23T20:13:20Z
+FAST150-3M,window not covered,34105,8353,2026-11-20T14:53:50Z,2026-11-23T20:18:51Z
+FAST150-3M,crossing outside entry band,1839,532,2026-11-20T14:57:01Z,2026-11-23T20:13:20Z
+FAST150-5M,window not covered,35194,8402,2026-11-20T14:53:50Z,2026-11-23T20:18:51Z
+FAST150-5M,crossing outside entry band,1836,535,2026-11-20T15:06:10Z,2026-11-23T20:13:20Z
+HH-BREAK,insufficient # h # min history,28509,7410,2026-11-20T14:53:50Z,2026-11-23T20:18:51Z
+HH-BREAK,zero volume baseline (not entered),504,73,2026-11-21T06:38:07Z,2026-11-23T10:51:16Z
+HH15-5M,insufficient history,12469,6273,2026-11-21T16:12:39Z,2026-11-23T20:18:51Z
+HH15-5M,zero volume baseline (not entered),1521,115,2026-11-21T17:53:21Z,2026-11-23T19:35:44Z
+HH30-10M,insufficient history,13349,6361,2026-11-21T16:12:39Z,2026-11-23T20:18:51Z
+HH30-10M,zero volume baseline (not entered),698,82,2026-11-21T19:19:12Z,2026-11-23T14:39:57Z
+HH30-5M,insufficient history,13291,6353,2026-11-21T16:12:39Z,2026-11-23T20:18:51Z
+HH30-5M,zero volume baseline (not entered),1662,109,2026-11-21T18:52:46Z,2026-11-23T14:45:27Z
+LOW4H,insufficient # h history,43782,9142,2026-11-20T14:53:50Z,2026-11-23T20:18:51Z
+LOW4H,crossing outside entry band,473,148,2026-11-21T05:45:48Z,2026-11-23T10:41:30Z
+LOW4H-LIQ25K,rejected: liquidity under $#K,40,18,2026-11-21T00:44:48Z,2026-11-23T13:55:28Z
+RUG450-BOUNCE,abandoned: observation broke during the setup,21,20,2026-11-22T11:33:42Z,2026-11-23T20:01:21Z
+SECOND-WAVE,seeded,62,52,2026-11-20T16:19:25Z,2026-11-23T19:22:30Z
+SECOND-WAVE,abandoned: coverage broke during the setup,22,20,2026-11-20T22:13:50Z,2026-11-23T19:41:14Z
+SECOND-WAVE,expired: no reclaim within # min,15,14,2026-11-20T17:19:28Z,2026-11-23T12:13:57Z
+SECOND-WAVE,reclaim outside entry band (attempt used),1,1,2026-11-22T21:16:23Z,2026-11-22T21:16:23Z
+SLOW-BUILD,rejected: a candle above +#%,77,16,2026-11-21T00:44:48Z,2026-11-23T13:55:28Z
+SLOW-BUILD,rejected: under # min from low,15,3,2026-11-21T09:33:39Z,2026-11-23T10:58:28Z
+VOL300K,window not covered,901,487,2026-11-21T21:23:17Z,2026-11-23T20:16:52Z
+VOL300K,"#-minute boundary inside a merged second: volume not known, not decided",95,86,2026-11-22T01:31:27Z,2026-11-23T18:26:29Z
+VOL500K,window not covered,1,1,2026-11-23T17:31:27Z,2026-11-23T17:31:27Z

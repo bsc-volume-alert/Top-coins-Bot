@@ -1,0 +1,8 @@
+import { readCsv, sum } from "./lib.mjs";
+const D = process.argv[2], V = readCsv(D + "/scoreboard_variants.csv"), O = readCsv(D + "/book_overlap.csv"), SB = readCsv(D + "/scoreboard.csv");
+const pad = (s, n) => String(s ?? "").padEnd(n).slice(0, n), mk = (r) => +(r.net_sol + r.open_value_sol - r.open_cost_sol).toFixed(2);
+console.log("book           | first buys, all ages: net incl. open at last valuation, by stop: trail 20/25/30/40/60 | scale 20..60 | ages@30t (closed net: A0..A4) | re-buys 30t closed/net/open | closest book: same buys %, profitable coins not in it");
+for (const b of [...new Set(V.map((v) => v.book))]) { const f = V.filter((v) => v.book === b && v.buys === "first buys" && v.age_group === "all"), g = (st, p) => { const r = f.find((v) => v.stop_pct === st && v.exit_policy === p); return r ? mk(r) + (r.open ? "(" + r.open + "o)" : "") : "-"; };
+  const ages = ["A0", "A1", "A2", "A3", "A4"].map((a) => { const r = V.find((v) => v.book === b && v.buys === "first buys" && v.age_group === a); return r ? r.net_sol + "/" + r.closed_measured : "-"; }).join(" ");
+  const rb = SB.find((s) => s.book === b && s.buys === "re-buys"), ov = O.filter((o) => o.book === b).sort((x, y) => y.same_buy - x.same_buy)[0];
+  console.log(pad(b, 14), "|", [20, 25, 30, 40, 60].map((s) => pad(g(s, "trail"), 10)).join(""), "|", [20, 25, 30, 40, 60].map((s) => pad(g(s, "scale"), 10)).join(""), "|", ages, "|", rb ? rb.closed_measured + "/" + rb.net_sol + "/" + rb.open : "-", "|", ov ? ov.other + " " + (100 * ov.same_buy / ov.buys).toFixed(0) + "% ; " + ov.profitable_coins_not_in_other + " of " + ov.profitable_coins : "-"); }
