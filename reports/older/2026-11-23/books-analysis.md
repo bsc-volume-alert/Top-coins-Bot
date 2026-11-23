@@ -240,7 +240,7 @@ _Rule: the same buys as CONT, sold at 60 minutes if the position never reached 1
 - Best buys at the 30% stop: Bivugv (20 Nov 17:06, $51K, peak 5.0×, +243.1%); 7cFiqd (23 Nov 12:41, $781K, peak 4.5×, +145.6%); ELbCDk (21 Nov 00:33, $42K, peak 3.9×, +132.4%).
 - Worst buys: Hm1QUy (22 Nov 17:19, $40K, peak 2.0×, −46.5%); 6fVQAu (22 Nov 15:11, $50K, peak 1.1×, −35.7%); H1jcPQ (20 Nov 17:23, $42K, peak 1.0×, −33.7%).
 - **What worked:** Nothing that CONT did not do.
-- **What failed:** The same buys as CONT with a sale at 60 minutes when the position has not reached 1.15×. That sale lowers the share of winners from 22–27% to 14–19% and makes the result worse at the 20%, 25%, 30% and 40% stops (−2.27 against −1.41 SOL at 30%). It closes positions that would have recovered, and does not shrink the average loss.
+- **What failed:** The same buys as CONT with a sale at 60 minutes when the position has not reached 1.15×. That sale lowers the share of winners from 21–27% to 14–19% and makes the result worse at the 25%, 30% and 40% stops (−2.27 against −1.41 SOL at 30%); it is slightly better only at the 20% and 60% stops. It closes positions that later recovered.
 - **How to improve:** None. Keep CONT.
 
 ### HH-BREAK — KEEP
