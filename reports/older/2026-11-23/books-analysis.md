@@ -544,8 +544,8 @@ _Rule: any age: $300K+ traded in the last 5 minutes ($40K–$2M)._
 - Best buys at the 30% stop: none.
 - Worst buys: p44sDi (22 Nov 12:51, $1906K, peak 1.0×, −99.2%); uL7vqm (22 Nov 01:44, $1976K, peak 1.0×, −75.6%); 8EzKJg (22 Nov 06:02, $1951K, peak 1.0×, −69.4%).
 - **What worked:** Nothing: 0 winners in 5.
-- **What failed:** Three of the five buys were coins near $1.9–2.0M with $567K–$928K traded in 5 minutes and the price NOT higher than 5 minutes before — the volume was selling. They lost 69%, 76% and 99%, far through every stop. The other two lost 22% and 27%.
-- **How to improve:** Remove the plain version. Heavy volume with a falling price is an exit, not an entry.
+- **What failed:** Three of the five buys were coins near $1.9–2.0M with $567K–$928K traded in 5 minutes. The price-up version did not buy them, so the price was not confirmed higher than 5 minutes before: the volume was selling. They lost 69%, 76% and 99%, far through every stop. The other two lost 22% and 27%.
+- **How to improve:** Remove the plain version. Heavy volume without a rising price is an exit, not an entry.
 
 ### VOL300K-UP — KEEP
 _Rule: any age: $300K+ traded in the last 5 minutes and the price higher than 5 minutes ago._
@@ -605,7 +605,7 @@ _Rule: any age: peaked at $450K+, bought the moment it is 80% below that peak._
 - Peak after the buy: 25% reached 1.5×, 13% reached 2×, 4% reached 3×; median 0.98×.
 - Best buys at the 30% stop: Fn95Nt (22 Nov 00:01, $413K, peak 2.1×, +45.5%); FJKt1L (22 Nov 00:42, $191K, peak 2.4×, +12.3%); 692gVU (21 Nov 22:47, $105K, peak 1.5×, +5.6%).
 - Worst buys: GY23Cd (22 Nov 00:24, $129K, peak 1.0×, −93.4%); 82mseL (22 Nov 06:57, $108K, peak 1.0×, −91.0%); 82mseL (22 Nov 11:02, $109K, peak 1.0×, −90.9%).
-- **What worked:** Three winners (one coin later 4×).
+- **What worked:** Three winners at the 30% stop (+45%, +12%, +6%).
 - **What failed:** 5–14% winners, −35% to −61% a trade. 8 of its 22 closed buys lost more than 60% at the 30% stop (13 lost more than 40%): the fall carried on through the stop. Median peak after the buy 0.98× — most never traded above the entry at all. "80% below the peak" does not mark a bottom.
 - **How to improve:** Remove. The bounce version is the only form with any case.
 
