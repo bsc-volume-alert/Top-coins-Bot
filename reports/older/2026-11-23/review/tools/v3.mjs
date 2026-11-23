@@ -1,0 +1,11 @@
+import { readCsv, sum, med } from "./lib.mjs";
+const D = process.argv[2], T = readCsv(D + "/candidate_tests.csv").filter((t) => t.n_pass != null);
+const pad = (s, n) => String(s ?? "").padEnd(n).slice(0, n);
+console.log("tests run", T.length, "| positive net", T.filter((t) => t.net_sol > 0).length, "| n>=20 & net>0 & both halves>0 & ex-best>0:", T.filter((t) => t.n_pass >= 20 && t.net_sol > 0 && t.first_half_net > 0 && t.second_half_net > 0 && t.net_without_best_mint > 0).length);
+const good = T.filter((t) => t.n_pass >= 15 && t.net_sol > 0 && t.first_half_net > 0 && t.second_half_net > 0 && t.net_without_best_mint > 0).sort((a, b) => b.net_sol - a.net_sol);
+console.log(pad("book", 13), pad("rule", 30), "n/univ  recall prec/base l40  mean% med%  net    parent h1     h2     exBest runK/rej");
+for (const t of good.slice(0, 40)) console.log(pad(t.book, 13), pad(t.rule, 30), pad(t.n_pass + "/" + t.n_universe, 7), pad(t.winner_recall_pct, 6), pad(t.precision_pct + "/" + t.base_precision_pct, 9), pad(t.severe_loss40_pct, 4), pad(t.mean_ret_pct, 5), pad(t.median_ret_pct, 5), pad(t.net_sol, 6), pad(t.net_sol_parent, 6), pad(t.first_half_net, 6), pad(t.second_half_net, 6), pad(t.net_without_best_mint, 6), t.runners_kept + "/" + t.runners_rejected);
+// which features recur across books (same direction) among stable-positive or loss-cutting tests
+const byF = {}; for (const t of T.filter((t) => t.n_pass >= 15)) { const dir = t.rule.includes(">=") ? ">=" : "<", k = t.feature + " " + dir; const o = (byF[k] ||= { n: 0, better: 0, books: new Set(), gain: 0 }); o.n++; const d = t.net_sol - t.net_sol_parent * (t.n_pass / t.n_universe); if (t.mean_ret_pct > (100 * t.net_sol_parent / t.n_universe / 0.2005) && t.first_half_net / Math.max(1, t.first_half_n) > t.net_sol_parent / t.n_universe && t.second_half_net / Math.max(1, t.second_half_n) > t.net_sol_parent / t.n_universe) { o.better++; o.books.add(t.book); } }
+console.log("\nfeature direction: tests where the passing set beat the parent's per-trade average in BOTH halves (of tests with n>=15) — books");
+for (const [k, o] of Object.entries(byF).sort((a, b) => b[1].books.size - a[1].books.size).slice(0, 22)) console.log(" ", pad(k, 26), o.better + "/" + o.n, "books:", o.books.size);

@@ -49,7 +49,7 @@ const starts = feed.filter((f) => /restart-gap/.test(f.ev)).map((f) => f.t);
   for (const f of feed) { const r = { t_utc: iso(f.t), t: r4(f.t), event: f.ev, detail: f.detail, duration_s: null };
     if (f.ev === "down") down = f.t; else if (f.ev === "up" && down != null) { r.duration_s = r4(f.t - down); down = null; }
     if (f.ev === "poll-down") pdown = f.t; else if (f.ev === "poll-up" && pdown != null) { r.duration_s = r4(f.t - pdown); pdown = null; }
-    const g = /(\d+(?:\.\d+)?) ?s/.exec(f.ev + " " + f.detail); if (/restart-gap/.test(f.ev) && g) r.duration_s = +g[1];
+    if (/restart-gap/.test(f.ev) && Number(f.detail) > 0) { r.duration_s = r4(f.t - Number(f.detail)); r.detail = "program not running from " + iso(Number(f.detail)) + " to this time"; }
     out.push(r); }
   csv("coverage_and_incidents.csv", ["t_utc", "t", "event", "detail", "duration_s"], out); }
 // deployed period of a time: the newest source commit committed before the latest program start at or before that time (INFERRED:
@@ -78,10 +78,10 @@ for (const e of entries) {
   const q = []; // evidence-quality flags (machine labels; the bot's own free-text flags are kept in `flags`)
   if (tk.xfer_bps > 0) q.push("fee-coin"); if (e.warm_gap_s > 0) q.push("warm-gap-in-decision-window"); if (e.startup) q.push("startup-24h"); if (e.mode === "polled") q.push("sampled-method");
   if (f && f.fee_src && f.fee_src !== "event" && e.mode !== "polled") q.push("buy-fee-assumed"); if (e.state_approx) q.push("state-approx"); if (e.verify?.suspect) q.push("verify-suspect"); if (e.verify?.error) q.push("verify-error");
-  if (f && f.delay_s > 3) q.push("late-buy>3s"); if (f && f.state_age_s > 5) q.push("buy-state-age>5s"); if (tk.risk_status && tk.risk_status !== "ok" && tk.risk_status !== "clean") q.push("risk-status:" + tk.risk_status);
+  if (f && f.delay_s > 3) q.push("late-buy>3s"); if (tr.block_ts != null && e.decisionT - tr.block_ts > 10) q.push("feed-late>10s-at-signal"); if (f && f.state_age_s > 5) q.push("buy-state-age>5s"); if (tk.risk_status && tk.risk_status !== "ok" && tk.risk_status !== "clean") q.push("risk-status:" + tk.risk_status);
   const rowsN = e.versions.length;
   E.push({ entry_id: e.id, mint: e.mint, symbol: tk.symbol ?? sym(e.mint), pool: e.pool, age_group: e.ag, families: e.families.join("+"), rebuy_families: again.join("+"), is_rebuy_any: again.length ? 1 : 0, rows_carried: rowsN, method: e.mode, population: e.pop, exec_model: e.exec,
-    signal_utc: iso(e.decisionT), signal_t: r4(e.decisionT), sched_fill_t: r4(e.schedT), eval_t: r4(tr.eval_t), signal_read_lag_s: tr.eval_t != null ? r4(tr.eval_t - e.decisionT) : null, status: e.status, done: e._done, startup: e.startup ? 1 : 0,
+    signal_utc: iso(e.decisionT), signal_t: r4(e.decisionT), sched_fill_t: r4(e.schedT), eval_t: r4(tr.eval_t), block_ts: tr.block_ts ?? null, feed_lag_s: tr.block_ts != null ? r4(e.decisionT - tr.block_ts) : null, eval_lag_s: tr.eval_t != null ? r4(tr.eval_t - e.decisionT) : null, status: e.status, done: e._done, startup: e.startup ? 1 : 0,
     signal_mc_usd: Math.round(e.signalMc), signal_px_usd: e.signalPx, sol_usd: tr.sol_usd ?? null, token_age_s: tr.age_s ?? e.features?.age_s ?? null, age_basis: e.age_basis, token_program: tk.token_program, xfer_fee_bps: tk.xfer_bps ?? 0, risk_status: tk.risk_status, origin: tk.origin, venues: tk.venues, cadence_s: tk.cadence_s ?? tr.cadence_s ?? null,
     trigger_kind: tr.kind, trigger_sig: tr.sig, trigger_slot: tr.slot, coverage: tr.coverage, warm_gap_s: e.warm_gap_s ?? null, runner_max_x_24h: r4(e.runner?.maxX), runner_horizon_done: e.runner?.horizonDone ? 1 : 0, runner_partial: e.runner?.partial ? 1 : 0,
     reached_2x_s: e.runner?.reached?.[2] ?? null, reached_3x_s: e.runner?.reached?.[3] ?? null, reached_5x_s: e.runner?.reached?.[5] ?? null, reached_10x_s: e.runner?.reached?.[10] ?? null,
@@ -136,7 +136,7 @@ csv("decisions.csv", ["mint", "symbol", "age_group", "family", "t_utc", "t", "en
     out.push({ mint, symbol: c.info?.symbol ?? null, name: c.info?.name ?? null, pool: c.pool, method: c.info?.mode ?? (c.info?.polled ? "polled" : null), created_utc: iso(c.create_ts), create_src: c.create_src, pump_origin: c.pump_origin, first_seen_utc: iso(c.first_seen), last_px_usd: c.last_px, last_seen_utc: iso(c.last_t), supply,
       token_program: c.info?.token_program ?? null, xfer_fee_bps: c.info?.risk?.fee_bps ?? null, bought: es.length ? 1 : 0, buys: es.filter((e) => e.status === "filled").length, first_buys: es.filter((e) => e.status === "filled" && !e.again).length, books_bought: [...new Set(es.flatMap((e) => e.families))].join("+"), closed_30trail_buys: nM.get(mint) ?? 0, net_sol_30trail_all_buys: r6(netM.get(mint) ?? null), decisions: decM.get(mint) ?? 0,
       bar_minutes: mins, first_bar_hour_utc: iso(firstHr != null ? firstHr * 3600 : null), last_bar_hour_utc: iso(lastHr != null ? lastHr * 3600 : null), px_high_usd: hi, px_high_hour_utc: iso(hiHr != null ? hiHr * 3600 : null), px_low_usd: lo, px_low_to_peak_usd: loBefore, px_low_after_peak_usd: loAfter, peak_over_prior_low_x: hi && loBefore ? r4(hi / loBefore) : null, after_peak_fall: hi && loAfter ? r4(loAfter / hi - 1) : null,
-      mc_high_usd: hi && supply ? Math.round(hi * supply) : null, vol_usd: Math.round(vol), n_buys: nb, n_sells: ns, info: JSON.stringify(c.info).slice(0, 500) }); }
+      mc_high_usd: hi && supply ? Math.round(hi * supply) : null, mc_high_usd_if_1bn_supply: hi && /pump$/.test(mint) ? Math.round(hi * 1e9) : null, mc_low_to_peak_usd_if_1bn_supply: loBefore && /pump$/.test(mint) ? Math.round(loBefore * 1e9) : null, vol_usd: Math.round(vol), n_buys: nb, n_sells: ns, info: JSON.stringify(c.info).slice(0, 500) }); }
   csv("coin_outcomes.csv", Object.keys(out[0] || { mint: 0 }), out); }
 
 // ---------- manifest ----------

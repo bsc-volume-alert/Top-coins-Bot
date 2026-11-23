@@ -48,6 +48,11 @@ function classify(p) { const f = FE.get(p.entry_id) || {}, e = EN.get(p.entry_id
       if (!mech.length) mech.push("no defensible explanation from recorded fields"); } }
   return { fin, path, mech: mech.join("; ") }; }
 for (const p of P) Object.assign(p, classify(p));
+// STRICT EVIDENCE: rows with none of the doubts found in the evidence check (see the report, section 2). The feed ran late
+// from about 14:00 UTC on 23 Nov (lag fix 982ecde deployed 20:19 UTC), so buys and sales from then on are set apart.
+const LAG0 = Date.parse("2026-11-23T14:00:00Z") / 1000;
+for (const p of P) { const extra = []; if (p.fill_t >= LAG0) extra.push("bought-while-feed-late"); else if (p.exit_t >= LAG0) extra.push("sold-while-feed-late"); if (extra.length) p.quality = [p.quality, ...extra].filter(Boolean).join(";"); }
+const strict = (p) => !/warm-gap|verify-|feed-late|late-buy|fee-assumed|late-sale|estimated-exit|unresolved/.test(p.quality || "");
 
 // ---------- scoreboard ----------
 function board(rows) { const m = rows.filter(measured), open = rows.filter((p) => p.entry_status === "filled" && p.row_status !== "closed"), est = rows.filter((p) => p.row_status === "closed" && p.estimated_exit);
@@ -69,7 +74,7 @@ function board(rows) { const m = rows.filter(measured), open = rows.filter((p) =
 const key = (p) => p.book, groups = new Map(); for (const p of P) (groups.get(key(p)) || groups.set(key(p), []).get(key(p))).push(p);
 const sb = [], sbv = [], daily = [];
 for (const b of BOOKS) { const all = groups.get(b) || [];
-  for (const [label, sel] of [["first buys", (p) => !p.rebuy], ["re-buys", (p) => p.rebuy], ["all buys", () => true]]) {
+  for (const [label, sel] of [["first buys", (p) => !p.rebuy], ["first buys, strict evidence", (p) => !p.rebuy && strict(p)], ["re-buys", (p) => p.rebuy], ["all buys", () => true]]) {
     const def = all.filter((p) => p.stop_pct === 30 && p.exit_policy === "trail" && sel(p)); sb.push({ book: b, buys: label, row: "30% trail, all ages (website default)", ...board(def) });
     for (const st of [20, 25, 30, 40, 60]) for (const pol of ["trail", "scale"]) { const rws = all.filter((p) => p.stop_pct === st && p.exit_policy === pol && sel(p)); if (rws.length) sbv.push({ book: b, buys: label, age_group: "all", stop_pct: st, exit_policy: pol, ...board(rws) }); }
     if (label === "first buys") for (const ag of ["A0", "A1", "A2", "A3", "A4"]) { const rws = all.filter((p) => p.age_group === ag && p.stop_pct === 30 && p.exit_policy === "trail" && sel(p)); if (rws.length) sbv.push({ book: b, buys: label, age_group: ag, stop_pct: 30, exit_policy: "trail", ...board(rws) }); } }
