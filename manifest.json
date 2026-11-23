@@ -1,0 +1,225 @@
+{
+ "cutoff_utc": "2026-11-23T20:19:05.585Z",
+ "db_bytes": 920244224,
+ "node": "v22.23.3",
+ "tables": {
+  "entries": {
+   "cols": [
+    "id",
+    "mint",
+    "status",
+    "done",
+    "decision_t",
+    "json"
+   ],
+   "sql": "SELECT * FROM entries",
+   "rows": 2300,
+   "files": [
+    {
+     "f": "entries-0.ndjson.gz",
+     "bytes": 5221349,
+     "sha256": "c0e7d08d07655f22ab44b383cef189848f8baea586408d9db8d889409627809f"
+    }
+   ]
+  },
+  "decisions": {
+   "cols": [
+    "mint",
+    "ag",
+    "family",
+    "t",
+    "entry_id",
+    "detail"
+   ],
+   "sql": "SELECT * FROM decisions",
+   "rows": 2187,
+   "files": [
+    {
+     "f": "decisions-0.ndjson.gz",
+     "bytes": 110934,
+     "sha256": "df5eabb246f9f88b8678bddf15722a43beaabb12f62c5efe10babc852ca52aaf"
+    }
+   ]
+  },
+  "feed": {
+   "cols": [
+    "id",
+    "t",
+    "ev",
+    "detail"
+   ],
+   "sql": "SELECT * FROM feed",
+   "rows": 157,
+   "files": [
+    {
+     "f": "feed-0.ndjson.gz",
+     "bytes": 2388,
+     "sha256": "1339d0870902f9efc525bbf840231cbf775e8aa5058f75085ed367c1366c2fcd"
+    }
+   ]
+  },
+  "meta": {
+   "cols": [
+    "k",
+    "v"
+   ],
+   "sql": "SELECT k,substr(v,1,4000) v FROM meta",
+   "rows": 38,
+   "files": [
+    {
+     "f": "meta-0.ndjson.gz",
+     "bytes": 571,
+     "sha256": "67f2434090aa7c7f795b5aa571f3724f1ff26c683922a59f12f64165ad96d771"
+    }
+   ]
+  },
+  "coins": {
+   "cols": [
+    "mint",
+    "pool",
+    "create_ts",
+    "create_src",
+    "pump_origin",
+    "first_seen",
+    "last_px",
+    "last_t",
+    "info"
+   ],
+   "sql": "SELECT * FROM coins",
+   "rows": 41647,
+   "files": [
+    {
+     "f": "coins-0.ndjson.gz",
+     "bytes": 2369440,
+     "sha256": "5dbc405bd7e8b4f929039e466540481260d6492d53c822b2489b214d439fa541"
+    }
+   ]
+  },
+  "pools_bought": {
+   "cols": [
+    "pool",
+    "mint",
+    "quote",
+    "creator"
+   ],
+   "sql": "SELECT * FROM pools WHERE mint IN (SELECT DISTINCT mint FROM entries)",
+   "rows": 281,
+   "files": [
+    {
+     "f": "pools_bought-0.ndjson.gz",
+     "bytes": 28741,
+     "sha256": "939fe1baae540cdbf9ba10020c29f0a8f6e6af746dff12340197c9c637f9232a"
+    }
+   ]
+  },
+  "pools_by_quote": {
+   "cols": [
+    "quote",
+    "n"
+   ],
+   "sql": "SELECT quote,COUNT(*) n FROM pools GROUP BY 1",
+   "rows": 15081,
+   "files": [
+    {
+     "f": "pools_by_quote-0.ndjson.gz",
+     "bytes": 499634,
+     "sha256": "db09fefda7dea96d117b120b91ed4225044cce8bb75232b66beabaeb5805cba3"
+    }
+   ]
+  },
+  "notes_hourly": {
+   "cols": [
+    "family",
+    "ag",
+    "reason",
+    "hr",
+    "n",
+    "mints"
+   ],
+   "sql": "SELECT family,ag,reason,CAST(t/3600 AS INT) hr,COUNT(*) n,COUNT(DISTINCT mint) mints FROM notes GROUP BY 1,2,3,4",
+   "rows": 6851,
+   "files": [
+    {
+     "f": "notes_hourly-0.ndjson.gz",
+     "bytes": 34226,
+     "sha256": "3d65b4367d635cbbc72ee8819dfbe05a9669c5641ce543e7e1f4b9cd5beee622"
+    }
+   ]
+  },
+  "notes": {
+   "cols": [
+    "id",
+    "mint",
+    "ag",
+    "family",
+    "t",
+    "reason",
+    "detail"
+   ],
+   "sql": "SELECT id,mint,ag,family,t,reason,substr(detail,1,300) detail FROM notes",
+   "rows": 521011,
+   "files": [
+    {
+     "f": "notes-0.ndjson.gz",
+     "bytes": 5318060,
+     "sha256": "1982b9fed3a37c08adfc22e34679c48bce73b178b1cfc0767913e7b77f0d45ee"
+    },
+    {
+     "f": "notes-1.ndjson.gz",
+     "bytes": 1875281,
+     "sha256": "3338a7b560753044fe294ef674a895ca4a7e218e414a2990812f9dbbdefdeec7"
+    }
+   ]
+  },
+  "bars_bought": {
+   "cols": [
+    "mint",
+    "m",
+    "o",
+    "h",
+    "l",
+    "c",
+    "v",
+    "nb",
+    "ns",
+    "buyers",
+    "src"
+   ],
+   "sql": "SELECT * FROM bars WHERE mint IN (SELECT DISTINCT mint FROM entries)",
+   "rows": 384846,
+   "files": [
+    {
+     "f": "bars_bought-0.ndjson.gz",
+     "bytes": 8810368,
+     "sha256": "913884687e93c7e82baece92542ad19bfff0edb0b2385059d509d5355fb05a3a"
+    },
+    {
+     "f": "bars_bought-1.ndjson.gz",
+     "bytes": 3190326,
+     "sha256": "3f68fdac7465634c1de25b422f827fbdf7ea85d49f0821b3cfe99c35862e906c"
+    }
+   ]
+  },
+  "bars_hourly": {
+   "cols": [
+    "mint",
+    "hr",
+    "h",
+    "l",
+    "v",
+    "nb",
+    "ns",
+    "n"
+   ],
+   "sql": "SELECT mint,m/60 hr,MAX(h) h,MIN(l) l,SUM(v) v,SUM(nb) nb,SUM(ns) ns,COUNT(*) n FROM bars GROUP BY 1,2",
+   "rows": 243449,
+   "files": [
+    {
+     "f": "bars_hourly-0.ndjson.gz",
+     "bytes": 7955291,
+     "sha256": "32533a0c84effd44fd8616c121312f443f00303844c18f3e92ff9859b7406697"
+    }
+   ]
+  }
+ }
+}
