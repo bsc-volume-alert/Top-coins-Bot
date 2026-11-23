@@ -62,12 +62,16 @@ export class Engine {
     const ids = this.byMint.get(mint); if (!ids) return;
     // each entry keeps the execution method it was opened with: a routed-quote entry is NEVER priced from a pool state
     for (const id of ids) { const e = this.entries.get(id), was = e.status, sig = e.versions.map((v) => v.status).join(), q = e.exec === "routed-quote";
-      advance(e, upTo, q ? undefined : c.state, q ? NEVER : (at) => this.trustedAt(c, at), q ? this.pollCov : this.feedCov); this._after(e, was, sig, ids, c); }
+      const mut = advance(e, upTo, q ? undefined : c.state, q ? NEVER : (at) => this.trustedAt(c, at), q ? this.pollCov : this.feedCov); this._after(e, was, sig, ids, c, mut); }
   }
-  _after(e, was, sig, ids, c) {
+  /** `seen` = the entry's decision state may have changed without a status change: a price was observed (peak, last value,
+   *  runner high), or advance() reported a change. A clock tick that changed nothing does NOT mark the entry for saving: before
+   *  23 Nov 2026 every open position was re-written to the database every second whether or not anything had happened to it,
+   *  which at 1,350 open positions was about 38 MB of writing per second and a full processor core (the feed fell behind). */
+  _after(e, was, sig, ids, c, seen = true) {
     if (was === "pending" && e.status === "filled") { e.fill.pool = c.pool; this.onFill(e, c); }
     if (e.status !== was || e.versions.map((v) => v.status).join() !== sig || e.touched) { e.touched = false; this.store?.saveEntry(e); this.dirty.delete(e.id); }
-    else if (e.status === "filled") this.dirty.add(e.id); // peaks, last values, runner highs: check-pointed every few seconds (see tick)
+    else if (e.status === "filled" && seen) this.dirty.add(e.id); // peaks, last values, runner highs: check-pointed at most CHECKPOINT_S after they change (see tick)
     if (entryDone(e)) { this.store?.saveEntry(e); ids.delete(e.id); this.entries.delete(e.id); /* finished entries live in the database only */ }
   }
 

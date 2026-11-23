@@ -85,21 +85,24 @@ function execSell(e, v, st, at, delay, cov, minReq = null) {
 
 /** Everything scheduled at or before `upTo` is executed against `st`, the state in force until then. trusted(at) says whether
  *  that state is known-good at time `at`. Called before a new state replaces `st`, and on every clock tick. */
+/** Returns true when it changed something that a status comparison does not show (a clock check done, the runner horizon
+ *  closed): the engine check-points the entry then. Status changes are detected by the caller. */
 export function advance(e, upTo, st, trusted, cov) {
+  let mut = false;
   if (e.status === "pending") {
-    if (e.schedT > upTo) return;
+    if (e.schedT > upTo) return false;
     if (st && trusted(e.schedT) && fillBuy(e, st, e.schedT, 0)) { /* filled or cancelled */ }
-    else if (upTo > e.schedT + S.BUY_PRICING_TIMEOUT_S) { e.status = "cancelled"; e.flags.push("pricing/data timeout: no trustworthy pool state within 5 s of the scheduled buy"); return; }
-    else return;
+    else if (upTo > e.schedT + S.BUY_PRICING_TIMEOUT_S) { e.status = "cancelled"; e.flags.push("pricing/data timeout: no trustworthy pool state within 5 s of the scheduled buy"); return false; }
+    else return false;
   }
-  if (e.status !== "filled") return;
+  if (e.status !== "filled") return false;
   for (let guard = 0; guard < 6; guard++) {
     let changed = false;
     for (const v of e.versions) {
       if (v.status === "open" || v.status === "scaling") { // time-based triggers, in time order
         const ck = v.stall ? S.clockOf(v.stall) : null, stallT = ck ? e.fill.t + ck.at : Infinity, endT = e.fill.t + S.MAX_HOLD_S;
         // the clock book's timed sale: at its time, sold if the position never reached minPeak (CONT-STALL) or simply if still open (HH-BREAK-4H)
-        if (ck && !v.stallChecked && stallT <= upTo) { v.stallChecked = true; if (ck.minPeak == null || v.maxX < ck.minPeak) { trigger(v, stallT, ck.reason, null); changed = true; continue; } }
+        if (ck && !v.stallChecked && stallT <= upTo) { v.stallChecked = true; mut = true; if (ck.minPeak == null || v.maxX < ck.minPeak) { trigger(v, stallT, ck.reason, null); changed = true; continue; } }
         if (endT <= upTo) { trigger(v, endT, "max-hold", null); changed = true; continue; }
       }
       if ((v.status === "selling" || v.status === "scaling") && v.schedT != null && v.schedT <= upTo) {
@@ -111,7 +114,8 @@ export function advance(e, upTo, st, trusted, cov) {
     }
     if (!changed) break;
   }
-  if (!e.runner.horizonDone && upTo >= e.fill.t + S.RUNNER_HORIZON_S) { e.runner.horizonDone = true; if (cov && cov.gapsIn(e.fill.t, e.fill.t + S.RUNNER_HORIZON_S).length) e.runner.partial = true; }
+  if (!e.runner.horizonDone && upTo >= e.fill.t + S.RUNNER_HORIZON_S) { e.runner.horizonDone = true; mut = true; if (cov && cov.gapsIn(e.fill.t, e.fill.t + S.RUNNER_HORIZON_S).length) e.runner.partial = true; }
+  return mut;
 }
 
 /** A new trustworthy state `st` was observed at time t (after advance() ran with the previous state).
