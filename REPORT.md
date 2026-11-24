@@ -10,14 +10,14 @@ Prepared 23 Nov 2026 for the owner and for an independent review. Analysis only:
 - **Test one variant beside it:** CONT, HH30-5M (a 4-hour clock sale).
 - **Retire from active research (15):** AGE-DOUBLE, CONT-STALL, LOW4H-LIQ25K, FAST-1M, FAST-10M, FAST-30M, FAST150-1M, FAST150-3M, FAST150-10M, HH30-10M, HH15-5M, VOL300K, VOL500K, RUG450, RUG950.
 - **Repair before judging:** VOL300K-UP, VOL500K-UP, FEE-COINS.
-- **Highest-value next experiments:** (1) a clean run on frozen code with the lag fix, because restarts, a late feed and re-buys contaminate this one; (2) the 4-hour clock sale beside CONT and HH30-5M; (3) HH-BREAK restricted to coins within 18% of their 4-hour high (exploratory); (4) report 20–25% stops and drop the 60% rows; (5) buying again switched off or kept strictly apart — 1079 re-buys were made and they lost in every large book.
+- **Highest-value next experiments:** (1) a clean run on frozen code with the lag fix, because restarts, a late feed and re-buys contaminate this one; (2) the 4-hour clock sale beside CONT and HH30-5M; (3) HH-BREAK restricted to coins with a shallow four-hour range — 4-hour low at least 82% of the 4-hour high (exploratory); (4) report 20–25% stops and drop the 60% rows; (5) buying again switched off or kept strictly apart — 1079 re-buys were made and they lost in every large book.
 
 Retirement here is a recommendation. Nothing has been switched off and no definition or history has been deleted.
 
 ## 2. What was analysed
 
 - Database: `older-shakedown.db (the shakedown run; never reset)`, 920 MB, first start 2026-11-20T14:53:46Z. Export cut-off 2026-11-23T20:19:05.585Z (one read transaction).
-- Code running at the cut-off: commit `834ca71`, specification older-9. (The lag fix 982ecde was started seconds after the export and is not in this data.)
+- Code running at the cut-off: commit `834ca71`, specification older-10. (The lag fix 982ecde was started seconds after the export and is not in this data.)
 - **30 books** from the code: 29 rule families (`FAMILIES` in `older/src/spec.mjs`) plus FEE-COINS. Two of the 29 are clock books that share another book's buys (CONT-STALL ← CONT, HH-BREAK-4H ← HH-BREAK). Each family has 4 or 5 age groups × 5 stops × 2 exits = 1,240 comparison rows. **These rows are alternatives on the same buys, not 1,240 strategies; they are never added together here.**
 - Records: 2300 buy decisions (2283 filled, 17 cancelled), of which 1204 first buys and 1079 re-buys; 266 coins bought; 31584 comparison rows; 521011 recorded rejections; 41647 coins seen.
 - Reconciliation: the package reproduces the bot's own published report on 1,236 of 1,240 rows exactly; the other 4 differ by one sale made in the three minutes between the bot's last report and the export.
@@ -55,7 +55,7 @@ Retirement here is a recommendation. Nothing has been switched off and no defini
 | RUG950-BOUNCE | any-age rule book | live PumpSwap only | A0 A1 A2 A3 A4 | 21 Nov 21:23 | older-8 |
 | FEE-COINS | FEE-COINS | sampled/routed only | A0 A1 A2 A3 A4 | 22 Nov 01:16 | fee-book (22 Nov, commit e4a5a3b) |
 
-Exact rule text for each book is in `books.csv` (column `entry_rule`) and repeated in each book's section below. Code and rule periods are in `code_rule_periods.csv`; which code a buy was made under is in `entries.csv` (`code_commit`, inferred as the newest source commit before the program start in force — the database does not store the commit of each start).
+Exact rule text for each book is in `books.csv` (column `entry_rule`) and repeated in each book's section below. Code and rule periods are in `code_rule_periods.csv`; which code a buy was made under is in `entries.csv`: `code_commit` is the commit the program itself recorded at its start (24 recorded starts, `program_starts.csv`); for the 38 buys before the first such record it is empty and `code_commit_inferred` gives the newest source commit before that start, marked as an inference.
 
 ## 3. Evidence check before reading any profit figure
 
@@ -636,7 +636,7 @@ A coarse estimate from hourly prices (assumes the pump.fun supply of one billion
 | Half at 2×, trail the rest | -1.76 | -1.39 | -1.58 | -2.95 (1 open) | -3.06 (7 open) |
 
 **By age group (30% trail, closed):** A1: -0.27 (17, 23.5% won); A2: +0.22 (16, 43.8% won); A3: +0.16 (11, 45.5% won); A4: -1.37 (73, 16.4% won).  
-**By day of the buy:** 20 Nov: -0.03 (21); 21 Nov: +0.39 (41); 22 Nov: -0.93 (35); 23 Nov: -0.69 (20).  
+**By day of the buy:** 20 Nov: -0.03 (21); 21 Nov: +0.39 (41); 22 Nov: -0.94 (35); 23 Nov: -0.69 (20).  
 **Re-buys (30% trail):** 42 closed, -0.93 SOL, 16.7% won; 3 open.
 
 **Price-path classes (closed first buys):** ordinary decline 66 (-3.40); runner missed: sold before the run 19 (-0.33); runner captured 11 (+2.56); ordinary gain 9 (+0.40); giveback 6 (-0.05); abrupt collapse 4 (-0.41); stagnation 2 (-0.02).
@@ -1088,7 +1088,7 @@ A coarse estimate from hourly prices (assumes the pump.fun supply of one billion
 | # | Experiment | Exact definition | Compared with | Decision rule fixed in advance |
 |---|---|---|---|---|
 | B1 | 4-hour clock beside CONT and HH30-5M | A clock book on the parent's buys: sell at 4 h after the fill if the row is still open (existing CLOCK mechanism, minPeak = none). | The parent's plain rows on the same buys | Keep if, after 150 shared buys, the clock rows beat the parent on the 25% and 30% trail in both halves by time. Otherwise retire the clock row (and HH30-5M). |
-| B2 | HH-BREAK-CALM (exploratory) | HH-BREAK's rule plus: the price before the breakout is within 18% of its 4-hour high (recorded `drawdown4h ≥ −0.18`). Chosen from this data: 78 of 162 buys, +0.71 SOL against +0.37, both halves positive, +0.54 without its best coin. | HH-BREAK on the same period | Needs 100 new buys. Supported only if average after-cost result > 0, above HH-BREAK's, and positive without its best coin. This data cannot validate it — it was used to choose it. |
+| B2 | HH-BREAK, shallow four-hour range (exploratory) | HH-BREAK's rule plus the recorded field `drawdown4h ≥ −0.18`, which is **four-hour low ÷ four-hour high − 1**: the low of the last 4 hours is at least 82% of their high. It is a range/compression measure — not the distance of the current price from the high, and not a chronological drawdown (corrected 24 Nov; an earlier version of this report described it wrongly). On this data: 77 of 162 closed first buys on 76 coins, +0.77 SOL against +0.37, both halves positive, +0.60 without its best coin; the field is missing on 8 buys. | HH-BREAK on the same period | Needs 100 new buys. Supported only if average after-cost result > 0, above HH-BREAK's, and positive without its best coin. This data cannot validate it — it was used to choose it. |
 | B3 | Stops | Report 20% and 25% as the reference rows; stop opening 60% rows. | Existing rows | Already measured; no new data needed. |
 | B4 | Buying again | Switch off, or keep but never mix with first buys. | First buys | Already measured negative on 1,079 re-buys; re-test only inside a clean run. |
 | B5 | Retire the redundant books | The 15 books in section 1. | Their covering book | Retire only if the owner agrees; definitions and history stay. |
@@ -1096,10 +1096,10 @@ A coarse estimate from hourly prices (assumes the pump.fun supply of one billion
 ### C. Data gaps and open accounting questions
 
 - **C1.** Transfer-fee setting never read for Token-2022 coins bought on the live method (225 buys). Needs one read-only chain look-up per bought coin.
-- **C2.** The commit of each program start is not stored in the database; periods here are inferred from start times and commit times.
+- **C2.** The commit of a program start is recorded from 20 Nov 17:30 UTC on (24 starts); for the one earlier period (38 buys) it is not, and only an inferred commit is given. (Corrected 24 Nov: an earlier version of this package inferred all periods and disagreed with the records on 80 buys.)
 - **C3.** Sales fill 0.7 s after the trigger at, on average, a better value than the trigger. Whether a real sale would get that is unverified.
 - **C4.** The feed ran up to 112 s late on 23 Nov from about 14:00 UTC; results from then until the fix are flagged.
-- **C5.** Not recorded: coin names for live coins, social links, holder counts, deployer history, supply in the coin table. The lowest executable value while held is not stored either; `spot_lo_held_x` is the lowest one-minute spot price relative to the signal price, which is not an executable value.
+- **C5.** Not recorded: coin names for live coins, social links, holder counts, deployer history, supply in the coin table. The lowest executable value while held is not stored either; `spot_lo_held_x` is the lowest one-minute spot price relative to the signal price over the whole minutes strictly inside the holding (the minutes containing the fill and the sale are left out), which is not an executable value; one-minute bars never show the order of prices inside a minute.
 - **C6.** Minute bars exist only for coins the live feed priced; the sampled side has samples, not trades. Bars of all 41647 coins are in the package only as hourly high/low/volume; full minute bars are included for the bought coins.
 - **C7.** HH-BREAK-4H before 21 Nov 16:40 UTC exists only as estimates (excluded).
 - **C8.** FEE-COINS, VOL500K-UP and the sampled method have no usable observations.

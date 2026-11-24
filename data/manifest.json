@@ -8,8 +8,8 @@
   "spec_in_db": "older-3"
  },
  "server_checkout_commit": "834ca7133d3e4d7b949a363f5c9b76c8b280b9ea",
- "analysis_repo_commit": "1d079b42d956044c2e76059892a069045373cbc2",
- "spec_in_code": "older-9",
+ "analysis_repo_commit": "132d2244c3df84f64aae17c9d3a359e23ba1a1b3",
+ "spec_in_code": "older-10",
  "node": "v22.23.4",
  "stake_sol": 0.2,
  "cost_sol": 0.2005,
@@ -159,23 +159,28 @@
   },
   "coverage_and_incidents.csv": {
    "rows": 157,
-   "bytes": 11744,
-   "sha256": "bdd66e1ed4fa1b3b81d6bd7a6e41f0bc75c75aec8a9e9670c00ce6d7abf732b8"
+   "bytes": 12356,
+   "sha256": "859123c937f6df716584f158be8af4eb6a8c7baa35f6e77252d8b9e043d33779"
   },
   "code_rule_periods.csv": {
    "rows": 49,
-   "bytes": 13967,
-   "sha256": "6574ec99f08fbe4d1628ba0dfe8ecf6f61226d01575eb80e022c9f606bd9b0d2"
+   "bytes": 13996,
+   "sha256": "86cbe522fcef2315972e53746598edc4988c33cc540a33618064da01ee0aceaa"
+  },
+  "program_starts.csv": {
+   "rows": 26,
+   "bytes": 1817,
+   "sha256": "9a0735be54c26dbcf9333db53645dd615dd0ecb35fdd7eb72f4016539895a348"
   },
   "entries.csv": {
    "rows": 2300,
-   "bytes": 2084259,
-   "sha256": "16382b576d6b715ef86191c48f2dd010045521bfe812b318d69e324b2334cc46"
+   "bytes": 2179517,
+   "sha256": "f7b0e50e20025e5c03726915a871075f123b3468b2a06717a4d8a68ae7f114ed"
   },
   "entry_features.csv": {
    "rows": 2300,
-   "bytes": 1251879,
-   "sha256": "8f89546106fc98a8bae6c5171d403252b5d7d12bb1696d76646e56c75abdf166"
+   "bytes": 1252035,
+   "sha256": "b4eaf7f61920d94f57b10ce1b25c818d6773bad268b50118c827958e981ec3e7"
   },
   "entry_candidates.csv": {
    "rows": 3747,
@@ -184,23 +189,23 @@
   },
   "fills.csv": {
    "rows": 2283,
-   "bytes": 799728,
-   "sha256": "ebdfde30ce904916e46e541825f71387d1e797be6ce710d11a0f3380cf5c3ba2"
+   "bytes": 869457,
+   "sha256": "500f4bfff094837a10a08385a8464dd110ccfc19ea838da748be8d2ea863aaeb"
   },
   "sales.csv": {
    "rows": 21418,
-   "bytes": 4840139,
-   "sha256": "6f1cfb528b9dbec83de77869e9cf4dc13890c00e81081e6204966da280d800fc"
+   "bytes": 7131266,
+   "sha256": "5fb4c78bc939ee64184a63391e45effdfcd131fd1466f75cb315fd8e3f7dc045"
   },
   "positions.csv": {
    "rows": 31584,
-   "bytes": 12308944,
-   "sha256": "74fa2d8bd9ff77fa554e80a17337ead05e67fbe75d3485befe35ab002cfdbd63"
+   "bytes": 15702218,
+   "sha256": "801d37358e5e9be2d3901f4d0afc744e2557b09a7218c9ac7223f45320f53106"
   },
   "decisions.csv": {
    "rows": 2187,
-   "bytes": 634037,
-   "sha256": "3907084c0b7a2f412b87150a0aa7af7a9a079ea22e1f5f1e96091920dd7e442f"
+   "bytes": 642505,
+   "sha256": "814cf61ea488749fe2fb411532681a39ad15dbceb16567ceef9993b9dacc42fa"
   },
   "rejections.csv.gz": {
    "rows": 521011,
@@ -214,8 +219,8 @@
   },
   "coin_outcomes.csv": {
    "rows": 41647,
-   "bytes": 21077738,
-   "sha256": "4415d7bdbf6fcf1b5c2b1b592dba0249b6e0122c25c67e1a8b91585017f0f2e8"
+   "bytes": 21913347,
+   "sha256": "0d614c51695bc2417ea497659ba09a7c0e98839aab9ec82b96cc9365ff038031"
   },
   "scoreboard.csv": {
    "rows": 120,
@@ -228,14 +233,14 @@
    "sha256": "fa741b9c2233c3c3c0984117cd2c55007bde615f60255c742c3d1523b1e9cb73"
   },
   "chronology.csv": {
-   "rows": 269,
-   "bytes": 14908,
-   "sha256": "a03ef23e2e6f0f723247ddd91081233d4bcb64e5dbcc52c6e9f8b79801c969eb"
+   "rows": 267,
+   "bytes": 14765,
+   "sha256": "d67afae271a335416099c1a3d45ccf245f165e8f1f2955d56732d829ff5dfcc3"
   },
   "coin_ledger.csv": {
    "rows": 31584,
-   "bytes": 10413908,
-   "sha256": "298c7ac24d6dc4f9f0e3767924c4d336f210623958dc866031d57ad66ff2467a"
+   "bytes": 10402808,
+   "sha256": "7ceae36833c723e54688d6d8a1f6787ff668298f0b683be0fbc660a29a022c25"
   },
   "book_overlap.csv": {
    "rows": 812,
@@ -273,60 +278,64 @@
    "sha256": "8a2ca7d3650558319cea226d94dec588e27e0dee5a32eb90d189d72a99dcaa6c"
   },
   "chronology.csv": {
-   "bytes": 14908,
-   "sha256": "a03ef23e2e6f0f723247ddd91081233d4bcb64e5dbcc52c6e9f8b79801c969eb"
+   "bytes": 14765,
+   "sha256": "d67afae271a335416099c1a3d45ccf245f165e8f1f2955d56732d829ff5dfcc3"
   },
   "class_counts.csv": {
    "bytes": 34769,
    "sha256": "feee302132a3a15e36bf4641a61b1588a2be2ce9c8fc6cb209c471a66b7f7545"
   },
   "code_rule_periods.csv": {
-   "bytes": 13967,
-   "sha256": "6574ec99f08fbe4d1628ba0dfe8ecf6f61226d01575eb80e022c9f606bd9b0d2"
+   "bytes": 13996,
+   "sha256": "86cbe522fcef2315972e53746598edc4988c33cc540a33618064da01ee0aceaa"
   },
   "coin_ledger.csv.gz": {
-   "bytes": 475923,
-   "sha256": "f7b49304f90804fc7c361d7f605fc1da62fa7cc3c59c6476c4884b2a1402d682"
+   "bytes": 475391,
+   "sha256": "9abe451bd29b36654f39544e9858358db9ffddee2a7f12003b51adf9c8e6a66a"
   },
   "coin_outcomes.csv.gz": {
-   "bytes": 3614456,
-   "sha256": "40dd133a21d4954698e4aecadda48fa4d0e56476e8fb939dfd5b466046914ead"
+   "bytes": 3930293,
+   "sha256": "80bf86948547a09e101a562af766d47172d9e9b3e6bdd928431fb850fc1bc670"
   },
   "coverage_and_incidents.csv": {
-   "bytes": 11744,
-   "sha256": "bdd66e1ed4fa1b3b81d6bd7a6e41f0bc75c75aec8a9e9670c00ce6d7abf732b8"
+   "bytes": 12356,
+   "sha256": "859123c937f6df716584f158be8af4eb6a8c7baa35f6e77252d8b9e043d33779"
   },
   "decisions.csv": {
-   "bytes": 634037,
-   "sha256": "3907084c0b7a2f412b87150a0aa7af7a9a079ea22e1f5f1e96091920dd7e442f"
+   "bytes": 642505,
+   "sha256": "814cf61ea488749fe2fb411532681a39ad15dbceb16567ceef9993b9dacc42fa"
   },
   "distinct_first_buys.csv": {
    "bytes": 136761,
    "sha256": "5bffbaccb96877fff94da8fb0eec7124c5bd3e013adc48eb83e3aaca19621a94"
   },
   "entries.csv": {
-   "bytes": 2084259,
-   "sha256": "16382b576d6b715ef86191c48f2dd010045521bfe812b318d69e324b2334cc46"
+   "bytes": 2179517,
+   "sha256": "f7b0e50e20025e5c03726915a871075f123b3468b2a06717a4d8a68ae7f114ed"
   },
   "entry_candidates.csv": {
    "bytes": 1015616,
    "sha256": "e3ed477e251ea49ccc55ec63cbaa9016d52ff6d00330106f7b9d08054a92ce76"
   },
   "entry_features.csv": {
-   "bytes": 1251879,
-   "sha256": "8f89546106fc98a8bae6c5171d403252b5d7d12bb1696d76646e56c75abdf166"
+   "bytes": 1252035,
+   "sha256": "b4eaf7f61920d94f57b10ce1b25c818d6773bad268b50118c827958e981ec3e7"
   },
   "exit_comparison_identical_buys.csv": {
    "bytes": 15775,
    "sha256": "8b0b7f06ba3d5be3eabf761952613074343dcdb48779e48d970ea7b1af3e6c61"
   },
   "fills.csv": {
-   "bytes": 799728,
-   "sha256": "ebdfde30ce904916e46e541825f71387d1e797be6ce710d11a0f3380cf5c3ba2"
+   "bytes": 869457,
+   "sha256": "500f4bfff094837a10a08385a8464dd110ccfc19ea838da748be8d2ea863aaeb"
   },
   "positions.csv.gz": {
-   "bytes": 793592,
-   "sha256": "86edf940790d89108b6539d6b653992945e52c3e4ab03470157724ad3fab09e6"
+   "bytes": 878943,
+   "sha256": "0428d36137596045a5a97aecb5e5ea799219833f6eb057d8d809e6df0177db04"
+  },
+  "program_starts.csv": {
+   "bytes": 1817,
+   "sha256": "9a0735be54c26dbcf9333db53645dd615dd0ecb35fdd7eb72f4016539895a348"
   },
   "rejections.csv.gz": {
    "bytes": 6515087,
@@ -337,8 +346,8 @@
    "sha256": "187beb2d7682b256b0a600084e1e38a4b28eb0c925b41f993490db424cb10a7a"
   },
   "sales.csv.gz": {
-   "bytes": 439649,
-   "sha256": "dda2e7806c132123146d7477c71fe0813a5f52dfad85cea960e393e6d0425b7e"
+   "bytes": 535045,
+   "sha256": "06036a0e0a6ca048f9a436a08b33240bac1b7cc4e14749fb4577e2a868c432b2"
   },
   "scoreboard.csv": {
    "bytes": 40749,
@@ -352,5 +361,6 @@
    "bytes": 82526,
    "sha256": "240aca721696873aed3a1a2159bb82325bb8e3b4f8de84e2cb4995aacd034f0a"
   }
- }
+ },
+ "corrections": "24 Nov 2026: see README.md"
 }

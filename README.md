@@ -61,6 +61,14 @@ day, censoring, clock books against their parents, never-bought coins).
 - `candidate_tests.csv` — every filter tested (one fixed grid; in-sample; exploratory). `exit_comparison_identical_buys.csv` — the ten rows on buys where all ten are closed (biased towards quick stop-outs; see the report). `book_overlap.csv`, `class_counts.csv`, `distinct_first_buys.csv`.
 - `manifest.json` — cut-off, commit, row counts and SHA-256 of every file, and the raw tables' SQL.
 
+## Corrections of 24 Nov 2026 (after Codex's full-export review; data and cut-off unchanged)
+- **Code period of each buy.** `entries.csv`/`positions.csv` `code_commit` is now the commit the program recorded at its own start (feed rows `start`; 24 recorded starts, listed in the new `program_starts.csv`). `code_commit_basis` says so. For the 38 buys before the first start record `code_commit` is empty and `code_commit_inferred` holds the newest source commit before that start. The earlier package inferred every period and disagreed with the records on 80 buys.
+- **Time precision.** Numbers are written in full; `*_t` columns are epoch seconds to the millisecond (the earlier package cut them to ten significant digits, i.e. whole seconds). `positions.csv` gains `sale_sched_t` (trigger + 0.7 s for a stop).
+- **Spot path while held.** `spot_hi_held_x`, `spot_lo_held_x` and their times now use only whole minutes strictly inside the holding; the minute containing the fill and the minute containing the sale are excluded (`spot_path_basis`). One-minute bars never show the order of prices inside a minute: do not infer a stop/target sequence from them.
+- **Evidence class of each sale leg** (`sales.csv`, `evidence_class`): measured with pool reserves and fee saved (independently repricable) 19,059; measured by the bot at the time, reserves not saved on that leg (1,653 — older legs); measured routed quote 122; estimated from one-minute prices 584.
+- **T4 wording.** `drawdown4h` is four-hour low ÷ four-hour high − 1 (a range measure). REPORT.md and RESPONSE-to-codex.md described it as the distance of the current price from the high; corrected. The number tested (≥ −0.18) is unchanged.
+- No result figure changed: the package still reproduces the bot's own report on 1,236 of 1,240 rows.
+
 ## What is not in the package, and what that prevents
 - Minute bars of coins that were never bought (only hourly high/low/volume for all coins; minute bars of the 272 bought coins are in the raw branch). Prevents exact replay of signals on never-bought coins.
 - Raw per-trade observations (the bot keeps them in memory only; a buy stores up to 1,500 observations of its own trigger window — in the raw `entries` table, field `evidence`). Prevents re-running a rule tick by tick outside those windows.

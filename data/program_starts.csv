@@ -1,0 +1,27 @@
+start_utc,start_t,commit,spec,basis
+2026-11-20T14:53:46Z,1795186426.245,,,first start of this database; commit not recorded
+2026-11-20T14:58:56Z,1795186736.955,,,restart seen in the feed log; commit not recorded
+2026-11-20T17:29:43Z,1795195783.327,43f5ab2,older-3,recorded start
+2026-11-20T17:31:44Z,1795195904.349,decaa91,older-3,recorded start
+2026-11-20T17:47:40Z,1795196860.81,5963512,older-3,recorded start
+2026-11-20T18:04:55Z,1795197895.848,23c4657,older-3,recorded start
+2026-11-20T18:26:04Z,1795199164.261,c5dda67,older-3,recorded start
+2026-11-20T18:57:09Z,1795201029.777,e511f2f,older-3,recorded start
+2026-11-20T19:20:31Z,1795202431.037,07dd68e,older-3,recorded start
+2026-11-20T19:45:08Z,1795203908.547,d8eb842,older-3,recorded start
+2026-11-21T12:28:54Z,1795264134.358,4a890e3,older-3,recorded start
+2026-11-21T13:10:31Z,1795266631.242,8474066,older-4,recorded start
+2026-11-21T14:19:37Z,1795270777.861,c3d3bcd,older-5,recorded start
+2026-11-21T14:29:11Z,1795271351.883,2aa3eef,older-5,recorded start
+2026-11-21T14:48:27Z,1795272507.901,4cef979,older-5,recorded start
+2026-11-21T16:12:37Z,1795277557.458,7abc863,older-6,recorded start
+2026-11-21T16:19:50Z,1795277990.696,37a5793,older-6,recorded start
+2026-11-21T16:23:59Z,1795278239.679,d07c49e,older-6,recorded start
+2026-11-21T16:46:33Z,1795279593.644,95b0a2d,older-7,recorded start
+2026-11-21T21:23:14Z,1795296194.446,c780ef6,older-8,recorded start
+2026-11-21T21:32:01Z,1795296721.039,bae3939,older-8,recorded start
+2026-11-21T22:38:05Z,1795300685.224,7bc6cd7,older-8,recorded start
+2026-11-22T01:16:35Z,1795310195.077,0a3b8d3,older-8,recorded start
+2026-11-22T01:25:49Z,1795310749.817,4a56633,older-8,recorded start
+2026-11-22T21:12:19Z,1795381939.9,cecc7a2,older-9,recorded start
+2026-11-22T21:24:00Z,1795382640.069,834ca71,older-9,recorded start
