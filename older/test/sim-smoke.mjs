@@ -4,9 +4,11 @@ const db = process.argv[2], port = Number(process.argv[3] || 0);
 const store = new Store(db), e = new Engine({ store, solUsd: () => 100 });
 const T0 = 1_800_000_000, N = Number(process.argv[4] || 300), H = 3600, HOURS = Number(process.argv[5] || 12); let rnd = 7; const R = () => ((rnd = (rnd * 1103515245 + 12345) % 2147483648) / 2147483648);
 const coins = Array.from({ length: N }, (_, i) => ({ mint: "Sim" + i + "pump", pool: "Pool" + i, mc: 20000 + R() * 300000, create: T0 - R() * 40 * H }));
-e.feedUp(T0); for (const c of coins) { e.coin(c.mint, { pool: c.pool, createTs: c.create }); store.saveCoin(c.mint, { pool: c.pool, createTs: c.create }); }
+// synthetic fixtures (older-10): every coin is a classic SPL token (fee known) and the stream is measured 1 s behind throughout
+e.feedUp(T0); for (const c of coins) { e.coin(c.mint, { pool: c.pool, createTs: c.create }).info.token_program = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"; store.saveCoin(c.mint, { pool: c.pool, createTs: c.create }); }
 let swaps = 0; const t0 = Date.now();
 for (let t = T0; t < T0 + HOURS * H; t += 20) {
+  for (let x = t; x < t + 20; x += 4) e.noteLag(x, 1); // the stream is measured current across the whole step (the synthetic swaps of one step are not in time order)
   for (const c of coins) { if (R() < 0.5) continue; c.mc *= Math.exp((R() - 0.5) * 0.06 + (R() < 0.001 ? 0.8 : 0) - (R() < 0.0006 ? 0.5 : 0)); c.mc = Math.min(Math.max(c.mc, 3000), 3e6);
     e.onSwap({ t: t + R() * 19, mint: c.mint, pool: c.pool, base: 2e8, quote: (c.mc / 1e11) * 2e8, feeBps: 30, sol: R() * 2, isBuy: R() < 0.55, user: "w" + Math.floor(R() * 500) }); swaps++; }
   store.tx(() => e.tick(t)); if (t % 60 === 0) e.prune(t);

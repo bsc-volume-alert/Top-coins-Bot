@@ -1,7 +1,8 @@
 // spec.mjs — the FROZEN rule constants for the older-coin paper project (older-1, 20 Nov 2026 UK).
 // Every number a rule depends on lives here and nowhere else. Changing one is a new spec version (SPEC_VER), never a silent edit.
 // The written specification that matches this code: older/docs/SPEC.md.
-export const SPEC_VER = "older-9"; // 22 Nov 2026 17:40 UK: + BUYING AGAIN (owner's decision) — a book that has bought a coin may buy it again, on any stop on which it no longer holds it (see REBUY below). The first buy per book, coin and age group is unchanged.
+export const SPEC_VER = "older-10"; // 24 Nov 2026 (ninth review, Codex on the full export): EXECUTION TRUST only, no strategy number changed — (A) a coin whose token program / Token-2022 extensions have not been read from the chain is not entered on EITHER method (was: sampled coins only), the mint-account reader serves live coins and runs without the sampled adapter, and a pending live buy is checked again at the fill; (B) FEED_MAX_LAG_S: no signal and no pricing while the stream runs more than 5 s behind the chain or its delay is unknown. Rules, thresholds, stops, exits: unchanged.
+// older-9: 22 Nov 2026 17:40 UK: + BUYING AGAIN (owner's decision) — a book that has bought a coin may buy it again, on any stop on which it no longer holds it (see REBUY below). The first buy per book, coin and age group is unchanged.
 // older-8: 21 Nov 2026 21:15 UK: + eight any-age books (owner's decision): VOL300K / VOL500K (5-minute volume, with and without a price-up condition, $40K–$2M) and RUG450 / RUG950 (80% below a peak, bought at the level and on a 30% bounce); evaluated from migration on, incl. the first 8 hours (age group A0). 29 families, 1,240 rows. Previous: older-7 // 21 Nov 2026 16:40 UK: + HH-BREAK-4H (owner's decision: HH-BREAK's buys, sold at 4 hours if still open; 21 families, 840 rows; the existing HH-BREAK buys are carried into it, sales past 4 h estimated from minute bars and marked). Previous: older-6 // 21 Nov 2026 16:00 UK: + HH30-5M, HH30-10M, HH15-5M (owner's decision: faster volume breakouts, no dollar floor; 20 families, 800 comparison rows). Previous: older-5 // 21 Nov 2026 (afternoon): + a 60% trailing stop (owner's decision; 5 stops, 680 comparison rows) and website-only stake views. Previous: older-4 // 21 Nov 2026: + FAST-10M, FAST-30M, FAST150-10M (owner's decision: fill the gap between the 5-minute and the 4-hour books); SECOND-WAVE seeds unchanged (1/3/5-minute doubles only). Previous: older-3 // 20 Nov 2026 pm: Solana-wide scope (launchpad/exchange-neutral), HH-BREAK completed-minute windows, SECOND-WAVE across age boundaries. Previous: older-2 // 20 Nov 2026: + FAST, FAST150, SECOND-WAVE, scale-out policy, 90-day ceiling, scheduled-time fills (owner + ChatGPT consensus round)
 
 export const STAKE_SOL = 0.2;                 // paper stake per entry
@@ -98,6 +99,12 @@ export const FEE_MAX = 0.10;                  // a measured pool fee outside 0�
 export const BACKFILL_MAX_HOLE_S = 300;       // back-filled minute bars prove a window only where consecutive bars are ≤ 5 min apart
 export const OMIT_DROP_AFTER = 10;             // a sampled token the price provider omits this many times in a row (no position, no setup) leaves the watch list
 export const SCALE_QUOTE_MAX_SPREAD_S = 5;    // the routed quotes of one half-sale must have been requested within 5 s of each other
+// STREAM FRESHNESS (ninth review, B) — an operating limit for execution trust, NOT a strategy filter and not tuned on results.
+// Our clock is receive time; each transaction also carries its block time. Normal delay is about 1.0–1.3 s. Above this limit
+// (or with no measurement in the last FEED_MAX_LAG_S seconds, or none since the last connect) the stream is not CURRENT:
+// no signal, no peak or stop, no order priced. The same number is the time measurements must stay within the limit before a
+// late spell is over. See Engine.noteLag / freshAt.
+export const FEED_MAX_LAG_S = 5;
 export const CHECKPOINT_S = 1;                // open positions' peaks are saved at most this long after they change
 export const BUYER_RAW_KEEP_S = 6 * 60;       // exact per-trade buyer wallets kept this long (the 1/3/5-minute entry measurements)
 export const BUYERS_KEEP_S = 20 * 60;          // per-bar buyer wallet lists kept this long (the features read 15 minutes); older bars keep the count only

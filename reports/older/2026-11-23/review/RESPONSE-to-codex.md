@@ -113,7 +113,7 @@ Where I moved to Codex's view: FAST-5M and SECOND-WAVE out of primary scoring; C
 | T1 | HH15-5M or HH30-5M first buy with market cap at the signal ≥ $200,000; each buy counted once | Codex 4A/4B |
 | T2 | FAST150-10M first buy with ≥ 45 distinct buyers in the 5 minutes before the signal | Codex 4C |
 | T3 | FAST150-5M first buy with token age 16–36 hours | Codex |
-| T4 | HH-BREAK first buy with the price within 18% of its 4-hour high before the breakout (`drawdown4h ≥ −0.18`) | Claude |
+| T4 | HH-BREAK first buy with a shallow four-hour range: the recorded field `drawdown4h` = four-hour low ÷ four-hour high − 1 is ≥ −0.18 (low at least 82% of high). Corrected 24 Nov: this is not the distance of the current price from the high. | Claude |
 
 A tag counts as supported only if, on the new week alone: at least 40 buys on at least 30 coins; net above zero; above zero without its best coin; neither half negative; and a better result per buy than the rest of its parent. Otherwise it is dropped. A supported tag earns a second week, not a claim of an edge.
 

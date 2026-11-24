@@ -1,0 +1,12 @@
+// reproduction on the UNCHANGED code (982ecde): what Codex reported, with the recorded values
+import { mkEngine, swap, path, H, T0 } from "../../../../older/test/helpers.mjs"; import * as R from "../../../../older/src/risk.mjs";
+const M = "MintAAApump", mk = (info, o = {}) => { const e = mkEngine({ tokens: null, ...o }); e.feedUp(T0); Object.assign(e.coin(M, { pool: "PoolA", createTs: T0 - 9 * H }).info, info); return e; };
+{ const e = mk({ token_program: R.TOKEN_2022, risk: { status: "missing" } }); path(e, T0, T0 + 600, () => 100_000, 10); swap(e, T0 + 600, 210_000, { sol: 5 }); swap(e, T0 + 601.2, 210_000); e.tick(T0 + 601.3);
+  const f = [...e.entries.values()].filter((x) => x.status === "filled"); console.log("A1: live Token-2022, extensions never read → filled entries:", f.length, "| books:", f[0]?.families.join("+"), "| recorded fee bps:", f[0]?.token.xfer_bps, "| risk_status:", f[0]?.token.risk_status, "| next mint account to read:", R.nextRiskRead(e, T0 + 602)); }
+{ const mint = (ext = []) => ({ owner: R.TOKEN_2022, data: { parsed: { info: { decimals: 6, supply: "1000000000000000", extensions: ext } } } });
+  const e = mk({ token_program: R.TOKEN_2022, risk: R.classifyMintAccount(mint()) }); path(e, T0, T0 + 600, () => 100_000, 10); swap(e, T0 + 600, 210_000, { sol: 5 });
+  e.coins.get(M).info.risk = R.classifyMintAccount(mint([{ extension: "transferFeeConfig", state: { newerTransferFee: { transferFeeBasisPoints: 800 }, olderTransferFee: { transferFeeBasisPoints: 800 } } }]));
+  swap(e, T0 + 601.2, 210_000); e.tick(T0 + 601.3); const f = [...e.entries.values()].filter((x) => x.status === "filled"); console.log("A3: restricted (8%) between decision and fill → filled:", f.length, "| coin risk now:", e.coins.get(M).info.risk.status, "| entry's recorded fee bps:", f[0]?.token.xfer_bps); }
+{ const e = mk({ token_program: R.SPL_TOKEN }); const ev = (t, mc, sol = 1) => e.onEvent({ t, mint: M, pool: "PoolA", kind: "buy", state: { base: 2e8, quote: mc / 1e11 * 2e8, feeBuy: 0.003, feeSell: 0.003, supply: 1e9 }, sol, isBuy: true, user: "u", blockTs: t - 60 });
+  for (let t = T0; t < T0 + 600; t += 10) ev(t, 100_000); ev(T0 + 600, 210_000, 5); ev(T0 + 601.2, 210_000); e.tick(T0 + 601.3);
+  const f = [...e.entries.values()].filter((x) => x.status === "filled"); console.log("B: every event 60 s late, stream connected → filled:", f.length, "| fill state_age_s:", f[0]?.fill.state_age_s, "| signal block_ts lag s:", f[0] && (f[0].decisionT - f[0].evidence.trigger.block_ts)); }

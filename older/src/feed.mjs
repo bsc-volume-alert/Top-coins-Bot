@@ -33,6 +33,8 @@ export function startFeed({ engine, store, backfill = null, pools /* Map pool â†
   // pool are applied in order to reconstruct the state, and only the COMMITTED state after the last one is handed to the engine
   // as an observation (volume summed). Intermediate states never create a price, a peak, a crossing or a stop.
   const emitTx = (evs, info, t, meta, replay = false) => {
+    // how far behind the chain the stream is running, from EVERY decoded transaction (any pool class): the engine's evidence of freshness
+    if (!replay) { let bts = null; for (const e of evs) if (e.ts) bts = e.ts; if (bts) engine.noteLag(t, Math.max(0, t - bts)); }
     const cls = poolClass(info); if (cls === "non-sol") { fs.nonSol += evs.length; if (info.mint === WSOL) fs.baseIsSol += evs.length; const k = (info.mint === WSOL ? "SOL" : String(info.mint).slice(0, 6)) + "/" + String(info.quote).slice(0, 8); fs.nonSolQuotes[k] = (fs.nonSolQuotes[k] || 0) + evs.length; return; }
     if (cls === "non-canonical") { fs.nonCanonical += evs.length; return; }
     const pool = evs[0].pool; let p = mem.get(pool); if (!p) mem.set(pool, (p = {}));

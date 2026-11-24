@@ -9,6 +9,8 @@ import { newCoin, evaluate } from "./signals.mjs";
 import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount } from "./book.mjs";
 import { liquidityUsd, staticImpact } from "./fills.mjs";
 import { feeKnown } from "./risk.mjs";
+/** why a coin cannot be bought on the LIVE method (pool-state fills model no transfer fee), or null */
+const liveBlock = (info) => { const rk = info?.risk; return rk?.status === "restricted" ? `restricted (${(rk.blocking || []).join(", ") || "transfer restriction"})` : rk?.fee_bps > 0 ? `a transfer fee of ${rk.fee_bps} bps, which the live method does not model` : !feeKnown(info) ? "transfer fee not known" : null; };
 const ALL_ROWS = S.POLICIES.flatMap((p) => S.STOPS.map((s) => p + "|" + s)), ROWS = ALL_ROWS.length; // the rows of one book on one buy: exit policy × stop
 
 const POLLED_UNSUPPORTED = new Set(["HH-BREAK", "HH-BREAK-4H", ...S.HH_FAST.map((x) => x[0]), ...S.ANY_AGE]), NEVER = () => false;
@@ -18,14 +20,50 @@ export class Engine {
     this.store = store; this.solUsd = solUsd; this.needCreation = needCreation; this.onFill = onFill; this.onEntry = onEntry; this.log = log; this.firstStart = firstStart;
     this.stats = { events: 0, swaps: 0, otherPool: 0, noSolUsd: 0, noCreation: 0, evals: 0, cands: 0, entries: 0, notes: 0, replayed: 0, tooOld: 0, lastT: null, evalMsMax: 0 };
     this.dirtyBars = new Map(); this.usdDown = false; this.dirty = new Set(); this.lastCkpt = 0; this.entriesUntil = null; this.onOwnership = () => {};
-    this.rebuy = true; /* spec REBUY: buying again after a sale; false = older-8 */ this.pollCov = new Coverage(); // continuity of PRICE POLLING (the Solana-wide adapter); independent of the PumpSwap WebSocket
+    this.stream = { at: null, lag: null, late: false, since: null, lastLate: null, spans: [], spells: 0, max: 0 }; /* stream freshness: see noteLag */ this.rebuy = true; /* spec REBUY: buying again after a sale; false = older-8 */ this.pollCov = new Coverage(); // continuity of PRICE POLLING (the Solana-wide adapter); independent of the PumpSwap WebSocket
     this.stats.prices = 0; this.stats.riskBlocked = 0; this.stats.quotes = 0;
   }
   /** the time the program was away. warm = the price memory was read back (warm.mjs): the signal coverage then closes the gap
    *  itself when the feed is up again (Coverage.resume / up), tolerated or not by its real length. Pool-state trust and exit
    *  flags (feedCov) always treat a restart as a plain gap. */
   restartGap(from, to, { warm = false } = {}) { if (from != null && to > from) { if (!warm) this.cov.gaps.push([from, to]); this.feedCov.gaps.push([from, to]); this.store?.feedEvent(to, warm ? "restart-gap (warm: price memory read back)" : "restart-gap", `${from}`); } }
-  feedUp(t) { this.feedCov.up(t, "feed"); this.cov.up(t, "feed"); if (!this.cov.down) for (const c of this.coins.values()) if (c.mode !== "polled") c.series.startLive(t); /* a sampled coin's history starts at its own first sample, never at the PumpSwap feed's */ this.store?.feedEvent(t, "up"); }
+  /** STREAM FRESHNESS (ninth review, B). `t` is OUR receive time; every decoded transaction also carries its block time, so
+   *  t − blockTs measures how far behind the chain the stream is running at that moment (normally 1.0–1.3 s). A stream can stay
+   *  connected and still be late: on 23 Nov 2026 it ran up to 112 s behind while every state looked 1 s old by receive time,
+   *  and 88 buys were signalled more than 10 s late. A lifetime average says nothing about now, so the evidence is per measurement.
+   *  The stream is CURRENT at time `at` (freshAt) only if
+   *    (1) its delay has been measured since the last (re)connect                      — unknown is not current;
+   *    (2) `at` is not inside a LATE SPELL: from the first measurement above FEED_MAX_LAG_S until measurements have stayed
+   *        within the limit for FEED_MAX_LAG_S seconds; nor inside a SILENCE longer than the limit;
+   *    (3) the newest measurement is no older than FEED_MAX_LAG_S before `at`         — a connected, silent stream proves nothing.
+   *  While it is not current: pool states are still rebuilt (the chain of reserves must stay continuous), but a late
+   *  observation creates no price history, no signal, no peak and no stop, and no order is priced. A pending buy runs into the
+   *  existing 5 s pricing timeout; a triggered sale stays pending and is priced by the first current state, with the delay it
+   *  really had (the 24 h unresolved rule is unchanged). For SIGNALS a late spell is a coverage gap exactly like an outage:
+   *  no window and no fresh crossing spans it, so catch-up observations cannot manufacture a crossing. For POOL-STATE TRUST it
+   *  is not a gap — nothing was lost, only late: once the stream is current again a quiet pool's last state is valid again, and
+   *  every open position is valued once on its pool's current state (_revalue).
+   *  This is not a rule about quiet pools: an old, unchanged pool state stays valid while the stream as a whole is current. */
+  noteLag(t, lagS) {
+    if (!(lagS >= 0) || !isFinite(lagS)) return; const L = this.stream, late = lagS > S.FEED_MAX_LAG_S;
+    if (L.at != null && !L.late && t - L.at > S.FEED_MAX_LAG_S) L.spans.push([L.at, t]); // connected but silent for longer than the limit: that stretch is unverified
+    L.at = t; L.lag = lagS; if (lagS > L.max) L.max = lagS; this.stats.streamLagS = +lagS.toFixed(2);
+    if (late) { L.lastLate = t; if (!L.late) { L.late = true; L.since = t; L.spells++; this.stats.lateSpells = L.spells; this.cov.drop(t, "late"); this.store?.feedEvent(t, "late", `stream ${lagS.toFixed(1)} s behind the chain (limit ${S.FEED_MAX_LAG_S} s): no signal and no pricing until it is current again`); } }
+    else if (L.late && t - L.lastLate >= S.FEED_MAX_LAG_S) { L.late = false; L.spans.push([L.since, t]); if (L.spans.length > 4000) L.spans.splice(0, 2000);
+      this.cov.up(t, "late"); if (!this.cov.down) for (const c of this.coins.values()) if (c.mode !== "polled") c.series.startLive(t);
+      this.store?.feedEvent(t, "current", `stream current again after ${(t - L.since).toFixed(1)} s late`); L.since = null; this._revalue(t); }
+  }
+  freshAt(at) { const L = this.stream; if (L.at == null || at > L.at + S.FEED_MAX_LAG_S) return false; if (L.late && L.since <= at) return false;
+    for (let i = L.spans.length - 1; i >= 0; i--) { const [a, b] = L.spans[i]; if (b <= at) break; if (a < at) return false; } return true; }
+  /** the stream is current again at t: each live position is valued once on its pool's state in force (peaks, stops, overdue orders) */
+  _revalue(t) { for (const [mint, ids] of this.byMint) { if (!ids.size) continue; const c = this.coins.get(mint); if (!c || c.mode === "polled" || !this.trustedAt(c, t)) continue;
+    for (const id of [...ids]) { const e = this.entries.get(id); if (!e || e.exec === "routed-quote") continue; const was = e.status, sig = e.versions.map((v) => v.status).join(); observe(e, c.state, t, this.feedCov); this._after(e, was, sig, ids, c); } } }
+  /** the risk reader read this coin's mint account: a fee or restriction found on a coin already HELD on the live method is
+   *  recorded on the position. The position, its exits and any unresolved exposure stay exactly as they are — nothing is
+   *  deleted and no sale is invented. (A pending live buy is cancelled by _run.) */
+  riskUpdated(mint) { const c = this.coins.get(mint), ids = this.byMint.get(mint); if (!c || !ids) return; const bad = liveBlock(c.info); if (!bad || !c.info.risk || c.info.risk.status === "missing") return;
+    for (const id of ids) { const e = this.entries.get(id); if (!e || e.exec === "routed-quote" || e.status !== "filled" || e.riskAfter === bad) continue; e.riskAfter = bad; e.flags.push(`found after the buy: the coin now has ${bad} — this position's result does not model it`); e.touched = true; } }
+  feedUp(t) { this.stream.at = null; this.stream.lag = null; /* the delay of the new connection is unknown until measured */ this.feedCov.up(t, "feed"); this.cov.up(t, "feed"); if (!this.cov.down) for (const c of this.coins.values()) if (c.mode !== "polled") c.series.startLive(t); /* a sampled coin's history starts at its own first sample, never at the PumpSwap feed's */ this.store?.feedEvent(t, "up"); }
   feedDown(t, why = "") { this.feedCov.drop(t, "feed"); this.cov.drop(t, "feed"); this.store?.feedEvent(t, "down", why); }
   /** a watched coin. mode "live" = decoded pool events (PumpSwap adapter); "polled" = sampled prices + routed quotes (Solana-wide adapter).
    *  A mint is observed in ONE mode; `info` carries the launchpad-neutral record (origin, venues, token program, sources, risk…). */
@@ -56,12 +94,16 @@ export class Engine {
   /** is the coin's current state known-good at time `at`? (observed, and nothing unknown between its observation and `at`) */
   /** is the coin's current state the one IN FORCE and known-good at time `at`? It must have been observed at or before `at`
    *  (a state that arrived later can never price an earlier moment), after any loss of the coin's data, with no feed gap in between.
-   *  A state reconstructed from a boost event is NOT trusted for fills: it is only confirmed (or contradicted) by the next swap. */
-  trustedAt(c, at) { return !!c.state && !c.state.approx && c.state.t <= at && (c.lostAt === null || c.state.t >= c.lostAt) && this.feedCov.gapsIn(c.state.t, at).length === 0; }
+   *  A state reconstructed from a boost event is NOT trusted for fills: it is only confirmed (or contradicted) by the next swap.
+   *  And the STREAM must be current at `at` (freshAt): receipt time alone does not show that the stream had caught up. */
+  trustedAt(c, at) { return !!c.state && !c.state.approx && c.state.t <= at && (c.lostAt === null || c.state.t >= c.lostAt) && this.feedCov.gapsIn(c.state.t, at).length === 0 && this.freshAt(at); }
   _run(mint, upTo, c) {
     const ids = this.byMint.get(mint); if (!ids) return;
     // each entry keeps the execution method it was opened with: a routed-quote entry is NEVER priced from a pool state
     for (const id of ids) { const e = this.entries.get(id), was = e.status, sig = e.versions.map((v) => v.status).join(), q = e.exec === "routed-quote";
+      // ELIGIBILITY IS CHECKED AGAIN AT THE FILL, on the live method too (ninth review, A): a pending live buy on a coin that is
+      // now restricted, now known to charge a fee, or whose fee is no longer known is CANCELLED, never filled.
+      if (!q && e.status === "pending") { const bad = liveBlock(c.info); if (bad) { e.status = "cancelled"; e.flags.push(`cancelled before the buy: the coin's transfer restrictions changed between the decision and the fill — now ${bad}`); this.stats.cancelledAtFill = (this.stats.cancelledAtFill || 0) + 1; this._after(e, was, sig, ids, c); continue; } }
       const mut = advance(e, upTo, q ? undefined : c.state, q ? NEVER : (at) => this.trustedAt(c, at), q ? this.pollCov : this.feedCov); this._after(e, was, sig, ids, c, mut); }
   }
   /** `seen` = the entry's decision state may have changed without a status change: a price was observed (peak, last value,
@@ -99,6 +141,9 @@ export class Engine {
     // moves no peak or stop, and creates no price observation or signal. Counted.
     if (st.approx) { this.stats.approxStates = (this.stats.approxStates || 0) + 1; if (c.series.breakOpen(ev.t)) this.stats.priceBreaks = (this.stats.priceBreaks || 0) + 1; return; } // recorded on the coin as a price-history break
     c.series.breakClose(ev.t); // a confirmed state ends any quarantine; the interval itself stays unusable
+    // STREAM NOT CURRENT (late, or its delay unknown — see noteLag): the state above is kept, nothing else is done with this
+    // observation: no valuation, peak or stop, no price history, no signal.
+    if (!ev.replay && !this.freshAt(ev.t)) { this.stats.lateEvents = (this.stats.lateEvents || 0) + 1; return; }
     // 3) open positions see it (value, peaks, triggers) — in SOL, independent of the USD reference
     if (!ev.replay) { const ids = this.byMint.get(ev.mint); if (ids) for (const id of ids) { const e = this.entries.get(id); if (e.exec === "routed-quote") continue; const was = e.status, sig = e.versions.map((v) => v.status).join(); observe(e, st, ev.t, this.feedCov); this._after(e, was, sig, ids, c); } }
     // 4) USD history and signals
@@ -124,8 +169,10 @@ export class Engine {
     if (c.info.risk?.status === "restricted") { if (!c.riskNoted) { c.riskNoted = true; this.stats.riskBlocked++; this.store?.saveNote(mint, { ag: null, family: "*", t: o.t, reason: "not evaluated for entry: token transfer restrictions make the execution assumption unsupported", detail: { risk: c.info.risk } }); } return null; }
     // a transfer-fee coin is entered only where the fee is modelled: the sampled method (the fee is taken off its routed quotes)
     if (c.info.risk?.fee_bps > 0 && c.mode !== "polled") { if (!c.riskNoted) { c.riskNoted = true; this.stats.riskBlocked++; this.store?.saveNote(mint, { ag: null, family: "*", t: o.t, reason: "not evaluated for entry: transfer-fee coin on the live method, where the fee is not modelled", detail: { fee_bps: c.info.risk.fee_bps } }); } return null; }
-    // UNKNOWN IS NOT "NO FEE" (eighth review, B1): a sampled coin whose transfer fee is not known yet is not entered
-    if (c.mode === "polled" && !feeKnown(c.info)) { this.stats.feeUnknown = (this.stats.feeUnknown || 0) + 1; if (!c.feeNoted) { c.feeNoted = true; this.store?.saveNote(mint, { ag: null, family: "*", t: o.t, reason: "not evaluated for entry: the coin's transfer fee has not been read from the chain yet", detail: { token_program: c.info.token_program ?? null } }); } return null; }
+    // UNKNOWN IS NOT "NO FEE" (eighth review, B1 — sampled coins; ninth review, A — live coins too): a coin whose token program
+    // or Token-2022 extensions have not been read from the chain is not entered. A live coin is marked for the mint-account
+    // reader here (risk.riskQueue), so the first decision that needs the answer is what asks for it.
+    if (!feeKnown(c.info)) { c.feeWanted = o.t; this.stats.feeUnknown = (this.stats.feeUnknown || 0) + 1; if (!c.feeNoted) { c.feeNoted = true; this.store?.saveNote(mint, { ag: null, family: "*", t: o.t, reason: "not evaluated for entry: the coin's transfer fee has not been read from the chain yet", detail: { token_program: c.info.token_program ?? null } }); } return null; }
     // BUYING AGAIN (spec REBUY): which rows each book still holds on this coin. A row is held while its entry is pending or the row is
     // not closed. A book may buy again when at least one of its rows is free; the first buy per age group is decided as before.
     const busy = this._busy(mint), tNow = o.t, log24 = (c.rebuys ||= {});

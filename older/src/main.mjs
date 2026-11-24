@@ -10,7 +10,7 @@ const { Store } = await import("./store.mjs"); const { Engine } = await import("
 const { startFeed, fs } = await import("./feed.mjs"); const { dec, IDL_PIN } = await import("./decoder.mjs");
 const { startSolUsd, solUsd, sp } = await import("./solusd.mjs"); const { startBackfill, bf } = await import("./backfill.mjs");
 const { inventory } = await import("./inventory.mjs"); const { gm } = await import("./gmgn.mjs"); const { startWeb } = await import("./web.mjs");
-const { verifyEntry, vf } = await import("./verify.mjs"); const { SPEC_VER } = await import("./spec.mjs");
+const { verifyEntry, vf } = await import("./verify.mjs"); const { SPEC_VER, FEED_MAX_LAG_S: S_FEED_MAX_LAG } = await import("./spec.mjs");
 
 const store = new Store(process.env.OLDER_DB || "/root/older/older.db");
 const log = (s) => console.log(new Date().toISOString(), s);
@@ -79,22 +79,19 @@ if (process.env.OLDER_SOLANA_WIDE === "1") {
   poller = new Poller({ engine, jup: J, store, log, hotEvery: Number(process.env.OLDER_HOT_S || 10), coldEvery: Number(process.env.OLDER_COLD_S || 60), quoteFast: Number(process.env.OLDER_QUOTE_FAST_S || 2), quoteSlow: Number(process.env.OLDER_QUOTE_SLOW_S || 10) });
   log(`[older] sampled coins restored to the watch list: ${poller.restore()}`);
   poller.start();
-  // TRANSFER RESTRICTIONS are read from the chain, one call each (risk.nextRiskRead): first a coin with a position whose fee is not
-  // known, then any coin whose fee is not known (most recently priced first), then — every RISK_REFRESH_S — coins we hold, because a
-  // fee can be raised while a position is open. Until a coin's fee is known it is not entered (engine._decide).
-  (async () => { const { nextRiskRead } = await import("./risk.mjs"); const { RISK_REFRESH_S } = await import("./spec.mjs");
-    while (true) { const c = nextRiskRead(engine, Date.now() / 1000, RISK_REFRESH_S); if (!c) { await new Promise((r) => setTimeout(r, 1000)); continue; }
-      const held = !!engine.byMint.get(c.mint)?.size; c.riskRead = true; c.riskAt = Date.now() / 1000;
-      try { const r = await rpc("getAccountInfo", [c.mint, { encoding: "jsonParsed" }]); const k = classifyMintAccount(r?.value); if (k.status !== "missing") { c.info.risk = k; if (k.program) c.info.token_program = k.program; store.saveCoin(c.mint, { info: c.info }); } else if (!c.info.risk) c.info.risk = k; }
-      catch { if (!c.info.risk) c.info.risk = { status: "missing", why: "mint account read failed" }; c.riskRead = false; c.riskRetryAt = Date.now() / 1000 + 60; } // a failed read is tried again; what was known before stays
-      await new Promise((r) => setTimeout(r, held ? 200 : 500)); } })();
   log("[older] Solana-wide adapter ON (Jupiter polling + routed quotes)");
 }
+// TRANSFER RESTRICTIONS are read from the chain for BOTH observation methods, whether or not the sampled adapter is on (ninth
+// review, A): coins with a position first, then coins a decision is waiting on, then — every RISK_REFRESH_S — coins we hold,
+// because a fee can be raised while a position is open. One getMultipleAccounts call per round (risk.riskReadOnce). Until a
+// coin's token program and extensions are known it is not entered (engine._decide).
+(async () => { const { riskReadOnce } = await import("./risk.mjs"); const { RISK_REFRESH_S } = await import("./spec.mjs");
+  while (true) { let n = 0; try { n = await riskReadOnce(engine, store, rpc, Date.now() / 1000, RISK_REFRESH_S); } catch {} await new Promise((r) => setTimeout(r, n ? 250 : 1000)); } })();
 const inv = () => { try { return JSON.parse(store.db.prepare("SELECT v FROM meta WHERE k='inventory'").get()?.v || "null"); } catch { return null; } };
 // the reserve reading counts as validated only when the owner sets OLDER_RES_VALIDATED=1 after reviewing docs/tx-validation.json
 const valid = () => (process.env.OLDER_RES_VALIDATED === "1" ? { by: "OLDER_RES_VALIDATED" } : null);
 const web = startWeb({ port: Number(process.env.OLDER_PORT || 8793), store, engine, status: () => ({ started: now0, first_start: firstStart, commit: COMMIT, run: process.env.OLDER_RUN_NAME || null, entries_until: engine.entriesUntil, idl: IDL_PIN,
-  feed: { ...fs, lag_ms_avg: fs.lagN ? Math.round(fs.lagMsSum / fs.lagN) : null }, engine: { ...engine.stats, coins: engine.coins.size, open: [...engine.byMint.values()].reduce((s, x) => s + x.size, 0), feed_gaps: engine.feedCov.gaps.length, usd_down: engine.usdDown },
+  feed: { ...fs, lag_ms_avg: fs.lagN ? Math.round(fs.lagMsSum / fs.lagN) : null }, stream: { lag_s: engine.stream.lag != null ? +engine.stream.lag.toFixed(2) : null, measured_at: engine.stream.at, late: engine.stream.late, late_since: engine.stream.since, late_spells: engine.stream.spells, max_lag_s: +engine.stream.max.toFixed(1), limit_s: S_FEED_MAX_LAG }, engine: { ...engine.stats, coins: engine.coins.size, open: [...engine.byMint.values()].reduce((s, x) => s + x.size, 0), feed_gaps: engine.feedCov.gaps.length, usd_down: engine.usdDown },
   decoder: { ...dec }, tx_validation: valid(), verify: { ...vf }, snapshots: { ...snapStats }, sol: { ...sp }, gmgn: { calls: gm.calls, errors: gm.errors, limited: gm.limited, banned: gm.banned, lastErr: gm.lastErr, rate_headers: gm.headers }, backfill: { ...bf }, backfillQ: backfill.size(), jupiter: { ...J.ju, key: !!process.env.JUP_API_KEY, rps: Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0.5)) }, poller: poller ? { ...poller.stats, cadence_avg_s: poller.stats.cadence.n ? +(poller.stats.cadence.sum / poller.stats.cadence.n).toFixed(1) : null, hot_s: poller.hotEvery, cold_s: poller.coldEvery } : null, inventory: inv(), mem_mb: Math.round(process.memoryUsage().rss / 2 ** 20), sizes: sizes() }) });
 log(`[older] started, spec ${SPEC_VER}, paper only`);
 
