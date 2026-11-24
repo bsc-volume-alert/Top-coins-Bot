@@ -4,7 +4,8 @@
 //   status "clean"      : checked, none of the restrictions below
 //   status "flagged"    : tradeable under our assumption, but with recorded warnings (mint/freeze authority still active, "sus" marker…)
 //                         — includes a TRANSFER FEE of at most XFER_FEE_MAX_BPS: entered, fee deducted on the buy and on every sale (fee_bps)
-//   status "missing"    : no risk data — recorded as missing, NOT treated as clean; entries proceed with the flag
+//   status "missing"    : no risk data — recorded as missing, NOT treated as clean. From older-10 a coin whose token program /
+//                         Token-2022 extensions are not known is NOT ENTERED on either method (feeKnown); the reader retries it
 // Risk flags are evidence, not proof a later sale succeeds.
 import { XFER_FEE_MAX_BPS } from "./spec.mjs";
 export const TOKEN_2022 = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb", SPL_TOKEN = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
@@ -20,6 +21,7 @@ export const feeKnown = (info) => info?.token_program === SPL_TOKEN || info?.ris
  *    3. coins with a pending or open position last read over refreshS ago     (a fee can be raised while we hold)
  *  Both observation methods (ninth review, A: until 24 Nov 2026 live coins were never read). A classic SPL token needs no
  *  read (the program has no extensions); a read that failed is retried after a minute without holding up the others. */
+const LAT_EDGES = [1, 2, 5, 10, 30, 60, 300, Infinity]; // seconds from the first decision that needed a coin to its classification
 export function riskQueue(engine, now, refreshS = 600, max = 50) {
   const a = [], b = [], c = [];
   for (const x of engine.coins.values()) { if (x.info?.token_program === SPL_TOKEN || (x.riskRetryAt ?? 0) > now) continue;
@@ -31,18 +33,37 @@ export function riskQueue(engine, now, refreshS = 600, max = 50) {
 }
 /** the single next coin (the head of riskQueue), or null */
 export const nextRiskRead = (engine, now, refreshS = 600) => riskQueue(engine, now, refreshS, 1)[0] ?? null;
+/** reader counters for the status report (bounded): how many accounts were asked for, what came back, and how long a coin
+ *  waited between the first decision that needed its classification and the classification arriving */
+export const rk = { rounds: 0, asked: 0, classified: 0, transport_fail_rounds: 0, null_account: 0, unparsed: 0, short_response: 0, retries: 0, max_batch: 0, backoff_max_s: 0,
+  rpc_ms_sum: 0, rpc_ms_max: 0, latency_n: 0, latency_sum_s: 0, latency_max_s: 0, latency_hist: LAT_EDGES.map(() => 0), refreshes: 0, refresh_overdue_sum_s: 0, refresh_overdue_max_s: 0 };
+/** the reader's part of the status report: the counters above plus the queue as it stands (length, oldest waiting request) */
+export const riskStatus = (engine, now, refreshS = 600) => { const q = riskQueue(engine, now, refreshS, Infinity), w = q.map((c) => c.feeWantedFirst).filter((x) => x != null);
+  return { ...rk, latency_hist: Object.fromEntries(LAT_EDGES.map((x, i) => [x === Infinity ? ">300" : "<=" + x, rk.latency_hist[i]])), latency_mean_s: rk.latency_n ? +(rk.latency_sum_s / rk.latency_n).toFixed(2) : null, rpc_ms_mean: rk.rounds ? Math.round(rk.rpc_ms_sum / rk.rounds) : null,
+    refresh_overdue_mean_s: rk.refreshes ? +(rk.refresh_overdue_sum_s / rk.refreshes).toFixed(1) : null, queue: q.length, queue_oldest_wait_s: w.length ? +(now - Math.min(...w)).toFixed(1) : null, backing_off: [...engine.coins.values()].filter((c) => (c.riskRetryAt ?? 0) > now).length }; };
+const WHY = { transport: "mint account read failed", null_account: "the provider returned no account for this mint", unparsed: "mint account not parsed", short_response: "the provider's answer was shorter than the request" };
 /** ONE ROUND of the reader: reads the queued mint accounts in one call and records what they say. Returns how many were asked.
- *  rpc(method, params) is injected (feed.rpc in production). What was known before a failed read stays; a coin whose account
- *  could not be read stays "fee not known" and is therefore not entered. engine.riskUpdated(mint) lets the engine record a
- *  restriction found on a coin it already holds. No dependency on the sampled adapter. */
+ *  rpc(method, params) is injected (feed.rpc in production). No dependency on the sampled adapter.
+ *  FAILURES (Codex B5) — a whole-batch failure (transport) and a per-account failure (no account, an account that does not
+ *  parse, an answer shorter than the request) are told apart and counted. Either way the coin is tried again with a bounded
+ *  back-off (1 min, doubling, at most 1 h), what was known about it before stays, and one bad account never strands the others
+ *  in its batch. A coin whose account could not be read stays "fee not known" and is therefore not entered — but it is no
+ *  longer dropped from the queue for good. engine.riskUpdated(mint) lets the engine record a restriction found on a coin it holds. */
 export async function riskReadOnce(engine, store, rpc, now, refreshS = 600, max = 50) {
   const q = riskQueue(engine, now, refreshS, max); if (!q.length) return 0;
-  for (const c of q) { c.riskRead = true; c.riskAt = now; }
-  let vals = null; try { vals = (await rpc("getMultipleAccounts", [q.map((c) => c.mint), { encoding: "jsonParsed" }]))?.value ?? null; } catch { vals = null; }
+  rk.rounds++; rk.asked += q.length; if (q.length > rk.max_batch) rk.max_batch = q.length;
+  for (const c of q) { if (c.riskFails) rk.retries++; else if (c.riskRead && c.riskAt != null) { const late = Math.max(0, now - c.riskAt - refreshS); rk.refreshes++; rk.refresh_overdue_sum_s += late; if (late > rk.refresh_overdue_max_s) rk.refresh_overdue_max_s = +late.toFixed(1); } c.riskRead = true; c.riskAt = now; }
+  const p0 = performance.now(); let vals = null; try { vals = (await rpc("getMultipleAccounts", [q.map((c) => c.mint), { encoding: "jsonParsed" }]))?.value ?? null; } catch { vals = null; }
+  const took = (performance.now() - p0) / 1000, batchFail = !Array.isArray(vals); if (batchFail) rk.transport_fail_rounds++; rk.rpc_ms_sum += took * 1000; if (took * 1000 > rk.rpc_ms_max) rk.rpc_ms_max = Math.round(took * 1000);
+  // back-off: 1 min, doubling, at most 1 h — and for a coin we hold never longer than its normal refresh interval
+  const fail = (c, why) => { if (why !== "transport") rk[why]++; c.riskFails = (c.riskFails || 0) + 1; c.riskRead = false; const wait = Math.min(engine.byMint.get(c.mint)?.size ? refreshS : 3600, 60 * 2 ** Math.min(c.riskFails - 1, 10)); c.riskRetryAt = now + wait; if (wait > rk.backoff_max_s) rk.backoff_max_s = wait;
+    c.riskFailWhy = why; if (!c.info.risk) c.info.risk = { status: "missing", why: WHY[why] }; };
   q.forEach((c, i) => {
-    if (!Array.isArray(vals)) { if (!c.info.risk) c.info.risk = { status: "missing", why: "mint account read failed" }; c.riskRead = false; c.riskRetryAt = now + 60; return; } // tried again; what was known before stays
-    const k = classifyMintAccount(vals[i]);
-    if (k.status !== "missing") { c.info.risk = k; if (k.program) c.info.token_program = k.program; store?.saveCoin(c.mint, { info: c.info }); engine.riskUpdated?.(c.mint); } else if (!c.info.risk) c.info.risk = k; });
+    if (batchFail) return fail(c, "transport"); if (i >= vals.length) return fail(c, "short_response"); if (vals[i] == null) return fail(c, "null_account");
+    const k = classifyMintAccount(vals[i]); if (k.status === "missing") return fail(c, "unparsed");
+    k.read_at = Math.round(now + took); c.info.risk = k; if (k.program) c.info.token_program = k.program; c.riskFails = 0; c.riskFailWhy = null; rk.classified++;
+    if (c.feeWantedFirst != null) { const w = Math.max(0, now + took - c.feeWantedFirst); rk.latency_n++; rk.latency_sum_s += w; rk.latency_hist[LAT_EDGES.findIndex((x) => w <= x)]++; if (w > rk.latency_max_s) rk.latency_max_s = +w.toFixed(2); c.feeWantedFirst = null; }
+    store?.saveCoin(c.mint, { info: c.info }); engine.riskUpdated?.(c.mint); });
   return q.length;
 }
 const BLOCKING = new Set(["transferHook", "nonTransferable", "permanentDelegate", "pausableConfig", "confidentialTransferMint"]);

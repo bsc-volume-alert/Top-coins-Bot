@@ -225,7 +225,7 @@ and corrected. Entry rules, thresholds, bands, ages, stops and exits are exactly
   recorded). That does not show a fee was charged on any of them; it shows fee-free execution was never established.
 - The mint-account reader (`risk.riskQueue` / `riskReadOnce`, started in `main.mjs`) now serves live coins and runs whether or
   not the sampled adapter is on. Order: coins with a position; then coins a decision is waiting on (a live coin is asked for by
-  the first decision that needs it); then, every `RISK_REFRESH_S`, coins that are held. One `getMultipleAccounts` call per round.
+  its first evaluation for entry); then, every `RISK_REFRESH_S`, coins that are held. One `getMultipleAccounts` call per round.
 - Unchanged policy: a coin that charges a transfer fee is supported on the sampled method only (the fee is inside its routed
   quotes); on the live method it is not entered. A restricted coin is entered on neither.
 - A pending live buy is checked again when it is about to fill: restricted, fee-bearing or no-longer-known → **cancelled**,
@@ -234,29 +234,77 @@ and corrected. Entry rules, thresholds, bands, ages, stops and exits are exactly
   position, its exits and any unresolved exposure stay; nothing is deleted and no sale is invented.
 - Declared limits: the classification is cached and refreshed only while a position is held (same as the sampled method). A
   Token-2022 fee change is announced in the mint account before it takes effect and the higher of the two fees is used, so a
-  cached read does not understate a fee. A transfer-hook extension with no program set is not blocking (existing rule) and
+  read does not understate the schedule known at that read. It says nothing about an update announced after it; the age of
+  the reading is recorded on every entry and fill (section C). A transfer-hook extension with no program set is not blocking (existing rule) and
   could be armed later; it is caught by the refresh while held and by the check at the fill.
 
 ### B. Stream freshness (`FEED_MAX_LAG_S = 5`) — an operating limit, not a strategy filter
+*(State machine corrected after Codex's review of commit 3537ada — findings B1, B3, B4. The three 5-second figures are
+declared, frozen paper-execution assumptions. They were not fitted to results and are not claimed to be optimal.)*
+
 - Our clock is receive time. Every decoded transaction also carries its block time, so `receive − block` measures how far
   behind the chain the stream is at that moment (normally 1.0–1.3 s). On 23 Nov the stream stayed connected and ran up to
   112 s behind; 105 buys were signalled more than 5 s late while their pool state looked 1 s old.
-- The stream is **current** at a time only if (1) its delay has been measured since the last connect, (2) the time is not
-  inside a late spell — from the first measurement above 5 s until measurements have stayed within 5 s for 5 s — nor inside a
-  silence longer than 5 s, and (3) the newest measurement is not more than 5 s old. Evidence is per measurement, from every
-  decoded transaction of any pool; a lifetime average is never used. Unknown is not current.
-- While the stream is not current: pool states are still rebuilt, but a late observation creates no price history, no
-  signal, no peak and no stop, and no order is priced from a pool state. A pending buy meets the existing 5-second pricing
-  timeout (cancelled, counted as a failed fill). A triggered sale stays pending and is priced by the first current state,
-  with the delay it really had; the 24-hour unresolved rule is unchanged.
-- For **signals** a late spell is a coverage gap exactly like an outage: no window and no fresh crossing spans it, so
-  catch-up observations cannot manufacture a crossing. Hour-scale windows are affected as after any outage.
-- For **pool-state trust** a late spell is not a gap: nothing was lost, only late. When the stream is current again a quiet
-  pool's last state is valid again and every open live position is valued once on its pool's state in force.
-- This is not a rule about quiet pools. An old, unchanged pool state remains a valid price while the stream as a whole is
-  current.
-- Recorded: feed log rows `late` / `current`; status `stream` (current delay, late now, number of late spells, largest
-  delay); `engine.lateEvents`. Each buy still stores its own block time and receive time.
+- **One state machine** (`engine.stream`) serves both pricing (`freshAt` → `trustedAt`) and signal coverage (`cov`, reason
+  `stream`). The stream is **current**, or **interrupted** for one of three causes:
+  - `connect` — start-up or a reconnect: the delay on this connection has not been measured. *Unknown is not current.* It
+    ends at the **first good measurement on the connection** (the initial-connection policy, kept as written). Nothing before
+    that measurement is treated as current — the time between a connect and its first measurement is not back-dated.
+  - `late` — a measurement above 5 s.
+  - `silence` — no transaction at all for more than 5 s while connected; it starts at the last evidence.
+  - `late` and `silence` end only after a **good-evidence period** of 5 s: it starts at the first good measurement and
+    starts again after a bad measurement, after more than 5 s without a measurement, or after a disconnect. A connection
+    whose first measurement is late owes the full period. One good measurement after a quiet stretch ends nothing.
+- **Order inside one transaction** (`engine.tx`, used by `feed.mjs`): (1) its delay is noted — this can *start* an
+  interruption at once, but can only *propose* the end of one; (2) all of the transaction's committed pool states are
+  installed; (3) only then does the end of the interruption take effect, and every open live position is valued once on the
+  pool state **now** in force. A recovery therefore never prices an order on a state that the recovering transaction itself
+  replaced, and a transaction that touches several pools is never valued halfway through.
+- While the stream is not current: pool states are still rebuilt, but an observation creates no price history, no signal,
+  no peak and no stop, and no order is priced from a pool state. A pending buy meets the existing 5-second pricing timeout
+  (cancelled, counted as a failed fill). A triggered sale stays pending and is priced by the first current state, with the
+  delay it really had; the 24-hour unresolved rule is unchanged.
+- For **signals** every interruption — connect, late **and silence** — is a coverage gap exactly like an outage: no exact
+  window and no fresh crossing spans it. Hour-scale windows follow the declared policy for any non-warm gap (a window that
+  contains the gap is not proven; back-filled minute bars may prove it under `BACKFILL_MAX_HOLE_S`). Each gap keeps its
+  cause in the feed log.
+- For **pool-state trust** a late spell or a silence is not in itself a gap: if events were complete and continuous, a
+  pool's state is valid again once the stream is current. Reconnects, lost events, overflow, chain discontinuities and
+  quarantined states keep their own, stronger requirements, unchanged.
+- **Every path that can fill a pending live buy** — the event path, the clock path and the valuation after a recovery —
+  passes the same eligibility gate (`engine._blocked`): restricted, fee-bearing or no-longer-known → cancelled with the
+  reason. A position that is already filled is never cancelled by it.
+- This is not a rule about quiet pools. An old, unchanged pool state remains a valid price while other transactions keep
+  the stream's delay measured.
+- **What the check can and cannot see.** A *delivered* transaction that is too old is detected whichever pool it belongs
+  to, even while other transactions are current. An update that *has not arrived* cannot be detected by this check, and one
+  good measurement does not prove that every pool is synchronised. Per-pool evidence remains the chain check on consecutive
+  reserves and the targeted comparison of fills against the chain.
+- Recorded, bounded: status `stream` — state, newest delay, number of measurements, mean and largest delay, a fixed
+  8-bucket histogram of the delay (≤1, ≤2, ≤3, ≤5, ≤10, ≤30, ≤60, >60 s), wall-clock seconds spent current / late /
+  recovering / silent / unknown, the count and the longest of each kind of interruption, the last 10 interruptions; feed
+  log rows `late` / `silence` / `current`; `engine.lateEvents`. Each buy still stores its own block time and receive time.
 
-Tests: `test/review9.test.mjs` (12). Fixtures in `test/helpers.mjs` declare what a real feed supplies (classic SPL tokens; a
-stream measured 1 s behind) and can be switched off per test; the production guards are not bypassed.
+### C. Mint-account reader — failures and age (Codex's review of 3537ada, finding B5 and limitation 3)
+- A coin is marked read only when a mint account was actually parsed. A whole-batch failure (`transport`), an answer shorter
+  than the request (`short_response`), an empty account (`null_account`) and an account that could not be parsed
+  (`unparsed`) are counted separately in status `risk_reader`, and the coin is asked for again after 60 s, doubling to at
+  most one hour (for a coin we hold: never longer than the normal refresh interval). One bad account does not affect the
+  others in its batch. Evidence already held for a coin is kept when a later read fails.
+- A coin whose fee is not known is still **not entered**, and a crossing that was blocked is never back-dated once the
+  classification arrives: a coin is asked for at its **first evaluation for entry**, normally long before any crossing, and
+  a crossing seen while it was unknown is not fresh afterwards. Status counts the blocked evaluations (an upper bound on
+  lost crossings — the entry rules are not run on an ineligible coin) and coins, the time from first request to classification
+  (mean, largest, fixed 8-bucket histogram), the provider's round-trip time, the queue and its oldest waiting request, and
+  how overdue each refresh of a held coin was.
+- Each classification stores when it was read (`risk.read_at`); each entry and each live fill stores the age of the reading
+  it relied on (`token.risk_age_s`, `fill.risk_age_s`). A reading takes the higher of the two scheduled Token-2022 fees —
+  that covers the schedule known at that read, **not** an update announced afterwards.
+- A live position on a coin that is later found fee-bearing or restricted keeps its ledger, its stops and its exposure.
+  Its closed rows are counted apart (`unsupported_fee_exits`, `unsupported_fee_net_sol`) and are in no primary total: the
+  modelled exit had no transfer fee in it. Nothing is deleted or zeroed.
+
+Tests: `test/review9.test.mjs` (12) and `test/review10.test.mjs` (13). Fixtures in `test/helpers.mjs` declare what a real feed
+supplies (classic SPL tokens; a stream measured 1 s behind) and can be switched off per test; the production guards are not
+bypassed. `review10` uses neither: it builds the production `Engine` directly and drives it one transaction at a time, in
+time order, through `engine.tx` — start-up, silence, late spells and recovery are not assumed.

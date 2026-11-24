@@ -33,8 +33,6 @@ export function startFeed({ engine, store, backfill = null, pools /* Map pool â†
   // pool are applied in order to reconstruct the state, and only the COMMITTED state after the last one is handed to the engine
   // as an observation (volume summed). Intermediate states never create a price, a peak, a crossing or a stop.
   const emitTx = (evs, info, t, meta, replay = false) => {
-    // how far behind the chain the stream is running, from EVERY decoded transaction (any pool class): the engine's evidence of freshness
-    if (!replay) { let bts = null; for (const e of evs) if (e.ts) bts = e.ts; if (bts) engine.noteLag(t, Math.max(0, t - bts)); }
     const cls = poolClass(info); if (cls === "non-sol") { fs.nonSol += evs.length; if (info.mint === WSOL) fs.baseIsSol += evs.length; const k = (info.mint === WSOL ? "SOL" : String(info.mint).slice(0, 6)) + "/" + String(info.quote).slice(0, 8); fs.nonSolQuotes[k] = (fs.nonSolQuotes[k] || 0) + evs.length; return; }
     if (cls === "non-canonical") { fs.nonCanonical += evs.length; return; }
     const pool = evs[0].pool; let p = mem.get(pool); if (!p) mem.set(pool, (p = {}));
@@ -87,12 +85,18 @@ export function startFeed({ engine, store, backfill = null, pools /* Map pool â†
       if (e.type === "pool") { fs.pools++; const info = { mint: e.baseMint, quote: e.quoteMint, creator: e.creator }; resolved(e.pool, info); if (poolClass(info) === "canonical") { store?.saveCoin(e.baseMint, { pool: e.pool, firstSeen: Math.floor(t), pumpOrigin: "pump.fun", info: { population: "pumpswap-canonical", origin: "pump.fun", origin_evidence: "canonical pool: creator = pump pool-authority PDA", venues: ["PumpSwap"], discovery_source: "pool-creation event", price_source: "pool events", monitoring_mode: "live" } }); engine.coin(e.baseMint, { pool: e.pool }); engine.historyFrom(e.baseMint, t); backfill?.want(e.baseMint); } continue; }
       if (!e.pool) continue; let a = byPool.get(e.pool); if (!a) byPool.set(e.pool, (a = [])); a.push(e);
     }
-    for (const [pool, evs] of byPool) {
-      const info = pools.get(pool);
-      if (info) { emitTx(evs, info, t, meta); continue; }
-      let h = hold.get(pool); if (!h) { if (hold.size >= HOLD_POOLS) { fs.overflow++; continue; } h = { items: [], overflow: false }; hold.set(pool, h); queue.add(pool); }
-      if (h.items.length < HOLD_PER_POOL) { h.items.push([evs, t, meta]); fs.held += evs.length; } else { h.overflow = true; h.items.shift(); h.items.push([evs, t, meta]); }
-    }
+    // ONE TRANSACTION, IN THE ONLY SAFE ORDER (engine.tx): its delay behind the chain is noted first â€” from every decoded
+    // transaction, whatever its pool class â€” then ALL its pools' committed states are installed, and only then may the end of
+    // a late spell take effect and positions be revalued. Never halfway through a transaction that touches several pools.
+    let bts = null; for (const evs of byPool.values()) for (const e of evs) if (e.ts) bts = e.ts;
+    engine.tx(t, bts ? Math.max(0, t - bts) : null, () => {
+      for (const [pool, evs] of byPool) {
+        const info = pools.get(pool);
+        if (info) { emitTx(evs, info, t, meta); continue; }
+        let h = hold.get(pool); if (!h) { if (hold.size >= HOLD_POOLS) { fs.overflow++; continue; } h = { items: [], overflow: false }; hold.set(pool, h); queue.add(pool); }
+        if (h.items.length < HOLD_PER_POOL) { h.items.push([evs, t, meta]); fs.held += evs.length; } else { h.overflow = true; h.items.shift(); h.items.push([evs, t, meta]); }
+      }
+    });
   }
   function connect() {
     ws = new WebSocket(process.env.RPC_WS); let gone = false;

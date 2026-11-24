@@ -14,9 +14,13 @@ import { SPL_TOKEN } from "../src/risk.mjs";
 export function mkEngine(opts = {}) {
   const logs = [], { tokens = SPL_TOKEN, stream = "current", ...rest } = opts; const e = new Engine({ solUsd: () => SOLUSD, log: (s) => logs.push(s), ...rest }); e.logs = logs;
   if (tokens) { const coin = e.coin.bind(e); e.coin = (mint, o = {}) => { const c = coin(mint, o); if (c.info.token_program == null && !c.info.risk) c.info.token_program = tokens; return c; }; }
-  const manual = stream === "manual", keep = (upTo) => { const L = e.stream; if (!L) return; if (L.at == null) { e.noteLag(upTo, 1); return; } while (L.at + 4 < upTo) e.noteLag(L.at + 4, 1); };
-  const onEvent = e.onEvent.bind(e); e.onEvent = (ev) => { if (!ev.replay && e.noteLag) { if (ev.lag != null) e.noteLag(ev.t, ev.lag); else if (!manual) { keep(ev.t); e.noteLag(ev.t, 1); } } return onEvent(ev); };
-  const tick = e.tick.bind(e); e.tick = (now) => { if (!manual && e.noteLag) { keep(now); e.noteLag(now, 1); } return tick(now); };
+  // the fixture drives the stream exactly as feed.mjs does: one engine.tx per transaction (delay noted → states installed → txDone)
+  const manual = stream === "manual", keep = (upTo) => { const L = e.stream; if (L.at == null) { e.tx(upTo, 1); return; } while (L.at + 4 < upTo) e.tx(L.at + 4, 1); };
+  const onEvent = e.onEvent.bind(e); let inTx = false;
+  e.onEvent = (ev) => { if (ev.replay || inTx) return onEvent(ev); const lag = ev.lag != null ? ev.lag : manual ? null : 1; if (lag == null) return onEvent(ev);
+    if (!manual) keep(ev.t); let r; inTx = true; try { e.tx(ev.t, lag, () => { r = onEvent(ev); }); } finally { inTx = false; } return r; };
+  const tick = e.tick.bind(e); e.tick = (now) => { if (!manual) { keep(now); e.tx(now, 1); } return tick(now); };
+  const feedUp = e.feedUp.bind(e); e.feedUp = (t) => { feedUp(t); if (!manual) e.tx(t, 1); }; // the first transaction on the connection arrives at once and on time
   return e;
 }
 export function swap(eng, t, mc, { mint = "MintAAApump", pool = "PoolA", sol = 1, isBuy = true, user = "u1", feeBps = 30, lag = undefined } = {}) {

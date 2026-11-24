@@ -11,7 +11,7 @@ const sum = (a) => a.reduce((s, x) => s + x, 0);
 export function bookRows(entries, noteCounts = []) {
   const rows = new Map();
   for (const policy of S.POLICIES) for (const f of S.FAMILIES) for (const [ag] of S.agesOf(f)) for (const stop of S.STOPS)
-    rows.set(`${f}|${ag}|${stop}|${policy}`, { family: f, ag, stop, policy, entries: 0, cancelled: 0, pending: 0, filled: 0, open: 0, closed: 0, unresolved: 0, mints: new Set(), trades: [], holds: [], delays: [], runners: { n: 0, partial: 0, x2: 0, x3: 0, x5: 0, x10: 0 }, outage: 0, estimated: 0, estimatedNet: 0, rebuys: 0, rebuyNet: 0, rebuyOpen: 0, feeAssumed: 0, halves: 0, startup: 0, startupNet: 0 });
+    rows.set(`${f}|${ag}|${stop}|${policy}`, { family: f, ag, stop, policy, entries: 0, cancelled: 0, pending: 0, filled: 0, open: 0, closed: 0, unresolved: 0, mints: new Set(), trades: [], holds: [], delays: [], runners: { n: 0, partial: 0, x2: 0, x3: 0, x5: 0, x10: 0 }, outage: 0, estimated: 0, estimatedNet: 0, rebuys: 0, rebuyNet: 0, rebuyOpen: 0, feeAssumed: 0, halves: 0, startup: 0, startupNet: 0, unsupported: 0, unsupportedNet: 0 });
   for (const e of entries) { if (e.token?.xfer_bps > 0) continue; // transfer-fee coins are reported in their own book (spec FEE_BOOK), not in the rule rows
    for (const f of e.families) for (const policy of S.POLICIES) for (const v of versionsFor(e, f, policy)) {
     const r = rows.get(`${f}|${e.ag}|${v.stop}|${policy}`); if (!r) continue;
@@ -24,6 +24,10 @@ export function bookRows(entries, noteCounts = []) {
     if (v.half) r.halves++;
     if (v.status === "open" || v.status === "selling" || v.status === "scaling" || v.status === "unresolved") { r.open++; if (v.unresolvedSince || v.status === "unresolved") r.unresolved++; }
     else if (v.status === "closed" && v.exit.est) { r.estimated++; r.estimatedNet += v.exit.sol - COST; } // an ESTIMATED sale is not a result: counted apart, in no total, quantile or win rate (eighth review, A)
+    // A coin found fee-bearing or restricted AFTER a live buy (Codex review of 3537ada): the live method models no transfer fee,
+    // so this row's fee-free exit is not a supported result. The position and its ledger stay; its result is counted APART and
+    // is in no primary total, quantile or win rate — never deleted, never zeroed.
+    else if (v.status === "closed" && e.riskAfter && e.exec !== "routed-quote") { r.unsupported++; r.unsupportedNet += v.exit.sol - COST; }
     else if (v.status === "closed") { r.closed++; const net = v.exit.sol - COST; r.trades.push({ mint: e.mint, t: e.fill.t, ret: v.exit.ret, net, reason: v.reason }); r.holds.push(v.exit.hold_s); r.delays.push(v.exit.delay_s); if (v.exit.outage_during) r.outage++; if (e.startup) r.startupNet += net; }
   } }
   const notes = {}; for (const n of noteCounts) (notes[n.family] ||= {})[n.reason] = n.n;
@@ -44,6 +48,7 @@ export function bookRows(entries, noteCounts = []) {
       hold_median_min: r.holds.length ? Math.round(q(r.holds, 0.5) / 60) : null, stake_committed_sol: r4(r.filled * COST), sell_delay_max_s: r.delays.length ? r4(Math.max(...r.delays)) : null,
       runners: r.runners, exit_reasons: reasons, exits_during_outage: r.outage, fee_not_from_event: r.feeAssumed, half_sales: r.halves,
       estimated_exits: r.estimated, estimated_net_sol: r4(r.estimatedNet), // shown apart: never part of closed / net_sol / win_rate above
+      unsupported_fee_exits: r.unsupported, unsupported_fee_net_sol: r4(r.unsupportedNet), // live buys of coins later found fee-bearing or restricted: shown apart, never inside net_sol
       rebuys_closed: r.rebuys, rebuys_net_sol: r4(r.rebuyNet), rebuys_open: r.rebuyOpen, // older-9 re-buys: beside the row, never inside it
       startup_entries: r.startup, startup_net_sol: r4(r.startupNet), notes: notes[r.family] || {},
     };

@@ -14,7 +14,7 @@ const M = "MintAAApump", ents = (e) => [...e.entries.values()], filled = (e) => 
 /** a live coin 9 hours old; `info` is what is known about its token (nothing is assumed: tokens: null) */
 const mk = (info = {}, opts = {}) => { const e = mkEngine({ tokens: null, ...opts }); e.feedUp(T0); Object.assign(e.coin(M, { pool: "PoolA", createTs: T0 - 9 * H }).info, info); return e; };
 /** ten flat minutes at $100K, then a jump to $210K: a fresh FAST crossing → buys scheduled 1 s later. Returns the jump time. */
-const jump = (e, t0 = T0, o = {}) => { path(e, t0, t0 + 600, () => 100_000, 10, o); swap(e, t0 + 600, 210_000, { sol: 5, ...o }); return t0 + 600; };
+const jump = (e, t0 = T0, o = {}) => { path(e, t0, t0 + 600, () => 100_000, o.lag != null ? 2 : 10, o); swap(e, t0 + 600, 210_000, { sol: 5, ...o }); return t0 + 600; }; // a test that feeds the stream's delay itself must keep it measured: every 2 s
 const settle = (e, t, o = {}) => { swap(e, t + 1.2, 210_000, o); e.tick(t + 1.3); };
 /** getAccountInfo / getMultipleAccounts value of a mint account (jsonParsed) */
 const mint = (program, extensions = []) => ({ owner: program, data: { parsed: { info: { decimals: 6, supply: "1000000000000000", mintAuthority: null, freezeAuthority: null, extensions } } } });
@@ -102,6 +102,7 @@ test("B3 orders pending when the stream falls behind: the buy is cancelled by th
   assert.ok(pend.every((x) => x.status === "cancelled" && x.flags.some((f) => /pricing\/data timeout/.test(f))), "not filled from a late state: the existing 5 s data timeout applies");
   // (b) pending sale
   const b = mk({ token_program: R.SPL_TOKEN }, { stream: "manual" }), t = jump(b, T0, { lag: 1 }); settle(b, t, { lag: 1 }); const pos = filled(b); assert.ok(pos.length > 0);
+  for (let x = t + 3; x < t + 10; x += 2) b.noteLag(x, 1); // other pools keep the stream measured
   swap(b, t + 10, 150_000, { lag: 1 }); // −29%: the 20% and 25% trailing rows trigger, sale scheduled 0.7 s later
   const sell = pos[0].versions.filter((v) => v.status === "selling"); assert.ok(sell.length > 0);
   for (let x = t + 10.3; x < t + 40; x += 1) { swap(b, x, 120_000, { lag: 60 }); b.tick(x + 0.2); } // the stream is now 60 s behind
