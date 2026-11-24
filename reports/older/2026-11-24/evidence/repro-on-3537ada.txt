@@ -1,0 +1,7 @@
+B1 sale after recovery: closed proceeds 0.11299428449461654 priced on quote reserve 240 | the recovering transaction's reserve is 80
+B2 pending buy at recovery with the coin now restricted: FILLED, recorded fee bps 0
+B3 freshAt(+610): false
+B3 after 22 s of global silence: entries FAST-1M+FAST-3M+FAST-5M+FAST-10M+FAST150-1M+FAST150-3M+FAST150-5M+FAST150-10M | signal-coverage gaps [] | exact continuity 560→622: true
+B4 one good measurement 30 s after a late one: late = false freshAt(+30): true
+B5 queued before the read: true
+B5 after {value:[null]} and 399 s: fee known false | riskRead true | queued again: false

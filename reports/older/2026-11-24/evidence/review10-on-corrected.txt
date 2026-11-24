@@ -1,0 +1,16 @@
+ok 1 - B1 the transaction that ends a late spell is applied BEFORE anything is priced: the overdue sale gets its 80 SOL pool, not the 240 SOL one before it
+ok 2 - B1 a recovering transaction that touches TWO pools: no position is revalued halfway through it
+ok 3 - B2 the eligibility gate also guards the recovery path: a pending buy on a coin that turned restricted is cancelled, not filled
+ok 4 - B3 a globally silent stream is a gap in SIGNAL coverage too: no exact window and no fresh crossing spans it
+ok 5 - B4 a late spell ends only after FEED_MAX_LAG_S of continuous good evidence — one good measurement after a quiet stretch does not end it
+ok 6 - the written initial-connection policy is kept, explicitly: unknown until measured, current at the first good measurement of a connection
+ok 7 - B5 a mint account that comes back empty, unparsed or missing from a short answer is retried with a bounded back-off; the rest of the batch is not stranded
+ok 8 - a crossing that was blocked because the fee was not known is LOST: it is not back-dated and not taken late once the classification arrives
+ok 9 - control: on an uninterrupted current stream a stop is still priced at its scheduled time on the state in force then
+ok 10 - control: a quiet pool, driven chronologically — while other transactions keep the delay measured its unchanged state prices the 24-hour sale on time
+ok 11 - a coin found fee-bearing after a live buy: the position stays, its fee-free result is reported apart and is in no primary total
+ok 12 - a failed refresh of a coin we HOLD: what was known stays, the position stays, and the retry never waits longer than the refresh interval
+ok 13 - diagnostics are bounded and sufficient: delay histogram, seconds in each state, interruption counts and lengths
+# tests 13
+# pass 13
+# fail 0

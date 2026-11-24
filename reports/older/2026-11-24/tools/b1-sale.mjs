@@ -1,0 +1,10 @@
+const root = process.argv[2];
+const { Engine } = await import(root + "/src/engine.mjs"); const R = await import(root + "/src/risk.mjs"); const { liqValue } = await import(root + "/src/fills.mjs");
+const T0 = 1_800_000_000, H = 3600, BASE = 2e8, q = (mc) => (mc / 1e11) * BASE, A = "MintAAApump";
+const e = new Engine({ solUsd: () => 100 }); e.feedUp(T0); Object.assign(e.coin(A, { pool: "PoolA", createTs: T0 - 9 * H }).info, { token_program: R.SPL_TOKEN });
+const ev = (t, mc, sol = 1) => ({ t: T0 + t, mint: A, pool: "PoolA", base: BASE, quote: q(mc), feeBps: 30, sol, isBuy: true, user: "u" });
+const tx = (t, lag, ...evs) => (e.tx ? e.tx(T0 + t, lag, () => { for (const x of evs) e.onSwap(x); }) : (e.noteLag(T0 + t, lag), evs.forEach((x) => e.onSwap(x))));
+for (let t = 0; t < 600; t += 2) tx(t, 1, ev(t, 100_000)); tx(600, 1, ev(600, 210_000, 5)); tx(601.2, 1, ev(601.2, 210_000)); e.tick(T0 + 601.3); for (let t = 603; t < 610; t += 2) tx(t, 1, ev(t, 210_000));
+tx(610, 1, ev(610, 150_000)); tx(610.2, 60); for (let t = 612; t <= 630; t += 2) tx(t, 60, ev(t, 120_000)); for (const t of [630.001, 631.001, 632.001, 633.001, 634.001]) tx(t, 1); tx(635.001, 1, ev(635.001, 40_000));
+const p = [...e.entries.values()].find((x) => x.status === "filled"), v = p.versions.find((v) => v.stop === 0.2 && v.policy === "trail");
+console.log(JSON.stringify({ status: v.status, proceeds_sol: v.exit?.sol, priced_on_quote_reserve: v.exit?.pool?.q, exit_t: v.exit ? +(v.exit.t - T0).toFixed(3) : null, delay_s: v.exit?.delay_s, quote_on_80: liqValue({ base: BASE, quote: q(40_000), feeBuy: 0.003, feeSell: 0.003 }, p.fill.tok), quote_on_240: liqValue({ base: BASE, quote: q(120_000), feeBuy: 0.003, feeSell: 0.003 }, p.fill.tok) }));

@@ -1,0 +1,69 @@
+{
+ "note": "node tools/equiv-uninterrupted.mjs <older/> 200 26 — same history start on both checkouts (default)",
+ "3537ada": {
+  "code": "3537ada",
+  "first_measurement_at_connect": true,
+  "coins": 200,
+  "hours": 26,
+  "transactions": 994854,
+  "entries": 4218,
+  "filled": 4218,
+  "cancelled": 0,
+  "rows": 46306,
+  "rows_closed": 43170,
+  "proceeds_sol_closed": 41888.583646332,
+  "stream_gaps": 0,
+  "ledger_bytes": 47695677,
+  "ledger_sha256": "ac863c86c156af0ec1a3ef15d5eff35747516e1cf9d8b5fa14ee79aa5f1a25c7"
+ },
+ "corrected": {
+  "code": "161d545",
+  "first_measurement_at_connect": true,
+  "coins": 200,
+  "hours": 26,
+  "transactions": 994854,
+  "entries": 4218,
+  "filled": 4218,
+  "cancelled": 0,
+  "rows": 46306,
+  "rows_closed": 43170,
+  "proceeds_sol_closed": 41888.583646332,
+  "stream_gaps": 0,
+  "ledger_bytes": 47695677,
+  "ledger_sha256": "ac863c86c156af0ec1a3ef15d5eff35747516e1cf9d8b5fa14ee79aa5f1a25c7"
+ },
+ "without_alignment_EQ_FIRST_0": {
+  "note": "EQ_FIRST=0: connection unmeasured until the first market transaction at T0+1.087 s",
+  "3537ada": {
+   "code": "3537ada",
+   "coins": 200,
+   "hours": 26,
+   "transactions": 994854,
+   "entries": 4218,
+   "filled": 4218,
+   "cancelled": 0,
+   "rows": 46306,
+   "rows_closed": 43170,
+   "proceeds_sol_closed": 41888.583646332,
+   "stream_gaps": 0,
+   "ledger_bytes": 47695677,
+   "ledger_sha256": "ac863c86c156af0ec1a3ef15d5eff35747516e1cf9d8b5fa14ee79aa5f1a25c7"
+  },
+  "corrected": {
+   "code": "161d545",
+   "coins": 200,
+   "hours": 26,
+   "transactions": 994854,
+   "entries": 4218,
+   "filled": 4218,
+   "cancelled": 0,
+   "rows": 46306,
+   "rows_closed": 43170,
+   "proceeds_sol_closed": 41888.591513138,
+   "stream_gaps": 0,
+   "ledger_bytes": 47695644,
+   "ledger_sha256": "abb436b41f5d47e44254a0b6164ce7df628d83c866aa77ec5159e3c525f990f9"
+  },
+  "differences": "1 LOW4H buy (Eq186pump) decided at +14493.99 s on 3537ada and at +14597.69 s on the corrected code; 3 buys at +14499.67, +14500.05, +14508.36 s identical except features.drawdown4h and features.recovery4h are null on the corrected code; every other entry identical"
+ }
+}
