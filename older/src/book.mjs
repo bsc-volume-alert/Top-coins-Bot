@@ -36,7 +36,7 @@ function fillBuy(e, st, at, delay, minReq = null) {
   const q = isQuote(st);
   e.fill = { t: at, tok, cost: COST, delay_s: +delay.toFixed(3), state_age_s: q ? null : +(at - st.t).toFixed(3), fee_buy: q ? null : feeBuy(st), fee_src: feeSrc(st, "buy"),
     quote_sol: q ? null : st.quote, base: q ? null : st.base, px_sol: q ? S.STAKE_SOL / tok : (S.STAKE_SOL / (1 + feeBuy(st))) / tok,
-    exec: q ? "routed-quote" : "reconstructed-pool-state", ...(q ? { quote: { req_t: st.buy.reqT ?? st.reqT, resp_t: st.buy.t ?? st.t, route: st.buy.route ?? null, router: st.buy.router ?? null, fee_bps: st.buy.feeBps ?? null, xfer_bps: st.buy.xfer_bps ?? 0, raw_tok: st.buy.raw_tok ?? null, xfer_in_quote: st.buy.xfer_in_quote ?? null, impact: st.buy.impact ?? null } } : {}) };
+    exec: q ? "routed-quote" : "reconstructed-pool-state", ...(q ? {} : stRef(st)), ...(q ? { quote: { req_t: st.buy.reqT ?? st.reqT, resp_t: st.buy.t ?? st.t, route: st.buy.route ?? null, router: st.buy.router ?? null, fee_bps: st.buy.feeBps ?? null, xfer_bps: st.buy.xfer_bps ?? 0, raw_tok: st.buy.raw_tok ?? null, xfer_in_quote: st.buy.xfer_in_quote ?? null, impact: st.buy.impact ?? null } } : {}) };
   // the position's first valuation: from the same state when it can price the sale (pool state). A quote-priced entry starts
   // its high-water mark at COST and takes its first real valuation from its first sell quote. This is deliberate: if the price
   // falls between the buy and the first sell quote, the stop must still be measured from what was paid — starting the peak at
@@ -47,7 +47,8 @@ function fillBuy(e, st, at, delay, minReq = null) {
 }
 /** the pool a sale was priced on: effective SOL side, token side and the sell fee in force. Evidence only — kept so the same
  *  trade can be re-priced at another stake (atStake). No decision reads it. */
-const poolOf = (st) => ({ q: st.quote, b: st.base, f: feeSell(st) });
+const stRef = (st) => (st.st_sig ? { st_sig: st.st_sig, st_slot: st.st_slot ?? null } : {}); // which transaction committed the state that priced this (evidence only; absent on routed quotes and on states saved before this field existed)
+const poolOf = (st) => ({ q: st.quote, b: st.base, f: feeSell(st), ...stRef(st) });
 function trigger(v, t, reason, value) { v.status = "selling"; v.trigT = t; v.reason = reason; v.trigValue = value; v.schedT = t + S.SELL_DELAY_MS / 1000; }
 /** returns false when this state cannot price the order (it then stays pending — a sale is never dropped or priced at zero).
  *  minReq (routed quotes): every quote used must have been requested at or after the order's scheduled time. Realised proceeds are

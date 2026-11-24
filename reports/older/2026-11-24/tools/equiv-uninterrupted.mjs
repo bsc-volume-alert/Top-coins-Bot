@@ -33,7 +33,7 @@ for (;;) {
   tx(t, 1 + rnd() * 0.3, [{ t, mint: c.mint, pool: c.pool, base: BASE, quote: (c.mc / 1e11) * BASE, feeBps: 30, sol: 0.05 + rnd() * 3, isBuy: rnd() < 0.55, user: "w" + Math.floor(rnd() * 400) }]); n++;
   c.next = t + 0.4 + rnd() * (c.drift ? 6 : 40);
 }
-const NEW = new Set(["risk_read_at", "risk_age_s", "riskAfter", "eval_t"]); // fields added after 3537ada, and eval_t — the wall-clock time of the evaluation (Date.now()), different on every run of the same code
+const NEW = new Set(["risk_read_at", "risk_age_s", "riskAfter", "eval_t", "st_sig", "st_slot"]); // fields added after 3537ada, and eval_t — the wall-clock time of the evaluation (Date.now()), different on every run of the same code
 const strip = (o) => Array.isArray(o) ? o.map(strip) : o && typeof o === "object" ? Object.fromEntries(Object.keys(o).sort().filter((k) => !NEW.has(k)).map((k) => [k, strip(o[k])])) : o;
 for (const x of e.entries.values()) saved.set(x.id, x); // still in memory: their current state
 const inMemory = e.entries.size, ents = [...saved.values()].sort((p, q) => p.id - q.id), led = JSON.stringify(ents.map(strip)), rows = ents.flatMap((x) => x.versions ?? []);

@@ -63,6 +63,15 @@ const inv0 = store.db.prepare("SELECT v FROM meta WHERE k='inventory'").get();
 if (!inv0 || Date.now() - Date.parse(JSON.parse(inv0.v).at) > 86400e3) runInventory();
 setInterval(runInventory, 86400e3);
 
+// EVENT-LOOP DELAY and CPU (validation protocol; Codex's review of 161d545): measured inside the process by Node's own
+// monitor (10 ms resolution), kept as one line per minute — mean, 99th percentile, maximum — for the last 3 hours. One
+// HTTP probe a minute from outside cannot establish the maximum. Counters restart with the process: every status carries
+// the process start time and its own uptime so results are worked out per process lifetime, never across a restart.
+const { monitorEventLoopDelay } = await import("node:perf_hooks"); const eld = monitorEventLoopDelay({ resolution: 10 }); eld.enable();
+const loopMin = []; let cpu0 = process.cpuUsage(), cpuT0 = Date.now();
+setInterval(() => { const c = process.cpuUsage(cpu0), dt = Date.now() - cpuT0; loopMin.push({ t: Math.round(Date.now() / 1000), mean_ms: +(eld.mean / 1e6).toFixed(2), p99_ms: +(eld.percentile(99) / 1e6).toFixed(1), max_ms: +(eld.max / 1e6).toFixed(1), cpu_pct: dt ? +(((c.user + c.system) / 1000 / dt) * 100).toFixed(1) : null });
+  if (loopMin.length > 180) loopMin.shift(); eld.reset(); cpu0 = process.cpuUsage(); cpuT0 = Date.now(); }, 60000).unref?.();
+const loopStatus = () => ({ resolution_ms: 10, minutes: loopMin.length, worst_max_ms: loopMin.length ? Math.max(...loopMin.map((x) => x.max_ms)) : null, worst_p99_ms: loopMin.length ? Math.max(...loopMin.map((x) => x.p99_ms)) : null, last: loopMin.slice(-60), current_minute_max_ms: +(eld.max / 1e6).toFixed(1) });
 // clock: scheduled fills/exits every 100 ms (1 s and 0.7 s delays need a fine clock); bars, memory, heartbeat each minute
 setInterval(() => engine.tick(Date.now() / 1000), 100);
 let gapsSeen = engine.cov.gaps.length; // SIGNAL-coverage gaps (reconnects, late spells, silences): the list hour-scale windows are checked against — see backfill.gapRequests
@@ -92,6 +101,7 @@ const inv = () => { try { return JSON.parse(store.db.prepare("SELECT v FROM meta
 // the reserve reading counts as validated only when the owner sets OLDER_RES_VALIDATED=1 after reviewing docs/tx-validation.json
 const valid = () => (process.env.OLDER_RES_VALIDATED === "1" ? { by: "OLDER_RES_VALIDATED" } : null);
 const web = startWeb({ port: Number(process.env.OLDER_PORT || 8793), store, engine, status: () => ({ started: now0, first_start: firstStart, commit: COMMIT, run: process.env.OLDER_RUN_NAME || null, entries_until: engine.entriesUntil, idl: IDL_PIN,
+  process: { pid: process.pid, started_at: now0, uptime_s: Math.round(process.uptime()), cpu_user_s: +(process.cpuUsage().user / 1e6).toFixed(1), cpu_system_s: +(process.cpuUsage().system / 1e6).toFixed(1) }, event_loop: loopStatus(),
   feed: { ...fs, lag_ms_avg: fs.lagN ? Math.round(fs.lagMsSum / fs.lagN) : null }, stream: engine.streamStatus(Date.now() / 1000), risk_reader: { ...riskStatus(engine, Date.now() / 1000, RISK_REFRESH_S), fee_unknown_evaluations: engine.stats.feeUnknown || 0, fee_unknown_coins: engine.stats.feeUnknownCoins || 0, cancelled_at_fill: engine.stats.cancelledAtFill || 0 }, engine: { ...engine.stats, coins: engine.coins.size, open: [...engine.byMint.values()].reduce((s, x) => s + x.size, 0), feed_gaps: engine.feedCov.gaps.length, usd_down: engine.usdDown },
   decoder: { ...dec }, tx_validation: valid(), verify: { ...vf }, snapshots: { ...snapStats }, sol: { ...sp }, gmgn: { calls: gm.calls, errors: gm.errors, limited: gm.limited, banned: gm.banned, lastErr: gm.lastErr, rate_headers: gm.headers }, backfill: { ...bf }, backfillQ: backfill.size(), jupiter: { ...J.ju, key: !!process.env.JUP_API_KEY, rps: Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0.5)) }, poller: poller ? { ...poller.stats, cadence_avg_s: poller.stats.cadence.n ? +(poller.stats.cadence.sum / poller.stats.cadence.n).toFixed(1) : null, hot_s: poller.hotEvery, cold_s: poller.coldEvery } : null, inventory: inv(), mem_mb: Math.round(process.memoryUsage().rss / 2 ** 20), sizes: sizes() }) });
 log(`[older] started, spec ${SPEC_VER}, paper only`);

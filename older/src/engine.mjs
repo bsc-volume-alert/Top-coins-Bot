@@ -194,7 +194,8 @@ export class Engine {
     // 1) orders scheduled before this event execute against the state that was in force until now
     if (!ev.replay) this._run(ev.mint, ev.t, c);
     // 2) the new state
-    const prev = c.state; const st = { ...ev.state, feeBuy: ev.state.feeBuy ?? prev?.feeBuy ?? null, feeSell: ev.state.feeSell ?? prev?.feeSell ?? null, supply: ev.state.supply ?? prev?.supply ?? null, t: ev.t };
+    const prev = c.state; const st = { ...ev.state, feeBuy: ev.state.feeBuy ?? prev?.feeBuy ?? null, feeSell: ev.state.feeSell ?? prev?.feeSell ?? null, supply: ev.state.supply ?? prev?.supply ?? null, t: ev.t,
+      st_sig: ev.sig ?? null, st_slot: ev.slot ?? null }; // the transaction this state was committed by: lets a fill or a sale be checked later against that transaction's own balances (evidence only)
     c.state = st; if (st.supply) c.supply = st.supply;
     // QUARANTINE: a state rebuilt from a boost event is an estimate until the next swap confirms it — it prices no fill (trustedAt),
     // moves no peak or stop, and creates no price observation or signal. Counted.
