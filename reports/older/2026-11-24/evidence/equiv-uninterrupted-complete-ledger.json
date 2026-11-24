@@ -1,0 +1,39 @@
+{
+ "note": "node tools/equiv-uninterrupted.mjs <older/> 200 26 — COMPLETE ledger: finished entries (dropped from engine memory) captured through a stand-in store. Supersedes equiv-uninterrupted.json, which hashed in-memory entries only (4,218 of 4,605).",
+ "3537ada": {
+  "code": "3537ada",
+  "first_measurement_at_connect": true,
+  "coins": 200,
+  "hours": 26,
+  "transactions": 994854,
+  "entries": 4605,
+  "entries_made": 4605,
+  "finished_and_dropped_from_memory": 387,
+  "filled": 4605,
+  "cancelled": 0,
+  "rows": 50634,
+  "rows_closed": 47498,
+  "proceeds_sol_closed": 46329.766800727,
+  "stream_gaps": 0,
+  "ledger_bytes": 52419445,
+  "ledger_sha256": "8436593726efe17c97ed43d49605b5998f405226333d6260ecbbdf7fcdcf9a4c"
+ },
+ "corrected": {
+  "code": "161d545",
+  "first_measurement_at_connect": true,
+  "coins": 200,
+  "hours": 26,
+  "transactions": 994854,
+  "entries": 4605,
+  "entries_made": 4605,
+  "finished_and_dropped_from_memory": 387,
+  "filled": 4605,
+  "cancelled": 0,
+  "rows": 50634,
+  "rows_closed": 47498,
+  "proceeds_sol_closed": 46329.766800727,
+  "stream_gaps": 0,
+  "ledger_bytes": 52419445,
+  "ledger_sha256": "8436593726efe17c97ed43d49605b5998f405226333d6260ecbbdf7fcdcf9a4c"
+ }
+}
