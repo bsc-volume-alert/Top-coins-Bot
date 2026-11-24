@@ -35,13 +35,13 @@ export function riskQueue(engine, now, refreshS = 600, max = 50) {
 export const nextRiskRead = (engine, now, refreshS = 600) => riskQueue(engine, now, refreshS, 1)[0] ?? null;
 /** reader counters for the status report (bounded): how many accounts were asked for, what came back, and how long a coin
  *  waited between the first decision that needed its classification and the classification arriving */
-export const rk = { rounds: 0, asked: 0, classified: 0, transport_fail_rounds: 0, null_account: 0, unparsed: 0, short_response: 0, retries: 0, max_batch: 0, backoff_max_s: 0,
+export const rk = { rounds: 0, asked: 0, classified: 0, transport_fail_rounds: 0, null_account: 0, unparsed: 0, malformed: 0, short_response: 0, retries: 0, max_batch: 0, backoff_max_s: 0,
   rpc_ms_sum: 0, rpc_ms_max: 0, latency_n: 0, latency_sum_s: 0, latency_max_s: 0, latency_hist: LAT_EDGES.map(() => 0), refreshes: 0, refresh_overdue_sum_s: 0, refresh_overdue_max_s: 0 };
 /** the reader's part of the status report: the counters above plus the queue as it stands (length, oldest waiting request) */
 export const riskStatus = (engine, now, refreshS = 600) => { const q = riskQueue(engine, now, refreshS, Infinity), w = q.map((c) => c.feeWantedFirst).filter((x) => x != null);
   return { ...rk, latency_hist: Object.fromEntries(LAT_EDGES.map((x, i) => [x === Infinity ? ">300" : "<=" + x, rk.latency_hist[i]])), latency_mean_s: rk.latency_n ? +(rk.latency_sum_s / rk.latency_n).toFixed(2) : null, rpc_ms_mean: rk.rounds ? Math.round(rk.rpc_ms_sum / rk.rounds) : null,
     refresh_overdue_mean_s: rk.refreshes ? +(rk.refresh_overdue_sum_s / rk.refreshes).toFixed(1) : null, queue: q.length, queue_oldest_wait_s: w.length ? +(now - Math.min(...w)).toFixed(1) : null, backing_off: [...engine.coins.values()].filter((c) => (c.riskRetryAt ?? 0) > now).length }; };
-const WHY = { transport: "mint account read failed", null_account: "the provider returned no account for this mint", unparsed: "mint account not parsed", short_response: "the provider's answer was shorter than the request" };
+const WHY = { transport: "mint account read failed", null_account: "the provider returned no account for this mint", unparsed: "mint account not parsed", short_response: "the provider's answer was shorter than the request", malformed: "mint account malformed (a field had an unexpected shape)" };
 /** ONE ROUND of the reader: reads the queued mint accounts in one call and records what they say. Returns how many were asked.
  *  rpc(method, params) is injected (feed.rpc in production). No dependency on the sampled adapter.
  *  FAILURES (Codex B5) — a whole-batch failure (transport) and a per-account failure (no account, an account that does not
@@ -58,12 +58,16 @@ export async function riskReadOnce(engine, store, rpc, now, refreshS = 600, max 
   // back-off: 1 min, doubling, at most 1 h — and for a coin we hold never longer than its normal refresh interval
   const fail = (c, why) => { if (why !== "transport") rk[why]++; c.riskFails = (c.riskFails || 0) + 1; c.riskRead = false; const wait = Math.min(engine.byMint.get(c.mint)?.size ? refreshS : 3600, 60 * 2 ** Math.min(c.riskFails - 1, 10)); c.riskRetryAt = now + wait; if (wait > rk.backoff_max_s) rk.backoff_max_s = wait;
     c.riskFailWhy = why; if (!c.info.risk) c.info.risk = { status: "missing", why: WHY[why] }; };
-  q.forEach((c, i) => {
+  // EACH account is handled on its own (Codex's review of 161d545): an answer with an unexpected shape used to throw out of
+  // this loop and leave the WHOLE batch marked as read for good. Now it fails that one coin ("malformed"), which is retried
+  // like any other failure, and the rest of the batch is classified.
+  q.forEach((c, i) => { try {
     if (batchFail) return fail(c, "transport"); if (i >= vals.length) return fail(c, "short_response"); if (vals[i] == null) return fail(c, "null_account");
-    const k = classifyMintAccount(vals[i]); if (k.status === "missing") return fail(c, "unparsed");
+    const k = classifyMintAccount(vals[i]); if (k.status === "missing") return fail(c, k.malformed ? "malformed" : "unparsed");
     k.read_at = Math.round(now + took); c.info.risk = k; if (k.program) c.info.token_program = k.program; c.riskFails = 0; c.riskFailWhy = null; rk.classified++;
     if (c.feeWantedFirst != null) { const w = Math.max(0, now + took - c.feeWantedFirst); rk.latency_n++; rk.latency_sum_s += w; rk.latency_hist[LAT_EDGES.findIndex((x) => w <= x)]++; if (w > rk.latency_max_s) rk.latency_max_s = +w.toFixed(2); c.feeWantedFirst = null; }
-    store?.saveCoin(c.mint, { info: c.info }); engine.riskUpdated?.(c.mint); });
+    store?.saveCoin(c.mint, { info: c.info }); engine.riskUpdated?.(c.mint);
+  } catch { fail(c, "malformed"); } });
   return q.length;
 }
 const BLOCKING = new Set(["transferHook", "nonTransferable", "permanentDelegate", "pausableConfig", "confidentialTransferMint"]);
@@ -71,6 +75,12 @@ const BLOCKING = new Set(["transferHook", "nonTransferable", "permanentDelegate"
 /** from an RPC getAccountInfo(mint, jsonParsed) value — the authoritative check for Token-2022 extensions */
 export function classifyMintAccount(value) {
   const info = value?.data?.parsed?.info; if (!info) return { status: "missing", why: "mint account not parsed" };
+  // FAIL CLOSED on an unexpected shape: a mint whose extension list, decimals or owner cannot be read is "missing", never "no extensions"
+  const bad = (why) => ({ status: "missing", malformed: true, why: "mint account malformed: " + why });
+  if (typeof info !== "object") return bad("info is not an object");
+  if (info.extensions != null && (!Array.isArray(info.extensions) || info.extensions.some((x) => !x || typeof x !== "object" || typeof x.extension !== "string"))) return bad("extensions is not a list of extensions");
+  if (!Number.isInteger(info.decimals) || info.decimals < 0 || info.decimals > 18) return bad("decimals"); if (typeof value.owner !== "string") return bad("owner");
+  if (!(Number(info.supply) >= 0)) return bad("supply");
   const program = value.owner, ext = (info.extensions || []).map((x) => x.extension), warn = [], block = []; let fee = 0;
   for (const x of info.extensions || []) {
     if (BLOCKING.has(x.extension)) { if (x.extension === "transferHook" && !x.state?.programId) continue; block.push(x.extension); }

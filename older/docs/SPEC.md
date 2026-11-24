@@ -260,6 +260,13 @@ declared, frozen paper-execution assumptions. They were not fitted to results an
   installed; (3) only then does the end of the interruption take effect, and every open live position is valued once on the
   pool state **now** in force. A recovery therefore never prices an order on a state that the recovering transaction itself
   replaced, and a transaction that touches several pools is never valued halfway through.
+- **At the end of an interruption** each open live position whose pool state is trusted has, in this order: (a) its due
+  clock transitions run — a maximum-hold or clock-book deadline that passed during the interruption is triggered at its own
+  time, whether or not the clock ran meanwhile; (b) one valuation on the state now in force, which prices every overdue
+  order with the delay it really had. Both go through the eligibility gate and the ordinary trust test. *(Added after
+  Codex's review of 161d545: without (a), a deadline that passed while the clock was held up left the sale pending.)*
+- **A silence is noticed by the clock** (`engine.tick`), not only when the next transaction arrives: 5 s after the last
+  measurement the stream is interrupted, signal coverage is down and the status says so while it is happening.
 - While the stream is not current: pool states are still rebuilt, but an observation creates no price history, no signal,
   no peak and no stop, and no order is priced from a pool state. A pending buy meets the existing 5-second pricing timeout
   (cancelled, counted as a failed fill). A triggered sale stays pending and is priced by the first current state, with the
@@ -280,15 +287,22 @@ declared, frozen paper-execution assumptions. They were not fitted to results an
   to, even while other transactions are current. An update that *has not arrived* cannot be detected by this check, and one
   good measurement does not prove that every pool is synchronised. Per-pool evidence remains the chain check on consecutive
   reserves and the targeted comparison of fills against the chain.
-- Recorded, bounded: status `stream` — state, newest delay, number of measurements, mean and largest delay, a fixed
+- **Gap repair** (`backfill.gapRequests`, called from `main.mjs`): the back-fill scheduler reads the *signal-coverage* gap
+  list — the one hour-scale windows are tested against — so reconnects, late spells and silences are all sent for repair,
+  each once, with gaps in touching minutes merged into one request. It used to read the pool-trust list, which never
+  contains a late spell or a silence, and whose reconnect interval is slightly shorter than the signal gap (so a repair
+  recorded for it did not cover the gap). Repair is by 1-minute bars: it can satisfy hour-scale windows only, never an
+  exact window or a fresh crossing, and it does not touch pool-state trust.
+- Recorded, bounded: status `stream` — as of the time of the report (`as_of`, `since_last_measurement_s`, `seconds_total`) — state, newest delay, number of measurements, mean and largest delay, a fixed
   8-bucket histogram of the delay (≤1, ≤2, ≤3, ≤5, ≤10, ≤30, ≤60, >60 s), wall-clock seconds spent current / late /
   recovering / silent / unknown, the count and the longest of each kind of interruption, the last 10 interruptions; feed
   log rows `late` / `silence` / `current`; `engine.lateEvents`. Each buy still stores its own block time and receive time.
 
 ### C. Mint-account reader — failures and age (Codex's review of 3537ada, finding B5 and limitation 3)
 - A coin is marked read only when a mint account was actually parsed. A whole-batch failure (`transport`), an answer shorter
-  than the request (`short_response`), an empty account (`null_account`) and an account that could not be parsed
-  (`unparsed`) are counted separately in status `risk_reader`, and the coin is asked for again after 60 s, doubling to at
+  than the request (`short_response`), an empty account (`null_account`), an account that could not be parsed
+  (`unparsed`) and an account with a field of an unexpected shape (`malformed` — it fails closed: never read as "no
+  extensions", and it fails that one coin only) are counted separately in status `risk_reader`, and the coin is asked for again after 60 s, doubling to at
   most one hour (for a coin we hold: never longer than the normal refresh interval). One bad account does not affect the
   others in its batch. Evidence already held for a coin is kept when a later read fails.
 - A coin whose fee is not known is still **not entered**, and a crossing that was blocked is never back-dated once the
@@ -301,10 +315,11 @@ declared, frozen paper-execution assumptions. They were not fitted to results an
   it relied on (`token.risk_age_s`, `fill.risk_age_s`). A reading takes the higher of the two scheduled Token-2022 fees —
   that covers the schedule known at that read, **not** an update announced afterwards.
 - A live position on a coin that is later found fee-bearing or restricted keeps its ledger, its stops and its exposure.
-  Its closed rows are counted apart (`unsupported_fee_exits`, `unsupported_fee_net_sol`) and are in no primary total: the
+  Its closed rows are counted apart (`unsupported_fee_exits`, `unsupported_fee_net_sol`; for a re-buy
+  `unsupported_fee_rebuys`, `unsupported_fee_rebuys_net_sol`) and are in no primary total and no re-buy total: the
   modelled exit had no transfer fee in it. Nothing is deleted or zeroed.
 
-Tests: `test/review9.test.mjs` (12) and `test/review10.test.mjs` (13). Fixtures in `test/helpers.mjs` declare what a real feed
+Tests: `test/review9.test.mjs` (12), `test/review10.test.mjs` (13) and `test/review11.test.mjs` (9). Fixtures in `test/helpers.mjs` declare what a real feed
 supplies (classic SPL tokens; a stream measured 1 s behind) and can be switched off per test; the production guards are not
-bypassed. `review10` uses neither: it builds the production `Engine` directly and drives it one transaction at a time, in
+bypassed. `review10` and `review11` use neither: they build the production `Engine` directly and drive it one transaction at a time, in
 time order, through `engine.tx` — start-up, silence, late spells and recovery are not assumed.

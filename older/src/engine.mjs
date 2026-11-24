@@ -89,25 +89,41 @@ export class Engine {
   /** was the stream current at receive time `at`? */
   freshAt(at) { const L = this.stream; if (L.first == null || at < L.first) return false; if (L.open !== null) { if (at > L.open) return false; } else if (L.at == null || at > L.at + S.FEED_MAX_LAG_S) return false;
     for (let i = L.spans.length - 1; i >= 0; i--) { const [a, b] = L.spans[i]; if (b <= at) break; if (a < at) return false; } return true; }
-  /** bounded diagnostics for the status report: enough for a delay distribution, the time spent in each state and the coverage cost */
-  streamStatus() { const L = this.stream, D = L.diag; return { state: L.open === null ? "current" : L.kind === "connect" ? "unknown (delay not measured on this connection)" : L.goodSince != null ? "recovering" : L.kind, lag_s: L.lag != null ? +L.lag.toFixed(2) : null, measured_at: L.at, interrupted_since: L.open !== null && L.open > -Infinity ? +L.open.toFixed(1) : null, limit_s: S.FEED_MAX_LAG_S,
-    measurements: D.n, lag_mean_s: D.n ? +(D.sum / D.n).toFixed(3) : null, lag_max_s: +D.max.toFixed(1), lag_hist: Object.fromEntries(LAG_EDGES.map((x, i) => [x === Infinity ? ">60" : "<=" + x, D.hist[i]])),
-    seconds: Object.fromEntries(Object.entries(D.secs).map(([k, v]) => [k, +v.toFixed(1)])), interruptions: { ...D.spells }, longest_s: { ...D.longest }, recent: D.recent.slice(-10), late_events_skipped: this.stats.lateEvents || 0 }; }
+  /** bounded diagnostics for the status report: enough for a delay distribution, the time spent in each state and the coverage cost.
+   *  `now` = the time the report is made. The state and the seconds counters are given AS OF NOW: the time since the last
+   *  measurement is added to the state it belongs to (without changing the engine), and a stream that has gone quiet for
+   *  longer than the limit is reported as "silence" even if the clock has not run since. Without `now` the figures stop at
+   *  the last measurement and say so (as_of). */
+  streamStatus(now = null) { const L = this.stream, D = L.diag, LIM = S.FEED_MAX_LAG_S, at = now != null && L.at != null && now > L.at ? now : L.at, idle = at != null && L.at != null ? at - L.at : 0, quiet = idle > LIM;
+    const key = L.open === null ? (quiet ? "silence" : "current") : L.kind === "connect" ? "unknown" : L.goodSince != null && !quiet ? "recovering" : L.kind;
+    const secs = { ...D.secs }, t0 = L.acctAt; if (now != null && t0 != null && now > t0) secs[key] += now - t0;
+    const state = key === "unknown" ? "unknown (delay not measured on this connection)" : key;
+    return { state, as_of: now ?? L.at, lag_s: L.lag != null ? +L.lag.toFixed(2) : null, measured_at: L.at, since_last_measurement_s: L.at != null && at != null ? +idle.toFixed(1) : null, interrupted_since: L.open !== null && L.open > -Infinity ? +L.open.toFixed(1) : (L.open === null && quiet ? +L.at.toFixed(1) : null), limit_s: LIM,
+      measurements: D.n, lag_mean_s: D.n ? +(D.sum / D.n).toFixed(3) : null, lag_max_s: +D.max.toFixed(1), lag_hist: Object.fromEntries(LAG_EDGES.map((x, i) => [x === Infinity ? ">60" : "<=" + x, D.hist[i]])),
+      seconds: Object.fromEntries(Object.entries(secs).map(([k, v]) => [k, +v.toFixed(1)])), seconds_total: +Object.values(secs).reduce((a, b) => a + b, 0).toFixed(1), interruptions: { ...D.spells }, longest_s: { ...D.longest }, recent: D.recent.slice(-10), late_events_skipped: this.stats.lateEvents || 0 }; }
   /** ELIGIBILITY GATE shared by EVERY path that can fill a pending live buy — the ordinary run, a new state, and the
    *  revaluation at the end of an interruption (Codex B2: recovery used to fill without it). A pending buy on a coin that is
    *  now restricted, now known to charge a fee, or whose fee is no longer known is CANCELLED, never filled. Positions that
    *  are already filled are never cancelled here; a later change is recorded on them (riskUpdated). Returns true if cancelled. */
   _blocked(e, c, was, sig, ids) { if (e.exec === "routed-quote" || e.status !== "pending") return false; const bad = liveBlock(c.info); if (!bad) return false;
     e.status = "cancelled"; e.flags.push(`cancelled before the buy: the coin's transfer restrictions changed between the decision and the fill — now ${bad}`); this.stats.cancelledAtFill = (this.stats.cancelledAtFill || 0) + 1; this._after(e, was, sig, ids, c); return true; }
-  /** the stream is current again at t: each open live position is valued once on its pool's state IN FORCE NOW (peaks, stops, overdue orders) */
+  /** the stream is current again at t. For each open live position whose pool state is trusted now:
+   *    1. its DUE CLOCK TRANSITIONS are run first (advance): a maximum-hold or clock-book deadline that passed during the
+   *       interruption is triggered at its own time, exactly as a tick would have done — the clock may have been held up
+   *       while the backlog was processed (Codex's review of 161d545: without this the position was still "open" here, the
+   *       next tick triggered the sale with a scheduled time inside the interruption, and nothing priced it afterwards);
+   *    2. then it is valued once on the state IN FORCE NOW (observe): peaks, stops, and every overdue order — priced with
+   *       the delay it really had.
+   *  Both steps go through the same eligibility gate (_blocked) and the same trust test as every other path. */
   _revalue(t) { for (const [mint, ids] of this.byMint) { if (!ids.size) continue; const c = this.coins.get(mint); if (!c || c.mode === "polled" || !this.trustedAt(c, t)) continue;
-    for (const id of [...ids]) { const e = this.entries.get(id); if (!e || e.exec === "routed-quote") continue; const was = e.status, sig = e.versions.map((v) => v.status).join(); if (this._blocked(e, c, was, sig, ids)) continue; observe(e, c.state, t, this.feedCov); this._after(e, was, sig, ids, c); } } }
+    for (const id of [...ids]) { const e = this.entries.get(id); if (!e || e.exec === "routed-quote") continue; const was = e.status, sig = e.versions.map((v) => v.status).join(); if (this._blocked(e, c, was, sig, ids)) continue;
+      const mut = advance(e, t, c.state, (at) => this.trustedAt(c, at), this.feedCov); observe(e, c.state, t, this.feedCov); this._after(e, was, sig, ids, c, mut); } } }
   /** the risk reader read this coin's mint account: a fee or restriction found on a coin already HELD on the live method is
    *  recorded on the position. The position, its exits and any unresolved exposure stay exactly as they are — nothing is
    *  deleted and no sale is invented. (A pending live buy is cancelled by _run.) */
   riskUpdated(mint) { const c = this.coins.get(mint), ids = this.byMint.get(mint); if (!c || !ids) return; const bad = liveBlock(c.info); if (!bad || !c.info.risk || c.info.risk.status === "missing") return;
     for (const id of ids) { const e = this.entries.get(id); if (!e || e.exec === "routed-quote" || e.status !== "filled" || e.riskAfter === bad) continue; e.riskAfter = bad; e.flags.push(`found after the buy: the coin now has ${bad} — this position's result does not model it`); e.touched = true; } }
-  feedUp(t) { this.feedCov.up(t, "feed"); this.cov.up(t, "feed"); if (!this.cov.down) for (const c of this.coins.values()) if (c.mode !== "polled") c.series.startLive(t); /* a sampled coin's history starts at its own first sample, never at the PumpSwap feed's */ this.store?.feedEvent(t, "up"); }
+  feedUp(t) { if (this.stream.acctAt == null) this.stream.acctAt = t; /* "unknown" seconds are counted from the first connect */ this.feedCov.up(t, "feed"); this.cov.up(t, "feed"); if (!this.cov.down) for (const c of this.coins.values()) if (c.mode !== "polled") c.series.startLive(t); /* a sampled coin's history starts at its own first sample, never at the PumpSwap feed's */ this.store?.feedEvent(t, "up"); }
   feedDown(t, why = "") { this.feedCov.drop(t, "feed"); this.cov.drop(t, "feed"); this.store?.feedEvent(t, "down", why);
     /* the delay of the next connection is unknown until measured; an interruption already open needs its good-evidence period again */ const L = this.stream; if (L.open === null) this._interrupt(t, "connect", why); else { L.goodSince = null; L.promote = false; } }
   /** a watched coin. mode "live" = decoded pool events (PumpSwap adapter); "polled" = sampled prices + routed quotes (Solana-wide adapter).
@@ -305,6 +321,9 @@ export class Engine {
   onSwap(ev) { this.onEvent({ ...ev, kind: ev.isBuy ? "buy" : "sell", state: ev.state ?? { base: ev.base, quote: ev.quote, feeBuy: ev.feeBuy ?? (ev.feeBps != null ? ev.feeBps / 1e4 : null), feeSell: ev.feeSell ?? (ev.feeBps != null ? ev.feeBps / 1e4 : null), supply: ev.supply ?? null } }); }
 
   tick(now) {
+    // a silence is noticed by the CLOCK, not only when the next transaction arrives: status, signal coverage and the
+    // seconds counters then say "silence" while it is happening (Codex's review of 161d545)
+    { const L = this.stream; if (L.open === null && L.at != null && now - L.at > S.FEED_MAX_LAG_S) this._interrupt(L.at, "silence", `no transaction for ${(now - L.at).toFixed(1)} s on a connected stream (noticed by the clock)`); }
     for (const [mint, ids] of this.byMint) if (ids.size) this._run(mint, now, this.coins.get(mint));
     // CHECKPOINT: an open position's decision state (peak, last value, runner high) is saved at most 1 s after it changes, so a
     // restart resumes with the same high-water marks the uninterrupted run would have had

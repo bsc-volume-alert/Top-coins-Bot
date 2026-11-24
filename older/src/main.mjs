@@ -8,7 +8,7 @@ if (process.env.HELIUS_API_KEY) { process.env.RPC_WS ||= "wss://mainnet.helius-r
 for (const k of ["RPC_WS", "RPC_HTTP"]) if (!process.env[k]) { console.error(`[older] ${k} is not set — cannot start the feed`); process.exit(1); }
 const { Store } = await import("./store.mjs"); const { Engine } = await import("./engine.mjs");
 const { startFeed, fs } = await import("./feed.mjs"); const { dec, IDL_PIN } = await import("./decoder.mjs");
-const { startSolUsd, solUsd, sp } = await import("./solusd.mjs"); const { startBackfill, bf } = await import("./backfill.mjs");
+const { startSolUsd, solUsd, sp } = await import("./solusd.mjs"); const { startBackfill, bf, gapRequests } = await import("./backfill.mjs");
 const { inventory } = await import("./inventory.mjs"); const { gm } = await import("./gmgn.mjs"); const { startWeb } = await import("./web.mjs");
 const { verifyEntry, vf } = await import("./verify.mjs"); const { SPEC_VER } = await import("./spec.mjs"); const { riskStatus } = await import("./risk.mjs"); const { RISK_REFRESH_S } = await import("./spec.mjs");
 
@@ -65,10 +65,11 @@ setInterval(runInventory, 86400e3);
 
 // clock: scheduled fills/exits every 100 ms (1 s and 0.7 s delays need a fine clock); bars, memory, heartbeat each minute
 setInterval(() => engine.tick(Date.now() / 1000), 100);
-let gapsSeen = engine.feedCov.gaps.length; // the list that is compared below (after a warm restart the two lists differ in length)
+let gapsSeen = engine.cov.gaps.length; // SIGNAL-coverage gaps (reconnects, late spells, silences): the list hour-scale windows are checked against — see backfill.gapRequests
 setInterval(() => {
   const t = Date.now() / 1000; engine.prune(t); store.heartbeat(t);
-  if (engine.feedCov.gaps.length > gapsSeen) { for (const [a, b] of engine.feedCov.gaps.slice(gapsSeen)) { const mints = [...engine.byMint.keys()].filter((m) => engine.byMint.get(m).size); for (const [m, c] of engine.coins) if (c.series.lastPx && c.series.lastPx * c.supply >= 20000 && c.series.lastPx * c.supply <= 1e6) mints.push(m); backfill.patchGap(a, b, [...new Set(mints)]); } gapsSeen = engine.feedCov.gaps.length; }
+  { const gr = gapRequests(engine.cov.gaps, gapsSeen); gapsSeen = gr.seen;
+    if (gr.requests.length) { const mints = [...engine.byMint.keys()].filter((m) => engine.byMint.get(m).size); for (const [m, c] of engine.coins) if (c.series.lastPx && c.series.lastPx * c.supply >= 20000 && c.series.lastPx * c.supply <= 1e6) mints.push(m); const list = [...new Set(mints)]; for (const [a, b] of gr.requests) backfill.patchGap(a, b, list); } }
 }, 60000);
 setInterval(() => { const n = store.retention(Date.now() / 1000); if (n) log(`[retention] ${n} old bars removed`); }, 3600e3);
 
@@ -91,7 +92,7 @@ const inv = () => { try { return JSON.parse(store.db.prepare("SELECT v FROM meta
 // the reserve reading counts as validated only when the owner sets OLDER_RES_VALIDATED=1 after reviewing docs/tx-validation.json
 const valid = () => (process.env.OLDER_RES_VALIDATED === "1" ? { by: "OLDER_RES_VALIDATED" } : null);
 const web = startWeb({ port: Number(process.env.OLDER_PORT || 8793), store, engine, status: () => ({ started: now0, first_start: firstStart, commit: COMMIT, run: process.env.OLDER_RUN_NAME || null, entries_until: engine.entriesUntil, idl: IDL_PIN,
-  feed: { ...fs, lag_ms_avg: fs.lagN ? Math.round(fs.lagMsSum / fs.lagN) : null }, stream: engine.streamStatus(), risk_reader: { ...riskStatus(engine, Date.now() / 1000, RISK_REFRESH_S), fee_unknown_evaluations: engine.stats.feeUnknown || 0, fee_unknown_coins: engine.stats.feeUnknownCoins || 0, cancelled_at_fill: engine.stats.cancelledAtFill || 0 }, engine: { ...engine.stats, coins: engine.coins.size, open: [...engine.byMint.values()].reduce((s, x) => s + x.size, 0), feed_gaps: engine.feedCov.gaps.length, usd_down: engine.usdDown },
+  feed: { ...fs, lag_ms_avg: fs.lagN ? Math.round(fs.lagMsSum / fs.lagN) : null }, stream: engine.streamStatus(Date.now() / 1000), risk_reader: { ...riskStatus(engine, Date.now() / 1000, RISK_REFRESH_S), fee_unknown_evaluations: engine.stats.feeUnknown || 0, fee_unknown_coins: engine.stats.feeUnknownCoins || 0, cancelled_at_fill: engine.stats.cancelledAtFill || 0 }, engine: { ...engine.stats, coins: engine.coins.size, open: [...engine.byMint.values()].reduce((s, x) => s + x.size, 0), feed_gaps: engine.feedCov.gaps.length, usd_down: engine.usdDown },
   decoder: { ...dec }, tx_validation: valid(), verify: { ...vf }, snapshots: { ...snapStats }, sol: { ...sp }, gmgn: { calls: gm.calls, errors: gm.errors, limited: gm.limited, banned: gm.banned, lastErr: gm.lastErr, rate_headers: gm.headers }, backfill: { ...bf }, backfillQ: backfill.size(), jupiter: { ...J.ju, key: !!process.env.JUP_API_KEY, rps: Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0.5)) }, poller: poller ? { ...poller.stats, cadence_avg_s: poller.stats.cadence.n ? +(poller.stats.cadence.sum / poller.stats.cadence.n).toFixed(1) : null, hot_s: poller.hotEvery, cold_s: poller.coldEvery } : null, inventory: inv(), mem_mb: Math.round(process.memoryUsage().rss / 2 ** 20), sizes: sizes() }) });
 log(`[older] started, spec ${SPEC_VER}, paper only`);
 

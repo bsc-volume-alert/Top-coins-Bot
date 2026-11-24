@@ -6,6 +6,21 @@ import * as S from "./spec.mjs";
 import { creationTime, minuteBars, gmgnOn } from "./gmgn.mjs";
 export const bf = { queued: 0, done: 0, created: 0, noCreation: 0, bars: 0, refsOk: 0, refsMissing: 0, gapsPatched: 0, errors: 0, lastErr: "" };
 
+/** WHICH GAPS TO ASK BACK-FILL FOR (Codex's review of 161d545). `gaps` is the engine's SIGNAL-coverage list (engine.cov.gaps) —
+ *  the list every coin's hour-scale windows are checked against — and `seen` how many of its entries were handled before.
+ *  It must be THIS list, not the pool-trust list (engine.feedCov.gaps):
+ *    - a late spell or a silence is a gap in signal coverage only, so the pool-trust list never contains it;
+ *    - since older-10 a reconnect's signal gap ends at the first delay measurement, a little AFTER the pool-trust gap ends, and
+ *      a repair recorded for the shorter interval does not cover the gap the window test looks for.
+ *  New gaps whose minute ranges touch or overlap are merged into ONE request (one set of minute bars covers them all), so a
+ *  flapping stream does not multiply requests. Returns the merged [from, to] intervals and the new `seen`.
+ *  Repair is by 1-minute bars and therefore only ever satisfies hour-scale windows: exact windows (FAST, fresh crossings) are
+ *  never repaired, and nothing here touches pool-state trust. */
+export function gapRequests(gaps, seen = 0) {
+  const fresh = gaps.slice(seen).filter((g) => g && g[1] > g[0]).map(([a, b]) => [a, b]).sort((p, q) => p[0] - q[0]), out = [];
+  for (const g of fresh) { const last = out[out.length - 1]; if (last && Math.floor(g[0] / 60) * 60 <= Math.ceil(last[1] / 60) * 60) { if (g[1] > last[1]) last[1] = g[1]; } else out.push(g); }
+  return { requests: out, seen: gaps.length };
+}
 export function startBackfill({ engine, store, jup = null, log = console.log }) {
   const q = [], inQ = new Set(), needC = new Set(), askedC = new Set();
   // CREATION TIME IN BULK (measured 20 Nov: GMGN's free plan managed 38 coins in 10 minutes, far too slow for thousands).

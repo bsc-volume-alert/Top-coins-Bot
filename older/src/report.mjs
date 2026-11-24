@@ -11,12 +11,14 @@ const sum = (a) => a.reduce((s, x) => s + x, 0);
 export function bookRows(entries, noteCounts = []) {
   const rows = new Map();
   for (const policy of S.POLICIES) for (const f of S.FAMILIES) for (const [ag] of S.agesOf(f)) for (const stop of S.STOPS)
-    rows.set(`${f}|${ag}|${stop}|${policy}`, { family: f, ag, stop, policy, entries: 0, cancelled: 0, pending: 0, filled: 0, open: 0, closed: 0, unresolved: 0, mints: new Set(), trades: [], holds: [], delays: [], runners: { n: 0, partial: 0, x2: 0, x3: 0, x5: 0, x10: 0 }, outage: 0, estimated: 0, estimatedNet: 0, rebuys: 0, rebuyNet: 0, rebuyOpen: 0, feeAssumed: 0, halves: 0, startup: 0, startupNet: 0, unsupported: 0, unsupportedNet: 0 });
+    rows.set(`${f}|${ag}|${stop}|${policy}`, { family: f, ag, stop, policy, entries: 0, cancelled: 0, pending: 0, filled: 0, open: 0, closed: 0, unresolved: 0, mints: new Set(), trades: [], holds: [], delays: [], runners: { n: 0, partial: 0, x2: 0, x3: 0, x5: 0, x10: 0 }, outage: 0, estimated: 0, estimatedNet: 0, rebuys: 0, rebuyNet: 0, rebuyOpen: 0, feeAssumed: 0, halves: 0, startup: 0, startupNet: 0, unsupported: 0, unsupportedNet: 0, unsupportedRebuys: 0, unsupportedRebuyNet: 0 });
   for (const e of entries) { if (e.token?.xfer_bps > 0) continue; // transfer-fee coins are reported in their own book (spec FEE_BOOK), not in the rule rows
    for (const f of e.families) for (const policy of S.POLICIES) for (const v of versionsFor(e, f, policy)) {
     const r = rows.get(`${f}|${e.ag}|${v.stop}|${policy}`); if (!r) continue;
     // BUYING AGAIN (older-9): a row's figures are its FIRST buys, exactly as in older-8. Re-buys are counted and summed apart.
-    if (e.again?.[f]) { if (e.status === "filled") { if (v.status === "closed") { if (!v.exit.est) { r.rebuys++; r.rebuyNet += v.exit.sol - COST; } } else r.rebuyOpen++; } continue; }
+    // A re-buy of a coin later found fee-bearing or restricted is separated exactly like a first buy (Codex's review of
+    // 161d545: the re-buy branch used to return before that check, so those fee-free results stayed in the re-buy P&L).
+    if (e.again?.[f]) { if (e.status === "filled") { if (v.status === "closed") { if (v.exit.est) { /* an estimated sale is not a result */ } else if (e.riskAfter && e.exec !== "routed-quote") { r.unsupportedRebuys++; r.unsupportedRebuyNet += v.exit.sol - COST; } else { r.rebuys++; r.rebuyNet += v.exit.sol - COST; } } else r.rebuyOpen++; } continue; }
     r.entries++; r.mints.add(e.mint);
     if (e.status === "cancelled" || e.status === "failed") { r.cancelled++; continue; } if (e.status === "pending") { r.pending++; continue; }
     r.filled++; if (e.fill.fee_src !== "event") r.feeAssumed++; if (e.startup) r.startup++;
@@ -49,6 +51,7 @@ export function bookRows(entries, noteCounts = []) {
       runners: r.runners, exit_reasons: reasons, exits_during_outage: r.outage, fee_not_from_event: r.feeAssumed, half_sales: r.halves,
       estimated_exits: r.estimated, estimated_net_sol: r4(r.estimatedNet), // shown apart: never part of closed / net_sol / win_rate above
       unsupported_fee_exits: r.unsupported, unsupported_fee_net_sol: r4(r.unsupportedNet), // live buys of coins later found fee-bearing or restricted: shown apart, never inside net_sol
+      unsupported_fee_rebuys: r.unsupportedRebuys, unsupported_fee_rebuys_net_sol: r4(r.unsupportedRebuyNet), // the same for re-buys: never inside rebuys_net_sol
       rebuys_closed: r.rebuys, rebuys_net_sol: r4(r.rebuyNet), rebuys_open: r.rebuyOpen, // older-9 re-buys: beside the row, never inside it
       startup_entries: r.startup, startup_net_sol: r4(r.startupNet), notes: notes[r.family] || {},
     };
