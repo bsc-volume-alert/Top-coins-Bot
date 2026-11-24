@@ -1,0 +1,19 @@
+not ok 1 - C1 (Codex's reproduction) a 24-hour deadline that passes inside a late spell while the clock is held up: sold at recovery, not left pending
+  error: 'the deadline was run at recovery and the sale priced there (was: still open, then pending for good)'
+ok 2 - C1 control: the same deadline with the clock running through the late spell closes at the same moment with the same delay
+ok 3 - C1 a deadline that comes AFTER the recovery is untouched by it: triggered and priced on time by the clock, as always
+ok 4 - C1 the eligibility gate still comes first at recovery: a pending buy on a coin that turned restricted is cancelled before any clock transition
+not ok 5 - C2 a silence is reported while it is happening: state, signal coverage and the seconds counters are as of NOW
+    30 s without a transaction is not current — even before the clock has run (was: "current")
+not ok 6 - C2 the unknown time before a connection's first measurement is counted, and a clock-noticed silence prices nothing
+    The expression evaluated to a falsy value:
+not ok 7 - C3 a RE-BUY of a coin later found fee-bearing is counted apart from the re-buy totals, exactly like a first buy; no row is lost
+    not inside the ordinary re-buy count (was: 1)
+    1 !== 0
+not ok 8 - C4 a malformed mint answer fails that ONE coin (and fails closed); the rest of the batch is classified and the bad one is retried
+  error: '(info.extensions || []).map is not a function'
+not ok 9 - C5 the gap repair is asked for SIGNAL-coverage gaps — reconnect, late spell and silence — merged per minute, with no duplicates
+    the scheduler's choice of gaps is a tested function
+# tests 9
+# pass 3
+# fail 6

@@ -1,0 +1,12 @@
+ok 1 - C1 (Codex's reproduction) a 24-hour deadline that passes inside a late spell while the clock is held up: sold at recovery, not left pending
+ok 2 - C1 control: the same deadline with the clock running through the late spell closes at the same moment with the same delay
+ok 3 - C1 a deadline that comes AFTER the recovery is untouched by it: triggered and priced on time by the clock, as always
+ok 4 - C1 the eligibility gate still comes first at recovery: a pending buy on a coin that turned restricted is cancelled before any clock transition
+ok 5 - C2 a silence is reported while it is happening: state, signal coverage and the seconds counters are as of NOW
+ok 6 - C2 the unknown time before a connection's first measurement is counted, and a clock-noticed silence prices nothing
+ok 7 - C3 a RE-BUY of a coin later found fee-bearing is counted apart from the re-buy totals, exactly like a first buy; no row is lost
+ok 8 - C4 a malformed mint answer fails that ONE coin (and fails closed); the rest of the batch is classified and the bad one is retried
+ok 9 - C5 the gap repair is asked for SIGNAL-coverage gaps — reconnect, late spell and silence — merged per minute, with no duplicates
+# tests 9
+# pass 9
+# fail 0

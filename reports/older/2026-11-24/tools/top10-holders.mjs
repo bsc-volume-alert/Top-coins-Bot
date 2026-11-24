@@ -1,0 +1,17 @@
+import fs from "node:fs"; import zlib from "node:zlib"; const COST = 0.2005;
+const raw = zlib.gunzipSync(fs.readFileSync(process.argv[2])).toString("utf8").trim().split("\n").map((l) => JSON.parse(JSON.parse(l)[5]));
+const FASTS = ["FAST-1M", "FAST-3M", "FAST-5M", "VOL300K", "VOL300K-UP", "VOL500K", "VOL500K-UP"];
+const rows = raw.map((e) => { if (e.status !== "filled") return null; const v = e.versions.find((x) => x.stop === 0.3 && x.policy === "trail" && !x.stall); if (!v || v.status !== "closed" || v.exit?.est) return null; const again = e.again ? Object.keys(e.again) : [];
+  const firstFams = e.families.filter((f) => !again.includes(f)); if (!firstFams.length) return null;
+  return { id: e.id, mint: e.mint, fams: firstFams, net: v.exit.sol - COST, ret: v.exit.ret, snapOk: e.snap?.ok === true, top: e.snap?.top_holders_pct ?? null, delay: e.snap?.delay_s ?? null, respAfterDecision: e.snap?.t != null && e.snap?.decision_t != null ? e.snap.t - e.snap.decision_t : null, fillDelay: e.fill.t - e.decisionT, runMax: e.runner?.maxX ?? null, heldMax: v.maxX ?? null }; }).filter(Boolean);
+const s = (a) => a.reduce((x, y) => x + y, 0), pct = (a, p) => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.min(b.length - 1, Math.floor(p * b.length))] : null; };
+console.log("snap example:", JSON.stringify(raw.find((e) => e.snap?.ok)?.snap).slice(0, 420));
+const tops = rows.filter((r) => r.top != null).map((r) => r.top); console.log("top_holders_pct distribution over closed first buys with a value: n", tops.length, "min", pct(tops, 0), "p10", pct(tops, 0.1), "p25", pct(tops, 0.25), "median", pct(tops, 0.5), "p75", pct(tops, 0.75), "p90", pct(tops, 0.9), "max", pct(tops, 0.999));
+const lat = rows.filter((r) => r.respAfterDecision != null).map((r) => r.respAfterDecision); console.log("snapshot response time after the decision (s): n", lat.length, "median", pct(lat, 0.5)?.toFixed(2), "p90", pct(lat, 0.9)?.toFixed(2), "max", pct(lat, 0.999)?.toFixed(2), "| arrived before the fill (1 s after the decision):", lat.filter((x) => x <= 1).length, "after:", lat.filter((x) => x > 1).length);
+const show = (name, R) => { console.log("\n" + name, "— closed first buys", R.length, "net", s(R.map((r) => r.net)).toFixed(2), "won", R.filter((r) => r.net > 0).length);
+  const g = (label, f) => { const G = R.filter(f); console.log("   ", label.padEnd(34), "n", String(G.length).padStart(4), "won", String(G.filter((r) => r.net > 0).length).padStart(3), (G.length ? Math.round(100 * G.filter((r) => r.net > 0).length / G.length) : 0) + "%", "net", s(G.map((r) => r.net)).toFixed(2).padStart(7), "avg", (G.length ? (100 * s(G.map((r) => r.ret)) / G.length).toFixed(0) : "-") + "%", "| never +10%:", G.filter((r) => r.runMax < 1.1).length); };
+  g("top-10 holders value MISSING", (r) => r.top == null); g("top-10 holders < 25%", (r) => r.top != null && r.top < 25); g("top-10 holders 25–40%", (r) => r.top != null && r.top >= 25 && r.top < 40); g("top-10 holders ≥ 40%", (r) => r.top != null && r.top >= 40); g("  (of which arrived before the fill, <25%)", (r) => r.top != null && r.top < 25 && r.respAfterDecision <= 1); };
+const seen = new Set(); show("ALL distinct closed first buys (any book)", rows);
+show("FAST-1M/3M/5M + the four volume books", rows.filter((r) => r.fams.some((f) => FASTS.includes(f))));
+show("HH-BREAK", rows.filter((r) => r.fams.includes("HH-BREAK"))); show("RUG450", rows.filter((r) => r.fams.includes("RUG450")));
+show("HH15-5M / HH30-5M / HH30-10M", rows.filter((r) => r.fams.some((f) => /^HH(15|30)-/.test(f))));

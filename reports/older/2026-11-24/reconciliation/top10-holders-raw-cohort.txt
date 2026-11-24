@@ -1,0 +1,38 @@
+snap example: {"decision_t":1795197239.869,"delay_s":1.98,"ok":true,"req":1795197241.85,"t":1795197241.866,"holders":173,"top_holders_pct":27.620366142262775,"organic":42.27865685419921,"liq_usd":8333.33184811204,"mcap":52014.895023143625,"stats5m":{"priceChange":40.92969515867492,"holderChange":2.366863905325444,"liquidityChange":21.619598732498666,"volumeChange":3061.325159738866,"buyVolume":1584.7791380988488,"sellVolume":142.0
+top_holders_pct distribution over closed first buys with a value: n 1133 min 0.4001392140675331 p10 14.027391008117466 p25 21.539370155510767 median 25.363795059077134 p75 29.29672706622129 p90 35.12572900498878 max 90.967090805467
+snapshot response time after the decision (s): n 1133 median 20.28 p90 20.98 max 22.49 | arrived before the fill (1 s after the decision): 314 after: 819
+
+ALL distinct closed first buys (any book) — closed first buys 1171 net -15.39 won 320
+    top-10 holders value MISSING       n   38 won  15 39% net    0.99 avg 13% | never +10%: 8
+    top-10 holders < 25%               n  528 won 147 28% net   -8.97 avg -8% | never +10%: 192
+    top-10 holders 25–40%              n  514 won 141 27% net   -6.55 avg -6% | never +10%: 171
+    top-10 holders ≥ 40%               n   91 won  17 19% net   -0.86 avg -5% | never +10%: 47
+      (of which arrived before the fill, <25%) n  158 won  44 28% net   -3.23 avg -10% | never +10%: 53
+
+FAST-1M/3M/5M + the four volume books — closed first buys 82 net -2.14 won 20
+    top-10 holders value MISSING       n    7 won   4 57% net    0.22 avg 16% | never +10%: 3
+    top-10 holders < 25%               n   38 won   6 16% net   -1.38 avg -18% | never +10%: 9
+    top-10 holders 25–40%              n   36 won  10 28% net   -0.93 avg -13% | never +10%: 16
+    top-10 holders ≥ 40%               n    1 won   0 0% net   -0.05 avg -24% | never +10%: 0
+      (of which arrived before the fill, <25%) n   15 won   1 7% net   -0.85 avg -28% | never +10%: 6
+
+HH-BREAK — closed first buys 162 net 0.37 won 64
+    top-10 holders value MISSING       n    0 won   0 0% net    0.00 avg -% | never +10%: 0
+    top-10 holders < 25%               n   67 won  27 40% net   -0.70 avg -5% | never +10%: 28
+    top-10 holders 25–40%              n   75 won  33 44% net    1.01 avg 7% | never +10%: 20
+    top-10 holders ≥ 40%               n   20 won   4 20% net    0.05 avg 1% | never +10%: 10
+      (of which arrived before the fill, <25%) n   19 won   6 32% net   -0.37 avg -10% | never +10%: 7
+
+RUG450 — closed first buys 23 net -1.80 won 3
+    top-10 holders value MISSING       n    0 won   0 0% net    0.00 avg -% | never +10%: 0
+    top-10 holders < 25%               n   23 won   3 13% net   -1.80 avg -39% | never +10%: 13
+    top-10 holders 25–40%              n    0 won   0 0% net    0.00 avg -% | never +10%: 0
+    top-10 holders ≥ 40%               n    0 won   0 0% net    0.00 avg -% | never +10%: 0
+      (of which arrived before the fill, <25%) n    9 won   0 0% net   -0.89 avg -49% | never +10%: 7
+
+HH15-5M / HH30-5M / HH30-10M — closed first buys 468 net -7.11 won 125
+    top-10 holders value MISSING       n    1 won   1 100% net    0.04 avg 22% | never +10%: 0
+    top-10 holders < 25%               n  223 won  63 28% net   -3.47 avg -8% | never +10%: 96
+    top-10 holders 25–40%              n  194 won  51 26% net   -3.16 avg -8% | never +10%: 77
+    top-10 holders ≥ 40%               n   50 won  10 20% net   -0.52 avg -5% | never +10%: 26
+      (of which arrived before the fill, <25%) n   63 won  16 25% net   -1.28 avg -10% | never +10%: 20

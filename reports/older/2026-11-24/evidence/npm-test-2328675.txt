@@ -1,0 +1,203 @@
+ok 1 - 1. scale-out keeps the trail intact: an existing drawdown is neither erased nor enlarged by selling half; costs charged once per leg
+ok 2 - 2. USD history: every observation is converted at the SOL/USD of its own moment; positions are valued in SOL
+ok 3 - 3. SECOND-WAVE lives across an age boundary: classified by age AT ENTRY, seed age recorded, one active setup per mint
+ok 4 - 4. HH-BREAK windows: signal [B−15 min, B), baseline sixteen buckets over [B−255 min, B−15 min); the unfinished minute is in neither
+ok 5 - 5. an unusual observed fee rate is a FAILED measurement: counted, never installed, never clamped — the pool keeps the last rate it really showed
+ok 6 - VOL300K / VOL500K: a migrated coin in its first 8 hours is bought when $300K (then $500K) has traded in the last 5 minutes; the -UP books also need the price above 5 minutes ago
+ok 7 - VOL books: $40K–$2M at the buy (the owner's limit for these books); an unobserved stretch inside the 5 minutes blocks the decision; also bought at 8 hours and older
+ok 8 - RUG450 / RUG950: bought at the fresh fall to 80% below the observed peak; the 950 books need a $950K peak; the bounce books wait for +30% off the low
+ok 9 - RUG: nothing is carried across a restart — a fall measured against a peak from before the restart is not bought; a new peak and collapse watched in full is. A setup expires after 24 hours; a bounce outside the band is not bought
+ok 10 - older-8 tables: 1,240 rows — the any-age books have an 'under 8h' row, the others do not; the page can show the under-8h group
+ok 11 - the books page's own script parses (a quoting slip in the page text once left the site blank; unit tests on the data could not see it)
+ok 12 - books page data: each trade carries the market cap at our buy and at our sale, from the pool it was priced on
+ok 13 - the books page reloads itself after an update: the data carries the server's build id and the page script compares it
+ok 14 - a position nothing happened to is not re-written by clock ticks
+ok 15 - a new price is saved within CHECKPOINT_S, and a restart resumes with the same peaks
+ok 16 - changes made by the clock alone are still saved (max hold, clock books, runner horizon)
+ok 17 - BuyEvent / SellEvent decode in IDL order, including the appended fields (ix name, virtual reserves, supply, holder rewards)
+ok 18 - pricing uses EFFECTIVE quote reserves (vault + signed virtual), and a negative virtual value is handled
+ok 19 - fee per side is the user's net debit/credit — overlapping fee fields (creator fee = holder rewards) are never added together
+ok 20 - pre/post evidence: each swap is scored against both hypotheses, consecutive events are chained, and a non-fitting event is rejected
+ok 21 - older, shorter events still decode; virtual reserves that were never seen are UNKNOWN, not zero → no state
+ok 22 - deposit / withdraw change reserves without a swap; a fee sweep is price-neutral
+ok 23 - canonical pool check: pool-authority and canonical pool derivations match the standard Solana library (fixed vectors)
+ok 24 - REAL transaction (20 Nov 2026 validation): buy_exact_quote_in carries the user's total in quote_amount_in and the curve amount in user_quote_amount_in
+ok 25 - buy fills AT signal + 1 s from the state in force then — no other trader is needed, and a later swap does not move the fill
+ok 26 - a swap landing inside the 1 s delay IS the state in force at the scheduled time
+ok 27 - buy pricing timeout: no trustworthy state within 5 s → cancelled as a data timeout; a trustworthy state inside 5 s is used with its delay
+ok 28 - four trailing stops exit independently; the sale prices at trigger + 0.7 s on the state in force then — not at the trigger level
+ok 29 - a triggered sell survives a data failure: it waits, records the real delay, and is never dropped — even past 24 h
+ok 30 - CONT-STALL: at fill + 60 min, closes if after-cost value never reached 1.15× cost; plain CONT is unaffected
+ok 31 - 24 h maximum hold from the fill, on a quiet coin, with no further trade needed
+ok 32 - scale-out: half the ORIGINAL tokens sold when full value reaches 2× cost; the rest trails on a normalised high-water mark
+ok 33 - scale-out never sells the same tokens twice: a trail trigger during the pending half-sale becomes ONE full sale
+ok 34 - runner tracking continues after an exit and is separate from realised profit
+ok 35 - liquidation value = effective-reserve quote, less the pool's sell fee, less the transaction cost
+ok 36 - FAST: fresh-crossing times differ by window — 5M fires first, 1M later; entries are shared only when signals fire together
+ok 37 - FAST-1M: a sudden double inside one minute fires all three windows on the same update → one shared entry
+ok 38 - FAST window boundary: a low just outside the 60 s window does not count; the price standing at the window start does
+ok 39 - FAST needs a covered window: nothing fires across a feed outage, and held (replayed) events never create signals
+ok 40 - SECOND-WAVE: seed on a 2× FAST trigger → ≥ 25% pullback freezes the high → buy strictly above it; one attempt; expires after 60 min
+ok 41 - 90-day ceiling at entry: a coin older than 90 days is not evaluated; exactly the same move on an 89-day coin enters
+ok 42 - SOL/USD stale: new entries are suspended, open positions are still managed in SOL, and the stale period is not covered history
+ok 43 - startup tag: entries in the first 24 h after the project's first start are tagged, later ones are not
+ok 44 - Solana-wide adapter: a non-pump coin on another venue is discovered, sampled, and enters with a ROUTED QUOTE — never back-dated
+ok 45 - routed-quote exits: one quote per DISTINCT inventory (not per row); a sale waits for a quote requested after its trigger
+ok 46 - no route: the buy is cancelled as a pricing/data timeout; an open position with no exit route stays visible, never removed
+ok 47 - a token the price API omits is missing coverage: counted, history restarts, and no signal is made across the hole
+ok 48 - a mint already observed live by the PumpSwap adapter is not polled twice; restricted tokens are not entered
+ok 49 - risk evidence: Token-2022 restrictions block the execution assumption; missing data is 'missing', not clean
+ok 50 - capacity is budgeted per job (scans, position quotes, entry/exit quotes, discovery) and picks the lowest tier with headroom
+ok 51 - Jupiter client: omitted mints are reported, not priced as zero; quotes return route and timing; no route is explicit
+ok 52 - transfer-fee coins (owner, 22 Nov 2026): a 5% fee coin is bought on the sampled method and marked; the fee is charged once — inside the quote as measured (nothing more deducted), or, under the other assumption, off the tokens at the buy and off the proceeds at the sale; on the live method it stays blocked
+ok 53 - fee coins in their first 8 hours (owner, 22 Nov 2026): a 2-hour-old fee coin is bought by the ordinary sampled rules, in age group A0 and in FEE-COINS; a 2-hour-old coin without a fee is still not evaluated; a 2-hour-old coin with a fee over 5% is blocked
+ok 54 - while a book holds the coin on every row it does not buy again; once a row has sold, the next signal is a re-buy carrying exactly the free rows
+ok 55 - the page and the full table: a stop that sold shows the first buy and the re-buy; a stop still holding shows only the first; 'first only' and the 1,240 rows are the older-8 figures
+ok 56 - no waiting time: a volume book stopped out during heavy trading buys again at the next trade, and again — every one marked
+ok 57 - the safety limit: no more than REBUY_MAX_PER_DAY re-buys of one coin by one book in 24 hours, recorded when it bites; an older re-buy ages out
+ok 58 - a clock book on its own: CONT-STALL sold at 60 minutes while CONT still holds — the next CONT signal is a CONT-STALL re-buy on its own rows, and no CONT buy
+ok 59 - the sampled method buys again too (a non-pump.fun coin priced by quotes)
+ok 60 - first buys are the older-8 buys: on random markets, the first buys with buying-again switched on are identical to those with it switched off
+ok 61 - 1,240 rows (620 pure-trailing + 620 scale-out); a shared entry feeds each of its families' rows; CONT-STALL reads only stall versions
+ok 62 - restart: one-entry flags and open positions survive; the restart gap blocks fabricated crossings; exits flag the outage
+ok 63 - B1 a state observed AFTER the scheduled time can never price it: no back-dated fill, the 5 s timeout applies
+ok 64 - B2 events of one transaction give ONE committed state; equal receive times still order strictly, so FAST-1M is not missed
+ok 65 - B3 coverage follows evidence: an empty back-fill extends nothing and repairs nothing; a real low in the boundary minute is kept
+ok 66 - B3 a sample the price provider omits breaks that token's coverage at once (first miss, not the third)
+ok 67 - B4 open-position peaks are check-pointed: a restart resumes with the same high-water mark and the same stop
+ok 68 - B5 restart: a sampled coin comes back as sampled, on the watch list, and its open position keeps receiving quotes
+ok 69 - B6 an entry keeps its declared execution method: live events never price a routed-quote entry; a coin moves to live only with no open entry
+ok 70 - B7 see exits.test 'a triggered sell survives a data failure': unresolved is never terminal — sampled side: inventory still requested, slowly
+ok 71 - B8 a break in the reserve chain is reported as a discontinuity and resets trust: the stale state cannot fill a pending order
+ok 72 - B9 each quoted quantity keeps its own request/response time; an order only uses quotes requested after it was scheduled
+ok 73 - memory: buyer wallet lists are released after 20 minutes, the count is kept, and the 15-minute features are unchanged
+ok 74 - measurements: 1/3/5-minute volume, buys, sells, different buyers and top-buyer share are recorded on the entry and never change the decision
+ok 75 - measurements: buyer wallets on exact observations are released after 6 minutes; sampled coins record no trade windows
+ok 76 - measurements: the holder snapshot keeps the provider's numbers as returned, with request and reply times; a missing token is recorded as missing
+ok 77 - B1 the transaction that ends a late spell is applied BEFORE anything is priced: the overdue sale gets its 80 SOL pool, not the 240 SOL one before it
+ok 78 - B1 a recovering transaction that touches TWO pools: no position is revalued halfway through it
+ok 79 - B2 the eligibility gate also guards the recovery path: a pending buy on a coin that turned restricted is cancelled, not filled
+ok 80 - B3 a globally silent stream is a gap in SIGNAL coverage too: no exact window and no fresh crossing spans it
+ok 81 - B4 a late spell ends only after FEED_MAX_LAG_S of continuous good evidence — one good measurement after a quiet stretch does not end it
+ok 82 - the written initial-connection policy is kept, explicitly: unknown until measured, current at the first good measurement of a connection
+ok 83 - B5 a mint account that comes back empty, unparsed or missing from a short answer is retried with a bounded back-off; the rest of the batch is not stranded
+ok 84 - a crossing that was blocked because the fee was not known is LOST: it is not back-dated and not taken late once the classification arrives
+ok 85 - control: on an uninterrupted current stream a stop is still priced at its scheduled time on the state in force then
+ok 86 - control: a quiet pool, driven chronologically — while other transactions keep the delay measured its unchanged state prices the 24-hour sale on time
+ok 87 - a coin found fee-bearing after a live buy: the position stays, its fee-free result is reported apart and is in no primary total
+ok 88 - a failed refresh of a coin we HOLD: what was known stays, the position stays, and the retry never waits longer than the refresh interval
+ok 89 - diagnostics are bounded and sufficient: delay histogram, seconds in each state, interruption counts and lengths
+ok 90 - C1 (Codex's reproduction) a 24-hour deadline that passes inside a late spell while the clock is held up: sold at recovery, not left pending
+ok 91 - C1 control: the same deadline with the clock running through the late spell closes at the same moment with the same delay
+ok 92 - C1 a deadline that comes AFTER the recovery is untouched by it: triggered and priced on time by the clock, as always
+ok 93 - C1 the eligibility gate still comes first at recovery: a pending buy on a coin that turned restricted is cancelled before any clock transition
+ok 94 - C2 a silence is reported while it is happening: state, signal coverage and the seconds counters are as of NOW
+ok 95 - C2 the unknown time before a connection's first measurement is counted, and a clock-noticed silence prices nothing
+ok 96 - C3 a RE-BUY of a coin later found fee-bearing is counted apart from the re-buy totals, exactly like a first buy; no row is lost
+ok 97 - C4 a malformed mint answer fails that ONE coin (and fails closed); the rest of the batch is classified and the bad one is retried
+ok 98 - C5 the gap repair is asked for SIGNAL-coverage gaps — reconnect, late spell and silence — merged per minute, with no duplicates
+ok 99 - C1 a coin promoted from sampled to live keeps its live position after a restart (the ownership change is saved)
+ok 100 - C1 a database written before the fix (coin stored as sampled, position opened live) is corrected on restore: the entry's method wins
+ok 101 - C2 sparse back-fill proves nothing about the minutes it leaves out: one bar does not repair an hour-long outage, and CONT does not fire on it
+ok 102 - C2 a newer back-filled close is used in preference to an older exact observation (15-minute rise measured from the right price)
+ok 103 - C3 a quote-side break in the reserve chain is a discontinuity; fee dust under 0.1% is counted and tolerated
+ok 104 - C3 a multi_hop_swap that happens to fit the curve gives a state but never a fee; a nonsense rate never prices a fill
+ok 105 - C3 a state rebuilt from a boost event is quarantined: no fill, no peak, no signal until the next swap confirms it
+ok 106 - C4 a half-sale is never executed on routed quotes taken at different market moments; a failed quote is dropped, not carried forward
+ok 107 - C5 a sampled token without supply or market cap is not valued from a default, and missing decimals are not accepted
+ok 108 - C5 / B5 a restored sampled position whose stored record lacks decimals is not skipped silently: metadata is fetched again, or the position is flagged
+ok 109 - M1 an executable quote is never queued behind background requests (priority lanes on the one Jupiter rate bucket)
+ok 110 - M2 every buyer of a transaction is counted, each with its own volume
+ok 111 - M3 trade-window measurements are empty unless exact observations cover the whole window (back-fill and outages do not count)
+ok 112 - G1 a planned stop saves every open position at once; the regular save is at most 1 second behind
+ok 113 - T1 a REJECTED back-fill leaves nothing behind, and FAST never reads back-fill or a minute bar: a 22% move is not bought as a double
+ok 114 - T1 at start-up FAST waits for its own exact window: back-filled history before the live start does not make a seconds-scale window 'covered'
+ok 115 - T1 boundary: a back-filled close is kept even when an incomplete live candle already occupies that minute
+ok 116 - T2 a deposit or withdrawal after a boost does not release the quarantine: only the next swap does
+ok 117 - T3 (left-and-labelled items) compression is flagged and keeps every buyer; a quoted valuation carries its own quote's time
+ok 118 - M1b routine position valuations do not starve price sampling: only an order that is DUE takes the first lane
+ok 119 - watch list: a token the provider stops pricing is dropped after 10 misses and not restored; a token with a position always is
+ok 120 - F1 one rule for the authoritative candle: a live minute cut by an outage yields to an accepted repair; a fully observed live minute is kept; never both added
+ok 121 - F1 SLOW-BUILD: a +50% candle hidden behind a partial live candle is seen after the repair, and the entry is refused
+ok 122 - F1 HH-BREAK: volume of repaired minutes counts in the signal window, so a qualifying break is not missed
+ok 123 - F2 compression keeps the first buyer through buy → sell → buy in one second
+ok 124 - F3 a coin that goes quiet for hours keeps its standing price: the wake-up trade is measured against it
+ok 125 - F4 audit rows: a rejected back-fill is stored with its label and never overwrites a live row
+ok 126 - a buy that becomes due is quoted at once even while a slow valuation pass is running (urgent and routine passes are independent)
+ok 127 - P1 a price from before a feed gap is never the starting price of a later window (the reviewer's $50K → gap → $90K → $110K)
+ok 128 - P2 after a loss of the coin's data neither the anchor nor an old live-bar close supplies the reference
+ok 129 - P3 a sampled coin dropped from the watch list and re-admitted in the same process starts with an empty history
+ok 130 - P4 a boost quarantine is a recorded price break: it empties exact windows, makes its minute incomplete, and its candle yields to an accepted repair
+ok 131 - P5 an order that becomes due while a pass is waiting is dispatched as urgent
+ok 132 - older-4: a double that takes 8 minutes enters FAST-10M and FAST-30M (not the 1/3/5-minute books), records how long it took, and does not seed SECOND-WAVE
+ok 133 - older-4: the 30-minute book needs 30 minutes of unbroken exact observation, like every FAST book
+ok 134 - watch list: a token pruned as far below the band is not restored after a restart; a re-discovery brings it back with a clean history
+ok 135 - older-5: the 60% stop is its own row — a 45% fall sells the 20–40% versions and leaves the 60% version open; a 65% fall sells it
+ok 136 - stake view: at 0.2 SOL the re-priced trade equals the recorded one; bigger stakes pay more price impact and are never a plain multiple
+ok 137 - stake view: every stake shows the same trades — a routed-quote trade cannot be re-priced and keeps its 0.2 SOL percentage result (flagged); a sale recorded before pools were saved is re-priced on a pool rebuilt from the sale and marked as an estimate
+ok 138 - A1 sampled: after an omitted sample, the first price back does not make the minute before it 'observed' — $90K then $210K ten seconds later is NOT a FAST-1M entry
+ok 139 - A2 through the engine: a live coin whose data was lost, and a coin first seen after a reconnection, do not enter a FAST book on their first two prices
+ok 140 - C1 compression keeps the price path: the low and high inside a merged second survive, the newest observation stays exact, and memory stays bounded
+ok 141 - C2 the decision ChatGPT reproduced: with the buffer full, a dip inside one busy second is still the window's low — FAST-30M does not fire against a low that compression used to erase… and a real fresh double still does
+ok 142 - counting since: a book starts when it was first evaluated on this database (never before the first start), a stop with its first buy; both are set once and survive a restart; the page API carries them
+ok 143 - older-7 HH-BREAK-4H: its versions sell at 4 hours whatever the position did (reason 'clock'); a stop before 4 hours works as usual; plain versions and CONT-STALL are untouched
+ok 144 - older-7 through the engine: an HH-BREAK buy carries HH-BREAK-4H on the same entry
+ok 145 - older-7 existing buys are carried into the new book: stopped before 4 h = the same real result; open past 4 h = a clock sale estimated from the minute bars and marked; younger than 4 h = a live copy; done once
+ok 146 - 1 RUG state is evidence only over unbroken observation: a feed gap after the peak wipes it, so a later fall against the old peak is not bought
+ok 147 - 2 an observation mode that cannot support the RUG books builds no RUG state, and a change of observation method starts clean (sampled $600K → $110K → live $140K → $145K is not a bounce buy)
+ok 148 - 3 an hour-scale price window needs a known starting price: after a long silence the first two prices ($90K → $210K) are not a LOW4H double, and CONT does not use an hour-high whose first part is unknown
+ok 149 - 4 the 5-minute volume is 'not known' when the cut-off falls inside a merged second — VOL books do not decide on it
+ok 150 - 5 an entry and its one-buy flags are one commit; a stored entry without flags gets them back on restore, so the same book cannot buy the coin twice
+ok 151 - defects fixed with the blockers: the clock estimate never uses the minute containing the deadline or a rejected back-fill row; a half-sold row's 'high while held' is what it was really worth; the sale market cap is always marked approximate
+ok 152 - B1 unknown is not 'no fee': a Token-2022 coin whose extensions have not been read is not entered; once read (1% fee) it is, as a fee coin
+ok 153 - B1 eligibility is checked again at the fill: a fee raised over the limit between decision and fill cancels the buy; a fee that only appears at the fill moves the buy into FEE-COINS
+ok 154 - B1 the next mint to read: a coin with a position first, then unread coins (most recently priced first), then a refresh for coins we hold; a failed read waits a minute
+ok 155 - B2 the fee is charged exactly once and the evidence is kept: the raw quoted amounts, the fee and the inclusion assumption are on the fill and on the sale
+ok 156 - C1 an ordinary outage from hours before the stop is still an outage after a warm restart: a RUG peak from before it is not evidence
+ok 157 - C1 a coin's own break that has been pruned from the record still counts: a stretch reaching back before it is not unbroken
+ok 158 - C2 an outage already under way at the stop stays an ordinary outage up to the stop: only the time away can be warm
+ok 159 - C3 the restart mark follows the observation that supplied the price: a quiet coin's CONT bought on a price from before the restart is marked, although its 1-hour window begins after it
+ok 160 - A an estimated sale is not a result in the full table either: counted apart, in no total
+ok 161 - A1 a classic SPL token (known program, no transfer fee possible) is still bought on the live method
+ok 162 - A2 a live Token-2022 coin whose extensions were never read is NOT bought as fee-free; neither is a coin whose token program is unknown
+ok 163 - A3 a Token-2022 coin whose mint account was read and shows no fee and no restriction follows the supported path
+ok 164 - A4 a live coin known to charge a transfer fee is not bought (fee coins are supported on the sampled method only)
+ok 165 - A5 a restriction that appears between the decision and the scheduled fill cancels the pending live buy
+ok 166 - A6 the mint-account reader serves LIVE coins and does not depend on the sampled adapter
+ok 167 - A7 a fee found on a coin already held on the live method is recorded on the position; the position and its exits stay
+ok 168 - B1 a stream running 60 s behind creates no signal and fills no buy, although every state is 1 s old by receive time
+ok 169 - B2 after the stream is current again, catch-up observations cannot manufacture a fresh crossing; a clean window fires normally
+ok 170 - B3 orders pending when the stream falls behind: the buy is cancelled by the pricing timeout, a triggered sale waits and is priced with its real delay
+ok 171 - B4 a QUIET pool is still trusted while the stream as a whole is current; a silent stream is not proof of anything
+ok 172 - B5 freshness that has not been established is not assumed: after a (re)connect nothing is evaluated until the delay is measured
+ok 173 - LOW4H: a continuous $50K → $100K rise qualifies (no pullback needed); SLOW-BUILD and LIQ25K share the entry
+ok 174 - SLOW-BUILD rejects a candle above +20%, records the rejection, and never enters later in that age group
+ok 175 - SLOW-BUILD: a candle of exactly +20% is allowed
+ok 176 - SLOW-BUILD: under 30 min from the low is rejected
+ok 177 - no fabricated crossing after a feed outage: the window is not covered, so nothing enters
+ok 178 - a crossing outside the $40K–$1M band is not an entry
+ok 179 - LOW4H window boundary: a low older than 4 h is outside the window
+ok 180 - CONT: +30% over 15 min and within 5% of the 1 h high; CONT-STALL shares the entry
+ok 181 - CONT: can qualify immediately at 8 h old when history exists
+ok 182 - HH-BREAK: zero volume baseline is recorded and not entered; a real 2× volume break enters
+ok 183 - AGE-DOUBLE: reference MISSING when history starts after the age-group start; OK and crossing when covered
+ok 184 - one FIRST buy per mint, family and age group; a new age group allows a new first buy; a later buy in the same age group is a marked re-buy (older-9)
+ok 185 - older-6 HH15-5M: a new 15-minute high with the last 5 completed minutes at 2× the 1-hour norm enters after 1 h 5 min of history; the 2-hour books are not ready yet
+ok 186 - older-6 HH30-5M and HH30-10M: with 2 h 10 min of history a 30-minute high on 2× the 2-hour norm enters both; volume that is not 2× the norm enters neither
+ok 187 - older-6 no dollar floor, but a quiet coin still does not enter: when most buckets had no trades the norm is zero, which is recorded and refused
+ok 188 - older-6 the known limit of having no dollar floor (owner's decision, on record): a coin with one $50 trade every 20 minutes has a non-zero 10-minute norm, so a new high on one more $50 trade IS bought by HH30-10M — and not by the 5-minute books
+ok 189 - the price memory read back is exactly what was in memory: every answer a decision reads is the same, merged seconds and buyers included
+ok 190 - LOW4H after a warm restart: the 4-hour low is still known, so a fresh double is bought — marked with the seconds not watched; a cold start cannot buy it
+ok 191 - the limit: a snapshot older than 60 s is not read; and if the feed only comes back more than 60 s after the stop, the gap is an ordinary outage that nothing spans
+ok 192 - exact windows never span a restart: a 1-minute double across it is not a FAST buy, the 5-minute volume across it is not decided, and both work again once a full window has been watched
+ok 193 - RUG books across a warm restart: the watched peak is kept, so a collapse watched after the restart is bought (marked); a collapse that happened while the program was away is not
+ok 194 - a snapshot is used once and never trusted when damaged: second read, cut-short file, wrong format → cold start; a planned stop with nothing observed is harmless
+ok 195 - one-buy flags after a warm restart: a book that bought the coin before the stop makes no second FIRST buy — only a marked re-buy on the rows it has sold; the database's observation method wins over the snapshot's
+ok 196 - sampled coins: the history read back is judged by the ordinary hole rule, with the interval the coin was sampled at before the stop
+# tests 196
+# suites 0
+# pass 196
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0

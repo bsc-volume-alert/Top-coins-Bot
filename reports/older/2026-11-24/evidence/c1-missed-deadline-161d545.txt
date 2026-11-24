@@ -1,0 +1,10 @@
+A. clock runs through the late spell (control):
+   at recovery (D+4): stream current; rows closed/max-hold
+   after the next tick (D+4.2): stream current; rows closed/max-hold
+   30 s later (D+34): stream current; rows closed/max-hold; trusted now: true
+   exit: t = D+4.00, delay 3.3 s
+B. clock misses D-3 … D+4 (Codex's case):
+   at recovery (D+4): stream current; rows open
+   after the next tick (D+4.2): stream current; rows selling/max-hold
+   30 s later (D+34): stream current; rows selling/max-hold; trusted now: true
+   exit: none
