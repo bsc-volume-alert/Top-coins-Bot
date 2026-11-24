@@ -70,7 +70,7 @@ export async function tokenStats(mint) {
   const { j, req, resp } = await get("search", `/tokens/v2/search?query=${mint}`, { prio: 3 }); // background lane: never ahead of a quote or a price sample
   const x = (Array.isArray(j) ? j : []).find((y) => y.id === mint);
   if (!x) return { ok: false, req, t: resp, why: "token not returned" };
-  return { ok: true, req, t: resp, holders: num(x.holderCount), top_holders_pct: num(x.audit?.topHoldersPercentage), organic: num(x.organicScore), liq_usd: num(x.liquidity), mcap: num(x.mcap), stats5m: numsOf(x.stats5m), stats1h: numsOf(x.stats1h), updated: x.updatedAt ?? null };
+  return { ok: true, req, t: resp, holders: num(x.holderCount), top_holders_pct: num(x.audit?.topHoldersPercentage), audit: x.audit && typeof x.audit === "object" ? x.audit : null /* the provider's whole audit object, as returned (same call, no extra request) */, organic: num(x.organicScore), liq_usd: num(x.liquidity), mcap: num(x.mcap), stats5m: numsOf(x.stats5m), stats1h: numsOf(x.stats1h), updated: x.updatedAt ?? null };
 }
 export async function recent() { const { j } = await get("recent", "/tokens/v2/recent"); return (Array.isArray(j) ? j : []).map(normToken); }
 export async function category(cat, interval, limit = 100) { const { j } = await get("category", `/tokens/v2/${cat}/${interval}?limit=${limit}`); return (Array.isArray(j) ? j : []).map(normToken); }
