@@ -12,6 +12,35 @@ import { PUMPSWAP_PROGRAM, WSOL, eventsFromLogs, reduceTx, bs58, isCanonical } f
 
 export const fs = { msgs: 0, events: 0, emitted: 0, pools: 0, held: 0, replayed: 0, overflow: 0, nonSol: 0, nonCanonical: 0, rejected: 0, lookups: 0, lookupCalls: 0, lookupFail: 0, lookupErrs: 0, lastLookupErr: "", baseIsSol: 0, discontinuities: 0, lastBreaks: [], multiEventTx: 0, reconnects: 0, lastMsg: null, nonSolQuotes: {}, bytes: 0, failedTx: 0, dupes: 0, connected: false, lagMsSum: 0, lagN: 0 };
 const HOLD_PER_POOL = 300, HOLD_POOLS = 20000;
+// BOUNDED MEMORY FOR POOLS THAT ARE NOT OURS (25 Nov 2026). Measured on the validation run: in 90 minutes 372,000 pools the
+// program had never seen traded on PumpSwap â€” almost all of them not SOL-quoted (most with SOL as the BASE token), a few
+// events each â€” while the pump.fun flow was unchanged. Every one used to be kept for ever as an object with three address
+// strings (and written to the database), and its events were held, up to 300 a pool, until a look-up at 100 pools a second
+// could classify it: working memory went from 0.6 to 0.84 GB in 90 minutes. Now:
+//   - a pool that is not SOL-quoted (or cannot be read) is remembered only as a key in a first-in-first-out list of at most
+//     JUNK_MAX pools, in memory only. One that falls out and trades again is simply looked up again (1 RPC call per 100).
+//     Only SOL-quoted pools are written to the database and loaded at a start;
+//   - a SOL-quoted pool found NOT to be a canonical pump.fun pool keeps no addresses either;
+//   - all held events together are limited to HOLD_ITEMS; beyond that a pool keeps only its newest events and is marked as
+//     overflowed â€” if it turns out to be one of ours its history restarts there (engine.coinLost), exactly as before;
+//   - while many pools wait, look-ups run back to back instead of once a second.
+// Nothing here changes what is priced: canonical, SOL-quoted pump.fun pools, as before.
+const HOLD_ITEMS = Number(process.env.OLDER_HOLD_ITEMS || 60000), JUNK_MAX = Number(process.env.OLDER_JUNK_POOLS || 300000);
+export const NON_SOL = Object.freeze({ mint: null, quote: null, creator: null, cls: "non-sol", baseSol: false }), NON_SOL_BASE_SOL = Object.freeze({ mint: null, quote: null, creator: null, cls: "non-sol", baseSol: true }), NON_CANON = Object.freeze({ mint: null, quote: WSOL, creator: null, cls: "non-canonical" });
+/** what is kept for a pool whose class makes it not ours: a shared marker instead of its own record. A SOL-quoted pool not yet classified, and a canonical one, keep their record. */
+export function compactPool(info) { if (!info) return info; if (info.unreadable || info.cls === "non-sol" || (info.quote != null && info.quote !== WSOL)) return info.baseSol || info.mint === WSOL ? NON_SOL_BASE_SOL : NON_SOL; if (info.cls === "non-canonical") return NON_CANON; return info; }
+/** the bounded first-in-first-out memory of pools that are not SOL-quoted */
+export class Junk { constructor(max = JUNK_MAX) { this.max = max; this.m = new Map(); this.evicted = 0; }
+  get(k) { return this.m.get(k); } get size() { return this.m.size; }
+  add(k, v) { this.m.set(k, v); if (this.m.size > this.max) { let n = Math.max(1, Math.floor(this.max / 10)); for (const key of this.m.keys()) { this.m.delete(key); this.evicted++; if (--n <= 0) break; } } } }
+/** held events of pools still being looked up, with one limit for all pools together */
+export class Hold { constructor(perPool = HOLD_PER_POOL, pools = HOLD_POOLS, items = HOLD_ITEMS) { this.perPool = perPool; this.maxPools = pools; this.maxItems = items; this.m = new Map(); this.items = 0; this.dropped = 0; }
+  get size() { return this.m.size; } has(k) { return this.m.has(k); }
+  /** returns "new" (first event of an unknown pool: queue a look-up), "held", "kept-newest" / "dropped" (limit reached: marked overflowed) or "full" (no room for another pool) */
+  push(pool, item, t) { let h = this.m.get(pool), isNew = false; if (!h) { if (this.m.size >= this.maxPools) return "full"; h = { items: [], overflow: false, t0: t }; this.m.set(pool, h); isNew = true; }
+    if (h.items.length < this.perPool && this.items < this.maxItems) { h.items.push(item); this.items++; return isNew ? "new" : "held"; }
+    h.overflow = true; if (h.items.length) { h.items.shift(); h.items.push(item); return isNew ? "new" : "kept-newest"; } this.dropped++; return isNew ? "new" : "dropped"; }
+  take(pool) { const h = this.m.get(pool); if (h) { this.items -= h.items.length; this.m.delete(pool); } return h ?? null; } }
 
 export async function rpc(method, params) {
   const r = await fetch(process.env.RPC_HTTP, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), signal: AbortSignal.timeout(30000) });
@@ -24,17 +53,19 @@ export function parsePool(b64) {
   return { index: b.readUInt16LE(9), creator: bs58(b.subarray(11, 43)), baseMint: bs58(b.subarray(43, 75)), quoteMint: bs58(b.subarray(75, 107)), poolBaseAta: bs58(b.subarray(139, 171)), poolQuoteAta: bs58(b.subarray(171, 203)), virtualQuote: vq };
 }
 /** classify once and cache on the pool info: 'canonical' | 'non-canonical' | 'non-sol' */
-export function poolClass(info) { if (info.cls) return info.cls; info.cls = info.quote !== WSOL ? "non-sol" : info.creator && isCanonical(info.mint, info.creator) ? "canonical" : "non-canonical"; return info.cls; }
+export function poolClass(info) { if (info.cls) return info.cls; if (Object.isFrozen(info)) return "non-sol"; info.cls = info.quote !== WSOL ? "non-sol" : info.creator && isCanonical(info.mint, info.creator) ? "canonical" : "non-canonical"; return info.cls; }
 
 export function startFeed({ engine, store, backfill = null, pools /* Map pool â†’ {mint, quote, creator} */, log = console.log }) {
-  const hold = new Map(), queue = new Set(), mem = new Map(); const seen = new Set(), seenQ = [];
+  const hold = new Hold(), junk = new Junk(), queue = new Set(), mem = new Map(); const seen = new Set(), seenQ = [];
+  // pools loaded from the database: a non-SOL row left by an earlier version is not kept in memory; SOL-quoted rows share one quote string
+  for (const [k, v] of pools) { if (v.quote !== WSOL) pools.delete(k); else v.quote = WSOL; }
   let ws = null, watchdog = null;
   // A transaction is atomic: nobody can trade against the pool BETWEEN two of its events. So all of a transaction's events on a
   // pool are applied in order to reconstruct the state, and only the COMMITTED state after the last one is handed to the engine
   // as an observation (volume summed). Intermediate states never create a price, a peak, a crossing or a stop.
   const emitTx = (evs, info, t, meta, replay = false) => {
-    const cls = poolClass(info); if (cls === "non-sol") { fs.nonSol += evs.length; if (info.mint === WSOL) fs.baseIsSol += evs.length; const k = (info.mint === WSOL ? "SOL" : String(info.mint).slice(0, 6)) + "/" + String(info.quote).slice(0, 8); fs.nonSolQuotes[k] = (fs.nonSolQuotes[k] || 0) + evs.length; return; }
-    if (cls === "non-canonical") { fs.nonCanonical += evs.length; return; }
+    const cls = poolClass(info); if (cls === "non-sol") { fs.nonSol += evs.length; if (info.baseSol || info.mint === WSOL) fs.baseIsSol += evs.length; return; }
+    if (cls === "non-canonical") { fs.nonCanonical += evs.length; if (info !== NON_CANON) pools.set(evs[0].pool, NON_CANON); return; } // classified on its first event: its addresses are not needed again
     const pool = evs[0].pool; let p = mem.get(pool); if (!p) mem.set(pool, (p = {}));
     const x = reduceTx(p, evs); fs.rejected += x.rejected;
     for (const e of x.breaks) { fs.discontinuities++; if (fs.lastBreaks.length < 20) fs.lastBreaks.push({ t: Math.round(t), pool: pool.slice(0, 8), sig: meta.sig?.slice(0, 12), type: e.type, ix: e.ix ?? null }); }
@@ -44,10 +75,12 @@ export function startFeed({ engine, store, backfill = null, pools /* Map pool â†
     engine.onEvent({ t, mint: info.mint, pool, kind: x.buys && !x.sells ? "buy" : x.sells && !x.buys ? "sell" : x.buys ? "mixed" : evs[evs.length - 1].type, state: { ...x.last.state, approx: x.last.approx ?? null }, sol: x.sol, isBuy: x.buys && !x.sells ? true : x.sells && !x.buys ? false : null, user: x.user, buyers: x.buyers, sig: meta.sig, slot: meta.slot, blockTs: x.blockTs, events: evs.length, replay });
   };
   const resolved = (pool, info) => {
-    pools.set(pool, info); store?.savePool(pool, info);
-    const h = hold.get(pool); hold.delete(pool); if (!h) return;
-    if (poolClass(info) !== "canonical") return;
-    if (h.overflow) engine.coinLost(info.mint, h.items[0][1]);
+    const h = hold.take(pool);
+    if (info.quote !== WSOL) { const k = (info.mint === WSOL ? "SOL" : String(info.mint).slice(0, 6)) + "/" + String(info.quote).slice(0, 8); if (fs.nonSolQuotes[k] != null || Object.keys(fs.nonSolQuotes).length < 400) fs.nonSolQuotes[k] = (fs.nonSolQuotes[k] || 0) + 1; // which quote tokens (a bounded sample, counted per pool)
+      junk.add(pool, compactPool(info)); if (h) fs.nonSol += h.items.reduce((n, x) => n + x[0].length, 0); return; } // not SOL-quoted: remembered as a key only, never written to the database
+    store?.savePool(pool, info); const canon = poolClass(info) === "canonical"; pools.set(pool, canon ? info : NON_CANON);
+    if (!h || !canon) return;
+    if (h.overflow) engine.coinLost(info.mint, h.items[0]?.[1] ?? h.t0);
     for (const [evs, t, meta] of h.items) { fs.replayed += evs.length; emitTx(evs, info, t, meta, true); }
   };
   // Pool look-ups, batched. A failing batch is never retried whole for ever (run 2: one bad batch blocked all later look-ups):
@@ -57,17 +90,17 @@ export function startFeed({ engine, store, backfill = null, pools /* Map pool â†
   async function lookup(batch) {
     try {
       fs.lookupCalls++; const res = await rpc("getMultipleAccounts", [batch, { encoding: "base64", dataSlice: { offset: 0, length: 203 } }]);
-      res.value.forEach((acc, i) => { fs.lookups++; const p = acc ? parsePool(acc.data[0]) : null; if (!p) { fs.lookupFail++; hold.delete(batch[i]); pools.set(batch[i], { mint: null, quote: null, creator: null, cls: "non-sol", unreadable: true }); return; } resolved(batch[i], { mint: p.baseMint, quote: p.quoteMint, creator: p.creator }); });
+      res.value.forEach((acc, i) => { fs.lookups++; const p = acc ? parsePool(acc.data[0]) : null; if (!p) { fs.lookupFail++; hold.take(batch[i]); junk.add(batch[i], NON_SOL); return; } resolved(batch[i], { mint: p.baseMint, quote: p.quoteMint, creator: p.creator }); });
     } catch (e) {
       fs.lookupErrs++; fs.lastLookupErr = String(e.message).slice(0, 140);
       if (batch.length > 1) { const h = Math.ceil(batch.length / 2); await new Promise((r) => setTimeout(r, 400)); await lookup(batch.slice(0, h)); await lookup(batch.slice(h)); return; }
       const n = (tries.get(batch[0]) || 0) + 1; tries.set(batch[0], n);
-      if (n < 3) queue.add(batch[0]); else { tries.delete(batch[0]); fs.lookupFail++; hold.delete(batch[0]); }
+      if (n < 3) queue.add(batch[0]); else { tries.delete(batch[0]); fs.lookupFail++; hold.take(batch[0]); }
     }
   }
   async function lookupLoop() {
     while (true) {
-      await new Promise((r) => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, queue.size > 300 ? 150 : 1000)); // a long queue is worked through back to back
       if (!queue.size) continue;
       const batch = [...queue].slice(0, 100); for (const p of batch) queue.delete(p);
       await lookup(batch);
@@ -91,10 +124,9 @@ export function startFeed({ engine, store, backfill = null, pools /* Map pool â†
     let bts = null; for (const evs of byPool.values()) for (const e of evs) if (e.ts) bts = e.ts;
     engine.tx(t, bts ? Math.max(0, t - bts) : null, () => {
       for (const [pool, evs] of byPool) {
-        const info = pools.get(pool);
+        const info = pools.get(pool) ?? junk.get(pool);
         if (info) { emitTx(evs, info, t, meta); continue; }
-        let h = hold.get(pool); if (!h) { if (hold.size >= HOLD_POOLS) { fs.overflow++; continue; } h = { items: [], overflow: false }; hold.set(pool, h); queue.add(pool); }
-        if (h.items.length < HOLD_PER_POOL) { h.items.push([evs, t, meta]); fs.held += evs.length; } else { h.overflow = true; h.items.shift(); h.items.push([evs, t, meta]); }
+        const r = hold.push(pool, [evs, t, meta], t); if (r === "full") { fs.overflow++; continue; } if (r === "new") queue.add(pool); if (r !== "dropped") fs.held += evs.length;
       }
     });
   }
@@ -107,5 +139,5 @@ export function startFeed({ engine, store, backfill = null, pools /* Map pool â†
     clearInterval(watchdog); watchdog = setInterval(() => { if (fs.connected && fs.lastMsg && Date.now() / 1000 - fs.lastMsg > 60) down("no message for 60 s"); }, 5000);
   }
   connect(); lookupLoop();
-  return { stop: () => { clearInterval(watchdog); try { ws.terminate(); } catch {} }, sizes: () => ({ pools_known: pools.size, pool_states: mem.size, held_pools: hold.size, lookup_queue: queue.size, seen_signatures: seen.size, non_sol_keys: Object.keys(fs.nonSolQuotes).length }) };
+  return { stop: () => { clearInterval(watchdog); try { ws.terminate(); } catch {} }, sizes: () => ({ pools_known: pools.size, other_pools_remembered: junk.size, other_pools_forgotten: junk.evicted, pool_states: mem.size, held_pools: hold.size, held_items: hold.items, held_dropped: hold.dropped, lookup_queue: queue.size, seen_signatures: seen.size, non_sol_keys: Object.keys(fs.nonSolQuotes).length }) };
 }

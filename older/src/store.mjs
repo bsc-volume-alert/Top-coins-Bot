@@ -48,7 +48,8 @@ export class Store {
   /** a coin changed observation method (sampled → live): pool and record are overwritten, not merged */
   setCoinMode(mint, pool, info) { this.q.mode.run(pool ?? null, JSON.stringify(info ?? {}), mint); }
   savePool(pool, i) { this.db.prepare("INSERT OR IGNORE INTO pools VALUES (?,?,?,?)").run(pool, i.mint, i.quote, i.creator ?? null); }
-  loadPools() { const m = new Map(); for (const r of this.db.prepare("SELECT pool, mint, quote, creator FROM pools").iterate()) m.set(r.pool, { mint: r.mint, quote: r.quote, creator: r.creator }); return m; }
+  /** quote: only pools quoted in this token (the feed loads SOL-quoted pools only — any other pool is not ours and is kept out of memory) */
+  loadPools(quote = null) { const m = new Map(), q = quote ? this.db.prepare("SELECT pool, mint, quote, creator FROM pools WHERE quote = ?").iterate(quote) : this.db.prepare("SELECT pool, mint, quote, creator FROM pools").iterate(); for (const r of q) m.set(r.pool, { mint: r.mint, quote: r.quote, creator: r.creator }); return m; }
   saveLast(mint, c) { this.q.last.run(c.series.lastPx, c.series.lastT, mint); }
   feedEvent(t, ev, detail = "") { this.q.feed.run(t, ev, String(detail).slice(0, 300)); }
   /** restart: reload the one-entry flags, unfinished entries and known coins into an engine */

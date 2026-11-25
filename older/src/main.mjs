@@ -67,7 +67,7 @@ const J = await import("./jupiter.mjs");
 let repOffAt = 0, repOff = false; const repairPaused = () => { if (process.env.OLDER_REPAIR === "0") return true; const n = Date.now(); if (n - repOffAt > 5000) { repOffAt = n; const was = repOff; repOff = !!process.env.OLDER_OUT && existsSync(process.env.OLDER_OUT + "/repair.off"); if (was !== repOff) log(`[backfill] history repair ${repOff ? "PAUSED (repair.off present)" : "resumed"}`); } return repOff; };
 const backfill = startBackfill({ engine, store, jup: J, log, paused: repairPaused });
 engine.needCreation = (mint) => backfill.want(mint, 2);
-const pools = store.loadPools();
+const { WSOL } = await import("./decoder.mjs"); const pools = store.loadPools(WSOL); // SOL-quoted pools only (feed.mjs, BOUNDED MEMORY)
 const feed = startFeed({ engine, store, backfill, pools, log });
 // DIAGNOSTICS ONLY (no decision reads this): where the memory is. Recomputed at most once a minute.
 let sizesAt = 0, sizesV = null;
