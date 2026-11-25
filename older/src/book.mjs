@@ -84,6 +84,39 @@ function execSell(e, v, st, at, delay, cov, minReq = null) {
   return true;
 }
 
+/** ───────── MANUAL SALE — PAPER ONLY (owner 25 Nov 2026 13:21–13:23 UK: "a sell now button… sell all and sell a percentage,
+ *  maybe sell 50%… a combination of AI and human") ─────────
+ *  The owner may sell a filled paper buy himself: a quarter, half or all of WHAT HE STILL HOLDS of it. It is priced exactly
+ *  like the program's own sales — on the pool state in force 0.7 s after the request (SELL_DELAY_MS), after the pool's sell
+ *  fee and price impact, one declared transaction cost per sale — and only on a state that is trustworthy at that moment;
+ *  otherwise the order waits for the first trustworthy state and records its delay. Never priced at zero, never dropped.
+ *  It is recorded BESIDE the rules, in e.manual, and changes nothing else: every stop × exit row of the buy carries on as if
+ *  he had not touched it, so each book still measures its rule and his selling can be compared with it on the same buys.
+ *  A buy he never touches has no manual record. What he has not sold by the 24-hour limit is sold then, like every position.
+ *  Pool-priced buys only (a routed-quote buy has quotes for the program's own quantities only).
+ *  e.manual = { tok (still held), got (SOL banked), sales: [{ t, req_t, frac, share, tok, sol, delay_s, state_age_s, by, pool }],
+ *               order: { frac, req_t, schedT, by } | null, closed: { t, sol, ret, hold_s } | null, lastX, lastT } */
+export const MANUAL_FRACS = [0.25, 0.5, 1];
+export function requestManual(e, frac, t) {
+  if (!e || e.status !== "filled" || !e.fill) return { ok: false, why: "this is not a filled buy" };
+  if (e.fill.exec !== "reconstructed-pool-state") return { ok: false, why: "a buy priced from routed quotes cannot be sold by hand (it has quotes for the program's own quantities only)" };
+  if (!MANUAL_FRACS.includes(frac)) return { ok: false, why: "sell 25%, 50% or all" };
+  if (!(t <= e.fill.t + S.MAX_HOLD_S)) return { ok: false, why: "the 24-hour limit of this buy has passed" };
+  const m = (e.manual ||= { tok: e.fill.tok, got: 0, sales: [], order: null, closed: null });
+  if (m.closed || !(m.tok > 0)) return { ok: false, why: "you have already sold all of this buy" };
+  if (m.order) return { ok: false, why: "a sale of this buy is already waiting for its price" };
+  m.order = { frac, req_t: t, schedT: t + S.SELL_DELAY_MS / 1000, by: "manual" };
+  return { ok: true, schedT: m.order.schedT, share_of_buy: +((frac >= 1 ? m.tok : m.tok * frac) / e.fill.tok).toFixed(4) };
+}
+function execManual(e, st, at, delay, cov) {
+  const m = e.manual, o = m.order; if (isQuote(st)) return false; const part = o.frac >= 1 ? m.tok : m.tok * o.frac, q = sellQuote(st, part); if (!q) return false;
+  const sol = q.sol - S.TX_COST_SOL; m.got += sol; m.tok = o.frac >= 1 ? 0 : m.tok - part; // proceeds are not clipped at zero: a near-worthless sale still pays its transaction cost
+  m.sales.push({ t: at, req_t: o.req_t, frac: o.frac, share: part / e.fill.tok, tok: part, sol, delay_s: +delay.toFixed(3), state_age_s: +(at - st.t).toFixed(3), by: o.by, pool: poolOf(st), ...(cov && cov.gapsIn(e.fill.t, at).length ? { outage_during: true } : {}) });
+  m.order = null; if (!(m.tok > 0)) m.closed = { t: at, sol: m.got, ret: m.got / COST - 1, hold_s: Math.round(at - e.fill.t) };
+  m.lastX = (m.got + (liqValue(st, m.tok) ?? 0)) / COST; m.lastT = at; return true;
+}
+export const manualOpen = (e) => !!e.manual && (!!e.manual.order || (!e.manual.closed && e.manual.tok > 0));
+
 /** Everything scheduled at or before `upTo` is executed against `st`, the state in force until then. trusted(at) says whether
  *  that state is known-good at time `at`. Called before a new state replaces `st`, and on every clock tick. */
 /** Returns true when it changed something that a status comparison does not show (a clock check done, the runner horizon
@@ -115,6 +148,9 @@ export function advance(e, upTo, st, trusted, cov) {
     }
     if (!changed) break;
   }
+  if (e.manual) { const m = e.manual, endT = e.fill.t + S.MAX_HOLD_S; // the owner's own sale of this buy — beside the rows above, never instead of them
+    if (!m.closed && !m.order && m.tok > 0 && endT <= upTo) { m.order = { frac: 1, req_t: endT, schedT: endT + S.SELL_DELAY_MS / 1000, by: "max-hold" }; mut = true; e.touched = true; } // what he still holds at 24 hours is sold then, like every position
+    if (m.order && m.order.schedT <= upTo && st && trusted(m.order.schedT) && execManual(e, st, m.order.schedT, 0, cov)) { mut = true; e.touched = true; } }
   if (!e.runner.horizonDone && upTo >= e.fill.t + S.RUNNER_HORIZON_S) { e.runner.horizonDone = true; mut = true; if (cov && cov.gapsIn(e.fill.t, e.fill.t + S.RUNNER_HORIZON_S).length) e.runner.partial = true; }
   return mut;
 }
@@ -131,6 +167,8 @@ export function observe(e, st, t, cov) {
   }
   if (e.status !== "filled") return;
   if (!q) e.mark = { ...poolOf(st), t }; // the latest pool this position was valued on (stake views of open positions only)
+  if (e.manual && !q) { const m = e.manual; if (m.order && m.order.schedT <= t) { if (execManual(e, st, t, t - m.order.schedT, cov)) e.touched = true; } // an overdue manual sale: the first trustworthy state prices it, with its real delay
+    else if (!m.closed && m.tok > 0) { const val = liqValue(st, m.tok); if (val != null) { m.lastX = (m.got + val) / COST; m.lastT = t; } } }
   const full = liqValue(st, e.fill.tok), age = t - e.fill.t;
   if (full != null) { const x = full / COST; if (age <= S.RUNNER_HORIZON_S) { if (x > e.runner.maxX) e.runner.maxX = x; for (const k of S.RUNNER_X) if (x >= k && !e.runner.reached[k]) e.runner.reached[k] = Math.round(age); } }
   for (const v of e.versions) {
@@ -147,10 +185,10 @@ export function observe(e, st, t, cov) {
 /** the distinct token quantities an entry currently needs a sell quote for (a routed-quote provider is asked for exactly these) */
 export function inventories(e) { if (e.status !== "filled") return []; const s = new Set(); for (const v of e.versions) if (live(v) && v.tok > 0) { s.add(v.tok); if (v.status === "scaling" || (v.policy === "scale" && !v.half)) s.add(e.fill.tok * S.SCALE_FRACTION); } if (!e.runner.horizonDone) s.add(e.fill.tok); return [...s]; }
 /** the earliest scheduled order still waiting for a price (buy or sell), or null */
-export function dueAt(e) { if (e.status === "pending") return e.schedT; let m = null; if (e.status === "filled") for (const v of e.versions) if ((v.status === "selling" || v.status === "scaling") && v.schedT != null && (m === null || v.schedT < m)) m = v.schedT; return m; }
+export function dueAt(e) { if (e.status === "pending") return e.schedT; let m = e.manual?.order?.schedT ?? null; if (e.status === "filled") for (const v of e.versions) if ((v.status === "selling" || v.status === "scaling") && v.schedT != null && (m === null || v.schedT < m)) m = v.schedT; return m; }
 /** rows still holding tokens whose sale has had no price for 24 h */
 export const unresolvedCount = (e) => (e.status === "filled" ? e.versions.filter((v) => live(v) && v.unresolvedSince).length : 0);
-export const entryDone = (e) => e.status === "cancelled" || (e.status === "filled" && e.runner.horizonDone && e.versions.every((v) => !live(v)));
+export const entryDone = (e) => e.status === "cancelled" || (e.status === "filled" && e.runner.horizonDone && e.versions.every((v) => !live(v)) && !manualOpen(e)); // a manual sale still waiting for its price keeps the buy in memory
 export const exposure = (e) => (e.status === "filled" ? e.versions.filter(live).length : 0);
 
 /** STAKE VIEW — website only, never a decision input. What this row's trade is worth at another stake, re-priced with the same

@@ -6,7 +6,7 @@
 import * as S from "./spec.mjs";
 import { Series, Coverage } from "./series.mjs";
 import { newCoin, evaluate } from "./signals.mjs";
-import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount } from "./book.mjs";
+import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount, requestManual } from "./book.mjs";
 import { liquidityUsd, staticImpact } from "./fills.mjs";
 import { feeKnown } from "./risk.mjs";
 import { parseInfo, judge } from "./gates.mjs";
@@ -320,6 +320,11 @@ export class Engine {
       { pop: c.info.population || "pumpswap-canonical", mode: "live", exec: "reconstructed-pool-state", valuation: "pool price × on-chain base supply (from the swap event)", age_basis: c.info.create_src || "token creation (source not recorded)", state_approx: st.approx ?? null });
     const ms = performance.now() - t0; if (ms > this.stats.evalMsMax) this.stats.evalMsMax = +ms.toFixed(1);
   }
+  /** MANUAL SALE, paper only (book.mjs, requestManual): the owner sells a quarter, half or all of what he still holds of one
+   *  filled buy. Only the request is taken here; it is priced by the ordinary clock 0.7 s later, on a trustworthy state, like
+   *  every sale. The rules' own rows of that buy are not touched. Returns { ok, why? }. */
+  manualSell(id, frac, t = Date.now() / 1000) { const e = this.entries.get(id); if (!e) return { ok: false, why: "this buy is no longer held (it is finished, or its number is unknown)" };
+    const r = requestManual(e, frac, t); const M = (this.stats.manual ||= { asked: 0, refused: 0 }); if (r.ok) { M.asked++; this.store?.saveEntry(e); } else M.refused++; return r; }
   /** older-11: choose the books that may make new buys in this run (a list from S.booksOf). Open positions of other books are untouched. */
   setBooks(list) { const on = new Set(list); this.inactive = new Set(S.FAMILIES.filter((f) => !on.has(f))); this.books = [...on]; }
   /** shared: evaluate the families on one observation and open the (shared) entry */

@@ -5,7 +5,7 @@ import { bookRows, overlap } from "./report.mjs";
 import * as S from "./spec.mjs";
 import { BOOKS_PAGE, booksApi } from "./page.mjs";
 
-export function startWeb({ port, store, engine, status, run = () => null }) { // run(): older-11 — the run's own books and settings, or null (every book, as before)
+export function startWeb({ port, store, engine, status, run = () => null, sell = null }) { // sell(id, frac): the owner's paper "sell now" (engine.manualSell); null = the page has no such button // run(): older-11 — the run's own books and settings, or null (every book, as before)
   const KEY = process.env.OLDER_SITE_KEY || "";
   const cache = new Map(), BUILD = String(process.env.OLDER_COMMIT || "dev").slice(0, 12) + ":" + Math.round(Date.now() / 1000); // changes on every start: the books page reloads itself when it sees a new one
   const state = (pop = "") => {
@@ -18,19 +18,25 @@ export function startWeb({ port, store, engine, status, run = () => null }) { //
       recent: entries.slice(-40).reverse().map((e) => ({ snap: e.snap ?? null, win: e.features ? { w1: e.features.w1 ?? null, w3: e.features.w3 ?? null, w5: e.features.w5 ?? null, vol_surge5: e.features.vol_surge5 ?? null, buyers15: e.features.buyers15 ?? null } : null, id: e.id, mint: e.mint, ag: e.ag, families: e.families, t: e.decisionT, mc: Math.round(e.signalMc), status: e.status, startup: !!e.startup, pop: e.pop || "pumpswap-canonical", mode: e.mode || "live", exec: e.exec || "reconstructed-pool-state", origin: e.token?.origin ?? null, risk: e.token?.risk_status ?? null, cadence: e.token?.cadence_s ?? e.evidence?.trigger?.cadence_s ?? null, route: e.fill?.quote?.route ?? null, fill_delay: e.fill?.delay_s ?? null, state_age: e.fill?.state_age_s ?? null, verify: e.verify ? (e.verify.error ? "error" : e.verify.suspect ? "SUSPECT" : `Δ ${(e.verify.diff_quote * 100).toFixed(2)}%`) : null, versions: e.versions.map((v) => ({ stop: v.stop, policy: v.policy, stall: v.stall, status: v.status, reason: v.reason, half: !!v.half, ret: v.exit ? +v.exit.ret.toFixed(3) : null })), runner_max: e.runner.maxX ? +e.runner.maxX.toFixed(2) : null, flags: e.flags })) };
     cache.set(pop, out); return out;
   };
-  http.createServer((req, res) => {
+  const server = http.createServer((req, res) => {
     const u = new URL(req.url, "http://x");
     if (KEY && (u.searchParams.get("k") || u.searchParams.get("key")) !== KEY) { res.writeHead(403); return res.end("key required"); }
+    // THE ONE WRITE ON THIS SITE — a PAPER sale by the owner (book.mjs, MANUAL SALE). POST only, and only when the site has a
+    // key (checked above for every request): without a key nothing can be sold from the page. Nothing here can touch a wallet.
+    if (u.pathname === "/api/sell") { const j = (code, o) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(o)); };
+      if (req.method !== "POST") return j(405, { ok: false, why: "POST only" }); if (!KEY || !sell) return j(403, { ok: false, why: "manual paper sales are switched off (the site has no key, or this run has no sell button)" });
+      const id = Number(u.searchParams.get("id")), frac = Number(u.searchParams.get("frac")); if (!Number.isInteger(id)) return j(400, { ok: false, why: "which buy?" });
+      const r = sell(id, frac); cache.clear(); return j(r.ok ? 200 : 409, r); }
     if (u.pathname === "/api/books") { // one stop / exit policy / age group / population at a time; cached 8 s per selection
       const sk = Number(u.searchParams.get("stake")), sel = { stop: Number(u.searchParams.get("stop") || 0.25), policy: u.searchParams.get("policy") === "scale" ? "scale" : "trail", ag: u.searchParams.get("ag") || "", pop: u.searchParams.get("pop") || "", stake: S.STAKE_VIEWS.includes(sk) ? sk : S.STAKE_SOL, first: u.searchParams.get("buys") === "first", checks: ["pass", "late"].includes(u.searchParams.get("chk")) ? u.searchParams.get("chk") : "all" }, ck = "b|" + JSON.stringify(sel);
-      let hit = cache.get(ck); if (!hit || Date.now() - hit.atMs > 8000) { hit = { atMs: Date.now(), body: JSON.stringify(booksApi(store.allEntries(), { ...sel, since: store.since ? store.since(Date.now() / 1000) : null, build: BUILD, run: run() })) }; cache.set(ck, hit); }
+      let hit = cache.get(ck); if (!hit || Date.now() - hit.atMs > 8000) { hit = { atMs: Date.now(), body: JSON.stringify(booksApi(store.allEntries(), { ...sel, since: store.since ? store.since(Date.now() / 1000) : null, build: BUILD, run: run(), sellable: !!(KEY && sell) })) }; cache.set(ck, hit); }
       res.writeHead(200, { "content-type": "application/json" }); return res.end(hit.body); }
     if (u.pathname === "/table") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(PAGE); }
     if (u.pathname === "/api/state") { res.writeHead(200, { "content-type": "application/json" }); return res.end(JSON.stringify(state(u.searchParams.get("pop") || ""))); }
     if (u.pathname === "/") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(BOOKS_PAGE); }
     res.writeHead(404); res.end();
   }).listen(port, () => console.log(`[web] :${port}`));
-  return { state };
+  return { state, server };
 }
 
 const PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Older Coins Books</title>

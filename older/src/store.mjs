@@ -4,7 +4,7 @@ import Database from "better-sqlite3";
 import { statSync, statfsSync } from "node:fs";
 import { dirname } from "node:path";
 import { BAR_RETAIN_DAYS, SPEC_VER, FAMILIES, STOPS, CLOCK, FEE_BOOK } from "./spec.mjs";
-import { setNextId } from "./book.mjs";
+import { setNextId, entryDone } from "./book.mjs";
 
 export class Store {
   constructor(path) {
@@ -42,7 +42,7 @@ export class Store {
   /** older-11: a buy cancelled for want of a provider reading does not use up the book's one buy (engine._giveBack): its marks go */
   dropDecisions(entryId) { return this.db.prepare("DELETE FROM decisions WHERE entry_id = ?").run(entryId).changes; }
   saveNote(mint, n) { this.q.note.run(mint, n.ag, n.family, n.t, n.reason, JSON.stringify(n.detail ?? null)); if (n.family === "SLOW-BUILD" || n.family === "LOW4H-LIQ25K" || (n.family === "SECOND-WAVE" && n.reason !== "window not covered")) this.q.dec.run(mint, n.ag, n.family, n.t, null, JSON.stringify({ rejected: n.reason, ...n.detail })); }
-  saveEntry(e) { const done = e.status === "cancelled" || (e.status === "filled" && e.versions.every((v) => v.status === "closed") && e.runner.horizonDone) ? 1 : 0; this.q.ent.run(e.id, e.mint, e.status, done, e.decisionT, JSON.stringify(e)); }
+  saveEntry(e) { const done = e.status === "cancelled" || (e.status === "filled" && e.versions.every((v) => v.status === "closed") && e.runner.horizonDone && entryDone(e)) ? 1 : 0; /* entryDone: also not while the owner's own sale of the buy is still open */ this.q.ent.run(e.id, e.mint, e.status, done, e.decisionT, JSON.stringify(e)); }
   /** `pumpOrigin` column = launchpad/origin label; `info` = the launchpad-neutral record (venues, token program, sources, mode, risk…) */
   saveCoin(mint, { pool = null, createTs = null, createSrc = null, pumpOrigin = null, firstSeen = null, info = null } = {}) { this.q.coin.run(mint, pool, createTs, createSrc, pumpOrigin, firstSeen, info ? JSON.stringify(info) : null); }
   /** a coin changed observation method (sampled → live): pool and record are overwritten, not merged */
