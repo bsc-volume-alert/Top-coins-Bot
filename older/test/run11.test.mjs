@@ -95,4 +95,12 @@ test("start script: a run's settings are fixed at its first start, an unknown or
   writeFileSync(logf, ""); r = run("score11", "7", "older-11", "new11"); assert.equal(r.status, 0, r.stdout + r.stderr); assert.match(r.stdout, /price memory will be carried from run 'new11'/);
   assert.match(log(), /START books=older-11 gates=older-11 rebuy=0 minage=6 wide=0 db=older-score11\.db run=score11 warm=older-new11\.db\.warm\n/, "validation run → scored run, same settings: a new database with the validated price memory carried in — " + log()); assert.ok(existsSync(join(out, "score11.until")), "and its seven-day entry window is fixed");
   r = run("new11", "", ""); assert.equal(r.status, 0); r = run("old", "", "older-11"); assert.equal(r.status, 1, "and the old name still cannot be turned into the new rule set");
+  // the owner's own list of pool books for a run (setbooks.sh): checked before anything is stopped, replaces the rule set's list, the rest of the rule set stays
+  const setb = (...a) => spawnSync("bash", [join(HERE, "../scripts/setbooks.sh"), ...a], { env: { ...process.env, PATH: bin + ":" + process.env.PATH, OLDER_OUT: out }, encoding: "utf8" });
+  writeFileSync(logf, ""); r = setb("new11", "VOL100K,NOPE"); assert.equal(r.status, 1); assert.match(r.stdout, /unknown book "NOPE"\. Nothing was changed/); assert.equal(log(), ""); assert.ok(!existsSync(join(out, "new11.books")));
+  r = setb("new11", "HH-BREAK-4H,VOL100K"); assert.equal(r.status, 1); assert.match(r.stdout, /shares the buys of HH-BREAK/); r = setb("new11", "VOL100K,NEW-5M"); assert.equal(r.status, 1); assert.match(r.stdout, /newcoins\.sh/); assert.equal(log(), "");
+  r = setb("new11", "VOL100K, VOL300K,VOL500K,FAST-1M,FAST-3M,FAST-5M,RUG450,RUG950"); assert.equal(r.status, 0, r.stdout + r.stderr); assert.match(r.stdout, /pool books of this run \(owner's list\): VOL100K,VOL300K/);
+  assert.match(log(), /START books=VOL100K,VOL300K,VOL500K,FAST-1M,FAST-3M,FAST-5M,RUG450,RUG950 gates=older-11 rebuy=0 minage=6 wide=0 db=older-new11\.db run=new11/, log());
+  writeFileSync(logf, ""); r = run("new11"); assert.match(log(), /START books=VOL100K,VOL300K,VOL500K,FAST-1M,FAST-3M,FAST-5M,RUG450,RUG950 /, "a plain restart keeps the owner's list");
+  writeFileSync(logf, ""); r = setb("new11", "default"); assert.equal(r.status, 0); assert.match(log(), /START books=older-11 /); assert.equal(readFileSync(join(out, "new11.books.log"), "utf8").trim().split("\n").length, 2, "every change is kept with its time");
 });

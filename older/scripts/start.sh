@@ -36,7 +36,12 @@ case "$PROFILE" in
   older-11) BOOKS=older-11; GATES=older-11; REBUY=0; MINAGE=6; WIDE=0 ;;
   *) echo "unknown settings '$PROFILE' (known: older-11). Nothing was changed."; exit 1 ;;
 esac
-# ---- the new-coin books (NEW-5M, NEW-10M): on for a run once the file <name>.newcoins exists (scripts/newcoins.sh creates it,
+# ---- the owner's own choice of books for this run: the file <name>.books (one line, e.g. VOL100K,VOL300K,RUG450 — written by
+#      scripts/setbooks.sh, which checks the names first and keeps every earlier list in <name>.books.log). It REPLACES the rule
+#      set's list of pool books; everything else of the rule set (checks, ages, buying again) stays. A book taken off the list
+#      makes no NEW buy; its open positions are managed to their exits as always and its history stays in the database.
+if [ -f "$OUT/$NAME.books" ]; then L="$(head -1 "$OUT/$NAME.books" | tr -d ' \r\n')"; [ -n "$L" ] && BOOKS="$L"; fi
+# ---- the new-coin books (NEW-5M … NEW-20M): on for a run once the file <name>.newcoins exists (scripts/newcoins.sh creates it,
 #      with the date). They are an addition to the run's own books, recorded beside its settings; removing the file and
 #      restarting stops NEW buys by them (open ones are managed to their exits as always).
 NEWCOINS=0; [ -f "$OUT/$NAME.newcoins" ] && NEWCOINS=1
@@ -55,7 +60,8 @@ OLDER_OUT="$OUT" OLDER_DB="$DB" OLDER_SOLANA_WIDE="$WIDE" OLDER_SITE_KEY="$SITE_
 OLDER_OUT="$OUT" pm2 start scripts/publish.sh --name older-pub --cwd "$HERE" --interpreter bash >/dev/null
 pm2 save --force >/dev/null
 IP="$(hostname -I | awk '{print $1}')"
-[ "$NEWCOINS" = 1 ] && echo "new-coin books ON (NEW-5M, NEW-10M)"
+[ "$NEWCOINS" = 1 ] && echo "new-coin books ON (NEW-5M, NEW-10M, NEW-15M, NEW-20M)"
+[ -f "$OUT/$NAME.books" ] && echo "pool books of this run (owner's list): $BOOKS"
 echo "started: run '$NAME'${PROFILE:+ (settings $PROFILE)}, database $DB, code $(git -C "$HERE" rev-parse --short HEAD 2>/dev/null)${UNTIL:+, entries until $(date -u -d @"$UNTIL" '+%d %b %H:%M UTC')}"
 echo "dashboard: http://$IP:8793/${SITE_KEY:+?k=$SITE_KEY}"
 pm2 ls | grep -E "older|name" || true
