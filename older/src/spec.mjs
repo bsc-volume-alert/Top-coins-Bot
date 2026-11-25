@@ -28,10 +28,10 @@ export const SELL_DELAY_MS = 700;             // sell scheduled 0.7 s after an e
 export const BUY_PRICING_TIMEOUT_S = 5;       // no trustworthy pool state within 5 s after the scheduled buy → pricing/data timeout, entry cancelled (NOT "untradeable")
 export const SELL_UNRESOLVED_S = 24 * 3600;   // a triggered sale that cannot be priced for 24 h is shown as unresolved exposure (never silently closed)
 
-// Families. 21 families × 4 ages + 9 any-age families × 5 ages = 129 book-ages; × 5 stops × 2 exit policies = 1,290 comparisons (VOL100K added in older-11).
+// Families. 21 families × 4 ages + 10 any-age families × 5 ages = 134 book-ages; × 5 stops × 2 exit policies = 1,340 comparisons (VOL100K and DIP15K added in older-11).
 export const FAMILIES = ["AGE-DOUBLE", "LOW4H", "CONT", "SLOW-BUILD", "HH-BREAK", "CONT-STALL", "LOW4H-LIQ25K",
   "FAST-1M", "FAST-3M", "FAST-5M", "FAST-10M", "FAST-30M", "FAST150-1M", "FAST150-3M", "FAST150-5M", "FAST150-10M", "SECOND-WAVE", "HH30-5M", "HH30-10M", "HH15-5M", "HH-BREAK-4H",
-  "VOL100K", "VOL300K", "VOL300K-UP", "VOL500K", "VOL500K-UP", "RUG450", "RUG450-BOUNCE", "RUG950", "RUG950-BOUNCE"];
+  "VOL100K", "VOL300K", "VOL300K-UP", "VOL500K", "VOL500K-UP", "RUG450", "RUG450-BOUNCE", "RUG950", "RUG950-BOUNCE", "DIP15K"];
 // ANY-AGE BOOKS (older-8, owner's decisions 21 Nov 2026 21:11 UK). Migrated coins only (this feed sees nothing else), any age after
 // migration: the first 8 hours (A0) and the four age groups. One entry per family per coin per age group, as everywhere.
 // VOL: USD volume over the last VOL_WIN_S seconds (exact observations, rolling) ≥ the threshold; the -UP version also needs the
@@ -47,7 +47,15 @@ export const VOL_WIN_S = 300, VOL_BAND_HI_USD = 2_000_000;
 // [family, peak threshold USD, kind]
 export const RUG = [["RUG450", 450_000, "knife"], ["RUG450-BOUNCE", 450_000, "bounce"], ["RUG950", 950_000, "knife"], ["RUG950-BOUNCE", 950_000, "bounce"]];
 export const RUG_FALL = 0.80, RUG_BOUNCE_X = 1.30, RUG_BOUNCE_EXPIRE_S = 24 * 3600, RUG_MIN_PEAK_USD = 450_000;
-export const ANY_AGE = new Set([...VOL.map((x) => x[0]), ...RUG.map((x) => x[0])]);
+// DIP15K (older-11, owner 25 Nov 2026 09:32 and 10:43): a coin that HAS BEEN to $100,000 or more and comes down into $5,000–$15,000
+//   is bought when its market cap freshly crosses down through DIP_HI_USD (the observation before it above the line, this one at
+//   or under it, nothing unobserved in between) and is still at or above DIP_LO_USD — at once, however long the fall took. Any
+//   age after migration. It has its OWN band: the $40K floor of the other books does not apply to it.
+//   "Has been to $100K": the watched peak (the highest market cap observed without a break — the same state the RUG books keep)
+//   is at least DIP_PEAK_USD, OR the run uses the owner's gates, where the provider's all-time high is tested at the buy (gates.mjs).
+//   A coin that is already inside the band when it is first seen is not bought there: nothing was watched arriving.
+export const DIP = "DIP15K", DIP_HI_USD = 15_000, DIP_LO_USD = 5_000, DIP_PEAK_USD = 100_000;
+export const ANY_AGE = new Set([...VOL.map((x) => x[0]), ...RUG.map((x) => x[0]), DIP]);
 export const agesOf = (family) => (ANY_AGE.has(family) ? ALL_AGES : AGES);
 export const POLICIES = ["trail", "scale"];   // trail = the original pure trailing stop; scale = sell half at 2× cost, trail the rest
 export const SCALE_AT_X = 2, SCALE_FRACTION = 0.5;
@@ -140,7 +148,7 @@ export const REBUY_MAX_PER_DAY = 50;
 
 // ───────────────────────── older-11: WHICH BOOKS BUY (owner's decisions 24–25 Nov 2026) ─────────────────────────
 // A run chooses its books (main.mjs, OLDER_BOOKS):
-//   unset or "legacy" : the 29 books of older-10, exactly as before. VOL100K, the only book added in older-11, stays off.
+//   unset or "legacy" : the 29 books of older-10, exactly as before. VOL100K and DIP15K, the books added in older-11, stay off.
 //   "older-11"        : BOOKS_11 below — the owner's list for the scored week (the pool books; the launch-curve books are not
 //                       in it because this feed cannot observe or price a coin before it migrates).
 //   "A,B,C"           : exactly those books.
@@ -148,8 +156,8 @@ export const REBUY_MAX_PER_DAY = 50;
 // same rules, its history stays in the database and in the reports. Every other book decides exactly as it would have decided
 // with all books active (the list is applied to the finished candidates, after every book has been evaluated).
 // VOL100K: the VOL rule at $100,000 of volume in 5 minutes, any age after migration, $40K–$2M at the buy (owner, 24 Nov).
-export const NEW_IN_11 = ["VOL100K"];
-export const BOOKS_11 = ["HH-BREAK", "HH-BREAK-4H", "VOL100K", "VOL300K", "VOL500K", "FAST-1M", "FAST-3M", "FAST-5M", "RUG450", "RUG950", "LOW4H", "SLOW-BUILD"];
+export const NEW_IN_11 = ["VOL100K", "DIP15K"];
+export const BOOKS_11 = ["HH-BREAK", "HH-BREAK-4H", "VOL100K", "VOL300K", "VOL500K", "FAST-1M", "FAST-3M", "FAST-5M", "RUG450", "RUG950", "LOW4H", "SLOW-BUILD", "DIP15K"];
 export const BOOKS_LEGACY = FAMILIES.filter((f) => !NEW_IN_11.includes(f));
 /** the active books for a run name; throws on an unknown book or a clock book without the book whose buys it shares */
 export function booksOf(name) {
@@ -168,7 +176,7 @@ export function booksOf(name) {
 //   buy    — the range that admits a buy: the UNION of the owner's main range and his second option
 //   main / second — his two options; every filled buy records which of them it satisfies, so both are reported from the same buys
 // byFamily — a book's own settings replace the common ones (a clock book uses its base book's). The rug books are defined by a
-//   watched peak of $450K / $950K, so "has reached $100K" is not asked of them, and the owner gave them a wider top-10 range.
+//   watched peak of $450K / $950K, so "has reached $100K" is not asked of them, and the owner gave them their own top-10 rule (under 12%).
 //   Fees of at least 5 SOL apply to every book, the rug books included (owner, 25 Nov 10:43).
 // A run switches the gates on with OLDER_GATES=older-11 (main.mjs); without it nothing is asked and nothing is gated.
 export const GATE_WAIT_S = 0; // extra seconds after the scheduled buy within which a reading still counts (0 = it must be there at the buy)
@@ -181,8 +189,8 @@ export const GATES_11 = {
   twitter: true,                                                                   // a Twitter link of any kind (a single tweet counts)
   ath_usd: { buy: [100_000, null] },                                               // "has reached $100K before" — the provider's all-time high
   bothZeroBlocks: true,                                                            // "zero bundles, zero insiders, never buy" (already implied by the minimums)
-  byFamily: { // rug books — owner 25 Nov 10:43: top 10 "maybe 30 to 15%, or even 10%": the wider range is set (10–30%); no "$100K" test (their own peak rule is stricter)
-    RUG450: { top10: { buy: [0.10, 0.30] }, ath_usd: null }, RUG950: { top10: { buy: [0.10, 0.30] }, ath_usd: null },
-    "RUG450-BOUNCE": { top10: { buy: [0.10, 0.30] }, ath_usd: null }, "RUG950-BOUNCE": { top10: { buy: [0.10, 0.30] }, ath_usd: null } },
+  byFamily: { // rug books — owner 25 Nov 10:49: top 10 UNDER 12% (read at the buy, i.e. after the fall: the large wallets have sold); no floor; no "$100K" test (their own peak rule is stricter)
+    RUG450: { top10: { buy: [0, 0.12], exclusiveHi: true }, ath_usd: null }, RUG950: { top10: { buy: [0, 0.12], exclusiveHi: true }, ath_usd: null },
+    "RUG450-BOUNCE": { top10: { buy: [0, 0.12], exclusiveHi: true }, ath_usd: null }, "RUG950-BOUNCE": { top10: { buy: [0, 0.12], exclusiveHi: true }, ath_usd: null } },
 };
 

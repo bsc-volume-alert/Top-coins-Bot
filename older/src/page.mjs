@@ -20,6 +20,7 @@ export const RULES = {
   "HH-BREAK-4H": "the same buys as HH-BREAK, but sold at 4 hours if the position is still open",
   "VOL100K": "any age after migration: $100K or more traded in the last 5 minutes (coin worth $40K–$2M) — added in older-11; buys only in a run whose book list includes it",
   "VOL300K": "any age after migration: $300K or more traded in the last 5 minutes (coin worth $40K–$2M)",
+  "DIP15K": "any age after migration: a coin that has been to $100K or more comes down through $15K (and is still at $5K or more) — bought at once; added in older-11; buys only in a run whose book list includes it",
   "VOL300K-UP": "any age after migration: $300K or more traded in the last 5 minutes and the price higher than 5 minutes ago ($40K–$2M)",
   "VOL500K": "any age after migration: $500K or more traded in the last 5 minutes (coin worth $40K–$2M)",
   "VOL500K-UP": "any age after migration: $500K or more traded in the last 5 minutes and the price higher than 5 minutes ago ($40K–$2M)",

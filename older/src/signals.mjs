@@ -103,6 +103,19 @@ export function evaluate(coin, o, opts = {}) {
     }
   }
 
+  // 0c. DIP15K (older-11) — has been to $100K or more, comes down into $5K–$15K: bought at the fresh crossing down through $15K.
+  //     Its own band. The "$100K" evidence is the watched peak (coin.rug.pk, kept above while any RUG book can be evaluated) or,
+  //     in a run with the owner's gates, the provider's all-time high tested at the buy (opts.peakByGate). See spec DIP.
+  if (can(S.DIP) && !skip.has(S.DIP)) {
+    const prevMc = sr.prevPx != null ? sr.prevPx * coin.supply : null;
+    if (prevOk && prevMc > S.DIP_HI_USD && o.mc <= S.DIP_HI_USD) {
+      const pk = coin.rug?.pk ?? null, watched = !!pk && pk.mc >= S.DIP_PEAK_USD, d = { line_mc: S.DIP_HI_USD, prev_mc: Math.round(prevMc), peak_watched_mc: pk ? Math.round(pk.mc) : null, peak_watched_t: pk ? pk.t : null, peak_evidence: watched ? "watched" : opts.peakByGate ? "provider all-time high (tested at the buy)" : null };
+      if (o.mc < S.DIP_LO_USD) note(S.DIP, "fell through the band in one step (not entered)", { ...d, mc: Math.round(o.mc) }, false);
+      else if (!watched && !opts.peakByGate) note(S.DIP, "crossing down into the band, but no $100K peak was watched (not entered)", { ...d, mc: Math.round(o.mc) }, false);
+      else cand(S.DIP, { ...d, fall: watched ? +(1 - o.mc / pk.mc).toFixed(4) : null, fall_s: watched ? Math.round(t - pk.t) : null }, watched ? pk.t : null);
+    }
+  }
+
   let low = null, hi1h = null, p15 = null; // shared by the books below and by the measurements at the end
   older: { if (young && !opts.youngAll) break older; // every book below starts at 8 hours old — except for a transfer-fee coin (owner, 22 Nov 2026: fee coins are bought in their first 8 hours too; they are reported in FEE-COINS only)
   // 1. AGE-DOUBLE — first fresh crossing of 2 × the market cap at the age-group start

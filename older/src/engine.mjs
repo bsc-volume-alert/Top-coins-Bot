@@ -269,6 +269,7 @@ export class Engine {
     // not closed. A book may buy again when at least one of its rows is free; the first buy per age group is decided as before.
     const busy = this._busy(mint), tNow = o.t, log24 = (c.rebuys ||= {});
     const again = this.rebuy === false ? null : (f) => { if (busy && (busy.get(f)?.size ?? 0) >= ROWS) return false; const L = log24[f]; if (L) { while (L.length && L[0] < tNow - 86400) L.shift(); if (L.length >= S.REBUY_MAX_PER_DAY) { if (!c.rebuyCapNoted?.[f]) { (c.rebuyCapNoted ||= {})[f] = 1; this.stats.rebuyCapped = (this.stats.rebuyCapped || 0) + 1; this.store?.saveNote(mint, { ag: null, family: f, t: tNow, reason: `safety limit: ${S.REBUY_MAX_PER_DAY} re-buys of this coin by this book in 24 hours — no further re-buy until one ages out`, detail: {} }); } return false; } } return true; };
+    if (this.gates && !opts.skip) opts = { ...opts, peakByGate: true }; // older-11: with the owner's gates on, "has been to $100K" is tested on the provider's all-time high at the buy (live method only)
     const r = evaluate(c, o, again ? { ...opts, again } : opts); // engine.rebuy = false (OLDER_REBUY=0): older-8 behaviour, one buy per book, coin and age group
     for (const n of r.notes) { this.stats.notes++; this.store?.saveNote(mint, n); }
     // older-11: a book that is not active in this run makes no new buy. Applied to the finished candidates, so every active book

@@ -31,10 +31,12 @@ test("judge with the owner's settings: the real coin fails on bundlers and insid
   assert.equal(J({ stat: { top_bundler_trader_percentage: "0.51" } }).pass, false); assert.equal(J({ stat: { top_rat_trader_percentage: "0.41" } }).pass, false);
   const miss = judge(parseInfo({ stat: { top_10_holder_rate: "0.2" } }), G, "HH-BREAK"); assert.equal(miss.pass, false); assert.deepEqual(miss.fails, []); assert.ok(miss.missing.includes("insiders") && miss.missing.includes("total fees"));
 });
-test("a book's own settings: the rug books take top 10 from 10% and are not asked for the $100K all-time high; a clock book uses its base book's settings", () => {
-  const G = S.GATES_11, r = parseInfo(good({ stat: { top_10_holder_rate: "0.12" }, ath_price: 0.00001 }));
-  assert.equal(judge(r, G, "RUG450").pass, true); assert.equal(judge(r, G, "HH-BREAK").pass, false); assert.equal(judge(r, G, "HH-BREAK-4H").pass, false);
-  assert.equal(gatesFor(G, "HH-BREAK-4H"), gatesFor(G, "HH-BREAK")); assert.deepEqual(gatesFor(G, "RUG950").top10.buy, [0.10, 0.30]); assert.equal(gatesFor(G, "RUG950").fees_sol.buy[0], 5, "5 SOL applies to the rug books too");
+test("a book's own settings: the rug books need top 10 UNDER 12% and are not asked for the $100K all-time high; a clock book uses its base book's settings", () => {
+  const G = S.GATES_11, at = (x) => parseInfo(good({ stat: { top_10_holder_rate: x }, ath_price: 0.00001 }));
+  assert.equal(judge(at("0.08"), G, "RUG450").pass, true); assert.equal(judge(at("0.1199"), G, "RUG950").pass, true); assert.equal(judge(at("0"), G, "RUG450").pass, true, "no floor");
+  assert.deepEqual(judge(at("0.12"), G, "RUG450").fails, ["top 10 holders 12%: not under 12%"]); assert.equal(judge(at("0.20"), G, "RUG950").pass, false);
+  assert.equal(judge(at("0.08"), G, "HH-BREAK").pass, false, "the common 18–30% range and the $100K test still apply to the other books"); assert.equal(judge(at("0.08"), G, "HH-BREAK-4H").pass, false);
+  assert.equal(gatesFor(G, "HH-BREAK-4H"), gatesFor(G, "HH-BREAK")); assert.equal(gatesFor(G, "RUG950").fees_sol.buy[0], 5, "5 SOL applies to the rug books too");
 });
 
 // ── engine: a 2-hour-old coin, $320K traded in five minutes → VOL300K (legacy list). The reading is supplied by the test.
