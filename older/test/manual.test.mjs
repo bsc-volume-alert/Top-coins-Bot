@@ -76,6 +76,12 @@ test("the site: sell buttons only when the server allows it; his sales are shown
   const a = await serve("sekret");
   assert.equal((await call(a.port, "/api/sell?id=7&frac=0.5")).status, 403, "no key, no sale"); assert.equal((await call(a.port, "/api/sell?id=7&frac=0.5&k=wrong")).status, 403); assert.equal((await call(a.port, "/api/sell?id=7&frac=0.5&k=sekret", "GET")).status, 405, "a link cannot sell: POST only");
   const ok = await call(a.port, "/api/sell?id=7&frac=0.5&k=sekret"); assert.equal(ok.status, 200); assert.deepEqual(JSON.parse(ok.body), { ok: true }); assert.deepEqual(a.asked, [[7, 0.5]]);
-  assert.equal((await call(a.port, "/api/sell?id=8&frac=1&k=sekret")).status, 409); assert.equal((await call(a.port, "/api/sell?id=x&frac=1&k=sekret")).status, 400); a.w.server.close();
+  assert.equal((await call(a.port, "/api/sell?id=8&frac=1&k=sekret")).status, 409); assert.equal((await call(a.port, "/api/sell?id=x&frac=1&k=sekret")).status, 400);
+  // the 2-second view of open positions: from the engine's memory only (this store has no entries at all), same figures as the page data, key needed
+  assert.equal((await call(a.port, "/api/live?stop=0.25&policy=trail", "GET")).status, 403);
+  const lv = JSON.parse((await call(a.port, "/api/live?stop=0.25&policy=trail&k=sekret", "GET")).body), keyOf = Object.keys(lv.rows).find((k) => k.endsWith("|" + en.id)); assert.ok(keyOf, "the open 25% row of the buy is there"); assert.equal(lv.stop, 0.25); assert.equal(lv.policy, "trail"); assert.equal(lv.stake, 0.2);
+  assert.equal(lv.rows[keyOf][0], api({}).now_x); assert.equal(lv.rows[keyOf][1], api({}).hi);
+  const lv60 = JSON.parse((await call(a.port, "/api/live?stop=0.6&policy=scale&stake=1&k=sekret", "GET")).body); assert.equal(lv60.stop, 0.6); assert.equal(lv60.policy, "scale"); assert.equal(lv60.stake, 1);
+  a.w.server.close();
   const b = await serve(null); assert.equal((await call(b.port, "/api/sell?id=7&frac=0.5")).status, 403, "a site without a key offers no manual sales at all"); assert.deepEqual(b.asked, []); b.w.server.close();
 });

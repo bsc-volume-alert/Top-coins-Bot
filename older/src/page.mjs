@@ -247,5 +247,11 @@ var BUILD=null; // the server's version: when it changes (the bot was updated an
 var qi=document.getElementById('q');try{var sf=sessionStorage.getItem('olderFind');if(sf){qi.value=sf;FIND=sf;sessionStorage.removeItem('olderFind')}}catch(e){}qi.addEventListener('input',function(){FIND=qi.value.trim();if(LAST)draw(LAST)});
 function load(){var q=new URLSearchParams(SEL);if(key)q.set('k',key);fetch('/api/books?'+q).then(function(r){return r.json()}).then(function(j){if(j.build){if(BUILD&&BUILD!==j.build){try{sessionStorage.setItem('olderFind',FIND)}catch(e){}location.reload();return}BUILD=j.build}LAST=j;draw(j)}).catch(function(e){document.getElementById('sub').textContent='error: '+e});
  var q2=new URLSearchParams();if(key)q2.set('k',key);fetch('/api/state?'+q2).then(function(r){return r.json()}).then(health).catch(function(){})}
-var NEXT=10;load();setInterval(function(){load();NEXT=10},10000);setInterval(function(){NEXT=Math.max(0,NEXT-1);var e=document.getElementById('tick');if(e)e.textContent='refreshes in '+NEXT+' s'},1000);
+// open positions every 2 s (/api/live: from the bot's memory, no database read): only "now" and "high" of positions still held move, and the page is repainted only when one of them did
+function live(){if(!LAST)return;var q=new URLSearchParams({stop:SEL.stop,policy:SEL.policy,stake:SEL.stake});if(key)q.set('k',key);
+ fetch('/api/live?'+q).then(function(r){return r.json()}).then(function(v){if(!LAST||!v||!v.rows||v.stop!==LAST.stop||v.policy!==LAST.policy||v.stake!==LAST.stake)return;var ch=false;
+  Object.keys(LAST.books).forEach(function(k){LAST.books[k].forEach(function(t){if(t.status!=='open')return;var x=v.rows[k+'|'+t.id];if(!x)return;if(x[0]!=null&&x[0]!==t.now_x){t.now_x=x[0];ch=true}if(x[1]!=null&&x[1]!==t.hi){t.hi=x[1];ch=true}if(x[2]!=null&&x[2]!==t.hi_held){t.hi_held=x[2];ch=true}})});
+  if(ch)draw(LAST)}).catch(function(){})}
+setInterval(live,2000);
+var NEXT=10;load();setInterval(function(){load();NEXT=10},10000);setInterval(function(){NEXT=Math.max(0,NEXT-1);var e=document.getElementById('tick');if(e)e.textContent='open prices every 2 s \u00b7 full refresh in '+NEXT+' s'},1000);
 </script></body></html>`;

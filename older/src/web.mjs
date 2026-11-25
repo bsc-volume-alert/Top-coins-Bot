@@ -27,6 +27,15 @@ export function startWeb({ port, store, engine, status, run = () => null, sell =
       if (req.method !== "POST") return j(405, { ok: false, why: "POST only" }); if (!KEY || !sell) return j(403, { ok: false, why: "manual paper sales are switched off (the site has no key, or this run has no sell button)" });
       const id = Number(u.searchParams.get("id")), frac = Number(u.searchParams.get("frac")); if (!Number.isInteger(id)) return j(400, { ok: false, why: "which buy?" });
       const r = sell(id, frac); cache.clear(); return j(r.ok ? 200 : 409, r); }
+    // OPEN POSITIONS ONLY, FROM MEMORY (owner 25 Nov 2026 22:49 UK: "refreshed every 2 or 3 seconds"): the current value and the high
+    // of every position that is still held, for the selected stop / exit / stake — the same figures /api/books gives, worked out
+    // by the same code, but from the engine's own unfinished buys, so the database is not read. The page asks every 2 s and
+    // repaints only when a figure moved. (The full page data stays on its 10 s cycle: it reads every buy from the database.)
+    if (u.pathname === "/api/live") { const sk = Number(u.searchParams.get("stake")), sel = { stop: Number(u.searchParams.get("stop") || 0.25), policy: u.searchParams.get("policy") === "scale" ? "scale" : "trail", stake: S.STAKE_VIEWS.includes(sk) ? sk : S.STAKE_SOL }, ck = "l|" + JSON.stringify(sel);
+      let hit = cache.get(ck); if (!hit || Date.now() - hit.atMs > 1500) { const j = booksApi([...engine.entries.values()].filter((e) => e.status === "filled"), { ...sel, run: run() }), rows = {};
+        for (const [k, list] of Object.entries(j.books)) for (const r of list) if (r.status === "open") rows[k + "|" + r.id] = [r.now_x, r.hi, r.hi_held ?? null];
+        hit = { atMs: Date.now(), body: JSON.stringify({ at: Date.now() / 1000, ...sel, rows }) }; cache.set(ck, hit); }
+      res.writeHead(200, { "content-type": "application/json" }); return res.end(hit.body); }
     if (u.pathname === "/api/books") { // one stop / exit policy / age group / population at a time; cached 8 s per selection
       const sk = Number(u.searchParams.get("stake")), sel = { stop: Number(u.searchParams.get("stop") || 0.25), policy: u.searchParams.get("policy") === "scale" ? "scale" : "trail", ag: u.searchParams.get("ag") || "", pop: u.searchParams.get("pop") || "", stake: S.STAKE_VIEWS.includes(sk) ? sk : S.STAKE_SOL, first: u.searchParams.get("buys") === "first", checks: ["pass", "late"].includes(u.searchParams.get("chk")) ? u.searchParams.get("chk") : "all" }, ck = "b|" + JSON.stringify(sel);
       let hit = cache.get(ck); if (!hit || Date.now() - hit.atMs > 8000) { hit = { atMs: Date.now(), body: JSON.stringify(booksApi(store.allEntries(), { ...sel, since: store.since ? store.since(Date.now() / 1000) : null, build: BUILD, run: run(), sellable: !!(KEY && sell) })) }; cache.set(ck, hit); }
