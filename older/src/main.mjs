@@ -10,7 +10,7 @@ const { Store } = await import("./store.mjs"); const { Engine } = await import("
 const { startFeed, fs } = await import("./feed.mjs"); const { dec, IDL_PIN } = await import("./decoder.mjs");
 const { startSolUsd, solUsd, sp } = await import("./solusd.mjs"); const { startBackfill, bf, gapRequests } = await import("./backfill.mjs");
 const { inventory } = await import("./inventory.mjs"); const { gm } = await import("./gmgn.mjs"); const { startWeb } = await import("./web.mjs");
-const { verifyEntry, vf } = await import("./verify.mjs"); const { SPEC_VER } = await import("./spec.mjs"); const { riskStatus } = await import("./risk.mjs"); const { RISK_REFRESH_S } = await import("./spec.mjs");
+const { verifyEntry, vf } = await import("./verify.mjs"); const { SPEC_VER, booksOf } = await import("./spec.mjs"); const { riskStatus } = await import("./risk.mjs"); const { RISK_REFRESH_S } = await import("./spec.mjs");
 
 const store = new Store(process.env.OLDER_DB || "/root/older/older.db");
 const log = (s) => console.log(new Date().toISOString(), s);
@@ -23,6 +23,7 @@ const engine = new Engine({ store, solUsd, log, firstStart, onEntry: (e) => { sn
 const onEvent = engine.onEvent.bind(engine); engine.onEvent = (ev) => { if (ev.slot) lastSlot.set(ev.mint, ev.slot); const c = engine.coins.get(ev.mint); if (c) c.eventCount = (c.eventCount || 0) + 1; onEvent(ev); };
 { const { addClockBook } = await import("./migrate.mjs"); for (const f of ["HH-BREAK-4H"]) { const r = addClockBook(store, f, now0); if (r.added) log(`[older] ${f}: ${r.added} existing ${r.base} buys carried into the new book (${r.exact} versions unchanged, ${r.estimated} clock sales estimated from minute bars, ${r.live} still inside the clock)`); } }
 engine.rebuy = process.env.OLDER_REBUY !== "0"; // buying again (older-9) — OLDER_REBUY=0 switches it off for a run
+if (process.env.OLDER_BOOKS) { engine.setBooks(booksOf(process.env.OLDER_BOOKS)); log(`[books] ${process.env.OLDER_BOOKS}: ${engine.books.length} books make new buys — ${engine.books.join(", ")}`); } // older-11: unset = the legacy 29 (spec.mjs, booksOf)
 store.since(now0); // "counting since" is fixed at START-UP, when a book or stop first exists on this database — not at the first page view
 store.restore(engine);
 // WARM RESTART (warm.mjs): after a planned stop the price memory is read back, so the hour-scale books do not start empty.

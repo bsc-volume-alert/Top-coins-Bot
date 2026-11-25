@@ -21,6 +21,7 @@ export class Engine {
     this.store = store; this.solUsd = solUsd; this.needCreation = needCreation; this.onFill = onFill; this.onEntry = onEntry; this.log = log; this.firstStart = firstStart;
     this.stats = { events: 0, swaps: 0, otherPool: 0, noSolUsd: 0, noCreation: 0, evals: 0, cands: 0, entries: 0, notes: 0, replayed: 0, tooOld: 0, lastT: null, evalMsMax: 0 };
     this.dirtyBars = new Map(); this.usdDown = false; this.dirty = new Set(); this.lastCkpt = 0; this.entriesUntil = null; this.onOwnership = () => {};
+    this.inactive = new Set(S.FAMILIES.filter((f) => !S.BOOKS_LEGACY.includes(f))); // older-11: books that make no new buy in this run (default: the legacy 29 buy, VOL100K does not) — see setBooks
     this.stream = { at: null, lag: null, first: null, open: -Infinity, kind: "connect", need: 0, goodSince: null, promote: false, spans: [], acctAt: null, diag: { n: 0, sum: 0, max: 0, hist: LAG_EDGES.map(() => 0), secs: { current: 0, late: 0, recovering: 0, silence: 0, unknown: 0 }, spells: { late: 0, silence: 0, connect: 0 }, longest: { late: 0, silence: 0, connect: 0 }, recent: [] } }; this.cov.reasons.add("stream"); /* stream freshness: ONE state machine for pricing and for signal coverage — see tx() */ this.rebuy = true; /* spec REBUY: buying again after a sale; false = older-8 */ this.pollCov = new Coverage(); // continuity of PRICE POLLING (the Solana-wide adapter); independent of the PumpSwap WebSocket
     this.stats.prices = 0; this.stats.riskBlocked = 0; this.stats.quotes = 0;
   }
@@ -222,6 +223,8 @@ export class Engine {
       { pop: c.info.population || "pumpswap-canonical", mode: "live", exec: "reconstructed-pool-state", valuation: "pool price × on-chain base supply (from the swap event)", age_basis: c.info.create_src || "token creation (source not recorded)", state_approx: st.approx ?? null });
     const ms = performance.now() - t0; if (ms > this.stats.evalMsMax) this.stats.evalMsMax = +ms.toFixed(1);
   }
+  /** older-11: choose the books that may make new buys in this run (a list from S.booksOf). Open positions of other books are untouched. */
+  setBooks(list) { const on = new Set(list); this.inactive = new Set(S.FAMILIES.filter((f) => !on.has(f))); this.books = [...on]; }
   /** shared: evaluate the families on one observation and open the (shared) entry */
   _decide(c, mint, o, opts, evidenceExtra, tags) {
     if (this.entriesUntil != null && o.t >= this.entriesUntil) { this.stats.afterEntryWindow = (this.stats.afterEntryWindow || 0) + 1; return null; } // the entry window has closed: positions and runner tracking continue, nothing new is opened
@@ -239,6 +242,9 @@ export class Engine {
     const again = this.rebuy === false ? null : (f) => { if (busy && (busy.get(f)?.size ?? 0) >= ROWS) return false; const L = log24[f]; if (L) { while (L.length && L[0] < tNow - 86400) L.shift(); if (L.length >= S.REBUY_MAX_PER_DAY) { if (!c.rebuyCapNoted?.[f]) { (c.rebuyCapNoted ||= {})[f] = 1; this.stats.rebuyCapped = (this.stats.rebuyCapped || 0) + 1; this.store?.saveNote(mint, { ag: null, family: f, t: tNow, reason: `safety limit: ${S.REBUY_MAX_PER_DAY} re-buys of this coin by this book in 24 hours — no further re-buy until one ages out`, detail: {} }); } return false; } } return true; };
     const r = evaluate(c, o, again ? { ...opts, again } : opts); // engine.rebuy = false (OLDER_REBUY=0): older-8 behaviour, one buy per book, coin and age group
     for (const n of r.notes) { this.stats.notes++; this.store?.saveNote(mint, n); }
+    // older-11: a book that is not active in this run makes no new buy. Applied to the finished candidates, so every active book
+    // has decided exactly as it would with all books active; the book's own once-per-age-group mark is left as evaluate set it.
+    if (this.inactive.size && r.cands.length) { const n = r.cands.length; r.cands = r.cands.filter((x) => !this.inactive.has(x.family)); if (r.cands.length !== n) this.stats.inactiveCands = (this.stats.inactiveCands || 0) + (n - r.cands.length); }
     if (!r.cands.length) return null;
     this.stats.cands += r.cands.length;
     const evidence = { ...r.evidence, ...evidenceExtra }; evidence.trigger.eval_t = Date.now() / 1000;

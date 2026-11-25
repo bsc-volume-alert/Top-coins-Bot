@@ -23,7 +23,7 @@ test("while a book holds the coin on every row it does not buy again; once a row
   e.tick(T0 + 5 * H + 214); assert.equal(r[0].status, "filled"); assert.ok(r[0].fill.t > f.fill.t, "a re-buy is a real new buy at its own time and price");
 });
 
-test("the page and the full table: a stop that sold shows the first buy and the re-buy; a stop still holding shows only the first; 'first only' and the 1,240 rows are the older-8 figures", () => {
+test("the page and the full table: a stop that sold shows the first buy and the re-buy; a stop still holding shows only the first; 'first only' is the older-8 figure", () => {
   const e = eng(); base(e); e.tick(T0 + 5 * H + 4); path(e, T0 + 5 * H + 20, T0 + 5 * H + 200, () => 80_000, 10); swap(e, T0 + 5 * H + 210, 110_000); swap(e, T0 + 5 * H + 212, 125_000); e.tick(T0 + 5 * H + 214);
   path(e, T0 + 5 * H + 220, T0 + 5 * H + 400, () => 85_000, 10);            // the re-buy's 20–30% stops sell too
   const at = (stop, first = false) => booksApi(all(e), { stop, policy: "trail", first }).books.LOW4H;

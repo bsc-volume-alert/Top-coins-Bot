@@ -74,11 +74,11 @@ test("RUG: nothing is carried across a restart — a fall measured against a pea
   path(y, T0 + 400, T0 + 25 * H, () => 62_000, 600); swap(y, T0 + 25 * H, 62_000); swap(y, T0 + 25 * H + 20, 90_000);
   assert.equal(has(y, "RUG450-BOUNCE").length, 0, "more than 24 hours after arming: the setup has expired");
 });
-test("older-8 tables: 1,240 rows — the any-age books have an 'under 8h' row, the others do not; the page can show the under-8h group", () => {
-  const rows = bookRows([]); assert.equal(rows.length, 1240);
-  assert.equal(rows.filter((r) => r.ag === "A0").length, 8 * 5 * 2); assert.ok(rows.filter((r) => r.ag === "A0").every((r) => S.ANY_AGE.has(r.family)));
+test("older-8 tables: 1,290 rows (1,240 + the 50 of VOL100K, older-11) — the any-age books have an 'under 8h' row, the others do not; the page can show the under-8h group", () => {
+  const rows = bookRows([]); assert.equal(rows.length, 1290);
+  assert.equal(rows.filter((r) => r.ag === "A0").length, 9 * 5 * 2); assert.ok(rows.filter((r) => r.ag === "A0").every((r) => S.ANY_AGE.has(r.family)));
   const e = young(); path(e, T0, T0 + 600, () => 100_000, 60, { sol: 100 }); for (let k = 0; k < 6; k++) swap(e, T0 + 600 + k * 20, 100_000, { sol: 900 });
-  const j = booksApi([...e.entries.values()], { stop: 0.25, ag: "A0" }); assert.ok(j.books["VOL300K"].length >= 1); assert.equal(j.rows_total, 1240); assert.ok(j.rules["RUG950-BOUNCE"] && j.rules["VOL500K-UP"]);
+  const j = booksApi([...e.entries.values()], { stop: 0.25, ag: "A0" }); assert.ok(j.books["VOL300K"].length >= 1); assert.equal(j.rows_total, 1290); assert.ok(j.rules["RUG950-BOUNCE"] && j.rules["VOL500K-UP"]);
 });
 test("the books page's own script parses (a quoting slip in the page text once left the site blank; unit tests on the data could not see it)", async () => {
   const { BOOKS_PAGE } = await import("../src/page.mjs"); const m = BOOKS_PAGE.match(/<script>([\s\S]*?)<\/script>/); assert.ok(m && m[1].length > 2000);

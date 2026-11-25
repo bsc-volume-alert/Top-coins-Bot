@@ -28,16 +28,16 @@ export const SELL_DELAY_MS = 700;             // sell scheduled 0.7 s after an e
 export const BUY_PRICING_TIMEOUT_S = 5;       // no trustworthy pool state within 5 s after the scheduled buy → pricing/data timeout, entry cancelled (NOT "untradeable")
 export const SELL_UNRESOLVED_S = 24 * 3600;   // a triggered sale that cannot be priced for 24 h is shown as unresolved exposure (never silently closed)
 
-// Families. 21 families × 4 ages + 8 any-age families × 5 ages = 124 book-ages; × 5 stops × 2 exit policies = 1,240 comparisons.
+// Families. 21 families × 4 ages + 9 any-age families × 5 ages = 129 book-ages; × 5 stops × 2 exit policies = 1,290 comparisons (VOL100K added in older-11).
 export const FAMILIES = ["AGE-DOUBLE", "LOW4H", "CONT", "SLOW-BUILD", "HH-BREAK", "CONT-STALL", "LOW4H-LIQ25K",
   "FAST-1M", "FAST-3M", "FAST-5M", "FAST-10M", "FAST-30M", "FAST150-1M", "FAST150-3M", "FAST150-5M", "FAST150-10M", "SECOND-WAVE", "HH30-5M", "HH30-10M", "HH15-5M", "HH-BREAK-4H",
-  "VOL300K", "VOL300K-UP", "VOL500K", "VOL500K-UP", "RUG450", "RUG450-BOUNCE", "RUG950", "RUG950-BOUNCE"];
+  "VOL100K", "VOL300K", "VOL300K-UP", "VOL500K", "VOL500K-UP", "RUG450", "RUG450-BOUNCE", "RUG950", "RUG950-BOUNCE"];
 // ANY-AGE BOOKS (older-8, owner's decisions 21 Nov 2026 21:11 UK). Migrated coins only (this feed sees nothing else), any age after
 // migration: the first 8 hours (A0) and the four age groups. One entry per family per coin per age group, as everywhere.
 // VOL: USD volume over the last VOL_WIN_S seconds (exact observations, rolling) ≥ the threshold; the -UP version also needs the
 //      price above the exact price VOL_WIN_S ago. Market cap $40K–$2M at the buy (the owner's upper limit for these books).
 // [family, threshold USD, needs price up]
-export const VOL = [["VOL300K", 300_000, false], ["VOL300K-UP", 300_000, true], ["VOL500K", 500_000, false], ["VOL500K-UP", 500_000, true]];
+export const VOL = [["VOL100K", 100_000, false], ["VOL300K", 300_000, false], ["VOL300K-UP", 300_000, true], ["VOL500K", 500_000, false], ["VOL500K-UP", 500_000, true]];
 export const VOL_WIN_S = 300, VOL_BAND_HI_USD = 2_000_000;
 // RUG: the coin's highest observed market cap ≥ the peak threshold, and the market cap FRESHLY crosses down to (1 − RUG_FALL) × that
 //      peak, with observation unbroken from the peak to the crossing (the state is in memory only and starts again after any
@@ -138,3 +138,23 @@ export const WARM_MAX_GAP_S = 60;
 // REBUY_MAX_PER_DAY is a safety limit for the server, not a strategy rule: one book cannot re-buy one coin more often than this in 24 hours.
 export const REBUY_MAX_PER_DAY = 50;
 
+// ───────────────────────── older-11: WHICH BOOKS BUY (owner's decisions 24–25 Nov 2026) ─────────────────────────
+// A run chooses its books (main.mjs, OLDER_BOOKS):
+//   unset or "legacy" : the 29 books of older-10, exactly as before. VOL100K, the only book added in older-11, stays off.
+//   "older-11"        : BOOKS_11 below — the owner's list for the scored week (the pool books; the launch-curve books are not
+//                       in it because this feed cannot observe or price a coin before it migrates).
+//   "A,B,C"           : exactly those books.
+// A book that is not active makes NO new buy. Nothing else changes for it: its open positions are managed to their exits by the
+// same rules, its history stays in the database and in the reports. Every other book decides exactly as it would have decided
+// with all books active (the list is applied to the finished candidates, after every book has been evaluated).
+// VOL100K: the VOL rule at $100,000 of volume in 5 minutes, any age after migration, $40K–$2M at the buy (owner, 24 Nov).
+export const NEW_IN_11 = ["VOL100K"];
+export const BOOKS_11 = ["HH-BREAK", "HH-BREAK-4H", "VOL100K", "VOL300K", "VOL500K", "FAST-1M", "FAST-3M", "FAST-5M", "RUG450", "RUG950", "LOW4H", "SLOW-BUILD"];
+export const BOOKS_LEGACY = FAMILIES.filter((f) => !NEW_IN_11.includes(f));
+/** the active books for a run name; throws on an unknown book or a clock book without the book whose buys it shares */
+export function booksOf(name) {
+  const n = (name ?? "").trim();
+  const list = !n || n === "legacy" ? BOOKS_LEGACY : n === "older-11" ? BOOKS_11 : n.split(",").map((x) => x.trim()).filter(Boolean);
+  for (const f of list) { if (!FAMILIES.includes(f)) throw new Error(`unknown book "${f}"`); const base = CLOCK[f]?.base; if (base && !list.includes(base)) throw new Error(`${f} shares the buys of ${base}, which is not in the list`); }
+  return [...new Set(list)];
+}
