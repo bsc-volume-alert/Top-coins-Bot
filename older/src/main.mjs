@@ -26,7 +26,7 @@ engine.rebuy = process.env.OLDER_REBUY !== "0"; // buying again (older-9) — OL
 if (process.env.OLDER_BOOKS) { engine.setBooks(booksOf(process.env.OLDER_BOOKS)); log(`[books] ${process.env.OLDER_BOOKS}: ${engine.books.length} books make new buys — ${engine.books.join(", ")}`); } // older-11: unset = the legacy 29 (spec.mjs, booksOf)
 // NEW-COIN BOOKS (spec NEW_COIN, newcoin.mjs): OLDER_NEWCOINS=1 adds the two books to the run's list. Unset = they do not exist for the run.
 const NEWCOINS = process.env.OLDER_NEWCOINS === "1";
-if (NEWCOINS) { engine.setBooks([...(engine.books ?? booksOf("")), ...NEW_BOOKS]); log(`[books] new-coin books ON: ${NEW_BOOKS.join(", ")} (coins measured at 5 and 10 minutes old; bought and sold on routed quotes)`); }
+if (NEWCOINS) { engine.setBooks([...(engine.books ?? booksOf("")), ...NEW_BOOKS]); log(`[books] new-coin books ON: ${NEW_BOOKS.join(", ")} (coins measured at 5, 10, 15 and 20 minutes old; bought and sold on routed quotes)`); }
 // older-11: the owner's gates. OLDER_GATES=older-11 → one GMGN token-info reading per buy signal, sent ahead of the history repair
 // (which then leaves GMGN_RESERVE units of the reported allowance untouched, default 2); the buy is filled only if the reading
 // arrived by the time of the buy and passes. Unset → nothing is asked and nothing is gated (the behaviour of older-10).
@@ -129,7 +129,7 @@ if (NEWCOINS) { const { NewCoins } = await import("./newcoin.mjs");
     readInfo: (mint) => tokenInfoFirst(mint, Number(process.env.NEWCOIN_GMGN_WAIT_MS ?? 5000)).catch(() => tokenInfoLate(mint)),
     readRisk: async (mint) => classifyMintAccount((await rpc("getMultipleAccounts", [[mint], { encoding: "jsonParsed" }]))?.value?.[0]) });
   const back = newcoins.restore(); quoter.startQuotes(); newcoins.start();
-  log(`[new coins] started: the newest coins are read every 20 s and measured at 5 and 10 minutes old${back ? `; ${back} open new-coin buys back on the quote list` : ""}`); }
+  log(`[new coins] started: the newest coins are read every 20 s and measured at 5, 10, 15 and 20 minutes old${back ? `; ${back} open new-coin buys back on the quote list` : ""}`); }
 // TRANSFER RESTRICTIONS are read from the chain for BOTH observation methods, whether or not the sampled adapter is on (ninth
 // review, A): coins with a position first, then coins a decision is waiting on, then — every RISK_REFRESH_S — coins we hold,
 // because a fee can be raised while a position is open. One getMultipleAccounts call per round (risk.riskReadOnce). Until a

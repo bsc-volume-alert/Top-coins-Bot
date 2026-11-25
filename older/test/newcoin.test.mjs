@@ -40,6 +40,9 @@ const A = "NewCoinAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAApump", B = "NewCoinBBBBBBBBBB
 test("the rule numbers are the owner's: 5 minutes — cap over $10K, over 100 holders, $30K traded, 2 SOL fees, top 10 20–30%; 10 minutes — over 150 holders, $50K, 3.5 SOL", () => {
   assert.deepEqual(R5, { family: "NEW-5M", at_s: 300, mc_min_usd: 10_000, holders_min: 100, vol_min_usd: 30_000, fees_min_sol: 2, top10: [0.2, 0.3] });
   assert.deepEqual(R10, { family: "NEW-10M", at_s: 600, mc_min_usd: 10_000, holders_min: 150, vol_min_usd: 50_000, fees_min_sol: 3.5, top10: [0.2, 0.3] });
+  // 15 and 20 minutes (owner 23:32 UK): holders over 200, $100K traded, fees 5 SOL, top 10 20–30% — the same at both ages
+  assert.deepEqual(S.NEW_COIN.slice(2), [{ family: "NEW-15M", at_s: 900, mc_min_usd: 10_000, holders_min: 200, vol_min_usd: 100_000, fees_min_sol: 5, top10: [0.2, 0.3] }, { family: "NEW-20M", at_s: 1200, mc_min_usd: 10_000, holders_min: 200, vol_min_usd: 100_000, fees_min_sol: 5, top10: [0.2, 0.3] }]);
+  assert.deepEqual(S.NEW_BOOKS, ["NEW-5M", "NEW-10M", "NEW-15M", "NEW-20M"]);
   const j = (f, r = R5) => judgeMeasure({ mc: 10_001, holders: 101, vol: 30_000, top_jup: 0.2, ...f }, r);
   assert.deepEqual(j({}), { mc: true, holders: true, vol: true, top_jup: true });
   assert.equal(j({ mc: 10_000 }).mc, false, "over $10K, not $10K itself"); assert.equal(j({ holders: 100 }).holders, false, "over 100"); assert.equal(j({ vol: 29_999 }).vol, false); assert.equal(j({ top_jup: 0.301 }).top_jup, false);
@@ -172,4 +175,26 @@ test("the other books are untouched: with the owner's GMGN checks on, a new-coin
   assert.equal(w.entries("NEW-5M")[0].status, "filled"); assert.equal(w.eng.stats.gate, undefined, "no reading was asked through the other books' gate");
   const v = world(); v.eng.setBooks(S.booksOf("older-11")); v.add(A, T0, {}); v.t = T0 + 20; await v.pass(); v.t = T0 + 301; await v.pass();
   assert.equal(v.entries().length, 0); assert.match(v.nc.stats.checks["NEW-5M"].recent.at(-1).out, /makes no new buy in this run/); assert.equal(v.quoter.watch.size, 0);
+});
+
+test("15 and 20 minutes: a slow starter that is nothing at 5 and 10 minutes is measured again and bought when it passes; the combined view shows each coin's FIRST buy and which age made it — no extra trades", async () => {
+  const w = world(); const run = { books: w.eng.books, gates: true, gate_mode: "label", newcoins: true };
+  w.add(A, T0, { mc: 4000, holders: 30, vol: 3000 }); w.add(B, T0, { mc: 25_000, holders: 180, vol: 60_000 }); w.info.set(A, { total_fee: 6 }); w.info.set(B, { total_fee: 6 });
+  w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.2); w.t = T0 + 601; await w.pass(); await w.price(1.2);
+  assert.deepEqual(w.entries().map((e) => e.mint.slice(0, 8) + ":" + e.families[0]).sort(), ["NewCoinB:NEW-10M", "NewCoinB:NEW-5M"], "A is under every line at 5 and 10 minutes; B is bought by both");
+  // at 15 minutes A has run: over 200 holders, $100K traded, fees 6 SOL
+  Object.assign(w.coins.get(A), { mc: 40_000, holders: 201, vol: 100_000 }); Object.assign(w.coins.get(B), { holders: 200, vol: 500_000 }); w.setMc(A, 40_000);
+  w.t = T0 + 901; await w.pass(); await w.price(1.2);
+  const K15 = w.nc.stats.checks["NEW-15M"]; assert.equal(K15.measured, 2); assert.equal(K15.bought, 1); assert.equal(K15.holders, 1, "200 holders is not over 200");
+  const a15 = w.entries("NEW-15M")[0]; assert.equal(a15.mint, A); assert.equal(a15.status, "filled"); assert.equal(a15.cands[0].detail.rule.fees_min_sol, 5); assert.ok(a15.cands[0].detail.age_s >= 900);
+  w.info.set(A, { total_fee: 4.9 }); w.t = T0 + 1201; await w.pass(); assert.equal(w.nc.stats.checks["NEW-20M"].measured, 2); assert.equal(w.entries("NEW-20M").length, 0, "fees 4.9 SOL: under 5");
+  assert.ok(w.nc.young.has(A), "kept until its last age point has passed"); w.t = T0 + 1200 + S.NEW_CHECK_LATE_S + 10; await w.pass(); assert.ok(!w.nc.young.has(A));
+  // the combined view: one row per coin — B's 5-minute buy (not its 10-minute one), A's 15-minute buy
+  const j = booksApi([...w.eng.entries.values()], { stop: 0.25, run, sellable: true, now: w.t }); assert.ok(j.order.indexOf(S.NEW_ALL) === j.order.indexOf("NEW-20M") + 1); assert.match(j.rules[S.NEW_ALL], /FIRST buy/);
+  const c = j.books[S.NEW_ALL]; assert.equal(c.length, 2); assert.deepEqual(c.map((r) => r.mint.slice(0, 8) + ":" + r.by_book).sort(), ["NewCoinA:NEW-15M", "NewCoinB:NEW-5M"]);
+  const b5 = j.books["NEW-5M"][0], cb = c.find((r) => r.mint === B); assert.equal(cb.id, b5.id); assert.equal(cb.now_x, b5.now_x); assert.equal(cb.mc_buy, b5.mc_buy); assert.equal(j.books["NEW-10M"].length, 1, "the 10-minute book keeps its own buy");
+  assert.equal(booksApi([...w.eng.entries.values()], { stop: 0.25, run: { books: w.eng.books } }).books[S.NEW_ALL], undefined, "only a run with the new-coin books has the view");
+  // a first attempt that was cancelled does not hide a later filled buy
+  const v = world(); v.add(C, T0, {}); v.info.set(C, { total_fee: 6 }); v.t = T0 + 20; await v.pass(); v.t = T0 + 301; await v.pass(); const c5 = v.entries("NEW-5M")[0]; v.t += 7; v.eng.tick(v.t); assert.equal(c5.status, "cancelled", "no quote within 5 s of the scheduled buy");
+  v.t = T0 + 601; await v.pass(); await v.price(1.2); const c10 = v.entries("NEW-10M")[0]; assert.equal(c10.status, "filled"); const jc = booksApi([c5, c10], { stop: 0.25, run: { books: v.eng.books, newcoins: true } }); assert.equal(jc.books["NEW-5M"][0].status, "cancelled"); assert.equal(jc.books[S.NEW_ALL].length, 1); assert.equal(jc.books[S.NEW_ALL][0].by_book, "NEW-10M");
 });

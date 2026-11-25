@@ -47,7 +47,16 @@ export const SELL_UNRESOLVED_S = 24 * 3600;   // a triggered sale that cannot be
 export const NEW_COIN = [
   { family: "NEW-5M", at_s: 300, mc_min_usd: 10_000, holders_min: 100, vol_min_usd: 30_000, fees_min_sol: 2, top10: [0.20, 0.30] },   // holders: 150 at 16:07, changed to 100 by the owner at 18:37
   { family: "NEW-10M", at_s: 600, mc_min_usd: 10_000, holders_min: 150, vol_min_usd: 50_000, fees_min_sol: 3.5, top10: [0.20, 0.30] }, // "fees around 3.5" → at least 3.5; top holders taken as the 5-minute book's 20–30%
+  // 15 and 20 minutes (owner 25 Nov 2026 23:32 UK, after a coin that first crossed $10K at ~15 minutes was missed): "volume about 100K,
+  // fees 5 SOL, top 10 keep it at 20 to 30, holders 200 … four separate books for now". The same numbers at both ages; market cap over
+  // $10K as in the other two (he did not restate it).
+  { family: "NEW-15M", at_s: 900, mc_min_usd: 10_000, holders_min: 200, vol_min_usd: 100_000, fees_min_sol: 5, top10: [0.20, 0.30] },
+  { family: "NEW-20M", at_s: 1200, mc_min_usd: 10_000, holders_min: 200, vol_min_usd: 100_000, fees_min_sol: 5, top10: [0.20, 0.30] },
 ];
+// THE COMBINED VIEW (owner 23:27–23:32: "one combined … a separate calculation, so we can work out where the money is"): NOT a
+// book and not extra trades — on the site, each coin's FIRST filled buy by any of the new-coin books, i.e. what one book that
+// buys a coin once, at the first age it passes, would have made; every row says which age bought it.
+export const NEW_ALL = "NEW-COMBINED";
 export const NEW_BOOKS = NEW_COIN.map((x) => x.family);
 export const NEW_LOOK_S = 20;          // the provider's list of new coins is read this often (it reaches back about a minute at ~35 new coins a minute)
 export const NEW_CHECK_LATE_S = 90;    // a coin that could not be measured within this long after its age point is NOT judged (counted "too late") — never judged on later figures
@@ -70,7 +79,7 @@ export const NEW_RUNNER_S = 60;
 export const NEW_LOG_KEEP = 3000;      // measurements of coins over the market-cap line kept for the site and the published file (all of them are in the log file beside the database)
 
 // Families. 21 families × 4 ages + 10 any-age families × 5 ages = 134 book-ages; × 5 stops × 2 exit policies = 1,340 comparisons (VOL100K and DIP15K added in older-11).
-// + the two new-coin books in A0 only = 136 book-ages, 1,360 comparisons.
+// + the four new-coin books in A0 only = 138 book-ages, 1,380 comparisons.
 export const FAMILIES = ["AGE-DOUBLE", "LOW4H", "CONT", "SLOW-BUILD", "HH-BREAK", "CONT-STALL", "LOW4H-LIQ25K",
   "FAST-1M", "FAST-3M", "FAST-5M", "FAST-10M", "FAST-30M", "FAST150-1M", "FAST150-3M", "FAST150-5M", "FAST150-10M", "SECOND-WAVE", "HH30-5M", "HH30-10M", "HH15-5M", "HH-BREAK-4H",
   "VOL100K", "VOL300K", "VOL300K-UP", "VOL500K", "VOL500K-UP", "RUG450", "RUG450-BOUNCE", "RUG950", "RUG950-BOUNCE", "DIP15K", ...NEW_BOOKS];
