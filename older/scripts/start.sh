@@ -6,12 +6,17 @@
 # Use "" to leave it open. Each name has its own database on the volume, so one run never mixes with another.
 # settings (older-11): the run's rule set. Written once to <name>.profile and reused on every restart of that name, so a
 #   restart can never silently change what a run buys. Empty = the settings of older-10 (every legacy book, no gates).
-#   older-11 = the owner's 13 books, his GMGN checks at every buy, coins from 6 hours old, buying again off, and the
-#              sampled "rest of Solana" adapter OFF (its buys are priced from quotes and are not put through the GMGN checks).
+#   older-11 = the owner's 13 books; every signal paper-bought as before and LABELLED with his GMGN checks (passed in time /
+#              failed / late / no reading — OLDER_GATE_MODE=label, the default; =cancel in the environment cancels instead);
+#              coins from 6 hours old; buying again off; pump.fun pool coins only — the sampled "rest of Solana" adapter is
+#              OFF (its buys are priced from quotes and the checks are not applied to them).
 # previous-name (older-11): only when <name> has no database yet. The new database is prepared from that run's database —
-#   coin identities and pools only, read-only on the old file, NO buys / decisions / bars (scripts/seed-db.mjs) — and the
-#   price memory that run writes when it stops is carried in once, so the hour-scale books do not start empty.
-#   The previous run's database is kept exactly as it is. Nothing is deleted.
+#   coin identities and pools only, read-only on the old file, NO buys / decisions / bars (scripts/seed-db.mjs).
+#   PRICE MEMORY is carried in ONLY from a run that had the SAME settings (e.g. from the validation run into the scored run):
+#   then the hour-scale books do not start empty. From a run with other settings — the old bot — nothing but identities
+#   comes across and the start is COLD: its price memory was built by code with known faults (second opinion, 25 Nov).
+#   The previous run's database is kept exactly as it is. Nothing is deleted. Positions still open in it are no longer
+#   managed once it is stopped: they stay in that database as they were, and are not results.
 set -euo pipefail
 NAME="${1:-shakedown}"; HERE="$(cd "$(dirname "$0")/.." && pwd)"; cd "$HERE"
 OUT="${OLDER_OUT:-/mnt/volume_1794164707392/older}"; mkdir -p "$OUT/pub"
@@ -36,12 +41,12 @@ WARM_FROM=""
 if [ -n "$FROM" ] && [ ! -f "$DB" ]; then
   [ -f "$OUT/older-$FROM.db" ] || { echo "previous run '$FROM' has no database at $OUT/older-$FROM.db. Nothing was changed."; exit 1; }
   node scripts/seed-db.mjs "$OUT/older-$FROM.db" "$DB" $([ "$WIDE" = 0 ] && echo --live-only)
-  WARM_FROM="$OUT/older-$FROM.db.warm"
+  if [ -n "$PROFILE" ] && [ -f "$OUT/$FROM.profile" ] && [ "$(cat "$OUT/$FROM.profile")" = "$PROFILE" ]; then WARM_FROM="$OUT/older-$FROM.db.warm"; echo "price memory will be carried from run '$FROM' (same settings)"; else echo "cold start: run '$FROM' had other settings — only coin identities come across, no price memory"; fi
 fi
 [ -n "$PROFILE" ] && [ ! -f "$OUT/$NAME.profile" ] && echo "$PROFILE" > "$OUT/$NAME.profile"
 pm2 delete older older-pub >/dev/null 2>&1 || true
 OLDER_OUT="$OUT" OLDER_DB="$DB" OLDER_SOLANA_WIDE="$WIDE" OLDER_SITE_KEY="$SITE_KEY" OLDER_RUN_NAME="$NAME" OLDER_ENTRIES_UNTIL="$UNTIL" OLDER_COMMIT="$(git -C "$HERE" rev-parse HEAD 2>/dev/null || true)" \
-  OLDER_BOOKS="$BOOKS" OLDER_GATES="$GATES" OLDER_REBUY="$REBUY" OLDER_MIN_AGE_H="$MINAGE" OLDER_WARM_FROM="$WARM_FROM" \
+  OLDER_BOOKS="$BOOKS" OLDER_GATES="$GATES" OLDER_REBUY="$REBUY" OLDER_MIN_AGE_H="$MINAGE" OLDER_WARM_FROM="$WARM_FROM" OLDER_GATE_MODE="${OLDER_GATE_MODE:-}" OLDER_REPAIR="${OLDER_REPAIR:-}" \
   pm2 start src/main.mjs --name older --cwd "$HERE" --node-args="--max-old-space-size=1100" --kill-timeout 20000 --time >/dev/null
 OLDER_OUT="$OUT" pm2 start scripts/publish.sh --name older-pub --cwd "$HERE" --interpreter bash >/dev/null
 pm2 save --force >/dev/null

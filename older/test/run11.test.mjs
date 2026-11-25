@@ -23,7 +23,7 @@ test("the site of a run that chose its books shows ONLY those books; FEE-COINS o
   const run = { name: "older11", books: S.booksOf("older-11"), gates: true, rebuy: false, min_age_h: 6, sampled: false }, j = booksApi(all, { stop: 0.25, run });
   assert.deepEqual(j.order, S.BOOKS_11, "the run's 13 books, nothing else — no empty FEE-COINS card"); assert.deepEqual(Object.keys(j.books).sort(), [...S.BOOKS_11].sort());
   assert.ok(j.books["FAST-1M"].length >= 1); assert.equal(j.books["FAST-10M"], undefined, "a book outside the run is not on the page even though the legacy engine bought for it");
-  assert.deepEqual(j.run, { name: "older11", books: S.BOOKS_11, gates: true, rebuy: false, min_age_h: 6, sampled: false }); assert.doesNotMatch(j.rules.VOL100K + j.rules.DIP15K, /buys only in a run/);
+  assert.deepEqual(j.run, { name: "older11", books: S.BOOKS_11, gates: true, gate_mode: "cancel", checks: "all", rebuy: false, min_age_h: 6, sampled: false }); assert.doesNotMatch(j.rules.VOL100K + j.rules.DIP15K, /buys only in a run/);
   assert.equal(j.rows_total, (7 * 4 + 6 * 5) * 5 * 2, "7 books in 4 age groups + 6 any-age books in 5, × 5 stops × 2 exits");
   const fee = JSON.parse(JSON.stringify(all[0])); fee.token.xfer_bps = 300; const jf = booksApi([fee], { stop: 0.25, run }); assert.equal(jf.order.at(-1), S.FEE_BOOK, "a fee-coin buy is never dropped from the page: its book appears when it has one"); assert.equal(jf.books[S.FEE_BOOK].length, 1);
 });
@@ -89,8 +89,10 @@ test("start script: a run's settings are fixed at its first start, an unknown or
   r = run("new11", "", "older-11", "missing"); assert.equal(r.status, 1); assert.match(r.stdout, /has no database/);
   const st = new Store(join(out, "older-old.db")); st.saveCoin(M, { pool: "PoolA", createTs: T0, info: {} }); st.db.close(); const size = statSync(join(out, "older-old.db")).size; writeFileSync(logf, "");
   r = run("new11", "", "older-11", "old"); assert.equal(r.status, 0, r.stdout + r.stderr); assert.match(r.stdout, /new database prepared: 1 coins/); assert.match(r.stdout, /run 'new11' \(settings older-11\)/);
-  assert.match(log(), /START books=older-11 gates=older-11 rebuy=0 minage=6 wide=0 db=older-new11\.db run=new11 warm=older-old\.db\.warm\n/, log()); assert.equal(readFileSync(join(out, "new11.profile"), "utf8").trim(), "older-11");
+  assert.match(r.stdout, /cold start: run 'old' had other settings/); assert.match(log(), /START books=older-11 gates=older-11 rebuy=0 minage=6 wide=0 db=older-new11\.db run=new11 warm=\n/, "from the old bot: identities only, NO price memory — " + log()); assert.equal(readFileSync(join(out, "new11.profile"), "utf8").trim(), "older-11");
   assert.ok(log().indexOf("delete older") < log().indexOf("START"), "the previous bot is stopped (and writes its price memory) before the new one starts"); assert.ok(statSync(join(out, "older-old.db")).size >= size, "the previous database is still there");
   writeFileSync(logf, ""); r = run("new11"); assert.equal(r.status, 0); assert.match(log(), /START books=older-11 gates=older-11 rebuy=0 minage=6 wide=0 db=older-new11\.db run=new11 warm=\n/, "a plain restart of the name keeps its settings and carries nothing in again: " + log());
+  writeFileSync(logf, ""); r = run("score11", "7", "older-11", "new11"); assert.equal(r.status, 0, r.stdout + r.stderr); assert.match(r.stdout, /price memory will be carried from run 'new11'/);
+  assert.match(log(), /START books=older-11 gates=older-11 rebuy=0 minage=6 wide=0 db=older-score11\.db run=score11 warm=older-new11\.db\.warm\n/, "validation run → scored run, same settings: a new database with the validated price memory carried in — " + log()); assert.ok(existsSync(join(out, "score11.until")), "and its seven-day entry window is fixed");
   r = run("new11", "", ""); assert.equal(r.status, 0); r = run("old", "", "older-11"); assert.equal(r.status, 1, "and the old name still cannot be turned into the new rule set");
 });

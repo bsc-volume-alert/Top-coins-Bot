@@ -6,7 +6,8 @@ import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs"; import { tmpdir } from "node:os"; import { join } from "node:path";
 import { mkEngine, swap, path, H, T0 } from "./helpers.mjs";
 import { Store } from "../src/store.mjs";
-import { parseInfo, judge, num, athUsd } from "../src/gates.mjs";
+import { parseInfo as parseRaw, judge, num, athUsd } from "../src/gates.mjs";
+const parseInfo = (info, supply = null, pump = true) => parseRaw(info, supply, pump); // the readings in these tests are of a verified pump.fun coin unless a test says otherwise
 import * as S from "../src/spec.mjs";
 import { Poller } from "../src/polled.mjs"; import { SPL_TOKEN } from "../src/risk.mjs";
 const M = "MintAAApump", fams = (e) => [...e.entries.values()].flatMap((x) => x.families).sort(), tick = () => new Promise((r) => setImmediate(r));
@@ -64,7 +65,7 @@ test("4 — a pending gated buy restored after a restart is cancelled cleanly (n
 });
 
 test("5 — the all-time-high market cap needs supply evidence: price × a billion is not assumed; a minted or unknown supply is 'unknown', which fails the $100K gate", () => {
-  assert.equal(Math.round(athUsd(0.00011, 1e6, null).usd), 110, "a one-million-token coin at $0.00011 was worth $110, not $110,000");
+  assert.equal(Math.round(athUsd(0.00011, 1e6, null, true).usd), 110, "a one-million-token coin at $0.00011 was worth $110, not $110,000");
   assert.equal(judge(parseInfo({ ...GOOD, ath_price: 0.00011, total_supply: "1000000" }), S.GATES_11, "FAST-1M").pass, false);
   assert.equal(Math.round(parseInfo(GOOD, 950_000_000).ath_usd), 380_000, "the chain's supply (950M after burns) is used before the provider's figure: a lower bound"); assert.match(parseInfo(GOOD, 950_000_000).ath_basis, /chain/);
   const none = parseInfo({ ...GOOD, total_supply: undefined }); assert.equal(none.ath_usd, null); assert.deepEqual(judge(none, S.GATES_11, "FAST-1M").missing, ["all-time high"]);

@@ -21,7 +21,7 @@ export function gapRequests(gaps, seen = 0) {
   for (const g of fresh) { const last = out[out.length - 1]; if (last && Math.floor(g[0] / 60) * 60 <= Math.ceil(last[1] / 60) * 60) { if (g[1] > last[1]) last[1] = g[1]; } else out.push(g); }
   return { requests: out, seen: gaps.length };
 }
-export function startBackfill({ engine, store, jup = null, log = console.log }) {
+export function startBackfill({ engine, store, jup = null, log = console.log, paused = () => false }) { // paused(): older-11 — history repair switched off for now (main.mjs): nothing is asked of GMGN here, the queue is kept
   const q = [], inQ = new Set(), needC = new Set(), askedC = new Set();
   // CREATION TIME IN BULK (measured 20 Nov: GMGN's free plan managed 38 coins in 10 minutes, far too slow for thousands).
   // Jupiter's token search takes 100 mints a call. For a pump.fun coin its "first pool" IS the bonding curve (firstPool.id = the
@@ -62,13 +62,14 @@ export function startBackfill({ engine, store, jup = null, log = console.log }) 
   }
   async function loop() {
     while (true) {
+      if (paused()) { bf.paused = true; await new Promise((r) => setTimeout(r, 2000)); continue; } bf.paused = false;
       const it = q.shift(); if (!it) { await new Promise((r) => setTimeout(r, 1000)); continue; }
       inQ.delete(it.mint);
       try { await one(it.mint); bf.done++; } catch (e) { bf.errors++; bf.lastErr = String(e.message).slice(0, 160); if (/rate limited/i.test(e.message)) { q.unshift(it); inQ.add(it.mint); await new Promise((r) => setTimeout(r, 3000)); } }
     }
   }
   /** after an outage: re-fill the gap from 1-minute bars for coins with open positions or near the band */
-  async function patchGap(a, b, mints) { for (const mint of mints) { try { const bars = await minuteBars(mint, Math.floor(a / 60) * 60, Math.ceil(b / 60) * 60); const r = engine.coin(mint).series.addBars(bars, { from: a, to: b, patchGap: true }); if (r.accepted) bf.gapsPatched++; else bf.gapsNotPatched = (bf.gapsNotPatched || 0) + 1; } catch (e) { bf.errors++; bf.lastErr = String(e.message).slice(0, 160); } } }
+  async function patchGap(a, b, mints) { if (paused()) { bf.gapsSkippedPaused = (bf.gapsSkippedPaused || 0) + mints.length; return; } for (const mint of mints) { if (paused()) return; try { const bars = await minuteBars(mint, Math.floor(a / 60) * 60, Math.ceil(b / 60) * 60); const r = engine.coin(mint).series.addBars(bars, { from: a, to: b, patchGap: true }); if (r.accepted) bf.gapsPatched++; else bf.gapsNotPatched = (bf.gapsNotPatched || 0) + 1; } catch (e) { bf.errors++; bf.lastErr = String(e.message).slice(0, 160); } } }
   if (jup) creationLoop();
   if (gmgnOn()) loop(); else log("[backfill] no GMGN key: creation times and history cannot be filled — coins stay not-covered");
   return { want, patchGap, size: () => q.length + needC.size };

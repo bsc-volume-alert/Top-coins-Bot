@@ -3,7 +3,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkEngine, swap, path, H, T0 } from "./helpers.mjs";
 import * as S from "../src/spec.mjs";
-import { parseInfo, judge, gatesFor } from "../src/gates.mjs";
+import { parseInfo as parseRaw, judge, gatesFor } from "../src/gates.mjs";
+const parseInfo = (info, supply = null, pump = true) => parseRaw(info, supply, pump); // the readings in these tests are of a verified pump.fun coin unless a test says otherwise
 const M = "MintAAApump";
 // the provider's real answer of 25 Nov 2026 10:02 UTC for AGmKjJ…Cqxqpump (fields the gates read; values as returned: strings)
 const REAL = { ath_price: 0.00019252105, total_fee: "64.55971947358077", trade_fee: "37.84892266864744", holder_count: 484, total_supply: "965557393.800231", creation_timestamp: 1791667383, open_timestamp: 1791668325, launchpad: "pump",

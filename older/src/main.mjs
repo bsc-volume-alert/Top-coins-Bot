@@ -9,7 +9,7 @@ for (const k of ["RPC_WS", "RPC_HTTP"]) if (!process.env[k]) { console.error(`[o
 const { Store } = await import("./store.mjs"); const { Engine } = await import("./engine.mjs");
 const { startFeed, fs } = await import("./feed.mjs"); const { dec, IDL_PIN } = await import("./decoder.mjs");
 const { startSolUsd, solUsd, sp } = await import("./solusd.mjs"); const { startBackfill, bf, gapRequests } = await import("./backfill.mjs");
-const { inventory } = await import("./inventory.mjs"); const { gm, tokenInfoFirst } = await import("./gmgn.mjs"); const { startWeb } = await import("./web.mjs");
+const { inventory } = await import("./inventory.mjs"); const { gm, tokenInfoFirst, tokenInfoLate } = await import("./gmgn.mjs"); const { startWeb } = await import("./web.mjs");
 const { verifyEntry, vf } = await import("./verify.mjs"); const { SPEC_VER, booksOf, GATES_11 } = await import("./spec.mjs"); const { riskStatus } = await import("./risk.mjs"); const { RISK_REFRESH_S } = await import("./spec.mjs");
 
 const store = new Store(process.env.OLDER_DB || "/root/older/older.db");
@@ -29,7 +29,11 @@ if (process.env.OLDER_BOOKS) { engine.setBooks(booksOf(process.env.OLDER_BOOKS))
 // arrived by the time of the buy and passes. Unset → nothing is asked and nothing is gated (the behaviour of older-10).
 if (process.env.OLDER_GATES) { if (process.env.OLDER_GATES !== "older-11") throw new Error(`unknown OLDER_GATES "${process.env.OLDER_GATES}"`);
   engine.gates = GATES_11; engine.readGate = (mint) => tokenInfoFirst(mint, Number(process.env.GMGN_FIRST_WAIT_MS ?? 300)); gm.reserve = Number(process.env.GMGN_RESERVE ?? 2);
-  log(`[gates] older-11 gates ON: one GMGN reading per buy signal; history repair leaves ${gm.reserve} allowance units for them`); }
+  // LABEL (default) or CANCEL: OLDER_GATE_MODE=label → every signal is bought as before and labelled with the verdict (the
+  // baseline stays intact and the checks are compared on the same buys); =cancel → a buy that fails or has no reading is cancelled.
+  const gmode = (process.env.OLDER_GATE_MODE || "").trim() || "label"; if (gmode !== "label" && gmode !== "cancel") throw new Error(`unknown OLDER_GATE_MODE "${gmode}"`);
+  engine.gateMode = gmode; if (gmode === "label") engine.readGateLate = (mint) => tokenInfoLate(mint);
+  log(`[gates] older-11 gates ON (${gmode}): one GMGN reading per buy signal; history repair leaves ${gm.reserve} allowance units for them`); }
 // older-11: the age from which the books that normally start at 8 hours are evaluated in this run (spec MIN_AGE_11_S). Unset = 8 hours.
 if (process.env.OLDER_MIN_AGE_H) { const h = Number(process.env.OLDER_MIN_AGE_H); if (!(h >= 0 && h <= 8)) throw new Error(`OLDER_MIN_AGE_H must be a number from 0 to 8, not "${process.env.OLDER_MIN_AGE_H}"`); engine.minAgeS = h * 3600; log(`[books] the 8-hour books are evaluated from ${h} hours old in this run`); }
 store.since(now0); // "counting since" is fixed at START-UP, when a book or stop first exists on this database — not at the first page view
@@ -57,7 +61,11 @@ let COMMIT = process.env.OLDER_COMMIT || null; try { const { execSync } = await 
 store.db.prepare("INSERT INTO feed (t, ev, detail) VALUES (?,?,?)").run(now0, "start", `commit ${COMMIT || "unknown"}`);
 await startSolUsd();
 const J = await import("./jupiter.mjs");
-const backfill = startBackfill({ engine, store, jup: J, log });
+// HISTORY REPAIR CAN BE SWITCHED OFF WITHOUT A RESTART (second opinion, 4: an isolated measurement of the provider's allowance
+// needs the only other consumer of it out of the way): OLDER_REPAIR=0, or a file named repair.off in $OLDER_OUT — create it to
+// pause, remove it to resume. While paused nothing is asked of GMGN for history; the hour-scale books simply know less.
+let repOffAt = 0, repOff = false; const repairPaused = () => { if (process.env.OLDER_REPAIR === "0") return true; const n = Date.now(); if (n - repOffAt > 5000) { repOffAt = n; const was = repOff; repOff = !!process.env.OLDER_OUT && existsSync(process.env.OLDER_OUT + "/repair.off"); if (was !== repOff) log(`[backfill] history repair ${repOff ? "PAUSED (repair.off present)" : "resumed"}`); } return repOff; };
+const backfill = startBackfill({ engine, store, jup: J, log, paused: repairPaused });
 engine.needCreation = (mint) => backfill.want(mint, 2);
 const pools = store.loadPools();
 const feed = startFeed({ engine, store, backfill, pools, log });
@@ -116,11 +124,11 @@ const inv = () => { try { return JSON.parse(store.db.prepare("SELECT v FROM meta
 // the reserve reading counts as validated only when the owner sets OLDER_RES_VALIDATED=1 after reviewing docs/tx-validation.json
 const valid = () => (process.env.OLDER_RES_VALIDATED === "1" ? { by: "OLDER_RES_VALIDATED" } : null);
 // older-11: a run that chose its books shows only those on the site (page.mjs, web.mjs); a run that did not shows every book, as before
-const runInfo = () => (engine.books ? { name: process.env.OLDER_RUN_NAME || null, books: engine.books, gates: !!engine.gates, rebuy: engine.rebuy, min_age_h: engine.minAgeS / 3600, sampled: !!poller } : null);
+const runInfo = () => (engine.books ? { name: process.env.OLDER_RUN_NAME || null, books: engine.books, gates: !!engine.gates, gate_mode: engine.gates ? engine.gateMode : null, rebuy: engine.rebuy, min_age_h: engine.minAgeS / 3600, sampled: !!poller } : null);
 const web = startWeb({ port: Number(process.env.OLDER_PORT || 8793), store, engine, run: runInfo, status: () => ({ started: now0, first_start: firstStart, commit: COMMIT, run: process.env.OLDER_RUN_NAME || null, entries_until: engine.entriesUntil, idl: IDL_PIN,
   process: { pid: process.pid, started_at: now0, uptime_s: Math.round(process.uptime()), cpu_user_s: +(process.cpuUsage().user / 1e6).toFixed(1), cpu_system_s: +(process.cpuUsage().system / 1e6).toFixed(1) }, event_loop: loopStatus(),
   feed: { ...fs, lag_ms_avg: fs.lagN ? Math.round(fs.lagMsSum / fs.lagN) : null }, stream: engine.streamStatus(Date.now() / 1000), risk_reader: { ...riskStatus(engine, Date.now() / 1000, RISK_REFRESH_S), fee_unknown_evaluations: engine.stats.feeUnknown || 0, fee_unknown_coins: engine.stats.feeUnknownCoins || 0, cancelled_at_fill: engine.stats.cancelledAtFill || 0 }, engine: { ...engine.stats, coins: engine.coins.size, open: [...engine.byMint.values()].reduce((s, x) => s + x.size, 0), feed_gaps: engine.feedCov.gaps.length, usd_down: engine.usdDown },
-  books: engine.books ?? "legacy", gates: engine.gates ? "older-11" : "off", rebuy: engine.rebuy, min_age_h: engine.minAgeS / 3600, decoder: { ...dec }, tx_validation: valid(), verify: { ...vf }, snapshots: { ...snapStats }, sol: { ...sp }, gmgn: { calls: gm.calls, errors: gm.errors, limited: gm.limited, banned: gm.banned, first: { ...gm.first }, held_back: gm.held_back, reserve: gm.reserve, lastErr: gm.lastErr, rate_headers: gm.headers }, backfill: { ...bf }, backfillQ: backfill.size(), jupiter: { ...J.ju, key: !!process.env.JUP_API_KEY, rps: Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0.5)) }, poller: poller ? { ...poller.stats, cadence_avg_s: poller.stats.cadence.n ? +(poller.stats.cadence.sum / poller.stats.cadence.n).toFixed(1) : null, hot_s: poller.hotEvery, cold_s: poller.coldEvery } : null, inventory: inv(), mem_mb: Math.round(process.memoryUsage().rss / 2 ** 20), sizes: sizes() }) });
+  books: engine.books ?? "legacy", gates: engine.gates ? "older-11" : "off", gate_mode: engine.gates ? engine.gateMode : null, repair_paused: repairPaused(), rebuy: engine.rebuy, min_age_h: engine.minAgeS / 3600, decoder: { ...dec }, tx_validation: valid(), verify: { ...vf }, snapshots: { ...snapStats }, sol: { ...sp }, gmgn: { calls: gm.calls, errors: gm.errors, limited: gm.limited, banned: gm.banned, first: { ...gm.first }, held_back: gm.held_back, reserve: gm.reserve, lastErr: gm.lastErr, rate_headers: gm.headers }, backfill: { ...bf }, backfillQ: backfill.size(), jupiter: { ...J.ju, key: !!process.env.JUP_API_KEY, rps: Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0.5)) }, poller: poller ? { ...poller.stats, cadence_avg_s: poller.stats.cadence.n ? +(poller.stats.cadence.sum / poller.stats.cadence.n).toFixed(1) : null, hot_s: poller.hotEvery, cold_s: poller.coldEvery } : null, inventory: inv(), mem_mb: Math.round(process.memoryUsage().rss / 2 ** 20), sizes: sizes() }) });
 log(`[older] started, spec ${SPEC_VER}, paper only`);
 
 // ---- monitoring copy: every 5 minutes the dashboard's own data is written to $OLDER_OUT/pub/state.json (no keys in it);
@@ -134,7 +142,7 @@ if (process.env.OLDER_OUT && !process.env.OLDER_RUN_MINUTES) {
     const w5 = e.features?.w5, s5 = e.snap?.stats5m, mv = {}; for (const c of e.cands || []) if (c.detail?.move_s != null) mv[c.family] = c.detail.move_s; return { id: e.id, mint: e.mint, sym: engine.coins.get(e.mint)?.info?.symbol ?? null, fee: e.token?.xfer_bps || 0, warm: e.warm_gap_s || 0, again: e.again ? Object.keys(e.again) : [], t: Math.round(e.decisionT), ag: e.ag, fam: e.families, mode: e.mode, pop: e.pop ?? null, status: e.status, mc: Math.round(e.signalMc || 0), delay: e.fill?.delay_s ?? null, max: e.runner?.maxX != null ? +e.runner.maxX.toFixed(3) : null, ret: r, chk: e.verify?.diff_quote != null ? +(e.verify.diff_quote * 100).toFixed(2) : null, flags: (e.flags || []).length,
       holders: e.snap?.holders ?? null, hc5: s5?.holderChange ?? null, traders5: s5?.numTraders ?? null, b1: e.features?.w1?.buyers ?? null, b5: w5?.buyers ?? null, v5: w5?.vol_usd ?? null, top5: w5?.top_buyer_share ?? null, surge: e.features?.vol_surge5 ?? null, move_s: mv,
       // older-11: the provider reading the owner's gates were judged on (fractions 0–1; fees in SOL), its verdict and how long it took
-      ...(e.gate ? { gate: { v: e.gate.verdict ?? null, ms: e.gate.ms ?? null, late: e.gate.late || undefined, err: e.gate.error ?? undefined, fails: e.gate.fails ?? undefined, dropped: e.gate.dropped ? Object.keys(e.gate.dropped) : undefined, opt: e.gate.options ?? undefined,
+      ...(e.gate ? { gate: { v: e.gate.verdict ?? null, ms: e.gate.ms ?? null, late: e.gate.late || undefined, timely: e.gate.timely || undefined, by: e.gate.by ? Object.fromEntries(Object.entries(e.gate.by).map(([f, x]) => [f, x.pass ? 1 : 0])) : undefined, retried: e.gate.retried || undefined, rule: e.gate.rule ?? undefined, err: e.gate.error ?? undefined, fails: e.gate.fails ?? undefined, dropped: e.gate.dropped ? Object.keys(e.gate.dropped) : undefined, opt: e.gate.options ?? undefined,
         ...(e.gate.reading ? { top10: e.gate.reading.top10, bund: e.gate.reading.bundlers, ins: e.gate.reading.insiders, snip: e.gate.reading.snipers, fees: e.gate.reading.fees_sol, tw: e.gate.reading.twitter == null ? null : !!e.gate.reading.twitter, ath: e.gate.reading.ath_usd == null ? null : Math.round(e.gate.reading.ath_usd), holders: e.gate.reading.holders } : {}) } } : {}) }; });
   const dump = () => { try { for (const pop of ["", "pumpswap-canonical", "solana-wide"]) writeFileSync(`${dir}/state${pop ? "-" + pop : ""}.json`, JSON.stringify(web.state(pop))); writeFileSync(`${dir}/entries.json`, JSON.stringify({ at: Date.now(), commit: COMMIT, run: process.env.OLDER_RUN_NAME || null, entries: compact() })); } catch (e) { log("[pub] " + e.message); } };
   setTimeout(dump, 60000); setInterval(dump, 300000);

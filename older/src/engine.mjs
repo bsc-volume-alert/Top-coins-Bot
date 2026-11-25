@@ -23,6 +23,7 @@ export class Engine {
     this.stats = { events: 0, swaps: 0, otherPool: 0, noSolUsd: 0, noCreation: 0, evals: 0, cands: 0, entries: 0, notes: 0, replayed: 0, tooOld: 0, lastT: null, evalMsMax: 0 };
     this.dirtyBars = new Map(); this.usdDown = false; this.dirty = new Set(); this.lastCkpt = 0; this.entriesUntil = null; this.onOwnership = () => {};
     this.gates = null; this.readGate = null; this.clock = () => Date.now() / 1000; // older-11: the owner's gates (spec GATES_11) — null = nothing asked, nothing gated; readGate(mint) → the provider's token-info answer; clock = the receive clock the answers are timed on
+    this.gateMode = "cancel"; this.readGateLate = null; // older-11: "cancel" = a buy that fails the gates or has no reading in time is cancelled; "label" = every signal is bought as before and carries the verdict (see _gateLabel)
     this.minAgeS = S.MIN_AGE_S; // older-11: the age from which the books that normally start at 8 hours are evaluated in this run (default: 8 hours, as always)
     this.inactive = new Set(S.FAMILIES.filter((f) => !S.BOOKS_LEGACY.includes(f))); // older-11: books that make no new buy in this run (default: the legacy 29 buy, VOL100K does not) — see setBooks
     this.stream = { at: null, lag: null, first: null, open: -Infinity, kind: "connect", need: 0, goodSince: null, promote: false, spans: [], acctAt: null, diag: { n: 0, sum: 0, max: 0, hist: LAG_EDGES.map(() => 0), secs: { current: 0, late: 0, recovering: 0, silence: 0, unknown: 0 }, spells: { late: 0, silence: 0, connect: 0 }, longest: { late: 0, silence: 0, connect: 0 }, recent: [] } }; this.cov.reasons.add("stream"); /* stream freshness: ONE state machine for pricing and for signal coverage — see tx() */ this.rebuy = true; /* spec REBUY: buying again after a sale; false = older-8 */ this.pollCov = new Coverage(); // continuity of PRICE POLLING (the Solana-wide adapter); independent of the PumpSwap WebSocket
@@ -115,7 +116,7 @@ export class Engine {
    *  now restricted, now known to charge a fee, or whose fee is no longer known is CANCELLED, never filled. Positions that
    *  are already filled are never cancelled here; a later change is recorded on them (riskUpdated). Returns true if cancelled. */
   _blocked(e, c, was, sig, ids, t = null) { if (e.exec === "routed-quote" || e.status !== "pending") return false; const bad = liveBlock(c.info);
-    if (!bad) { const why = e.gate && t != null && t >= e.schedT ? this._gate(e) : null; if (!why) return false; // older-11: the owner's gates, decided once, at the time of the buy
+    if (!bad) { const why = e.gate && t != null && t >= e.schedT ? (this.gateMode === "label" ? this._gateLabel(e, c) : this._gate(e)) : null; if (!why) return false; // older-11: the owner's gates, decided once, at the time of the buy
       e.status = "cancelled"; e.flags.push("cancelled before the buy: " + why); if (e.gate.verdict === "no reading") this._giveBack(e, c); this._after(e, was, sig, ids, c); return true; }
     e.status = "cancelled"; e.flags.push(`cancelled before the buy: the coin's transfer restrictions changed between the decision and the fill — now ${bad}`); this.stats.cancelledAtFill = (this.stats.cancelledAtFill || 0) + 1; this._after(e, was, sig, ids, c); return true; }
   /** older-11 — ask the provider for the coin's reading at the buy signal. Never awaited: the answer is stored on the entry with
@@ -123,10 +124,11 @@ export class Engine {
   _gateAsk(e, mint, t) {
     const g = (e.gate = { req_t: t, resp_t: null }), G = this._G(); G.asked++; const supply = this.coins.get(mint)?.state?.supply ?? null; // the coin's supply as the chain reported it with the latest swap (for the all-time-high market cap)
     const done = (fill) => { g.resp_t = this.clock(); g.ms = Math.max(0, Math.round((g.resp_t - g.req_t) * 1000)); fill(); G.ms_sum += g.ms; if (g.ms > G.ms_max) G.ms_max = g.ms;
+      if (this.gateMode === "label") { this._labelArrived(e, mint, supply); this.store?.saveEntry(e); return; }
       if (g.verdict && g.verdict !== "pass" && g.verdict !== "fail" && !g.late) { g.late = true; G.late++; } // it arrived after the buy had been decided without it: kept as a record only
       this.store?.saveEntry(e); };
     let p; try { p = this.readGate ? Promise.resolve(this.readGate(mint)) : Promise.reject(new Error("no reader configured")); } catch (err) { p = Promise.reject(err); }
-    p.then((info) => done(() => { g.reading = parseInfo(info, supply); G.answered++; }), (err) => done(() => { g.error = String(err?.message || err).slice(0, 160); G.errors++; }));
+    p.then((info) => done(() => { g.reading = parseInfo(info, supply, this._pump(mint)); G.answered++; }), (err) => done(() => { g.error = String(err?.message || err).slice(0, 160); G.errors++; }));
   }
   /** older-11 — the gate verdict for a pending buy whose time has come (called from _blocked, once per entry). Returns null if
    *  the buy may go ahead for at least one of its books (books that fail are taken off the entry and recorded in gate.dropped),
@@ -148,7 +150,48 @@ export class Engine {
     if (ok.length < e.families.length) { g.dropped = Object.fromEntries(e.families.filter((f) => !res.get(f).pass).map((f) => [f, why(f)])); e.families = ok; e.flags.push("books taken off this buy by their gates: " + Object.entries(g.dropped).map(([f, w]) => `${f} (${w.join("; ")})`).join(", ")); }
     g.verdict = "pass"; G.passed++; return null;
   }
-  _G() { return (this.stats.gate ||= { asked: 0, answered: 0, errors: 0, late: 0, passed: 0, failed: 0, no_reading: 0, attempts_returned: 0, held: 0, ms_sum: 0, ms_max: 0, fails: {} }); }
+  _G() { return (this.stats.gate ||= { asked: 0, answered: 0, errors: 0, late: 0, passed: 0, failed: 0, no_reading: 0, attempts_returned: 0, held: 0, ms_sum: 0, ms_max: 0, fails: {}, late_passed: 0, late_failed: 0, retries: 0, retry_errors: 0, rule_cancelled: 0 }); }
+  /** is this a coin whose supply can only have fallen since its high? Only a coin observed on its canonical pump.fun pool
+   *  (created with 1,000,000,000 tokens, minting closed). Anything else: the all-time-high market cap is not established. */
+  _pump(mint) { const c = this.coins.get(mint); return !!c && c.mode !== "polled" && (c.info?.population ?? "pumpswap-canonical") === "pumpswap-canonical"; }
+  /** ───────── LABEL, DON'T CANCEL (owner 25 Nov 2026 11:35 "keep the original and add the additional filters"; ChatGPT's second
+   *  opinion of the same day) ─────────
+   *  gateMode "label": every signal is paper-bought exactly as without the gates — the BASELINE. The provider reading is
+   *  recorded on the buy and each of its books is labelled:
+   *    passed IN TIME   the reading had arrived by the time of the buy (decision + 1 s) and passes that book's gates
+   *    failed IN TIME   it had arrived and fails (the reasons are kept)
+   *    passed / failed LATE   the reading arrived after the buy. Exploratory only: it can reflect what happened after the entry,
+   *                     so it never counts as a usable filter result
+   *    no reading       nothing arrived at all (kept apart from a genuine failure)
+   *  If the first request fails (refused, not sent, error) ONE ordinary queued request is made for a buy that is still alive,
+   *  so the label is late rather than missing. Nothing is cancelled for a label, no book is taken off a buy, no attempt is
+   *  given back: the baseline is exactly the ungated run, and the filtered views are FIRST-OPPORTUNITY views of it (they cannot
+   *  show a strategy that skips a first signal and buys a later one).
+   *  ONE EXCEPTION, because it is the rule and not a filter: DIP15K bought on "the provider's all-time high" (no $100K peak
+   *  was watched) needs that all-time high, in time, to be $100K or more — otherwise the rule itself is not established and
+   *  that book is taken off the buy. Execution guards (transfer restrictions, untrusted prices) are untouched. */
+  _judgeAll(e, late) { const g = e.gate, G = this._G(); g.by = {};
+    for (const f of e.families) { const r = judge(g.reading, this.gates, f); g.by[f] = r.pass ? { pass: true } : { pass: false, why: [...r.fails, ...r.missing.map((m) => m + " missing")] }; if (!r.pass && !late) for (const x of g.by[f].why) { const k = x.includes(":") ? x.split(":")[0].replace(/ \$?[0-9.]+(%|K| SOL)$/, "") : x; G.fails[k] = (G.fails[k] || 0) + 1; } }
+    const any = e.families.some((f) => g.by[f].pass); g.options = judge(g.reading, this.gates, e.families.find((f) => g.by[f].pass) ?? e.families[0]).options;
+    g.verdict = any ? "pass" : "fail"; if (!any) g.fails = [...new Set(e.families.flatMap((f) => g.by[f].why))];
+    if (late) { g.late = true; any ? G.late_passed++ : G.late_failed++; } else { g.timely = true; any ? G.passed++ : G.failed++; } }
+  _gateLabel(e, c) {
+    const g = e.gate, G = this._G(), by = e.schedT + S.GATE_WAIT_S; if (g.at_buy) return null; const timely = !!g.reading && g.resp_t != null && g.resp_t <= by; g.at_buy = timely ? "reading" : "none";
+    // the DIP15K rule itself: without a watched peak, the provider's all-time high must be there, in time, and at $100K or more
+    const needs = e.families.filter((f) => f === S.DIP && (e.cands || []).some((x) => x.family === f && /^provider/.test(x.detail?.peak_evidence || "")));
+    if (needs.length && !(timely && g.reading.ath_usd >= S.DIP_PEAK_USD)) { const why = timely ? (g.reading.ath_usd == null ? "the provider gave no usable all-time high" : `the provider's all-time high is $${Math.round(g.reading.ath_usd / 1000)}K`) : "no provider reading had arrived by the time of the buy";
+      G.rule_cancelled++; g.rule = `DIP15K not established: ${why} (it needs $100K or more)`;
+      if (needs.length === e.families.length) { g.verdict = timely ? "fail" : "no reading"; if (!timely) G.no_reading++; return g.rule; }
+      e.families = e.families.filter((f) => !needs.includes(f)); e.flags.push(g.rule); }
+    if (timely) this._judgeAll(e, false); else { g.verdict = "no reading"; G.no_reading++; if (g.reading) this._judgeAll(e, true); } // a reading that is already here but arrived after the buy time is a late label at once
+    return null; }
+  /** label mode: a reading (or an error) has just arrived for this entry */
+  _labelArrived(e, mint, supply) { const g = e.gate, G = this._G();
+    if (g.reading) { if (g.at_buy && g.verdict === "no reading" && e.status !== "cancelled") this._judgeAll(e, true); else if (g.at_buy && !g.late && !g.timely) { g.late = true; G.late++; } return; } // before the buy: judged at the buy
+    if (!g.retried && this.readGateLate && e.status !== "cancelled") { g.retried = true; g.first_error = g.error; G.retries++; // one ordinary, queued request: late is better than missing
+      let p; try { p = Promise.resolve(this.readGateLate(mint)); } catch (err) { p = Promise.reject(err); }
+      p.then((info) => { g.resp_t = this.clock(); g.ms = Math.max(0, Math.round((g.resp_t - g.req_t) * 1000)); g.reading = parseInfo(info, supply, this._pump(mint)); g.error = undefined; G.answered++; this._labelArrived(e, mint, supply); this.store?.saveEntry(e); },
+        (err) => { g.error = String(err?.message || err).slice(0, 160); G.retry_errors++; this.store?.saveEntry(e); }); } }
   /** older-11, owner's decision 25 Nov 2026 11:30 UK: a buy cancelled because NO READING arrived in time (the provider refused,
    *  failed or answered late — never the coin's fault) does not use up the book's one buy of that coin. The book's mark for the
    *  coin and age group is taken back, in memory and in the database, and the cancelled entry says so. What it may then buy on
@@ -208,7 +251,7 @@ export class Engine {
    *  (a state that arrived later can never price an earlier moment), after any loss of the coin's data, with no feed gap in between.
    *  A state reconstructed from a boost event is NOT trusted for fills: it is only confirmed (or contradicted) by the next swap.
    *  And the STREAM must be current at `at` (freshAt): receipt time alone does not show that the stream had caught up. */
-  trustedAt(c, at) { return !!c.state && !c.state.approx && c.state.t <= at && (c.lostAt === null || c.state.t >= c.lostAt) && this.feedCov.gapsIn(c.state.t, at).length === 0 && this.freshAt(at); }
+  trustedAt(c, at) { return !!c.state && !c.state.approx && !c.state.unmeasured && c.state.t <= at && (c.lostAt === null || c.state.t >= c.lostAt) && this.feedCov.gapsIn(c.state.t, at).length === 0 && this.freshAt(at); }
   _run(mint, upTo, c) {
     const ids = this.byMint.get(mint); if (!ids) return;
     // each entry keeps the execution method it was opened with: a routed-quote entry is NEVER priced from a pool state
@@ -246,7 +289,8 @@ export class Engine {
     if (!ev.replay) this._run(ev.mint, ev.t, c);
     // 2) the new state
     const prev = c.state; const st = { ...ev.state, feeBuy: ev.state.feeBuy ?? prev?.feeBuy ?? null, feeSell: ev.state.feeSell ?? prev?.feeSell ?? null, supply: ev.state.supply ?? prev?.supply ?? null, t: ev.t,
-      st_sig: ev.sig ?? null, st_slot: ev.slot ?? null }; // the transaction this state was committed by: lets a fill or a sale be checked later against that transaction's own balances (evidence only)
+      st_sig: ev.sig ?? null, st_slot: ev.slot ?? null,
+      ...(this._unmeasured && !ev.replay ? { unmeasured: true } : {}) }; // a state installed by a transaction whose delay is unknown (see tx): kept for the continuity of the reserves, but it prices NOTHING (trustedAt) until a measured transaction of this pool replaces it // the transaction this state was committed by: lets a fill or a sale be checked later against that transaction's own balances (evidence only)
     c.state = st; if (st.supply) c.supply = st.supply;
     // QUARANTINE: a state rebuilt from a boost event is an estimate until the next swap confirms it — it prices no fill (trustedAt),
     // moves no peak or stop, and creates no price observation or signal. Counted.

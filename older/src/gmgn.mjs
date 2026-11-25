@@ -56,6 +56,8 @@ const N = (v) => (v == null || v === "" || isNaN(Number(v)) ? null : Number(v));
 
 /** older-11: the reading for a pending buy — one token-info answer, sent ahead of everything else (see "first" above) */
 export const tokenInfoFirst = (mint, maxWaitMs = 300) => gcall("/v1/token/info", { chain: "sol", address: mint }, { first: true, maxWaitMs });
+/** older-11, label mode: the same reading as an ORDINARY queued call (waits its turn and for the allowance) — used once when the first request failed, so a buy gets a late label rather than none */
+export const tokenInfoLate = (mint) => gcall("/v1/token/info", { chain: "sol", address: mint });
 /** test hook: forget pacing and allowance state */
 export function _reset() { next = 0; pausedUntil = 0; remaining = null; resetAt = 0; chain = Promise.resolve(); }
 /** token creation time (unix s) — GMGN token info; null if GMGN does not give one */

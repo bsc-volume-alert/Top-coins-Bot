@@ -29,7 +29,7 @@ export function saveWarm(file, engine, t = Date.now() / 1000) {
       // carried state is saved only while its own provenance holds AT THE STOP: a RUG peak / setup that is no longer steady up to
       // now, or a SECOND-WAVE setup whose exact coverage has broken, is not written (it would be dropped at the next trade anyway)
       const rug = c.rug?.pk && sr.steady(c.rug.pk.t, t) ? c.rug : null, sw = c.sw && sr.covered(c.sw.seedT, t, true) ? c.sw : null;
-      line({ m: mint, mode: c.mode, pool: c.pool ?? null, createTs: c.createTs ?? null, supply: c.supply ?? null, lostAt: c.lostAt ?? null, sw, rug, groups, s: sr.dump() }); n++; }
+      line({ m: mint, mode: c.mode, pool: c.pool ?? null, createTs: c.createTs ?? null, supply: c.supply ?? null, lostAt: c.lostAt ?? null, sw, rug, groups, ...(c.gateHold ? { hold: c.gateHold } : {}), s: sr.dump() }); n++; }
     line({ end: true, coins: n });
   } finally { closeSync(fd); }
   renameSync(tmp, file); // atomic: a file that exists is complete
@@ -64,6 +64,7 @@ export function loadWarm(file, engine, now = Date.now() / 1000, { fresh = false 
     if (c.mode !== d.mode) { skipped++; continue; } // the database (and an unfinished entry's method) decides how a coin is observed: no mixed evidence
     c.series = Series.load(d.m, d.mode === "polled" ? engine.pollCov : engine.cov, d.s); c.warm = true;
     if (d.supply) c.supply = d.supply; c.lostAt = d.lostAt ?? null; c.sw = d.sw ?? null; c.rug = d.rug ?? null;
+    if (!fresh && d.hold) c.gateHold = d.hold; // a book held on this coin after a buy that got no reading stays held over a planned restart (second opinion, 5)
     if (!fresh) for (const [ag, g] of Object.entries(d.groups || {})) { const x = (c.groups[ag] ||= { ref: null, done: {}, logged: {} }); x.ref = g.ref ?? x.ref; Object.assign(x.done, g.done || {}); Object.assign(x.logged, g.logged || {}); } // one-buy flags: the database's and the snapshot's together
     for (const m of c.series.bars.keys()) if (m >= curM - 1) (engine.dirtyBars.get(d.m) || engine.dirtyBars.set(d.m, new Set()).get(d.m)).add(m); // the stop minute's bar is still to be saved
     if (!had) engine.stats.warmNewCoins = (engine.stats.warmNewCoins || 0) + 1;
