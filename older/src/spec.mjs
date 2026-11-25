@@ -158,3 +158,31 @@ export function booksOf(name) {
   for (const f of list) { if (!FAMILIES.includes(f)) throw new Error(`unknown book "${f}"`); const base = CLOCK[f]?.base; if (base && !list.includes(base)) throw new Error(`${f} shares the buys of ${base}, which is not in the list`); }
   return [...new Set(list)];
 }
+
+// ───────────────────────── older-11: THE OWNER'S GATES (decisions of 24–25 Nov 2026) ─────────────────────────
+// At a buy signal the engine asks the token-data provider for ONE reading of the coin (gates.mjs). The pending buy is filled
+// only if that reading had ARRIVED BY THE TIME OF THE BUY (decision + BUY_DELAY_MS + GATE_WAIT_S) and every gate passes for at
+// least one of the books that fired. A reading that is missing, failed or late is never treated as zero: the buy is cancelled
+// and the reason recorded; a late reading is still stored on the cancelled entry, marked late, so it can be seen what it said.
+// Fractions are 0–1; ranges are inclusive [low, high], high = null for "no upper limit"; exclusiveHi makes the upper limit strict.
+//   buy    — the range that admits a buy: the UNION of the owner's main range and his second option
+//   main / second — his two options; every filled buy records which of them it satisfies, so both are reported from the same buys
+// byFamily — a book's own settings replace the common ones (a clock book uses its base book's). The rug books are defined by a
+//   watched peak of $450K / $950K, so "has reached $100K" is not asked of them, and the owner gave them a wider top-10 range.
+//   Fees of at least 5 SOL apply to every book, the rug books included (owner, 25 Nov 10:43).
+// A run switches the gates on with OLDER_GATES=older-11 (main.mjs); without it nothing is asked and nothing is gated.
+export const GATE_WAIT_S = 0; // extra seconds after the scheduled buy within which a reading still counts (0 = it must be there at the buy)
+export const GATES_11 = {
+  top10: { buy: [0.18, 0.30] },                                                    // owner 25 Nov 09:22: "between 18% and 30%"; never under 10% is implied
+  bundlers: { buy: [0.05, 0.50], main: [0.07, 0.50], second: [0.05, 0.20] },       // owner 24 Nov 16:02 (7–50%) and 25 Nov 09:22 (second option 5–20%)
+  insiders: { buy: [0.025, 0.40], main: [0.025, 0.25], second: [0.025, 0.40] },    // owner 24 Nov 16:02 (2.5–25%) and 25 Nov 09:22 (second option 2.5–40%)
+  snipers: { buy: [0, 0.05], exclusiveHi: true },                                  // "snipers under 5%"
+  fees_sol: { buy: [5, null] },                                                    // owner 25 Nov 09:22: "fees I want to increase to 5 SOL"
+  twitter: true,                                                                   // a Twitter link of any kind (a single tweet counts)
+  ath_usd: { buy: [100_000, null] },                                               // "has reached $100K before" — the provider's all-time high
+  bothZeroBlocks: true,                                                            // "zero bundles, zero insiders, never buy" (already implied by the minimums)
+  byFamily: { // rug books — owner 25 Nov 10:43: top 10 "maybe 30 to 15%, or even 10%": the wider range is set (10–30%); no "$100K" test (their own peak rule is stricter)
+    RUG450: { top10: { buy: [0.10, 0.30] }, ath_usd: null }, RUG950: { top10: { buy: [0.10, 0.30] }, ath_usd: null },
+    "RUG450-BOUNCE": { top10: { buy: [0.10, 0.30] }, ath_usd: null }, "RUG950-BOUNCE": { top10: { buy: [0.10, 0.30] }, ath_usd: null } },
+};
+

@@ -9,6 +9,7 @@ import { newCoin, evaluate } from "./signals.mjs";
 import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount } from "./book.mjs";
 import { liquidityUsd, staticImpact } from "./fills.mjs";
 import { feeKnown } from "./risk.mjs";
+import { parseInfo, judge } from "./gates.mjs";
 /** why a coin cannot be bought on the LIVE method (pool-state fills model no transfer fee), or null */
 const LAG_EDGES = [1, 2, 3, 5, 10, 30, 60, Infinity]; // upper edges (seconds) of the stream-delay histogram kept for diagnostics
 const liveBlock = (info) => { const rk = info?.risk; return rk?.status === "restricted" ? `restricted (${(rk.blocking || []).join(", ") || "transfer restriction"})` : rk?.fee_bps > 0 ? `a transfer fee of ${rk.fee_bps} bps, which the live method does not model` : !feeKnown(info) ? "transfer fee not known" : null; };
@@ -21,6 +22,7 @@ export class Engine {
     this.store = store; this.solUsd = solUsd; this.needCreation = needCreation; this.onFill = onFill; this.onEntry = onEntry; this.log = log; this.firstStart = firstStart;
     this.stats = { events: 0, swaps: 0, otherPool: 0, noSolUsd: 0, noCreation: 0, evals: 0, cands: 0, entries: 0, notes: 0, replayed: 0, tooOld: 0, lastT: null, evalMsMax: 0 };
     this.dirtyBars = new Map(); this.usdDown = false; this.dirty = new Set(); this.lastCkpt = 0; this.entriesUntil = null; this.onOwnership = () => {};
+    this.gates = null; this.readGate = null; this.clock = () => Date.now() / 1000; // older-11: the owner's gates (spec GATES_11) — null = nothing asked, nothing gated; readGate(mint) → the provider's token-info answer; clock = the receive clock the answers are timed on
     this.inactive = new Set(S.FAMILIES.filter((f) => !S.BOOKS_LEGACY.includes(f))); // older-11: books that make no new buy in this run (default: the legacy 29 buy, VOL100K does not) — see setBooks
     this.stream = { at: null, lag: null, first: null, open: -Infinity, kind: "connect", need: 0, goodSince: null, promote: false, spans: [], acctAt: null, diag: { n: 0, sum: 0, max: 0, hist: LAG_EDGES.map(() => 0), secs: { current: 0, late: 0, recovering: 0, silence: 0, unknown: 0 }, spells: { late: 0, silence: 0, connect: 0 }, longest: { late: 0, silence: 0, connect: 0 }, recent: [] } }; this.cov.reasons.add("stream"); /* stream freshness: ONE state machine for pricing and for signal coverage — see tx() */ this.rebuy = true; /* spec REBUY: buying again after a sale; false = older-8 */ this.pollCov = new Coverage(); // continuity of PRICE POLLING (the Solana-wide adapter); independent of the PumpSwap WebSocket
     this.stats.prices = 0; this.stats.riskBlocked = 0; this.stats.quotes = 0;
@@ -106,8 +108,35 @@ export class Engine {
    *  revaluation at the end of an interruption (Codex B2: recovery used to fill without it). A pending buy on a coin that is
    *  now restricted, now known to charge a fee, or whose fee is no longer known is CANCELLED, never filled. Positions that
    *  are already filled are never cancelled here; a later change is recorded on them (riskUpdated). Returns true if cancelled. */
-  _blocked(e, c, was, sig, ids) { if (e.exec === "routed-quote" || e.status !== "pending") return false; const bad = liveBlock(c.info); if (!bad) return false;
+  _blocked(e, c, was, sig, ids, t = null) { if (e.exec === "routed-quote" || e.status !== "pending") return false; const bad = liveBlock(c.info);
+    if (!bad) { const why = e.gate && t != null && t >= e.schedT ? this._gate(e) : null; if (!why) return false; // older-11: the owner's gates, decided once, at the time of the buy
+      e.status = "cancelled"; e.flags.push("cancelled before the buy: " + why); this._after(e, was, sig, ids, c); return true; }
     e.status = "cancelled"; e.flags.push(`cancelled before the buy: the coin's transfer restrictions changed between the decision and the fill — now ${bad}`); this.stats.cancelledAtFill = (this.stats.cancelledAtFill || 0) + 1; this._after(e, was, sig, ids, c); return true; }
+  /** older-11 — ask the provider for the coin's reading at the buy signal. Never awaited: the answer is stored on the entry with
+   *  the time it arrived, and _gate reads whatever is there at the time of the buy. */
+  _gateAsk(e, mint, t) {
+    const g = (e.gate = { req_t: t, resp_t: null }), G = (this.stats.gate ||= { asked: 0, answered: 0, errors: 0, late: 0, passed: 0, failed: 0, no_reading: 0, ms_sum: 0, ms_max: 0, fails: {} }); G.asked++;
+    const done = (fill) => { g.resp_t = this.clock(); g.ms = Math.max(0, Math.round((g.resp_t - g.req_t) * 1000)); fill(); G.ms_sum += g.ms; if (g.ms > G.ms_max) G.ms_max = g.ms;
+      if (g.verdict && g.verdict !== "pass" && g.verdict !== "fail") { g.late = true; G.late++; } // it arrived after the buy had been decided without it: kept as a record only
+      this.store?.saveEntry(e); };
+    let p; try { p = this.readGate ? Promise.resolve(this.readGate(mint)) : Promise.reject(new Error("no reader configured")); } catch (err) { p = Promise.reject(err); }
+    p.then((info) => done(() => { g.reading = parseInfo(info); G.answered++; }), (err) => done(() => { g.error = String(err?.message || err).slice(0, 160); G.errors++; }));
+  }
+  /** older-11 — the gate verdict for a pending buy whose time has come (called from _blocked, once per entry). Returns null if
+   *  the buy may go ahead for at least one of its books (books that fail are taken off the entry and recorded in gate.dropped),
+   *  or the reason for cancelling it. A reading counts only if it had arrived by the scheduled buy (+ GATE_WAIT_S). */
+  _gate(e) {
+    const g = e.gate; if (g.verdict) return null; const G = this.stats.gate, by = e.schedT + S.GATE_WAIT_S;
+    if (g.resp_t == null || g.resp_t > by) { g.verdict = "no reading"; G.no_reading++; return g.resp_t == null ? "no provider reading had arrived by the time of the buy (not treated as zero)" : `the provider reading arrived ${(g.resp_t - e.schedT).toFixed(2)} s after the time of the buy`; }
+    if (!g.reading) { g.verdict = "no reading"; G.no_reading++; return `the provider reading failed (${g.error || "no answer"}) — not treated as zero`; }
+    const res = new Map(e.families.map((f) => [f, judge(g.reading, this.gates, f)])), ok = e.families.filter((f) => res.get(f).pass);
+    const why = (f) => [...res.get(f).fails, ...res.get(f).missing.map((m) => m + " missing")];
+    for (const f of e.families) if (!res.get(f).pass) for (const x of why(f)) { const k = x.replace(/ [0-9$].*$/, "").replace(/:.*$/, ""); G.fails[k] = (G.fails[k] || 0) + 1; }
+    g.options = res.get(ok[0] ?? e.families[0]).options;
+    if (!ok.length) { g.verdict = "fail"; G.failed++; g.fails = [...new Set(e.families.flatMap(why))]; return "the owner's gates: " + g.fails.join("; "); }
+    if (ok.length < e.families.length) { g.dropped = Object.fromEntries(e.families.filter((f) => !res.get(f).pass).map((f) => [f, why(f)])); e.families = ok; e.flags.push("books taken off this buy by their gates: " + Object.entries(g.dropped).map(([f, w]) => `${f} (${w.join("; ")})`).join(", ")); }
+    g.verdict = "pass"; G.passed++; return null;
+  }
   /** the stream is current again at t. For each open live position whose pool state is trusted now:
    *    1. its DUE CLOCK TRANSITIONS are run first (advance): a maximum-hold or clock-book deadline that passed during the
    *       interruption is triggered at its own time, exactly as a tick would have done — the clock may have been held up
@@ -117,7 +146,7 @@ export class Engine {
    *       the delay it really had.
    *  Both steps go through the same eligibility gate (_blocked) and the same trust test as every other path. */
   _revalue(t) { for (const [mint, ids] of this.byMint) { if (!ids.size) continue; const c = this.coins.get(mint); if (!c || c.mode === "polled" || !this.trustedAt(c, t)) continue;
-    for (const id of [...ids]) { const e = this.entries.get(id); if (!e || e.exec === "routed-quote") continue; const was = e.status, sig = e.versions.map((v) => v.status).join(); if (this._blocked(e, c, was, sig, ids)) continue;
+    for (const id of [...ids]) { const e = this.entries.get(id); if (!e || e.exec === "routed-quote") continue; const was = e.status, sig = e.versions.map((v) => v.status).join(); if (this._blocked(e, c, was, sig, ids, t)) continue;
       const mut = advance(e, t, c.state, (at) => this.trustedAt(c, at), this.feedCov); observe(e, c.state, t, this.feedCov); this._after(e, was, sig, ids, c, mut); } } }
   /** the risk reader read this coin's mint account: a fee or restriction found on a coin already HELD on the live method is
    *  recorded on the position. The position, its exits and any unresolved exposure stay exactly as they are — nothing is
@@ -163,7 +192,7 @@ export class Engine {
     const ids = this.byMint.get(mint); if (!ids) return;
     // each entry keeps the execution method it was opened with: a routed-quote entry is NEVER priced from a pool state
     for (const id of ids) { const e = this.entries.get(id), was = e.status, sig = e.versions.map((v) => v.status).join(), q = e.exec === "routed-quote";
-      if (this._blocked(e, c, was, sig, ids)) continue; // eligibility is checked again at the fill (see _blocked)
+      if (this._blocked(e, c, was, sig, ids, upTo)) continue; // eligibility is checked again at the fill (see _blocked)
       const mut = advance(e, upTo, q ? undefined : c.state, q ? NEVER : (at) => this.trustedAt(c, at), q ? this.pollCov : this.feedCov); this._after(e, was, sig, ids, c, mut); }
   }
   /** `seen` = the entry's decision state may have changed without a status change: a price was observed (peak, last value,
@@ -206,7 +235,7 @@ export class Engine {
     // observation: no valuation, peak or stop, no price history, no signal.
     if (!ev.replay && !this.freshAt(ev.t)) { this.stats.lateEvents = (this.stats.lateEvents || 0) + 1; return; }
     // 3) open positions see it (value, peaks, triggers) — in SOL, independent of the USD reference
-    if (!ev.replay) { const ids = this.byMint.get(ev.mint); if (ids) for (const id of ids) { const e = this.entries.get(id); if (e.exec === "routed-quote") continue; const was = e.status, sig = e.versions.map((v) => v.status).join(); if (this._blocked(e, c, was, sig, ids)) continue; observe(e, st, ev.t, this.feedCov); this._after(e, was, sig, ids, c); } }
+    if (!ev.replay) { const ids = this.byMint.get(ev.mint); if (ids) for (const id of ids) { const e = this.entries.get(id); if (e.exec === "routed-quote") continue; const was = e.status, sig = e.versions.map((v) => v.status).join(); if (this._blocked(e, c, was, sig, ids, ev.t)) continue; observe(e, st, ev.t, this.feedCov); this._after(e, was, sig, ids, c); } }
     // 4) USD history and signals
     const su = this.solUsd(ev.t);
     if (!su) { this.stats.noSolUsd++; if (!this.usdDown) { this.usdDown = true; this.cov.drop(ev.t, "sol-usd"); this.store?.feedEvent(ev.t, "sol-usd stale: new entries suspended, positions still managed in SOL"); } return; }
@@ -265,6 +294,7 @@ export class Engine {
       { const w = Math.max(0, ...G.map((x) => x.detail?.restart_gap_s || 0)); if (w > 0) { e.warm_gap_s = w; e.flags.push(`decision window includes a restart gap of ${w} s that was not observed (warm restart): ${G.filter((x) => x.detail?.restart_gap_s).map((x) => x.family).join(", ")}`); } }
       Object.assign(e, tags); e.token = { symbol: c.info.symbol ?? null, origin: c.info.origin ?? null, origin_evidence: c.info.origin_evidence ?? null, venues: c.info.venues ?? null, token_program: c.info.token_program ?? null, risk_read_at: c.info.risk?.read_at ?? null, risk_age_s: c.info.risk?.read_at ? Math.round(o.t - c.info.risk.read_at) : null, risk_status: c.info.risk?.status ?? "missing", xfer_bps: c.info.risk?.fee_bps || 0, create_src: c.info.create_src ?? null, cadence_s: c.info.cadence_s ?? null };
       this.addEntry(e); this.stats.entries++;
+      if (this.gates && e.exec !== "routed-quote") this._gateAsk(e, mint, o.t); // older-11: one provider reading per buy signal, asked now, judged at the buy
       // ONE COMMIT: the entry and its one-buy flags are written together. A stop between the two used to leave a stored entry
       // without its flags, and the same coin could then be bought again by the same book (seventh review, 5).
       if (this.store) { const write = () => { this.store.saveEntry(e); for (const x of G) this.store.saveDecision(mint, x.ag, x.family, o.t, e.id, x.detail); }; this.store.tx ? this.store.tx(write) : write(); }

@@ -6,25 +6,51 @@ import { randomUUID } from "node:crypto";
 const HOST = process.env.GMGN_HOST || "https://openapi.gmgn.ai", KEY = () => process.env.GMGN_API_KEY || "";
 const WPS = Number(process.env.GMGN_WPS || 4); // our key is on the FREE plan: 5 weight/s (verified 20 Nov 2026, x-ratelimit-limit: 5); 4 leaves headroom
 export const WEIGHT = { "/v1/market/token_kline": 2, "/v1/market/rank": 3, "/v1/trenches": 2, "/v1/token/info": 1, "/v1/token/security": 1 }; // documented weights
-export const gm = { calls: 0, errors: 0, limited: 0, banned: 0, lastErr: "", headers: {}, lastOk: null };
+export const gm = { calls: 0, errors: 0, limited: 0, banned: 0, lastErr: "", headers: {}, lastOk: null,
+  first: { calls: 0, ok: 0, refused: 0, not_sent: 0, ms_sum: 0, ms_max: 0 }, held_back: 0, reserve: 0 }; // older-11: "first" = buy-check readings (see below)
 let next = 0, pausedUntil = 0; const nap = (ms) => new Promise((r) => setTimeout(r, ms));
-let chain = Promise.resolve();
-function slot(path) { const w = WEIGHT[path] ?? 3; const p = chain.then(async () => { while (Date.now() < pausedUntil) await nap(500); const d = next - Date.now(); if (d > 0) await nap(d); next = Math.max(Date.now(), next) + (w / WPS) * 1000; }); chain = p.catch(() => {}); return p; }
+// older-11 — TWO KINDS OF CALL share this key's allowance:
+//   first : a reading for a pending buy (gcall(..., { first: true })). It is never queued behind anything and never paced: it
+//           goes out at once. If the provider has told us to wait (a refusal's reset time) for longer than maxWaitMs, it is
+//           NOT sent and fails at once ("allowance exhausted") — a reading that cannot arrive in time is of no use to the buy.
+//   rest  : history repair and everything else, in order, paced at GMGN_WPS as before. When gm.reserve > 0 (set by a run that
+//           uses the gates) such a call is held back while the allowance the provider last reported, minus the call's weight,
+//           is below the reserve — so a buy-check that arrives finds units left. Once the reported reset time has passed the
+//           allowance is taken as refilled. With gm.reserve = 0 (the default) the rest behaves exactly as in older-10.
+// What the provider's allowance really is (5 units per second on the plan page; refusals with a reset about 15 s ahead in
+// practice, 25 Nov 2026) is not assumed here: the client only uses the remaining / reset figures of the latest answer.
+let chain = Promise.resolve(), remaining = null, resetAt = 0;
+function slot(path) { const w = WEIGHT[path] ?? 3; const p = chain.then(async () => {
+    for (;;) { if (Date.now() < pausedUntil) { await nap(Math.min(500, pausedUntil - Date.now() + 5)); continue; }
+      const d = next - Date.now(); if (d > 0) { await nap(Math.min(d, 250)); continue; }
+      if (gm.reserve > 0 && remaining != null && Date.now() < resetAt && remaining - w < gm.reserve) { gm.held_back++; await nap(Math.min(250, resetAt - Date.now() + 5)); continue; }
+      break; }
+    next = Math.max(Date.now(), next) + (w / WPS) * 1000; }); chain = p.catch(() => {}); return p; }
+function note(r) { for (const [k, v] of r.headers) if (/ratelimit|quota|plan|tier/i.test(k)) gm.headers[k] = v; // limit evidence only — never auth headers
+  const rem = Number(r.headers.get("x-ratelimit-remaining")), rs = Number(r.headers.get("x-ratelimit-reset")); if (Number.isFinite(rem) && r.headers.get("x-ratelimit-remaining") != null) remaining = rem; if (rs > 1e9) resetAt = rs * 1000; }
 export const gmgnOn = () => !!KEY();
-export async function gcall(path, params = {}, { method = "GET", body = null } = {}) {
+export async function gcall(path, params = {}, { method = "GET", body = null, first = false, maxWaitMs = 0 } = {}) {
   if (!KEY()) throw new Error("no GMGN key configured");
-  await slot(path); gm.calls++;
+  const t0 = Date.now();
+  if (first) { gm.first.calls++; const wait = pausedUntil - Date.now(); if (wait > maxWaitMs) { gm.first.not_sent++; throw new Error(`GMGN allowance exhausted for another ${(wait / 1000).toFixed(1)} s`); } if (wait > 0) await nap(wait);
+    next = Math.max(Date.now(), next) + ((WEIGHT[path] ?? 3) / WPS) * 1000; if (remaining != null) remaining -= WEIGHT[path] ?? 3; }
+  else await slot(path);
+  gm.calls++;
   const q = new URLSearchParams({ ...(method === "GET" ? params : params.chain ? { chain: params.chain } : {}), timestamp: String(Math.floor(Date.now() / 1000)), client_id: randomUUID() });
   const r = await fetch(`${HOST}${path}?${q}`, { method, headers: { "X-APIKEY": KEY(), "Content-Type": "application/json" }, body: method === "POST" ? JSON.stringify(body ?? params) : undefined, signal: AbortSignal.timeout(15000) });
-  for (const [k, v] of r.headers) if (/ratelimit|quota|plan|tier/i.test(k)) gm.headers[k] = v; // limit evidence only — never auth headers
+  note(r);
   const text = await r.text(); let j; try { j = JSON.parse(text); } catch { gm.errors++; throw new Error(`GMGN HTTP ${r.status}`); }
-  if (r.status === 429 || /RATE_LIMIT/.test(j.error || "")) { gm.limited++; if (/BANNED/.test(j.error || "")) gm.banned++; const reset = Number(r.headers.get("x-ratelimit-reset")); pausedUntil = reset > 1e9 ? reset * 1000 + 500 : Date.now() + 5000; throw new Error("GMGN rate limited"); }
+  if (r.status === 429 || /RATE_LIMIT/.test(j.error || "")) { gm.limited++; if (/BANNED/.test(j.error || "")) gm.banned++; const reset = Number(r.headers.get("x-ratelimit-reset")); pausedUntil = reset > 1e9 ? reset * 1000 + 500 : Date.now() + 5000; if (first) gm.first.refused++; throw new Error("GMGN rate limited"); }
   if (j.code !== 0) { gm.errors++; gm.lastErr = `${path}: ${j.error || j.code} ${j.message || ""}`.slice(0, 160); throw new Error(gm.lastErr); }
-  gm.lastOk = Date.now();
+  gm.lastOk = Date.now(); if (first) { const ms = gm.lastOk - t0; gm.first.ok++; gm.first.ms_sum += ms; if (ms > gm.first.ms_max) gm.first.ms_max = ms; }
   return j.data && j.data.data && typeof j.data.data === "object" && !Array.isArray(j.data.data) && j.data.code !== undefined ? j.data.data : j.data;
 }
 const N = (v) => (v == null || v === "" || isNaN(Number(v)) ? null : Number(v));
 
+/** older-11: the reading for a pending buy — one token-info answer, sent ahead of everything else (see "first" above) */
+export const tokenInfoFirst = (mint, maxWaitMs = 300) => gcall("/v1/token/info", { chain: "sol", address: mint }, { first: true, maxWaitMs });
+/** test hook: forget pacing and allowance state */
+export function _reset() { next = 0; pausedUntil = 0; remaining = null; resetAt = 0; chain = Promise.resolve(); }
 /** token creation time (unix s) — GMGN token info; null if GMGN does not give one */
 export async function creationTime(mint) {
   const i = await gcall("/v1/token/info", { chain: "sol", address: mint });
