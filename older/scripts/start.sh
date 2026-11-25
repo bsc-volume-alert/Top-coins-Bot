@@ -36,6 +36,10 @@ case "$PROFILE" in
   older-11) BOOKS=older-11; GATES=older-11; REBUY=0; MINAGE=6; WIDE=0 ;;
   *) echo "unknown settings '$PROFILE' (known: older-11). Nothing was changed."; exit 1 ;;
 esac
+# ---- the new-coin books (NEW-5M, NEW-10M): on for a run once the file <name>.newcoins exists (scripts/newcoins.sh creates it,
+#      with the date). They are an addition to the run's own books, recorded beside its settings; removing the file and
+#      restarting stops NEW buys by them (open ones are managed to their exits as always).
+NEWCOINS=0; [ -f "$OUT/$NAME.newcoins" ] && NEWCOINS=1
 # ---- a new run prepared from a previous one (before anything is stopped: a failure here leaves the running bot untouched)
 WARM_FROM=""
 if [ -n "$FROM" ] && [ ! -f "$DB" ]; then
@@ -46,11 +50,12 @@ fi
 [ -n "$PROFILE" ] && [ ! -f "$OUT/$NAME.profile" ] && echo "$PROFILE" > "$OUT/$NAME.profile"
 pm2 delete older older-pub >/dev/null 2>&1 || true
 OLDER_OUT="$OUT" OLDER_DB="$DB" OLDER_SOLANA_WIDE="$WIDE" OLDER_SITE_KEY="$SITE_KEY" OLDER_RUN_NAME="$NAME" OLDER_ENTRIES_UNTIL="$UNTIL" OLDER_COMMIT="$(git -C "$HERE" rev-parse HEAD 2>/dev/null || true)" \
-  OLDER_BOOKS="$BOOKS" OLDER_GATES="$GATES" OLDER_REBUY="$REBUY" OLDER_MIN_AGE_H="$MINAGE" OLDER_WARM_FROM="$WARM_FROM" OLDER_GATE_MODE="${OLDER_GATE_MODE:-}" OLDER_REPAIR="${OLDER_REPAIR:-}" \
+  OLDER_BOOKS="$BOOKS" OLDER_GATES="$GATES" OLDER_REBUY="$REBUY" OLDER_MIN_AGE_H="$MINAGE" OLDER_WARM_FROM="$WARM_FROM" OLDER_GATE_MODE="${OLDER_GATE_MODE:-}" OLDER_REPAIR="${OLDER_REPAIR:-}" OLDER_NEWCOINS="$NEWCOINS" \
   pm2 start src/main.mjs --name older --cwd "$HERE" --node-args="--max-old-space-size=1100" --kill-timeout 20000 --time >/dev/null
 OLDER_OUT="$OUT" pm2 start scripts/publish.sh --name older-pub --cwd "$HERE" --interpreter bash >/dev/null
 pm2 save --force >/dev/null
 IP="$(hostname -I | awk '{print $1}')"
+[ "$NEWCOINS" = 1 ] && echo "new-coin books ON (NEW-5M, NEW-10M)"
 echo "started: run '$NAME'${PROFILE:+ (settings $PROFILE)}, database $DB, code $(git -C "$HERE" rev-parse --short HEAD 2>/dev/null)${UNTIL:+, entries until $(date -u -d @"$UNTIL" '+%d %b %H:%M UTC')}"
 echo "dashboard: http://$IP:8793/${SITE_KEY:+?k=$SITE_KEY}"
 pm2 ls | grep -E "older|name" || true

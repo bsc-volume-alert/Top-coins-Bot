@@ -29,10 +29,37 @@ export const SELL_DELAY_MS = 700;             // sell scheduled 0.7 s after an e
 export const BUY_PRICING_TIMEOUT_S = 5;       // no trustworthy pool state within 5 s after the scheduled buy → pricing/data timeout, entry cancelled (NOT "untradeable")
 export const SELL_UNRESOLVED_S = 24 * 3600;   // a triggered sale that cannot be priced for 24 h is shown as unresolved exposure (never silently closed)
 
+// ───────── NEW-COIN BOOKS (owner 25 Nov 2026, 16:07, 16:10 and 18:37 UK) — off unless a run switches them on (main.mjs, OLDER_NEWCOINS=1) ─────────
+// A coin is measured ONCE at each of two ages, counted from its creation, and paper-bought there if every one of that age's
+// rules holds. Any launchpad the provider's "new coins" list shows (in practice mostly pump.fun coins still on their launch curve).
+//   at_s         the age of the measurement, seconds from creation
+//   mc_min_usd   market cap OVER this                       (Jupiter token data, read at the measurement)
+//   holders_min  holders OVER this                          (Jupiter)
+//   vol_min_usd  bought + sold since creation AT LEAST this (Jupiter: the 1-hour statistics, which for a coin minutes old is its whole life)
+//   fees_min_sol total fees AT LEAST this, in SOL           (GMGN token info — the only source of fees)
+//   top10        top 10 holders inside this range, inclusive (GMGN token info, the figure the owner's other checks use)
+// GMGN is asked only for a coin that has already passed market cap, holders and volume (its allowance is small). The coin's real
+// age is checked on GMGN's creation time when it gives one. No reading, or a reading that fails: not bought, and counted as such.
+// Bought and sold on ROUTED QUOTES for the exact 0.2 SOL size (a launch curve is not on the pool feed): the ordinary 1 s buy
+// delay, the five trailing stops under both exit policies, the 24-hour limit — and the owner's own sell button. There is NO
+// forced sale at 45 minutes (owner 16:10: "we don't have to come out because we've got an automatic sell button").
+// One buy per book and coin (each age is measured once). A0 is their only age group.
+export const NEW_COIN = [
+  { family: "NEW-5M", at_s: 300, mc_min_usd: 10_000, holders_min: 100, vol_min_usd: 30_000, fees_min_sol: 2, top10: [0.20, 0.30] },   // holders: 150 at 16:07, changed to 100 by the owner at 18:37
+  { family: "NEW-10M", at_s: 600, mc_min_usd: 10_000, holders_min: 150, vol_min_usd: 50_000, fees_min_sol: 3.5, top10: [0.20, 0.30] }, // "fees around 3.5" → at least 3.5; top holders taken as the 5-minute book's 20–30%
+];
+export const NEW_BOOKS = NEW_COIN.map((x) => x.family);
+export const NEW_LOOK_S = 20;          // the provider's list of new coins is read this often (it reaches back about a minute at ~35 new coins a minute)
+export const NEW_CHECK_LATE_S = 90;    // a coin that could not be measured within this long after its age point is NOT judged (counted "too late") — never judged on later figures
+export const NEW_GMGN_WAIT_S = 30;     // the GMGN reading must arrive within this long of being asked for, or the coin is not bought
+export const NEW_AGE_SLACK_S = 180;    // GMGN's creation time may put the coin at most this much past the age point when the buy is decided (else: not a new coin by GMGN's clock)
+export const NEW_POP = "new-coins";    // how these buys are tagged (entry.pop)
+
 // Families. 21 families × 4 ages + 10 any-age families × 5 ages = 134 book-ages; × 5 stops × 2 exit policies = 1,340 comparisons (VOL100K and DIP15K added in older-11).
+// + the two new-coin books in A0 only = 136 book-ages, 1,360 comparisons.
 export const FAMILIES = ["AGE-DOUBLE", "LOW4H", "CONT", "SLOW-BUILD", "HH-BREAK", "CONT-STALL", "LOW4H-LIQ25K",
   "FAST-1M", "FAST-3M", "FAST-5M", "FAST-10M", "FAST-30M", "FAST150-1M", "FAST150-3M", "FAST150-5M", "FAST150-10M", "SECOND-WAVE", "HH30-5M", "HH30-10M", "HH15-5M", "HH-BREAK-4H",
-  "VOL100K", "VOL300K", "VOL300K-UP", "VOL500K", "VOL500K-UP", "RUG450", "RUG450-BOUNCE", "RUG950", "RUG950-BOUNCE", "DIP15K"];
+  "VOL100K", "VOL300K", "VOL300K-UP", "VOL500K", "VOL500K-UP", "RUG450", "RUG450-BOUNCE", "RUG950", "RUG950-BOUNCE", "DIP15K", ...NEW_BOOKS];
 // ANY-AGE BOOKS (older-8, owner's decisions 21 Nov 2026 21:11 UK). Migrated coins only (this feed sees nothing else), any age after
 // migration: the first 8 hours (A0) and the four age groups. One entry per family per coin per age group, as everywhere.
 // VOL: USD volume over the last VOL_WIN_S seconds (exact observations, rolling) ≥ the threshold; the -UP version also needs the
@@ -57,7 +84,7 @@ export const RUG_FALL = 0.80, RUG_BOUNCE_X = 1.30, RUG_BOUNCE_EXPIRE_S = 24 * 36
 //   A coin that is already inside the band when it is first seen is not bought there: nothing was watched arriving.
 export const DIP = "DIP15K", DIP_HI_USD = 15_000, DIP_LO_USD = 5_000, DIP_PEAK_USD = 100_000;
 export const ANY_AGE = new Set([...VOL.map((x) => x[0]), ...RUG.map((x) => x[0]), DIP]);
-export const agesOf = (family) => (ANY_AGE.has(family) ? ALL_AGES : AGES);
+export const agesOf = (family) => (NEW_BOOKS.includes(family) ? [AGE_YOUNG] : ANY_AGE.has(family) ? ALL_AGES : AGES);
 export const POLICIES = ["trail", "scale"];   // trail = the original pure trailing stop; scale = sell half at 2× cost, trail the rest
 export const SCALE_AT_X = 2, SCALE_FRACTION = 0.5;
 // FAST: fresh crossing of X × the lowest pool spot price in the preceding window (receive-time clock, exact observations)
@@ -159,7 +186,7 @@ export const REBUY_MAX_PER_DAY = 50;
 // VOL100K: the VOL rule at $100,000 of volume in 5 minutes, any age after migration, $40K–$2M at the buy (owner, 24 Nov).
 export const NEW_IN_11 = ["VOL100K", "DIP15K"];
 export const BOOKS_11 = ["HH-BREAK", "HH-BREAK-4H", "VOL100K", "VOL300K", "VOL500K", "FAST-1M", "FAST-3M", "FAST-5M", "RUG450", "RUG950", "LOW4H", "SLOW-BUILD", "DIP15K"];
-export const BOOKS_LEGACY = FAMILIES.filter((f) => !NEW_IN_11.includes(f));
+export const BOOKS_LEGACY = FAMILIES.filter((f) => !NEW_IN_11.includes(f) && !NEW_BOOKS.includes(f)); // the new-coin books are never part of "legacy": they buy only when a run switches them on
 /** the active books for a run name; throws on an unknown book or a clock book without the book whose buys it shares */
 // THE YOUNGEST AGE OF THE "OLDER" BOOKS IN A RUN (older-11; a run sets it with OLDER_MIN_AGE_H, main.mjs). MIN_AGE_S (8 hours)
 // stays the age-group boundary and the default. A run may evaluate the books that normally start at 8 hours from an earlier

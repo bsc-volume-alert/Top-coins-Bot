@@ -10,7 +10,7 @@ const { Store } = await import("./store.mjs"); const { Engine } = await import("
 const { startFeed, fs } = await import("./feed.mjs"); const { dec, IDL_PIN } = await import("./decoder.mjs");
 const { startSolUsd, solUsd, sp } = await import("./solusd.mjs"); const { startBackfill, bf, gapRequests } = await import("./backfill.mjs");
 const { inventory } = await import("./inventory.mjs"); const { gm, tokenInfoFirst, tokenInfoLate } = await import("./gmgn.mjs"); const { startWeb } = await import("./web.mjs");
-const { verifyEntry, vf } = await import("./verify.mjs"); const { SPEC_VER, booksOf, GATES_11 } = await import("./spec.mjs"); const { riskStatus } = await import("./risk.mjs"); const { RISK_REFRESH_S } = await import("./spec.mjs");
+const { verifyEntry, vf } = await import("./verify.mjs"); const { SPEC_VER, booksOf, GATES_11, NEW_BOOKS } = await import("./spec.mjs"); const { riskStatus } = await import("./risk.mjs"); const { RISK_REFRESH_S } = await import("./spec.mjs");
 
 const store = new Store(process.env.OLDER_DB || "/root/older/older.db");
 const log = (s) => console.log(new Date().toISOString(), s);
@@ -24,6 +24,9 @@ const onEvent = engine.onEvent.bind(engine); engine.onEvent = (ev) => { if (ev.s
 { const { addClockBook } = await import("./migrate.mjs"); for (const f of ["HH-BREAK-4H"]) { const r = addClockBook(store, f, now0); if (r.added) log(`[older] ${f}: ${r.added} existing ${r.base} buys carried into the new book (${r.exact} versions unchanged, ${r.estimated} clock sales estimated from minute bars, ${r.live} still inside the clock)`); } }
 engine.rebuy = process.env.OLDER_REBUY !== "0"; // buying again (older-9) — OLDER_REBUY=0 switches it off for a run
 if (process.env.OLDER_BOOKS) { engine.setBooks(booksOf(process.env.OLDER_BOOKS)); log(`[books] ${process.env.OLDER_BOOKS}: ${engine.books.length} books make new buys — ${engine.books.join(", ")}`); } // older-11: unset = the legacy 29 (spec.mjs, booksOf)
+// NEW-COIN BOOKS (spec NEW_COIN, newcoin.mjs): OLDER_NEWCOINS=1 adds the two books to the run's list. Unset = they do not exist for the run.
+const NEWCOINS = process.env.OLDER_NEWCOINS === "1";
+if (NEWCOINS) { engine.setBooks([...(engine.books ?? booksOf("")), ...NEW_BOOKS]); log(`[books] new-coin books ON: ${NEW_BOOKS.join(", ")} (coins measured at 5 and 10 minutes old; bought and sold on routed quotes)`); }
 // older-11: the owner's gates. OLDER_GATES=older-11 → one GMGN token-info reading per buy signal, sent ahead of the history repair
 // (which then leaves GMGN_RESERVE units of the reported allowance untouched, default 2); the buy is filled only if the reading
 // arrived by the time of the buy and passes. Unset → nothing is asked and nothing is gated (the behaviour of older-10).
@@ -114,6 +117,19 @@ else if (process.env.OLDER_SOLANA_WIDE === "1") {
   poller.start();
   log("[older] Solana-wide adapter ON (Jupiter polling + routed quotes)");
 }
+// ---- NEW-COIN BOOKS: the look / measure / buy loop, and a quote reader OF THEIR OWN that does nothing but price their open
+// buys — no discovery, no price sampling (the Solana-wide adapter, when it is on, keeps its own list and never samples these
+// coins). A buy whose every row is sold is still priced once a minute for its 24-hour high (OLDER_RUNNER_QUOTE_S).
+let newcoins = null;
+if (NEWCOINS) { const { NewCoins } = await import("./newcoin.mjs");
+  const own = engine.onOwnership, quoter = new Poller({ engine, jup: J, store, log, quoteFast: Number(process.env.OLDER_QUOTE_FAST_S || 2), quoteSlow: Number(process.env.OLDER_QUOTE_SLOW_S || 10), runnerEvery: Number(process.env.OLDER_RUNNER_QUOTE_S || 60) }); engine.onOwnership = own; // the adapter's own hook stays in place
+  newcoins = new NewCoins({ engine, jup: J, quoter, store, log, file: process.env.OLDER_OUT ? `${process.env.OLDER_OUT}/newcoins-${process.env.OLDER_RUN_NAME || "run"}.json` : null,
+    // ahead of the history repair, like the other books' readings, waiting out a short pause of the allowance; if that request
+    // cannot be sent or is refused, ONE ordinary queued request follows (the coin is bought only if it answers within NEW_GMGN_WAIT_S)
+    readInfo: (mint) => tokenInfoFirst(mint, Number(process.env.NEWCOIN_GMGN_WAIT_MS ?? 5000)).catch(() => tokenInfoLate(mint)),
+    readRisk: async (mint) => classifyMintAccount((await rpc("getMultipleAccounts", [[mint], { encoding: "jsonParsed" }]))?.value?.[0]) });
+  const back = newcoins.restore(); quoter.startQuotes(); newcoins.start();
+  log(`[new coins] started: the newest coins are read every 20 s and measured at 5 and 10 minutes old${back ? `; ${back} open new-coin buys back on the quote list` : ""}`); }
 // TRANSFER RESTRICTIONS are read from the chain for BOTH observation methods, whether or not the sampled adapter is on (ninth
 // review, A): coins with a position first, then coins a decision is waiting on, then — every RISK_REFRESH_S — coins we hold,
 // because a fee can be raised while a position is open. One getMultipleAccounts call per round (risk.riskReadOnce). Until a
@@ -124,11 +140,11 @@ const inv = () => { try { return JSON.parse(store.db.prepare("SELECT v FROM meta
 // the reserve reading counts as validated only when the owner sets OLDER_RES_VALIDATED=1 after reviewing docs/tx-validation.json
 const valid = () => (process.env.OLDER_RES_VALIDATED === "1" ? { by: "OLDER_RES_VALIDATED" } : null);
 // older-11: a run that chose its books shows only those on the site (page.mjs, web.mjs); a run that did not shows every book, as before
-const runInfo = () => (engine.books ? { name: process.env.OLDER_RUN_NAME || null, books: engine.books, gates: !!engine.gates, gate_mode: engine.gates ? engine.gateMode : null, rebuy: engine.rebuy, min_age_h: engine.minAgeS / 3600, sampled: !!poller } : null);
+const runInfo = () => (engine.books ? { name: process.env.OLDER_RUN_NAME || null, books: engine.books, gates: !!engine.gates, gate_mode: engine.gates ? engine.gateMode : null, rebuy: engine.rebuy, min_age_h: engine.minAgeS / 3600, sampled: !!poller, newcoins: NEWCOINS } : null);
 const web = startWeb({ port: Number(process.env.OLDER_PORT || 8793), store, engine, run: runInfo, sell: (id, frac) => engine.manualSell(id, frac), status: () => ({ started: now0, first_start: firstStart, commit: COMMIT, run: process.env.OLDER_RUN_NAME || null, entries_until: engine.entriesUntil, idl: IDL_PIN,
   process: { pid: process.pid, started_at: now0, uptime_s: Math.round(process.uptime()), cpu_user_s: +(process.cpuUsage().user / 1e6).toFixed(1), cpu_system_s: +(process.cpuUsage().system / 1e6).toFixed(1) }, event_loop: loopStatus(),
   feed: { ...fs, lag_ms_avg: fs.lagN ? Math.round(fs.lagMsSum / fs.lagN) : null }, stream: engine.streamStatus(Date.now() / 1000), risk_reader: { ...riskStatus(engine, Date.now() / 1000, RISK_REFRESH_S), fee_unknown_evaluations: engine.stats.feeUnknown || 0, fee_unknown_coins: engine.stats.feeUnknownCoins || 0, cancelled_at_fill: engine.stats.cancelledAtFill || 0 }, engine: { ...engine.stats, coins: engine.coins.size, open: [...engine.byMint.values()].reduce((s, x) => s + x.size, 0), feed_gaps: engine.feedCov.gaps.length, usd_down: engine.usdDown },
-  books: engine.books ?? "legacy", gates: engine.gates ? "older-11" : "off", gate_mode: engine.gates ? engine.gateMode : null, repair_paused: repairPaused(), rebuy: engine.rebuy, min_age_h: engine.minAgeS / 3600, decoder: { ...dec }, tx_validation: valid(), verify: { ...vf }, snapshots: { ...snapStats }, sol: { ...sp }, gmgn: { calls: gm.calls, errors: gm.errors, limited: gm.limited, banned: gm.banned, first: { ...gm.first }, held_back: gm.held_back, reserve: gm.reserve, refill_s: gm.refill_s ?? null, limited_repair: gm.limited_repair || 0, lastErr: gm.lastErr, rate_headers: gm.headers }, backfill: { ...bf }, backfillQ: backfill.size(), jupiter: { ...J.ju, key: !!process.env.JUP_API_KEY, rps: Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0.5)) }, poller: poller ? { ...poller.stats, cadence_avg_s: poller.stats.cadence.n ? +(poller.stats.cadence.sum / poller.stats.cadence.n).toFixed(1) : null, hot_s: poller.hotEvery, cold_s: poller.coldEvery } : null, inventory: inv(), mem_mb: Math.round(process.memoryUsage().rss / 2 ** 20), sizes: sizes() }) });
+  books: engine.books ?? "legacy", gates: engine.gates ? "older-11" : "off", gate_mode: engine.gates ? engine.gateMode : null, repair_paused: repairPaused(), rebuy: engine.rebuy, min_age_h: engine.minAgeS / 3600, decoder: { ...dec }, tx_validation: valid(), verify: { ...vf }, snapshots: { ...snapStats }, sol: { ...sp }, gmgn: { calls: gm.calls, errors: gm.errors, limited: gm.limited, banned: gm.banned, first: { ...gm.first }, held_back: gm.held_back, reserve: gm.reserve, refill_s: gm.refill_s ?? null, limited_repair: gm.limited_repair || 0, lastErr: gm.lastErr, rate_headers: gm.headers }, backfill: { ...bf }, backfillQ: backfill.size(), jupiter: { ...J.ju, key: !!process.env.JUP_API_KEY, rps: Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0.5)) }, poller: poller ? { ...poller.stats, cadence_avg_s: poller.stats.cadence.n ? +(poller.stats.cadence.sum / poller.stats.cadence.n).toFixed(1) : null, hot_s: poller.hotEvery, cold_s: poller.coldEvery } : null, inventory: inv(), newcoins: newcoins ? newcoins.status() : null, mem_mb: Math.round(process.memoryUsage().rss / 2 ** 20), sizes: sizes() }) });
 log(`[older] started, spec ${SPEC_VER}, paper only`);
 
 // ---- monitoring copy: every 5 minutes the dashboard's own data is written to $OLDER_OUT/pub/state.json (no keys in it);

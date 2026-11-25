@@ -6,7 +6,7 @@
 import * as S from "./spec.mjs";
 import { Series, Coverage } from "./series.mjs";
 import { newCoin, evaluate } from "./signals.mjs";
-import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount, requestManual } from "./book.mjs";
+import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount, requestManual, exposure, manualOpen } from "./book.mjs";
 import { liquidityUsd, staticImpact } from "./fills.mjs";
 import { feeKnown } from "./risk.mjs";
 import { parseInfo, judge } from "./gates.mjs";
@@ -385,6 +385,27 @@ export class Engine {
     }
     return firstEntry;
   }
+  /** NEW-COIN BOOKS (spec NEW_COIN) — a buy decided OUTSIDE the signal evaluator: the caller (newcoin.mjs) has measured the coin
+   *  at its age point and found every rule of `family` true. This only opens the paper buy, exactly like any other entry of a
+   *  sampled coin: pending now, priced by a routed quote for the exact size requested at or after decision + 1 s, cancelled if
+   *  none arrives within 5 s; the fill-time eligibility check (onQuote) applies. One buy per book and coin (the book's ordinary
+   *  mark, kept in the database). Returns the entry, or null with the reason in `out.why`.
+   *  The coin must already be registered (engine.coin) with its transfer restrictions known. */
+  openDirect({ mint, family, t, mc, px, features = {}, detail = {}, trigger = {}, tags = {}, token = {} }, out = {}) {
+    const c = this.coins.get(mint); if (!c) { out.why = "coin not registered"; return null; }
+    if (this.entriesUntil != null && t >= this.entriesUntil) { this.stats.afterEntryWindow = (this.stats.afterEntryWindow || 0) + 1; out.why = "the run's entry window has closed"; return null; }
+    if (this.inactive.has(family)) { out.why = "this book makes no new buy in this run"; return null; }
+    if (c.info.risk?.status === "restricted") { out.why = "token transfer restrictions"; return null; } if (!feeKnown(c.info)) { out.why = "the coin's transfer fee is not known"; return null; }
+    const ag = "A0", g = (c.groups[ag] ||= { ref: null, done: {}, logged: {} }); if (g.done[family]) { out.why = "this book has already bought this coin"; return null; } g.done[family] = 1;
+    const e = newEntry({ mint, pool: c.pool, ag, t, families: [family], features, mc, px, evidence: { trigger: { t, eval_t: Date.now() / 1000, coverage: "measured once at the age point", ...trigger } }, startup: this.firstStart != null && t < this.firstStart + S.STARTUP_TAG_S });
+    e.cands = [{ family, detail }]; Object.assign(e, { pop: S.NEW_POP, mode: "polled", exec: "routed-quote", valuation: "provider market cap at the measurement", age_basis: "first-pool creation (the launch curve of a launchpad coin is created with the coin); GMGN's creation time is recorded beside it" }, tags);
+    e.token = { symbol: c.info.symbol ?? null, origin: c.info.origin ?? null, origin_evidence: c.info.origin_evidence ?? null, venues: c.info.venues ?? null, token_program: c.info.token_program ?? null, risk_read_at: c.info.risk?.read_at ?? null, risk_age_s: c.info.risk?.read_at ? Math.round(t - c.info.risk.read_at) : null, risk_status: c.info.risk?.status ?? "missing", xfer_bps: c.info.risk?.fee_bps || 0, create_src: c.info.create_src ?? null, cadence_s: null, ...token };
+    this.addEntry(e); this.stats.entries++; this.stats.directEntries = (this.stats.directEntries || 0) + 1;
+    if (this.store) { const write = () => { this.store.saveEntry(e); this.store.saveDecision(mint, ag, family, t, e.id, detail); }; this.store.tx ? this.store.tx(write) : write(); }
+    this.log(`[entry ${e.id}] ${mint.slice(0, 6)} ${ag} ${family} mc $${Math.round(mc)} (new coin, routed quote)`);
+    try { this.onEntry(e, c); } catch {}
+    return e;
+  }
   /** rows (exit policy | stop) each book currently holds on this coin: Map(family → Set). null when the coin has no unfinished entry. */
   _busy(mint) {
     const ids = this.byMint.get(mint); if (!ids?.size) return null; const m = new Map();
@@ -418,7 +439,7 @@ export class Engine {
     const out = [];
     for (const [mint, ids] of this.byMint) for (const id of ids) { const e = this.entries.get(id); if (e.exec !== "routed-quote") continue;
       if (e.status === "pending") { if (now >= e.schedT) out.push({ id, mint, buy_sol: S.STAKE_SOL, sells: [], due: e.schedT }); }
-      else if (e.status === "filled") { const inv = inventories(e); if (inv.length) out.push({ id, mint, buy_sol: null, sells: inv, due: dueAt(e), unresolved: unresolvedCount(e) > 0 }); } }
+      else if (e.status === "filled") { const inv = inventories(e); if (inv.length) out.push({ id, mint, buy_sol: null, sells: inv, due: dueAt(e), unresolved: unresolvedCount(e) > 0, runner_only: exposure(e) === 0 && !manualOpen(e) }); } } // runner_only: every row is sold and nothing is waiting — only the 24-hour "how high did it go" measurement still needs a price
     return out;
   }
   /** st: { kind: "quote", reqT, t, buy?, sells } — a routed quote that became available at st.t */

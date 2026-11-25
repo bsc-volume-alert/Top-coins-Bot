@@ -14,8 +14,8 @@ import { Series } from "./series.mjs";
 /** token decimals are needed to convert quote sizes: null, undefined or a non-integer is NOT valid (note: `null >= 0` is true in JavaScript) */
 export const validDec = (d) => Number.isInteger(d) && d >= 0 && d <= 18;
 export class Poller {
-  constructor({ engine, jup, store = null, now = () => Date.now() / 1000, log = () => {}, hotEvery = 10, coldEvery = 60, quoteFast = 2, quoteSlow = 10, valuation = "jupiter mcap (circulating supply × price)" }) {
-    Object.assign(this, { engine, jup, store, now, log, hotEvery, coldEvery, quoteFast, quoteSlow, valuation });
+  constructor({ engine, jup, store = null, now = () => Date.now() / 1000, log = () => {}, hotEvery = 10, coldEvery = 60, quoteFast = 2, quoteSlow = 10, runnerEvery = null, valuation = "jupiter mcap (circulating supply × price)" }) {
+    Object.assign(this, { engine, jup, store, now, log, hotEvery, coldEvery, quoteFast, quoteSlow, valuation }); this.runnerEvery = runnerEvery ?? quoteSlow; // runnerEvery: how often a buy whose every row is SOLD is still priced for its 24-hour high (default: like an open position, as always)
     this.watch = new Map(); // mint → { decimals, circ, hot, lastT, lastReq, miss, mc }
     this.quoted = new Map(); // entry id → last quote request time
     this.held = new Map();   // entry id → Map(quantity → its latest quote, with that quote's own request/response times)
@@ -133,7 +133,7 @@ export class Poller {
     for (const need of needs) {
       const last = this.quoted.get(need.id) || 0, urgent = pri(need) === 0;
       // a sale that has had no price for 24 h keeps asking, slowly (it is never abandoned): once every 10 minutes
-      const every = need.unresolved ? 600 : urgent ? Math.min(1, this.quoteFast) : this.quoteSlow;
+      const every = need.unresolved ? 600 : urgent ? Math.min(1, this.quoteFast) : need.runner_only ? this.runnerEvery : this.quoteSlow;
       if (this.now() - last < every) continue;
       const w = this.watch.get(need.mint); if (!w || !validDec(w.decimals)) { this.stats.quoteNoWatch = (this.stats.quoteNoWatch || 0) + 1; continue; } const dec = w.decimals; this.quoted.set(need.id, this.now());
       // TRANSFER FEE (spec XFER_FEE_MAX_BPS, XFER_FEE_IN_QUOTE): the coin keeps this share of every transfer. Measured on 22 Nov 2026
@@ -155,6 +155,10 @@ export class Poller {
   }
   _fail(need, q) { if (/rate limited|HTTP 5|timeout|fetch/i.test(q.why || "")) this.stats.quoteErr++; else { this.stats.noRoute++; const e = this.engine.entries.get(need.id); if (e && !e.flags.includes("quote unavailable: " + q.why)) { e.flags.push("quote unavailable: " + q.why); e.touched = true; /* saved at the next tick: a clock tick alone no longer re-writes an entry */ } } }
 
+  /** QUOTES ONLY (the new-coin books in a run without the Solana-wide adapter): the two execution passes, and nothing else — no
+   *  discovery, no price sampling. A coin is priced here only because it has a pending or open routed-quote buy. */
+  startQuotes() { const loop = async (fn, every) => { while (!this.stopped) { const t0 = Date.now(); try { await fn(); } catch (e) { this.log("[quotes] " + e.message); } await new Promise((r) => setTimeout(r, Math.max(50, every * 1000 - (Date.now() - t0)))); } };
+    loop(() => this.quotes("urgent"), 0.25); loop(() => this.quotes("routine"), 0.25); }
   start({ categories = [["toptraded", "1h"], ["toptrending", "1h"]], discoverEvery = 30 } = {}) {
     const loop = async (fn, every) => { while (!this.stopped) { const t0 = Date.now(); try { await fn(); } catch (e) { this.log("[poller] " + e.message); } await new Promise((r) => setTimeout(r, Math.max(50, every * 1000 - (Date.now() - t0)))); } };
     this.repair().catch((e) => this.log("[poller] repair: " + e.message));

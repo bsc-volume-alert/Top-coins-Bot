@@ -3,7 +3,7 @@
 import Database from "better-sqlite3";
 import { statSync, statfsSync } from "node:fs";
 import { dirname } from "node:path";
-import { BAR_RETAIN_DAYS, SPEC_VER, FAMILIES, STOPS, CLOCK, FEE_BOOK } from "./spec.mjs";
+import { BAR_RETAIN_DAYS, SPEC_VER, FAMILIES, STOPS, CLOCK, FEE_BOOK, NEW_POP } from "./spec.mjs";
 import { setNextId, entryDone } from "./book.mjs";
 
 export class Store {
@@ -65,6 +65,9 @@ export class Store {
     const maxId = this.db.prepare("SELECT MAX(id) m FROM entries").get().m || 0;
     for (const r of this.db.prepare("SELECT id, json FROM entries WHERE done = 0 ORDER BY id").all()) { // .all(): corrections below write to the database
       const e = JSON.parse(r.json), want = e.exec === "routed-quote" ? "polled" : "live", c = engine.coin(e.mint);
+      // a NEW-COIN buy (spec NEW_POP) is priced by its own routed quotes whatever method its coin is observed by — the coin itself is
+      // an ordinary live coin that simply has no pool yet — so nothing is corrected or flagged for it (newcoin.mjs puts it back on the quote list)
+      if (e.pop === NEW_POP) { engine.addEntry(e); continue; }
       // 4) the entry's own execution method decides how its coin is observed (see engine.forceMode). Two unfinished entries of
       //    different methods on one coin cannot both be served: the first keeps the coin, the other is flagged, never hidden.
       if (c.mode !== want) { if (engine.byMint.get(e.mint)?.size) { const f = "observation-method conflict after restart: this position cannot be priced by the coin's current method"; if (!e.flags.includes(f)) e.flags.push(f); }

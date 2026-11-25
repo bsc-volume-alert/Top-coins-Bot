@@ -78,7 +78,8 @@ export function normToken(x) {
   const a = x.audit || {};
   return { mint: x.id, symbol: x.symbol ?? null, decimals: num(x.decimals), token_program: x.tokenProgram ?? null, px: num(x.usdPrice), mcap: num(x.mcap), fdv: num(x.fdv), liq_usd: num(x.liquidity), holders: num(x.holderCount),
     circ_supply: num(x.circSupply), total_supply: num(x.totalSupply), launchpad: x.launchpad ?? null, first_pool: x.firstPool ? { id: x.firstPool.id ?? null, created: x.firstPool.createdAt ? Math.floor(Date.parse(x.firstPool.createdAt) / 1000) : null } : null,
-    mint_authority_disabled: a.mintAuthorityDisabled ?? null, freeze_authority_disabled: a.freezeAuthorityDisabled ?? null, top_holders_pct: num(a.topHoldersPercentage), is_sus: a.isSus ?? null, organic: num(x.organicScore), keys: Object.keys(x) };
+    mint_authority_disabled: a.mintAuthorityDisabled ?? null, freeze_authority_disabled: a.freezeAuthorityDisabled ?? null, top_holders_pct: num(a.topHoldersPercentage), is_sus: a.isSus ?? null, organic: num(x.organicScore), keys: Object.keys(x),
+    stats5m: numsOf(x.stats5m), stats1h: numsOf(x.stats1h), curve_pct: num(x.bondingCurve), updated: x.updatedAt ?? null }; // the provider's own 5-minute / 1-hour statistics, as returned (numeric fields only) — read by the new-coin books (newcoin.mjs)
 }
 /** a routed quote, exact size. side "buy": spend `amount` lamports of SOL for the token; "sell": sell `amount` raw token units for SOL.
  *  Returns { ok, req, t, in, out (raw units), router, route: [labels], feeBps, impact, keys } or { ok: false, why } — a missing route stays visible. */

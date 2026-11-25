@@ -40,7 +40,7 @@ test("sell 50% then sell all: each sale is priced on the pool in force 0.7 s aft
 
 test("what is refused: a buy that is not filled, an unknown buy, a share other than 25% / 50% / all, after the 24-hour limit; 25% means a quarter of what is still held", () => {
   const { e, en } = bought(); assert.equal(e.manualSell(999_999, 1, T0 + 700).ok, false); assert.match(e.manualSell(en.id, 0.33, T0 + 700).why, /25%, 50% or all/); assert.equal(en.manual, undefined, "a refused request leaves no record");
-  assert.match(requestManual({ status: "pending" }, 1, T0).why, /not a filled buy/); assert.match(requestManual({ status: "filled", fill: { exec: "routed-quote", t: T0 } }, 1, T0).why, /routed quotes/);
+  assert.match(requestManual({ status: "pending" }, 1, T0).why, /not a filled buy/); assert.match(requestManual({ status: "filled", fill: { exec: "something else", t: T0 } }, 1, T0).why, /cannot be priced/); // a routed-quote buy CAN be sold by hand since the new-coin books (test/newcoin.test.mjs)
   assert.match(e.manualSell(en.id, 1, en.fill.t + S.MAX_HOLD_S + 1).why, /24-hour limit/); assert.deepEqual(e.stats.manual, { asked: 0, refused: 2 });
   e.manualSell(en.id, 0.5, T0 + 700); e.tick(T0 + 701); const r = e.manualSell(en.id, 0.25, T0 + 702); assert.equal(r.share_of_buy, 0.125, "a quarter of the half he still holds"); e.tick(T0 + 703); assert.ok(Math.abs(en.manual.tok / en.fill.tok - 0.375) < 1e-9);
 });

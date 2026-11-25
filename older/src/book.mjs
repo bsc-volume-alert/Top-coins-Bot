@@ -93,13 +93,15 @@ function execSell(e, v, st, at, delay, cov, minReq = null) {
  *  It is recorded BESIDE the rules, in e.manual, and changes nothing else: every stop × exit row of the buy carries on as if
  *  he had not touched it, so each book still measures its rule and his selling can be compared with it on the same buys.
  *  A buy he never touches has no manual record. What he has not sold by the 24-hour limit is sold then, like every position.
- *  Pool-priced buys only (a routed-quote buy has quotes for the program's own quantities only).
+ *  A buy priced from ROUTED QUOTES (the new-coin books) can be sold by hand as well: the quote provider is then asked for the
+ *  exact quantity of the sale, and only a quote REQUESTED at or after the sale's scheduled time may price it — the same rule
+ *  as the program's own sales of such a buy. What he still holds after a part-sale is quoted too, so its value is shown.
  *  e.manual = { tok (still held), got (SOL banked), sales: [{ t, req_t, frac, share, tok, sol, delay_s, state_age_s, by, pool }],
  *               order: { frac, req_t, schedT, by } | null, closed: { t, sol, ret, hold_s } | null, lastX, lastT } */
 export const MANUAL_FRACS = [0.25, 0.5, 1];
 export function requestManual(e, frac, t) {
   if (!e || e.status !== "filled" || !e.fill) return { ok: false, why: "this is not a filled buy" };
-  if (e.fill.exec !== "reconstructed-pool-state") return { ok: false, why: "a buy priced from routed quotes cannot be sold by hand (it has quotes for the program's own quantities only)" };
+  if (e.fill.exec !== "reconstructed-pool-state" && e.fill.exec !== "routed-quote") return { ok: false, why: "this buy cannot be priced for a manual sale" };
   if (!MANUAL_FRACS.includes(frac)) return { ok: false, why: "sell 25%, 50% or all" };
   if (!(t <= e.fill.t + S.MAX_HOLD_S)) return { ok: false, why: "the 24-hour limit of this buy has passed" };
   const m = (e.manual ||= { tok: e.fill.tok, got: 0, sales: [], order: null, closed: null });
@@ -109,11 +111,14 @@ export function requestManual(e, frac, t) {
   return { ok: true, schedT: m.order.schedT, share_of_buy: +((frac >= 1 ? m.tok : m.tok * frac) / e.fill.tok).toFixed(4) };
 }
 function execManual(e, st, at, delay, cov) {
-  const m = e.manual, o = m.order; if (isQuote(st)) return false; const part = o.frac >= 1 ? m.tok : m.tok * o.frac, q = sellQuote(st, part); if (!q) return false;
+  const m = e.manual, o = m.order, rq = isQuote(st); if (rq !== (e.fill.exec === "routed-quote")) return false; // each buy is sold on the method it was bought with
+  const part = o.frac >= 1 ? m.tok : m.tok * o.frac, q = sellQuote(st, part, rq ? o.schedT : null); if (!q) return false;
+  if (rq) { at = q.t; delay = at - o.schedT; } // a routed quote: the sale happens when ITS quote was answered, never back-dated
   const sol = q.sol - S.TX_COST_SOL; m.got += sol; m.tok = o.frac >= 1 ? 0 : m.tok - part; // proceeds are not clipped at zero: a near-worthless sale still pays its transaction cost
-  m.sales.push({ t: at, req_t: o.req_t, frac: o.frac, share: part / e.fill.tok, tok: part, sol, delay_s: +delay.toFixed(3), state_age_s: +(at - st.t).toFixed(3), by: o.by, pool: poolOf(st), ...(cov && cov.gapsIn(e.fill.t, at).length ? { outage_during: true } : {}) });
+  m.sales.push({ t: at, req_t: o.req_t, frac: o.frac, share: part / e.fill.tok, tok: part, sol, delay_s: +delay.toFixed(3), by: o.by, ...(rq ? { exec: "routed-quote", quote: { req_t: q.reqT, resp_t: q.t, route: q.route ?? null } } : { state_age_s: +(at - st.t).toFixed(3), pool: poolOf(st) }), ...(cov && cov.gapsIn(e.fill.t, at).length ? { outage_during: true } : {}) });
   m.order = null; if (!(m.tok > 0)) m.closed = { t: at, sol: m.got, ret: m.got / COST - 1, hold_s: Math.round(at - e.fill.t) };
-  m.lastX = (m.got + (liqValue(st, m.tok) ?? 0)) / COST; m.lastT = at; return true;
+  const left = liqValue(st, m.tok); if (left != null) { m.lastX = (m.got + left) / COST; m.lastT = at; } // a routed quote may not hold the remaining quantity yet: its value then appears with its own quote, never as zero
+  return true;
 }
 export const manualOpen = (e) => !!e.manual && (!!e.manual.order || (!e.manual.closed && e.manual.tok > 0));
 
@@ -167,8 +172,8 @@ export function observe(e, st, t, cov) {
   }
   if (e.status !== "filled") return;
   if (!q) e.mark = { ...poolOf(st), t }; // the latest pool this position was valued on (stake views of open positions only)
-  if (e.manual && !q) { const m = e.manual; if (m.order && m.order.schedT <= t) { if (execManual(e, st, t, t - m.order.schedT, cov)) e.touched = true; } // an overdue manual sale: the first trustworthy state prices it, with its real delay
-    else if (!m.closed && m.tok > 0) { const val = liqValue(st, m.tok); if (val != null) { m.lastX = (m.got + val) / COST; m.lastT = t; } } }
+  if (e.manual && q === (e.fill.exec === "routed-quote")) { const m = e.manual; if (m.order && m.order.schedT <= t) { if (execManual(e, st, t, t - m.order.schedT, cov)) e.touched = true; } // an overdue manual sale: the first trustworthy state (or the first quote requested after its scheduled time) prices it, with its real delay
+    else if (!m.closed && m.tok > 0) { const val = liqValue(st, m.tok); if (val != null) { m.lastX = (m.got + val) / COST; m.lastT = q ? (sellQuote(st, m.tok)?.t ?? t) : t; } } }
   const full = liqValue(st, e.fill.tok), age = t - e.fill.t;
   if (full != null) { const x = full / COST; if (age <= S.RUNNER_HORIZON_S) { if (x > e.runner.maxX) e.runner.maxX = x; for (const k of S.RUNNER_X) if (x >= k && !e.runner.reached[k]) e.runner.reached[k] = Math.round(age); } }
   for (const v of e.versions) {
@@ -183,7 +188,9 @@ export function observe(e, st, t, cov) {
   }
 }
 /** the distinct token quantities an entry currently needs a sell quote for (a routed-quote provider is asked for exactly these) */
-export function inventories(e) { if (e.status !== "filled") return []; const s = new Set(); for (const v of e.versions) if (live(v) && v.tok > 0) { s.add(v.tok); if (v.status === "scaling" || (v.policy === "scale" && !v.half)) s.add(e.fill.tok * S.SCALE_FRACTION); } if (!e.runner.horizonDone) s.add(e.fill.tok); return [...s]; }
+export function inventories(e) { if (e.status !== "filled") return []; const s = new Set(); for (const v of e.versions) if (live(v) && v.tok > 0) { s.add(v.tok); if (v.status === "scaling" || (v.policy === "scale" && !v.half)) s.add(e.fill.tok * S.SCALE_FRACTION); } if (!e.runner.horizonDone) s.add(e.fill.tok);
+  if (e.manual && !e.manual.closed && e.manual.tok > 0) { const m = e.manual; if (m.order) s.add(m.order.frac >= 1 ? m.tok : m.tok * m.order.frac); if (m.sales.length) s.add(m.tok); } // the owner's own sale of a quote-priced buy: the quantity being sold, and what he still holds after a part-sale
+  return [...s]; }
 /** the earliest scheduled order still waiting for a price (buy or sell), or null */
 export function dueAt(e) { if (e.status === "pending") return e.schedT; let m = e.manual?.order?.schedT ?? null; if (e.status === "filled") for (const v of e.versions) if ((v.status === "selling" || v.status === "scaling") && v.schedT != null && (m === null || v.schedT < m)) m = v.schedT; return m; }
 /** rows still holding tokens whose sale has had no price for 24 h */
