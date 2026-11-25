@@ -23,6 +23,7 @@ export class Engine {
     this.stats = { events: 0, swaps: 0, otherPool: 0, noSolUsd: 0, noCreation: 0, evals: 0, cands: 0, entries: 0, notes: 0, replayed: 0, tooOld: 0, lastT: null, evalMsMax: 0 };
     this.dirtyBars = new Map(); this.usdDown = false; this.dirty = new Set(); this.lastCkpt = 0; this.entriesUntil = null; this.onOwnership = () => {};
     this.gates = null; this.readGate = null; this.clock = () => Date.now() / 1000; // older-11: the owner's gates (spec GATES_11) — null = nothing asked, nothing gated; readGate(mint) → the provider's token-info answer; clock = the receive clock the answers are timed on
+    this.minAgeS = S.MIN_AGE_S; // older-11: the age from which the books that normally start at 8 hours are evaluated in this run (default: 8 hours, as always)
     this.inactive = new Set(S.FAMILIES.filter((f) => !S.BOOKS_LEGACY.includes(f))); // older-11: books that make no new buy in this run (default: the legacy 29 buy, VOL100K does not) — see setBooks
     this.stream = { at: null, lag: null, first: null, open: -Infinity, kind: "connect", need: 0, goodSince: null, promote: false, spans: [], acctAt: null, diag: { n: 0, sum: 0, max: 0, hist: LAG_EDGES.map(() => 0), secs: { current: 0, late: 0, recovering: 0, silence: 0, unknown: 0 }, spells: { late: 0, silence: 0, connect: 0 }, longest: { late: 0, silence: 0, connect: 0 }, recent: [] } }; this.cov.reasons.add("stream"); /* stream freshness: ONE state machine for pricing and for signal coverage — see tx() */ this.rebuy = true; /* spec REBUY: buying again after a sale; false = older-8 */ this.pollCov = new Coverage(); // continuity of PRICE POLLING (the Solana-wide adapter); independent of the PumpSwap WebSocket
     this.stats.prices = 0; this.stats.riskBlocked = 0; this.stats.quotes = 0;
@@ -131,7 +132,7 @@ export class Engine {
     if (!g.reading) { g.verdict = "no reading"; G.no_reading++; return `the provider reading failed (${g.error || "no answer"}) — not treated as zero`; }
     const res = new Map(e.families.map((f) => [f, judge(g.reading, this.gates, f)])), ok = e.families.filter((f) => res.get(f).pass);
     const why = (f) => [...res.get(f).fails, ...res.get(f).missing.map((m) => m + " missing")];
-    for (const f of e.families) if (!res.get(f).pass) for (const x of why(f)) { const k = x.replace(/ [0-9$].*$/, "").replace(/:.*$/, ""); G.fails[k] = (G.fails[k] || 0) + 1; }
+    for (const f of e.families) if (!res.get(f).pass) for (const x of why(f)) { const k = x.includes(":") ? x.split(":")[0].replace(/ \$?[0-9.]+(%|K| SOL)$/, "") : x; G.fails[k] = (G.fails[k] || 0) + 1; } // counted by the gate's name ("top 10 holders", "total fees"…), without the figure
     g.options = res.get(ok[0] ?? e.families[0]).options;
     if (!ok.length) { g.verdict = "fail"; G.failed++; g.fails = [...new Set(e.families.flatMap(why))]; return "the owner's gates: " + g.fails.join("; "); }
     if (ok.length < e.families.length) { g.dropped = Object.fromEntries(e.families.filter((f) => !res.get(f).pass).map((f) => [f, why(f)])); e.families = ok; e.flags.push("books taken off this buy by their gates: " + Object.entries(g.dropped).map(([f, w]) => `${f} (${w.join("; ")})`).join(", ")); }
@@ -248,7 +249,9 @@ export class Engine {
     const age = ev.t - c.createTs; if (!S.ageGroupAny(age)) { if (age >= S.MIN_AGE_S) this.stats.tooOld++; return; } // from migration on: the first 8 hours are evaluated for the any-age books only (signals.mjs)
     this.stats.evals++; if (age < S.MIN_AGE_S) this.stats.evalsYoung = (this.stats.evalsYoung || 0) + 1;
     const o = { t: ev.t, px, mc: px * c.supply, liqUsd: liquidityUsd(st, su), rtImpact: staticImpact(st) };
-    this._decide(c, ev.mint, o, {}, { trigger: { t: ev.t, block_ts: ev.blockTs ?? null, sig: ev.sig ?? null, slot: ev.slot ?? null, kind: ev.kind ?? null, px_usd: px, sol_usd: su, base: st.base, quote_eff: st.quote, fee_buy: st.feeBuy, fee_sell: st.feeSell, supply: c.supply, age_s: Math.round(age), coverage: "covered" } },
+    // older-11: a run may evaluate the 8-hour books from an earlier age (this.minAgeS). Between that age and 8 hours the coin is in A0.
+    const early = age < S.MIN_AGE_S && age >= this.minAgeS; if (early) this.stats.evalsEarly = (this.stats.evalsEarly || 0) + 1;
+    this._decide(c, ev.mint, o, early ? { youngAll: true } : {}, { trigger: { t: ev.t, block_ts: ev.blockTs ?? null, sig: ev.sig ?? null, slot: ev.slot ?? null, kind: ev.kind ?? null, px_usd: px, sol_usd: su, base: st.base, quote_eff: st.quote, fee_buy: st.feeBuy, fee_sell: st.feeSell, supply: c.supply, age_s: Math.round(age), coverage: "covered" } },
       { pop: c.info.population || "pumpswap-canonical", mode: "live", exec: "reconstructed-pool-state", valuation: "pool price × on-chain base supply (from the swap event)", age_basis: c.info.create_src || "token creation (source not recorded)", state_approx: st.approx ?? null });
     const ms = performance.now() - t0; if (ms > this.stats.evalMsMax) this.stats.evalMsMax = +ms.toFixed(1);
   }

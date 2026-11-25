@@ -38,7 +38,11 @@ export function saveWarm(file, engine, t = Date.now() / 1000) {
 
 /** read the snapshot back into a restored engine. Call AFTER store.restore (coins, modes and one-buy flags come from the
  *  database and win) and BEFORE engine.restartGap / the feed. Returns { loaded, why?, coins, skipped, age_s, stopped_at }. */
-export function loadWarm(file, engine, now = Date.now() / 1000) {
+/** `fresh` (older-11): the snapshot was written by ANOTHER run's database and is carried into a new one (main.mjs,
+ *  OLDER_WARM_FROM). Only what was OBSERVED comes across — prices, bars, coverage, the watched peaks and setups. What the other
+ *  run had DECIDED does not: its one-buy marks and its already-logged notes stay behind, so the new run's first buy of a coin is
+ *  a first buy and its refusals are logged from the start. */
+export function loadWarm(file, engine, now = Date.now() / 1000, { fresh = false } = {}) {
   if (!existsSync(file)) return { loaded: false, why: "no snapshot (first start, or the last stop was not a planned one)" };
   let lines; try { lines = readFileSync(file, "utf8").split("\n").filter(Boolean); } catch (e) { return { loaded: false, why: "snapshot unreadable: " + e.message }; }
   const used = () => { try { renameSync(file, file + ".used"); } catch { try { unlinkSync(file); } catch {} } }; // one use only, whatever happens next
@@ -60,11 +64,11 @@ export function loadWarm(file, engine, now = Date.now() / 1000) {
     if (c.mode !== d.mode) { skipped++; continue; } // the database (and an unfinished entry's method) decides how a coin is observed: no mixed evidence
     c.series = Series.load(d.m, d.mode === "polled" ? engine.pollCov : engine.cov, d.s); c.warm = true;
     if (d.supply) c.supply = d.supply; c.lostAt = d.lostAt ?? null; c.sw = d.sw ?? null; c.rug = d.rug ?? null;
-    for (const [ag, g] of Object.entries(d.groups || {})) { const x = (c.groups[ag] ||= { ref: null, done: {}, logged: {} }); x.ref = g.ref ?? x.ref; Object.assign(x.done, g.done || {}); Object.assign(x.logged, g.logged || {}); } // one-buy flags: the database's and the snapshot's together
+    if (!fresh) for (const [ag, g] of Object.entries(d.groups || {})) { const x = (c.groups[ag] ||= { ref: null, done: {}, logged: {} }); x.ref = g.ref ?? x.ref; Object.assign(x.done, g.done || {}); Object.assign(x.logged, g.logged || {}); } // one-buy flags: the database's and the snapshot's together
     for (const m of c.series.bars.keys()) if (m >= curM - 1) (engine.dirtyBars.get(d.m) || engine.dirtyBars.set(d.m, new Set()).get(d.m)).add(m); // the stop minute's bar is still to be saved
     if (!had) engine.stats.warmNewCoins = (engine.stats.warmNewCoins || 0) + 1;
     n++;
   }
-  engine.stats.warm = { coins: n, skipped, stopped_at: h.t, age_s: +age.toFixed(1), from_spec: h.spec ?? null };
+  engine.stats.warm = { coins: n, skipped, stopped_at: h.t, age_s: +age.toFixed(1), from_spec: h.spec ?? null, carried_from_another_run: fresh || undefined };
   return { loaded: true, coins: n, skipped, age_s: +age.toFixed(1), stopped_at: h.t };
 }

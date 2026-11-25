@@ -30,13 +30,20 @@ if (process.env.OLDER_BOOKS) { engine.setBooks(booksOf(process.env.OLDER_BOOKS))
 if (process.env.OLDER_GATES) { if (process.env.OLDER_GATES !== "older-11") throw new Error(`unknown OLDER_GATES "${process.env.OLDER_GATES}"`);
   engine.gates = GATES_11; engine.readGate = (mint) => tokenInfoFirst(mint, Number(process.env.GMGN_FIRST_WAIT_MS ?? 300)); gm.reserve = Number(process.env.GMGN_RESERVE ?? 2);
   log(`[gates] older-11 gates ON: one GMGN reading per buy signal; history repair leaves ${gm.reserve} allowance units for them`); }
+// older-11: the age from which the books that normally start at 8 hours are evaluated in this run (spec MIN_AGE_11_S). Unset = 8 hours.
+if (process.env.OLDER_MIN_AGE_H) { const h = Number(process.env.OLDER_MIN_AGE_H); if (!(h >= 0 && h <= 8)) throw new Error(`OLDER_MIN_AGE_H must be a number from 0 to 8, not "${process.env.OLDER_MIN_AGE_H}"`); engine.minAgeS = h * 3600; log(`[books] the 8-hour books are evaluated from ${h} hours old in this run`); }
 store.since(now0); // "counting since" is fixed at START-UP, when a book or stop first exists on this database — not at the first page view
 store.restore(engine);
 // WARM RESTART (warm.mjs): after a planned stop the price memory is read back, so the hour-scale books do not start empty.
 // The time away stays an unobserved gap. Not used by a bounded validation run.
 const { saveWarm, loadWarm } = await import("./warm.mjs"); const WARM_FILE = (process.env.OLDER_DB || "/root/older/older.db") + ".warm";
-const warm = process.env.OLDER_RUN_MINUTES || process.env.OLDER_WARM === "0" ? { loaded: false, why: "switched off" } : loadWarm(WARM_FILE, engine);
-log(warm.loaded ? `[older] warm restart: price memory of ${warm.coins} coins read back, ${warm.age_s} s after the stop${warm.skipped ? ` (${warm.skipped} skipped: observation method changed)` : ""}` : `[older] cold start: ${warm.why}`);
+// older-11, A NEW RUN ON A NEW DATABASE: the price memory the previous run wrote at its stop can be carried in once
+// (OLDER_WARM_FROM = that run's snapshot file), so the hour-scale books do not wait hours for history. Only on the very first
+// start of this database (it has never been alive) and only when it has no snapshot of its own. What the other run decided
+// (its one-buy marks) is NOT carried — warm.mjs, `fresh`. The same 60-second limit applies; older than that = cold start.
+const carry = !existsSync(WARM_FILE) && process.env.OLDER_WARM_FROM && existsSync(process.env.OLDER_WARM_FROM) && store.lastAlive() == null;
+const warm = process.env.OLDER_RUN_MINUTES || process.env.OLDER_WARM === "0" ? { loaded: false, why: "switched off" } : carry ? loadWarm(process.env.OLDER_WARM_FROM, engine, Date.now() / 1000, { fresh: true }) : loadWarm(WARM_FILE, engine);
+log(warm.loaded ? `[older] warm ${carry ? "start of a new run (price memory carried from the previous run; none of its buys or one-buy marks)" : "restart"}: price memory of ${warm.coins} coins read back, ${warm.age_s} s after the stop${warm.skipped ? ` (${warm.skipped} skipped: observation method changed)` : ""}` : `[older] cold start: ${warm.why}`);
 engine.restartGap(store.lastAlive(), now0, { warm: warm.loaded });
 // planned stop (pm2 restart/stop sends SIGINT): every open position's peak is saved and the last-alive time is written first,
 // so a planned restart loses nothing and its gap is measured from the real stop
@@ -107,10 +114,12 @@ if (process.env.OLDER_SOLANA_WIDE === "1") {
 const inv = () => { try { return JSON.parse(store.db.prepare("SELECT v FROM meta WHERE k='inventory'").get()?.v || "null"); } catch { return null; } };
 // the reserve reading counts as validated only when the owner sets OLDER_RES_VALIDATED=1 after reviewing docs/tx-validation.json
 const valid = () => (process.env.OLDER_RES_VALIDATED === "1" ? { by: "OLDER_RES_VALIDATED" } : null);
-const web = startWeb({ port: Number(process.env.OLDER_PORT || 8793), store, engine, status: () => ({ started: now0, first_start: firstStart, commit: COMMIT, run: process.env.OLDER_RUN_NAME || null, entries_until: engine.entriesUntil, idl: IDL_PIN,
+// older-11: a run that chose its books shows only those on the site (page.mjs, web.mjs); a run that did not shows every book, as before
+const runInfo = () => (engine.books ? { name: process.env.OLDER_RUN_NAME || null, books: engine.books, gates: !!engine.gates, rebuy: engine.rebuy, min_age_h: engine.minAgeS / 3600, sampled: !!poller } : null);
+const web = startWeb({ port: Number(process.env.OLDER_PORT || 8793), store, engine, run: runInfo, status: () => ({ started: now0, first_start: firstStart, commit: COMMIT, run: process.env.OLDER_RUN_NAME || null, entries_until: engine.entriesUntil, idl: IDL_PIN,
   process: { pid: process.pid, started_at: now0, uptime_s: Math.round(process.uptime()), cpu_user_s: +(process.cpuUsage().user / 1e6).toFixed(1), cpu_system_s: +(process.cpuUsage().system / 1e6).toFixed(1) }, event_loop: loopStatus(),
   feed: { ...fs, lag_ms_avg: fs.lagN ? Math.round(fs.lagMsSum / fs.lagN) : null }, stream: engine.streamStatus(Date.now() / 1000), risk_reader: { ...riskStatus(engine, Date.now() / 1000, RISK_REFRESH_S), fee_unknown_evaluations: engine.stats.feeUnknown || 0, fee_unknown_coins: engine.stats.feeUnknownCoins || 0, cancelled_at_fill: engine.stats.cancelledAtFill || 0 }, engine: { ...engine.stats, coins: engine.coins.size, open: [...engine.byMint.values()].reduce((s, x) => s + x.size, 0), feed_gaps: engine.feedCov.gaps.length, usd_down: engine.usdDown },
-  books: engine.books ?? "legacy", gates: engine.gates ? "older-11" : "off", rebuy: engine.rebuy, decoder: { ...dec }, tx_validation: valid(), verify: { ...vf }, snapshots: { ...snapStats }, sol: { ...sp }, gmgn: { calls: gm.calls, errors: gm.errors, limited: gm.limited, banned: gm.banned, first: { ...gm.first }, held_back: gm.held_back, reserve: gm.reserve, lastErr: gm.lastErr, rate_headers: gm.headers }, backfill: { ...bf }, backfillQ: backfill.size(), jupiter: { ...J.ju, key: !!process.env.JUP_API_KEY, rps: Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0.5)) }, poller: poller ? { ...poller.stats, cadence_avg_s: poller.stats.cadence.n ? +(poller.stats.cadence.sum / poller.stats.cadence.n).toFixed(1) : null, hot_s: poller.hotEvery, cold_s: poller.coldEvery } : null, inventory: inv(), mem_mb: Math.round(process.memoryUsage().rss / 2 ** 20), sizes: sizes() }) });
+  books: engine.books ?? "legacy", gates: engine.gates ? "older-11" : "off", rebuy: engine.rebuy, min_age_h: engine.minAgeS / 3600, decoder: { ...dec }, tx_validation: valid(), verify: { ...vf }, snapshots: { ...snapStats }, sol: { ...sp }, gmgn: { calls: gm.calls, errors: gm.errors, limited: gm.limited, banned: gm.banned, first: { ...gm.first }, held_back: gm.held_back, reserve: gm.reserve, lastErr: gm.lastErr, rate_headers: gm.headers }, backfill: { ...bf }, backfillQ: backfill.size(), jupiter: { ...J.ju, key: !!process.env.JUP_API_KEY, rps: Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0.5)) }, poller: poller ? { ...poller.stats, cadence_avg_s: poller.stats.cadence.n ? +(poller.stats.cadence.sum / poller.stats.cadence.n).toFixed(1) : null, hot_s: poller.hotEvery, cold_s: poller.coldEvery } : null, inventory: inv(), mem_mb: Math.round(process.memoryUsage().rss / 2 ** 20), sizes: sizes() }) });
 log(`[older] started, spec ${SPEC_VER}, paper only`);
 
 // ---- monitoring copy: every 5 minutes the dashboard's own data is written to $OLDER_OUT/pub/state.json (no keys in it);

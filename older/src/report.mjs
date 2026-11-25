@@ -10,11 +10,13 @@ const sum = (a) => a.reduce((s, x) => s + x, 0);
 
 export function bookRows(entries, noteCounts = []) {
   const rows = new Map();
-  for (const policy of S.POLICIES) for (const f of S.FAMILIES) for (const [ag] of S.agesOf(f)) for (const stop of S.STOPS)
-    rows.set(`${f}|${ag}|${stop}|${policy}`, { family: f, ag, stop, policy, entries: 0, cancelled: 0, pending: 0, filled: 0, open: 0, closed: 0, unresolved: 0, mints: new Set(), trades: [], holds: [], delays: [], runners: { n: 0, partial: 0, x2: 0, x3: 0, x5: 0, x10: 0 }, outage: 0, estimated: 0, estimatedNet: 0, rebuys: 0, rebuyNet: 0, rebuyOpen: 0, feeAssumed: 0, halves: 0, startup: 0, startupNet: 0, unsupported: 0, unsupportedNet: 0, unsupportedRebuys: 0, unsupportedRebuyNet: 0 });
+  const mk = (f, ag, stop, policy) => { const r = { family: f, ag, stop, policy, entries: 0, cancelled: 0, pending: 0, filled: 0, open: 0, closed: 0, unresolved: 0, mints: new Set(), trades: [], holds: [], delays: [], runners: { n: 0, partial: 0, x2: 0, x3: 0, x5: 0, x10: 0 }, outage: 0, estimated: 0, estimatedNet: 0, rebuys: 0, rebuyNet: 0, rebuyOpen: 0, feeAssumed: 0, halves: 0, startup: 0, startupNet: 0, unsupported: 0, unsupportedNet: 0, unsupportedRebuys: 0, unsupportedRebuyNet: 0 }; rows.set(`${f}|${ag}|${stop}|${policy}`, r); return r; };
+  for (const policy of S.POLICIES) for (const f of S.FAMILIES) for (const [ag] of S.agesOf(f)) for (const stop of S.STOPS) mk(f, ag, stop, policy);
   for (const e of entries) { if (e.token?.xfer_bps > 0) continue; // transfer-fee coins are reported in their own book (spec FEE_BOOK), not in the rule rows
    for (const f of e.families) for (const policy of S.POLICIES) for (const v of versionsFor(e, f, policy)) {
-    const r = rows.get(`${f}|${e.ag}|${v.stop}|${policy}`); if (!r) continue;
+    // older-11: a run may buy for an 8-hour book from 6 hours on (spec MIN_AGE_11_S). Such a buy is in age group A0, for which
+    // these books have no fixed row: the row is added when the first such buy exists, so no buy is ever left out of the table.
+    const r = rows.get(`${f}|${e.ag}|${v.stop}|${policy}`) ?? (e.ag === "A0" && S.FAMILIES.includes(f) && S.STOPS.includes(v.stop) ? mk(f, "A0", v.stop, policy) : null); if (!r) continue;
     // BUYING AGAIN (older-9): a row's figures are its FIRST buys, exactly as in older-8. Re-buys are counted and summed apart.
     // A re-buy of a coin later found fee-bearing or restricted is separated exactly like a first buy (Codex's review of
     // 161d545: the re-buy branch used to return before that check, so those fee-free results stayed in the re-buy P&L).

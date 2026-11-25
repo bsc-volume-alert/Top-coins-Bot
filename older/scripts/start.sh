@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
 # Start (or restart) the older-coin PAPER run under pm2. Nothing here signs or sends a transaction; no key is printed.
-#   bash older/scripts/start.sh [name=shakedown] [entry-days]
+#   bash older/scripts/start.sh [name=shakedown] [entry-days] [settings] [previous-name]
 # entry-days (e.g. 7): new entries stop that many days after this name's FIRST start (the date is written once to
 # <name>.until and reused on every restart, so a restart never extends the window); exits and runner tracking continue.
-# Each name has its own database on the volume, so a shakedown run never mixes with the seven-day run.
+# Use "" to leave it open. Each name has its own database on the volume, so one run never mixes with another.
+# settings (older-11): the run's rule set. Written once to <name>.profile and reused on every restart of that name, so a
+#   restart can never silently change what a run buys. Empty = the settings of older-10 (every legacy book, no gates).
+#   older-11 = the owner's 13 books, his GMGN checks at every buy, coins from 6 hours old, buying again off, and the
+#              sampled "rest of Solana" adapter OFF (its buys are priced from quotes and are not put through the GMGN checks).
+# previous-name (older-11): only when <name> has no database yet. The new database is prepared from that run's database —
+#   coin identities and pools only, read-only on the old file, NO buys / decisions / bars (scripts/seed-db.mjs) — and the
+#   price memory that run writes when it stops is carried in once, so the hour-scale books do not start empty.
+#   The previous run's database is kept exactly as it is. Nothing is deleted.
 set -euo pipefail
 NAME="${1:-shakedown}"; HERE="$(cd "$(dirname "$0")/.." && pwd)"; cd "$HERE"
 OUT="${OLDER_OUT:-/mnt/volume_1794164707392/older}"; mkdir -p "$OUT/pub"
@@ -11,12 +19,33 @@ OUT="${OLDER_OUT:-/mnt/volume_1794164707392/older}"; mkdir -p "$OUT/pub"
 SITE_KEY="$(grep -E '^WEB_KEY=' /root/older/.env 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"'"'"'' || true)"
 DAYS="${2:-}"; UNTIL=""
 if [ -f "$OUT/$NAME.until" ]; then UNTIL="$(cat "$OUT/$NAME.until")"; elif [ -n "$DAYS" ]; then UNTIL="$(( $(date +%s) + DAYS * 86400 ))"; echo "$UNTIL" > "$OUT/$NAME.until"; fi
+# ---- the run's settings: fixed at the first start of this name
+PROFILE="${3:-}"; FROM="${4:-}"; DB="$OUT/older-$NAME.db"
+if [ -f "$OUT/$NAME.profile" ]; then SAVED="$(cat "$OUT/$NAME.profile")"
+  if [ -n "$PROFILE" ] && [ "$PROFILE" != "$SAVED" ]; then echo "run '$NAME' was started with settings '$SAVED' — it cannot be restarted as '$PROFILE'. Use a new name for a new rule set. Nothing was changed."; exit 1; fi
+  PROFILE="$SAVED"
+elif [ -n "$PROFILE" ] && [ -f "$DB" ]; then echo "run '$NAME' already has a database that was started WITHOUT settings '$PROFILE'. Use a new name for a new rule set. Nothing was changed."; exit 1; fi
+BOOKS=""; GATES=""; REBUY=""; MINAGE=""; WIDE=1
+case "$PROFILE" in
+  "") ;;
+  older-11) BOOKS=older-11; GATES=older-11; REBUY=0; MINAGE=6; WIDE=0 ;;
+  *) echo "unknown settings '$PROFILE' (known: older-11). Nothing was changed."; exit 1 ;;
+esac
+# ---- a new run prepared from a previous one (before anything is stopped: a failure here leaves the running bot untouched)
+WARM_FROM=""
+if [ -n "$FROM" ] && [ ! -f "$DB" ]; then
+  [ -f "$OUT/older-$FROM.db" ] || { echo "previous run '$FROM' has no database at $OUT/older-$FROM.db. Nothing was changed."; exit 1; }
+  node scripts/seed-db.mjs "$OUT/older-$FROM.db" "$DB" $([ "$WIDE" = 0 ] && echo --live-only)
+  WARM_FROM="$OUT/older-$FROM.db.warm"
+fi
+[ -n "$PROFILE" ] && [ ! -f "$OUT/$NAME.profile" ] && echo "$PROFILE" > "$OUT/$NAME.profile"
 pm2 delete older older-pub >/dev/null 2>&1 || true
-OLDER_OUT="$OUT" OLDER_DB="$OUT/older-$NAME.db" OLDER_SOLANA_WIDE=1 OLDER_SITE_KEY="$SITE_KEY" OLDER_RUN_NAME="$NAME" OLDER_ENTRIES_UNTIL="$UNTIL" OLDER_COMMIT="$(git -C "$HERE" rev-parse HEAD 2>/dev/null || true)" \
+OLDER_OUT="$OUT" OLDER_DB="$DB" OLDER_SOLANA_WIDE="$WIDE" OLDER_SITE_KEY="$SITE_KEY" OLDER_RUN_NAME="$NAME" OLDER_ENTRIES_UNTIL="$UNTIL" OLDER_COMMIT="$(git -C "$HERE" rev-parse HEAD 2>/dev/null || true)" \
+  OLDER_BOOKS="$BOOKS" OLDER_GATES="$GATES" OLDER_REBUY="$REBUY" OLDER_MIN_AGE_H="$MINAGE" OLDER_WARM_FROM="$WARM_FROM" \
   pm2 start src/main.mjs --name older --cwd "$HERE" --node-args="--max-old-space-size=1100" --kill-timeout 20000 --time >/dev/null
 OLDER_OUT="$OUT" pm2 start scripts/publish.sh --name older-pub --cwd "$HERE" --interpreter bash >/dev/null
 pm2 save --force >/dev/null
 IP="$(hostname -I | awk '{print $1}')"
-echo "started: run '$NAME', database $OUT/older-$NAME.db, code $(git -C "$HERE" rev-parse --short HEAD 2>/dev/null)${UNTIL:+, entries until $(date -u -d @"$UNTIL" '+%d %b %H:%M UTC')}"
+echo "started: run '$NAME'${PROFILE:+ (settings $PROFILE)}, database $DB, code $(git -C "$HERE" rev-parse --short HEAD 2>/dev/null)${UNTIL:+, entries until $(date -u -d @"$UNTIL" '+%d %b %H:%M UTC')}"
 echo "dashboard: http://$IP:8793/${SITE_KEY:+?k=$SITE_KEY}"
 pm2 ls | grep -E "older|name" || true
