@@ -54,6 +54,20 @@ export const NEW_CHECK_LATE_S = 90;    // a coin that could not be measured with
 export const NEW_GMGN_WAIT_S = 30;     // the GMGN reading must arrive within this long of being asked for, or the coin is not bought
 export const NEW_AGE_SLACK_S = 180;    // GMGN's creation time may put the coin at most this much past the age point when the buy is decided (else: not a new coin by GMGN's clock)
 export const NEW_POP = "new-coins";    // how these buys are tagged (entry.pop)
+// GMGN IS ASKED ONLY WHEN THE COIN COULD STILL PASS (25 Nov 2026, after the first two hours live): about 90 coins an hour passed
+// market cap, holders and volume, nearly all of them with fees near zero and top 10 holders at 4–13% — and that many readings
+// crowded the other books' own buy-checks (refusals 17 in two hours against 1 in the three hours before). Jupiter's own
+// top-holders figure agreed with GMGN's top 10 to within 3.2 points on every candidate read (median 0.16), so a coin whose
+// Jupiter figure is OUTSIDE this wider range is not asked about and not bought (counted "top holders, GMGN not asked").
+// Inside it, or when Jupiter gives no figure, GMGN is asked and decides on the rule's own 20–30% as before.
+export const NEW_TOP_PRE = [0.15, 0.35];
+// AFTER EVERY ROW OF A NEW-COIN BUY IS SOLD its value is still followed for the rest of the 24 hours ("how high did it go"),
+// but no longer by one routed quote a minute each (at 7 buys an hour that alone would need more requests than the key's 60 a
+// minute within a few hours): every NEW_RUNNER_S seconds the provider's token data is read for all such buys together (100 coins
+// a request) and the value is ESTIMATED as price × tokens bought − the transaction cost. No fees or price impact are in it,
+// so it is an upper estimate; the buy is marked (runner.est). Open rows are priced by routed quotes exactly as before.
+export const NEW_RUNNER_S = 60;
+export const NEW_LOG_KEEP = 3000;      // measurements of coins over the market-cap line kept for the site and the published file (all of them are in the log file beside the database)
 
 // Families. 21 families × 4 ages + 10 any-age families × 5 ages = 134 book-ages; × 5 stops × 2 exit policies = 1,340 comparisons (VOL100K and DIP15K added in older-11).
 // + the two new-coin books in A0 only = 136 book-ages, 1,360 comparisons.

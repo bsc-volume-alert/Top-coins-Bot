@@ -2,7 +2,7 @@
 // rule, and paper-bought on a routed quote when all of that age's rules hold. Owner's numbers of 25 Nov 2026 (16:07, 18:37 UK).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, existsSync } from "node:fs"; import { tmpdir } from "node:os"; import { join } from "node:path";
+import { mkdtempSync, existsSync, readFileSync } from "node:fs"; import { tmpdir } from "node:os"; import { join } from "node:path";
 import { mkEngine, swap, T0 } from "./helpers.mjs";
 import { Poller } from "../src/polled.mjs";
 import { NewCoins, measure, judgeMeasure } from "../src/newcoin.mjs";
@@ -27,7 +27,7 @@ function world({ store = null, file = null, engine = {}, gmgn = null } = {}) {
   w.readInfo = gmgn ?? (async (mint) => { w.reqs.gmgn++; const x = w.info.get(mint); if (x instanceof Error) throw x; return { ...GOOD(mint), ...(x || {}) }; });
   w.readRisk = async (mint) => { w.reqs.risk++; return w.riskOf.get(mint) ?? { status: "clean", program: TOKEN_2022, extensions: [], blocking: [], warnings: [], fee_bps: 0, src: "rpc mint account" }; };
   w.eng = mkEngine({ tokens: null, ...(store ? { store } : {}), ...engine }); w.eng.setBooks([...S.booksOf("older-11"), ...S.NEW_BOOKS]); w.eng.feedUp(T0);
-  w.quoter = new Poller({ engine: w.eng, jup: w.jup, now: () => w.t, runnerEvery: 60 });
+  w.quoter = new Poller({ engine: w.eng, jup: w.jup, now: () => w.t, runnerEvery: Infinity }); // as main.mjs sets it: a buy whose every row is sold is not quoted
   w.nc = new NewCoins({ engine: w.eng, jup: w.jup, quoter: w.quoter, readInfo: w.readInfo, readRisk: w.readRisk, store, now: () => w.t, file });
   w.pass = async () => { await w.nc.look(); const n = await w.nc.check(); await w.nc.idle(); return n; };
   w.price = async (dt = 0) => { w.t += dt; w.eng.tick(w.t); await w.quoter.quotes(); w.eng.tick(w.t); };
@@ -109,15 +109,35 @@ test("the 10-minute book is measured on its own numbers at 10 minutes; both book
   assert.equal(w.entries("NEW-10M").length, 1); assert.equal(w.entries().filter((e) => e.mint === C).length, 2, "the 5-minute and the 10-minute book each hold their own buy of the coin");
 });
 
-test("stops and the 24-hour measurement run on quotes: a 25% fall from the high sells the 25% rows; a buy whose rows are all sold is priced once a minute, not every 10 s", async () => {
+test("stops run on quotes: a 25% fall from the high sells the 25% rows; once every row is sold the buy is not quoted any more — its 24-hour high is estimated from token data, all such buys in one request", async () => {
   const w = world(); w.add(A, T0, {}); w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.2);
   const [e] = w.entries("NEW-5M"); assert.equal(e.status, "filled"); const row = (stop, pol = "trail") => e.versions.find((v) => v.stop === stop && v.policy === pol);
   w.setMc(A, 30_000); await w.price(10); assert.ok(row(0.25).maxX > 1.4); w.setMc(A, 22_000); await w.price(10); // −27% from the high
   assert.equal(row(0.2).status, "selling"); assert.equal(row(0.25).status, "selling"); assert.equal(row(0.3).status, "open");
   await w.price(1); assert.equal(row(0.25).status, "closed"); assert.equal(row(0.25).reason, "trail"); assert.ok(row(0.25).exit.quote.req_t >= row(0.25).trigT + 0.7 - 1e-9, "the sale is priced by a quote asked for after trigger + 0.7 s"); assert.ok(Math.abs(row(0.25).exit.ret - (22 / 20 * 0.99 * 0.99 * 0.2 - 0.0005) / 0.2005 + 1) < 0.01);
   w.setMc(A, 2000); await w.price(10); await w.price(1); await w.price(1); assert.ok(e.versions.every((v) => v.status === "closed"), "every row is out");
-  const need = w.eng.quoteNeeds(w.t)[0]; assert.equal(need.runner_only, true); const q0 = w.reqs.quote; for (let i = 0; i < 12; i++) await w.price(10); // two minutes
-  assert.ok(w.reqs.quote - q0 <= 3, `the 24-hour high is followed once a minute (${w.reqs.quote - q0} quotes in 2 minutes)`); assert.ok(w.reqs.quote - q0 >= 1);
+  const need = w.eng.quoteNeeds(w.t)[0]; assert.equal(need.runner_only, true); const q0 = w.reqs.quote, s0 = w.reqs.search, hi0 = e.runner.maxX, exits = JSON.stringify(e.versions.map((v) => v.exit)); for (let i = 0; i < 12; i++) await w.price(10); // two minutes
+  assert.equal(w.reqs.quote - q0, 0, "no quote is asked for a buy whose rows are all sold");
+  w.setMc(A, 90_000); assert.equal(await w.nc.runnerPass(), 1); assert.equal(w.reqs.search - s0, 1, "one token-data request for all of them");
+  const want = ((90_000 / 1e9) * e.fill.tok / 100 - S.TX_COST_SOL) / 0.2005; assert.ok(Math.abs(e.runner.maxX - want) < 1e-9, "price × tokens bought, in SOL, less one transaction cost"); assert.ok(e.runner.maxX > hi0 && e.runner.maxX > 4); assert.equal(e.runner.est, true); assert.equal(e.runner.maxEst, true); assert.ok(e.runner.reached[3] > 0);
+  assert.equal(JSON.stringify(e.versions.map((v) => v.exit)), exits, "an estimate never touches a sale that was made");
+  assert.equal(booksApi([e], { stop: 0.25, run: { books: w.eng.books } }).books["NEW-5M"][0].hi_est, true);
+  w.setMc(A, 5000); await w.nc.runnerPass(); assert.ok(Math.abs(e.runner.maxX - want) < 1e-9, "the high only rises"); assert.ok(e.runner.lastX < 1);
+  // a buy with a row still open is NOT estimated: its quotes are its prices
+  w.add(B, w.t, {}); const bornB = w.t; w.t += 20; await w.pass(); w.t = bornB + 301; await w.pass(); await w.price(1.2); const eb = w.entries("NEW-5M").find((x) => x.mint === B); assert.equal(eb.status, "filled");
+  w.setMc(B, 500_000); assert.equal(await w.nc.runnerPass(), 1, "only the sold-out buy"); assert.ok(eb.runner.maxX < 1.1); assert.equal(eb.runner.est, undefined);
+});
+
+test("GMGN is asked only when the coin could still pass: Jupiter's top-holders figure outside 15–35% → not asked, not bought, counted; inside it or missing → asked, and GMGN's own 20–30% decides; every such measurement is logged", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "older-nc-")), file = join(dir, "newcoins-t.json"); const w = world({ file });
+  w.add(A, T0, { top: 9.2 }); w.add(B, T0, { top: 16 }); w.add(C, T0, { top: null }); w.add("ThinCoinXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXpump", T0, { top: 36, vol: 100 }); w.info.set(B, { stat: { top_10_holder_rate: 0.19 } });
+  w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass();
+  const K = w.nc.stats.checks["NEW-5M"]; assert.equal(K.candidates, 3); assert.equal(K.top_pre_skipped, 1); assert.equal(K.gmgn_asked, 2); assert.equal(w.reqs.gmgn, 2); assert.equal(K.bought, 1);
+  const out = Object.fromEntries(K.recent.map((x) => [x.mint.slice(0, 8), x.out])); assert.match(out.NewCoinA, /top holders 9\.2% by Jupiter's figure \(needs 20–30%; GMGN not asked\)/); assert.match(out.NewCoinB, /top 10 holders 19\.0% \(needs 20–30%\)/); assert.match(out.NewCoinC, /BOUGHT/); assert.match(out.ThinCoin, /volume \$0K/);
+  assert.deepEqual(S.NEW_TOP_PRE, [0.15, 0.35]);
+  // the log: one line per measured coin over the market-cap line, kept across a restart
+  const lines = readFileSync(join(dir, "newcoins-t.log.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l)); assert.equal(lines.length, 4); assert.ok(lines.every((l) => l.book === "NEW-5M" && l.mint && l.out)); assert.equal(w.nc.history.length, 4);
+  const w2 = world({ file }); assert.equal(w2.nc.history.length, 4); assert.equal(w2.nc.status().logged, 4);
 });
 
 test("the sell button on a new-coin buy: half, then the rest — each priced by a quote for exactly that quantity, asked for after the tap + 0.7 s; the rules' rows are untouched", async () => {

@@ -15,7 +15,8 @@
 // that never appeared on it — the second is counted ("looks with no coin in common with the one before").
 // The counters live in a small file beside the database so a restart does not empty them; the coins waiting for an age point
 // are in it too.
-import { readFileSync, writeFileSync, existsSync, renameSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, renameSync, appendFileSync } from "node:fs";
+import { COST } from "./book.mjs";
 import * as S from "./spec.mjs";
 import { classifyJupToken, feeKnown } from "./risk.mjs";
 import { parseInfo } from "./gates.mjs";
@@ -36,15 +37,17 @@ const fresh = () => ({ since: null, looks: 0, look_errors: 0, looks_no_overlap: 
 const freshCheck = () => ({ reached: 0, too_late: 0, search_failed: 0, not_answered: 0, measured: 0,
   mc: 0, holders: 0, vol: 0, top_jup: 0, mc_holders: 0, mc_vol: 0, candidates: 0, // each rule on its own, two pairs, and all three provider-side rules together
   no_figure: { mc: 0, holders: 0, vol: 0, top_jup: 0 },
-  gmgn_asked: 0, gmgn_ok: 0, gmgn_failed: 0, fees: 0, top10: 0, age_ok: 0, passed_all: 0, risk_unknown: 0, risk_blocked: 0, not_opened: 0, bought: 0,
+  top_pre_skipped: 0, gmgn_asked: 0, gmgn_ok: 0, gmgn_failed: 0, fees: 0, top10: 0, age_ok: 0, passed_all: 0, risk_unknown: 0, risk_blocked: 0, not_opened: 0, bought: 0,
   max: { mc: 0, holders: 0, vol: 0 }, recent: [] });
 const timeout = (p, ms, what) => new Promise((res, rej) => { const h = setTimeout(() => rej(new Error(`${what} did not arrive within ${Math.round(ms / 1000)} s`)), ms); h.unref?.(); Promise.resolve(p).then((v) => { clearTimeout(h); res(v); }, (e) => { clearTimeout(h); rej(e); }); });
 
 export class NewCoins {
   /** jup: { recent(), tokens(mints) } · quoter: the Poller that prices routed-quote buys (only its watch list is touched here)
    *  readInfo(mint) → GMGN token info · readRisk(mint) → classifyMintAccount result for the mint (transfer restrictions) */
-  constructor({ engine, jup, quoter, readInfo, readRisk = null, store = null, now = () => Date.now() / 1000, log = () => {}, file = null, rules = S.NEW_COIN }) {
-    Object.assign(this, { engine, jup, quoter, readInfo, readRisk, store, now, log, file, rules });
+  constructor({ engine, jup, quoter, readInfo, readRisk = null, store = null, now = () => Date.now() / 1000, log = () => {}, file = null, rules = S.NEW_COIN, solUsd = null }) {
+    Object.assign(this, { engine, jup, quoter, readInfo, readRisk, store, now, log, file, rules }); this.solUsd = solUsd ?? ((t) => engine.solUsd(t));
+    this.history = []; this.logFile = file ? file.replace(/\.json$/, "") + ".log.jsonl" : null; this.runner = { passes: 0, coins: 0, priced: 0, no_price: 0, errors: 0, last: null }; this.lastRunner = 0;
+    if (this.logFile && existsSync(this.logFile)) try { const L = readFileSync(this.logFile, "utf8").split("\n").filter(Boolean).slice(-S.NEW_LOG_KEEP); for (const l of L) try { this.history.push(JSON.parse(l)); } catch {} } catch {}
     this.young = new Map(); this.prevIds = null; this.inflight = new Set(); this.maxAt = Math.max(...rules.map((r) => r.at_s)); this.stats = fresh(); this.dirty = false;
     this.load();
   }
@@ -88,43 +91,55 @@ export class NewCoins {
       if (m.vol_basis && m.vol_basis.startsWith("5m")) K.vol_from_5m = (K.vol_from_5m || 0) + 1; // the provider gave no 1-hour statistics: the volume is the last 5 minutes only
       if (j.mc && j.holders) K.mc_holders++; if (j.mc && j.vol) K.mc_vol++;
       const rec = { t: Math.round(t), mint: c.mint, sym: tok.symbol ?? c.symbol ?? null, lp: c.launchpad, age_s: Math.round(age), mc: m.mc == null ? null : Math.round(m.mc), holders: m.holders, vol: m.vol == null ? null : Math.round(m.vol), top_jup: m.top_jup == null ? null : +m.top_jup.toFixed(4), ok: { mc: j.mc, holders: j.holders, vol: j.vol } };
-      if (j.mc && j.holders && j.vol) { K.candidates++; const p = this.candidate(c, r, tok, m, rec).catch((e) => { rec.out = "error: " + String(e.message).slice(0, 100); this.note(K, rec); }).finally(() => { this.inflight.delete(p); this.dirty = true; }); this.inflight.add(p); }
-      else if (j.mc) { rec.out = "not bought: " + [j.holders ? null : `holders ${m.holders ?? "?"} (needs over ${r.holders_min})`, j.vol ? null : `volume $${m.vol == null ? "?" : Math.round(m.vol / 1000) + "K"} (needs $${r.vol_min_usd / 1000}K)`].filter(Boolean).join(", "); this.note(K, rec); } } // the near misses are kept: a coin over the market-cap line that failed another rule
+      const pre = m.top_jup == null || (m.top_jup >= S.NEW_TOP_PRE[0] && m.top_jup <= S.NEW_TOP_PRE[1]); // could it still pass the top-10 rule? (spec NEW_TOP_PRE)
+      if (j.mc && j.holders && j.vol && !pre) { K.candidates++; K.top_pre_skipped++; rec.out = `not bought: top holders ${(m.top_jup * 100).toFixed(1)}% by Jupiter's figure (needs ${r.top10[0] * 100}–${r.top10[1] * 100}%; GMGN not asked)`; this.note(K, rec, r.family); }
+      else if (j.mc && j.holders && j.vol) { K.candidates++; const p = this.candidate(c, r, tok, m, rec).catch((e) => { rec.out = "error: " + String(e.message).slice(0, 100); this.note(K, rec, r.family); }).finally(() => { this.inflight.delete(p); this.dirty = true; }); this.inflight.add(p); }
+      else if (j.mc) { rec.out = "not bought: " + [j.holders ? null : `holders ${m.holders ?? "?"} (needs over ${r.holders_min})`, j.vol ? null : `volume $${m.vol == null ? "?" : Math.round(m.vol / 1000) + "K"} (needs $${r.vol_min_usd / 1000}K)`].filter(Boolean).join(", "); this.note(K, rec, r.family); } } // the near misses are kept: a coin over the market-cap line that failed another rule
     return n;
   }
-  note(K, rec) { K.recent.push(rec); if (K.recent.length > 25) K.recent.shift(); this.dirty = true; }
+  /** every measurement of a coin over the market-cap line, with what happened to it: the last 25 per book on the card, the last
+   *  NEW_LOG_KEEP in memory for the published file, and ALL of them as one line each in the log file beside the database */
+  note(K, rec, family = null) { K.recent.push(rec); if (K.recent.length > 25) K.recent.shift(); this.dirty = true; const row = { book: family ?? rec.book ?? null, ...rec }; this.history.push(row); if (this.history.length > S.NEW_LOG_KEEP) this.history.shift();
+    if (this.logFile) try { appendFileSync(this.logFile, JSON.stringify(row) + "\n"); } catch (e) { if (!this.logErr) { this.logErr = true; this.log("[new coins] log not written: " + e.message); } } }
+  /** the 24-hour high of buys whose every row is sold: one token-data request for all of them (spec NEW_RUNNER_S) */
+  async runnerPass() { const now = this.now(), E = this.engine, need = []; for (const n of E.quoteNeeds(now)) { if (!n.runner_only) continue; const e = E.entries.get(n.id); if (e?.pop === S.NEW_POP) need.push(e); }
+    if (!need.length) return 0; const R = this.runner; R.passes++; R.coins = need.length; const mints = [...new Set(need.map((e) => e.mint))], px = new Map(); let n = 0;
+    for (let i = 0; i < mints.length; i += 100) try { for (const t of await this.jup.tokens(mints.slice(i, i + 100))) if (t.px > 0) px.set(t.mint, t.px); } catch (e) { R.errors++; this.stats.last_error = "token data (24-hour high): " + String(e.message).slice(0, 80); }
+    const t = this.now(), su = this.solUsd(t); if (!(su > 0)) { R.no_sol_usd = (R.no_sol_usd || 0) + 1; return 0; }
+    for (const e of need) { const p = px.get(e.mint); if (!(p > 0)) { R.no_price++; continue; } const x = Math.max(0, (p * e.fill.tok) / su - S.TX_COST_SOL) / COST; if (E.runnerEstimate(e.id, x, t)) { n++; R.priced++; } } // price × tokens bought, in SOL, less one transaction cost — no fees or price impact: an upper estimate
+    R.last = t; return n; }
   /** every candidate still waiting for its GMGN reading or its buy (tests; a clean stop) */
   idle() { return Promise.all([...this.inflight]); }
   /** 3. BUY — a coin that passed market cap, holders and volume at its age point */
   async candidate(c, r, tok, m, rec) {
     const K = this.k(r.family), E = this.engine, t0 = this.now(); K.gmgn_asked++;
-    let info; try { info = await timeout(this.readInfo(c.mint), S.NEW_GMGN_WAIT_S * 1000, "the GMGN reading"); } catch (e) { K.gmgn_failed++; rec.out = "not bought: no GMGN reading (" + String(e.message).slice(0, 80) + ")"; return this.note(K, rec); }
+    let info; try { info = await timeout(this.readInfo(c.mint), S.NEW_GMGN_WAIT_S * 1000, "the GMGN reading"); } catch (e) { K.gmgn_failed++; rec.out = "not bought: no GMGN reading (" + String(e.message).slice(0, 80) + ")"; return this.note(K, rec, r.family); }
     const t1 = this.now(), g = parseInfo(info, null, false); K.gmgn_ok++;
     const created = g.created > 1e12 ? g.created / 1000 : g.created, gAge = created > 0 ? t1 - created : null;
     const feesOk = g.fees_sol != null && g.fees_sol >= r.fees_min_sol, topOk = g.top10 != null && g.top10 >= r.top10[0] && g.top10 <= r.top10[1], ageOk = gAge == null || gAge <= r.at_s + S.NEW_AGE_SLACK_S;
     if (feesOk) K.fees++; if (topOk) K.top10++; if (ageOk) K.age_ok++;
     Object.assign(rec, { fees: g.fees_sol, top10: g.top10, gmgn_ms: Math.round((t1 - t0) * 1000), gmgn_age_s: gAge == null ? null : Math.round(gAge) });
-    if (!feesOk || !topOk || !ageOk) { rec.out = "not bought: " + [feesOk ? null : `fees ${g.fees_sol == null ? "?" : +g.fees_sol.toFixed(2)} SOL (needs ${r.fees_min_sol})`, topOk ? null : `top 10 holders ${g.top10 == null ? "?" : (g.top10 * 100).toFixed(1) + "%"} (needs ${r.top10[0] * 100}–${r.top10[1] * 100}%)`, ageOk ? null : `GMGN says the coin is ${Math.round(gAge / 60)} minutes old`].filter(Boolean).join(", "); return this.note(K, rec); }
+    if (!feesOk || !topOk || !ageOk) { rec.out = "not bought: " + [feesOk ? null : `fees ${g.fees_sol == null ? "?" : +g.fees_sol.toFixed(2)} SOL (needs ${r.fees_min_sol})`, topOk ? null : `top 10 holders ${g.top10 == null ? "?" : (g.top10 * 100).toFixed(1) + "%"} (needs ${r.top10[0] * 100}–${r.top10[1] * 100}%)`, ageOk ? null : `GMGN says the coin is ${Math.round(gAge / 60)} minutes old`].filter(Boolean).join(", "); return this.note(K, rec, r.family); }
     K.passed_all++;
     // the coin itself: an ordinary coin of the engine that simply has no pool yet (if it migrates, the pool books see it like any other)
-    if (!validDec(tok.decimals)) { K.not_opened++; rec.out = "not bought: the provider gave no decimals for the coin (it cannot be quoted)"; return this.note(K, rec); }
+    if (!validDec(tok.decimals)) { K.not_opened++; rec.out = "not bought: the provider gave no decimals for the coin (it cannot be quoted)"; return this.note(K, rec, r.family); }
     const had = E.coins.get(c.mint), origin = tok.launchpad || c.launchpad || "unknown";
     const coin = E.coin(c.mint, { createTs: c.created, info: had ? null : { symbol: tok.symbol ?? null, decimals: tok.decimals, circ_supply: tok.circ_supply ?? null, origin, origin_evidence: tok.launchpad ? "provider launchpad field" : "none", token_program: tok.token_program ?? null, discovery_source: "jupiter recent (first pool)", risk: classifyJupToken(tok), create_src: "jupiter firstPool.createdAt (for a launchpad coin its launch curve, created with the coin)" } });
     if (had && coin.info.decimals == null) coin.info.decimals = tok.decimals;
     if (!feeKnown(coin.info) && this.readRisk) { try { const k = await timeout(this.readRisk(c.mint), 8000, "the mint account"); if (k && k.status !== "missing") { k.read_at = Math.round(this.now()); coin.info.risk = k; if (k.program) coin.info.token_program = k.program; coin.riskRead = true; coin.riskAt = this.now(); } } catch (e) { rec.risk_err = String(e.message).slice(0, 80); } }
     this.store?.saveCoin(c.mint, { createTs: c.created, createSrc: "jupiter firstPool", pumpOrigin: origin, firstSeen: Math.floor(t1), info: coin.info });
-    if (!feeKnown(coin.info)) { K.risk_unknown++; rec.out = "not bought: the coin's transfer restrictions could not be read from the chain"; return this.note(K, rec); }
-    if (coin.info.risk?.status === "restricted") { K.risk_blocked++; rec.out = "not bought: the coin restricts transfers (" + ((coin.info.risk.blocking || []).join(", ") || "restriction") + ")"; return this.note(K, rec); }
+    if (!feeKnown(coin.info)) { K.risk_unknown++; rec.out = "not bought: the coin's transfer restrictions could not be read from the chain"; return this.note(K, rec, r.family); }
+    if (coin.info.risk?.status === "restricted") { K.risk_blocked++; rec.out = "not bought: the coin restricts transfers (" + ((coin.info.risk.blocking || []).join(", ") || "restriction") + ")"; return this.note(K, rec, r.family); }
     const t = this.now(), age = t - c.created, out = {};
     const detail = { rule: { ...r }, age_s: +age.toFixed(1), measured_at: rec.t, jupiter: { mc: m.mc, holders: m.holders, vol_usd: m.vol, vol_basis: m.vol_basis, top_holders: m.top_jup, liq_usd: m.liq, traders: m.traders, curve_pct: m.curve_pct, updated: tok.updated ?? null }, gmgn: { fees_sol: g.fees_sol, top10: g.top10, created: created ?? null, age_s: gAge == null ? null : +gAge.toFixed(1), asked: t0, answered: t1 } };
     this.watch(c.mint, tok.decimals, tok.circ_supply);
     const e = E.openDirect({ mint: c.mint, family: r.family, t, mc: m.mc, px: m.px, features: { age_s: Math.round(age), mc: m.mc, holders: m.holders, vol_usd: m.vol, fees_sol: g.fees_sol, top10: g.top10, liq_usd: m.liq }, detail, trigger: { px_usd: m.px, src: "jupiter token data + gmgn token info", age_s: Math.round(age), supply: tok.circ_supply ?? tok.total_supply ?? null }, token: { decimals: tok.decimals } }, out);
-    if (!e) { K.not_opened++; rec.out = "not bought: " + (out.why || "the buy could not be opened"); if (!E.byMint.get(c.mint)?.size) this.quoter.watch.delete(c.mint); return this.note(K, rec); }
+    if (!e) { K.not_opened++; rec.out = "not bought: " + (out.why || "the buy could not be opened"); if (!E.byMint.get(c.mint)?.size) this.quoter.watch.delete(c.mint); return this.note(K, rec, r.family); }
     // the reading the rule was judged on, kept on the buy in the same shape as the other books' GMGN reading (so the page shows it)
     e.gate = { kind: "new-coin rule", req_t: t0, resp_t: t1, ms: Math.round((t1 - t0) * 1000), reading: g, verdict: "pass", timely: true, at_buy: "reading", by: { [r.family]: { pass: true } } };
-    this.store?.saveEntry(e); K.bought++; rec.out = "BOUGHT (paper), entry " + e.id; rec.entry = e.id; this.note(K, rec);
+    this.store?.saveEntry(e); K.bought++; rec.out = "BOUGHT (paper), entry " + e.id; rec.entry = e.id; this.note(K, rec, r.family);
   }
   /** for the status report and the page */
-  status() { const q = this.quoter?.stats || {}; return { on: true, rules: this.rules, look_s: S.NEW_LOOK_S, waiting: this.young.size, in_flight: this.inflight.size, quotes: { ok: q.quotesOk || 0, no_route: q.noRoute || 0, errors: q.quoteErr || 0, watched: this.quoter?.watch.size ?? 0 }, ...this.stats }; }
-  start() { const loop = async () => { while (!this.stopped) { const t0 = Date.now(); try { await this.look(); await this.check(); this.save(); } catch (e) { this.log("[new coins] " + e.message); } await new Promise((r) => setTimeout(r, Math.max(1000, S.NEW_LOOK_S * 1000 - (Date.now() - t0)))); } }; loop(); }
+  status() { const q = this.quoter?.stats || {}; return { on: true, rules: this.rules, top_pre: S.NEW_TOP_PRE, look_s: S.NEW_LOOK_S, waiting: this.young.size, in_flight: this.inflight.size, quotes: { ok: q.quotesOk || 0, no_route: q.noRoute || 0, errors: q.quoteErr || 0, watched: this.quoter?.watch.size ?? 0 }, runner: { ...this.runner }, logged: this.history.length, ...this.stats }; }
+  start() { const loop = async () => { while (!this.stopped) { const t0 = Date.now(); try { await this.look(); await this.check(); if (this.now() - this.lastRunner >= S.NEW_RUNNER_S - 1) { this.lastRunner = this.now(); await this.runnerPass(); } this.save(); } catch (e) { this.log("[new coins] " + e.message); } await new Promise((r) => setTimeout(r, Math.max(1000, S.NEW_LOOK_S * 1000 - (Date.now() - t0)))); } }; loop(); }
 }

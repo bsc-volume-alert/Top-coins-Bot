@@ -119,10 +119,10 @@ else if (process.env.OLDER_SOLANA_WIDE === "1") {
 }
 // ---- NEW-COIN BOOKS: the look / measure / buy loop, and a quote reader OF THEIR OWN that does nothing but price their open
 // buys — no discovery, no price sampling (the Solana-wide adapter, when it is on, keeps its own list and never samples these
-// coins). A buy whose every row is sold is still priced once a minute for its 24-hour high (OLDER_RUNNER_QUOTE_S).
+// coins). A buy whose every row is sold is followed for its 24-hour high through batched token data, not quotes (spec NEW_RUNNER_S).
 let newcoins = null;
 if (NEWCOINS) { const { NewCoins } = await import("./newcoin.mjs");
-  const own = engine.onOwnership, quoter = new Poller({ engine, jup: J, store, log, quoteFast: Number(process.env.OLDER_QUOTE_FAST_S || 2), quoteSlow: Number(process.env.OLDER_QUOTE_SLOW_S || 10), runnerEvery: Number(process.env.OLDER_RUNNER_QUOTE_S || 60) }); engine.onOwnership = own; // the adapter's own hook stays in place
+  const own = engine.onOwnership, quoter = new Poller({ engine, jup: J, store, log, quoteFast: Number(process.env.OLDER_QUOTE_FAST_S || 2), quoteSlow: Number(process.env.OLDER_QUOTE_SLOW_S || 10), runnerEvery: Infinity }); engine.onOwnership = own; // a buy whose every row is sold is not quoted at all: its 24-hour high is estimated from token data, all such buys in one request (newcoin.mjs, runnerPass) // the adapter's own hook stays in place
   newcoins = new NewCoins({ engine, jup: J, quoter, store, log, file: process.env.OLDER_OUT ? `${process.env.OLDER_OUT}/newcoins-${process.env.OLDER_RUN_NAME || "run"}.json` : null,
     // ahead of the history repair, like the other books' readings, waiting out a short pause of the allowance; if that request
     // cannot be sent or is refused, ONE ordinary queued request follows (the coin is bought only if it answers within NEW_GMGN_WAIT_S)
@@ -160,7 +160,8 @@ if (process.env.OLDER_OUT && !process.env.OLDER_RUN_MINUTES) {
       // older-11: the provider reading the owner's gates were judged on (fractions 0–1; fees in SOL), its verdict and how long it took
       ...(e.gate ? { gate: { v: e.gate.verdict ?? null, ms: e.gate.ms ?? null, late: e.gate.late || undefined, timely: e.gate.timely || undefined, by: e.gate.by ? Object.fromEntries(Object.entries(e.gate.by).map(([f, x]) => [f, x.pass ? 1 : 0])) : undefined, retried: e.gate.retried || undefined, rule: e.gate.rule ?? undefined, err: e.gate.error ?? undefined, fails: e.gate.fails ?? undefined, dropped: e.gate.dropped ? Object.keys(e.gate.dropped) : undefined, opt: e.gate.options ?? undefined,
         ...(e.gate.reading ? { top10: e.gate.reading.top10, bund: e.gate.reading.bundlers, ins: e.gate.reading.insiders, snip: e.gate.reading.snipers, fees: e.gate.reading.fees_sol, tw: e.gate.reading.twitter == null ? null : !!e.gate.reading.twitter, ath: e.gate.reading.ath_usd == null ? null : Math.round(e.gate.reading.ath_usd), holders: e.gate.reading.holders } : {}) } } : {}) }; });
-  const dump = () => { try { for (const pop of ["", "pumpswap-canonical", "solana-wide"]) writeFileSync(`${dir}/state${pop ? "-" + pop : ""}.json`, JSON.stringify(web.state(pop))); writeFileSync(`${dir}/entries.json`, JSON.stringify({ at: Date.now(), commit: COMMIT, run: process.env.OLDER_RUN_NAME || null, entries: compact() })); } catch (e) { log("[pub] " + e.message); } };
+  const dump = () => { try { for (const pop of ["", "pumpswap-canonical", "solana-wide"]) writeFileSync(`${dir}/state${pop ? "-" + pop : ""}.json`, JSON.stringify(web.state(pop))); writeFileSync(`${dir}/entries.json`, JSON.stringify({ at: Date.now(), commit: COMMIT, run: process.env.OLDER_RUN_NAME || null, entries: compact() }));
+      if (newcoins) writeFileSync(`${dir}/newcoins.json`, JSON.stringify({ at: Date.now(), commit: COMMIT, run: process.env.OLDER_RUN_NAME || null, note: "every measurement of a new coin over the market-cap line, newest last (the last " + newcoins.history.length + "); ok = Jupiter-side rules, fees / top10 = the GMGN reading when one was asked for", records: newcoins.history })); } catch (e) { log("[pub] " + e.message); } };
   setTimeout(dump, 60000); setInterval(dump, 300000);
 }
 

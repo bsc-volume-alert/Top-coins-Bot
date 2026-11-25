@@ -406,6 +406,11 @@ export class Engine {
     try { this.onEntry(e, c); } catch {}
     return e;
   }
+  /** NEW-COIN BOOKS: the value of a buy whose every row is sold, ESTIMATED from the provider's price (spec NEW_RUNNER_S) — it
+   *  only feeds the 24-hour "how high did it go" measurement of that buy, never a peak, a stop or a sale. x = value / cost. */
+  runnerEstimate(id, x, t) { const e = this.entries.get(id); if (!e || e.status !== "filled" || !(x >= 0) || !isFinite(x) || exposure(e) !== 0 || manualOpen(e)) return false; const age = t - e.fill.t; if (age > S.RUNNER_HORIZON_S || e.runner.horizonDone) return false;
+    e.runner.est = true; e.runner.estT = t; e.runner.lastX = +x.toFixed(4); let ch = false; if (x > e.runner.maxX) { e.runner.maxX = x; e.runner.maxEst = true; ch = true; } for (const k of S.RUNNER_X) if (x >= k && !e.runner.reached[k]) { e.runner.reached[k] = Math.round(age); ch = true; }
+    if (ch) this.dirty.add(e.id); return true; }
   /** rows (exit policy | stop) each book currently holds on this coin: Map(family → Set). null when the coin has no unfinished entry. */
   _busy(mint) {
     const ids = this.byMint.get(mint); if (!ids?.size) return null; const m = new Map();
