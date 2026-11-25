@@ -39,6 +39,8 @@ export class Store {
    *  returned by the provider but NOT used). It never overwrites a live row. Nothing reads these rows back into decisions. */
   saveBackfillBar(mint, m, b, accepted) { this.q.barBf.run(mint, m, b.o, b.h, b.l, b.c, b.v || 0, b.nb || 0, b.ns || 0, 0, accepted ? "backfill" : "backfill-rejected"); }
   saveDecision(mint, ag, family, t, entryId, detail) { this.q.dec.run(mint, ag, family, t, entryId, JSON.stringify(detail ?? null)); }
+  /** older-11: a buy cancelled for want of a provider reading does not use up the book's one buy (engine._giveBack): its marks go */
+  dropDecisions(entryId) { return this.db.prepare("DELETE FROM decisions WHERE entry_id = ?").run(entryId).changes; }
   saveNote(mint, n) { this.q.note.run(mint, n.ag, n.family, n.t, n.reason, JSON.stringify(n.detail ?? null)); if (n.family === "SLOW-BUILD" || n.family === "LOW4H-LIQ25K" || (n.family === "SECOND-WAVE" && n.reason !== "window not covered")) this.q.dec.run(mint, n.ag, n.family, n.t, null, JSON.stringify({ rejected: n.reason, ...n.detail })); }
   saveEntry(e) { const done = e.status === "cancelled" || (e.status === "filled" && e.versions.every((v) => v.status === "closed") && e.runner.horizonDone) ? 1 : 0; this.q.ent.run(e.id, e.mint, e.status, done, e.decisionT, JSON.stringify(e)); }
   /** `pumpOrigin` column = launchpad/origin label; `info` = the launchpad-neutral record (venues, token program, sources, mode, risk…) */
@@ -56,7 +58,7 @@ export class Store {
     for (const r of this.db.prepare("SELECT mint, pool, create_ts, info FROM coins").iterate()) { const info = r.info ? JSON.parse(r.info) : null; engine.coin(r.mint, { pool: r.pool, createTs: r.create_ts, info, mode: info?.monitoring_mode === "polled" ? "polled" : null }); }
     // 2) one-entry flags. First RECONCILE: every stored entry must have its flags (an entry written by a version that did not
     //    commit the two together, or carried in by a migration, may lack them) — otherwise the same book could buy the coin again.
-    this.tx(() => { for (const r of this.db.prepare("SELECT id, json FROM entries").all()) { const e = JSON.parse(r.json); for (const f of e.families || []) this.q.dec.run(e.mint, e.ag, f, e.decisionT, e.id, JSON.stringify((e.cands || []).find((c) => c.family === f)?.detail ?? null)); } });
+    this.tx(() => { for (const r of this.db.prepare("SELECT id, json FROM entries").all()) { const e = JSON.parse(r.json); if (e.attempt_returned) continue; /* its marks were taken back on purpose (no provider reading) */ for (const f of e.families || []) this.q.dec.run(e.mint, e.ag, f, e.decisionT, e.id, JSON.stringify((e.cands || []).find((c) => c.family === f)?.detail ?? null)); } });
     for (const r of this.db.prepare("SELECT mint, ag, family FROM decisions").iterate()) engine.restoreDone(r.mint, r.ag, r.family);
     // 3) unfinished entries (pending, open, or with a sale still waiting for a price)
     const maxId = this.db.prepare("SELECT MAX(id) m FROM entries").get().m || 0;

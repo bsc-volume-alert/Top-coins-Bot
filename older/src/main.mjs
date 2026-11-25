@@ -99,7 +99,8 @@ setInterval(() => { const n = store.retention(Date.now() / 1000); if (n) log(`[r
 // ---- Solana-wide adapter (launchpad- and exchange-neutral): sampled prices + routed quotes through Jupiter. Off unless OLDER_SOLANA_WIDE=1.
 const { Poller } = await import("./polled.mjs"); const { classifyMintAccount, TOKEN_2022 } = await import("./risk.mjs"); const { rpc } = await import("./feed.mjs");
 let poller = null;
-if (process.env.OLDER_SOLANA_WIDE === "1") {
+if (process.env.OLDER_SOLANA_WIDE === "1" && engine.gates) log("[older] Solana-wide adapter NOT started: this run uses the owner's gates, which are applied on the live method only — a sampled coin is never bought ungated");
+else if (process.env.OLDER_SOLANA_WIDE === "1") {
   poller = new Poller({ engine, jup: J, store, log, hotEvery: Number(process.env.OLDER_HOT_S || 10), coldEvery: Number(process.env.OLDER_COLD_S || 60), quoteFast: Number(process.env.OLDER_QUOTE_FAST_S || 2), quoteSlow: Number(process.env.OLDER_QUOTE_SLOW_S || 10) });
   log(`[older] sampled coins restored to the watch list: ${poller.restore()}`);
   poller.start();

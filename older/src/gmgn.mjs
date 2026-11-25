@@ -27,14 +27,21 @@ function slot(path) { const w = WEIGHT[path] ?? 3; const p = chain.then(async ()
       break; }
     next = Math.max(Date.now(), next) + (w / WPS) * 1000; }); chain = p.catch(() => {}); return p; }
 function note(r) { for (const [k, v] of r.headers) if (/ratelimit|quota|plan|tier/i.test(k)) gm.headers[k] = v; // limit evidence only — never auth headers
-  const rem = Number(r.headers.get("x-ratelimit-remaining")), rs = Number(r.headers.get("x-ratelimit-reset")); if (Number.isFinite(rem) && r.headers.get("x-ratelimit-remaining") != null) remaining = rem; if (rs > 1e9) resetAt = rs * 1000; }
+  const rem = Number(r.headers.get("x-ratelimit-remaining")), rs = Number(r.headers.get("x-ratelimit-reset")); // ONE SHARED COUNT for calls in flight: an answer to an earlier call reports the allowance as it was when THAT call was
+  // served; calls sent since are already counted here, so inside one window the lower figure stands. A new window (a later reset time) starts from the answer.
+  const has = Number.isFinite(rem) && r.headers.get("x-ratelimit-remaining") != null, newWin = rs > 1e9 && rs * 1000 > resetAt + 500;
+  if (has) remaining = newWin || remaining == null ? rem : Math.min(remaining, rem); if (rs > 1e9) resetAt = rs * 1000; }
 export const gmgnOn = () => !!KEY();
 export async function gcall(path, params = {}, { method = "GET", body = null, first = false, maxWaitMs = 0 } = {}) {
   if (!KEY()) throw new Error("no GMGN key configured");
   const t0 = Date.now();
-  if (first) { gm.first.calls++; const wait = pausedUntil - Date.now(); if (wait > maxWaitMs) { gm.first.not_sent++; throw new Error(`GMGN allowance exhausted for another ${(wait / 1000).toFixed(1)} s`); } if (wait > 0) await nap(wait);
+  // a reading is not sent into an allowance the provider has just reported as used up (review of bbe1115): it would be refused,
+  // and refusals are what the provider answers with longer bans. "Used up" = the units left after the calls sent since that
+  // report are fewer than this call's weight, and the reported reset time has not passed.
+  if (first) { gm.first.calls++; const now = Date.now(), w = WEIGHT[path] ?? 3, wait = Math.max(pausedUntil - now, remaining != null && remaining < w && now < resetAt ? resetAt - now : 0); if (wait > maxWaitMs) { gm.first.not_sent++; throw new Error(`GMGN allowance exhausted for another ${(wait / 1000).toFixed(1)} s`); } if (wait > 0) await nap(wait);
+    if (Date.now() >= resetAt) remaining = null; // the reported window is over: the allowance is not known until the next answer
     next = Math.max(Date.now(), next) + ((WEIGHT[path] ?? 3) / WPS) * 1000; if (remaining != null) remaining -= WEIGHT[path] ?? 3; }
-  else await slot(path);
+  else { await slot(path); if (remaining != null && Date.now() < resetAt) remaining -= WEIGHT[path] ?? 3; } // every call that is sent is counted against the last reported allowance, whichever kind it is
   gm.calls++;
   const q = new URLSearchParams({ ...(method === "GET" ? params : params.chain ? { chain: params.chain } : {}), timestamp: String(Math.floor(Date.now() / 1000)), client_id: randomUUID() });
   const r = await fetch(`${HOST}${path}?${q}`, { method, headers: { "X-APIKEY": KEY(), "Content-Type": "application/json" }, body: method === "POST" ? JSON.stringify(body ?? params) : undefined, signal: AbortSignal.timeout(15000) });

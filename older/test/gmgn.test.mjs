@@ -33,3 +33,11 @@ test("without a reserve the repair queue is exactly as before: in order, nothing
   install(); plan.push({ remaining: 1, resetInS: 5 }); const hb = gm.held_back; await gcall("/v1/token/info", { chain: "sol" }); await gcall("/v1/market/token_kline", { chain: "sol" }); assert.equal(calls.length, 2); assert.equal(gm.held_back, hb);
   plan.push({ body: { code: 40003, error: "BAD", message: "nope" } }); const err = await gcall("/v1/token/info", { chain: "sol" }).catch((e) => e.message); assert.ok(!/test-key/.test(err)); assert.equal(calls[2].key, "test-key");
 });
+test("review of bbe1115: a reading is not sent into an allowance the provider has just reported as used up, and calls in flight share one count", async () => {
+  install(); plan.push({ remaining: 0, resetInS: 15 }); // a successful answer that says: nothing left for about 15 s
+  await gcall("/v1/token/info", { chain: "sol" }); const n = calls.length, ns = gm.first.not_sent, t = Date.now();
+  await assert.rejects(tokenInfoFirst("MintX", 300), /allowance exhausted for another 1[345]\.\d s/); assert.ok(Date.now() - t < 100, "failed fast"); assert.equal(calls.length, n, "not sent: it would only have been refused"); assert.equal(gm.first.not_sent, ns + 1);
+  install(); plan.push({ remaining: 2, resetInS: 15 }); await gcall("/v1/token/info", { chain: "sol" }); // two units left
+  const a = tokenInfoFirst("A"), b = tokenInfoFirst("B"); await assert.rejects(tokenInfoFirst("C", 300), /allowance exhausted/, "the third finds the two units already taken by the readings still in flight");
+  await a; await b; assert.equal(calls.length, 3);
+});

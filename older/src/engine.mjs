@@ -66,7 +66,12 @@ export class Engine {
    *  update that has not arrived cannot be detected by this check; one good measurement does not prove every pool is
    *  synchronised — the chain checks (reduceTx continuity) and the entry verification remain the per-pool evidence.
    *  Not a rule about quiet pools: an old, unchanged pool state stays valid while other transactions keep the delay measured. */
-  tx(t, lagS = null, apply = null) { if (lagS != null) this._note(t, lagS); try { if (apply) apply(); } finally { this.txDone(t); } }
+  tx(t, lagS = null, apply = null) { if (lagS != null) this._note(t, lagS);
+    // UNKNOWN IS NOT CURRENT, PER TRANSACTION (review of 2328675, finding 2): a transaction whose own delay could not be measured
+    // installs its pool states (the chain of reserves must stay continuous) and nothing else — its observations create no price
+    // history, no signal, no peak and no stop, exactly like an observation on a stream that is not current. It never borrows
+    // the freshness of another transaction. The next MEASURED transaction is judged on its own evidence.
+    const un = lagS == null && !!apply; if (un) this._unmeasured = true; try { if (apply) apply(); } finally { if (un) this._unmeasured = false; this.txDone(t); } }
   /** a transaction that carries freshness evidence only (no state of a pool we follow) */
   noteLag(t, lagS) { this.tx(t, lagS); }
   _interrupt(from, kind, why) { const L = this.stream; L.open = kind === "late" ? from - 1e-6 : from; L.kind = kind; L.need = kind === "connect" ? 0 : S.FEED_MAX_LAG_S; L.goodSince = null; L.promote = false; L.diag.spells[kind]++; this.stats.lateSpells = L.diag.spells.late; this.stats.silences = L.diag.spells.silence;
@@ -111,23 +116,28 @@ export class Engine {
    *  are already filled are never cancelled here; a later change is recorded on them (riskUpdated). Returns true if cancelled. */
   _blocked(e, c, was, sig, ids, t = null) { if (e.exec === "routed-quote" || e.status !== "pending") return false; const bad = liveBlock(c.info);
     if (!bad) { const why = e.gate && t != null && t >= e.schedT ? this._gate(e) : null; if (!why) return false; // older-11: the owner's gates, decided once, at the time of the buy
-      e.status = "cancelled"; e.flags.push("cancelled before the buy: " + why); this._after(e, was, sig, ids, c); return true; }
+      e.status = "cancelled"; e.flags.push("cancelled before the buy: " + why); if (e.gate.verdict === "no reading") this._giveBack(e, c); this._after(e, was, sig, ids, c); return true; }
     e.status = "cancelled"; e.flags.push(`cancelled before the buy: the coin's transfer restrictions changed between the decision and the fill — now ${bad}`); this.stats.cancelledAtFill = (this.stats.cancelledAtFill || 0) + 1; this._after(e, was, sig, ids, c); return true; }
   /** older-11 — ask the provider for the coin's reading at the buy signal. Never awaited: the answer is stored on the entry with
    *  the time it arrived, and _gate reads whatever is there at the time of the buy. */
   _gateAsk(e, mint, t) {
-    const g = (e.gate = { req_t: t, resp_t: null }), G = (this.stats.gate ||= { asked: 0, answered: 0, errors: 0, late: 0, passed: 0, failed: 0, no_reading: 0, ms_sum: 0, ms_max: 0, fails: {} }); G.asked++;
+    const g = (e.gate = { req_t: t, resp_t: null }), G = this._G(); G.asked++; const supply = this.coins.get(mint)?.state?.supply ?? null; // the coin's supply as the chain reported it with the latest swap (for the all-time-high market cap)
     const done = (fill) => { g.resp_t = this.clock(); g.ms = Math.max(0, Math.round((g.resp_t - g.req_t) * 1000)); fill(); G.ms_sum += g.ms; if (g.ms > G.ms_max) G.ms_max = g.ms;
-      if (g.verdict && g.verdict !== "pass" && g.verdict !== "fail") { g.late = true; G.late++; } // it arrived after the buy had been decided without it: kept as a record only
+      if (g.verdict && g.verdict !== "pass" && g.verdict !== "fail" && !g.late) { g.late = true; G.late++; } // it arrived after the buy had been decided without it: kept as a record only
       this.store?.saveEntry(e); };
     let p; try { p = this.readGate ? Promise.resolve(this.readGate(mint)) : Promise.reject(new Error("no reader configured")); } catch (err) { p = Promise.reject(err); }
-    p.then((info) => done(() => { g.reading = parseInfo(info); G.answered++; }), (err) => done(() => { g.error = String(err?.message || err).slice(0, 160); G.errors++; }));
+    p.then((info) => done(() => { g.reading = parseInfo(info, supply); G.answered++; }), (err) => done(() => { g.error = String(err?.message || err).slice(0, 160); G.errors++; }));
   }
   /** older-11 — the gate verdict for a pending buy whose time has come (called from _blocked, once per entry). Returns null if
    *  the buy may go ahead for at least one of its books (books that fail are taken off the entry and recorded in gate.dropped),
    *  or the reason for cancelling it. A reading counts only if it had arrived by the scheduled buy (+ GATE_WAIT_S). */
   _gate(e) {
-    const g = e.gate; if (g.verdict) return null; const G = this.stats.gate, by = e.schedT + S.GATE_WAIT_S;
+    // FAIL CLOSED (review of bbe1115, finding 4): only an explicit "pass" lets a buy through. Any other verdict already on the
+    // entry — set before a restart, or by a call that was interrupted — cancels it. The counters exist whether or not this
+    // process has asked for a reading itself (a pending buy restored from the database arrives here without one).
+    const g = e.gate, G = this._G(), by = e.schedT + S.GATE_WAIT_S;
+    if (g.verdict) return g.verdict === "pass" ? null : g.verdict === "fail" ? "the owner's gates: " + (g.fails || []).join("; ") : "no provider reading had arrived by the time of the buy (not treated as zero)";
+    if (g.resp_t != null && g.resp_t > by && !g.late) { g.late = true; G.late++; } // it did arrive, but after the time of the buy: labelled late whenever that is found out
     if (g.resp_t == null || g.resp_t > by) { g.verdict = "no reading"; G.no_reading++; return g.resp_t == null ? "no provider reading had arrived by the time of the buy (not treated as zero)" : `the provider reading arrived ${(g.resp_t - e.schedT).toFixed(2)} s after the time of the buy`; }
     if (!g.reading) { g.verdict = "no reading"; G.no_reading++; return `the provider reading failed (${g.error || "no answer"}) — not treated as zero`; }
     const res = new Map(e.families.map((f) => [f, judge(g.reading, this.gates, f)])), ok = e.families.filter((f) => res.get(f).pass);
@@ -138,6 +148,15 @@ export class Engine {
     if (ok.length < e.families.length) { g.dropped = Object.fromEntries(e.families.filter((f) => !res.get(f).pass).map((f) => [f, why(f)])); e.families = ok; e.flags.push("books taken off this buy by their gates: " + Object.entries(g.dropped).map(([f, w]) => `${f} (${w.join("; ")})`).join(", ")); }
     g.verdict = "pass"; G.passed++; return null;
   }
+  _G() { return (this.stats.gate ||= { asked: 0, answered: 0, errors: 0, late: 0, passed: 0, failed: 0, no_reading: 0, attempts_returned: 0, held: 0, ms_sum: 0, ms_max: 0, fails: {} }); }
+  /** older-11, owner's decision 25 Nov 2026 11:30 UK: a buy cancelled because NO READING arrived in time (the provider refused,
+   *  failed or answered late — never the coin's fault) does not use up the book's one buy of that coin. The book's mark for the
+   *  coin and age group is taken back, in memory and in the database, and the cancelled entry says so. What it may then buy on
+   *  is a FRESH signal, not the old one: the book is held on this coin until its rule has been seen NOT firing once (_decide),
+   *  so a rule that stays true from one trade to the next (a volume level, a run of new highs) cannot re-ask on every trade.
+   *  A coin that FAILED the gates keeps its mark: that is a decision about the coin, unchanged. */
+  _giveBack(e, c) { const g = c.groups?.[e.ag]; for (const f of e.families) { if (g?.done) delete g.done[f]; (c.gateHold ||= {})[e.ag + "|" + f] = true; }
+    e.attempt_returned = true; e.flags.push("no reading from the provider: this does not count as the book's one buy of this coin — it may buy on a fresh signal later"); this._G().attempts_returned++; this.store?.dropDecisions?.(e.id); }
   /** the stream is current again at t. For each open live position whose pool state is trusted now:
    *    1. its DUE CLOCK TRANSITIONS are run first (advance): a maximum-hold or clock-book deadline that passed during the
    *       interruption is triggered at its own time, exactly as a tick would have done — the clock may have been held up
@@ -148,7 +167,8 @@ export class Engine {
    *  Both steps go through the same eligibility gate (_blocked) and the same trust test as every other path. */
   _revalue(t) { for (const [mint, ids] of this.byMint) { if (!ids.size) continue; const c = this.coins.get(mint); if (!c || c.mode === "polled" || !this.trustedAt(c, t)) continue;
     for (const id of [...ids]) { const e = this.entries.get(id); if (!e || e.exec === "routed-quote") continue; const was = e.status, sig = e.versions.map((v) => v.status).join(); if (this._blocked(e, c, was, sig, ids, t)) continue;
-      const mut = advance(e, t, c.state, (at) => this.trustedAt(c, at), this.feedCov); observe(e, c.state, t, this.feedCov); this._after(e, was, sig, ids, c, mut); } } }
+      advance(e, t, c.state, (at) => this.trustedAt(c, at), this.feedCov); observe(e, c.state, t, this.feedCov);
+      this._after(e, was, sig, ids, c, true); } } } // a price WAS observed here: a peak raised by the recovery is check-pointed like any other (review of 2328675, finding 1 — it used to be saved only if advance() had changed something, so a crash could lose the recovered high)
   /** the risk reader read this coin's mint account: a fee or restriction found on a coin already HELD on the live method is
    *  recorded on the position. The position, its exits and any unresolved exposure stay exactly as they are — nothing is
    *  deleted and no sale is invented. (A pending live buy is cancelled by _run.) */
@@ -235,6 +255,7 @@ export class Engine {
     // STREAM NOT CURRENT (late, or its delay unknown — see noteLag): the state above is kept, nothing else is done with this
     // observation: no valuation, peak or stop, no price history, no signal.
     if (!ev.replay && !this.freshAt(ev.t)) { this.stats.lateEvents = (this.stats.lateEvents || 0) + 1; return; }
+    if (!ev.replay && this._unmeasured) { this.stats.unmeasuredEvents = (this.stats.unmeasuredEvents || 0) + 1; return; } // this transaction's own delay is unknown (see tx)
     // 3) open positions see it (value, peaks, triggers) — in SOL, independent of the USD reference
     if (!ev.replay) { const ids = this.byMint.get(ev.mint); if (ids) for (const id of ids) { const e = this.entries.get(id); if (e.exec === "routed-quote") continue; const was = e.status, sig = e.versions.map((v) => v.status).join(); if (this._blocked(e, c, was, sig, ids, ev.t)) continue; observe(e, st, ev.t, this.feedCov); this._after(e, was, sig, ids, c); } }
     // 4) USD history and signals
@@ -259,7 +280,10 @@ export class Engine {
   setBooks(list) { const on = new Set(list); this.inactive = new Set(S.FAMILIES.filter((f) => !on.has(f))); this.books = [...on]; }
   /** shared: evaluate the families on one observation and open the (shared) entry */
   _decide(c, mint, o, opts, evidenceExtra, tags) {
-    if (this.entriesUntil != null && o.t >= this.entriesUntil) { this.stats.afterEntryWindow = (this.stats.afterEntryWindow || 0) + 1; return null; } // the entry window has closed: positions and runner tracking continue, nothing new is opened
+    if (this.entriesUntil != null && o.t >= this.entriesUntil) { this.stats.afterEntryWindow = (this.stats.afterEntryWindow || 0) + 1; return null; }
+    // EVERY BUY PASSES THE GATES (review of bbe1115, finding 3): the provider reading is asked for and judged on the live method
+    // only. With the gates on, a coin observed by sampling is therefore not entered at all — never bought ungated. Counted.
+    if (this.gates && tags?.exec === "routed-quote") { this.stats.sampledNotGated = (this.stats.sampledNotGated || 0) + 1; if (!c.gateNoted) { c.gateNoted = true; this.store?.saveNote(mint, { ag: null, family: "*", t: o.t, reason: "not evaluated for entry: the run's gates are not applied to coins observed by sampling", detail: {} }); } return null; } // the entry window has closed: positions and runner tracking continue, nothing new is opened
     // risk checks only stop entries whose EXECUTION assumption is unsupported (known transfer restrictions); they are not a quality filter
     if (c.info.risk?.status === "restricted") { if (!c.riskNoted) { c.riskNoted = true; this.stats.riskBlocked++; this.store?.saveNote(mint, { ag: null, family: "*", t: o.t, reason: "not evaluated for entry: token transfer restrictions make the execution assumption unsupported", detail: { risk: c.info.risk } }); } return null; }
     // a transfer-fee coin is entered only where the fee is modelled: the sampled method (the fee is taken off its routed quotes)
@@ -278,6 +302,10 @@ export class Engine {
     // older-11: a book that is not active in this run makes no new buy. Applied to the finished candidates, so every active book
     // has decided exactly as it would with all books active; the book's own once-per-age-group mark is left as evaluate set it.
     if (this.inactive.size && r.cands.length) { const n = r.cands.length; r.cands = r.cands.filter((x) => !this.inactive.has(x.family)); if (r.cands.length !== n) this.stats.inactiveCands = (this.stats.inactiveCands || 0) + (n - r.cands.length); }
+    // a book held on this coin after a buy that got no reading (_giveBack): released the first time its rule does not fire;
+    // while it keeps firing without a break the candidate is dropped and the book's mark is taken back again
+    if (c.gateHold) { const fired = new Set(r.cands.map((x) => x.ag + "|" + x.family)); for (const k of Object.keys(c.gateHold)) if (!fired.has(k)) delete c.gateHold[k];
+      if (!Object.keys(c.gateHold).length) c.gateHold = null; else r.cands = r.cands.filter((x) => { if (!c.gateHold[x.ag + "|" + x.family]) return true; const g = c.groups?.[x.ag]; if (g?.done) delete g.done[x.family]; this._G().held++; return false; }); }
     if (!r.cands.length) return null;
     this.stats.cands += r.cands.length;
     const evidence = { ...r.evidence, ...evidenceExtra }; evidence.trigger.eval_t = Date.now() / 1000;

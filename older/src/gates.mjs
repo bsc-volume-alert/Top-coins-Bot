@@ -16,14 +16,31 @@
 // Nothing here decides alone: engine.mjs applies the verdict to a pending buy at the time of the buy (see _gate).
 import { CLOCK } from "./spec.mjs";
 
-export const num = (v) => (v == null || v === "" || typeof v === "boolean" || !Number.isFinite(Number(v)) ? null : Number(v));
+// A figure is a number, or text that is a plain decimal number. Anything else — a list, an object, true / false, text that is
+// not a number — is UNKNOWN, never coerced (review of bbe1115: Number([]) is 0, so an empty list used to read as "0%").
+export const num = (v) => (typeof v === "number" ? (Number.isFinite(v) ? v : null) : typeof v === "string" && /^\s*[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?\s*$/.test(v) ? Number(v) : null);
+export const PUMP_SUPPLY = 1e9; // a pump.fun coin is created with 1,000,000,000 tokens and can only burn from there
 /** the figures the gates use, plus what is recorded beside them. `info` is the provider's answer object. */
-export function parseInfo(info) {
-  const st = info?.stat ?? null, link = info?.link ?? null, w = info?.wallet_tags_stat ?? null, ath = num(info?.ath_price);
+/** ALL-TIME-HIGH MARKET CAP (review of bbe1115, finding 5). The provider gives the highest PRICE. A market cap needs a supply,
+ *  and none is assumed: `supply` is what the chain reported with the coin's latest swap; failing that, the provider's own
+ *  total supply. The figure used is price × that supply, and only when the supply is no more than a pump.fun coin's initial
+ *  1,000,000,000 — such a coin can only have burned tokens since its high, so the result is a LOWER bound of the true figure
+ *  (never an overstatement; a few per cent under the provider's website figure, which multiplies by the full billion, when
+ *  tokens have been burned). No supply evidence, or a supply above the initial one (tokens were minted): UNKNOWN — which fails
+ *  the "$100K" gate as missing. The basis is recorded with the reading. */
+export function athUsd(athPrice, supplyChain, supplyProvider) {
+  const s = supplyChain > 0 ? supplyChain : supplyProvider > 0 ? supplyProvider : null, src = supplyChain > 0 ? "chain (latest swap)" : supplyProvider > 0 ? "provider total_supply" : null;
+  if (athPrice == null) return { usd: null, basis: "no all-time-high price in the reading" };
+  if (s == null) return { usd: null, basis: "no supply evidence" };
+  if (s > PUMP_SUPPLY * (1 + 1e-6)) return { usd: null, basis: `supply ${Math.round(s)} (${src}) is above 1,000,000,000: tokens were minted, the market cap at the high is not established` };
+  return { usd: athPrice * s, basis: `highest price × supply ${Math.round(s)} (${src}) — a lower bound` };
+}
+export function parseInfo(info, supplyChain = null) {
+  const st = info?.stat ?? null, link = info?.link ?? null, w = info?.wallet_tags_stat ?? null, ath = athUsd(num(info?.ath_price), num(supplyChain), num(info?.total_supply));
   const tw = link && typeof link.twitter_username === "string" ? link.twitter_username.trim() : null; // link block absent = unknown; "" = known: none
   return {
     top10: num(st?.top_10_holder_rate), bundlers: num(st?.top_bundler_trader_percentage), insiders: num(st?.top_rat_trader_percentage), snipers: num(st?.top70_sniper_hold_rate),
-    fees_sol: num(info?.total_fee), twitter: tw, ath_usd: ath != null ? ath * 1e9 : null,
+    fees_sol: num(info?.total_fee), twitter: tw, ath_usd: ath.usd, ath_basis: ath.basis, ath_price: num(info?.ath_price),
     // recorded, not gated (owner: "everything else recorded with time since these figures change")
     trade_fee_sol: num(info?.trade_fee), holders: num(info?.holder_count ?? st?.holder_count), dev_hold: num(st?.dev_team_hold_rate), creator_hold: num(st?.creator_hold_rate),
     creator_status: info?.dev?.creator_token_status ?? null, sniper_wallets: num(w?.sniper_wallets), insider_wallets: num(w?.rat_trader_wallets), bundler_wallets: num(w?.bundler_wallets),

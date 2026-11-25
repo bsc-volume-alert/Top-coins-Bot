@@ -22,7 +22,7 @@ test("DIP15K is not bought: without a watched $100K peak; when the coin falls th
   const L = mk(null); fall(L, [120_000, 60_000, 16_000, 14_000]); assert.equal(dips(L).length, 0, "legacy run: the book is off"); assert.ok(L.stats.inactiveCands >= 1);
 });
 test("DIP15K with the owner's gates: the provider's all-time high stands in for the watched peak, and decides at the buy", async () => {
-  const mkG = (ath) => { const e = mk(); e.gates = S.GATES_11; let now = T0; e.clock = () => now; const info = { ath_price: ath, total_fee: "20", link: { twitter_username: "x/status/1" }, stat: { top_10_holder_rate: "0.22", top_bundler_trader_percentage: "0.1", top_rat_trader_percentage: "0.05", top70_sniper_hold_rate: "0.01" } };
+  const mkG = (ath) => { const e = mk(); e.gates = S.GATES_11; let now = T0; e.clock = () => now; const info = { ath_price: ath, total_supply: "1000000000", total_fee: "20", link: { twitter_username: "x/status/1" }, stat: { top_10_holder_rate: "0.22", top_bundler_trader_percentage: "0.1", top_rat_trader_percentage: "0.05", top70_sniper_hold_rate: "0.01" } };
     e.readGate = () => Promise.resolve(info); e.at = (t) => { now = t; return new Promise((r) => setImmediate(r)); }; return e; };
   const a = mkG(0.00025); fall(a, [80_000, 40_000, 16_000]); await a.at(T0 + 60.2); swap(a, T0 + 61, 14_000); await a.at(T0 + 61.3);
   const d = dips(a); assert.equal(d.length, 1, "peak watched was only $80K, but the gates are on"); assert.equal(d[0].cands[0].detail.peak_evidence, "provider all-time high (tested at the buy)");

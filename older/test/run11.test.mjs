@@ -30,7 +30,7 @@ test("the site of a run that chose its books shows ONLY those books; FEE-COINS o
 
 test("the provider reading a buy was judged on is on its row of the page", () => {
   const e = mkEngine(); e.feedUp(T0); e.coin(M, { pool: "PoolA", createTs: T0 - 20 * H }); e.setBooks(S.booksOf("older-11")); e.gates = S.GATES_11; e.clock = () => T0 + 610.2;
-  e.readGate = async () => ({ stat: { top_10_holder_rate: 0.22, top_bundler_trader_percentage: 0.06, top_rat_trader_percentage: 0.03, top70_sniper_hold_rate: 0.02 }, total_fee: 64.5, link: { twitter_username: "x" }, ath_price: 0.0005, holder_count: 1234 });
+  e.readGate = async () => ({ stat: { top_10_holder_rate: 0.22, top_bundler_trader_percentage: 0.06, top_rat_trader_percentage: 0.03, top70_sniper_hold_rate: 0.02 }, total_fee: 64.5, link: { twitter_username: "x" }, ath_price: 0.0005, total_supply: 1e9, holder_count: 1234 });
   path(e, T0, T0 + 600, () => 100_000, 20); swap(e, T0 + 610, 205_000); const en = [...e.entries.values()][0]; assert.ok(en && en.status === "pending", "the signal opened a pending buy");
   return new Promise((res) => setImmediate(() => { swap(e, T0 + 612, 205_000); swap(e, T0 + 615, 205_000); // the reading arrived 0.2 s after the signal; the buy is 1 s after it
     assert.equal(en.status, "filled", en.flags.join("; ")); assert.equal(en.gate.verdict, "pass");

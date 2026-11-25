@@ -13,7 +13,7 @@ const good = (o = {}) => { const j = JSON.parse(JSON.stringify(REAL)); j.stat.to
 
 test("parseInfo reads the provider's real answer: fractions, fees in SOL, a tweet as the Twitter link, all-time high as a market cap; anything absent is unknown, not zero", () => {
   const r = parseInfo(REAL); assert.equal(r.top10, 0.2281); assert.equal(r.bundlers, 0.0344); assert.equal(r.insiders, 0); assert.equal(r.snipers, 0.0217269507);
-  assert.ok(Math.abs(r.fees_sol - 64.5597) < 1e-3); assert.equal(r.twitter, "_numanuk/status/2109033918683111935"); assert.ok(Math.abs(r.ath_usd - 192521.05) < 0.01); assert.equal(r.holders, 484); assert.equal(r.bundler_wallets, 490);
+  assert.ok(Math.abs(r.fees_sol - 64.5597) < 1e-3); assert.equal(r.twitter, "_numanuk/status/2109033918683111935"); assert.ok(Math.abs(r.ath_usd - 185890.12) < 0.01, "highest price × the supply in the reading (965.6M after burns): a lower bound, not × a full billion"); assert.match(r.ath_basis, /provider total_supply/); assert.equal(r.holders, 484); assert.equal(r.bundler_wallets, 490);
   const e = parseInfo({}); for (const k of ["top10", "bundlers", "insiders", "snipers", "fees_sol", "twitter", "ath_usd"]) assert.equal(e[k], null, k + " unknown");
   assert.equal(parseInfo({ stat: { top_10_holder_rate: "" }, link: { twitter_username: "" } }).top10, null, "an empty string is unknown"); assert.equal(parseInfo({ link: { twitter_username: " " } }).twitter, "", "a link block with no Twitter = known: none");
 });
@@ -24,7 +24,7 @@ test("judge with the owner's settings: the real coin fails on bundlers and insid
   assert.equal(J({ stat: { top_10_holder_rate: "0.18" } }).pass, true, "18% is inside"); assert.equal(J({ stat: { top_10_holder_rate: "0.1799" } }).pass, false); assert.equal(J({ stat: { top_10_holder_rate: "0.30" } }).pass, true); assert.equal(J({ stat: { top_10_holder_rate: "0.3001" } }).pass, false);
   assert.equal(J({ stat: { top70_sniper_hold_rate: "0.0499" } }).pass, true); assert.equal(J({ stat: { top70_sniper_hold_rate: "0.05" } }).pass, false, "5% is not under 5%");
   assert.equal(J({ total_fee: "5" }).pass, true); assert.deepEqual(J({ total_fee: "4.99" }).fails, ["total fees 4.99 SOL: below 5 SOL"]);
-  assert.deepEqual(J({ link: { twitter_username: "" } }).fails, ["no Twitter link"]); assert.deepEqual(J({ ath_price: 0.00009 }).fails, ["all-time high $90K: has not reached $100K"]);
+  assert.deepEqual(J({ link: { twitter_username: "" } }).fails, ["no Twitter link"]); assert.deepEqual(J({ ath_price: 0.00009 }).fails, ["all-time high $87K: has not reached $100K"]);
   // the second options: bundlers 6% is outside the main range (7–50%) but inside the second (5–20%) — bought and tagged
   const b6 = J({ stat: { top_bundler_trader_percentage: "0.06" } }); assert.equal(b6.pass, true); assert.equal(b6.options.bundlers_main, false); assert.equal(b6.options.bundlers_second, true);
   const i30 = J({ stat: { top_rat_trader_percentage: "0.30" } }); assert.equal(i30.pass, true); assert.equal(i30.options.insiders_main, false); assert.equal(i30.options.insiders_second, true);
