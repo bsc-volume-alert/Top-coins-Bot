@@ -14,8 +14,8 @@ import { Series } from "./series.mjs";
 /** token decimals are needed to convert quote sizes: null, undefined or a non-integer is NOT valid (note: `null >= 0` is true in JavaScript) */
 export const validDec = (d) => Number.isInteger(d) && d >= 0 && d <= 18;
 export class Poller {
-  constructor({ engine, jup, store = null, now = () => Date.now() / 1000, log = () => {}, hotEvery = 10, coldEvery = 60, quoteFast = 2, quoteSlow = 10, runnerEvery = null, valuation = "jupiter mcap (circulating supply × price)" }) {
-    Object.assign(this, { engine, jup, store, now, log, hotEvery, coldEvery, quoteFast, quoteSlow, valuation }); this.runnerEvery = runnerEvery ?? quoteSlow; // runnerEvery: how often a buy whose every row is SOLD is still priced for its 24-hour high (default: like an open position, as always)
+  constructor({ engine, jup, store = null, now = () => Date.now() / 1000, log = () => {}, hotEvery = 10, coldEvery = 60, quoteFast = 2, quoteSlow = 10, runnerEvery = null, quoteBudget = S.QUOTE_BUDGET_PER_MIN, valuation = "jupiter mcap (circulating supply × price)" }) {
+    Object.assign(this, { engine, jup, store, now, log, hotEvery, coldEvery, quoteFast, quoteSlow, quoteBudget, valuation }); this.runnerEvery = runnerEvery ?? quoteSlow; // runnerEvery: how often a buy whose every row is SOLD is still priced for its 24-hour high (default: like an open position, as always)
     this.watch = new Map(); // mint → { decimals, circ, hot, lastT, lastReq, miss, mc }
     this.quoted = new Map(); // entry id → last quote request time
     this.held = new Map();   // entry id → Map(quantity → its latest quote, with that quote's own request/response times)
@@ -129,11 +129,16 @@ export class Poller {
     // wait for it — measured live 20 Nov 20:20–20:35 UK: three sampled buys were cancelled at the 5 s limit for exactly that reason.
     const needs = this.engine.quoteNeeds(now).filter((n) => which === "all" || (which === "urgent") === (pri(n) === 0));
     needs.sort((a, b) => pri(a) - pri(b) || (this.quoted.get(a.id) || 0) - (this.quoted.get(b.id) || 0));
+    // THE QUOTE BUDGET (spec QUOTE_BUDGET_PER_MIN): how often the OLDER open positions are looked at when everything does not fit
+    let oldEvery = this.quoteSlow; { let young = 0, old = 0; for (const nd of needs) { if (pri(nd) === 0 || nd.unresolved || nd.runner_only || nd.buy_sol) continue; const e = this.engine.entries.get(nd.id), sz = Math.max(1, nd.sells.length); if (e?.fill && now - e.fill.t < S.QUOTE_YOUNG_S) young += sz; else old += sz; }
+      const per = 60 / this.quoteSlow, budget = this.quoteBudget, left = Math.max(budget / 4, budget - young * per); if (old > 0 && (young + old) * per > budget) oldEvery = this.quoteSlow * Math.max(1, (old * per) / left);
+      this.stats.quoteSizes = young + old; this.stats.quoteYoung = young; this.stats.quoteOldEvery = +oldEvery.toFixed(1); if (oldEvery > (this.stats.quoteOldEveryMax || 0)) this.stats.quoteOldEveryMax = +oldEvery.toFixed(1); }
     let n = 0;
     for (const need of needs) {
       const last = this.quoted.get(need.id) || 0, urgent = pri(need) === 0;
       // a sale that has had no price for 24 h keeps asking, slowly (it is never abandoned): once every 10 minutes
-      const every = need.unresolved ? 600 : urgent ? Math.min(1, this.quoteFast) : need.runner_only ? this.runnerEvery : this.quoteSlow;
+      const fillT = this.engine.entries.get(need.id)?.fill?.t, isYoung = fillT != null && now - fillT < S.QUOTE_YOUNG_S;
+      const every = need.unresolved ? 600 : urgent ? Math.min(1, this.quoteFast) : need.runner_only ? this.runnerEvery : isYoung || need.buy_sol ? this.quoteSlow : oldEvery;
       if (this.now() - last < every) continue;
       const w = this.watch.get(need.mint); if (!w || !validDec(w.decimals)) { this.stats.quoteNoWatch = (this.stats.quoteNoWatch || 0) + 1; continue; } const dec = w.decimals; this.quoted.set(need.id, this.now());
       // TRANSFER FEE (spec XFER_FEE_MAX_BPS, XFER_FEE_IN_QUOTE): the coin keeps this share of every transfer. Measured on 22 Nov 2026

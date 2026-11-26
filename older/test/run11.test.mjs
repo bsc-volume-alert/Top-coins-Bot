@@ -19,12 +19,12 @@ const doubled = (ageH, set = () => {}) => { const e = mkEngine(); e.feedUp(T0); 
 
 test("the site of a run that chose its books shows ONLY those books; FEE-COINS only when it holds a buy; without a run everything is as before", () => {
   const e = doubled(20), all = [...e.entries.values()]; assert.ok(fams(e).includes("FAST-1M"), "the legacy run bought: " + fams(e));
-  const old = booksApi(all, { stop: 0.25 }); assert.equal(old.order.length, S.FAMILIES.length + 1); assert.equal(old.order.at(-1), S.FEE_BOOK); assert.equal(old.run, null); assert.equal(old.rows_total, 1656); assert.match(old.rules.VOL100K, /buys only in a run/);
+  const old = booksApi(all, { stop: 0.25 }); assert.equal(old.order.length, S.FAMILIES.length + 1); assert.equal(old.order.at(-1), S.FEE_BOOK); assert.equal(old.run, null); assert.equal(old.rows_total, 276 * S.STOPS.length); assert.match(old.rules.VOL100K, /buys only in a run/);
   const run = { name: "older11", books: S.booksOf("older-11"), gates: true, rebuy: false, min_age_h: 6, sampled: false }, j = booksApi(all, { stop: 0.25, run });
   assert.deepEqual(j.order, S.BOOKS_11, "the run's 13 books, nothing else — no empty FEE-COINS card"); assert.deepEqual(Object.keys(j.books).sort(), [...S.BOOKS_11].sort());
   assert.ok(j.books["FAST-1M"].length >= 1); assert.equal(j.books["FAST-10M"], undefined, "a book outside the run is not on the page even though the legacy engine bought for it");
   assert.deepEqual(j.run, { name: "older11", books: S.BOOKS_11, gates: true, gate_mode: "cancel", checks: "all", rebuy: false, min_age_h: 6, sampled: false, newcoins: false }); assert.doesNotMatch(j.rules.VOL100K + j.rules.DIP15K, /buys only in a run/);
-  assert.equal(j.rows_total, (7 * 4 + 6 * 5) * 6 * 2, "7 books in 4 age groups + 6 any-age books in 5, × 6 stops × 2 exits");
+  assert.equal(j.rows_total, (7 * 4 + 6 * 5) * S.STOPS.length * 2, "7 books in 4 age groups + 6 any-age books in 5, × the stops × 2 exits");
   const fee = JSON.parse(JSON.stringify(all[0])); fee.token.xfer_bps = 300; const jf = booksApi([fee], { stop: 0.25, run }); assert.equal(jf.order.at(-1), S.FEE_BOOK, "a fee-coin buy is never dropped from the page: its book appears when it has one"); assert.equal(jf.books[S.FEE_BOOK].length, 1);
 });
 
@@ -48,7 +48,7 @@ test("the 8-hour books from 6 hours: off by default (a 7-hour-old coin is not bo
   assert.deepEqual(fams(doubled(20, on)), fams(doubled(20)), "a coin over 8 hours old is decided exactly as without the setting");
   swap(e, T0 + 700, 80_000); swap(e, T0 + 702, 80_000); swap(e, T0 + 704, 80_000); // −60%: every stop up to 40% sells
   const rows = bookRows(en), r = rows.find((x) => x.family === "FAST-1M" && x.ag === "A0" && x.stop === 0.25 && x.policy === "trail");
-  assert.ok(r && r.filled === 1 && r.closed === 1, "the under-8-hour buy has its own row"); assert.equal(bookRows([]).length, 1656, "and no row is added when there is no such buy");
+  assert.ok(r && r.filled === 1 && r.closed === 1, "the under-8-hour buy has its own row"); assert.equal(bookRows([]).length, 276 * S.STOPS.length, "and no row is added when there is no such buy");
 });
 
 test("a new run's database is prepared from the previous one: coin identities and pools only — no buys, decisions or bars — and the previous database is not changed", () => {

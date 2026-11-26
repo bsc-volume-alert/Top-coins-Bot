@@ -74,7 +74,7 @@ test("a coin that passes all five rules at 5 minutes is paper-bought on a routed
   const w = world(); w.add(A, T0, { mc: 20_000, holders: 150, vol: 45_000 });
   w.t = T0 + 20; await w.pass(); w.t = T0 + 303; await w.pass();
   const K = w.nc.stats.checks["NEW-5M"]; assert.equal(K.candidates, 1); assert.equal(K.gmgn_ok, 1); assert.equal(K.fees, 1); assert.equal(K.top10, 1); assert.equal(K.passed_all, 1); assert.equal(K.bought, 1);
-  const [e] = w.entries("NEW-5M"); assert.ok(e); assert.equal(e.status, "pending"); assert.equal(e.ag, "A0"); assert.equal(e.pop, "new-coins"); assert.equal(e.exec, "routed-quote"); assert.equal(e.mode, "polled"); assert.equal(e.versions.length, 12, "six stops under both exit policies (50% added 26 Nov 2026)");
+  const [e] = w.entries("NEW-5M"); assert.ok(e); assert.equal(e.status, "pending"); assert.equal(e.ag, "A0"); assert.equal(e.pop, "new-coins"); assert.equal(e.exec, "routed-quote"); assert.equal(e.mode, "polled"); assert.equal(e.versions.length, 2 * S.STOPS.length, "every stop under both exit policies");
   assert.equal(Math.round(e.signalMc), 20_000); assert.equal(e.cands[0].detail.gmgn.fees_sol, 4); assert.equal(e.cands[0].detail.jupiter.holders, 150); assert.equal(e.cands[0].detail.rule.holders_min, 100);
   assert.equal(e.gate.verdict, "pass"); assert.equal(e.gate.by["NEW-5M"].pass, true); assert.equal(e.gate.reading.fees_sol, 4);
   await w.quoter.quotes(); assert.equal(e.status, "pending", "no quote before the scheduled time");
@@ -338,12 +338,12 @@ test("a coin still worth more than it cost two hours after the last sale — the
 });
 
 test("the 50% stop (owner 26 Nov 2026 07:01 UK): a new buy carries it between the 40% and the 60% row; a buy made before it keeps its five stops and the page counts the 50% view from its own start", async () => {
-  assert.deepEqual(S.STOPS, [0.2, 0.25, 0.3, 0.4, 0.5, 0.6]);
+  assert.deepEqual(S.STOPS, [0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.65, 0.7]);
   const dir = mkdtempSync(join(tmpdir(), "nc-")), st = new Store(join(dir, "t.db")), w = world({ store: st });
   w.add(A, T0, {}); w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.2); const [old] = w.entries("NEW-5M");
   old.versions = old.versions.filter((v) => v.stop !== 0.5); st.saveEntry(old); // a buy from before the 50% stop existed: five stops, as it was opened
   w.add(B, w.t, {}); const born = w.t; w.t += 20; await w.pass(); w.t = born + 301; await w.pass(); await w.price(1.2); const fresh = w.entries("NEW-5M").find((e) => e.mint === B);
-  assert.deepEqual(fresh.versions.filter((v) => v.policy === "trail").map((v) => v.stop), [0.2, 0.25, 0.3, 0.4, 0.5, 0.6]); assert.equal(old.versions.length, 10);
+  assert.deepEqual(fresh.versions.filter((v) => v.policy === "trail").map((v) => v.stop), [0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.65, 0.7]); assert.equal(old.versions.length, 2 * S.STOPS.length - 2);
   const row = (e, s) => e.versions.find((v) => v.stop === s && v.policy === "trail");
   w.setMc(B, 9200); await w.price(10); await w.price(1); // −54% from the buy: through the 50% stop, inside the 60% one
   assert.equal(row(fresh, 0.4).status, "closed"); assert.equal(row(fresh, 0.5).status, "closed"); assert.equal(row(fresh, 0.5).reason, "trail"); assert.equal(row(fresh, 0.6).status, "open"); assert.ok(row(fresh, 0.5).exit.ret < -0.5 && row(fresh, 0.5).exit.ret > -0.6);
@@ -413,4 +413,39 @@ test("after the sale on EVERY book (owner 26 Nov 2026 07:34 UK): a pool-priced b
   const row = booksApi([e], { stop: 0.25, now: sale + 3700 }).books["VOL300K"][0]; assert.deepEqual(row.after, a); assert.equal(row.follow, "on"); assert.equal(row.live_px, true); assert.equal(booksApi([e], { stop: 0.25, now: sale + 8000 }).books["VOL300K"][0].follow, "done");
   assert.equal(booksApi([e], { stop: 0.4, now: sale + 3700 }).books["VOL300K"][0].after, undefined, "a row still held has no 'after the sale'");
   assert.equal(saleRows(e), undefined, "the sale-pricing record stays a quote-priced matter");
+});
+
+test("the quote budget: with a few positions every one is looked at every 10 s; with many open at once the ones older than 5 minutes are looked at less often, the young ones keep their pace, and a sale is still priced at once", async () => {
+  assert.equal(S.QUOTE_BUDGET_PER_MIN, 36); assert.equal(S.QUOTE_YOUNG_S, 300);
+  const w = world(), M = (i) => "BudgetCoin" + String(i).padStart(2, "1") + "1111111111111111111111111111pump".slice(0, 28) + "pump";
+  for (let i = 1; i <= 9; i++) w.add(M(i), T0, {}); w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.2);
+  assert.equal(w.entries("NEW-5M").filter((e) => e.status === "filled").length, 9, "nine positions open");
+  // young (bought seconds ago): every one keeps the 10-second pace — 9 quotes a look
+  let q0 = w.reqs.quote; for (let i = 0; i < 3; i++) await w.price(10); assert.equal(w.reqs.quote - q0, 27); assert.equal(w.quoter.stats.quoteOldEvery, 10); assert.equal(w.quoter.stats.quoteYoung, 9);
+  // six minutes later they are old: nine sizes at 10 s would be 54 requests a minute — over the budget of 36 → every 15 s
+  w.t += 360; q0 = w.reqs.quote; const t0 = w.t; while (w.t - t0 < 120) await w.price(5); const perMin = (w.reqs.quote - q0) / ((w.t - t0) / 60);
+  assert.equal(w.quoter.stats.quoteOldEvery, 15); assert.ok(perMin <= 37 && perMin >= 30, "about 36 a minute, not 54: " + perMin.toFixed(1)); assert.equal(w.quoter.stats.quoteSizes, 9);
+  // a new buy among them is young: it is looked at every 10 s while the old ones give way a little more
+  w.add(C, w.t, {}); const born = w.t; w.t += 20; await w.pass(); w.t = born + 301; await w.pass(); await w.price(1.2); const fresh = w.entries("NEW-5M").find((e) => e.mint === C); assert.equal(fresh.status, "filled");
+  const seen = []; const real = w.jup.quote; w.jup.quote = async (m, side, raw, o) => { if (m === C) seen.push(w.t); return real(m, side, raw, o); };
+  const t1 = w.t; while (w.t - t1 < 60) await w.price(5); assert.ok(seen.length >= 5, "the young position was looked at about every 10 s: " + seen.length); assert.ok(w.quoter.stats.quoteOldEvery > 15 && w.quoter.stats.quoteOldEvery <= 19); assert.equal(w.quoter.stats.quoteYoung, 1);
+  // a stop that triggers is priced at once whatever the budget says
+  w.jup.quote = real; w.setMc(M(1), 9000); const e1 = w.entries("NEW-5M").find((e) => e.mint === M(1)); let guard = 0; while (e1.versions.find((v) => v.stop === 0.25 && v.policy === "trail").status === "open" && guard++ < 10) await w.price(5);
+  const v = e1.versions.find((x) => x.stop === 0.25 && x.policy === "trail"); assert.equal(v.status, "selling"); await w.price(1); assert.equal(v.status, "closed"); assert.ok(v.exit.delay_s < 5, "sold on the next pass, ahead of every routine look (in the program the urgent lane runs four times a second): " + v.exit.delay_s);
+  // few positions: nothing changes
+  const w2 = world(); w2.add(A, T0, {}); w2.add(B, T0, {}); w2.t = T0 + 20; await w2.pass(); w2.t = T0 + 301; await w2.pass(); await w2.price(1.2); w2.t += 400; const q2 = w2.reqs.quote; for (let i = 0; i < 6; i++) await w2.price(10); assert.equal(w2.reqs.quote - q2, 12, "two positions, six looks each"); assert.equal(w2.quoter.stats.quoteOldEvery, 10);
+});
+
+test("the 65% and 70% stops (owner 26 Nov 2026 11:18 UK): a 62% fall from the high — the fall that sold Elonmas on the 60% stop — leaves both holding; 67% sells the 65% row; 72% sells the 70% row", async () => {
+  const { newEntry, advance, observe } = await import("../src/book.mjs");
+  const st = (q, t) => ({ base: 2e8, quote: q, feeBuy: 0.003, feeSell: 0.003, t }), yes = () => true;
+  const e = newEntry({ mint: "M", pool: "P", ag: "A1", t: 0, families: ["VOL300K"], features: {}, mc: 1e5, px: 1 }); advance(e, 1.5, st(100, 0), yes);
+  const T = (s) => e.versions.find((v) => v.policy === "trail" && v.stop === s); assert.ok(T(0.65) && T(0.7)); assert.equal(e.versions.length, 16);
+  observe(e, st(500, 20), 20);                                              // the high: five times the buy
+  observe(e, st(190, 50), 50); advance(e, 51, st(190, 50), yes);          // −62% from the high
+  assert.equal(T(0.6).status, "closed"); assert.equal(T(0.65).status, "open"); assert.equal(T(0.7).status, "open"); assert.ok(T(0.6).exit.ret > 0.7, "sold while still well above the buy price: a trailing stop follows the high");
+  observe(e, st(165, 60), 60); advance(e, 61, st(165, 60), yes);          // −67%
+  assert.equal(T(0.65).status, "closed"); assert.equal(T(0.7).status, "open");
+  observe(e, st(900, 70), 70); observe(e, st(250, 80), 80); advance(e, 81, st(250, 80), yes); // a new high at nine times, then −72%
+  assert.equal(T(0.7).status, "closed"); assert.ok(T(0.7).exit.ret > T(0.65).exit.ret, "here the widest stop rode the second leg");
 });

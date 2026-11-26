@@ -68,7 +68,7 @@ test("the sampled method buys again too (a non-pump.fun coin priced by quotes)",
   for (let i = 0; i < 31; i++) await step(10, 100_000); await step(10, 205_000); await step(2, 205_000); assert.equal(firsts(e, "FAST-5M").length, 1); assert.equal(firsts(e, "FAST-5M")[0].status, "filled");
   for (let i = 0; i < 40; i++) await step(10, 60_000);                       // −70%: every stop sells; five quiet minutes
   await step(10, 125_000); await step(2, 125_000);                           // doubles again inside 5 minutes
-  const r = agains(e, "FAST-5M"); assert.equal(r.length, 1); assert.equal(r[0].exec, "routed-quote"); assert.equal(r[0].status, "filled"); assert.equal(rows(r[0]), "t20 t25 t30 t40 t50 t60 h20 h25 h30 h40 h50 h60", "everything had sold: the re-buy carries every row");
+  const r = agains(e, "FAST-5M"); assert.equal(r.length, 1); assert.equal(r[0].exec, "routed-quote"); assert.equal(r[0].status, "filled"); assert.equal(rows(r[0]), "t20 t25 t30 t40 t50 t60 t65 t70 h20 h25 h30 h40 h50 h60 h65 h70", "everything had sold: the re-buy carries every row");
 });
 
 test("first buys are the older-8 buys: on random markets, the first buys with buying-again switched on are identical to those with it switched off", () => {

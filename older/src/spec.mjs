@@ -19,7 +19,7 @@ export const ageStartOf = (id) => AGES.find((g) => g[0] === id)[1];
 export const AGE_YOUNG = ["A0", 0, MIN_AGE_S], ALL_AGES = [AGE_YOUNG, ...AGES];
 export const ageGroupAny = (ageS) => (ageS >= 0 && ageS < MIN_AGE_S ? "A0" : ageGroupOf(ageS));
 
-export const STOPS = [0.20, 0.25, 0.30, 0.40, 0.50, 0.60]; // trailing stops on after-cost liquidation value (60% added in older-5; 50% added 26 Nov 2026 07:01 UK, owner: "Just do the 50%" — he asked for 10% and 50%, and dropped 10% after seeing that the price is typically 5–9% past a stop when it is noticed). A stop added later exists only on buys made after it: older buys keep the rows they were opened with, and the page counts that stop from its own start (store.since).
+export const STOPS = [0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.65, 0.70]; /* 65% and 70% added 26 Nov 2026 11:18 UK (owner, after Elonmas was sold by the 60% stop on a 62% fall from its high and then ran to 8x: "add a 65 and 70% stop loss… just to see") */ // trailing stops on after-cost liquidation value (60% added in older-5; 50% added 26 Nov 2026 07:01 UK, owner: "Just do the 50%" — he asked for 10% and 50%, and dropped 10% after seeing that the price is typically 5–9% past a stop when it is noticed). A stop added later exists only on buys made after it: older buys keep the rows they were opened with, and the page counts that stop from its own start (store.since).
 // STAKE VIEWS (website only, never a decision input): the page can re-price every pool-priced trade at these stakes from the pool
 // reserves saved at its buy, its half-sale and its exit. The paper trade itself is always STAKE_SOL.
 export const STAKE_VIEWS = [0.2, 0.5, 1, 2, 5];
@@ -89,6 +89,14 @@ export const NEW_RUNNER_S = 60;
 // reaches RUN_LINE_USD on the pool feed (a pump.fun coin is on its pool by then — nothing extra is asked of any provider) is
 // written down with the time; the page lists the ones that got there within RUN_WINDOW_S of their creation, each with what
 // every check said, and — so the list cannot mislead — how many checks each rule rejected and how many of THOSE got there.
+// THE QUOTE BUDGET (26 Nov 2026 11:10 UTC: Jupiter at 58 requests a minute of the key's 60 with 4 refusals — one coin, konnichiwa,
+// held by all four new-coin books and past 2×, so each of its four positions needed two quotes a look). Routine looks at open
+// quote-priced positions share QUOTE_BUDGET_PER_MIN requests a minute. While they fit, every position is looked at every
+// quoteSlow seconds as before. When they do not, positions bought in the last QUOTE_YOUNG_S keep that pace (most stops are hit
+// in the first minutes) and the OLDER ones are looked at proportionally less often, so the total stays inside the budget and
+// the new-coin looks, the measurements and the sales (always first) are never crowded out. A sale is still priced by its own
+// quote asked for after the stop is noticed; the look before each trigger is on the row (v.trig.before), so the cost is measurable.
+export const QUOTE_BUDGET_PER_MIN = 36, QUOTE_YOUNG_S = 300;
 export const RUN_LINE_USD = 100_000, RUN_WINDOW_S = 6 * 3600, RUN_PEAK_STEP = 1.1, RUN_LIST = 150;
 export const NEW_FOLLOW_S = 2 * 3600, NEW_FOLLOW_LONG_S = 6 * 3600, NEW_FOLLOW_LONG_EVERY_S = 300, NEW_TRACK_S = 30;
 export const AFTER_WINDOWS = [["m15", 900], ["h1", 3600], ["h2", 7200]]; // the windows after a sale shown on the page

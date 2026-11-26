@@ -62,7 +62,7 @@ test("SOL/USD stale: new entries are suspended, open positions are still managed
   let usd = 100; const e = mkEngine({ solUsd: () => usd }); e.feedUp(T0); e.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 9 * H });
   path(e, T0, T0 + 600, () => 100_000, 10); swap(e, T0 + 605, 150_000); swap(e, T0 + 610, 205_000); swap(e, T0 + 620, 206_000);
   const pos = has(e, "FAST-1M")[0]; assert.equal(pos.status, "filled"); const n = e.entries.size;
-  usd = null; swap(e, T0 + 700, 70_000); swap(e, T0 + 702, 70_000);         // price collapses (−66%: through every stop, the 60% one included) while the USD reference is stale
+  usd = null; swap(e, T0 + 700, 50_000); swap(e, T0 + 702, 50_000);         // price collapses (−76%: through every stop, the 70% one included) while the USD reference is stale
   assert.ok(pos.versions.filter((v) => v.policy === "trail").every((v) => v.status === "closed"), "stops still sold");
   usd = 100; swap(e, T0 + 760, 90_000); swap(e, T0 + 770, 200_000);
   assert.equal(e.entries.size, n, "no new entry from a window that spans the stale period");
