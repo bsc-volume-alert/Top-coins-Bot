@@ -24,9 +24,9 @@ export function coinLookup({ mint, store, engine, lookup = null, run = null, now
 export function startWeb({ port, store, engine, status, run = () => null, sell = null, lookup = null, runners = null }) { // runners(): the runners list (newcoin.mjs, runnersView) // lookup(mint): what the new-coin books know about one coin (newcoin.mjs); null = no new-coin books in this program // sell(id, frac): the owner's paper "sell now" (engine.manualSell); null = the page has no such button // run(): older-11 — the run's own books and settings, or null (every book, as before)
   const KEY = process.env.OLDER_SITE_KEY || "";
   const cache = new Map(), BUILD = String(process.env.OLDER_COMMIT || "dev").slice(0, 12) + ":" + Math.round(Date.now() / 1000); // changes on every start: the books page reloads itself when it sees a new one
-  const state = (pop = "") => {
+  const state = (pop = "", given = null) => { // given: every buy, already read (the status dump reads them once, in slices, for all its files)
     const hit = cache.get(pop); if (hit && Date.now() - hit.at < 15000) return hit;
-    const all = store.allEntries(), entries = pop ? all.filter((e) => (e.pop || "pumpswap-canonical") === pop) : all;
+    const all = given ?? store.allEntries(), entries = pop ? all.filter((e) => (e.pop || "pumpswap-canonical") === pop) : all;
     const pops = {}; for (const e of all) { const k = (e.pop || "pumpswap-canonical") + " · " + (e.mode || "live") + " · " + (e.exec || "reconstructed-pool-state"); pops[k] = (pops[k] || 0) + 1; }
     const costs = { server: Number(process.env.OLDER_COST_SERVER_USD_MO || 0), gmgn: Number(process.env.OLDER_COST_GMGN_USD_MO || 30), rpc: Number(process.env.OLDER_COST_RPC_USD_MO || 0) };
     const R = run(), on = R?.books?.length ? new Set([...R.books, "*"]) : null; // a run that chose its books: the table, the overlap and the refusal counts show those books only

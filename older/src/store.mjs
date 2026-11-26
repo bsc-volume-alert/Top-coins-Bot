@@ -125,6 +125,8 @@ export class Store {
   checksOf(mint) { return this.q.chkOf.all(mint).map((r) => { let j = {}; try { j = JSON.parse(r.j); } catch {} return { t: r.t, mint, book: r.book, ...j }; }); }
   lastAlive() { const r = this.db.prepare("SELECT v FROM meta WHERE k='alive'").get(); return r ? Number(r.v) : null; }
   allEntries() { return this.db.prepare("SELECT json FROM entries").all().map((r) => JSON.parse(r.json)); }
+  /** the same buys, a slice at a time (in id order): for a reader that must not hold the program while it reads them all */
+  entriesAfter(id = 0, n = 50) { return this.db.prepare("SELECT id, json FROM entries WHERE id > ? ORDER BY id LIMIT ?").all(id, n).map((r) => JSON.parse(r.json)); }
   noteCounts() { return this.db.prepare("SELECT family, reason, COUNT(*) n FROM notes GROUP BY family, reason ORDER BY family, n DESC").all(); }
   retention(now) { const cut = Math.floor(now / 60) - BAR_RETAIN_DAYS * 1440; return this.db.prepare("DELETE FROM bars WHERE m < ?").run(cut).changes; }
   disk() {
