@@ -15,7 +15,7 @@ import * as S from "../src/spec.mjs";
 
 const R5 = S.NEW_COIN[0], R10 = S.NEW_COIN[1];
 // a synthetic provider: the test sets each coin's figures and price; the clock is manual
-function world({ store = null, file = null, engine = {}, gmgn = null, quoter = {} } = {}) {
+function world({ store = null, file = null, engine = {}, gmgn = null, quoter = {}, evidence = false } = {}) {
   const w = { t: T0, coins: new Map(), px: new Map(), list: [], reqs: { recent: 0, search: 0, quote: 0, gmgn: 0, risk: 0 }, searchFail: false, quoteDelay: 0.3, info: new Map(), riskOf: new Map(), sizes: [] };
   // figures: mc, holders, vol (since creation), top (Jupiter %, 0–100)
   w.add = (mint, born, f = {}) => { w.coins.set(mint, { born, mc: 20_000, holders: 200, vol: 60_000, top: 25, program: SPL_TOKEN, ...f }); w.px.set(mint, (f.mc ?? 20_000) / 1e9); w.list.push(mint); };
@@ -30,7 +30,7 @@ function world({ store = null, file = null, engine = {}, gmgn = null, quoter = {
   w.readRisk = async (mint) => { w.reqs.risk++; return w.riskOf.get(mint) ?? { status: "clean", program: TOKEN_2022, extensions: [], blocking: [], warnings: [], fee_bps: 0, src: "rpc mint account" }; };
   w.eng = mkEngine({ tokens: null, ...(store ? { store } : {}), ...engine }); w.eng.setBooks([...S.booksOf("older-11"), ...S.NEW_BOOKS]); w.eng.feedUp(T0);
   w.quoter = new Poller({ engine: w.eng, jup: w.jup, now: () => w.t, runnerEvery: Infinity, ...quoter }); // as main.mjs sets it: a buy whose every row is sold is not quoted
-  w.nc = new NewCoins({ engine: w.eng, jup: w.jup, quoter: w.quoter, readInfo: w.readInfo, readRisk: w.readRisk, store, now: () => w.t, file });
+  w.nc = new NewCoins({ engine: w.eng, jup: w.jup, quoter: w.quoter, readInfo: w.readInfo, readRisk: w.readRisk, readEvidence: evidence ? async (mint) => { w.reqs.ev = (w.reqs.ev || 0) + 1; const x = w.info.get(mint); if (x instanceof Error) throw x; return { ...GOOD(mint), ...(x || {}) }; } : null, store, now: () => w.t, file });
   w.pass = async () => { await w.nc.look(); const n = await w.nc.check(); await w.nc.idle(); return n; };
   w.price = async (dt = 0) => { w.t += dt; w.eng.tick(w.t); await w.quoter.quotes(); w.eng.tick(w.t); };
   w.setMc = (mint, mc) => w.px.set(mint, mc / 1e9);
@@ -532,4 +532,27 @@ test("the buy-price rows on a quote-priced buy: a buy made before they existed k
   assert.equal(bRow(0.2).status, "closed"); assert.equal(bRow(0.2).reason, "buy-stop"); assert.equal(bRow(0.3).status, "closed"); assert.equal(bRow(0.4).status, "open"); assert.ok(bRow(0.2).exit.quote.req_t >= bRow(0.2).trigT + 0.7 - 1e-9);
   const sr = saleRows(fresh).rows.find((r) => r.k === "b20"); assert.ok(sr, "its sale record is kept like a trailing one"); assert.ok(Math.abs(sr.level - 0.8) < 1e-6, "the level is 80% of what was paid, whatever the high was: " + sr.level); assert.ok(sr.peak > 3);
   st.db.close();
+});
+
+test("the full picture of a near miss (owner 26 Nov 2026 12:29–12:36 UK: 'list all the factors that didn't pass… the fees, the bundle, the snipe, everything'): a coin over the market-cap line refused on volume or on the first look is read from GMGN once for the record — every failed rule is on the check, nothing is bought, and a coin under the line is not read", async () => {
+  assert.equal(S.NEW_EVIDENCE, true);
+  const w = world({ evidence: true }), D = "NearMissDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDpump", E = "UnderLineEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEpump", F = "FirstLookFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFpump", G = "NoAnswerGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGpump";
+  w.add(D, T0, { mc: 35_000, holders: 2761, vol: 14_200, top: 44.8 }); // BASKET's figures at 5 minutes
+  w.info.set(D, { total_fee: 1.2, stat: { top_10_holder_rate: 0.45, top_bundler_trader_percentage: 0.3, top_rat_trader_percentage: 0.02, top70_sniper_hold_rate: 0.05, top_entrapment_trader_percentage: 0.04 } });
+  w.add(E, T0, { mc: 4500, holders: 50, vol: 13_900, top: 17.7 });        // under the market-cap line: not read
+  w.add(F, T0, { mc: 66_000, holders: 397, vol: 116_500, top: 9.2 });     // WIENER at 20 minutes: only the first look fails
+  w.add(G, T0, { mc: 30_000, holders: 240, vol: 12_000, top: 30 }); w.info.set(G, new Error("HTTP 429"));
+  w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.2);
+  const row = (m) => w.nc.history.find((r) => r.mint === m && r.book === "NEW-5M"), K = w.nc.stats.checks["NEW-5M"];
+  assert.equal(w.entries().length, 0, "nothing is bought on a reading made for the record"); assert.equal(w.reqs.gmgn, 0, "the buy lane was never used"); assert.equal(w.reqs.ev, 3, "D, F and G — not the coin under the line");
+  const d = row(D); assert.equal(d.fees, 1.2); assert.equal(d.top10, 0.45); assert.equal(d.st.vol, "fail"); assert.equal(d.st.top_pre, "fail"); assert.equal(d.st.fees, "fail"); assert.equal(d.st.top10, "fail"); assert.equal(d.ev, "read for the record");
+  assert.deepEqual([d.g.bundlers, d.g.insiders, d.g.snipers, d.g.phishing], [0.3, 0.02, 0.05, 0.04]);
+  assert.equal(d.out, "not bought: volume $14K (needs $30K), top holders 44.8% by Jupiter's figure (the first look needs 15–35%), fees 1.2 SOL (needs 2), top 10 holders 45.0% (needs 20–30%)", "every rule it failed, not only the first");
+  assert.equal(whyOf(d), "volume", "it is still counted once, under the first rule it failed");
+  const f = row(F); assert.equal(f.st.top_pre, "fail"); assert.equal(f.st.fees, "pass"); assert.equal(f.st.top10, "pass"); assert.equal(f.fees, 4); assert.equal(f.out, "not bought: top holders 9.2% by Jupiter's figure (needs 20–30%)"); assert.equal(whyOf(f), "top holders (Jupiter)");
+  const g = row(G); assert.equal(g.st.fees, "not asked"); assert.equal(g.fees, undefined); assert.match(g.ev, /^no answer/); assert.equal(g.out, "not bought: volume $12K (needs $30K)");
+  assert.equal(w.nc.history.some((r) => r.mint === E), false, "a coin under the line stays in the database only"); 
+  assert.equal(K.evidence_asked, 3); assert.equal(K.evidence_ok, 2); assert.equal(K.evidence_failed, 1); assert.equal(K.gmgn_asked, 0); assert.equal(K.candidates, 1, "F passed the three Jupiter rules: a candidate stopped at the first look, as before"); assert.equal(K.top_pre_skipped, 1);
+  // without the reader (as every earlier test runs) a near miss is written down at once, unread
+  const w2 = world(); w2.add(D, T0, { mc: 35_000, holders: 2761, vol: 14_200, top: 44.8 }); w2.t = T0 + 20; await w2.pass(); w2.t = T0 + 301; await w2.pass(); const d2 = w2.nc.history.find((r) => r.mint === D); assert.equal(d2.st.fees, "not asked"); assert.equal(d2.ev, undefined);
 });

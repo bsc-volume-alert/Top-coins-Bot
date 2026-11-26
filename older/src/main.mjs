@@ -133,6 +133,7 @@ if (NEWCOINS) { const { NewCoins } = await import("./newcoin.mjs");
     // ahead of the history repair, like the other books' readings, waiting out a short pause of the allowance; if that request
     // cannot be sent or is refused, ONE ordinary queued request follows (the coin is bought only if it answers within NEW_GMGN_WAIT_S)
     readInfo: (mint) => tokenInfoFirst(mint, Number(process.env.NEWCOIN_GMGN_WAIT_MS ?? 5000)).catch(() => tokenInfoLate(mint)),
+    readEvidence: process.env.NEWCOIN_EVIDENCE === "0" ? null : (mint) => tokenInfoLate(mint), // a near miss is read for the record in the ordinary lane, never ahead of a buy's reading (spec NEW_EVIDENCE)
     readRisk: async (mint) => classifyMintAccount((await rpc("getMultipleAccounts", [[mint], { encoding: "jsonParsed" }]))?.value?.[0]) });
   const back = newcoins.restore(); quoter.startQuotes(); newcoins.start();
   engine.onLine = (mint, mc, t, sawUnder) => newcoins.runnerHit(mint, mc, t, sawUnder); // the runners list: a measured new coin that reaches $100K on the pool feed (spec RUN_LINE_USD)

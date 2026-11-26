@@ -60,6 +60,15 @@ export const NEW_ALL = "NEW-COMBINED";
 export const NEW_BOOKS = NEW_COIN.map((x) => x.family);
 export const NEW_LOOK_S = 20;          // the provider's list of new coins is read this often (it reaches back about a minute at ~35 new coins a minute)
 export const NEW_CHECK_LATE_S = 90;    // a coin that could not be measured within this long after its age point is NOT judged (counted "too late") — never judged on later figures
+// THE FULL PICTURE OF A NEAR MISS (owner 26 Nov 2026 12:29–12:36 UK: "for the 100k coins that we're missing, list all the factors
+// that didn't pass the filters, not just one… the fees, the bundle, the snipe, everything. We need to know the initial conditions…
+// we need to get the fees info as well, just to get completely right"). Until then GMGN was asked only for a coin that had passed
+// market cap, holders, volume and the first look, so a coin refused on volume had no fees, top 10, bundler or sniper figure — and
+// GMGN gives today's figures only, so they could never be recovered. Now: at every check of a coin OVER the market-cap line that
+// fails another Jupiter-side rule, GMGN is read once FOR THE RECORD (NEW_EVIDENCE = true), in the ordinary lane (never ahead of
+// a reading a buy is waiting for), and the answer is kept on the check with a pass / fail for fees and top 10. It decides
+// nothing: such a coin is not bought whatever the reading says. A coin under the cap line is still not read (thousands an hour).
+export const NEW_EVIDENCE = true, NEW_EVIDENCE_WAIT_S = 60;
 export const NEW_GMGN_WAIT_S = 30;     // the GMGN reading must arrive within this long of being asked for, or the coin is not bought
 export const NEW_AGE_SLACK_S = 180;    // GMGN's creation time may put the coin at most this much past the age point when the buy is decided (else: not a new coin by GMGN's clock)
 export const NEW_POP = "new-coins";    // how these buys are tagged (entry.pop)

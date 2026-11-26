@@ -58,8 +58,8 @@ const timeout = (p, ms, what) => new Promise((res, rej) => { const h = setTimeou
 export class NewCoins {
   /** jup: { recent(), tokens(mints) } · quoter: the Poller that prices routed-quote buys (only its watch list is touched here)
    *  readInfo(mint) → GMGN token info · readRisk(mint) → classifyMintAccount result for the mint (transfer restrictions) */
-  constructor({ engine, jup, quoter, readInfo, readRisk = null, store = null, now = () => Date.now() / 1000, log = () => {}, file = null, rules = S.NEW_COIN, solUsd = null }) {
-    Object.assign(this, { engine, jup, quoter, readInfo, readRisk, store, now, log, file, rules }); this.solUsd = solUsd ?? ((t) => engine.solUsd(t));
+  constructor({ engine, jup, quoter, readInfo, readRisk = null, readEvidence = null, store = null, now = () => Date.now() / 1000, log = () => {}, file = null, rules = S.NEW_COIN, solUsd = null }) {
+    Object.assign(this, { engine, jup, quoter, readInfo, readRisk, readEvidence, store, now, log, file, rules }); /* readEvidence(mint) → GMGN token info in the ordinary lane, for the record of a near miss (spec NEW_EVIDENCE); absent = not read, as before */ this.solUsd = solUsd ?? ((t) => engine.solUsd(t));
     this.history = []; this.logFile = file ? file.replace(/\.json$/, "") + ".log.jsonl" : null; this.runner = { passes: 0, coins: 0, priced: 0, no_price: 0, errors: 0, last: null }; this.lastRunner = 0;
     if (this.logFile && existsSync(this.logFile)) try { const L = readFileSync(this.logFile, "utf8").split("\n").filter(Boolean).slice(-S.NEW_LOG_KEEP); for (const l of L) try { this.history.push(JSON.parse(l)); } catch {} } catch {}
     this.young = new Map(); this.prevIds = null; this.inflight = new Set(); this.maxAt = Math.max(...rules.map((r) => r.at_s)); this.stats = fresh(); this.dirty = false; this.confirmMax = S.NEW_CONFIRM_MAX; this.hits = new Map(); this.hitsLoaded = false; this.dbq = []; this.kept = 0; this.keepErr = null;
@@ -111,9 +111,9 @@ export class NewCoins {
       // status in words for every rule, so "failed", "never asked" and "the provider did not answer" can never be confused.
       Object.assign(rec, { v1h: m.v1h == null ? null : Math.round(m.v1h), v5m: m.v5m == null ? null : Math.round(m.v5m), sells: m.n_sells, liq: m.liq == null ? null : Math.round(m.liq), px: m.px, curve: m.curve_pct, upd: tok.updated ?? null, req: tok.req == null ? null : +tok.req.toFixed(2), resp: tok.resp == null ? null : +tok.resp.toFixed(2),
         st: { mc: statusOf(j.mc), holders: statusOf(j.holders), vol: statusOf(j.vol), top_pre: m.top_jup == null ? "no figure" : pre ? "pass" : "fail", fees: "not asked", top10: "not asked" } });
-      if (j.mc && j.holders && j.vol && !pre) { K.candidates++; K.top_pre_skipped++; rec.out = `not bought: top holders ${(m.top_jup * 100).toFixed(1)}% by Jupiter's figure (needs ${r.top10[0] * 100}–${r.top10[1] * 100}%; GMGN not asked)`; this.note(K, rec, r.family); }
+      if (j.mc && j.holders && j.vol && !pre) { K.candidates++; K.top_pre_skipped++; rec.out = `not bought: top holders ${(m.top_jup * 100).toFixed(1)}% by Jupiter's figure (needs ${r.top10[0] * 100}–${r.top10[1] * 100}%; GMGN not asked)`; this.nearMiss(c, r, K, rec); }
       else if (j.mc && j.holders && j.vol) { K.candidates++; const p = this.candidate(c, r, tok, m, rec).catch((e) => { rec.out = "error: " + String(e.message).slice(0, 100); this.note(K, rec, r.family); }).finally(() => { this.inflight.delete(p); this.dirty = true; this.flush(); }); this.inflight.add(p); }
-      else if (j.mc) { rec.out = "not bought: " + [j.holders ? null : `holders ${m.holders ?? "?"} (needs over ${r.holders_min})`, j.vol ? null : `volume $${m.vol == null ? "?" : Math.round(m.vol / 1000) + "K"} (needs $${r.vol_min_usd / 1000}K)`].filter(Boolean).join(", "); this.note(K, rec, r.family); } // the near misses are kept: a coin over the market-cap line that failed another rule
+      else if (j.mc) { rec.out = "not bought: " + [j.holders ? null : `holders ${m.holders ?? "?"} (needs over ${r.holders_min})`, j.vol ? null : `volume $${m.vol == null ? "?" : Math.round(m.vol / 1000) + "K"} (needs $${r.vol_min_usd / 1000}K)`, pre ? null : `top holders ${(m.top_jup * 100).toFixed(1)}% by Jupiter's figure (the first look needs ${S.NEW_TOP_PRE[0] * 100}–${S.NEW_TOP_PRE[1] * 100}%)`].filter(Boolean).join(", "); this.nearMiss(c, r, K, rec); } // the near misses are kept: a coin over the market-cap line that failed another rule
       else { rec.out = "not bought: " + [`market cap ${m.mc == null ? "?" : USDK(m.mc)} (needs over ${USDK(r.mc_min_usd)})`, j.holders ? null : `holders ${m.holders ?? "?"} (needs over ${r.holders_min})`, j.vol ? null : `volume ${USDK(m.vol)} (needs ${USDK(r.vol_min_usd)})`].filter(Boolean).join(", "); this.keep({ book: r.family, ...rec }); } } // under the market-cap line: in the database only (the lookup), never on the card or in the published file
     this.flush();
     return n;
@@ -148,7 +148,7 @@ export class NewCoins {
     const out = []; let missed = 0;
     for (const r of list) { let checks = []; try { checks = this.lookup(r.mint).checks; } catch {}
       let buys = []; try { buys = (this.store?.entriesOf?.(r.mint) || []).filter((e) => e.pop === S.NEW_POP && e.status === "filled").map((e) => ({ id: e.id, book: e.families[0], t: e.decisionT, mc: Math.round(e.signalMc || 0), max: e.runner?.maxX != null ? +e.runner.maxX.toFixed(2) : null })); } catch {}
-      const cs = checks.map((c) => ({ book: c.book, t: c.t, age_s: c.age_s ?? null, mc: c.mc ?? null, holders: c.holders ?? null, vol: c.vol ?? null, top_jup: c.top_jup ?? null, fees: c.fees ?? null, top10: c.top10 ?? null, why: whyOf(c), counted: !!c.st && since != null && c.t >= since, out: c.out ?? null }));
+      const cs = checks.map((c) => ({ book: c.book, t: c.t, age_s: c.age_s ?? null, mc: c.mc ?? null, holders: c.holders ?? null, vol: c.vol ?? null, top_jup: c.top_jup ?? null, fees: c.fees ?? null, top10: c.top10 ?? null, g: c.g ? lean({ bundlers: c.g.bundlers, snipers: c.g.snipers, insiders: c.g.insiders, phishing: c.g.phishing, dev_hold: c.g.dev_hold }) : undefined, ev: c.ev ?? undefined, why: whyOf(c), counted: !!c.st && since != null && c.t >= since, out: c.out ?? null }));
       for (const c of cs) if (c.counted && tally[c.book]?.[c.why]) tally[c.book][c.why].reached++; // only checks made since the counting began: both columns cover the same checks
       if (!buys.length) missed++; if (out.length < S.RUN_LIST) out.push({ ...r, bought: buys, checks: cs }); }
     return { on: true, at: now, line: S.RUN_LINE_USD, window_s: S.RUN_WINDOW_S, counting_since: since, reached: list.length, missed, bought: list.length - missed, later: all.length - list.length, unknown_time: list.filter((r) => r.unseen_before).length, whys: WHYS, tally, list: out }; }
@@ -192,6 +192,23 @@ export class NewCoins {
     R.last = t; return n; }
   /** every candidate still waiting for its GMGN reading or its buy (tests; a clean stop) */
   idle() { return Promise.all([...this.inflight]); }
+  /** A NEAR MISS — over the market-cap line, refused by another Jupiter-side rule (spec NEW_EVIDENCE): GMGN is read once for the
+   *  record, then the check is written down with EVERY rule it failed. Nothing is bought here, whatever the reading says. */
+  nearMiss(c, r, K, rec) {
+    if (!S.NEW_EVIDENCE || !this.readEvidence) return this.note(K, rec, r.family);
+    K.evidence_asked = (K.evidence_asked || 0) + 1; const t0 = this.now();
+    const p = (async () => {
+      let info; try { info = await timeout(this.readEvidence(c.mint), S.NEW_EVIDENCE_WAIT_S * 1000, "the GMGN reading"); } catch (e) { K.evidence_failed = (K.evidence_failed || 0) + 1; rec.ev = "no answer: " + String(e.message).slice(0, 60); return; } // the check stays as it was: fees and top 10 "not asked"
+      const t1 = this.now(), g = parseInfo(info, null, false); K.evidence_ok = (K.evidence_ok || 0) + 1;
+      const feesOk = g.fees_sol != null && g.fees_sol >= r.fees_min_sol, topOk = g.top10 != null && g.top10 >= r.top10[0] && g.top10 <= r.top10[1];
+      Object.assign(rec, { fees: g.fees_sol, top10: g.top10, gmgn_ms: Math.round((t1 - t0) * 1000), ev: "read for the record" }); // ev: this reading decided nothing — the coin had already been refused
+      rec.st.fees = g.fees_sol == null ? "no figure" : feesOk ? "pass" : "fail"; rec.st.top10 = g.top10 == null ? "no figure" : topOk ? "pass" : "fail";
+      rec.g = lean({ vol_5m: g.vol_5m, vol_1h: g.vol_1h, buy_vol_1h: g.buy_vol_1h, sell_vol_1h: g.sell_vol_1h, buys_1h: g.buys_1h, sells_1h: g.sells_1h, swaps_5m: g.swaps_5m, swaps_1h: g.swaps_1h, holders: g.holders, bundlers: g.bundlers, insiders: g.insiders, snipers: g.snipers, phishing: g.phishing, dev_hold: g.dev_hold, creator_hold: g.creator_hold, sniper_wallets: g.sniper_wallets, insider_wallets: g.insider_wallets, bundler_wallets: g.bundler_wallets, liq: g.liq_usd == null ? null : Math.round(g.liq_usd), asked: +t0.toFixed(2), answered: +t1.toFixed(2) });
+      const more = [feesOk ? null : `fees ${g.fees_sol == null ? "?" : +g.fees_sol.toFixed(2)} SOL (needs ${r.fees_min_sol})`, topOk ? null : `top 10 holders ${g.top10 == null ? "?" : (g.top10 * 100).toFixed(1) + "%"} (needs ${r.top10[0] * 100}–${r.top10[1] * 100}%)`].filter(Boolean);
+      rec.out = String(rec.out).replace("; GMGN not asked)", ")") + (more.length ? ", " + more.join(", ") : "");
+    })().catch((e) => { rec.ev = "error: " + String(e.message).slice(0, 60); }).finally(() => { this.note(K, rec, r.family); this.inflight.delete(p); this.dirty = true; this.flush(); });
+    this.inflight.add(p);
+  }
   /** 3. BUY — a coin that passed market cap, holders and volume at its age point */
   async candidate(c, r, tok, m, rec) {
     const K = this.k(r.family), E = this.engine, t0 = this.now(); K.gmgn_asked++;
