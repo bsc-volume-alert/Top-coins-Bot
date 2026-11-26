@@ -30,7 +30,7 @@ test("a book switched off still has its open position managed: the list stops ne
   const e = young(); burst(e, 800); const en = [...e.entries.values()].find((x) => x.families.includes("VOL300K")); assert.ok(en, "VOL300K bought");
   swap(e, T0 + 700, 100_000); swap(e, T0 + 705, 100_000); assert.equal(en.status, "filled");
   e.setBooks(S.booksOf("RUG450")); // VOL300K is not active from here
-  swap(e, T0 + 720, 50_000); swap(e, T0 + 725, 50_000); swap(e, T0 + 730, 50_000); // −50%: the trailing stops up to 40% sell
-  const closed = en.versions.filter((v) => v.status === "closed" && v.policy === "trail" && !v.stall).map((v) => v.stop).sort(); assert.deepEqual(closed, [0.2, 0.25, 0.3, 0.4]);
+  swap(e, T0 + 720, 50_000); swap(e, T0 + 725, 50_000); swap(e, T0 + 730, 50_000); // −50% (and the sale's fees): the trailing stops up to 50% sell, the 60% one holds
+  const closed = en.versions.filter((v) => v.status === "closed" && v.policy === "trail" && !v.stall).map((v) => v.stop).sort(); assert.deepEqual(closed, [0.2, 0.25, 0.3, 0.4, 0.5]);
   assert.equal([...e.entries.values()].length, 1, "and nothing new was bought");
 });

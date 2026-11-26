@@ -19,7 +19,7 @@ export const ageStartOf = (id) => AGES.find((g) => g[0] === id)[1];
 export const AGE_YOUNG = ["A0", 0, MIN_AGE_S], ALL_AGES = [AGE_YOUNG, ...AGES];
 export const ageGroupAny = (ageS) => (ageS >= 0 && ageS < MIN_AGE_S ? "A0" : ageGroupOf(ageS));
 
-export const STOPS = [0.20, 0.25, 0.30, 0.40, 0.60]; // trailing stops on after-cost liquidation value (60% added in older-5)
+export const STOPS = [0.20, 0.25, 0.30, 0.40, 0.50, 0.60]; // trailing stops on after-cost liquidation value (60% added in older-5; 50% added 26 Nov 2026 07:01 UK, owner: "Just do the 50%" — he asked for 10% and 50%, and dropped 10% after seeing that the price is typically 5–9% past a stop when it is noticed). A stop added later exists only on buys made after it: older buys keep the rows they were opened with, and the page counts that stop from its own start (store.since).
 // STAKE VIEWS (website only, never a decision input): the page can re-price every pool-priced trade at these stakes from the pool
 // reserves saved at its buy, its half-sale and its exit. The paper trade itself is always STAKE_SOL.
 export const STAKE_VIEWS = [0.2, 0.5, 1, 2, 5];

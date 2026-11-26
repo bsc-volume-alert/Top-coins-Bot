@@ -74,7 +74,7 @@ test("a coin that passes all five rules at 5 minutes is paper-bought on a routed
   const w = world(); w.add(A, T0, { mc: 20_000, holders: 150, vol: 45_000 });
   w.t = T0 + 20; await w.pass(); w.t = T0 + 303; await w.pass();
   const K = w.nc.stats.checks["NEW-5M"]; assert.equal(K.candidates, 1); assert.equal(K.gmgn_ok, 1); assert.equal(K.fees, 1); assert.equal(K.top10, 1); assert.equal(K.passed_all, 1); assert.equal(K.bought, 1);
-  const [e] = w.entries("NEW-5M"); assert.ok(e); assert.equal(e.status, "pending"); assert.equal(e.ag, "A0"); assert.equal(e.pop, "new-coins"); assert.equal(e.exec, "routed-quote"); assert.equal(e.mode, "polled"); assert.equal(e.versions.length, 10, "five stops under both exit policies");
+  const [e] = w.entries("NEW-5M"); assert.ok(e); assert.equal(e.status, "pending"); assert.equal(e.ag, "A0"); assert.equal(e.pop, "new-coins"); assert.equal(e.exec, "routed-quote"); assert.equal(e.mode, "polled"); assert.equal(e.versions.length, 12, "six stops under both exit policies (50% added 26 Nov 2026)");
   assert.equal(Math.round(e.signalMc), 20_000); assert.equal(e.cands[0].detail.gmgn.fees_sol, 4); assert.equal(e.cands[0].detail.jupiter.holders, 150); assert.equal(e.cands[0].detail.rule.holders_min, 100);
   assert.equal(e.gate.verdict, "pass"); assert.equal(e.gate.by["NEW-5M"].pass, true); assert.equal(e.gate.reading.fees_sol, 4);
   await w.quoter.quotes(); assert.equal(e.status, "pending", "no quote before the scheduled time");
@@ -335,4 +335,20 @@ test("a coin still worth more than it cost two hours after the last sale — the
   assert.equal(trackHigh(x, 1075, 0.9, true), true); assert.equal(trackHigh(x, 1005, 5, true), false, "an older look never rewrites the track"); assert.deepEqual(x.track, [[10, 1.4, 0], [75, 0.9, 1]]); assert.equal(trackHigh(x, 1080, NaN, true), false);
   // a sale always starts a new point: what was seen before it is never counted as after it
   x.versions = [{ exit: { t: 1082 } }]; assert.equal(trackHigh(x, 1085, 0.5, true), true); assert.deepEqual(x.track[2], [85, 0.5, 1]); assert.equal(afterSale(x, x.versions[0]).m15.x, 0.5, "the 0.9 seen seven seconds before the sale is not in it"); assert.equal(afterSale(x, x.versions[0]).m15.s, 3);
+});
+
+test("the 50% stop (owner 26 Nov 2026 07:01 UK): a new buy carries it between the 40% and the 60% row; a buy made before it keeps its five stops and the page counts the 50% view from its own start", async () => {
+  assert.deepEqual(S.STOPS, [0.2, 0.25, 0.3, 0.4, 0.5, 0.6]);
+  const dir = mkdtempSync(join(tmpdir(), "nc-")), st = new Store(join(dir, "t.db")), w = world({ store: st });
+  w.add(A, T0, {}); w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.2); const [old] = w.entries("NEW-5M");
+  old.versions = old.versions.filter((v) => v.stop !== 0.5); st.saveEntry(old); // a buy from before the 50% stop existed: five stops, as it was opened
+  w.add(B, w.t, {}); const born = w.t; w.t += 20; await w.pass(); w.t = born + 301; await w.pass(); await w.price(1.2); const fresh = w.entries("NEW-5M").find((e) => e.mint === B);
+  assert.deepEqual(fresh.versions.filter((v) => v.policy === "trail").map((v) => v.stop), [0.2, 0.25, 0.3, 0.4, 0.5, 0.6]); assert.equal(old.versions.length, 10);
+  const row = (e, s) => e.versions.find((v) => v.stop === s && v.policy === "trail");
+  w.setMc(B, 9200); await w.price(10); await w.price(1); // −54% from the buy: through the 50% stop, inside the 60% one
+  assert.equal(row(fresh, 0.4).status, "closed"); assert.equal(row(fresh, 0.5).status, "closed"); assert.equal(row(fresh, 0.5).reason, "trail"); assert.equal(row(fresh, 0.6).status, "open"); assert.ok(row(fresh, 0.5).exit.ret < -0.5 && row(fresh, 0.5).exit.ret > -0.6);
+  const at = (s) => booksApi([old, fresh], { stop: s, run: { books: w.eng.books } }).books["NEW-5M"].map((r) => r.mint);
+  assert.deepEqual(at(0.5), [B], "the older buy has no 50% row: it is simply not in that view"); assert.deepEqual(at(0.6).sort(), [A, B].sort()); assert.deepEqual(at(0.4).sort(), [A, B].sort());
+  const since = st.since(w.t); assert.equal(since.stops[0.5], fresh.decisionT, "the 50% view counts from the first buy that has it"); assert.ok(since.stops[0.5] > old.decisionT, "later than the buy that never had it");
+  assert.equal(saleRows(fresh).rows.find((r) => r.k === "t50").k, "t50"); st.db.close();
 });
