@@ -302,25 +302,25 @@ test("after the sale: the buy is looked at once a minute for two hours after its
   w.setMc(A, 14_500); await w.price(10); await w.price(1); assert.equal(row(0.25).status, "closed"); assert.equal(row(0.3).status, "open"); const sale25 = row(0.25).exit.t; assert.equal(lastSaleT(e), sale25); // −27.5%: the 20% and 25% rows are out, the others still hold
   // while a row is still open the looks are real quotes (every 10 s): they go on the track from the first sale on
   w.setMc(A, 17_000); await w.price(10); w.setMc(A, 26_000); await w.price(10); await w.price(10); assert.ok(e.track.length >= 1); assert.ok(e.track.every((p) => p[2] === 0), "real quotes, not estimates");
-  let a = afterSale(e, row(0.25)); assert.ok(Math.abs(a.m15.x - (26 / 20) * 0.99 * 0.99 * 0.2 / 0.2005) < 0.02, "it went back to 1.27x within a minute of the sale"); assert.equal(a.m15.est, false); assert.equal(a.m15.full, false, "the window is still running"); assert.ok(a.m15.s < 60);
-  assert.equal(afterSale(e, row(0.3)), null, "a row that has not sold has no 'after the sale'");
+  let a = afterSale(e, row(0.25), w.t); assert.ok(Math.abs(a.m15.x - (26 / 20) * 0.99 * 0.99 * 0.2 / 0.2005) < 0.02, "it went back to 1.27x within a minute of the sale"); assert.equal(a.m15.est, false); assert.equal(a.m15.full, false, "the window is still running"); assert.ok(a.m15.s < 60);
+  assert.equal(afterSale(e, row(0.3), w.t), null, "a row that has not sold has no 'after the sale'");
   // everything is sold: now it is followed by the price alone (an estimate), every 30 s
   w.setMc(A, 3000); await w.price(10); await w.price(1); await w.price(1); assert.ok(e.versions.every((v) => v.status === "closed")); const last = lastSaleT(e), q0 = w.reqs.quote, s0 = w.reqs.search;
   w.t = last + 600; w.setMc(A, 24_000); assert.equal(await w.nc.runnerPass(), 1); w.t = last + 3000; w.setMc(A, 31_000); await w.nc.runnerPass(); w.t = last + 5000; w.setMc(A, 9000); await w.nc.runnerPass();
   assert.equal(w.reqs.search - s0, 3, "one token-data request per look"); assert.equal(w.reqs.quote - q0, 1, "one confirming quote: the estimate of 1.55x was a new high over 1.5x");
-  a = afterSale(e, row(0.6)); assert.equal(a.m15.est, true); assert.ok(a.m15.x > 1.15 && a.m15.x < 1.25, "24K after ten minutes: about 1.2x"); assert.ok(a.h1.x > 1.5 && a.h1.x < 1.6, "31K after fifty minutes"); assert.equal(a.h1.est, false, "that high was confirmed by a real quote"); assert.equal(a.h1.s > 2900 && a.h1.s < 3100, true); assert.equal(a.h2.x, a.h1.x);
+  a = afterSale(e, row(0.6), w.t); assert.equal(a.m15.est, true); assert.ok(a.m15.x > 1.15 && a.m15.x < 1.25, "24K after ten minutes: about 1.2x"); assert.ok(a.h1.x > 1.5 && a.h1.x < 1.6, "31K after fifty minutes"); assert.equal(a.h1.est, false, "that high was confirmed by a real quote"); assert.equal(a.h1.s > 2900 && a.h1.s < 3100, true); assert.equal(a.h2.x, a.h1.x);
   assert.ok(e.runner.maxQ > 1.5 && e.runner.maxQ < e.runner.maxX, "the confirmed figure is under the estimate: fees are in it"); assert.equal(e.runner.confirms, 1); assert.ok(e.runner.lastConfirm.est_x > e.runner.lastConfirm.x);
   // the 25% row sold earlier: its own windows start at ITS sale
-  const b = afterSale(e, row(0.25)); assert.equal(b.m15.full, true); assert.ok(b.m15.x >= 1.2 && b.h1.x > 1.5);
+  const b = afterSale(e, row(0.25), w.t); assert.equal(b.m15.full, true); assert.ok(b.m15.x >= 1.2 && b.h1.x > 1.5);
   // the page's row carries it
-  const pr = booksApi([e], { stop: 0.6, run: { books: w.eng.books } }).books["NEW-5M"][0]; assert.deepEqual(pr.after, a); assert.equal(pr.follow, "on"); assert.equal(pr.hi_q, e.runner.maxQ);
-  assert.deepEqual(saleRows(e).rows.find((r) => r.k === "t60").after, a); assert.equal(saleRows(e).track_n, e.track.length);
+  const pr = booksApi([e], { stop: 0.6, run: { books: w.eng.books }, now: w.t }).books["NEW-5M"][0]; assert.deepEqual(pr.after, a); assert.equal(pr.follow, "on"); assert.equal(pr.hi_q, e.runner.maxQ);
+  assert.deepEqual(saleRows(e, w.t).rows.find((r) => r.k === "t60").after, a); assert.equal(saleRows(e).track_n, e.track.length);
   // two hours after the last sale, worth less than it cost: finished — no more looks, out of memory, off the quote list
   w.t = last + S.NEW_FOLLOW_S - 20; await w.nc.runnerPass(); assert.ok(w.eng.entries.has(e.id)); const s1 = w.reqs.search;
   w.t = last + S.NEW_FOLLOW_S + 5; assert.equal(await w.nc.runnerPass(), 0); assert.equal(w.reqs.search - s1, 0, "nothing is asked for a finished buy"); assert.equal(e.runner.long, false); assert.equal(e.runner.horizonDone, true); assert.match(e.runner.followed.why, /two hours after the last sale/);
   assert.equal(w.eng.entries.has(e.id), false); assert.equal(w.quoter.watch.has(A), false); assert.equal(w.nc.runner.finished, 1);
-  assert.equal(afterSale(e, row(0.6)).h2.full, true, "the two-hour window was watched to its end");
-  { const w2 = world(); assert.equal(w2.nc.confirmMax, 0); w2.add(B, T0, {}); w2.t = T0 + 20; await w2.pass(); w2.t = T0 + 301; await w2.pass(); await w2.price(1.2); const [e2] = w2.entries("NEW-5M"); w2.setMc(B, 3000); await w2.price(10); await w2.price(1); await w2.price(1); const q0 = w2.reqs.quote; w2.t += 600; w2.setMc(B, 60_000); assert.equal(await w2.nc.runnerPass(), 1); assert.equal(w2.reqs.quote - q0, 0, "as deployed: a new high is NOT confirmed by a quote — one token-data request a look and nothing else"); assert.equal(e2.runner.maxQ, undefined); assert.equal(afterSale(e2, e2.versions[0]).m15.est, true); } assert.equal(booksApi([e], { stop: 0.6, run: { books: w.eng.books } }).books["NEW-5M"][0].follow, "done");
+  assert.equal(afterSale(e, row(0.6), w.t).h2.full, true, "the two-hour window was watched to its end");
+  { const w2 = world(); assert.equal(w2.nc.confirmMax, 0); w2.add(B, T0, {}); w2.t = T0 + 20; await w2.pass(); w2.t = T0 + 301; await w2.pass(); await w2.price(1.2); const [e2] = w2.entries("NEW-5M"); w2.setMc(B, 3000); await w2.price(10); await w2.price(1); await w2.price(1); const q0 = w2.reqs.quote; w2.t += 600; w2.setMc(B, 60_000); assert.equal(await w2.nc.runnerPass(), 1); assert.equal(w2.reqs.quote - q0, 0, "as deployed: a new high is NOT confirmed by a quote — one token-data request a look and nothing else"); assert.equal(e2.runner.maxQ, undefined); assert.equal(afterSale(e2, e2.versions[0], w2.t).m15.est, true); } assert.equal(booksApi([e], { stop: 0.6, run: { books: w.eng.books }, now: w.t }).books["NEW-5M"][0].follow, "done");
 });
 
 test("a coin still worth more than it cost two hours after the last sale — the runner — is looked at every 5 minutes up to six hours; then it is finished too", async () => {
@@ -393,4 +393,24 @@ test("the runners list: a measured coin that reaches $100K on the pool feed is w
   // over the site: key-protected
   process.env.OLDER_SITE_KEY = "sekret"; const web = startWeb({ port: 0, store: st0, engine: w.eng, status: () => ({}), run: () => ({ books: w.eng.books }), runners: () => w.nc.runnersView() }); delete process.env.OLDER_SITE_KEY; await new Promise((res) => web.server.once("listening", res)); const port = web.server.address().port;
   try { assert.equal((await fetch(`http://127.0.0.1:${port}/api/runners`)).status, 403); const j = await (await fetch(`http://127.0.0.1:${port}/api/runners?k=sekret`)).json(); assert.equal(j.on, true); assert.equal(j.reached, 2); assert.equal(j.list.length, 2); } finally { web.server.close(); st0.db.close(); }
+});
+
+test("after the sale on EVERY book (owner 26 Nov 2026 07:34 UK): a pool-priced buy is followed on the pool's own prices — exact, never an estimate — from its first sale to two hours after its latest one", async () => {
+  const { newEntry, advance, observe } = await import("../src/book.mjs");
+  const st = (q, t) => ({ base: 2e8, quote: q, feeBuy: 0.003, feeSell: 0.003, t }), yes = () => true;
+  const e = newEntry({ mint: "PoolCoin", pool: "P", ag: "A1", t: 0, families: ["VOL300K"], features: {}, mc: 1e5, px: 1 }); advance(e, 1.5, st(100, 0), yes); assert.equal(e.status, "filled");
+  const T = (s) => e.versions.find((v) => v.policy === "trail" && v.stop === s);
+  observe(e, st(110, 20), 20); assert.equal(e.track, undefined, "nothing is tracked while every row is still held");
+  observe(e, st(80, 50), 50); advance(e, 51, st(80, 50), yes); assert.equal(T(0.25).status, "closed"); assert.equal(T(0.3).status, "open"); const sale = T(0.25).exit.t; // −27% from the high: the 20% and 25% rows are out
+  observe(e, st(95, 100), 100); observe(e, st(140, 400), 400); observe(e, st(140, 410), 410); observe(e, st(60, 2000), 2000);
+  assert.ok(e.track.length >= 3); assert.ok(e.track.every((p) => p[2] === 0), "pool prices: nothing is estimated");
+  let a = afterSale(e, T(0.25), sale + 1000); assert.ok(a.m15.x > 1.3 && a.m15.x < 1.45, "worth about 1.4x the buy six minutes after the sale"); assert.equal(a.m15.est, false); assert.ok(a.m15.s > 330 && a.m15.s < 360); assert.equal(a.m15.full, true, "fifteen minutes have passed"); assert.equal(a.h1.full, false);
+  // a pool is only seen when it trades: with no trade for the rest of the hour the window still ends — by the clock
+  a = afterSale(e, T(0.25), sale + 3700); assert.equal(a.h1.full, true); assert.equal(a.h1.x, a.m15.x); assert.equal(a.h2.full, false);
+  // two hours after the latest sale nothing more is added (the rows still held are valued as always)
+  const n = e.track.length; observe(e, st(500, sale + S.NEW_FOLLOW_S + 60), sale + S.NEW_FOLLOW_S + 60); assert.equal(e.track.length, n); assert.ok(e.runner.maxX > 4, "the 24-hour high is still kept as before");
+  // the page: the column is there for a pool book, with the exact figures
+  const row = booksApi([e], { stop: 0.25, now: sale + 3700 }).books["VOL300K"][0]; assert.deepEqual(row.after, a); assert.equal(row.follow, "on"); assert.equal(row.live_px, true); assert.equal(booksApi([e], { stop: 0.25, now: sale + 8000 }).books["VOL300K"][0].follow, "done");
+  assert.equal(booksApi([e], { stop: 0.4, now: sale + 3700 }).books["VOL300K"][0].after, undefined, "a row still held has no 'after the sale'");
+  assert.equal(saleRows(e), undefined, "the sale-pricing record stays a quote-priced matter");
 });

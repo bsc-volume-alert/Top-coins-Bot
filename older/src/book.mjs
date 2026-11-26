@@ -175,7 +175,7 @@ export function observe(e, st, t, cov) {
   if (e.manual && q === (e.fill.exec === "routed-quote")) { const m = e.manual; if (m.order && m.order.schedT <= t) { if (execManual(e, st, t, t - m.order.schedT, cov)) e.touched = true; } // an overdue manual sale: the first trustworthy state (or the first quote requested after its scheduled time) prices it, with its real delay
     else if (!m.closed && m.tok > 0) { const val = liqValue(st, m.tok); if (val != null) { m.lastX = (m.got + val) / COST; m.lastT = q ? (sellQuote(st, m.tok)?.t ?? t) : t; } } }
   const full = liqValue(st, e.fill.tok), age = t - e.fill.t;
-  if (full != null && q && e.pop === S.NEW_POP) { const ls = lastSaleT(e); if (ls !== null && t <= ls + S.NEW_FOLLOW_S) trackHigh(e, t, full / COST, false); } // new-coin buys, from the first sale to two hours after the latest one: a real quote for the whole original holding
+  if (full != null) { const ls = lastSaleT(e); if (ls !== null && t <= ls + S.NEW_FOLLOW_S) trackHigh(e, t, full / COST, false); } // EVERY book (owner 26 Nov 2026 07:34 UK: "can we do all the books, please?"): from a buy's first sale to two hours after its latest one, what the whole original holding would fetch — a real quote for a new-coin buy, the pool's own price after every trade for a pool-priced one (so never an estimate there)
   if (full != null) { const x = full / COST; if (age <= S.RUNNER_HORIZON_S) { if (x > e.runner.maxX) e.runner.maxX = x; for (const k of S.RUNNER_X) if (x >= k && !e.runner.reached[k]) e.runner.reached[k] = Math.round(age); } }
   for (const v of e.versions) {
     if ((v.status === "selling" || v.status === "scaling") && v.schedT <= t) { execSell(e, v, st, t, t - v.schedT, cov, q ? v.schedT : null); if (v.status === "closed") continue; } // overdue order: first trustworthy state
@@ -199,7 +199,7 @@ export function dueAt(e) { if (e.status === "pending") return e.schedT; let m = 
 export const unresolvedCount = (e) => (e.status === "filled" ? e.versions.filter((v) => live(v) && v.unresolvedSince).length : 0);
 /** when the LAST sold row of a buy was sold (null: nothing sold yet) */
 export const lastSaleT = (e) => { let m = null; for (const v of e.versions || []) if (v.exit && (m === null || v.exit.t > m)) m = v.exit.t; return m; };
-/** THE TRACK of a quote-priced buy after its first sale (spec NEW_TRACK_S): the highest value seen in each half-minute, as
+/** THE TRACK of a buy after its first sale (spec NEW_TRACK_S; every book since 26 Nov 2026 07:34 UK): the highest value seen in each half-minute, as
  *  [seconds after the buy when that half-minute's first look was made, multiple of cost, 1 = estimated from the price / 0 = a
  *  real sell quote]. A SALE ALWAYS STARTS A NEW POINT, so a value seen before a sale is never counted as "after" it.
  *  Evidence for "how high did it go after we sold" — no peak, stop or sale reads it. Returns true when the track changed. */
@@ -213,10 +213,10 @@ export function trackHigh(e, t, x, est = false) {
 /** how high the buy went AFTER one row's sale, per window (spec AFTER_WINDOWS): { m15: { x, s, est, full }, … } — x = the highest
  *  value in that window as a multiple of cost, s = seconds after the sale when it was seen (to the half-minute), est = that high
  *  is an estimate from the price, full = the looks reach the end of the window (false: still running). null: no look after it yet. */
-export function afterSale(e, v) {
-  if (!e.track?.length || !v?.exit) return null; const t0 = v.exit.t - e.fill.t, out = {}, lastS = e.track[e.track.length - 1][0]; let any = false;
+export function afterSale(e, v, now = Date.now() / 1000) {
+  if (!e.track?.length || !v?.exit) return null; const t0 = v.exit.t - e.fill.t, out = {}; let any = false;
   for (const [k, w] of S.AFTER_WINDOWS) { let hi = null; for (const [s, x, est] of e.track) { if (s <= t0) continue; if (s >= t0 + w) break; if (hi === null || x > hi.x) hi = { x, s: Math.round(s - t0), est: !!est }; }
-    if (hi) { any = true; out[k] = { ...hi, full: lastS >= t0 + w - (S.NEW_RUNNER_S + S.NEW_TRACK_S) }; } } // full: the looks reach the end of the window (within one look)
+    if (hi) { any = true; out[k] = { ...hi, full: now >= v.exit.t + w }; } } // full: the window's time has passed (a pool-priced coin is seen only when it trades — no trade, no change — so the clock decides, not the last look)
   return any ? out : null;
 }
 export const entryDone = (e) => e.status === "cancelled" || (e.status === "filled" && e.runner.horizonDone && e.versions.every((v) => !live(v)) && !manualOpen(e)); // a manual sale still waiting for its price keeps the buy in memory
