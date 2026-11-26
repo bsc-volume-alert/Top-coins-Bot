@@ -38,6 +38,16 @@ export function athUsd(athPrice, supplyChain, supplyProvider, pump = false) {
   if (s > PUMP_SUPPLY * (1 + 1e-6)) return { usd: null, basis: `supply ${Math.round(s)} (${src}) is above 1,000,000,000: tokens were minted, the market cap at the high is not established` };
   return { usd: athPrice * s, basis: `highest price × supply ${Math.round(s)} (${src}) — a lower bound` };
 }
+/** GMGN's TOKEN AUDIT for one coin (its token-security answer; owner 26 Nov 2026 00:43 UK: "token audit… should be 100%").
+ *  The four lines of the audit box on GMGN's page: NoMint (minting given up), No Blacklist (freezing given up), Burnt (the
+ *  liquidity burnt), Top 10 (under 30%). Each true / false / null (GMGN did not say). ok = the number that pass, of = the
+ *  number GMGN answered. Recorded on the buy; no rule reads it. */
+export function parseAudit(sec) {
+  const b = (v) => (v === true || v === 1 ? true : v === false || v === 0 ? false : null), t10 = num(sec?.top_10_holder_rate), burn = typeof sec?.burn_status === "string" ? sec.burn_status : null;
+  const a = { no_mint: b(sec?.renounced_mint), no_blacklist: b(sec?.renounced_freeze_account), burnt: burn == null || burn === "unknown" ? null : burn === "burn", top10_ok: t10 == null ? null : t10 < 0.30 };
+  const known = Object.values(a).filter((v) => v != null);
+  return { ...a, ok: known.filter(Boolean).length, of: known.length, top10: t10, burn_status: burn, burn_ratio: num(sec?.burn_ratio), alert: b(sec?.is_show_alert), honeypot: b(sec?.honeypot), buy_tax: num(sec?.buy_tax), sell_tax: num(sec?.sell_tax), locked: num(sec?.lock_summary?.lock_percent) };
+}
 export function parseInfo(info, supplyChain = null, pump = false) {
   const st = info?.stat ?? null, link = info?.link ?? null, w = info?.wallet_tags_stat ?? null, ath = athUsd(num(info?.ath_price), num(supplyChain), num(info?.total_supply), pump);
   const tw = link && typeof link.twitter_username === "string" ? link.twitter_username.trim() : null; // link block absent = unknown; "" = known: none
@@ -48,6 +58,10 @@ export function parseInfo(info, supplyChain = null, pump = false) {
     trade_fee_sol: num(info?.trade_fee), holders: num(info?.holder_count ?? st?.holder_count), dev_hold: num(st?.dev_team_hold_rate), creator_hold: num(st?.creator_hold_rate),
     creator_status: info?.dev?.creator_token_status ?? null, sniper_wallets: num(w?.sniper_wallets), insider_wallets: num(w?.rat_trader_wallets), bundler_wallets: num(w?.bundler_wallets),
     total_supply: num(info?.total_supply), created: num(info?.creation_timestamp), pool_opened: num(info?.open_timestamp), launchpad: info?.launchpad ?? null,
+    // owner 26 Nov 2026 00:43 UK ("there's also a phishing percentage… include that as well") — recorded, not gated. Field names read
+    // from a live answer the same night: GMGN's "phishing" figure is stat.top_entrapment_trader_percentage; beside it the share
+    // held by bot wallets, the share of fresh wallets, and GMGN's own liquidity figure for the coin.
+    phishing: num(st?.top_entrapment_trader_percentage), bot_degen: num(st?.top_bot_degen_percentage), fresh_wallets: num(st?.fresh_wallet_rate), liq_usd: num(info?.liquidity),
   };
 }
 const pct = (x) => (x * 100).toFixed(x * 100 < 10 && x !== 0 ? 2 : 1).replace(/\.?0+$/, "") + "%";

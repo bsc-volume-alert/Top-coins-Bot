@@ -35,7 +35,7 @@ test("the provider reading a buy was judged on is on its row of the page", () =>
   return new Promise((res) => setImmediate(() => { swap(e, T0 + 612, 205_000); swap(e, T0 + 615, 205_000); // the reading arrived 0.2 s after the signal; the buy is 1 s after it
     assert.equal(en.status, "filled", en.flags.join("; ")); assert.equal(en.gate.verdict, "pass");
     const r = booksApi([en], { stop: 0.25, run: { books: S.booksOf("older-11"), gates: true } }).books["FAST-1M"][0];
-    assert.deepEqual(r.gate, { v: "pass", ms: 200, late: undefined, top10: 0.22, bund: 0.06, ins: 0.03, snip: 0.02, fees: 64.5, tw: true, ath: 500_000, holders: 1234, opt: { bundlers_main: false, bundlers_second: true, insiders_main: true, insiders_second: true } });
+    assert.deepEqual(r.gate, { v: "pass", ms: 200, late: undefined, top10: 0.22, bund: 0.06, ins: 0.03, snip: 0.02, fees: 64.5, tw: true, ath: 500_000, holders: 1234, phish: null, bot: null, fresh: null, opt: { bundlers_main: false, bundlers_second: true, insiders_main: true, insiders_second: true } });
     res(); }));
 });
 

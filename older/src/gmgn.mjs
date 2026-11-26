@@ -75,6 +75,8 @@ const N = (v) => (v == null || v === "" || isNaN(Number(v)) ? null : Number(v));
 export const tokenInfoFirst = (mint, maxWaitMs = 300) => gcall("/v1/token/info", { chain: "sol", address: mint }, { first: true, maxWaitMs });
 /** older-11, label mode: the same reading as an ORDINARY queued call (waits its turn and for the allowance) — used once when the first request failed, so a buy gets a late label rather than none */
 export const tokenInfoLate = (mint) => gcall("/v1/token/info", { chain: "sol", address: mint });
+/** GMGN's token-security answer (its "token audit": mint and freeze given up, liquidity burnt, top 10) — an ORDINARY queued call (1 unit): it waits its turn behind the buy-checks and is only ever a record */
+export const tokenSecurity = (mint) => gcall("/v1/token/security", { chain: "sol", address: mint });
 /** test hook: forget pacing and allowance state */
 export function _reset() { next = 0; pausedUntil = 0; remaining = null; resetAt = 0; chain = Promise.resolve(); coolUntil = 0; refillMs = REFILL0; afterWait = false; limitHdr = 5; gm.refill_s = undefined; }
 /** token creation time (unix s) — GMGN token info; null if GMGN does not give one */

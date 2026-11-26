@@ -78,3 +78,16 @@ test("books that fire together are judged each by its own settings: the one that
   const en = [...e.entries.values()][0]; assert.deepEqual([...en.families].sort(), ["VOL100K", "VOL300K"]); await e.answer(en.gate.req_t + 0.2, good()); swap(e, en.schedT + 2, 100_000); swap(e, en.schedT + 3, 100_000);
   assert.equal(en.status, "filled"); assert.deepEqual(en.families, ["VOL100K"]); assert.deepEqual(en.gate.dropped, { VOL300K: ["total fees 64.56 SOL: below 100 SOL"] }); assert.ok(en.flags.some((f) => /books taken off this buy by their gates: VOL300K/.test(f)));
 });
+
+test("GMGN's phishing figure and token audit are read from the fields of a live answer (26 Nov 2026) and only recorded", async () => {
+  const { parseInfo, parseAudit, judge } = await import("../src/gates.mjs"); const S = await import("../src/spec.mjs");
+  // the stat block and the security answer of 4chanpump as GMGN returned them (numbers as text, as it sends them)
+  const info = { total_fee: "165.65568578416793", liquidity: "4955.9604548016", stat: { top_10_holder_rate: "0.2285", top_bundler_trader_percentage: "0.1696", top_rat_trader_percentage: "0.0001", top70_sniper_hold_rate: "0", top_entrapment_trader_percentage: "0.1618", top_bot_degen_percentage: "0.2748", fresh_wallet_rate: "0.073" }, link: { twitter_username: "4chanpump_" } };
+  const r = parseInfo(info, null, false); assert.equal(r.phishing, 0.1618); assert.equal(r.bot_degen, 0.2748); assert.equal(r.fresh_wallets, 0.073); assert.equal(Math.round(r.liq_usd), 4956); assert.equal(r.top10, 0.2285);
+  assert.equal(parseInfo({ stat: {} }).phishing, null, "absent stays absent, never zero");
+  const high = parseInfo({ ...info, stat: { ...info.stat, top_entrapment_trader_percentage: "0.99" } }); assert.deepEqual(judge(high, S.GATES_11, "FAST-1M").fails, judge(r, S.GATES_11, "FAST-1M").fails, "no rule reads the phishing figure");
+  const sec = { top_10_holder_rate: "0.2285", burn_ratio: "1", burn_status: "burn", honeypot: 0, is_show_alert: false, renounced_freeze_account: true, renounced_mint: true, buy_tax: "0", sell_tax: "0", lock_summary: { lock_percent: "0.95" } };
+  const a = parseAudit(sec); assert.deepEqual({ no_mint: a.no_mint, no_blacklist: a.no_blacklist, burnt: a.burnt, top10_ok: a.top10_ok, ok: a.ok, of: a.of }, { no_mint: true, no_blacklist: true, burnt: true, top10_ok: true, ok: 4, of: 4 }); assert.equal(a.honeypot, false); assert.equal(a.locked, 0.95);
+  const b = parseAudit({ ...sec, renounced_mint: false, burn_status: "unknown", top_10_holder_rate: "0.31" }); assert.deepEqual([b.no_mint, b.burnt, b.top10_ok, b.ok, b.of], [false, null, false, 1, 3], "a line GMGN does not answer is left out of the count, a line that fails is counted against it");
+  assert.deepEqual([parseAudit(null).ok, parseAudit(null).of], [0, 0]);
+});
