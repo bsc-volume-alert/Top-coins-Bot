@@ -8,7 +8,7 @@ import { Poller } from "../src/polled.mjs";
 import * as S from "../src/spec.mjs";
 const M = "MintAAApump", all = (e) => e._all, of = (e, f) => all(e).filter((x) => x.families.includes(f)), firsts = (e, f) => of(e, f).filter((x) => !x.again?.[f]), agains = (e, f) => of(e, f).filter((x) => x.again?.[f]);
 const eng = (o = {}) => { const e = mkEngine(o); e._all = []; const add = e.addEntry.bind(e); e.addEntry = (x) => { e._all.push(x); add(x); }; e.feedUp(T0); e.coin(M, { pool: "PoolA", createTs: T0 - (o.age ?? 20 * H) }); return e; };
-const rows = (x) => x.versions.filter((v) => v.stall === false).map((v) => (v.policy === "trail" ? "t" : "h") + Math.round(v.stop * 100)).join(" ");
+const rows = (x) => x.versions.filter((v) => v.stall === false).map((v) => S.POLICY_KEY[v.policy] + Math.round(v.stop * 100)).join(" ");
 // five hours watched with a $60K low, then a fresh double: the standard LOW4H buy (shared by other books that fire with it)
 const base = (e) => { path(e, T0, T0 + 2 * H, () => 100_000, 60); path(e, T0 + 2 * H, T0 + 5 * H, () => 60_000, 60); swap(e, T0 + 5 * H, 110_000); swap(e, T0 + 5 * H + 2, 125_000); };
 
@@ -16,9 +16,9 @@ test("while a book holds the coin on every row it does not buy again; once a row
   const e = eng(); base(e); assert.equal(firsts(e, "LOW4H").length, 1); const f = firsts(e, "LOW4H")[0]; e.tick(T0 + 5 * H + 4);
   swap(e, T0 + 5 * H + 10, 118_000); swap(e, T0 + 5 * H + 12, 126_000); assert.equal(agains(e, "LOW4H").length, 0, "nothing sold yet: a second crossing changes nothing");
   path(e, T0 + 5 * H + 20, T0 + 5 * H + 200, () => 80_000, 10);           // −36% from the high: the 20, 25 and 30% stops sell; 40% and 60% still hold
-  assert.deepEqual(f.versions.filter((v) => v.stall === false && v.status === "closed").map((v) => v.stop).sort(), [0.2, 0.2, 0.25, 0.25, 0.3, 0.3]);
+  assert.deepEqual(f.versions.filter((v) => v.stall === false && v.status === "closed").map((v) => v.stop).sort(), [0.2, 0.2, 0.2, 0.25, 0.25, 0.25, 0.3, 0.3, 0.3]); // the trailing, the half-at-2× and the buy-price row of each (the coin was bought near its high: 36% under the high is over 30% under the buy price too)
   swap(e, T0 + 5 * H + 210, 110_000); swap(e, T0 + 5 * H + 212, 125_000);   // LOW4H's rule fires again: 2 × the $60K low, freshly crossed
-  const r = agains(e, "LOW4H"); assert.equal(r.length, 1, "one re-buy"); assert.equal(rows(r[0]), "t20 t25 t30 h20 h25 h30", "on the rows that had sold — the 40% and 60% rows are still in the first buy");
+  const r = agains(e, "LOW4H"); assert.equal(r.length, 1, "one re-buy"); assert.equal(rows(r[0]), "t20 t25 t30 h20 h25 h30 b20 b25 b30", "on the rows that had sold — the 40% and 60% rows are still in the first buy");
   assert.equal(r[0].again.LOW4H, true); assert.ok(r[0].id !== f.id && r[0].decisionT > f.decisionT); assert.equal(firsts(e, "LOW4H").length, 1, "the first buy is untouched");
   e.tick(T0 + 5 * H + 214); assert.equal(r[0].status, "filled"); assert.ok(r[0].fill.t > f.fill.t, "a re-buy is a real new buy at its own time and price");
 });
@@ -55,7 +55,7 @@ test("a clock book on its own: CONT-STALL sold at 60 minutes while CONT still ho
   path(e, T0 + 2 * H + 10, T0 + 3 * H + 30, () => 128_000, 30);            // an hour sideways, never 1.15×: the stall rows are sold by the clock, the plain rows are all still open
   assert.ok(f.versions.filter((v) => v.stall === true).every((v) => v.status === "closed")); assert.ok(f.versions.filter((v) => v.stall === false).every((v) => v.status !== "closed"));
   path(e, T0 + 3 * H + 40, T0 + 3 * H + 1000, () => 128_000, 30); swap(e, T0 + 3 * H + 1010, 170_000);   // CONT's condition again
-  const r = agains(e, "CONT-STALL"); assert.equal(r.length, 1); assert.deepEqual(r[0].families, ["CONT-STALL"]); assert.ok(r[0].versions.length === 2 * S.STOPS.length && r[0].versions.every((v) => v.stall === true), "only the stall rows"); assert.equal(agains(e, "CONT").length, 0, "CONT holds every row: no CONT buy");
+  const r = agains(e, "CONT-STALL"); assert.equal(r.length, 1); assert.deepEqual(r[0].families, ["CONT-STALL"]); assert.ok(r[0].versions.length === S.POLICIES.length * S.STOPS.length && r[0].versions.every((v) => v.stall === true), "only the stall rows"); assert.equal(agains(e, "CONT").length, 0, "CONT holds every row: no CONT buy");
 });
 
 test("the sampled method buys again too (a non-pump.fun coin priced by quotes)", async () => {
@@ -68,7 +68,7 @@ test("the sampled method buys again too (a non-pump.fun coin priced by quotes)",
   for (let i = 0; i < 31; i++) await step(10, 100_000); await step(10, 205_000); await step(2, 205_000); assert.equal(firsts(e, "FAST-5M").length, 1); assert.equal(firsts(e, "FAST-5M")[0].status, "filled");
   for (let i = 0; i < 40; i++) await step(10, 60_000);                       // −70%: every stop sells; five quiet minutes
   await step(10, 125_000); await step(2, 125_000);                           // doubles again inside 5 minutes
-  const r = agains(e, "FAST-5M"); assert.equal(r.length, 1); assert.equal(r[0].exec, "routed-quote"); assert.equal(r[0].status, "filled"); assert.equal(rows(r[0]), "t20 t25 t30 t40 t50 t60 t65 t70 h20 h25 h30 h40 h50 h60 h65 h70", "everything had sold: the re-buy carries every row");
+  const r = agains(e, "FAST-5M"); assert.equal(r.length, 1); assert.equal(r[0].exec, "routed-quote"); assert.equal(r[0].status, "filled"); assert.equal(rows(r[0]), "t20 t25 t30 t40 t50 t60 t65 t70 h20 h25 h30 h40 h50 h60 h65 h70 b20 b25 b30 b40 b50 b60 b65 b70", "everything had sold: the re-buy carries every row");
 });
 
 test("first buys are the older-8 buys: on random markets, the first buys with buying-again switched on are identical to those with it switched off", () => {

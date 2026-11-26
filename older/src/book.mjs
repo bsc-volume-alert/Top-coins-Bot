@@ -185,7 +185,8 @@ export function observe(e, st, t, cov) {
     if (!(v.maxEq >= (v.got + val) / COST)) v.maxEq = (v.got + val) / COST; // DISPLAY ONLY: the best the row was actually worth (banked half + what is still held); maxX is the full original position
     const before = q && v.lastT != null ? { t: v.lastT, x: v.lastX } : null; // routed quotes only: what the look BEFORE this one showed (kept on the row if this look triggers the stop)
     v.lastX = (v.got + val) / COST; v.lastT = q ? (sellQuote(st, v.tok)?.t ?? t) : t; // what this row would be worth if sold now (banked half included); for a routed quote, the time of THAT quantity's own quote — another quantity's newer reply never makes it look current
-    if (val <= v.peak * (1 - v.stop)) { trigger(v, t, "trail", val); if (q) v.trig = { peak: v.peak, level: v.peak * (1 - v.stop), seen: val, before }; } // v.trig (routed quotes, owner 26 Nov 05:27 UK "we need to be more accurate with pricing"): the stop's level, what the position was worth when the fall was NOTICED, and the look before it — positions are valued every few seconds, so a fall can pass the stop between two looks; this measures by how much. Evidence only. // also replaces a pending half-sale: one order, never two on the same tokens
+    const byBuy = v.policy === "buy", lvl = (byBuy ? COST : v.peak) * (1 - v.stop); // the stop's level: X% under the row's high — or, for a buy-price row, X% under what was paid (spec POLICIES)
+    if (val <= lvl) { trigger(v, t, byBuy ? "buy-stop" : "trail", val); if (q) v.trig = { peak: v.peak, level: lvl, seen: val, before }; } // v.trig (routed quotes, owner 26 Nov 05:27 UK "we need to be more accurate with pricing"): the stop's level, what the position was worth when the fall was NOTICED, and the look before it — positions are valued every few seconds, so a fall can pass the stop between two looks; this measures by how much. Evidence only. // also replaces a pending half-sale: one order, never two on the same tokens
     else if (v.status === "open" && v.policy === "scale" && !v.half && full != null && full >= S.SCALE_AT_X * COST) { v.status = "scaling"; v.trigT = t; v.trigValue = full; v.schedT = t + S.SELL_DELAY_MS / 1000; }
   }
 }
@@ -221,6 +222,8 @@ export function afterSale(e, v, now = Date.now() / 1000) {
 }
 export const entryDone = (e) => e.status === "cancelled" || (e.status === "filled" && e.runner.horizonDone && e.versions.every((v) => !live(v)) && !manualOpen(e)); // a manual sale still waiting for its price keeps the buy in memory
 export const exposure = (e) => (e.status === "filled" ? e.versions.filter(live).length : 0);
+/** only buy-price rows are still held, and none of them is waiting for a sale's price (spec POLICIES, BUY_SLOW_AFTER_S) */
+export const buyOnly = (e) => { if (e.status !== "filled") return false; let n = 0; for (const v of e.versions) if (live(v)) { if (v.policy !== "buy" || v.status !== "open") return false; n++; } return n > 0; };
 
 /** STAKE VIEW — website only, never a decision input. What this row's trade is worth at another stake, re-priced with the same
  *  constant-product formulas on the pool reserves SAVED at the recorded trade's own buy, half-sale and exit (open rows: the latest

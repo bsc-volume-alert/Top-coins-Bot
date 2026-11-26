@@ -74,7 +74,7 @@ test("a coin that passes all five rules at 5 minutes is paper-bought on a routed
   const w = world(); w.add(A, T0, { mc: 20_000, holders: 150, vol: 45_000 });
   w.t = T0 + 20; await w.pass(); w.t = T0 + 303; await w.pass();
   const K = w.nc.stats.checks["NEW-5M"]; assert.equal(K.candidates, 1); assert.equal(K.gmgn_ok, 1); assert.equal(K.fees, 1); assert.equal(K.top10, 1); assert.equal(K.passed_all, 1); assert.equal(K.bought, 1);
-  const [e] = w.entries("NEW-5M"); assert.ok(e); assert.equal(e.status, "pending"); assert.equal(e.ag, "A0"); assert.equal(e.pop, "new-coins"); assert.equal(e.exec, "routed-quote"); assert.equal(e.mode, "polled"); assert.equal(e.versions.length, 2 * S.STOPS.length, "every stop under both exit policies");
+  const [e] = w.entries("NEW-5M"); assert.ok(e); assert.equal(e.status, "pending"); assert.equal(e.ag, "A0"); assert.equal(e.pop, "new-coins"); assert.equal(e.exec, "routed-quote"); assert.equal(e.mode, "polled"); assert.equal(e.versions.length, S.POLICIES.length * S.STOPS.length, "every stop under every exit policy");
   assert.equal(Math.round(e.signalMc), 20_000); assert.equal(e.cands[0].detail.gmgn.fees_sol, 4); assert.equal(e.cands[0].detail.jupiter.holders, 150); assert.equal(e.cands[0].detail.rule.holders_min, 100);
   assert.equal(e.gate.verdict, "pass"); assert.equal(e.gate.by["NEW-5M"].pass, true); assert.equal(e.gate.reading.fees_sol, 4);
   await w.quoter.quotes(); assert.equal(e.status, "pending", "no quote before the scheduled time");
@@ -343,7 +343,7 @@ test("the 50% stop (owner 26 Nov 2026 07:01 UK): a new buy carries it between th
   w.add(A, T0, {}); w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.2); const [old] = w.entries("NEW-5M");
   old.versions = old.versions.filter((v) => v.stop !== 0.5); st.saveEntry(old); // a buy from before the 50% stop existed: five stops, as it was opened
   w.add(B, w.t, {}); const born = w.t; w.t += 20; await w.pass(); w.t = born + 301; await w.pass(); await w.price(1.2); const fresh = w.entries("NEW-5M").find((e) => e.mint === B);
-  assert.deepEqual(fresh.versions.filter((v) => v.policy === "trail").map((v) => v.stop), [0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.65, 0.7]); assert.equal(old.versions.length, 2 * S.STOPS.length - 2);
+  assert.deepEqual(fresh.versions.filter((v) => v.policy === "trail").map((v) => v.stop), [0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.65, 0.7]); assert.equal(old.versions.length, S.POLICIES.length * (S.STOPS.length - 1));
   const row = (e, s) => e.versions.find((v) => v.stop === s && v.policy === "trail");
   w.setMc(B, 9200); await w.price(10); await w.price(1); // −54% from the buy: through the 50% stop, inside the 60% one
   assert.equal(row(fresh, 0.4).status, "closed"); assert.equal(row(fresh, 0.5).status, "closed"); assert.equal(row(fresh, 0.5).reason, "trail"); assert.equal(row(fresh, 0.6).status, "open"); assert.ok(row(fresh, 0.5).exit.ret < -0.5 && row(fresh, 0.5).exit.ret > -0.6);
@@ -440,7 +440,7 @@ test("the 65% and 70% stops (owner 26 Nov 2026 11:18 UK): a 62% fall from the hi
   const { newEntry, advance, observe } = await import("../src/book.mjs");
   const st = (q, t) => ({ base: 2e8, quote: q, feeBuy: 0.003, feeSell: 0.003, t }), yes = () => true;
   const e = newEntry({ mint: "M", pool: "P", ag: "A1", t: 0, families: ["VOL300K"], features: {}, mc: 1e5, px: 1 }); advance(e, 1.5, st(100, 0), yes);
-  const T = (s) => e.versions.find((v) => v.policy === "trail" && v.stop === s); assert.ok(T(0.65) && T(0.7)); assert.equal(e.versions.length, 16);
+  const T = (s) => e.versions.find((v) => v.policy === "trail" && v.stop === s); assert.ok(T(0.65) && T(0.7)); assert.equal(e.versions.length, S.POLICIES.length * S.STOPS.length);
   observe(e, st(500, 20), 20);                                              // the high: five times the buy
   observe(e, st(190, 50), 50); advance(e, 51, st(190, 50), yes);          // −62% from the high
   assert.equal(T(0.6).status, "closed"); assert.equal(T(0.65).status, "open"); assert.equal(T(0.7).status, "open"); assert.ok(T(0.6).exit.ret > 0.7, "sold while still well above the buy price: a trailing stop follows the high");
@@ -479,4 +479,57 @@ test("the paid key's credits are a reserve, not a spacing: with a monthly allowa
     const t1 = Date.now(); await Promise.all([J.tokens(["c"]), J.tokens(["d"]), J.tokens(["e"]), J.tokens(["f"]), J.tokens(["g"])]); // 50 more: the reserve (about 37 left) runs out → the last waits for it to refill
     assert.ok(Date.now() - t1 > 300, "an empty reserve is waited for: " + (Date.now() - t1) + " ms"); assert.equal(at.length, 10);
   } finally { delete process.env.JUP_RPS; delete process.env.JUP_CREDITS_MONTH; J.setFetch((...a) => fetch(...a)); }
+});
+
+test("the stop from the buy price (owner 26 Nov 2026 11:45–11:55 UK: 'it'll just sell if it reaches its own price. Simple as that'): a third exit on the same buys — sold only when the holding is worth X% less than was paid, never because it fell from a high; otherwise at 24 hours like every row", async () => {
+  const { newEntry, advance, observe, buyOnly } = await import("../src/book.mjs");
+  assert.deepEqual(S.POLICIES, ["trail", "scale", "buy"]); assert.deepEqual(S.POLICY_KEY, { trail: "t", scale: "h", buy: "b" });
+  const st = (q, t) => ({ base: 2e8, quote: q, feeBuy: 0.003, feeSell: 0.003, t }), yes = () => true;
+  const e = newEntry({ mint: "M", pool: "P", ag: "A1", t: 0, families: ["VOL300K"], features: {}, mc: 1e5, px: 1 }); advance(e, 1.5, st(100, 0), yes); assert.equal(e.versions.length, 3 * S.STOPS.length);
+  const T = (s) => e.versions.find((v) => v.policy === "trail" && v.stop === s), B = (s) => e.versions.find((v) => v.policy === "buy" && v.stop === s);
+  assert.equal(buyOnly(e), false);
+  // Elonmas again: five times the buy, then −72% from the high — every trailing row is out, and the coin is still 40% ABOVE the buy price
+  observe(e, st(500, 20), 20); observe(e, st(140, 50), 50); advance(e, 51, st(140, 50), yes);
+  assert.ok(S.STOPS.every((s) => T(s).status === "closed"), "the trailing rows follow the high: all sold"); assert.ok(S.STOPS.every((s) => B(s).status === "open"), "the buy-price rows do not: the coin has not been under what was paid");
+  assert.equal(buyOnly(e), true, "only buy-price rows are still held");
+  // 21% under the buy price: the 20% row sells — and only that one
+  observe(e, st(79, 100), 100); advance(e, 101, st(79, 100), yes);
+  assert.equal(B(0.2).status, "closed"); assert.equal(B(0.2).reason, "buy-stop"); assert.ok(B(0.2).exit.ret < -0.2 && B(0.2).exit.ret > -0.24, "about 21% lost: " + B(0.2).exit.ret); assert.equal(B(0.25).status, "open"); assert.equal(B(0.7).status, "open");
+  // a bounce to twice the buy and back to 55% under it: no trailing from the new high — the rows down to 50% sell on the buy price alone
+  observe(e, st(200, 200), 200); observe(e, st(150, 210), 210); assert.equal(B(0.25).status, "open", "25% off a new high is nothing to a buy-price row");
+  observe(e, st(45, 300), 300); advance(e, 301, st(45, 300), yes);
+  for (const s of [0.25, 0.3, 0.4, 0.5]) { assert.equal(B(s).status, "closed"); assert.equal(B(s).reason, "buy-stop"); } for (const s of [0.6, 0.65, 0.7]) assert.equal(B(s).status, "open");
+  // it can never sell before the trailing row of the same percentage
+  for (const s of [0.2, 0.25, 0.3, 0.4, 0.5]) assert.ok(B(s).exit.t >= T(s).exit.t);
+  // nothing else sells it but the 24-hour limit every row has
+  observe(e, st(60, 5000), 5000); advance(e, 5001, st(60, 5000), yes); assert.equal(B(0.6).status, "open");
+  advance(e, 86_400 + 3, st(60, 86_400), yes); for (const s of [0.6, 0.65, 0.7]) { assert.equal(B(s).status, "closed"); assert.equal(B(s).reason, "max-hold"); }
+  // the page: its own view, its own keys
+  const j = booksApi([e], { stop: 0.2, policy: "buy" }); assert.equal(j.policy, "buy"); assert.equal(j.books.VOL300K.length, 1); assert.equal(j.books.VOL300K[0].reason, "buy-stop"); assert.ok(Math.abs(j.books.VOL300K[0].ret - B(0.2).exit.ret) < 1e-9);
+  assert.equal(j.rows_total, 138 * S.STOPS.length * 3);
+});
+
+test("the buy-price rows on a quote-priced buy: a buy made before they existed keeps its rows and the view counts from the first buy that has them; an old position holding only buy-price rows is looked at once a minute, never at the cost of a fresh one; its sale is priced like any other", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "nc-")), st = new Store(join(dir, "t.db")), w = world({ store: st }); st.firstStart(T0 - 3600); // the run began an hour before (main.mjs writes this at the very first start)
+  w.add(A, T0, {}); w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.2); const [old] = w.entries("NEW-5M");
+  old.versions = old.versions.filter((v) => v.policy !== "buy"); st.saveEntry(old); // a buy from before the buy-price rows existed
+  w.add(B, w.t, {}); const born = w.t; w.t += 20; await w.pass(); w.t = born + 301; await w.pass(); await w.price(1.2); const fresh = w.entries("NEW-5M").find((e) => e.mint === B);
+  assert.equal(fresh.versions.filter((v) => v.policy === "buy").length, S.STOPS.length); assert.equal(old.versions.length, 2 * S.STOPS.length);
+  const view = (policy) => booksApi([old, fresh], { stop: 0.25, policy, since: st.since(w.t), run: { books: w.eng.books } });
+  assert.deepEqual(view("buy").books["NEW-5M"].map((r) => r.mint), [B], "the older buy is simply not in the buy-price view"); assert.deepEqual(view("trail").books["NEW-5M"].map((r) => r.mint).sort(), [A, B].sort());
+  const since = st.since(w.t); assert.equal(since.policies.buy, fresh.decisionT, "counting from the first buy that has the rows"); assert.equal(since.policies.trail, since.first); assert.equal(view("buy").since.stop, fresh.decisionT); assert.equal(view("trail").since.stop, since.first);
+  // B: four times the buy, then back to 10% under it — every trailing row is out, every buy-price row still held
+  w.setMc(A, 100); await w.price(10); await w.price(1); await w.price(1); // (A is gone: all its rows sold)
+  w.setMc(B, 80_000); await w.price(10); w.setMc(B, 18_300); await w.price(10); await w.price(1); await w.price(1);
+  const bRow = (s) => fresh.versions.find((v) => v.policy === "buy" && v.stop === s); assert.ok(fresh.versions.filter((v) => v.policy !== "buy").every((v) => v.status === "closed")); assert.ok(S.STOPS.every((s) => bRow(s).status === "open"));
+  const need = () => w.eng.quoteNeeds(w.t).find((n) => n.id === fresh.id); assert.equal(need().buy_only, false, "younger than six hours: looked at like every open position"); assert.equal(need().sells.length, 1, "one size");
+  let q0 = w.reqs.quote, t0 = w.t; while (w.t - t0 < 300) await w.price(5); assert.ok(w.reqs.quote - q0 >= 28 && w.reqs.quote - q0 <= 31, "every 10 s on the free key: " + (w.reqs.quote - q0));
+  // six hours on: once a minute
+  w.t = fresh.fill.t + S.BUY_SLOW_AFTER_S + 5; assert.equal(need().buy_only, true); q0 = w.reqs.quote; t0 = w.t; while (w.t - t0 < 600) await w.price(5);
+  assert.ok(w.reqs.quote - q0 >= 9 && w.reqs.quote - q0 <= 11, "about one look a minute: " + (w.reqs.quote - q0)); assert.equal(w.quoter.stats.quoteSlowN, 1); assert.equal(w.quoter.stats.quoteSlowEvery, 60); assert.equal(w.quoter.stats.quoteSizes, 0, "it is not counted among the positions that share the main budget");
+  // 30% under the buy price: the 20–30% rows are sold on their own quote, asked for after the trigger
+  w.setMc(B, 14_000); let g = 0; while (bRow(0.2).status === "open" && g++ < 20) await w.price(5); assert.equal(bRow(0.2).status, "selling"); assert.equal(need().buy_only, false, "a sale is waiting: no longer slow"); await w.price(1);
+  assert.equal(bRow(0.2).status, "closed"); assert.equal(bRow(0.2).reason, "buy-stop"); assert.equal(bRow(0.3).status, "closed"); assert.equal(bRow(0.4).status, "open"); assert.ok(bRow(0.2).exit.quote.req_t >= bRow(0.2).trigT + 0.7 - 1e-9);
+  const sr = saleRows(fresh).rows.find((r) => r.k === "b20"); assert.ok(sr, "its sale record is kept like a trailing one"); assert.ok(Math.abs(sr.level - 0.8) < 1e-6, "the level is 80% of what was paid, whatever the high was: " + sr.level); assert.ok(sr.peak > 3);
+  st.db.close();
 });

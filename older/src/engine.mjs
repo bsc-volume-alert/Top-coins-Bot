@@ -6,7 +6,7 @@
 import * as S from "./spec.mjs";
 import { Series, Coverage } from "./series.mjs";
 import { newCoin, evaluate } from "./signals.mjs";
-import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount, requestManual, exposure, manualOpen, trackHigh } from "./book.mjs";
+import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount, requestManual, exposure, manualOpen, buyOnly, trackHigh } from "./book.mjs";
 import { liquidityUsd, staticImpact } from "./fills.mjs";
 import { feeKnown } from "./risk.mjs";
 import { parseInfo, judge } from "./gates.mjs";
@@ -456,7 +456,7 @@ export class Engine {
     const out = [];
     for (const [mint, ids] of this.byMint) for (const id of ids) { const e = this.entries.get(id); if (e.exec !== "routed-quote") continue;
       if (e.status === "pending") { if (now >= e.schedT) out.push({ id, mint, buy_sol: S.STAKE_SOL, sells: [], due: e.schedT }); }
-      else if (e.status === "filled") { const inv = inventories(e); if (inv.length) out.push({ id, mint, buy_sol: null, sells: inv, due: dueAt(e), unresolved: unresolvedCount(e) > 0, runner_only: exposure(e) === 0 && !manualOpen(e) }); } } // runner_only: every row is sold and nothing is waiting — only the 24-hour "how high did it go" measurement still needs a price
+      else if (e.status === "filled") { const inv = inventories(e); if (inv.length) out.push({ id, mint, buy_sol: null, sells: inv, due: dueAt(e), unresolved: unresolvedCount(e) > 0, runner_only: exposure(e) === 0 && !manualOpen(e), buy_only: now - e.fill.t > S.BUY_SLOW_AFTER_S && !manualOpen(e) && buyOnly(e) }); } } // buy_only (spec BUY_SLOW_AFTER_S): an older position on which only buy-price rows are still held — looked at slowly // runner_only: every row is sold and nothing is waiting — only the 24-hour "how high did it go" measurement still needs a price
     return out;
   }
   /** st: { kind: "quote", reqT, t, buy?, sells } — a routed quote that became available at st.t */

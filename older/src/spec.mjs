@@ -148,7 +148,19 @@ export const RUG_FALL = 0.80, RUG_BOUNCE_X = 1.30, RUG_BOUNCE_EXPIRE_S = 24 * 36
 export const DIP = "DIP15K", DIP_HI_USD = 15_000, DIP_LO_USD = 5_000, DIP_PEAK_USD = 100_000;
 export const ANY_AGE = new Set([...VOL.map((x) => x[0]), ...RUG.map((x) => x[0]), DIP]);
 export const agesOf = (family) => (NEW_BOOKS.includes(family) ? [AGE_YOUNG] : ANY_AGE.has(family) ? ALL_AGES : AGES);
-export const POLICIES = ["trail", "scale"];   // trail = the original pure trailing stop; scale = sell half at 2× cost, trail the rest
+export const POLICIES = ["trail", "scale", "buy"];   // trail = the original pure trailing stop; scale = sell half at 2× cost, trail the rest; buy = the stop from the BUY PRICE (below)
+// THE STOP FROM THE BUY PRICE (owner 26 Nov 2026 11:45–11:55 UK: "stop from the buy price… just as a comparison tool… just keep
+// it open… it'll just sell if it reaches its own price. Simple as that"). A third exit beside the two trailing ones, on the
+// same buys and the same stop percentages: the row is sold when the holding is worth X% LESS THAN WHAT WAS PAID for it — never
+// because it fell from a high. Nothing else sells it but the 24-hour limit every row has always had (MAX_HOLD_S). It can never
+// sell before the trailing row of the same percentage (the high is never below the buy price), so the two differ only on a coin
+// that rose first. 24 rows on every buy from the start that has it; older buys keep theirs.
+// These rows stay open for hours where the trailing ones are out in minutes, and every open quote-priced position costs
+// requests. So that they never slow the looks at fresh buys: a quote-priced position on which ONLY buy-price rows are still
+// held, bought more than BUY_SLOW_AFTER_S ago, is looked at every BUY_SLOW_EVERY_S (less often when so many are open that this
+// would take more than BUY_SLOW_SHARE of the quote budget). A pool-priced buy costs nothing to hold and is priced trade by trade.
+export const POLICY_KEY = { trail: "t", scale: "h", buy: "b" }, POLICY_NAME = { trail: "pure trailing stop", scale: "half sold at 2×, rest trailed", buy: "stop from the buy price" };
+export const BUY_SLOW_AFTER_S = 6 * 3600, BUY_SLOW_EVERY_S = 60, BUY_SLOW_SHARE = 0.25;
 export const SCALE_AT_X = 2, SCALE_FRACTION = 0.5;
 // FAST: fresh crossing of X × the lowest pool spot price in the preceding window (receive-time clock, exact observations)
 // [family, window seconds, multiple, seeds SECOND-WAVE]. The 10- and 30-minute books (older-4) use the same exact-observation rules;

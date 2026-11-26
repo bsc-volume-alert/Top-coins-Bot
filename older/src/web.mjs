@@ -8,7 +8,7 @@ import { BOOKS_PAGE, booksApi } from "./page.mjs";
 /** everything the bot has on record about one coin, with a one-line verdict in plain words (see /api/coin) */
 export function coinLookup({ mint, store, engine, lookup = null, run = null, now = Date.now() / 1000 }) {
   const nc = lookup ? lookup(mint) : { on: false }, coin = engine.coins.get(mint) || null, on = run?.books?.length ? new Set(run.books) : null;
-  const buys = store.entriesOf(mint).map((e) => { const rows = {}; for (const v of e.versions || []) if (!v.stall) rows[(v.policy === "trail" ? "t" : "h") + Math.round(v.stop * 100)] = v.exit?.ret != null ? +v.exit.ret.toFixed(4) : v.status === "closed" ? null : "open";
+  const buys = store.entriesOf(mint).map((e) => { const rows = {}; for (const v of e.versions || []) if (!v.stall) rows[S.POLICY_KEY[v.policy] + Math.round(v.stop * 100)] = v.exit?.ret != null ? +v.exit.ret.toFixed(4) : v.status === "closed" ? null : "open";
     return { id: e.id, books: e.families, t: e.decisionT, status: e.status, mc: Math.round(e.signalMc || 0), pop: e.pop ?? null, max: e.runner?.maxX != null ? +e.runner.maxX.toFixed(3) : null, rows, fees: e.gate?.reading?.fees_sol ?? null, top10: e.gate?.reading?.top10 ?? null, hidden: on ? !e.families.some((f) => on.has(f)) : false }; });
   const notes = store.notesOf(mint, 12).map((n) => ({ book: n.family, t: n.t, why: n.reason })).filter((n) => !on || on.has(n.book));
   const checks = nc.checks || [], bought = buys.filter((b) => b.status !== "cancelled"), sym = coin?.info?.symbol ?? nc.waiting?.symbol ?? checks.find((c) => c.sym)?.sym ?? null;
@@ -47,7 +47,7 @@ export function startWeb({ port, store, engine, status, run = () => null, sell =
     // of every position that is still held, for the selected stop / exit / stake — the same figures /api/books gives, worked out
     // by the same code, but from the engine's own unfinished buys, so the database is not read. The page asks every 2 s and
     // repaints only when a figure moved. (The full page data stays on its 10 s cycle: it reads every buy from the database.)
-    if (u.pathname === "/api/live") { const sk = Number(u.searchParams.get("stake")), sel = { stop: Number(u.searchParams.get("stop") || 0.25), policy: u.searchParams.get("policy") === "scale" ? "scale" : "trail", stake: S.STAKE_VIEWS.includes(sk) ? sk : S.STAKE_SOL }, ck = "l|" + JSON.stringify(sel);
+    if (u.pathname === "/api/live") { const sk = Number(u.searchParams.get("stake")), sel = { stop: Number(u.searchParams.get("stop") || 0.25), policy: S.POLICIES.includes(u.searchParams.get("policy")) ? u.searchParams.get("policy") : "trail", stake: S.STAKE_VIEWS.includes(sk) ? sk : S.STAKE_SOL }, ck = "l|" + JSON.stringify(sel);
       let hit = cache.get(ck); if (!hit || Date.now() - hit.atMs > 1500) { const j = booksApi([...engine.entries.values()].filter((e) => e.status === "filled"), { ...sel, run: run() }), rows = {};
         for (const [k, list] of Object.entries(j.books)) for (const r of list) if (r.status === "open") rows[k + "|" + r.id] = [r.now_x, r.hi, r.hi_held ?? null];
         hit = { atMs: Date.now(), body: JSON.stringify({ at: Date.now() / 1000, ...sel, rows }) }; cache.set(ck, hit); }
@@ -62,7 +62,7 @@ export function startWeb({ port, store, engine, status, run = () => null, sell =
       if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint)) return j(400, { ok: false, why: "that is not a coin address" });
       try { return j(200, coinLookup({ mint, store, engine, lookup, run: run() })); } catch (e) { return j(500, { ok: false, why: String(e.message).slice(0, 160) }); } }
     if (u.pathname === "/api/books") { // one stop / exit policy / age group / population at a time; cached 8 s per selection
-      const sk = Number(u.searchParams.get("stake")), sel = { stop: Number(u.searchParams.get("stop") || 0.25), policy: u.searchParams.get("policy") === "scale" ? "scale" : "trail", ag: u.searchParams.get("ag") || "", pop: u.searchParams.get("pop") || "", stake: S.STAKE_VIEWS.includes(sk) ? sk : S.STAKE_SOL, first: u.searchParams.get("buys") === "first", checks: ["pass", "late"].includes(u.searchParams.get("chk")) ? u.searchParams.get("chk") : "all" }, ck = "b|" + JSON.stringify(sel);
+      const sk = Number(u.searchParams.get("stake")), sel = { stop: Number(u.searchParams.get("stop") || 0.25), policy: S.POLICIES.includes(u.searchParams.get("policy")) ? u.searchParams.get("policy") : "trail", ag: u.searchParams.get("ag") || "", pop: u.searchParams.get("pop") || "", stake: S.STAKE_VIEWS.includes(sk) ? sk : S.STAKE_SOL, first: u.searchParams.get("buys") === "first", checks: ["pass", "late"].includes(u.searchParams.get("chk")) ? u.searchParams.get("chk") : "all" }, ck = "b|" + JSON.stringify(sel);
       let hit = cache.get(ck); if (!hit || Date.now() - hit.atMs > 8000) { hit = { atMs: Date.now(), body: JSON.stringify(booksApi(store.allEntries(), { ...sel, since: store.since ? store.since(Date.now() / 1000) : null, build: BUILD, run: run(), sellable: !!(KEY && sell) })) }; cache.set(ck, hit); }
       res.writeHead(200, { "content-type": "application/json" }); return res.end(hit.body); }
     if (u.pathname === "/table") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(PAGE); }

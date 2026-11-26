@@ -75,10 +75,10 @@ test("RUG: nothing is carried across a restart — a fall measured against a pea
   assert.equal(has(y, "RUG450-BOUNCE").length, 0, "more than 24 hours after arming: the setup has expired");
 });
 test("older-8 tables: 1,656 rows (six stops since 26 Nov 2026: 1,488 + the 60 each of VOL100K and DIP15K, older-11, + the 12 each of the four new-coin books) — the any-age books have an 'under 8h' row, the others do not; the page can show the under-8h group", () => {
-  const rows = bookRows([]); assert.equal(rows.length, 276 * S.STOPS.length);
-  assert.equal(rows.filter((r) => r.ag === "A0").length, 14 * S.STOPS.length * 2); assert.ok(rows.filter((r) => r.ag === "A0").every((r) => S.ANY_AGE.has(r.family) || S.NEW_BOOKS.includes(r.family))); assert.ok(rows.filter((r) => S.NEW_BOOKS.includes(r.family)).every((r) => r.ag === "A0"), "the new-coin books have the under-8h group only");
+  const rows = bookRows([]); assert.equal(rows.length, 138 * S.STOPS.length * S.POLICIES.length);
+  assert.equal(rows.filter((r) => r.ag === "A0").length, 14 * S.STOPS.length * S.POLICIES.length); assert.ok(rows.filter((r) => r.ag === "A0").every((r) => S.ANY_AGE.has(r.family) || S.NEW_BOOKS.includes(r.family))); assert.ok(rows.filter((r) => S.NEW_BOOKS.includes(r.family)).every((r) => r.ag === "A0"), "the new-coin books have the under-8h group only");
   const e = young(); path(e, T0, T0 + 600, () => 100_000, 60, { sol: 100 }); for (let k = 0; k < 6; k++) swap(e, T0 + 600 + k * 20, 100_000, { sol: 900 });
-  const j = booksApi([...e.entries.values()], { stop: 0.25, ag: "A0" }); assert.ok(j.books["VOL300K"].length >= 1); assert.equal(j.rows_total, 276 * S.STOPS.length); assert.ok(j.rules["RUG950-BOUNCE"] && j.rules["VOL500K-UP"]);
+  const j = booksApi([...e.entries.values()], { stop: 0.25, ag: "A0" }); assert.ok(j.books["VOL300K"].length >= 1); assert.equal(j.rows_total, 138 * S.STOPS.length * S.POLICIES.length); assert.ok(j.rules["RUG950-BOUNCE"] && j.rules["VOL500K-UP"]);
 });
 test("the books page's own script parses (a quoting slip in the page text once left the site blank; unit tests on the data could not see it)", async () => {
   const { BOOKS_PAGE } = await import("../src/page.mjs"); const m = BOOKS_PAGE.match(/<script>([\s\S]*?)<\/script>/); assert.ok(m && m[1].length > 2000);

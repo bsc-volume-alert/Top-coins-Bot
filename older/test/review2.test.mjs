@@ -476,7 +476,7 @@ test("stake view: every stake shows the same trades — a routed-quote trade can
   advance(kk, 1.5, sk(100, 0), yes); observe(kk, sk(60, 50), 50); advance(kk, 51, sk(60, 50), yes); const exact = atStake(kk, v(kk), 5); delete v(kk).exit.pool; const rebuilt = atStake(kk, v(kk), 5);
   assert.equal(v(kk).status, "closed"); assert.ok(Math.abs(exact.ret - rebuilt.ret) < 1e-9 && rebuilt.est === true && exact.est === false);
   const j1 = booksApi([a, old, rq], { stop: 0.25, policy: "trail" }), j2 = booksApi([a, old, rq], { stop: 0.25, policy: "trail", stake: 2 });
-  assert.equal(j1.books.LOW4H.filter((t) => t.ret != null).length, 3); assert.equal(j1.stake, 0.2); assert.equal(j1.rows_total, 276 * S.STOPS.length);
+  assert.equal(j1.books.LOW4H.filter((t) => t.ret != null).length, 3); assert.equal(j1.stake, 0.2); assert.equal(j1.rows_total, 138 * S.STOPS.length * S.POLICIES.length);
   const b = j2.books.LOW4H; assert.equal(b.length, 3); assert.equal(b.filter((t) => t.flat).length, 1); assert.equal(b.find((t) => t.mint === "B").est, true);
   const fl = b.find((t) => t.flat), f1 = j1.books.LOW4H.find((t) => t.mint === fl.mint); assert.equal(fl.mint, "C"); assert.equal(fl.ret, f1.ret, "same percentage as at 0.2 SOL"); assert.ok(Math.abs(fl.net - f1.ret * 2.0005) < 1e-12, "on the larger stake");
   assert.equal(b.filter((t) => t.ret != null).length, j1.books.LOW4H.filter((t) => t.ret != null).length, "no trade drops out when the stake changes");
@@ -543,7 +543,7 @@ test("counting since: a book starts when it was first evaluated on this database
 // ---- older-7 (21 Nov 2026, owner's decision): HH-BREAK-4H — HH-BREAK's buys, sold at 4 hours if still open; existing buys carried in ----
 test("older-7 HH-BREAK-4H: its versions sell at 4 hours whatever the position did (reason 'clock'); a stop before 4 hours works as usual; plain versions and CONT-STALL are untouched", async () => {
   const { newEntry, advance, observe, versionsFor } = await import("../src/book.mjs"); const st = (q, t) => ({ base: 2e8, quote: q, feeBuy: 0.003, feeSell: 0.003, t }), yes = () => true;
-  const e = newEntry({ mint: "M", pool: "P", ag: "A4", t: 0, families: ["HH-BREAK", "HH-BREAK-4H"], features: {}, mc: 1e5, px: 1 }); assert.equal(e.versions.length, 4 * S.STOPS.length);
+  const e = newEntry({ mint: "M", pool: "P", ag: "A4", t: 0, families: ["HH-BREAK", "HH-BREAK-4H"], features: {}, mc: 1e5, px: 1 }); assert.equal(e.versions.length, 2 * S.POLICIES.length * S.STOPS.length);
   assert.equal(versionsFor(e, "HH-BREAK").length, S.STOPS.length); assert.equal(versionsFor(e, "HH-BREAK-4H").length, S.STOPS.length); assert.ok(versionsFor(e, "HH-BREAK-4H").every((v) => v.stall === "4h"));
   advance(e, 1.5, st(100, 0), yes); observe(e, st(130, 600), 600);              // +30% early on (CONT-STALL's 1.15× test would be passed: irrelevant here)
   observe(e, st(100, 3600), 3600); advance(e, 3601, st(100, 3600), yes);        // −23% from the peak: the 20% stops sell in both books
@@ -558,7 +558,7 @@ test("older-7 HH-BREAK-4H: its versions sell at 4 hours whatever the position di
 test("older-7 through the engine: an HH-BREAK buy carries HH-BREAK-4H on the same entry", () => {
   const e2 = mkEngine(); e2.feedUp(T0); e2.coin("MintAAApump", { pool: "PoolA", createTs: T0 - 3.5 * H });
   path(e2, T0, T0 + 4.5 * H, () => 100_000, 60, { sol: 1 }); const t1 = T0 + 4.5 * H; path(e2, t1, t1 + 14 * 60, () => 100_000, 60, { sol: 3 }); swap(e2, t1 + 14 * 60 + 5, 101_000, { sol: 3 });
-  const h = [...e2.entries.values()].find((x) => x.families.includes("HH-BREAK")); assert.ok(h && h.families.includes("HH-BREAK-4H")); assert.equal(h.versions.filter((v) => v.stall === "4h").length, 2 * S.STOPS.length);
+  const h = [...e2.entries.values()].find((x) => x.families.includes("HH-BREAK")); assert.ok(h && h.families.includes("HH-BREAK-4H")); assert.equal(h.versions.filter((v) => v.stall === "4h").length, S.POLICIES.length * S.STOPS.length);
 });
 test("older-7 existing buys are carried into the new book: stopped before 4 h = the same real result; open past 4 h = a clock sale estimated from the minute bars and marked; younger than 4 h = a live copy; done once", async () => {
   const { addClockBook } = await import("../src/migrate.mjs"); const { advance, versionsFor } = await import("../src/book.mjs"); const { booksApi } = await import("../src/page.mjs");
@@ -570,11 +570,11 @@ test("older-7 existing buys are carried into the new book: stopped before 4 h = 
   const m0 = Math.floor((now - 10 * 3600) / 60); st.saveBar("OLD", m0 + 30, { o: 0.001, h: 0.0011, l: 0.001, c: 0.0011, v: 50, nb: 1, ns: 0 }); st.saveBar("OLD", m0 + 200, { o: 0.0009, h: 0.0009, l: 0.0009, c: 0.0009, v: 50, nb: 1, ns: 0 }); st.saveBar("OLD", m0 + 300, { o: 0.002, h: 0.002, l: 0.002, c: 0.002, v: 50, nb: 1, ns: 0 }); // the bar after 4 h must not be used
   const r = addClockBook(st, "HH-BREAK-4H", now); assert.equal(r.added, 2); assert.deepEqual(addClockBook(st, "HH-BREAK-4H", now + 5), { base: "HH-BREAK", added: 0, exact: 0, estimated: 0, live: 0 }, "second run changes nothing");
   const E = st.allEntries(), old = E.find((e) => e.mint === "OLD"), yg = E.find((e) => e.mint === "YOUNG"), K = (e, sp, p = "trail") => versionsFor(e, "HH-BREAK-4H", p).find((v) => v.stop === sp), Pl = (e, sp) => versionsFor(e, "HH-BREAK").find((v) => v.stop === sp);
-  assert.ok(old.families.includes("HH-BREAK-4H") && old.cands.some((c) => c.family === "HH-BREAK-4H")); assert.equal(old.versions.length, 4 * S.STOPS.length);
+  assert.ok(old.families.includes("HH-BREAK-4H") && old.cands.some((c) => c.family === "HH-BREAK-4H")); assert.equal(old.versions.length, 2 * S.POLICIES.length * S.STOPS.length);
   assert.equal(K(old, 0.2).exit.ret, Pl(old, 0.2).exit.ret, "stopped out before 4 h: the same real result"); assert.ok(!K(old, 0.2).exit.est);
   const k = K(old, 0.4); assert.equal(k.status, "closed"); assert.equal(k.reason, "clock"); assert.equal(k.exit.est, true); assert.equal(k.exit.exec, "estimated-minute-bar"); assert.equal(k.exit.est_from.close, 0.0009, "the last bar at or before the 4-hour mark, not a later one");
   assert.ok(Math.abs(k.exit.ret - (0.9 * 0.994 - 1)) < 0.01, "price 0.9× the signal price, less two fees and costs ≈ −11%: " + k.exit.ret); assert.equal(Pl(old, 0.4).status, "open", "the plain row is untouched");
-  assert.equal(K(yg, 0.4).status, "open"); assert.equal(K(yg, 0.4).tok, Pl(yg, 0.4).tok, "younger than 4 h: a live copy of the position"); assert.equal(r.live, 2 * S.STOPS.length);
+  assert.equal(K(yg, 0.4).status, "open"); assert.equal(K(yg, 0.4).tok, Pl(yg, 0.4).tok, "younger than 4 h: a live copy of the position"); assert.equal(r.live, S.POLICIES.length * S.STOPS.length);
   const eng = mkEngine({ store: st }); st.restore(eng); assert.equal(eng.coins.get("OLD").groups.A4.done["HH-BREAK-4H"], 1, "the one-buy flag is restored for the new book");
   const live = [...eng.entries.values()].find((e) => e.mint === "YOUNG"); advance(live, live.fill.t + 4 * 3600 + 5, s(104, live.fill.t + 600), yes); assert.equal(K(live, 0.4).reason, "clock", "and the live copy is sold by the engine's own clock");
   const j = booksApi(E, { stop: 0.4 }); const row = j.books["HH-BREAK-4H"].find((t) => t.mint === "OLD"); assert.equal(row.est_exit, true); assert.equal(j.books["HH-BREAK"].find((t) => t.mint === "OLD").est_exit, undefined);

@@ -3,7 +3,7 @@
 import Database from "better-sqlite3";
 import { statSync, statfsSync } from "node:fs";
 import { dirname } from "node:path";
-import { BAR_RETAIN_DAYS, SPEC_VER, FAMILIES, STOPS, CLOCK, FEE_BOOK, NEW_POP } from "./spec.mjs";
+import { BAR_RETAIN_DAYS, SPEC_VER, FAMILIES, STOPS, POLICIES, CLOCK, FEE_BOOK, NEW_POP } from "./spec.mjs";
 import { setNextId, entryDone } from "./book.mjs";
 
 export class Store {
@@ -104,7 +104,12 @@ export class Store {
       if (t === null) { all ??= this.allEntries(); const has = all.filter((e) => (e.versions || []).some((v) => v.stop === s)), lacks = all.some((e) => !(e.versions || []).some((v) => v.stop === s));
         t = !lacks ? first : has.length ? Math.min(...has.map((e) => e.decisionT)) : now; put("since:stop:" + s, t); }
       stops[s] = t; }
-    return (this._since = { first, families, stops });
+    const policies = {}; // an exit added later (the stop from the buy price, 26 Nov 2026) counts from the first buy that has its rows — exactly like a stop added later
+    for (const p of POLICIES) { let t = get("since:policy:" + p);
+      if (t === null) { all ??= this.allEntries(); const has = all.filter((e) => (e.versions || []).some((v) => v.policy === p)), lacks = all.some((e) => !(e.versions || []).some((v) => v.policy === p));
+        t = !lacks ? first : has.length ? Math.min(...has.map((e) => e.decisionT)) : now; put("since:policy:" + p, t); }
+      policies[p] = t; }
+    return (this._since = { first, families, stops, policies });
   }
   heartbeat(t) { this.db.prepare("INSERT OR REPLACE INTO meta VALUES ('alive', ?)").run(String(t)); }
   /** the time the previous run was last known alive: the restart gap starts there (null on a first run) */

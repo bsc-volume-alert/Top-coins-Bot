@@ -8,7 +8,7 @@ test("1,656 rows (828 pure-trailing + 828 scale-out; VOL100K and DIP15K added in
   const a = newEntry({ mint: "M1", pool: "P", ag: "A1", t: 0, families: ["LOW4H", "SLOW-BUILD"], features: {}, mc: 1e5, px: 1 });
   const b = newEntry({ mint: "M2", pool: "P", ag: "A2", t: 0, families: ["CONT", "CONT-STALL"], features: {}, mc: 1e5, px: 1, startup: true });
   for (const e of [a, b]) { advance(e, 1.5, st(200, 0), yes); observe(e, st(100, 100), 100); advance(e, 101, st(100, 100), yes); }
-  const rows = bookRows([a, b]); assert.equal(rows.length, 276 * S.STOPS.length); assert.equal(rows.filter((r) => r.policy === "trail").length, 138 * S.STOPS.length);
+  const rows = bookRows([a, b]); assert.equal(rows.length, 138 * S.STOPS.length * S.POLICIES.length); assert.equal(rows.filter((r) => r.policy === "trail").length, 138 * S.STOPS.length);
   const r = (f, ag, s, p = "trail") => rows.find((x) => x.family === f && x.ag === ag && x.stop === s && x.policy === p);
   assert.equal(r("LOW4H", "A1", 0.2).closed, 1); assert.equal(r("SLOW-BUILD", "A1", 0.2).closed, 1); assert.equal(r("LOW4H", "A2", 0.2).closed, 0);
   assert.equal(r("CONT-STALL", "A2", 0.4).closed, 1); assert.equal(r("CONT", "A2", 0.4, "scale").closed, 1); assert.ok(r("LOW4H", "A1", 0.2).avg_ret < -0.4);
