@@ -84,6 +84,11 @@ test("a coin that passes all five rules at 5 minutes is paper-bought on a routed
   const j = booksApi([e], { stop: 0.25, run: { books: w.eng.books, gates: true, gate_mode: "label", newcoins: true }, sellable: true, now: w.t });
   assert.ok(j.order.includes("NEW-5M") && j.rules["NEW-5M"].includes("5 minutes old")); const r = j.books["NEW-5M"][0]; assert.equal(r.sell, 1); assert.equal(r.chk, "pass"); assert.equal(r.gate.fees, 4); assert.equal(r.mode, "polled");
   assert.equal(booksApi([e], { stop: 0.25, run: { books: w.eng.books, gates: true, gate_mode: "label" }, checks: "pass" }).books["NEW-5M"].length, 1, "it stays in the 'passed in time' view: it passed its own rules before it was bought");
+  // trading at the buy (owner 26 Nov 00:37 UK): volume with market cap, net buys, transactions — from the figures stored on the buy
+  assert.equal(r.mk, undefined, "no stored reading, nothing invented"); assert.equal(e.cands[0].detail.jupiter.n_buys, null, "the provider gave no buy count in this reading: recorded as missing"); assert.equal(e.cands[0].detail.jupiter.buy_vol, 45_000 * 0.6);
+  e.snap = { ok: true, delay_s: 0.85, mcap: 20_000, holders: 150, stats1h: { buyVolume: 30_000, sellVolume: 26_000, numBuys: 400, numSells: 322, numTraders: 185, numNetBuyers: 90, buyOrganicVolume: 2000, sellOrganicVolume: 1500 }, stats5m: { buyVolume: 9000, sellVolume: 8000 } };
+  const m = booksApi([e], { stop: 0.25, run: { books: w.eng.books } }).books["NEW-5M"][0].mk; assert.deepEqual(m, { win: "1h", mc: 20_000, vol: 56_000, vmc: 2.8, nb: 4000, tx: 722, buys: 400, sells: 322, traders: 185, netb: 90, org: 3500, holders: 150, v5: 17_000, delay: 0.85 });
+  e.snap = { ok: false, why: "token not returned" }; assert.equal(booksApi([e], { stop: 0.25, run: { books: w.eng.books } }).books["NEW-5M"][0].mk, undefined);
   // one buy per book and coin
   assert.equal(w.eng.openDirect({ mint: A, family: "NEW-5M", t: w.t, mc: 1, px: 1 }), null);
 });
