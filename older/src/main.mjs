@@ -10,7 +10,7 @@ const { Store } = await import("./store.mjs"); const { Engine } = await import("
 const { startFeed, fs } = await import("./feed.mjs"); const { dec, IDL_PIN } = await import("./decoder.mjs");
 const { startSolUsd, solUsd, sp } = await import("./solusd.mjs"); const { startBackfill, bf, gapRequests } = await import("./backfill.mjs");
 const { inventory } = await import("./inventory.mjs"); const { gm, tokenInfoFirst, tokenInfoLate, tokenSecurity, gmgnOn } = await import("./gmgn.mjs"); const { parseAudit } = await import("./gates.mjs"); const { startWeb } = await import("./web.mjs");
-const { verifyEntry, vf } = await import("./verify.mjs"); const { SPEC_VER, booksOf, GATES_11, NEW_BOOKS } = await import("./spec.mjs"); const { riskStatus } = await import("./risk.mjs"); const { RISK_REFRESH_S } = await import("./spec.mjs");
+const { verifyEntry, vf } = await import("./verify.mjs"); const { SPEC_VER, booksOf, GATES_11, NEW_BOOKS, quotePlan, QUOTE_YOUNG_S: S_QUOTE_YOUNG_S } = await import("./spec.mjs"); const { riskStatus } = await import("./risk.mjs"); const { RISK_REFRESH_S } = await import("./spec.mjs");
 
 const store = new Store(process.env.OLDER_DB || "/root/older/older.db");
 const log = (s) => console.log(new Date().toISOString(), s);
@@ -128,7 +128,7 @@ else if (process.env.OLDER_SOLANA_WIDE === "1") {
 // coins). A buy whose every row is sold is followed for its highs after the sale through batched token data, not quotes: two hours after the last sale (spec NEW_RUNNER_S, NEW_FOLLOW_S).
 let newcoins = null;
 if (NEWCOINS) { const { NewCoins } = await import("./newcoin.mjs");
-  const own = engine.onOwnership, quoter = new Poller({ engine, jup: J, store, log, quoteFast: Number(process.env.OLDER_QUOTE_FAST_S || 2), quoteSlow: Number(process.env.OLDER_QUOTE_SLOW_S || 10), runnerEvery: Infinity }); engine.onOwnership = own; // a buy whose every row is sold is not quoted at all: its 24-hour high is estimated from token data, all such buys in one request (newcoin.mjs, runnerPass) // the adapter's own hook stays in place
+  const own = engine.onOwnership, qSlow = Number(process.env.OLDER_QUOTE_SLOW_S || 10), qPlan = quotePlan(Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0.5)), qSlow), quoter = new Poller({ engine, jup: J, store, log, quoteFast: Number(process.env.OLDER_QUOTE_FAST_S || 2), quoteSlow: qSlow, quoteYoung: Number(process.env.OLDER_QUOTE_YOUNG_S || qPlan.young), quoteBudget: Number(process.env.OLDER_QUOTE_BUDGET || qPlan.budget), quotePar: Number(process.env.OLDER_QUOTE_PAR || qPlan.par), runnerEvery: Infinity }); log(`[quotes] open positions: bought in the last ${S_QUOTE_YOUNG_S / 60} minutes every ${quoter.quoteYoung} s, older ones every ${quoter.quoteYoung}–${qSlow} s inside ${quoter.quoteBudget} requests a minute, ${quoter.quotePar} at a time`); engine.onOwnership = own; // a buy whose every row is sold is not quoted at all: its 24-hour high is estimated from token data, all such buys in one request (newcoin.mjs, runnerPass) // the adapter's own hook stays in place
   newcoins = new NewCoins({ engine, jup: J, quoter, store, log, file: process.env.OLDER_OUT ? `${process.env.OLDER_OUT}/newcoins-${process.env.OLDER_RUN_NAME || "run"}.json` : null,
     // ahead of the history repair, like the other books' readings, waiting out a short pause of the allowance; if that request
     // cannot be sent or is refused, ONE ordinary queued request follows (the coin is bought only if it answers within NEW_GMGN_WAIT_S)

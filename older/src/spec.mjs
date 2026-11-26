@@ -97,6 +97,17 @@ export const NEW_RUNNER_S = 60;
 // the new-coin looks, the measurements and the sales (always first) are never crowded out. A sale is still priced by its own
 // quote asked for after the stop is noticed; the look before each trigger is on the row (v.trig.before), so the cost is measurable.
 export const QUOTE_BUDGET_PER_MIN = 36, QUOTE_YOUNG_S = 300;
+// A PAID JUPITER PLAN (26 Nov 2026 11:40 UK: the owner bought the Developer plan — 10 requests a second, 25M credits a month —
+// "let's make this bot far more accurate"). The loss measured that morning was in NOTICING a fall: positions were looked at every
+// 10 s, and when a 25% stop was noticed the price was already a median 6.7% past it (88 of 99 such sales came within 5 minutes
+// of the buy). With a key paced at QUOTE_FAST_PLAN_RPS or more (JUP_RPS in his settings), a position bought in the last
+// QUOTE_YOUNG_S is looked at every QUOTE_YOUNG_EVERY_S, the older ones share what is left of the budget (never faster than the
+// young ones), the budget is QUOTE_PLAN_SHARE of the key's requests, and QUOTE_PAR positions are asked about at the same time
+// (one after another, a 3-second pace cannot be kept: each answer takes a few tenths of a second). On the free key nothing
+// changes: 10 s for every position, 36 a minute, one at a time. A sale is priced exactly as before, by its own quote.
+export const QUOTE_FAST_PLAN_RPS = 5, QUOTE_YOUNG_EVERY_S = 3, QUOTE_PLAN_SHARE = 0.8, QUOTE_PAR = 8, JUP_CREDIT_BURST = 60;
+/** the routine-quote settings for a key paced at `rps` requests a second: { young, budget, par } (quoteSlow = the free-key pace) */
+export const quotePlan = (rps, quoteSlow = 10) => (rps >= QUOTE_FAST_PLAN_RPS ? { young: Math.min(quoteSlow, QUOTE_YOUNG_EVERY_S), budget: Math.round(60 * rps * QUOTE_PLAN_SHARE), par: QUOTE_PAR } : { young: quoteSlow, budget: QUOTE_BUDGET_PER_MIN, par: 1 });
 export const RUN_LINE_USD = 100_000, RUN_WINDOW_S = 6 * 3600, RUN_PEAK_STEP = 1.1, RUN_LIST = 150;
 export const NEW_FOLLOW_S = 2 * 3600, NEW_FOLLOW_LONG_S = 6 * 3600, NEW_FOLLOW_LONG_EVERY_S = 300, NEW_TRACK_S = 30;
 export const AFTER_WINDOWS = [["m15", 900], ["h1", 3600], ["h2", 7200]]; // the windows after a sale shown on the page

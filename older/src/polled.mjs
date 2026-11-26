@@ -14,8 +14,8 @@ import { Series } from "./series.mjs";
 /** token decimals are needed to convert quote sizes: null, undefined or a non-integer is NOT valid (note: `null >= 0` is true in JavaScript) */
 export const validDec = (d) => Number.isInteger(d) && d >= 0 && d <= 18;
 export class Poller {
-  constructor({ engine, jup, store = null, now = () => Date.now() / 1000, log = () => {}, hotEvery = 10, coldEvery = 60, quoteFast = 2, quoteSlow = 10, runnerEvery = null, quoteBudget = S.QUOTE_BUDGET_PER_MIN, valuation = "jupiter mcap (circulating supply × price)" }) {
-    Object.assign(this, { engine, jup, store, now, log, hotEvery, coldEvery, quoteFast, quoteSlow, quoteBudget, valuation }); this.runnerEvery = runnerEvery ?? quoteSlow; // runnerEvery: how often a buy whose every row is SOLD is still priced for its 24-hour high (default: like an open position, as always)
+  constructor({ engine, jup, store = null, now = () => Date.now() / 1000, log = () => {}, hotEvery = 10, coldEvery = 60, quoteFast = 2, quoteSlow = 10, runnerEvery = null, quoteBudget = S.QUOTE_BUDGET_PER_MIN, quoteYoung = null, quotePar = 1, valuation = "jupiter mcap (circulating supply × price)" }) {
+    Object.assign(this, { engine, jup, store, now, log, hotEvery, coldEvery, quoteFast, quoteSlow, quoteBudget, quotePar, valuation }); this.quoteYoung = quoteYoung ?? quoteSlow; /* quoteYoung: how often a position bought in the last QUOTE_YOUNG_S is looked at (a paid key: every few seconds; default = like the others) · quotePar: how many positions are asked about at the same time */ this.runnerEvery = runnerEvery ?? quoteSlow; // runnerEvery: how often a buy whose every row is SOLD is still priced for its 24-hour high (default: like an open position, as always)
     this.watch = new Map(); // mint → { decimals, circ, hot, lastT, lastReq, miss, mc }
     this.quoted = new Map(); // entry id → last quote request time
     this.held = new Map();   // entry id → Map(quantity → its latest quote, with that quote's own request/response times)
@@ -130,17 +130,20 @@ export class Poller {
     const needs = this.engine.quoteNeeds(now).filter((n) => which === "all" || (which === "urgent") === (pri(n) === 0));
     needs.sort((a, b) => pri(a) - pri(b) || (this.quoted.get(a.id) || 0) - (this.quoted.get(b.id) || 0));
     // THE QUOTE BUDGET (spec QUOTE_BUDGET_PER_MIN): how often the OLDER open positions are looked at when everything does not fit
-    let oldEvery = this.quoteSlow; { let young = 0, old = 0; for (const nd of needs) { if (pri(nd) === 0 || nd.unresolved || nd.runner_only || nd.buy_sol) continue; const e = this.engine.entries.get(nd.id), sz = Math.max(1, nd.sells.length); if (e?.fill && now - e.fill.t < S.QUOTE_YOUNG_S) young += sz; else old += sz; }
-      const per = 60 / this.quoteSlow, budget = this.quoteBudget, left = Math.max(budget / 4, budget - young * per); if (old > 0 && (young + old) * per > budget) oldEvery = this.quoteSlow * Math.max(1, (old * per) / left);
-      this.stats.quoteSizes = young + old; this.stats.quoteYoung = young; this.stats.quoteOldEvery = +oldEvery.toFixed(1); if (oldEvery > (this.stats.quoteOldEveryMax || 0)) this.stats.quoteOldEveryMax = +oldEvery.toFixed(1); }
-    let n = 0;
-    for (const need of needs) {
+    // A PAID KEY (spec quotePlan): the young positions are looked at every quoteYoung seconds, the older ones share what is left of
+    // the budget and are never looked at more often than the young ones. If even the young ones do not fit in three quarters of
+    // the budget, they share that. With quoteYoung = quoteSlow (the free key) this is the arithmetic of 26 Nov 11:10 UTC unchanged.
+    let oldEvery = this.quoteSlow, youngEvery = this.quoteYoung; { let young = 0, old = 0; for (const nd of needs) { if (pri(nd) === 0 || nd.unresolved || nd.runner_only || nd.buy_sol) continue; const e = this.engine.entries.get(nd.id), sz = Math.max(1, nd.sells.length); if (e?.fill && now - e.fill.t < S.QUOTE_YOUNG_S) young += sz; else old += sz; }
+      const budget = this.quoteBudget; if (this.quoteYoung < this.quoteSlow && young * (60 / this.quoteYoung) > budget * 0.75) youngEvery = Math.min(this.quoteSlow, (60 * young) / (budget * 0.75));
+      const left = Math.max(budget / 4, budget - young * (60 / youngEvery)); oldEvery = old > 0 ? Math.max(this.quoteYoung, (60 * old) / left) : this.quoteYoung;
+      this.stats.quoteSizes = young + old; this.stats.quoteYoung = young; this.stats.quoteYoungEvery = +youngEvery.toFixed(1); this.stats.quoteOldEvery = +oldEvery.toFixed(1); if (oldEvery > (this.stats.quoteOldEveryMax || 0)) this.stats.quoteOldEveryMax = +oldEvery.toFixed(1); }
+    const one = async (need) => { let n = 0;
       const last = this.quoted.get(need.id) || 0, urgent = pri(need) === 0;
       // a sale that has had no price for 24 h keeps asking, slowly (it is never abandoned): once every 10 minutes
       const fillT = this.engine.entries.get(need.id)?.fill?.t, isYoung = fillT != null && now - fillT < S.QUOTE_YOUNG_S;
-      const every = need.unresolved ? 600 : urgent ? Math.min(1, this.quoteFast) : need.runner_only ? this.runnerEvery : isYoung || need.buy_sol ? this.quoteSlow : oldEvery;
-      if (this.now() - last < every) continue;
-      const w = this.watch.get(need.mint); if (!w || !validDec(w.decimals)) { this.stats.quoteNoWatch = (this.stats.quoteNoWatch || 0) + 1; continue; } const dec = w.decimals; this.quoted.set(need.id, this.now());
+      const every = need.unresolved ? 600 : urgent ? Math.min(1, this.quoteFast) : need.runner_only ? this.runnerEvery : need.buy_sol ? this.quoteSlow : isYoung ? youngEvery : oldEvery;
+      if (this.now() - last < every) return 0;
+      const w = this.watch.get(need.mint); if (!w || !validDec(w.decimals)) { this.stats.quoteNoWatch = (this.stats.quoteNoWatch || 0) + 1; return 0; } const dec = w.decimals; this.quoted.set(need.id, this.now());
       // TRANSFER FEE (spec XFER_FEE_MAX_BPS, XFER_FEE_IN_QUOTE): the coin keeps this share of every transfer. Measured on 22 Nov 2026
       // (fee-probe): the routed quote already includes it on both legs, so nothing more is taken off (keep = 1). Under the other
       // assumption the fee would be taken off the tokens received at the buy and off the proceeds of each sale — exactly once each.
@@ -154,7 +157,12 @@ export class Poller {
         for (const k of held.keys()) if (!need.sells.some((x) => Math.abs(x - k) <= 1e-9 * Math.max(1, x))) held.delete(k); // sizes no longer held
         this.engine.onQuote(need.id, { kind: "quote", reqT: q.req, t: q.t, buy: null, sells: [...held.values()] }); n++;
       }
-    }
+      return n; };
+    // ONE AFTER ANOTHER on the free key (quotePar 1 — exactly as before). On a paid key, quotePar positions are asked about at the
+    // same time (the sizes of ONE position stay in order); the shared rate bucket in jupiter.mjs still spaces every request.
+    let n = 0;
+    if (this.quotePar > 1) { let i = 0; const worker = async () => { while (i < needs.length) { const need = needs[i++]; try { n += await one(need); } catch (e) { this.stats.quoteErr++; this.log("[quotes] " + String(e.message).slice(0, 120)); } } }; await Promise.all(Array.from({ length: Math.min(this.quotePar, needs.length) }, worker)); }
+    else for (const need of needs) n += await one(need);
     for (const id of this.quoted.keys()) if (!this.engine.entries.has(id)) { this.quoted.delete(id); this.held.delete(id); }
     return n;
   }

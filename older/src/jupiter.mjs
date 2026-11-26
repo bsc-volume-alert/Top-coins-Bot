@@ -10,6 +10,7 @@
 // because the full response schema could not be fetched from this workspace (marked UNVERIFIED in docs/REVIEW.md).
 export const WSOL = "So11111111111111111111111111111111111111112";
 const BASE = () => process.env.JUP_BASE || "https://api.jup.ag";
+import { JUP_CREDIT_BURST } from "./spec.mjs";
 export const CREDITS = { price: 1, search: 10, recent: 1, category: 5, order: 1 };
 export const ju = { calls: {}, credits: 0, errors: 0, limited: 0, lastErr: "", omitted: 0, requested: 0, lastOk: null, headers: {} };
 let fetchImpl = (...a) => fetch(...a), next = 0;
@@ -19,6 +20,11 @@ const rps = () => Number(process.env.JUP_RPS || (process.env.JUP_API_KEY ? 1 : 0
 // Pacing respects BOTH limits: requests per second, and the plan's monthly credits (endpoints cost 1–50 credits each, so a
 // request cap alone does not protect the allowance). JUP_CREDITS_MONTH (e.g. 25000000 on Developer) spreads credits evenly.
 const creditsPerSec = () => (Number(process.env.JUP_CREDITS_MONTH || 0) > 0 ? Number(process.env.JUP_CREDITS_MONTH) / (30 * 86400) : Infinity);
+// The credit allowance is a BUCKET (26 Nov 2026, paid plan): it fills at the monthly rate and holds up to JUP_CREDIT_BURST credits,
+// so a 10-credit token search is paid from the reserve and does not hold every other request — a sale's quote included — for a
+// second, as an even spacing by credits did. A request waits only when the reserve is empty. Unset allowance = no credit limit.
+let credTok = JUP_CREDIT_BURST, credAt = 0;
+const credWait = (cost, now) => { const cps = creditsPerSec(); if (!isFinite(cps)) return 0; if (credAt) credTok = Math.min(JUP_CREDIT_BURST, credTok + ((now - credAt) / 1000) * cps); credAt = now; return credTok >= cost ? 0 : Math.ceil(((cost - credTok) / cps) * 1000); };
 // PRIORITY LANES on the one rate bucket: an executable quote for a scheduled order is never queued behind background work.
 //   0 = routed quotes for orders that are DUE (a scheduled buy or sale waiting for its price)
 //   1 = price samples AND routine position valuations, first come first served — measured live on the free key (20 Nov, 19:02 UK):
@@ -29,7 +35,8 @@ const creditsPerSec = () => (Number(process.env.JUP_CREDITS_MONTH || 0) > 0 ? Nu
 const PRIO = { order: 0, price: 1, recent: 2, category: 2, search: 2 }; const waiting = []; let pumping = false, seq = 0;
 async function pump() { if (pumping) return; pumping = true; try { while (waiting.length) { const d = next - Date.now(); if (d > 0) await nap(d);
   const now = Date.now(), eff = (w) => (w.prio === 0 ? 0 : Math.max(1, w.prio - Math.floor((now - w.at) / 10000))); waiting.sort((a, b) => eff(a) - eff(b) || a.seq - b.seq);
-  const w = waiting.shift(); next = Math.max(Date.now(), next) + 1000 * Math.max(1 / rps(), (CREDITS[w.kind] ?? 1) / creditsPerSec()); w.go(); } } finally { pumping = false; } }
+  const w = waiting.shift(), cost = CREDITS[w.kind] ?? 1; { const cw = credWait(cost, Date.now()); if (cw > 0) { await nap(cw); credWait(cost, Date.now()); } } if (isFinite(creditsPerSec())) credTok -= cost;
+  next = Math.max(Date.now(), next) + 1000 / rps(); w.go(); } } finally { pumping = false; } }
 function slot(kind, prio = PRIO[kind] ?? 2) { return new Promise((go) => { waiting.push({ kind, prio, seq: seq++, at: Date.now(), go }); pump(); }); }
 export const queueDepth = () => waiting.length;
 async function get(kind, path, { paced = true, prio } = {}) {

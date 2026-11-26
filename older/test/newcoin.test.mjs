@@ -15,7 +15,7 @@ import * as S from "../src/spec.mjs";
 
 const R5 = S.NEW_COIN[0], R10 = S.NEW_COIN[1];
 // a synthetic provider: the test sets each coin's figures and price; the clock is manual
-function world({ store = null, file = null, engine = {}, gmgn = null } = {}) {
+function world({ store = null, file = null, engine = {}, gmgn = null, quoter = {} } = {}) {
   const w = { t: T0, coins: new Map(), px: new Map(), list: [], reqs: { recent: 0, search: 0, quote: 0, gmgn: 0, risk: 0 }, searchFail: false, quoteDelay: 0.3, info: new Map(), riskOf: new Map(), sizes: [] };
   // figures: mc, holders, vol (since creation), top (Jupiter %, 0–100)
   w.add = (mint, born, f = {}) => { w.coins.set(mint, { born, mc: 20_000, holders: 200, vol: 60_000, top: 25, program: SPL_TOKEN, ...f }); w.px.set(mint, (f.mc ?? 20_000) / 1e9); w.list.push(mint); };
@@ -29,7 +29,7 @@ function world({ store = null, file = null, engine = {}, gmgn = null } = {}) {
   w.readInfo = gmgn ?? (async (mint) => { w.reqs.gmgn++; const x = w.info.get(mint); if (x instanceof Error) throw x; return { ...GOOD(mint), ...(x || {}) }; });
   w.readRisk = async (mint) => { w.reqs.risk++; return w.riskOf.get(mint) ?? { status: "clean", program: TOKEN_2022, extensions: [], blocking: [], warnings: [], fee_bps: 0, src: "rpc mint account" }; };
   w.eng = mkEngine({ tokens: null, ...(store ? { store } : {}), ...engine }); w.eng.setBooks([...S.booksOf("older-11"), ...S.NEW_BOOKS]); w.eng.feedUp(T0);
-  w.quoter = new Poller({ engine: w.eng, jup: w.jup, now: () => w.t, runnerEvery: Infinity }); // as main.mjs sets it: a buy whose every row is sold is not quoted
+  w.quoter = new Poller({ engine: w.eng, jup: w.jup, now: () => w.t, runnerEvery: Infinity, ...quoter }); // as main.mjs sets it: a buy whose every row is sold is not quoted
   w.nc = new NewCoins({ engine: w.eng, jup: w.jup, quoter: w.quoter, readInfo: w.readInfo, readRisk: w.readRisk, store, now: () => w.t, file });
   w.pass = async () => { await w.nc.look(); const n = await w.nc.check(); await w.nc.idle(); return n; };
   w.price = async (dt = 0) => { w.t += dt; w.eng.tick(w.t); await w.quoter.quotes(); w.eng.tick(w.t); };
@@ -448,4 +448,35 @@ test("the 65% and 70% stops (owner 26 Nov 2026 11:18 UK): a 62% fall from the hi
   assert.equal(T(0.65).status, "closed"); assert.equal(T(0.7).status, "open");
   observe(e, st(900, 70), 70); observe(e, st(250, 80), 80); advance(e, 81, st(250, 80), yes); // a new high at nine times, then −72%
   assert.equal(T(0.7).status, "closed"); assert.ok(T(0.7).exit.ret > T(0.65).exit.ret, "here the widest stop rode the second leg");
+});
+
+test("a paid Jupiter key (owner 26 Nov 2026 11:40 UK, Developer plan): a position bought in the last 5 minutes is looked at every 3 s, the older ones share the rest of a bigger budget and never fall behind the free pace while they fit, several positions are asked about at once — and on the free key nothing changes", async () => {
+  assert.deepEqual(S.quotePlan(1), { young: 10, budget: 36, par: 1 }); assert.deepEqual(S.quotePlan(0.5), { young: 10, budget: 36, par: 1 }); assert.deepEqual(S.quotePlan(8), { young: 3, budget: 384, par: 8 }); assert.deepEqual(S.quotePlan(10, 2), { young: 2, budget: 480, par: 8 }, "never slower for the young than the others");
+  const w = world({ quoter: { quoteYoung: 3, quoteBudget: 384, quotePar: 8 } }), M = (i) => "PaidCoin" + String(i).padStart(2, "1") + "111111111111111111111111111111pump";
+  for (let i = 1; i <= 6; i++) w.add(M(i), T0, {}); w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.2); assert.equal(w.entries("NEW-5M").filter((e) => e.status === "filled").length, 6);
+  // several at once: the six quotes of one look are all asked for before the first answer is used
+  let flying = 0, most = 0; const real = w.jup.quote; w.jup.quote = async (m, side, raw, o) => { flying++; most = Math.max(most, flying); await null; await null; const r = await real(m, side, raw, o); flying--; return r; };
+  w.quoteDelay = 0; w.quoter.quoted.clear(); let q0 = w.reqs.quote, t0 = w.t; while (w.t - t0 < 30) await w.price(1); // thirty seconds, a pass every second
+  assert.ok(most >= 6, "six positions in flight together: " + most); assert.equal(w.reqs.quote - q0, 60, "six young positions, ten looks each in 30 s (every 3 s)"); assert.equal(w.quoter.stats.quoteYoungEvery, 3); assert.equal(w.quoter.stats.quoteYoung, 6);
+  // six minutes later they are old and few: they get the spare budget — still every 3 s, not every 10
+  w.t += 360; q0 = w.reqs.quote; t0 = w.t; while (w.t - t0 < 30) await w.price(1); assert.equal(w.quoter.stats.quoteOldEvery, 3); assert.equal(w.reqs.quote - q0, 60);
+  // a fall is now noticed within 3 s and the sale is priced by its own later quote, as always
+  w.setMc(M(1), 9000); const v = w.entries("NEW-5M").find((e) => e.mint === M(1)).versions.find((x) => x.stop === 0.25 && x.policy === "trail"); let g = 0; while (v.status === "open" && g++ < 5) await w.price(1); assert.equal(v.status, "selling"); assert.ok(v.trig.before && w.t - v.trig.before.t <= 3.5, "the look before the trigger was 3 s earlier, not 10");
+  await w.price(1); assert.equal(v.status, "closed"); assert.ok(v.exit.quote.req_t >= v.trigT + 0.7 - 1e-9);
+  // many old positions: 150 sizes do not fit 384 a minute at 3 s → they are spread over the budget (150 × 60 / 384 ≈ 23 s)
+  const P = new Poller({ engine: { quoteNeeds: () => Array.from({ length: 150 }, (_, i) => ({ id: i + 1, mint: "x", sells: [1], due: null })), entries: { get: () => ({ fill: { t: 0 } }), has: () => true } }, jup: {}, now: () => 1e6, quoteYoung: 3, quoteBudget: 384, quotePar: 8 }); await P.quotes("routine");
+  assert.ok(Math.abs(P.stats.quoteOldEvery - 23.4) < 0.2, "old positions share the budget: " + P.stats.quoteOldEvery); assert.equal(P.stats.quoteSizes, 150);
+  // too many YOUNG ones for three quarters of the budget: they share it (never slower than the free pace)
+  const Y = new Poller({ engine: { quoteNeeds: () => Array.from({ length: 30 }, (_, i) => ({ id: i + 1, mint: "x", sells: [1], due: null })), entries: { get: () => ({ fill: { t: 1e6 - 10 } }), has: () => true } }, jup: {}, now: () => 1e6, quoteYoung: 3, quoteBudget: 384, quotePar: 8 }); await Y.quotes("routine");
+  assert.ok(Math.abs(Y.stats.quoteYoungEvery - 6.3) < 0.1, "30 young sizes share 288 a minute: " + Y.stats.quoteYoungEvery);
+});
+
+test("the paid key's credits are a reserve, not a spacing: with a monthly allowance set, a 10-credit token search does not hold the next quote for a second; an empty reserve does", async () => {
+  const J = await import("../src/jupiter.mjs"); const at = []; J.setFetch(async (url) => { at.push([/order/.test(url) ? "order" : "search", Date.now()]); return { status: 200, headers: [], json: async () => (/order/.test(url) ? { outAmount: "5", inAmount: "1" } : []) }; });
+  process.env.JUP_RPS = "200"; process.env.JUP_CREDITS_MONTH = String(20 * 30 * 86400); // 20 credits a second, a reserve of 60
+  try { const t0 = Date.now(); await Promise.all([J.tokens(["a"]), J.quote("m", "sell", 1), J.tokens(["b"]), J.quote("m", "sell", 2), J.quote("m", "sell", 3)]); // 23 credits: paid from the reserve
+    assert.ok(Date.now() - t0 < 400, "nothing waited for credits: " + (Date.now() - t0) + " ms");
+    const t1 = Date.now(); await Promise.all([J.tokens(["c"]), J.tokens(["d"]), J.tokens(["e"]), J.tokens(["f"]), J.tokens(["g"])]); // 50 more: the reserve (about 37 left) runs out → the last waits for it to refill
+    assert.ok(Date.now() - t1 > 300, "an empty reserve is waited for: " + (Date.now() - t1) + " ms"); assert.equal(at.length, 10);
+  } finally { delete process.env.JUP_RPS; delete process.env.JUP_CREDITS_MONTH; J.setFetch((...a) => fetch(...a)); }
 });
