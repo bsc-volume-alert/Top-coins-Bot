@@ -5,7 +5,23 @@ import { bookRows, overlap } from "./report.mjs";
 import * as S from "./spec.mjs";
 import { BOOKS_PAGE, booksApi } from "./page.mjs";
 
-export function startWeb({ port, store, engine, status, run = () => null, sell = null }) { // sell(id, frac): the owner's paper "sell now" (engine.manualSell); null = the page has no such button // run(): older-11 — the run's own books and settings, or null (every book, as before)
+/** everything the bot has on record about one coin, with a one-line verdict in plain words (see /api/coin) */
+export function coinLookup({ mint, store, engine, lookup = null, run = null, now = Date.now() / 1000 }) {
+  const nc = lookup ? lookup(mint) : { on: false }, coin = engine.coins.get(mint) || null, on = run?.books?.length ? new Set(run.books) : null;
+  const buys = store.entriesOf(mint).map((e) => { const rows = {}; for (const v of e.versions || []) if (!v.stall) rows[(v.policy === "trail" ? "t" : "h") + Math.round(v.stop * 100)] = v.exit?.ret != null ? +v.exit.ret.toFixed(4) : v.status === "closed" ? null : "open";
+    return { id: e.id, books: e.families, t: e.decisionT, status: e.status, mc: Math.round(e.signalMc || 0), pop: e.pop ?? null, max: e.runner?.maxX != null ? +e.runner.maxX.toFixed(3) : null, rows, fees: e.gate?.reading?.fees_sol ?? null, top10: e.gate?.reading?.top10 ?? null, hidden: on ? !e.families.some((f) => on.has(f)) : false }; });
+  const notes = store.notesOf(mint, 12).map((n) => ({ book: n.family, t: n.t, why: n.reason })).filter((n) => !on || on.has(n.book));
+  const checks = nc.checks || [], bought = buys.filter((b) => b.status !== "cancelled"), sym = coin?.info?.symbol ?? nc.waiting?.symbol ?? checks.find((c) => c.sym)?.sym ?? null;
+  let verdict;
+  if (bought.length) verdict = "BOUGHT (paper) by " + [...new Set(bought.flatMap((b) => b.books))].join(", ");
+  else if (checks.length) { const left = nc.waiting?.next?.length || 0; verdict = "Seen and measured, NOT bought" + (left ? " so far — " + left + " check" + (left > 1 ? "s" : "") + " still to come" : ""); }
+  else if (nc.waiting) { const n = nc.waiting.next[0]; verdict = "Seen, waiting for its first check" + (n ? " (" + n.book + " in " + Math.max(0, n.in_s) + " s)" : ""); }
+  else if (notes.length) verdict = "Not bought — the pool books looked at it (reasons below)";
+  else if (coin) verdict = "Known to the bot, never measured by the new-coin books and never bought";
+  else verdict = "No record of this coin";
+  return { ok: true, mint, sym, at: now, verdict, newcoins: nc, buys, notes, known: !!coin, created: coin?.createTs ?? nc.waiting?.created ?? null, pool: coin?.pool ?? null };
+}
+export function startWeb({ port, store, engine, status, run = () => null, sell = null, lookup = null }) { // lookup(mint): what the new-coin books know about one coin (newcoin.mjs); null = no new-coin books in this program // sell(id, frac): the owner's paper "sell now" (engine.manualSell); null = the page has no such button // run(): older-11 — the run's own books and settings, or null (every book, as before)
   const KEY = process.env.OLDER_SITE_KEY || "";
   const cache = new Map(), BUILD = String(process.env.OLDER_COMMIT || "dev").slice(0, 12) + ":" + Math.round(Date.now() / 1000); // changes on every start: the books page reloads itself when it sees a new one
   const state = (pop = "") => {
@@ -36,6 +52,13 @@ export function startWeb({ port, store, engine, status, run = () => null, sell =
         for (const [k, list] of Object.entries(j.books)) for (const r of list) if (r.status === "open") rows[k + "|" + r.id] = [r.now_x, r.hi, r.hi_held ?? null];
         hit = { atMs: Date.now(), body: JSON.stringify({ at: Date.now() / 1000, ...sel, rows }) }; cache.set(ck, hit); }
       res.writeHead(200, { "content-type": "application/json" }); return res.end(hit.body); }
+    // THE COIN LOOKUP (owner 26 Nov 2026 04:49 UK: "when I paste the contract, we need to know immediately why the coin was rejected or
+    // not"). Read-only and from the bot's own records only — no provider is asked, so it costs nothing and answers at once:
+    // the new-coin books' waiting list and every check they made of the coin, every paper buy of it by any book, and the pool
+    // books' latest recorded reasons for not buying it.
+    if (u.pathname === "/api/coin") { const mint = (u.searchParams.get("mint") || "").trim(), j = (code, o) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(o)); };
+      if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint)) return j(400, { ok: false, why: "that is not a coin address" });
+      try { return j(200, coinLookup({ mint, store, engine, lookup, run: run() })); } catch (e) { return j(500, { ok: false, why: String(e.message).slice(0, 160) }); } }
     if (u.pathname === "/api/books") { // one stop / exit policy / age group / population at a time; cached 8 s per selection
       const sk = Number(u.searchParams.get("stake")), sel = { stop: Number(u.searchParams.get("stop") || 0.25), policy: u.searchParams.get("policy") === "scale" ? "scale" : "trail", ag: u.searchParams.get("ag") || "", pop: u.searchParams.get("pop") || "", stake: S.STAKE_VIEWS.includes(sk) ? sk : S.STAKE_SOL, first: u.searchParams.get("buys") === "first", checks: ["pass", "late"].includes(u.searchParams.get("chk")) ? u.searchParams.get("chk") : "all" }, ck = "b|" + JSON.stringify(sel);
       let hit = cache.get(ck); if (!hit || Date.now() - hit.atMs > 8000) { hit = { atMs: Date.now(), body: JSON.stringify(booksApi(store.allEntries(), { ...sel, since: store.since ? store.since(Date.now() / 1000) : null, build: BUILD, run: run(), sellable: !!(KEY && sell) })) }; cache.set(ck, hit); }

@@ -59,8 +59,8 @@ export async function prices(mints) {
 /** token metadata + risk indicators for ≤ 100 mints */
 export async function tokens(mints) {
   if (mints.length > 100) throw new Error("≤ 100 mints per search");
-  const { j } = await get("search", `/tokens/v2/search?query=${mints.join(",")}`);
-  return (Array.isArray(j) ? j : []).map(normToken);
+  const { j, req, resp } = await get("search", `/tokens/v2/search?query=${mints.join(",")}`);
+  return (Array.isArray(j) ? j : []).map((x) => ({ ...normToken(x), req, resp })); // req / resp: when this batch was asked and answered (recorded with every new-coin measurement)
 }
 const numsOf = (o) => { if (!o || typeof o !== "object") return null; const out = {}; for (const [k, v] of Object.entries(o)) if (typeof v !== "boolean" && num(v) != null) out[k] = num(v); return out; };
 /** RECORDED MEASUREMENT for one token at an entry: holder count and the provider's own 5-minute and 1-hour statistics, kept

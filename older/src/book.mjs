@@ -182,8 +182,9 @@ export function observe(e, st, t, cov) {
     const val = liqValue(st, v.tok); if (val == null) continue; // this state does not price this holding: no peak, no trigger
     if (val > v.peak) v.peak = val; if (full != null && full / COST > v.maxX) v.maxX = full / COST;
     if (!(v.maxEq >= (v.got + val) / COST)) v.maxEq = (v.got + val) / COST; // DISPLAY ONLY: the best the row was actually worth (banked half + what is still held); maxX is the full original position
+    const before = q && v.lastT != null ? { t: v.lastT, x: v.lastX } : null; // routed quotes only: what the look BEFORE this one showed (kept on the row if this look triggers the stop)
     v.lastX = (v.got + val) / COST; v.lastT = q ? (sellQuote(st, v.tok)?.t ?? t) : t; // what this row would be worth if sold now (banked half included); for a routed quote, the time of THAT quantity's own quote — another quantity's newer reply never makes it look current
-    if (val <= v.peak * (1 - v.stop)) trigger(v, t, "trail", val); // also replaces a pending half-sale: one order, never two on the same tokens
+    if (val <= v.peak * (1 - v.stop)) { trigger(v, t, "trail", val); if (q) v.trig = { peak: v.peak, level: v.peak * (1 - v.stop), seen: val, before }; } // v.trig (routed quotes, owner 26 Nov 05:27 UK "we need to be more accurate with pricing"): the stop's level, what the position was worth when the fall was NOTICED, and the look before it — positions are valued every few seconds, so a fall can pass the stop between two looks; this measures by how much. Evidence only. // also replaces a pending half-sale: one order, never two on the same tokens
     else if (v.status === "open" && v.policy === "scale" && !v.half && full != null && full >= S.SCALE_AT_X * COST) { v.status = "scaling"; v.trigT = t; v.trigValue = full; v.schedT = t + S.SELL_DELAY_MS / 1000; }
   }
 }

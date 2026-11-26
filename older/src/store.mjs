@@ -19,7 +19,9 @@ export class Store {
       CREATE INDEX IF NOT EXISTS notes_f ON notes(family, reason);
       CREATE TABLE IF NOT EXISTS entries (id INTEGER PRIMARY KEY, mint TEXT, status TEXT, done INTEGER DEFAULT 0, decision_t REAL, json TEXT);
       CREATE TABLE IF NOT EXISTS pools (pool TEXT PRIMARY KEY, mint TEXT, quote TEXT, creator TEXT) WITHOUT ROWID;
-      CREATE TABLE IF NOT EXISTS feed (id INTEGER PRIMARY KEY, t REAL, ev TEXT, detail TEXT);`);
+      CREATE TABLE IF NOT EXISTS feed (id INTEGER PRIMARY KEY, t REAL, ev TEXT, detail TEXT);
+      CREATE TABLE IF NOT EXISTS nc_checks (id INTEGER PRIMARY KEY, t REAL, mint TEXT, book TEXT, j TEXT);
+      CREATE INDEX IF NOT EXISTS nc_checks_mint ON nc_checks(mint);`); // nc_checks: EVERY measurement of a new coin at an age point (newcoin.mjs) — also the ones under the market-cap line and the ones the provider did not answer; read by the coin lookup on the page
     db.prepare("INSERT OR IGNORE INTO meta VALUES ('spec', ?)").run(SPEC_VER);
     this.q = {
       bar: db.prepare("INSERT OR REPLACE INTO bars VALUES (?,?,?,?,?,?,?,?,?,?,?)"),
@@ -31,6 +33,8 @@ export class Store {
       coin: db.prepare("INSERT INTO coins (mint, pool, create_ts, create_src, pump_origin, first_seen, info) VALUES (?,?,?,?,?,?,?) ON CONFLICT(mint) DO UPDATE SET pool=COALESCE(coins.pool, excluded.pool), create_ts=COALESCE(coins.create_ts, excluded.create_ts), create_src=COALESCE(coins.create_src, excluded.create_src), pump_origin=COALESCE(coins.pump_origin, excluded.pump_origin), info=COALESCE(excluded.info, coins.info)"),
       last: db.prepare("UPDATE coins SET last_px=?, last_t=? WHERE mint=?"),
       mode: db.prepare("UPDATE coins SET pool=COALESCE(?, pool), info=? WHERE mint=?"),
+      chk: db.prepare("INSERT INTO nc_checks (t, mint, book, j) VALUES (?,?,?,?)"),
+      chkOf: db.prepare("SELECT t, book, j FROM nc_checks WHERE mint = ? ORDER BY t, id"),
     };
     this.tx = db.transaction((fn) => fn());
   }
@@ -102,6 +106,12 @@ export class Store {
   }
   heartbeat(t) { this.db.prepare("INSERT OR REPLACE INTO meta VALUES ('alive', ?)").run(String(t)); }
   /** the time the previous run was last known alive: the restart gap starts there (null on a first run) */
+  /** new-coin measurements: rows = [{ t, mint, book, ...figures }] written in one transaction; checksOf(mint) reads a coin's rows back, oldest first */
+  saveChecks(rows) { if (!rows.length) return 0; this.tx(() => { for (const r of rows) { const { t, mint, book, ...rest } = r; this.q.chk.run(t, mint, book ?? null, JSON.stringify(rest)); } }); return rows.length; }
+  checksSince() { const r = this.db.prepare("SELECT MIN(t) t FROM nc_checks").get(); return r?.t ?? null; }
+  entriesOf(mint) { return this.db.prepare("SELECT json FROM entries WHERE mint = ? ORDER BY id").all(mint).map((r) => JSON.parse(r.json)); }
+  notesOf(mint, limit = 20) { return this.db.prepare("SELECT family, ag, t, reason FROM notes WHERE mint = ? ORDER BY id DESC LIMIT ?").all(mint, limit); }
+  checksOf(mint) { return this.q.chkOf.all(mint).map((r) => { let j = {}; try { j = JSON.parse(r.j); } catch {} return { t: r.t, mint, book: r.book, ...j }; }); }
   lastAlive() { const r = this.db.prepare("SELECT v FROM meta WHERE k='alive'").get(); return r ? Number(r.v) : null; }
   allEntries() { return this.db.prepare("SELECT json FROM entries").all().map((r) => JSON.parse(r.json)); }
   noteCounts() { return this.db.prepare("SELECT family, reason, COUNT(*) n FROM notes GROUP BY family, reason ORDER BY family, n DESC").all(); }
@@ -110,6 +120,6 @@ export class Store {
     let db = 0, wal = 0; try { db = statSync(this.path).size; } catch {} try { wal = statSync(this.path + "-wal").size; } catch {}
     let freeGb = null; try { const s = statfsSync(dirname(this.path)); freeGb = +((s.bavail * s.bsize) / 2 ** 30).toFixed(2); } catch {}
     const n = (sql) => { try { return this.db.prepare(sql).get().n; } catch { return null; } };
-    return { db_mb: +(db / 2 ** 20).toFixed(1), wal_mb: +(wal / 2 ** 20).toFixed(1), free_gb: freeGb, bars: n("SELECT COUNT(*) n FROM bars"), coins: n("SELECT COUNT(*) n FROM coins"), notes: n("SELECT COUNT(*) n FROM notes"), entries: n("SELECT COUNT(*) n FROM entries") };
+    return { db_mb: +(db / 2 ** 20).toFixed(1), wal_mb: +(wal / 2 ** 20).toFixed(1), free_gb: freeGb, bars: n("SELECT COUNT(*) n FROM bars"), coins: n("SELECT COUNT(*) n FROM coins"), notes: n("SELECT COUNT(*) n FROM notes"), entries: n("SELECT COUNT(*) n FROM entries"), nc_checks: n("SELECT MAX(id) n FROM nc_checks") };
   }
 }

@@ -7,7 +7,9 @@ import { mkEngine, swap, T0 } from "./helpers.mjs";
 import { Poller } from "../src/polled.mjs";
 import { NewCoins, measure, judgeMeasure } from "../src/newcoin.mjs";
 import { Store } from "../src/store.mjs";
-import { booksApi } from "../src/page.mjs";
+import { booksApi, saleRows } from "../src/page.mjs";
+import { startWeb, coinLookup } from "../src/web.mjs";
+import { parseInfo } from "../src/gates.mjs";
 import { SPL_TOKEN, TOKEN_2022 } from "../src/risk.mjs";
 import * as S from "../src/spec.mjs";
 
@@ -202,4 +204,76 @@ test("15 and 20 minutes: a slow starter that is nothing at 5 and 10 minutes is m
   // a first attempt that was cancelled does not hide a later filled buy
   const v = world(); v.add(C, T0, {}); v.info.set(C, { total_fee: 6 }); v.t = T0 + 20; await v.pass(); v.t = T0 + 301; await v.pass(); const c5 = v.entries("NEW-5M")[0]; v.t += 7; v.eng.tick(v.t); assert.equal(c5.status, "cancelled", "no quote within 5 s of the scheduled buy");
   v.t = T0 + 601; await v.pass(); await v.price(1.2); const c10 = v.entries("NEW-10M")[0]; assert.equal(c10.status, "filled"); const jc = booksApi([c5, c10], { stop: 0.25, run: { books: v.eng.books, newcoins: true } }); assert.equal(jc.books["NEW-5M"][0].status, "cancelled"); assert.equal(jc.books[S.NEW_ALL].length, 1); assert.equal(jc.books[S.NEW_ALL][0].by_book, "NEW-10M");
+});
+
+// ───────── owner 26 Nov 2026 04:49–05:27 UK: "when I paste the contract, we need to know immediately why the coin was rejected or not" ·
+// "we need to be more accurate with pricing" — every check on record, the lookup, and how each sale was priced ─────────
+const D = "NewCoinDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDpump", E5 = "NewCoinEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEpump";
+test("EVERY check is written to the database with a status for every rule — also a coin under $10K and one the provider did not answer; fees and top 10 are 'not asked' unless GMGN was asked", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "nc-")), st = new Store(join(dir, "t.db")), w = world({ store: st });
+  w.add(A, T0, { mc: 3000, holders: 40, vol: 4000 });                       // under the market-cap line
+  w.add(B, T0, { mc: 31_800, holders: 319, vol: 13_400, vol5: 9000 });      // the owner's example: fails volume only — fees never read
+  w.add(C, T0, {});                                                          // passes everything → bought
+  w.add(D, T0, { hidden: true });                                            // the provider returns no record of it
+  w.add(E5, T0, { mc: 40_000, holders: 500, vol: 90_000 }); w.info.set(E5, new Error("HTTP 429")); // a candidate GMGN did not answer
+  w.t = T0 + 20; await w.pass(); w.t = T0 + 301; assert.equal(await w.pass(), 4, "four of the five were measured");
+  const of = (m) => st.checksOf(m), one = (m) => { const r = of(m); assert.equal(r.length, 1, m.slice(7, 8) + ": one row for its 5-minute check"); return r[0]; };
+  const a = one(A); assert.equal(a.book, "NEW-5M"); assert.equal(a.mc, 3000); assert.deepEqual(a.st, { mc: "fail", holders: "fail", vol: "fail", top_pre: "pass", fees: "not asked", top10: "not asked" }); assert.match(a.out, /^not bought: market cap \$3K \(needs over \$10K\), holders 40 \(needs over 100\), volume \$4K \(needs \$30K\)$/); assert.equal(a.ok, undefined, "the true/false trio is not stored twice");
+  const b = one(B); assert.deepEqual(b.st, { mc: "pass", holders: "pass", vol: "fail", top_pre: "pass", fees: "not asked", top10: "not asked" }); assert.equal(b.fees, undefined, "no fee figure exists: GMGN was never asked"); assert.equal(b.vol, 13_400); assert.equal(b.v1h, 13_400); assert.equal(b.v5m, 9000, "both volume windows, separately"); assert.equal(b.out, "not bought: volume $13K (needs $30K)");
+  const c = one(C); assert.deepEqual(c.st, { mc: "pass", holders: "pass", vol: "pass", top_pre: "pass", fees: "pass", top10: "pass" }); assert.match(c.out, /^BOUGHT \(paper\), entry \d+$/); assert.equal(c.fees, 4); assert.equal(c.top10, 0.24); assert.ok(c.g.asked <= c.g.answered); assert.equal(c.g.holders, 210);
+  const d = one(D); assert.equal(d.st.mc, "provider error"); assert.equal(d.st.fees, "not asked"); assert.match(d.out, /provider returned no record/); assert.equal(d.mc, undefined);
+  const e = one(E5); assert.equal(e.st.vol, "pass"); assert.equal(e.st.fees, "provider error"); assert.equal(e.st.top10, "provider error"); assert.match(e.out, /no GMGN reading/);
+  assert.equal(w.nc.status().kept, 5); assert.equal(w.nc.status().keep_error, null); assert.equal(st.disk().nc_checks, 5);
+  // the card and the published file are as before: coins over the market-cap line only
+  assert.deepEqual(w.nc.history.map((r) => r.mint).sort(), [B, C, E5].sort()); assert.equal(w.nc.history.find((r) => r.mint === B).ok.vol, false);
+  // a coin that could not be measured in time is on record too
+  w.add("NewCoinFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFpump", w.t, {}); const born = w.t; w.t += 20; await w.pass(); w.searchFail = true; w.t = born + 301; await w.pass(); w.t = born + 300 + S.NEW_CHECK_LATE_S + 5; w.searchFail = false; await w.pass();
+  const late = st.checksOf("NewCoinFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFpump"); assert.equal(late.length, 1); assert.match(late[0].out, /^not measured: the coin could not be measured within 90 s/); assert.equal(late[0].st.vol, "provider error");
+  st.db.close();
+});
+
+test("GMGN's own volume and trade counts are read from the same answer and recorded beside Jupiter's (no extra request, no rule reads them)", async () => {
+  const g = parseInfo({ total_fee: 3, price: { price: "0.0000089", volume_1m: "28.3", volume_5m: "81.4", volume_1h: "5675.78", buy_volume_1h: "1947.1", sell_volume_1h: "3728.6", buys_1h: 212, sells_1h: 235, swaps_5m: 13, swaps_1h: 447 } });
+  assert.equal(g.vol_5m, 81.4); assert.equal(g.vol_1h, 5675.78); assert.equal(g.buy_vol_1h, 1947.1); assert.equal(g.sell_vol_1h, 3728.6); assert.equal(g.buys_1h, 212); assert.equal(g.sells_1h, 235); assert.equal(g.swaps_1h, 447); assert.equal(g.price_usd, 0.0000089);
+  assert.equal(parseInfo({ total_fee: 3 }).vol_1h, null, "an answer without the price block gives no figure, not zero");
+  const dir = mkdtempSync(join(tmpdir(), "nc-")), st = new Store(join(dir, "t.db")), w = world({ store: st }); w.add(A, T0, {}); w.info.set(A, { price: { volume_5m: "41000", volume_1h: "58000", swaps_1h: 900 } });
+  w.t = T0 + 20; await w.pass(); w.t = T0 + 301; const q0 = w.reqs.gmgn; await w.pass(); assert.equal(w.reqs.gmgn - q0, 1, "one GMGN request, as before");
+  const [r] = st.checksOf(A); assert.equal(r.vol, 60_000); assert.equal(r.g.vol_1h, 58_000); assert.equal(r.g.vol_5m, 41_000); assert.equal(r.g.swaps_1h, 900); st.db.close();
+});
+
+test("the coin lookup answers at once from the bot's own records: waiting → measured and not bought (with the reason) → bought; no provider is asked", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "nc-")), st = new Store(join(dir, "t.db")), w = world({ store: st });
+  const ask = (mint) => coinLookup({ mint, store: st, engine: w.eng, lookup: (m) => w.nc.lookup(m), run: { books: w.eng.books }, now: w.t });
+  assert.equal(ask(A).verdict, "No record of this coin"); assert.deepEqual(ask(A).newcoins.checks, []);
+  w.add(A, T0, { mc: 31_800, holders: 319, vol: 13_400 }); w.add(B, T0, {}); w.t = T0 + 20; await w.pass();
+  let r = ask(A); assert.match(r.verdict, /^Seen, waiting for its first check \(NEW-5M in 280 s\)$/); assert.deepEqual(r.newcoins.waiting.next.map((x) => x.book), ["NEW-5M", "NEW-10M", "NEW-15M", "NEW-20M"]); assert.equal(r.newcoins.waiting.next[0].at, T0 + 300); assert.equal(r.created, T0);
+  w.t = T0 + 301; const before = { ...w.reqs }; await w.pass(); const asked = { ...w.reqs };
+  r = ask(A); assert.equal(r.verdict, "Seen and measured, NOT bought so far — 3 checks still to come"); assert.equal(r.newcoins.checks.length, 1); assert.equal(r.newcoins.checks[0].out, "not bought: volume $13K (needs $30K)"); assert.equal(r.newcoins.checks[0].st.fees, "not asked"); assert.equal(r.sym, A.slice(0, 4));
+  assert.deepEqual(r.newcoins.rules[0], { book: "NEW-5M", at_s: 300, mc: 10_000, holders: 100, vol: 30_000, fees: 2, top10: [0.2, 0.3] });
+  await w.price(1.2); r = ask(B); assert.equal(r.verdict, "BOUGHT (paper) by NEW-5M"); assert.equal(r.buys.length, 1); assert.equal(r.buys[0].status, "filled"); assert.equal(r.buys[0].rows.t25, "open"); assert.equal(r.buys[0].fees, 4); assert.equal(r.buys[0].top10, 0.24); assert.equal(r.buys[0].hidden, false);
+  assert.deepEqual({ ...w.reqs, quote: 0 }, { ...asked, quote: 0 }, "a lookup asks no provider anything"); assert.ok(before.search < asked.search);
+  // after every age point has passed the coin leaves the waiting list; its record stays
+  w.t = T0 + 1200 + S.NEW_CHECK_LATE_S + 30; await w.pass(); await w.pass(); r = ask(A); assert.equal(r.newcoins.waiting, null); assert.equal(r.verdict, "Seen and measured, NOT bought"); assert.ok(r.newcoins.checks.length >= 1);
+  // a check made before the database kept every check (the log file's rows) is still found
+  w.nc.history.push({ book: "NEW-5M", t: T0 - 5000, mint: D, sym: "OLD", mc: 46_080, holders: 106, vol: 39_126, ok: { mc: true, holders: true, vol: true }, fees: 6.26, top10: 0.1848, out: "not bought: top 10 holders 18.5% (needs 20–30%)" });
+  r = ask(D); assert.equal(r.verdict, "Seen and measured, NOT bought"); assert.equal(r.newcoins.checks[0].top10, 0.1848); assert.equal(r.sym, "OLD");
+  // over the site: key-protected, read-only, a bad address is refused
+  process.env.OLDER_SITE_KEY = "sekret"; const web = startWeb({ port: 0, store: st, engine: w.eng, status: () => ({}), run: () => ({ books: w.eng.books }), lookup: (m) => w.nc.lookup(m) }); delete process.env.OLDER_SITE_KEY; await new Promise((res) => web.server.once("listening", res)); const port = web.server.address().port;
+  const get = async (path) => { const x = await fetch(`http://127.0.0.1:${port}${path}`); return { status: x.status, body: await x.text() }; };
+  try { assert.equal((await get(`/api/coin?mint=${B}`)).status, 403); assert.equal((await get(`/api/coin?mint=not-an-address&k=sekret`)).status, 400);
+    const ok = await get(`/api/coin?mint=${B}&k=sekret`); assert.equal(ok.status, 200); const j = JSON.parse(ok.body); assert.equal(j.ok, true); assert.equal(j.verdict, "BOUGHT (paper) by NEW-5M"); assert.equal(j.mint, B); assert.ok(!ok.body.includes("sekret")); } finally { web.server.close(); st.db.close(); }
+});
+
+test("how each sale was priced is on record: the stop's level, what the position was worth when the fall was noticed, the look before it, and what the sale fetched", async () => {
+  const w = world(); w.add(A, T0, {}); w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.2);
+  const [e] = w.entries("NEW-5M"), row = (stop) => e.versions.find((v) => v.stop === stop && v.policy === "trail"); assert.equal(saleRows(e).rows.length, 0, "nothing sold yet");
+  w.setMc(A, 30_000); await w.price(10); const hiT = row(0.25).lastT, hiX = row(0.25).lastX; w.setMc(A, 12_000); await w.price(10); // −60% between two looks: every stop from 20% to 40% is passed at once
+  for (const s of [0.2, 0.25, 0.3, 0.4]) assert.equal(row(s).status, "selling"); const v = row(0.25);
+  assert.ok(Math.abs(v.trig.level - v.trig.peak * 0.75) < 1e-12); assert.equal(v.trig.seen, v.trigValue); assert.ok(v.trig.seen < v.trig.level * 0.6, "noticed far under the stop's level"); assert.deepEqual(v.trig.before, { t: hiT, x: hiX }, "the look before: at the high, 10 s earlier");
+  await w.price(1); const S25 = saleRows(e).rows.find((r) => r.k === "t25"), S40 = saleRows(e).rows.find((r) => r.k === "t40");
+  assert.ok(Math.abs(S25.level - S25.peak * 0.75) < 2e-4); assert.ok(Math.abs(S25.past - (1 - S25.seen / S25.level)) < 2e-3); assert.ok(S25.past > 0.4 && S25.past < 0.5, "about 47% under the 25% stop's level when noticed"); assert.ok(S40.past > 0.3 && S40.past < 0.36);
+  assert.ok(Math.abs(S25.slip) < 0.005, "the sale itself was priced a second later at the same price: the loss is in the noticing, not in the sale"); assert.ok(S25.delay_s >= 0 && S25.delay_s < 2); assert.ok(S25.sold_t >= S25.trig_t + 0.7 - 0.05); assert.deepEqual(S25.before, [+hiT.toFixed(1), +hiX.toFixed(4)]);
+  assert.equal(saleRows({ exec: "reconstructed-pool-state", fill: {}, versions: [] }), undefined, "pool-priced buys have no such record (they are priced trade by trade)");
+  // a pool-priced position never gets the field
+  const en = mkEngine({ tokens: null }); en.feedUp(T0); assert.ok([...en.entries.values()].every((x) => x.versions.every((y) => y.trig === undefined)));
 });

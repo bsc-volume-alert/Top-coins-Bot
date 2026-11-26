@@ -62,6 +62,10 @@ export function parseInfo(info, supplyChain = null, pump = false) {
     // from a live answer the same night: GMGN's "phishing" figure is stat.top_entrapment_trader_percentage; beside it the share
     // held by bot wallets, the share of fresh wallets, and GMGN's own liquidity figure for the coin.
     phishing: num(st?.top_entrapment_trader_percentage), bot_degen: num(st?.top_bot_degen_percentage), fresh_wallets: num(st?.fresh_wallet_rate), liq_usd: num(info?.liquidity),
+    // owner 26 Nov 2026 04:39 UK ("why don't we use GMGN for the volume") — GMGN's own volume and trade counts, from the same
+    // answer (field names read from the live answer of 26 Nov): recorded beside Jupiter's so the two can be compared; no rule reads them.
+    vol_1m: num(info?.price?.volume_1m), vol_5m: num(info?.price?.volume_5m), vol_1h: num(info?.price?.volume_1h), buy_vol_1h: num(info?.price?.buy_volume_1h), sell_vol_1h: num(info?.price?.sell_volume_1h),
+    buys_1h: num(info?.price?.buys_1h), sells_1h: num(info?.price?.sells_1h), swaps_5m: num(info?.price?.swaps_5m), swaps_1h: num(info?.price?.swaps_1h), price_usd: num(info?.price?.price),
   };
 }
 const pct = (x) => (x * 100).toFixed(x * 100 < 10 && x !== 0 ? 2 : 1).replace(/\.?0+$/, "") + "%";
