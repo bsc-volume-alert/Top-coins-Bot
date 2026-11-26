@@ -38,6 +38,13 @@ export function judgeMeasure(m, r) {
 /** one rule on one check, in words: "pass" | "fail" | "no figure" (the provider answered without it) — and, set where they apply,
  *  "not asked" (the reading was never requested because an earlier rule had failed) and "provider error" (asked, no answer in time) */
 export const statusOf = (v) => (v == null ? "no figure" : v ? "pass" : "fail");
+/** WHY one check did not buy, in one word — the FIRST rule it failed, in the order the rules are judged: market cap, holders,
+ *  volume, top holders by Jupiter's figure (the first look), then GMGN's fees and top 10. "bought" = it bought. The runners list
+ *  counts every check under exactly one of these, so "rejected by this rule" and "of those, reached $100K" add up. */
+export const WHYS = ["bought", "market cap", "holders", "volume", "top holders (Jupiter)", "no GMGN answer", "fees", "top 10 (GMGN)", "not measured", "other"];
+export function whyOf(r) { const st = r.st; if (String(r.out || "").startsWith("BOUGHT")) return "bought"; if (!st) return "other";
+  if (st.mc === "provider error") return "not measured"; if (st.mc !== "pass") return "market cap"; if (st.holders !== "pass") return "holders"; if (st.vol !== "pass") return "volume"; if (st.top_pre === "fail") return "top holders (Jupiter)";
+  if (st.fees === "provider error") return "no GMGN answer"; if (st.fees === "fail" || st.fees === "no figure") return "fees"; if (st.top10 === "fail" || st.top10 === "no figure") return "top 10 (GMGN)"; return "other"; }
 const lean = (o) => { const out = {}; for (const [k, v] of Object.entries(o)) if (v != null) out[k] = v; return out; }; // a database row carries no empty fields
 const USDK = (v) => (v == null ? "?" : "$" + (v >= 1000 ? Math.round(v / 1000) + "K" : Math.round(v)));
 const fresh = () => ({ since: null, looks: 0, look_errors: 0, looks_no_overlap: 0, seen: 0, no_creation: 0, by_launchpad: {}, last_look: null, last_error: null, checks: {} });
@@ -55,7 +62,7 @@ export class NewCoins {
     Object.assign(this, { engine, jup, quoter, readInfo, readRisk, store, now, log, file, rules }); this.solUsd = solUsd ?? ((t) => engine.solUsd(t));
     this.history = []; this.logFile = file ? file.replace(/\.json$/, "") + ".log.jsonl" : null; this.runner = { passes: 0, coins: 0, priced: 0, no_price: 0, errors: 0, last: null }; this.lastRunner = 0;
     if (this.logFile && existsSync(this.logFile)) try { const L = readFileSync(this.logFile, "utf8").split("\n").filter(Boolean).slice(-S.NEW_LOG_KEEP); for (const l of L) try { this.history.push(JSON.parse(l)); } catch {} } catch {}
-    this.young = new Map(); this.prevIds = null; this.inflight = new Set(); this.maxAt = Math.max(...rules.map((r) => r.at_s)); this.stats = fresh(); this.dirty = false; this.confirmMax = S.NEW_CONFIRM_MAX; this.dbq = []; this.kept = 0; this.keepErr = null;
+    this.young = new Map(); this.prevIds = null; this.inflight = new Set(); this.maxAt = Math.max(...rules.map((r) => r.at_s)); this.stats = fresh(); this.dirty = false; this.confirmMax = S.NEW_CONFIRM_MAX; this.hits = new Map(); this.hitsLoaded = false; this.dbq = []; this.kept = 0; this.keepErr = null;
     this.load();
   }
   k(family) { return (this.stats.checks[family] ||= freshCheck()); }
@@ -117,8 +124,34 @@ export class NewCoins {
     if (this.logFile) try { appendFileSync(this.logFile, JSON.stringify(row) + "\n"); } catch (e) { if (!this.logErr) { this.logErr = true; this.log("[new coins] log not written: " + e.message); } } }
   /** EVERY check goes to the database (table nc_checks) — also coins under the market-cap line and checks the provider did not
    *  answer — so the page's coin lookup can say at once what happened to any coin. Written in one transaction per pass. */
-  keep(row) { const { ok, ...r } = row; this.dbq.push(lean(r.st ? r : row)); } // the true/false trio is the same information as the statuses: not stored twice
+  keep(row) { const { ok, ...r } = row; this.dbq.push(lean(r.st ? r : row));
+    if (row.book && row.st) { const W = (this.k(row.book).why ||= {}), w = whyOf(row); W[w] = (W[w] || 0) + 1; if (!this.stats.why_since) this.stats.why_since = row.t; } } // each check counted once under the first rule it failed (the runners list sets these beside the coins that reached $100K) // the true/false trio is the same information as the statuses: not stored twice
   flush() { if (!this.dbq.length) return 0; const rows = this.dbq; this.dbq = []; if (!this.store?.saveChecks) return 0; try { this.kept += this.store.saveChecks(rows); return rows.length; } catch (e) { this.keepErr = String(e.message).slice(0, 120); if (!this.keepLogged) { this.keepLogged = true; this.log("[new coins] checks not written to the database: " + e.message); } return 0; } }
+  /** THE RUNNERS LIST (spec RUN_LINE_USD). The engine says when a coin's pool price first reaches the line (and at each new high
+   *  a step above). If the new-coin books ever measured that coin it is written down once — when it got there, how old it was —
+   *  and its highest value is kept. A coin they never measured (created before the bot ran, or never listed) is not theirs: skipped.
+   *  sawUnder = false: the coin was already at the line when this process first saw it trade (a restart, or a deploy): the true
+   *  moment is unknown and the record says so. No provider is asked; nothing here buys, sells or changes a rule. */
+  loadHits() { if (this.hitsLoaded) return; this.hitsLoaded = true; try { for (const r of this.store?.runners?.() || []) this.hits.set(r.mint, r); } catch {} }
+  runnerHit(mint, mc, t, sawUnder = null) { this.loadHits(); const had = this.hits.get(mint);
+    if (had === null) return null; // looked up before: not a coin the new-coin books measured
+    if (had) { if (mc > had.peak) { had.peak = Math.round(mc); had.peak_t = Math.round(t); try { this.store?.runnerPeak?.(mint, had.peak, had.peak_t); } catch {} } return had; }
+    const checks = this.lookup(mint).checks; if (!checks.length) { this.hits.set(mint, null); return null; }
+    const c0 = checks.find((c) => c.age_s != null) || null, created = c0 ? c0.t - c0.age_s : this.young.get(mint)?.created ?? null;
+    const rec = { mint, t: Math.round(t), mc: Math.round(mc), created: created == null ? null : Math.round(created), peak: Math.round(mc), peak_t: Math.round(t), sym: checks.find((c) => c.sym)?.sym ?? null, lp: checks.find((c) => c.lp)?.lp ?? null, age_s: created == null ? null : Math.round(t - created), unseen_before: sawUnder === false ? true : undefined };
+    this.hits.set(mint, rec); try { this.store?.saveRunner?.(rec); } catch (e) { this.log("[new coins] runner not written: " + e.message); } this.stats.runners = (this.stats.runners || 0) + 1; this.dirty = true; return rec; }
+  /** for the page and the published file: the coins that reached the line within RUN_WINDOW_S of their creation (newest first),
+   *  each with its checks and any buy, and the both-sides count — per book and rule: checks rejected, and how many of those coins got there */
+  runnersView(now = this.now()) { this.loadHits(); const all = [...this.hits.values()].filter(Boolean), since = this.stats.why_since ?? null;
+    const inWin = (r) => r.age_s != null && r.age_s <= S.RUN_WINDOW_S, list = all.filter(inWin).sort((a, b) => b.t - a.t), tally = {};
+    for (const r of this.rules) tally[r.family] = Object.fromEntries(WHYS.map((w) => [w, { checks: this.k(r.family).why?.[w] || 0, reached: 0 }]));
+    const out = []; let missed = 0;
+    for (const r of list) { let checks = []; try { checks = this.lookup(r.mint).checks; } catch {}
+      let buys = []; try { buys = (this.store?.entriesOf?.(r.mint) || []).filter((e) => e.pop === S.NEW_POP && e.status === "filled").map((e) => ({ id: e.id, book: e.families[0], t: e.decisionT, mc: Math.round(e.signalMc || 0), max: e.runner?.maxX != null ? +e.runner.maxX.toFixed(2) : null })); } catch {}
+      const cs = checks.map((c) => ({ book: c.book, t: c.t, age_s: c.age_s ?? null, mc: c.mc ?? null, holders: c.holders ?? null, vol: c.vol ?? null, top_jup: c.top_jup ?? null, fees: c.fees ?? null, top10: c.top10 ?? null, why: whyOf(c), counted: !!c.st && since != null && c.t >= since, out: c.out ?? null }));
+      for (const c of cs) if (c.counted && tally[c.book]?.[c.why]) tally[c.book][c.why].reached++; // only checks made since the counting began: both columns cover the same checks
+      if (!buys.length) missed++; if (out.length < S.RUN_LIST) out.push({ ...r, bought: buys, checks: cs }); }
+    return { on: true, at: now, line: S.RUN_LINE_USD, window_s: S.RUN_WINDOW_S, counting_since: since, reached: list.length, missed, bought: list.length - missed, later: all.length - list.length, unknown_time: list.filter((r) => r.unseen_before).length, whys: WHYS, tally, list: out }; }
   /** THE COIN LOOKUP (owner 26 Nov 2026 04:49 UK: "when I paste the contract, we need to know immediately why the coin was rejected
    *  or not"). Read-only, from the bot's own records — no provider is asked. Returns what the new-coin books know about one coin:
    *  whether it is on the waiting list and when its next checks fall due, and every check made of it with its figures and reason. */
@@ -192,7 +225,7 @@ export class NewCoins {
     this.store?.saveEntry(e); K.bought++; rec.out = "BOUGHT (paper), entry " + e.id; rec.entry = e.id; this.note(K, rec, r.family);
   }
   /** for the status report and the page */
-  status() { const q = this.quoter?.stats || {}; return { on: true, rules: this.rules, top_pre: S.NEW_TOP_PRE, look_s: S.NEW_LOOK_S, waiting: this.young.size, in_flight: this.inflight.size, quotes: { ok: q.quotesOk || 0, no_route: q.noRoute || 0, errors: q.quoteErr || 0, watched: this.quoter?.watch.size ?? 0 }, runner: { ...this.runner }, logged: this.history.length, kept: this.kept, keep_error: this.keepErr, ...this.stats }; }
+  status() { const q = this.quoter?.stats || {}; return { on: true, rules: this.rules, top_pre: S.NEW_TOP_PRE, look_s: S.NEW_LOOK_S, waiting: this.young.size, in_flight: this.inflight.size, quotes: { ok: q.quotesOk || 0, no_route: q.noRoute || 0, errors: q.quoteErr || 0, watched: this.quoter?.watch.size ?? 0 }, runner: { ...this.runner }, logged: this.history.length, runners_known: [...this.hits.values()].filter(Boolean).length, kept: this.kept, keep_error: this.keepErr, ...this.stats }; }
   start() { const loop = async () => { while (!this.stopped) { const t0 = Date.now(); try { await this.look(); await this.check(); this.save(); } catch (e) { this.log("[new coins] " + e.message); } await new Promise((r) => setTimeout(r, Math.max(1000, S.NEW_LOOK_S * 1000 - (Date.now() - t0)))); } }; loop();
     const follow = async () => { while (!this.stopped) { const t0 = Date.now(); try { this.lastRunner = this.now(); await this.runnerPass(); } catch (e) { this.log("[new coins] after the sale: " + e.message); } await new Promise((r) => setTimeout(r, Math.max(1000, S.NEW_RUNNER_S * 1000 - (Date.now() - t0)))); } }; follow(); } // its own clock: every NEW_RUNNER_S seconds whatever the looks and checks are doing
 }

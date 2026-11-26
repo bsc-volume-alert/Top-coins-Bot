@@ -21,7 +21,7 @@ export function coinLookup({ mint, store, engine, lookup = null, run = null, now
   else verdict = "No record of this coin";
   return { ok: true, mint, sym, at: now, verdict, newcoins: nc, buys, notes, known: !!coin, created: coin?.createTs ?? nc.waiting?.created ?? null, pool: coin?.pool ?? null };
 }
-export function startWeb({ port, store, engine, status, run = () => null, sell = null, lookup = null }) { // lookup(mint): what the new-coin books know about one coin (newcoin.mjs); null = no new-coin books in this program // sell(id, frac): the owner's paper "sell now" (engine.manualSell); null = the page has no such button // run(): older-11 — the run's own books and settings, or null (every book, as before)
+export function startWeb({ port, store, engine, status, run = () => null, sell = null, lookup = null, runners = null }) { // runners(): the runners list (newcoin.mjs, runnersView) // lookup(mint): what the new-coin books know about one coin (newcoin.mjs); null = no new-coin books in this program // sell(id, frac): the owner's paper "sell now" (engine.manualSell); null = the page has no such button // run(): older-11 — the run's own books and settings, or null (every book, as before)
   const KEY = process.env.OLDER_SITE_KEY || "";
   const cache = new Map(), BUILD = String(process.env.OLDER_COMMIT || "dev").slice(0, 12) + ":" + Math.round(Date.now() / 1000); // changes on every start: the books page reloads itself when it sees a new one
   const state = (pop = "") => {
@@ -56,6 +56,8 @@ export function startWeb({ port, store, engine, status, run = () => null, sell =
     // not"). Read-only and from the bot's own records only — no provider is asked, so it costs nothing and answers at once:
     // the new-coin books' waiting list and every check they made of the coin, every paper buy of it by any book, and the pool
     // books' latest recorded reasons for not buying it.
+    if (u.pathname === "/api/runners") { let hit = cache.get("runners"); if (!hit || Date.now() - hit.atMs > 10000) { let j; try { j = runners ? runners() : { on: false }; } catch (e) { j = { on: false, why: String(e.message).slice(0, 160) }; } hit = { atMs: Date.now(), body: JSON.stringify(j) }; cache.set("runners", hit); }
+      res.writeHead(200, { "content-type": "application/json" }); return res.end(hit.body); } // read-only, from the bot's own records; rebuilt at most every 10 s
     if (u.pathname === "/api/coin") { const mint = (u.searchParams.get("mint") || "").trim(), j = (code, o) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(o)); };
       if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint)) return j(400, { ok: false, why: "that is not a coin address" });
       try { return j(200, coinLookup({ mint, store, engine, lookup, run: run() })); } catch (e) { return j(500, { ok: false, why: String(e.message).slice(0, 160) }); } }

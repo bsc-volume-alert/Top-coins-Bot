@@ -21,7 +21,7 @@ export class Engine {
     this.cov = new Coverage(); this.feedCov = new Coverage(); /* feed + restarts only: what pool-state trust and exit flags depend on */ this.coins = new Map(); this.entries = new Map(); this.byMint = new Map();
     this.store = store; this.solUsd = solUsd; this.needCreation = needCreation; this.onFill = onFill; this.onEntry = onEntry; this.log = log; this.firstStart = firstStart;
     this.stats = { events: 0, swaps: 0, otherPool: 0, noSolUsd: 0, noCreation: 0, evals: 0, cands: 0, entries: 0, notes: 0, replayed: 0, tooOld: 0, lastT: null, evalMsMax: 0 };
-    this.dirtyBars = new Map(); this.usdDown = false; this.dirty = new Set(); this.lastCkpt = 0; this.entriesUntil = null; this.onOwnership = () => {};
+    this.dirtyBars = new Map(); this.usdDown = false; this.dirty = new Set(); this.lastCkpt = 0; this.entriesUntil = null; this.onOwnership = () => {}; this.onLine = null; // onLine(mint, mc, t, sawUnder): a coin's pool price first reaches spec RUN_LINE_USD in this process, and again each time it is RUN_PEAK_STEP higher (the runners list, newcoin.mjs) — evidence only
     this.gates = null; this.readGate = null; this.clock = () => Date.now() / 1000; // older-11: the owner's gates (spec GATES_11) — null = nothing asked, nothing gated; readGate(mint) → the provider's token-info answer; clock = the receive clock the answers are timed on
     this.gateMode = "cancel"; this.readGateLate = null; // older-11: "cancel" = a buy that fails the gates or has no reading in time is cancelled; "label" = every signal is bought as before and carries the verdict (see _gateLabel)
     this.minAgeS = S.MIN_AGE_S; // older-11: the age from which the books that normally start at 8 hours are evaluated in this run (default: 8 hours, as always)
@@ -310,6 +310,7 @@ export class Engine {
     c.series.add(ev.t, px, (ev.sol || 0) * su, ev.isBuy ?? null, ev.buyers?.length > 1 ? ev.buyers.map(([w, sol]) => [w, sol * su]) : (ev.buyers?.[0]?.[0] ?? ev.user ?? null)); // every buyer of the transaction, each with its own volume
     (this.dirtyBars.get(ev.mint) || this.dirtyBars.set(ev.mint, new Set()).get(ev.mint)).add(Math.floor(ev.t / 60));
     if (ev.replay) { this.stats.replayed++; return; }
+    if (this.onLine && c.supply) { const mc = px * c.supply; if (mc < S.RUN_LINE_USD) { if (!c.lineUnder) c.lineUnder = true; } else if (!(mc < (c.linePk || 0) * S.RUN_PEAK_STEP)) { const first = !c.linePk; c.linePk = mc; try { this.onLine(ev.mint, mc, ev.t, first ? !!c.lineUnder : null); } catch {} } } // the runners list: told when a coin first trades at the line, then at each new high a step above the last one told
     if (!c.createTs) { this.stats.noCreation++; this.needCreation(ev.mint); return; }
     const age = ev.t - c.createTs; if (!S.ageGroupAny(age)) { if (age >= S.MIN_AGE_S) this.stats.tooOld++; return; } // from migration on: the first 8 hours are evaluated for the any-age books only (signals.mjs)
     this.stats.evals++; if (age < S.MIN_AGE_S) this.stats.evalsYoung = (this.stats.evalsYoung || 0) + 1;

@@ -352,3 +352,45 @@ test("the 50% stop (owner 26 Nov 2026 07:01 UK): a new buy carries it between th
   const since = st.since(w.t); assert.equal(since.stops[0.5], fresh.decisionT, "the 50% view counts from the first buy that has it"); assert.ok(since.stops[0.5] > old.decisionT, "later than the buy that never had it");
   assert.equal(saleRows(fresh).rows.find((r) => r.k === "t50").k, "t50"); st.db.close();
 });
+
+// ───────── owner 26 Nov 2026 07:18–07:20 UK: "any coins that hit 100k and that we missed… and to see why we missed them… to make
+// sure we're not missing any runners on our filters" — the runners list ─────────
+import { whyOf, WHYS } from "../src/newcoin.mjs";
+test("the runners list: a measured coin that reaches $100K on the pool feed is written down once, with what every check said; bought and missed are told apart; each rule shows the checks it rejected AND how many of those coins got there", async () => {
+  assert.equal(S.RUN_LINE_USD, 100_000); assert.equal(S.RUN_WINDOW_S, 6 * 3600);
+  // one word per check: the first rule it failed, in the order the rules are judged
+  const st = (o) => ({ st: { mc: "pass", holders: "pass", vol: "pass", top_pre: "pass", fees: "not asked", top10: "not asked", ...o } });
+  assert.equal(whyOf({ ...st({ mc: "fail", holders: "fail" }) }), "market cap"); assert.equal(whyOf(st({ holders: "fail", vol: "fail" })), "holders"); assert.equal(whyOf(st({ vol: "fail" })), "volume"); assert.equal(whyOf(st({ top_pre: "fail" })), "top holders (Jupiter)");
+  assert.equal(whyOf(st({ fees: "provider error", top10: "provider error" })), "no GMGN answer"); assert.equal(whyOf(st({ fees: "fail", top10: "fail" })), "fees"); assert.equal(whyOf(st({ fees: "pass", top10: "fail" })), "top 10 (GMGN)"); assert.equal(whyOf(st({ mc: "provider error" })), "not measured");
+  assert.equal(whyOf({ ...st({ fees: "pass", top10: "pass" }), out: "BOUGHT (paper), entry 4" }), "bought"); assert.equal(whyOf({ out: "not bought: volume $13K" }), "other", "a check from before the statuses were kept is not guessed at"); assert.ok(WHYS.includes("volume"));
+
+  const dir = mkdtempSync(join(tmpdir(), "nc-")), st0 = new Store(join(dir, "t.db")), w = world({ store: st0 }); w.eng.onLine = (m, mc, t, under) => w.nc.runnerHit(m, mc, t, under);
+  w.add(A, T0, { mc: 31_800, holders: 319, vol: 13_400 });   // fails volume at 5 minutes: the coin the owner asked about
+  w.add(B, T0, {});                                           // passes everything: bought
+  w.add(C, T0, { mc: 12_000, holders: 40, vol: 50_000 });     // fails holders — and never runs
+  w.add(D, T0, { mc: 4000, holders: 20, vol: 3000 });         // under the market-cap line — and never runs
+  w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.2);
+  const K = w.nc.stats.checks["NEW-5M"]; assert.deepEqual(K.why, { volume: 1, bought: 1, holders: 1, "market cap": 1 }, "every check counted once, under the first rule it failed"); assert.equal(w.nc.stats.why_since, T0 + 301);
+  // the pool feed: A climbs to $100K twenty minutes after it was created; B gets there too; E was never measured by the new-coin books
+  const E9 = "OlderCoin11111111111111111111111111111111pump", told = []; const real = w.eng.onLine; w.eng.onLine = (...a) => { told.push(a); return real(...a); };
+  const P = (mint) => ({ mint, pool: "Pool" + mint.slice(7, 8) });
+  swap(w.eng, T0 + 900, 60_000, P(A)); swap(w.eng, T0 + 1000, 99_000, P(A)); assert.equal(told.length, 0, "under the line: nothing");
+  swap(w.eng, T0 + 1200, 101_000, P(A)); assert.equal(told.length, 1); assert.equal(told[0][0], A); assert.equal(told[0][3], true, "the bot saw it under the line first: the moment is known");
+  swap(w.eng, T0 + 1210, 104_000, P(A)); assert.equal(told.length, 1, "not told again for a few per cent more"); swap(w.eng, T0 + 1300, 180_000, P(A)); assert.equal(told.length, 2, "told again at a new high a step above"); swap(w.eng, T0 + 1310, 120_000, P(A)); assert.equal(told.length, 2);
+  swap(w.eng, T0 + 2000, 150_000, P(B)); assert.equal(told.at(-1)[3], false, "first seen already above the line"); swap(w.eng, T0 + 2100, 400_000, P(E9)); assert.equal(w.nc.hits.get(E9), null, "never measured by the new-coin books: not on the list");
+  const q0 = st0.checksOf.bind(st0); let looked = 0; st0.checksOf = (m) => { looked++; return q0(m); }; swap(w.eng, T0 + 2200, 900_000, P(E9)); assert.equal(looked, 0, "and it is not looked up again");
+  w.t = T0 + 2300; const v = w.nc.runnersView();
+  assert.equal(v.reached, 2); assert.equal(v.missed, 1); assert.equal(v.bought, 1); assert.equal(v.later, 0); assert.equal(v.unknown_time, 1); assert.equal(v.line, 100_000);
+  const a = v.list.find((r) => r.mint === A), b = v.list.find((r) => r.mint === B);
+  assert.equal(a.t, T0 + 1200); assert.equal(a.age_s, 1200, "twenty minutes old when it got there"); assert.equal(a.created, T0); assert.ok(Math.abs(a.peak - 180_000) < 2000, "its highest is kept up to date"); assert.deepEqual(a.bought, []); assert.equal(a.checks[0].why, "volume"); assert.equal(a.checks[0].out, "not bought: volume $13K (needs $30K)"); assert.equal(a.checks[0].counted, true);
+  assert.equal(b.bought.length, 1); assert.equal(b.bought[0].book, "NEW-5M"); assert.equal(b.unseen_before, true); assert.equal(b.checks[0].why, "bought");
+  // BOTH SIDES: of the checks that ended at each rule, how many of those coins reached the line
+  const T5 = v.tally["NEW-5M"]; assert.deepEqual(T5.volume, { checks: 1, reached: 1 }); assert.deepEqual(T5.holders, { checks: 1, reached: 0 }, "the holders rule rejected a coin that never ran"); assert.deepEqual(T5["market cap"], { checks: 1, reached: 0 }); assert.deepEqual(T5.bought, { checks: 1, reached: 1 }); assert.deepEqual(T5.fees, { checks: 0, reached: 0 });
+  // a coin that takes longer than the window is counted apart, not listed
+  swap(w.eng, T0 + 900, 20_000, P(C)); swap(w.eng, T0 + 7 * 3600, 130_000, P(C)); w.t = T0 + 7 * 3600 + 10; const v2 = w.nc.runnersView(); assert.equal(v2.reached, 2); assert.equal(v2.later, 1); assert.ok(!v2.list.some((r) => r.mint === C)); assert.deepEqual(v2.tally["NEW-5M"].holders, { checks: 1, reached: 0 }, "seven hours is outside the six-hour window");
+  // written to the database: a restart loses nothing and does not count a coin twice
+  assert.equal(st0.runners().length, 3); assert.equal(st0.disk().nc_runners, 3); const w3 = world({ store: st0 }); w3.t = w.t; assert.equal(w3.nc.runnerHit(A, 250_000, w.t + 50, false).t, T0 + 1200, "the same record, its first time kept"); assert.equal(w3.nc.runnersView().reached, 2); assert.ok(st0.runners().find((r) => r.mint === A).peak === 250_000);
+  // over the site: key-protected
+  process.env.OLDER_SITE_KEY = "sekret"; const web = startWeb({ port: 0, store: st0, engine: w.eng, status: () => ({}), run: () => ({ books: w.eng.books }), runners: () => w.nc.runnersView() }); delete process.env.OLDER_SITE_KEY; await new Promise((res) => web.server.once("listening", res)); const port = web.server.address().port;
+  try { assert.equal((await fetch(`http://127.0.0.1:${port}/api/runners`)).status, 403); const j = await (await fetch(`http://127.0.0.1:${port}/api/runners?k=sekret`)).json(); assert.equal(j.on, true); assert.equal(j.reached, 2); assert.equal(j.list.length, 2); } finally { web.server.close(); st0.db.close(); }
+});

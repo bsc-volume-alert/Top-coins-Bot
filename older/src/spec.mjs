@@ -84,6 +84,12 @@ export const NEW_RUNNER_S = 60;
 // NEW_FOLLOW_LONG_EVERY_S up to NEW_FOLLOW_LONG_S after the last sale; every other buy is finished at the 2-hour mark.
 // Every look is kept as the highest value per NEW_TRACK_S of the buy's life (e.track), from its first sale on, so the page can
 // say for every sale how high the coin went in the 15 minutes, the hour and the two hours AFTER it, and when.
+// THE RUNNERS LIST (owner 26 Nov 2026 07:18–07:20 UK: "any coins that hit 100k and that we missed, just to have a list of those… and
+// to see why we missed them… to make sure we're not missing any runners on our filters"). A coin the new-coin books measured that
+// reaches RUN_LINE_USD on the pool feed (a pump.fun coin is on its pool by then — nothing extra is asked of any provider) is
+// written down with the time; the page lists the ones that got there within RUN_WINDOW_S of their creation, each with what
+// every check said, and — so the list cannot mislead — how many checks each rule rejected and how many of THOSE got there.
+export const RUN_LINE_USD = 100_000, RUN_WINDOW_S = 6 * 3600, RUN_PEAK_STEP = 1.1, RUN_LIST = 150;
 export const NEW_FOLLOW_S = 2 * 3600, NEW_FOLLOW_LONG_S = 6 * 3600, NEW_FOLLOW_LONG_EVERY_S = 300, NEW_TRACK_S = 30;
 export const AFTER_WINDOWS = [["m15", 900], ["h1", 3600], ["h2", 7200]]; // the windows after a sale shown on the page
 // A new high from the price alone is an ESTIMATE (price × tokens: no fees, no price impact). When such a high is NEW_CONFIRM_X
