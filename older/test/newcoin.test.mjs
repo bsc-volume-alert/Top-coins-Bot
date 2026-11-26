@@ -295,9 +295,9 @@ test("one quote per position per look: the half is asked for only while a half-s
 // ───────── owner 26 Nov 2026 06:01–06:07 UK: "can we have a time scale on this… the highest we could have got within the last hour or
 // 2 hours… to know if we sold too early" · "we don't need 24 hours… 2 hours is fine" ─────────
 import { afterSale, trackHigh, lastSaleT } from "../src/book.mjs";
-test("after the sale: the buy is looked at every 30 s for two hours after its last sale, and the page gets the highest in the 15 minutes, the hour and the two hours after EACH row's own sale", async () => {
-  assert.equal(S.NEW_RUNNER_S, 30); assert.equal(S.NEW_FOLLOW_S, 7200); assert.equal(S.NEW_TRACK_S, 30); assert.deepEqual(S.AFTER_WINDOWS, [["m15", 900], ["h1", 3600], ["h2", 7200]]);
-  const w = world(); w.add(A, T0, {}); w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.2);
+test("after the sale: the buy is looked at once a minute for two hours after its last sale, and the page gets the highest in the 15 minutes, the hour and the two hours after EACH row's own sale", async () => {
+  assert.equal(S.NEW_RUNNER_S, 60); assert.equal(S.NEW_CONFIRM_MAX, 0, "no confirming quote: a rough price is enough (owner 06:20 UK)"); assert.equal(S.NEW_FOLLOW_S, 7200); assert.equal(S.NEW_TRACK_S, 30); assert.deepEqual(S.AFTER_WINDOWS, [["m15", 900], ["h1", 3600], ["h2", 7200]]);
+  const w = world(); w.nc.confirmMax = 2; /* the confirming quote is switched off in the spec; this test runs it switched on, the last lines check it off */ w.add(A, T0, {}); w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.2);
   const [e] = w.entries("NEW-5M"), row = (stop) => e.versions.find((v) => v.stop === stop && v.policy === "trail"); assert.equal(e.track, undefined, "nothing is tracked before the first sale");
   w.setMc(A, 14_500); await w.price(10); await w.price(1); assert.equal(row(0.25).status, "closed"); assert.equal(row(0.3).status, "open"); const sale25 = row(0.25).exit.t; assert.equal(lastSaleT(e), sale25); // −27.5%: the 20% and 25% rows are out, the others still hold
   // while a row is still open the looks are real quotes (every 10 s): they go on the track from the first sale on
@@ -319,14 +319,15 @@ test("after the sale: the buy is looked at every 30 s for two hours after its la
   w.t = last + S.NEW_FOLLOW_S - 20; await w.nc.runnerPass(); assert.ok(w.eng.entries.has(e.id)); const s1 = w.reqs.search;
   w.t = last + S.NEW_FOLLOW_S + 5; assert.equal(await w.nc.runnerPass(), 0); assert.equal(w.reqs.search - s1, 0, "nothing is asked for a finished buy"); assert.equal(e.runner.long, false); assert.equal(e.runner.horizonDone, true); assert.match(e.runner.followed.why, /two hours after the last sale/);
   assert.equal(w.eng.entries.has(e.id), false); assert.equal(w.quoter.watch.has(A), false); assert.equal(w.nc.runner.finished, 1);
-  assert.equal(afterSale(e, row(0.6)).h2.full, true, "the two-hour window was watched to its end"); assert.equal(booksApi([e], { stop: 0.6, run: { books: w.eng.books } }).books["NEW-5M"][0].follow, "done");
+  assert.equal(afterSale(e, row(0.6)).h2.full, true, "the two-hour window was watched to its end");
+  { const w2 = world(); assert.equal(w2.nc.confirmMax, 0); w2.add(B, T0, {}); w2.t = T0 + 20; await w2.pass(); w2.t = T0 + 301; await w2.pass(); await w2.price(1.2); const [e2] = w2.entries("NEW-5M"); w2.setMc(B, 3000); await w2.price(10); await w2.price(1); await w2.price(1); const q0 = w2.reqs.quote; w2.t += 600; w2.setMc(B, 60_000); assert.equal(await w2.nc.runnerPass(), 1); assert.equal(w2.reqs.quote - q0, 0, "as deployed: a new high is NOT confirmed by a quote — one token-data request a look and nothing else"); assert.equal(e2.runner.maxQ, undefined); assert.equal(afterSale(e2, e2.versions[0]).m15.est, true); } assert.equal(booksApi([e], { stop: 0.6, run: { books: w.eng.books } }).books["NEW-5M"][0].follow, "done");
 });
 
 test("a coin still worth more than it cost two hours after the last sale — the runner — is looked at every 5 minutes up to six hours; then it is finished too", async () => {
   const w = world(); w.add(A, T0, {}); w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.2); const [e] = w.entries("NEW-5M");
   w.setMc(A, 3000); await w.price(10); await w.price(1); await w.price(1); assert.ok(e.versions.every((v) => v.status === "closed")); const last = lastSaleT(e);
   w.setMc(A, 80_000); w.t = last + S.NEW_FOLLOW_S - 10; await w.nc.runnerPass(); assert.ok(e.runner.lastX > 3);
-  w.t = last + S.NEW_FOLLOW_S + 20; const s0 = w.reqs.search; assert.equal(await w.nc.runnerPass(), 0, "looked at 30 s ago: not again yet"); assert.equal(e.runner.long, true); assert.equal(w.reqs.search - s0, 0); assert.equal(e.runner.horizonDone, false);
+  w.t = last + S.NEW_FOLLOW_S + 20; const s0 = w.reqs.search; assert.equal(await w.nc.runnerPass(), 0, "looked at half a minute ago: not again yet"); assert.equal(e.runner.long, true); assert.equal(w.reqs.search - s0, 0); assert.equal(e.runner.horizonDone, false);
   w.t = last + S.NEW_FOLLOW_S + 150; assert.equal(await w.nc.runnerPass(), 0); w.t = last + S.NEW_FOLLOW_S + 300; w.setMc(A, 200_000); assert.equal(await w.nc.runnerPass(), 1, "five minutes after the last look"); assert.ok(e.runner.maxX > 9);
   w.t = last + S.NEW_FOLLOW_LONG_S + 5; assert.equal(await w.nc.runnerPass(), 0); assert.equal(e.runner.horizonDone, true); assert.match(e.runner.followed.why, /six hours/); assert.equal(w.eng.entries.has(e.id), false);
   // the track itself: the highest per half-minute, real over estimated never mixed up, never out of order

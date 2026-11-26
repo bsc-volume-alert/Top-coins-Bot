@@ -216,7 +216,7 @@ export function trackHigh(e, t, x, est = false) {
 export function afterSale(e, v) {
   if (!e.track?.length || !v?.exit) return null; const t0 = v.exit.t - e.fill.t, out = {}, lastS = e.track[e.track.length - 1][0]; let any = false;
   for (const [k, w] of S.AFTER_WINDOWS) { let hi = null; for (const [s, x, est] of e.track) { if (s <= t0) continue; if (s >= t0 + w) break; if (hi === null || x > hi.x) hi = { x, s: Math.round(s - t0), est: !!est }; }
-    if (hi) { any = true; out[k] = { ...hi, full: lastS >= t0 + w - 2 * S.NEW_TRACK_S }; } }
+    if (hi) { any = true; out[k] = { ...hi, full: lastS >= t0 + w - (S.NEW_RUNNER_S + S.NEW_TRACK_S) }; } } // full: the looks reach the end of the window (within one look)
   return any ? out : null;
 }
 export const entryDone = (e) => e.status === "cancelled" || (e.status === "filled" && e.runner.horizonDone && e.versions.every((v) => !live(v)) && !manualOpen(e)); // a manual sale still waiting for its price keeps the buy in memory

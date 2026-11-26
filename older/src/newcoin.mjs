@@ -55,7 +55,7 @@ export class NewCoins {
     Object.assign(this, { engine, jup, quoter, readInfo, readRisk, store, now, log, file, rules }); this.solUsd = solUsd ?? ((t) => engine.solUsd(t));
     this.history = []; this.logFile = file ? file.replace(/\.json$/, "") + ".log.jsonl" : null; this.runner = { passes: 0, coins: 0, priced: 0, no_price: 0, errors: 0, last: null }; this.lastRunner = 0;
     if (this.logFile && existsSync(this.logFile)) try { const L = readFileSync(this.logFile, "utf8").split("\n").filter(Boolean).slice(-S.NEW_LOG_KEEP); for (const l of L) try { this.history.push(JSON.parse(l)); } catch {} } catch {}
-    this.young = new Map(); this.prevIds = null; this.inflight = new Set(); this.maxAt = Math.max(...rules.map((r) => r.at_s)); this.stats = fresh(); this.dirty = false; this.dbq = []; this.kept = 0; this.keepErr = null;
+    this.young = new Map(); this.prevIds = null; this.inflight = new Set(); this.maxAt = Math.max(...rules.map((r) => r.at_s)); this.stats = fresh(); this.dirty = false; this.confirmMax = S.NEW_CONFIRM_MAX; this.dbq = []; this.kept = 0; this.keepErr = null;
     this.load();
   }
   k(family) { return (this.stats.checks[family] ||= freshCheck()); }
@@ -152,7 +152,7 @@ export class NewCoins {
       if (E.runnerEstimate(e.id, x, t)) { n++; R.priced++; if (x >= S.NEW_CONFIRM_X && x > (hi ?? 0) && x >= (e.runner.lastConfirm?.est_x ?? 0) * S.NEW_CONFIRM_STEP) confirm.push([e, x]); } }
     // a new estimated high worth confirming: ONE real sell quote for the whole original holding, the biggest first, a few per look at most
     confirm.sort((a, b) => b[1] - a[1]);
-    for (const [e, x] of confirm.slice(0, S.NEW_CONFIRM_MAX)) { const dec = e.token?.decimals ?? E.coins.get(e.mint)?.info?.decimals; if (!validDec(dec) || !this.jup.quote) continue;
+    for (const [e, x] of confirm.slice(0, this.confirmMax)) { const dec = e.token?.decimals ?? E.coins.get(e.mint)?.info?.decimals; if (!validDec(dec) || !this.jup.quote) continue;
       try { const q = await this.jup.quote(e.mint, "sell", e.fill.tok * 10 ** dec, {}); if (!q?.ok) { R.confirm_failed = (R.confirm_failed || 0) + 1; continue; }
         const xfer = E.coins.get(e.mint)?.info?.risk?.fee_bps || 0, keep = this.quoter?.feeInQuote === false ? 1 - xfer / 10_000 : 1, real = Math.max(0, (q.out / 1e9) * keep - S.TX_COST_SOL) / COST;
         if (E.runnerConfirm(e.id, real, q.t ?? this.now(), x)) R.confirmed = (R.confirmed || 0) + 1; } catch (err) { R.confirm_failed = (R.confirm_failed || 0) + 1; } }
