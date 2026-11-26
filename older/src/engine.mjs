@@ -6,7 +6,7 @@
 import * as S from "./spec.mjs";
 import { Series, Coverage } from "./series.mjs";
 import { newCoin, evaluate } from "./signals.mjs";
-import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount, requestManual, exposure, manualOpen } from "./book.mjs";
+import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount, requestManual, exposure, manualOpen, trackHigh } from "./book.mjs";
 import { liquidityUsd, staticImpact } from "./fills.mjs";
 import { feeKnown } from "./risk.mjs";
 import { parseInfo, judge } from "./gates.mjs";
@@ -409,8 +409,19 @@ export class Engine {
   /** NEW-COIN BOOKS: the value of a buy whose every row is sold, ESTIMATED from the provider's price (spec NEW_RUNNER_S) — it
    *  only feeds the 24-hour "how high did it go" measurement of that buy, never a peak, a stop or a sale. x = value / cost. */
   runnerEstimate(id, x, t) { const e = this.entries.get(id); if (!e || e.status !== "filled" || !(x >= 0) || !isFinite(x) || exposure(e) !== 0 || manualOpen(e)) return false; const age = t - e.fill.t; if (age > S.RUNNER_HORIZON_S || e.runner.horizonDone) return false;
-    e.runner.est = true; e.runner.estT = t; e.runner.lastX = +x.toFixed(4); let ch = false; if (x > e.runner.maxX) { e.runner.maxX = x; e.runner.maxEst = true; ch = true; } for (const k of S.RUNNER_X) if (x >= k && !e.runner.reached[k]) { e.runner.reached[k] = Math.round(age); ch = true; }
+    e.runner.est = true; e.runner.estT = t; e.runner.lastX = +x.toFixed(4); let ch = e.pop === S.NEW_POP ? trackHigh(e, t, x, true) : false; if (x > e.runner.maxX) { e.runner.maxX = x; e.runner.maxEst = true; ch = true; } for (const k of S.RUNNER_X) if (x >= k && !e.runner.reached[k]) { e.runner.reached[k] = Math.round(age); ch = true; }
     if (ch) this.dirty.add(e.id); return true; }
+  /** a real sell quote for the whole original holding of a sold-out new-coin buy (newcoin.mjs, spec NEW_CONFIRM_X): what the
+   *  estimated high would actually have fetched. Kept as the highest CONFIRMED value; the track's bucket takes the real figure. */
+  runnerConfirm(id, x, t, estX = null) { const e = this.entries.get(id); if (!e || e.status !== "filled" || !(x >= 0) || !isFinite(x) || e.runner.horizonDone) return false;
+    const R = e.runner; R.confirms = (R.confirms || 0) + 1; R.lastConfirm = { t, x: +x.toFixed(4), est_x: estX == null ? null : +estX.toFixed(4) }; if (!(R.maxQ >= x)) { R.maxQ = +x.toFixed(4); R.maxQT = t; }
+    const T = e.track, last = T?.[T.length - 1]; if (last && t - e.fill.t - last[0] < S.NEW_TRACK_S && t - e.fill.t >= last[0] - 0.1) { last[1] = +x.toFixed(4); last[2] = 0; } else trackHigh(e, t, x, false); // the look that was just estimated: its real figure takes the estimate's place
+    this.dirty.add(e.id); return true; }
+  /** a sold-out new-coin buy is finished: its follow-up after the sale is over (spec NEW_FOLLOW_S / NEW_FOLLOW_LONG_S). Like the
+   *  24-hour horizon of the other books, only sooner: the buy leaves memory and lives in the database. */
+  runnerClose(id, t, why) { const e = this.entries.get(id); if (!e || e.status !== "filled" || exposure(e) !== 0 || manualOpen(e) || e.runner.horizonDone) return false;
+    e.runner.horizonDone = true; e.runner.followed = { until: Math.round(t), why }; this.store?.saveEntry(e); this.dirty.delete(e.id);
+    if (entryDone(e)) { this.byMint.get(e.mint)?.delete(e.id); this.entries.delete(e.id); } return true; }
   /** rows (exit policy | stop) each book currently holds on this coin: Map(family → Set). null when the coin has no unfinished entry. */
   _busy(mint) {
     const ids = this.byMint.get(mint); if (!ids?.size) return null; const m = new Map();

@@ -16,7 +16,7 @@
 // The counters live in a small file beside the database so a restart does not empty them; the coins waiting for an age point
 // are in it too.
 import { readFileSync, writeFileSync, existsSync, renameSync, appendFileSync } from "node:fs";
-import { COST } from "./book.mjs";
+import { COST, lastSaleT } from "./book.mjs";
 import * as S from "./spec.mjs";
 import { classifyJupToken, feeKnown } from "./risk.mjs";
 import { parseInfo } from "./gates.mjs";
@@ -132,12 +132,30 @@ export class NewCoins {
     const waiting = y ? { created: y.created, symbol: y.symbol, launchpad: y.launchpad, age_s: Math.round(now - y.created), next: this.rules.filter((r) => !y.done[r.family]).map((r) => ({ book: r.family, at: y.created + r.at_s, in_s: Math.round(y.created + r.at_s - now) })) } : null;
     return { on: true, now, since: this.stats.since, kept_since: (() => { try { return this.store?.checksSince ? this.store.checksSince() : null; } catch { return null; } })(), rules: this.rules.map((r) => ({ book: r.family, at_s: r.at_s, mc: r.mc_min_usd, holders: r.holders_min, vol: r.vol_min_usd, fees: r.fees_min_sol, top10: r.top10 })), waiting, checks };
   }
-  /** the 24-hour high of buys whose every row is sold: one token-data request for all of them (spec NEW_RUNNER_S) */
-  async runnerPass() { const now = this.now(), E = this.engine, need = []; for (const n of E.quoteNeeds(now)) { if (!n.runner_only) continue; const e = E.entries.get(n.id); if (e?.pop === S.NEW_POP) need.push(e); }
-    if (!need.length) return 0; const R = this.runner; R.passes++; R.coins = need.length; const mints = [...new Set(need.map((e) => e.mint))], px = new Map(); let n = 0;
-    for (let i = 0; i < mints.length; i += 100) try { for (const t of await this.jup.tokens(mints.slice(i, i + 100))) if (t.px > 0) px.set(t.mint, t.px); } catch (e) { R.errors++; this.stats.last_error = "token data (24-hour high): " + String(e.message).slice(0, 80); }
+  /** AFTER THE SALE (spec NEW_FOLLOW_S, owner 26 Nov 2026 06:07 UK "2 hours is fine"): every buy whose rows are all sold is looked
+   *  at every NEW_RUNNER_S seconds for two hours after its last sale — one token-data request for all of them, the value an
+   *  estimate (price × tokens − one transaction cost). At the two-hour mark a buy worth less than it cost is finished; one still
+   *  worth more is looked at every NEW_FOLLOW_LONG_EVERY_S up to NEW_FOLLOW_LONG_S. A new estimated high of NEW_CONFIRM_X or more
+   *  gets one real sell quote (what it would actually have fetched). */
+  async runnerPass() { const now = this.now(), E = this.engine, R = this.runner, need = [];
+    for (const n of E.quoteNeeds(now)) { if (!n.runner_only) continue; const e = E.entries.get(n.id); if (e?.pop !== S.NEW_POP) continue;
+      const since = now - (lastSaleT(e) ?? e.fill.t);
+      if (since > S.NEW_FOLLOW_S) { if (e.runner.long == null) { e.runner.long = (e.runner.lastX ?? 0) >= 1; E.dirty.add(e.id); } // decided once, at the two-hour mark: is it still worth more than it cost?
+        if (!e.runner.long || since > S.NEW_FOLLOW_LONG_S) { const mint = e.mint; if (E.runnerClose(e.id, now, e.runner.long ? "six hours after the last sale" : "two hours after the last sale, worth less than it cost")) { R.finished = (R.finished || 0) + 1; if (!E.byMint.get(mint)?.size) this.quoter.watch.delete(mint); } continue; }
+        if (now - (e.runner.estT || 0) < S.NEW_FOLLOW_LONG_EVERY_S - 1) continue; }
+      need.push(e); }
+    R.following = need.length; if (!need.length) return 0; R.passes++; R.coins = need.length; const mints = [...new Set(need.map((e) => e.mint))], px = new Map(); let n = 0;
+    for (let i = 0; i < mints.length; i += 100) try { for (const t of await this.jup.tokens(mints.slice(i, i + 100))) if (t.px > 0) px.set(t.mint, t.px); } catch (e) { R.errors++; this.stats.last_error = "token data (after the sale): " + String(e.message).slice(0, 80); }
     const t = this.now(), su = this.solUsd(t); if (!(su > 0)) { R.no_sol_usd = (R.no_sol_usd || 0) + 1; return 0; }
-    for (const e of need) { const p = px.get(e.mint); if (!(p > 0)) { R.no_price++; continue; } const x = Math.max(0, (p * e.fill.tok) / su - S.TX_COST_SOL) / COST; if (E.runnerEstimate(e.id, x, t)) { n++; R.priced++; } } // price × tokens bought, in SOL, less one transaction cost — no fees or price impact: an upper estimate
+    const confirm = [];
+    for (const e of need) { const p = px.get(e.mint); if (!(p > 0)) { R.no_price++; continue; } const x = Math.max(0, (p * e.fill.tok) / su - S.TX_COST_SOL) / COST, hi = e.runner.maxX; // price × tokens bought, in SOL, less one transaction cost — no fees or price impact: an upper estimate
+      if (E.runnerEstimate(e.id, x, t)) { n++; R.priced++; if (x >= S.NEW_CONFIRM_X && x > (hi ?? 0) && x >= (e.runner.lastConfirm?.est_x ?? 0) * S.NEW_CONFIRM_STEP) confirm.push([e, x]); } }
+    // a new estimated high worth confirming: ONE real sell quote for the whole original holding, the biggest first, a few per look at most
+    confirm.sort((a, b) => b[1] - a[1]);
+    for (const [e, x] of confirm.slice(0, S.NEW_CONFIRM_MAX)) { const dec = e.token?.decimals ?? E.coins.get(e.mint)?.info?.decimals; if (!validDec(dec) || !this.jup.quote) continue;
+      try { const q = await this.jup.quote(e.mint, "sell", e.fill.tok * 10 ** dec, {}); if (!q?.ok) { R.confirm_failed = (R.confirm_failed || 0) + 1; continue; }
+        const xfer = E.coins.get(e.mint)?.info?.risk?.fee_bps || 0, keep = this.quoter?.feeInQuote === false ? 1 - xfer / 10_000 : 1, real = Math.max(0, (q.out / 1e9) * keep - S.TX_COST_SOL) / COST;
+        if (E.runnerConfirm(e.id, real, q.t ?? this.now(), x)) R.confirmed = (R.confirmed || 0) + 1; } catch (err) { R.confirm_failed = (R.confirm_failed || 0) + 1; } }
     R.last = t; return n; }
   /** every candidate still waiting for its GMGN reading or its buy (tests; a clean stop) */
   idle() { return Promise.all([...this.inflight]); }
@@ -175,5 +193,6 @@ export class NewCoins {
   }
   /** for the status report and the page */
   status() { const q = this.quoter?.stats || {}; return { on: true, rules: this.rules, top_pre: S.NEW_TOP_PRE, look_s: S.NEW_LOOK_S, waiting: this.young.size, in_flight: this.inflight.size, quotes: { ok: q.quotesOk || 0, no_route: q.noRoute || 0, errors: q.quoteErr || 0, watched: this.quoter?.watch.size ?? 0 }, runner: { ...this.runner }, logged: this.history.length, kept: this.kept, keep_error: this.keepErr, ...this.stats }; }
-  start() { const loop = async () => { while (!this.stopped) { const t0 = Date.now(); try { await this.look(); await this.check(); if (this.now() - this.lastRunner >= S.NEW_RUNNER_S - 1) { this.lastRunner = this.now(); await this.runnerPass(); } this.save(); } catch (e) { this.log("[new coins] " + e.message); } await new Promise((r) => setTimeout(r, Math.max(1000, S.NEW_LOOK_S * 1000 - (Date.now() - t0)))); } }; loop(); }
+  start() { const loop = async () => { while (!this.stopped) { const t0 = Date.now(); try { await this.look(); await this.check(); this.save(); } catch (e) { this.log("[new coins] " + e.message); } await new Promise((r) => setTimeout(r, Math.max(1000, S.NEW_LOOK_S * 1000 - (Date.now() - t0)))); } }; loop();
+    const follow = async () => { while (!this.stopped) { const t0 = Date.now(); try { this.lastRunner = this.now(); await this.runnerPass(); } catch (e) { this.log("[new coins] after the sale: " + e.message); } await new Promise((r) => setTimeout(r, Math.max(1000, S.NEW_RUNNER_S * 1000 - (Date.now() - t0)))); } }; follow(); } // its own clock: every NEW_RUNNER_S seconds whatever the looks and checks are doing
 }

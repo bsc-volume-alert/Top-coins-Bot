@@ -291,3 +291,47 @@ test("one quote per position per look: the half is asked for only while a half-s
   // afterwards the halved rows hold the half, the pure-trail rows the whole: two sizes are really held, two are asked
   w.sizes.length = 0; await w.price(10); assert.ok(w.sizes.some(isHalf) && w.sizes.some(isFull)); assert.equal(w.sizes.length, 2);
 });
+
+// ───────── owner 26 Nov 2026 06:01–06:07 UK: "can we have a time scale on this… the highest we could have got within the last hour or
+// 2 hours… to know if we sold too early" · "we don't need 24 hours… 2 hours is fine" ─────────
+import { afterSale, trackHigh, lastSaleT } from "../src/book.mjs";
+test("after the sale: the buy is looked at every 30 s for two hours after its last sale, and the page gets the highest in the 15 minutes, the hour and the two hours after EACH row's own sale", async () => {
+  assert.equal(S.NEW_RUNNER_S, 30); assert.equal(S.NEW_FOLLOW_S, 7200); assert.equal(S.NEW_TRACK_S, 30); assert.deepEqual(S.AFTER_WINDOWS, [["m15", 900], ["h1", 3600], ["h2", 7200]]);
+  const w = world(); w.add(A, T0, {}); w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.2);
+  const [e] = w.entries("NEW-5M"), row = (stop) => e.versions.find((v) => v.stop === stop && v.policy === "trail"); assert.equal(e.track, undefined, "nothing is tracked before the first sale");
+  w.setMc(A, 14_500); await w.price(10); await w.price(1); assert.equal(row(0.25).status, "closed"); assert.equal(row(0.3).status, "open"); const sale25 = row(0.25).exit.t; assert.equal(lastSaleT(e), sale25); // −27.5%: the 20% and 25% rows are out, the others still hold
+  // while a row is still open the looks are real quotes (every 10 s): they go on the track from the first sale on
+  w.setMc(A, 17_000); await w.price(10); w.setMc(A, 26_000); await w.price(10); await w.price(10); assert.ok(e.track.length >= 1); assert.ok(e.track.every((p) => p[2] === 0), "real quotes, not estimates");
+  let a = afterSale(e, row(0.25)); assert.ok(Math.abs(a.m15.x - (26 / 20) * 0.99 * 0.99 * 0.2 / 0.2005) < 0.02, "it went back to 1.27x within a minute of the sale"); assert.equal(a.m15.est, false); assert.equal(a.m15.full, false, "the window is still running"); assert.ok(a.m15.s < 60);
+  assert.equal(afterSale(e, row(0.3)), null, "a row that has not sold has no 'after the sale'");
+  // everything is sold: now it is followed by the price alone (an estimate), every 30 s
+  w.setMc(A, 3000); await w.price(10); await w.price(1); await w.price(1); assert.ok(e.versions.every((v) => v.status === "closed")); const last = lastSaleT(e), q0 = w.reqs.quote, s0 = w.reqs.search;
+  w.t = last + 600; w.setMc(A, 24_000); assert.equal(await w.nc.runnerPass(), 1); w.t = last + 3000; w.setMc(A, 31_000); await w.nc.runnerPass(); w.t = last + 5000; w.setMc(A, 9000); await w.nc.runnerPass();
+  assert.equal(w.reqs.search - s0, 3, "one token-data request per look"); assert.equal(w.reqs.quote - q0, 1, "one confirming quote: the estimate of 1.55x was a new high over 1.5x");
+  a = afterSale(e, row(0.6)); assert.equal(a.m15.est, true); assert.ok(a.m15.x > 1.15 && a.m15.x < 1.25, "24K after ten minutes: about 1.2x"); assert.ok(a.h1.x > 1.5 && a.h1.x < 1.6, "31K after fifty minutes"); assert.equal(a.h1.est, false, "that high was confirmed by a real quote"); assert.equal(a.h1.s > 2900 && a.h1.s < 3100, true); assert.equal(a.h2.x, a.h1.x);
+  assert.ok(e.runner.maxQ > 1.5 && e.runner.maxQ < e.runner.maxX, "the confirmed figure is under the estimate: fees are in it"); assert.equal(e.runner.confirms, 1); assert.ok(e.runner.lastConfirm.est_x > e.runner.lastConfirm.x);
+  // the 25% row sold earlier: its own windows start at ITS sale
+  const b = afterSale(e, row(0.25)); assert.equal(b.m15.full, true); assert.ok(b.m15.x >= 1.2 && b.h1.x > 1.5);
+  // the page's row carries it
+  const pr = booksApi([e], { stop: 0.6, run: { books: w.eng.books } }).books["NEW-5M"][0]; assert.deepEqual(pr.after, a); assert.equal(pr.follow, "on"); assert.equal(pr.hi_q, e.runner.maxQ);
+  assert.deepEqual(saleRows(e).rows.find((r) => r.k === "t60").after, a); assert.equal(saleRows(e).track_n, e.track.length);
+  // two hours after the last sale, worth less than it cost: finished — no more looks, out of memory, off the quote list
+  w.t = last + S.NEW_FOLLOW_S - 20; await w.nc.runnerPass(); assert.ok(w.eng.entries.has(e.id)); const s1 = w.reqs.search;
+  w.t = last + S.NEW_FOLLOW_S + 5; assert.equal(await w.nc.runnerPass(), 0); assert.equal(w.reqs.search - s1, 0, "nothing is asked for a finished buy"); assert.equal(e.runner.long, false); assert.equal(e.runner.horizonDone, true); assert.match(e.runner.followed.why, /two hours after the last sale/);
+  assert.equal(w.eng.entries.has(e.id), false); assert.equal(w.quoter.watch.has(A), false); assert.equal(w.nc.runner.finished, 1);
+  assert.equal(afterSale(e, row(0.6)).h2.full, true, "the two-hour window was watched to its end"); assert.equal(booksApi([e], { stop: 0.6, run: { books: w.eng.books } }).books["NEW-5M"][0].follow, "done");
+});
+
+test("a coin still worth more than it cost two hours after the last sale — the runner — is looked at every 5 minutes up to six hours; then it is finished too", async () => {
+  const w = world(); w.add(A, T0, {}); w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.2); const [e] = w.entries("NEW-5M");
+  w.setMc(A, 3000); await w.price(10); await w.price(1); await w.price(1); assert.ok(e.versions.every((v) => v.status === "closed")); const last = lastSaleT(e);
+  w.setMc(A, 80_000); w.t = last + S.NEW_FOLLOW_S - 10; await w.nc.runnerPass(); assert.ok(e.runner.lastX > 3);
+  w.t = last + S.NEW_FOLLOW_S + 20; const s0 = w.reqs.search; assert.equal(await w.nc.runnerPass(), 0, "looked at 30 s ago: not again yet"); assert.equal(e.runner.long, true); assert.equal(w.reqs.search - s0, 0); assert.equal(e.runner.horizonDone, false);
+  w.t = last + S.NEW_FOLLOW_S + 150; assert.equal(await w.nc.runnerPass(), 0); w.t = last + S.NEW_FOLLOW_S + 300; w.setMc(A, 200_000); assert.equal(await w.nc.runnerPass(), 1, "five minutes after the last look"); assert.ok(e.runner.maxX > 9);
+  w.t = last + S.NEW_FOLLOW_LONG_S + 5; assert.equal(await w.nc.runnerPass(), 0); assert.equal(e.runner.horizonDone, true); assert.match(e.runner.followed.why, /six hours/); assert.equal(w.eng.entries.has(e.id), false);
+  // the track itself: the highest per half-minute, real over estimated never mixed up, never out of order
+  const x = { fill: { t: 1000 }, runner: {} }; assert.equal(trackHigh(x, 1010, 1.2, true), true); assert.equal(trackHigh(x, 1020, 1.1, false), false, "lower in the same half-minute: kept as it was"); assert.equal(trackHigh(x, 1025, 1.4, false), true); assert.deepEqual(x.track, [[10, 1.4, 0]]);
+  assert.equal(trackHigh(x, 1075, 0.9, true), true); assert.equal(trackHigh(x, 1005, 5, true), false, "an older look never rewrites the track"); assert.deepEqual(x.track, [[10, 1.4, 0], [75, 0.9, 1]]); assert.equal(trackHigh(x, 1080, NaN, true), false);
+  // a sale always starts a new point: what was seen before it is never counted as after it
+  x.versions = [{ exit: { t: 1082 } }]; assert.equal(trackHigh(x, 1085, 0.5, true), true); assert.deepEqual(x.track[2], [85, 0.5, 1]); assert.equal(afterSale(x, x.versions[0]).m15.x, 0.5, "the 0.9 seen seven seconds before the sale is not in it"); assert.equal(afterSale(x, x.versions[0]).m15.s, 3);
+});

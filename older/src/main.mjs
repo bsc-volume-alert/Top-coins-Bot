@@ -125,7 +125,7 @@ else if (process.env.OLDER_SOLANA_WIDE === "1") {
 }
 // ---- NEW-COIN BOOKS: the look / measure / buy loop, and a quote reader OF THEIR OWN that does nothing but price their open
 // buys — no discovery, no price sampling (the Solana-wide adapter, when it is on, keeps its own list and never samples these
-// coins). A buy whose every row is sold is followed for its 24-hour high through batched token data, not quotes (spec NEW_RUNNER_S).
+// coins). A buy whose every row is sold is followed for its highs after the sale through batched token data, not quotes: two hours after the last sale (spec NEW_RUNNER_S, NEW_FOLLOW_S).
 let newcoins = null;
 if (NEWCOINS) { const { NewCoins } = await import("./newcoin.mjs");
   const own = engine.onOwnership, quoter = new Poller({ engine, jup: J, store, log, quoteFast: Number(process.env.OLDER_QUOTE_FAST_S || 2), quoteSlow: Number(process.env.OLDER_QUOTE_SLOW_S || 10), runnerEvery: Infinity }); engine.onOwnership = own; // a buy whose every row is sold is not quoted at all: its 24-hour high is estimated from token data, all such buys in one request (newcoin.mjs, runnerPass) // the adapter's own hook stays in place

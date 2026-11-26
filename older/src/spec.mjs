@@ -75,7 +75,20 @@ export const NEW_TOP_PRE = [0.15, 0.35];
 // minute within a few hours): every NEW_RUNNER_S seconds the provider's token data is read for all such buys together (100 coins
 // a request) and the value is ESTIMATED as price × tokens bought − the transaction cost. No fees or price impact are in it,
 // so it is an upper estimate; the buy is marked (runner.est). Open rows are priced by routed quotes exactly as before.
-export const NEW_RUNNER_S = 60;
+export const NEW_RUNNER_S = 30;
+// AFTER THE SALE (owner 26 Nov 2026 06:01–06:07 UK: "can we have a time scale on this… what was the highest we could have got within
+// the last hour or 2 hours… to know if we sold too early" · "we don't need 24 hours… 2 hours is fine"). A new-coin buy is followed
+// for NEW_FOLLOW_S after its LAST row is sold, looked at every NEW_RUNNER_S seconds (it was once a minute for 24 hours from the
+// buy). A coin that is still worth more than it cost at that 2-hour mark — the rare runner — is looked at every
+// NEW_FOLLOW_LONG_EVERY_S up to NEW_FOLLOW_LONG_S after the last sale; every other buy is finished at the 2-hour mark.
+// Every look is kept as the highest value per NEW_TRACK_S of the buy's life (e.track), from its first sale on, so the page can
+// say for every sale how high the coin went in the 15 minutes, the hour and the two hours AFTER it, and when.
+export const NEW_FOLLOW_S = 2 * 3600, NEW_FOLLOW_LONG_S = 6 * 3600, NEW_FOLLOW_LONG_EVERY_S = 300, NEW_TRACK_S = 30;
+export const AFTER_WINDOWS = [["m15", 900], ["h1", 3600], ["h2", 7200]]; // the windows after a sale shown on the page
+// A new high from the price alone is an ESTIMATE (price × tokens: no fees, no price impact). When such a high is NEW_CONFIRM_X
+// times cost or more and NEW_CONFIRM_STEP above the last confirmed one, ONE real sell quote for the whole original holding is
+// asked — what it would actually have fetched — at most NEW_CONFIRM_MAX per look.
+export const NEW_CONFIRM_X = 1.5, NEW_CONFIRM_STEP = 1.1, NEW_CONFIRM_MAX = 2;
 export const NEW_LOG_KEEP = 3000;      // measurements of coins over the market-cap line kept for the site and the published file (all of them are in the log file beside the database)
 
 // Families. 21 families × 4 ages + 10 any-age families × 5 ages = 134 book-ages; × 5 stops × 2 exit policies = 1,340 comparisons (VOL100K and DIP15K added in older-11).
