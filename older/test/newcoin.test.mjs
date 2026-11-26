@@ -277,3 +277,17 @@ test("how each sale was priced is on record: the stop's level, what the position
   // a pool-priced position never gets the field
   const en = mkEngine({ tokens: null }); en.feedUp(T0); assert.ok([...en.entries.values()].every((x) => x.versions.every((y) => y.trig === undefined)));
 });
+
+test("one quote per position per look: the half is asked for only while a half-sale is waiting — and that half-sale is still priced by quotes asked for after its time", async () => {
+  const w = world(); w.add(A, T0, {}); w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.2);
+  const [e] = w.entries("NEW-5M"); assert.equal(e.status, "filled"); const half = e.fill.tok / 2, isHalf = ([side, raw]) => side === "sell" && Math.abs(raw - half * 1e6) < 2, isFull = ([side, raw]) => side === "sell" && Math.abs(raw - e.fill.tok * 1e6) < 2;
+  assert.deepEqual(w.eng.quoteNeeds(w.t)[0].sells, [e.fill.tok], "one size: everything it holds");
+  w.sizes.length = 0; const q0 = w.reqs.quote; for (let i = 0; i < 6; i++) await w.price(10); // a minute of routine looks
+  assert.equal(w.reqs.quote - q0, 6, "six looks, six requests (it was twelve)"); assert.ok(w.sizes.every(isFull)); assert.ok(!w.sizes.some(isHalf));
+  w.setMc(A, 44_000); await w.price(10); const sc = e.versions.filter((v) => v.policy === "scale"); assert.ok(sc.every((v) => v.status === "scaling"), "2× reached: every half-at-2× row has a half-sale waiting");
+  assert.deepEqual(w.eng.quoteNeeds(w.t)[0].sells.slice().sort((a, b) => a - b), [half, e.fill.tok], "now the half is needed too");
+  w.sizes.length = 0; await w.price(1); assert.ok(w.sizes.some(isHalf)); assert.ok(sc.every((v) => v.status === "open" && v.half), "the half is banked");
+  const h = sc[0].half; assert.ok(h.quotes.half.req_t >= sc[0].trigT + 0.7 - 1e-9, "priced by a quote asked for after the order's time"); assert.ok(h.quote_spread_s <= S.SCALE_QUOTE_MAX_SPREAD_S); assert.ok(Math.abs(h.sol - ((44 / 20) * 0.99 * 0.99 * 0.1 - S.TX_COST_SOL)) < 0.002, "half the tokens at the 2.2× price, after fees and one transaction cost");
+  // afterwards the halved rows hold the half, the pure-trail rows the whole: two sizes are really held, two are asked
+  w.sizes.length = 0; await w.price(10); assert.ok(w.sizes.some(isHalf) && w.sizes.some(isFull)); assert.equal(w.sizes.length, 2);
+});

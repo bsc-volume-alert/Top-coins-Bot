@@ -189,7 +189,7 @@ export function observe(e, st, t, cov) {
   }
 }
 /** the distinct token quantities an entry currently needs a sell quote for (a routed-quote provider is asked for exactly these) */
-export function inventories(e) { if (e.status !== "filled") return []; const s = new Set(); for (const v of e.versions) if (live(v) && v.tok > 0) { s.add(v.tok); if (v.status === "scaling" || (v.policy === "scale" && !v.half)) s.add(e.fill.tok * S.SCALE_FRACTION); } if (!e.runner.horizonDone) s.add(e.fill.tok);
+export function inventories(e) { if (e.status !== "filled") return []; const s = new Set(); for (const v of e.versions) if (live(v) && v.tok > 0) { s.add(v.tok); if (v.status === "scaling") s.add(e.fill.tok * S.SCALE_FRACTION); } /* the half is quoted only while a half-sale is waiting to be priced (it must be a quote asked for AFTER the order's time anyway, execSell): until 26 Nov 2026 it was also asked at every routine look of every position not yet halved — a second request per position per look that no valuation and no trigger ever read, and half of all the quote traffic */ if (!e.runner.horizonDone) s.add(e.fill.tok);
   if (e.manual && !e.manual.closed && e.manual.tok > 0) { const m = e.manual; if (m.order) s.add(m.order.frac >= 1 ? m.tok : m.tok * m.order.frac); if (m.sales.length) s.add(m.tok); } // the owner's own sale of a quote-priced buy: the quantity being sold, and what he still holds after a part-sale
   return [...s]; }
 /** the earliest scheduled order still waiting for a price (buy or sell), or null */

@@ -125,7 +125,7 @@ test("C4 a half-sale is never executed on routed quotes taken at different marke
   // poller: when the quote for one size fails, the old quote for that size is not offered again
   const M = "SampledCoin9", w = world(), eng = mkEngine(), po = new Poller({ engine: eng, jup: w.jup, now: () => w.t });
   w.px.set(M, 1e-4); po.add(w.tok(M), "t"); for (let k = 0; k < 31; k++) { w.t += 10; await po.sweep(); } w.px.set(M, 2.05e-4); w.t += 10; await po.sweep(); w.t += 1.1; await po.quotes();
-  const en = [...eng.entries.values()][0]; assert.equal(en.status, "filled"); w.t += 11; await po.quotes(); const held = po.held.get(en.id); assert.ok(held.size >= 2);
+  const en = [...eng.entries.values()][0]; assert.equal(en.status, "filled"); w.t += 11; await po.quotes(); const held = po.held.get(en.id); assert.ok(held.size >= 1); assert.ok([...held.keys()].some((k) => Math.abs(k - en.fill.tok) < 1e-9)); // one size per routine look since 26 Nov 2026 (the half is asked only while a half-sale is waiting)
   w.failSize = Math.floor(en.fill.tok * 1e6); w.t += 11; await po.quotes(); assert.ok(![...held.keys()].some((k) => Math.abs(k - en.fill.tok) < 1e-9), "the failed size holds no stale quote");
 });
 
@@ -393,7 +393,7 @@ test("P4 a boost quarantine is a recorded price break: it empties exact windows,
 });
 
 test("P5 an order that becomes due while a pass is waiting is dispatched as urgent", async () => {
-  const w = world(), eng = mkEngine(), po = new Poller({ engine: eng, jup: w.jup, now: () => w.t }); const en = await sampledEntry2(w, eng, po, "UrgCoin1"); assert.equal(en.status, "filled");
+  const w = world(), eng = mkEngine(), po = new Poller({ engine: eng, jup: w.jup, now: () => w.t }); const en = await sampledEntry2(w, eng, po, "UrgCoin1"); assert.equal(en.status, "filled"); const en2 = await sampledEntry2(w, eng, po, "UrgCoin2"); assert.equal(en2.status, "filled"); // two positions: one request each in a routine pass (the half is no longer asked at every look)
   const seen = []; const fast = w.jup.quote; w.jup.quote = async (m, side, raw, o = {}) => { seen.push(o.urgent); w.t += 2; return fast(m, side, raw, o); };
   const real = eng.quoteNeeds.bind(eng); eng.quoteNeeds = (now) => real(now).map((n) => ({ ...n, due: w.t + 0.5 }));   // a sale due half a second into the pass
   w.t += 11; await po.quotes("routine"); assert.equal(seen[0], false, "not yet due at the first request"); assert.ok(seen.slice(1).length > 0 && seen.slice(1).every((u) => u === true), "due by the later requests: first lane — " + seen.join());
