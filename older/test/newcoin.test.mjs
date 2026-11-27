@@ -379,7 +379,12 @@ test("the runners list: a measured coin that reaches $100K on the pool feed is w
   swap(w.eng, T0 + 1210, 104_000, P(A)); assert.equal(told.length, 1, "not told again for a few per cent more"); swap(w.eng, T0 + 1300, 180_000, P(A)); assert.equal(told.length, 2, "told again at a new high a step above"); swap(w.eng, T0 + 1310, 120_000, P(A)); assert.equal(told.length, 2);
   swap(w.eng, T0 + 2000, 150_000, P(B)); assert.equal(told.at(-1)[3], false, "first seen already above the line"); swap(w.eng, T0 + 2100, 400_000, P(E9)); assert.equal(w.nc.hits.get(E9), null, "never measured by the new-coin books: not on the list");
   const q0 = st0.checksOf.bind(st0); let looked = 0; st0.checksOf = (m) => { looked++; return q0(m); }; swap(w.eng, T0 + 2200, 900_000, P(E9)); assert.equal(looked, 0, "and it is not looked up again");
-  w.t = T0 + 2300; const v = w.nc.runnersView();
+  // 27 Nov 2026: the runners list reads each coin's checks and nothing else — the "kept since" figure of the coin lookup scans the whole checks table
+  // (measured: about 70 ms a time on the server, once per listed coin = the 4.3-second hold of every status dump), and the store keeps it once found
+  let scans = 0; const cs0 = st0.checksSince.bind(st0); st0.checksSince = () => { scans++; return cs0(); };
+  w.t = T0 + 2300; const v = w.nc.runnersView(); assert.equal(scans, 0, "no whole-table read while the list is built");
+  { const lk = w.nc.lookup(A); assert.ok(lk.kept_since != null && lk.checks.length > 0); assert.equal(scans, 1, "the coin lookup still reports it");
+    let prepared = 0; const p0 = st0.db.prepare.bind(st0.db); st0.db.prepare = (q) => { if (/MIN\(t\)/.test(q)) prepared++; return p0(q); }; assert.equal(st0.checksSince(), lk.kept_since); assert.equal(prepared, 0, "found once per process, then kept"); st0.db.prepare = p0; }
   assert.equal(v.reached, 2); assert.equal(v.missed, 1); assert.equal(v.bought, 1); assert.equal(v.later, 0); assert.equal(v.unknown_time, 1); assert.equal(v.line, 100_000);
   const a = v.list.find((r) => r.mint === A), b = v.list.find((r) => r.mint === B);
   assert.equal(a.t, T0 + 1200); assert.equal(a.age_s, 1200, "twenty minutes old when it got there"); assert.equal(a.created, T0); assert.ok(Math.abs(a.peak - 180_000) < 2000, "its highest is kept up to date"); assert.deepEqual(a.bought, []); assert.equal(a.checks[0].why, "volume"); assert.equal(a.checks[0].out, "not bought: volume $13K (needs $30K)"); assert.equal(a.checks[0].counted, true);

@@ -136,7 +136,7 @@ export class NewCoins {
   runnerHit(mint, mc, t, sawUnder = null) { this.loadHits(); const had = this.hits.get(mint);
     if (had === null) return null; // looked up before: not a coin the new-coin books measured
     if (had) { if (mc > had.peak) { had.peak = Math.round(mc); had.peak_t = Math.round(t); try { this.store?.runnerPeak?.(mint, had.peak, had.peak_t); } catch {} } return had; }
-    const checks = this.lookup(mint).checks; if (!checks.length) { this.hits.set(mint, null); return null; }
+    const checks = this.checksOfCoin(mint); if (!checks.length) { this.hits.set(mint, null); return null; }
     const c0 = checks.find((c) => c.age_s != null) || null, created = c0 ? c0.t - c0.age_s : this.young.get(mint)?.created ?? null;
     const rec = { mint, t: Math.round(t), mc: Math.round(mc), created: created == null ? null : Math.round(created), peak: Math.round(mc), peak_t: Math.round(t), sym: checks.find((c) => c.sym)?.sym ?? null, lp: checks.find((c) => c.lp)?.lp ?? null, age_s: created == null ? null : Math.round(t - created), unseen_before: sawUnder === false ? true : undefined };
     this.hits.set(mint, rec); try { this.store?.saveRunner?.(rec); } catch (e) { this.log("[new coins] runner not written: " + e.message); } this.stats.runners = (this.stats.runners || 0) + 1; this.dirty = true; return rec; }
@@ -146,7 +146,7 @@ export class NewCoins {
     const inWin = (r) => r.age_s != null && r.age_s <= S.RUN_WINDOW_S, list = all.filter(inWin).sort((a, b) => b.t - a.t), tally = {};
     for (const r of this.rules) tally[r.family] = Object.fromEntries(WHYS.map((w) => [w, { checks: this.k(r.family).why?.[w] || 0, reached: 0 }]));
     const out = []; let missed = 0;
-    for (const r of list) { let checks = []; try { checks = this.lookup(r.mint).checks; } catch {}
+    for (const r of list) { let checks = []; try { checks = this.checksOfCoin(r.mint); } catch {}
       let buys = []; try { buys = (this.store?.entriesOf?.(r.mint) || []).filter((e) => e.pop === S.NEW_POP && e.status === "filled").map((e) => ({ id: e.id, book: e.families[0], t: e.decisionT, mc: Math.round(e.signalMc || 0), max: e.runner?.maxX != null ? +e.runner.maxX.toFixed(2) : null })); } catch {}
       const cs = checks.map((c) => ({ book: c.book, t: c.t, age_s: c.age_s ?? null, mc: c.mc ?? null, holders: c.holders ?? null, vol: c.vol ?? null, top_jup: c.top_jup ?? null, fees: c.fees ?? null, top10: c.top10 ?? null, g: c.g ? lean({ bundlers: c.g.bundlers, snipers: c.g.snipers, insiders: c.g.insiders, phishing: c.g.phishing, dev_hold: c.g.dev_hold }) : undefined, ev: c.ev ?? undefined, why: whyOf(c), counted: !!c.st && since != null && c.t >= since, out: c.out ?? null }));
       for (const c of cs) if (c.counted && tally[c.book]?.[c.why]) tally[c.book][c.why].reached++; // only checks made since the counting began: both columns cover the same checks
@@ -155,13 +155,17 @@ export class NewCoins {
   /** THE COIN LOOKUP (owner 26 Nov 2026 04:49 UK: "when I paste the contract, we need to know immediately why the coin was rejected
    *  or not"). Read-only, from the bot's own records — no provider is asked. Returns what the new-coin books know about one coin:
    *  whether it is on the waiting list and when its next checks fall due, and every check made of it with its figures and reason. */
-  lookup(mint) {
-    const now = this.now(), y = this.young.get(mint) || null, seen = new Set(), checks = [];
+  /** one coin's checks, oldest first — the part of the lookup the runners list needs (it must not pay for the rest once per coin: see store.checksSince) */
+  checksOfCoin(mint) {
+    const seen = new Set(), checks = [];
     const add = (r) => { const k = r.book + "|" + r.t; if (seen.has(k)) return; seen.add(k); checks.push(r); };
     if (this.store?.checksOf) try { for (const r of this.store.checksOf(mint)) add(r); } catch {}
     for (const r of this.dbq) if (r.mint === mint) add(r); // measured a moment ago, not yet written
     for (const r of this.history) if (r.mint === mint) add(r); // checks made before every check was kept in the database (coins over the market-cap line only)
-    checks.sort((a, b) => a.t - b.t);
+    return checks.sort((a, b) => a.t - b.t);
+  }
+  lookup(mint) {
+    const now = this.now(), y = this.young.get(mint) || null, checks = this.checksOfCoin(mint);
     const waiting = y ? { created: y.created, symbol: y.symbol, launchpad: y.launchpad, age_s: Math.round(now - y.created), next: this.rules.filter((r) => !y.done[r.family]).map((r) => ({ book: r.family, at: y.created + r.at_s, in_s: Math.round(y.created + r.at_s - now) })) } : null;
     return { on: true, now, since: this.stats.since, kept_since: (() => { try { return this.store?.checksSince ? this.store.checksSince() : null; } catch { return null; } })(), rules: this.rules.map((r) => ({ book: r.family, at_s: r.at_s, mc: r.mc_min_usd, holders: r.holders_min, vol: r.vol_min_usd, fees: r.fees_min_sol, top10: r.top10 })), waiting, checks };
   }

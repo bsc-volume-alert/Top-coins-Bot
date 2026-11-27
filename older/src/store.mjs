@@ -119,7 +119,10 @@ export class Store {
   saveRunner(r) { const { mint, t, mc, created, peak, peak_t, ...rest } = r; return this.db.prepare("INSERT OR IGNORE INTO nc_runners (mint, t, mc, created, peak, peak_t, j) VALUES (?,?,?,?,?,?,?)").run(mint, t, mc, created ?? null, peak ?? mc, peak_t ?? t, JSON.stringify(rest)).changes; }
   runnerPeak(mint, peak, peakT) { return this.db.prepare("UPDATE nc_runners SET peak = ?, peak_t = ? WHERE mint = ? AND peak < ?").run(peak, peakT, mint, peak).changes; }
   runners() { return this.db.prepare("SELECT mint, t, mc, created, peak, peak_t, j FROM nc_runners ORDER BY t").all().map((r) => { let j = {}; try { j = JSON.parse(r.j); } catch {} return { mint: r.mint, t: r.t, mc: r.mc, created: r.created, peak: r.peak, peak_t: r.peak_t, ...j }; }); }
-  checksSince() { const r = this.db.prepare("SELECT MIN(t) t FROM nc_checks").get(); return r?.t ?? null; }
+  // MEASURED 27 Nov 2026 (status.dump on e48b6a1): this statement reads the WHOLE table (no index on t — 214,000 rows, about 70 ms on the server),
+  // and the runners list asked it once per listed coin: 61 coins = the 4.3-second hold of the whole program at every status dump. Rows are only
+  // ever added, so the earliest time is found once per process and kept.
+  checksSince() { if (this._chkSince != null) return this._chkSince; const r = this.db.prepare("SELECT MIN(t) t FROM nc_checks").get(), t = r?.t ?? null; if (t != null) this._chkSince = t; return t; }
   entriesOf(mint) { return this.db.prepare("SELECT json FROM entries WHERE mint = ? ORDER BY id").all(mint).map((r) => JSON.parse(r.json)); }
   notesOf(mint, limit = 20) { return this.db.prepare("SELECT family, ag, t, reason FROM notes WHERE mint = ? ORDER BY id DESC LIMIT ?").all(mint, limit); }
   checksOf(mint) { return this.q.chkOf.all(mint).map((r) => { let j = {}; try { j = JSON.parse(r.j); } catch {} return { t: r.t, mint, book: r.book, ...j }; }); }
