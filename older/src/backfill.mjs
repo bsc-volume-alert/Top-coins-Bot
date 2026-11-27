@@ -69,7 +69,13 @@ export function startBackfill({ engine, store, jup = null, log = console.log, pa
     }
   }
   /** after an outage: re-fill the gap from 1-minute bars for coins with open positions or near the band */
-  async function patchGap(a, b, mints) { if (paused()) { bf.gapsSkippedPaused = (bf.gapsSkippedPaused || 0) + mints.length; return; } for (const mint of mints) { if (paused()) return; try { const bars = await minuteBars(mint, Math.floor(a / 60) * 60, Math.ceil(b / 60) * 60); const r = engine.coin(mint).series.addBars(bars, { from: a, to: b, patchGap: true }); if (r.accepted) bf.gapsPatched++; else bf.gapsNotPatched = (bf.gapsNotPatched || 0) + 1; } catch (e) { bf.errors++; bf.lastErr = String(e.message).slice(0, 160); } } }
+  // ONE GAP-REPAIR PASS AT A TIME (27 Nov 2026): every feed drop or late spell starts a pass over hundreds of coins, and they used to run side
+  // by side (56 late spells in one morning). Now a pass waits for the one before it; with two already waiting a new one is not started (counted
+  // in gapsSkippedBusy): by the time it ran, the minutes it would fill would be hours old, and the books treat an unfilled gap as not covered.
+  let gapLine = Promise.resolve(), gapWaiting = 0;
+  const patchGap = (a, b, mints) => { if (gapWaiting >= 3) { bf.gapsSkippedBusy = (bf.gapsSkippedBusy || 0) + mints.length; return Promise.resolve(); }
+    gapWaiting++; bf.gapPasses = gapWaiting; return (gapLine = gapLine.then(() => patchGapNow(a, b, mints)).catch(() => {}).then(() => { gapWaiting--; bf.gapPasses = gapWaiting; })); };
+  async function patchGapNow(a, b, mints) { if (paused()) { bf.gapsSkippedPaused = (bf.gapsSkippedPaused || 0) + mints.length; return; } for (const mint of mints) { if (paused()) return; try { const bars = await minuteBars(mint, Math.floor(a / 60) * 60, Math.ceil(b / 60) * 60); const r = engine.coin(mint).series.addBars(bars, { from: a, to: b, patchGap: true }); if (r.accepted) bf.gapsPatched++; else bf.gapsNotPatched = (bf.gapsNotPatched || 0) + 1; } catch (e) { bf.errors++; bf.lastErr = String(e.message).slice(0, 160); } } }
   if (jup) creationLoop();
   if (gmgnOn()) loop(); else log("[backfill] no GMGN key: creation times and history cannot be filled — coins stay not-covered");
   return { want, patchGap, size: () => q.length + needC.size };

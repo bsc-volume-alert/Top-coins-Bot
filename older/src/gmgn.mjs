@@ -31,15 +31,29 @@ let next = 0, pausedUntil = 0; const nap = (ms) => new Promise((r) => setTimeout
 // (limit − 2 or more left). So repair settles at the fastest pace that still leaves the allowance full between its calls,
 // and a buy-check finds units waiting. A reset time, when the provider gives one, is always respected as well.
 const REFILL0 = Number(process.env.GMGN_REFILL_S || 15) * 1000, REFILL_MIN = Number(process.env.GMGN_REFILL_MIN_S || 4) * 1000, REFILL_MAX = 120_000;
-let chain = Promise.resolve(), remaining = null, resetAt = 0, coolUntil = 0, refillMs = REFILL0, afterWait = false, limitHdr = 5;
-function slot(path) { const w = WEIGHT[path] ?? 3; const p = chain.then(async () => {
+let remaining = null, resetAt = 0, coolUntil = 0, refillMs = REFILL0, afterWait = false, limitHdr = 5;
+// THE ORDER OF THE ORDINARY LANE (27 Nov 2026). Until now every ordinary call waited in one line, first come first served. After a
+// restart the history repair asks for some 1,260 coins, and each feed gap for hundreds more; at the 4-second pace the lane serves
+// about 13 calls a minute, so a reading "for the record" (and a buy's late label) stood behind repair for more than its 60 seconds
+// and was given up: 207 of 359 in the hour after the 08:29 restart, with GMGN refusing nothing. Now there are two lines: READINGS
+// (token info, token security) and REPAIR (gcall(..., { low: true }): creation time and one-minute bars). A repair call is paced
+// only when no reading is waiting, and if a reading arrives while a repair call is being paced, the reading takes that turn (its
+// weight is no larger) and the repair call goes back to the head of its line. The pacing itself — bucket, reserve, refill time —
+// is exactly as before, one call at a time.
+const waitHi = [], waitLo = []; let pumping = false; export const gmQueue = () => ({ readings: waitHi.length, repair: waitLo.length });
+async function pace(path) { const w = WEIGHT[path] ?? 3;
     for (;;) { if (Date.now() < pausedUntil) { await nap(Math.min(500, pausedUntil - Date.now() + 5)); continue; }
       const d = next - Date.now(); if (d > 0) { await nap(Math.min(d, 250)); continue; }
       if (gm.reserve > 0) { const now = Date.now();
         if (now < coolUntil) { await nap(Math.min(250, coolUntil - now + 5)); continue; }
         if (remaining != null && remaining - w < gm.reserve) { coolUntil = Math.max(now + refillMs, resetAt > now ? resetAt + 5 : 0); remaining = null; afterWait = true; gm.held_back++; gm.refill_s = +(refillMs / 1000).toFixed(1); continue; } } // too little left for a buy-check after this call: wait for the refill, then take the allowance as refilled
       break; }
-    next = Math.max(Date.now(), next) + (w / WPS) * 1000; }); chain = p.catch(() => {}); return p; }
+    next = Math.max(Date.now(), next) + (w / WPS) * 1000; }
+async function pump() { if (pumping) return; pumping = true;
+  try { for (;;) { let job = waitHi.shift() || waitLo.shift(); if (!job) break; await pace(job.path);
+      if (job.low && waitHi.length && (WEIGHT[waitHi[0].path] ?? 3) <= (WEIGHT[job.path] ?? 3)) { waitLo.unshift(job); job = waitHi.shift(); gm.repair_yielded = (gm.repair_yielded || 0) + 1; } // a reading came in during the wait: it goes first
+      job.go(); } } finally { pumping = false; if (waitHi.length || waitLo.length) pump(); } }
+function slot(path, low = false) { return new Promise((go) => { (low ? waitLo : waitHi).push({ path, low, go }); pump(); }); }
 function note(r) { for (const [k, v] of r.headers) if (/ratelimit|quota|plan|tier/i.test(k)) gm.headers[k] = v; // limit evidence only — never auth headers
   const rem = Number(r.headers.get("x-ratelimit-remaining")), rs = Number(r.headers.get("x-ratelimit-reset")); // ONE SHARED COUNT for calls in flight: an answer to an earlier call reports the allowance as it was when THAT call was
   // served; calls sent since are already counted here, so inside one window the lower figure stands. A new window (a later reset time) starts from the answer.
@@ -48,7 +62,7 @@ function note(r) { for (const [k, v] of r.headers) if (/ratelimit|quota|plan|tie
 /** learn the refill time from a repair call's outcome (see THE RESERVE NOW above) */
 function learn(refused, rem) { if (!(gm.reserve > 0)) return; if (refused) refillMs = Math.min(REFILL_MAX, refillMs * 2); else if (afterWait && rem != null && rem >= limitHdr - 2) refillMs = Math.max(REFILL_MIN, refillMs * 0.8); afterWait = false; gm.refill_s = +(refillMs / 1000).toFixed(1); }
 export const gmgnOn = () => !!KEY();
-export async function gcall(path, params = {}, { method = "GET", body = null, first = false, maxWaitMs = 0 } = {}) {
+export async function gcall(path, params = {}, { method = "GET", body = null, first = false, maxWaitMs = 0, low = false } = {}) {
   if (!KEY()) throw new Error("no GMGN key configured");
   const t0 = Date.now();
   // a reading is not sent into an allowance the provider has just reported as used up (review of bbe1115): it would be refused,
@@ -57,7 +71,7 @@ export async function gcall(path, params = {}, { method = "GET", body = null, fi
   if (first) { gm.first.calls++; const now = Date.now(), w = WEIGHT[path] ?? 3, wait = Math.max(pausedUntil - now, remaining != null && remaining < w && now < resetAt ? resetAt - now : 0); if (wait > maxWaitMs) { gm.first.not_sent++; throw new Error(`GMGN allowance exhausted for another ${(wait / 1000).toFixed(1)} s`); } if (wait > 0) await nap(wait);
     if (Date.now() >= resetAt) remaining = null; // the reported window is over: the allowance is not known until the next answer
     next = Math.max(Date.now(), next) + ((WEIGHT[path] ?? 3) / WPS) * 1000; if (remaining != null) remaining -= WEIGHT[path] ?? 3; }
-  else { await slot(path); if (remaining != null) remaining -= WEIGHT[path] ?? 3; } // every call that is sent is counted against the last reported allowance, whichever kind it is
+  else { await slot(path, low); if (remaining != null) remaining -= WEIGHT[path] ?? 3; } // every call that is sent is counted against the last reported allowance, whichever kind it is
   gm.calls++;
   const q = new URLSearchParams({ ...(method === "GET" ? params : params.chain ? { chain: params.chain } : {}), timestamp: String(Math.floor(Date.now() / 1000)), client_id: randomUUID() });
   const r = await fetch(`${HOST}${path}?${q}`, { method, headers: { "X-APIKEY": KEY(), "Content-Type": "application/json" }, body: method === "POST" ? JSON.stringify(body ?? params) : undefined, signal: AbortSignal.timeout(15000) });
@@ -78,10 +92,10 @@ export const tokenInfoLate = (mint) => gcall("/v1/token/info", { chain: "sol", a
 /** GMGN's token-security answer (its "token audit": mint and freeze given up, liquidity burnt, top 10) — an ORDINARY queued call (1 unit): it waits its turn behind the buy-checks and is only ever a record */
 export const tokenSecurity = (mint) => gcall("/v1/token/security", { chain: "sol", address: mint });
 /** test hook: forget pacing and allowance state */
-export function _reset() { next = 0; pausedUntil = 0; remaining = null; resetAt = 0; chain = Promise.resolve(); coolUntil = 0; refillMs = REFILL0; afterWait = false; limitHdr = 5; gm.refill_s = undefined; }
+export function _reset() { next = 0; pausedUntil = 0; remaining = null; resetAt = 0; waitHi.length = 0; waitLo.length = 0; coolUntil = 0; refillMs = REFILL0; afterWait = false; limitHdr = 5; gm.refill_s = undefined; }
 /** token creation time (unix s) — GMGN token info; null if GMGN does not give one */
 export async function creationTime(mint) {
-  const i = await gcall("/v1/token/info", { chain: "sol", address: mint });
+  const i = await gcall("/v1/token/info", { chain: "sol", address: mint }, { low: true }); // history repair: behind the readings
   let v = N(i?.creation_timestamp ?? i?.open_timestamp ?? i?.created_at); if (v > 1e12) v = Math.floor(v / 1000);
   return v ? { t: v, src: i?.creation_timestamp != null ? "gmgn.creation_timestamp" : "gmgn.open_timestamp (UNVERIFIED: must be shown to mean token creation, not pool opening)" } : null;
 }
@@ -90,7 +104,7 @@ export async function minuteBars(mint, from, to) {
   const out = [];
   for (let a = from; a < to; a += 100 * 60) {
     const b = Math.min(to, a + 100 * 60);
-    const d = await gcall("/v1/market/token_kline", { chain: "sol", address: mint, resolution: "1m", from: String(a * 1000), to: String(b * 1000) });
+    const d = await gcall("/v1/market/token_kline", { chain: "sol", address: mint, resolution: "1m", from: String(a * 1000), to: String(b * 1000) }, { low: true }); // history repair: behind the readings
     for (const c of d?.list || (Array.isArray(d) ? d : [])) { const t = Math.floor(Number(c.time) / 1000); if (t >= from && t < to && N(c.close) > 0) out.push({ m: Math.floor(t / 60), o: N(c.open) ?? N(c.close), h: N(c.high), l: N(c.low), c: N(c.close), v: N(c.volume) ?? 0 }); }
   }
   return out.sort((x, y) => x.m - y.m).filter((x, i, a) => i === 0 || x.m !== a[i - 1].m);
