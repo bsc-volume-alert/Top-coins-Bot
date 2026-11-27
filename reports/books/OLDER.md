@@ -1913,3 +1913,35 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
 - Since the rule change (8.23 h): four looks 122 buys −1.412 / −2.096 / −4.186 SOL; NEW-5M −0.142 / −0.141; CONFIRM-15 −0.430, -20 −0.066, -30 −0.149; WAIT5-UP 27 buys −0.211;
   HIT50-NOW 62 buys −1.881; HIT100-NOW 18 buys −0.952 (0 won on 20%); **FARM-90K 31 buys, 28 closed, +2.021 SOL (20%) / +1.871 (25%), 32% won**;
   5M-H300 46 buys +7.9% vs −4.3% for the other 147. Runners: reached 93, bought 19, missed 74. Entries 1267 (1065 bought).
+
+### 27 Nov, 23:38 UK — check (publish 23:28:58, state 23:28:57)
+
+- **Fine. 1bcef1f confirmed from the data:** started 22:58:51, up 30 min, no log error, too late 0, feed reconnects 0, GMGN limited 0, Jupiter
+  refused 128 in 30 min, rate window 57 of 100, limited 0. **Memory back to normal: 670 MB / 374 heap at 30 minutes** (the 788 / 520 of the
+  run before did not repeat). Loop hold worst 1.26 s; no late buy. Entries 1288 (1086 bought).
+- **Volume test: 5 buys — the first CONTROL buy.** WINCULT JC6cvM 1269 (22:51, cap $76K, 386 buyers, holders +89% in 5 min, $82 a trade;
+  bundlers 10.7%, snipers 1.3%, fees 9.8 SOL, top 10 19.5%, phishing 1.2% → type neither): **control's 40% stop −5.3%**; 20% −7.9%, 25% +6.5%.
+  SPEC 6DmC5K 1286 (23:19, cap $44K, 949 buyers, holders −21%, $37 a trade; fees 30.1 SOL) → REST: −9.8% on 20%.
+  Standing: CONTROL 1 buy −5.3% (first look at 30) · REST 4 buys (ZERO −18.0%, MAYA −11.2%, RAURA −1.5%, SPEC −9.8%) · BARE 0 · OPER 0.
+- **FARM-90K: Gold 3AhpV3 (1210) collapsed — the rule −100% after 4.69×, target 6×.** He had sold it by hand at about 4.1×.
+  His two hand sales (+2.653 SOL at his 0.5 stake) are now about level with the rule on the same two buys (+3.103 − 0.501 = +2.602): the
+  −2.017 gap of 22:53 is gone. FARM-90K since the start: 32 buys, 30 closed, +1.733 SOL (20%) / +1.583 (25%), 30% won.
+  **The capped-sale test rerun on the 30 closed buys (0.2 SOL, 20% stop):** rule as it is +1.729 (9 won) · cap 2× +1.047 (16 won) ·
+  **cap 2.5× +2.148 (15 won, without top 3 +1.248)** · **cap 3× +2.118 (13 won, without top 3 +0.918)** · cap 4× +1.117.
+  Bought under $25K: 9 buys, all 9 reached 2×, 7 reached 3×, 3 reached the target. The cap now beats the rule (it was level at 22:39). Still looking back, 30 buys.
+- **SPEC 6DmC5K — bought at all four looks** (peak $146K at 19 min).
+
+  | look | cap | holders | volume | fees | top 10 | bundlers | snipers | phishing | result (20 / 25 / 40%) |
+  |---|---|---|---|---|---|---|---|---|---|
+  | 5 min | $37K | 253 | $38K | 3.3 SOL | 27.5% | 19.0% | 0% | 9.7% | BOUGHT: −13.5% / −46.6% / −46.6% (then 3.9×) |
+  | 10 min | $42K | 464 | $107K | 9.8 SOL | 27.2% | 22.8% | 0% | 7.6% | BOUGHT: +133.7% / +133.7% / +80.9% |
+  | 15 min | $64K | 544 | $150K | 13.2 SOL | 27.9% | 20.3% | 0% | 8.1% | BOUGHT: +19.9% / +19.9% / +19.9% |
+  | 20 min | $106K | 884 | $243K | 18.1 SOL | 25.9% | 14.0% | 0% | 8.5% | BOUGHT: +0.9% / −28.1% / −28.1% |
+
+  Type: fee-heavy, no snipers, top 10 26–28%. CONFIRM-15 +83.0%, -20 +84.2%, -30 +70.8%, WAIT5-UP +11.4% (20% stop).
+- Other new buys (20% stop): NBA AjucUK FAST-5M −29.8%, FAST-3M open; Compute NEW-5M −22.3%, WAIT5-UP −2.1%; Gemini 12U6yS FARM-90K −43.2%;
+  chairman NEW-5M −32.8%; NASDAQISTA NEW-5M −22.2%, NEW-10M −13.7%, WAIT5-UP −14.7%, NEW-15M open; IPOY HIT50-NOW −15.7%;
+  STEADY NEW-15M −19.0%, NEW-20M −28.0%; FOMO ZjSXr2 HIT50-NOW −10.8%.
+- Since the rule change (8.81 h): four looks 131 buys −1.368 / −2.177 / −4.538 SOL; NEW-10M −0.032; CONFIRM-15 −0.263, **-20 +0.103**, -30 −0.007;
+  WAIT5-UP 30 buys −0.221; HIT50-NOW 63 buys −1.934; HIT100-NOW 18 buys −0.952; 5M-H300 46 buys +7.9% vs −4.8% for the other 151.
+  Runners: reached 94, bought 20, missed 74. 25% stop on all new-coin-side buys: 442 closed, 111 won, avg −5.6%.
