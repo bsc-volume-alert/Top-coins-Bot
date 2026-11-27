@@ -1122,3 +1122,11 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   - Accuracy (n=131): median 4.3%, mean 7.9%, 35 over 10% (27%). Buy-price against trailing (25%, n=130): −32.1% against −6.6%.
   - 25% stop: 262 closed, 66 won, average −2.5%, median −21.7%. 40%: 54 won, −8.4%. 60%: 32 won, −34.8%.
   - Tally: volume 2,543 → 61, top holders (Jupiter) 1,969 → 37, market cap 153,164 → 24, holders 3,111 → 20, top 10 (GMGN) 85 → 17, fees 226 → 13, bought 156 → 16.
+- **27 Nov 03:28 UK — 30-minute check (state 03:16:20 UTC, publish 03:18:49; code 20653a2, up 10 h; not restarted).** Bot up, no new feed drop. Memory 703 MB / 321 heap. Jupiter 252 requests a minute, limited 0, errors 0. GMGN: no new refused buy reading (292 / 289 / 3; limited 7, banned 0).
+  - **Status-dump stall now 3.26–3.44 s every five minutes (02:46: 2.78–3.12 s; 00:36: 2.11–2.33 s) — at the line set for telling him again; it grew by about 0.4 s in this half hour.** Each pause is 3.4 seconds in which no price is looked at. The fix is in the server's folder (d7210db) and needs the restart; told him first, with the two lines.
+  - Follow-up. **Thanksgiving 6CivJJ: highest $389.7K at 02:30:06 (10 minutes after it passed $100K); the pool book VOL100K bought it at $317K at 02:29:41 (entry 772): 25% stop −9.0%, 40% −18.8%, 60% −52.0% — so it has fallen to under about $160K since; where it is now is not in the published files.** SMILE GvuCLH: highest $121.4K at 02:42:49, two minutes after reaching the line; nothing after that is published.
+  - 3 new new-coin buys (265 in all), all lost: SCRATCHY HNR2jF 5M $26.5K **−69.1%** (noticed 34% past the stop; highest 1.14×); SOLCAP J2We8h 5M $22.6K −22.0% (40% −43.3%); Dragon BtDuWa 5M $13.3K −34.2% (40% −44.9%).
+  - Runners: 49 reached, 7 bought, 42 missed, 2 later. No new coin on the list; no new fast runner missing from it.
+  - Accuracy (n=134): median 4.3%, mean 8.0%, 36 over 10% (27%). Buy-price against trailing (25%, n=133): −32.6% against −7.4%.
+  - 25% stop: 265 closed, 66 won, average −3.0%, median −21.8%. 40%: 54 won, −8.9%. 60%: 32 won, −35.1%.
+  - Tally: volume 2,593 → 61, top holders (Jupiter) 2,022 → 37, market cap 156,053 → 24, holders 3,156 → 20, top 10 (GMGN) 86 → 17, fees 232 → 13, bought 159 → 16.
