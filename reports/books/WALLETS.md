@@ -82,3 +82,14 @@
   operator. The useful output is the operator's fingerprint, saved in `wallets/db/` (two funder addresses, 123 wallets) to match
   against the next coins. Candidate signals, n = 1, untested: one wallet taking >50% of a dead coin's supply in one buy; then
   single equal-sized buys at a fixed interval, each in the same block as that wallet's sell.
+
+## 27 Nov 2026, 17:19–17:56 UK — owner's decision: SUPPLY books (to be built in the paper bot, not from this chat)
+- Rule he asked for: when 30% or more of a coin's supply is bought (20–30% as a second book), paper-buy 0.2 SOL at once; coin
+  age from 6 hours, no upper limit. Agreed additions: single wallet within 60 s, buy size ≥ 5 SOL, pool-depth check, one entry per
+  coin per 24 h, exits (a) half at 2x + rest at 3x with −30% stop, (b) all at 2x, (c) all at 3x, 6-hour limit.
+- **Must stay fixed:** he changes and resets the paper bot constantly. The SUPPLY rule is frozen — other edits and resets must not
+  alter it, and its trade record must survive a new run or restart (the bot uses a fresh database per run). Changes only on his
+  say, dated. He wants a first look after 12–24 hours of running.
+- Exits are NOT the other books' trailing stops; a fourth variant (d) using the bot's standard exit is added so the two can be compared.
+- Not built from this chat: the paper-bot chat was mid-change (commit 17:21, awaiting his paste). A ready-to-paste brief was given
+  to him at 17:26 and 17:58.
