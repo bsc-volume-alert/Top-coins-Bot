@@ -1,6 +1,7 @@
 // web.mjs — the project's page (visual reference: the old books page). GET / (page), GET /api/state (JSON).
 // Optional key: if OLDER_SITE_KEY is set, every request needs ?k=<key>. Read-only.
 import http from "node:http";
+import { gzip } from "node:zlib";
 import { bookRows, overlap } from "./report.mjs";
 import * as S from "./spec.mjs";
 import { BOOKS_PAGE, booksApi } from "./page.mjs";
@@ -67,6 +68,14 @@ export function startWeb({ port, store, engine, status, run = () => null, sell =
     if (u.pathname === "/api/books") { // one stop / exit policy / age group / population at a time; cached 8 s per selection
       const sk = Number(u.searchParams.get("stake")), sel = { stop: Number(u.searchParams.get("stop") || 0.25), policy: S.POLICIES.includes(u.searchParams.get("policy")) ? u.searchParams.get("policy") : "trail", ag: u.searchParams.get("ag") || "", pop: u.searchParams.get("pop") || "", stake: S.STAKE_VIEWS.includes(sk) ? sk : S.STAKE_SOL, first: u.searchParams.get("buys") === "first", checks: ["pass", "late"].includes(u.searchParams.get("chk")) ? u.searchParams.get("chk") : "all" }, ck = "b|" + JSON.stringify(sel);
       let hit = cache.get(ck); if (!hit || Date.now() - hit.atMs > 8000) { hit = { atMs: Date.now(), body: JSON.stringify(booksApi(store.allEntries(), { ...sel, since: store.since ? store.since(Date.now() / 1000) : null, build: BUILD, run: run(), sellable: !!(KEY && sell) })) }; cache.set(ck, hit); }
+      // SENT COMPRESSED (27 Nov 2026: about 1 MB every 10 seconds to a tablet): compressed once per cached answer, off the
+      // program's own thread; a browser that does not accept it, or a failed compression, gets the plain answer as before.
+      if (!/\bgzip\b/.test(String(req.headers["accept-encoding"] || ""))) { res.writeHead(200, { "content-type": "application/json" }); return res.end(hit.body); }
+      hit.gz ||= new Promise((ok) => gzip(hit.body, { level: 1 }, (e, b) => ok(e ? null : b)));
+      return void hit.gz.then((b) => { if (b) { res.writeHead(200, { "content-type": "application/json", "content-encoding": "gzip", vary: "accept-encoding" }); res.end(b); } else { res.writeHead(200, { "content-type": "application/json" }); res.end(hit.body); } }); }
+    // THE PAGE'S HEALTH STRIP (27 Nov 2026): it asked for the whole state every 10 seconds — 1.5 MB, and a full build of every
+    // result row on the bot — to show a few status figures. This answers with those figures only; nothing else is built.
+    if (u.pathname === "/api/health") { let hit = cache.get("health"); if (!hit || Date.now() - hit.atMs > 5000) { hit = { atMs: Date.now(), body: JSON.stringify({ at: Date.now(), status: status(), disk: store.disk() }) }; cache.set("health", hit); }
       res.writeHead(200, { "content-type": "application/json" }); return res.end(hit.body); }
     if (u.pathname === "/table") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(PAGE); }
     if (u.pathname === "/api/state") { res.writeHead(200, { "content-type": "application/json" }); return res.end(JSON.stringify(state(u.searchParams.get("pop") || ""))); }

@@ -7,15 +7,15 @@ import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs"; import { tmpdir } from "node:os"; import { join } from "node:path";
 import { mkEngine, T0 } from "./helpers.mjs";
 import { Poller } from "../src/polled.mjs";
-import { NewCoins } from "../src/newcoin.mjs";
-import { booksApi, followRow, VIEW_NAMES } from "../src/page.mjs";
+import { NewCoins, isFarm } from "../src/newcoin.mjs";
+import { booksApi, followRow, VIEW_NAMES, VIEWS } from "../src/page.mjs";
 import { SPL_TOKEN, TOKEN_2022 } from "../src/risk.mjs";
 import { COST } from "../src/book.mjs";
 import * as S from "../src/spec.mjs";
 
 const POOL = ["VOL100K", "VOL300K"];
 // a synthetic provider (as in newcoin.test.mjs): the test sets each coin's figures and price; the clock is manual
-function world({ file = null, books = [...POOL, ...S.FOLLOW_BOOKS], notes = [] } = {}) {
+function world({ file = null, books = [...POOL, ...S.FOLLOW_BOOKS], notes = [], evidence = false } = {}) {
   const w = { t: T0, coins: new Map(), px: new Map(), list: [], reqs: { search: 0, gmgn: 0 }, searchFail: false, info: new Map(), notes };
   w.add = (mint, born, f = {}) => { w.coins.set(mint, { born, mc: 20_000, holders: 200, vol: 60_000, top: 25, program: SPL_TOKEN, ...f }); w.px.set(mint, (f.mc ?? 20_000) / 1e9); w.list.push(mint); };
   const row = (mint) => { const c = w.coins.get(mint); return { mint, symbol: mint.slice(0, 4), decimals: 6, token_program: c.program, px: w.px.get(mint), mcap: w.px.get(mint) * 1e9, holders: c.holders, liq_usd: 9000, circ_supply: 1e9, total_supply: 1e9, launchpad: "pump.fun", first_pool: { id: mint, created: c.born },
@@ -29,7 +29,7 @@ function world({ file = null, books = [...POOL, ...S.FOLLOW_BOOKS], notes = [] }
   w.readRisk = async () => ({ status: "clean", program: TOKEN_2022, extensions: [], blocking: [], warnings: [], fee_bps: 0, src: "rpc mint account" });
   w.eng = mkEngine({ tokens: null }); w.eng.setBooks([...S.booksOf(books.join(",")), ...S.NEW_BOOKS]); w.eng.feedUp(T0);
   w.quoter = new Poller({ engine: w.eng, jup: w.jup, now: () => w.t, runnerEvery: Infinity });
-  w.nc = new NewCoins({ engine: w.eng, jup: w.jup, quoter: w.quoter, readInfo: w.readInfo, readRisk: w.readRisk, store: { saveNote: (mint, n) => notes.push({ mint, ...n }), saveEntry() {}, saveCoin() {}, saveDecision() {} }, now: () => w.t, file });
+  w.nc = new NewCoins({ engine: w.eng, jup: w.jup, quoter: w.quoter, readInfo: w.readInfo, readRisk: w.readRisk, store: { saveNote: (mint, n) => notes.push({ mint, ...n }), saveEntry() {}, saveCoin() {}, saveDecision() {} }, now: () => w.t, file, readEvidence: evidence ? async (mint) => { w.reqs.ev = (w.reqs.ev || 0) + 1; return { ...GOOD(mint), ...(w.info.get(mint) || {}) }; } : null });
   w.pass = async () => { await w.nc.look(); const n = await w.nc.check(); await w.nc.idle(); return n; };
   w.price = async (dt = 0) => { w.t += dt; w.eng.tick(w.t); await w.quoter.quotes(); w.eng.tick(w.t); };
   w.setMc = (mint, mc) => w.px.set(mint, mc / 1e9);
@@ -78,7 +78,7 @@ test("CONFIRM: nothing is bought at the look; each book buys when the look's own
   assert.equal(w.nc.pending.size, 1, "WAIT5-UP is still inside its five minutes"); assert.deepEqual([...w.nc.pending.values()][0].left, new Set(["WAIT5-UP"]));
   // the page: the buy in its own book, the look named on the row, and the fee split as a view
   const j = booksApi([...w.eng.entries.values()], { stop: 0.25, run: { books: w.eng.books, newcoins: true }, now: w.t }); assert.equal(j.books["CONFIRM-15"].length, 1); assert.equal(j.books["CONFIRM-15"][0].by_book, "NEW-5M"); assert.match(j.rules["CONFIRM-15"], /NO buy at the look/);
-  assert.equal(j.books["CONFIRM-15-FEE1"].length, 1, "8 SOL of fees on $60K traded = 1.33 per $10K"); for (const n of VIEW_NAMES) assert.ok(j.order.includes(n), n);
+  assert.equal(j.books["CONFIRM-15-FEE1"].length, 1, "8 SOL of fees on $60K traded = 1.33 per $10K"); for (const n of VIEW_NAMES.filter((x) => !x.startsWith("HIT"))) assert.ok(j.order.includes(n), n); assert.ok(!j.order.includes("HIT50-NOW-FEE2"), "the HIT views need the HIT books in the run");
 });
 
 test("CONFIRM never buys a coin that falls 20% from its high before rising that far — the buys that went straight down are the ones it is there to avoid", async () => {
@@ -125,4 +125,48 @@ test("one buy per follow-up book and coin, whichever look led to it; a look stil
 test("without the follow-up books in the run nothing is started and nothing changes for the new-coin books", async () => {
   const w = world({ books: POOL }), par = await w.look5(A); assert.equal(par.status, "filled"); assert.equal(w.nc.pending.size, 0); assert.equal(w.nc.stats.follow, undefined);
   w.setMc(A, 40_000); await w.price(11); assert.equal(await w.nc.followPass(), 0); assert.equal(w.eng.entries.size, 1); assert.deepEqual(w.nc.status().follow_books, []);
+});
+
+// ───────── FARM-90K (spec FARM; owner 27 Nov 2026 14:36 and 16:18 UK) and the HIT fee views ─────────
+const FARMC = { holders: 2000, vol: 15_000, mc: 30_000 }, trailRows = (e) => e.versions.filter((v) => v.policy === "trail");
+test("FARM-90K exists, is off unless a run lists it, and its rule is the holder pattern inside $10K–$45K", () => {
+  assert.deepEqual(S.FARM, { family: "FARM-90K", holders: [1800, 2800], vol_max_usd: 40_000, mc: [10_000, 45_000], target_usd: 90_000 }); assert.ok(S.FAMILIES.includes("FARM-90K")); assert.ok(!S.booksOf("").includes("FARM-90K")); assert.ok(!S.booksOf("older-11").includes("FARM-90K"));
+  assert.deepEqual(S.agesOf("FARM-90K").map((a) => a[0]), ["A0"]); assert.deepEqual(S.editBooks("VOL100K", "+FARM-90K"), ["VOL100K", "FARM-90K"]); assert.deepEqual(S.booksOf("FARM"), ["FARM-90K"]);
+  const m = { holders: 2000, vol: 15_000, mc: 30_000 }; assert.equal(isFarm(m), true); assert.equal(isFarm({ ...m, holders: 1800 }), true); assert.equal(isFarm({ ...m, holders: 2800 }), true);
+  for (const bad of [{ holders: 1799 }, { holders: 2801 }, { vol: 40_000 }, { mc: 10_000 }, { mc: 45_000 }, { holders: null }, { vol: null }, { mc: null }]) assert.equal(isFarm({ ...m, ...bad }), false, JSON.stringify(bad));
+});
+
+test("FARM-90K buys the first look that shows the pattern — a coin the look's own book refuses — once per coin, with the target on the buy and the look's GMGN reading put on it for the record", async () => {
+  const notes = [], w = world({ books: [...POOL, "FARM-90K"], notes, evidence: true }); w.info.set(A, { total_fee: 0.4, stat: { top_10_holder_rate: 0.43, top_bundler_trader_percentage: 0.35, top70_sniper_hold_rate: 0.4 } });
+  w.add(A, T0, FARMC); w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass();
+  assert.equal(w.of("NEW-5M").length, 0, "the 5-minute book refuses it: volume under $30K"); const [e] = w.of("FARM-90K"); assert.ok(e); assert.equal(e.status, "pending"); assert.equal(e.pop, "new-coins"); assert.equal(e.exec, "routed-quote");
+  assert.equal(e.tp, 3, "a $90K sale from $30K"); const d = e.cands[0].detail; assert.equal(d.look, "NEW-5M"); assert.equal(d.target_x, 3); assert.equal(d.jupiter.holders, 2000); assert.equal(d.rule.target_usd, 90_000);
+  assert.equal(e.gate.reading.fees_sol, 0.4, "the reading the look took for the record is on the buy"); assert.equal(e.gate.reading.top10, 0.43); assert.equal(e.gate.after_buy, true); assert.match(e.gate.kind, /for the record/);
+  assert.deepEqual({ started: w.nc.stats.farm.started, bought: w.nc.stats.farm.bought, not_opened: w.nc.stats.farm.not_opened }, { started: 1, bought: 1, not_opened: 0 });
+  await w.price(1.1); assert.equal(e.status, "filled");
+  w.t = T0 + 601; await w.pass(); assert.equal(w.of("FARM-90K").length, 1, "the 10-minute look shows the pattern too: not bought again"); assert.equal(w.nc.stats.farm.started, 1);
+  const j = booksApi([...w.eng.entries.values()], { stop: 0.25, run: { books: w.eng.books, newcoins: true }, now: w.t }); assert.equal(j.books["FARM-90K"].length, 1); assert.match(j.rules["FARM-90K"], /holder pattern/); assert.equal(j.books["FARM-90K"][0].gate.fees, 0.4);
+});
+
+test("FARM-90K sells every row at the target — the whole position worth (90K ÷ the cap at the buy) × its cost — priced by a real quote; below it the ordinary stops decide", async () => {
+  const w = world({ books: [...POOL, "FARM-90K"] }); w.add(A, T0, FARMC); w.add(B, T0, FARMC); w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); await w.price(1.1);
+  const [ea] = w.of("FARM-90K").filter((x) => x.mint === A), [eb] = w.of("FARM-90K").filter((x) => x.mint === B); assert.equal(ea.status, "filled"); assert.equal(eb.status, "filled");
+  w.setMc(A, 85_000); w.setMc(B, 21_000); await w.price(11); assert.ok(trailRows(ea).every((v) => v.status === "open"), "2.8×: under the target"); // B: −30%
+  const b20 = trailRows(eb).find((v) => v.stop === 0.2), b40 = trailRows(eb).find((v) => v.stop === 0.4); assert.equal(b20.reason, "trail"); assert.equal(b40.status, "open", "a coin that does not get there is left to its stops");
+  w.setMc(A, 95_000); await w.price(11); for (const v of ea.versions.filter((x) => x.policy !== "scale")) { assert.equal(v.reason, "target", v.policy + " " + v.stop); assert.ok(v.status === "selling" || v.status === "closed"); }
+  await w.price(1); await w.price(1); const a25 = trailRows(ea).find((v) => v.stop === 0.25); assert.equal(a25.status, "closed"); assert.ok(a25.exit.ret > 1.9 && a25.exit.ret < 2.2, "about 3× its cost: " + a25.exit.ret); assert.ok(a25.trig.level > 0);
+  assert.ok(ea.versions.filter((x) => x.policy === "buy").every((v) => v.reason === "target"), "the buy-price rows too");
+  // a buy of any other book has no target: nothing is sold on the way up
+  const w2 = world({ books: POOL }), p = await w2.look5(A); assert.equal(p.tp, undefined); w2.setMc(A, 200_000); await w2.price(11); assert.ok(trailRows(p).every((v) => v.status === "open"));
+});
+
+test("FARM-90K does not buy outside its rule (cap at $45K or more, too few holders, real volume), and nothing at all when the run does not list it", async () => {
+  const w = world({ books: [...POOL, "FARM-90K"] }); w.add(A, T0, { ...FARMC, mc: 50_000 }); w.add(B, T0, { ...FARMC, holders: 900 }); const C = "FollowCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCpump"; w.add(C, T0, { ...FARMC, vol: 60_000 });
+  w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass(); assert.equal(w.of("FARM-90K").length, 0); assert.equal(w.nc.stats.farm, undefined);
+  const off = world({ books: POOL }); off.add(A, T0, FARMC); off.t = T0 + 20; await off.pass(); off.t = T0 + 301; await off.pass(); assert.equal(off.eng.entries.size, 0); assert.equal(off.nc.stats.farm, undefined);
+});
+
+test("the HIT fee views pick the HIT buys of coins that had paid 2 SOL or more in fees", () => {
+  const v = VIEWS.find((x) => x.name === "HIT50-NOW-FEE2"), all = VIEWS.find((x) => x.name === "HIT-ALL-FEE2"); assert.deepEqual(v.of, ["HIT50-NOW"]); assert.deepEqual(all.of, S.HIT_BOOKS);
+  assert.equal(v.test({ gate: { fees: 2 } }), true); assert.equal(v.test({ gate: { fees: 1.99 } }), false); assert.equal(v.test({ gate: {} }), false); assert.equal(v.test({}), false); assert.equal(all.test({ gate: { fees: 13.6 } }), true);
 });

@@ -82,6 +82,23 @@ export const TOP10_OLD_FLOOR = 0.20;   // the floor until 27 Nov 2026 14:15 UK (
 export const CONFIRM = [["CONFIRM-15", 1.15], ["CONFIRM-20", 1.20], ["CONFIRM-30", 1.30]], CONFIRM_STOP = 0.20;
 export const WAIT_UP = [["WAIT5-UP", 300]];
 export const FOLLOW_BOOKS = [...CONFIRM.map((x) => x[0]), ...WAIT_UP.map((x) => x[0])], FOLLOW_EVERY_S = 1;
+// FARM-90K (owner 27 Nov 2026 14:36 UK: "make another book and include all the rug tokens… buy as early as possible and sell at 90k
+// or 100k… try to get a 3x on each"; 16:18 UK: "Yes, do all three"). A paper book of its own, off unless a run lists it.
+//   WHY       of the first 65 coins that reached $100K, 45 were rugs by his own list, and most of those show one shape at the
+//             5–20-minute looks: about 2,000 holders on almost no volume (wallets handed out, not buyers). In the last 8.3 hours
+//             27 coins showed it and 6 reached $100K (22%) — from $14–15K (6× at a $90K sale) and $33–37K (2.4–2.7×).
+//             What the other 21 lose has never been measured: the other books refuse these coins (volume, fees). This book
+//             exists to measure exactly that. Break-even on those figures: the 21 may lose about 68% each on average.
+//   BUYS      at the FIRST of the four looks where the coin has `holders` (inclusive) holders, has traded UNDER vol_max_usd since
+//             it was created, and is worth more than mc[0] and less than mc[1] (above that a $90K sale is under 2×) — Jupiter's
+//             figures at the look, nothing else: no fees rule, no top-10 rule (GMGN's reading is kept on the buy for the record).
+//             One buy per coin, on a routed quote like every new-coin buy.
+//   SELLS     everything still held the moment the whole position is worth target_usd ÷ (the cap at the buy) times its cost
+//             (reason "target") — e.g. 3× for a buy at $30K — priced by a real sell quote like every sale; because that
+//             multiple is of COST, the coin is then a little over $90K. Until then the ordinary rows apply, so each stop
+//             shows what the coins that never get there cost.
+export const FARM = { family: "FARM-90K", holders: [1800, 2800], vol_max_usd: 40_000, mc: [10_000, 45_000], target_usd: 90_000 };
+export const FARM_BOOKS = [FARM.family];
 export const NEW_LOOK_S = 20;          // the provider's list of new coins is read this often (it reaches back about a minute at ~35 new coins a minute)
 export const NEW_CHECK_LATE_S = 90;    // a coin that could not be measured within this long after its age point is NOT judged (counted "too late") — never judged on later figures
 // THE FULL PICTURE OF A NEAR MISS (owner 26 Nov 2026 12:29–12:36 UK: "for the 100k coins that we're missing, list all the factors
@@ -154,12 +171,13 @@ export const NEW_LOG_KEEP = 3000;      // measurements of coins over the market-
 
 // Families. 21 families × 4 ages + 10 any-age families × 5 ages = 134 book-ages; × 5 stops × 2 exit policies = 1,340 comparisons (VOL100K and DIP15K added in older-11).
 // + the four new-coin books in A0 only = 138 book-ages, 1,380 comparisons. + the six HIT books in A0 only (27 Nov 2026) = 144 book-ages.
-// + the four follow-up books in A0 only (27 Nov 2026) = 148 book-ages.
+// + the four follow-up books in A0 only (27 Nov 2026) = 148 book-ages. + FARM-90K in A0 only (27 Nov 2026) = 149 book-ages.
 export const FAMILIES = ["AGE-DOUBLE", "LOW4H", "CONT", "SLOW-BUILD", "HH-BREAK", "CONT-STALL", "LOW4H-LIQ25K",
   "FAST-1M", "FAST-3M", "FAST-5M", "FAST-10M", "FAST-30M", "FAST150-1M", "FAST150-3M", "FAST150-5M", "FAST150-10M", "SECOND-WAVE", "HH30-5M", "HH30-10M", "HH15-5M", "HH-BREAK-4H",
   "VOL100K", "VOL300K", "VOL300K-UP", "VOL500K", "VOL500K-UP", "RUG450", "RUG450-BOUNCE", "RUG950", "RUG950-BOUNCE", "DIP15K", ...NEW_BOOKS,
   "HIT50-NOW", "HIT50-5M", "HIT50-10M", "HIT100-NOW", "HIT100-5M", "HIT100-10M", // the six HIT books (27 Nov 2026) — see HIT below; A0 only
-  ...FOLLOW_BOOKS]; // the four follow-up books (27 Nov 2026) — see FOLLOW_BOOKS above; A0 only
+  ...FOLLOW_BOOKS, // the four follow-up books (27 Nov 2026) — see FOLLOW_BOOKS above; A0 only
+  ...FARM_BOOKS]; // FARM-90K (27 Nov 2026) — see FARM above; A0 only
 // ANY-AGE BOOKS (older-8, owner's decisions 21 Nov 2026 21:11 UK). Migrated coins only (this feed sees nothing else), any age after
 // migration: the first 8 hours (A0) and the four age groups. One entry per family per coin per age group, as everywhere.
 // VOL: USD volume over the last VOL_WIN_S seconds (exact observations, rolling) ≥ the threshold; the -UP version also needs the
@@ -201,7 +219,7 @@ export const ANY_AGE = new Set([...VOL.map((x) => x[0]), ...RUG.map((x) => x[0])
 // [family, line USD, wait seconds]
 export const HIT = [["HIT50-NOW", 50_000, 0], ["HIT50-5M", 50_000, 300], ["HIT50-10M", 50_000, 600], ["HIT100-NOW", 100_000, 0], ["HIT100-5M", 100_000, 300], ["HIT100-10M", 100_000, 600]];
 export const HIT_BOOKS = HIT.map((x) => x[0]), HIT_LINES = [...new Set(HIT.map((x) => x[1]))], HIT_WINDOW_S = 8 * 3600, HIT_START_S = 120, HIT_WAIT_MAX_S = Math.max(...HIT.map((x) => x[2]));
-export const agesOf = (family) => (NEW_BOOKS.includes(family) || HIT_BOOKS.includes(family) || FOLLOW_BOOKS.includes(family) ? [AGE_YOUNG] : ANY_AGE.has(family) ? ALL_AGES : AGES);
+export const agesOf = (family) => (NEW_BOOKS.includes(family) || HIT_BOOKS.includes(family) || FOLLOW_BOOKS.includes(family) || FARM_BOOKS.includes(family) ? [AGE_YOUNG] : ANY_AGE.has(family) ? ALL_AGES : AGES);
 export const POLICIES = ["trail", "scale", "buy"];   // trail = the original pure trailing stop; scale = sell half at 2× cost, trail the rest; buy = the stop from the BUY PRICE (below)
 // THE STOP FROM THE BUY PRICE (owner 26 Nov 2026 11:45–11:55 UK: "stop from the buy price… just as a comparison tool… just keep
 // it open… it'll just sell if it reaches its own price. Simple as that"). A third exit beside the two trailing ones, on the
@@ -315,7 +333,7 @@ export const REBUY_MAX_PER_DAY = 50;
 // VOL100K: the VOL rule at $100,000 of volume in 5 minutes, any age after migration, $40K–$2M at the buy (owner, 24 Nov).
 export const NEW_IN_11 = ["VOL100K", "DIP15K"];
 export const BOOKS_11 = ["HH-BREAK", "HH-BREAK-4H", "VOL100K", "VOL300K", "VOL500K", "FAST-1M", "FAST-3M", "FAST-5M", "RUG450", "RUG950", "LOW4H", "SLOW-BUILD", "DIP15K"];
-export const BOOKS_LEGACY = FAMILIES.filter((f) => !NEW_IN_11.includes(f) && !NEW_BOOKS.includes(f) && !HIT_BOOKS.includes(f) && !FOLLOW_BOOKS.includes(f)); // the new-coin books are never part of "legacy": they buy only when a run switches them on
+export const BOOKS_LEGACY = FAMILIES.filter((f) => !NEW_IN_11.includes(f) && !NEW_BOOKS.includes(f) && !HIT_BOOKS.includes(f) && !FOLLOW_BOOKS.includes(f) && !FARM_BOOKS.includes(f)); // the new-coin books are never part of "legacy": they buy only when a run switches them on
 /** the active books for a run name; throws on an unknown book or a clock book without the book whose buys it shares */
 // THE YOUNGEST AGE OF THE "OLDER" BOOKS IN A RUN (older-11; a run sets it with OLDER_MIN_AGE_H, main.mjs). MIN_AGE_S (8 hours)
 // stays the age-group boundary and the default. A run may evaluate the books that normally start at 8 hours from an earlier
@@ -327,7 +345,7 @@ export const MIN_AGE_11_S = 6 * 3600;
 export const RUNS = { "older-11": { books: "older-11", gates: "older-11", rebuy: false, min_age_h: MIN_AGE_11_S / 3600 } };
 // A GROUP WORD in a book list stands for its books (27 Nov 2026 — so a list typed on a phone stays short): HIT = the six HIT
 // books, FOLLOW = the four follow-up books.
-export const BOOK_GROUPS = { HIT: HIT_BOOKS, FOLLOW: FOLLOW_BOOKS };
+export const BOOK_GROUPS = { HIT: HIT_BOOKS, FOLLOW: FOLLOW_BOOKS, FARM: FARM_BOOKS };
 /** a run's book list after a change typed as "+A,B" (add) or "-A,B" (take off); group words allowed. `current` = the list now. */
 export function editBooks(current, change) { const ch = (change ?? "").trim(), sign = ch[0]; if (sign !== "+" && sign !== "-") return booksOf(ch);
   if (!(current ?? "").trim()) throw new Error("this run has no book list of its own yet: give the whole list once");

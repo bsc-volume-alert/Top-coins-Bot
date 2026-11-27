@@ -37,6 +37,8 @@ export function judgeMeasure(m, r) {
 }
 /** one rule on one check, in words: "pass" | "fail" | "no figure" (the provider answered without it) — and, set where they apply,
  *  "not asked" (the reading was never requested because an earlier rule had failed) and "provider error" (asked, no answer in time) */
+/** FARM-90K (spec FARM): does this measurement show the holder pattern inside the book's market-cap range? */
+export const isFarm = (m, F = S.FARM) => m.holders != null && m.holders >= F.holders[0] && m.holders <= F.holders[1] && m.vol != null && m.vol < F.vol_max_usd && m.mc != null && m.mc > F.mc[0] && m.mc < F.mc[1];
 export const statusOf = (v) => (v == null ? "no figure" : v ? "pass" : "fail");
 /** WHY one check did not buy, in one word — the FIRST rule it failed, in the order the rules are judged: market cap, holders,
  *  volume, top holders by Jupiter's figure (the first look), then GMGN's fees and top 10. "bought" = it bought. The runners list
@@ -68,7 +70,7 @@ export class NewCoins {
   k(family) { return (this.stats.checks[family] ||= freshCheck()); }
   load() { if (!this.file || !existsSync(this.file)) { this.stats.since = this.now(); return; }
     try { const j = JSON.parse(readFileSync(this.file, "utf8")); if (j?.v !== 1) throw new Error("unknown format"); this.stats = { ...fresh(), ...j.stats }; for (const f of Object.keys(this.stats.checks)) this.stats.checks[f] = { ...freshCheck(), ...this.stats.checks[f] };
-      for (const c of j.young || []) if (c?.mint && c.created > 0) this.young.set(c.mint, { mint: c.mint, created: c.created, launchpad: c.launchpad ?? null, symbol: c.symbol ?? null, done: c.done || {} });
+      for (const c of j.young || []) if (c?.mint && c.created > 0) this.young.set(c.mint, { mint: c.mint, created: c.created, launchpad: c.launchpad ?? null, symbol: c.symbol ?? null, done: c.done || {}, farm: c.farm || undefined });
       for (const p of j.follow || []) if (p?.id != null && p.mint && Array.isArray(p.left) && p.left.length) this.pending.set(p.id, { ...p, left: new Set(p.left) }); }
     catch (e) { this.log("[new coins] counters file unreadable (" + e.message + "): counting starts again"); this.stats = fresh(); this.stats.since = this.now(); } }
   save() { if (!this.file || !this.dirty) return; this.dirty = false; try { const tmp = this.file + ".tmp"; writeFileSync(tmp, JSON.stringify({ v: 1, saved: this.now(), stats: this.stats, young: [...this.young.values()], follow: [...this.pending.values()].map((p) => ({ ...p, left: [...p.left] })) })); renameSync(tmp, this.file); } catch (e) { this.log("[new coins] counters not saved: " + e.message); } }
@@ -112,6 +114,7 @@ export class NewCoins {
       // status in words for every rule, so "failed", "never asked" and "the provider did not answer" can never be confused.
       Object.assign(rec, { v1h: m.v1h == null ? null : Math.round(m.v1h), v5m: m.v5m == null ? null : Math.round(m.v5m), sells: m.n_sells, liq: m.liq == null ? null : Math.round(m.liq), px: m.px, curve: m.curve_pct, upd: tok.updated ?? null, req: tok.req == null ? null : +tok.req.toFixed(2), resp: tok.resp == null ? null : +tok.resp.toFixed(2),
         st: { mc: statusOf(j.mc), holders: statusOf(j.holders), vol: statusOf(j.vol), top_pre: m.top_jup == null ? "no figure" : pre ? "pass" : "fail", fees: "not asked", top10: "not asked" } });
+      if (!c.farm && !this.engine.inactive.has(S.FARM.family) && isFarm(m)) { c.farm = 1; this.farm(c, r, tok, m, rec); } // FARM-90K: the holder pattern, first look that shows it (independent of what this look's own book decides)
       if (j.mc && j.holders && j.vol && !pre) { K.candidates++; K.top_pre_skipped++; rec.out = `not bought: top holders ${(m.top_jup * 100).toFixed(1)}% by Jupiter's figure (needs ${r.top10[0] * 100}–${r.top10[1] * 100}%; GMGN not asked)`; this.nearMiss(c, r, K, rec); }
       else if (j.mc && j.holders && j.vol) { K.candidates++; const p = this.candidate(c, r, tok, m, rec).catch((e) => { rec.out = "error: " + String(e.message).slice(0, 100); this.note(K, rec, r.family); }).finally(() => { this.inflight.delete(p); this.dirty = true; this.flush(); }); this.inflight.add(p); }
       else if (j.mc) { rec.out = "not bought: " + [j.holders ? null : `holders ${m.holders ?? "?"} (needs over ${r.holders_min})`, j.vol ? null : `volume $${m.vol == null ? "?" : Math.round(m.vol / 1000) + "K"} (needs $${r.vol_min_usd / 1000}K)`, pre ? null : `top holders ${(m.top_jup * 100).toFixed(1)}% by Jupiter's figure (the first look needs ${S.NEW_TOP_PRE[0] * 100}–${S.NEW_TOP_PRE[1] * 100}%)`].filter(Boolean).join(", "); this.nearMiss(c, r, K, rec); } // the near misses are kept: a coin over the market-cap line that failed another rule
@@ -121,7 +124,7 @@ export class NewCoins {
   }
   /** every measurement of a coin over the market-cap line, with what happened to it: the last 25 per book on the card, the last
    *  NEW_LOG_KEEP in memory for the published file, and ALL of them as one line each in the log file beside the database */
-  note(K, rec, family = null) { K.recent.push(rec); if (K.recent.length > 25) K.recent.shift(); this.dirty = true; const row = { book: family ?? rec.book ?? null, ...rec }; this.history.push(row); if (this.history.length > S.NEW_LOG_KEEP) this.history.shift(); this.keep(row);
+  note(K, rec, family = null) { if (rec.farm != null) this.farmReading(rec); K.recent.push(rec); if (K.recent.length > 25) K.recent.shift(); this.dirty = true; const row = { book: family ?? rec.book ?? null, ...rec }; this.history.push(row); if (this.history.length > S.NEW_LOG_KEEP) this.history.shift(); this.keep(row);
     if (this.logFile) try { appendFileSync(this.logFile, JSON.stringify(row) + "\n"); } catch (e) { if (!this.logErr) { this.logErr = true; this.log("[new coins] log not written: " + e.message); } } }
   /** EVERY check goes to the database (table nc_checks) — also coins under the market-cap line and checks the provider did not
    *  answer — so the page's coin lookup can say at once what happened to any coin. Written in one transaction per pass. */
@@ -247,6 +250,33 @@ export class NewCoins {
     this.store?.saveEntry(e); K.bought++; rec.out = "BOUGHT (paper), entry " + e.id; rec.entry = e.id; this.note(K, rec, r.family);
     this.follow(c, r, e, m, g, tok, t0, t1);
   }
+  // ───────── FARM-90K (spec FARM; owner 27 Nov 2026 14:36 and 16:18 UK) ─────────
+  // The coin showed the holder pattern at this look (isFarm): it is paper-bought at once on Jupiter's figures alone — no GMGN
+  // rule — with a target sale at target_usd ÷ its cap (entry.tp, book.mjs). The look's own GMGN reading (asked by the look's
+  // book, or read for the record) is put on the buy when it arrives: recorded, never part of the decision.
+  farm(c, r, tok, m, rec) { const K = (this.stats.farm ||= { started: 0, bought: 0, not_opened: 0 }); K.started++; this.dirty = true;
+    const p = this.farmBuy(c, r, tok, m, rec, K).catch((e) => { K.errors = (K.errors || 0) + 1; K.last_error = String(e.message).slice(0, 100); }).finally(() => { this.inflight.delete(p); this.dirty = true; }); this.inflight.add(p); }
+  async farmBuy(c, r, tok, m, rec, K) { const E = this.engine, F = S.FARM;
+    const no = (why) => { K.not_opened++; (K.why ||= {})[why] = (K.why[why] || 0) + 1; try { this.store?.saveNote?.(c.mint, { ag: "A0", family: F.family, t: this.now(), reason: "not bought: " + why, detail: { look: r.family } }); } catch {} };
+    if (!validDec(tok.decimals)) return no("the provider gave no decimals for the coin (it cannot be quoted)");
+    const had = E.coins.get(c.mint), origin = tok.launchpad || c.launchpad || "unknown";
+    const coin = E.coin(c.mint, { createTs: c.created, info: had ? null : { symbol: tok.symbol ?? null, decimals: tok.decimals, circ_supply: tok.circ_supply ?? null, origin, origin_evidence: tok.launchpad ? "provider launchpad field" : "none", token_program: tok.token_program ?? null, discovery_source: "jupiter recent (first pool)", risk: classifyJupToken(tok), create_src: "jupiter firstPool.createdAt (for a launchpad coin its launch curve, created with the coin)" } });
+    if (had && coin.info.decimals == null) coin.info.decimals = tok.decimals;
+    if (!feeKnown(coin.info) && this.readRisk) { try { const k = await timeout(this.readRisk(c.mint), 8000, "the mint account"); if (k && k.status !== "missing") { k.read_at = Math.round(this.now()); coin.info.risk = k; if (k.program) coin.info.token_program = k.program; coin.riskRead = true; coin.riskAt = this.now(); } } catch {} }
+    this.store?.saveCoin(c.mint, { createTs: c.created, createSrc: "jupiter firstPool", pumpOrigin: origin, firstSeen: Math.floor(this.now()), info: coin.info });
+    if (!feeKnown(coin.info)) return no("the coin's transfer restrictions could not be read from the chain");
+    if (coin.info.risk?.status === "restricted") return no("the coin restricts transfers");
+    const t = this.now(), age = t - c.created, out = {}, tp = F.target_usd / m.mc; this.watch(c.mint, tok.decimals, tok.circ_supply);
+    const e = E.openDirect({ mint: c.mint, family: F.family, t, mc: m.mc, px: m.px, features: { age_s: Math.round(age), mc: m.mc, holders: m.holders, vol_usd: m.vol, liq_usd: m.liq, top_holders: m.top_jup },
+      detail: { rule: { ...F }, look: r.family, age_s: +age.toFixed(1), measured_at: rec.t, target_x: +tp.toFixed(4), jupiter: { mc: m.mc, holders: m.holders, vol_usd: m.vol, vol_basis: m.vol_basis, n_buys: m.n_buys, n_sells: m.n_sells, top_holders: m.top_jup, liq_usd: m.liq, traders: m.traders, curve_pct: m.curve_pct } },
+      trigger: { px_usd: m.px, src: "jupiter token data (the holder pattern)", age_s: Math.round(age), supply: tok.circ_supply ?? tok.total_supply ?? null }, tags: { tp: +tp.toFixed(4) }, token: { decimals: tok.decimals } }, out);
+    if (!e) { no(out.why || "the buy could not be opened"); if (!E.byMint.get(c.mint)?.size) this.quoter.watch.delete(c.mint); return; }
+    K.bought++; rec.farm = e.id; this.store?.saveEntry(e); if (rec.fees != null || rec.g) this.farmReading(rec);
+  }
+  /** the look's GMGN reading, put on the FARM-90K buy once it has arrived (recorded only) */
+  farmReading(rec) { const e = this.engine.entries.get(rec.farm); if (!e || e.gate || (rec.fees == null && rec.top10 == null && !rec.g)) return; const g = rec.g || {};
+    e.gate = { kind: "read for the record (FARM-90K buys on the provider's holders and volume alone)", req_t: g.asked ?? null, resp_t: g.answered ?? null, ms: rec.gmgn_ms ?? null, reading: { fees_sol: rec.fees ?? null, top10: rec.top10 ?? null, bundlers: g.bundlers ?? null, insiders: g.insiders ?? null, snipers: g.snipers ?? null, phishing: g.phishing ?? null, holders: g.holders ?? null, dev_hold: g.dev_hold ?? null }, verdict: "pass", timely: false, at_buy: "reading", after_buy: true, by: { [S.FARM.family]: { pass: true } } };
+    e.touched = true; this.store?.saveEntry(e); }
   // ───────── THE FOLLOW-UP BOOKS (spec CONFIRM, WAIT_UP; owner 27 Nov 2026 12:37 and 14:15 UK) ─────────
   // A look that passed (its own buy `e` was just opened) starts every follow-up book that is active in this run and has not yet
   // bought this coin. What is kept is small and survives a restart (the counters file): the look's own buy, its figures and its

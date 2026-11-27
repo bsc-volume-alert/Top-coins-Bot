@@ -19,7 +19,7 @@ const doubled = (ageH, set = () => {}) => { const e = mkEngine(); e.feedUp(T0); 
 
 test("the site of a run that chose its books shows ONLY those books; FEE-COINS only when it holds a buy; without a run everything is as before", () => {
   const e = doubled(20), all = [...e.entries.values()]; assert.ok(fams(e).includes("FAST-1M"), "the legacy run bought: " + fams(e));
-  const old = booksApi(all, { stop: 0.25 }); assert.equal(old.order.length, S.FAMILIES.length + 1); assert.equal(old.order.at(-1), S.FEE_BOOK); assert.equal(old.run, null); assert.equal(old.rows_total, 148 * S.STOPS.length * S.POLICIES.length); assert.match(old.rules.VOL100K, /buys only in a run/);
+  const old = booksApi(all, { stop: 0.25 }); assert.equal(old.order.length, S.FAMILIES.length + 1); assert.equal(old.order.at(-1), S.FEE_BOOK); assert.equal(old.run, null); assert.equal(old.rows_total, 149 * S.STOPS.length * S.POLICIES.length); assert.match(old.rules.VOL100K, /buys only in a run/);
   const run = { name: "older11", books: S.booksOf("older-11"), gates: true, rebuy: false, min_age_h: 6, sampled: false }, j = booksApi(all, { stop: 0.25, run });
   assert.deepEqual(j.order, S.BOOKS_11, "the run's 13 books, nothing else — no empty FEE-COINS card"); assert.deepEqual(Object.keys(j.books).sort(), [...S.BOOKS_11].sort());
   assert.ok(j.books["FAST-1M"].length >= 1); assert.equal(j.books["FAST-10M"], undefined, "a book outside the run is not on the page even though the legacy engine bought for it");
@@ -48,7 +48,7 @@ test("the 8-hour books from 6 hours: off by default (a 7-hour-old coin is not bo
   assert.deepEqual(fams(doubled(20, on)), fams(doubled(20)), "a coin over 8 hours old is decided exactly as without the setting");
   swap(e, T0 + 700, 80_000); swap(e, T0 + 702, 80_000); swap(e, T0 + 704, 80_000); // −60%: every stop up to 40% sells
   const rows = bookRows(en), r = rows.find((x) => x.family === "FAST-1M" && x.ag === "A0" && x.stop === 0.25 && x.policy === "trail");
-  assert.ok(r && r.filled === 1 && r.closed === 1, "the under-8-hour buy has its own row"); assert.equal(bookRows([]).length, 148 * S.STOPS.length * S.POLICIES.length, "and no row is added when there is no such buy");
+  assert.ok(r && r.filled === 1 && r.closed === 1, "the under-8-hour buy has its own row"); assert.equal(bookRows([]).length, 149 * S.STOPS.length * S.POLICIES.length, "and no row is added when there is no such buy");
 });
 
 test("a new run's database is prepared from the previous one: coin identities and pools only — no buys, decisions or bars — and the previous database is not changed", () => {
