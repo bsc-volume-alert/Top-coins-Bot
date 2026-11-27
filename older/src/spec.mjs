@@ -43,7 +43,8 @@ export const BUY_PRICING_TIMEOUT_S = 5;       // no trustworthy pool state withi
 export const VOLG = { t: 1795811460, since: "27 Nov, 20:31", books: ["VOL100K", "VOL300K", "VOL500K"], buyers_min: 200, cap_ath_min: 0.15, growth_min: 70, per_trade_min: 72,
   bare: { bund_max: 0.03, snip_max: 0.03, fees_max: 3, top10_min: 0.24 }, oper: { bund_min: 0.40, snip_min: 0.40 },
   exits: { t20: ["trail", 0.20], t25: ["trail", 0.25], t40: ["trail", 0.40], h40: ["scale", 0.40] },
-  cards: { "VOL-CONTROL": "t40", "VOL-BARE": "h40", "VOL-OPER": "t20", "VOL-REST": "t20" }, checkpoints: [30, 60, 100, 200], bare_last_before: 1795800710, bare_quiet_h: [24, 48, 72] };
+  cards: { "VOL-CONTROL": "t40", "VOL-BARE": "h40", "VOL-OPER": "t20", "VOL-REST": "t20" }, checkpoints: [30, 60, 100, 200], bare_last_before: 1795800710, bare_quiet_h: [24, 48, 72],
+  hide_books: true }; // hide_books (owner, 27 Nov 20:50 UK): while the test's cards are shown, the three volume books are not cards of their own — they go on buying exactly as before (the test is made of their buys) and nothing is deleted
 export const NO_ROUTE_RUN = 10, NO_ROUTE_EVERY_S = 30; // a held position answered "no route" this many times in a row is asked about only this often (polled.mjs) — never dropped
 export const SELL_UNRESOLVED_S = 24 * 3600;   // a triggered sale that cannot be priced for 24 h is shown as unresolved exposure (never silently closed)
 

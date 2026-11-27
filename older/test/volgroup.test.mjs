@@ -43,7 +43,10 @@ test("the cards: buys since the start only, one row per buy, each with the test'
   const r = j.books["VOL-CONTROL"][0]; assert.equal(r.id, en.id); assert.deepEqual([r.vg.card, r.vg.tpl], ["CONTROL", "BARE"]); assert.deepEqual(Object.keys(r.xr), ["t20", "t25", "t40", "h40"]);
   for (const k of Object.keys(r.xr)) { const [policy, stop] = S.VOLG.exits[k], v = en.versions.find((x) => x.policy === policy && x.stop === stop); assert.deepEqual(r.xr[k], v.exit ? { c: 1, r: v.exit.ret } : { c: 0, x: v.lastX ?? null }); }
   assert.deepEqual(api({ stop: 0.6, policy: "scale" }).books["VOL-CONTROL"][0].xr, r.xr, "the test's exits do not follow the stop chosen");
-  assert.ok(j.books.VOL100K.some((x) => x.id === en.id && x.vg) && j.books.VOL300K.some((x) => x.id === en.id && x.vg), "the books themselves still show the buy");
+  assert.ok(j.books.VOL100K.some((x) => x.id === en.id && x.vg) && j.books.VOL300K.some((x) => x.id === en.id && x.vg), "the books' rows are still sent (the count by class reads them)");
+  // THE OLD CARDS ARE HIDDEN (owner, 27 Nov 20:50): with the test's cards shown, the three volume books are not cards of their own; they still buy
+  assert.equal(S.VOLG.hide_books, true); for (const f of S.VOLG.books) { assert.ok(!j.order.includes(f), f + " is not a card"); assert.equal(j.about[f], undefined); assert.ok(run.books.includes(f), "still in the run's book list"); }
+  assert.deepEqual(j.group.vol.hidden, S.VOLG.books); assert.ok(j.order.includes("RUG450") && j.order.includes("FAST-1M"), "every other card stays");
   // the collapse: the test exits close with the rule's own results
   swap(e, T0 + 900, 30_000); swap(e, T0 + 902, 30_000); swap(e, T0 + 904, 30_000); const r2 = booksApi([...e.entries.values()], { stop: 0.25, now: T0 + 950, run }).books["VOL-CONTROL"][0];
   assert.equal(r2.xr.t40.c, 1); assert.equal(r2.xr.t40.r, en.versions.find((x) => x.policy === "trail" && x.stop === 0.4).exit.ret); assert.ok(r2.xr.t40.r < 0);
@@ -56,8 +59,8 @@ test("the cards: buys since the start only, one row per buy, each with the test'
   Object.assign(en, ent()); en.signalMc = 100_000; en.gate.reading.ath_usd = 120_000; const dt = en.decisionT; en.decisionT = S.VOLG.t - 1; k = api();
   for (const n of Object.keys(S.VOLG.cards)) assert.equal(k.books[n].length, 0, n + " starts empty"); const old = k.books.VOL100K.find((x) => x.id === en.id); assert.ok(old, "still in VOL100K"); assert.equal(old.vg, undefined); assert.equal(old.xr, undefined); en.decisionT = dt;
   // a run without the three volume books has no group
-  assert.equal(booksApi([...e.entries.values()], { stop: 0.25, now: T0 + 800, run: { ...run, books: ["VOL100K", "RUG450"] } }).group, undefined);
+  { const n = booksApi([...e.entries.values()], { stop: 0.25, now: T0 + 800, run: { ...run, books: ["VOL100K", "RUG450"] } }); assert.equal(n.group, undefined); assert.ok(n.order.includes("VOL100K"), "no test cards: the book keeps its own card"); }
 });
 test("the page: one purple group with its own tag and test box; a waiting hand sale says when there is no sale price", () => {
-  for (const s of ["--grp:#c58bff", ".card.grp", "VOLUME TEST · since ", "class=\"gbox\"", "the test · ", "adaptive: bare on half-at-2", "every volume buy since the start", "the 25% stop beside it", "last bare buy", "RETIRED from expectations", "next look at ", "newtag gp", "no sale price yet", "the volume test first", "g0.concat("]) assert.ok(BOOKS_PAGE.includes(s), "the page has: " + s);
+  for (const s of ["--grp:#c58bff", ".card.grp", "VOLUME TEST · since ", "class=\"gbox\"", "the test · ", "adaptive: bare on half-at-2", "every volume buy since the start", "the 25% stop beside it", "last bare buy", "RETIRED from expectations", "next look at ", "newtag gp", "no sale price yet", "the volume test first", "g0.concat(", "cards are hidden; the books still buy"]) assert.ok(BOOKS_PAGE.includes(s), "the page has: " + s);
 });
