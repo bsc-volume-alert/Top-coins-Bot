@@ -1790,3 +1790,19 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
 - **Owner 22:31:** clicking a token should go straight to Axiom. The name opened GMGN and a small "ax" opened Axiom. Swapped: **8f919e8** —
   the name opens Axiom, a small "gm" opens GMGN (all books, and the coin lookup). 330 tests, fail 0. Waiting for his paste.
 - Seen on his screen, not fixed: a −100% sale shows "sold at ≈ $−38" (a negative market cap; display only).
+
+### 27 Nov, 22:36 UK — FARM-90K: his screen (+4.635 SOL) against my +0.946
+
+- Same book, three differences: his screen is at **0.5 SOL a buy and the 70% stop**, and includes CATE 6J9dkt (target, +466%), which closed
+  after the 22:24 data I quoted. Mine was 0.2 SOL, 20% stop. Publish 22:34: 31 buys, 27 closed.
+
+  | stop | won | net at 0.2 SOL | the same at 0.5 SOL | without the top 3 coins (0.2) |
+  |---|---|---|---|---|
+  | 20% | 8 of 27 | +1.702 | +4.254 | −1.511 |
+  | 25% / 40% | 8 of 27 | +1.552 | +3.879 | −1.661 |
+  | 70% | 9 of 27 | +1.852 | +4.630 | −1.360 |
+
+- Top three: Gold 4DLrom +620%, CATE 2iux7J +520%, CATE 6J9dkt +466% — all bought at $12–16K (6× to the target). Next: Suki +188%, Claude AI +180%,
+  Coca-Cola +179% (bought at $31–33K, 3× to the target). 17 of the 27 closed buys lost over 80%. Open: Gold 3AhpV3, SPACEXLIFE ALC8tU, FOMO; Democat stuck (−100% when booked).
+- Caveats told to him: the 0.5 SOL figure is the 0.2 SOL result × 2.5 ("31 at the 0.2 SOL % result" — none re-priced at the bigger size; in
+  $15K coins a bigger buy and sale would fetch worse prices); 27 trades in 6 hours; without three coins the book is negative on every stop.
