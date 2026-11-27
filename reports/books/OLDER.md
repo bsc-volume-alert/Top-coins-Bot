@@ -1139,3 +1139,11 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   - Accuracy (n=139): median 4.3%, mean 8.0%, 37 over 10% — unchanged with the longer stall. Buy-price against trailing (25%, n=137): −32.5% against −7.9%.
   - 25% stop: 270 closed, 66 won, average −3.3%, median −21.9%. 40%: 269 closed, 54 won, −9.4%. 60%: 32 won, −35.5%.
   - Tally: volume 2,675 → 61, top holders (Jupiter) 2,085 → 37, market cap 160,367 → 24, holders 3,241 → 23, top 10 (GMGN) 89 → 17, fees 242 → 13, bought 164 → 16.
+- **27 Nov 04:34 UK — 30-minute check (state 04:26:20 UTC, publish 04:29:08; code 20653a2, up 11 h 10 min; not restarted).** Bot up. **One new feed drop (4 in all; it came back by itself).** Memory 705 MB / 309 heap. Jupiter 250 requests a minute, limited 0, errors 0. GMGN: no new refused buy reading (327 / 324 / 3; limited 7, banned 0). Error log empty.
+  - **Status-dump stall 3.46–3.71 s every five minutes (03:56: 3.35–3.85 s) — level this half hour, not growing.** Under the 5-second line; restart lines not repeated (told at 03:28).
+  - 2 new new-coin buys (272 in all): **Rolana 99pk7c 20M $21.8K: 25% stop +29.4%, 40% +30.4%, highest 2.25×** (the 70% row −35.0%, so it has since fallen under two thirds of the buy price); hugo CnQvqC 20M $23.7K −20.1% (40% −45.5%; highest 1.26×) — the same hugo the 10M book bought ten minutes before (entry 790: −18.7%, 40% row now closed at −31.6%). A third coin bought twice inside ten minutes and lost both times tonight (after LOOM ELQkmQ).
+  - Follow-up. **LUMINARE Eomygb kept climbing after the line: highest $147.2K at 04:18:21, 24 minutes after reaching $108K (40 minutes old) — a slow climber, not a pump-and-pull so far.** No pool book bought it. Where it is after 04:18 is not published.
+  - Runners: 50 reached, 7 bought, 43 missed, 2 later. No new coin on the list; no new fast runner missing from it.
+  - Accuracy (n=141): median 4.4%, mean 8.0%, 37 over 10%. Buy-price against trailing (25%, n=140): −32.6% against −7.8%.
+  - 25% stop: 272 closed, 67 won, average −3.3%, median −21.8%. 40%: 55 won, −9.5%. 60%: 32 won, −35.6%.
+  - Tally: volume 2,751 → 62, top holders (Jupiter) 2,134 → 37, market cap 163,404 → 24, holders 3,290 → 23, top 10 (GMGN) 89 → 17, fees 248 → 13, bought 166 → 16.
