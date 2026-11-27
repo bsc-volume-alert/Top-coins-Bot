@@ -41,3 +41,7 @@ test("since the rule change is only for the cards whose rules changed; 24 h and 
   assert.deepEqual(booksApi([], { stop: 0.25, now: 1795812000, run: { name: "t", books: ["RUG450"] } }).rule.cards, []);
   for (const s of ["rcOn:!!(RC&&RCB[k]),rc:RC&&RCB[k]?w(RC):tot", "(RC&&b.rcOn?cell('since the rule change", "(b.rcOn?num(b.rc):'<span class=\"mut\">no change</span>')", '<span class="pt d24">24h</span> \'+num(b.h24)', '<span class="pt d6">6h</span> \'+num(b.h6)', "if(!SEL.h24Seen){SEL.win='h24';SEL.h24Seen=1}", ".pt.d24{background:var(--acc)}.pt.d6{background:var(--mag)}", '<span class="c6">last 6 hours</span>', '<span class="c24">last 24 hours</span>', "no other book is restarted"]) assert.ok(BOOKS_PAGE.includes(s), "the page has: " + s);
 });
+test("a coin's name opens it on Axiom; GMGN is the small link beside it", () => {
+  assert.ok(BOOKS_PAGE.includes("function coin(t){return '<a class=\"coin\" href=\"https://axiom.trade/t/'+t.mint+'\" target=\"_blank\""));
+  assert.ok(BOOKS_PAGE.includes("href=\"https://gmgn.ai/sol/token/'+t.mint+'\" target=\"_blank\" title=\"open this coin on GMGN\">gm</a>")); assert.ok(!BOOKS_PAGE.includes('class="coin" href="https://gmgn.ai'));
+});
