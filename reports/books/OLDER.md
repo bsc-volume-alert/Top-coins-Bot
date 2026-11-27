@@ -1725,3 +1725,20 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   reads every coin again by itself. Checked with his exact saved selection: the page recovers, his 60% stop and 0.5 stake kept.
 - His page also showed the bot still on 340aa78 (old VOL cards listed, no topic buttons). One paste now brings 0f48f4c + 8ce9609 + 5ec009e.
 - Lesson: a selector that can be hidden must never keep filtering; a saved selection has to be checked against what the run offers.
+
+### 27 Nov, 21:42–21:55 UK — 5ec009e live; "since the rule change" narrowed; 24 h / 6 h on the ranking (74501c7)
+
+- **21:42 he pasted: code 5ec009e0 running** (his terminal output). His 21:44 screenshot shows it working: data back, topic buttons and
+  colours on, old VOL cards gone, purple cards first. (The stuck "rest of Solana" filter cleared itself.)
+- **Owner 21:45:** the rule change did not affect every book, so why is everything "reset" since the rule change? It should apply only to
+  the books whose rules changed. Also: a 6-hour and a 24-hour figure on top, each its own colour, the 24-hour one deciding the order.
+- Facts given: nothing was reset — "since rule change" was a period button applied to every book; each book's total was beside it. He is
+  right that it should not apply to books with no change: the 14:34 change (top-10 floor 16–30%, 3-second pricing) was about the four
+  new-coin looks. HIT / CONFIRM / WAIT5-UP / FARM started at or after it, so their total IS their figure. FAST / RUG / volume: no change.
+- **Built and pushed 74501c7** (display only; 329 tests, fail 0):
+  - "since the rule change" only on the cards made of the four looks (NEW-5M/10M/15M/20M, NEW-COMBINED and the seven slices). Other
+    cards: no such box; "no change" in the rules table; under that period they are ranked by their total.
+  - every ranking row: **24h** (cyan tag) and **6h** (magenta tag) profit with trade counts, then total (or "since change").
+    The cards' "last 24 hours" / "last 6 hours" labels carry the same two colours.
+  - the page opens ranked by the last 24 hours (once; another period is one tap and is remembered). Most profitable first; purple cards still pinned first.
+- Waiting for his paste: 74501c7.
