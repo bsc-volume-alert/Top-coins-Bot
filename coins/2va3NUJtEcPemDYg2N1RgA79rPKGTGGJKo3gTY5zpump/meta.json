@@ -1,0 +1,51 @@
+{
+ "id": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump",
+ "mint": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump",
+ "label": "WOOPY",
+ "request": {
+  "mint": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump",
+  "label": "WOOPY",
+  "id": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump"
+ },
+ "finished": "2026-11-27T10:37:45.647Z",
+ "seconds": 1060,
+ "window": {
+  "from": "2026-11-20T10:20:06Z",
+  "to": "2026-11-27T10:20:06Z",
+  "first_tx": "2026-11-26T15:16:57Z",
+  "last_tx_read": "2026-11-27T10:20:06Z"
+ },
+ "supply": 998919955.010171,
+ "sol_usd": 73.26,
+ "mc_line_usd": 100000,
+ "reached_line_at": "2026-11-26T15:50:42Z",
+ "reached_line_mc": 101204,
+ "low_mc_usd": 7503,
+ "peak_mc_usd_in_read": 493054,
+ "counts": {
+  "signatures_listed": 43000,
+  "failed_tx_skipped": 10803,
+  "in_window": 31365,
+  "read": 31365,
+  "not_returned": 1333,
+  "trades": 29965,
+  "transfers": 26,
+  "arbitrage_tx": 0,
+  "no_balance_change": 47,
+  "wallets": 2060,
+  "early_buyers": 27,
+  "enriched": 27
+ },
+ "cut_short": {
+  "listing_hit_cap_before_window_start": false,
+  "read_stopped_at_cap": false,
+  "unread": 0
+ },
+ "rpc": {
+  "calls": 31495,
+  "http": 3192,
+  "retries": 0,
+  "failed": 0
+ },
+ "note": "mc_usd uses ONE SOL/USD rate for the whole window (the rate at collection time) — approximate. 'early' = buys before the first trade at or above mc_line_usd."
+}
