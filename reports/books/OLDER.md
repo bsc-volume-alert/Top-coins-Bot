@@ -1714,3 +1714,14 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
 - Since the rule change (6.48 h): four looks 102 buys −1.252 / −2.248 / −3.724 SOL (20/25/40%); CONFIRM-15 −0.535, -20 −0.275, -30 −0.373;
   WAIT5-UP 23 buys −0.222; HIT50-NOW 47 buys −1.583; HIT100-NOW 15 buys −0.851; **FARM-90K 25 buys, 22 closed, +0.974 SOL on 20%** (+0.823 on 25%);
   5M-H300 45 buys +9.0% (median −8.6%) vs −5.0% for the other 141. Runners: reached 89, bought 17, missed 72. 25% stop on all new-coin-side buys: 414 closed, 104 won, avg −6.0%.
+
+### 27 Nov, 21:31–21:40 UK — "all the data disappeared": found and fixed (5ec009e)
+
+- He pasted his page text (21:30:50): every book "—", 0 trades; header read "60% stop · stake 0.5 SOL · **rest of Solana (sampled)**".
+- **Cause (page bug, nothing lost):** the "coins" filter (all / pump.fun live / rest of Solana) is hidden for this run, but its buttons were
+  drawn for a moment before the run was known. One tap there saved "rest of Solana" in his browser; this run has no such buys → every
+  card empty, and no button to go back. Reproduced on a copy of the live data: 0 rows with that filter.
+- **Fix 5ec009e** (328 tests, fail 0): the filter starts hidden; where the run does not offer it, a saved choice is dropped and the page
+  reads every coin again by itself. Checked with his exact saved selection: the page recovers, his 60% stop and 0.5 stake kept.
+- His page also showed the bot still on 340aa78 (old VOL cards listed, no topic buttons). One paste now brings 0f48f4c + 8ce9609 + 5ec009e.
+- Lesson: a selector that can be hidden must never keep filtering; a saved selection has to be checked against what the run offers.
