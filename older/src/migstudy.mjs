@@ -5,6 +5,8 @@
 // live feed, so every sale is given twice: at the stop level itself (the best case) and "cautious" — at the close of the minute
 // the stop was hit in whenever that minute closed under the level (a coin that falls through its stop inside a minute is not
 // sold at the stop). The truth lies between the two. No fee, no price impact: a real paper book would do a little worse.
+// 27 Nov 2026 11:29 UK, his next questions: longer waits (15 / 30 / 60 minutes after migration, still over $50K), and
+// "if they hit 100K" — buy at once (40% stop), or wait 5 minutes and buy only if still over $100K. See firstTouch().
 export const STOPS = [0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7];
 export const MAX_HOLD_MIN = 1440;
 
@@ -23,12 +25,16 @@ export function priceAt(bars, t, freshMin = 2) {
  *  Inside one minute the order of high and low is unknown: the low is tested first against the peak known BEFORE the minute
  *  (the cautious order), then the high lifts the peak, then the close is tested against the new level.
  *  Returns { best, cautious (returns, e.g. -0.25), hold_min, open } — open: the data ended before the stop or the 24 hours. */
-export function trail(bars, from, px, m0, stop, maxHold = MAX_HOLD_MIN) {
+export function trail(bars, from, px, m0, stop, maxHold = MAX_HOLD_MIN, touch = false) {
   let peak = px;
   for (let i = from; i < bars.length; i++) {
     const b = bars[i], held = b.m - m0;
     if (held > maxHold) return { best: b.o / px - 1, cautious: b.o / px - 1, hold_min: maxHold, open: false, why: "24 h" };
     let level = peak * (1 - stop);
+    // a buy made INSIDE this minute, the moment the price touched a line (27 Nov): the minute's open and low are taken to have
+    // come before the buy (the price was rising to the line), so only its high (a new peak) and its close can act on the stop.
+    // A dip after the touch that recovered by the close is not seen — the best case and the cautious case share that blind spot.
+    if (touch && i === from) { if (b.h > peak) peak = b.h; level = peak * (1 - stop); if (b.c <= level) return { best: level / px - 1, cautious: b.c / px - 1, hold_min: held, open: false, why: "stop in the minute of the buy" }; continue; }
     if (b.o <= level) return { best: b.o / px - 1, cautious: b.o / px - 1, hold_min: held, open: false, why: "opened under the stop" };
     if (b.l <= level) return { best: level / px - 1, cautious: Math.min(level, b.c) / px - 1, hold_min: held, open: false, why: "stop" };
     if (b.h > peak) { peak = b.h; level = peak * (1 - stop); if (b.c <= level) return { best: level / px - 1, cautious: b.c / px - 1, hold_min: held, open: false, why: "stop after a new high" }; }
@@ -37,12 +43,21 @@ export function trail(bars, from, px, m0, stop, maxHold = MAX_HOLD_MIN) {
   return { best: (last ? last.c : px) / px - 1, cautious: (last ? last.c : px) / px - 1, hold_min: last ? last.m - m0 : 0, open: true, why: "data ends" };
 }
 
+/** The first minute in which a coin that began UNDER a price line reached it (owner, 27 Nov: "if they hit 100K…").
+ *  { above: true } = the coin's first bar already opened at or over the line: it never "hit" it in front of us, no buy.
+ *  { i, m, after_min } = index and minute of the touch, minutes after the first bar. null = not reached within `withinMin`. */
+export function firstTouch(bars, linePx, withinMin = MAX_HOLD_MIN) {
+  if (!bars.length) return null; if (bars[0].o >= linePx) return { above: true };
+  for (let i = 0; i < bars.length && bars[i].m - bars[0].m <= withinMin; i++) if (bars[i].h >= linePx) return { i, m: bars[i].m, after_min: bars[i].m - bars[0].m };
+  return null;
+}
+
 /** Everything about one would-be buy: the highest multiple reached (within 24 h), when, the value at set minutes after, and every stop. */
 export function replay(bars, entry, stops = STOPS, marks = [5, 15, 60]) {
-  const { px, m: m0, from } = entry; let hi = 1, hiMin = 0, lo = 1; const at = {};
-  for (let i = from; i < bars.length; i++) { const b = bars[i], k = b.m - m0; if (k > MAX_HOLD_MIN) break; if (b.h / px > hi) { hi = b.h / px; hiMin = k; } if (b.l / px < lo) lo = b.l / px; }
+  const { px, m: m0, from, touch = false } = entry; let hi = 1, hiMin = 0, lo = 1; const at = {};
+  for (let i = from; i < bars.length; i++) { const b = bars[i], k = b.m - m0; if (k > MAX_HOLD_MIN) break; if (b.h / px > hi) { hi = b.h / px; hiMin = k; } const low = touch && i === from ? b.c : b.l; if (low / px < lo) lo = low / px; }
   for (const k of marks) { let c = null; for (let i = from; i < bars.length && bars[i].m - m0 <= k; i++) c = bars[i].c; at[k] = c == null ? null : c / px; }
-  const st = {}; for (const s of stops) st[Math.round(s * 100)] = trail(bars, from, px, m0, s);
+  const st = {}; for (const s of stops) st[Math.round(s * 100)] = trail(bars, from, px, m0, s, MAX_HOLD_MIN, touch);
   return { high: hi, high_min: hiMin, low: lo, at, stops: st };
 }
 

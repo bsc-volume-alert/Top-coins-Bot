@@ -1,7 +1,7 @@
 // the migration study's replay helpers (src/migstudy.mjs): pure arithmetic on one-minute bars
 import test from "node:test";
 import assert from "node:assert/strict";
-import { priceAt, trail, replay, summarise } from "../src/migstudy.mjs";
+import { priceAt, trail, replay, summarise, firstTouch } from "../src/migstudy.mjs";
 
 const bar = (m, o, h, l, c) => ({ m, o, h, l, c });
 const near = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} is not ${b}`);
@@ -45,4 +45,24 @@ test("a replayed buy: highest multiple, values after set minutes, every stop; an
   assert.equal(s.n, 2); assert.equal(s.reached_2x_pct, 50); assert.equal(s.never_up_10_pct, 50); assert.equal(s.fell_90_pct, 0);
   assert.equal(s.stops[25].cautious_wins, 0); assert.equal(s.stops[25].best_mean, +(100 * ((1.25 - 0.25) / 2)).toFixed(1));
   assert.deepEqual(summarise([]), { n: 0 });
+});
+
+test("a coin that HITS a line: the first minute whose high reaches it; a coin already over it never hit it", () => {
+  const bars = [bar(10, 0.3, 0.4, 0.3, 0.35), bar(11, 0.35, 0.9, 0.3, 0.8), bar(13, 0.8, 1.2, 0.7, 1.1), bar(14, 1.1, 2, 1, 1.9)];
+  assert.deepEqual(firstTouch(bars, 1), { i: 2, m: 13, after_min: 3 });
+  assert.deepEqual(firstTouch(bars, 0.4), { i: 0, m: 10, after_min: 0 });      // reached in its very first minute, having opened under it
+  assert.deepEqual(firstTouch(bars, 0.3), { above: true });                    // opened at the line: not a hit
+  assert.equal(firstTouch(bars, 5), null); assert.equal(firstTouch([], 1), null);
+  assert.equal(firstTouch(bars, 1, 2), null);                                  // only within the first two minutes: not reached in time
+});
+
+test("a buy at the touch: the touch minute's open and low came before the buy; its high and close act on the stop", () => {
+  // the line is 1.00. Minute 13 opens 0.80, dips to 0.50, touches the line, runs to 1.20 and closes 1.10: the 0.50 low came before the buy and sells nothing
+  const bars = [bar(13, 0.8, 1.2, 0.5, 1.1), bar(14, 1.1, 1.15, 0.6, 0.65)];
+  const t = trail(bars, 0, 1, 13, 0.4, 1440, true); near(t.best, 1.2 * 0.6 - 1); near(t.cautious, 0.65 - 1); assert.equal(t.hold_min, 1); // sold in minute 14: level 0.72, closed 0.65
+  const plain = trail(bars, 0, 1, 13, 0.4); assert.equal(plain.why, "stop"); assert.equal(plain.hold_min, 0);                   // without the flag the 0.50 low would have sold it at once
+  // a touch minute that collapses by its close: sold in that same minute — best case at the level, cautious at the close
+  const c = trail([bar(13, 0.8, 1.05, 0.2, 0.25)], 0, 1, 13, 0.4, 1440, true); near(c.best, 1.05 * 0.6 - 1); near(c.cautious, 0.25 - 1); assert.equal(c.why, "stop in the minute of the buy");
+  // replay() carries the flag: the lowest value after the buy ignores the touch minute's earlier low, the high counts
+  const r = replay(bars, { px: 1, m: 13, from: 0, touch: true }); near(r.high, 1.2); near(r.low, 0.6); near(r.stops[40].cautious, 0.65 - 1); near(r.stops[20].best, 1.2 * 0.8 - 1);
 });
