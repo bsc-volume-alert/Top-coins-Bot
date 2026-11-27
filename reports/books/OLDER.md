@@ -1742,3 +1742,30 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
     The cards' "last 24 hours" / "last 6 hours" labels carry the same two colours.
   - the page opens ranked by the last 24 hours (once; another period is one tap and is remembered). Most profitable first; purple cards still pinned first.
 - Waiting for his paste: 74501c7.
+
+### 27 Nov, 21:58 UK — check (newest publish 21:52:36, state 21:47:41)
+
+- **Fine.** He pasted 74501c7 at ~21:53 (his terminal: "code 74501c7d", both processes online). The newest published data is still from
+  5ec009e (started 21:42:35): no log error, too late 0, feed reconnects 0, GMGN limited 0, Jupiter refused 28 in 5 min, rate window 60 of 100,
+  limited 0. Not yet confirmed from data: 74501c7.
+- **Watch:** memory 734 MB (343 heap) only 5 minutes after the 21:42 restart — earlier builds were at about 540 MB at that age; worst
+  loop hold about 1.0 s a minute in the first five minutes (usually 0.4–0.7 s). No late buy. Before that restart 340aa78 had reached 844 MB at 50 min.
+- **Volume test: 2 buys, both VOL-REST, control 0 (first look at 30).**
+  ZERO 1196 −18.0% (20% stop); MAYA H2PjSb 1203 (21:18, cap $507K, 1,396 buyers, holders +57% in 5 min — needs over 70%; $66 a trade — needs
+  over $72; bundlers 38.9%, snipers 38.9%, fees 0.38 SOL, top 10 32.9% → type neither): −11.2% on 20%, −36.7% on 40%.
+- **Bull cKt65K — missed by the looks, bought by HIT** (top $124K at 13 min; $1.4K at 20 min — rugged).
+
+  | look | cap | holders | volume | fees | top 10 | bundlers | snipers | phishing | kept out by |
+  |---|---|---|---|---|---|---|---|---|---|
+  | 5 min | $35K | 589 | $77K | 0.95 SOL | 15.2% | 27.5% | 0.2% | 1.2% | fees (needs 2), top 10 (needs 16–30%) |
+  | 10 min | $67K | 1,530 | $130K | 2.36 SOL | 14.8% | 22.4% | 0.2% | 12.4% | top holders 14.9%, fees (needs 3.5), top 10 |
+  | 15 min | $83K | 1,624 | $218K | 3.76 SOL | 13.6% | 17.1% | 0.2% | 12.1% | top holders 13.6%, fees (needs 5), top 10 |
+  | 20 min | $1.4K | 100 | $255K | – | – | – | – | – | cap, holders |
+
+  Type: low-fee pump with phishing wallets jumping from 1% to 12%, pulled between 15 and 20 minutes. HIT50-NOW +21.6%, HIT50-5M +29.0%, HIT100-NOW −16.5% (20% stop).
+- Other new buys (20% stop): TripleH 9Vr8XJ HIT50-NOW +3.4%; TripleH 3F1Hin NEW-10M +2.8%, CONFIRM-15 −13.7%, CONFIRM-20 −17.9%; TSI HIT50-NOW −18.4%;
+  1sol HIT50-NOW −14.3%; BI HIT50-NOW −20.9%; Coca-Cola yWmzDp FARM-90K **+178.8% (target)**, HIT50-NOW −31.3%, HIT50-5M −56.2%;
+  Gold 3AhpV3 FARM-90K open; CM 9BAwZL NEW-5M −17.8% (25% stop +58.8%), NEW-10M −8.4%, NEW-15M −30.5%, WAIT5-UP −30.4%.
+- Since the rule change (7.13 h): four looks 106 buys −1.360 / −2.267 / −3.882 SOL; CONFIRM-15 −0.562, -20 −0.311, -30 −0.373; WAIT5-UP 24 buys −0.283;
+  HIT50-NOW 53 buys −1.897; HIT100-NOW 16 buys −0.884 (0 won); **FARM-90K 27 buys, 24 closed, +1.131 SOL** (20%) / +0.981 (25%);
+  5M-H300 45 buys +9.0% vs −5.1% for the other 142. Runners: reached 90, bought 17, missed 73. Entries 1220 (1018 bought).
