@@ -45,3 +45,6 @@ test("a coin's name opens it on Axiom; GMGN is the small link beside it", () => 
   assert.ok(BOOKS_PAGE.includes("function coin(t){return '<a class=\"coin\" href=\"https://axiom.trade/t/'+t.mint+'\" target=\"_blank\""));
   assert.ok(BOOKS_PAGE.includes("href=\"https://gmgn.ai/sol/token/'+t.mint+'\" target=\"_blank\" title=\"open this coin on GMGN\">gm</a>")); assert.ok(!BOOKS_PAGE.includes('class="coin" href="https://gmgn.ai'));
 });
+test("you and auto sell together: a second box under 'sold by you' — his sale in place of the rule's on the buys he sold, the rule's on the rest; the rules' total is untouched", () => {
+  for (const x of ["you + auto sell together · total", "var tg=b.tot.net-rmn+yn,oth=b.tot.n-rm,df=tg-b.tot.net", "auto sell alone · total", "together against auto alone", "if(t.status==='closed'&&t.ret!=null&&!t.est_exit){rm++;rmn+=t.net}"]) assert.ok(BOOKS_PAGE.includes(x), "the page has: " + x);
+});
