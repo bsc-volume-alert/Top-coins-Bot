@@ -1104,3 +1104,9 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   - Accuracy (n=124): median 4.3%, mean 8.2%, 35 over 10%. Buy-price against trailing (25%, n=123): −32.1% against −6.3%.
   - 25% stop: 255 closed, 64 won, average −2.3%, median −21.8%. 40%: 54 won, −7.9%. 60%: 32 won, −34.2%.
   - Tally: volume 2,398 → 53, market cap 146,891 → 21, holders 2,969 → 17, top holders (Jupiter) 1,862 → 26, top 10 (GMGN) 83 → 17, fees 209 → 9, bought 149 → 16.
+- **27 Nov 02:23 UK — 30-minute check (state 02:16:20 UTC, publish 02:18:33; code 20653a2, up 9 h; not restarted).** Bot up, no new feed drop. Memory 686 MB / 313 heap. Jupiter 252 requests a minute, limited 0, errors 0. GMGN: no new refused buy reading (267 / 264 / 3; limited 7, banned 0). Status-dump stall 2.61–2.90 s every five minutes (01:46: 2.49–2.69 s).
+  - One new coin on the runners list, missed (43 reached, 7 bought, 36 missed, 1 later): **fomoDay 6Zexdt — $135.5K at 15 minutes, back to $75.5K at the 20-minute check; the pull profile.** $35.0K / $62.0K / $104.7K at 5 / 10 / 15 minutes; out on fees 0.81 / 1.58 / 3.25 / 4.07 SOL and top 10 16.1% / 15.2% / 11.8% / 9.8% (and Jupiter's first look from 15 minutes); bundlers 34% → 19%, phishing 2.8% → 12.9%, 591 → 1,708 holders.
+  - 2 new new-coin buys (257 in all): dog3d 8YjTr1 5M $15.8K −38.1% (40% −36.2%, 1.59×); steppa 6StXSU 20M $37.3K −13.4% (40% −23.4%).
+  - Accuracy (n=126): median 4.4%, mean 8.1%, 35 over 10%. Buy-price against trailing (25%, n=125): −32.1% against −6.7%.
+  - 25% stop: 257 closed, 64 won, average −2.5%, median −21.8%. 40%: 54 won, −8.0%. 60%: 32 won, −34.3%.
+  - Tally: volume 2,477 → 53, market cap 150,409 → 22, holders 3,057 → 17, top holders (Jupiter) 1,922 → 28, top 10 (GMGN) 84 → 17, fees 220 → 11, bought 151 → 16.
