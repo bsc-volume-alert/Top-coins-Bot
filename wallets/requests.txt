@@ -9,3 +9,5 @@
 2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump label=WOOPY-band from=2026-11-26T15:00:00Z to=2026-11-26T19:10:00Z mc=200000 top=150 run=3
 # WOOPY after the earlier read (11:11 UTC 27 Nov) to now: did the 100 holding wallets sell or move their coins?
 2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump label=WOOPY-after from=2026-11-27T11:11:00Z to=2026-11-27T16:52:07Z mc=200000 max=200000 hold=0 top=0 run=4
+# WOOPY complete, one clean read (version-1 transactions included): first buy 26 Nov to now
+2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump label=WOOPY-full from=2026-11-26T15:00:00Z to=2026-11-27T16:54:27Z mc=200000 max=400000 hold=0 top=0 run=5
