@@ -1088,3 +1088,10 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   - Accuracy (n=113): median 4.3%, mean 8.1%, 32 over 10% (28%). Buy-price against trailing (25%, n=111): −32.3% against −5.6%.
   - 25% stop: 244 closed, 62 won, average −1.6%, median −21.8%. 40%: 52 won, −7.1%. 60%: 32 won, −33.5%.
   - Tally: volume 2,265 → 51, market cap 136,354 → 19, holders 2,671 → 15, top holders (Jupiter) 1,749 → 21, top 10 (GMGN) 80 → 17, fees 189 → 9, bought 138 → 16.
+- **27 Nov 01:19 UK — 30-minute check (state 01:16:20 UTC, publish 01:18:17; code 20653a2, up 8 h; not restarted).** Bot up, no new feed drop. Memory 686 MB / 321 heap. Jupiter 240 requests a minute, limited 0, errors 0 (the older positions were briefly looked at every 3.7 s instead of 3). GMGN: no new refused buy reading (231 / 228 / 3; limited 7, banned 0). Status-dump stall 2.28–2.48 s every five minutes.
+  - GTAVI HeYnz2: highest $121.9K at 00:37:35, four minutes after it reached the line; the published files show nothing after that (no pool-book buy, no later check) — whether it held is not known.
+  - **10 new new-coin buys (254 in all), 2 won on the 25% stop:** inuvestor 5M $15.5K −26.6%; DeepWeb Bg84XT 5M $27.2K −36.3% (noticed 29% past), 10M $13.7K +4.3%, 20M $13.3K −25.0% (22% past); Winston 10M $13.8K −29.8%; CUMASS CS8vS3 5M $39.1K −27.7%, 10M $28.6K −15.1% (2.32×, 40% open), 15M $55.0K −21.4%, 20M $40.2K +20.1% (40% open); costakid GZka3g 5M $12.4K −12.0%. SPEC 5M 40% −39.1%; FF's 70% rows −36% / −58% / −49% / −31%.
+  - Runners unchanged: 39 reached, 7 bought, 32 missed, 1 later. No new fast runner missing from the list.
+  - Accuracy (n=123): median 4.3%, mean 8.2%, 35 over 10% (28%). Buy-price against trailing (25%, n=121): −32.1% against −6.3%.
+  - 25% stop: 254 closed, 64 won, average −2.2%, median −21.8%. 40%: 53 won, −7.8%. 60%: 32 won, −34.2%.
+  - Tally: volume 2,327 → 51, market cap 142,977 → 19, holders 2,859 → 15, top holders (Jupiter) 1,812 → 21, top 10 (GMGN) 80 → 17, fees 197 → 9, bought 148 → 16.
