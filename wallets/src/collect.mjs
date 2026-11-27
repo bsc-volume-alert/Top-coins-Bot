@@ -33,7 +33,7 @@ export async function collect(req, dir, { onStatus = () => {} } = {}) {
   mkdirSync(dir, { recursive: true });
   const mint = req.mint, rps = num(req.rps, 30), maxTx = num(req.max, 40000), maxSigs = num(req.maxsigs, 1500000), mcLine = num(req.mc, 100000), top = num(req.top, 60);
   const t0 = Date.now(); const st = { id: req.id, label: req.label || "", stage: "start", started: iso(t0 / 1000) };
-  const status = (extra) => { Object.assign(st, extra, { updated: iso(Date.now() / 1000), rpc_calls: stats.calls, rpc_retries: stats.retries, rpc_failed: stats.failed }); onStatus(st); };
+  const status = (extra) => { Object.assign(st, extra, { updated: iso(Date.now() / 1000), rpc_calls: stats.calls, rpc_retries: stats.retries, rpc_failed: stats.failed, rpc_last_err: stats.last_err, rpc_last_err_at: stats.last_err_at }); onStatus(st); };
 
   const solUsd = num(req.sol, null) ?? (await solUsdNow());
   const sup = await one("getTokenSupply", [mint]); if (!sup?.value) throw new Error("coin not found on chain (getTokenSupply gave nothing) — check the contract address");
@@ -51,7 +51,7 @@ export async function collect(req, dir, { onStatus = () => {} } = {}) {
     if (from == null) { const newest = page.find((s) => s.blockTime)?.blockTime; if (newest) from = Math.min(newest, to) - days * 86400; }
     for (const s of page) { if (!s.blockTime || s.blockTime > to) continue; if (from != null && s.blockTime < from) { reachedStart = true; continue; } if (s.err) { failedTx++; continue; } sigs.push([s.signature, s.blockTime, s.slot]); }
     if (reachedStart) break; if (page.length < 1000) { exhausted = true; break; }
-    if (listed % 20000 === 0) status({ listed, kept: sigs.length });
+    status({ listed, kept: sigs.length, listing_back_to: iso(page[page.length - 1].blockTime) });
   }
   sigs.reverse(); // oldest first (the listing is newest-first; order inside a slot is the reverse of the listing)
   const listingCut = !reachedStart && !exhausted; // hit maxsigs before reaching the window start: the EARLIEST part is missing

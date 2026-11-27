@@ -11,13 +11,14 @@ export function loadEnv() {
   return !!process.env.RPC_HTTP;
 }
 export const scrub = (s) => String(s).replace(/api-key=[^&\s"']+/g, "api-key=***").replace(/https?:\/\/[^\s"']*helius[^\s"']*/gi, "<rpc>");
-export const stats = { calls: 0, http: 0, retries: 0, failed: 0 };
+export const stats = { calls: 0, http: 0, retries: 0, failed: 0, last_err: "", last_err_at: "" };
+const note = (m) => { stats.last_err = scrub(m).slice(0, 200); stats.last_err_at = new Date().toISOString(); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let nextAt = 0;
 async function pace(n, rps) { const now = Date.now(), at = Math.max(now, nextAt); nextAt = at + (1000 * n) / rps; if (at > now) await sleep(at - now); }
 
 async function post(body) {
-  const r = await fetch(process.env.RPC_HTTP, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(60000) });
+  const r = await fetch(process.env.RPC_HTTP, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(30000) });
   stats.http++;
   if (r.status === 429 || r.status >= 500) throw Object.assign(new Error("http " + r.status), { retry: true });
   if (!r.ok) throw new Error("http " + r.status);
@@ -39,11 +40,11 @@ export async function many(method, paramsList, { rps = 30, batch = 10 } = {}) {
         const body = idx.map((i) => ({ jsonrpc: "2.0", id: i, method, params: paramsList[i] }));
         const j = await post(idx.length === 1 ? body[0] : body);
         const arr = Array.isArray(j) ? j : idx.length === 1 ? [j] : null;
-        if (!arr) { again.push(...idx); noBatch = true; continue; } // provider refused a batch: single calls from now on
+        if (!arr) { again.push(...idx); noBatch = true; note("batch refused: " + JSON.stringify(j).slice(0, 120)); continue; } // provider refused a batch: single calls from now on
         const seen = new Set();
-        for (const x of arr) { if (x?.id == null) continue; seen.add(x.id); if (x.error) { if (/429|rate|limit|timeout|busy|overload/i.test(JSON.stringify(x.error))) again.push(x.id); } else out[x.id] = x.result; }
+        for (const x of arr) { if (x?.id == null) continue; seen.add(x.id); if (x.error) { note(method + " error: " + JSON.stringify(x.error)); if (/429|rate|limit|timeout|busy|overload/i.test(JSON.stringify(x.error))) again.push(x.id); } else out[x.id] = x.result; }
         for (const i of idx) if (!seen.has(i)) again.push(i);
-      } catch (e) { if (e.retry || /fetch failed|timeout|aborted|ECONN|socket|terminated/i.test(String(e.message))) again.push(...idx); else fatal = new Error(scrub(e.message)); }
+      } catch (e) { note(method + ": " + e.message); if (e.retry || /fetch failed|timeout|aborted|ECONN|socket|terminated/i.test(String(e.message))) again.push(...idx); else fatal = new Error(scrub(e.message)); }
     } };
     await Promise.all(Array.from({ length: Math.min(4, groups.length) }, worker));
     if (fatal) throw fatal;
