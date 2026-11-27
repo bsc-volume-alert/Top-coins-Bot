@@ -1866,3 +1866,15 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   insiders 0%, snipers 38.9%, fees 0.38); RAURA on one (insiders 0%).
 - Told him: the 4.58× is on the stop he chose at the top (70%), open and not in any total; the card's own exit (20%) lost on it. Before the test
   the wide stop was worse on 38 of 47 coins of this type; one coin does not change that. The test's rules stay frozen.
+
+### 27 Nov, 22:53–23:00 UK — "you + auto sell together" box (4c pushed below); FARM-90K on his screen
+
+- His 22:53 screen (0.5 SOL, 70% stop): FARM-90K +5.421 SOL, 28 closed, 36% won, without top 3 −2.618. One more target since 22:36
+  (+0.79 at his stake; by the numbers FOMO ZjSXr2, target 2.56× — after the 22:45 publish, so read from his screen).
+  He has sold a second buy by hand (about +1.54 SOL at his stake ≈ 4.1×; fits Gold 3AhpV3, target 6×; the rule still holds it, worth +1.567).
+  Hand sales so far +2.653 against +4.670 for the rule on the same two buys (one open): −2.017, almost all the first Gold.
+- **Owner 22:53:** a total of his sales and the system's together, in another box in the same section.
+  Built and pushed (display only; 331 tests, fail 0): under "sold by you", a second amber box —
+  **you + auto sell together** (his sale in place of the rule's on the buys he sold; the rule's sale on every other closed buy) ·
+  **auto sell alone** (the card's total) · **together against auto alone**. Where the rules still hold a buy he sold, it says that buy is in
+  the together total only until the rules sell it. The rules' totals are unchanged.
