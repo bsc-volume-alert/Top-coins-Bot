@@ -1156,3 +1156,17 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   - Accuracy (n=145): median 4.4%, mean 7.9%, 38 over 10%. Buy-price against trailing (25%, n=143): −32.4% against −8.0%.
   - 25% stop: 276 closed, 67 won, average −3.5%, median −21.8%. 40%: 274 closed, 55 won, −9.8%. 60%: 32 won, −35.7%.
   - Tally: volume 2,831 → 62, top holders (Jupiter) 2,185 → 37, market cap 166,195 → 24, holders 3,343 → 23, top 10 (GMGN) 90 → 17, fees 264 → 13, bought 170 → 16.
+- **27 Nov 05:38 UK — 30-minute check (state 05:26:20 UTC, publish 05:29:23; code 20653a2, up 12 h 10 min; not restarted).** Bot up, no new feed drop (4). Memory 709 MB / 305 heap. Jupiter 248 requests a minute, limited 0, errors 0. GMGN: no new refused buy reading (356 / 353 / 3; limited 7, banned 0). Error log empty.
+  - Status-dump stall 3.33–3.99 s every five minutes; the last three 3.88–3.99 s (04:56: 3.57–3.85 s) — creeping again, now about 4 seconds. Under the 5-second line; restart lines not repeated.
+  - **CaveBaby ADgpuU was bought by all four books, five minutes apart, and went to about $87K (2.87× the first buy) around 05:00.** 5M $30.2K: 25% stop −2.5% (shaken out before the run), 40% +66.4%, 60% +11.8%. 10M $35.5K: 25% +82.5%, 40% +22.2%. 15M $60.0K (after the high): +0.5%, 40% −32.5%. 20M $64.7K: −21.0%, 40% −36.0%. Four buys together: 25% stop average +14.9%, 40% stop average +5.0% — the two early buys carried it, the two late ones bought the way down. It never reached $100K, so it is not on the runners list.
+  - Earlier rows now closed: the no-name coin 2DyLsL (20M, entry 794) went to 2.07×; its 40% row closed at +20.9% (25% had sold at −32.5% before the rise).
+  - 3 new new-coin buys in this half hour (279 in all) — the three later CaveBaby buys above.
+  - **Two new runners on the list, both slow climbers, both missed:**
+    - VOLALITY 4tPsVj: $21K / $23K / $33K / $41K at 5 / 10 / 15 / 20 min; passed $100K at 04:58:43 (42 minutes old); highest $237.1K at 05:15:14. Failed: holders 91 / 101 / 143 / 145 (need 100 / 150 / 200 / 200), volume $10K / $18K / $25K / $32K (need $30K / $50K / $100K / $100K), fees 0.57–0.75 SOL (need 2–5), top holders 37.3% / 36.3% at 5 / 10 min (passed at 15 and 20: 29.3%, 23.7%). Bundlers 6–13%, phishing about 0, creator 6% then 0.
+    - Snowball AYfPJn: $35K / $36K / $41K / $44K; passed $100K at 04:57:36 (48 minutes old); highest $133.8K at 05:01:59. Holders passed (1,781–1,991). Failed: volume $13K–$21K, fees 0.23–0.91 SOL, top holders 35.7–38.1%, top 10 34.9–36.9%. Bundlers 32%, phishing 12–14%, creator 15%.
+    - Both passed $100K long after the 20-minute look, on little recorded volume before it ($21–32K in the first 20 minutes). No rule at 5–20 minutes could have caught them without also letting in the many that stay at $20–40K.
+  - Follow-up. Christmas DDKtTw and EWwTe1: no record after 04:45:49. LUMINARE: highest still $147.2K at 04:18.
+  - Runners: 52 reached, 7 bought, 45 missed, 2 later.
+  - Accuracy (n=148): median 4.4%, mean 7.8%, 38 over 10%. Buy-price against trailing (25%, n=145): −32.1% against −8.0%.
+  - 25% stop: 279 closed, 69 won, average −3.2%, median −21.7%. 40%: 279 closed, 58 won, −9.5%. 60%: 33 won, −35.6%.
+  - Tally: volume 2,884 → 66, top holders (Jupiter) 2,226 → 37, market cap 168,678 → 24, holders 3,366 → 27, top 10 (GMGN) 90 → 17, fees 267 → 13, bought 173 → 16.
