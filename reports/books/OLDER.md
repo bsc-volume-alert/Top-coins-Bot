@@ -1878,3 +1878,38 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   **you + auto sell together** (his sale in place of the rule's on the buys he sold; the rule's sale on every other closed buy) ·
   **auto sell alone** (the card's total) · **together against auto alone**. Where the rules still hold a buy he sold, it says that buy is in
   the together total only until the rules sell it. The rules' totals are unchanged.
+
+### 27 Nov, 23:05 UK — check (publish 22:55:12, state 22:50:13)
+
+- **Fine.** Data shows 8f919e8 (Axiom links) started 22:35:08: no log error, too late 0, feed reconnects 0, GMGN limited 0, Jupiter refused 68 in
+  15 min, rate window 60 of 100, limited 0. His 23:00 screenshot shows the "together" box, so 1bcef1f is running too (pasted about 22:58; not in the data yet).
+- **Watch: memory 788 MB / 520 heap at 15 minutes** on 8f919e8 — the highest heap seen tonight (410 at 30 min on the build before). Under the
+  900 line; restarted since. Likely the site's per-selection caches (he is switching stops and stake on two devices) — not confirmed. Loop hold worst 1.24 s; no late buy.
+- He asked (23:00–23:01) whether his sales should be ADDED to auto sell's total. Explained twice: auto alone (+5.421) already holds the rule's
+  sale of the first Gold; together (+4.971) = auto on the 27 buys he left (+2.318) + his two sales (+2.653). Offered a clearer left-to-right wording; not built.
+- **Volume test: 3 buys, all VOL-REST, control 0.** ZERO −18.0%, MAYA −11.2% (now seen at 5.82× after the sale), RAURA −1.5% (20% stop).
+- **STEADY AQ1VAV — bought at all four looks; the best buy of the evening.**
+
+  | look | cap | holders | volume | fees | top 10 | bundlers | snipers | phishing | result (20 / 25 / 40%) |
+  |---|---|---|---|---|---|---|---|---|---|
+  | 5 min | $26K | 108 | $46K | 7.1 SOL | 17.0% | 16.8% | 4.0% | 0.3% | BOUGHT: +175.2% / +333.6% / +238.5% (highest 6.0×) |
+  | 10 min | $86K | 598 | $144K | 18.4 SOL | 19.2% | 15.9% | 0.2% | 2.3% | BOUGHT: +36.1% / +27.8% / +0.3% |
+  | 15 min | $107K | 776 | $238K | 27.5 SOL | 20.6% | 7.8% | 0.2% | 14.1% | BOUGHT: −19.0% / −26.1% / open |
+  | 20 min | $85K | 798 | $268K | 30.3 SOL | 21.6% | 7.6% | 0.2% | 14.5% | BOUGHT: open |
+
+  Type: high-fee coin (7 SOL at 5 minutes), few bundlers, top 10 at 17.0% — bought only because the floor went from 20% to 16% at 14:34; holders 108 against a floor of 100.
+  Follow-ups on the 5-minute look: CONFIRM-15 +126.5%, -20 +130.8%, -30 +124.3%, WAIT5-UP +35.6% (20% stop).
+- **RAURA F5NjZL — bought at 10, 15 and 20 minutes** (peak $107K): 5 min $7K / 66 holders / $10K (cap, holders, volume); 10 min $48K, 462, $81K,
+  fees 4.1, top 10 24.7%, bundlers 36.7%, snipers 5.8%, phishing 1.3% → bought (entry 1237, open at the last check); 15 min $46K, 588, $195K, fees 12.4, top 10 18.7%, bundlers 23.6%, snipers 0.4%,
+  phishing 3.4% → +37.8% / +18.4% / −4.8%; 20 min $49K, 777, $310K, fees 20.9, top 10 20.6%, bundlers 20.2%, snipers 0%, phishing 4.8% → −1.9% / −4.1% / −26.4%.
+  CONFIRM-15 +9.3%, -20 −8.6%, -30 −12.5%, WAIT5-UP +35.2%, HIT100-NOW −11.7%, VOL100K −1.5%.
+- **FOMO ZjSXr2 — missed by the looks, bought by FARM-90K (+157.1%, target) and HIT50-NOW (open)**; peak $123K at 34 min.
+  5 min $17K, 130 holders, $9K, fees 0.02, top 10 51.9%, bundlers 53.6%, snipers 31.8%, phishing 0% (volume, top holders, fees, top 10);
+  10 min $35K, 2,577, $14K, fees 0.78, top 10 39.9%, bundlers 50.3%, snipers 20.6%, phishing 9.7% (volume, top holders, fees, top 10);
+  15 min $40K, 2,565, $19K, fees 1.03, 39.4%, 50.1%, 21.0%, 11.3% (same four); 20 min $48K, 2,563, $22K, fees 1.14, 40.0%, 51.6%, 21.0%, 11.3% (same four).
+  Type: the holder pattern (2,500 holders on $14K traded) — exactly what FARM-90K is for.
+- **Grok 3WHLxg** (see 22:43): 20-minute look also refused — $135K, 1,760 holders, $288K, fees 4.35 (needs 5), top 10 7.7%, bundlers 9.5%, snipers 1.5%, phishing 6.3%. Peak now $246K.
+- Other new buys (20% stop): SpaceX 6iNMMQ FARM-90K −87.0%; SAME HIT50-NOW +17.0%; Hyperball NEW-5M −23.4%; jeff NEW-5M −34.4%; NBA RUG450 −20.9%; Nala HIT50-NOW −5.6%, NEW-10M −25.7%.
+- Since the rule change (8.23 h): four looks 122 buys −1.412 / −2.096 / −4.186 SOL; NEW-5M −0.142 / −0.141; CONFIRM-15 −0.430, -20 −0.066, -30 −0.149; WAIT5-UP 27 buys −0.211;
+  HIT50-NOW 62 buys −1.881; HIT100-NOW 18 buys −0.952 (0 won on 20%); **FARM-90K 31 buys, 28 closed, +2.021 SOL (20%) / +1.871 (25%), 32% won**;
+  5M-H300 46 buys +7.9% vs −4.3% for the other 147. Runners: reached 93, bought 19, missed 74. Entries 1267 (1065 bought).
