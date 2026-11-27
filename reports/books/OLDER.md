@@ -1831,3 +1831,26 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   sampled every 3 s, and a sale at the level needs a route at that moment (target sales so far fetched their target: +179% on a 2.76× target).
 - Proposed, NOT built (waiting for his word): leave FARM-90K as it is (it is the measurement) and add two paper books on the same buy rule,
   sale capped at 2.5× and at 3× (or the $90K target if lower); compare on new buys.
+
+### 27 Nov, 22:43 UK — he pasted Grok 3WHLxgCY…pump: bought by five HIT books, missed by the looks
+
+- Created 22:16:25 UK. Peak in the data $181K at 22:32 (5.0× the 5-minute look's cap). Publish 22:34 (the 20-minute look not yet in it).
+- **HIT books bought it five times** (20% / 25% / 40% stop): HIT50-NOW 1240 at $50K 22:23:18 **+67.5% / +67.5% / +125.7%** (highest 3.93×);
+  HIT100-NOW 1247 at $100K −22.3% / −22.3% / +4.8%; HIT50-5M 1250 at $101K −4.5% / −19.5% / +5.1%; HIT100-5M 1253 at $181K (the top) −30.5% / −30.5% / −41.0%;
+  HIT50-10M 1257 at $117K −20.1% / −19.3% / open.
+- **The new-coin looks refused it at 5, 10 and 15 minutes — two rules each time: top 10 holders under 16%, and fees just under the floor.**
+
+  | look | cap | holders | volume | fees | top 10 | bundlers | snipers | phishing | kept out by |
+  |---|---|---|---|---|---|---|---|---|---|
+  | 5 min | $36K | 875 | $82K | 1.22 SOL | 10.2% | 7.8% | 41.6% | 4.8% | top 10 (needs 16–30%), fees (needs 2) |
+  | 10 min | $75K | 1,211 | $150K | 2.37 SOL | 8.3% | 7.8% | 1.9% | 4.9% | top 10, fees (needs 3.5) |
+  | 15 min | $125K | 1,667 | $218K | 3.60 SOL | 7.7% | 8.9% | 1.4% | 5.3% | top 10, fees (needs 5) |
+
+  Type: widely held (top 10 under 11%), few bundlers, developer held 37% at 5 minutes and nothing at 10; fees growing but behind each look's floor.
+- **Context (runners list, since 26 Nov 07:33): 21 of the 74 missed $100K coins were kept out by top holders UNDER 16% at every look where cap,
+  holders and volume had passed** (Grok, Bull, Army, KETTLE, WN, KEE, SMILE, fomoDay ×2, Thanksgiving, FOMO, Buttercup, TOGI, N3ON, SpaceX, CONNIE,
+  Manager, Trust, Kuro, HSANE, WIENER); none of that group was kept out on the high side (over 30%). It is the largest single reason on the missed list.
+  The other side of it: the top-holders step has refused 4,021 coins and 49 of them reached $100K (1.2%); of 317 bought, 36 did (11%).
+  Of the look records on file with a top-holders fail, 1,902 of 2,672 are under 16%.
+- Not answered yet (offered): whether low-top-10 coins that pass a fee rule are worth a paper book of their own — needs the outcome of the
+  refused ones, not only the 21 that ran.
