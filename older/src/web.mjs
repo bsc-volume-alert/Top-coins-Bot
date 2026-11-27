@@ -4,7 +4,7 @@ import http from "node:http";
 import { gzip } from "node:zlib";
 import { bookRows, overlap } from "./report.mjs";
 import * as S from "./spec.mjs";
-import { BOOKS_PAGE, booksApi } from "./page.mjs";
+import { BOOKS_PAGE, booksApi, entryRows, rowCtx } from "./page.mjs";
 
 /** everything the bot has on record about one coin, with a one-line verdict in plain words (see /api/coin) */
 export function coinLookup({ mint, store, engine, lookup = null, run = null, now = Date.now() / 1000 }) {
@@ -41,6 +41,32 @@ export function startWeb({ port, store, engine, status, run = () => null, sell =
   // THE ANSWERS ARE KEPT PER SELECTION (stop, exit, stake, age…), each 1–2 MB, and the list was never emptied: every selector the
   // owner taps added one for the life of the program. An answer nobody has asked for in two minutes is now dropped (27 Nov 2026).
   { const put = cache.set.bind(cache); cache.set = (k, v) => { const now = Date.now(); for (const [kk, vv] of cache) if (now - (vv?.atMs ?? vv?.at ?? now) > 120_000) cache.delete(kk); return put(k, v); }; }
+  // SENT COMPRESSED (27 Nov 2026): the page itself and its three large answers. Compressed once per kept answer, off the
+  // program's own thread; a browser that does not accept it, or a failed compression, gets the plain answer as before.
+  const PAGE_HIT = { body: BOOKS_PAGE };
+  const sendZ = (req, res, type, hit) => { if (!/\bgzip\b/.test(String(req.headers["accept-encoding"] || ""))) { res.writeHead(200, { "content-type": type }); return void res.end(hit.body); }
+    hit.gz ||= new Promise((ok) => gzip(hit.body, { level: 1 }, (e, b) => ok(e ? null : b)));
+    hit.gz.then((b) => { if (b) { res.writeHead(200, { "content-type": type, "content-encoding": "gzip", vary: "accept-encoding" }); res.end(b); } else { res.writeHead(200, { "content-type": type }); res.end(hit.body); } }); };
+  // THE BOOKS ANSWER WITHOUT READING EVERY BUY AGAIN (27 Nov 2026). It used to read and unpack every buy the run has ever made from
+  // the database for each answer — about a thousand large records every 8 seconds while the site is open: a pause of the whole
+  // program each time and a great deal of memory turned over. Now, per selection:
+  //   a FINISHED buy (database flag `done`, decided more than DONE_SETTLE_S ago) is read ONCE and its page rows are kept;
+  //   an unfinished buy is taken from the program's own memory (the same object /api/live shows) — no database read;
+  //   anything else (finished moments ago; unfinished but not in memory) is read from the database for this answer only.
+  // The rows are built by the same function as before (page.entryRows), so the answer is the same. A kept row of a finished
+  // buy carries no sell button (a finished buy cannot be sold). Kept rows of a selection not asked for in 15 minutes are dropped.
+  const KEPT = new Map(), DONE_SETTLE_S = 600, stats = { answers: 0, read: 0, kept: 0, live: 0 };
+  const booksOf = (sel, ck) => { const opts = { ...sel, since: store.since ? store.since(Date.now() / 1000) : null, build: BUILD, run: run(), sellable: !!(KEY && sell) };
+    if (!store.entryFlags || !store.entriesByIds || !engine?.entries?.get) return booksApi(store.allEntries(), opts); // a store without the two readers: as before
+    const nowMs = Date.now(), sig = JSON.stringify(opts.run?.books ?? null); for (const [k, v] of KEPT) if (nowMs - v.atMs > 900_000) KEPT.delete(k);
+    let K = KEPT.get(ck); if (!K || K.sig !== sig) { K = { sig, rows: new Map() }; KEPT.set(ck, K); } K.atMs = nowMs;
+    const C = rowCtx(opts), flags = store.entryFlags(), settled = nowMs / 1000 - DONE_SETTLE_S, need = [], loose = [];
+    for (const f of flags) { if (f.done && f.t < settled) { if (!K.rows.has(f.id)) need.push(f.id); } else if (!engine.entries.get(f.id)) loose.push(f.id); }
+    if (need.length) for (const e of store.entriesByIds(need)) { const R = entryRows(e, C); for (const x of R) delete x[1].sell; K.rows.set(e.id, R); }
+    const L = new Map(loose.length ? store.entriesByIds(loose).map((e) => [e.id, e]) : []), list = [];
+    for (const f of flags) { if (f.done && f.t < settled) list.push({ __rows: K.rows.get(f.id) || [] }); else { const e = engine.entries.get(f.id) ?? L.get(f.id); if (e) list.push(e); } }
+    stats.answers++; stats.read += need.length + loose.length; stats.kept = K.rows.size; stats.live = list.length - K.rows.size - loose.length;
+    return booksApi(list, opts); };
   const server = http.createServer((req, res) => {
     const u = new URL(req.url, "http://x");
     if (KEY && (u.searchParams.get("k") || u.searchParams.get("key")) !== KEY) { res.writeHead(403); return res.end("key required"); }
@@ -64,28 +90,24 @@ export function startWeb({ port, store, engine, status, run = () => null, sell =
     // the new-coin books' waiting list and every check they made of the coin, every paper buy of it by any book, and the pool
     // books' latest recorded reasons for not buying it.
     if (u.pathname === "/api/runners") { let hit = cache.get("runners"); if (!hit || Date.now() - hit.atMs > 10000) { let j; try { j = runners ? runners() : { on: false }; } catch (e) { j = { on: false, why: String(e.message).slice(0, 160) }; } hit = { atMs: Date.now(), body: JSON.stringify(j) }; cache.set("runners", hit); }
-      res.writeHead(200, { "content-type": "application/json" }); return res.end(hit.body); } // read-only, from the bot's own records; rebuilt at most every 10 s
+      return sendZ(req, res, "application/json", hit); } // read-only, from the bot's own records; rebuilt at most every 10 s
     if (u.pathname === "/api/coin") { const mint = (u.searchParams.get("mint") || "").trim(), j = (code, o) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(o)); };
       if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(mint)) return j(400, { ok: false, why: "that is not a coin address" });
       try { return j(200, coinLookup({ mint, store, engine, lookup, run: run() })); } catch (e) { return j(500, { ok: false, why: String(e.message).slice(0, 160) }); } }
     if (u.pathname === "/api/books") { // one stop / exit policy / age group / population at a time; cached 8 s per selection
       const sk = Number(u.searchParams.get("stake")), sel = { stop: Number(u.searchParams.get("stop") || 0.25), policy: S.POLICIES.includes(u.searchParams.get("policy")) ? u.searchParams.get("policy") : "trail", ag: u.searchParams.get("ag") || "", pop: u.searchParams.get("pop") || "", stake: S.STAKE_VIEWS.includes(sk) ? sk : S.STAKE_SOL, first: u.searchParams.get("buys") === "first", checks: ["pass", "late"].includes(u.searchParams.get("chk")) ? u.searchParams.get("chk") : "all" }, ck = "b|" + JSON.stringify(sel);
-      let hit = cache.get(ck); if (!hit || Date.now() - hit.atMs > 8000) { hit = { atMs: Date.now(), body: JSON.stringify(booksApi(store.allEntries(), { ...sel, since: store.since ? store.since(Date.now() / 1000) : null, build: BUILD, run: run(), sellable: !!(KEY && sell) })) }; cache.set(ck, hit); }
-      // SENT COMPRESSED (27 Nov 2026: about 1 MB every 10 seconds to a tablet): compressed once per cached answer, off the
-      // program's own thread; a browser that does not accept it, or a failed compression, gets the plain answer as before.
-      if (!/\bgzip\b/.test(String(req.headers["accept-encoding"] || ""))) { res.writeHead(200, { "content-type": "application/json" }); return res.end(hit.body); }
-      hit.gz ||= new Promise((ok) => gzip(hit.body, { level: 1 }, (e, b) => ok(e ? null : b)));
-      return void hit.gz.then((b) => { if (b) { res.writeHead(200, { "content-type": "application/json", "content-encoding": "gzip", vary: "accept-encoding" }); res.end(b); } else { res.writeHead(200, { "content-type": "application/json" }); res.end(hit.body); } }); }
+      let hit = cache.get(ck); if (!hit || Date.now() - hit.atMs > 8000) { hit = { atMs: Date.now(), body: JSON.stringify(booksOf(sel, ck)) }; cache.set(ck, hit); }
+      return sendZ(req, res, "application/json", hit); }
     // THE PAGE'S HEALTH STRIP (27 Nov 2026): it asked for the whole state every 10 seconds — 1.5 MB, and a full build of every
     // result row on the bot — to show a few status figures. This answers with those figures only; nothing else is built.
     if (u.pathname === "/api/health") { let hit = cache.get("health"); if (!hit || Date.now() - hit.atMs > 5000) { hit = { atMs: Date.now(), body: JSON.stringify({ at: Date.now(), status: status(), disk: store.disk() }) }; cache.set("health", hit); }
-      res.writeHead(200, { "content-type": "application/json" }); return res.end(hit.body); }
+      return sendZ(req, res, "application/json", hit); }
     if (u.pathname === "/table") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(PAGE); }
     if (u.pathname === "/api/state") { res.writeHead(200, { "content-type": "application/json" }); return res.end(JSON.stringify(state(u.searchParams.get("pop") || ""))); }
-    if (u.pathname === "/") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(BOOKS_PAGE); }
+    if (u.pathname === "/") return sendZ(req, res, "text/html; charset=utf-8", PAGE_HIT);
     res.writeHead(404); res.end();
   }).listen(port, () => console.log(`[web] :${port}`));
-  return { state, server, cached: () => cache.size };
+  return { state, server, cached: () => cache.size, books: () => ({ ...stats, selections: KEPT.size }) };
 }
 
 const PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Older Coins Books</title>

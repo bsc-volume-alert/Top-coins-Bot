@@ -30,8 +30,11 @@ test("/api/books is sent compressed to a browser that accepts it — the same co
 
 test("the page: asks for the light health answer, replaces only the parts of a card that changed, never redraws under a finger, and writes each time with one shared formatter", () => {
   assert.ok(BOOKS_PAGE.includes("fetch('/api/health?'")); assert.ok(!BOOKS_PAGE.includes("fetch('/api/state?'+q2)"), "the page no longer downloads the whole state");
-  assert.ok(BOOKS_PAGE.includes("data-sig")); assert.ok(BOOKS_PAGE.includes("PARTS[c[0]+'|'+i]!==p"), "a part is rebuilt only when its content changed"); assert.ok(!BOOKS_PAGE.includes("document.getElementById('books').innerHTML=h"), "the whole list is not rebuilt at every update");
-  assert.ok(BOOKS_PAGE.includes("Date.now()-BUSY<1000")); for (const ev of ["touchstart", "touchmove", "scroll", "wheel"]) assert.ok(BOOKS_PAGE.includes("'" + ev + "'"));
+  assert.ok(BOOKS_PAGE.includes("data-sig")); assert.ok(BOOKS_PAGE.includes("PARTS[c[0]+'|0']!==c[1]") && BOOKS_PAGE.includes("PARTS[k+'|1']!==p1"), "a part is rebuilt only when its content changed"); assert.ok(!BOOKS_PAGE.includes("document.getElementById('books').innerHTML=h"), "the whole list is not rebuilt at every update");
+  assert.ok(BOOKS_PAGE.includes("Date.now()-BUSY<1000")); for (const ev of ["touchmove", "scroll", "wheel"]) assert.ok(BOOKS_PAGE.includes("'" + ev + "'")); assert.ok(!BOOKS_PAGE.includes("'touchstart'"), "a tap is not a scroll: it must not hold a redraw back");
+  // only the cards on or near the screen carry their tables; a selector tap is immediate; the other panels wait for a still page too
+  assert.ok(BOOKS_PAGE.includes("new IntersectionObserver(")); assert.ok(BOOKS_PAGE.includes("rootMargin:'1200px 0px 1200px 0px'")); assert.ok(BOOKS_PAGE.includes("if(NEAR[c[0]])fill(c[0])")); assert.ok(BOOKS_PAGE.includes("else CARDS.forEach(function(c){NEAR[c[0]]=1;fill(c[0])})"), "without the observer every card is filled, as before");
+  assert.ok(BOOKS_PAGE.includes("FORCE=Date.now()")); assert.ok(BOOKS_PAGE.includes("Date.now()-FORCE>4000")); assert.ok(BOOKS_PAGE.includes("var healthC=calm(health)")); assert.ok(BOOKS_PAGE.includes("var RNC=calm(RN)")); assert.ok(BOOKS_PAGE.includes("while(SEENQ.length>4)"));
   assert.ok(!/toLocale(Time)?String\('en-GB',\{timeZone/.test(BOOKS_PAGE.split("function ukDayStart")[0].split("var TF=")[1] || "x"), "DT / HM / UKT use the shared formatters"); assert.ok(BOOKS_PAGE.includes("function DT(ts){return TFM('d',ts)}"));
   // the script still parses
   const js = BOOKS_PAGE.split("<script>").slice(1).map((x) => x.split("</script>")[0]).join("\n"); assert.doesNotThrow(() => new Function(js));
@@ -56,4 +59,31 @@ test("the site's kept answers do not pile up: one per selection asked for in the
     const real = Date.now; Date.now = () => real() + 130_000; t.after(() => { Date.now = real; });
     await get(s.port, "/api/books?stop=0.5"); assert.equal(s.w.cached(), 1, "the four answers nobody asked for again are gone"); await get(s.port, "/api/health"); assert.equal(s.w.cached(), 2);
   } finally { s.w.server.close(); }
+});
+
+// THE BOOKS ANSWER WITHOUT READING EVERY BUY AGAIN (owner 27 Nov 2026 16:52 UK: "can you make it really super fast?")
+test("the books answer keeps the rows of finished buys and reads only what it must — and is the same answer as reading every buy", async (t) => {
+  const { mkdtempSync } = await import("node:fs"), { tmpdir } = await import("node:os"), { join } = await import("node:path");
+  const { Store } = await import("../src/store.mjs"), { newEntry, COST } = await import("../src/book.mjs"), { booksApi } = await import("../src/page.mjs"), S = await import("../src/spec.mjs");
+  const store = new Store(join(mkdtempSync(join(tmpdir(), "older-fast-")), "t.db")), now = Date.now() / 1000, engine = { entries: new Map() };
+  const mk = (i, fam, ago, kind) => { const e = newEntry({ mint: "Mint" + i + "x".repeat(38), pool: "P", ag: "A1", t: now - ago, families: [fam], features: {}, mc: 50_000 + i, px: 1 }); e.token = { symbol: "C" + i, xfer_bps: 0 }; e.evidence = { trigger: {} };
+    if (kind === "cancelled") { e.status = "cancelled"; e.flags.push("pricing/data timeout"); }
+    else { e.status = "filled"; e.fill = { t: now - ago + 1, tok: 1e6, delay_s: 0.1, exec: "reconstructed-pool-state", quote_sol: 100, base: 1e9, px_sol: 2e-7, fee_src: "event" };
+      for (const v of e.versions) { v.tok = 1e6; v.peak = COST; v.maxX = 1.2; if (kind !== "open") { v.status = "closed"; v.reason = "trail"; v.exit = { t: now - ago + 90, ret: -0.2 + i / 100, sol: COST * (0.8 + i / 100), last_sol: COST * (0.8 + i / 100), hold_s: 89, delay_s: 0 }; } else { v.lastX = 1.1; v.lastT = now; } }
+      if (kind === "done") e.runner.horizonDone = true; }
+    store.saveEntry(e); return e; };
+  const A = mk(1, "VOL100K", 7200, "done"), B = mk(2, "VOL300K", 3600, "cancelled"), C = mk(3, "VOL100K", 300, "open"), D = mk(4, "RUG450", 120, "done"), E = mk(5, "VOL500K", 5000, "closed"); engine.entries.set(C.id, C);
+  assert.deepEqual(store.entryFlags().map((f) => [f.id, f.done]), [[A.id, 1], [B.id, 1], [C.id, 0], [D.id, 1], [E.id, 0]]); assert.deepEqual(store.entriesByIds([E.id, A.id]).map((e) => e.id), [A.id, E.id]);
+  const runInfo = { books: ["VOL100K", "VOL300K", "VOL500K", "RUG450"] }, w = startWeb({ port: 0, store, engine, status: () => ({}), run: () => runInfo }); await new Promise((r) => w.server.once("listening", r)); const port = w.server.address().port;
+  try {
+    const strip = (j) => { const o = JSON.parse(JSON.stringify(j)); o.at = 0; o.build = null; for (const L of Object.values(o.books)) for (const r of L) delete r.sell; return o; };
+    const fast = JSON.parse((await get(port, "/api/books?stop=0.25")).body), slow = booksApi(store.allEntries(), { stop: 0.25, policy: "trail", ag: "", pop: "", stake: S.STAKE_SOL, first: false, checks: "all", since: store.since(now), run: runInfo, sellable: false });
+    assert.deepEqual(strip(fast), strip(slow)); assert.equal(fast.books.VOL100K.length, 2); assert.equal(fast.books.VOL300K[0].status, "cancelled"); assert.equal(fast.books.RUG450.length, 1); assert.equal(fast.books.VOL500K.length, 1);
+    assert.deepEqual(w.books(), { answers: 1, read: 4, kept: 2, live: 1, selections: 1 }, "A and B read once and kept; D (finished two minutes ago) and E (not in memory) read for this answer; C from memory");
+    const real = Date.now; Date.now = () => real() + 9000; t.after(() => { Date.now = real; });
+    C.versions.find((v) => v.policy === "trail" && v.stop === 0.25).lastX = 1.5; // the open buy moves in memory: no save, no read
+    const again = JSON.parse((await get(port, "/api/books?stop=0.25")).body); assert.equal(w.books().read, 6, "only D and E are read again — the kept buys are not"); assert.equal(again.books.VOL100K.find((r) => r.id === C.id).now_x, 1.5);
+    await get(port, "/api/books?stop=0.4"); assert.equal(w.books().selections, 2); assert.equal(w.books().read, 10, "a new selection reads the finished buys once");
+    for (const p of ["/", "/api/health", "/api/runners"]) { const z = await get(port, p, { "accept-encoding": "gzip" }), plain = await get(port, p); assert.equal(z.headers["content-encoding"], "gzip", p); assert.equal(plain.headers["content-encoding"], undefined); assert.equal(gunzipSync(z.body).toString(), plain.body.toString(), p); }
+  } finally { w.server.close(); }
 });
