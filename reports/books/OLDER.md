@@ -1900,7 +1900,7 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   Type: high-fee coin (7 SOL at 5 minutes), few bundlers, top 10 at 17.0% — bought only because the floor went from 20% to 16% at 14:34; holders 108 against a floor of 100.
   Follow-ups on the 5-minute look: CONFIRM-15 +126.5%, -20 +130.8%, -30 +124.3%, WAIT5-UP +35.6% (20% stop).
 - **RAURA F5NjZL — bought at 10, 15 and 20 minutes** (peak $107K): 5 min $7K / 66 holders / $10K (cap, holders, volume); 10 min $48K, 462, $81K,
-  fees 4.1, top 10 24.7%, bundlers 36.7%, snipers 5.8%, phishing 1.3% → bought (entry 1237, open at the last check); 15 min $46K, 588, $195K, fees 12.4, top 10 18.7%, bundlers 23.6%, snipers 0.4%,
+  fees 4.1, top 10 24.7%, bundlers 36.7%, snipers 5.8%, phishing 1.3% → −18.5% / −25.5% / −72.8%; 15 min $46K, 588, $195K, fees 12.4, top 10 18.7%, bundlers 23.6%, snipers 0.4%,
   phishing 3.4% → +37.8% / +18.4% / −4.8%; 20 min $49K, 777, $310K, fees 20.9, top 10 20.6%, bundlers 20.2%, snipers 0%, phishing 4.8% → −1.9% / −4.1% / −26.4%.
   CONFIRM-15 +9.3%, -20 −8.6%, -30 −12.5%, WAIT5-UP +35.2%, HIT100-NOW −11.7%, VOL100K −1.5%.
 - **FOMO ZjSXr2 — missed by the looks, bought by FARM-90K (+157.1%, target) and HIT50-NOW (open)**; peak $123K at 34 min.
