@@ -1679,3 +1679,38 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   topic buttons above the ranking shows one topic alone (tap again or ALL to go back). Green / red / amber / lime not used (up / down / sold by you / NEW).
   Checked on a local copy of the live data: 37 cards, no page error, the buttons filter and restore.
 - Waiting for his paste: 0f48f4c (old volume cards hidden) + 8ce9609 (topics).
+
+### 27 Nov, 21:26 UK — check (state 21:19:20)
+
+- **Fine.** 340aa78, started 20:49:14, no restart since; no error in the log; memory 622 MB / 369 heap; too late 0; feed reconnects 0;
+  Jupiter refused quotes 128 in 30 min (4.3 a minute), rate window 61 of 100, limited 0; GMGN limited 0; status dump 501–520 ms. Entries 1201 (999 bought).
+- Owner 21:25: "all the data just disappeared for a second" — no restart or error up to 21:19 explains it; not yet known whether he pasted
+  0f48f4c / 8ce9609 after 21:19 (a restart empties the page for a few seconds). He also said: colour coordination important, "ascending
+  order of profit" important — told him the ranking is already most profitable first (also inside a topic), purple cards pinned first; asked which he wants if different.
+- **Volume test: 1 buy.** ZERO 3WsqUN (1196, VOL100K, 20:54:19, cap $621K): 1,056 buyers, cap/ATH fine → passes both rug checks;
+  holders +42% in 5 min (needs over 70%) → **VOL-REST**, not control; type operator (bundlers 65.5%, snipers 65.5%), fees 0.26 SOL,
+  top 10 44.5%. 20% stop: −18.0%. Control buys 0 (first look at 30).
+- **MoonBoy GXjSWD — bought at three looks, a runner (top ≈ $760K = 8.4× the 5-minute buy).**
+
+  | look | cap | holders | volume | fees | top 10 | bundlers | snipers | phishing | result |
+  |---|---|---|---|---|---|---|---|---|---|
+  | 5 min | $90K | 709 | $178K | 21.5 SOL | 16.2% | 49.0% | 4.2% | 5.9% | BOUGHT: 20% −24.0%, 25% −21.9%, **40% +390.9%** |
+  | 10 min | $237K | 1,228 | $358K | 39.0 SOL | 17.7% | 52.5% | 4.2% | 7.1% | BOUGHT: 20% +200.2%, 25% +141.6%, 40% +141.6% |
+  | 15 min | $336K | 1,691 | $534K | 55.0 SOL | 16.3% | 46.2% | 4.2% | 6.4% | BOUGHT: 20% +71.2%, 25% +71.2%, 40% +43.2% |
+  | 20 min | $562K | 2,620 | $915K | 96.8 SOL | 14.1% | 47.0% | 4.2% | 7.6% | not bought: top 10 14.1% and Jupiter's 14.8% (need 16–30%) |
+
+  Type: high-fee organic runner with ~50% bundlers; top 10 16–18% — inside the 16–20% band the old 20% floor refused. On the 5-minute buy
+  the 20% and 25% stops sold at a loss before the run; only the 40% stop held. Follow-ups: WAIT5-UP +137.7%, CONFIRM-15 +49.1%, -20 +73.3%, -30 +26.5% (20% stop).
+- **inuvest EJTf8B — missed** (a second coin of that name; top $195K at 7 min, $1.5K by 15 min: a rug).
+
+  | look | cap | holders | volume | fees | top 10 | bundlers | snipers | phishing | kept out by |
+  |---|---|---|---|---|---|---|---|---|---|
+  | 5 min | $2K | 2 | $947 | – | – | – | – | – | cap, holders, volume |
+  | 10 min | $168K | 197 | $40K | 0.10 SOL | 52.0% | 83.7% | 0% | 0.04% | volume, top holders 53.2%, fees, top 10 |
+  | 15 min | $1.5K | 14 | $67K | – | – | – | – | – | cap, holders, volume |
+  | 20 min | $1.3K | 15 | $67K | – | – | – | – | – | cap, holders, volume |
+
+- Other new buys: SNIBBU NEW-10M −20.1%; CATE 6J9dkt and SPACEXLIFE FARM-90K open; Meta iUZTXg FARM-90K −87.8%.
+- Since the rule change (6.48 h): four looks 102 buys −1.252 / −2.248 / −3.724 SOL (20/25/40%); CONFIRM-15 −0.535, -20 −0.275, -30 −0.373;
+  WAIT5-UP 23 buys −0.222; HIT50-NOW 47 buys −1.583; HIT100-NOW 15 buys −0.851; **FARM-90K 25 buys, 22 closed, +0.974 SOL on 20%** (+0.823 on 25%);
+  5M-H300 45 buys +9.0% (median −8.6%) vs −5.0% for the other 141. Runners: reached 89, bought 17, missed 72. 25% stop on all new-coin-side buys: 414 closed, 104 won, avg −6.0%.
