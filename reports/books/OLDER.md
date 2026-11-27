@@ -1130,3 +1130,12 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   - Accuracy (n=134): median 4.3%, mean 8.0%, 36 over 10% (27%). Buy-price against trailing (25%, n=133): −32.6% against −7.4%.
   - 25% stop: 265 closed, 66 won, average −3.0%, median −21.8%. 40%: 54 won, −8.9%. 60%: 32 won, −35.1%.
   - Tally: volume 2,593 → 61, top holders (Jupiter) 2,022 → 37, market cap 156,053 → 24, holders 3,156 → 20, top 10 (GMGN) 86 → 17, fees 232 → 13, bought 159 → 16.
+- **27 Nov 04:01 UK — 30-minute check (state 03:56:20 UTC, publish 03:58:59; code 20653a2, up 10 h 40 min; not restarted).** Bot up, no new feed drop (3). Memory 705 MB / 319 heap. Jupiter 250 requests a minute, limited 0, errors 0. GMGN: no new refused buy reading (319 / 316 / 3; limited 7, banned 0). Error log empty.
+  - **Status-dump stall 3.35–3.85 s every five minutes (03:16: 3.26–3.44 s; 02:46: 2.78–3.12 s).** Still growing by 0.2–0.4 s per half hour; under the 5-second line for repeating the restart lines. Not repeated to him (asleep; told at 03:28).
+  - 5 new new-coin buys (270 in all), none won so far: DAWKOIN B4xwHU 5M $12.0K −10.2% (40% −37.5%; highest 1.21×); LOOM EowA8g 5M $25.9K −34.7% (noticed 22% past the stop; never above the buy price); LOOM ELQkmQ (a different coin) 10M $21.2K −28.2% (40% −47.3%) **and again by 15M five minutes later at $18.6K: −23.2% (40% −57.0%)**; hugo CnQvqC 10M $24.6K −18.7% (40% row open).
+  - **New runner on the list: LUMINARE Eomygb — a slow climber, $37K at 5 min, $50K at 10, $87K at 15, $108K at 16 min 23 s (03:54:09).** Not bought at any look: holders 73 / 117 / 154 (need 100 / 150 / 200), volume $7K / $24K / $52K (need $30K / $50K / $100K), fees 0.02 / 0.06 / 0.11 SOL (need 2 / 3.5 / 5), top holders 51.6% / 36.5% / 22.4%, top 10 50.7% / 35.2% / 22.0%; bundlers 8–9%, phishing 0–0.5%; the creator held 28.5% at 5 minutes and 0.1% at 15 (sold on the way up). What it did after 03:54 is not yet published.
+  - Thanksgiving and SMILE: nothing new in the published files since 03:28.
+  - Runners: 50 reached, 7 bought, 43 missed, 2 later.
+  - Accuracy (n=139): median 4.3%, mean 8.0%, 37 over 10% — unchanged with the longer stall. Buy-price against trailing (25%, n=137): −32.5% against −7.9%.
+  - 25% stop: 270 closed, 66 won, average −3.3%, median −21.9%. 40%: 269 closed, 54 won, −9.4%. 60%: 32 won, −35.5%.
+  - Tally: volume 2,675 → 61, top holders (Jupiter) 2,085 → 37, market cap 160,367 → 24, holders 3,241 → 23, top 10 (GMGN) 89 → 17, fees 242 → 13, bought 164 → 16.
