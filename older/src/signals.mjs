@@ -43,7 +43,7 @@ export function features(coin, o, low, hi1h, p15) {
 /** HIT books (spec HIT): the bookkeeping, on EVERY observation of a coin whose migration this process watched — whether or not
  *  a buy could be made at that moment (a coin whose transfer fee is still unread is followed all the same, so that a crossing
  *  seen then is never mistaken later for "first observed over the line"). Pure. `migT` = the pool-creation second.
- *  coin.hit = { firstT, late, lines: { [line]: { under, over, overMc, lost, t, mc, prevMc, since } } } */
+ *  coin.hit = { firstT, late, lines: { [line]: { under, over, overMc, lost, t, mc, prevMc, since, unbroken } } } */
 export function hitTrack(coin, o, migT) {
   const t = o.t, since = t - migT, sr = coin.series, H = (coin.hit ||= { firstT: t, late: since > S.HIT_START_S, lines: {} });
   for (const line of S.HIT_LINES) { const h = (H.lines[line] ||= { under: false, over: false, lost: H.late ? "not watched from its migration" : null, t: null });
@@ -52,8 +52,12 @@ export function hitTrack(coin, o, migT) {
     if (o.mc < line) { h.under = true; continue; }
     if (!h.under) { h.over = true; h.overMc = o.mc; continue; }
     const prevOk = sr.prevT !== null && sr.prevT < t && sr.covered(sr.prevT, t, true), prevMc = sr.prevPx * coin.supply;
-    if (!prevOk || !(prevMc < line) || !sr.covered(H.firstT, t, true)) { h.lost = "reached the line during a stretch that was not observed"; continue; }
-    h.t = t; h.mc = o.mc; h.prevMc = prevMc; h.since = since; }
+    if (!prevOk || !(prevMc < line)) { h.lost = "reached the line during a stretch that was not observed"; continue; }
+    // 27 Nov 14:05 UK: in their first hour live the books bought nothing in 34 migrations. A hit used to be refused unless EVERYTHING
+    // since the coin's first observation had been observed; a fresh busy pool almost always has a short break on record (the hour
+    // counted 609 of them), so nearly every hit was refused. The crossing itself must still be observed from the trade before it
+    // (prevOk, strict). Whether the whole stretch since the first observation was unbroken is now RECORDED on the buy instead.
+    h.t = t; h.mc = o.mc; h.prevMc = prevMc; h.since = since; h.unbroken = sr.covered(H.firstT, t, true); }
   return H;
 }
 
@@ -85,7 +89,7 @@ export function evaluate(coin, o, opts = {}) {
       if (h.t === null) { if (wait === 0 && h.over) note(family, "at or over the line when first observed after its migration: it never hit the line in front of us (not bought)", { line_usd: line, mc: Math.round(h.overMc) });
         else if (wait === 0 && h.lost && h.lost.startsWith("reached")) note(family, h.lost + " (not bought)", { line_usd: line });
         continue; }
-      const base = { line_usd: line, wait_s: wait, hit_t: +h.t.toFixed(3), hit_mc: Math.round(h.mc), prev_mc: Math.round(h.prevMc), since_mig_s: Math.round(h.since), vol_since_mig_usd: (() => { const v = sr.volSince(opts.hit.migT); return v == null ? null : Math.round(v); })() };
+      const base = { line_usd: line, wait_s: wait, hit_t: +h.t.toFixed(3), hit_mc: Math.round(h.mc), prev_mc: Math.round(h.prevMc), since_mig_s: Math.round(h.since), unbroken_since_first: !!h.unbroken, vol_since_mig_usd: (() => { const v = sr.volSince(opts.hit.migT); return v == null ? null : Math.round(v); })() };
       if (wait === 0) { if (h.t === t && can(family)) cand(family, base); continue; }
       if (h["w" + wait] || t < h.t + wait) continue; // judged once, at the first observation at or after the end of the wait
       const d = { ...base, late_s: +(t - h.t - wait).toFixed(1), mc_at_wait: Math.round(o.mc) };

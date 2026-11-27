@@ -315,6 +315,10 @@ export class Engine {
     // The bookkeeping (hitTrack) sees every observation; a buy is only possible when _decide's ordinary safety checks pass.
     if (this.hitOn && c.migT != null && c.supply && ev.t - c.migT <= S.HIT_WINDOW_S + S.HIT_WAIT_MAX_S + 3600) {
       const oh = { t: ev.t, px, mc: px * c.supply, liqUsd: liquidityUsd(st, su), rtImpact: staticImpact(st) }, H = hitTrack(c, oh, c.migT);
+      // what became of each followed coin at each line, counted once (published with the engine's figures: the notes are not)
+      for (const [l, h] of Object.entries(H.lines)) { if (h.counted) continue; const k = h.t !== null ? "hit" : h.over ? "first_seen_over" : h.lost ? (h.lost.startsWith("reached") ? "crossing_not_observed" : h.lost.startsWith("not watched") ? "not_from_migration" : "window_over") : null; if (!k) continue; h.counted = true;
+        const S2 = (this.stats.hit ||= {}), L2 = (S2[l] ||= {}); L2[k] = (L2[k] || 0) + 1; if (k === "hit" && !h.unbroken) L2.hit_with_a_break_before = (L2.hit_with_a_break_before || 0) + 1; if (k === "hit" && h.since <= 60) L2.hit_first_minute = (L2.hit_first_minute || 0) + 1; }
+      if (!H.cnt) { H.cnt = true; (this.stats.hit ||= {}).followed = (this.stats.hit.followed || 0) + 1; }
       const due = Object.values(H.lines).some((h) => h.t !== null && (h.t === ev.t || S.HIT.some(([, , w]) => w > 0 && !h["w" + w] && ev.t >= h.t + w)));
       if (due || Object.values(H.lines).some((h) => (h.over || h.lost) && !h.noted)) { // only when there is something to buy, judge or record: not one evaluation per trade of every new pool
         for (const h of Object.values(H.lines)) if (h.over || h.lost) h.noted = true;

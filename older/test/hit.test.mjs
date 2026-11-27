@@ -19,7 +19,7 @@ test("the six books exist, are off in a legacy and an older-11 run, and each has
 test("buy at once: a migrated coin seen under the line is bought at the first trade at or over it — $50K, then $100K — with no creation time known, once per book", () => {
   const e = mk(); swap(e, T0 + 2, 30_000); swap(e, T0 + 10, 42_000); assert.equal(e.entries.size, 0, "under both lines: nothing");
   swap(e, T0 + 20, 61_000, { sol: 50 }); const a = of(e, "HIT50-NOW"); assert.equal(a.length, 1); assert.equal(a[0].ag, "A0"); assert.deepEqual(a[0].families, ["HIT50-NOW"]); assert.equal(Math.round(a[0].signalMc), 61_000);
-  const d = det(a[0], "HIT50-NOW"); assert.equal(d.line_usd, 50_000); assert.equal(d.wait_s, 0); assert.equal(d.hit_mc, 61_000); assert.equal(d.prev_mc, 42_000); assert.equal(d.since_mig_s, 20); assert.ok(d.vol_since_mig_usd >= 5000, "volume since the pool opened: " + d.vol_since_mig_usd);
+  const d = det(a[0], "HIT50-NOW"); assert.equal(d.line_usd, 50_000); assert.equal(d.wait_s, 0); assert.equal(d.hit_mc, 61_000); assert.equal(d.prev_mc, 42_000); assert.equal(d.since_mig_s, 20); assert.equal(d.unbroken_since_first, true); assert.ok(d.vol_since_mig_usd >= 5000, "volume since the pool opened: " + d.vol_since_mig_usd);
   assert.equal(a[0].features.age_s, null, "no creation time: the age is unknown, never a made-up number"); assert.equal(a[0].evidence.trigger.since_mig_s, 20); assert.equal(a[0].age_basis, "migration (pool-creation event seen by the feed)");
   assert.equal(of(e, "HIT100-NOW").length, 0);
   swap(e, T0 + 30, 95_000); swap(e, T0 + 40, 130_000); const b = of(e, "HIT100-NOW"); assert.equal(b.length, 1); assert.equal(det(b[0], "HIT100-NOW").prev_mc, 95_000); assert.equal(det(b[0], "HIT100-NOW").since_mig_s, 40);
@@ -47,7 +47,10 @@ test("never bought: a coin first seen at or over the line; a coin not watched fr
   const b = mk(); swap(b, T0 + 1, 70_000); swap(b, T0 + 5, 90_000); swap(b, T0 + 9, 110_000); assert.equal(of(b, "HIT50-NOW").length, 0, "opened over $50K"); assert.equal(of(b, "HIT100-NOW").length, 1, "…but it did hit $100K");
   const c = mk(); swap(c, T0 + 200, 30_000); swap(c, T0 + 210, 60_000); assert.equal(c.entries.size, 0, "first observed more than two minutes after the migration");
   const d = mk(); swap(d, T0 + 5, 30_000); d.feedDown(T0 + 10); d.feedUp(T0 + 40); swap(d, T0 + 45, 60_000); swap(d, T0 + 50, 40_000); swap(d, T0 + 55, 65_000); assert.equal(d.entries.size, 0, "the feed was down between the last trade under the line and the first over it");
-  assert.match(notes(d, "HIT50-NOW")[0], /stretch that was not observed/);
+  assert.match(notes(d, "HIT50-NOW")[0], /stretch that was not observed/); assert.equal(d.stats.hit[50000].crossing_not_observed, 1);
+  // 27 Nov 14:05 UK: a break EARLIER than the trade before the crossing no longer refuses the hit — it is recorded on the buy
+  const g = mk(); swap(g, T0 + 5, 30_000); g.feedDown(T0 + 6); g.feedUp(T0 + 8); swap(g, T0 + 10, 35_000); swap(g, T0 + 15, 60_000); const hg = of(g, "HIT50-NOW"); assert.equal(hg.length, 1, "bought: the crossing itself was observed from the trade before it");
+  assert.equal(det(hg[0], "HIT50-NOW").unbroken_since_first, false); assert.equal(det(hg[0], "HIT50-NOW").prev_mc, 35_000); assert.deepEqual(g.stats.hit, { followed: 1, 50000: { hit: 1, hit_with_a_break_before: 1, hit_first_minute: 1 } });
   const off = mk({}, null); swap(off, T0 + 5, 30_000); swap(off, T0 + 15, 60_000); swap(off, T0 + 25, 120_000); assert.equal(off.entries.size, 0, "legacy run: the books are off"); assert.equal(off.stats.hitEvals, undefined, "…and not even evaluated");
   const one = mk({}, ["HIT100-NOW"]); swap(one, T0 + 5, 30_000); swap(one, T0 + 15, 60_000); swap(one, T0 + 25, 120_000); assert.deepEqual([...one.entries.values()].map((x) => x.families.join()), ["HIT100-NOW"], "only the book the run switched on");
   const old = mkEngine(); old.feedUp(T0 - 60); old.setBooks(S.HIT_BOOKS); old.coin(M, { pool: "PoolA" }); swap(old, T0 + 5, 30_000); swap(old, T0 + 15, 60_000); assert.equal(old.entries.size, 0, "a pool whose creation was not seen is not followed");
