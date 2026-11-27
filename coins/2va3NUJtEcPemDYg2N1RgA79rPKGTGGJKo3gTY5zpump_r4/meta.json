@@ -1,0 +1,66 @@
+{
+ "id": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump_r4",
+ "mint": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump",
+ "label": "WOOPY-after",
+ "request": {
+  "mint": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump",
+  "label": "WOOPY-after",
+  "from": "2026-11-27T11:11:00Z",
+  "to": "2026-11-27T16:52:07Z",
+  "mc": "200000",
+  "max": "200000",
+  "hold": "0",
+  "top": "0",
+  "run": "4",
+  "id": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump_r4"
+ },
+ "finished": "2026-11-27T16:52:59.007Z",
+ "seconds": 30,
+ "source": "getTransactionsForAddress",
+ "window": {
+  "from": "2026-11-27T11:11:00Z",
+  "to": "2026-11-27T16:52:07Z",
+  "first_tx": "2026-11-27T11:11:00Z",
+  "last_tx_read": "2026-11-27T16:51:10Z"
+ },
+ "supply": 998914240.940612,
+ "sol_usd": 72.345,
+ "last_price_sol": 6.070040697399058e-8,
+ "last_price_time": "2026-11-27T16:51:10Z",
+ "last_mc_usd": 4387,
+ "mc_line_usd": 200000,
+ "reached_line_at": "2026-11-27T11:11:00Z",
+ "reached_line_mc": 501816,
+ "low_mc_usd": 20,
+ "peak_mc_usd_in_read": 43315089747244,
+ "counts": {
+  "signatures_listed": 0,
+  "failed_tx_skipped": 0,
+  "in_window": null,
+  "read": 70497,
+  "not_returned": 0,
+  "failed_or_unreadable": 0,
+  "max_tx_version": 1,
+  "trades": 41226,
+  "transfers": 5983,
+  "arbitrage_tx": 199,
+  "no_balance_change": 23148,
+  "wallets": 2919,
+  "early_buyers": 0,
+  "enriched": 0
+ },
+ "cut_short": {
+  "listing_hit_cap_before_window_start": false,
+  "read_stopped_at_cap": false,
+  "fast_read_refused": ""
+ },
+ "rpc": {
+  "calls": 143,
+  "http": 143,
+  "retries": 0,
+  "failed": 0,
+  "last_err": "",
+  "last_err_at": ""
+ },
+ "note": "mc_usd uses ONE SOL/USD rate for the whole window (the rate at collection time) — approximate. 'early' = buys before the first trade at or above mc_line_usd. profit_sol = sells − buys + holdings valued at last_price_sol (the last trade READ, which is not 'now' if the read stopped at the cap); a wallet that received coins by transfer shows profit it did not earn by buying."
+}
