@@ -32,3 +32,13 @@
   list-then-fetch method stays as the fallback if the call is refused. Request format taken from Helius's docs, NOT yet seen
   working against the live API. 12 tests pass (fast path, fallback gives identical output, cap).
 - New code loads when the stalled run ends or after `pm2 restart wallets`.
+
+## 27 Nov 2026, 11:07 UK — his exact brief for WOOPY (and the template for later coins)
+- Start about 10 minutes before the market cap began to rise (he recalls ~$16K this morning). Take every wallet that bought
+  between ~$16K and $200K. For each: did it sell, is it holding, does it still hold right now. Rank by profit made from $16K to
+  $200K and analyse the most profitable wallets. "Let's be very specific about it."
+- Collector changed to serve this: `mc=200000`; holdings-now check for every band buyer (up to 3,000); profit per wallet =
+  sells − buys + holdings at the last price read; age/funder for the biggest and the most profitable. WOOPY re-queued as `run=2`,
+  window from 06:00 UTC, cap 150,000 transactions so the read reaches the present. The exact rise start and the 10-minute lead
+  are set from the trade data in the analysis, not guessed.
+- Still not collected at 11:10: the first run is stalled on the old code; needs `pm2 restart wallets`.

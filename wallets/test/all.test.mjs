@@ -111,5 +111,6 @@ test("whole collector against a fake RPC: early buyers, line crossing, transfers
   assert.equal(A.rank, "1"); assert.equal(A.early_buy_sol, "2.0000"); assert.equal(A.first_buy_mc_usd, "10000"); assert.equal(A.total_sell_sol, "30.0000"); assert.equal(A.net_sol, "28.0000");
   assert.equal(A.first_sell_mc_usd, "200000"); assert.equal(A.tokens_out_by_transfer, "5000"); assert.equal(A.funder, "CEX"); assert.equal(A.funder_sol, "3"); assert.equal(A.wallet_tx_count, "2"); assert.equal(A.pct_supply_bought_early, "2.000");
   assert.equal(B.holds_now, "4000"); assert.equal(B.sells, "0"); assert.equal(B.funder, "");
+  assert.equal(B.holds_value_sol, "8.0000"); assert.equal(B.profit_sol, "7.5000"); assert.equal(A.profit_sol, "28.0000"); assert.equal(meta.last_price_sol, 0.002); // BOB: 4,000 coins at the last price 0.002 = 8 SOL, less the 0.5 SOL he paid
   for (const f of ["meta.json", "early.csv"]) assert.ok(!/SECRET|api-key/.test(readFileSync(dir + "/" + f, "utf8")), f + " must not contain the key");
 });

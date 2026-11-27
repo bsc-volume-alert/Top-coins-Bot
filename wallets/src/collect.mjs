@@ -80,14 +80,14 @@ export async function collect(req, dir, { onStatus = () => {} } = {}) {
   T.write("ts,slot,sig,wallet,side,tokens,sol,mc_usd,signer,payer\n"); X.write("ts,slot,sig,from,to,tokens\n");
   const W = new Map(); // wallet → totals
   const w = (a) => { let x = W.get(a); if (!x) W.set(a, (x = { wallet: a, first: 0, eb: 0, es: 0, en: 0, etok: 0, emc: 0, b: 0, s: 0, nb: 0, ns: 0, tokb: 0, toks: 0, firstSell: 0, firstSellMc: 0, tin: 0, tout: 0 })); return x; };
-  let crossTs = 0, crossMc = 0, streak = 0, streakTs = 0, streakMc = 0, peakMc = 0, lowMc = Infinity, nTrades = 0, nTransfers = 0, nArb = 0, nNone = 0, nMissing = 0, read = 0, lastTs = 0, firstTs = 0;
+  let crossTs = 0, crossMc = 0, streak = 0, streakTs = 0, streakMc = 0, peakMc = 0, lowMc = Infinity, nTrades = 0, nTransfers = 0, nArb = 0, nNone = 0, nMissing = 0, read = 0, lastTs = 0, firstTs = 0, lastPrice = 0, lastPriceTs = 0;
   for await (const [sig, ts, slot, tx] of stream()) {
     if (read >= maxTx) { moreUnread = true; break; }
     read++; lastTs = ts; if (!firstTs) firstTs = ts;
     if (!tx) { nMissing++; continue; }
     const r = parseTx(tx, mint); if (!r) continue;
     if (r.kind === "arb") nArb++; else if (r.kind === "none") nNone++;
-    const mc = r.price ? r.price * supply * (solUsd || 0) : 0;
+    const mc = r.price ? r.price * supply * (solUsd || 0) : 0; if (r.kind === "trade" && r.price > 0) { lastPrice = r.price; lastPriceTs = ts; }
     if (r.kind === "trade" && mc > 0) { if (mc > peakMc) peakMc = mc; if (mc < lowMc) lowMc = mc; }
     const early = !crossTs; // this trade happened before the line was first reached
     for (const t of r.trades) { nTrades++;
@@ -106,10 +106,17 @@ export async function collect(req, dir, { onStatus = () => {} } = {}) {
 
   // 3) the early buyers: everything they did, what they hold now, wallet age and first funder for the biggest ones
   const early = [...W.values()].filter((x) => x.en > 0).sort((a, b) => b.eb - a.eb);
-  const pick = early.filter((x, i) => i < top || x.eb >= 1).slice(0, Math.max(top, 150));
+  // what every early buyer holds RIGHT NOW (one call each, up to `hold` wallets, biggest early buyers first), valued at the last
+  // trade price read. profit = SOL from sells − SOL spent on buys + value of what is still held.
+  const holdN = num(req.hold, 3000), held = early.slice(0, holdN);
+  status({ stage: "holdings", early_buyers: early.length, checking: held.length });
+  const bal = await many("getTokenAccountsByOwner", held.map((x) => [x.wallet, { mint }, { encoding: "jsonParsed" }]), { rps });
+  held.forEach((x, i) => { x.holdNow = bal[i]?.value ? bal[i].value.reduce((a, v) => a + Number(v.account?.data?.parsed?.info?.tokenAmount?.uiAmountString || 0), 0) : null; });
+  for (const x of early) { x.holdSol = x.holdNow == null ? null : x.holdNow * lastPrice; x.profit = x.s - x.b + (x.holdSol || 0); }
+  // wallet age and first funder: the biggest early buyers AND the most profitable ones
+  const byProfit = early.slice().sort((a, b) => b.profit - a.profit).slice(0, top);
+  const pick = [...new Set([...early.filter((x, i) => i < top || x.eb >= 1).slice(0, Math.max(top, 150)), ...byProfit])];
   status({ stage: "enriching", early_buyers: early.length, enriching: pick.length });
-  const bal = await many("getTokenAccountsByOwner", pick.map((x) => [x.wallet, { mint }, { encoding: "jsonParsed" }]), { rps });
-  pick.forEach((x, i) => { x.holdNow = bal[i]?.value ? bal[i].value.reduce((a, v) => a + Number(v.account?.data?.parsed?.info?.tokenAmount?.uiAmountString || 0), 0) : null; });
   // wallet age: up to 3 pages of its history (3,000 transactions). Longer than that = an old, busy wallet (often a bot); not traced.
   for (const x of pick) x.pages = [];
   let live = pick.slice();
@@ -123,16 +130,16 @@ export async function collect(req, dir, { onStatus = () => {} } = {}) {
   const ftx = await many("getTransaction", full.map((x) => [x.oldestSig, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0, commitment: "confirmed" }]), { rps });
   full.forEach((x, i) => { const f = funderOf(ftx[i], x.wallet); if (f) { x.funder = f.funder; x.funderSol = f.sol; } });
 
-  const cols = ["rank", "wallet", "early_buy_sol", "early_buys", "first_buy_mc_usd", "first_buy_time", "early_sell_sol", "total_buy_sol", "total_sell_sol", "net_sol", "buys", "sells", "first_sell_time", "first_sell_mc_usd", "tokens_bought", "tokens_sold", "tokens_in_by_transfer", "tokens_out_by_transfer", "holds_now", "pct_supply_bought_early", "wallet_tx_count", "wallet_first_seen", "funder", "funder_sol"];
-  const rows = early.map((x, i) => [i + 1, x.wallet, x.eb.toFixed(4), x.en, Math.round(x.emc), iso(x.first), x.es.toFixed(4), x.b.toFixed(4), x.s.toFixed(4), (x.s - x.b).toFixed(4), x.nb, x.ns, iso(x.firstSell), Math.round(x.firstSellMc), +x.tokb.toPrecision(8), +x.toks.toPrecision(8), +x.tin.toPrecision(8), +x.tout.toPrecision(8), x.holdNow ?? "", ((100 * x.etok) / supply).toFixed(3), x.nTx == null ? "" : x.complete ? x.nTx : x.nTx + "+", x.complete ? iso(x.oldestTs) : "", x.funder || "", x.funderSol ?? ""]);
+  const cols = ["rank", "wallet", "early_buy_sol", "early_buys", "first_buy_mc_usd", "first_buy_time", "early_sell_sol", "total_buy_sol", "total_sell_sol", "net_sol", "buys", "sells", "first_sell_time", "first_sell_mc_usd", "tokens_bought", "tokens_sold", "tokens_in_by_transfer", "tokens_out_by_transfer", "holds_now", "holds_value_sol", "profit_sol", "pct_supply_bought_early", "wallet_tx_count", "wallet_first_seen", "funder", "funder_sol"];
+  const rows = early.map((x, i) => [i + 1, x.wallet, x.eb.toFixed(4), x.en, Math.round(x.emc), iso(x.first), x.es.toFixed(4), x.b.toFixed(4), x.s.toFixed(4), (x.s - x.b).toFixed(4), x.nb, x.ns, iso(x.firstSell), Math.round(x.firstSellMc), +x.tokb.toPrecision(8), +x.toks.toPrecision(8), +x.tin.toPrecision(8), +x.tout.toPrecision(8), x.holdNow ?? "", x.holdSol == null ? "" : x.holdSol.toFixed(4), x.holdNow == null ? "" : x.profit.toFixed(4), ((100 * x.etok) / supply).toFixed(3), x.nTx == null ? "" : x.complete ? x.nTx : x.nTx + "+", x.complete ? iso(x.oldestTs) : "", x.funder || "", x.funderSol ?? ""]);
   writeFileSync(dir + "/early.csv", cols.join(",") + "\n" + rows.map((r) => r.join(",")).join("\n") + "\n");
 
   const meta = { id: req.id, mint, label: req.label || "", request: req, finished: iso(Date.now() / 1000), seconds: Math.round((Date.now() - t0) / 1000),
     source, window: { from: iso(from), to: iso(to), first_tx: iso(firstTs), last_tx_read: iso(lastTs) },
-    supply, sol_usd: solUsd, mc_line_usd: mcLine, reached_line_at: iso(crossTs), reached_line_mc: Math.round(crossMc), low_mc_usd: Number.isFinite(lowMc) ? Math.round(lowMc) : null, peak_mc_usd_in_read: Math.round(peakMc),
+    supply, sol_usd: solUsd, last_price_sol: lastPrice, last_price_time: iso(lastPriceTs), last_mc_usd: Math.round(lastPrice * supply * (solUsd || 0)), mc_line_usd: mcLine, reached_line_at: iso(crossTs), reached_line_mc: Math.round(crossMc), low_mc_usd: Number.isFinite(lowMc) ? Math.round(lowMc) : null, peak_mc_usd_in_read: Math.round(peakMc),
     counts: { signatures_listed: listed, failed_tx_skipped: failedTx, in_window: inWindow, read, not_returned: nMissing, trades: nTrades, transfers: nTransfers, arbitrage_tx: nArb, no_balance_change: nNone, wallets: W.size, early_buyers: early.length, enriched: pick.length },
     cut_short: { listing_hit_cap_before_window_start: listingCut, read_stopped_at_cap: moreUnread, fast_read_refused: st.fast_refused || "" },
-    rpc: { ...stats }, note: "mc_usd uses ONE SOL/USD rate for the whole window (the rate at collection time) — approximate. 'early' = buys before the first trade at or above mc_line_usd." };
+    rpc: { ...stats }, note: "mc_usd uses ONE SOL/USD rate for the whole window (the rate at collection time) — approximate. 'early' = buys before the first trade at or above mc_line_usd. profit_sol = sells − buys + holdings valued at last_price_sol (the last trade READ, which is not 'now' if the read stopped at the cap); a wallet that received coins by transfer shows profit it did not earn by buying." };
   writeFileSync(dir + "/meta.json", JSON.stringify(meta, null, 1));
   status({ stage: "done" });
   return meta;
