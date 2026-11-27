@@ -7,3 +7,5 @@
 2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump label=WOOPY from=2026-11-27T06:00:00Z mc=200000 max=150000 run=2
 # WOOPY band only (26 Nov 15:00–19:10 UTC = first buy to the first sustained $200K): holdings NOW for every band buyer, age + funder for the top 150
 2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump label=WOOPY-band from=2026-11-26T15:00:00Z to=2026-11-26T19:10:00Z mc=200000 top=150 run=3
+# WOOPY after the earlier read (11:11 UTC 27 Nov) to now: did the 100 holding wallets sell or move their coins?
+2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump label=WOOPY-after from=2026-11-27T11:11:00Z to=2026-11-27T16:52:07Z mc=200000 max=200000 hold=0 top=0 run=4
