@@ -1,0 +1,61 @@
+{
+ "id": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump_r2",
+ "mint": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump",
+ "label": "WOOPY",
+ "request": {
+  "mint": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump",
+  "label": "WOOPY",
+  "from": "2026-11-27T06:00:00Z",
+  "mc": "200000",
+  "max": "150000",
+  "run": "2",
+  "id": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump_r2"
+ },
+ "finished": "2026-11-27T11:47:58.844Z",
+ "seconds": 2174,
+ "source": "getSignaturesForAddress + getTransaction",
+ "window": {
+  "from": "2026-11-27T06:00:00Z",
+  "to": "2026-11-27T11:11:44Z",
+  "first_tx": "2026-11-27T06:08:30Z",
+  "last_tx_read": "2026-11-27T11:11:44Z"
+ },
+ "supply": 998919955.010171,
+ "sol_usd": 73.14,
+ "last_price_sol": 0.000007384322670859271,
+ "last_price_time": "2026-11-27T11:11:44Z",
+ "last_mc_usd": 539506,
+ "mc_line_usd": 200000,
+ "reached_line_at": "2026-11-27T08:54:57Z",
+ "reached_line_mc": 201851,
+ "low_mc_usd": 390,
+ "peak_mc_usd_in_read": 9910429594,
+ "counts": {
+  "signatures_listed": 80000,
+  "failed_tx_skipped": 14010,
+  "in_window": 65041,
+  "read": 65041,
+  "not_returned": 4974,
+  "trades": 53750,
+  "transfers": 3085,
+  "arbitrage_tx": 17,
+  "no_balance_change": 3226,
+  "wallets": 2738,
+  "early_buyers": 0,
+  "enriched": 0
+ },
+ "cut_short": {
+  "listing_hit_cap_before_window_start": false,
+  "read_stopped_at_cap": false,
+  "fast_read_refused": "{\"code\":-32015,\"message\":\"Transaction version (1) is not supported by the requesting client. Please try the request again with the following configuration parameter: \\\"maxSupportedTransactionVersion\\\""
+ },
+ "rpc": {
+  "calls": 65123,
+  "http": 6587,
+  "retries": 0,
+  "failed": 0,
+  "last_err": "getTransaction error: {\"code\":-32015,\"message\":\"Transaction version (1) is not supported by the requesting client. Please try the request again with the following configuration parameter: \\\"maxSupport",
+  "last_err_at": "2026-11-27T11:47:58.498Z"
+ },
+ "note": "mc_usd uses ONE SOL/USD rate for the whole window (the rate at collection time) — approximate. 'early' = buys before the first trade at or above mc_line_usd. profit_sol = sells − buys + holdings valued at last_price_sol (the last trade READ, which is not 'now' if the read stopped at the cap); a wallet that received coins by transfer shows profit it did not earn by buying."
+}
