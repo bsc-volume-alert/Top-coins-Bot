@@ -3,8 +3,8 @@
  "label": "WOOPY",
  "stage": "reading",
  "started": "2026-11-27T10:20:05.980Z",
- "updated": "2026-11-27T10:22:38.959Z",
- "rpc_calls": 4544,
+ "updated": "2026-11-27T10:25:10.174Z",
+ "rpc_calls": 9044,
  "rpc_retries": 0,
  "rpc_failed": 0,
  "listed": 43000,
@@ -12,11 +12,11 @@
  "in_window": 31365,
  "to_read": 31365,
  "listing_cut": false,
- "read": 4500,
- "trades": 4181,
+ "read": 9000,
+ "trades": 8477,
  "transfers": 12,
- "wallets": 798,
+ "wallets": 1121,
  "reached_line_at": "2026-11-26T15:50:42Z",
- "last_tx_time": "2026-11-27T09:21:34Z",
- "peak_mc": 398829
+ "last_tx_time": "2026-11-27T09:36:10Z",
+ "peak_mc": 406014
 }
