@@ -1080,3 +1080,11 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   - Accuracy (n=110): median 4.3%, mean 8.1%, 31 over 10% (28%). Buy-price against trailing (25%, n=109): −32.3% against −5.4%.
   - 25% stop: 241 closed, 61 won, average −1.6%, median −21.8%. 40%: 51 won, −7.2%. 60%: 32 won, −33.4%.
   - Tally: volume 2,197 → 47, market cap 132,011 → 16, holders 2,577 → 14, top holders (Jupiter) 1,706 → 21, top 10 (GMGN) 78 → 17, fees 185 → 9, bought 136 → 16.
+- **27 Nov 00:47 UK — 30-minute check (state 00:36:20 UTC, publish 00:38:07; code 20653a2, up 7 h 20; not restarted).** Bot up. Feed dropped for 2.8 seconds at 00:31:22 and came back by itself (reconnects 2). Memory 685 MB / 301 heap. Jupiter 229 requests a minute, limited 0, errors 0. GMGN: no new refused buy reading (211 / 208 / 3; limited 7, banned 0). Status-dump stall 2.11–2.33 s every five minutes.
+  - **Two new coins on the runners list, both missed, neither a real miss (39 reached, 7 bought, 32 missed, 1 later):**
+    - **TOGI 5e1rKG (a second coin of that name) — pump-and-pull:** $101K at 9 minutes, $3.3K at the 10-minute check, $1.8K at 15. At 5 minutes: cap $20.3K, 90 holders, $10K traded, top 10 39.8%, fees 0.77 SOL, bundlers 47%, dev 10% — failed holders, volume, both top-holder rules and fees.
+    - **GTAVI HeYnz2 — $111K at 27 minutes; an odd one:** 2,676 holders from the first check on only $14K traded ($27K by 20 minutes), top 10 38–41%, dev holding 37% then 14%, bundlers 45–52%, phishing 9.5–10.4%, fees 0.66 → 1.35 SOL; cap $33K / $39K / $47K / $63K at the four checks. Failed volume, both top-holder rules and fees at every check. Whether it holds: next check.
+  - 2 new new-coin buys (244 in all): FF B2JjjQ 20M $12.8K **+47.4%** (40% +41.3%, 2.36×) — the fourth FF buy, after −16.0%, +1.2% and −39.9%; SPEC FcoDQE 5M $41.6K −23.2% (40% open). MEMEKING 5M closed −14.1% (40% −33.7%); COSTAKID's 70% rows −42% / −70% / −61%.
+  - Accuracy (n=113): median 4.3%, mean 8.1%, 32 over 10% (28%). Buy-price against trailing (25%, n=111): −32.3% against −5.6%.
+  - 25% stop: 244 closed, 62 won, average −1.6%, median −21.8%. 40%: 52 won, −7.1%. 60%: 32 won, −33.5%.
+  - Tally: volume 2,265 → 51, market cap 136,354 → 19, holders 2,671 → 15, top holders (Jupiter) 1,749 → 21, top 10 (GMGN) 80 → 17, fees 189 → 9, bought 138 → 16.
