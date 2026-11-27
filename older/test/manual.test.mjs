@@ -8,7 +8,7 @@ import { mkEngine, swap, path, quoteFor, BASE, H, T0 } from "./helpers.mjs";
 import { Store } from "../src/store.mjs";
 import { COST, requestManual, entryDone, manualOpen } from "../src/book.mjs";
 import { sellQuote } from "../src/fills.mjs";
-import { booksApi } from "../src/page.mjs";
+import { booksApi, BOOKS_PAGE } from "../src/page.mjs";
 import { startWeb } from "../src/web.mjs";
 import * as S from "../src/spec.mjs";
 const M = "MintAAApump";
@@ -67,7 +67,8 @@ test("the site: sell buttons only when the server allows it; his sales are shown
   assert.equal(api().sell, undefined, "no button unless the server offers manual sales"); assert.equal(api({ sellable: true }).sell, 1); assert.equal(booksApi([], { sellable: true }).sellable, true);
   e.manualSell(en.id, 0.5, now); let r = api({ sellable: true }); assert.deepEqual(r.man.pending, { frac: 0.5, by: "manual" }); assert.equal(r.sell, undefined, "no second order while one waits");
   e.tick(now + 1); r = api({ sellable: true }); assert.equal(r.man.left, 0.5); assert.equal(r.man.sales.length, 1); assert.equal(r.man.sales[0].share, 0.5); assert.ok(r.man.sales[0].mc > 290_000 && r.man.sales[0].mc < 310_000); assert.equal(r.sell, 1); assert.equal(r.man.closed, false);
-  e.manualSell(en.id, 1, now + 2); e.tick(now + 3); r = api({ sellable: true }); assert.equal(r.man.closed, true); assert.ok(r.man.ret > 0.3); assert.equal(r.sell, undefined); assert.equal(r.status, "open", "the 25% stop row of the same buy is still open: the rule carries on");
+  e.manualSell(en.id, 1, now + 2); e.tick(now + 3); r = api({ sellable: true }); assert.equal(r.man.closed, true); assert.ok(r.man.ret > 0.3); assert.equal(r.sell, undefined); assert.equal(r.rule.status, "open", "the 25% stop row of the same buy is still open: the rule carries on");
+  assert.equal(en.versions.find((v) => v.stop === 0.25 && v.policy === "trail").status, "open");
   // the endpoint
   const call = async (port, path, method = "POST") => { const x = await fetch(`http://127.0.0.1:${port}${path}`, { method }); return { status: x.status, body: await x.text() }; };
   const serve = (key) => { const old = process.env.OLDER_SITE_KEY; if (key) process.env.OLDER_SITE_KEY = key; else delete process.env.OLDER_SITE_KEY; const asked = [];
@@ -79,9 +80,38 @@ test("the site: sell buttons only when the server allows it; his sales are shown
   assert.equal((await call(a.port, "/api/sell?id=8&frac=1&k=sekret")).status, 409); assert.equal((await call(a.port, "/api/sell?id=x&frac=1&k=sekret")).status, 400);
   // the 2-second view of open positions: from the engine's memory only (this store has no entries at all), same figures as the page data, key needed
   assert.equal((await call(a.port, "/api/live?stop=0.25&policy=trail", "GET")).status, 403);
-  const lv = JSON.parse((await call(a.port, "/api/live?stop=0.25&policy=trail&k=sekret", "GET")).body), keyOf = Object.keys(lv.rows).find((k) => k.endsWith("|" + en.id)); assert.ok(keyOf, "the open 25% row of the buy is there"); assert.equal(lv.stop, 0.25); assert.equal(lv.policy, "trail"); assert.equal(lv.stake, 0.2);
-  assert.equal(lv.rows[keyOf][0], api({}).now_x); assert.equal(lv.rows[keyOf][1], api({}).hi);
+  const lv = JSON.parse((await call(a.port, "/api/live?stop=0.25&policy=trail&k=sekret", "GET")).body); assert.equal(lv.stop, 0.25); assert.equal(lv.policy, "trail"); assert.equal(lv.stake, 0.2);
+  assert.equal(Object.keys(lv.rows).find((k) => k.endsWith("|" + en.id)), undefined, "the buy he sold in full by hand is no longer an open position of the book (27 Nov: his sale counts)");
+  { const o = bought(); swap(o.e, T0 + 700, 300_000); const olde = process.env.OLDER_SITE_KEY; process.env.OLDER_SITE_KEY = "sekret"; // an untouched buy: its open 25% row is there with the page's own figures
+    const w2 = startWeb({ port: 0, store: { allEntries: () => [], noteCounts: () => [], disk: () => ({}) }, engine: o.e, status: () => ({}) }); if (olde === undefined) delete process.env.OLDER_SITE_KEY; else process.env.OLDER_SITE_KEY = olde;
+    await new Promise((res) => w2.server.on("listening", res)); let l2; try { l2 = JSON.parse((await call(w2.server.address().port, "/api/live?stop=0.25&policy=trail&k=sekret", "GET")).body); } finally { w2.server.close(); }
+    const keyOf = Object.keys(l2.rows).find((k) => k.endsWith("|" + o.en.id)), pr = booksApi([...o.e.entries.values()], { stop: 0.25, now }).books["FAST-1M"][0]; assert.ok(keyOf, "the open 25% row of the buy is there"); assert.equal(l2.rows[keyOf][0], pr.now_x); assert.equal(l2.rows[keyOf][1], pr.hi); }
   const lv60 = JSON.parse((await call(a.port, "/api/live?stop=0.6&policy=scale&stake=1&k=sekret", "GET")).body); assert.equal(lv60.stop, 0.6); assert.equal(lv60.policy, "scale"); assert.equal(lv60.stake, 1);
   a.w.server.close();
   const b = await serve(null); assert.equal((await call(b.port, "/api/sell?id=7&frac=0.5")).status, 403, "a site without a key offers no manual sales at all"); assert.deepEqual(b.asked, []); b.w.server.close();
+});
+
+// ONE BOX (owner 27 Nov 2026 20:07 UK: "make all the sales, whether it's manual or automatic, all on one box so we can see what profit we're making")
+test("a buy he sold in full by hand is counted in its book at HIS result and listed as sold by you; the rule's result is kept beside it; a part-sale changes nothing; the rows and the published results are untouched", () => {
+  const { e, en } = bought(), twin = bought(); for (const x of [e, twin.e]) { swap(x, T0 + 700, 300_000); swap(x, T0 + 702, 300_000); }
+  const now = T0 + 720, row = (x, o = {}) => booksApi([...x.entries.values()], { stop: 0.25, now, sellable: true, ...o }).books["FAST-1M"][0];
+  const before = row(e); assert.equal(before.status, "open"); assert.equal(before.by_you, undefined); assert.equal(before.rule, undefined);
+  e.manualSell(en.id, 0.5, T0 + 705); for (const x of [e, twin.e]) x.tick(T0 + 706);
+  let r = row(e); assert.equal(r.status, "open", "half sold by hand: the book still shows the rule's open row"); assert.equal(r.by_you, undefined); assert.equal(r.man.left, 0.5);
+  e.manualSell(en.id, 1, T0 + 707); for (const x of [e, twin.e]) x.tick(T0 + 708);
+  r = row(e); const m = en.manual.closed; assert.ok(m && m.ret > 0.3);
+  assert.equal(r.status, "closed"); assert.equal(r.by_you, true); assert.equal(r.reason, "sold by you"); assert.equal(r.ret, m.ret); assert.ok(Math.abs(r.net - (m.sol - COST)) < 1e-12); assert.equal(r.exit_t, m.t); assert.equal(r.now_x, null);
+  assert.ok(r.mc_sold > 290_000 && r.mc_sold < 310_000, "sold at about $300K: " + r.mc_sold); assert.equal(r.sell, undefined, "nothing left to sell");
+  const t = row(twin.e); assert.deepEqual(r.rule, { status: t.status, ret: t.ret, net: t.net, now_x: t.now_x, reason: t.reason, exit_t: t.exit_t }, "beside it: exactly what the 25% stop shows on the buy nobody touched");
+  assert.equal(r.rule.status, "open"); assert.equal(rows(en), rows(twin.en), "the stop × exit rows themselves are exactly as in the untouched run");
+  // every stop and exit of the same buy shows the same hand sale; at another stake it keeps its percentage
+  for (const o of [{ stop: 0.6 }, { stop: 0.2, policy: "scale" }]) { const x = row(e, o); assert.equal(x.by_you, true); assert.equal(x.ret, m.ret); }
+  const s1 = row(e, { stake: 1 }); assert.equal(s1.ret, m.ret); assert.ok(Math.abs(s1.net - m.ret * (1 + S.TX_COST_SOL)) < 1e-12); assert.equal(s1.flat, true);
+  // the price collapses: the rule sells at a loss, his result stays, and the comparison shows the rule's sale
+  for (const x of [e, twin.e]) { swap(x, T0 + 900, 100_000); swap(x, T0 + 902, 100_000); swap(x, T0 + 904, 100_000); }
+  r = booksApi([...e.entries.values()], { stop: 0.25, now: T0 + 950, sellable: true }).books["FAST-1M"][0]; assert.equal(r.ret, m.ret); assert.equal(r.reason, "sold by you"); assert.equal(r.rule.status, "closed"); assert.equal(r.rule.reason, "trail"); assert.ok(r.rule.ret < r.ret);
+  assert.equal(rows(en), rows(twin.en));
+});
+test("the page: the card counts hand sales, marks them in the sold list and says what the rule made of the same buys", () => {
+  for (const s of ["sold by you", "you sold by hand", "t.rule||t", "youline", "counted in its book at YOUR result"]) assert.ok(BOOKS_PAGE.includes(s), "the page has: " + s);
 });

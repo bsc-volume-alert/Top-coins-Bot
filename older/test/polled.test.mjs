@@ -138,3 +138,15 @@ test("fee coins in their first 8 hours (owner, 22 Nov 2026): a 2-hour-old fee co
   const big = await run({ status: "restricted", blocking: ["transferFee 900 bps"], fee_bps: 900 }); assert.equal(big.eng.entries.size, 0, "9% fee: blocked at any age");
 });
 
+
+// NO ROUTE, AGAIN AND AGAIN (27 Nov 2026: a hand sale of a coin whose liquidity had been removed was asked for once a second — over 4,000 refused requests)
+test("a position that keeps answering \"no route\" is asked about every 30 s after 10 refusals in a row, its order is kept, and the first answered quote puts it back on its pace", async () => {
+  const w = world(); w.px.set(M, 100_000 / 1e9); w.poll.add(w.tok(M), "t"); for (let i = 0; i < 31; i++) await w.step(10, M, 100_000);
+  await w.step(10, M, 205_000); w.t += 1.1; await w.poll.quotes(); const e = [...w.eng.entries.values()][0]; assert.equal(e.status, "filled");
+  w.route = false; assert.equal(w.eng.manualSell(e.id, 1, w.t).ok, true); w.t += 1;
+  let n0 = w.reqs.quote; for (let i = 0; i < 12; i++) { w.t += 1.05; await w.poll.quotes(); } const early = w.reqs.quote - n0; assert.ok(early >= S.NO_ROUTE_RUN, "at first every second: " + early);
+  assert.ok(w.poll.noRouteRun.get(e.id) >= S.NO_ROUTE_RUN); assert.ok(e.manual.order, "the order is still waiting");
+  n0 = w.reqs.quote; for (let i = 0; i < 60; i++) { w.t += 1.05; await w.poll.quotes(); } const later = w.reqs.quote - n0, sizes = w.eng.quoteNeeds(w.t).find((x) => x.id === e.id).sells.length;
+  assert.ok(later <= 3 * sizes, "then about once in 30 s (" + later + " requests in 63 s for " + sizes + " sizes)"); assert.ok(later >= 1, "never dropped");
+  w.route = true; w.t += S.NO_ROUTE_EVERY_S + 1; await w.poll.quotes(); w.eng.tick(w.t); assert.equal(w.poll.noRouteRun.get(e.id), undefined); assert.ok(e.manual.closed, "sold at the first price that came"); assert.equal(e.manual.order, null);
+});

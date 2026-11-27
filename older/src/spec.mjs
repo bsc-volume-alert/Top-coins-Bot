@@ -27,6 +27,7 @@ export const MAX_HOLD_S = 24 * 3600;          // from the simulated FILL
 export const BUY_DELAY_MS = 1000;             // buy scheduled 1 s after the signal
 export const SELL_DELAY_MS = 700;             // sell scheduled 0.7 s after an exit trigger
 export const BUY_PRICING_TIMEOUT_S = 5;       // no trustworthy pool state within 5 s after the scheduled buy → pricing/data timeout, entry cancelled (NOT "untradeable")
+export const NO_ROUTE_RUN = 10, NO_ROUTE_EVERY_S = 30; // a held position answered "no route" this many times in a row is asked about only this often (polled.mjs) — never dropped
 export const SELL_UNRESOLVED_S = 24 * 3600;   // a triggered sale that cannot be priced for 24 h is shown as unresolved exposure (never silently closed)
 
 // ───────── NEW-COIN BOOKS (owner 25 Nov 2026, 16:07, 16:10 and 18:37 UK) — off unless a run switches them on (main.mjs, OLDER_NEWCOINS=1) ─────────

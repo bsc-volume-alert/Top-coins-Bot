@@ -19,6 +19,7 @@ export class Poller {
     this.watch = new Map(); // mint → { decimals, circ, hot, lastT, lastReq, miss, mc }
     this.quoted = new Map(); // entry id → last quote request time
     this.held = new Map();   // entry id → Map(quantity → its latest quote, with that quote's own request/response times)
+    this.noRouteRun = new Map(); // entry id → "no route" answers in a row (reset by the first quote that is answered)
     engine.onOwnership = (mint, mode) => { if (mode === "live" && this.watch.delete(mint)) this.stats.movedToLive = (this.stats.movedToLive || 0) + 1; };
     this.stats = { watched: 0, hot: 0, sweeps: 0, priced: 0, omitted: 0, lost: 0, discovered: 0, skippedLive: 0, noMeta: 0, quotesOk: 0, noRoute: 0, quoteErr: 0, cadence: { n: 0, sum: 0, max: 0 }, by_origin: {}, risk: {} };
     this.seen = new Set();
@@ -144,7 +145,11 @@ export class Poller {
       // a sale that has had no price for 24 h keeps asking, slowly (it is never abandoned): once every 10 minutes
       const fillT = this.engine.entries.get(need.id)?.fill?.t, isYoung = fillT != null && now - fillT < S.QUOTE_YOUNG_S;
       const every = need.unresolved ? 600 : urgent ? Math.min(1, this.quoteFast) : need.runner_only ? this.runnerEvery : need.buy_sol ? this.quoteSlow : need.buy_only ? Math.max(slowEvery, oldEvery) : isYoung ? youngEvery : oldEvery;
-      if (this.now() - last < every) return 0;
+      // NO ROUTE, AGAIN AND AGAIN (27 Nov 2026: a paper sale of a coin whose liquidity had been removed was asked for once a second for an hour —
+      // 4,000 refused requests): after NO_ROUTE_RUN "no route" answers in a row the position is asked about every NO_ROUTE_EVERY_S seconds, however
+      // urgent its order. The first quote that is answered puts it back on its ordinary pace. An order is never dropped (book.mjs).
+      const slow = (this.noRouteRun.get(need.id) || 0) >= S.NO_ROUTE_RUN && !need.buy_sol;
+      if (this.now() - last < (slow ? Math.max(every, S.NO_ROUTE_EVERY_S) : every)) return 0;
       const w = this.watch.get(need.mint); if (!w || !validDec(w.decimals)) { this.stats.quoteNoWatch = (this.stats.quoteNoWatch || 0) + 1; return 0; } const dec = w.decimals; this.quoted.set(need.id, this.now());
       // TRANSFER FEE (spec XFER_FEE_MAX_BPS, XFER_FEE_IN_QUOTE): the coin keeps this share of every transfer. Measured on 22 Nov 2026
       // (fee-probe): the routed quote already includes it on both legs, so nothing more is taken off (keep = 1). Under the other
@@ -155,7 +160,7 @@ export class Poller {
       for (const tok of need.sells) {
         const q = await this.jup.quote(need.mint, "sell", tok * 10 ** dec, { urgent: urgent || (need.due != null && need.due <= this.now()) }); // urgency is decided at dispatch: an order that became due while this pass was waiting goes in the first lane
         if (!q.ok) { this._fail(need, q); for (const k of held.keys()) if (Math.abs(tok - k) <= 1e-9 * Math.max(1, tok)) held.delete(k); continue; } // a size whose quote failed has NO current quote: the old one is dropped, never carried forward
-        this.stats.quotesOk++; held.set(tok, { tok, sol: (q.out / 1e9) * keep, raw_sol: q.out / 1e9, xfer_bps: xfer, xfer_in_quote: this.feeInQuote, reqT: q.req, t: q.t, route: q.route, router: q.router });
+        this.stats.quotesOk++; this.noRouteRun.delete(need.id); held.set(tok, { tok, sol: (q.out / 1e9) * keep, raw_sol: q.out / 1e9, xfer_bps: xfer, xfer_in_quote: this.feeInQuote, reqT: q.req, t: q.t, route: q.route, router: q.router });
         for (const k of held.keys()) if (!need.sells.some((x) => Math.abs(x - k) <= 1e-9 * Math.max(1, x))) held.delete(k); // sizes no longer held
         this.engine.onQuote(need.id, { kind: "quote", reqT: q.req, t: q.t, buy: null, sells: [...held.values()] }); n++;
       }
@@ -168,7 +173,7 @@ export class Poller {
     for (const id of this.quoted.keys()) if (!this.engine.entries.has(id)) { this.quoted.delete(id); this.held.delete(id); }
     return n;
   }
-  _fail(need, q) { if (/rate limited|HTTP 5|timeout|fetch/i.test(q.why || "")) this.stats.quoteErr++; else { this.stats.noRoute++; const e = this.engine.entries.get(need.id); if (e && !e.flags.includes("quote unavailable: " + q.why)) { e.flags.push("quote unavailable: " + q.why); e.touched = true; /* saved at the next tick: a clock tick alone no longer re-writes an entry */ } } }
+  _fail(need, q) { if (/rate limited|HTTP 5|timeout|fetch/i.test(q.why || "")) this.stats.quoteErr++; else { this.stats.noRoute++; this.noRouteRun.set(need.id, (this.noRouteRun.get(need.id) || 0) + 1); const e = this.engine.entries.get(need.id); if (e && !e.flags.includes("quote unavailable: " + q.why)) { e.flags.push("quote unavailable: " + q.why); e.touched = true; /* saved at the next tick: a clock tick alone no longer re-writes an entry */ } } }
 
   /** QUOTES ONLY (the new-coin books in a run without the Solana-wide adapter): the two execution passes, and nothing else — no
    *  discovery, no price sampling. A coin is priced here only because it has a pending or open routed-quote buy. */
