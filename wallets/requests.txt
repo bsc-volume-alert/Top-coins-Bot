@@ -1,0 +1,6 @@
+# One coin per line:  CONTRACT_ADDRESS  [label=NAME] [from=2026-11-27T08:00:00Z] [to=...] [days=7] [mc=100000] [max=40000] [run=2]
+#   from/to  the window (UTC). Default: the 7 days before the coin's newest transaction, up to now.
+#   mc       the market-cap line in USD; "early buyers" = wallets that bought before the coin first reached it. Default 100000.
+#   max      the most transactions to read, oldest first. Default 40000 (1 Helius credit each).
+#   run      add run=2 (3, …) to collect the same coin again; without it a coin is collected once.
+2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump label=WOOPY
