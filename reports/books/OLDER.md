@@ -1147,3 +1147,12 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   - Accuracy (n=141): median 4.4%, mean 8.0%, 37 over 10%. Buy-price against trailing (25%, n=140): −32.6% against −7.8%.
   - 25% stop: 272 closed, 67 won, average −3.3%, median −21.8%. 40%: 55 won, −9.5%. 60%: 32 won, −35.6%.
   - Tally: volume 2,751 → 62, top holders (Jupiter) 2,134 → 37, market cap 163,404 → 24, holders 3,290 → 23, top 10 (GMGN) 89 → 17, fees 248 → 13, bought 166 → 16.
+- **27 Nov 05:06 UK — 30-minute check (state 04:56:20 UTC, publish 04:59:16; code 20653a2, up 11 h 40 min; not restarted).** Bot up, no new feed drop (4). Memory 709 MB / 328 heap. Jupiter 247 requests a minute, limited 0, errors 0. GMGN: no new refused buy reading (348 / 345 / 3; limited 7, banned 0). Error log empty.
+  - Status-dump stall 3.57–3.85 s every five minutes (04:26: 3.46–3.71 s) — about level for an hour now. Under the 5-second line; restart lines not repeated.
+  - 4 new new-coin buys (276 in all), none won so far: Christmas AgBxPN 20M $18.7K −3.0% (40% −45.3%; highest 1.27×); a coin with no name 2DyLsL 20M $11.2K −32.5% (it rose to 1.68× only after the 25% stop had sold; 40% row open); CaveBaby ADgpuU 5M $30.2K −2.5% (40% row open; highest 1.37×); CaveBaby 5J9B6H (a different coin) 5M $18.0K −24.2% (40% −48.5%; never above the buy price).
+  - **Two fast coins over $100K at five minutes old, not on the runners list (the known list fault): Christmas EWwTe1 ($141K at 5 min, $195K at 10) and Christmas DDKtTw ($110K at 5 min, $158K, $200K, $244K at 20 min).** Neither is a pump.fun coin. Refused at every look, rightly by the rules: **one wallet holds 82–86% of each** (top holders 83–87%; the rule needs 20–30%), fees 0.01 SOL (need 2–5). Liquidity $15–22K against a $110–244K cap, so the cap is a paper figure: it could not be sold at that price. EWwTe1 has no 15-minute check on record, which normally means it was under $10K by then; not confirmed.
+  - Follow-up. LUMINARE Eomygb: highest still $147.2K at 04:18; no pool-book buy; nothing later published.
+  - Runners (the list): 50 reached, 7 bought, 43 missed, 2 later.
+  - Accuracy (n=145): median 4.4%, mean 7.9%, 38 over 10%. Buy-price against trailing (25%, n=143): −32.4% against −8.0%.
+  - 25% stop: 276 closed, 67 won, average −3.5%, median −21.8%. 40%: 274 closed, 55 won, −9.8%. 60%: 32 won, −35.7%.
+  - Tally: volume 2,831 → 62, top holders (Jupiter) 2,185 → 37, market cap 166,195 → 24, holders 3,343 → 23, top 10 (GMGN) 90 → 17, fees 264 → 13, bought 170 → 16.
