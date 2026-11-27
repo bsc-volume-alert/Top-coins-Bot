@@ -34,3 +34,10 @@ test("a hidden filter does not filter: the coins filter starts hidden, and where
   assert.ok(BOOKS_PAGE.includes('id="popLab" style="display:none"') && BOOKS_PAGE.includes('id="pop" style="display:none"'), "hidden until the run is known");
   assert.ok(BOOKS_PAGE.includes("if(hideP&&SEL.pop){SEL.pop='';try{localStorage.setItem('olderSel',JSON.stringify(SEL))}catch(e){}seg('pop');FORCE=Date.now();load();return}"));
 });
+test("since the rule change is only for the cards whose rules changed; 24 h and 6 h on every ranking row, ranked by 24 h once", () => {
+  const run = { name: "t", books: [...S.booksOf("older-11"), ...S.HIT_BOOKS, ...S.FOLLOW_BOOKS, ...S.FARM_BOOKS, ...S.NEW_BOOKS], newcoins: true }, j = booksApi([], { stop: 0.25, now: 1795812000, run });
+  assert.deepEqual(j.rule.cards.slice().sort(), [...S.NEW_BOOKS, S.NEW_ALL, "TOP10-16-20", "5M-H300", "20M-FEE1", "5M-LOWCONC", "5M-LOWCONC-SNIP", "LIQUID-SMALLCAP", "BUNDLED-RUNNER"].sort(), "the four looks and the cards made only of them");
+  for (const k of ["FAST-1M", "RUG450", "HIT50-NOW", "CONFIRM-15", "FARM-90K", "VOL-CONTROL"]) assert.ok(!j.rule.cards.includes(k), k + " had no rule change");
+  assert.deepEqual(booksApi([], { stop: 0.25, now: 1795812000, run: { name: "t", books: ["RUG450"] } }).rule.cards, []);
+  for (const s of ["rcOn:!!(RC&&RCB[k]),rc:RC&&RCB[k]?w(RC):tot", "(RC&&b.rcOn?cell('since the rule change", "(b.rcOn?num(b.rc):'<span class=\"mut\">no change</span>')", '<span class="pt d24">24h</span> \'+num(b.h24)', '<span class="pt d6">6h</span> \'+num(b.h6)', "if(!SEL.h24Seen){SEL.win='h24';SEL.h24Seen=1}", ".pt.d24{background:var(--acc)}.pt.d6{background:var(--mag)}", '<span class="c6">last 6 hours</span>', '<span class="c24">last 24 hours</span>', "no other book is restarted"]) assert.ok(BOOKS_PAGE.includes(s), "the page has: " + s);
+});
