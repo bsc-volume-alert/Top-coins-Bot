@@ -1,0 +1,64 @@
+{
+ "id": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump_r3",
+ "mint": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump",
+ "label": "WOOPY-band",
+ "request": {
+  "mint": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump",
+  "label": "WOOPY-band",
+  "from": "2026-11-26T15:00:00Z",
+  "to": "2026-11-26T19:10:00Z",
+  "mc": "200000",
+  "top": "150",
+  "run": "3",
+  "id": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump_r3"
+ },
+ "finished": "2026-11-27T16:50:56.557Z",
+ "seconds": 34,
+ "source": "getTransactionsForAddress",
+ "window": {
+  "from": "2026-11-26T15:00:00Z",
+  "to": "2026-11-26T19:10:00Z",
+  "first_tx": "2026-11-26T15:16:57Z",
+  "last_tx_read": "2026-11-26T19:08:43Z"
+ },
+ "supply": 998914240.940612,
+ "sol_usd": 72.12,
+ "last_price_sol": 0.00000284610121527239,
+ "last_price_time": "2026-11-26T19:08:43Z",
+ "last_mc_usd": 205038,
+ "mc_line_usd": 200000,
+ "reached_line_at": "",
+ "reached_line_mc": 0,
+ "low_mc_usd": 7386,
+ "peak_mc_usd_in_read": 205038,
+ "counts": {
+  "signatures_listed": 0,
+  "failed_tx_skipped": 0,
+  "in_window": null,
+  "read": 930,
+  "not_returned": 0,
+  "failed_or_unreadable": 0,
+  "max_tx_version": 1,
+  "trades": 915,
+  "transfers": 2,
+  "arbitrage_tx": 0,
+  "no_balance_change": 16,
+  "wallets": 367,
+  "early_buyers": 364,
+  "enriched": 280
+ },
+ "cut_short": {
+  "listing_hit_cap_before_window_start": false,
+  "read_stopped_at_cap": false,
+  "fast_read_refused": ""
+ },
+ "rpc": {
+  "calls": 954,
+  "http": 101,
+  "retries": 0,
+  "failed": 0,
+  "last_err": "",
+  "last_err_at": ""
+ },
+ "note": "mc_usd uses ONE SOL/USD rate for the whole window (the rate at collection time) — approximate. 'early' = buys before the first trade at or above mc_line_usd. profit_sol = sells − buys + holdings valued at last_price_sol (the last trade READ, which is not 'now' if the read stopped at the cap); a wallet that received coins by transfer shows profit it did not earn by buying."
+}
