@@ -1071,3 +1071,12 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   - Accuracy (n=106): median 4.3%, mean 7.9%, 29 over 10% (27%). Buy-price against trailing (25%, n=104): −32.5% against −7.1%.
   - 25% stop: 237 closed, 60 won, average −1.2%, median −21.8%. 40%: 51 won, −6.7%. 60%: 32 won, −33.1%.
   - Tally: volume 2,130 → 47, market cap 127,381 → 15, holders 2,522 → 14, top holders (Jupiter) 1,671 → 19, top 10 (GMGN) 77 → 16, fees 181 → 9, bought 131 → 16.
+- **27 Nov 00:15 UK — 30-minute check (state 00:06:19 UTC, publish 00:07:59; code 20653a2, up 6 h 50; not restarted).** Bot up, no new feed drop. Memory 683 MB / 338 heap. Jupiter 221 requests a minute, limited 0, errors 0. GMGN: no new refused buy reading (203 / 200 / 3; limited 7, banned 0).
+  - **Status-dump stall on 20653a2 now over 2 seconds every time: 5-minute maximum 2.08–2.47 s (23:36: 1.82–1.96 s).** The fix is already in the server's folder (d7210db); it needs only the restart line.
+  - **Follow-up on the two fast runners of 23:35.** TOGI 81TW4g: $243K at 8 minutes, then $102K at 10, $93K at 15, $102K at 20 (1,386 → 1,588 holders, $1.0M traded, fees 49 → 85 SOL) — it held about $100K for at least twelve minutes, not an instant pull; the pool book VOL100K bought it at $97K at 23:45 (entry 735): 25% stop +5.3%, 40% −18.3%, 60% −40.7%, so it has since fallen by more than half from its later high. N3ON 5YLDE7: $93K at 15 minutes, peak $100.5K at 23:34:31, and no 20-minute check among the over-$10K records — it was under $10K five minutes after its peak: pump-and-pull (inferred from the missing record).
+  - COIN 8n7mSQ closed: 10M ($17.2K) 25% +18.2%, 40% +257.0%, 70% +100.5%; 15M ($24.0K) −24.1% / +138.5% / +29.0%; 20M ($22.6K) +247.7% / +154.4% / +37.6%. COSTAKID 10M 25% +41.5%, 40% +15.2%; FLOW 10M 70% −32.3%.
+  - 5 new new-coin buys (242 in all): FLOW FxWDDc 20M $43.1K −45.3% (noticed 35% past the stop); FF B2JjjQ 5M $15.2K −16.0% (40% −9.4%, 1.68×), 10M $21.0K +1.2% (40% −46.1%), 15M $18.1K −39.9%; MEMEKING B8USdt 5M $13.0K open.
+  - Runners unchanged: 37 reached, 7 bought, 30 missed, 1 later. No new fast runner missing from the list.
+  - Accuracy (n=110): median 4.3%, mean 8.1%, 31 over 10% (28%). Buy-price against trailing (25%, n=109): −32.3% against −5.4%.
+  - 25% stop: 241 closed, 61 won, average −1.6%, median −21.8%. 40%: 51 won, −7.2%. 60%: 32 won, −33.4%.
+  - Tally: volume 2,197 → 47, market cap 132,011 → 16, holders 2,577 → 14, top holders (Jupiter) 1,706 → 21, top 10 (GMGN) 78 → 17, fees 185 → 9, bought 136 → 16.
