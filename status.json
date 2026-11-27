@@ -1,13 +1,23 @@
 {
  "id": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump_r5",
  "label": "WOOPY-full",
- "stage": "reading",
+ "stage": "done",
  "started": "2026-11-27T16:54:32.970Z",
- "updated": "2026-11-27T16:54:33.163Z",
- "rpc_calls": 1,
+ "updated": "2026-11-27T16:55:50.301Z",
+ "rpc_calls": 996,
  "rpc_retries": 0,
  "rpc_failed": 0,
  "rpc_last_err": "",
  "rpc_last_err_at": "",
- "heartbeat": "2026-11-27T16:54:33.164Z"
+ "source": "getTransactionsForAddress",
+ "read": 136009,
+ "trades": 97647,
+ "transfers": 9039,
+ "wallets": 6077,
+ "reached_line_at": "2026-11-26T19:08:43Z",
+ "last_tx_time": "2026-11-27T16:53:29Z",
+ "peak_mc": 43255216791619,
+ "early_buyers": 364,
+ "checking": 364,
+ "enriching": 167
 }

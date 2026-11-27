@@ -1,0 +1,66 @@
+{
+ "id": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump_r5",
+ "mint": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump",
+ "label": "WOOPY-full",
+ "request": {
+  "mint": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump",
+  "label": "WOOPY-full",
+  "from": "2026-11-26T15:00:00Z",
+  "to": "2026-11-27T16:54:27Z",
+  "mc": "200000",
+  "max": "400000",
+  "hold": "0",
+  "top": "0",
+  "run": "5",
+  "id": "2va3NUJtEcPemDYg2N1RgA79rPKGTGGJKo3gTY5zpump_r5"
+ },
+ "finished": "2026-11-27T16:55:50.301Z",
+ "seconds": 77,
+ "source": "getTransactionsForAddress",
+ "window": {
+  "from": "2026-11-26T15:00:00Z",
+  "to": "2026-11-27T16:54:27Z",
+  "first_tx": "2026-11-26T15:16:57Z",
+  "last_tx_read": "2026-11-27T16:53:29Z"
+ },
+ "supply": 998914240.940612,
+ "sol_usd": 72.245,
+ "last_price_sol": 5.98752598118041e-8,
+ "last_price_time": "2026-11-27T16:53:29Z",
+ "last_mc_usd": 4321,
+ "mc_line_usd": 200000,
+ "reached_line_at": "2026-11-26T19:08:43Z",
+ "reached_line_mc": 205393,
+ "low_mc_usd": 20,
+ "peak_mc_usd_in_read": 43255216791619,
+ "counts": {
+  "signatures_listed": 0,
+  "failed_tx_skipped": 0,
+  "in_window": null,
+  "read": 136009,
+  "not_returned": 0,
+  "failed_or_unreadable": 0,
+  "max_tx_version": 1,
+  "trades": 97647,
+  "transfers": 9039,
+  "arbitrage_tx": 361,
+  "no_balance_change": 29042,
+  "wallets": 6077,
+  "early_buyers": 364,
+  "enriched": 167
+ },
+ "cut_short": {
+  "listing_hit_cap_before_window_start": false,
+  "read_stopped_at_cap": false,
+  "fast_read_refused": ""
+ },
+ "rpc": {
+  "calls": 996,
+  "http": 350,
+  "retries": 0,
+  "failed": 0,
+  "last_err": "",
+  "last_err_at": ""
+ },
+ "note": "mc_usd uses ONE SOL/USD rate for the whole window (the rate at collection time) — approximate. 'early' = buys before the first trade at or above mc_line_usd. profit_sol = sells − buys + holdings valued at last_price_sol (the last trade READ, which is not 'now' if the read stopped at the cap); a wallet that received coins by transfer shows profit it did not earn by buying."
+}
