@@ -1769,3 +1769,24 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
 - Since the rule change (7.13 h): four looks 106 buys −1.360 / −2.267 / −3.882 SOL; CONFIRM-15 −0.562, -20 −0.311, -30 −0.373; WAIT5-UP 24 buys −0.283;
   HIT50-NOW 53 buys −1.897; HIT100-NOW 16 buys −0.884 (0 won); **FARM-90K 27 buys, 24 closed, +1.131 SOL** (20%) / +0.981 (25%);
   5M-H300 45 buys +9.0% vs −5.1% for the other 142. Runners: reached 90, bought 17, missed 73. Entries 1220 (1018 bought).
+
+### 27 Nov, 22:30 UK — check (publish 22:24:29, state 22:24:27); coin names → Axiom (8f919e8)
+
+- **Fine. 74501c7 confirmed from the data:** started 21:54:22, up 30 min, no log error, too late 0, feed reconnects 0, GMGN limited 0,
+  Jupiter refused 129 in 30 min (4.3 a minute), rate window 56 of 100, limited 0. Entries 1237 (1035 bought).
+- **Memory: 708 MB / 410 heap at 30 minutes** — level with earlier runs at that age (706 MB at 20:13); not climbing like 21:19–21:39.
+- Worst loop hold about 1.0 s in most minutes (worst 1.34 s; before 21:42 it was 0.4–0.7 s; 1.47 s was seen at 19:24). One late feed event
+  skipped. No late buy. The site is now read on full selections (40% stop, 0.5 stake) and, by his screenshots, from a Mac as well as the iPad.
+- Creator wallet: on 15 of the 17 new buys.
+- **Volume test:** still 2 buys, both VOL-REST (ZERO −18.0%, MAYA −11.2% on the 20% stop; MAYA later reached 4.0× its buy); control 0.
+- No coin newly at $100K (runners: reached 90, bought 17, missed 73).
+- New buys (20% stop): PAIRING GVaUm3 at all four looks −41.4% / −20.8% / −33.8% / −26.3%, CONFIRM-15 −47.5%, WAIT5-UP −34.8%;
+  PUMP GvJ9CV NEW-5M −5.6%, CONFIRM-15 −22.3%; Solve NEW-5M −24.7%; HIT50-NOW: CONCERNING −16.4%, Voyager −7.2%, JIMKU −11.1%, RAURA −12.5%,
+  ELONGIVING −23.8%; RAURA NEW-10M open; Meta 13raNh FARM-90K −92.5%; SPACEXLIFE 2oZVJ6 FARM-90K −100%.
+- Since the rule change (7.73 h): four looks 113 buys −1.665 / −2.591 / −4.323 SOL; CONFIRM-15 −0.702, -20 −0.311, -30 −0.373; WAIT5-UP 25 buys −0.353;
+  HIT50-NOW 58 buys −2.039; HIT100-NOW 16 buys −0.884 (0 won); FARM-90K 29 buys, 25 closed, +0.946 SOL (20%) in the published data —
+  his 22:30 screen shows CATE 6J9dkt since sold at the target (+466%), not yet in that figure; open: SpaceX 6iNMMQ, FOMO ZjSXr2, SPACEXLIFE ALC8tU,
+  Gold 3AhpV3, Democat (stuck, no route). 5M-H300 46 buys +7.9% vs −5.2% for the other 144.
+- **Owner 22:31:** clicking a token should go straight to Axiom. The name opened GMGN and a small "ax" opened Axiom. Swapped: **8f919e8** —
+  the name opens Axiom, a small "gm" opens GMGN (all books, and the coin lookup). 330 tests, fail 0. Waiting for his paste.
+- Seen on his screen, not fixed: a −100% sale shows "sold at ≈ $−38" (a negative market cap; display only).
