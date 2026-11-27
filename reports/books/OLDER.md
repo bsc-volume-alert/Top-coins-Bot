@@ -1095,3 +1095,12 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   - Accuracy (n=123): median 4.3%, mean 8.2%, 35 over 10% (28%). Buy-price against trailing (25%, n=121): −32.1% against −6.3%.
   - 25% stop: 254 closed, 64 won, average −2.2%, median −21.8%. 40%: 53 won, −7.8%. 60%: 32 won, −34.2%.
   - Tally: volume 2,327 → 51, market cap 142,977 → 19, holders 2,859 → 15, top holders (Jupiter) 1,812 → 21, top 10 (GMGN) 80 → 17, fees 197 → 9, bought 148 → 16.
+- **27 Nov 01:51 UK — 30-minute check (state 01:46:20 UTC, publish 01:48:25; code 20653a2, up 8 h 30; not restarted).** Bot up, no new feed drop. Memory 686 MB / 305 heap. Jupiter 247 requests a minute, limited 0, errors 0. GMGN: no new refused buy reading (249 / 246 / 3; limited 7, banned 0). Status-dump stall 2.49–2.69 s every five minutes (01:16: 2.28–2.48 s).
+  - **Three new coins on the runners list, all missed, none a real miss (42 reached, 7 bought, 35 missed, 1 later):**
+    - **Buttercup 7KDemc — pump-and-pull:** $33.7K at 5 minutes, $81.6K at 10, $100.6K at about 10, $1.4K at 15. Out on top holders 14.6% / 13.0%, fees 1.23 / 2.43 SOL, top 10 14.2% / 11.5%; bundlers 28% / 22%, phishing 5.9% / 7.6%, 834 → 1,319 holders.
+    - **FOMO 5RQj34 — $100K at 13 minutes, already down to $67K at the 15-minute check:** $42.8K / $54.1K at 5 / 10 minutes; out at every check on top holders 10.4–11.4%, fees 0.88 / 1.29 / 1.58 SOL, top 10 10.4–11.4%; bundlers 31% → 20%, phishing 5.5–6.1%, dev 8% at 5 minutes then 0. The pull profile.
+    - **BASKET 7MPeiH — late, $122K at 84 minutes:** $14.4K, 118 holders, $7K traded, top 10 53%, dev 41% at the first three checks; $34.4K with 2,753 holders on $13K traded at 20 minutes (thousands of holders on almost no volume, as with GTAVI). Failed volume, both top-holder rules and fees throughout.
+  - 1 new new-coin buy (255 in all): 530A BZ4ZaT 10M $16.2K −32.0% (40% −40.9%, never above the buy price). CUMASS rows closed: 10M 40% +36.3%; 20M 40% −5.7%; 15M 40% −25.7%.
+  - Accuracy (n=124): median 4.3%, mean 8.2%, 35 over 10%. Buy-price against trailing (25%, n=123): −32.1% against −6.3%.
+  - 25% stop: 255 closed, 64 won, average −2.3%, median −21.8%. 40%: 54 won, −7.9%. 60%: 32 won, −34.2%.
+  - Tally: volume 2,398 → 53, market cap 146,891 → 21, holders 2,969 → 17, top holders (Jupiter) 1,862 → 26, top 10 (GMGN) 83 → 17, fees 209 → 9, bought 149 → 16.
