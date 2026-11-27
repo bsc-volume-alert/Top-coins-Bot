@@ -10,7 +10,7 @@ export function loadEnv() {
   if (process.env.HELIUS_API_KEY && !process.env.RPC_HTTP) process.env.RPC_HTTP = "https://mainnet.helius-rpc.com/?api-key=" + process.env.HELIUS_API_KEY;
   return !!process.env.RPC_HTTP;
 }
-export const scrub = (s) => String(s).replace(/api-key=[^&\s"']+/g, "api-key=***").replace(/https?:\/\/[^\s"']*helius[^\s"']*/gi, "<rpc>");
+export const scrub = (s) => String(s).replace(/:\/\/[^@\/\s]+@/g, "://***@").replace(/api-key=[^&\s"']+/g, "api-key=***").replace(/https?:\/\/[^\s"']*helius[^\s"']*/gi, "<rpc>");
 export const stats = { calls: 0, http: 0, retries: 0, failed: 0, last_err: "", last_err_at: "" };
 const note = (m) => { stats.last_err = scrub(m).slice(0, 200); stats.last_err_at = new Date().toISOString(); };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
