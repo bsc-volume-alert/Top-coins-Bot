@@ -56,7 +56,11 @@ export function parseInfo(info, supplyChain = null, pump = false) {
     fees_sol: num(info?.total_fee), twitter: tw, ath_usd: ath.usd, ath_basis: ath.basis, ath_price: num(info?.ath_price),
     // recorded, not gated (owner: "everything else recorded with time since these figures change")
     trade_fee_sol: num(info?.trade_fee), holders: num(info?.holder_count ?? st?.holder_count), dev_hold: num(st?.dev_team_hold_rate), creator_hold: num(st?.creator_hold_rate),
-    creator_status: info?.dev?.creator_token_status ?? null, sniper_wallets: num(w?.sniper_wallets), insider_wallets: num(w?.rat_trader_wallets), bundler_wallets: num(w?.bundler_wallets),
+    creator_status: info?.dev?.creator_token_status ?? null, // THE CREATOR'S WALLET (27 Nov 2026, the volume test: whether the "bare" coins are one launcher cannot be told without it). The field name in the
+    // provider's dev block is not confirmed (the saved sample was trimmed), so the likely names are tried and the block's own field NAMES are kept
+    // (dev_fields) so the right one can be read from the first published buys. Public chain data; recorded, never used by a rule.
+    creator: [info?.dev?.creator_address, info?.creator_address, info?.dev?.address, info?.dev?.creator].find((x) => typeof x === "string" && x.length >= 32 && x.length <= 44) ?? null,
+    dev_fields: info?.dev && typeof info.dev === "object" ? Object.keys(info.dev).slice(0, 40) : null, sniper_wallets: num(w?.sniper_wallets), insider_wallets: num(w?.rat_trader_wallets), bundler_wallets: num(w?.bundler_wallets),
     total_supply: num(info?.total_supply), created: num(info?.creation_timestamp), pool_opened: num(info?.open_timestamp), launchpad: info?.launchpad ?? null,
     // owner 26 Nov 2026 00:43 UK ("there's also a phishing percentage… include that as well") — recorded, not gated. Field names read
     // from a live answer the same night: GMGN's "phishing" figure is stat.top_entrapment_trader_percentage; beside it the share

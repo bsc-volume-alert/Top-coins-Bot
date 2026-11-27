@@ -91,3 +91,11 @@ test("GMGN's phishing figure and token audit are read from the fields of a live 
   const b = parseAudit({ ...sec, renounced_mint: false, burn_status: "unknown", top_10_holder_rate: "0.31" }); assert.deepEqual([b.no_mint, b.burnt, b.top10_ok, b.ok, b.of], [false, null, false, 1, 3], "a line GMGN does not answer is left out of the count, a line that fails is counted against it");
   assert.deepEqual([parseAudit(null).ok, parseAudit(null).of], [0, 0]);
 });
+
+// THE CREATOR'S WALLET (27 Nov 2026, for the volume test's launcher question): recorded when the reading carries it, with the dev block's field names
+test("parseInfo keeps the creator's wallet when the provider gives one, and the names of the dev block's fields; an absent or odd value is unknown", () => {
+  const W = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin";
+  assert.equal(parseInfo(REAL).creator, null); assert.deepEqual(parseInfo(REAL).dev_fields, ["creator_token_status"]);
+  assert.equal(parseInfo({ dev: { creator_address: W, creator_token_status: "creator_hold" } }).creator, W); assert.deepEqual(parseInfo({ dev: { creator_address: W, x: 1 } }).dev_fields, ["creator_address", "x"]);
+  assert.equal(parseInfo({ creator_address: W }).creator, W); assert.equal(parseInfo({ dev: { creator_address: "" } }).creator, null); assert.equal(parseInfo({ dev: { creator_address: 12345 } }).creator, null); assert.equal(parseInfo({}).dev_fields, null);
+});

@@ -27,6 +27,23 @@ export const MAX_HOLD_S = 24 * 3600;          // from the simulated FILL
 export const BUY_DELAY_MS = 1000;             // buy scheduled 1 s after the signal
 export const SELL_DELAY_MS = 700;             // sell scheduled 0.7 s after an exit trigger
 export const BUY_PRICING_TIMEOUT_S = 5;       // no trustworthy pool state within 5 s after the scheduled buy → pricing/data timeout, entry cancelled (NOT "untradeable")
+// THE VOLUME TEST (owner's go 27 Nov 2026 20:31 UK: "let's add these books and see what happens. Start fresh… do a different colour, maybe purple, so we
+// know that they are one group… reset everything on that"). CARDS, NOT BOOKS: the three volume books go on buying exactly as before; each card is a
+// selection of THEIR buys made from this moment on (earlier buys stay in the books and in the notes, never deleted, and are not shown on these cards).
+// The definitions were frozen with a second opinion on 27 Nov (reports/books/OLDER.md) and must not be tuned on the buys they are judged on:
+//   clean   = at least buyers_min different buyers in the 5 minutes (own feed) AND cap >= cap_ath_min x the provider's all-time-high cap
+//   CONTROL = clean AND holders up more than growth_min % in 5 minutes (Jupiter) AND 1-hour volume / 1-hour trades over $per_trade_min — judged on t40
+//   BARE    = CONTROL whose reading (in time) shows bundlers and snipers under 3%, fees under 3 SOL, top 10 at 24%+ — judged on h40
+//   OPER    = CONTROL whose reading (in time) shows bundlers and snipers both 40%+ — judged on t20 (t25 beside it)
+//   REST    = clean, not CONTROL — the group expected to keep losing, judged on t20
+//   ADAPTIVE (a line on CONTROL, not a card): BARE on h40, every other CONTROL buy on t20
+// A reading that is missing or late makes the type UNKNOWN (20% stop in ADAPTIVE), kept apart from a genuine NEITHER. A buy whose buyers, all-time
+// high, holder growth or trade size was not recorded is UNCLASSED and sits on no card (counted on CONTROL). Decision at about 200 CONTROL buys; 30 / 60 /
+// 100 are looks only. BARE with no new buy: warning at 24 h, dormant at 48 h, retired from expectations at 72 h (its records stay).
+export const VOLG = { t: 1795811460, since: "27 Nov, 20:31", books: ["VOL100K", "VOL300K", "VOL500K"], buyers_min: 200, cap_ath_min: 0.15, growth_min: 70, per_trade_min: 72,
+  bare: { bund_max: 0.03, snip_max: 0.03, fees_max: 3, top10_min: 0.24 }, oper: { bund_min: 0.40, snip_min: 0.40 },
+  exits: { t20: ["trail", 0.20], t25: ["trail", 0.25], t40: ["trail", 0.40], h40: ["scale", 0.40] },
+  cards: { "VOL-CONTROL": "t40", "VOL-BARE": "h40", "VOL-OPER": "t20", "VOL-REST": "t20" }, checkpoints: [30, 60, 100, 200], bare_last_before: 1795800710, bare_quiet_h: [24, 48, 72] };
 export const NO_ROUTE_RUN = 10, NO_ROUTE_EVERY_S = 30; // a held position answered "no route" this many times in a row is asked about only this often (polled.mjs) — never dropped
 export const SELL_UNRESOLVED_S = 24 * 3600;   // a triggered sale that cannot be priced for 24 h is shown as unresolved exposure (never silently closed)
 

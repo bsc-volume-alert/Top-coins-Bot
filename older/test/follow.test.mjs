@@ -78,7 +78,7 @@ test("CONFIRM: nothing is bought at the look; each book buys when the look's own
   assert.equal(w.nc.pending.size, 1, "WAIT5-UP is still inside its five minutes"); assert.deepEqual([...w.nc.pending.values()][0].left, new Set(["WAIT5-UP"]));
   // the page: the buy in its own book, the look named on the row, and the fee split as a view
   const j = booksApi([...w.eng.entries.values()], { stop: 0.25, run: { books: w.eng.books, newcoins: true }, now: w.t }); assert.equal(j.books["CONFIRM-15"].length, 1); assert.equal(j.books["CONFIRM-15"][0].by_book, "NEW-5M"); assert.match(j.rules["CONFIRM-15"], /NO buy at the look/);
-  assert.equal(j.books["CONFIRM-15-FEE1"].length, 1, "8 SOL of fees on $60K traded = 1.33 per $10K"); for (const n of VIEW_NAMES.filter((x) => !x.startsWith("HIT"))) assert.ok(j.order.includes(n), n); assert.ok(!j.order.includes("HIT50-NOW-FEE2"), "the HIT views need the HIT books in the run");
+  assert.equal(j.books["CONFIRM-15-FEE1"].length, 1, "8 SOL of fees on $60K traded = 1.33 per $10K"); for (const n of VIEW_NAMES.filter((x) => !x.startsWith("HIT") && !S.VOLG.cards[x])) assert.ok(j.order.includes(n), n); /* the volume-test cards need all three volume books in the run (volgroup.test.mjs) */ assert.ok(!j.order.includes("HIT50-NOW-FEE2"), "the HIT views need the HIT books in the run");
 });
 
 test("CONFIRM never buys a coin that falls 20% from its high before rising that far — the buys that went straight down are the ones it is there to avoid", async () => {
