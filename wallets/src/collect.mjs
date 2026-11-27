@@ -45,11 +45,15 @@ export async function collect(req, dir, { onStatus = () => {} } = {}) {
   //    Fallback (any other RPC, or if the fast call is refused): list signatures newest-first, then one getTransaction each.
   const to = toTs(req.to) ?? Math.floor(Date.now() / 1000); const days = num(req.days, 7); let from = toTs(req.from) ?? to - days * 86400;
   let listed = 0, failedTx = 0, listingCut = false, source = "", moreUnread = false, inWindow = null;
-  const TXOPT = { encoding: "jsonParsed", maxSupportedTransactionVersion: 0, commitment: "confirmed" };
+  // Transaction versions: the chain now carries version-1 transactions; asking with 0 makes the node refuse them (the first WOOPY
+  // runs lost ~7% of transactions that way, and the fast call was refused outright). Ask with 1; step back to 0 only if a node
+  // rejects the parameter itself.
+  let maxV = num(req.maxv, 1); const TXOPT = () => ({ encoding: "jsonParsed", maxSupportedTransactionVersion: maxV, commitment: "confirmed" });
   async function* viaFast() {
     const pageN = num(req.page, 500); let token = null, n = 0;
     while (true) {
-      const r = await callRaw("getTransactionsForAddress", [mint, { transactionDetails: "full", sortOrder: "asc", limit: pageN, encoding: "json", maxSupportedTransactionVersion: 0, commitment: "confirmed", filters: { blockTime: { gte: from, lte: to }, status: "succeeded" }, ...(token ? { paginationToken: token } : {}) }], { rps, timeoutMs: 120000 });
+      const r = await callRaw("getTransactionsForAddress", [mint, { transactionDetails: "full", sortOrder: "asc", limit: pageN, encoding: "json", maxSupportedTransactionVersion: maxV, commitment: "confirmed", filters: { blockTime: { gte: from, lte: to }, status: "succeeded" }, ...(token ? { paginationToken: token } : {}) }], { rps, timeoutMs: 120000 });
+      if (r.error && n === 0 && maxV > 0 && /invalid/i.test(String(r.error)) && !/32015/.test(String(r.error))) { maxV = 0; continue; }
       if (r.error || !Array.isArray(r.result?.data)) { if (n === 0) { st.fast_refused = String(r.error || "unexpected answer").slice(0, 200); return false; } throw new Error("fast read stopped after " + n + " transactions: " + (r.error || "unexpected answer")); }
       source = "getTransactionsForAddress";
       for (const it of r.result.data) { n++; yield [it.transaction?.signatures?.[0] || "", it.blockTime, it.slot, it]; }
@@ -70,7 +74,7 @@ export async function collect(req, dir, { onStatus = () => {} } = {}) {
     }
     sigs.reverse(); listingCut = !reachedStart && !exhausted; inWindow = sigs.length; // hit maxsigs before the window start: the EARLIEST part is missing
     status({ stage: "reading", listed, in_window: sigs.length, listing_cut: listingCut });
-    for (let k = 0; k < sigs.length; k += 500) { const chunk = sigs.slice(k, k + 500); const txs = await many("getTransaction", chunk.map((s) => [s[0], TXOPT]), { rps }); for (let i = 0; i < chunk.length; i++) yield [...chunk[i], txs[i]]; }
+    for (let k = 0; k < sigs.length; k += 500) { const chunk = sigs.slice(k, k + 500); let txs = await many("getTransaction", chunk.map((s) => [s[0], TXOPT()]), { rps }); if (maxV > 0 && txs.every((t) => !t) && /invalid/i.test(stats.last_err) && !/32015/.test(stats.last_err)) { maxV = 0; txs = await many("getTransaction", chunk.map((s) => [s[0], TXOPT()]), { rps }); } for (let i = 0; i < chunk.length; i++) yield [...chunk[i], txs[i]]; }
   }
   async function* stream() { status({ stage: "reading" }); const ok = yield* viaFast(); if (ok === false) yield* viaList(); }
 
@@ -80,12 +84,12 @@ export async function collect(req, dir, { onStatus = () => {} } = {}) {
   T.write("ts,slot,sig,wallet,side,tokens,sol,mc_usd,signer,payer\n"); X.write("ts,slot,sig,from,to,tokens\n");
   const W = new Map(); // wallet → totals
   const w = (a) => { let x = W.get(a); if (!x) W.set(a, (x = { wallet: a, first: 0, eb: 0, es: 0, en: 0, etok: 0, emc: 0, b: 0, s: 0, nb: 0, ns: 0, tokb: 0, toks: 0, firstSell: 0, firstSellMc: 0, tin: 0, tout: 0 })); return x; };
-  let crossTs = 0, crossMc = 0, streak = 0, streakTs = 0, streakMc = 0, peakMc = 0, lowMc = Infinity, nTrades = 0, nTransfers = 0, nArb = 0, nNone = 0, nMissing = 0, read = 0, lastTs = 0, firstTs = 0, lastPrice = 0, lastPriceTs = 0;
+  let crossTs = 0, crossMc = 0, streak = 0, streakTs = 0, streakMc = 0, peakMc = 0, lowMc = Infinity, nTrades = 0, nTransfers = 0, nArb = 0, nNone = 0, nMissing = 0, read = 0, lastTs = 0, firstTs = 0, lastPrice = 0, lastPriceTs = 0, nUnread = 0;
   for await (const [sig, ts, slot, tx] of stream()) {
     if (read >= maxTx) { moreUnread = true; break; }
     read++; lastTs = ts; if (!firstTs) firstTs = ts;
     if (!tx) { nMissing++; continue; }
-    const r = parseTx(tx, mint); if (!r) continue;
+    const r = parseTx(tx, mint); if (!r) { nUnread++; continue; }
     if (r.kind === "arb") nArb++; else if (r.kind === "none") nNone++;
     const mc = r.price ? r.price * supply * (solUsd || 0) : 0; if (r.kind === "trade" && r.price > 0) { lastPrice = r.price; lastPriceTs = ts; }
     if (r.kind === "trade" && mc > 0) { if (mc > peakMc) peakMc = mc; if (mc < lowMc) lowMc = mc; }
@@ -127,7 +131,7 @@ export async function collect(req, dir, { onStatus = () => {} } = {}) {
     live = next;
   }
   const full = pick.filter((x) => x.complete && x.oldestSig);
-  const ftx = await many("getTransaction", full.map((x) => [x.oldestSig, { encoding: "jsonParsed", maxSupportedTransactionVersion: 0, commitment: "confirmed" }]), { rps });
+  const ftx = await many("getTransaction", full.map((x) => [x.oldestSig, TXOPT()]), { rps });
   full.forEach((x, i) => { const f = funderOf(ftx[i], x.wallet); if (f) { x.funder = f.funder; x.funderSol = f.sol; } });
 
   const cols = ["rank", "wallet", "early_buy_sol", "early_buys", "first_buy_mc_usd", "first_buy_time", "early_sell_sol", "total_buy_sol", "total_sell_sol", "net_sol", "buys", "sells", "first_sell_time", "first_sell_mc_usd", "tokens_bought", "tokens_sold", "tokens_in_by_transfer", "tokens_out_by_transfer", "holds_now", "holds_value_sol", "profit_sol", "pct_supply_bought_early", "wallet_tx_count", "wallet_first_seen", "funder", "funder_sol"];
@@ -137,7 +141,7 @@ export async function collect(req, dir, { onStatus = () => {} } = {}) {
   const meta = { id: req.id, mint, label: req.label || "", request: req, finished: iso(Date.now() / 1000), seconds: Math.round((Date.now() - t0) / 1000),
     source, window: { from: iso(from), to: iso(to), first_tx: iso(firstTs), last_tx_read: iso(lastTs) },
     supply, sol_usd: solUsd, last_price_sol: lastPrice, last_price_time: iso(lastPriceTs), last_mc_usd: Math.round(lastPrice * supply * (solUsd || 0)), mc_line_usd: mcLine, reached_line_at: iso(crossTs), reached_line_mc: Math.round(crossMc), low_mc_usd: Number.isFinite(lowMc) ? Math.round(lowMc) : null, peak_mc_usd_in_read: Math.round(peakMc),
-    counts: { signatures_listed: listed, failed_tx_skipped: failedTx, in_window: inWindow, read, not_returned: nMissing, trades: nTrades, transfers: nTransfers, arbitrage_tx: nArb, no_balance_change: nNone, wallets: W.size, early_buyers: early.length, enriched: pick.length },
+    counts: { signatures_listed: listed, failed_tx_skipped: failedTx, in_window: inWindow, read, not_returned: nMissing, failed_or_unreadable: nUnread, max_tx_version: maxV, trades: nTrades, transfers: nTransfers, arbitrage_tx: nArb, no_balance_change: nNone, wallets: W.size, early_buyers: early.length, enriched: pick.length },
     cut_short: { listing_hit_cap_before_window_start: listingCut, read_stopped_at_cap: moreUnread, fast_read_refused: st.fast_refused || "" },
     rpc: { ...stats }, note: "mc_usd uses ONE SOL/USD rate for the whole window (the rate at collection time) — approximate. 'early' = buys before the first trade at or above mc_line_usd. profit_sol = sells − buys + holdings valued at last_price_sol (the last trade READ, which is not 'now' if the read stopped at the cap); a wallet that received coins by transfer shows profit it did not earn by buying." };
   writeFileSync(dir + "/meta.json", JSON.stringify(meta, null, 1));
