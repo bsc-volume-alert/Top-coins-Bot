@@ -1854,3 +1854,15 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   Of the look records on file with a top-holders fail, 1,902 of 2,672 are under 16%.
 - Not answered yet (offered): whether low-top-10 coins that pass a fee rule are worth a paper book of their own — needs the outcome of the
   refused ones, not only the 21 that ran.
+
+### 27 Nov, 22:51 UK — he asked what "GMGN at the buy · failed" means (VOL-REST card, 70% stop chosen)
+
+- Explained: the old GMGN checks (top 10 18–30%, bundlers 5–50%, insiders 2.5–40%, snipers under 5%, fees 5 SOL+, a Twitter link) are
+  label-only in valid11: every signal is bought, the reading is recorded and labelled passed / failed. "failed" = at least one figure outside.
+- Volume test, publish 22:45: **3 buys, all VOL-REST, control 0.** ZERO 1196: 20% −18.0%, 40% +37.4%, 70% open (1.08× on his screen).
+  **MAYA 1203: 20% −11.2%, 25% −16.8%, 40% −36.7% — all sold before the run; 70% stop still holding at 4.58× (high 5.82×) on his screen.**
+  RAURA F5NjZL 1248 (22:27, cap $49K, 857 buyers, holders +41%, $33 a trade, fees 20.3 SOL, bundlers 21.9%, snipers 0%): 20% −1.5%, 40% −18.4%, 70% −55.2%.
+  All three "failed" the old checks: ZERO on five (top 10 44.5%, bundlers 65.5%, insiders 0%, snipers 65.5%, fees 0.26); MAYA on four (top 10 32.9%,
+  insiders 0%, snipers 38.9%, fees 0.38); RAURA on one (insiders 0%).
+- Told him: the 4.58× is on the stop he chose at the top (70%), open and not in any total; the card's own exit (20%) lost on it. Before the test
+  the wide stop was worse on 38 of 47 coins of this type; one coin does not change that. The test's rules stay frozen.
