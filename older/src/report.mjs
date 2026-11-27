@@ -5,18 +5,21 @@ import * as S from "./spec.mjs";
 import { versionsFor, COST } from "./book.mjs";
 
 const q = (a, p) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); const i = (s.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i); return s[lo] + (s[hi] - s[lo]) * (i - lo); };
+const qs = (s, p) => { if (!s.length) return null; const i = (s.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i); return s[lo] + (s[hi] - s[lo]) * (i - lo); }; // the same, on an array that is already sorted
 const r4 = (x) => (x == null || !isFinite(x) ? null : +x.toFixed(4));
 const sum = (a) => a.reduce((s, x) => s + x, 0);
 
-export function bookRows(entries, noteCounts = []) {
+/** only (27 Nov 2026): a Set of families — rows are built for those books alone (the status dump of a run that chose its books
+ *  built every row of every book and then threw most away: 0.4–0.5 s of each dump on the server). Absent: every book, as before. */
+export function bookRows(entries, noteCounts = [], only = null) {
   const rows = new Map();
   const mk = (f, ag, stop, policy) => { const r = { family: f, ag, stop, policy, entries: 0, cancelled: 0, pending: 0, filled: 0, open: 0, closed: 0, unresolved: 0, mints: new Set(), trades: [], holds: [], delays: [], runners: { n: 0, partial: 0, x2: 0, x3: 0, x5: 0, x10: 0 }, outage: 0, estimated: 0, estimatedNet: 0, rebuys: 0, rebuyNet: 0, rebuyOpen: 0, feeAssumed: 0, halves: 0, startup: 0, startupNet: 0, unsupported: 0, unsupportedNet: 0, unsupportedRebuys: 0, unsupportedRebuyNet: 0 }; rows.set(`${f}|${ag}|${stop}|${policy}`, r); return r; };
-  for (const policy of S.POLICIES) for (const f of S.FAMILIES) for (const [ag] of S.agesOf(f)) for (const stop of S.STOPS) mk(f, ag, stop, policy);
+  for (const policy of S.POLICIES) for (const f of S.FAMILIES) { if (only && !only.has(f)) continue; for (const [ag] of S.agesOf(f)) for (const stop of S.STOPS) mk(f, ag, stop, policy); }
   for (const e of entries) { if (e.token?.xfer_bps > 0) continue; // transfer-fee coins are reported in their own book (spec FEE_BOOK), not in the rule rows
    for (const f of e.families) for (const policy of S.POLICIES) for (const v of versionsFor(e, f, policy)) {
     // older-11: a run may buy for an 8-hour book from 6 hours on (spec MIN_AGE_11_S). Such a buy is in age group A0, for which
     // these books have no fixed row: the row is added when the first such buy exists, so no buy is ever left out of the table.
-    const r = rows.get(`${f}|${e.ag}|${v.stop}|${policy}`) ?? (e.ag === "A0" && S.FAMILIES.includes(f) && S.STOPS.includes(v.stop) ? mk(f, "A0", v.stop, policy) : null); if (!r) continue;
+    const r = rows.get(`${f}|${e.ag}|${v.stop}|${policy}`) ?? (e.ag === "A0" && S.FAMILIES.includes(f) && (!only || only.has(f)) && S.STOPS.includes(v.stop) ? mk(f, "A0", v.stop, policy) : null); if (!r) continue;
     // BUYING AGAIN (older-9): a row's figures are its FIRST buys, exactly as in older-8. Re-buys are counted and summed apart.
     // A re-buy of a coin later found fee-bearing or restricted is separated exactly like a first buy (Codex's review of
     // 161d545: the re-buy branch used to return before that check, so those fee-free results stayed in the re-buy P&L).
@@ -36,7 +39,7 @@ export function bookRows(entries, noteCounts = []) {
   } }
   const notes = {}; for (const n of noteCounts) (notes[n.family] ||= {})[n.reason] = n.n;
   return [...rows.values()].map((r) => {
-    const t = r.trades.sort((a, b) => a.t - b.t), rets = t.map((x) => x.ret), n = t.length;
+    const t = r.trades.sort((a, b) => a.t - b.t), rets = t.map((x) => x.ret), n = t.length, sorted = [...rets].sort((x, y) => x - y); // sorted once for the five quantiles (it was sorted again for each)
     const byMint = new Map(); for (const x of t) byMint.set(x.mint, (byMint.get(x.mint) || 0) + x.net);
     const top3 = new Set([...byMint].sort((a, b) => b[1] - a[1]).slice(0, 3).map((x) => x[0])), rest = t.filter((x) => !top3.has(x.mint));
     const h1 = t.slice(0, Math.floor(n / 2)), h2 = t.slice(Math.floor(n / 2));
@@ -45,7 +48,7 @@ export function bookRows(entries, noteCounts = []) {
       book: `${r.family} · ${r.ag} · ${Math.round(r.stop * 100)}% · ${r.policy}`, family: r.family, ag: r.ag, stop: r.stop, policy: r.policy,
       mints: r.mints.size, entries: r.entries, filled: r.filled, open: r.open, closed: n, cancelled: r.cancelled, pending: r.pending, unresolved: r.unresolved,
       net_sol: r4(sum(t.map((x) => x.net))), avg_ret: n ? r4(sum(rets) / n) : null, win_rate: n ? r4(rets.filter((x) => x > 0).length / n) : null,
-      q10: r4(q(rets, 0.1)), q25: r4(q(rets, 0.25)), median: r4(q(rets, 0.5)), q75: r4(q(rets, 0.75)), q90: r4(q(rets, 0.9)),
+      q10: r4(qs(sorted, 0.1)), q25: r4(qs(sorted, 0.25)), median: r4(qs(sorted, 0.5)), q75: r4(qs(sorted, 0.75)), q90: r4(qs(sorted, 0.9)),
       loss40: rets.filter((x) => x <= -0.4).length, loss50: rets.filter((x) => x <= -0.5).length, loss60: rets.filter((x) => x <= -0.6).length,
       ex_top3_net: r4(sum(rest.map((x) => x.net))), ex_top3_avg: rest.length ? r4(sum(rest.map((x) => x.ret)) / rest.length) : null, ex_top3_n: rest.length,
       h1_net: r4(sum(h1.map((x) => x.net))), h1_avg: h1.length ? r4(sum(h1.map((x) => x.ret)) / h1.length) : null, h2_net: r4(sum(h2.map((x) => x.net))), h2_avg: h2.length ? r4(sum(h2.map((x) => x.ret)) / h2.length) : null,

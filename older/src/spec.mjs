@@ -38,6 +38,10 @@ export const SELL_UNRESOLVED_S = 24 * 3600;   // a triggered sale that cannot be
 //   vol_min_usd  bought + sold since creation AT LEAST this (Jupiter: the 1-hour statistics, which for a coin minutes old is its whole life)
 //   fees_min_sol total fees AT LEAST this, in SOL           (GMGN token info — the only source of fees)
 //   top10        top 10 holders inside this range, inclusive (GMGN token info, the figure the owner's other checks use)
+//                16–30% since 27 Nov 2026 14:15 UK (owner: "the top 10 should be 16% and above for all analysis … otherwise we're
+//                missing runners") — it was 20–30%. Of 100 checks refused by that floor alone, 19 were of coins that went on to
+//                $100K, every one with a top 10 of 16.1–19.9%. A buy made inside 16–20% is one the old floor refused: the page
+//                shows those buys as their own view (page.mjs VIEWS) so it can be seen whether they earn or lose.
 // GMGN is asked only for a coin that has already passed market cap, holders and volume (its allowance is small). The coin's real
 // age is checked on GMGN's creation time when it gives one. No reading, or a reading that fails: not bought, and counted as such.
 // Bought and sold on ROUTED QUOTES for the exact 0.2 SOL size (a launch curve is not on the pool feed): the ordinary 1 s buy
@@ -45,19 +49,39 @@ export const SELL_UNRESOLVED_S = 24 * 3600;   // a triggered sale that cannot be
 // forced sale at 45 minutes (owner 16:10: "we don't have to come out because we've got an automatic sell button").
 // One buy per book and coin (each age is measured once). A0 is their only age group.
 export const NEW_COIN = [
-  { family: "NEW-5M", at_s: 300, mc_min_usd: 10_000, holders_min: 100, vol_min_usd: 30_000, fees_min_sol: 2, top10: [0.20, 0.30] },   // holders: 150 at 16:07, changed to 100 by the owner at 18:37
-  { family: "NEW-10M", at_s: 600, mc_min_usd: 10_000, holders_min: 150, vol_min_usd: 50_000, fees_min_sol: 3.5, top10: [0.20, 0.30] }, // "fees around 3.5" → at least 3.5; top holders taken as the 5-minute book's 20–30%
+  { family: "NEW-5M", at_s: 300, mc_min_usd: 10_000, holders_min: 100, vol_min_usd: 30_000, fees_min_sol: 2, top10: [0.16, 0.30] },   // holders: 150 at 16:07, changed to 100 by the owner at 18:37
+  { family: "NEW-10M", at_s: 600, mc_min_usd: 10_000, holders_min: 150, vol_min_usd: 50_000, fees_min_sol: 3.5, top10: [0.16, 0.30] }, // "fees around 3.5" → at least 3.5; top holders taken as the 5-minute book's 20–30%
   // 15 and 20 minutes (owner 25 Nov 2026 23:32 UK, after a coin that first crossed $10K at ~15 minutes was missed): "volume about 100K,
   // fees 5 SOL, top 10 keep it at 20 to 30, holders 200 … four separate books for now". The same numbers at both ages; market cap over
   // $10K as in the other two (he did not restate it).
-  { family: "NEW-15M", at_s: 900, mc_min_usd: 10_000, holders_min: 200, vol_min_usd: 100_000, fees_min_sol: 5, top10: [0.20, 0.30] },
-  { family: "NEW-20M", at_s: 1200, mc_min_usd: 10_000, holders_min: 200, vol_min_usd: 100_000, fees_min_sol: 5, top10: [0.20, 0.30] },
+  { family: "NEW-15M", at_s: 900, mc_min_usd: 10_000, holders_min: 200, vol_min_usd: 100_000, fees_min_sol: 5, top10: [0.16, 0.30] },
+  { family: "NEW-20M", at_s: 1200, mc_min_usd: 10_000, holders_min: 200, vol_min_usd: 100_000, fees_min_sol: 5, top10: [0.16, 0.30] },
 ];
 // THE COMBINED VIEW (owner 23:27–23:32: "one combined … a separate calculation, so we can work out where the money is"): NOT a
 // book and not extra trades — on the site, each coin's FIRST filled buy by any of the new-coin books, i.e. what one book that
 // buys a coin once, at the first age it passes, would have made; every row says which age bought it.
 export const NEW_ALL = "NEW-COMBINED";
 export const NEW_BOOKS = NEW_COIN.map((x) => x.family);
+export const TOP10_OLD_FLOOR = 0.20;   // the floor until 27 Nov 2026 14:15 UK (display only: which buys the old rule would have refused)
+// THE FOLLOW-UP BOOKS (owner 27 Nov 2026 12:37 UK: "our usual look and then wait 5 minutes, and if the price goes up, we buy. If the
+// price goes down, we don't buy … let's go ahead and see how they do"; 14:15 UK: "Yes, 100%. Add those"). Paper books of their own,
+// off unless a run lists them. They buy NOTHING at a look: a look that passes (one of the four new-coin books bought there — that
+// buy is "the look's own buy") only STARTS them, and each then decides for itself, once, on what the coin does next.
+//   CONFIRM-15 / -20 / -30  bought at the first routine valuation that shows the look's own buy worth 1.15× / 1.20× / 1.30× what
+//                           it cost (its 20%-trailing row, valued by real sell quotes every few seconds) — never if that row is
+//                           sold first, i.e. the coin fell 20% from its high before rising that far. This is the rule measured
+//                           on the first 300 buys (27 Nov: 125 of them never rose 5% and lost about 25% each); there the price
+//                           paid was ASSUMED (6% over the trigger). Here the buy is priced like every new-coin buy — a real
+//                           routed quote for 0.2 SOL asked a second after the trigger — so what it really costs is measured:
+//                           each buy records the look's own buy price beside its own.
+//   WAIT5-UP                judged once, WAIT seconds after the look: one reading of the provider's price; bought if it is higher
+//                           than the price at the look, never if it is the same or lower.
+// One buy per book and coin (the first look that leads to one). A0 only. The fees, top 10, bundler, sniper and phishing figures
+// on such a buy are the LOOK's reading (GMGN is not asked again); the provider's cap, holders and volume a second after the buy
+// are on it like on every buy (entry.snap). [family, value of the look's own buy ÷ cost] · [family, wait seconds]
+export const CONFIRM = [["CONFIRM-15", 1.15], ["CONFIRM-20", 1.20], ["CONFIRM-30", 1.30]], CONFIRM_STOP = 0.20;
+export const WAIT_UP = [["WAIT5-UP", 300]];
+export const FOLLOW_BOOKS = [...CONFIRM.map((x) => x[0]), ...WAIT_UP.map((x) => x[0])], FOLLOW_EVERY_S = 1;
 export const NEW_LOOK_S = 20;          // the provider's list of new coins is read this often (it reaches back about a minute at ~35 new coins a minute)
 export const NEW_CHECK_LATE_S = 90;    // a coin that could not be measured within this long after its age point is NOT judged (counted "too late") — never judged on later figures
 // THE FULL PICTURE OF A NEAR MISS (owner 26 Nov 2026 12:29–12:36 UK: "for the 100k coins that we're missing, list all the factors
@@ -77,7 +101,8 @@ export const NEW_POP = "new-coins";    // how these buys are tagged (entry.pop)
 // crowded the other books' own buy-checks (refusals 17 in two hours against 1 in the three hours before). Jupiter's own
 // top-holders figure agreed with GMGN's top 10 to within 3.2 points on every candidate read (median 0.16), so a coin whose
 // Jupiter figure is OUTSIDE this wider range is not asked about and not bought (counted "top holders, GMGN not asked").
-// Inside it, or when Jupiter gives no figure, GMGN is asked and decides on the rule's own 20–30% as before.
+// Inside it, or when Jupiter gives no figure, GMGN is asked and decides on the rule's own range (16–30% since 27 Nov 2026).
+// Checked against the 16% floor on 3,000 measurements (27 Nov): of 88 with a GMGN top 10 of 16–20%, Jupiter put 1 under 15% — the range stays.
 export const NEW_TOP_PRE = [0.15, 0.35];
 // AFTER EVERY ROW OF A NEW-COIN BUY IS SOLD its value is still followed for the rest of the 24 hours ("how high did it go"),
 // but no longer by one routed quote a minute each (at 7 buys an hour that alone would need more requests than the key's 60 a
@@ -129,10 +154,12 @@ export const NEW_LOG_KEEP = 3000;      // measurements of coins over the market-
 
 // Families. 21 families × 4 ages + 10 any-age families × 5 ages = 134 book-ages; × 5 stops × 2 exit policies = 1,340 comparisons (VOL100K and DIP15K added in older-11).
 // + the four new-coin books in A0 only = 138 book-ages, 1,380 comparisons. + the six HIT books in A0 only (27 Nov 2026) = 144 book-ages.
+// + the four follow-up books in A0 only (27 Nov 2026) = 148 book-ages.
 export const FAMILIES = ["AGE-DOUBLE", "LOW4H", "CONT", "SLOW-BUILD", "HH-BREAK", "CONT-STALL", "LOW4H-LIQ25K",
   "FAST-1M", "FAST-3M", "FAST-5M", "FAST-10M", "FAST-30M", "FAST150-1M", "FAST150-3M", "FAST150-5M", "FAST150-10M", "SECOND-WAVE", "HH30-5M", "HH30-10M", "HH15-5M", "HH-BREAK-4H",
   "VOL100K", "VOL300K", "VOL300K-UP", "VOL500K", "VOL500K-UP", "RUG450", "RUG450-BOUNCE", "RUG950", "RUG950-BOUNCE", "DIP15K", ...NEW_BOOKS,
-  "HIT50-NOW", "HIT50-5M", "HIT50-10M", "HIT100-NOW", "HIT100-5M", "HIT100-10M"]; // the six HIT books (27 Nov 2026) — see HIT below; A0 only
+  "HIT50-NOW", "HIT50-5M", "HIT50-10M", "HIT100-NOW", "HIT100-5M", "HIT100-10M", // the six HIT books (27 Nov 2026) — see HIT below; A0 only
+  ...FOLLOW_BOOKS]; // the four follow-up books (27 Nov 2026) — see FOLLOW_BOOKS above; A0 only
 // ANY-AGE BOOKS (older-8, owner's decisions 21 Nov 2026 21:11 UK). Migrated coins only (this feed sees nothing else), any age after
 // migration: the first 8 hours (A0) and the four age groups. One entry per family per coin per age group, as everywhere.
 // VOL: USD volume over the last VOL_WIN_S seconds (exact observations, rolling) ≥ the threshold; the -UP version also needs the
@@ -174,7 +201,7 @@ export const ANY_AGE = new Set([...VOL.map((x) => x[0]), ...RUG.map((x) => x[0])
 // [family, line USD, wait seconds]
 export const HIT = [["HIT50-NOW", 50_000, 0], ["HIT50-5M", 50_000, 300], ["HIT50-10M", 50_000, 600], ["HIT100-NOW", 100_000, 0], ["HIT100-5M", 100_000, 300], ["HIT100-10M", 100_000, 600]];
 export const HIT_BOOKS = HIT.map((x) => x[0]), HIT_LINES = [...new Set(HIT.map((x) => x[1]))], HIT_WINDOW_S = 8 * 3600, HIT_START_S = 120, HIT_WAIT_MAX_S = Math.max(...HIT.map((x) => x[2]));
-export const agesOf = (family) => (NEW_BOOKS.includes(family) || HIT_BOOKS.includes(family) ? [AGE_YOUNG] : ANY_AGE.has(family) ? ALL_AGES : AGES);
+export const agesOf = (family) => (NEW_BOOKS.includes(family) || HIT_BOOKS.includes(family) || FOLLOW_BOOKS.includes(family) ? [AGE_YOUNG] : ANY_AGE.has(family) ? ALL_AGES : AGES);
 export const POLICIES = ["trail", "scale", "buy"];   // trail = the original pure trailing stop; scale = sell half at 2× cost, trail the rest; buy = the stop from the BUY PRICE (below)
 // THE STOP FROM THE BUY PRICE (owner 26 Nov 2026 11:45–11:55 UK: "stop from the buy price… just as a comparison tool… just keep
 // it open… it'll just sell if it reaches its own price. Simple as that"). A third exit beside the two trailing ones, on the
@@ -288,7 +315,7 @@ export const REBUY_MAX_PER_DAY = 50;
 // VOL100K: the VOL rule at $100,000 of volume in 5 minutes, any age after migration, $40K–$2M at the buy (owner, 24 Nov).
 export const NEW_IN_11 = ["VOL100K", "DIP15K"];
 export const BOOKS_11 = ["HH-BREAK", "HH-BREAK-4H", "VOL100K", "VOL300K", "VOL500K", "FAST-1M", "FAST-3M", "FAST-5M", "RUG450", "RUG950", "LOW4H", "SLOW-BUILD", "DIP15K"];
-export const BOOKS_LEGACY = FAMILIES.filter((f) => !NEW_IN_11.includes(f) && !NEW_BOOKS.includes(f) && !HIT_BOOKS.includes(f)); // the new-coin books are never part of "legacy": they buy only when a run switches them on
+export const BOOKS_LEGACY = FAMILIES.filter((f) => !NEW_IN_11.includes(f) && !NEW_BOOKS.includes(f) && !HIT_BOOKS.includes(f) && !FOLLOW_BOOKS.includes(f)); // the new-coin books are never part of "legacy": they buy only when a run switches them on
 /** the active books for a run name; throws on an unknown book or a clock book without the book whose buys it shares */
 // THE YOUNGEST AGE OF THE "OLDER" BOOKS IN A RUN (older-11; a run sets it with OLDER_MIN_AGE_H, main.mjs). MIN_AGE_S (8 hours)
 // stays the age-group boundary and the default. A run may evaluate the books that normally start at 8 hours from an earlier
@@ -298,9 +325,16 @@ export const BOOKS_LEGACY = FAMILIES.filter((f) => !NEW_IN_11.includes(f) && !NE
 export const MIN_AGE_11_S = 6 * 3600;
 // what a run name switches on (scripts/start.sh passes these to main.mjs; each can also be set on its own)
 export const RUNS = { "older-11": { books: "older-11", gates: "older-11", rebuy: false, min_age_h: MIN_AGE_11_S / 3600 } };
+// A GROUP WORD in a book list stands for its books (27 Nov 2026 — so a list typed on a phone stays short): HIT = the six HIT
+// books, FOLLOW = the four follow-up books.
+export const BOOK_GROUPS = { HIT: HIT_BOOKS, FOLLOW: FOLLOW_BOOKS };
+/** a run's book list after a change typed as "+A,B" (add) or "-A,B" (take off); group words allowed. `current` = the list now. */
+export function editBooks(current, change) { const ch = (change ?? "").trim(), sign = ch[0]; if (sign !== "+" && sign !== "-") return booksOf(ch);
+  if (!(current ?? "").trim()) throw new Error("this run has no book list of its own yet: give the whole list once");
+  const names = booksOf(ch.slice(1)), cur = booksOf(current); return booksOf((sign === "+" ? [...cur, ...names] : cur.filter((f) => !names.includes(f))).join(",")); }
 export function booksOf(name) {
   const n = (name ?? "").trim();
-  const list = !n || n === "legacy" ? BOOKS_LEGACY : n === "older-11" ? BOOKS_11 : n.split(",").map((x) => x.trim()).filter(Boolean);
+  const list = !n || n === "legacy" ? BOOKS_LEGACY : n === "older-11" ? BOOKS_11 : n.split(",").map((x) => x.trim()).filter(Boolean).flatMap((x) => BOOK_GROUPS[x] ?? [x]);
   for (const f of list) { if (!FAMILIES.includes(f)) throw new Error(`unknown book "${f}"`); const base = CLOCK[f]?.base; if (base && !list.includes(base)) throw new Error(`${f} shares the buys of ${base}, which is not in the list`); }
   return [...new Set(list)];
 }

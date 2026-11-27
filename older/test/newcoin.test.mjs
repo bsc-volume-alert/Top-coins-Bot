@@ -39,11 +39,11 @@ function world({ store = null, file = null, engine = {}, gmgn = null, quoter = {
 }
 const A = "NewCoinAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAApump", B = "NewCoinBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBpump", C = "NewCoinCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCpump";
 
-test("the rule numbers are the owner's: 5 minutes — cap over $10K, over 100 holders, $30K traded, 2 SOL fees, top 10 20–30%; 10 minutes — over 150 holders, $50K, 3.5 SOL", () => {
-  assert.deepEqual(R5, { family: "NEW-5M", at_s: 300, mc_min_usd: 10_000, holders_min: 100, vol_min_usd: 30_000, fees_min_sol: 2, top10: [0.2, 0.3] });
-  assert.deepEqual(R10, { family: "NEW-10M", at_s: 600, mc_min_usd: 10_000, holders_min: 150, vol_min_usd: 50_000, fees_min_sol: 3.5, top10: [0.2, 0.3] });
-  // 15 and 20 minutes (owner 23:32 UK): holders over 200, $100K traded, fees 5 SOL, top 10 20–30% — the same at both ages
-  assert.deepEqual(S.NEW_COIN.slice(2), [{ family: "NEW-15M", at_s: 900, mc_min_usd: 10_000, holders_min: 200, vol_min_usd: 100_000, fees_min_sol: 5, top10: [0.2, 0.3] }, { family: "NEW-20M", at_s: 1200, mc_min_usd: 10_000, holders_min: 200, vol_min_usd: 100_000, fees_min_sol: 5, top10: [0.2, 0.3] }]);
+test("the rule numbers are the owner's: 5 minutes — cap over $10K, over 100 holders, $30K traded, 2 SOL fees, top 10 16–30% (20–30% until 27 Nov 2026 14:15 UK); 10 minutes — over 150 holders, $50K, 3.5 SOL", () => {
+  assert.deepEqual(R5, { family: "NEW-5M", at_s: 300, mc_min_usd: 10_000, holders_min: 100, vol_min_usd: 30_000, fees_min_sol: 2, top10: [0.16, 0.3] });
+  assert.deepEqual(R10, { family: "NEW-10M", at_s: 600, mc_min_usd: 10_000, holders_min: 150, vol_min_usd: 50_000, fees_min_sol: 3.5, top10: [0.16, 0.3] });
+  // 15 and 20 minutes (owner 23:32 UK): holders over 200, $100K traded, fees 5 SOL, top 10 16–30% since 27 Nov 14:15 UK — the same at both ages
+  assert.deepEqual(S.NEW_COIN.slice(2), [{ family: "NEW-15M", at_s: 900, mc_min_usd: 10_000, holders_min: 200, vol_min_usd: 100_000, fees_min_sol: 5, top10: [0.16, 0.3] }, { family: "NEW-20M", at_s: 1200, mc_min_usd: 10_000, holders_min: 200, vol_min_usd: 100_000, fees_min_sol: 5, top10: [0.16, 0.3] }]);
   assert.deepEqual(S.NEW_BOOKS, ["NEW-5M", "NEW-10M", "NEW-15M", "NEW-20M"]);
   const j = (f, r = R5) => judgeMeasure({ mc: 10_001, holders: 101, vol: 30_000, top_jup: 0.2, ...f }, r);
   assert.deepEqual(j({}), { mc: true, holders: true, vol: true, top_jup: true });
@@ -95,14 +95,14 @@ test("a coin that passes all five rules at 5 minutes is paper-bought on a routed
   assert.equal(w.eng.openDirect({ mint: A, family: "NEW-5M", t: w.t, mc: 1, px: 1 }), null);
 });
 
-test("not bought, and counted why: fees too low, top 10 outside 20–30%, no GMGN reading, GMGN says the coin is old, transfers restricted, restrictions unreadable", async () => {
+test("not bought, and counted why: fees too low, top 10 outside 16–30%, no GMGN reading, GMGN says the coin is old, transfers restricted, restrictions unreadable", async () => {
   const w = world(); const born = T0, names = ["Fees", "Top", "NoRead", "Old", "Restr", "Unread", "Good22"].map((n) => n + "CoinXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXpump");
   for (const m of names) w.add(m, born, { program: /Restr|Unread|Good22/.test(m) ? TOKEN_2022 : SPL_TOKEN });
   w.info.set(names[0], { total_fee: 1.99 }); w.info.set(names[1], { stat: { top_10_holder_rate: 0.31 } }); w.info.set(names[2], new Error("GMGN allowance exhausted for another 9.0 s")); w.info.set(names[3], { creation_timestamp: born - 3600 });
   w.riskOf.set(names[4], { status: "restricted", program: TOKEN_2022, blocking: ["transferHook"], warnings: [], fee_bps: 0, src: "rpc mint account" }); w.riskOf.set(names[5], { status: "missing", why: "mint account not parsed" });
   w.t = T0 + 20; await w.pass(); w.t = T0 + 305; await w.pass();
   const K = w.nc.stats.checks["NEW-5M"]; assert.equal(K.candidates, 7); assert.equal(K.gmgn_failed, 1); assert.equal(K.gmgn_ok, 6); assert.equal(K.fees, 5); assert.equal(K.top10, 5); assert.equal(K.age_ok, 5); assert.equal(K.passed_all, 3); assert.equal(K.risk_blocked, 1); assert.equal(K.risk_unknown, 1); assert.equal(K.bought, 1);
-  const out = Object.fromEntries(K.recent.map((x) => [x.mint.slice(0, 4), x.out])); assert.match(out.Fees, /fees 1\.99 SOL \(needs 2\)/); assert.match(out.TopC, /top 10 holders 31\.0% \(needs 20–30%\)/); assert.match(out.NoRe, /no GMGN reading/); assert.match(out.OldC, /GMGN says the coin is 65 minutes old/); assert.match(out.Rest, /restricts transfers \(transferHook\)/); assert.match(out.Unre, /could not be read from the chain/); assert.match(out.Good, /BOUGHT/);
+  const out = Object.fromEntries(K.recent.map((x) => [x.mint.slice(0, 4), x.out])); assert.match(out.Fees, /fees 1\.99 SOL \(needs 2\)/); assert.match(out.TopC, /top 10 holders 31\.0% \(needs 16–30%\)/); assert.match(out.NoRe, /no GMGN reading/); assert.match(out.OldC, /GMGN says the coin is 65 minutes old/); assert.match(out.Rest, /restricts transfers \(transferHook\)/); assert.match(out.Unre, /could not be read from the chain/); assert.match(out.Good, /BOUGHT/);
   assert.equal(w.entries().length, 1); assert.equal(w.entries()[0].mint, names[6]); assert.equal(w.reqs.risk, 3, "the mint account is read only for a Token-2022 coin that passed everything else"); assert.equal(w.quoter.watch.size, 1, "only the coin that was bought is quoted");
   assert.equal(w.entries()[0].token.token_program, TOKEN_2022); assert.equal(w.entries()[0].token.risk_status, "clean");
 });
@@ -138,12 +138,12 @@ test("stops run on quotes: a 25% fall from the high sells the 25% rows; once eve
   w.setMc(B, 500_000); assert.equal(await w.nc.runnerPass(), 1, "only the sold-out buy"); assert.ok(eb.runner.maxX < 1.1); assert.equal(eb.runner.est, undefined);
 });
 
-test("GMGN is asked only when the coin could still pass: Jupiter's top-holders figure outside 15–35% → not asked, not bought, counted; inside it or missing → asked, and GMGN's own 20–30% decides; every such measurement is logged", async () => {
+test("GMGN is asked only when the coin could still pass: Jupiter's top-holders figure outside 15–35% → not asked, not bought, counted; inside it or missing → asked, and GMGN's own 16–30% decides; every such measurement is logged", async () => {
   const dir = mkdtempSync(join(tmpdir(), "older-nc-")), file = join(dir, "newcoins-t.json"); const w = world({ file });
-  w.add(A, T0, { top: 9.2 }); w.add(B, T0, { top: 16 }); w.add(C, T0, { top: null }); w.add("ThinCoinXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXpump", T0, { top: 36, vol: 100 }); w.info.set(B, { stat: { top_10_holder_rate: 0.19 } });
+  w.add(A, T0, { top: 9.2 }); w.add(B, T0, { top: 16 }); w.add(C, T0, { top: null }); w.add("ThinCoinXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXpump", T0, { top: 36, vol: 100 }); w.info.set(B, { stat: { top_10_holder_rate: 0.159 } });
   w.t = T0 + 20; await w.pass(); w.t = T0 + 301; await w.pass();
   const K = w.nc.stats.checks["NEW-5M"]; assert.equal(K.candidates, 3); assert.equal(K.top_pre_skipped, 1); assert.equal(K.gmgn_asked, 2); assert.equal(w.reqs.gmgn, 2); assert.equal(K.bought, 1);
-  const out = Object.fromEntries(K.recent.map((x) => [x.mint.slice(0, 8), x.out])); assert.match(out.NewCoinA, /top holders 9\.2% by Jupiter's figure \(needs 20–30%; GMGN not asked\)/); assert.match(out.NewCoinB, /top 10 holders 19\.0% \(needs 20–30%\)/); assert.match(out.NewCoinC, /BOUGHT/); assert.match(out.ThinCoin, /volume \$0K/);
+  const out = Object.fromEntries(K.recent.map((x) => [x.mint.slice(0, 8), x.out])); assert.match(out.NewCoinA, /top holders 9\.2% by Jupiter's figure \(needs 16–30%; GMGN not asked\)/); assert.match(out.NewCoinB, /top 10 holders 15\.9% \(needs 16–30%\)/); assert.match(out.NewCoinC, /BOUGHT/); assert.match(out.ThinCoin, /volume \$0K/);
   assert.deepEqual(S.NEW_TOP_PRE, [0.15, 0.35]);
   // the log: one line per measured coin over the market-cap line, kept across a restart
   const lines = readFileSync(join(dir, "newcoins-t.log.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l)); assert.equal(lines.length, 4); assert.ok(lines.every((l) => l.book === "NEW-5M" && l.mint && l.out)); assert.equal(w.nc.history.length, 4);
@@ -249,13 +249,13 @@ test("the coin lookup answers at once from the bot's own records: waiting → me
   let r = ask(A); assert.match(r.verdict, /^Seen, waiting for its first check \(NEW-5M in 280 s\)$/); assert.deepEqual(r.newcoins.waiting.next.map((x) => x.book), ["NEW-5M", "NEW-10M", "NEW-15M", "NEW-20M"]); assert.equal(r.newcoins.waiting.next[0].at, T0 + 300); assert.equal(r.created, T0);
   w.t = T0 + 301; const before = { ...w.reqs }; await w.pass(); const asked = { ...w.reqs };
   r = ask(A); assert.equal(r.verdict, "Seen and measured, NOT bought so far — 3 checks still to come"); assert.equal(r.newcoins.checks.length, 1); assert.equal(r.newcoins.checks[0].out, "not bought: volume $13K (needs $30K)"); assert.equal(r.newcoins.checks[0].st.fees, "not asked"); assert.equal(r.sym, A.slice(0, 4));
-  assert.deepEqual(r.newcoins.rules[0], { book: "NEW-5M", at_s: 300, mc: 10_000, holders: 100, vol: 30_000, fees: 2, top10: [0.2, 0.3] });
+  assert.deepEqual(r.newcoins.rules[0], { book: "NEW-5M", at_s: 300, mc: 10_000, holders: 100, vol: 30_000, fees: 2, top10: [0.16, 0.3] });
   await w.price(1.2); r = ask(B); assert.equal(r.verdict, "BOUGHT (paper) by NEW-5M"); assert.equal(r.buys.length, 1); assert.equal(r.buys[0].status, "filled"); assert.equal(r.buys[0].rows.t25, "open"); assert.equal(r.buys[0].fees, 4); assert.equal(r.buys[0].top10, 0.24); assert.equal(r.buys[0].hidden, false);
   assert.deepEqual({ ...w.reqs, quote: 0 }, { ...asked, quote: 0 }, "a lookup asks no provider anything"); assert.ok(before.search < asked.search);
   // after every age point has passed the coin leaves the waiting list; its record stays
   w.t = T0 + 1200 + S.NEW_CHECK_LATE_S + 30; await w.pass(); await w.pass(); r = ask(A); assert.equal(r.newcoins.waiting, null); assert.equal(r.verdict, "Seen and measured, NOT bought"); assert.ok(r.newcoins.checks.length >= 1);
   // a check made before the database kept every check (the log file's rows) is still found
-  w.nc.history.push({ book: "NEW-5M", t: T0 - 5000, mint: D, sym: "OLD", mc: 46_080, holders: 106, vol: 39_126, ok: { mc: true, holders: true, vol: true }, fees: 6.26, top10: 0.1848, out: "not bought: top 10 holders 18.5% (needs 20–30%)" });
+  w.nc.history.push({ book: "NEW-5M", t: T0 - 5000, mint: D, sym: "OLD", mc: 46_080, holders: 106, vol: 39_126, ok: { mc: true, holders: true, vol: true }, fees: 6.26, top10: 0.1848, out: "not bought: top 10 holders 18.5% (needs 16–30%)" });
   r = ask(D); assert.equal(r.verdict, "Seen and measured, NOT bought"); assert.equal(r.newcoins.checks[0].top10, 0.1848); assert.equal(r.sym, "OLD");
   // over the site: key-protected, read-only, a bad address is refused
   process.env.OLDER_SITE_KEY = "sekret"; const web = startWeb({ port: 0, store: st, engine: w.eng, status: () => ({}), run: () => ({ books: w.eng.books }), lookup: (m) => w.nc.lookup(m) }); delete process.env.OLDER_SITE_KEY; await new Promise((res) => web.server.once("listening", res)); const port = web.server.address().port;
@@ -511,7 +511,7 @@ test("the stop from the buy price (owner 26 Nov 2026 11:45–11:55 UK: 'it'll ju
   advance(e, 86_400 + 3, st(60, 86_400), yes); for (const s of [0.6, 0.65, 0.7]) { assert.equal(B(s).status, "closed"); assert.equal(B(s).reason, "max-hold"); }
   // the page: its own view, its own keys
   const j = booksApi([e], { stop: 0.2, policy: "buy" }); assert.equal(j.policy, "buy"); assert.equal(j.books.VOL300K.length, 1); assert.equal(j.books.VOL300K[0].reason, "buy-stop"); assert.ok(Math.abs(j.books.VOL300K[0].ret - B(0.2).exit.ret) < 1e-9);
-  assert.equal(j.rows_total, 144 * S.STOPS.length * 3);
+  assert.equal(j.rows_total, 148 * S.STOPS.length * 3);
 });
 
 test("the buy-price rows on a quote-priced buy: a buy made before they existed keeps its rows and the view counts from the first buy that has them; an old position holding only buy-price rows is looked at once a minute, never at the cost of a fresh one; its sale is priced like any other", async () => {
@@ -552,9 +552,9 @@ test("the full picture of a near miss (owner 26 Nov 2026 12:29–12:36 UK: 'list
   assert.equal(w.entries().length, 0, "nothing is bought on a reading made for the record"); assert.equal(w.reqs.gmgn, 0, "the buy lane was never used"); assert.equal(w.reqs.ev, 3, "D, F and G — not the coin under the line");
   const d = row(D); assert.equal(d.fees, 1.2); assert.equal(d.top10, 0.45); assert.equal(d.st.vol, "fail"); assert.equal(d.st.top_pre, "fail"); assert.equal(d.st.fees, "fail"); assert.equal(d.st.top10, "fail"); assert.equal(d.ev, "read for the record");
   assert.deepEqual([d.g.bundlers, d.g.insiders, d.g.snipers, d.g.phishing], [0.3, 0.02, 0.05, 0.04]);
-  assert.equal(d.out, "not bought: volume $14K (needs $30K), top holders 44.8% by Jupiter's figure (the first look needs 15–35%), fees 1.2 SOL (needs 2), top 10 holders 45.0% (needs 20–30%)", "every rule it failed, not only the first");
+  assert.equal(d.out, "not bought: volume $14K (needs $30K), top holders 44.8% by Jupiter's figure (the first look needs 15–35%), fees 1.2 SOL (needs 2), top 10 holders 45.0% (needs 16–30%)", "every rule it failed, not only the first");
   assert.equal(whyOf(d), "volume", "it is still counted once, under the first rule it failed");
-  const f = row(F); assert.equal(f.st.top_pre, "fail"); assert.equal(f.st.fees, "pass"); assert.equal(f.st.top10, "pass"); assert.equal(f.fees, 4); assert.equal(f.out, "not bought: top holders 9.2% by Jupiter's figure (needs 20–30%)"); assert.equal(whyOf(f), "top holders (Jupiter)");
+  const f = row(F); assert.equal(f.st.top_pre, "fail"); assert.equal(f.st.fees, "pass"); assert.equal(f.st.top10, "pass"); assert.equal(f.fees, 4); assert.equal(f.out, "not bought: top holders 9.2% by Jupiter's figure (needs 16–30%)"); assert.equal(whyOf(f), "top holders (Jupiter)");
   const g = row(G); assert.equal(g.st.fees, "not asked"); assert.equal(g.fees, undefined); assert.match(g.ev, /^no answer/); assert.equal(g.out, "not bought: volume $12K (needs $30K)");
   assert.equal(w.nc.history.some((r) => r.mint === E), false, "a coin under the line stays in the database only"); 
   assert.equal(K.evidence_asked, 3); assert.equal(K.evidence_ok, 2); assert.equal(K.evidence_failed, 1); assert.equal(K.gmgn_asked, 0); assert.equal(K.candidates, 1, "F passed the three Jupiter rules: a candidate stopped at the first look, as before"); assert.equal(K.top_pre_skipped, 1);

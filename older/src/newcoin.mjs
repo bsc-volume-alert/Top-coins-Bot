@@ -16,7 +16,7 @@
 // The counters live in a small file beside the database so a restart does not empty them; the coins waiting for an age point
 // are in it too.
 import { readFileSync, writeFileSync, existsSync, renameSync, appendFileSync } from "node:fs";
-import { COST, lastSaleT } from "./book.mjs";
+import { COST, lastSaleT, versionsFor } from "./book.mjs";
 import * as S from "./spec.mjs";
 import { classifyJupToken, feeKnown } from "./risk.mjs";
 import { parseInfo } from "./gates.mjs";
@@ -62,15 +62,16 @@ export class NewCoins {
     Object.assign(this, { engine, jup, quoter, readInfo, readRisk, readEvidence, store, now, log, file, rules }); /* readEvidence(mint) → GMGN token info in the ordinary lane, for the record of a near miss (spec NEW_EVIDENCE); absent = not read, as before */ this.solUsd = solUsd ?? ((t) => engine.solUsd(t));
     this.history = []; this.logFile = file ? file.replace(/\.json$/, "") + ".log.jsonl" : null; this.runner = { passes: 0, coins: 0, priced: 0, no_price: 0, errors: 0, last: null }; this.lastRunner = 0;
     if (this.logFile && existsSync(this.logFile)) try { const L = readFileSync(this.logFile, "utf8").split("\n").filter(Boolean).slice(-S.NEW_LOG_KEEP); for (const l of L) try { this.history.push(JSON.parse(l)); } catch {} } catch {}
-    this.young = new Map(); this.prevIds = null; this.inflight = new Set(); this.maxAt = Math.max(...rules.map((r) => r.at_s)); this.stats = fresh(); this.dirty = false; this.confirmMax = S.NEW_CONFIRM_MAX; this.hits = new Map(); this.hitsLoaded = false; this.dbq = []; this.kept = 0; this.keepErr = null;
+    this.young = new Map(); this.prevIds = null; this.inflight = new Set(); this.maxAt = Math.max(...rules.map((r) => r.at_s)); this.stats = fresh(); this.dirty = false; this.confirmMax = S.NEW_CONFIRM_MAX; this.hits = new Map(); this.hitsLoaded = false; this.pending = new Map(); /* the follow-up books: looks that passed and are still being followed (spec FOLLOW_BOOKS) */ this.dbq = []; this.kept = 0; this.keepErr = null;
     this.load();
   }
   k(family) { return (this.stats.checks[family] ||= freshCheck()); }
   load() { if (!this.file || !existsSync(this.file)) { this.stats.since = this.now(); return; }
     try { const j = JSON.parse(readFileSync(this.file, "utf8")); if (j?.v !== 1) throw new Error("unknown format"); this.stats = { ...fresh(), ...j.stats }; for (const f of Object.keys(this.stats.checks)) this.stats.checks[f] = { ...freshCheck(), ...this.stats.checks[f] };
-      for (const c of j.young || []) if (c?.mint && c.created > 0) this.young.set(c.mint, { mint: c.mint, created: c.created, launchpad: c.launchpad ?? null, symbol: c.symbol ?? null, done: c.done || {} }); }
+      for (const c of j.young || []) if (c?.mint && c.created > 0) this.young.set(c.mint, { mint: c.mint, created: c.created, launchpad: c.launchpad ?? null, symbol: c.symbol ?? null, done: c.done || {} });
+      for (const p of j.follow || []) if (p?.id != null && p.mint && Array.isArray(p.left) && p.left.length) this.pending.set(p.id, { ...p, left: new Set(p.left) }); }
     catch (e) { this.log("[new coins] counters file unreadable (" + e.message + "): counting starts again"); this.stats = fresh(); this.stats.since = this.now(); } }
-  save() { if (!this.file || !this.dirty) return; this.dirty = false; try { const tmp = this.file + ".tmp"; writeFileSync(tmp, JSON.stringify({ v: 1, saved: this.now(), stats: this.stats, young: [...this.young.values()] })); renameSync(tmp, this.file); } catch (e) { this.log("[new coins] counters not saved: " + e.message); } }
+  save() { if (!this.file || !this.dirty) return; this.dirty = false; try { const tmp = this.file + ".tmp"; writeFileSync(tmp, JSON.stringify({ v: 1, saved: this.now(), stats: this.stats, young: [...this.young.values()], follow: [...this.pending.values()].map((p) => ({ ...p, left: [...p.left] })) })); renameSync(tmp, this.file); } catch (e) { this.log("[new coins] counters not saved: " + e.message); } }
   /** after a restart: every unfinished new-coin buy goes back on the quote list (it is priced by its own quotes only) */
   restore() { let n = 0; for (const e of this.engine.entries.values()) { if (e.pop !== S.NEW_POP || e.exec !== "routed-quote") continue; const dec = e.token?.decimals ?? this.engine.coins.get(e.mint)?.info?.decimals;
       if (validDec(dec)) { this.watch(e.mint, dec, null); n++; } else { const f = "new-coin buy restored without the coin's decimals: it cannot be quoted"; if (!e.flags.includes(f)) { e.flags.push(f); e.touched = true; } } } return n; }
@@ -244,9 +245,64 @@ export class NewCoins {
     // the reading the rule was judged on, kept on the buy in the same shape as the other books' GMGN reading (so the page shows it)
     e.gate = { kind: "new-coin rule", req_t: t0, resp_t: t1, ms: Math.round((t1 - t0) * 1000), reading: g, verdict: "pass", timely: true, at_buy: "reading", by: { [r.family]: { pass: true } } };
     this.store?.saveEntry(e); K.bought++; rec.out = "BOUGHT (paper), entry " + e.id; rec.entry = e.id; this.note(K, rec, r.family);
+    this.follow(c, r, e, m, g, tok, t0, t1);
+  }
+  // ───────── THE FOLLOW-UP BOOKS (spec CONFIRM, WAIT_UP; owner 27 Nov 2026 12:37 and 14:15 UK) ─────────
+  // A look that passed (its own buy `e` was just opened) starts every follow-up book that is active in this run and has not yet
+  // bought this coin. What is kept is small and survives a restart (the counters file): the look's own buy, its figures and its
+  // GMGN reading. followPass() then decides each book once — see the spec for the rules. Nothing here asks GMGN again.
+  fk(f) { return ((this.stats.follow ||= {})[f] ||= { started: 0, bought: 0, not_opened: 0 }); }
+  follow(c, r, e, m, g, tok, t0, t1) {
+    const E = this.engine, done = E.coins.get(c.mint)?.groups?.A0?.done || {}, books = S.FOLLOW_BOOKS.filter((f) => !E.inactive.has(f) && !done[f]); if (!books.length) return;
+    const look = lean({ book: r.family, entry: e.id, t: +e.decisionT.toFixed(2), age_s: Math.round(e.decisionT - c.created), mc: m.mc == null ? null : Math.round(m.mc), px: m.px, holders: m.holders, vol_usd: m.vol == null ? null : Math.round(m.vol), liq_usd: m.liq == null ? null : Math.round(m.liq), n_buys: m.n_buys, n_sells: m.n_sells, top_holders: m.top_jup, fees_sol: g.fees_sol, top10: g.top10, bundlers: g.bundlers, snipers: g.snipers, insiders: g.insiders, phishing: g.phishing, dev_hold: g.dev_hold });
+    this.pending.set(e.id, { id: e.id, mint: c.mint, created: c.created, sym: tok.symbol ?? c.symbol ?? null, decimals: tok.decimals, circ: tok.circ_supply ?? null, t: e.decisionT, look, reading: g, req_t: t0, resp_t: t1, left: new Set(books) });
+    for (const f of books) this.fk(f).started++; this.dirty = true;
+  }
+  /** one follow-up book is finished with one look without a buy: counted under `key`, and written down as a note (why not) */
+  followEnd(p, f, key, reason, detail = {}) { p.left.delete(f); const K = this.fk(f); K[key] = (K[key] || 0) + 1; this.dirty = true;
+    try { this.store?.saveNote?.(p.mint, { ag: "A0", family: f, t: this.now(), reason, detail: { look: p.look.book, look_entry: p.id, ...detail } }); } catch {} }
+  /** the paper buy of a follow-up book: opened like every new-coin buy (a routed quote for the exact size, a second later) */
+  followBuy(p, f, { mc, px, why, extra }) {
+    const E = this.engine, t = this.now(), out = {}, K = this.fk(f), age = t - p.created; p.left.delete(f); this.dirty = true;
+    this.watch(p.mint, p.decimals, p.circ);
+    const detail = { look: p.look, since_look_s: +(t - p.t).toFixed(1), ...extra };
+    const e = E.openDirect({ mint: p.mint, family: f, t, mc, px, features: { age_s: Math.round(age), mc, holders: p.look.holders ?? null, vol_usd: p.look.vol_usd ?? null, fees_sol: p.look.fees_sol ?? null, top10: p.look.top10 ?? null, liq_usd: p.look.liq_usd ?? null, figures_from: "the look (" + p.look.book + ")" }, detail,
+      trigger: { px_usd: px, src: why, age_s: Math.round(age), supply: p.circ ?? null, coverage: "followed from a look that passed" }, tags: extra.mc_estimated ? { valuation: "ESTIMATED: the look's market cap × what the look's own buy was worth at the trigger (the provider's own figure a second after the buy is on the buy)" } : {}, token: { decimals: p.decimals } }, out);
+    if (!e) { K.not_opened++; (K.not_opened_why ||= {})[out.why || "?"] = (K.not_opened_why[out.why || "?"] || 0) + 1; if (!E.byMint.get(p.mint)?.size) this.quoter.watch.delete(p.mint); return null; }
+    // the reading on the buy is the LOOK's (GMGN is not asked again): shown like every new-coin buy's reading, with its age
+    e.gate = { kind: "new-coin rule (the reading taken at the look)", req_t: p.req_t, resp_t: p.resp_t, ms: Math.round((p.resp_t - p.req_t) * 1000), reading: p.reading, verdict: "pass", timely: true, at_buy: "reading", age_s: Math.round(t - p.resp_t), by: { [f]: { pass: true } } };
+    this.store?.saveEntry(e); K.bought++; return e;
+  }
+  /** decide what can be decided now. Called every FOLLOW_EVERY_S seconds; returns the number of buys opened. */
+  async followPass() {
+    if (!this.pending.size) return 0; const E = this.engine, now = this.now(), due = []; let n = 0;
+    for (const p of [...this.pending.values()]) {
+      const cb = S.CONFIRM.filter(([f]) => p.left.has(f));
+      if (cb.length) { let par = E.entries.get(p.id) ?? null; if (!par) try { par = this.store?.entriesOf?.(p.mint)?.find((x) => x.id === p.id) ?? null; } catch {} // no longer in memory: finished or never priced — the database says which
+        const v = par?.status === "filled" ? versionsFor(par, par.families[0], "trail").find((x) => x.stop === S.CONFIRM_STOP) : null;
+        if (!par || par.status === "cancelled" || par.status === "failed" || (par.status === "filled" && !v)) { for (const [f] of cb) this.followEnd(p, f, "look_unpriced", "the look's own buy was never priced, so its rise could not be measured (not bought)"); }
+        else if (v) { const open = v.status === "open", x = open ? v.lastX : null, peak = v.peak != null ? v.peak / COST : null;
+          for (const [f, rise] of cb) {
+            if (open && x >= rise) { const e = this.followBuy(p, f, { mc: (p.look.mc ?? par.signalMc) * x, px: p.look.px != null ? p.look.px * x : null, why: "the look's own buy worth " + rise + "× its cost", extra: { rise, x_seen: +x.toFixed(4), x_high: peak == null ? null : +peak.toFixed(4), seen_t: v.lastT == null ? null : +v.lastT.toFixed(2), noticed_s: v.lastT == null ? null : +(now - v.lastT).toFixed(2), look_px_sol: par.fill?.px_sol ?? null, look_fill_t: par.fill?.t ?? null, mc_estimated: true } }); if (e) n++; }
+            else if (!open) this.followEnd(p, f, "fell_first", `fell ${S.CONFIRM_STOP * 100}% from its high before the look's own buy was worth ${rise}× its cost (not bought)`, { x_high: peak == null ? null : +peak.toFixed(4) }); } } }
+      for (const [f, wait] of S.WAIT_UP) if (p.left.has(f) && now >= p.t + wait) due.push([p, f, wait]);
+      if (!p.left.size) { this.pending.delete(p.id); this.dirty = true; }
+    }
+    if (due.length) { const rows = new Map(); let failed = null; try { for (const t of await this.jup.tokens([...new Set(due.map((d) => d[0].mint))])) rows.set(t.mint, t); } catch (e) { failed = String(e.message).slice(0, 80); this.stats.last_error = "token data (follow-up books): " + failed; }
+      const t = this.now();
+      for (const [p, f, wait] of due) { if (!p.left.has(f)) continue; const late = t - (p.t + wait), tok = rows.get(p.mint);
+        if (late > S.NEW_CHECK_LATE_S) this.followEnd(p, f, "too_late", `could not be judged within ${S.NEW_CHECK_LATE_S} s of the end of its wait (not bought)`, { late_s: Math.round(late) });
+        else if (failed) continue; // the request itself failed: asked again at the next pass while still inside the window
+        else if (!tok || !(tok.px > 0) || !(p.look.px > 0)) this.followEnd(p, f, "no_price", "the provider gave no price at the end of the wait (not bought)");
+        else { const m = measure(tok), ratio = m.px / p.look.px, at = lean({ mc: m.mc == null ? null : Math.round(m.mc), px: m.px, holders: m.holders, vol_usd: m.vol == null ? null : Math.round(m.vol), liq_usd: m.liq == null ? null : Math.round(m.liq), top_holders: m.top_jup, n_buys: m.n_buys, n_sells: m.n_sells });
+          if (!(ratio > 1)) this.followEnd(p, f, "not_up", `price not above the look's price ${wait / 60} minutes later (not bought)`, { ratio: +ratio.toFixed(4), at });
+          else if (this.followBuy(p, f, { mc: m.mc ?? (p.look.mc ?? 0) * ratio, px: m.px, why: `price above the look's price ${wait / 60} minutes later`, extra: { wait_s: wait, late_s: +late.toFixed(1), ratio: +ratio.toFixed(4), at } })) n++; }
+        if (!p.left.size) { this.pending.delete(p.id); this.dirty = true; } } }
+    return n;
   }
   /** for the status report and the page */
-  status() { const q = this.quoter?.stats || {}; return { on: true, rules: this.rules, top_pre: S.NEW_TOP_PRE, look_s: S.NEW_LOOK_S, waiting: this.young.size, in_flight: this.inflight.size, quotes: { ok: q.quotesOk || 0, no_route: q.noRoute || 0, errors: q.quoteErr || 0, watched: this.quoter?.watch.size ?? 0, sizes: q.quoteSizes ?? 0, young: q.quoteYoung ?? 0, young_every_s: q.quoteYoungEvery ?? this.quoter?.quoteYoung ?? null, old_every_s: q.quoteOldEvery ?? null, old_every_max_s: q.quoteOldEveryMax ?? null, budget: this.quoter?.quoteBudget ?? null, at_a_time: this.quoter?.quotePar ?? 1, slow: q.quoteSlowN ?? 0, slow_every_s: q.quoteSlowEvery ?? null }, runner: { ...this.runner }, logged: this.history.length, runners_known: [...this.hits.values()].filter(Boolean).length, kept: this.kept, keep_error: this.keepErr, ...this.stats }; }
+  status() { const q = this.quoter?.stats || {}; return { on: true, rules: this.rules, top_pre: S.NEW_TOP_PRE, look_s: S.NEW_LOOK_S, waiting: this.young.size, in_flight: this.inflight.size, quotes: { ok: q.quotesOk || 0, no_route: q.noRoute || 0, errors: q.quoteErr || 0, watched: this.quoter?.watch.size ?? 0, sizes: q.quoteSizes ?? 0, young: q.quoteYoung ?? 0, young_every_s: q.quoteYoungEvery ?? this.quoter?.quoteYoung ?? null, old_every_s: q.quoteOldEvery ?? null, old_every_max_s: q.quoteOldEveryMax ?? null, budget: this.quoter?.quoteBudget ?? null, at_a_time: this.quoter?.quotePar ?? 1, slow: q.quoteSlowN ?? 0, slow_every_s: q.quoteSlowEvery ?? null }, runner: { ...this.runner }, logged: this.history.length, follow_waiting: this.pending.size, follow_books: S.FOLLOW_BOOKS.filter((f) => !this.engine.inactive.has(f)), runners_known: [...this.hits.values()].filter(Boolean).length, kept: this.kept, keep_error: this.keepErr, ...this.stats }; }
   start() { const loop = async () => { while (!this.stopped) { const t0 = Date.now(); try { await this.look(); await this.check(); this.save(); } catch (e) { this.log("[new coins] " + e.message); } await new Promise((r) => setTimeout(r, Math.max(1000, S.NEW_LOOK_S * 1000 - (Date.now() - t0)))); } }; loop();
+    const fol = async () => { while (!this.stopped) { const t0 = Date.now(); try { await this.followPass(); } catch (e) { this.log("[new coins] follow-up books: " + e.message); } await new Promise((r) => setTimeout(r, Math.max(200, S.FOLLOW_EVERY_S * 1000 - (Date.now() - t0)))); } }; fol(); // the follow-up books' own clock (spec FOLLOW_EVERY_S)
     const follow = async () => { while (!this.stopped) { const t0 = Date.now(); try { this.lastRunner = this.now(); await this.runnerPass(); } catch (e) { this.log("[new coins] after the sale: " + e.message); } await new Promise((r) => setTimeout(r, Math.max(1000, S.NEW_RUNNER_S * 1000 - (Date.now() - t0)))); } }; follow(); } // its own clock: every NEW_RUNNER_S seconds whatever the looks and checks are doing
 }

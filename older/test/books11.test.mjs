@@ -10,7 +10,7 @@ const young = () => { const e = mkEngine(); e.feedUp(T0); e.coin(M, { pool: "Poo
 const burst = (e, sol) => { path(e, T0, T0 + 600, () => 100_000, 60, { sol: 10 }); for (let k = 0; k < 4; k++) swap(e, T0 + 600 + k * 30, 100_000, { sol }); };
 
 test("booksOf: legacy = the 29 books of older-10 (no VOL100K); older-11 = the owner's 13 pool books; an unknown book and a clock book without its base are refused", () => {
-  assert.equal(S.FAMILIES.length, 41); /* 35 + the six HIT books (27 Nov 2026) */ assert.equal(S.booksOf("").length, 29); assert.ok(!S.booksOf("").includes("NEW-5M") && !S.booksOf("older-11").includes("NEW-5M"), "the new-coin books are in no list unless a run adds them"); assert.ok(!S.booksOf("legacy").includes("VOL100K"));
+  assert.equal(S.FAMILIES.length, 45); /* 35 + the six HIT books + the four follow-up books (27 Nov 2026) */ assert.equal(S.booksOf("").length, 29); assert.ok(!S.booksOf("").includes("NEW-5M") && !S.booksOf("older-11").includes("NEW-5M"), "the new-coin books are in no list unless a run adds them"); assert.ok(!S.booksOf("legacy").includes("VOL100K"));
   assert.deepEqual(S.booksOf("older-11"), ["HH-BREAK", "HH-BREAK-4H", "VOL100K", "VOL300K", "VOL500K", "FAST-1M", "FAST-3M", "FAST-5M", "RUG450", "RUG950", "LOW4H", "SLOW-BUILD", "DIP15K"]);
   assert.deepEqual(S.booksOf(" VOL300K , RUG450 "), ["VOL300K", "RUG450"]);
   assert.throws(() => S.booksOf("NOPE"), /unknown book/); assert.throws(() => S.booksOf("HH-BREAK-4H"), /shares the buys of HH-BREAK/);

@@ -476,7 +476,7 @@ test("stake view: every stake shows the same trades — a routed-quote trade can
   advance(kk, 1.5, sk(100, 0), yes); observe(kk, sk(60, 50), 50); advance(kk, 51, sk(60, 50), yes); const exact = atStake(kk, v(kk), 5); delete v(kk).exit.pool; const rebuilt = atStake(kk, v(kk), 5);
   assert.equal(v(kk).status, "closed"); assert.ok(Math.abs(exact.ret - rebuilt.ret) < 1e-9 && rebuilt.est === true && exact.est === false);
   const j1 = booksApi([a, old, rq], { stop: 0.25, policy: "trail" }), j2 = booksApi([a, old, rq], { stop: 0.25, policy: "trail", stake: 2 });
-  assert.equal(j1.books.LOW4H.filter((t) => t.ret != null).length, 3); assert.equal(j1.stake, 0.2); assert.equal(j1.rows_total, 144 * S.STOPS.length * S.POLICIES.length);
+  assert.equal(j1.books.LOW4H.filter((t) => t.ret != null).length, 3); assert.equal(j1.stake, 0.2); assert.equal(j1.rows_total, 148 * S.STOPS.length * S.POLICIES.length);
   const b = j2.books.LOW4H; assert.equal(b.length, 3); assert.equal(b.filter((t) => t.flat).length, 1); assert.equal(b.find((t) => t.mint === "B").est, true);
   const fl = b.find((t) => t.flat), f1 = j1.books.LOW4H.find((t) => t.mint === fl.mint); assert.equal(fl.mint, "C"); assert.equal(fl.ret, f1.ret, "same percentage as at 0.2 SOL"); assert.ok(Math.abs(fl.net - f1.ret * 2.0005) < 1e-12, "on the larger stake");
   assert.equal(b.filter((t) => t.ret != null).length, j1.books.LOW4H.filter((t) => t.ret != null).length, "no trade drops out when the stake changes");
