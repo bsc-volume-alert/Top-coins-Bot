@@ -21,3 +21,14 @@
   pool dates from May 2025. Axiom screenshot: a handful of wallets repeating in ~0.95 SOL clips.
 - Known limits: one SOL/USD rate per window; first funder only for wallets with under 3,000 transactions; a coin at or above the
   line at the start of the window has no "early" buyers (pass `mc=` higher); reads stop at the cap, oldest first.
+
+## 27 Nov 2026, 10:20–10:45 UK — first real run stalled silently; collector changed
+- He pasted the install at ~10:20; WOOPY started 10:20:05, found the coin (key works), entered the listing step and then
+  published nothing for 16+ minutes — no progress, no error. Cause NOT established (no server logs visible from here). My design
+  fault: progress was only published every 20 listing pages, so a slow listing and a stuck call looked the same.
+- Fix 1 (a453126): status pushed every 90 s by a heartbeat, with listing depth and the last RPC error; 30 s request timeout.
+- Fix 2: the read now uses Helius `getTransactionsForAddress` (oldest first, window and success filtered, whole transactions,
+  500 a call, 10 credits per 100 — a tenth of the old cost) so a busy coin is no longer walked backwards from today; the old
+  list-then-fetch method stays as the fallback if the call is refused. Request format taken from Helius's docs, NOT yet seen
+  working against the live API. 12 tests pass (fast path, fallback gives identical output, cap).
+- New code loads when the stalled run ends or after `pm2 restart wallets`.

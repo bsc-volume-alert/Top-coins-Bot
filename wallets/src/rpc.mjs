@@ -17,8 +17,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let nextAt = 0;
 async function pace(n, rps) { const now = Date.now(), at = Math.max(now, nextAt); nextAt = at + (1000 * n) / rps; if (at > now) await sleep(at - now); }
 
-async function post(body) {
-  const r = await fetch(process.env.RPC_HTTP, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(30000) });
+async function post(body, ms = 30000) {
+  const r = await fetch(process.env.RPC_HTTP, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(ms) });
   stats.http++;
   if (r.status === 429 || r.status >= 500) throw Object.assign(new Error("http " + r.status), { retry: true });
   if (!r.ok) throw new Error("http " + r.status);
@@ -54,3 +54,17 @@ export async function many(method, paramsList, { rps = 30, batch = 10 } = {}) {
   return out;
 }
 export const one = async (method, params, o) => (await many(method, [params], o))[0];
+/** one call that reports the node's error instead of hiding it: { result } or { error }. Retries rate limits, timeouts and 5xx. */
+export async function callRaw(method, params, { rps = 30, timeoutMs = 90000, tries = 5 } = {}) {
+  let last = "no answer";
+  for (let a = 0; a < tries; a++) {
+    if (a) { stats.retries++; await sleep(Math.min(20000, 1000 * 2 ** a)); }
+    await pace(1, rps); stats.calls++;
+    try {
+      const j = await post({ jsonrpc: "2.0", id: 1, method, params }, timeoutMs);
+      if (j?.error) { last = JSON.stringify(j.error).slice(0, 300); note(method + " error: " + last); if (/429|rate|limit|timeout|busy|overload/i.test(last) && !/not found|not supported|plan|upgrade/i.test(last)) continue; return { error: last }; }
+      return { result: j?.result };
+    } catch (e) { last = scrub(e.message); note(method + ": " + last); if (e.retry || /fetch failed|timeout|aborted|ECONN|socket|terminated/i.test(last)) continue; return { error: last }; }
+  }
+  stats.failed++; return { error: last };
+}

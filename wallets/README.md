@@ -9,8 +9,9 @@ within 30 s, collects the coin and pushes the result to the branch `wallets-data
 market-cap line, default $100K, with later sells, current holding, wallet age and first funder), `meta.json` (window, counts, cuts).
 `status.json` at the top shows progress while a coin is being read.
 
-Method: balance changes per transaction (works on any exchange or launchpad). Cost: 1 Helius credit per transaction read
-(default cap 40,000 per coin). Market caps use one SOL/USD rate for the whole window — approximate.
+Method: balance changes per transaction (works on any exchange or launchpad). Transactions are read oldest-first with Helius
+`getTransactionsForAddress` (10 credits per 100; default cap 40,000 per coin ≈ 4,000 credits); if that call is refused it falls
+back to listing signatures and one `getTransaction` each (1 credit each). Market caps use one SOL/USD rate for the whole window — approximate.
 
 Install once on the server (owner's paste):
 `cd /root && git clone -q -b wallets --single-branch "$(git -C /root/older-review remote get-url origin)" wallets-tool && bash wallets-tool/wallets/start.sh`

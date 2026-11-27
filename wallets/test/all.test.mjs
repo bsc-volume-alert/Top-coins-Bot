@@ -69,26 +69,40 @@ test("whole collector against a fake RPC: early buyers, line crossing, transfers
   ];
   const txBy = Object.fromEntries(story.map(([s, t, tx]) => [s, { ...tx, blockTime: t, slot: t }]));
   txBy.aOld = { ...mk([["CEX", 1], ["ALICE"]], { CEX: [10e9, 7e9], ALICE: [0, 3e9] }, []), blockTime: 900, slot: 900 };
-  let batches = 0;
+  let batches = 0, fastOn = true, fastCalls = 0, listCalls = 0;
   const answer = (q) => { const [a, b] = q.params; switch (q.method) {
+    case "getTransactionsForAddress": { if (!fastOn) return { __error: { code: -32601, message: "Method not found" } }; fastCalls++;
+      assert.equal(b.sortOrder, "asc"); assert.equal(b.filters.status, "succeeded"); assert.equal(b.filters.blockTime.gte, 500);
+      const ok = story.filter(([, t, tx]) => !tx.meta.err && t >= b.filters.blockTime.gte && t <= b.filters.blockTime.lte); const at = b.paginationToken ? Number(b.paginationToken) : 0; const pg = ok.slice(at, at + b.limit);
+      return { data: pg.map(([s, t, tx]) => ({ slot: t, transactionIndex: 0, blockTime: t, meta: tx.meta, transaction: { ...tx.transaction, signatures: [s] } })), paginationToken: at + b.limit < ok.length ? String(at + b.limit) : null }; }
     case "getTokenSupply": return { value: { uiAmountString: "1000000", decimals: 6 } };
     case "getSignaturesForAddress":
+      if (a === MINT) listCalls++;
       if (a === MINT) return b.before ? [] : story.slice().reverse().map(([s, t, tx]) => ({ signature: s, blockTime: t, slot: t, err: tx.meta.err }));
       if (a === "ALICE") return b.before ? [] : [{ signature: "s7", blockTime: 1040 }, { signature: "aOld", blockTime: 900 }];
       return b.before ? [] : [{ signature: "x", blockTime: 950 }];
     case "getTransaction": return txBy[a] ?? null;
     case "getTokenAccountsByOwner": return { value: a === "BOB" ? [{ account: { data: { parsed: { info: { tokenAmount: { uiAmountString: "4000" } } } } } }] : [] };
     default: return null; } };
-  const srv = http.createServer((req, res) => { let d = ""; req.on("data", (c) => (d += c)); req.on("end", () => { const j = JSON.parse(d); if (Array.isArray(j)) batches++; const one = (q) => ({ jsonrpc: "2.0", id: q.id, result: answer(q) }); res.setHeader("content-type", "application/json"); res.end(JSON.stringify(Array.isArray(j) ? j.map(one) : one(j))); }); });
+  const srv = http.createServer((req, res) => { let d = ""; req.on("data", (c) => (d += c)); req.on("end", () => { const j = JSON.parse(d); if (Array.isArray(j)) batches++; const one = (q) => { const r = answer(q); return r?.__error ? { jsonrpc: "2.0", id: q.id, error: r.__error } : { jsonrpc: "2.0", id: q.id, result: r }; }; res.setHeader("content-type", "application/json"); res.end(JSON.stringify(Array.isArray(j) ? j.map(one) : one(j))); }); });
   await new Promise((r) => srv.listen(0, r));
   process.env.RPC_HTTP = `http://127.0.0.1:${srv.address().port}/?api-key=SECRETSECRET123`;
   const { collect, parseRequest } = await import("../src/collect.mjs");
-  const dir = mkdtempSync(tmpdir() + "/wt-"); const req = parseRequest(`${MINT} label=TEST sol=100 from=500 to=2000 rps=500`);
-  const meta = await collect(req, dir);
+  const check = (meta, fast) => {
+    assert.equal(meta.counts.read, 7); assert.equal(meta.counts.trades, 6); assert.equal(meta.counts.transfers, 1);
+    assert.equal(meta.reached_line_at, "1970-01-01T00:17:10Z"); assert.equal(meta.reached_line_mc, 150000); assert.equal(meta.counts.early_buyers, 2);
+    assert.equal(meta.cut_short.read_stopped_at_cap, false); assert.equal(meta.source, fast ? "getTransactionsForAddress" : "getSignaturesForAddress + getTransaction");
+    assert.equal(meta.window.first_tx, "1970-01-01T00:16:40Z"); };
+  // fast path, 3 transactions a page (3 pages); then the same coin with the fast call refused → the listing fallback must give the same answer
+  const dir = mkdtempSync(tmpdir() + "/wt-"); const meta = await collect(parseRequest(`${MINT} label=TEST sol=100 from=500 to=2000 rps=500 page=3`), dir);
+  check(meta, true); assert.equal(fastCalls, 3); assert.equal(listCalls, 0);
+  fastOn = false; const dir2 = mkdtempSync(tmpdir() + "/wt-"); const meta2 = await collect(parseRequest(`${MINT} label=TEST sol=100 from=500 to=2000 rps=500`), dir2);
+  check(meta2, false); assert.equal(meta2.counts.failed_tx_skipped, 1); assert.ok(batches > 0); assert.match(meta2.cut_short.fast_read_refused, /not found/i);
+  assert.equal(readFileSync(dir + "/early.csv", "utf8"), readFileSync(dir2 + "/early.csv", "utf8"));
+  assert.deepEqual(gunzipSync(readFileSync(dir + "/trades.csv.gz")), gunzipSync(readFileSync(dir2 + "/trades.csv.gz")));
+  // the cap: stop after 4 transactions and say so
+  fastOn = true; const meta3 = await collect(parseRequest(`${MINT} sol=100 from=500 to=2000 rps=500 max=4`), mkdtempSync(tmpdir() + "/wt-")); assert.equal(meta3.counts.read, 4); assert.equal(meta3.cut_short.read_stopped_at_cap, true);
   srv.close();
-  assert.equal(meta.counts.failed_tx_skipped, 1); assert.equal(meta.counts.read, 7); assert.equal(meta.counts.trades, 6); assert.equal(meta.counts.transfers, 1);
-  assert.equal(meta.reached_line_at, "1970-01-01T00:17:10Z"); assert.equal(meta.reached_line_mc, 150000); assert.equal(meta.counts.early_buyers, 2);
-  assert.equal(meta.cut_short.read_stopped_at_cap, false); assert.ok(batches > 0);
   const trades = gunzipSync(readFileSync(dir + "/trades.csv.gz")).toString().trim().split("\n");
   assert.equal(trades.length, 7); assert.equal(trades[1], "1000,1000,s1,ALICE,buy,20000,2,10000,1,");
   assert.equal(gunzipSync(readFileSync(dir + "/transfers.csv.gz")).toString().trim().split("\n")[1], "1020,1020,s3,ALICE,ERIN,5000");
