@@ -1622,3 +1622,35 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   - **The pass rule as agreed with ChatGPT (for the notes; applied by hand at the looks):** on CONTROL at about 200 buys — mean above +5%; positive without the best two buys, without the best coin name and without the best launcher; one-sided 95% lower bound above zero; profit from at least three launchers; still positive with 5 points worse execution; adaptive preferred only on a positive paired difference. 30 / 60 / 100 are looks, no automatic stop. Real money: not approved.
   - **Not in this push (still proposed):** the status-build pause fix; a cancel button for a waiting order; booking a liquidity pull as a total loss; the price-path export.
   - **His paste:** cd /root/older-review / git fetch -q origin older-11-review && git checkout -q FETCH_HEAD / bash older/scripts/start.sh valid11.
+
+### 27 Nov, 20:48–21:05 UK — check, and the old volume cards hidden (owner: "get rid of the old ones")
+
+- **Running build:** 31a8a8f, started 20:23:12 UK (he pasted before 340aa78 was pushed). So live: the "sold by you" box and the 30-second
+  retry for a coin with no sale route. NOT live yet: the four purple volume-test cards (340aa78) and this change (0f48f4c). One paste brings both.
+- **The retry fix works:** Jupiter refused quotes 68 in 15 minutes (about 4.5 a minute; before: about 100 a minute). Rate window 57 of 100, limited 0.
+- Health at 20:38: memory 621 MB / 367 heap, too late 0 on all four looks, feed reconnects 0, stream lag mean 1.0 s (max 2.6 s),
+  status dump 506–594 ms (no late buy), GMGN limited 0, no error in the log. db 646 MB. Entries 1189 (987 bought).
+- **Owner 20:50:** "Just get rid of the old ones. Now that we've got these purple lines, we don't need the old ones. They were worthless… What do you think?"
+  Facts given: the three old volume cards closed 96 buys (91 coins) at −19.3% a buy on the 20% stop (20 won), −3.71 SOL at 0.2 a buy;
+  −20.4% on 25%, −29.1% on 40%. As a strategy: a loss on every stop. BUT the purple cards are made of those three books' buys, so the
+  books cannot be switched off — only their cards can go. Built that way: **0f48f4c** (`VOLG.hide_books`): with the test cards shown,
+  VOL100K / VOL300K / VOL500K are not cards (nor ranking / rule rows); the books buy exactly as before; nothing deleted; the control
+  card says "the old … cards are hidden; the books still buy". 323 tests, fail 0. Checked on a local copy of the live data: 37 cards, no page error.
+- What hiding costs (told to him): (1) volume buys the test leaves out (under 200 buyers, dead cap, not classed) are only COUNTED on the
+  control card, their rows are on no card; (2) three old volume buys still have rules open (845 Fireball, 964 NBA, 995) — they finish on
+  their own within 24 h but can no longer be seen or sold by hand on the site; (3) all of it stays in the database and in entries.json.
+- The purple cards are unproven: 0 volume buys since 20:31 as of 20:38.
+- Since the rule change (6.04 h): four looks 98 buys −1.707 / −2.563 / −4.696 SOL (20/25/40%); CONFIRM-15 −0.633, -20 −0.422, -30 −0.426;
+  WAIT5-UP 22 buys −0.498; HIT50-NOW 47 buys −1.583; HIT100-NOW 15 buys −0.851 (0 won); FARM-90K 22 buys, 19 closed, +0.099 SOL on 20%
+  (−0.052 on 25%); 5M-H300 44 buys +9.8% a buy on 20% (median −8.3%; −0.538 SOL without its top 3) vs −5.0% for the other 141.
+- Runners: reached 88, bought 17, missed 71. New at $100K: **inuvest FkvBGq — missed** (top $175K at 9 min).
+
+  | look | cap | holders | volume | fees | top 10 | bundlers | snipers | phishing | kept out by |
+  |---|---|---|---|---|---|---|---|---|---|
+  | 5 min | $2K | 2 | $776 | – | – | – | – | – | cap, holders, volume |
+  | 10 min | $159K | 44 | $19K | 0.07 SOL | 59.1% | 90.3% | 0% | 0% | holders, volume, top holders 59.6%, fees, top 10 |
+  | 15 min | $76K | 267 | $53K | 0.08 SOL | 40.4% | 72.0% | 0% | 0.2% | volume, top holders 40.4%, fees, top 10 |
+  | 20 min | $46K | 517 | $89K | 0.10 SOL | 19.0% | 35.3% | 0% | 0.3% | volume ($89K, needs $100K), fees (0.1, needs 5) |
+
+  Type: bundled launch (90% bundlers at 10 min), almost no fees, cap halved twice after the top. Every rule that kept it out was right to on this one.
+- Hand orders (Democat 1012, Gold 1102): not in the published data, so not checked from here.
