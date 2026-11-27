@@ -30,3 +30,7 @@ test("the books data: each card shown has its topic; only topics with a card are
 test("the page: a row of topic buttons, the topic's colour on the card, its name, the ranking and the rules table", () => {
   for (const s of ['class="topics"', 'class="tpc', "ALL · '+NALL", "border-left:4px solid '+tc(c[0])", "box-shadow:inset 3px 0 0 ", "TOPF=t===TOPF?'':t;FORCE=Date.now()", "keys.filter(function(k){return TOP[k]===TOPF})", "'Only '+esc(TOPC[TOPF].label)", "esc(TOPC[TOP[k]].label)"]) assert.ok(BOOKS_PAGE.includes(s), "the page has: " + s);
 });
+test("a hidden filter does not filter: the coins filter starts hidden, and where the run does not offer it a saved choice is dropped", () => {
+  assert.ok(BOOKS_PAGE.includes('id="popLab" style="display:none"') && BOOKS_PAGE.includes('id="pop" style="display:none"'), "hidden until the run is known");
+  assert.ok(BOOKS_PAGE.includes("if(hideP&&SEL.pop){SEL.pop='';try{localStorage.setItem('olderSel',JSON.stringify(SEL))}catch(e){}seg('pop');FORCE=Date.now();load();return}"));
+});

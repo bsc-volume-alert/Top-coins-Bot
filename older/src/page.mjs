@@ -290,7 +290,7 @@ footer{padding:16px;color:var(--mut);font-size:12px;text-align:center}
 <span class="mut">exit</span><span class="seg" id="policy"><button data-v="trail" class="on">trail</button><button data-v="scale">half at 2×</button><button data-v="buy" title="the stop is measured from the buy price, not from the high: sold when the coin is that far below what was paid (or at 24 hours)">from buy price</button></span>
 <span class="mut">age</span><span class="seg" id="ag"><button data-v="" class="on">all</button><button data-v="A0">under 8h</button><button data-v="A1">8–16h</button><button data-v="A2">16–24h</button><button data-v="A3">24–36h</button><button data-v="A4">36h+</button></span>
 <span class="mut" id="chkLab" style="display:none">checks</span><span class="seg" id="chk" style="display:none"><button data-v="all" class="on">all buys</button><button data-v="pass">passed in time</button><button data-v="late">passed incl. late</button></span>
-<span class="mut" id="popLab">coins</span><span class="seg" id="pop"><button data-v="" class="on">all</button><button data-v="pumpswap-canonical">pump.fun live</button><button data-v="solana-wide">rest of Solana</button></span>
+<span class="mut" id="popLab" style="display:none">coins</span><span class="seg" id="pop" style="display:none"><button data-v="" class="on">all</button><button data-v="pumpswap-canonical">pump.fun live</button><button data-v="solana-wide">rest of Solana</button></span>
 <input id="q" type="search" placeholder="paste a coin's contract address: what the bot did with it and why \u00b7 or type a name" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1 1 260px;min-width:220px;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:8px;color:var(--tx);font:inherit;font-size:13px;padding:6px 10px"></div></header>
 <main>
 <div class="card" id="look" style="padding:10px 14px;display:none;border-color:var(--acc)"></div>
@@ -380,6 +380,10 @@ function draw(j){
  var now=Math.floor(Date.now()/1000),day0=ukDayStart(),B={},SK=(j.stake||0.2)+' SOL',VIEW=j.stake&&j.stake!==0.2,UNS=0,PRICED=0,EST=0,RUN=j.run||null,GA=!!(RUN&&RUN.gates),LAB=!!(GA&&RUN.gate_mode==='label');
  var ce=document.getElementById('chk'),cl=document.getElementById('chkLab');if(ce){ce.style.display=LAB?'':'none';cl.style.display=LAB?'':'none'}
  var pe=document.getElementById('pop'),pl=document.getElementById('popLab'),hideP=RUN&&!RUN.sampled;if(pe){pe.style.display=hideP?'none':'';pl.style.display=hideP?'none':''}
+ // A HIDDEN FILTER MUST NOT FILTER (27 Nov 2026 21:30 UK: every book showed 0 trades — the saved selection said "rest of Solana", a choice this run
+ // does not offer, so its buttons were hidden and there was no way back). The coins filter starts hidden and is shown only for a run that
+ // samples the rest of Solana; where it is hidden, a saved choice is dropped and the page is read again with every coin.
+ if(hideP&&SEL.pop){SEL.pop='';try{localStorage.setItem('olderSel',JSON.stringify(SEL))}catch(e){}seg('pop');FORCE=Date.now();load();return}
  j.order.forEach(function(k){var all=j.books[k]||[];var done=all.filter(function(t){return t.status==='closed'&&t.ret!=null}),open=all.filter(function(t){return t.status==='open'}),other=all.filter(function(t){return t.status!=='closed'&&t.status!=='open'});
   var meas=done.filter(function(t){return !t.est_exit}),estd=done.filter(function(t){return t.est_exit});
   var w=function(s){return sumR(meas.filter(function(t){return t.fill_t>=s}))};var tot=sumR(meas),h12=w(now-43200);
