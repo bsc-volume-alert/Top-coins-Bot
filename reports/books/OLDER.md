@@ -1654,3 +1654,28 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
 
   Type: bundled launch (90% bundlers at 10 min), almost no fees, cap halved twice after the top. Every rule that kept it out was right to on this one.
 - Hand orders (Democat 1012, Gold 1102): not in the published data, so not checked from here.
+
+### 27 Nov, 21:00–21:08 UK — topic colours (owner: "color coordinate similar topics"); the purple cards ARE live
+
+- **Correction:** at 20:58 I told him the purple cards were "not live as of 20:43". The data I had was the 20:38 state. He had pasted
+  again at 20:49: the bot runs **340aa78 since 20:49:14 UK** (state 20:54). The volume test is live. His "I did the paste" was right.
+- 340aa78 live check: no error in the log; memory 539 MB; Jupiter refused quotes 28 in 5 minutes, limited 0; entries 1196.
+  **Creator wallet comes through**: GMGN's field is `creator_address` (as coded); buys 1195 and 1196 carry it.
+  First volume buy of the test: ZERO 3WsqUN, VOL100K, 20:54:19 (still pending at the publish).
+- **Owner 21:00:** colour-code the recent projects so they are easier to see and group. Built and pushed **8ce9609** (display only; 327 tests, fail 0):
+  seven topics, each card in at most one, by the book it is or the books it is drawn from.
+
+  | topic | colour | cards |
+  |---|---|---|
+  | VOLUME TEST | purple #c58bff | VOL-CONTROL, VOL-BARE, VOL-OPER, VOL-REST |
+  | NEW-COIN LOOKS | blue #6ea8ff | NEW-5M / 10M / 15M / 20M, NEW-COMBINED |
+  | SLICES OF THE LOOKS | aqua #5fe3e8 | TOP10-16-20, 5M-H300, 20M-FEE1, 5M-LOWCONC, 5M-LOWCONC-SNIP, LIQUID-SMALLCAP, BUNDLED-RUNNER |
+  | FOLLOW-UP | pink #ff8fd0 | CONFIRM-15 / 20 / 30, WAIT5-UP, the three CONFIRM-…-FEE1 |
+  | HIT $50K / $100K | orange #ff8a3d | the six HIT books, HIT50-NOW-FEE2, HIT-ALL-FEE2 |
+  | FARM | yellow #ffe45c | FARM-90K |
+  | FAST & RUG | silver #d6daf0 | FAST-1M / 3M / 5M, RUG450, RUG950 |
+
+  On the page: colour on the card's left edge, its name, the ranking and the rules table; a chip on each card names the topic; a row of
+  topic buttons above the ranking shows one topic alone (tap again or ALL to go back). Green / red / amber / lime not used (up / down / sold by you / NEW).
+  Checked on a local copy of the live data: 37 cards, no page error, the buttons filter and restore.
+- Waiting for his paste: 0f48f4c (old volume cards hidden) + 8ce9609 (topics).
