@@ -99,6 +99,12 @@ export const FOLLOW_BOOKS = [...CONFIRM.map((x) => x[0]), ...WAIT_UP.map((x) => 
 //             shows what the coins that never get there cost.
 export const FARM = { family: "FARM-90K", holders: [1800, 2800], vol_max_usd: 40_000, mc: [10_000, 45_000], target_usd: 90_000 };
 export const FARM_BOOKS = [FARM.family];
+// THE LATEST RULE CHANGE (owner 27 Nov 2026 17:17 UK: "can we have something since the rule change… the accurate pricing… an idea
+// of how we're actually doing"). Every card and the top of the page show the result of buys made SINCE this moment beside the
+// older totals. t = the start of the first process that ran with the 16% top-10 floor (14:34:48 UK, 27 Nov 2026). Pricing had
+// by then been as accurate as it gets here: positions looked at every 3 s (26 Nov 11:40 UK) and no multi-second pauses of the
+// program since 10:53 UK that day. Move t when a rule next changes; nothing else reads it (display only).
+export const RULE_CHANGE = { t: 1795790088, what: "top-10 floor 16–30% on all four new-coin looks; positions priced every 3 seconds with no long pauses" };
 export const NEW_LOOK_S = 20;          // the provider's list of new coins is read this often (it reaches back about a minute at ~35 new coins a minute)
 export const NEW_CHECK_LATE_S = 90;    // a coin that could not be measured within this long after its age point is NOT judged (counted "too late") — never judged on later figures
 // THE FULL PICTURE OF A NEAR MISS (owner 26 Nov 2026 12:29–12:36 UK: "for the 100k coins that we're missing, list all the factors
@@ -219,6 +225,9 @@ export const ANY_AGE = new Set([...VOL.map((x) => x[0]), ...RUG.map((x) => x[0])
 // [family, line USD, wait seconds]
 export const HIT = [["HIT50-NOW", 50_000, 0], ["HIT50-5M", 50_000, 300], ["HIT50-10M", 50_000, 600], ["HIT100-NOW", 100_000, 0], ["HIT100-5M", 100_000, 300], ["HIT100-10M", 100_000, 600]];
 export const HIT_BOOKS = HIT.map((x) => x[0]), HIT_LINES = [...new Set(HIT.map((x) => x[1]))], HIT_WINDOW_S = 8 * 3600, HIT_START_S = 120, HIT_WAIT_MAX_S = Math.max(...HIT.map((x) => x[2]));
+// THE BOOKS ADDED ON THE DAY OF THAT CHANGE (owner, same message: "highlight the new projects in a different colour so we can
+// actually see them… then we can work on the older ones") — marked NEW on the page, with every view (all written that day).
+export const NEW_TODAY = { day: "27 Nov", books: [...HIT_BOOKS, ...FOLLOW_BOOKS, ...FARM_BOOKS] };
 export const agesOf = (family) => (NEW_BOOKS.includes(family) || HIT_BOOKS.includes(family) || FOLLOW_BOOKS.includes(family) || FARM_BOOKS.includes(family) ? [AGE_YOUNG] : ANY_AGE.has(family) ? ALL_AGES : AGES);
 export const POLICIES = ["trail", "scale", "buy"];   // trail = the original pure trailing stop; scale = sell half at 2× cost, trail the rest; buy = the stop from the BUY PRICE (below)
 // THE STOP FROM THE BUY PRICE (owner 26 Nov 2026 11:45–11:55 UK: "stop from the buy price… just as a comparison tool… just keep

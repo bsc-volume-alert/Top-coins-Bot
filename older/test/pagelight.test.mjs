@@ -87,3 +87,14 @@ test("the books answer keeps the rows of finished buys and reads only what it mu
     for (const p of ["/", "/api/health", "/api/runners"]) { const z = await get(port, p, { "accept-encoding": "gzip" }), plain = await get(port, p); assert.equal(z.headers["content-encoding"], "gzip", p); assert.equal(plain.headers["content-encoding"], undefined); assert.equal(gunzipSync(z.body).toString(), plain.body.toString(), p); }
   } finally { w.server.close(); }
 });
+
+// SINCE THE RULE CHANGE, AND THE NEW BOOKS IN THEIR OWN COLOUR (owner 27 Nov 2026 17:17 UK)
+test("the page is told when the rules last changed and which books are new — it shows each book's result since that moment first, ranks by it once, and marks the new books", async () => {
+  const { booksApi, VIEW_NAMES } = await import("../src/page.mjs"); const S = await import("../src/spec.mjs");
+  assert.equal(S.RULE_CHANGE.t, 1795790088); assert.equal(new Date(S.RULE_CHANGE.t * 1000).toISOString(), "2026-11-27T14:34:48.000Z"); assert.deepEqual(S.NEW_TODAY.books, [...S.HIT_BOOKS, ...S.FOLLOW_BOOKS, ...S.FARM_BOOKS]);
+  const run = { books: [...S.booksOf("VOL100K,FAST-1M,RUG450,HIT,FOLLOW,FARM"), ...S.NEW_BOOKS], newcoins: true }, j = booksApi([], { stop: 0.25, run });
+  assert.deepEqual(j.rule, S.RULE_CHANGE); for (const k of [...S.NEW_TODAY.books, ...VIEW_NAMES]) assert.equal(j.fresh[k], "27 Nov", k); for (const k of ["VOL100K", "FAST-1M", "RUG450", ...S.NEW_BOOKS, S.NEW_ALL]) assert.equal(j.fresh[k], undefined, k + " is not new");
+  assert.ok(BOOKS_PAGE.includes('<button data-v="rc">since rule change</button>')); assert.ok(BOOKS_PAGE.includes("if(!SEL.rcSeen){SEL.win='rc';SEL.rcSeen=1}"), "ranked by it once; his own choice of period is kept afterwards");
+  assert.ok(BOOKS_PAGE.includes("rc:RC?w(RC):sumR([])")); assert.ok(BOOKS_PAGE.includes("cell('since the rule change · '+UKT(RC),b.rc")); assert.ok(BOOKS_PAGE.includes('<span class="mode new">NEW · ')); assert.ok(BOOKS_PAGE.includes("--new:#c8ff4d"));
+  assert.ok(BOOKS_PAGE.includes("<th style=\\"color:var(--new)\\">since rule change</th>") || BOOKS_PAGE.includes('<th style="color:var(--new)">since rule change</th>'));
+});
