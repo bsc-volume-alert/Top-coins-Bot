@@ -25,6 +25,7 @@ export const RULES = {
   [S.NEW_ALL]: "NOT a separate book and no extra trades: each new coin's FIRST buy by any of the 5 / 10 / 15 / 20-minute books — what one book that buys a coin once, at the first age it passes, would have made. Each row says which age bought it",
   "VOL100K": "any age after migration: $100K or more traded in the last 5 minutes (coin worth $40K–$2M) — added in older-11; buys only in a run whose book list includes it",
   "VOL300K": "any age after migration: $300K or more traded in the last 5 minutes (coin worth $40K–$2M)",
+  ...Object.fromEntries(S.HIT.map(([f, line, wait]) => [f, `a coin whose migration the bot watched, seen under $${line / 1000}K and then reaching it within 8 hours of migrating: ` + (wait ? `judged ${wait / 60} minutes after that hit — bought if it is still at or over $${line / 1000}K then, never if it has fallen under` : "bought at once, at the first trade at or over the line") + "; a coin first seen already over the line is not bought (27 Nov 2026; buys only in a run whose book list includes it)"])),
   "DIP15K": "any age after migration: a coin that has been to $100K or more comes down through $15K (and is still at $5K or more) — bought at once; added in older-11; buys only in a run whose book list includes it",
   "VOL300K-UP": "any age after migration: $300K or more traded in the last 5 minutes and the price higher than 5 minutes ago ($40K–$2M)",
   "VOL500K": "any age after migration: $500K or more traded in the last 5 minutes (coin worth $40K–$2M)",

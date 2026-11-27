@@ -128,10 +128,11 @@ export const NEW_CONFIRM_X = 1.5, NEW_CONFIRM_STEP = 1.1, NEW_CONFIRM_MAX = 0;
 export const NEW_LOG_KEEP = 3000;      // measurements of coins over the market-cap line kept for the site and the published file (all of them are in the log file beside the database)
 
 // Families. 21 families × 4 ages + 10 any-age families × 5 ages = 134 book-ages; × 5 stops × 2 exit policies = 1,340 comparisons (VOL100K and DIP15K added in older-11).
-// + the four new-coin books in A0 only = 138 book-ages, 1,380 comparisons.
+// + the four new-coin books in A0 only = 138 book-ages, 1,380 comparisons. + the six HIT books in A0 only (27 Nov 2026) = 144 book-ages.
 export const FAMILIES = ["AGE-DOUBLE", "LOW4H", "CONT", "SLOW-BUILD", "HH-BREAK", "CONT-STALL", "LOW4H-LIQ25K",
   "FAST-1M", "FAST-3M", "FAST-5M", "FAST-10M", "FAST-30M", "FAST150-1M", "FAST150-3M", "FAST150-5M", "FAST150-10M", "SECOND-WAVE", "HH30-5M", "HH30-10M", "HH15-5M", "HH-BREAK-4H",
-  "VOL100K", "VOL300K", "VOL300K-UP", "VOL500K", "VOL500K-UP", "RUG450", "RUG450-BOUNCE", "RUG950", "RUG950-BOUNCE", "DIP15K", ...NEW_BOOKS];
+  "VOL100K", "VOL300K", "VOL300K-UP", "VOL500K", "VOL500K-UP", "RUG450", "RUG450-BOUNCE", "RUG950", "RUG950-BOUNCE", "DIP15K", ...NEW_BOOKS,
+  "HIT50-NOW", "HIT50-5M", "HIT50-10M", "HIT100-NOW", "HIT100-5M", "HIT100-10M"]; // the six HIT books (27 Nov 2026) — see HIT below; A0 only
 // ANY-AGE BOOKS (older-8, owner's decisions 21 Nov 2026 21:11 UK). Migrated coins only (this feed sees nothing else), any age after
 // migration: the first 8 hours (A0) and the four age groups. One entry per family per coin per age group, as everywhere.
 // VOL: USD volume over the last VOL_WIN_S seconds (exact observations, rolling) ≥ the threshold; the -UP version also needs the
@@ -156,7 +157,24 @@ export const RUG_FALL = 0.80, RUG_BOUNCE_X = 1.30, RUG_BOUNCE_EXPIRE_S = 24 * 36
 //   A coin that is already inside the band when it is first seen is not bought there: nothing was watched arriving.
 export const DIP = "DIP15K", DIP_HI_USD = 15_000, DIP_LO_USD = 5_000, DIP_PEAK_USD = 100_000;
 export const ANY_AGE = new Set([...VOL.map((x) => x[0]), ...RUG.map((x) => x[0]), DIP]);
-export const agesOf = (family) => (NEW_BOOKS.includes(family) ? [AGE_YOUNG] : ANY_AGE.has(family) ? ALL_AGES : AGES);
+// HIT books (older-11, owner 27 Nov 2026 11:50 UK: "if it hits 50k, buy it once, or wait 5 minutes … wait 10 minutes … and then we do
+// the same for 100 … have these separate tests running"; 11:55: every buy keeps its full reading — fees, snipers, bundlers,
+// phishing, top 10, holders, volume — "so we can analyse for the next leg").
+//   WHICH COINS : a pump.fun coin whose MIGRATION THIS PROCESS WATCHED (its pool-creation event arrived on the feed), observed from
+//                 at most HIT_START_S after that event, and seen UNDER the line before it reached it. A coin first observed at or
+//                 over the line never "hit" it in front of us and is never bought by that line's books.
+//   THE HIT     : the first FRESH crossing up through the line — the observation before it under the line, this one at or over
+//                 it, nothing unobserved between them or since the first observation — within HIT_WINDOW_S of the migration.
+//   wait 0      : bought at the hit.
+//   wait N > 0  : judged ONCE, at the first observation at or after hit + N seconds (its lateness is recorded): bought if the
+//                 market cap is at or over the line there; otherwise never ("fell under the line by the end of the wait").
+// One buy per book and coin. No market-cap band of their own: the line is the rule. They need no creation time (the clock is
+// the migration), so they are judged on their own pass (signals.evaluate with opts.hit) before the age-based books.
+// State is in memory only: after a restart only pools created afterwards are followed, and a wait still running is dropped.
+// [family, line USD, wait seconds]
+export const HIT = [["HIT50-NOW", 50_000, 0], ["HIT50-5M", 50_000, 300], ["HIT50-10M", 50_000, 600], ["HIT100-NOW", 100_000, 0], ["HIT100-5M", 100_000, 300], ["HIT100-10M", 100_000, 600]];
+export const HIT_BOOKS = HIT.map((x) => x[0]), HIT_LINES = [...new Set(HIT.map((x) => x[1]))], HIT_WINDOW_S = 8 * 3600, HIT_START_S = 120, HIT_WAIT_MAX_S = Math.max(...HIT.map((x) => x[2]));
+export const agesOf = (family) => (NEW_BOOKS.includes(family) || HIT_BOOKS.includes(family) ? [AGE_YOUNG] : ANY_AGE.has(family) ? ALL_AGES : AGES);
 export const POLICIES = ["trail", "scale", "buy"];   // trail = the original pure trailing stop; scale = sell half at 2× cost, trail the rest; buy = the stop from the BUY PRICE (below)
 // THE STOP FROM THE BUY PRICE (owner 26 Nov 2026 11:45–11:55 UK: "stop from the buy price… just as a comparison tool… just keep
 // it open… it'll just sell if it reaches its own price. Simple as that"). A third exit beside the two trailing ones, on the
@@ -270,7 +288,7 @@ export const REBUY_MAX_PER_DAY = 50;
 // VOL100K: the VOL rule at $100,000 of volume in 5 minutes, any age after migration, $40K–$2M at the buy (owner, 24 Nov).
 export const NEW_IN_11 = ["VOL100K", "DIP15K"];
 export const BOOKS_11 = ["HH-BREAK", "HH-BREAK-4H", "VOL100K", "VOL300K", "VOL500K", "FAST-1M", "FAST-3M", "FAST-5M", "RUG450", "RUG950", "LOW4H", "SLOW-BUILD", "DIP15K"];
-export const BOOKS_LEGACY = FAMILIES.filter((f) => !NEW_IN_11.includes(f) && !NEW_BOOKS.includes(f)); // the new-coin books are never part of "legacy": they buy only when a run switches them on
+export const BOOKS_LEGACY = FAMILIES.filter((f) => !NEW_IN_11.includes(f) && !NEW_BOOKS.includes(f) && !HIT_BOOKS.includes(f)); // the new-coin books are never part of "legacy": they buy only when a run switches them on
 /** the active books for a run name; throws on an unknown book or a clock book without the book whose buys it shares */
 // THE YOUNGEST AGE OF THE "OLDER" BOOKS IN A RUN (older-11; a run sets it with OLDER_MIN_AGE_H, main.mjs). MIN_AGE_S (8 hours)
 // stays the age-group boundary and the default. A run may evaluate the books that normally start at 8 hours from an earlier

@@ -511,7 +511,7 @@ test("the stop from the buy price (owner 26 Nov 2026 11:45–11:55 UK: 'it'll ju
   advance(e, 86_400 + 3, st(60, 86_400), yes); for (const s of [0.6, 0.65, 0.7]) { assert.equal(B(s).status, "closed"); assert.equal(B(s).reason, "max-hold"); }
   // the page: its own view, its own keys
   const j = booksApi([e], { stop: 0.2, policy: "buy" }); assert.equal(j.policy, "buy"); assert.equal(j.books.VOL300K.length, 1); assert.equal(j.books.VOL300K[0].reason, "buy-stop"); assert.ok(Math.abs(j.books.VOL300K[0].ret - B(0.2).exit.ret) < 1e-9);
-  assert.equal(j.rows_total, 138 * S.STOPS.length * 3);
+  assert.equal(j.rows_total, 144 * S.STOPS.length * 3);
 });
 
 test("the buy-price rows on a quote-priced buy: a buy made before they existed keeps its rows and the view counts from the first buy that has them; an old position holding only buy-price rows is looked at once a minute, never at the cost of a fresh one; its sale is priced like any other", async () => {

@@ -5,7 +5,7 @@
 // the transaction's block time. Both times are stored. Replayed (held) events update history but never create signals.
 import * as S from "./spec.mjs";
 import { Series, Coverage } from "./series.mjs";
-import { newCoin, evaluate } from "./signals.mjs";
+import { newCoin, evaluate, hitTrack } from "./signals.mjs";
 import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount, requestManual, exposure, manualOpen, buyOnly, trackHigh } from "./book.mjs";
 import { liquidityUsd, staticImpact } from "./fills.mjs";
 import { feeKnown } from "./risk.mjs";
@@ -15,7 +15,7 @@ const LAG_EDGES = [1, 2, 3, 5, 10, 30, 60, Infinity]; // upper edges (seconds) o
 const liveBlock = (info) => { const rk = info?.risk; return rk?.status === "restricted" ? `restricted (${(rk.blocking || []).join(", ") || "transfer restriction"})` : rk?.fee_bps > 0 ? `a transfer fee of ${rk.fee_bps} bps, which the live method does not model` : !feeKnown(info) ? "transfer fee not known" : null; };
 const ALL_ROWS = S.POLICIES.flatMap((p) => S.STOPS.map((s) => p + "|" + s)), ROWS = ALL_ROWS.length; // the rows of one book on one buy: exit policy × stop
 
-const POLLED_UNSUPPORTED = new Set(["HH-BREAK", "HH-BREAK-4H", ...S.HH_FAST.map((x) => x[0]), ...S.ANY_AGE]), NEVER = () => false;
+const POLLED_UNSUPPORTED = new Set(["HH-BREAK", "HH-BREAK-4H", ...S.HH_FAST.map((x) => x[0]), ...S.ANY_AGE, ...S.HIT_BOOKS]), NEVER = () => false;
 export class Engine {
   constructor({ store = null, solUsd = () => null, needCreation = () => {}, onFill = () => {}, onEntry = () => {}, log = () => {}, firstStart = null } = {}) {
     this.cov = new Coverage(); this.feedCov = new Coverage(); /* feed + restarts only: what pool-state trust and exit flags depend on */ this.coins = new Map(); this.entries = new Map(); this.byMint = new Map();
@@ -311,6 +311,19 @@ export class Engine {
     (this.dirtyBars.get(ev.mint) || this.dirtyBars.set(ev.mint, new Set()).get(ev.mint)).add(Math.floor(ev.t / 60));
     if (ev.replay) { this.stats.replayed++; return; }
     if (this.onLine && c.supply) { const mc = px * c.supply; if (mc < S.RUN_LINE_USD) { if (!c.lineUnder) c.lineUnder = true; } else if (!(mc < (c.linePk || 0) * S.RUN_PEAK_STEP)) { const first = !c.linePk; c.linePk = mc; try { this.onLine(ev.mint, mc, ev.t, first ? !!c.lineUnder : null); } catch {} } } // the runners list: told when a coin first trades at the line, then at each new high a step above the last one told
+    // HIT books (spec HIT) — their own pass, on the migration clock: it needs no creation time and comes before the age-based books.
+    // The bookkeeping (hitTrack) sees every observation; a buy is only possible when _decide's ordinary safety checks pass.
+    if (this.hitOn && c.migT != null && c.supply && ev.t - c.migT <= S.HIT_WINDOW_S + S.HIT_WAIT_MAX_S + 3600) {
+      const oh = { t: ev.t, px, mc: px * c.supply, liqUsd: liquidityUsd(st, su), rtImpact: staticImpact(st) }, H = hitTrack(c, oh, c.migT);
+      const due = Object.values(H.lines).some((h) => h.t !== null && (h.t === ev.t || S.HIT.some(([, , w]) => w > 0 && !h["w" + w] && ev.t >= h.t + w)));
+      if (due || Object.values(H.lines).some((h) => (h.over || h.lost) && !h.noted)) { // only when there is something to buy, judge or record: not one evaluation per trade of every new pool
+        for (const h of Object.values(H.lines)) if (h.over || h.lost) h.noted = true;
+        this.stats.hitEvals = (this.stats.hitEvals || 0) + 1; const hitNow = Object.entries(H.lines).filter(([, h]) => h.t === ev.t).map(([l]) => +l);
+        if (hitNow.length && !feeKnown(c.info)) { this.stats.hitFeeUnread = (this.stats.hitFeeUnread || 0) + 1; for (const l of hitNow) this.store?.saveNote(ev.mint, { ag: "A0", family: S.HIT.find((x) => x[1] === l && x[2] === 0)[0], t: ev.t, reason: "hit the line while the coin's transfer fee had not been read from the chain yet (not bought)", detail: { line_usd: l, mc: Math.round(oh.mc), since_mig_s: Math.round(ev.t - c.migT) } }); }
+        this._decide(c, ev.mint, oh, { hit: { migT: c.migT } }, { trigger: { t: ev.t, block_ts: ev.blockTs ?? null, sig: ev.sig ?? null, slot: ev.slot ?? null, kind: ev.kind ?? null, px_usd: px, sol_usd: su, base: st.base, quote_eff: st.quote, fee_buy: st.feeBuy, fee_sell: st.feeSell, supply: c.supply, age_s: c.createTs ? Math.round(ev.t - c.createTs) : null, since_mig_s: Math.round(ev.t - c.migT), coverage: "covered" } },
+          { pop: c.info.population || "pumpswap-canonical", mode: "live", exec: "reconstructed-pool-state", valuation: "pool price × on-chain base supply (from the swap event)", age_basis: "migration (pool-creation event seen by the feed)", state_approx: st.approx ?? null });
+      }
+    }
     if (!c.createTs) { this.stats.noCreation++; this.needCreation(ev.mint); return; }
     const age = ev.t - c.createTs; if (!S.ageGroupAny(age)) { if (age >= S.MIN_AGE_S) this.stats.tooOld++; return; } // from migration on: the first 8 hours are evaluated for the any-age books only (signals.mjs)
     this.stats.evals++; if (age < S.MIN_AGE_S) this.stats.evalsYoung = (this.stats.evalsYoung || 0) + 1;
@@ -327,7 +340,13 @@ export class Engine {
   manualSell(id, frac, t = Date.now() / 1000) { const e = this.entries.get(id); if (!e) return { ok: false, why: "this buy is no longer held (it is finished, or its number is unknown)" };
     const r = requestManual(e, frac, t); const M = (this.stats.manual ||= { asked: 0, refused: 0 }); if (r.ok) { M.asked++; this.store?.saveEntry(e); } else M.refused++; return r; }
   /** older-11: choose the books that may make new buys in this run (a list from S.booksOf). Open positions of other books are untouched. */
-  setBooks(list) { const on = new Set(list); this.inactive = new Set(S.FAMILIES.filter((f) => !on.has(f))); this.books = [...on]; }
+  setBooks(list) { const on = new Set(list); this.inactive = new Set(S.FAMILIES.filter((f) => !on.has(f))); this.books = [...on]; this.hitOn = S.HIT_BOOKS.some((f) => on.has(f)); }
+  /** HIT books (spec HIT): the feed saw this coin's pool being CREATED at t — the migration clock of the HIT books starts here.
+   *  Only pools created while this process runs are followed (nothing is restored after a restart). With a HIT book active the
+   *  coin's transfer-fee reading is asked for now instead of at its first decision: the same one reading, a few seconds earlier,
+   *  so that a hit in the pool's first minute is not lost to "fee not read yet". */
+  migrated(mint, t) { const c = this.coin(mint); if (c.migT != null) return; c.migT = t; /* a coin still observed by sampling is followed from the moment it moves to live observation (onEvent) */ this.stats.migrations = (this.stats.migrations || 0) + 1;
+    if (this.hitOn && !feeKnown(c.info)) { c.feeWanted = t; c.feeWantedFirst ??= t; } }
   /** shared: evaluate the families on one observation and open the (shared) entry */
   _decide(c, mint, o, opts, evidenceExtra, tags) {
     if (this.entriesUntil != null && o.t >= this.entriesUntil) { this.stats.afterEntryWindow = (this.stats.afterEntryWindow || 0) + 1; return null; }

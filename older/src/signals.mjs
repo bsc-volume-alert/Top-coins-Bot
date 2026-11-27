@@ -31,7 +31,7 @@ export function features(coin, o, low, hi1h, p15) {
   const full60 = live && sr.obsCovered(t - 3600, t), vol60 = full60 ? sr.volIn(t - 3600, t) : null, prior = full60 && w5 ? (vol60 - w5.vol_usd) / 11 : null;
   return {
     w1, w3, w5, vol60_usd: vol60 != null ? Math.round(vol60) : null, vol_surge5: prior > 0 ? +(w5.vol_usd / prior).toFixed(2) : null, // last 5 min ÷ the average 5 min of the 55 min before
-    age_s: Math.round(t - coin.createTs), mc: Math.round(o.mc), band: o.mc < 100e3 ? "40-100K" : o.mc < 250e3 ? "100-250K" : o.mc < 500e3 ? "250-500K" : "500K-1M",
+    age_s: coin.createTs ? Math.round(t - coin.createTs) : null /* a HIT-book buy can come before the creation time is known */, mc: Math.round(o.mc), band: o.mc < 100e3 ? "40-100K" : o.mc < 250e3 ? "100-250K" : o.mc < 500e3 ? "250-500K" : "500K-1M",
     rise15: p15 ? +(o.px / p15.px).toFixed(4) : null, big_candle_60m: +bigCandle.toFixed(4),
     vol15_usd: Math.round(sr.volIn(t - 900, t)), buys15: nb, sells15: ns, buyers15: seen.size, repeat_buyers15: [...seen.values()].filter((n) => n > 1).length,
     liq_usd: o.liqUsd != null ? Math.round(o.liqUsd) : null, rt_impact: o.rtImpact != null ? +o.rtImpact.toFixed(4) : null,
@@ -40,10 +40,27 @@ export function features(coin, o, low, hi1h, p15) {
   };
 }
 
+/** HIT books (spec HIT): the bookkeeping, on EVERY observation of a coin whose migration this process watched — whether or not
+ *  a buy could be made at that moment (a coin whose transfer fee is still unread is followed all the same, so that a crossing
+ *  seen then is never mistaken later for "first observed over the line"). Pure. `migT` = the pool-creation second.
+ *  coin.hit = { firstT, late, lines: { [line]: { under, over, overMc, lost, t, mc, prevMc, since } } } */
+export function hitTrack(coin, o, migT) {
+  const t = o.t, since = t - migT, sr = coin.series, H = (coin.hit ||= { firstT: t, late: since > S.HIT_START_S, lines: {} });
+  for (const line of S.HIT_LINES) { const h = (H.lines[line] ||= { under: false, over: false, lost: H.late ? "not watched from its migration" : null, t: null });
+    if (h.t !== null || h.over || h.lost) continue;
+    if (since > S.HIT_WINDOW_S) { h.lost = "window over"; continue; }
+    if (o.mc < line) { h.under = true; continue; }
+    if (!h.under) { h.over = true; h.overMc = o.mc; continue; }
+    const prevOk = sr.prevT !== null && sr.prevT < t && sr.covered(sr.prevT, t, true), prevMc = sr.prevPx * coin.supply;
+    if (!prevOk || !(prevMc < line) || !sr.covered(H.firstT, t, true)) { h.lost = "reached the line during a stretch that was not observed"; continue; }
+    h.t = t; h.mc = o.mc; h.prevMc = prevMc; h.since = since; }
+  return H;
+}
+
 export function evaluate(coin, o, opts = {}) {
   const skip = opts.skip || NONE; // families the observation mode cannot support (recorded by the caller, never silently entered)
   const out = { cands: [], notes: [] }, sr = coin.series, t = o.t;
-  const ag = S.ageGroupAny(t - coin.createTs); if (!ag) return out;
+  const ag = opts.hit ? "A0" : S.ageGroupAny(t - coin.createTs); if (!ag) return out; // the HIT pass runs on the migration clock: no creation time needed
   const young = ag === "A0"; // migration to 8 hours old: only the any-age books are evaluated
   const g = grp(coin, ag), inBand = o.mc >= S.BAND_LO_USD && o.mc <= S.BAND_HI_USD;
   const note = (family, reason, detail = {}, once = true) => { const k = family + "|" + reason; if (once && g.logged[k]) return; g.logged[k] = 1; out.notes.push({ family, ag, t, reason, detail }); };
@@ -61,6 +78,20 @@ export function evaluate(coin, o, opts = {}) {
   const again = opts.again || (() => false), can = (f) => !g.done[f] || again(f);
   const cand = (family, detail, from = null, re = null) => { const a = re ?? !!g.done[family]; g.done[family] = 1; const w = from != null ? sr.warmIn(from, t) : 0; out.cands.push({ family, ag, t, mc: o.mc, px: o.px, detail: w ? { ...detail, restart_gap_s: w } : detail, ...(a ? { again: true } : {}) }); };
   const prevRec = sr.prevT !== null ? { t: sr.prevT, px: sr.prevPx, covered_to_now: prevOk } : null;
+
+  // HIT books — their own pass (opts.hit = { migT }), after hitTrack() has seen this observation. Nothing else is judged on it.
+  if (opts.hit) { const H = coin.hit; if (!H) return out;
+    for (const [family, line, wait] of S.HIT) { if (skip.has(family)) continue; const h = H.lines[line]; if (!h) continue;
+      if (h.t === null) { if (wait === 0 && h.over) note(family, "at or over the line when first observed after its migration: it never hit the line in front of us (not bought)", { line_usd: line, mc: Math.round(h.overMc) });
+        else if (wait === 0 && h.lost && h.lost.startsWith("reached")) note(family, h.lost + " (not bought)", { line_usd: line });
+        continue; }
+      const base = { line_usd: line, wait_s: wait, hit_t: +h.t.toFixed(3), hit_mc: Math.round(h.mc), prev_mc: Math.round(h.prevMc), since_mig_s: Math.round(h.since), vol_since_mig_usd: (() => { const v = sr.volSince(opts.hit.migT); return v == null ? null : Math.round(v); })() };
+      if (wait === 0) { if (h.t === t && can(family)) cand(family, base); continue; }
+      if (h["w" + wait] || t < h.t + wait) continue; // judged once, at the first observation at or after the end of the wait
+      const d = { ...base, late_s: +(t - h.t - wait).toFixed(1), mc_at_wait: Math.round(o.mc) };
+      if (o.mc >= line) { h["w" + wait] = "bought"; if (can(family)) cand(family, d); } else { h["w" + wait] = "under"; note(family, "fell under the line by the end of the wait (not bought)", d); } }
+    if (out.cands.length) { out.evidence = { prev: prevRec, window_s: null, obs: null }; const f = features(coin, o, null, sr.priced(t - 3600, t) ? sr.highIn(t - 3600, t) : null, sr.priceAt(t - 900)); for (const c of out.cands) c.features = f; }
+    return out; }
 
   // 0. ANY-AGE BOOKS (older-8) — evaluated from migration on. See spec VOL / RUG.
   // 0a. VOL300K / VOL500K (± price up): rolling 5-minute USD volume from exact observations. The window must be fully observed
