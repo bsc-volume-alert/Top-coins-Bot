@@ -36,3 +36,16 @@ test("the page: asks for the light health answer, replaces only the parts of a c
   // the script still parses
   const js = BOOKS_PAGE.split("<script>").slice(1).map((x) => x.split("</script>")[0]).join("\n"); assert.doesNotThrow(() => new Function(js));
 });
+
+// WHAT EACH BOOK IS (owner 27 Nov 2026 16:46 UK: "a detailed description of what it is so when I'm going through it, I know exactly what we're picking")
+test("every book and every view the run shows has a plain description — what it is, which coins, when it buys, when it sells, what to keep in mind — with the rule's own numbers", async () => {
+  const { ABOUT, VIEW_NAMES, booksApi } = await import("../src/page.mjs"); const S = await import("../src/spec.mjs");
+  const run = { books: [...S.booksOf("VOL100K,VOL300K,VOL500K,FAST-1M,FAST-3M,FAST-5M,RUG450,RUG950,HIT,FOLLOW,FARM"), ...S.NEW_BOOKS], newcoins: true }, j = booksApi([], { stop: 0.25, run });
+  for (const k of j.order) { const a = j.about[k]; assert.ok(a, "no description for " + k); for (const f of ["kind", "coins", "buys", "sells", "mind"]) assert.ok(typeof a[f] === "string" && a[f].length > 20, k + " " + f); }
+  for (const n of [...VIEW_NAMES, S.NEW_ALL]) { assert.ok(j.order.includes(n), n); assert.match(ABOUT[n].kind, /A view, not a book/); } for (const f of run.books) assert.match(ABOUT[f].kind, /A real paper book/);
+  const n5 = S.NEW_COIN[0]; assert.match(ABOUT["NEW-5M"].buys, /At 5 minutes old/); assert.ok(ABOUT["NEW-5M"].buys.includes("between 16% and 30%")); assert.ok(ABOUT["NEW-5M"].buys.includes("more than " + n5.holders_min + " holders")); assert.ok(ABOUT["NEW-20M"].buys.includes("5 SOL or more paid in fees"));
+  assert.ok(ABOUT["CONFIRM-30"].buys.includes("1.3×")); assert.ok(ABOUT["WAIT5-UP"].buys.includes("Exactly 5 minutes later")); assert.ok(ABOUT["FARM-90K"].sells.includes("$90K")); assert.ok(ABOUT["HIT100-10M"].buys.includes("10 minutes later") && ABOUT["HIT100-10M"].buys.includes("$100K")); assert.ok(ABOUT["HIT50-NOW"].buys.includes("The moment the coin first reaches $50K"));
+  assert.ok(ABOUT["FAST-3M"].buys.includes("last 3 minutes")); assert.ok(ABOUT["FAST-1M"].buys.includes("last 1 minute.")); assert.ok(ABOUT["RUG950"].coins.includes("$950K")); assert.ok(ABOUT["VOL500K"].buys.includes("$500K"));
+  assert.ok(BOOKS_PAGE.includes("about(j.about&&j.about[k])")); assert.ok(BOOKS_PAGE.includes("'When it buys'"));
+  assert.equal(booksApi([], { stop: 0.25 }).about["AGE-DOUBLE"], undefined, "a book without a description simply shows its one-line rule, as before");
+});
