@@ -38,6 +38,9 @@ export function startWeb({ port, store, engine, status, run = () => null, sell =
       recent: entries.slice(-40).reverse().map((e) => ({ snap: e.snap ?? null, win: e.features ? { w1: e.features.w1 ?? null, w3: e.features.w3 ?? null, w5: e.features.w5 ?? null, vol_surge5: e.features.vol_surge5 ?? null, buyers15: e.features.buyers15 ?? null } : null, id: e.id, mint: e.mint, ag: e.ag, families: e.families, t: e.decisionT, mc: Math.round(e.signalMc), status: e.status, startup: !!e.startup, pop: e.pop || "pumpswap-canonical", mode: e.mode || "live", exec: e.exec || "reconstructed-pool-state", origin: e.token?.origin ?? null, risk: e.token?.risk_status ?? null, cadence: e.token?.cadence_s ?? e.evidence?.trigger?.cadence_s ?? null, route: e.fill?.quote?.route ?? null, fill_delay: e.fill?.delay_s ?? null, state_age: e.fill?.state_age_s ?? null, verify: e.verify ? (e.verify.error ? "error" : e.verify.suspect ? "SUSPECT" : `Δ ${(e.verify.diff_quote * 100).toFixed(2)}%`) : null, versions: e.versions.map((v) => ({ stop: v.stop, policy: v.policy, stall: v.stall, status: v.status, reason: v.reason, half: !!v.half, ret: v.exit ? +v.exit.ret.toFixed(3) : null })), runner_max: e.runner.maxX ? +e.runner.maxX.toFixed(2) : null, flags: e.flags })) };
     cache.set(pop, out); return out;
   };
+  // THE ANSWERS ARE KEPT PER SELECTION (stop, exit, stake, age…), each 1–2 MB, and the list was never emptied: every selector the
+  // owner taps added one for the life of the program. An answer nobody has asked for in two minutes is now dropped (27 Nov 2026).
+  { const put = cache.set.bind(cache); cache.set = (k, v) => { const now = Date.now(); for (const [kk, vv] of cache) if (now - (vv?.atMs ?? vv?.at ?? now) > 120_000) cache.delete(kk); return put(k, v); }; }
   const server = http.createServer((req, res) => {
     const u = new URL(req.url, "http://x");
     if (KEY && (u.searchParams.get("k") || u.searchParams.get("key")) !== KEY) { res.writeHead(403); return res.end("key required"); }
@@ -82,7 +85,7 @@ export function startWeb({ port, store, engine, status, run = () => null, sell =
     if (u.pathname === "/") { res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); return res.end(BOOKS_PAGE); }
     res.writeHead(404); res.end();
   }).listen(port, () => console.log(`[web] :${port}`));
-  return { state, server };
+  return { state, server, cached: () => cache.size };
 }
 
 const PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Older Coins Books</title>

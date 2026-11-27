@@ -49,3 +49,11 @@ test("every book and every view the run shows has a plain description — what i
   assert.ok(BOOKS_PAGE.includes("about(j.about&&j.about[k])")); assert.ok(BOOKS_PAGE.includes("'When it buys'"));
   assert.equal(booksApi([], { stop: 0.25 }).about["AGE-DOUBLE"], undefined, "a book without a description simply shows its one-line rule, as before");
 });
+
+test("the site's kept answers do not pile up: one per selection asked for in the last two minutes, older ones dropped", async (t) => {
+  const s = await site(); try {
+    for (const stop of [0.2, 0.25, 0.3, 0.4]) await get(s.port, "/api/books?stop=" + stop); assert.equal(s.w.cached(), 4);
+    const real = Date.now; Date.now = () => real() + 130_000; t.after(() => { Date.now = real; });
+    await get(s.port, "/api/books?stop=0.5"); assert.equal(s.w.cached(), 1, "the four answers nobody asked for again are gone"); await get(s.port, "/api/health"); assert.equal(s.w.cached(), 2);
+  } finally { s.w.server.close(); }
+});
