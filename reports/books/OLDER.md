@@ -1806,3 +1806,28 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   Coca-Cola +179% (bought at $31–33K, 3× to the target). 17 of the 27 closed buys lost over 80%. Open: Gold 3AhpV3, SPACEXLIFE ALC8tU, FOMO; Democat stuck (−100% when booked).
 - Caveats told to him: the 0.5 SOL figure is the 0.2 SOL result × 2.5 ("31 at the 0.2 SOL % result" — none re-priced at the bigger size; in
   $15K coins a bigger buy and sale would fetch worse prices); 27 trades in 6 hours; without three coins the book is negative on every stop.
+
+### 27 Nov, 22:39 UK — FARM-90K: "just sell at 2–3×" tested on its own 27 closed buys (looking back; NOT built)
+
+- Owner: several buys were 2–3× up and were then lost on the fall; "maybe we should just sell for 2, 3×".
+- Method (publish 22:34; 0.2 SOL; scratchpad `farm_tp.py`): a buy "reached k× while held" = exactly known for 2× (the half-at-2× row differs
+  from the trailing row; checked, 0 mismatches with the estimate), for other levels from the target / the highest seen for a buy held into
+  its collapse / (1+result)÷(1−stop) for a stop sale. Rule tested: **sell everything at k× or at the $90K target, whichever comes first**.
+
+  | sale capped at | 20% stop | won | without top 3 coins | 70% stop | won | without top 3 |
+  |---|---|---|---|---|---|---|
+  | (rule as it is: $90K target) | +1.702 SOL | 8 of 27 | −1.511 | +1.852 | 9 | −1.360 |
+  | 2× | +0.734 | 14 | +0.134 | +0.782 | 15 | +0.182 |
+  | 2.5× | +1.635 | 13 | +0.735 | +1.785 | 14 | +0.883 |
+  | 3× | +1.490 | 11 | +0.290 | +1.641 | 12 | +0.441 |
+  | 4× | +0.289 | 8 | −1.511 | +0.440 | 9 | −1.360 |
+
+- **Where it comes from: the cheap buys.** Bought under $25K (target 3.8–8×): 8 buys, ALL 8 reached 2×, 6 reached 3×; on the rule 3 won
+  (Gold +620%, CATE +520%, CATE +466%) and 5 lost 87–100% after being 2.8–3.6× up (Snowball 3.20×, Gold 4-wallet 3.29×, SPACEXLIFE 2.77×,
+  SPACEXLIFE 3.58×, SpaceX 2.80×); net +2.237 SOL. Bought at $25K+ (target 2.2–2.9×): 19 buys, 6 reached 2×, 5 won, net −0.535 SOL.
+- Reading: his point holds at **2.5–3×, not at 2×**. A 2.5× cap makes the same total as the target rule (+1.64 vs +1.70) from 13 winners
+  instead of 8 and stays positive without the three best coins (+0.74 vs −1.51). 2× gives up more than half the profit. 4× changes nothing useful.
+- Limits: 27 buys in about 7 hours; four levels tried and the best picked looking back; the whole difference is 8 cheap buys; prices are
+  sampled every 3 s, and a sale at the level needs a route at that moment (target sales so far fetched their target: +179% on a 2.76× target).
+- Proposed, NOT built (waiting for his word): leave FARM-90K as it is (it is the measurement) and add two paper books on the same buy rule,
+  sale capped at 2.5× and at 3× (or the $90K target if lower); compare on new buys.
