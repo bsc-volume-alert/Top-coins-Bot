@@ -96,5 +96,5 @@ test("the page is told when the rules last changed and which books are new — i
   assert.deepEqual(j.rule, S.RULE_CHANGE); for (const k of [...S.NEW_TODAY.books, ...VIEW_NAMES]) assert.equal(j.fresh[k], "27 Nov", k); for (const k of ["VOL100K", "FAST-1M", "RUG450", ...S.NEW_BOOKS, S.NEW_ALL]) assert.equal(j.fresh[k], undefined, k + " is not new");
   assert.ok(BOOKS_PAGE.includes('<button data-v="rc">since rule change</button>')); assert.ok(BOOKS_PAGE.includes("if(!SEL.rcSeen){SEL.win='rc';SEL.rcSeen=1}"), "ranked by it once; his own choice of period is kept afterwards");
   assert.ok(BOOKS_PAGE.includes("rc:RC?w(RC):sumR([])")); assert.ok(BOOKS_PAGE.includes("cell('since the rule change · '+UKT(RC),b.rc")); assert.ok(BOOKS_PAGE.includes('<span class="mode new">NEW · ')); assert.ok(BOOKS_PAGE.includes("--new:#c8ff4d"));
-  assert.ok(BOOKS_PAGE.includes("<th style=\\"color:var(--new)\\">since rule change</th>") || BOOKS_PAGE.includes('<th style="color:var(--new)">since rule change</th>'));
+  assert.ok(BOOKS_PAGE.includes('<th style="color:var(--new)">since rule change</th>'));
 });
