@@ -6,7 +6,7 @@
 import * as S from "./spec.mjs";
 import { Series, Coverage } from "./series.mjs";
 import { newCoin, evaluate, hitTrack } from "./signals.mjs";
-import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount, requestManual, exposure, manualOpen, buyOnly, trackHigh } from "./book.mjs";
+import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount, requestManual, exposure, manualOpen, buyOnly, trackHigh, writeOff } from "./book.mjs";
 import { liquidityUsd, staticImpact } from "./fills.mjs";
 import { feeKnown } from "./risk.mjs";
 import { parseInfo, judge } from "./gates.mjs";
@@ -342,6 +342,9 @@ export class Engine {
   /** MANUAL SALE, paper only (book.mjs, requestManual): the owner sells a quarter, half or all of what he still holds of one
    *  filled buy. Only the request is taken here; it is priced by the ordinary clock 0.7 s later, on a trustworthy state, like
    *  every sale. The rules' own rows of that buy are not touched. Returns { ok, why? }. */
+  /** WRITE-OFF, paper only (book.mjs, writeOff): the owner closes a buy that can no longer be priced as a total loss. Returns { ok, why? }. */
+  writeOff(id, t = Date.now() / 1000) { const e = this.entries.get(id); if (!e) return { ok: false, why: "this buy is no longer held (it is finished, or its number is unknown)" };
+    const r = writeOff(e, t); const M = (this.stats.written_off ||= { done: 0, refused: 0 }); if (r.ok) { M.done++; e.touched = false; this.store?.saveEntry(e); } else M.refused++; return r; }
   manualSell(id, frac, t = Date.now() / 1000) { const e = this.entries.get(id); if (!e) return { ok: false, why: "this buy is no longer held (it is finished, or its number is unknown)" };
     const r = requestManual(e, frac, t); const M = (this.stats.manual ||= { asked: 0, refused: 0 }); if (r.ok) { M.asked++; this.store?.saveEntry(e); } else M.refused++; return r; }
   /** older-11: choose the books that may make new buys in this run (a list from S.booksOf). Open positions of other books are untouched. */

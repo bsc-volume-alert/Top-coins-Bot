@@ -120,6 +120,24 @@ function execManual(e, st, at, delay, cov) {
   const left = liqValue(st, m.tok); if (left != null) { m.lastX = (m.got + left) / COST; m.lastT = at; } // a routed quote may not hold the remaining quantity yet: its value then appears with its own quote, never as zero
   return true;
 }
+/** WRITE-OFF, by the owner's own tap (spec WRITE_OFF_MIN_S): a routed-quote buy for which the provider gives no sale price is closed
+ *  as a TOTAL LOSS of what is still held. Every row still held exits with what it had already banked (a half sold earlier) and nothing
+ *  for the rest, marked "written off"; a hand sale that was waiting for a price is closed the same way. lastPriced = when a sale quote
+ *  was last answered for any part of it (the latest of the rows' own quote times). Refused while the coin can still be priced. */
+export function lastPriced(e) { return Math.max(e.fill?.t ?? 0, ...(e.versions || []).map((v) => v.lastT || 0), e.manual?.lastT || 0); }
+export const canWriteOff = (e, t) => !!e && e.status === "filled" && e.fill?.exec === "routed-quote" && (e.versions.some(live) || manualOpen(e)) && t - lastPriced(e) >= S.WRITE_OFF_MIN_S;
+export function writeOff(e, t) {
+  if (!e || e.status !== "filled" || !e.fill) return { ok: false, why: "this is not a held buy" };
+  if (e.fill.exec !== "routed-quote") return { ok: false, why: "this buy is priced on its pool and can always be sold: use the sell buttons" };
+  if (!(e.versions.some(live) || manualOpen(e))) return { ok: false, why: "nothing of this buy is still held" };
+  if (!(t - lastPriced(e) >= S.WRITE_OFF_MIN_S)) return { ok: false, why: "this coin had a sale price in the last " + Math.round(S.WRITE_OFF_MIN_S / 60) + " minutes: sell it instead" };
+  let rows = 0;
+  for (const v of e.versions) { if (!live(v)) continue; const total = v.got || 0; v.status = "closed"; v.tok = 0; v.schedT = null; v.reason = "written off: no sale price"; rows++;
+    v.exit = { t, sol: total, last_sol: 0, ret: total / COST - 1, delay_s: 0, hold_s: Math.round(t - e.fill.t), trigger_value: v.trigValue ?? null, exec: "written-off", written_off: true }; }
+  const m = e.manual; if (m && !m.closed) { m.order = null; m.tok = 0; m.closed = { t, sol: m.got, ret: m.got / COST - 1, hold_s: Math.round(t - e.fill.t), written_off: true }; }
+  if (!e.flags.includes("written off: no sale price")) e.flags.push("written off: no sale price");
+  e.written_off = { t, rows }; e.touched = true; return { ok: true, rows };
+}
 export const manualOpen = (e) => !!e.manual && (!!e.manual.order || (!e.manual.closed && e.manual.tok > 0));
 
 /** Everything scheduled at or before `upTo` is executed against `st`, the state in force until then. trusted(at) says whether

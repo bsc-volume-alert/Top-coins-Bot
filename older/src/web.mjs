@@ -22,7 +22,7 @@ export function coinLookup({ mint, store, engine, lookup = null, run = null, now
   else verdict = "No record of this coin";
   return { ok: true, mint, sym, at: now, verdict, newcoins: nc, buys, notes, known: !!coin, created: coin?.createTs ?? nc.waiting?.created ?? null, pool: coin?.pool ?? null };
 }
-export function startWeb({ port, store, engine, status, run = () => null, sell = null, lookup = null, runners = null }) { // runners(): the runners list (newcoin.mjs, runnersView) // lookup(mint): what the new-coin books know about one coin (newcoin.mjs); null = no new-coin books in this program // sell(id, frac): the owner's paper "sell now" (engine.manualSell); null = the page has no such button // run(): older-11 — the run's own books and settings, or null (every book, as before)
+export function startWeb({ port, store, engine, status, run = () => null, sell = null, writeOff = null, lookup = null, runners = null }) { // runners(): the runners list (newcoin.mjs, runnersView) // lookup(mint): what the new-coin books know about one coin (newcoin.mjs); null = no new-coin books in this program // sell(id, frac): the owner's paper "sell now" (engine.manualSell); null = the page has no such button // run(): older-11 — the run's own books and settings, or null (every book, as before)
   const KEY = process.env.OLDER_SITE_KEY || "";
   const cache = new Map(), BUILD = String(process.env.OLDER_COMMIT || "dev").slice(0, 12) + ":" + Math.round(Date.now() / 1000); // changes on every start: the books page reloads itself when it sees a new one
   const state = (pop = "", given = null, tm = null) => { // given: every buy, already read (the status dump reads them once, in slices, for all its files)
@@ -76,6 +76,11 @@ export function startWeb({ port, store, engine, status, run = () => null, sell =
       if (req.method !== "POST") return j(405, { ok: false, why: "POST only" }); if (!KEY || !sell) return j(403, { ok: false, why: "manual paper sales are switched off (the site has no key, or this run has no sell button)" });
       const id = Number(u.searchParams.get("id")), frac = Number(u.searchParams.get("frac")); if (!Number.isInteger(id)) return j(400, { ok: false, why: "which buy?" });
       const r = sell(id, frac); cache.clear(); return j(r.ok ? 200 : 409, r); }
+    // WRITE-OFF (spec WRITE_OFF_MIN_S): the owner closes a buy that has no sale price any more as a total loss. Paper only; the same key as a sale.
+    if (u.pathname === "/api/writeoff") { const j = (code, o) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(o)); };
+      if (req.method !== "POST") return j(405, { ok: false, why: "POST only" }); if (!KEY || !writeOff) return j(403, { ok: false, why: "writing off is switched off (the site has no key)" });
+      const id = Number(u.searchParams.get("id")); if (!Number.isInteger(id)) return j(400, { ok: false, why: "which buy?" });
+      const r = writeOff(id); cache.clear(); KEPT.clear(); return j(r.ok ? 200 : 409, r); }
     // OPEN POSITIONS ONLY, FROM MEMORY (owner 25 Nov 2026 22:49 UK: "refreshed every 2 or 3 seconds"): the current value and the high
     // of every position that is still held, for the selected stop / exit / stake — the same figures /api/books gives, worked out
     // by the same code, but from the engine's own unfinished buys, so the database is not read. The page asks every 2 s and
