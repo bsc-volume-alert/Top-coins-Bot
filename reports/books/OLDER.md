@@ -2006,3 +2006,17 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   (kept on the buy once; survives a restart), labelled "first reading"; pool-priced positions keep "at the buy" (same measure).
   entries.json now carries `liq_buy` (look) and `liq0` (first live reading) → at the next checks, work out the ratio and tell him.
 - 335 tests, fail 0. Waiting for his paste.
+
+### 28 Nov, 00:26–00:45 UK — "Held now" at the top (c2c27bf); his sales folded away
+
+- Owner 00:26: "I don't care about my sales. I just want the top 5 coins… that I've bought with the option where I can sell 25%, at a quick
+  glance… right on the front page in case I need to sell something."
+- Built and pushed (display only; 336 tests, fail 0): **Held now** box above everything — the buys still open on the stop chosen above that can be
+  sold by hand, one row per buy, biggest gain first, five shown ("show all N" button); columns: coin (opens Axiom) · sell 25% / 50% / all ·
+  now · high · liquidity now · bought at (market cap · liquidity) · bought. A buy whose hand sale waits for a price is named under the table.
+  Independent of the topic buttons and the search box; refreshed with the live prices. "Your own sales" is one folded line under it.
+  The sell buttons come straight after the name: at the iPad's width they were cut off at the right edge in the first version.
+- Also on the branch since 00:18: the liquidity at the buy beside the buy market cap (257af9a) and the first-reading baseline (fd08a12).
+- His 00:25 screen: four hand sales so far (SPACEXLIFE 3.25× — the rule then reached its target +338%; Gold 4.07× — the rule then −100%;
+  MAYA 4.64× — the 70% rule still open at 4.69×; first Gold 3.23× — the rule +620%). Hand +2.244 SOL at his stake on four.
+- Waiting for his paste: c2c27bf.
