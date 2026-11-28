@@ -1945,3 +1945,19 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
 - Since the rule change (8.81 h): four looks 131 buys −1.368 / −2.177 / −4.538 SOL; NEW-10M −0.032; CONFIRM-15 −0.263, **-20 +0.103**, -30 −0.007;
   WAIT5-UP 30 buys −0.221; HIT50-NOW 63 buys −1.934; HIT100-NOW 18 buys −0.952; 5M-H300 46 buys +7.9% vs −4.8% for the other 151.
   Runners: reached 94, bought 20, missed 74. 25% stop on all new-coin-side buys: 442 closed, 111 won, avg −5.6%.
+
+### 28 Nov, 00:10 UK — live liquidity beside every open position (pushed; waiting for his paste)
+
+- **Owner 27 Nov 23:53:** live liquidity next to the open positions, "because the moment they take liquidity out, the coin dumps… so I can sell if I need to".
+- Built (display only; 335 tests, fail 0): a **"liquidity now"** column beside the sell buttons — the figure, the figure at the buy and
+  the change (amber from −20%, red from −50%), refreshed with the live prices every 2 s.
+  - pool-priced positions (VOL / FAST / RUG / HIT): the pool itself (2 × its SOL side) at every trade; free.
+  - quote-priced positions (the looks, CONFIRM / WAIT, FARM-90K): Jupiter's liquidity figure; ONE price request for up to 50 held coins
+    every 5 s = 720 credits an hour (use was about 26–27K an hour of the plan's ≈34.7K) and 12 requests a minute (about 385 of 600 used).
+    A coin Jupiter leaves out keeps its last figure and counts a miss ("Jupiter has stopped giving a figure") — never zero.
+- **Told him plainly what it can and cannot do:** a full pull happens in ONE transaction — the figure and the price fall in the same
+  second, so the column cannot warn before a one-shot pull; by then the sale may have no route (Democat). It helps where liquidity is
+  taken out in steps, where it is thin against the cap, and where Jupiter stops pricing the coin.
+  Not known until it runs: whether Jupiter's price call gives a liquidity figure for these very new, tiny coins — check `liquidity`
+  (asks / read / missed) in the new-coin status after the paste and tell him.
+- Not built, only mentioned: a paper rule that sells by itself when liquidity falls a set amount (faster than a hand).
