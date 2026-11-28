@@ -2188,3 +2188,11 @@ Owner 02:06: "I'm not saying ban a token. I'm saying that we have the option… 
 - Every coin a ban keeps out is written down once (time, cap at that look, books that would have bought it) and shown in the box with an Axiom link — so each ban can be judged afterwards. Also in status.bans of the published state.
 - Known limit: a coin FARM-90K refused while its name was banned is not bought by FARM-90K at a later look after an unban (its "seen" mark is set before the buy); the looks' own books can still buy it.
 - To judge later: for each kept-out coin, what it did after (the runners list has those that reached $100K). 344 tests, fail 0.
+
+### 28 Nov 02:25 UK — 30-minute check (state 02:05:25, publish 02:10:20)
+- Code: ad4955a confirmed live since 02:00:20 (auto-update, no paste). e2bebd7 (banned names) pushed 02:16:32 — NOT yet confirmed: no publish since 02:10:20 (the publisher publishes about 10 min after a start). Confirm at the next check.
+- Health at 5 min up: memory 546 MB / 324 heap, Jupiter 26.5K credits/h, 0 limited, 0 errors, GMGN limited 0, no error in the log tail.
+- Entries 1423 (1220 bought); 19 new since 1404, all filled. Runners reached 98 / bought 22 / missed 76 — no coin newly at $100K.
+- New buys (20% stop): Pete 1405 VOL100K +22%, 1406 VOL300K -29%; eiˣ HIT50-NOW -6%; MANDY HIT50-NOW -16%, HIT100-NOW -20%, HIT50-10M -18%; eˣ NEW-5M -29%; Grok AI FARM -95%; CMDTY NEW-5M -38%; 8sAxws VOL100K +1%; Samsung FARM -12%; MARS NEW-5M -8%, CONFIRM-15 -26%, CONFIRM-20 -20%, NEW-10M -50%, WAIT5-UP -52%; Snowball 5dPKsE FARM (1419, 01:57, cap $25K) -100%; aEeCWD VOL100K -100%; SPACEXLIFE 9n5BrF FARM (1421, 01:58) open.
+- FARM-90K: 43 buys, 42 closed, +1.243 SOL (20%) / +0.763 (25%), 11 won. Snowball is now 3 buys, 3 x -100% (16:30, 01:27, 01:57) — the one name where a ban after the first rug would only have saved money (0.4 SOL at the 0.2 stake). SPACEXLIFE now 6 buys.
+- Volume test: 15 volume buys. CONTROL 1 (WINCULT -5.3% on 40%). REST 10 (ZERO -18.0%, MAYA -11.2%, RAURA -1.5%, SPEC -9.8%, MONO -11.8%, aurbit -7.3% and -6.7%, Pete 1405 +22.2%, Pete 1406 -28.9%, 8sAxws +0.9%). Failed a rug check 4 (YfKJNU x2 open, iFSvbH -99.6%, aEeCWD -99.6%). BARE 0, OPER 0. Clean, all, 20% stop: 11 buys, -0.160 SOL.
