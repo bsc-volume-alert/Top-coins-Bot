@@ -48,3 +48,7 @@ test("a coin's name opens it on Axiom; GMGN is the small link beside it", () => 
 test("you and auto sell together: a second box under 'sold by you' — his sale in place of the rule's on the buys he sold, the rule's on the rest; the rules' total is untouched", () => {
   for (const x of ["you + auto sell together · total", "var tg=b.tot.net-rmn+yn,oth=b.tot.n-rm,df=tg-b.tot.net", "auto sell alone · total", "together against auto alone", "if(t.status==='closed'&&t.ret!=null&&!t.est_exit){rm++;rmn+=t.net}"]) assert.ok(BOOKS_PAGE.includes(x), "the page has: " + x);
 });
+test("held now: the five biggest gainers still held, one row per buy, each with its sell buttons, at the top of the page; his own sales are folded away", () => {
+  const P = BOOKS_PAGE; assert.ok(P.indexOf('id="held"') > 0 && P.indexOf('id="held"') < P.indexOf('id="manual"') && P.indexOf('id="manual"') < P.indexOf('id="rank"'), "held, then his sales, then the ranking");
+  for (const x of ["Held now</b>", "var hshow=HALL?HL:HL.slice(0,5)", "if(t.man&&t.man.pending)HW.push(o);else if(t.sell)HL.push(o)", "HL.sort(function(a,b){return (b.t.now_x==null?-1:b.t.now_x)-(a.t.now_x==null?-1:a.t.now_x)})", "'+LQ(t)+'</td><td style=\"white-space:nowrap\">'+SB(t)+'</td></tr>'}).join('')+'</tbody></table></div>':'')\n   +(HW.length", "waiting to sell:", "show all '+HL.length", "<details'+(mdOpen?' open':'')+'><summary", "· tap to open</span></summary>"]) assert.ok(P.includes(x), "the page has: " + x);
+});
