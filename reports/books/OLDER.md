@@ -2344,3 +2344,12 @@ Owner 10:40: "can we have current market cap as well?" Added after "now" in the 
 
 ### 28 Nov 11:03 UK — ranking as a top-20 table (72373bb), on the owner's word
 Owner 10:54: "the top 20 in this list… a 24-hour, a 6-hour… and then just a total of me and AI. 3 columns." Columns: 24h auto sell · 6h auto sell · you + auto together (the book's whole total with his hand sales in place of the rules' sale on those buys — same figure as each card's amber box). Top 20 by the chosen period, button for all. 347 tests, fail 0. Head of older-11-review is now 72373bb (after e09b87d 10:36, aee374e 10:46).
+
+### 28 Nov 11:04 UK — 30-minute check (state 10:51:02, publish 10:55:55)
+- Code: e09b87d (picked up / books named) ran 10:36–10:45; aee374e (market cap now) started 10:45:55 by itself — both CONFIRMED (the runners file now carries bought 31 / picked 28 / missed 56). 72373bb (ranking table) pushed 11:03:06, not yet in the data. At 5 min up: memory 660 MB, Jupiter limited 0, GMGN limited 0, feed reconnects 0, no error in the log tail.
+- BANNED NAMES: Snowball; kept out 3, no new one.
+- ROBINHOOD RUGGED after its $163K peak: every HIT buy still open at 10:25 ended at about -97% to -99% although each had been up 2.5x–6.1x (HIT50-5M high 6.10x -97%, HIT50-10M high 5.32x -98%, HIT100-NOW high 3.17x -99%, HIT100-5M -99%, HIT100-10M -99%). His own hand sale of a Robinhood buy is the one that kept its profit.
+- FARM-90K: 81 buys, all closed, -2.352 SOL (20%) / -2.864 (25%), 19 won (-1.984 at 10:25). Zhaki AzLcYf 1734 +9% (high 3.57x — sold on the stop before the run), MICROAI BL2tTd 1735 -100% (high 2.85x; fourth MICROAI: -100%, +329%, -100%, -100%), Speed Dije86 1739 -93%.
+- New at $100K: Zhaki AzLcYf — $100.3K at 10:48, 42 min old, peak $110K. BOUGHT by FARM-90K at $29.7K 10:11, +9%; also HIT50-NOW -34%, HIT50-5M -51%. Looks refused it. Type: holder-pattern coin. 5M cap $29.7K, holders 1,988, vol $13K, fees 0.63, top10 35.2%, bundlers 31%, snipers 42%, phishing 14% — out: volume, fees, top 10. 10M $38.1K, 2,002, $18K, 1.20, 34.7%, 32%, 18%, 12% — same. 15M $43.5K, 1,998, $21K, 1.40, 35.8%, 35%, 18%, 13% — same. 20M $58.5K, 1,996, $24K, 1.53, 37.0%, 38%, 18%, 12% — same.
+- Other new buys: PumpCat NEW-5M -22%, NEW-10M -19% · ECqVUW HIT50-NOW open.
+- Volume test: 28 buys, no new one. CONTROL 4 (-0.196 SOL, 0 won). OPER 1. BARE 0. REST 15. Clean all 20%: 19 buys -0.264 SOL. Failed a rug check 9.
