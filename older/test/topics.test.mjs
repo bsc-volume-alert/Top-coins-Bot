@@ -79,7 +79,7 @@ test("the page: the $100K list names the books that bought a coin, and a coin on
   assert.ok(!BOOKS_PAGE.includes(".replace('M',' min'))+' check ('"), "FARM-90K is no longer shown as 'FAR min-90K'");
 });
 
-test("the page: the ranking is a table — top 20, 24 h and 6 h of auto sell, and you + auto together", () => {
-  for (const x of ["<th><span class=\"pt d24\">24h</span> auto sell</th>", "you + auto together · total</th>", "keys.slice(0,20)", 'id="rall"', "sold by you: '+sl(g.yn)"]) assert.ok(BOOKS_PAGE.includes(x), "the page has: " + x);
+test("the page: the ranking is a table — every book, 24 h and 6 h of auto sell, and you + auto together", () => {
+  for (const x of ["<th><span class=\"pt d24\">24h</span> auto sell</th>", "you + auto together · total</th>", "var shown=keys;", "sold by you: '+sl(g.yn)"]) assert.ok(BOOKS_PAGE.includes(x), "the page has: " + x);
   const m = BOOKS_PAGE.match(/<script>([\s\S]*)<\/script>/); assert.doesNotThrow(() => new Function(m[1]));
 });
