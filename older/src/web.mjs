@@ -56,7 +56,7 @@ export function startWeb({ port, store, engine, status, run = () => null, sell =
   // The rows are built by the same function as before (page.entryRows), so the answer is the same. A kept row of a finished
   // buy carries no sell button (a finished buy cannot be sold). Kept rows of a selection not asked for in 15 minutes are dropped.
   const KEPT = new Map(), DONE_SETTLE_S = 600, stats = { answers: 0, read: 0, kept: 0, live: 0 };
-  const booksOf = (sel, ck) => { const opts = { ...sel, since: store.since ? store.since(Date.now() / 1000) : null, build: BUILD, run: run(), sellable: !!(KEY && sell) };
+  const booksOf = (sel, ck) => { const opts = { ...sel, since: store.since ? store.since(Date.now() / 1000) : null, build: BUILD, run: run(), sellable: !!(KEY && sell), liq: engine?.liq ?? null };
     if (!store.entryFlags || !store.entriesByIds || !engine?.entries?.get) return booksApi(store.allEntries(), opts); // a store without the two readers: as before
     const nowMs = Date.now(), sig = JSON.stringify(opts.run?.books ?? null); for (const [k, v] of KEPT) if (nowMs - v.atMs > 900_000) KEPT.delete(k);
     let K = KEPT.get(ck); if (!K || K.sig !== sig) { K = { sig, rows: new Map() }; KEPT.set(ck, K); } K.atMs = nowMs;
@@ -81,8 +81,8 @@ export function startWeb({ port, store, engine, status, run = () => null, sell =
     // by the same code, but from the engine's own unfinished buys, so the database is not read. The page asks every 2 s and
     // repaints only when a figure moved. (The full page data stays on its 10 s cycle: it reads every buy from the database.)
     if (u.pathname === "/api/live") { const sk = Number(u.searchParams.get("stake")), sel = { stop: Number(u.searchParams.get("stop") || 0.25), policy: S.POLICIES.includes(u.searchParams.get("policy")) ? u.searchParams.get("policy") : "trail", stake: S.STAKE_VIEWS.includes(sk) ? sk : S.STAKE_SOL }, ck = "l|" + JSON.stringify(sel);
-      let hit = cache.get(ck); if (!hit || Date.now() - hit.atMs > 1500) { const j = booksApi([...engine.entries.values()].filter((e) => e.status === "filled"), { ...sel, run: run() }), rows = {};
-        for (const [k, list] of Object.entries(j.books)) for (const r of list) if (r.status === "open") rows[k + "|" + r.id] = [r.now_x, r.hi, r.hi_held ?? null];
+      let hit = cache.get(ck); if (!hit || Date.now() - hit.atMs > 1500) { const j = booksApi([...engine.entries.values()].filter((e) => e.status === "filled"), { ...sel, run: run(), liq: engine?.liq ?? null }), rows = {};
+        for (const [k, list] of Object.entries(j.books)) for (const r of list) if (r.status === "open") rows[k + "|" + r.id] = r.liq ? [r.now_x, r.hi, r.hi_held ?? null, r.liq] : [r.now_x, r.hi, r.hi_held ?? null];
         hit = { atMs: Date.now(), body: JSON.stringify({ at: Date.now() / 1000, ...sel, rows }) }; cache.set(ck, hit); }
       res.writeHead(200, { "content-type": "application/json" }); return res.end(hit.body); }
     // THE COIN LOOKUP (owner 26 Nov 2026 04:49 UK: "when I paste the contract, we need to know immediately why the coin was rejected or

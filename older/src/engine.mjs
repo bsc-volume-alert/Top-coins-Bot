@@ -18,7 +18,7 @@ const ALL_ROWS = S.POLICIES.flatMap((p) => S.STOPS.map((s) => p + "|" + s)), ROW
 const POLLED_UNSUPPORTED = new Set(["HH-BREAK", "HH-BREAK-4H", ...S.HH_FAST.map((x) => x[0]), ...S.ANY_AGE, ...S.HIT_BOOKS]), NEVER = () => false;
 export class Engine {
   constructor({ store = null, solUsd = () => null, needCreation = () => {}, onFill = () => {}, onEntry = () => {}, log = () => {}, firstStart = null } = {}) {
-    this.cov = new Coverage(); this.feedCov = new Coverage(); /* feed + restarts only: what pool-state trust and exit flags depend on */ this.coins = new Map(); this.entries = new Map(); this.byMint = new Map();
+    this.cov = new Coverage(); this.feedCov = new Coverage(); /* feed + restarts only: what pool-state trust and exit flags depend on */ this.coins = new Map(); this.liq = new Map(); /* mint → { usd, t, src, miss } — the latest liquidity of a coin that is held (spec LIQ_EVERY_S); memory only, for the page */ this.entries = new Map(); this.byMint = new Map();
     this.store = store; this.solUsd = solUsd; this.needCreation = needCreation; this.onFill = onFill; this.onEntry = onEntry; this.log = log; this.firstStart = firstStart;
     this.stats = { events: 0, swaps: 0, otherPool: 0, noSolUsd: 0, noCreation: 0, evals: 0, cands: 0, entries: 0, notes: 0, replayed: 0, tooOld: 0, lastT: null, evalMsMax: 0 };
     this.dirtyBars = new Map(); this.usdDown = false; this.dirty = new Set(); this.lastCkpt = 0; this.entriesUntil = null; this.onOwnership = () => {}; this.onLine = null; // onLine(mint, mc, t, sawUnder): a coin's pool price first reaches spec RUN_LINE_USD in this process, and again each time it is RUN_PEAK_STEP higher (the runners list, newcoin.mjs) — evidence only
@@ -301,7 +301,8 @@ export class Engine {
     if (!ev.replay && !this.freshAt(ev.t)) { this.stats.lateEvents = (this.stats.lateEvents || 0) + 1; return; }
     if (!ev.replay && this._unmeasured) { this.stats.unmeasuredEvents = (this.stats.unmeasuredEvents || 0) + 1; return; } // this transaction's own delay is unknown (see tx)
     // 3) open positions see it (value, peaks, triggers) — in SOL, independent of the USD reference
-    if (!ev.replay) { const ids = this.byMint.get(ev.mint); if (ids) for (const id of ids) { const e = this.entries.get(id); if (e.exec === "routed-quote") continue; const was = e.status, sig = e.versions.map((v) => v.status).join(); if (this._blocked(e, c, was, sig, ids, ev.t)) continue; observe(e, st, ev.t, this.feedCov); this._after(e, was, sig, ids, c); } }
+    if (!ev.replay) { const ids = this.byMint.get(ev.mint); if (ids) for (const id of ids) { const e = this.entries.get(id); if (e.exec === "routed-quote") continue; const was = e.status, sig = e.versions.map((v) => v.status).join(); if (this._blocked(e, c, was, sig, ids, ev.t)) continue; observe(e, st, ev.t, this.feedCov); this._after(e, was, sig, ids, c); }
+      if (ids?.size) { const s0 = this.solUsd(ev.t); if (s0 > 0 && st.quote > 0) this.liq.set(ev.mint, { usd: liquidityUsd(st, s0), t: ev.t, src: "pool" }); } } // LIVE LIQUIDITY of a held coin (spec LIQ_EVERY_S): the pool's own, at this trade
     // 4) USD history and signals
     const su = this.solUsd(ev.t);
     if (!su) { this.stats.noSolUsd++; if (!this.usdDown) { this.usdDown = true; this.cov.drop(ev.t, "sol-usd"); this.store?.feedEvent(ev.t, "sol-usd stale: new entries suspended, positions still managed in SOL"); } return; }

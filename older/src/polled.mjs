@@ -20,6 +20,7 @@ export class Poller {
     this.quoted = new Map(); // entry id → last quote request time
     this.held = new Map();   // entry id → Map(quantity → its latest quote, with that quote's own request/response times)
     this.noRouteRun = new Map(); // entry id → "no route" answers in a row (reset by the first quote that is answered)
+    this.liqAsked = new Map(); // mint → when its liquidity was last asked for (spec LIQ_EVERY_S)
     engine.onOwnership = (mint, mode) => { if (mode === "live" && this.watch.delete(mint)) this.stats.movedToLive = (this.stats.movedToLive || 0) + 1; };
     this.stats = { watched: 0, hot: 0, sweeps: 0, priced: 0, omitted: 0, lost: 0, discovered: 0, skippedLive: 0, noMeta: 0, quotesOk: 0, noRoute: 0, quoteErr: 0, cadence: { n: 0, sum: 0, max: 0 }, by_origin: {}, risk: {} };
     this.seen = new Set();
@@ -173,12 +174,28 @@ export class Poller {
     for (const id of this.quoted.keys()) if (!this.engine.entries.has(id)) { this.quoted.delete(id); this.held.delete(id); }
     return n;
   }
+  /** LIVE LIQUIDITY of the coins held on a routed quote (spec LIQ_EVERY_S): one price request for up to 50 of them — the ones asked
+   *  about longest ago first. Jupiter's liquidity figure for each goes to engine.liq, for the page only: nothing is bought, sold or
+   *  written by it. A coin left out of the answer has NO reading (counted as a miss, never as zero): the last figure stays, with its time. */
+  async liquidity() {
+    const now = this.now(), held = new Set(); for (const n of this.engine.quoteNeeds(now)) if (!n.buy_sol && !n.runner_only) held.add(n.mint);
+    for (const m of this.liqAsked.keys()) if (!held.has(m)) this.liqAsked.delete(m);
+    for (const [m, L] of this.engine.liq) if (L.src !== "pool" ? !held.has(m) : !this.engine.byMint.get(m)?.size) this.engine.liq.delete(m); // no longer held: forgotten
+    if (!held.size) return 0;
+    const batch = [...held].sort((a, b) => (this.liqAsked.get(a) || 0) - (this.liqAsked.get(b) || 0)).slice(0, 50); for (const m of batch) this.liqAsked.set(m, now);
+    const K = (this.stats.liq ||= { asks: 0, read: 0, missed: 0, errors: 0 }); let r; try { r = await this.jup.prices(batch); } catch (e) { K.errors++; return 0; }
+    K.asks++;
+    for (const m of batch) { const p = r.prices.get(m), was = this.engine.liq.get(m);
+      if (p && p.liqUsd != null) { K.read++; this.engine.liq.set(m, { usd: p.liqUsd, t: r.t, src: "jupiter" }); }
+      else { K.missed++; this.engine.liq.set(m, { usd: was?.usd ?? null, t: was?.t ?? null, src: "jupiter", miss: (was?.miss || 0) + 1 }); } }
+    return batch.length;
+  }
   _fail(need, q) { if (/rate limited|HTTP 5|timeout|fetch/i.test(q.why || "")) this.stats.quoteErr++; else { this.stats.noRoute++; this.noRouteRun.set(need.id, (this.noRouteRun.get(need.id) || 0) + 1); const e = this.engine.entries.get(need.id); if (e && !e.flags.includes("quote unavailable: " + q.why)) { e.flags.push("quote unavailable: " + q.why); e.touched = true; /* saved at the next tick: a clock tick alone no longer re-writes an entry */ } } }
 
   /** QUOTES ONLY (the new-coin books in a run without the Solana-wide adapter): the two execution passes, and nothing else — no
    *  discovery, no price sampling. A coin is priced here only because it has a pending or open routed-quote buy. */
   startQuotes() { const loop = async (fn, every) => { while (!this.stopped) { const t0 = Date.now(); try { await fn(); } catch (e) { this.log("[quotes] " + e.message); } await new Promise((r) => setTimeout(r, Math.max(50, every * 1000 - (Date.now() - t0)))); } };
-    loop(() => this.quotes("urgent"), 0.25); loop(() => this.quotes("routine"), 0.25); }
+    loop(() => this.quotes("urgent"), 0.25); loop(() => this.quotes("routine"), 0.25); loop(() => this.liquidity(), S.LIQ_EVERY_S); }
   start({ categories = [["toptraded", "1h"], ["toptrending", "1h"]], discoverEvery = 30 } = {}) {
     const loop = async (fn, every) => { while (!this.stopped) { const t0 = Date.now(); try { await fn(); } catch (e) { this.log("[poller] " + e.message); } await new Promise((r) => setTimeout(r, Math.max(50, every * 1000 - (Date.now() - t0)))); } };
     this.repair().catch((e) => this.log("[poller] repair: " + e.message));

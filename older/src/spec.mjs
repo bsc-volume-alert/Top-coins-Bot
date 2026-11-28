@@ -45,7 +45,13 @@ export const VOLG = { t: 1795811460, since: "27 Nov, 20:31", books: ["VOL100K", 
   exits: { t20: ["trail", 0.20], t25: ["trail", 0.25], t40: ["trail", 0.40], h40: ["scale", 0.40] },
   cards: { "VOL-CONTROL": "t40", "VOL-BARE": "h40", "VOL-OPER": "t20", "VOL-REST": "t20" }, checkpoints: [30, 60, 100, 200], bare_last_before: 1795800710, bare_quiet_h: [24, 48, 72],
   hide_books: true }; // hide_books (owner, 27 Nov 20:50 UK): while the test's cards are shown, the three volume books are not cards of their own — they go on buying exactly as before (the test is made of their buys) and nothing is deleted
-export const NO_ROUTE_RUN = 10, NO_ROUTE_EVERY_S = 30; // a held position answered "no route" this many times in a row is asked about only this often (polled.mjs) — never dropped
+export const NO_ROUTE_RUN = 10, NO_ROUTE_EVERY_S = 30;
+// LIVE LIQUIDITY BESIDE EVERY OPEN POSITION (owner 27 Nov 2026 23:53 UK: "we need to have the live liquidity, because the moment they
+// take liquidity out, the coin dumps… so I can sell if I need to"). Display only: no rule reads it. A pool-priced position's figure is
+// the pool itself (2 × its SOL side), at every trade, at no cost. A quote-priced position's figure is Jupiter's own liquidity figure
+// for the coin: ONE price request for up to 50 held coins every LIQ_EVERY_S seconds (1 credit each: 720 credits an hour at 5 s).
+// LIQ_WARN / LIQ_BAD: how far below the figure at the buy the page turns it amber / red.
+export const LIQ_EVERY_S = 5, LIQ_WARN = 0.2, LIQ_BAD = 0.5; // a held position answered "no route" this many times in a row is asked about only this often (polled.mjs) — never dropped
 export const SELL_UNRESOLVED_S = 24 * 3600;   // a triggered sale that cannot be priced for 24 h is shown as unresolved exposure (never silently closed)
 
 // ───────── NEW-COIN BOOKS (owner 25 Nov 2026, 16:07, 16:10 and 18:37 UK) — off unless a run switches them on (main.mjs, OLDER_NEWCOINS=1) ─────────
