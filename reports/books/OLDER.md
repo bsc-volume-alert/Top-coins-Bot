@@ -2102,3 +2102,23 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   - His tap only. The bot writes nothing off by itself — an automatic rule (e.g. after an hour without a price) would treat every book alike
     and is the better accounting, but it changes results on every book: proposed, not built.
 - Deployment: auto-update is on; this goes live about a minute after the push. Not yet confirmed from data (first publish ~10 min after the restart).
+
+### 28 Nov, 01:17 UK — check (publish 01:08:04, state 01:03:08)
+
+- **Fine.** Data: 38e6381 (ranking strictly by profit) started 00:58:03 — auto-deployed about a minute after its push, the second time the
+  auto-update has worked. No log error, too late 0, feed reconnects 0, memory 608 MB / 331 heap at 5 min, Jupiter rate window 59 of 100, limited 0,
+  GMGN limited 0. The write-off build 004534d (pushed 01:13:39) is not in the data yet.
+- **Liquidity: the two Jupiter calls DO measure the same thing.** 75 buys carry both figures; first live reading ÷ the look's figure: median 1.01
+  (the buys made since the feature read 1.00 — e.g. $5,720 / $5,720, $6,701 / $6,701). **Correction to what I told him at 00:20:** Anthropic's
+  +161% four minutes after its buy was not a measuring artefact — liquidity was added to that pool ($5.2K → $13.6K with the price at 1.05×).
+  On these deployer-made pools liquidity can be added as well as taken out. Readings: asks 60, read 1,187, missed 120 (2 of 22 held coins give none).
+- **Volume test: 11 volume buys — CONTROL 1 (WINCULT −5.3% on 40%), REST 7, failed a rug check 3** (on no card): YfKJNU twice (caps $1.99M and
+  $1.15M, 10 buyers in 5 min, top 10 0.5%, no Twitter — open) and iFSvbH ($1.98M, 40 buyers) **−99.6%**. The 200-buyer check kept all three out. BARE 0, OPER 0.
+- No coin newly at $100K (runners: reached 95, bought 20, missed 75).
+- FARM-90K: 38 buys, 35 closed, **+2.451 SOL (20%)** / +2.138 (25%), 31% won — Anthropic efyZMD target +175.5%; ANT 2xu3o3 −41.1%; SPACEXLIFE 3Mctgd −100%.
+- Other new buys (20% stop): ETHEREM 8CbCH5 NEW-5M −19.5%, NEW-10M +21.6%, NEW-20M −26.1%, WAIT5-UP +36.7%, CONFIRM −11.9% / −12.2% / −18.1%;
+  Vicewire NEW-20M −9.0%, HIT50-NOW −6.6%, CONFIRM-15 −20.2%; Joe HIT50-NOW +22.9%, HIT50-5M −96.7%; Anthropic HIT50-5M −96.8%; ANT HIT50-NOW −63.4%;
+  JEFFLE −20.4%, BfvuTX −28.5%, semigenius −12.6% (WAIT5-UP −26.9%), Delta −29.7% (all NEW-5M); Bambi NEW-20M −26.8%; fEhvhW RUG450+RUG950 −69.4%;
+  TOGI FAST-1M −28.9%; AYGuBs HIT50-NOW −8.0%.
+- Since the rule change (10.43 h): four looks 161 buys −2.082 SOL (20%) / −3.136 (25%); CONFIRM-15 −0.465, -20 −0.039, -30 −0.116; WAIT5-UP 37 buys −0.175;
+  HIT50-NOW 73 buys −2.410; HIT100-NOW 20 buys −0.994 (0 won). Entries 1381 (1178 bought).
