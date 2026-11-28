@@ -2375,3 +2375,11 @@ Owner 11:07: "just do all the books… so we can see it". Top-20 cut and its but
 
 ### 28 Nov 12:45 UK — Held now coin cell (8320248, then a one-line fix), on the owner's word
 Owner 12:39: "show only axiom on here… all the books… a link so when I click them it goes straight to the books". Coin name = Axiom link only (no gm, no address stub); every book holding the coin listed, each a link that scrolls to its card (re-scrolls after the cards above finish drawing; clears the topic filter if needed; note if the book has no card, e.g. hidden VOL books). 348 tests, fail 0. Head of older-11-review moved past b563f09 — the 12:39 check text names b563f09; a restart at about 12:44–12:46 is expected.
+
+### 28 Nov 12:45 UK — 30-minute check (state 12:39:11, publish 12:39:31)
+- Code b563f09, 90 min up: memory 769 MB (693 at 50 min — about 2 MB a minute; 900 is the line). The pushes at 12:43/12:44 restart it, which clears it. Jupiter limited 0 (185 no-route), GMGN limited 0, feed reconnects 0, no error in the log tail.
+- BANNED NAMES: Snowball; kept out 3, no new one.
+- FARM-90K: 87 buys, 86 closed, -2.452 SOL (20%) / -2.964 (25%), 21 won (-2.352 at 11:59). Gemini LGzFq3 1779 +126% (fifth Gemini: -96%, -43%, -14%, -94%, +126%), MoonBoy GTXyMt 1755 +15% (high 2.62x), Zhaki DbUpd3 1765 -95%, Rockstar 1770 -95%; open: Zhaki 7eRMyS 1776 (fifth Zhaki).
+- Entries 1789 (1586 bought), 23 new: OKOWARE HIT50-10M -19% · MoonBoy HIT50-NOW -31%, HIT50-5M -40%, HIT50-10M -50% · CS HIT50-NOW -94% · Snowgent NEW-5M -6%, CONFIRM-15 -21%, WAIT5-UP -32% · heh NEW-5M -21% · FlipFlop HIT50-NOW +10%, HIT50-5M -9%, HIT50-10M -13% · Gemini HIT50-NOW -37%, HIT50-5M -56% · nothing NEW-5M -22%, NEW-10M/CONFIRM-15/CONFIRM-20 open · ZOFF, ORBITBUDDY HIT50-NOW open · PEPE GpG61y HIT50-NOW -34%, HIT50-5M -51%.
+- Runners 115 / 31 / 28 / 56 — none new.
+- Volume test: 29 buys, no new one. CONTROL 4 (-0.196 SOL, 0 won). OPER 1. BARE 0. REST 15. Clean all 20%: 19 buys -0.264 SOL. Failed a rug check 10.
