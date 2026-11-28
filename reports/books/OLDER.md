@@ -1961,3 +1961,33 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   Not known until it runs: whether Jupiter's price call gives a liquidity figure for these very new, tiny coins — check `liquidity`
   (asks / read / missed) in the new-coin status after the paste and tell him.
 - Not built, only mentioned: a paper rule that sells by itself when liquidity falls a set amount (faster than a hand).
+
+### 28 Nov, 00:10 UK — check (publish 27 Nov 23:59:08, state 23:58:56)
+
+- **Fine.** 1bcef1f, started 22:58:51, up 60 min: no log error, too late 0, feed reconnects 0, GMGN limited 0, Jupiter refused 248 in 60 min,
+  rate window 58 of 100, limited 0. Memory 730 MB / 352 heap at 60 min (flat). Loop hold worst 1.26 s; no late buy. Entries 1320 (1118 bought).
+  Waiting for his paste: 9716b3e (live liquidity column, pushed 00:08). No `liquidity` counters yet (old build).
+- **Volume test: 6 buys — CONTROL 1 (WINCULT −5.3% on 40%), REST 5** (ZERO −18.0%, MAYA −11.2%, RAURA −1.5%, SPEC −9.8%;
+  MONO 8XJzPg 1320, 23:58, cap $96K, 659 buyers, holders +42%, $101 a trade, bundlers 4.8%, snipers 1.8%, fees 7.4 SOL — open). BARE 0, OPER 0.
+- **FARM-90K: SPACEXLIFE ALC8tU (1222) hit its target: +337.6%** (bought $20.6K, target 4.37×). Book: 33 buys, 32 closed, **+2.383 SOL (20%)** / +2.070 (25%), 31% won.
+  Capped-sale test rerun on 32 closed (20% stop): rule +2.377 (10 won) · cap 2× +1.220 · cap 2.5× +2.421 (16 won, without top 3 +1.521) ·
+  cap 3× +2.491 (14 won, without top 3 +1.291) · cap 4× +1.689. **Level with the rule again** (22:39 level, 23:38 cap ahead by 0.4, now level):
+  the total does not separate them; the difference is how many coins carry it. New FARM buy: Gemini MGWLLA −13.8% (20%) / −94.8% (25%).
+- **IPOY EgD7ug — missed by the looks, bought by four HIT books; rugged** (peak $116K at 11 min, $2.3K at 20 min).
+
+  | look | cap | holders | volume | fees | top 10 | bundlers | snipers | phishing | kept out by |
+  |---|---|---|---|---|---|---|---|---|---|
+  | 5 min | $57K | 712 | $151K | 8.4 SOL | 3.4% | 12.7% | 0.9% | 0.6% | top 10 (needs 16–30%) |
+  | 10 min | $66K | 814 | $378K | 20.6 SOL | 3.6% | 17.6% | 0.5% | 0.8% | top 10 |
+  | 15 min | $69K | 846 | $577K | 31.7 SOL | 3.3% | 19.3% | 0.6% | 0.9% | top 10 |
+  | 20 min | $2K | 135 | $615K | – | – | – | – | – | cap, holders |
+
+  Type: very high fees and volume for its cap (volume 8× the cap), top 10 only 3.4% — a churned coin; the top-10 floor kept the looks out of a rug.
+  HIT50-NOW −15.7%, HIT50-5M +23.3%, HIT100-NOW −16.2%, HIT50-10M +3.1% (20% stop).
+- Other new buys (20% stop): hac H91uyM NEW-5M −26.0% (40%: +12.0%), NEW-10M +77.2%, NEW-15M +5.6%, WAIT5-UP +65.9%, CONFIRM-15 +25.1%, -20 +25.6%, -30 +31.4%;
+  Clout NEW-5M +8.7%, NEW-10M −47.7%, CONFIRM −9.6% / −22.8% / −28.0%; PAIRBALL NEW-5M −23.7%, NEW-10M −28.1%, NEW-15M +1.9%, NEW-20M −9.3%, WAIT5-UP −9.2%,
+  CONFIRM-15 −15.4%, -20 −21.2%; STEADY 98jBqG NEW-5M −13.0%, CONFIRM-15 −28.3%; POTATO NEW-5M −27.1%; NASDAQISTA NEW-20M −24.3%; Maebashi HIT50-NOW −17.9%;
+  Gemini MGWLLA HIT50-NOW −95.6%; 8sAxws FAST-1M/3M/5M (one buy at $929K) +31.2%.
+- Since the rule change (9.40 h): four looks 144 buys −1.605 SOL (20%) / −2.514 (25%); NEW-10M −0.029; CONFIRM-15 −0.320, -20 +0.066, -30 0.000;
+  WAIT5-UP 32 buys −0.108; HIT50-NOW 65 buys −2.162; HIT100-NOW 19 buys −0.985 (0 won); 5M-H300 47 buys +7.3% vs −5.1% for the other 155.
+  Runners: reached 95, bought 20, missed 75. 25% stop on all new-coin-side buys: 455 closed, 114 won, avg −5.8%.
