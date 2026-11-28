@@ -2034,3 +2034,14 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   So: I push only what he asked for or said "go" to (his CLAUDE.md rule as written); my own ideas are described first and wait.
   The server then runs whatever is on that branch — only he and this session can push to it; a broken start is rolled back, a wrong rule is not.
 - Each update is still a restart (a few seconds of empty page; counters since restart reset).
+
+### 28 Nov, 00:40–00:55 UK — "I sold NBA and it is still there": three separate buys; Held now is now one row per coin
+
+- His 00:39 screens (Held now box live): he sold NBA; "Your own sales" shows NBA AjucUK **RUG450** bought 22:39:18 at $153K, sold by him
+  00:37:30 at ≈$440K, +179% (2.79×). The Held list still showed NBA — the **FAST-5M** buy of 22:51 at $173K (2.65×); a third, FAST-3M 22:55 at $322K.
+  Nothing failed: he sold one of three separate paper buys of the same coin and the next took its place.
+- Built and pushed (336 tests, fail 0): Held now is ONE ROW PER COIN — "3 buys", the average multiple, the highest high; the buttons sell
+  that share of every buy of the coin (one paper sale per buy; "tap again: sell all of all 3 buys"). Each book's card then shows his sale
+  on its own row and in its "sold by you" box. Tried on a copy of the live data: the three NBA ids were all asked for.
+- Until that is live: pressing sell on the NBA row that is still listed sells the second buy, and once more the third.
+- Whether he installed the auto-update (the fourth line) is not known yet — the next publish shows which commit runs and when it started.
