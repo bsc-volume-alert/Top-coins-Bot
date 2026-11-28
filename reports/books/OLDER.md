@@ -2356,3 +2356,11 @@ Owner 10:54: "the top 20 in this list… a 24-hour, a 6-hour… and then just a 
 
 ### 28 Nov 11:09 UK — ranking table shows every book (b563f09), on the owner's word
 Owner 11:07: "just do all the books… so we can see it". Top-20 cut and its button removed. 72373bb was seen live by him at 11:07 (his screenshot). Head of older-11-review is now b563f09; the 11:35 check text says 72373bb — b563f09 is expected, not a rollback.
+
+### 28 Nov 11:36 UK — 30-minute check (state 11:24:10, publish 11:29:08)
+- Code b563f09 (ranking: every book) started by itself 11:09:04 — CONFIRMED (72373bb ran 11:03–11:09, seen by him at 11:07). 15 min up: memory 629 MB, Jupiter limited 0 (38 no-route errors), GMGN limited 0, feed connected, reconnects 0, no error in the log tail.
+- QUIET MARKET, not a fault: one buy between 10:51 and 11:24 (X FTgGAc HIT50-NOW -37%); looks running (last 11:23:49, 0 look errors, 126 new-coin records since 11:00, 477 waiting); FARM-90K entry 1744 you2qC at 11:28 in the log.
+- BANNED NAMES: Snowball; kept out 3, no new one (FARM's own counter agrees: 3 not opened, all "you banned the name Snowball").
+- FARM-90K unchanged: 81 buys, -2.352 SOL (20%), 19 won. ECqVUW HIT50-NOW 1740 closed -97%.
+- Runners 115 / bought 31 / picked 28 / missed 56 — no coin newly at $100K.
+- Volume test: 28 buys, no new one. CONTROL 4 (-0.196 SOL, 0 won). OPER 1. BARE 0. REST 15. Clean all 20%: 19 buys -0.264 SOL. Failed a rug check 9.
