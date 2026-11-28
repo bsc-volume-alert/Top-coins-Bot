@@ -86,9 +86,10 @@ export function startWeb({ port, store, engine, status, run = () => null, sell =
     // by the same code, but from the engine's own unfinished buys, so the database is not read. The page asks every 2 s and
     // repaints only when a figure moved. (The full page data stays on its 10 s cycle: it reads every buy from the database.)
     if (u.pathname === "/api/live") { const sk = Number(u.searchParams.get("stake")), sel = { stop: Number(u.searchParams.get("stop") || 0.25), policy: S.POLICIES.includes(u.searchParams.get("policy")) ? u.searchParams.get("policy") : "trail", stake: S.STAKE_VIEWS.includes(sk) ? sk : S.STAKE_SOL }, ck = "l|" + JSON.stringify(sel);
-      let hit = cache.get(ck); if (!hit || Date.now() - hit.atMs > 1500) { const j = booksApi([...engine.entries.values()].filter((e) => e.status === "filled"), { ...sel, run: run(), liq: engine?.liq ?? null }), rows = {};
+      let hit = cache.get(ck); if (!hit || Date.now() - hit.atMs > 1500) { const j = booksApi([...engine.entries.values()].filter((e) => e.status === "filled"), { ...sel, run: run(), liq: engine?.liq ?? null }), rows = {}, held = {};
         for (const [k, list] of Object.entries(j.books)) for (const r of list) if (r.status === "open") rows[k + "|" + r.id] = r.liq ? [r.now_x, r.hi, r.hi_held ?? null, r.liq] : [r.now_x, r.hi, r.hi_held ?? null];
-        hit = { atMs: Date.now(), body: JSON.stringify({ at: Date.now() / 1000, ...sel, rows }) }; cache.set(ck, hit); }
+        for (const list of Object.values(j.books)) for (const r of list) if (r.hx != null && !held[r.id]) held[r.id] = [r.hx, r.hi ?? null, r.liq ?? null]; // HELD NOW: the buy's own value, whatever stop is chosen (page.mjs, heldX)
+        hit = { atMs: Date.now(), body: JSON.stringify({ at: Date.now() / 1000, ...sel, rows, held }) }; cache.set(ck, hit); }
       res.writeHead(200, { "content-type": "application/json" }); return res.end(hit.body); }
     // THE COIN LOOKUP (owner 26 Nov 2026 04:49 UK: "when I paste the contract, we need to know immediately why the coin was rejected or
     // not"). Read-only and from the bot's own records only — no provider is asked, so it costs nothing and answers at once:
