@@ -2168,3 +2168,14 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   rule row still held, a half-sold row scaled back to the whole buy); Held now lists every buy he has not sold that a rule still holds,
   whatever stop is chosen, from every book including the hidden ones; top 7 by gain ("show all"); refreshed every 2 s.
   Limit told to him: once every rule (the 70% stop and the buy-price stops too) has sold a buy, the bot stops pricing it and it leaves the list.
+
+### 28 Nov 02:04 UK — owner asked for a "ban this ticker" cross (repeated rug names: SPACEXLIFE, Snowball, Gemini). Tested first, NOT built
+Data: publish 01:54:19, FARM-90K, 20% stop, 0.2 SOL stake. 41 buys, 40 closed, +1.643 SOL, 11 won.
+- 12 of 23 tickers were bought more than once; 30 of 41 buys are of a repeated ticker. Every repeat is a DIFFERENT coin (different contract) — a relaunch under the same name.
+- Automatic ban of a name after its first loss (80%+, 50%+ or any loss: same answer): 25 buys, -0.338 SOL, 5 won. It drops 16 buys worth +1.981 SOL, 6 winners among them (Gold +620% came after a Gold -100%; SPACEXLIFE +338% after two -100%; FOMO +157%, Anthropic +175%, Coca-Cola +179%, Suki +188% all second buys after a -93% to -96% first). Looks back with results known at the end — the real ban could only start after the losing sale.
+- First buy of a name: 23 buys, -1.079 SOL, 4 won. Later buys of the same name: 17 buys, +2.723 SOL, 7 won.
+- Banning only the names he gave, after their first rug: SPACEXLIFE + Snowball -> 4 buys dropped, they made +0.074 SOL (ban costs 0.074); with Gemini too -> 6 buys dropped, they made -0.040 SOL (ban saves 0.040). Level.
+- Lost 80%+: 22 of 40. Of those, 10 never reached 1.5x (the "bought at 20, rugged at 20" type): FOMO, Anthropic, Coca-Cola, Gemini, Claude AI, Meta x2, SPACEXLIFE 00:46, Snowball 01:27, Grok AI 01:47. 7 of these 10 were the FIRST buy of that name, so a name ban would not have stopped them.
+- Liquidity / cap at the buy does not separate them: 0.5 and over = 12 buys, +2.285 SOL, 4 won, 8 lost 80%+ (holds the biggest winners AND the instant rugs); under 0.25 = 28 buys, -0.642 SOL.
+- Creator wallet is not recorded on new-coin / FARM buys, so "same launcher" cannot be tested yet.
+Proposed to owner, waiting for his go: (1) the cross + ban list by name, but as a LABEL: banned names are still bought on paper and the card shows the total with and without them, so the ban is measured before it is trusted; (2) record the creator wallet at the look (no extra cost) so a ban by launcher can be tested. Small sample: 41 buys, one evening.
