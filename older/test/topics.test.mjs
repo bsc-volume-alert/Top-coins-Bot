@@ -83,3 +83,8 @@ test("the page: the ranking is a table — every book, 24 h and 6 h of auto sell
   for (const x of ["<th><span class=\"pt d24\">24h</span> auto sell</th>", "you + auto together · total</th>", "var shown=keys;", "sold by you: '+sl(g.yn)"]) assert.ok(BOOKS_PAGE.includes(x), "the page has: " + x);
   const m = BOOKS_PAGE.match(/<script>([\s\S]*)<\/script>/); assert.doesNotThrow(() => new Function(m[1]));
 });
+
+test("the page: Held now shows the coin with an Axiom link only, and every book holding it as a link to that book's card", () => {
+  for (const x of ["o.books.map(function(k){return '<a class=\"coin\" href=\"#bk-'", "data-bk=", "a[data-bk]", "has no card of its own"]) assert.ok(BOOKS_PAGE.includes(x), "the page has: " + x);
+  assert.ok(!BOOKS_PAGE.includes("esc(o.books.slice(0,2).join(', '))"), "no '+1' cut any more");
+});
