@@ -2086,3 +2086,19 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   period chosen (24 h / 6 h / total / since the rule change), no-trade cards last. The VOLUME TEST topic button still shows the four together.
 - His 00:51 screen (0.5 SOL, 70% stop, last 24 h): FARM-90K +6.469 SOL (34 trades) is the only positive book; HIT50-NOW −27.380 (70), NEW-COMBINED −29.168 (115),
   NEW-5M −21.560 (89). "Your own sales": 17 sold in full by him, +4.257 SOL (0.2 SOL figures).
+
+### 28 Nov, 01:10–01:15 UK — write-off cross for a buy with no sale price (004534d, pushed 01:13:39 → auto-deploys)
+
+- Owner 01:10: Democat is still in FARM-90K's live list; "I tried to sell it, but liquidity had already gone… it rugged… put a cross button on
+  some of the coins so we can just remove them… we lost the money on it."
+- Built (339 tests, fail 0) — the first change tonight that is NOT display only:
+  - a red **✕** beside a buy that has had no answered sale quote for 10 minutes (`WRITE_OFF_MIN_S` 600), quote-priced buys only;
+    first tap arms it ("tap again: write off as a total loss"), the second closes it.
+  - `book.writeOff`: every row still held exits with what it had banked and nothing for the rest (−100% where nothing was banked), reason
+    "written off: no sale price"; a waiting hand sale is closed the same way; flag on the buy. Refused while the coin had a sale price in the
+    last 10 minutes, and for pool-priced buys.
+  - the buy then leaves "held" / "open now" and sits in the sold list; the book's total counts the loss it was leaving out
+    (FARM-90K: −0.2 SOL at the paper stake for Democat).
+  - His tap only. The bot writes nothing off by itself — an automatic rule (e.g. after an hour without a price) would treat every book alike
+    and is the better accounting, but it changes results on every book: proposed, not built.
+- Deployment: auto-update is on; this goes live about a minute after the push. Not yet confirmed from data (first publish ~10 min after the restart).
