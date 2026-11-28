@@ -2155,3 +2155,16 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   Midcurve HIT50-NOW +0.3%; Snowball CQXV2C FARM-90K open.
 - Since the rule change (11.06 h): four looks 166 buys −2.240 SOL (20%) / −3.267 (25%); CONFIRM-15 −0.506, -20 −0.080, -30 −0.116; WAIT5-UP 38 buys −0.201;
   HIT50-NOW 77 buys −2.482; HIT100-NOW 22 buys −0.985 (one won). Runners: reached 98, bought 22, missed 76. Entries 1404 (1201 bought).
+
+### 28 Nov, 01:55–02:10 UK — he pasted 8sAxwsNz…pump: "why is this coin not showing… it should be on my top coin list"
+
+- The bot bought it three times: 1005 VOL100K 27 Nov 17:31 at $614K (long closed); **1293 FAST-1M + FAST-3M + FAST-5M (one buy) 23:30:25 at $929K**
+  (20% +31.2%, 25% +20.4%, 30% +39.3%, 40% +2.6%, 50% −16.5% — sold; the 60 / 65 / 70% stops and every buy-price row still hold it; highest 2.58×);
+  **1412 VOL100K 28 Nov 01:50:44 at $1.83M** (20% +0.9%; every other row open).
+- Why it was not in "Held now" on his screen (25% stop chosen): (1) the list was "open on the stop chosen" — the 25% stop had sold 1293;
+  (2) a bug of mine: the list read only the cards shown, and VOL100K's card is hidden — 1412 failed the volume test's rug check, so it is on
+  no purple card and was left out altogether.
+- Fixed and pushed (auto-deploys; display only; 340 tests, fail 0): each row carries the buy's own value now (`heldX`: the latest-valued
+  rule row still held, a half-sold row scaled back to the whole buy); Held now lists every buy he has not sold that a rule still holds,
+  whatever stop is chosen, from every book including the hidden ones; top 7 by gain ("show all"); refreshed every 2 s.
+  Limit told to him: once every rule (the 70% stop and the buy-price stops too) has sold a buy, the bot stops pricing it and it leaves the list.
