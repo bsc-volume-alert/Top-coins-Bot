@@ -2020,3 +2020,17 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
 - His 00:25 screen: four hand sales so far (SPACEXLIFE 3.25× — the rule then reached its target +338%; Gold 4.07× — the rule then −100%;
   MAYA 4.64× — the 70% rule still open at 4.69×; first Gold 3.23× — the rule +620%). Hand +2.244 SOL at his stake on four.
 - Waiting for his paste: c2c27bf.
+
+### 28 Nov, 00:31–00:50 UK — auto-update offered (script pushed; NOT installed until he pastes the install line)
+
+- Owner 00:31: "Can you just not automatically update my Termius? Do I have to keep cutting and pasting?"
+- I cannot reach his server. What can be done: the server follows the branch itself. `older/scripts/autoupdate.sh` (pushed):
+  once a minute `git fetch origin older-11-review`; when the head has changed → checkout + `start.sh valid11` (what the three lines do) →
+  watches pm2 for a minute → if the bot is not online or keeps restarting, back to the previous commit, logged, and that commit is not retried.
+  A commit already handled is never started twice (a start by hand is left alone). Sandbox test: good update, broken commit rolled back, next good one started.
+- Install (his paste, once): `pm2 delete older-auto >/dev/null 2>&1; pm2 start older/scripts/autoupdate.sh --name older-auto --interpreter bash -- valid11 && pm2 save`.
+  Off: `pm2 delete older-auto && pm2 save`. Log: `pm2 logs older-auto --lines 30 --nostream`.
+- **What changes in how we work (told to him):** until now his paste was his go. With this installed, a push IS the deployment, a minute later.
+  So: I push only what he asked for or said "go" to (his CLAUDE.md rule as written); my own ideas are described first and wait.
+  The server then runs whatever is on that branch — only he and this session can push to it; a broken start is rolled back, a wrong rule is not.
+- Each update is still a restart (a few seconds of empty page; counters since restart reset).
