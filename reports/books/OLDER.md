@@ -2179,3 +2179,12 @@ Data: publish 01:54:19, FARM-90K, 20% stop, 0.2 SOL stake. 41 buys, 40 closed, +
 - Liquidity / cap at the buy does not separate them: 0.5 and over = 12 buys, +2.285 SOL, 4 won, 8 lost 80%+ (holds the biggest winners AND the instant rugs); under 0.25 = 28 buys, -0.642 SOL.
 - Creator wallet is not recorded on new-coin / FARM buys, so "same launcher" cannot be tested yet.
 Proposed to owner, waiting for his go: (1) the cross + ban list by name, but as a LABEL: banned names are still bought on paper and the card shows the total with and without them, so the ban is measured before it is trusted; (2) record the creator wallet at the look (no extra cost) so a ban by launcher can be tested. Small sample: 41 buys, one evening.
+
+### 28 Nov 02:16 UK — BANNED NAMES built and pushed (e2bebd7), on the owner's word
+Owner 02:06: "I'm not saying ban a token. I'm saying that we have the option… you can ban and unban… as opposed to buy it and then try to sell it." He accepts the numbers above (a blanket name ban would have cost) and wants the switch in his own hand.
+- His list only; nothing is banned by itself. One tap on "ban" beside a new-coin buy (or type a name in the Banned names box); "banned · undo" / "unban" takes it off.
+- A banned name is NOT bought by the new-coin books (looks, FARM-90K, follow-up books — everything through engine.openDirect). Pool books (frozen volume test, HIT, FAST, RUG) untouched. Nothing is sold by a ban.
+- Match ignores capitals, spaces, punctuation; "SPACEXLIFE" and "SpaceX" are different names.
+- Every coin a ban keeps out is written down once (time, cap at that look, books that would have bought it) and shown in the box with an Axiom link — so each ban can be judged afterwards. Also in status.bans of the published state.
+- Known limit: a coin FARM-90K refused while its name was banned is not bought by FARM-90K at a later look after an unban (its "seen" mark is set before the buy); the looks' own books can still buy it.
+- To judge later: for each kept-out coin, what it did after (the runners list has those that reached $100K). 344 tests, fail 0.
