@@ -2331,3 +2331,10 @@ Owner 06:02: "a button on the side that takes me straight to the top". A round b
 - NVIDIA (at $100K at 09:50) rugged after its peak: HIT100-NOW -99%, HIT100-5M -99%, HIT100-10M -99%. FARM-90K had sold it at +37% before.
 - Other new buys (20% stop): Zhaki AzLcYf HIT50-NOW open · Mojave HIT50-NOW -23%.
 - Volume test: 28 volume buys, no new one. CONTROL 4 on 40% (WINCULT -5.3%, BITCOINU -25.6%, SCAMSEM -21.3%, TIMOTHY -46.0%; -0.196 SOL, 0 won). OPER 1 (BITCOINU +3.7%). BARE 0. REST 15. Clean, all, 20% stop: 19 buys, -0.264 SOL, 4 won. Failed a rug check 9 (four still open).
+
+### 28 Nov 10:36 UK — $100K list: "picked up" + the books named (e09b87d), on the owner's word
+Owner 10:33: Robinhood "says missed, but it was still picked up by my other books… say what books picked it up. And I sold it myself."
+- The list now has three results: bought (a new-coin book: a look, FARM-90K, a follow-up book) · picked up (the looks did not buy it, another book did: HIT, FAST, RUG, a volume book) · missed (no book at all). Every book that bought the coin is named with the cap it bought at; a buy he sold by hand shows "you sold it: +x%"; the opened row lists every buy with time, cap and high.
+- NOT simply turned green, and told to him: the HIT books buy any coin on the pool feed as it crosses $50K / $100K, so "bought by any book" would make almost every runner green and the list would stop showing what the looks miss. On the 10:26 data: 114 reached = 30 bought by a new-coin book, 28 picked up by another book only, 56 missed by every book.
+- Also fixed: FARM-90K / CONFIRM-15 were printed as "FAR min-90K" / "CONFIR min-15" in that list.
+- For the checks: runners "missed" now means missed by EVERY book and there is a new "picked" count; "bought" is unchanged in meaning (new-coin books). The stored 11:03 check text still says head a28b6d2 — a restart at about 10:37 on e09b87d is expected, not a rollback. 346 tests, fail 0.
