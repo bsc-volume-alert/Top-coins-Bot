@@ -1,0 +1,14 @@
+const fs=require("fs"),z=require("zlib"),H=require("crypto"),D=require("better-sqlite3"),O=process.argv[1],T=O+"/review-dump",P=O+"/older-shakedown.db",d=new D(P,{readonly:true}),K=/(api-key=|jup_|X-APIKEY\W*)[\w-]{6,}/gi,M={cutoff_utc:new Date().toISOString(),db_bytes:fs.statSync(P).size,node:process.version,tables:{}};
+fs.rmSync(T,{recursive:true,force:true});fs.mkdirSync(T);
+const w=(n,q)=>{const s=d.prepare(q).raw(),t=M.tables[n]={cols:s.columns().map(c=>c.name),sql:q,rows:0,files:[]};let b=[],L=0;const f=()=>{if(!b.length)return;const g=z.gzipSync(b.join("")),x=n+"-"+t.files.length+".ndjson.gz";fs.writeFileSync(T+"/"+x,g);t.files.push({f:x,bytes:g.length,sha256:H.createHash("sha256").update(g).digest("hex")});b=[];L=0};for(const r of s.iterate()){const j=JSON.stringify(r).replace(K,"[key-removed]")+"\n";b.push(j);L+=j.length;t.rows++;if(L>5e7)f()}f();console.log(n,t.rows)};
+const E="(SELECT DISTINCT mint FROM entries)";
+d.exec("BEGIN");
+w("entries","SELECT * FROM entries");w("decisions","SELECT * FROM decisions");w("feed","SELECT * FROM feed");w("meta","SELECT k,substr(v,1,4000) v FROM meta");w("coins","SELECT * FROM coins");
+w("pools_bought","SELECT * FROM pools WHERE mint IN "+E);w("pools_by_quote","SELECT quote,COUNT(*) n FROM pools GROUP BY 1");
+w("notes_hourly","SELECT family,ag,reason,CAST(t/3600 AS INT) hr,COUNT(*) n,COUNT(DISTINCT mint) mints FROM notes GROUP BY 1,2,3,4");
+w("notes","SELECT id,mint,ag,family,t,reason,substr(detail,1,300) detail FROM notes");
+w("bars_bought","SELECT * FROM bars WHERE mint IN "+E);
+w("bars_hourly","SELECT mint,m/60 hr,MAX(h) h,MIN(l) l,SUM(v) v,SUM(nb) nb,SUM(ns) ns,COUNT(*) n FROM bars GROUP BY 1,2");
+d.exec("COMMIT");
+for(const x of fs.readdirSync(O+"/pub"))if(x.endsWith(".json"))fs.writeFileSync(T+"/pub-"+x,fs.readFileSync(O+"/pub/"+x,"utf8").replace(K,"[key-removed]"));
+fs.writeFileSync(T+"/manifest.json",JSON.stringify(M,null,1));

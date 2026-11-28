@@ -1,0 +1,5 @@
+2026-11-20T13:55:29.717Z [older] started, spec older-3, paper only
+[web] :8793
+2026-11-20T13:55:29.782Z [feed] up
+2026-11-20T13:57:18.922Z [inventory] {"at":"2026-11-20T13:55:29.703Z","method":"getProgramAccountsV2 (paginated)","pages":181,"pools":60172,"solPools":60172,"canonical":36122,"nonCanonical":24050,"pumpSuffix":32861,"priced":36122,"aboveMin":673,"inBand":103,"errors":0,"minMc":5000,"complete":false,"stopped":"INV_MAX_POOLS=60000"}
+2026-11-20T14:05:30.223Z [older] validation run finished (10 min) → /mnt/volume_1794164707392/older/validation-run.json

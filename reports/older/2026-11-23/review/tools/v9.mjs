@@ -1,0 +1,10 @@
+import { readCsv, sum } from "./lib.mjs";
+const D = process.argv[2], P = readCsv(D + "/positions.csv"), C = readCsv(D + "/coin_outcomes.csv"), E = readCsv(D + "/entries.csv");
+console.log("positions with symbol:", P.filter((p) => p.symbol).length, "of", P.length, "| coins with symbol:", C.filter((c) => c.symbol).length, "of", C.length, "| sample info:", C.find((c) => c.bought)?.info?.slice(0, 300));
+// never-bought coins: how many had a big move inside the data (hourly bars), by observation method
+const nb = C.filter((c) => !c.bought && c.bar_minutes > 0); const big = (x) => nb.filter((c) => c.peak_over_prior_low_x >= x).length;
+console.log("coins in database", C.length, "with bars", C.filter((c) => c.bar_minutes > 0).length, "bought", C.filter((c) => c.bought).length, "| never bought with bars:", nb.length, "peak/prior-low >=2x:", big(2), ">=3x:", big(3), ">=5x:", big(5), ">=10x:", big(10));
+const inband = nb.filter((c) => c.mc_high_usd >= 40000); console.log("never bought, peak market cap >= $40K (where supply is recorded):", inband.length, ">=2x:", inband.filter((c) => c.peak_over_prior_low_x >= 2).length, ">=5x:", inband.filter((c) => c.peak_over_prior_low_x >= 5).length, "| supply recorded on", C.filter((c) => c.supply).length);
+const bt = C.filter((c) => c.bought && c.bar_minutes > 0); console.log("bought coins:", bt.length, "peak/prior-low >=2x:", bt.filter((c) => c.peak_over_prior_low_x >= 2).length, ">=5x:", bt.filter((c) => c.peak_over_prior_low_x >= 5).length);
+console.log("method of coins:", JSON.stringify(Object.fromEntries(Object.entries(C.reduce((o, c) => { const k = c.create_src + "/" + (c.method ?? "-"); o[k] = (o[k] || 0) + 1; return o; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 8))));
+const R = readCsv(D + "/rejections_by_book.csv"); console.log("top rejection reasons:"); for (const r of R.sort((a, b) => b.n - a.n).slice(0, 16)) console.log(" ", String(r.family).padEnd(13), String(r.n).padEnd(7), String(r.mints).padEnd(6), String(r.reason).slice(0, 110));
