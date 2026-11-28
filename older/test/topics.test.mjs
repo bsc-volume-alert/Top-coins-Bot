@@ -73,3 +73,8 @@ test("the page: a button at the lower right that goes back to the top, shown onl
   for (const x of ['<button id="totop"', "#totop{position:fixed;right:14px", "window.scrollTo(0,0);see()", ">400?'block':'none'"]) assert.ok(BOOKS_PAGE.includes(x), "the page has: " + x);
   const m = BOOKS_PAGE.match(/<script>([\s\S]*)<\/script>/); assert.ok(m); assert.doesNotThrow(() => new Function(m[1]), "the page script parses");
 });
+
+test("the page: the $100K list names the books that bought a coin, and a coin only the other books bought is 'picked up', not 'missed'", () => {
+  for (const x of ["picked up by another book", "missed by every book", ">picked up</span>", "<b>Picked up by</b> ", "<b>Bought by</b> ", "you sold it: '+pc(b.sold)", "every buy of this coin, oldest first:", "which books bought it"]) assert.ok(BOOKS_PAGE.includes(x), "the page has: " + x);
+  assert.ok(!BOOKS_PAGE.includes(".replace('M',' min'))+' check ('"), "FARM-90K is no longer shown as 'FAR min-90K'");
+});

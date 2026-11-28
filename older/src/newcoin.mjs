@@ -149,13 +149,17 @@ export class NewCoins {
   runnersView(now = this.now()) { this.loadHits(); const all = [...this.hits.values()].filter(Boolean), since = this.stats.why_since ?? null;
     const inWin = (r) => r.age_s != null && r.age_s <= S.RUN_WINDOW_S, list = all.filter(inWin).sort((a, b) => b.t - a.t), tally = {};
     for (const r of this.rules) tally[r.family] = Object.fromEntries(WHYS.map((w) => [w, { checks: this.k(r.family).why?.[w] || 0, reached: 0 }]));
-    const out = []; let missed = 0;
+    // WHO BOUGHT IT (owner 28 Nov 2026 10:33 UK: Robinhood "says missed, but it was still picked up by my other books… say what books picked it up"):
+    // bought = buys by the new-coin books (the looks, FARM-90K, the follow-up books); other = buys by every other book (HIT, FAST, RUG, the volume
+    // books). A coin only the other books bought is "picked up", not "missed"; missed = no book bought it at all. sold = the owner sold that buy by hand.
+    const out = []; let missed = 0, picked = 0;
+    const mk = (e) => ({ id: e.id, book: (e.families || []).join("+"), t: e.decisionT, mc: Math.round(e.signalMc || 0), max: e.runner?.maxX != null ? +e.runner.maxX.toFixed(2) : null, sold: e.manual?.closed && !e.manual.closed.written_off && e.manual.closed.ret != null ? +e.manual.closed.ret.toFixed(4) : undefined });
     for (const r of list) { let checks = []; try { checks = this.checksOfCoin(r.mint); } catch {}
-      let buys = []; try { buys = (this.store?.entriesOf?.(r.mint) || []).filter((e) => e.pop === S.NEW_POP && e.status === "filled").map((e) => ({ id: e.id, book: e.families[0], t: e.decisionT, mc: Math.round(e.signalMc || 0), max: e.runner?.maxX != null ? +e.runner.maxX.toFixed(2) : null })); } catch {}
+      let buys = [], other = []; try { const E = (this.store?.entriesOf?.(r.mint) || []).filter((e) => e.status === "filled"); buys = E.filter((e) => e.pop === S.NEW_POP).map(mk); other = E.filter((e) => e.pop !== S.NEW_POP).map(mk); } catch {}
       const cs = checks.map((c) => ({ book: c.book, t: c.t, age_s: c.age_s ?? null, mc: c.mc ?? null, holders: c.holders ?? null, vol: c.vol ?? null, top_jup: c.top_jup ?? null, fees: c.fees ?? null, top10: c.top10 ?? null, g: c.g ? lean({ bundlers: c.g.bundlers, snipers: c.g.snipers, insiders: c.g.insiders, phishing: c.g.phishing, dev_hold: c.g.dev_hold }) : undefined, ev: c.ev ?? undefined, why: whyOf(c), counted: !!c.st && since != null && c.t >= since, out: c.out ?? null }));
       for (const c of cs) if (c.counted && tally[c.book]?.[c.why]) tally[c.book][c.why].reached++; // only checks made since the counting began: both columns cover the same checks
-      if (!buys.length) missed++; if (out.length < S.RUN_LIST) out.push({ ...r, bought: buys, checks: cs }); }
-    return { on: true, at: now, line: S.RUN_LINE_USD, window_s: S.RUN_WINDOW_S, top_pre: S.NEW_TOP_PRE, rules: Object.fromEntries(this.rules.map((r) => [r.family, { mc: r.mc_min_usd, holders: r.holders_min, vol: r.vol_min_usd, fees: r.fees_min_sol, top10: r.top10 }])), counting_since: since, reached: list.length, missed, bought: list.length - missed, later: all.length - list.length, unknown_time: list.filter((r) => r.unseen_before).length, whys: WHYS, tally, list: out }; }
+      if (!buys.length) { if (other.length) picked++; else missed++; } if (out.length < S.RUN_LIST) out.push({ ...r, bought: buys, other, checks: cs }); }
+    return { on: true, at: now, line: S.RUN_LINE_USD, window_s: S.RUN_WINDOW_S, top_pre: S.NEW_TOP_PRE, rules: Object.fromEntries(this.rules.map((r) => [r.family, { mc: r.mc_min_usd, holders: r.holders_min, vol: r.vol_min_usd, fees: r.fees_min_sol, top10: r.top10 }])), counting_since: since, reached: list.length, missed, picked, bought: list.length - missed - picked, later: all.length - list.length, unknown_time: list.filter((r) => r.unseen_before).length, whys: WHYS, tally, list: out }; }
   /** THE COIN LOOKUP (owner 26 Nov 2026 04:49 UK: "when I paste the contract, we need to know immediately why the coin was rejected
    *  or not"). Read-only, from the bot's own records — no provider is asked. Returns what the new-coin books know about one coin:
    *  whether it is on the waiting list and when its next checks fall due, and every check made of it with its figures and reason. */
