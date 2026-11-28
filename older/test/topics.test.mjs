@@ -39,7 +39,7 @@ test("since the rule change is only for the cards whose rules changed; 24 h and 
   assert.deepEqual(j.rule.cards.slice().sort(), [...S.NEW_BOOKS, S.NEW_ALL, "TOP10-16-20", "5M-H300", "20M-FEE1", "5M-LOWCONC", "5M-LOWCONC-SNIP", "LIQUID-SMALLCAP", "BUNDLED-RUNNER"].sort(), "the four looks and the cards made only of them");
   for (const k of ["FAST-1M", "RUG450", "HIT50-NOW", "CONFIRM-15", "FARM-90K", "VOL-CONTROL"]) assert.ok(!j.rule.cards.includes(k), k + " had no rule change");
   assert.deepEqual(booksApi([], { stop: 0.25, now: 1795812000, run: { name: "t", books: ["RUG450"] } }).rule.cards, []);
-  for (const s of ["rcOn:!!(RC&&RCB[k]),rc:RC&&RCB[k]?w(RC):tot", "(RC&&b.rcOn?cell('since the rule change", "(b.rcOn?num(b.rc):'<span class=\"mut\">no change</span>')", '<span class="pt d24">24h</span> \'+num(b.h24)', '<span class="pt d6">6h</span> \'+num(b.h6)', "if(!SEL.h24Seen){SEL.win='h24';SEL.h24Seen=1}", ".pt.d24{background:var(--acc)}.pt.d6{background:var(--mag)}", '<span class="c6">last 6 hours</span>', '<span class="c24">last 24 hours</span>', "no other book is restarted"]) assert.ok(BOOKS_PAGE.includes(s), "the page has: " + s);
+  for (const s of ["rcOn:!!(RC&&RCB[k]),rc:RC&&RCB[k]?w(RC):tot", "(RC&&b.rcOn?cell('since the rule change", "(b.rcOn?num(b.rc):'<span class=\"mut\">no change</span>')", '<td style="white-space:nowrap">\'+num(b.h24)+\'</td><td style="white-space:nowrap">\'+num(b.h6)', "if(!SEL.h24Seen){SEL.win='h24';SEL.h24Seen=1}", ".pt.d24{background:var(--acc)}.pt.d6{background:var(--mag)}", '<span class="c6">last 6 hours</span>', '<span class="c24">last 24 hours</span>', "no other book is restarted"]) assert.ok(BOOKS_PAGE.includes(s), "the page has: " + s);
 });
 test("a coin's name opens it on Axiom; GMGN is the small link beside it", () => {
   assert.ok(BOOKS_PAGE.includes("function coin(t){return '<a class=\"coin\" href=\"https://axiom.trade/t/'+t.mint+'\" target=\"_blank\""));
@@ -77,4 +77,9 @@ test("the page: a button at the lower right that goes back to the top, shown onl
 test("the page: the $100K list names the books that bought a coin, and a coin only the other books bought is 'picked up', not 'missed'", () => {
   for (const x of ["picked up by another book", "missed by every book", ">picked up</span>", "<b>Picked up by</b> ", "<b>Bought by</b> ", "you sold it: '+pc(b.sold)", "every buy of this coin, oldest first:", "which books bought it"]) assert.ok(BOOKS_PAGE.includes(x), "the page has: " + x);
   assert.ok(!BOOKS_PAGE.includes(".replace('M',' min'))+' check ('"), "FARM-90K is no longer shown as 'FAR min-90K'");
+});
+
+test("the page: the ranking is a table — top 20, 24 h and 6 h of auto sell, and you + auto together", () => {
+  for (const x of ["<th><span class=\"pt d24\">24h</span> auto sell</th>", "you + auto together · total</th>", "keys.slice(0,20)", 'id="rall"', "sold by you: '+sl(g.yn)"]) assert.ok(BOOKS_PAGE.includes(x), "the page has: " + x);
+  const m = BOOKS_PAGE.match(/<script>([\s\S]*)<\/script>/); assert.doesNotThrow(() => new Function(m[1]));
 });
