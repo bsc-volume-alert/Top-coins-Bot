@@ -2075,3 +2075,14 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   CONFIRM −20.8% / −21.7% / −18.4%, WAIT5-UP −19.9%; FARM-90K: Anthropic efyZMD, ANT 2xu3o3, SPACEXLIFE 7u9BY6 open in the data (his screen: Anthropic target +175%).
 - Since the rule change (9.82 h): four looks 149 buys −1.656 SOL (20%) / −2.611 (25%); CONFIRM-15 −0.401, -20 −0.015, -30 −0.080; WAIT5-UP 34 buys −0.178;
   HIT50-NOW 69 buys −2.108; HIT100-NOW 20 buys −0.994 (0 won); FARM-90K 36 buys, 32 closed, +2.383 SOL (20%). Runners: reached 95, bought 20, missed 75.
+
+### 28 Nov, 00:56–01:00 UK — ranking strictly by profit (38e6381); AUTO-UPDATE IS INSTALLED AND WORKING
+
+- **Auto-update confirmed:** publish 00:54:58 shows 29b472e started **00:44:58** — about a minute after that commit was pushed, with no paste
+  from him. From now on a push to older-11-review IS a deployment, a minute later. Push only what he asked for or said "go" to.
+- Owner 00:56 (third time, now unambiguous): "the most profitable coin should be number one… second most profitable, third". On his screen the
+  purple volume-test cards sat at 1–4 with −0.488 / — / — / −1.743 above FARM-90K at +6.469.
+- Pushed 38e6381 (display only; 336 tests, fail 0): the purple cards are no longer pinned first; ranking and card order are strictly by the
+  period chosen (24 h / 6 h / total / since the rule change), no-trade cards last. The VOLUME TEST topic button still shows the four together.
+- His 00:51 screen (0.5 SOL, 70% stop, last 24 h): FARM-90K +6.469 SOL (34 trades) is the only positive book; HIT50-NOW −27.380 (70), NEW-COMBINED −29.168 (115),
+  NEW-5M −21.560 (89). "Your own sales": 17 sold in full by him, +4.257 SOL (0.2 SOL figures).
