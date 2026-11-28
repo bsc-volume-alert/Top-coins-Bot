@@ -2122,3 +2122,36 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   TOGI FAST-1M −28.9%; AYGuBs HIT50-NOW −8.0%.
 - Since the rule change (10.43 h): four looks 161 buys −2.082 SOL (20%) / −3.136 (25%); CONFIRM-15 −0.465, -20 −0.039, -30 −0.116; WAIT5-UP 37 buys −0.175;
   HIT50-NOW 73 buys −2.410; HIT100-NOW 20 buys −0.994 (0 won). Entries 1381 (1178 bought).
+
+### 28 Nov, 01:49 UK — check (publish 01:44:16, state 01:44:14)
+
+- **Fine. The write-off build 004534d is live:** started 01:14:09 (30 seconds after the push, by the auto-update), up 30 min, no log error,
+  too late 0, feed reconnects 0, memory 661 MB / 333 heap, Jupiter rate window 57 of 100, limited 0, GMGN limited 0. Loop hold worst 0.9 s.
+- **He used the cross: written_off done 2, refused 0.** Democat 1012 is closed at −100% on every stop (reason "written off: no sale price").
+  The second one cannot be identified from the published data (no other buy shows −100% on every row — probably a buy whose rule rows had
+  already closed and only his waiting sale was left). FARM-90K now counts Democat: 39 buys, 37 closed, **+2.062 SOL (20%)** / +1.749 (25%), 29% won.
+- Liquidity readings: asks 361, read 5,904, missed 479 (92% read), 16 held.
+- **Volume test: unchanged — 11 volume buys: CONTROL 1 (−5.3%), REST 7, failed a rug check 3.**
+- **Crema 7F5Xam — bought at all four looks** (peak $101K at 9 min, then back to $38K by 20 min).
+
+  | look | cap | holders | volume | fees | top 10 | bundlers | snipers | phishing | result (20 / 25 / 40%) |
+  |---|---|---|---|---|---|---|---|---|---|
+  | 5 min | $51K | 370 | $102K | 10.7 SOL | 21.5% | 51.2% | 0.8% | 1.2% | BOUGHT: +2.5% / −4.3% / −48.9% |
+  | 10 min | $71K | 602 | $207K | 20.0 SOL | 20.7% | 42.9% | 0.8% | 3.3% | BOUGHT: −20.5% / −13.7% / −54.6% |
+  | 15 min | $74K | 672 | $273K | 25.1 SOL | 21.3% | 32.1% | 0.8% | 2.2% | BOUGHT: −16.2% / −20.5% / −57.1% |
+  | 20 min | $38K | 465 | $345K | 32.9 SOL | 24.4% | 26.8% | 0.8% | 3.7% | BOUGHT: −22.2% / −27.6% / open |
+
+  Type: 51% bundlers at the first look, high fees; it doubled in four minutes and gave it all back. CONFIRM-15 −20.5%, -20 −20.4%, WAIT5-UP −13.0%;
+  HIT50-NOW −16.0%, HIT100-NOW −16.4%, HIT50-5M −19.1%, HIT50-10M −14.5%. Eleven buys of one coin, ten of them losses.
+- **Pete 9cZ36x — missed by the looks on ONE rule (top 10 under 16%), bought by five HIT books; $50K → about $200K.**
+  5 min: $37K, 688 holders, $100K, fees 6.5 SOL, top 10 2.7%, bundlers 9.1%, snipers 0.6%, phishing 0.5% (top 10);
+  10 min: $123K, 829, $345K, 19.6 SOL, 3.1%, 17.1%, 0.4%, 1.1% (top 10). Later looks not in the data yet.
+  HIT50-NOW −21.4% / −24.8% / **+123.1%** (highest 4.0×); HIT100-NOW +21.0%; HIT100-5M +18.1%; HIT50-5M +5.5%; HIT50-10M −3.0% (20% stop).
+  **Third coin tonight with a top 10 of 3–5% and fees over the floor: IPOY rugged, aurbit ran, Pete ran.**
+- **ANT 2xu3o3 — the holder pattern, bought by FARM-90K** (reached $100K at 82 min, after the book's sale): looks refused it on volume
+  ($14–20K), top holders 43–44%, fees 0.6–1.0 SOL and top 10 42–44% at all four (holders 2,756–2,776, bundlers 30–34%, snipers 41% → 20%, phishing 8–10%).
+  FARM-90K −41.1% (it fell first, then ran — the 20% and 70% stops both sold before the run); HIT50-NOW −63.4%.
+- Other new buys (20% stop): semigenius HIT50-NOW +1.1%, NEW-20M −22.3%, HIT50-5M −13.9%; ZERO 3WsqUN RUG450+RUG950 (one buy at $426K) −88.2%;
+  Midcurve HIT50-NOW +0.3%; Snowball CQXV2C FARM-90K open.
+- Since the rule change (11.06 h): four looks 166 buys −2.240 SOL (20%) / −3.267 (25%); CONFIRM-15 −0.506, -20 −0.080, -30 −0.116; WAIT5-UP 38 buys −0.201;
+  HIT50-NOW 77 buys −2.482; HIT100-NOW 22 buys −0.985 (one won). Runners: reached 98, bought 22, missed 76. Entries 1404 (1201 bought).
