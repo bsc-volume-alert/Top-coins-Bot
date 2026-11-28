@@ -303,7 +303,7 @@ export class Engine {
     if (!ev.replay && this._unmeasured) { this.stats.unmeasuredEvents = (this.stats.unmeasuredEvents || 0) + 1; return; } // this transaction's own delay is unknown (see tx)
     // 3) open positions see it (value, peaks, triggers) — in SOL, independent of the USD reference
     if (!ev.replay) { const ids = this.byMint.get(ev.mint); if (ids) for (const id of ids) { const e = this.entries.get(id); if (e.exec === "routed-quote") continue; const was = e.status, sig = e.versions.map((v) => v.status).join(); if (this._blocked(e, c, was, sig, ids, ev.t)) continue; observe(e, st, ev.t, this.feedCov); this._after(e, was, sig, ids, c); }
-      if (ids?.size) { const s0 = this.solUsd(ev.t); if (s0 > 0 && st.quote > 0) this.liq.set(ev.mint, { usd: liquidityUsd(st, s0), t: ev.t, src: "pool" }); } } // LIVE LIQUIDITY of a held coin (spec LIQ_EVERY_S): the pool's own, at this trade
+      if (ids?.size) { const s0 = this.solUsd(ev.t); if (s0 > 0 && st.quote > 0) this.liq.set(ev.mint, { usd: liquidityUsd(st, s0), mc: c.supply > 0 && st.base > 0 ? Math.round((st.quote / st.base) * s0 * c.supply) : null, t: ev.t, src: "pool" }); } } // LIVE LIQUIDITY of a held coin (spec LIQ_EVERY_S): the pool's own, at this trade — and its MARKET CAP NOW beside it (owner 28 Nov 2026 10:40 UK: "current market cap as well"): the pool's spot price x the supply
     // 4) USD history and signals
     const su = this.solUsd(ev.t);
     if (!su) { this.stats.noSolUsd++; if (!this.usdDown) { this.usdDown = true; this.cov.drop(ev.t, "sol-usd"); this.store?.feedEvent(ev.t, "sol-usd stale: new entries suspended, positions still managed in SOL"); } return; }

@@ -186,12 +186,13 @@ export class Poller {
     const K = (this.stats.liq ||= { asks: 0, read: 0, missed: 0, errors: 0 }); let r; try { r = await this.jup.prices(batch); } catch (e) { K.errors++; return 0; }
     K.asks++;
     for (const m of batch) { const p = r.prices.get(m), was = this.engine.liq.get(m);
-      if (p && p.liqUsd != null) { K.read++; this.engine.liq.set(m, { usd: p.liqUsd, t: r.t, src: "jupiter" });
+      if (p && p.liqUsd != null) { K.read++; const c = this.engine.coins.get(m), sup = c?.supply || c?.info?.circ_supply; // the market cap now: the same answer's price x the coin's supply (no extra request)
+        this.engine.liq.set(m, { usd: p.liqUsd, mc: p.px > 0 && sup > 0 ? Math.round(p.px * sup) : null, t: r.t, src: "jupiter" });
         // THE FIRST READING is kept on the buy itself (28 Nov 2026 00:20 UK: a coin showed +161% against "the figure at the buy" four minutes after it —
         // that figure came from another Jupiter call, the token data at the look, which may not measure the same thing). The change the page shows
         // is against this first reading: the same call, the same measure. Written once per buy; it survives a restart.
         for (const id of this.engine.byMint.get(m) || []) { const e = this.engine.entries.get(id); if (e && e.exec === "routed-quote" && e.status === "filled" && !e.liq0) { e.liq0 = { usd: p.liqUsd, t: r.t }; e.touched = true; } } }
-      else { K.missed++; this.engine.liq.set(m, { usd: was?.usd ?? null, t: was?.t ?? null, src: "jupiter", miss: (was?.miss || 0) + 1 }); } }
+      else { K.missed++; this.engine.liq.set(m, { usd: was?.usd ?? null, mc: was?.mc ?? null, t: was?.t ?? null, src: "jupiter", miss: (was?.miss || 0) + 1 }); } }
     return batch.length;
   }
   _fail(need, q) { if (/rate limited|HTTP 5|timeout|fetch/i.test(q.why || "")) this.stats.quoteErr++; else { this.stats.noRoute++; this.noRouteRun.set(need.id, (this.noRouteRun.get(need.id) || 0) + 1); const e = this.engine.entries.get(need.id); if (e && !e.flags.includes("quote unavailable: " + q.why)) { e.flags.push("quote unavailable: " + q.why); e.touched = true; /* saved at the next tick: a clock tick alone no longer re-writes an entry */ } } }
