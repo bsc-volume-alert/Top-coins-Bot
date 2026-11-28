@@ -18,7 +18,7 @@ test("a pool-priced position: the pool's own liquidity (2 × its SOL side) at ev
   swap(e, T0 + 770, 50_000, { isBuy: false }); assert.ok(e.liq.get(M).usd < L.usd, "it moves with the pool");
   const r = liqRow(en, e.liq); assert.equal(r.src, "pool"); assert.ok(r.buy > 0 && r.usd > 0 && r.usd < r.buy, "now against the figure at the signal");
   const j = booksApi([...e.entries.values()], { stop: 0.25, now: T0 + 780, run: { name: "t", books: S.booksOf("older-11") }, liq: e.liq }), row = j.books.VOL100K.find((x) => x.id === en.id);
-  assert.equal(row.status, "open"); assert.deepEqual(row.liq, r); assert.equal(booksApi([...e.entries.values()], { stop: 0.25, now: T0 + 780, run: { name: "t", books: S.booksOf("older-11") } }).books.VOL100K.find((x) => x.id === en.id).liq, undefined, "no figure known: none shown");
+  assert.equal(row.status, "open"); assert.deepEqual(row.liq, r); assert.equal(row.liq_buy, r.buy, "the liquidity at the buy is on the row itself — beside the buy market cap, held or sold"); assert.equal(booksApi([...e.entries.values()], { stop: 0.25, now: T0 + 780, run: { name: "t", books: S.booksOf("older-11") } }).books.VOL100K.find((x) => x.id === en.id).liq, undefined, "no figure known: none shown");
 });
 
 test("a quote-priced position: Jupiter's figure, one request for all held coins; a coin left out keeps its last figure and counts a miss; a coin no longer held is forgotten", async () => {
@@ -40,7 +40,7 @@ test("a quote-priced position: Jupiter's figure, one request for all held coins;
 });
 
 test("the page: a 'liquidity now' column beside the sell buttons, refreshed with the live prices", () => {
-  for (const s of ["<th>liquidity now</th>", "function LQ(t)", "<td>'+LQ(t)+'</td>", "at the buy '+KD(q.buy)", "Jupiter has stopped giving a figure", "if(x[3]&&(!t.liq||x[3].usd!==t.liq.usd||x[3].miss!==t.liq.miss)){t.liq=x[3];ch=true}", "d<=-0.5?'dn':d<=-0.2?'amb':''"]) assert.ok(BOOKS_PAGE.includes(s), "the page has: " + s);
+  for (const s of ["<th>liquidity now</th>", "bought at (market cap · liquidity)", "function LB(t)", "</b>'+LB(t)+'</td>", "function LQ(t)", "<td>'+LQ(t)+'</td>", "at the buy '+KD(q.buy)", "Jupiter has stopped giving a figure", "if(x[3]&&(!t.liq||x[3].usd!==t.liq.usd||x[3].miss!==t.liq.miss)){t.liq=x[3];ch=true}", "d<=-0.5?'dn':d<=-0.2?'amb':''"]) assert.ok(BOOKS_PAGE.includes(s), "the page has: " + s);
   assert.equal(liqRow({ mint: "X" }, null), undefined); assert.equal(liqRow({ mint: "X" }, new Map()), undefined);
   assert.deepEqual(liqRow({ mint: "X", features: { liq_usd: 8000.4 } }, new Map([["X", { usd: 3999.6, t: 5, src: "jupiter" }]])), { usd: 4000, t: 5, buy: 8000, miss: undefined, src: "jupiter" });
   assert.deepEqual(liqRow({ mint: "X" }, new Map([["X", { usd: null, t: null, src: "jupiter", miss: 2 }]])), { usd: null, t: null, buy: null, miss: 2, src: "jupiter" });
