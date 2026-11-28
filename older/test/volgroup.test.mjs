@@ -62,5 +62,6 @@ test("the cards: buys since the start only, one row per buy, each with the test'
   { const n = booksApi([...e.entries.values()], { stop: 0.25, now: T0 + 800, run: { ...run, books: ["VOL100K", "RUG450"] } }); assert.equal(n.group, undefined); assert.ok(n.order.includes("VOL100K"), "no test cards: the book keeps its own card"); }
 });
 test("the page: one purple group with its own tag and test box; a waiting hand sale says when there is no sale price", () => {
-  for (const s of ["--grp:#c58bff", ".card.grp", "VOLUME TEST · since ", "class=\"gbox\"", "the test · ", "adaptive: bare on half-at-2", "every volume buy since the start", "the 25% stop beside it", "last bare buy", "RETIRED from expectations", "next look at ", "newtag gp", "no sale price yet", "the volume test first", "g0.concat(", "cards are hidden; the books still buy"]) assert.ok(BOOKS_PAGE.includes(s), "the page has: " + s);
+  for (const s of ["--grp:#c58bff", ".card.grp", "VOLUME TEST · since ", "class=\"gbox\"", "the test · ", "adaptive: bare on half-at-2", "every volume buy since the start", "the 25% stop beside it", "last bare buy", "RETIRED from expectations", "next look at ", "newtag gp", "no sale price yet", "cards are hidden; the books still buy"]) assert.ok(BOOKS_PAGE.includes(s), "the page has: " + s);
+  assert.ok(!BOOKS_PAGE.includes("the volume test first") && !BOOKS_PAGE.includes("g0.concat("), "ranked strictly by profit: the purple cards are not pinned first (owner 28 Nov 00:56)");
 });
