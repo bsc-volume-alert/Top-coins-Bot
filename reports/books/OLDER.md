@@ -2372,3 +2372,6 @@ Owner 11:07: "just do all the books… so we can see it". Top-20 cut and its but
 - Entries 1766 (1563 bought), 23 new, all filled: Claude AI HIT50-NOW -36%, HIT50-5M -53% · eS8Gno VOL100K -75% · DODO HIT50-NOW -20%, HIT50-5M -8%, HIT50-10M +3% · OKOWARE NEW-10M +5%, NEW-20M +9%, HIT50-NOW +1%, CONFIRM-15/20/30 -24%/-23%/-25%, WAIT5-UP -12% · Hachiware NEW-20M +21%, CONFIRM-15 -3%, CONFIRM-20 -3%, CONFIRM-30 -8%, WAIT5-UP -21% · PEPE GpG61y HIT50-NOW, HIT50-5M open.
 - Runners 115 / 31 / 28 / 56 — none new.
 - Volume test: 29 buys. CONTROL 4 (-0.196 SOL, 0 won). OPER 1. BARE 0. REST 15. Clean all 20%: 19 buys -0.264 SOL. Failed a rug check 10 (new: eS8Gno 1745 -75%).
+
+### 28 Nov 12:45 UK — Held now coin cell (8320248, then a one-line fix), on the owner's word
+Owner 12:39: "show only axiom on here… all the books… a link so when I click them it goes straight to the books". Coin name = Axiom link only (no gm, no address stub); every book holding the coin listed, each a link that scrolls to its card (re-scrolls after the cards above finish drawing; clears the topic filter if needed; note if the book has no card, e.g. hidden VOL books). 348 tests, fail 0. Head of older-11-review moved past b563f09 — the 12:39 check text names b563f09; a restart at about 12:44–12:46 is expected.
