@@ -198,8 +198,8 @@ export const rowCtx = ({ stop = 0.25, policy = "trail", ag = "", pop = "", stake
 // LIVE LIQUIDITY of a held coin (spec LIQ_EVERY_S): the latest figure and its time, beside what it was at the buy — the look's own
 // figure for a new-coin buy, the pool at the signal for a pool-priced one. null where nothing is known: never a guess.
 export const liqBuy = (e) => { const tr = e.evidence?.trigger, v = e.features?.liq_usd ?? (tr?.quote_eff > 0 && tr?.sol_usd > 0 ? 2 * tr.quote_eff * tr.sol_usd : null); return v == null ? null : Math.round(v); };
-export const liqRow = (e, liq) => { const L = liq?.get(e.mint); if (!L) return undefined; const buy = liqBuy(e);
-  return { usd: L.usd == null ? null : Math.round(L.usd), t: L.t ?? null, buy, miss: L.miss || undefined, src: L.src }; };
+export const liqRow = (e, liq) => { const L = liq?.get(e.mint); if (!L) return undefined; const q = e.exec === "routed-quote", buy = q ? (e.liq0?.usd == null ? null : Math.round(e.liq0.usd)) : liqBuy(e); // what "now" is compared with: the pool at the signal, or — a quote-priced buy — its own FIRST reading from the same call
+  return { usd: L.usd == null ? null : Math.round(L.usd), t: L.t ?? null, buy, base: q ? "first" : undefined, miss: L.miss || undefined, src: L.src }; };
 export function entryRows(e, C) { const out = [], { stop, policy, ag, pop, stake, first, keep, has, stakeView, cost, sellable, now } = C;
   if (ag && e.ag !== ag) return out; if (pop && (e.pop || "pumpswap-canonical") !== pop) return out;
     const feeCoin = e.token?.xfer_bps > 0; let feeDone = false; // a transfer-fee coin: ONE row per buy, in the separate book only
@@ -352,7 +352,7 @@ function gcell(lab,o,extra){return '<div><div class="lab">'+lab+'</div><div clas
 function KD(v){return v==null?'\u2014':v>=1e6?'$'+(v/1e6).toFixed(2)+'M':v>=1000?'$'+(v/1000).toFixed(1)+'K':'$'+Math.round(v)}
 function LB(t){return t.liq_buy!=null?' <span class="mut small" title="liquidity at the buy">· liq '+KD(t.liq_buy)+'</span>':''}
 function LQ(t){var q=t.liq;if(!q||q.usd==null)return '<span class="mut">'+(q&&q.miss?'no figure from Jupiter':'\u2014')+'</span>';var now=Date.now()/1000,age=q.t!=null?now-q.t:null,d=q.buy>0?q.usd/q.buy-1:null,cls=d==null?'':d<=-0.5?'dn':d<=-0.2?'amb':'',stale=q.miss>=3||(q.src==='jupiter'&&age!=null&&age>30);
- return '<span class="lq"><b class="'+cls+'">'+KD(q.usd)+'</b>'+(d!=null?' <span class="'+(cls||'mut')+'">'+(d>=0?'+':'\u2212')+Math.abs(Math.round(d*100))+'%</span>':'')+'<span class="small '+(stale?'dn':'mut')+'">'+(q.buy!=null?'at the buy '+KD(q.buy):'no figure at the buy')+(stale?' \u00b7 '+(q.miss>=3?'Jupiter has stopped giving a figure':'reading '+Math.round(age)+' s old'):'')+'</span></span>'}
+ return '<span class="lq"><b class="'+cls+'">'+KD(q.usd)+'</b>'+(d!=null?' <span class="'+(cls||'mut')+'">'+(d>=0?'+':'\u2212')+Math.abs(Math.round(d*100))+'%</span>':'')+'<span class="small '+(stale?'dn':'mut')+'">'+(q.buy!=null?(q.base==='first'?'first reading ':'at the buy ')+KD(q.buy):'no earlier figure')+(stale?' \u00b7 '+(q.miss>=3?'Jupiter has stopped giving a figure':'reading '+Math.round(age)+' s old'):'')+'</span></span>'}
 function openNet(rows,cost){var n=0,s=0;rows.forEach(function(t){if(t.now_x!=null){n++;s+=(t.now_x-1)*cost}});return {n:n,net:s}}
 function MC(v,ap){return v==null?'—':(ap?'≈ ':'')+'$'+Math.round(v).toLocaleString('en-GB')}
 var FIND='';function hit(t){if(!FIND)return true;var f=FIND.toLowerCase();return t.mint.toLowerCase().indexOf(f)>=0||String(t.sym||'').toLowerCase().indexOf(f)>=0}

@@ -35,13 +35,15 @@ test("a quote-priced position: Jupiter's figure, one request for all held coins;
   w.t += 5; w.liq.set(M, 9_000); await poll.liquidity(); assert.equal(eng.liq.get(M).usd, 9_000, "the newest figure");
   const t9 = eng.liq.get(M).t; w.t += 5; w.omit.add(M); await poll.liquidity(); assert.deepEqual(eng.liq.get(M), { usd: 9_000, t: t9, src: "jupiter", miss: 1 }, "left out by Jupiter: the last figure and its time stay, a miss is counted — never zero");
   jup.prices = async () => { throw new Error("HTTP 500"); }; assert.equal(await poll.liquidity(), 0); assert.equal(poll.stats.liq.errors, 1, "a failed request changes nothing");
-  assert.equal(e.status, "filled", "nothing was sold or changed by it"); assert.equal(e.liq, undefined, "nothing is written on the buy");
+  assert.equal(e.status, "filled", "nothing was sold or decided by it"); assert.deepEqual(e.liq0, { usd: 41_500, t: e.liq0.t }, "the FIRST reading is kept on the buy, once — later readings do not replace it");
+  assert.deepEqual(liqRow(e, eng.liq), { usd: 9_000, t: t9, buy: 41_500, base: "first", miss: 1, src: "jupiter" }, "now against the buy's own first reading, from the same call");
   eng.quoteNeeds = () => []; await poll.liquidity(); assert.equal(eng.liq.has(M), false, "no longer held: forgotten"); assert.equal(poll.liqAsked.size, 0);
 });
 
 test("the page: a 'liquidity now' column beside the sell buttons, refreshed with the live prices", () => {
-  for (const s of ["<th>liquidity now</th>", "bought at (market cap · liquidity)", "function LB(t)", "</b>'+LB(t)+'</td>", "function LQ(t)", "<td>'+LQ(t)+'</td>", "at the buy '+KD(q.buy)", "Jupiter has stopped giving a figure", "if(x[3]&&(!t.liq||x[3].usd!==t.liq.usd||x[3].miss!==t.liq.miss)){t.liq=x[3];ch=true}", "d<=-0.5?'dn':d<=-0.2?'amb':''"]) assert.ok(BOOKS_PAGE.includes(s), "the page has: " + s);
+  for (const s of ["<th>liquidity now</th>", "bought at (market cap · liquidity)", "function LB(t)", "</b>'+LB(t)+'</td>", "function LQ(t)", "<td>'+LQ(t)+'</td>", "(q.base==='first'?'first reading ':'at the buy ')+KD(q.buy)", "Jupiter has stopped giving a figure", "if(x[3]&&(!t.liq||x[3].usd!==t.liq.usd||x[3].miss!==t.liq.miss)){t.liq=x[3];ch=true}", "d<=-0.5?'dn':d<=-0.2?'amb':''"]) assert.ok(BOOKS_PAGE.includes(s), "the page has: " + s);
   assert.equal(liqRow({ mint: "X" }, null), undefined); assert.equal(liqRow({ mint: "X" }, new Map()), undefined);
-  assert.deepEqual(liqRow({ mint: "X", features: { liq_usd: 8000.4 } }, new Map([["X", { usd: 3999.6, t: 5, src: "jupiter" }]])), { usd: 4000, t: 5, buy: 8000, miss: undefined, src: "jupiter" });
-  assert.deepEqual(liqRow({ mint: "X" }, new Map([["X", { usd: null, t: null, src: "jupiter", miss: 2 }]])), { usd: null, t: null, buy: null, miss: 2, src: "jupiter" });
+  assert.deepEqual(liqRow({ mint: "X", exec: "routed-quote", features: { liq_usd: 8000.4 }, liq0: { usd: 5000.2, t: 1 } }, new Map([["X", { usd: 3999.6, t: 5, src: "jupiter" }]])), { usd: 4000, t: 5, buy: 5000, base: "first", miss: undefined, src: "jupiter" }, "a quote-priced buy is compared with its first reading, not with the look's figure from another call");
+  assert.deepEqual(liqRow({ mint: "X", exec: "routed-quote", features: { liq_usd: 8000.4 } }, new Map([["X", { usd: 3999.6, t: 5, src: "jupiter" }]])).buy, null);
+  assert.deepEqual(liqRow({ mint: "X" }, new Map([["X", { usd: null, t: null, src: "jupiter", miss: 2 }]])), { usd: null, t: null, buy: null, base: undefined, miss: 2, src: "jupiter" });
 });
