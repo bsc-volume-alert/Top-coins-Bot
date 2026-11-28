@@ -2353,3 +2353,6 @@ Owner 10:54: "the top 20 in this list… a 24-hour, a 6-hour… and then just a 
 - New at $100K: Zhaki AzLcYf — $100.3K at 10:48, 42 min old, peak $110K. BOUGHT by FARM-90K at $29.7K 10:11, +9%; also HIT50-NOW -34%, HIT50-5M -51%. Looks refused it. Type: holder-pattern coin. 5M cap $29.7K, holders 1,988, vol $13K, fees 0.63, top10 35.2%, bundlers 31%, snipers 42%, phishing 14% — out: volume, fees, top 10. 10M $38.1K, 2,002, $18K, 1.20, 34.7%, 32%, 18%, 12% — same. 15M $43.5K, 1,998, $21K, 1.40, 35.8%, 35%, 18%, 13% — same. 20M $58.5K, 1,996, $24K, 1.53, 37.0%, 38%, 18%, 12% — same.
 - Other new buys: PumpCat NEW-5M -22%, NEW-10M -19% · ECqVUW HIT50-NOW open.
 - Volume test: 28 buys, no new one. CONTROL 4 (-0.196 SOL, 0 won). OPER 1. BARE 0. REST 15. Clean all 20%: 19 buys -0.264 SOL. Failed a rug check 9.
+
+### 28 Nov 11:09 UK — ranking table shows every book (b563f09), on the owner's word
+Owner 11:07: "just do all the books… so we can see it". Top-20 cut and its button removed. 72373bb was seen live by him at 11:07 (his screenshot). Head of older-11-review is now b563f09; the 11:35 check text says 72373bb — b563f09 is expected, not a rollback.
