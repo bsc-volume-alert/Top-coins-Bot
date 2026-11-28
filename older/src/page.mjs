@@ -297,6 +297,7 @@ a.coin{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--acc)}
 .kp{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:12px}.kp b{color:#fff}
 .sb{background:transparent;border:1px solid var(--amb);color:var(--amb);border-radius:6px;padding:4px 9px;font:inherit;font-size:12px;cursor:pointer;margin-right:4px}.sb.arm{background:var(--amb);color:#1a0f00;font-weight:800}.sb:disabled{opacity:.5}
 footer{padding:16px;color:var(--mut);font-size:12px;text-align:center}
+#totop{position:fixed;right:14px;bottom:calc(22px + env(safe-area-inset-bottom));z-index:5;width:54px;height:54px;border-radius:50%;border:1px solid var(--acc);background:rgba(18,10,42,.92);color:var(--acc);font:inherit;font-size:11px;font-weight:800;line-height:1.1;cursor:pointer;display:none;box-shadow:0 4px 14px rgba(0,0,0,.5)}#totop b{display:block;font-size:20px;line-height:1}
 </style></head><body>
 <header><div><h1>Older coins — paper books <a id="tbl" href="#">full table →</a></h1><div id="sub">loading…</div></div>
 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="mut small" id="tick"></span>
@@ -322,6 +323,7 @@ footer{padding:16px;color:var(--mut);font-size:12px;text-align:center}
 <div class="card" id="newc" style="padding:10px 14px;display:none"></div>
 <div class="card" id="runr" style="padding:10px 14px;display:none"></div>
 <div id="books"></div>
+<button id="totop" title="back to the top of the page" aria-label="back to the top of the page"><b>\u2191</b>top</button>
 <div class="card mut" style="font-size:12px">PAPER ONLY — nothing here is a real trade. Every figure is a <b>simulated fill</b> at 0.2 SOL (the stake buttons re-price the same trades at a bigger size — an estimate, see the amber note): bought 1 s after the rule fires, sold 0.7 s after the stop triggers (or at 24 h), after pool fees, price impact and an assumed 0.0005 SOL per transaction. <b>pump.fun live</b> coins are watched trade by trade and priced on the pool itself. <b>Rest of Solana</b> coins are checked every few seconds through Jupiter and priced from Jupiter quotes — they can miss fast moves between checks. Books share coins and buys (one coin can appear in several books): do not add the books together as if it were one wallet. UK times. Refreshes every 10 s.</div>
 </main><footer id="foot"></footer>
 <script>
@@ -624,4 +626,8 @@ var draw0=draw;draw=function(j){var sc={},key=function(e){var a=e.closest('[id]'
 var healthC=calm(health);var PEND=null,draw1=draw;
 draw=function(j){if(Date.now()-BUSY<1000&&Date.now()-FORCE>4000){PEND=j;return}PEND=null;draw1(j)};setInterval(function(){if(PEND&&Date.now()-BUSY>=1000){var j=PEND;PEND=null;draw1(j)}},250);
 var NEXT=10;load();setInterval(function(){load();NEXT=10},10000);setInterval(function(){NEXT=Math.max(0,NEXT-1);var e=document.getElementById('tick');if(e)e.textContent='open prices every 2 s \u00b7 full refresh in '+NEXT+' s'},1000);
+// BACK TO THE TOP (owner 28 Nov 2026 06:02 UK: "a button on the side that takes me straight to the top"): a round button at the lower right, shown once
+// the page is scrolled down; one tap goes to the top (Held now, the banned names, the ranking).
+(function(){var tt=document.getElementById('totop');if(!tt)return;var see=function(){tt.style.display=(window.pageYOffset||document.documentElement.scrollTop||0)>400?'block':'none'};window.addEventListener('scroll',see,{passive:true});see();
+ tt.addEventListener('click',function(){window.scrollTo(0,0);see()})})(); // at once, not a smooth scroll: the page redraws every 2 s and a redraw stops a smooth scroll half-way
 </script></body></html>`;

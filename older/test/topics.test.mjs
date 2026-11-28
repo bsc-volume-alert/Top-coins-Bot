@@ -68,3 +68,8 @@ test("held now is the buy itself, whatever stop is chosen: a buy the 25% stop ha
   assert.equal(heldX({ status: "filled", fill: { tok: 10 }, versions: [{ status: "closed", tok: 0, lastX: 2 }] }), null, "every row sold: no value shown");
   assert.equal(heldX({ status: "filled", fill: { tok: 10 }, versions: [{ status: "open", tok: 5, got: 0.1005, lastX: 1.5, lastT: 9 }] }), +(((1.5 * 0.2005 - 0.1005) / 0.2005) * 2).toFixed(4), "a row that has sold a half is scaled back to the whole buy");
 });
+
+test("the page: a button at the lower right that goes back to the top, shown only once the page is scrolled down", () => {
+  for (const x of ['<button id="totop"', "#totop{position:fixed;right:14px", "window.scrollTo(0,0);see()", ">400?'block':'none'"]) assert.ok(BOOKS_PAGE.includes(x), "the page has: " + x);
+  const m = BOOKS_PAGE.match(/<script>([\s\S]*)<\/script>/); assert.ok(m); assert.doesNotThrow(() => new Function(m[1]), "the page script parses");
+});
