@@ -2341,3 +2341,6 @@ Owner 10:33: Robinhood "says missed, but it was still picked up by my other book
 
 ### 28 Nov 10:46 UK — Held now: "market cap now" column (aee374e), on the owner's word
 Owner 10:40: "can we have current market cap as well?" Added after "now" in the Held now box: the coin's market cap from the same live reading that gives the liquidity (pool price x supply at each trade for pool-priced coins; the price in the same Jupiter answer x supply for quote-priced coins — no extra request or credit). Where a coin has no live reading: an estimate with "≈" = cap at the buy x what the buy is worth now. 346 tests, fail 0. Head of older-11-review is now aee374e (after e09b87d at 10:36): two restarts between 10:37 and 10:48 are expected.
+
+### 28 Nov 11:03 UK — ranking as a top-20 table (72373bb), on the owner's word
+Owner 10:54: "the top 20 in this list… a 24-hour, a 6-hour… and then just a total of me and AI. 3 columns." Columns: 24h auto sell · 6h auto sell · you + auto together (the book's whole total with his hand sales in place of the rules' sale on those buys — same figure as each card's amber box). Top 20 by the chosen period, button for all. 347 tests, fail 0. Head of older-11-review is now 72373bb (after e09b87d 10:36, aee374e 10:46).
