@@ -2045,3 +2045,33 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
   on its own row and in its "sold by you" box. Tried on a copy of the live data: the three NBA ids were all asked for.
 - Until that is live: pressing sell on the NBA row that is still listed sells the second buy, and once more the third.
 - Whether he installed the auto-update (the fourth line) is not known yet — the next publish shows which commit runs and when it started.
+
+### 28 Nov, 00:44 UK — check (publish 00:32:14, state 00:32:12; he has pasted since — the next publish will show which build)
+
+- **Fine.** Data: 9716b3e (liquidity column), started 00:02:06, up 30 min: no log error, too late 0, feed reconnects 0, memory 641 MB / 342 heap,
+  Jupiter rate window 54 of 100, limited 0 (the liquidity call did not raise it), GMGN limited 1 (one refusal in 405 calls). Loop hold worst 0.78 s.
+  Head of the branch is now 29b472e (Held now per coin); c2c27bf / 482c2de are what his 00:39 screen shows.
+- **Liquidity readings: asks 360, read 5,010, missed 375, errors 0, 16 coins held** → 93% read; the misses are one coin per ask (Democat).
+  Jupiter gives a liquidity figure for the held new coins. `liq0` (first live reading) is not in the data yet (build before fd08a12).
+- **Volume test: 8 buys — CONTROL 1 (WINCULT −5.3% on 40%), REST 7**: ZERO −18.0%, MAYA −11.2%, RAURA −1.5%, SPEC −9.8%, MONO −11.8%
+  (40%: −98.5%), aurbit 4qFwbK 1335 (VOL100K at $247K, holders +2%) −7.3%, aurbit 1337 (VOL300K at $334K — a second, separate buy) −6.7% (20% stop). BARE 0, OPER 0.
+- **aurbit 4qFwbK — missed by all four looks on ONE rule (top 10 under 16%), bought by six HIT and volume books; ran from $50K to about $450K.**
+
+  | look | cap | holders | volume | fees | top 10 | bundlers | snipers | phishing | kept out by |
+  |---|---|---|---|---|---|---|---|---|---|
+  | 5 min | $85K | 790 | $334K | 16.5 SOL | 4.9% | 9.1% | 0.8% | 0.6% | top 10 (needs 16–30%) |
+  | 10 min | $238K | 786 | $585K | 32.8 SOL | 2.9% | 10.7% | 0.3% | 0.5% | top 10 |
+  | 15 min | $259K | 922 | $946K | 51.7 SOL | 2.9% | 11.6% | 0.2% | 0.5% | top 10 |
+  | 20 min | $248K | 928 | $1.2M | 65.3 SOL | 3.0% | 11.8% | 0.2% | 0.7% | top 10 |
+
+  Type: the same profile as IPOY an hour earlier (top 10 3–5%, very high fees and volume) — IPOY rugged at 15–20 min, aurbit held $248K at 20 min.
+  Fees passed at every look: only the top-10 floor kept it out. HIT50-NOW at $50K: +21.9% / **+89.7% / +92.3%** (20 / 25 / 40%; highest 9.0×);
+  HIT100-5M +76.4% / +61.5% / +137.8%; HIT50-5M −16.1% / −19.4% / +121.4%; HIT100-NOW −4.5%; HIT50-10M −16.5%; HIT100-10M −14.9%.
+- **STEADY AvvXpC — bought at all four looks** (already $129K at the 5-minute look; $240K at 20 min): 5 min $129K, 681 holders, $192K, fees 19.9,
+  top 10 17.7%, bundlers 34.8%, snipers 0.7%, phishing 4.9% → −6.8% / −6.8% / −28.9%; 10 min $151K, 919, $306K, 30.2, 18.5%, 26.9%, 0.7%, 4.6% → −32.5%;
+  15 min $198K, 1,031, $404K, 38.8, 18.2%, 30.8%, 0.7%, 6.8% → +14.7% (20%); 20 min $240K, 1,316, $537K, 47.2, 19.4%, 28.7%, 0.7%, 7.8% → open.
+  CONFIRM-15 −19.6%, -20 −18.7%, -30 −21.4%, WAIT5-UP −15.0%.
+- Other new buys (20% stop): cKMGm9 RUG450+RUG950 (one buy at $719K) −70.4%; Cats HIT50-NOW +19.0%; CI HIT50-NOW −13.8%; Bambi NEW-10M −4.9%,
+  CONFIRM −20.8% / −21.7% / −18.4%, WAIT5-UP −19.9%; FARM-90K: Anthropic efyZMD, ANT 2xu3o3, SPACEXLIFE 7u9BY6 open in the data (his screen: Anthropic target +175%).
+- Since the rule change (9.82 h): four looks 149 buys −1.656 SOL (20%) / −2.611 (25%); CONFIRM-15 −0.401, -20 −0.015, -30 −0.080; WAIT5-UP 34 buys −0.178;
+  HIT50-NOW 69 buys −2.108; HIT100-NOW 20 buys −0.994 (0 won); FARM-90K 36 buys, 32 closed, +2.383 SOL (20%). Runners: reached 95, bought 20, missed 75.
