@@ -1991,3 +1991,18 @@ His decision: bundlers 7% to 50%; insiders 2.5% to 25%; bundlers 0% and insiders
 - Since the rule change (9.40 h): four looks 144 buys −1.605 SOL (20%) / −2.514 (25%); NEW-10M −0.029; CONFIRM-15 −0.320, -20 +0.066, -30 0.000;
   WAIT5-UP 32 buys −0.108; HIT50-NOW 65 buys −2.162; HIT100-NOW 19 buys −0.985 (0 won); 5M-H300 47 buys +7.3% vs −5.1% for the other 155.
   Runners: reached 95, bought 20, missed 75. 25% stop on all new-coin-side buys: 455 closed, 114 won, avg −5.8%.
+
+### 28 Nov, 00:18–00:35 UK — liquidity column live (9716b3e since 00:02:06); two follow-ups pushed
+
+- His 00:17 screenshot: the "liquidity now" column is there (Anthropic $13.6K, "+161%", at the buy $5.2K; Democat "no figure from Jupiter").
+  He wrote that liquidity was "still not showing next to the buy price on the bought column".
+- Live counters at state ≈00:07 (5 min up): asks 61, read 793, missed 61, errors 0, held 14 → **Jupiter gives a figure for 13 of the 14 held
+  coins at every ask; the one it never gives is Democat** (the coin with no sale route). Memory 539 MB / 278 heap.
+- **257af9a**: the liquidity at the buy is now also beside the buy market cap, on held and sold rows ("bought at (market cap · liquidity)").
+- **Flaw found on his screen and fixed (next commit on the branch):** +161% four minutes after the buy with the price at 1.05× is not credible as
+  growth. The "at the buy" figure is the look's (Jupiter token data); the live one is Jupiter's price call. Earlier records show the
+  token-data figure at about half of GMGN's for the same moment (Grok: $5.7K vs $11.4K) — one may count one side of the pool, the other both.
+  A baseline from a different measure could hide a real fall. Now a quote-priced position is compared with its OWN first live reading
+  (kept on the buy once; survives a restart), labelled "first reading"; pool-priced positions keep "at the buy" (same measure).
+  entries.json now carries `liq_buy` (look) and `liq0` (first live reading) → at the next checks, work out the ratio and tell him.
+- 335 tests, fail 0. Waiting for his paste.
