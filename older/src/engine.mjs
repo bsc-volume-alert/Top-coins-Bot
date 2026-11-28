@@ -9,6 +9,7 @@ import { newCoin, evaluate, hitTrack } from "./signals.mjs";
 import { newEntry, advance, observe, entryDone, inventories, dueAt, unresolvedCount, requestManual, exposure, manualOpen, buyOnly, trackHigh, writeOff } from "./book.mjs";
 import { liquidityUsd, staticImpact } from "./fills.mjs";
 import { feeKnown } from "./risk.mjs";
+import { Bans } from "./bans.mjs";
 import { parseInfo, judge } from "./gates.mjs";
 /** why a coin cannot be bought on the LIVE method (pool-state fills model no transfer fee), or null */
 const LAG_EDGES = [1, 2, 3, 5, 10, 30, 60, Infinity]; // upper edges (seconds) of the stream-delay histogram kept for diagnostics
@@ -18,7 +19,7 @@ const ALL_ROWS = S.POLICIES.flatMap((p) => S.STOPS.map((s) => p + "|" + s)), ROW
 const POLLED_UNSUPPORTED = new Set(["HH-BREAK", "HH-BREAK-4H", ...S.HH_FAST.map((x) => x[0]), ...S.ANY_AGE, ...S.HIT_BOOKS]), NEVER = () => false;
 export class Engine {
   constructor({ store = null, solUsd = () => null, needCreation = () => {}, onFill = () => {}, onEntry = () => {}, log = () => {}, firstStart = null } = {}) {
-    this.cov = new Coverage(); this.feedCov = new Coverage(); /* feed + restarts only: what pool-state trust and exit flags depend on */ this.coins = new Map(); this.liq = new Map(); /* mint → { usd, t, src, miss } — the latest liquidity of a coin that is held (spec LIQ_EVERY_S); memory only, for the page */ this.entries = new Map(); this.byMint = new Map();
+    this.cov = new Coverage(); this.feedCov = new Coverage(); /* feed + restarts only: what pool-state trust and exit flags depend on */ this.coins = new Map(); this.bans = new Bans(store); /* the owner's banned names (bans.mjs): the new-coin books do not buy them */ this.liq = new Map(); /* mint → { usd, t, src, miss } — the latest liquidity of a coin that is held (spec LIQ_EVERY_S); memory only, for the page */ this.entries = new Map(); this.byMint = new Map();
     this.store = store; this.solUsd = solUsd; this.needCreation = needCreation; this.onFill = onFill; this.onEntry = onEntry; this.log = log; this.firstStart = firstStart;
     this.stats = { events: 0, swaps: 0, otherPool: 0, noSolUsd: 0, noCreation: 0, evals: 0, cands: 0, entries: 0, notes: 0, replayed: 0, tooOld: 0, lastT: null, evalMsMax: 0 };
     this.dirtyBars = new Map(); this.usdDown = false; this.dirty = new Set(); this.lastCkpt = 0; this.entriesUntil = null; this.onOwnership = () => {}; this.onLine = null; // onLine(mint, mc, t, sawUnder): a coin's pool price first reaches spec RUN_LINE_USD in this process, and again each time it is RUN_PEAK_STEP higher (the runners list, newcoin.mjs) — evidence only
@@ -345,6 +346,8 @@ export class Engine {
   /** WRITE-OFF, paper only (book.mjs, writeOff): the owner closes a buy that can no longer be priced as a total loss. Returns { ok, why? }. */
   writeOff(id, t = Date.now() / 1000) { const e = this.entries.get(id); if (!e) return { ok: false, why: "this buy is no longer held (it is finished, or its number is unknown)" };
     const r = writeOff(e, t); const M = (this.stats.written_off ||= { done: 0, refused: 0 }); if (r.ok) { M.done++; e.touched = false; this.store?.saveEntry(e); } else M.refused++; return r; }
+  /** the owner bans a name, or takes the ban off (bans.mjs). Paper books only; nothing is sold by a ban. */
+  setBan(name, on = true, t = Date.now() / 1000) { const r = on ? this.bans.add(name, t) : this.bans.remove(name); const M = (this.stats.bans ||= { added: 0, removed: 0, refused: 0 }); if (!r.ok) M.refused++; else if (!r.already) on ? M.added++ : M.removed++; return { ...r, on: !!on, names: this.bans.map.size }; }
   manualSell(id, frac, t = Date.now() / 1000) { const e = this.entries.get(id); if (!e) return { ok: false, why: "this buy is no longer held (it is finished, or its number is unknown)" };
     const r = requestManual(e, frac, t); const M = (this.stats.manual ||= { asked: 0, refused: 0 }); if (r.ok) { M.asked++; this.store?.saveEntry(e); } else M.refused++; return r; }
   /** older-11: choose the books that may make new buys in this run (a list from S.booksOf). Open positions of other books are untouched. */
@@ -424,7 +427,10 @@ export class Engine {
     if (this.entriesUntil != null && t >= this.entriesUntil) { this.stats.afterEntryWindow = (this.stats.afterEntryWindow || 0) + 1; out.why = "the run's entry window has closed"; return null; }
     if (this.inactive.has(family)) { out.why = "this book makes no new buy in this run"; return null; }
     if (c.info.risk?.status === "restricted") { out.why = "token transfer restrictions"; return null; } if (!feeKnown(c.info)) { out.why = "the coin's transfer fee is not known"; return null; }
-    const ag = "A0", g = (c.groups[ag] ||= { ref: null, done: {}, logged: {} }); if (g.done[family]) { out.why = "this book has already bought this coin"; return null; } g.done[family] = 1;
+    const ag = "A0", g = (c.groups[ag] ||= { ref: null, done: {}, logged: {} }); if (g.done[family]) { out.why = "this book has already bought this coin"; return null; }
+    // BANNED NAME (bans.mjs): the owner banned this name on the page — not bought, written down as kept out. The book's mark is NOT set, so the coin can be bought at a later look if he takes the ban off.
+    const bn = this.bans.match(c.info.symbol); if (bn) { this.bans.hit(bn, { t, sym: c.info.symbol, mint, family, mc }); this.stats.banned = (this.stats.banned || 0) + 1; out.why = `you banned the name "${bn.name}" (the banned names box on the page)`; out.banned = bn.key; return null; }
+    g.done[family] = 1;
     const e = newEntry({ mint, pool: c.pool, ag, t, families: [family], features, mc, px, evidence: { trigger: { t, eval_t: Date.now() / 1000, coverage: "measured once at the age point", ...trigger } }, startup: this.firstStart != null && t < this.firstStart + S.STARTUP_TAG_S });
     e.cands = [{ family, detail }]; Object.assign(e, { pop: S.NEW_POP, mode: "polled", exec: "routed-quote", valuation: "provider market cap at the measurement", age_basis: "first-pool creation (the launch curve of a launchpad coin is created with the coin); GMGN's creation time is recorded beside it" }, tags);
     e.token = { symbol: c.info.symbol ?? null, origin: c.info.origin ?? null, origin_evidence: c.info.origin_evidence ?? null, venues: c.info.venues ?? null, token_program: c.info.token_program ?? null, risk_read_at: c.info.risk?.read_at ?? null, risk_age_s: c.info.risk?.read_at ? Math.round(t - c.info.risk.read_at) : null, risk_status: c.info.risk?.status ?? "missing", xfer_bps: c.info.risk?.fee_bps || 0, create_src: c.info.create_src ?? null, cadence_s: null, ...token };

@@ -22,7 +22,7 @@ export function coinLookup({ mint, store, engine, lookup = null, run = null, now
   else verdict = "No record of this coin";
   return { ok: true, mint, sym, at: now, verdict, newcoins: nc, buys, notes, known: !!coin, created: coin?.createTs ?? nc.waiting?.created ?? null, pool: coin?.pool ?? null };
 }
-export function startWeb({ port, store, engine, status, run = () => null, sell = null, writeOff = null, lookup = null, runners = null }) { // runners(): the runners list (newcoin.mjs, runnersView) // lookup(mint): what the new-coin books know about one coin (newcoin.mjs); null = no new-coin books in this program // sell(id, frac): the owner's paper "sell now" (engine.manualSell); null = the page has no such button // run(): older-11 — the run's own books and settings, or null (every book, as before)
+export function startWeb({ port, store, engine, status, run = () => null, sell = null, writeOff = null, ban = null, lookup = null, runners = null }) { // runners(): the runners list (newcoin.mjs, runnersView) // lookup(mint): what the new-coin books know about one coin (newcoin.mjs); null = no new-coin books in this program // sell(id, frac): the owner's paper "sell now" (engine.manualSell); null = the page has no such button // run(): older-11 — the run's own books and settings, or null (every book, as before)
   const KEY = process.env.OLDER_SITE_KEY || "";
   const cache = new Map(), BUILD = String(process.env.OLDER_COMMIT || "dev").slice(0, 12) + ":" + Math.round(Date.now() / 1000); // changes on every start: the books page reloads itself when it sees a new one
   const state = (pop = "", given = null, tm = null) => { // given: every buy, already read (the status dump reads them once, in slices, for all its files)
@@ -56,7 +56,7 @@ export function startWeb({ port, store, engine, status, run = () => null, sell =
   // The rows are built by the same function as before (page.entryRows), so the answer is the same. A kept row of a finished
   // buy carries no sell button (a finished buy cannot be sold). Kept rows of a selection not asked for in 15 minutes are dropped.
   const KEPT = new Map(), DONE_SETTLE_S = 600, stats = { answers: 0, read: 0, kept: 0, live: 0 };
-  const booksOf = (sel, ck) => { const opts = { ...sel, since: store.since ? store.since(Date.now() / 1000) : null, build: BUILD, run: run(), sellable: !!(KEY && sell), liq: engine?.liq ?? null };
+  const booksOf = (sel, ck) => { const opts = { ...sel, since: store.since ? store.since(Date.now() / 1000) : null, build: BUILD, run: run(), sellable: !!(KEY && sell), liq: engine?.liq ?? null, bans: engine?.bans ?? null };
     if (!store.entryFlags || !store.entriesByIds || !engine?.entries?.get) return booksApi(store.allEntries(), opts); // a store without the two readers: as before
     const nowMs = Date.now(), sig = JSON.stringify(opts.run?.books ?? null); for (const [k, v] of KEPT) if (nowMs - v.atMs > 900_000) KEPT.delete(k);
     let K = KEPT.get(ck); if (!K || K.sig !== sig) { K = { sig, rows: new Map() }; KEPT.set(ck, K); } K.atMs = nowMs;
@@ -81,6 +81,11 @@ export function startWeb({ port, store, engine, status, run = () => null, sell =
       if (req.method !== "POST") return j(405, { ok: false, why: "POST only" }); if (!KEY || !writeOff) return j(403, { ok: false, why: "writing off is switched off (the site has no key)" });
       const id = Number(u.searchParams.get("id")); if (!Number.isInteger(id)) return j(400, { ok: false, why: "which buy?" });
       const r = writeOff(id); cache.clear(); KEPT.clear(); return j(r.ok ? 200 : 409, r); }
+    // BAN A NAME / TAKE THE BAN OFF (bans.mjs): the owner's own list of names the new-coin books do not buy. Paper only; the same key as a sale. Nothing is sold by it.
+    if (u.pathname === "/api/ban") { const j = (code, o) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(o)); };
+      if (req.method !== "POST") return j(405, { ok: false, why: "POST only" }); if (!KEY || !ban) return j(403, { ok: false, why: "banning is switched off (the site has no key)" });
+      const name = (u.searchParams.get("name") || "").slice(0, 60); if (!name.trim()) return j(400, { ok: false, why: "which name?" });
+      const r = ban(name, u.searchParams.get("on") !== "0"); cache.clear(); return j(r.ok ? 200 : 409, r); }
     // OPEN POSITIONS ONLY, FROM MEMORY (owner 25 Nov 2026 22:49 UK: "refreshed every 2 or 3 seconds"): the current value and the high
     // of every position that is still held, for the selected stop / exit / stake — the same figures /api/books gives, worked out
     // by the same code, but from the engine's own unfinished buys, so the database is not read. The page asks every 2 s and

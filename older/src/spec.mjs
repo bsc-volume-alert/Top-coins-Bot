@@ -55,6 +55,8 @@ export const NO_ROUTE_RUN = 10, NO_ROUTE_EVERY_S = 30;
 // priced from routed quotes that has had NO sale price for WRITE_OFF_MIN_S can be closed by the owner as a total loss (book.mjs, writeOff).
 // A position that still has a sale price is sold, never written off.
 export const WRITE_OFF_MIN_S = 600;
+// BANNED NAMES (bans.mjs; owner 28 Nov 2026 02:06 UK): his own list, by his hand only. BAN_MAX names at most; the last BAN_KEEP coins a ban kept out are listed.
+export const BAN_MAX = 200, BAN_KEEP = 40;
 export const LIQ_EVERY_S = 5, LIQ_WARN = 0.2, LIQ_BAD = 0.5; // a held position answered "no route" this many times in a row is asked about only this often (polled.mjs) — never dropped
 export const SELL_UNRESOLVED_S = 24 * 3600;   // a triggered sale that cannot be priced for 24 h is shown as unresolved exposure (never silently closed)
 
