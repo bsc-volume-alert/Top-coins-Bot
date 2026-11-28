@@ -2364,3 +2364,11 @@ Owner 11:07: "just do all the books… so we can see it". Top-20 cut and its but
 - FARM-90K unchanged: 81 buys, -2.352 SOL (20%), 19 won. ECqVUW HIT50-NOW 1740 closed -97%.
 - Runners 115 / bought 31 / picked 28 / missed 56 — no coin newly at $100K.
 - Volume test: 28 buys, no new one. CONTROL 4 (-0.196 SOL, 0 won). OPER 1. BARE 0. REST 15. Clean all 20%: 19 buys -0.264 SOL. Failed a rug check 9.
+
+### 28 Nov 12:08 UK — 30-minute check (state 11:59:10, publish 11:59:18)
+- Code b563f09, 50 min up: memory 693 MB, Jupiter limited 0 (107 no-route), GMGN limited 0, feed connected, reconnects 0, no error in the log tail. He sold 5 buys by hand in this run.
+- BANNED NAMES: Snowball; kept out 3, no new one.
+- FARM-90K: 84 buys, 82 closed, -2.352 SOL (20%) / -2.865 (25%), 19 won (unchanged). Claude AI you2qC 1744 -0% (fourth Claude AI on FARM? earlier: +180%, -95%). Open: MoonBoy GTXyMt 1755 (sixth MoonBoy), Zhaki DbUpd3 1765 (fourth Zhaki).
+- Entries 1766 (1563 bought), 23 new, all filled: Claude AI HIT50-NOW -36%, HIT50-5M -53% · eS8Gno VOL100K -75% · DODO HIT50-NOW -20%, HIT50-5M -8%, HIT50-10M +3% · OKOWARE NEW-10M +5%, NEW-20M +9%, HIT50-NOW +1%, CONFIRM-15/20/30 -24%/-23%/-25%, WAIT5-UP -12% · Hachiware NEW-20M +21%, CONFIRM-15 -3%, CONFIRM-20 -3%, CONFIRM-30 -8%, WAIT5-UP -21% · PEPE GpG61y HIT50-NOW, HIT50-5M open.
+- Runners 115 / 31 / 28 / 56 — none new.
+- Volume test: 29 buys. CONTROL 4 (-0.196 SOL, 0 won). OPER 1. BARE 0. REST 15. Clean all 20%: 19 buys -0.264 SOL. Failed a rug check 10 (new: eS8Gno 1745 -75%).
